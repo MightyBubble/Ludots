@@ -69,7 +69,7 @@ debug_output*.txt
 
 # ----- User Requested Ignores -----
 external/
-docs/
+# docs/  <-- Un-ignore docs to keep archived documentation
 artifacts/
 _temp_export/
 
