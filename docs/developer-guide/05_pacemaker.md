@@ -54,7 +54,8 @@ RealtimePacemaker 使用累加器 `_accumulator` 累积 `dt`。当累加器达�
 *   用 `timeBudgetMs` 试图“控制模拟频率”：预算只影响切片推进是否能在本帧完成，不改变 `Time.FixedDeltaTime` 的目标频率。
 *   依赖 BudgetFuse 自动恢复：BudgetFuse 触发后，Pacemaker 会停止推进，需要上层按产品策略处理（提示、降载、重置等）。
 
-## 4 相关文档
+## 6 相关文档
 
 *   表现管线与 Performer 体系：见 [06_presentation_performer.md](06_presentation_performer.md)
 *   ConfigPipeline 合并管线：见 [07_config_pipeline.md](07_config_pipeline.md)
+

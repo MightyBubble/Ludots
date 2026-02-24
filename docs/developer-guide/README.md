@@ -19,7 +19,7 @@
 4.  [CLI 启动与调试指南](04_cli_guide.md)
     *   脚本入口与工作目录约定
     *   ModLauncher CLI 常用命令
-5.  [Pacemaker 时间与步进](05_pacemaker_presenter_config.md)
+5.  [Pacemaker 时间与步进](05_pacemaker.md)
     *   固定步长与插值
     *   BudgetFuse 与 CooperativeSimulation
 6.  [表现管线与 Performer 体系](06_presentation_performer.md)
