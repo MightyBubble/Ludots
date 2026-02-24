@@ -31,3 +31,9 @@
 8.  [Trigger 开发指南](08_trigger_guide.md)
     *   TriggerManager 与事件
     *   ScriptContext 与 ContextKeys
+9.  [启动顺序与入口点](09_startup_entrypoints.md)
+    *   Raylib App 与 Host 入口
+    *   app/game.json 与 ModPaths
+10. [Map、Mod 与空间服务可插拔](10_map_mod_spatial.md)
+    *   MapConfig 合并与继承
+    *   空间服务热切换与 SSOT

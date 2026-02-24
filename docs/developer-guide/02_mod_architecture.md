@@ -79,3 +79,5 @@ if (vfs.TryResolveFullPath("MyMod:assets/Configs/game.json", out var fullPath))
 引擎最终运行时使用的配置将是合并后的结果。
 
 如需了解更完整的“配置来源、优先级、合并规则与限制”，参见 [07_config_pipeline.md](07_config_pipeline.md)。
+
+地图配置与地图切换的生命周期（以及空间服务的热切换）参见 [10_map_mod_spatial.md](10_map_mod_spatial.md)。
