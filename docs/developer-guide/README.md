@@ -37,3 +37,6 @@
 10. [Map、Mod 与空间服务可插拔](10_map_mod_spatial.md)
     *   MapConfig 合并与继承
     *   空间服务热切换与 SSOT
+11. [GAS 分层架构与 Sink 最佳实践](11_gas_layered_architecture.md)
+    *   系统组与 Phase 的分层 SSOT
+    *   AttributeSink 与 Physics2D Sink 示例
