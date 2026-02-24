@@ -1,97 +1,34 @@
-# Pacemaker, Presenter 与 ConfigPipeline 深度解析
+# Pacemaker 时间与步进
 
-本章深入探讨 Ludots 引擎的核心系统：时间管理 (Pacemaker)、视觉同步 (Presenter) 以及数据配置合并管线 (ConfigPipeline)。
+Pacemaker 负责把平台侧的帧间隔时间 `dt` 转换为“固定步长”的模拟推进，确保逻辑系统在固定频率下执行，并为表现层提供插值参数。
 
-## 1. Pacemaker 系统 (心跳与时间管理)
+代码位置：`src/Core/Engine/Pacemaker/IPacemaker.cs`
 
-`Pacemaker` 是该引擎中解耦 **物理时间 (Wall-clock Time)** 与 **逻辑模拟时间 (Simulation Time)** 的核心组件。它负责驱动游戏的主循环。
+## 1 职责边界
 
-*   **代码位置**: `src/Core/Engine/Pacemaker/IPacemaker.cs`
+*   **Pacemaker 只管步进**：决定每帧要推进多少次 FixedStep，以及每次 FixedStep 的步长（`Time.FixedDeltaTime`）。
+*   **系统组负责逻辑**：Pacemaker 调用模拟系统组（或 cooperativeSimulation）的 `Step/Update`，不关心具体业务。
+*   **表现层插值依赖它**：RealtimePacemaker 计算 `InterpolationAlpha`，供表现层系统把上一帧与当前帧状态做平滑过渡。
 
-### 1.1 核心机制
+## 2 固定步长与插值
 
-*   **Accumulator (累加器)**:
-    *   使用 `_accumulator` 累积 `dt` (Delta Time)。
-    *   当 `_accumulator >= Time.FixedDeltaTime` 时，执行一次或多次 `simulationGroup.Update()` (即 FixedUpdate)。
-    *   **作用**: 保证逻辑更新频率固定（如 60Hz），不受渲染帧率波动影响。
-*   **Time Slicing (时间分片/预算控制)**:
-    *   支持 `ICooperativeSimulation` 接口。如果单帧逻辑计算耗时超过 `timeBudgetMs`，Pacemaker 会暂停当前逻辑帧，在下一帧继续执行（"BudgetFuse" 机制）。
-    *   **作用**: 防止长时间卡顿导致的帧率暴跌。
-*   **Interpolation (插值)**:
-    *   提供 `InterpolationAlpha` (0.0 - 1.0)，用于表现层在两个物理帧之间进行平滑插值渲染。
+RealtimePacemaker 使用累加器 `_accumulator` 累积 `dt`。当累加器达到固定步长 `Time.FixedDeltaTime` 时，推进一次 FixedStep 并扣减累加器，循环直到不足一个固定步长。
 
-### 1.2 实现类
+插值参数 `InterpolationAlpha` 由累加器与固定步长计算得到，用于表现层插值渲染：
 
-*   **RealtimePacemaker**: 标准的实时游戏循环，适用于动作游戏。
-*   **TurnBasedPacemaker**: 回合制循环，仅在手动触发 `Step()` 时推进。
+*   `alpha = accumulator / FixedDeltaTime`，范围限制在 0 到 1。
+*   alpha 只用于表现层平滑，不应写入决定性状态。
 
-## 2. Presenter 系统 (视觉同步与 UI 绑定)
+## 3 BudgetFuse 与 CooperativeSimulation
 
-`Presenter` 模式用于隔离 **Core (纯逻辑/状态)** 与 **Platform (Unity/Godot 渲染)**。Core 计算“应该长什么样”，Presenter 将其转换为平台 API 调用。
+当逻辑系统需要“可切片执行”（避免单帧卡死）时，Pacemaker 支持 `ICooperativeSimulation`：
 
-*   **代码位置**: `src/Core/Presentation/`
+*   每帧给定 `timeBudgetMs`，在预算内尽可能推进 cooperative simulation。
+*   如果一个逻辑步长需要切片次数超过 `maxSlicesPerLogicFrame`，触发 BudgetFuse：
+    *   Pacemaker 标记 fused 并停止继续推进；
+    *   引擎层会触发 `GameEvents.SimulationBudgetFused` 供上层可观测与处理。
 
-### 2.1 工作流
+## 4 相关文档
 
-1.  **Core State**: 纯数据对象（如 `CameraState`），包含逻辑坐标、目标 ID 等。
-2.  **Presenter**:
-    *   读取 Core State。
-    *   执行纯数学计算（如球面坐标转换、平滑阻尼 `Lerp`）。
-    *   **作用**: 将逻辑数据转换为适合渲染的数据（如 `Vector3`）。
-3.  **Adapter (Interface)**:
-    *   Presenter 调用 `ICameraAdapter` (或类似接口)，将计算好的 `Vector3` 传给引擎。
-    *   这使得 Core 和 Presenter 不需要引用 Unity/Godot 的 GameObject。
-
-### 2.2 响应链 (Response Chain) 中的应用
-
-*   Presenter 被视为“表演者 (Performer)”。
-*   Core 发出 `PresentationCommandBuffer` (如 "PlayAnimation", "ShowWindow")。
-*   Presenter 接收指令并调用平台 UI/特效接口进行播放。
-
-## 3. ConfigPipeline (数据配置合并管线)
-
-`ConfigPipeline` 负责在游戏启动时加载并合并 `game.json` 配置片段。它允许 Mod 覆盖或扩展核心配置，而无需修改核心文件。
-
-*   **代码位置**: `src/Core/Config/ConfigPipeline.cs`
-
-### 3.1 合并策略 (Merge Strategies)
-
-1.  **对象 (Objects/Dictionaries)**: **递归合并 (Deep Merge)**
-    *   如果 Key 存在，则递归调用 `DeepMerge`。
-    *   如果 Key 不存在，则克隆并添加。
-    *   **结果**: 子属性会被合并，而不是替换。
-
-2.  **数组 (Arrays) & 标量 (Scalars)**: **直接替换 (Replace)**
-    *   **注意**: 当前实现中，**不存在** `ArrayById` 或数组追加策略。
-    *   代码明确注释：`// Scalars or arrays - source overwrites target`。
-    *   源配置中的数组会完全覆盖目标配置中的同名数组。
-
-3.  **优先级 (Priority)**:
-    *   合并顺序：Core (默认) -> Mod (按 Priority 升序)。
-    *   高优先级的 Mod 配置会覆盖低优先级的配置。
-
-### 3.2 示例
-
-**Core (game.json)**:
-```json
-{
-  "Settings": { "Volume": 100, "Quality": "High" },
-  "Levels": [ "Level1", "Level2" ]
-}
-```
-
-**Mod (game.json)**:
-```json
-{
-  "Settings": { "Volume": 50 },  // Volume 变为 50，Quality 保持 High
-  "Levels": [ "MyLevel" ]        // Levels 完全替换为 ["MyLevel"]
-}
-```
-
-**合并结果**:
-```json
-{
-  "Settings": { "Volume": 50, "Quality": "High" },
-  "Levels": [ "MyLevel" ]
-}
-```
+*   表现管线与 Performer 体系：见 [06_presentation_performer.md](06_presentation_performer.md)
+*   ConfigPipeline 合并管线：见 [07_config_pipeline.md](07_config_pipeline.md)
