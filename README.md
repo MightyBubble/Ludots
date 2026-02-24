@@ -95,15 +95,4 @@ We gratefully acknowledge the following open-source projects that make Ludots po
 | **Raylib-cs** | Zlib | **Rendering**. Source integrated in `src/Libraries/Raylib-cs`. C# bindings for Raylib, used for the desktop client rendering. | [ChrisDill/Raylib-cs](https://github.com/ChrisDill/Raylib-cs) |
 | **FixPointCS** | MIT | **Math**. Source integrated in `external/FixPointCS-master`. Deterministic fixed-point mathematics for simulation consistency. | [asik/FixPointCS](https://github.com/asik/FixPointCS) |
 
-### Tools & Web Frontend (工具与前端)
-
-| Library | License | Usage (用途) |
-| :--- | :--- | :--- |
-| **React** | MIT | Web Editor UI framework. |
-| **Three.js** | MIT | 3D visualization in the Web Editor. |
-| **Vite** | MIT | Frontend build tool. |
-| **Zustand** | MIT | State management for the editor. |
-| **Radix UI** | MIT | Accessible UI primitives. |
-| **TailwindCSS** | MIT | Utility-first CSS framework. |
-
 *Disclaimer: All trademarks and registered trademarks are the property of their respective owners.*
