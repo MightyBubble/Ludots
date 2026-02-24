@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net7.0; net6.0; netstandard2.1</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+        <PackageId>Arch.LowLevel</PackageId>
+        <Title>Arch.LowLevel</Title>
+        <Version>1.1.5</Version>
+        <Authors>genaray</Authors>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <Description>LowLevel tools for arch.</Description>
+        <PackageReleaseNotes>Refactored JaggedArrays.
+Increased performance of JaggedArrays.
+Added Array, a new class that acts as a Wrapper around normal generic Arrays for unsafe operations. 
+Added tests. 
+Bug fixes.</PackageReleaseNotes>
+        <PackageTags>c#;.net;.net6;.net7;ecs;game;entity;gamedev; game-development; game-engine; entity-component-system; arch;</PackageTags>
+
+        <PackageProjectUrl>https://github.com/genaray/Arch.Extended</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/genaray/Arch.Extended.git</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <IsPackable>true</IsPackable>
+
+        <LangVersion>11</LangVersion>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Copyright>Apache2.0</Copyright>
+        <PackageLicenseUrl></PackageLicenseUrl>
+        <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
+
+        <UnityPublish>true</UnityPublish>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.2.2" />
+      <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+    </ItemGroup>
+
+</Project>

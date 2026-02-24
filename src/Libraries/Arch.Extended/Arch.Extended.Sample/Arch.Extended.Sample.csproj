@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Arch.Extended</RootNamespace>
+        <LangVersion>12</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Arch.AOT.SourceGenerator\Arch.AOT.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+      <ProjectReference Include="..\Arch.EventBus\Arch.EventBus.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+      <ProjectReference Include="..\Arch.LowLevel\Arch.LowLevel.csproj" />
+      <ProjectReference Include="..\Arch.Persistence\Arch.Persistence.csproj" />
+      <ProjectReference Include="..\Arch.Relationships\Arch.Relationships.csproj" />
+      <ProjectReference Include="..\Arch.System.SourceGenerator\Arch.System.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+      <ProjectReference Include="..\Arch.System\Arch.System.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Arch" Version="2.1.0" />
+      <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.1.303" />
+      <PackageReference Include="NUnit" Version="3.13.3" />
+      <PackageReference Include="Utf8Json" Version="1.3.7" />
+    </ItemGroup>
+
+</Project>

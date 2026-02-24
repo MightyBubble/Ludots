@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+        <PackageId>Arch.System.SourceGenerator</PackageId>
+        <Title>Arch.System.SourceGenerator</Title>
+        <Version>2.1.0</Version>
+        <Authors>genaray</Authors>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <Description>A source generator for arch.system.</Description>
+        <PackageReleaseNotes>Updated to fit Arch 2.1.0-beta and upwards. </PackageReleaseNotes>
+        <PackageTags>c#;.net;.net6;.net7;ecs;game;entity;gamedev; game-development; game-engine; entity-component-system; arch;</PackageTags>
+
+        <PackageProjectUrl>https://github.com/genaray/Arch.Extended</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/genaray/Arch.Extended.git</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <IsPackable>true</IsPackable>
+
+        <LangVersion>12</LangVersion>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Copyright>Apache2.0</Copyright>
+        <PackageLicenseUrl></PackageLicenseUrl>
+        <SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.1.0" PrivateAssets="analyzers" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    </ItemGroup>
+
+</Project>
