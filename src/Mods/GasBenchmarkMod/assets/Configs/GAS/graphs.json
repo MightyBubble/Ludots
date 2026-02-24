@@ -1,0 +1,23 @@
+[
+  {
+    "id": "GasBenchmarkMod.Graphs.ModifyHealth",
+    "kind": "Effect",
+    "entry": "t1",
+    "nodes": [
+      { "id": "t1", "op": "LoadExplicitTarget", "next": "c1" },
+      { "id": "c1", "op": "ConstFloat", "floatValue": 5.0, "next": "m1" },
+      { "id": "m1", "op": "ModifyAttributeAdd", "attribute": "Health", "inputs": [ "t1", "c1" ] }
+    ]
+  },
+  {
+    "id": "GameplayStandard.Graphs.ApplyForce2D",
+    "kind": "Effect",
+    "entry": "t1",
+    "nodes": [
+      { "id": "t1", "op": "LoadExplicitTarget", "next": "fx" },
+      { "id": "fx", "op": "ConstFloat", "floatValue": 12.5, "next": "fy" },
+      { "id": "fy", "op": "ConstFloat", "floatValue": -7.0, "next": "a1" },
+      { "id": "a1", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Preset.ApplyForce2D", "inputs": [ "t1", "fx", "fy" ] }
+    ]
+  }
+]

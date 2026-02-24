@@ -1,0 +1,10 @@
+{
+  "name": "GasBenchmarkMod",
+  "version": "1.0.0",
+  "description": "Mod for benchmarking GAS system.",
+  "main": "bin/Release/net8.0/GasBenchmarkMod.dll",
+  "priority": 10,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

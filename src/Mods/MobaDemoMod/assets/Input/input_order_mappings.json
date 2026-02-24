@@ -1,0 +1,57 @@
+{
+  "mappings": [
+    {
+      "actionId": "SkillQ",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "castAbility",
+      "argsTemplate": { "i0": 0 },
+      "requireSelection": false,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillW",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "castAbility",
+      "argsTemplate": { "i0": 1 },
+      "requireSelection": false,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillE",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "castAbility",
+      "argsTemplate": { "i0": 2 },
+      "requireSelection": false,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillR",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "castAbility",
+      "argsTemplate": { "i0": 3 },
+      "requireSelection": false,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "Command",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "castAbility",
+      "argsTemplate": { "i0": 4 },
+      "requireSelection": true,
+      "selectionType": "Ground",
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "Stop",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "stop",
+      "argsTemplate": {},
+      "requireSelection": false,
+      "modifierBehavior": "IgnoreModifier"
+    }
+  ],
+  "userOverrides": {
+    "enabled": true,
+    "persistPath": "user://MobaDemoMod/input_preferences.json"
+  }
+}

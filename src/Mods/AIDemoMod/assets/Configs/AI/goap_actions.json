@@ -1,0 +1,11 @@
+[
+  {
+    "Id": "Submit.Attack",
+    "Cost": 1,
+    "Pre": { "Mask": [], "Values": [] },
+    "Post": { "Mask": [], "Values": [] },
+    "Order": { "OrderTagId": 1234, "SubmitMode": 0, "PlayerId": 0 },
+    "Bindings": []
+  }
+]
+

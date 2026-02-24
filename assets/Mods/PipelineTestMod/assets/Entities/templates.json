@@ -1,0 +1,10 @@
+[
+                  {
+                    "Id": "TestUnit",
+                    "Components": {
+                      "Health": { "Value": 999 },
+                      "Mana": { "Value": 50 },
+                      "Name": { "Value": "Base Unit" }
+                    }
+                  }
+                ]

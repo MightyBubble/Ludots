@@ -1,0 +1,15 @@
+{
+  "actions": [
+    { "id": "PrimaryClick", "name": "Gameplay_PrimaryClick", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Physics2D_Playground",
+      "name": "Physics2D Playground",
+      "priority": 10,
+      "bindings": [
+        { "actionId": "PrimaryClick", "path": "<Mouse>/LeftButton" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "TerrainBenchmarkMod",
+  "version": "1.0.0",
+  "description": "Terrain vertexmap benchmark: huge map + camera pan.",
+  "main": "bin/Release/net8.0/TerrainBenchmarkMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

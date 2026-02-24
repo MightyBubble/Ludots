@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.12" />
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.3.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
+    <ProjectReference Include="..\..\Mods\LudotsCoreMod\LudotsCoreMod.csproj" />
+    <ProjectReference Include="..\..\Mods\MobaDemoMod\MobaDemoMod.csproj" />
+    <ProjectReference Include="..\..\Mods\DepApiMod\DepApiMod.csproj" />
+    <ProjectReference Include="..\..\Mods\DepConsumerMod\DepConsumerMod.csproj" />
+    <ProjectReference Include="..\..\Mods\CycleAMod\CycleAMod.csproj" />
+    <ProjectReference Include="..\..\Mods\CycleBMod\CycleBMod.csproj" />
+    <ProjectReference Include="..\..\Mods\ExampleMod\ExampleMod.csproj" />
+    <ProjectReference Include="..\..\Mods\GasBenchmarkMod\GasBenchmarkMod.csproj" />
+    <ProjectReference Include="..\..\Mods\HtmlTestMod\HtmlTestMod.csproj" />
+    <ProjectReference Include="..\..\Mods\MissingDepMod\MissingDepMod.csproj" />
+    <ProjectReference Include="..\..\Mods\PerformanceMod\PerformanceMod.csproj" />
+    <ProjectReference Include="..\..\Mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj" />
+    <ProjectReference Include="..\..\Mods\Physics2DPlaygroundMod\Physics2DPlaygroundMod.csproj" />
+    <ProjectReference Include="..\..\Mods\ReactiveTestMod\ReactiveTestMod.csproj" />
+    <ProjectReference Include="..\..\Mods\TerrainBenchmarkMod\TerrainBenchmarkMod.csproj" />
+    <ProjectReference Include="..\..\Mods\UiTestMod\UiTestMod.csproj" />
+    <ProjectReference Include="..\..\Mods\Universal3CCameraMod\Universal3CCameraMod.csproj" />
+    <ProjectReference Include="..\..\Mods\VersionMismatchMod\VersionMismatchMod.csproj" />
+    <ProjectReference Include="..\..\Mods\FourXDemoMod\FourXDemoMod.csproj" />
+    <ProjectReference Include="..\..\Mods\TcgDemoMod\TcgDemoMod.csproj" />
+    <ProjectReference Include="..\..\Mods\ArpgDemoMod\ArpgDemoMod.csproj" />
+    <ProjectReference Include="..\..\Mods\AIDemoMod\AIDemoMod.csproj" />
+    <ProjectReference Include="..\..\Mods\AIInspectorMod\AIInspectorMod.csproj" />
+  </ItemGroup>
+
+</Project>

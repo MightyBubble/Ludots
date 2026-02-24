@@ -1,0 +1,8 @@
+{
+  "startupMapId": "nav2d_playground",
+  "Navigation2D": {
+    "Enabled": true,
+    "MaxAgents": 50000,
+    "FlowIterationsPerTick": 8192
+  }
+}

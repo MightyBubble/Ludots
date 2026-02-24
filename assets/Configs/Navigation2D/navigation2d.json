@@ -1,0 +1,7 @@
+{
+  "Navigation2D": {
+    "Enabled": false,
+    "MaxAgents": 50000,
+    "FlowIterationsPerTick": 4096
+  }
+}

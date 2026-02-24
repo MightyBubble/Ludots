@@ -1,0 +1,10 @@
+[
+  {
+    "id": "Status.Stimmed",
+    "attached": ["Status.AttackSpeedUp"]
+  },
+  {
+    "id": "Status.Irradiated",
+    "attached": ["Status.DamageOverTime"]
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "profiles": [
+    {
+      "id": "Small",
+      "radiusCm": 30,
+      "heightCm": 180,
+      "maxClimbCm": 40,
+      "maxSlopeDeg": 45
+    },
+    {
+      "id": "Medium",
+      "radiusCm": 50,
+      "heightCm": 200,
+      "maxClimbCm": 45,
+      "maxSlopeDeg": 45
+    },
+    {
+      "id": "Large",
+      "radiusCm": 80,
+      "heightCm": 240,
+      "maxClimbCm": 50,
+      "maxSlopeDeg": 40
+    }
+  ],
+  "layers": [
+    {
+      "id": "Ground",
+      "layer": 0
+    }
+  ],
+  "areas": [
+    {
+      "id": "Default",
+      "areaId": 0,
+      "cost": 1.0
+    }
+  ]
+}

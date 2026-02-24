@@ -1,0 +1,75 @@
+{
+  "orderTypes": {
+    "castAbility": {
+      "orderTagId": 100,
+      "label": "Cast Ability",
+      "maxQueueSize": 3,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 100,
+      "bufferWindowMs": 500,
+      "canInterruptSelf": false,
+      "orderStateTagId": 100,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true
+    },
+    "attackTarget": {
+      "orderTagId": 102,
+      "label": "Attack Target",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 75,
+      "bufferWindowMs": 300,
+      "canInterruptSelf": true,
+      "orderStateTagId": 102,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true
+    },
+    "stop": {
+      "orderTagId": 103,
+      "label": "Stop",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 200,
+      "bufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "orderStateTagId": 103,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true
+    }
+  },
+  "tagRules": {
+    "castAbility": {
+      "tagId": 100,
+      "requiredTags": [],
+      "blockedTags": [],
+      "attachedTags": [110],
+      "removedTags": [],
+      "disabledIfTags": [],
+      "removeIfTags": []
+    },
+    "attackTarget": {
+      "tagId": 102,
+      "requiredTags": [],
+      "blockedTags": [],
+      "attachedTags": [110],
+      "removedTags": [],
+      "disabledIfTags": [],
+      "removeIfTags": []
+    },
+    "stop": {
+      "tagId": 103,
+      "requiredTags": [],
+      "blockedTags": [],
+      "attachedTags": [110],
+      "removedTags": [100, 102],
+      "disabledIfTags": [],
+      "removeIfTags": []
+    }
+  }
+}

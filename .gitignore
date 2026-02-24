@@ -1,0 +1,88 @@
+# =============================================
+# Ludots Project .gitignore
+# =============================================
+
+# ----- .NET / C# 构建产物 -----
+**/bin/
+**/obj/
+*.nupkg
+*.snupkg
+# NuGet Packages
+*.nupkg
+packages/
+**/TestResults/
+**/*.trx
+**/*.coverage
+**/*.coveragexml
+
+# ----- Mod 构建产物（避免提交编译副作用） -----
+src/Mods/**/ref/
+assets/**/ref/
+
+# ----- IDE / 编辑器 -----
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ----- Cursor IDE -----
+# 保留 .cursor/rules/ 等项目规则，排除其余 IDE 状态
+.cursor/*
+!.cursor/rules/
+
+# ----- Node.js -----
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+**/dist/
+**/.next/
+**/.vite/
+**/.cache/
+**/coverage/
+
+# ----- 通用本地配置 -----
+.env
+.env.*
+!.env.example
+
+# ----- Rust (external/SuperECS/Samples/Avian) -----
+target/
+
+# ----- 临时文件与缓存 -----
+.tmp/
+.trae/
+raylib_temp/
+
+# ----- 构建日志与调试输出 -----
+build_*.log
+build_*.txt
+build_error*.log
+build_error*.txt
+build_full.log
+build_output.txt
+build.log
+debug_error*.txt
+debug_output*.txt
+
+# ----- User Requested Ignores -----
+external/
+docs/
+artifacts/
+_temp_export/
+
+# ----- Build Logs & Artifacts -----
+msbuild.log
+out.log
+out.host.*.log
+*.zip
+*.dll
+!src/Platforms/Desktop/raylib.dll
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk

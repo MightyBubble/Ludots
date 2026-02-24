@@ -1,0 +1,17 @@
+{
+  "Id": "rts_entry",
+  "Tags": ["rts"],
+  "Entities": [
+    { "Template": "rts_scv", "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } } },
+    { "Template": "rts_barracks", "Overrides": { "WorldPositionCm": { "Value": { "X": 400, "Y": 0 } } } },
+    { "Template": "rts_marine", "Overrides": { "WorldPositionCm": { "Value": { "X": 200, "Y": 100 } } } },
+    { "Template": "rts_marine", "Overrides": { "WorldPositionCm": { "Value": { "X": 200, "Y": -100 } } } },
+    { "Template": "rts_siege_tank", "Overrides": { "WorldPositionCm": { "Value": { "X": 600, "Y": 0 } } } },
+    { "Template": "rts_science_vessel", "Overrides": { "WorldPositionCm": { "Value": { "X": 300, "Y": 200 } } } },
+    { "Template": "rts_zergling", "Overrides": { "WorldPositionCm": { "Value": { "X": 2000, "Y": 50 } } } },
+    { "Template": "rts_zergling", "Overrides": { "WorldPositionCm": { "Value": { "X": 2000, "Y": -50 } } } },
+    { "Template": "rts_zergling", "Overrides": { "WorldPositionCm": { "Value": { "X": 2100, "Y": 0 } } } },
+    { "Template": "rts_zealot", "Overrides": { "WorldPositionCm": { "Value": { "X": -2000, "Y": 0 } } } },
+    { "Template": "rts_zealot", "Overrides": { "WorldPositionCm": { "Value": { "X": -2100, "Y": 100 } } } }
+  ]
+}

@@ -1,0 +1,83 @@
+[
+  {
+    "id": "Effect.4X.BuildOutpost",
+    "tags": ["Effect.4X.BuildOutpost"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "unitCreation": {
+      "unitType": "Unit.Outpost",
+      "count": 1,
+      "offsetRadius": 80,
+      "onSpawnEffect": "Effect.4X.OutpostComplete"
+    }
+  },
+  {
+    "id": "Effect.4X.OutpostComplete",
+    "tags": ["Effect.4X.OutpostComplete"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "duration": {
+      "durationTicks": 1
+    },
+    "modifiers": [
+      { "attribute": "Production", "op": "Add", "value": 5 }
+    ]
+  },
+  {
+    "id": "Effect.4X.TechResearch",
+    "tags": ["Effect.4X.Tech"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 300
+    },
+    "modifiers": [
+      { "attribute": "TechProgress", "op": "Add", "value": 1 }
+    ],
+    "grantedTags": [
+      { "tag": "Status.Researching", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.4X.TechComplete",
+    "tags": ["Effect.4X.Tech"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "grantedTags": [
+      { "tag": "Tech.Agriculture", "formula": "Fixed", "amount": 1 }
+    ],
+    "modifiers": [
+      { "attribute": "FoodProduction", "op": "Add", "value": 10 }
+    ]
+  },
+  {
+    "id": "Effect.4X.DiplomacyPact",
+    "tags": ["Effect.4X.Diplomacy"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "grantedTags": [
+      { "tag": "Status.Allied", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.4X.TradeRoute",
+    "tags": ["Effect.4X.Economy"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 600
+    },
+    "modifiers": [
+      { "attribute": "Gold", "op": "Add", "value": 3 }
+    ],
+    "stack": {
+      "limit": 5,
+      "policy": "KeepDuration",
+      "overflowPolicy": "RejectNew"
+    }
+  }
+]

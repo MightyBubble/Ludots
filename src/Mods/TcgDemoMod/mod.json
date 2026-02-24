@@ -1,0 +1,11 @@
+{
+  "name": "TcgDemoMod",
+  "version": "1.0.0",
+  "description": "TCG demo mod for production GAS validation.",
+  "main": "bin/Release/net8.0/TcgDemoMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}
+

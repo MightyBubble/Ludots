@@ -1,0 +1,8 @@
+{
+  "Id": "example_map",
+  "DataFile": "example_map.bin",
+  "Dependencies": [
+    { "Id": "ExampleMod", "MinVersion": "1.0.0" }
+  ],
+  "Entities": []
+}

@@ -1,0 +1,33 @@
+<Project>
+  <PropertyGroup>
+    <LudotsModSdkDir>$(MSBuildThisFileDirectory)</LudotsModSdkDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Ludots.Core">
+      <HintPath>$(LudotsModSdkDir)ref\Ludots.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Ludots.Platform.Abstractions">
+      <HintPath>$(LudotsModSdkDir)ref\Ludots.Platform.Abstractions.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Ludots.UI">
+      <HintPath>$(LudotsModSdkDir)ref\Ludots.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Ludots.UI.HtmlEngine">
+      <HintPath>$(LudotsModSdkDir)ref\Ludots.UI.HtmlEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Arch">
+      <HintPath>$(LudotsModSdkDir)ref\Arch.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Arch.System">
+      <HintPath>$(LudotsModSdkDir)ref\Arch.System.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
+

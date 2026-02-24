@@ -1,0 +1,11 @@
+{
+  "name": "FourXDemoMod",
+  "version": "1.0.0",
+  "description": "4X demo mod for production GAS validation.",
+  "main": "bin/Release/net8.0/FourXDemoMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}
+

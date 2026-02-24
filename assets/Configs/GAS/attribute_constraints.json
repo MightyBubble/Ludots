@@ -1,0 +1,7 @@
+{
+  "Health": {
+    "clampToBase": true,
+    "min": 0
+  }
+}
+

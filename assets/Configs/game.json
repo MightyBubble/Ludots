@@ -1,0 +1,12 @@
+{
+  "defaultCoreMod": "LudotsCoreMod",
+  "windowWidth": 1280,
+  "windowHeight": 720,
+  "windowTitle": "Ludots Engine (Raylib)",
+  "targetFps": 0,
+  "simulationBudgetMsPerFrame": 4,
+  "simulationMaxSlicesPerLogicFrame": 120,
+  "gridCellSizeCm": 100,
+  "worldWidthInTiles": 64,
+  "worldHeightInTiles": 64
+}

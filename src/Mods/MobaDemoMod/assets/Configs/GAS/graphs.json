@@ -1,0 +1,10 @@
+[
+  {
+    "id": "Graph.Shield.Absorb",
+    "kind": "Effect",
+    "entry": "n1",
+    "nodes": [
+      { "id": "n1", "op": "LoadContextTarget" }
+    ]
+  }
+]

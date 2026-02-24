@@ -1,0 +1,10 @@
+{
+  "name": "RtsDemoMod",
+  "version": "1.0.0",
+  "description": "RTS demo mod: unit production, aura (PeriodicSearch), AOE combat (Search), resource cost, effect stacking, 3-faction teams.",
+  "main": "bin/Release/net8.0/RtsDemoMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

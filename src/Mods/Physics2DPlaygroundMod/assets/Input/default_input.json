@@ -1,0 +1,38 @@
+{
+  "actions": [
+    { "id": "PointerPos", "name": "Gameplay_PointerPos", "type": "Axis2D" },
+    { "id": "PrimaryClick", "name": "Gameplay_PrimaryClick", "type": "Button" },
+    { "id": "SecondaryClick", "name": "Gameplay_SecondaryClick", "type": "Button" },
+    { "id": "Hotkey1", "name": "Gameplay_Hotkey1", "type": "Button" },
+    { "id": "Hotkey2", "name": "Gameplay_Hotkey2", "type": "Button" },
+    { "id": "Hotkey3", "name": "Gameplay_Hotkey3", "type": "Button" },
+    { "id": "Hotkey4", "name": "Gameplay_Hotkey4", "type": "Button" },
+    { "id": "Hotkey5", "name": "Gameplay_Hotkey5", "type": "Button" },
+    { "id": "Hotkey6", "name": "Gameplay_Hotkey6", "type": "Button" },
+    { "id": "Hotkey7", "name": "Gameplay_Hotkey7", "type": "Button" },
+    { "id": "Hotkey8", "name": "Gameplay_Hotkey8", "type": "Button" },
+    { "id": "Hotkey9", "name": "Gameplay_Hotkey9", "type": "Button" },
+    { "id": "ChainDemo", "name": "Gameplay_ChainDemo", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Physics2D_Playground",
+      "name": "Physics2D Playground",
+      "priority": 10,
+      "bindings": [
+        { "actionId": "PrimaryClick", "path": "<Mouse>/LeftButton" },
+        { "actionId": "SecondaryClick", "path": "<Mouse>/RightButton" },
+        { "actionId": "Hotkey1", "path": "<Keyboard>/1" },
+        { "actionId": "Hotkey2", "path": "<Keyboard>/2" },
+        { "actionId": "Hotkey3", "path": "<Keyboard>/3" },
+        { "actionId": "Hotkey4", "path": "<Keyboard>/4" },
+        { "actionId": "Hotkey5", "path": "<Keyboard>/5" },
+        { "actionId": "Hotkey6", "path": "<Keyboard>/6" },
+        { "actionId": "Hotkey7", "path": "<Keyboard>/7" },
+        { "actionId": "Hotkey8", "path": "<Keyboard>/8" },
+        { "actionId": "Hotkey9", "path": "<Keyboard>/9" },
+        { "actionId": "ChainDemo", "path": "<Keyboard>/C" }
+      ]
+    }
+  ]
+}

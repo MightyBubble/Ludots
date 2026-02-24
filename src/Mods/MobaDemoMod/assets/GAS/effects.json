@@ -1,0 +1,264 @@
+[
+  {
+    "id": "Effect.Moba.Damage.Q",
+    "tags": ["Effect.Moba.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -20.0 }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Heal.W",
+    "tags": ["Effect.Moba.Heal"],
+    "presetType": "Heal",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 15.0 }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Damage.E",
+    "tags": ["Effect.Moba.Damage"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Cone",
+      "radius": 800,
+      "halfAngle": 45
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 8
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Moba.Cone.E.Hit",
+      "contextMapping": {
+        "payloadSource": "OriginalSource",
+        "payloadTarget": "ResolvedEntity",
+        "payloadTargetContext": "OriginalTarget"
+      }
+    }
+  },
+  {
+    "id": "Effect.Moba.Cone.E.Hit",
+    "tags": ["Effect.Moba.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -5.0 }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Damage.R",
+    "tags": ["Effect.Moba.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -10.0 }
+    ]
+  },
+  {
+    "id": "Effect.Moba.DOT.Burn",
+    "tags": ["Effect.Moba.DoT"],
+    "presetType": "DoT",
+    "lifetime": "After",
+    "participatesInResponse": true,
+    "duration": {
+      "durationTicks": 120,
+      "periodTicks": 20
+    },
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -3.0 }
+    ]
+  },
+  {
+    "id": "Effect.Moba.HOT.Regen",
+    "tags": ["Effect.Moba.HoT"],
+    "presetType": "HoT",
+    "lifetime": "After",
+    "participatesInResponse": true,
+    "duration": {
+      "durationTicks": 180,
+      "periodTicks": 30
+    },
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 5.0 }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Buff.SpeedBoost",
+    "tags": ["Effect.Moba.Buff"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 300
+    },
+    "modifiers": [
+      { "attribute": "MoveSpeed", "op": "Add", "value": 50.0 }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Search.Fireball",
+    "tags": ["Effect.Moba.Search"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 500
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 16
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Moba.Damage.R"
+    }
+  },
+  {
+    "id": "Effect.Moba.Search.BlizzardZone",
+    "tags": ["Effect.Moba.PeriodicSearch"],
+    "presetType": "PeriodicSearch",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 300,
+      "periodTicks": 60
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 600
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": false,
+      "maxTargets": 32
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Moba.Damage.R"
+    }
+  },
+  {
+    "id": "Effect.Moba.Projectile.Arrow",
+    "tags": ["Effect.Moba.Projectile"],
+    "presetType": "LaunchProjectile",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "projectile": {
+      "speed": 1200,
+      "range": 2000,
+      "arcHeight": 0,
+      "impactEffect": "Effect.Moba.Damage.R"
+    }
+  },
+  {
+    "id": "Effect.Moba.Summon.Skeleton",
+    "tags": ["Effect.Moba.Summon"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "unitType": "Unit.Skeleton",
+      "count": 1,
+      "offsetRadius": 200
+    }
+  },
+  {
+    "id": "Effect.Moba.Buff.Shield",
+    "tags": ["Effect.Moba.Shield"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 600
+    },
+    "modifiers": [
+      { "attribute": "Shield", "op": "Add", "value": 100.0 }
+    ],
+    "phaseListeners": [
+      {
+        "listenTag": "Effect.Moba.Damage",
+        "phase": "onHit",
+        "scope": "target",
+        "action": "graph",
+        "graphProgram": "Graph.Shield.Absorb",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Aura.FriendlyHeal",
+    "tags": ["Effect.Moba.Aura"],
+    "presetType": "PeriodicSearch",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 6000,
+      "periodTicks": 60
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 700
+    },
+    "targetFilter": {
+      "relationFilter": "Friendly",
+      "excludeSource": true,
+      "maxTargets": 8
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Moba.Aura.FriendlyHeal.Tick"
+    }
+  },
+  {
+    "id": "Effect.Moba.Aura.FriendlyHeal.Tick",
+    "tags": ["Effect.Moba.Heal"],
+    "presetType": "Heal",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 3.0 }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Debuff.Slow",
+    "tags": ["Effect.Moba.Debuff"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 120
+    },
+    "modifiers": [
+      { "attribute": "MoveSpeed", "op": "Add", "value": -30.0 }
+    ],
+    "grantedTags": [
+      { "tag": "Status.Slowed", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Debuff.Silence",
+    "tags": ["Effect.Moba.Debuff"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90
+    },
+    "grantedTags": [
+      { "tag": "Status.Silenced", "formula": "Fixed", "amount": 1 }
+    ]
+  }
+]

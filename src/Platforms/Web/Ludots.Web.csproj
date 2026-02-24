@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- UseAppHost=false is required for WASM, but Electron Host project needs its own config. 
+         ElectronNET builds the Host project which references Web. 
+         The error implies Web project is trying to build AppHost for browser-wasm which is invalid. -->
+    <UseAppHost>false</UseAppHost>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <PublishTrimmed>false</PublishTrimmed>
+    
+    <!-- AOT Optimization for Performance (Disabled due to runtime error) -->
+    <!-- <RunAOTCompilation>true</RunAOTCompilation> -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.0" PrivateAssets="all" />
+    
+    <!-- Arch Dependencies -->
+    <PackageReference Include="Collections.Pooled" Version="2.0.0-preview.27" />
+    <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.2.2" />
+    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="8.0.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+    <PackageReference Include="ZeroAllocJobScheduler" Version="1.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Include Core Source Code directly -->
+    <Compile Include="..\..\Core\**\*.cs" LinkBase="Core" />
+    
+    <!-- Include Arch Source Code directly -->
+    <!-- Path: src/Libraries/Arch/src/Arch/**/*.cs -->
+    <Compile Include="..\..\Libraries\Arch\src\Arch\**\*.cs" LinkBase="Libraries\Arch" />
+    
+    <!-- Include Arch.LowLevel Source Code directly -->
+    <Compile Include="..\..\Libraries\Arch.Extended\Arch.LowLevel\**\*.cs" LinkBase="Libraries\Arch.LowLevel" />
+    
+    <!-- Exclude Arch Tests and Samples just in case glob is too greedy (though src/Arch/ should be safe) -->
+  </ItemGroup>
+
+</Project>

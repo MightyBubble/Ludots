@@ -1,0 +1,7 @@
+[
+  {
+    "id": "Status.Stunned",
+    "attached": ["Status.CannotMove"]
+  }
+]
+

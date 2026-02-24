@@ -1,0 +1,12 @@
+[
+  {
+    "id": "Status.Colonizing",
+    "attached": ["Status.Working"],
+    "removeIfAny": ["Status.Blocked"]
+  },
+  {
+    "id": "Status.Blocked",
+    "removed": ["Status.Colonizing"]
+  }
+]
+

@@ -1,0 +1,8 @@
+{
+  "Id": "benchmark_map",
+  "DataFile": "benchmark.bin",
+  "Dependencies": [
+    { "Id": "PerformanceMod", "MinVersion": "1.0.0" }
+  ],
+  "Entities": []
+}

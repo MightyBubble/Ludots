@@ -1,0 +1,9 @@
+{
+  "name": "AIDemoMod",
+  "version": "1.0.0",
+  "description": "Demo AI config mod (atoms/goals/actions) to verify merge policies.",
+  "main": "bin/Release/net8.0/AIDemoMod.dll",
+  "priority": 100,
+  "dependencies": {}
+}
+

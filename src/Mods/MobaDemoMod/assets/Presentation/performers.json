@@ -1,0 +1,53 @@
+[
+  {
+    "_comment": "单位方块渲染 - entity-scoped, 查询所有有 VisualTransform 的实体",
+    "id": 5001,
+    "visualKind": "Marker3D",
+    "entityScope": "AllWithVisualTransform",
+    "meshOrShapeId": 1,
+    "defaultScale": 0.35,
+    "positionOffset": [0, 0.25, 0],
+    "visibility": { "inline": "OwnerCullVisible" },
+    "bindings": [
+      { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
+      { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
+      { "paramKey": 6, "source": "entityColor", "sourceId": 2 },
+      { "paramKey": 7, "source": "entityColor", "sourceId": 3 }
+    ]
+  },
+  {
+    "_comment": "选中指示器 - instance-scoped, 黄色球体悬浮在选中单位头顶",
+    "id": 5002,
+    "visualKind": "Marker3D",
+    "meshOrShapeId": 2,
+    "defaultColor": [1, 1, 0, 1],
+    "defaultScale": 0.18,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.85, 0]
+  },
+  {
+    "_comment": "选区范围标记 - instance-scoped, 紫色扁球短暂闪烁(CircleEnemy)",
+    "id": 5003,
+    "visualKind": "Marker3D",
+    "meshOrShapeId": 2,
+    "defaultColor": [0.8, 0.2, 1.0, 0.75],
+    "defaultLifetime": 0.35,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.1, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 1.2 },
+      { "paramKey": 2, "source": "constant", "constantValue": 0.08 },
+      { "paramKey": 3, "source": "constant", "constantValue": 1.2 }
+    ]
+  },
+  {
+    "_comment": "技能范围圈 - instance-scoped, 瞄准时的地面圆形指示器",
+    "id": 5004,
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": 0,
+    "defaultColor": [0.3, 0.7, 1.0, 0.2],
+    "defaultScale": 6.0,
+    "defaultLifetime": -1,
+    "visibility": { "inline": "OwnerCullVisible" }
+  }
+]

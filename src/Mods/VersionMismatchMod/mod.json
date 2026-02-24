@@ -1,0 +1,10 @@
+{
+  "name": "VersionMismatchMod",
+  "version": "1.0.0",
+  "description": "Demo version mismatch dependency",
+  "main": "bin/Release/net8.0/VersionMismatchMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "DepApiMod": ">=2.0.0"
+  }
+}

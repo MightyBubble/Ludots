@@ -1,0 +1,10 @@
+{
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine (Raylib) - Moba Demo",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../Mods/LudotsCoreMod",
+    "../../../../../../Mods/MobaDemoMod"
+  ]
+}

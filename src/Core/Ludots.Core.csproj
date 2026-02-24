@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Collections.Pooled" Version="2.0.0-preview.27" />
+    <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.2.2" />
+    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="8.0.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+    <PackageReference Include="ZeroAllocJobScheduler" Version="1.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Libraries\Arch\src\Arch\Arch.csproj" />
+    <ProjectReference Include="..\Libraries\Arch.Extended\Arch.System\Arch.System.csproj" />
+    <ProjectReference Include="..\Platform\Ludots.Platform.Abstractions\Ludots.Platform.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Ludots.Physics2D\**\*.cs" />
+    <Compile Remove="Ludots.Physics.Broadphase\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Arch.System" />
+  </ItemGroup>
+</Project>

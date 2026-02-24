@@ -1,0 +1,27 @@
+{
+  "Id": "fourx_entry",
+  "Tags": ["fourx"],
+  "Entities": [
+    {
+      "Template": "fourx_governor",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } }
+    },
+    {
+      "Template": "fourx_site",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 800, "Y": 0 } } }
+    },
+    {
+      "Template": "fourx_federation_city",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 3000, "Y": 0 } } }
+    },
+    {
+      "Template": "fourx_horde_camp",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -3000, "Y": 0 } } }
+    },
+    {
+      "Template": "fourx_nomad_caravan",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 3000 } } }
+    }
+  ]
+}
+

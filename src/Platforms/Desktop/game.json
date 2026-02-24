@@ -1,0 +1,18 @@
+{
+  "StartupMapId": "entry",
+  "StartupInputContexts": [
+    "Default_Gameplay",
+    "Moba_Gameplay"
+  ],
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine (Raylib)",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../Mods/MobaDemoMod",
+    "../../../../../Mods/PerformanceVisualizationMod",
+    "../../../../../Mods/TerrainBenchmarkMod",
+    "../../../../../Mods/Physics2DPlaygroundMod",
+    "../../../../../Mods/Navigation2DPlaygroundMod"
+  ]
+}

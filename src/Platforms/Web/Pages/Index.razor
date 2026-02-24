@@ -1,0 +1,30 @@
+@page "/"
+@inject IJSRuntime JS
+@inject Ludots.Web.Services.GameInitializer GameInitializer
+
+<PageTitle>Ludots Web</PageTitle>
+
+<div id="game-container" style="width: 100%; height: 100vh; overflow: hidden; background: #000;"></div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Initialize Three.js scene
+            await JS.InvokeVoidAsync("ludots.init", "game-container");
+            
+            // Initialize Game (Load configs, etc.)
+            try 
+            {
+                await GameInitializer.InitializeAsync();
+                Console.WriteLine("Ludots Web Client Initialized and Game Started.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing game: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
+            }
+        }
+    }
+}

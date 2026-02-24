@@ -1,0 +1,10 @@
+{
+  "name": "Universal3CCameraMod",
+  "version": "1.0.0",
+  "description": "Platform-agnostic request for a universal 3C orbit camera controller.",
+  "main": "bin/Release/net8.0/Universal3CCameraMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

@@ -1,0 +1,153 @@
+[
+  {
+    "id": "Effect.Rts.BuildCost.Barracks",
+    "tags": ["Effect.Rts.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Minerals", "op": "Add", "value": -150 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.BuildBarracks",
+    "tags": ["Effect.Rts.Build"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "unitType": "Unit.Barracks",
+      "count": 1,
+      "offsetRadius": 300
+    }
+  },
+  {
+    "id": "Effect.Rts.TrainCost.Marine",
+    "tags": ["Effect.Rts.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Minerals", "op": "Add", "value": -50 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.TrainMarine",
+    "tags": ["Effect.Rts.Train"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "unitType": "Unit.Marine",
+      "count": 1,
+      "offsetRadius": 120
+    }
+  },
+  {
+    "id": "Effect.Rts.ResearchComplete",
+    "tags": ["Effect.Rts.Research"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "grantedTags": [
+      { "tag": "Tech.Stim", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.ShieldAura",
+    "tags": ["Effect.Rts.Aura"],
+    "presetType": "PeriodicSearch",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 6000,
+      "periodTicks": 30
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 800
+    },
+    "targetFilter": {
+      "relationFilter": "Friendly",
+      "excludeSource": true,
+      "maxTargets": 16
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Rts.ShieldBuff"
+    }
+  },
+  {
+    "id": "Effect.Rts.ShieldBuff",
+    "tags": ["Effect.Rts.ShieldBuff"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90
+    },
+    "modifiers": [
+      { "attribute": "Shield", "op": "Add", "value": 10 }
+    ],
+    "stack": {
+      "limit": 3,
+      "policy": "RefreshDuration",
+      "overflowPolicy": "RejectNew"
+    }
+  },
+  {
+    "id": "Effect.Rts.SiegeTankAoe",
+    "tags": ["Effect.Rts.Aoe"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 600
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 32
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Rts.AoeDamage"
+    }
+  },
+  {
+    "id": "Effect.Rts.AoeDamage",
+    "tags": ["Effect.Rts.AoeDamage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -20 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.StimBuff",
+    "tags": ["Effect.Rts.StimBuff"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 180
+    },
+    "modifiers": [
+      { "attribute": "AttackSpeed", "op": "Add", "value": 50 },
+      { "attribute": "Health", "op": "Add", "value": -10 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.Irradiate",
+    "tags": ["Effect.Rts.Irradiate"],
+    "presetType": "DoT",
+    "lifetime": "After",
+    "participatesInResponse": true,
+    "duration": {
+      "durationTicks": 150,
+      "periodTicks": 15
+    },
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -3 }
+    ]
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "name": "DepConsumerMod",
+  "version": "1.0.0",
+  "description": "Demo dependency consumer mod",
+  "main": "bin/Release/net8.0/DepConsumerMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "DepApiMod": ">=1.0.0 <2.0.0"
+  }
+}

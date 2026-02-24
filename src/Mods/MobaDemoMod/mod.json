@@ -1,0 +1,10 @@
+{
+  "name": "MobaDemoMod",
+  "version": "1.0.0",
+  "description": "MOBA demo gameplay: selection + click-to-move + QWER abilities.",
+  "main": "bin/Release/net8.0/MobaDemoMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

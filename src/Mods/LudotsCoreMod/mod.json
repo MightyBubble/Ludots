@@ -1,0 +1,8 @@
+{
+  "name": "LudotsCoreMod",
+  "version": "1.0.0",
+  "description": "Core game framework for Ludots - provides base systems, controllers, and configuration",
+  "main": "bin/Release/net8.0/LudotsCoreMod.dll",
+  "priority": -1000,
+  "dependencies": {}
+}

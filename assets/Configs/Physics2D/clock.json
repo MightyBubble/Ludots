@@ -1,0 +1,4 @@
+{
+  "PhysicsHz": 15,
+  "MaxStepsPerFixedTick": 8
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Navigation2DPlaygroundMod",
+  "version": "1.0.0",
+  "description": "Enable Navigation2D playground on entry map.",
+  "main": "bin/Release/net8.0/Navigation2DPlaygroundMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}
+

@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageId>DotRecast.Recast.Demo</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Authors>ikpil</Authors>
+    <Description>DotRecast - a port of Recast Detour, Industry-standard navigation mesh toolset for .NET, C#, Unity3D, games, servers</Description>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/ikpil/DotRecast</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ikpil/DotRecast</RepositoryUrl>
+    <PackageTags>game gamedev ai csharp server unity navigation game-development unity3d pathfinding pathfinder recast detour navmesh crowd-simulation recastnavigation</PackageTags>
+    <PackageReleaseNotes>https://github.com/ikpil/DotRecast/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <WarningsAsErrors>$(WarningsAsErrors);CS9191</WarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.3.0"/>
+    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0"/>
+    <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0"/>
+    <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0"/>
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1"/>
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0"/>
+    <PackageReference Include="K4os.Compression.LZ4" Version="1.3.8"/>
+    <PackageReference Include="Silk.NET" Version="2.23.0"/>
+    <PackageReference Include="Silk.NET.OpenGL.Extensions.ImGui" Version="2.23.0"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DotRecast.Recast.Toolset\DotRecast.Recast.Toolset.csproj"/>
+  </ItemGroup>
+
+</Project>

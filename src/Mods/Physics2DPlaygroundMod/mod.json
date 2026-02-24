@@ -1,0 +1,10 @@
+{
+  "name": "Physics2DPlaygroundMod",
+  "version": "1.0.0",
+  "description": "Enable Physics2D playground on entry map.",
+  "main": "bin/Release/net8.0/Physics2DPlaygroundMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

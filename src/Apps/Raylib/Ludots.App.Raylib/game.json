@@ -1,0 +1,9 @@
+{
+  "ModPaths": [
+    "../../../../../../Mods/LudotsCoreMod",
+    "../../../../../../Mods/MobaDemoMod",
+    "../../../../../../Mods/PerformanceVisualizationMod",
+    "../../../../../../Mods/TerrainBenchmarkMod",
+    "../../../../../../Mods/Physics2DPlaygroundMod"
+  ]
+}

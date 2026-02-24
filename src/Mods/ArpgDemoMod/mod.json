@@ -1,0 +1,11 @@
+{
+  "name": "ArpgDemoMod",
+  "version": "1.0.0",
+  "description": "ARPG demo mod for production GAS validation.",
+  "main": "bin/Release/net8.0/ArpgDemoMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}
+

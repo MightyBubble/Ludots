@@ -1,0 +1,20 @@
+[
+  {
+    "id": "Bind.Physics.ForceInput2D.X",
+    "attribute": "Physics.ForceRequestX",
+    "sink": "Physics.ForceInput2D",
+    "channel": 0,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  },
+  {
+    "id": "Bind.Physics.ForceInput2D.Y",
+    "attribute": "Physics.ForceRequestY",
+    "sink": "Physics.ForceInput2D",
+    "channel": 1,
+    "mode": "Override",
+    "scale": 1.0,
+    "resetPolicy": "ResetToZeroPerLogicFrame"
+  }
+]

@@ -1,0 +1,442 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text.Json;
+using Ludots.Core.Scripting;
+using Ludots.Core.Map;
+
+namespace Ludots.Core.Modding
+{
+    public class ModLoader
+    {
+        private readonly IVirtualFileSystem _vfs;
+        private readonly FunctionRegistry _functionRegistry;
+        private readonly TriggerManager _triggerManager;
+        private readonly List<IMod> _loadedMods = new List<IMod>();
+        private readonly List<ModLoadContext> _loadContexts = new List<ModLoadContext>();
+        private readonly Dictionary<string, Assembly> _sharedAssemblies = new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> _modDirectories = new Dictionary<string, string>();
+        
+        public IMapManager MapManager { get; set; }
+        public List<string> LoadedModIds { get; private set; } = new List<string>();
+
+        public ModLoader(IVirtualFileSystem vfs, FunctionRegistry fr, TriggerManager tm)
+        {
+            _vfs = vfs;
+            _functionRegistry = fr;
+            _triggerManager = tm;
+        }
+
+        public void LoadMods(string modsRootPath)
+        {
+            if (!Directory.Exists(modsRootPath))
+            {
+                Console.WriteLine($"Mods directory not found: {modsRootPath}");
+                return;
+            }
+
+            var directories = Directory.GetDirectories(modsRootPath);
+            LoadMods(directories);
+        }
+
+        public void LoadMods(IEnumerable<string> modDirectories)
+        {
+            _modDirectories.Clear();
+            _sharedAssemblies.Clear();
+
+            // 1. Scan for mod.json
+            var modNodes = new List<DependencyResolver.ModNode>();
+            int scanIndex = 0;
+
+            foreach (var dir in modDirectories)
+            {
+                var manifestPath = Path.Combine(dir, "mod.json");
+                if (File.Exists(manifestPath))
+                {
+                    try
+                    {
+                        var json = File.ReadAllText(manifestPath);
+                        var manifest = ParseManifestStrict(json, manifestPath);
+                        
+                        if (manifest != null)
+                        {
+                            modNodes.Add(new DependencyResolver.ModNode
+                            {
+                                Manifest = manifest,
+                                CreationIndex = scanIndex++
+                            });
+                            
+                            // Store path for later DLL loading
+                            _modDirectories[manifest.Name] = dir;
+
+                            // Mount resources
+                            _vfs.Mount(manifest.Name, dir);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to load manifest from {dir}: {ex.Message}");
+                    }
+                }
+            }
+
+            // 2. Resolve Dependencies
+            var resolver = new DependencyResolver();
+            List<ModManifest> sortedManifests;
+            try
+            {
+                sortedManifests = resolver.Resolve(modNodes);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Dependency resolution failed: {ex.Message}");
+                throw;
+            }
+
+            Console.WriteLine("Mod Load Order:");
+            foreach(var m in sortedManifests)
+            {
+                Console.WriteLine($"- {m.Name} (P:{m.Priority})");
+            }
+
+            // 3. Load Assemblies and Init
+            foreach (var manifest in sortedManifests)
+            {
+                LoadModAssembly(manifest);
+                LoadedModIds.Add(manifest.Name);
+            }
+        }
+
+        private void LoadModAssembly(ModManifest manifest)
+        {
+            Console.WriteLine($"[ModLoader] >>> DEBUG: Entering LoadModAssembly for {manifest.Name} <<<");
+
+            if (!_modDirectories.TryGetValue(manifest.Name, out var modDir))
+                return;
+
+            // Look for DLL
+            var hasDll = TryResolveMainAssemblyPath(manifest, modDir, out var dllPath);
+
+            if (!hasDll)
+            {
+                var matches = FindAllBuiltDllCandidates(modDir, manifest.Name);
+                if (matches.Count > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Mod '{manifest.Name}' has built DLL candidates, but none match the expected path.\n" +
+                        $"Expected: {dllPath}\n" +
+                        $"Found:\n- {string.Join("\n- ", matches)}");
+                }
+
+                Console.WriteLine($"[ModLoader] Warning: No DLL found for {manifest.Name} (asset-only mod?): expected {dllPath}");
+                return;
+            }
+
+            try
+                {
+                    dllPath = Path.GetFullPath(dllPath);
+                    Console.WriteLine($"[ModLoader] Loading DLL for {manifest.Name} at {dllPath}");
+                    var loadContext = new ModLoadContext(dllPath, ResolveSharedAssembly);
+                    var assembly = loadContext.LoadFromAssemblyPath(dllPath);
+                    _loadContexts.Add(loadContext);
+                    CacheSharedAssembly(assembly);
+
+                    Type[] allTypes;
+                    try
+                    {
+                        allTypes = assembly.GetTypes();
+                    }
+                    catch (ReflectionTypeLoadException rtle)
+                    {
+                        allTypes = rtle.Types.Where(t => t != null).ToArray();
+                        Console.WriteLine($"[ModLoader] Warning: Type load failures while scanning {manifest.Name}: {rtle.LoaderExceptions?.Length ?? 0}");
+                        if (rtle.LoaderExceptions != null)
+                        {
+                            foreach (var le in rtle.LoaderExceptions)
+                            {
+                                Console.WriteLine($"[ModLoader]   LoaderException: {le}");
+                            }
+                        }
+                    }
+
+                    Console.WriteLine($"[ModLoader] Scanning {allTypes.Length} types in assembly...");
+                    
+                    // Scan for IMod
+                    var modType = allTypes.FirstOrDefault(t => typeof(IMod).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+                    if (modType != null)
+                    {
+                        var modInstance = (IMod)Activator.CreateInstance(modType);
+                        Console.WriteLine($"[ModLoader] Instantiated entry for {manifest.Name}. Calling OnLoad...");
+                        var context = new ModContext(manifest.Name, _vfs, _functionRegistry, _triggerManager);
+                        modInstance.OnLoad(context);
+                        Console.WriteLine($"[ModLoader] {manifest.Name} OnLoad completed.");
+                        _loadedMods.Add(modInstance);
+                        Console.WriteLine($"[ModLoader] Loaded {manifest.Name}");
+                        
+                        // Fire ModLoaded event (will be implemented in future TriggerManager)
+                        // _triggerManager.FireEvent(GameEvents.ModLoaded, ...); 
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[ModLoader] No IMod implementation found in {dllPath}");
+                    }
+                    
+                    // Scan for MapDefinition
+                    if (MapManager != null)
+                    {
+                        var mapTypes = allTypes.Where(t => typeof(MapDefinition).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+                        foreach (var mapType in mapTypes)
+                        {
+                            try 
+                            {
+                                var mapDef = (MapDefinition)Activator.CreateInstance(mapType);
+                                MapManager.RegisterMap(mapDef);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"[ModLoader] Failed to register map {mapType.Name}: {ex}");
+                            }
+                        }
+                    }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ModLoader] Failed to load DLL for {manifest.Name}: {ex}");
+            }
+        }
+
+        private Assembly ResolveSharedAssembly(AssemblyName assemblyName)
+        {
+            var name = assemblyName?.Name;
+            if (string.IsNullOrWhiteSpace(name)) return null;
+            return _sharedAssemblies.TryGetValue(name, out var assembly) ? assembly : null;
+        }
+
+        private void CacheSharedAssembly(Assembly assembly)
+        {
+            var name = assembly?.GetName()?.Name;
+            if (string.IsNullOrWhiteSpace(name)) return;
+            _sharedAssemblies[name] = assembly;
+        }
+
+        private static ModManifest ParseManifestStrict(string json, string manifestPath)
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw new Exception($"Invalid mod.json (root is not object): {manifestPath}");
+            }
+
+            var root = doc.RootElement;
+            var allowed = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "name",
+                "version",
+                "description",
+                "main",
+                "priority",
+                "dependencies"
+            };
+
+            foreach (var prop in root.EnumerateObject())
+            {
+                if (!allowed.Contains(prop.Name))
+                {
+                    throw new Exception($"Invalid mod.json (unknown/forbidden field '{prop.Name}'): {manifestPath}");
+                }
+            }
+
+            if (!root.TryGetProperty("name", out var nameEl) || nameEl.ValueKind != JsonValueKind.String)
+            {
+                throw new Exception($"Invalid mod.json (missing 'name'): {manifestPath}");
+            }
+            if (!root.TryGetProperty("version", out var verEl) || verEl.ValueKind != JsonValueKind.String)
+            {
+                throw new Exception($"Invalid mod.json (missing 'version'): {manifestPath}");
+            }
+
+            var manifest = new ModManifest
+            {
+                Name = nameEl.GetString(),
+                Version = verEl.GetString()
+            };
+
+            if (root.TryGetProperty("description", out var descEl) && descEl.ValueKind == JsonValueKind.String)
+            {
+                manifest.Description = descEl.GetString();
+            }
+
+            if (root.TryGetProperty("main", out var mainEl) && mainEl.ValueKind == JsonValueKind.String)
+            {
+                manifest.Main = mainEl.GetString();
+            }
+
+            if (root.TryGetProperty("priority", out var priEl) && priEl.ValueKind == JsonValueKind.Number && priEl.TryGetInt32(out var pri))
+            {
+                manifest.Priority = pri;
+            }
+
+            if (root.TryGetProperty("dependencies", out var depsEl))
+            {
+                if (depsEl.ValueKind != JsonValueKind.Object)
+                {
+                    throw new Exception($"Invalid mod.json ('dependencies' must be object): {manifestPath}");
+                }
+
+                foreach (var depProp in depsEl.EnumerateObject())
+                {
+                    if (depProp.Value.ValueKind != JsonValueKind.String)
+                    {
+                        throw new Exception($"Invalid mod.json ('dependencies.{depProp.Name}' must be string): {manifestPath}");
+                    }
+                    manifest.Dependencies[depProp.Name] = depProp.Value.GetString();
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(manifest.Name))
+            {
+                throw new Exception($"Invalid mod.json ('name' is empty): {manifestPath}");
+            }
+            if (string.IsNullOrWhiteSpace(manifest.Version))
+            {
+                throw new Exception($"Invalid mod.json ('version' is empty): {manifestPath}");
+            }
+
+            return manifest;
+        }
+
+        private static bool TryResolveMainAssemblyPath(ModManifest manifest, string modDir, out string dllPath)
+        {
+            var modDirFull = Path.GetFullPath(modDir);
+            string relative = manifest.Main;
+            if (!string.IsNullOrWhiteSpace(relative))
+            {
+                if (Path.IsPathRooted(relative))
+                {
+                    throw new Exception($"Invalid mod.json ('main' must be relative): {manifest.Name}");
+                }
+
+                var primary = Path.GetFullPath(Path.Combine(modDirFull, relative));
+                if (!primary.StartsWith(modDirFull, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new Exception($"Invalid mod.json ('main' escapes mod directory): {manifest.Name}");
+                }
+
+                dllPath = primary;
+                var debugFallback = TryResolveDebugFallback(modDirFull, relative);
+                bool primaryExists = File.Exists(primary);
+                bool debugExists = !string.IsNullOrWhiteSpace(debugFallback) && File.Exists(debugFallback);
+
+#if DEBUG
+                if (debugExists)
+                {
+                    dllPath = debugFallback;
+                    return true;
+                }
+#endif
+
+                if (primaryExists && debugExists)
+                {
+                    var primaryTime = File.GetLastWriteTimeUtc(primary);
+                    var debugTime = File.GetLastWriteTimeUtc(debugFallback);
+                    if (debugTime > primaryTime)
+                    {
+                        dllPath = debugFallback;
+                    }
+                    return true;
+                }
+
+                if (primaryExists) return true;
+
+                if (debugExists)
+                {
+                    dllPath = debugFallback;
+                    return true;
+                }
+
+                return false;
+            }
+
+            var defaultName = $"{manifest.Name}.dll";
+            var candidates = new List<string>(8)
+            {
+                Path.Combine(modDirFull, "bin", "Release", "net8.0", defaultName),
+                Path.Combine(modDirFull, "bin", "Release", "net8.0-windows", defaultName),
+                Path.Combine(modDirFull, "bin", "Debug", "net8.0", defaultName),
+                Path.Combine(modDirFull, "bin", "Debug", "net8.0-windows", defaultName)
+            };
+
+            foreach (var c in candidates)
+            {
+                var full = Path.GetFullPath(c);
+                if (!full.StartsWith(modDirFull, StringComparison.OrdinalIgnoreCase)) continue;
+                if (File.Exists(full))
+                {
+                    dllPath = full;
+                    return true;
+                }
+            }
+
+            dllPath = candidates[0];
+            return false;
+        }
+
+        private static string TryResolveDebugFallback(string modDirFull, string relativeMain)
+        {
+            if (string.IsNullOrWhiteSpace(relativeMain)) return null;
+            var normalized = relativeMain.Replace('\\', '/');
+            const string releaseToken = "bin/Release/";
+            int idx = normalized.IndexOf(releaseToken, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return null;
+
+            var debugRelative = normalized.Substring(0, idx) + "bin/Debug/" + normalized.Substring(idx + releaseToken.Length);
+            var debugFull = Path.GetFullPath(Path.Combine(modDirFull, debugRelative.Replace('/', Path.DirectorySeparatorChar)));
+            if (!debugFull.StartsWith(modDirFull, StringComparison.OrdinalIgnoreCase)) return null;
+            return debugFull;
+        }
+
+        private static List<string> FindAllBuiltDllCandidates(string modDir, string modName)
+        {
+            var modDirFull = Path.GetFullPath(modDir);
+            var defaultName = $"{modName}.dll";
+            var results = new List<string>(16);
+            try
+            {
+                var binDir = Path.Combine(modDirFull, "bin");
+                if (!Directory.Exists(binDir)) return results;
+                foreach (var p in Directory.EnumerateFiles(binDir, defaultName, SearchOption.AllDirectories))
+                {
+                    var full = Path.GetFullPath(p);
+                    if (!full.StartsWith(modDirFull, StringComparison.OrdinalIgnoreCase)) continue;
+                    results.Add(full);
+                }
+            }
+            catch
+            {
+            }
+
+            results.Sort(StringComparer.OrdinalIgnoreCase);
+            return results;
+        }
+
+        public void UnloadAll()
+        {
+            foreach(var mod in _loadedMods)
+            {
+                try { mod.OnUnload(); } catch { }
+            }
+            _loadedMods.Clear();
+
+            foreach (var ctx in _loadContexts)
+            {
+                try { ctx.Unload(); } catch { }
+            }
+            _loadContexts.Clear();
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+    }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "DepApiMod",
+  "version": "1.0.0",
+  "description": "Demo dependency provider mod",
+  "main": "bin/Release/net8.0/DepApiMod.dll",
+  "priority": 0,
+  "dependencies": {}
+}

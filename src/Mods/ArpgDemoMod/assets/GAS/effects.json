@@ -1,0 +1,107 @@
+[
+  {
+    "id": "Effect.Arpg.Poison",
+    "tags": ["Effect.Arpg.Poison"],
+    "presetType": "DoT",
+    "lifetime": "After",
+    "duration": {
+      "durationTicks": 60,
+      "periodTicks": 10
+    },
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -2 }
+    ],
+    "stack": {
+      "limit": 3,
+      "policy": "RefreshDuration",
+      "overflowPolicy": "RejectNew"
+    }
+  },
+  {
+    "id": "Effect.Arpg.HealPotion",
+    "tags": ["Effect.Arpg.HealPotion"],
+    "presetType": "Heal",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 25 }
+    ]
+  },
+  {
+    "id": "Effect.Arpg.FireArrow",
+    "tags": ["Effect.Arpg.FireArrow"],
+    "presetType": "LaunchProjectile",
+    "lifetime": "Instant",
+    "projectile": {
+      "speed": 1200,
+      "range": 2000,
+      "arcHeight": 0,
+      "impactEffect": "Effect.Arpg.Poison"
+    },
+    "configParams": {
+      "damage_base": { "type": "float", "value": 10.0 },
+      "skill_level": { "type": "int", "value": 1 }
+    }
+  },
+  {
+    "id": "Effect.Arpg.SummonWolf",
+    "tags": ["Effect.Arpg.SummonWolf"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "unitCreation": {
+      "unitType": "Unit.Wolf",
+      "count": 1,
+      "offsetRadius": 120,
+      "onSpawnEffect": "Effect.Arpg.WolfSpawnBuff"
+    }
+  },
+  {
+    "id": "Effect.Arpg.WolfSpawnBuff",
+    "tags": ["Effect.Arpg.WolfSpawnBuff"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "duration": {
+      "durationTicks": 30
+    },
+    "modifiers": [
+      { "attribute": "Armor", "op": "Add", "value": 5 }
+    ]
+  },
+  {
+    "id": "Effect.Arpg.Bleed",
+    "tags": ["Effect.Arpg.Bleed"],
+    "presetType": "DoT",
+    "lifetime": "After",
+    "participatesInResponse": true,
+    "duration": {
+      "durationTicks": 90,
+      "periodTicks": 15
+    },
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -4 }
+    ],
+    "stack": {
+      "limit": 5,
+      "policy": "AddDuration",
+      "overflowPolicy": "RemoveOldest"
+    },
+    "grantedTags": [
+      { "tag": "Status.Bleeding", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Arpg.IronSkin",
+    "tags": ["Effect.Arpg.Buff"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 300
+    },
+    "modifiers": [
+      { "attribute": "Armor", "op": "Add", "value": 20 }
+    ],
+    "grantedTags": [
+      { "tag": "Status.Armored", "formula": "Fixed", "amount": 1 }
+    ]
+  }
+]

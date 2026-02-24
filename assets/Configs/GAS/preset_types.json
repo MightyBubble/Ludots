@@ -1,0 +1,95 @@
+[
+  {
+    "id": "InstantDamage",
+    "components": ["Modifiers"],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "ApplyModifiers" }
+    }
+  },
+  {
+    "id": "Heal",
+    "components": ["Modifiers"],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "ApplyModifiers" }
+    }
+  },
+  {
+    "id": "Buff",
+    "components": ["Modifiers", "Duration"],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["After", "Infinite"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "ApplyModifiers" }
+    }
+  },
+  {
+    "id": "DoT",
+    "components": ["Modifiers", "Duration"],
+    "activePhases": ["OnApply", "OnPeriod"],
+    "allowedLifetimes": ["After"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "ApplyModifiers" },
+      "OnPeriod": { "type": "builtin", "id": "ApplyModifiers" }
+    }
+  },
+  {
+    "id": "HoT",
+    "components": ["Modifiers", "Duration"],
+    "activePhases": ["OnApply", "OnPeriod"],
+    "allowedLifetimes": ["After"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "ApplyModifiers" },
+      "OnPeriod": { "type": "builtin", "id": "ApplyModifiers" }
+    }
+  },
+  {
+    "id": "ApplyForce2D",
+    "components": ["Force"],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "ApplyForce" }
+    }
+  },
+  {
+    "id": "Search",
+    "components": ["TargetQuery", "TargetDispatch"],
+    "activePhases": ["OnResolve", "OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnResolve": { "type": "builtin", "id": "SpatialQuery" },
+      "OnApply": { "type": "builtin", "id": "DispatchPayload" }
+    }
+  },
+  {
+    "id": "PeriodicSearch",
+    "components": ["TargetQuery", "TargetDispatch", "Duration"],
+    "activePhases": ["OnPeriod"],
+    "allowedLifetimes": ["After"],
+    "defaultPhaseHandlers": {
+      "OnPeriod": { "type": "builtin", "id": "ReResolveAndDispatch" }
+    }
+  },
+  {
+    "id": "LaunchProjectile",
+    "components": ["Projectile"],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "CreateProjectile" }
+    }
+  },
+  {
+    "id": "CreateUnit",
+    "components": ["UnitCreation"],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "CreateUnit" }
+    }
+  }
+]

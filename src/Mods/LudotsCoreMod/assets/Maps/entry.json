@@ -1,0 +1,26 @@
+{
+  "Id": "entry",
+  "Tags": ["moba_demo"],
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 600, "Y": 0 } },
+        "Name": { "Value": "Enemy1" }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 700, "Y": 200 } },
+        "Name": { "Value": "Enemy2" }
+      }
+    }
+  ]
+}

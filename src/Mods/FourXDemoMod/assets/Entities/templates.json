@@ -1,0 +1,53 @@
+[
+  {
+    "id": "fourx_governor",
+    "components": {
+      "Name": { "Value": "Governor" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 100, "Production": 0, "Gold": 0, "TechProgress": 0, "FoodProduction": 0 } },
+      "AbilityStateBuffer": { "abilityIds": [4101, 4102, 4103, 4104, 4105, 4106] },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "fourx_site",
+    "components": {
+      "Name": { "Value": "OutpostSite" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 800, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 9999 } }
+    }
+  },
+  {
+    "id": "fourx_federation_city",
+    "components": {
+      "Name": { "Value": "FederationCity" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 3000, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 200, "Production": 5, "Gold": 10 } }
+    }
+  },
+  {
+    "id": "fourx_horde_camp",
+    "components": {
+      "Name": { "Value": "HordeCamp" },
+      "Team": { "Id": 3 },
+      "WorldPositionCm": { "Value": { "X": -3000, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 150 } }
+    }
+  },
+  {
+    "id": "fourx_nomad_caravan",
+    "components": {
+      "Name": { "Value": "NomadCaravan" },
+      "Team": { "Id": 4 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 3000 } },
+      "AttributeBuffer": { "base": { "Health": 80, "Gold": 50 } }
+    }
+  }
+]
+

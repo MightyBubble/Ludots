@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj" />
+    <ProjectReference Include="..\..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
+    <ProjectReference Include="..\..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
+  </ItemGroup>
+
+  <Target Name="BuildModsRelease" BeforeTargets="Build">
+    <MSBuild Projects="..\..\..\Mods\MobaDemoMod\MobaDemoMod.csproj;..\..\..\Mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj;..\..\..\Mods\TerrainBenchmarkMod\TerrainBenchmarkMod.csproj;..\..\..\Mods\Physics2DPlaygroundMod\Physics2DPlaygroundMod.csproj;..\..\..\Mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj"
+             Targets="Restore;Build"
+             Properties="Configuration=Release" />
+  </Target>
+
+  <ItemGroup>
+    <None Include="..\..\..\Platforms\Desktop\raylib.dll">
+      <Link>raylib.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\instancing.vs">
+      <Link>instancing.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\instancing.fs">
+      <Link>instancing.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\terrain.vs">
+      <Link>terrain.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\terrain.fs">
+      <Link>terrain.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\water.vs">
+      <Link>water.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\water.fs">
+      <Link>water.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="game.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="game.moba.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="game.physics2d.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="game.navigation2d.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

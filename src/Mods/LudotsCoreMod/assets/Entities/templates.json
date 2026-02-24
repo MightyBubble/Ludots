@@ -1,0 +1,43 @@
+[
+  {
+    "id": "orc_grunt",
+    "components": {
+      "Health": { "Current": 100, "Max": 100 },
+      "Name": { "Value": "Orc Grunt" },
+      "Velocity": { "Value": { "X": 0, "Y": 0 } }
+    }
+  },
+  {
+    "id": "tree_pine",
+    "components": {
+      "Health": { "Current": 50, "Max": 50 },
+      "Name": { "Value": "Pine Tree" },
+      "Position": { "Value": { "X": 0, "Y": 0 } } 
+    }
+  },
+  {
+    "id": "moba_hero",
+    "components": {
+      "Name": { "Value": "Hero" },
+      "PlayerOwner": { "PlayerId": 1 },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 100 } },
+      "AbilityStateBuffer": { "abilityIds": [1, 2, 3, 4, 5] },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "moba_dummy",
+    "components": {
+      "Name": { "Value": "Dummy" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 600, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 100 } }
+    }
+  }
+]

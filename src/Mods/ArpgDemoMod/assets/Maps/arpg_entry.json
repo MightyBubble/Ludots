@@ -1,0 +1,9 @@
+{
+  "Id": "arpg_entry",
+  "Tags": ["arpg"],
+  "Entities": [
+    { "Template": "arpg_hero", "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } } },
+    { "Template": "arpg_enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 800, "Y": 0 } } } }
+  ]
+}
+

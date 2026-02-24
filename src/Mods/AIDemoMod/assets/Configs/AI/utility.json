@@ -1,0 +1,12 @@
+[
+  {
+    "Id": "Attack.Goap",
+    "GoalPresetId": 1,
+    "PlanningStrategyId": 1,
+    "Weight": 1.0,
+    "Bool": [
+      { "Atom": "HasEnemy", "TrueScore": 1.0, "FalseScore": 0.0 }
+    ]
+  }
+]
+

@@ -1,0 +1,25 @@
+{
+  "actions": [
+    { "id": "SkillQ", "name": "Gameplay_SkillQ", "type": "Button" },
+    { "id": "SkillW", "name": "Gameplay_SkillW", "type": "Button" },
+    { "id": "SkillE", "name": "Gameplay_SkillE", "type": "Button" },
+    { "id": "SkillR", "name": "Gameplay_SkillR", "type": "Button" },
+    { "id": "Select", "name": "Gameplay_Select", "type": "Button" },
+    { "id": "Command", "name": "Gameplay_Command", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Moba_Gameplay",
+      "name": "MOBA Gameplay",
+      "priority": 50,
+      "bindings": [
+        { "actionId": "SkillQ", "path": "<Keyboard>/q" },
+        { "actionId": "SkillW", "path": "<Keyboard>/w" },
+        { "actionId": "SkillE", "path": "<Keyboard>/e" },
+        { "actionId": "SkillR", "path": "<Keyboard>/r" },
+        { "actionId": "Select", "path": "<Mouse>/LeftButton" },
+        { "actionId": "Command", "path": "<Mouse>/RightButton" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+[
+  { "Path": "AI/atoms.json", "Policy": "ArrayById", "IdField": "Id" },
+  { "Path": "AI/projection.json", "Policy": "ArrayById", "IdField": "Id" },
+  { "Path": "AI/utility.json", "Policy": "ArrayById", "IdField": "Id" },
+  { "Path": "AI/goap_actions.json", "Policy": "ArrayById", "IdField": "Id" },
+  { "Path": "AI/goap_goals.json", "Policy": "ArrayById", "IdField": "Id" },
+  { "Path": "AI/htn_domain.json", "Policy": "DeepObject" }
+]
+

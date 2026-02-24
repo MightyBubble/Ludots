@@ -1,0 +1,28 @@
+{
+  "agentTypes": [
+    {
+      "id": "Humanoid",
+      "profileId": "Small",
+      "layer": 0,
+      "selection": {
+        "mode": "AutoCheapest",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0,
+        "fallback": "PreferMesh"
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 200000,
+        "forbiddenTagsAny": [],
+        "requiredTagsAll": [],
+        "tagCostRules": []
+      }
+    }
+  ]
+}

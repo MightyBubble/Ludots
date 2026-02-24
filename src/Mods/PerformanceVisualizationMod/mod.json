@@ -1,0 +1,10 @@
+{
+  "name": "PerformanceVisualizationMod",
+  "version": "1.0.0",
+  "description": "Visual benchmark for GAS system.",
+  "main": "bin/Release/net8.0/PerformanceVisualizationMod.dll",
+  "priority": 20,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

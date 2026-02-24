@@ -1,0 +1,39 @@
+{
+  "abilities": {
+    "skillQ": { "rangeCm": 600, "cooldownTicks": 180 },
+    "skillW": { "rangeCm": 0, "cooldownTicks": 300 },
+    "skillE": { "rangeCm": 800, "cooldownTicks": 240 },
+    "skillR": { "rangeCm": 1000, "cooldownTicks": 600 },
+    "globalCooldownTicks": 15,
+    "indicator": {
+      "validColor": [0.3, 0.8, 1.0, 0.4],
+      "invalidColor": [1.0, 0.3, 0.2, 0.3],
+      "rangeCircleColor": [0.3, 0.7, 1.0, 0.2]
+    }
+  },
+  "movement": {
+    "speedCmPerSec": 600,
+    "stopRadiusCm": 20
+  },
+  "commands": {
+    "maxPerFrame": 128
+  },
+  "presentation": {
+    "selectionIndicatorDefId": 5002,
+    "selectionScopeId": 99001,
+    "rangeCircleIndicatorDefId": 5004,
+    "circleEnemyMarker": {
+      "scale": [1.2, 0.08, 1.2],
+      "color": [0.8, 0.2, 1.0, 0.75],
+      "lifetimeSeconds": 0.35,
+      "yOffsetMeters": 0.1
+    }
+  },
+  "camera": {
+    "zoomCmPerWheel": 2000,
+    "rotateDegPerSecond": 90,
+    "initialYawDegrees": 35,
+    "initialPitchDegrees": 60,
+    "initialDistanceCm": 25000
+  }
+}

@@ -1,0 +1,73 @@
+[
+  {
+    "id": 9010,
+    "visualKind": "WorldBar",
+    "entityScope": "AllWithAttributes",
+    "visibility": { "inline": "OwnerCullVisible" },
+    "positionOffset": [0, 0.45, 0],
+    "defaultColor": [0.1, 0.85, 0.15, 1.0],
+    "bindings": [
+      {
+        "paramKey": 0,
+        "source": "attributeRatio",
+        "attributeName": "Health"
+      },
+      {
+        "paramKey": 1,
+        "source": "constant",
+        "constantValue": 50
+      },
+      {
+        "paramKey": 2,
+        "source": "constant",
+        "constantValue": 8
+      },
+      {
+        "paramKey": 8,
+        "source": "constant",
+        "constantValue": 0.3
+      },
+      {
+        "paramKey": 9,
+        "source": "constant",
+        "constantValue": 0.0
+      },
+      {
+        "paramKey": 10,
+        "source": "constant",
+        "constantValue": 0.0
+      },
+      {
+        "paramKey": 11,
+        "source": "constant",
+        "constantValue": 0.85
+      }
+    ]
+  },
+  {
+    "id": 9011,
+    "visualKind": "WorldText",
+    "entityScope": "AllWithAttributes",
+    "visibility": { "inline": "OwnerCullVisible" },
+    "positionOffset": [0, 0.58, 0],
+    "defaultColor": [1, 1, 1, 1],
+    "defaultFontSize": 12,
+    "bindings": [
+      {
+        "paramKey": 0,
+        "source": "attribute",
+        "attributeName": "Health"
+      },
+      {
+        "paramKey": 1,
+        "source": "attributeBase",
+        "attributeName": "Health"
+      },
+      {
+        "paramKey": 16,
+        "source": "constant",
+        "constantValue": 1
+      }
+    ]
+  }
+]

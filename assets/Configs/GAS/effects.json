@@ -1,0 +1,15 @@
+[
+  {
+    "id": "Effect.Preset.ApplyForce2D",
+    "tags": ["Effect.ApplyForce"],
+    "presetType": "ApplyForce2D",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "configParams": {
+      "_ep.forceXTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestX" },
+      "_ep.forceYTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestY" },
+      "_ep.forceXAttribute": { "type": "int", "value": 0 },
+      "_ep.forceYAttribute": { "type": "int", "value": 0 }
+    }
+  }
+]

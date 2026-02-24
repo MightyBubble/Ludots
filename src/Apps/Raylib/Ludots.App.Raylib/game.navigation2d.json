@@ -1,0 +1,14 @@
+{
+  "StartupInputContexts": [
+    "Default_Gameplay"
+  ],
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine (Raylib) - Navigation2D Playground",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../Mods/LudotsCoreMod",
+    "../../../../../../Mods/Navigation2DPlaygroundMod"
+  ]
+}
+

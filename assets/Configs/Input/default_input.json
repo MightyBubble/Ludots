@@ -1,0 +1,197 @@
+{
+  "actions": [
+    {
+      "id": "QueueModifier",
+      "name": "Gameplay_QueueModifier",
+      "type": "Button"
+    },
+    {
+      "id": "PrecisionModifier",
+      "name": "Gameplay_PrecisionModifier",
+      "type": "Button"
+    },
+    {
+      "id": "AlternateModifier",
+      "name": "Gameplay_AlternateModifier",
+      "type": "Button"
+    },
+    {
+      "id": "Move",
+      "name": "Gameplay_Move",
+      "type": "Axis2D"
+    },
+    {
+      "id": "Look",
+      "name": "Gameplay_Look",
+      "type": "Axis2D"
+    },
+    {
+      "id": "PointerPos",
+      "name": "Gameplay_PointerPos",
+      "type": "Axis2D"
+    },
+    {
+      "id": "Zoom",
+      "name": "Gameplay_Zoom",
+      "type": "Axis1D"
+    },
+    {
+      "id": "OrbitRotateHold",
+      "name": "Gameplay_OrbitRotateHold",
+      "type": "Button"
+    },
+    {
+      "id": "RotateLeft",
+      "name": "Gameplay_RotateLeft",
+      "type": "Button"
+    },
+    {
+      "id": "RotateRight",
+      "name": "Gameplay_RotateRight",
+      "type": "Button"
+    },
+    {
+      "id": "PrimaryClick",
+      "name": "Gameplay_PrimaryClick",
+      "type": "Button"
+    },
+    {
+      "id": "SecondaryClick",
+      "name": "Gameplay_SecondaryClick",
+      "type": "Button"
+    },
+    {
+      "id": "Hotkey1",
+      "name": "Gameplay_Hotkey1",
+      "type": "Button"
+    },
+    {
+      "id": "Hotkey2",
+      "name": "Gameplay_Hotkey2",
+      "type": "Button"
+    },
+    {
+      "id": "Hotkey3",
+      "name": "Gameplay_Hotkey3",
+      "type": "Button"
+    },
+    {
+      "id": "Hotkey4",
+      "name": "Gameplay_Hotkey4",
+      "type": "Button"
+    },
+    {
+      "id": "Hotkey5",
+      "name": "Gameplay_Hotkey5",
+      "type": "Button"
+    },
+    {
+      "id": "Hotkey6",
+      "name": "Gameplay_Hotkey6",
+      "type": "Button"
+    },
+    {
+      "id": "Hotkey7",
+      "name": "Gameplay_Hotkey7",
+      "type": "Button"
+    },
+    {
+      "id": "Hotkey8",
+      "name": "Gameplay_Hotkey8",
+      "type": "Button"
+    },
+    {
+      "id": "Hotkey9",
+      "name": "Gameplay_Hotkey9",
+      "type": "Button"
+    },
+    {
+      "id": "ChainDemo",
+      "name": "Gameplay_ChainDemo",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "Default_Gameplay",
+      "name": "Default Gameplay",
+      "priority": 0,
+      "bindings": [
+        { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },
+        { "actionId": "QueueModifier", "path": "<Keyboard>/rightShift" },
+        { "actionId": "PrecisionModifier", "path": "<Keyboard>/leftCtrl" },
+        { "actionId": "PrecisionModifier", "path": "<Keyboard>/rightCtrl" },
+        { "actionId": "AlternateModifier", "path": "<Keyboard>/leftAlt" },
+        { "actionId": "AlternateModifier", "path": "<Keyboard>/rightAlt" },
+        {
+          "actionId": "Move",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            { "path": "<Keyboard>/up" },
+            { "path": "<Keyboard>/down" },
+            { "path": "<Keyboard>/left" },
+            { "path": "<Keyboard>/right" }
+          ],
+          "processors": [
+            { "type": "Normalize" }
+          ]
+        },
+        {
+          "actionId": "Move",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            { "path": "<Keyboard>/w" },
+            { "path": "<Keyboard>/s" },
+            { "path": "<Keyboard>/a" },
+            { "path": "<Keyboard>/d" }
+          ],
+          "processors": [
+            { "type": "Normalize" }
+          ]
+        },
+        {
+          "actionId": "RotateLeft",
+          "path": "<Keyboard>/z"
+        },
+        {
+          "actionId": "RotateRight",
+          "path": "<Keyboard>/c"
+        },
+        {
+          "actionId": "PointerPos",
+          "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "OrbitRotateHold",
+          "path": "<Mouse>/MiddleButton"
+        },
+        {
+          "actionId": "Zoom",
+          "path": "<Mouse>/ScrollY",
+          "processors": [
+            { "type": "Scale", "parameters": [{ "name": "Factor", "value": 0.1 }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Physics2D_Playground",
+      "name": "Physics2D Playground",
+      "priority": 100,
+      "bindings": [
+        { "actionId": "PrimaryClick", "path": "<Mouse>/LeftButton" },
+        { "actionId": "SecondaryClick", "path": "<Mouse>/RightButton" },
+        { "actionId": "Hotkey1", "path": "<Keyboard>/1" },
+        { "actionId": "Hotkey2", "path": "<Keyboard>/2" },
+        { "actionId": "Hotkey3", "path": "<Keyboard>/3" },
+        { "actionId": "Hotkey4", "path": "<Keyboard>/4" },
+        { "actionId": "Hotkey5", "path": "<Keyboard>/5" },
+        { "actionId": "Hotkey6", "path": "<Keyboard>/6" },
+        { "actionId": "Hotkey7", "path": "<Keyboard>/7" },
+        { "actionId": "Hotkey8", "path": "<Keyboard>/8" },
+        { "actionId": "Hotkey9", "path": "<Keyboard>/9" },
+        { "actionId": "ChainDemo", "path": "<Keyboard>/c" }
+      ]
+    }
+  ]
+}

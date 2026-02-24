@@ -1,0 +1,10 @@
+{
+  "name": "MissingDepMod",
+  "version": "1.0.0",
+  "description": "Demo missing dependency mod",
+  "main": "bin/Release/net8.0/MissingDepMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "GhostMod": ">=1.0.0"
+  }
+}

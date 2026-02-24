@@ -1,0 +1,9 @@
+{
+  "name": "AIInspectorMod",
+  "version": "1.0.0",
+  "description": "Inspector mod to print merged+compiled AI config at runtime.",
+  "main": "bin/Release/net8.0/AIInspectorMod.dll",
+  "priority": 100,
+  "dependencies": {}
+}
+

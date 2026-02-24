@@ -1,0 +1,95 @@
+[
+  {
+    "id": "rts_scv",
+    "components": {
+      "Name": { "Value": "SCV" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 60, "Minerals": 500 } },
+      "AbilityStateBuffer": { "abilityIds": [5001] },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_barracks",
+    "components": {
+      "Name": { "Value": "Barracks" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 400, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 1000 } },
+      "AbilityStateBuffer": { "abilityIds": [5002, 5003] },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_marine",
+    "components": {
+      "Name": { "Value": "Marine" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 40, "Shield": 0, "AttackSpeed": 100 } },
+      "AbilityStateBuffer": { "abilityIds": [5004] },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_siege_tank",
+    "components": {
+      "Name": { "Value": "SiegeTank" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 150, "Shield": 0 } },
+      "AbilityStateBuffer": { "abilityIds": [5005] },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_science_vessel",
+    "components": {
+      "Name": { "Value": "ScienceVessel" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 200, "Energy": 200 } },
+      "AbilityStateBuffer": { "abilityIds": [5006, 5007] },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_zergling",
+    "components": {
+      "Name": { "Value": "Zergling" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 2000, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 35 } }
+    }
+  },
+  {
+    "id": "rts_zealot",
+    "components": {
+      "Name": { "Value": "Zealot" },
+      "Team": { "Id": 3 },
+      "WorldPositionCm": { "Value": { "X": -2000, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 100, "Shield": 60 } }
+    }
+  }
+]

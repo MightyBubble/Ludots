@@ -1,0 +1,8 @@
+{
+  "Id": "tcg_stack",
+  "Tags": ["tcg_stack"],
+  "Entities": [
+    { "Template": "tcg_hero" },
+    { "Template": "tcg_enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } } } }
+  ]
+}

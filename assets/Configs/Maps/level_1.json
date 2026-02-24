@@ -1,0 +1,25 @@
+{
+  "id": "level_1_forest",
+  "dataFile": "level_1.bin",
+  "entities": [
+    {
+      "template": "orc_grunt",
+      "overrides": {
+        "Position": { "Value": { "X": 10500, "Y": 20000 } }
+      }
+    },
+    {
+      "template": "orc_grunt",
+      "overrides": {
+        "Position": { "Value": { "X": 12000, "Y": 20000 } },
+        "Health": { "Current": 150, "Max": 150 }
+      }
+    },
+    {
+      "template": "tree_pine",
+      "overrides": {
+        "Position": { "Value": { "X": 5000, "Y": 5000 } }
+      }
+    }
+  ]
+}

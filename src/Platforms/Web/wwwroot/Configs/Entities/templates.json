@@ -1,0 +1,18 @@
+[
+  {
+    "id": "orc_grunt",
+    "components": {
+      "Health": { "Current": 100, "Max": 100 },
+      "Name": { "Value": "Orc Grunt" },
+      "Velocity": { "Value": { "X": 0, "Y": 0 } }
+    }
+  },
+  {
+    "id": "tree_pine",
+    "components": {
+      "Health": { "Current": 50, "Max": 50 },
+      "Name": { "Value": "Pine Tree" },
+      "Position": { "Value": { "X": 0, "Y": 0 } } 
+    }
+  }
+]
