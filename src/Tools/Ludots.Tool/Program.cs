@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using GraphProgramBlob = Ludots.Core.GraphRuntime.GraphProgramBlob;
 using GraphProgramPackage = Ludots.Core.GraphRuntime.GraphProgramPackage;
@@ -271,14 +272,17 @@ namespace Ludots.Tool
             Directory.CreateDirectory(Path.Combine(modDir, "assets"));
             Directory.CreateDirectory(Path.Combine(modDir, "assets", "maps"));
             
-            // Create mod.json
-            var jsonContent = $@"{{
-  ""Id"": ""{modId}"",
-  ""Version"": ""1.0.0"",
-  ""Description"": ""A new Ludots mod."",
-  ""Priority"": 0,
-  ""Dependencies"": []
-}}";
+            // Create mod.json using canonical schema shared with runtime loader.
+            var manifest = new ModManifest
+            {
+                Name = modId,
+                Version = "1.0.0",
+                Description = "A new Ludots mod.",
+                Main = $"bin/Release/net8.0/{modId}.dll",
+                Priority = 0,
+                Dependencies = new Dictionary<string, string>()
+            };
+            var jsonContent = ModManifestJson.ToCanonicalJson(manifest);
             File.WriteAllText(Path.Combine(modDir, "mod.json"), jsonContent);
             
             // Create .csproj

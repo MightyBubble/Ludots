@@ -16,6 +16,12 @@ namespace Ludots.Core.Modding
             _mountPoints[modId] = physicalPath;
         }
 
+        public bool Unmount(string modId)
+        {
+            if (string.IsNullOrWhiteSpace(modId)) return false;
+            return _mountPoints.Remove(modId);
+        }
+
         public Stream GetStream(string uri)
         {
             // Format: ModId:Path/To/File
@@ -33,7 +39,11 @@ namespace Ludots.Core.Modding
                 throw new FileNotFoundException($"Mod '{modId}' is not mounted.");
             }
 
-            var fullPath = Path.Combine(rootPath, relativePath);
+            if (!TryResolveUnderRoot(rootPath, relativePath, out var fullPath))
+            {
+                throw new UnauthorizedAccessException($"Path escapes mount root: {uri}");
+            }
+
             if (!File.Exists(fullPath))
             {
                  // Console.WriteLine($"[VFS] File not found: {fullPath} (URI: {uri})");
@@ -53,7 +63,31 @@ namespace Ludots.Core.Modding
             var relativePath = parts[1];
             if (!_mountPoints.TryGetValue(modId, out var rootPath)) return false;
 
-            fullPath = Path.Combine(rootPath, relativePath);
+            return TryResolveUnderRoot(rootPath, relativePath, out fullPath);
+        }
+
+        private static bool TryResolveUnderRoot(string rootPath, string relativePath, out string fullPath)
+        {
+            fullPath = string.Empty;
+            if (string.IsNullOrWhiteSpace(rootPath) || string.IsNullOrWhiteSpace(relativePath)) return false;
+
+            var rootFull = Path.GetFullPath(rootPath);
+            var rel = relativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            rel = rel.TrimStart(Path.DirectorySeparatorChar);
+
+            var candidate = Path.GetFullPath(Path.Combine(rootFull, rel));
+
+            // Prefix check with separator to avoid sibling directory false-positives.
+            var rootWithSep = rootFull.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                ? rootFull
+                : rootFull + Path.DirectorySeparatorChar;
+
+            if (!candidate.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            fullPath = candidate;
             return true;
         }
     }

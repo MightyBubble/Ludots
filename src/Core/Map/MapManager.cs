@@ -50,90 +50,107 @@ namespace Ludots.Core.Map
 
         public MapConfig LoadMap(MapId mapId)
         {
+            var visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var chain = new List<string>(8);
+            return LoadMapInternal(mapId, visiting, chain);
+        }
+
+        private MapConfig LoadMapInternal(MapId mapId, HashSet<string> visiting, List<string> chain)
+        {
             Console.WriteLine($"[MapManager] Loading Map: {mapId}");
-            
-            // 0. Check if we have a code definition
-            MapDefinition definition = null;
-            if (_definitions.TryGetValue(mapId, out var def))
+
+            var mapIdValue = mapId.Value;
+            if (!visiting.Add(mapIdValue))
             {
-                definition = def;
-                Console.WriteLine($"[MapManager] Found Code Definition: {def.GetType().Name}");
+                chain.Add(mapIdValue);
+                var cycle = string.Join(" -> ", chain);
+                throw new InvalidOperationException($"Cyclic map inheritance detected: {cycle}");
             }
-
-            // 1. Find all config fragments
-            var configs = new List<MapConfig>();
+            chain.Add(mapIdValue);
             
-            // If definition exists, use its DataFilePath. Otherwise use default convention.
-            string jsonPath = definition != null ? definition.DataFilePath : $"Maps/{mapId}.json";
-            
-            // Normalize path to remove leading slash if any
-            if (jsonPath.StartsWith("/") || jsonPath.StartsWith("\\")) jsonPath = jsonPath.Substring(1);
-
-            // 1a. Core Assets (Try Configs/ first, then assets/)
-            TryLoadConfigFromUri($"Core:Configs/{jsonPath}", configs);
-            TryLoadConfigFromUri($"Core:assets/{jsonPath}", configs);
-            // Also try root of assets if not found (e.g. Core:Maps/...)
-            TryLoadConfigFromUri($"Core:{jsonPath}", configs);
-
-            // 1b. Mods
-            foreach (var modId in _modLoader.LoadedModIds)
+            try
             {
-                TryLoadConfigFromUri($"{modId}:assets/{jsonPath}", configs);
-                TryLoadConfigFromUri($"{modId}:{jsonPath}", configs);
-            }
-
-            if (configs.Count == 0 && definition == null)
-            {
-                Console.WriteLine($"[MapManager] Error: Map '{mapId}' not found (No Definition, No Data).");
-                return null;
-            }
-
-            // 2. Merge configs
-            var finalConfig = new MapConfig { Id = mapId.ToString() };
-            foreach (var cfg in configs)
-            {
-                MergeMapConfig(finalConfig, cfg);
-            }
-            
-            // 3. Apply Definition Metadata (Tags)
-            if (definition != null)
-            {
-                if (finalConfig.Tags == null) finalConfig.Tags = new List<string>();
-                
-                foreach (var tag in definition.Tags)
+                // 0. Check if we have a code definition
+                MapDefinition definition = null;
+                if (_definitions.TryGetValue(mapId, out var def))
                 {
-                    if (!finalConfig.Tags.Contains(tag.Name))
+                    definition = def;
+                    Console.WriteLine($"[MapManager] Found Code Definition: {def.GetType().Name}");
+                }
+
+                // 1. Find all config fragments
+                var configs = new List<MapConfig>();
+            
+                // If definition exists, use its DataFilePath. Otherwise use default convention.
+                string jsonPath = definition != null ? definition.DataFilePath : $"Maps/{mapId}.json";
+            
+                // Normalize path to remove leading slash if any
+                if (jsonPath.StartsWith("/") || jsonPath.StartsWith("\\")) jsonPath = jsonPath.Substring(1);
+
+                // 1a. Core Assets (Try Configs/ first, then assets/)
+                TryLoadConfigFromUri($"Core:Configs/{jsonPath}", configs);
+                TryLoadConfigFromUri($"Core:assets/{jsonPath}", configs);
+                // Also try root of assets if not found (e.g. Core:Maps/...)
+                TryLoadConfigFromUri($"Core:{jsonPath}", configs);
+
+                // 1b. Mods
+                foreach (var modId in _modLoader.LoadedModIds)
+                {
+                    TryLoadConfigFromUri($"{modId}:assets/{jsonPath}", configs);
+                    TryLoadConfigFromUri($"{modId}:{jsonPath}", configs);
+                }
+
+                if (configs.Count == 0 && definition == null)
+                {
+                    Console.WriteLine($"[MapManager] Error: Map '{mapId}' not found (No Definition, No Data).");
+                    return null;
+                }
+
+                // 2. Merge configs
+                var finalConfig = new MapConfig { Id = mapId.ToString() };
+                foreach (var cfg in configs)
+                {
+                    MergeMapConfig(finalConfig, cfg);
+                }
+            
+                // 3. Apply Definition Metadata (Tags)
+                if (definition != null)
+                {
+                    if (finalConfig.Tags == null) finalConfig.Tags = new List<string>();
+                
+                    foreach (var tag in definition.Tags)
                     {
-                        finalConfig.Tags.Add(tag.Name);
+                        if (!finalConfig.Tags.Contains(tag.Name))
+                        {
+                            finalConfig.Tags.Add(tag.Name);
+                        }
+                    }
+                }
+
+                // 4. Handle Inheritance (ParentId)
+                if (!string.IsNullOrEmpty(finalConfig.ParentId))
+                {
+                    Console.WriteLine($"[MapManager] Loading Parent Map: {finalConfig.ParentId}");
+                    var parentConfig = LoadMapInternal(new MapId(finalConfig.ParentId), visiting, chain);
+                    if (parentConfig != null)
+                    {
+                        var childConfig = finalConfig;
+                        finalConfig = parentConfig; 
+                        MergeMapConfig(finalConfig, childConfig); 
                     }
                 }
                 
-                // Allow optional DataFile from definition if config didn't specify one
-                // But only if it points to a binary file, not the config itself?
-                // Actually, DataFile in MapConfig usually points to the BINARY terrain data.
-                // MapDefinition.DataFilePath usually points to the JSON config?
-                // Let's clarify:
-                // MapConfig.DataFile -> Binary Terrain (.bin / .map)
-                // MapDefinition.DataFilePath -> JSON Config path?
-                // Current usage in LoadMap: jsonPath = definition.DataFilePath.
-                // So definition.DataFilePath IS the config path.
+                Console.WriteLine($"[MapManager] Map '{mapId}' loaded.");
+                return finalConfig;
             }
-
-            // 4. Handle Inheritance (ParentId)
-            if (!string.IsNullOrEmpty(finalConfig.ParentId))
+            finally
             {
-                Console.WriteLine($"[MapManager] Loading Parent Map: {finalConfig.ParentId}");
-                var parentConfig = LoadMap(finalConfig.ParentId);
-                if (parentConfig != null)
+                if (chain.Count > 0 && string.Equals(chain[^1], mapIdValue, StringComparison.OrdinalIgnoreCase))
                 {
-                    var childConfig = finalConfig;
-                    finalConfig = parentConfig; 
-                    MergeMapConfig(finalConfig, childConfig); 
+                    chain.RemoveAt(chain.Count - 1);
                 }
+                visiting.Remove(mapIdValue);
             }
-            
-            Console.WriteLine($"[MapManager] Map '{mapId}' loaded.");
-            return finalConfig;
         }
 
         private void TryLoadConfigFromUri(string uri, List<MapConfig> configs)
@@ -151,13 +168,27 @@ namespace Ludots.Core.Map
                     }
                 }
             }
-            catch { /* Ignore */ }
+            catch (FileNotFoundException)
+            {
+            }
+            catch (DirectoryNotFoundException)
+            {
+            }
+            catch (JsonException ex)
+            {
+                Console.WriteLine($"[MapManager] Invalid JSON at '{uri}': {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[MapManager] Failed to load '{uri}': {ex.Message}");
+            }
         }
 
         private void MergeMapConfig(MapConfig target, MapConfig source)
         {
             if (!string.IsNullOrEmpty(source.DataFile)) target.DataFile = source.DataFile;
             if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
+            if (source.Spatial != null) target.Spatial = CloneSpatial(source.Spatial);
             
             if (source.Dependencies != null)
             {
@@ -177,6 +208,19 @@ namespace Ludots.Core.Map
                     if (!target.Tags.Contains(t)) target.Tags.Add(t);
                 }
             }
+        }
+
+        private static MapSpatialConfig CloneSpatial(MapSpatialConfig source)
+        {
+            return new MapSpatialConfig
+            {
+                SpatialType = source.SpatialType,
+                WidthInTiles = source.WidthInTiles,
+                HeightInTiles = source.HeightInTiles,
+                GridCellSizeCm = source.GridCellSizeCm,
+                HexEdgeLengthCm = source.HexEdgeLengthCm,
+                ChunkSizeCells = source.ChunkSizeCells
+            };
         }
     }
 }

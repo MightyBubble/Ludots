@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Ludots.Core.Modding;
 using Ludots.ModLauncher.Config;
 using Ludots.ModLauncher.ModSdk;
 
@@ -143,10 +144,8 @@ namespace Ludots.ModLauncher.Cli
                     var modJson = Path.Combine(dir, "mod.json");
                     if (!File.Exists(modJson)) return;
 
-                    using var doc = JsonDocument.Parse(File.ReadAllText(modJson));
-                    var root = doc.RootElement;
-                    if (!root.TryGetProperty("name", out var nameProp)) throw new InvalidOperationException($"Invalid mod.json (missing name): {modJson}");
-                    var name = nameProp.GetString() ?? throw new InvalidOperationException($"Invalid mod.json (empty name): {modJson}");
+                    var manifest = ModManifestJson.ParseStrict(File.ReadAllText(modJson), modJson);
+                    var name = manifest.Name;
                     if (seenNames.Contains(name)) return;
 
                     var full = Path.GetFullPath(dir);

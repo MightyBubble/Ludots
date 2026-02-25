@@ -40,3 +40,6 @@
 11. [GAS 分层架构与 Sink 最佳实践](11_gas_layered_architecture.md)
     *   系统组与 Phase 的分层 SSOT
     *   AttributeSink 与 Physics2D Sink 示例
+12. [数据配置类与通用合并策略最佳实践](12_config_data_merge_best_practices.md)
+    *   单例对象、键控表、多维配置的统一 merge 规则
+    *   Mod 自定义配置类接入 ConfigPipeline 的标准流程

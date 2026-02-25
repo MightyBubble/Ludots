@@ -64,3 +64,10 @@ ConfigPipeline 在不同场景下有两条合并路径：
     *   如果你需要“按 id 改一点点”：使用 ConfigCatalog + ArrayById 策略的配置文件。
 3.  避免依赖“隐式追加”的幻想：`MergeGameConfig` 的数组不追加，只覆盖。
 
+## 5 配置类统一策略（必读）
+
+如果你在新增一个“数据配置类”（尤其是给 Mod 暴露扩展点），不要再写独立合并器。  
+请按统一策略设计并接入目录驱动合并，详见：
+
+*   [数据配置类与通用合并策略最佳实践](12_config_data_merge_best_practices.md)
+
