@@ -4,6 +4,26 @@
   { "Path": "AI/utility.json", "Policy": "ArrayById", "IdField": "Id" },
   { "Path": "AI/goap_actions.json", "Policy": "ArrayById", "IdField": "Id" },
   { "Path": "AI/goap_goals.json", "Policy": "ArrayById", "IdField": "Id" },
-  { "Path": "AI/htn_domain.json", "Policy": "DeepObject" }
-]
+  { "Path": "AI/htn_domain.json", "Policy": "DeepObject" },
 
+  { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "Id" },
+  { "Path": "GAS/abilities.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/tag_rules.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/attribute_bindings.json", "Policy": "ArrayById", "IdField": "Id" },
+  { "Path": "GAS/graphs.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/preset_types.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/attribute_constraints.json", "Policy": "DeepObject" },
+  { "Path": "GAS/clock.json", "Policy": "DeepObject" },
+  { "Path": "GAS/order_types.json", "Policy": "DeepObject" },
+
+  { "Path": "Engine/clock.json", "Policy": "DeepObject" },
+  { "Path": "Physics2D/clock.json", "Policy": "DeepObject" },
+  { "Path": "Navigation2D/clock.json", "Policy": "DeepObject" },
+  { "Path": "Navigation/pathing.json", "Policy": "DeepObject" },
+
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "Id" },
+  { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" },
+
+  { "Path": "Input/default_input.json", "Policy": "DeepObject" },
+  { "Path": "Input/input_order_mappings.json", "Policy": "DeepObject" }
+]

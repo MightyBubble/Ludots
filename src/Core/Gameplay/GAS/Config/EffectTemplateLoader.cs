@@ -25,47 +25,23 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _conditions = conditions;
         }
 
-        public void Load(string relativePath = "GAS/effects.json")
+        public void Load(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "GAS/effects.json")
         {
             _registry.Clear();
             EffectTemplateIdRegistry.Clear();
             UnitTypeRegistry.Clear();
 
-            var arrays = _pipeline.CollectJsonArrays(relativePath);
-            var mergedNodes = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "Id");
+            var mergedEntries = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
-            foreach (var array in arrays)
+            var merged = new List<(string Id, JsonObject Node)>(mergedEntries.Count);
+            for (int i = 0; i < mergedEntries.Count; i++)
             {
-                foreach (var node in array)
-                {
-                    if (node is not JsonObject obj) continue;
-
-                    if (!TryGetId(obj, out var id))
-                    {
-                        throw new InvalidOperationException($"Effect template entry missing 'id' in {relativePath}.");
-                    }
-
-                    if (mergedNodes.TryGetValue(id, out var existingNode))
-                    {
-                        JsonMerger.Merge(existingNode, node);
-                    }
-                    else
-                    {
-                        mergedNodes[id] = node.DeepClone();
-                    }
-                }
-            }
-
-            var merged = new List<(string Id, JsonObject Node)>(mergedNodes.Count);
-            foreach (var kvp in mergedNodes)
-            {
-                if (kvp.Value is not JsonObject obj)
-                {
-                    throw new InvalidOperationException($"Effect template '{kvp.Key}' in {relativePath} is not an object.");
-                }
-
-                RejectForbiddenFields(obj, relativePath, kvp.Key);
-                merged.Add((kvp.Key, obj));
+                RejectForbiddenFields(mergedEntries[i].Node, relativePath, mergedEntries[i].Id);
+                merged.Add((mergedEntries[i].Id, mergedEntries[i].Node));
             }
 
             merged.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
@@ -105,27 +81,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 var data = Compile(cfg, relativePath);
                 _registry.Register(templateId, data);
             }
-        }
-
-        private static bool TryGetId(JsonObject obj, out string id)
-        {
-            if (obj.TryGetPropertyValue("Id", out var idNode) || obj.TryGetPropertyValue("id", out idNode))
-            {
-                id = idNode?.ToString() ?? string.Empty;
-                return !string.IsNullOrWhiteSpace(id);
-            }
-
-            foreach (var kvp in obj)
-            {
-                if (string.Equals(kvp.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    id = kvp.Value?.ToString() ?? string.Empty;
-                    return !string.IsNullOrWhiteSpace(id);
-                }
-            }
-
-            id = string.Empty;
-            return false;
         }
 
         private static void RejectForbiddenFields(JsonObject obj, string relativePath, string id)

@@ -232,6 +232,7 @@ namespace Ludots.Core.Engine
             
             // 3. Create ConfigPipeline and merge all game.json files
             ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
+            ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
             MergedConfig = ConfigPipeline.MergeGameConfig();
 
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
@@ -502,35 +503,8 @@ namespace Ludots.Core.Engine
             var graphConfigLoader = new GraphProgramConfigLoader(ConfigPipeline, graphProgramRegistry, graphSymbolResolver);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile();
             var presetTypes = new PresetTypeRegistry();
-            var presetTypeArrays = ConfigPipeline.CollectJsonArrays("GAS/preset_types.json");
-            var mergedPresetNodes = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
-            for (int ai = 0; ai < presetTypeArrays.Count; ai++)
-            {
-                var arr = presetTypeArrays[ai];
-                for (int ni = 0; ni < arr.Count; ni++)
-                {
-                    if (arr[ni] is not JsonObject obj) continue;
-                    string id = obj["id"]?.GetValue<string>() ?? string.Empty;
-                    if (string.IsNullOrWhiteSpace(id)) continue;
-
-                    if (mergedPresetNodes.TryGetValue(id, out var existing))
-                    {
-                        JsonMerger.Merge(existing, obj);
-                    }
-                    else
-                    {
-                        mergedPresetNodes[id] = obj.DeepClone();
-                    }
-                }
-            }
-            var mergedPresetArray = new JsonArray();
-            var presetIds = new List<string>(mergedPresetNodes.Keys);
-            presetIds.Sort(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < presetIds.Count; i++)
-            {
-                mergedPresetArray.Add(mergedPresetNodes[presetIds[i]]);
-            }
-            PresetTypeLoader.Load(presetTypes, mergedPresetArray.ToJsonString());
+            var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes);
+            presetTypeLoader.Load(ConfigCatalog, ConfigConflictReport);
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             var effectRequestQueue = new EffectRequestQueue();

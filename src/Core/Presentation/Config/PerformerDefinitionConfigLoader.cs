@@ -33,22 +33,19 @@ namespace Ludots.Core.Presentation.Config
         /// <summary>
         /// Load and register all performer definitions. Safe to call if config file is missing (no-op).
         /// </summary>
-        public void Load()
+        public void Load(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null)
         {
-            var fragments = _configs.CollectFragments("Presentation/performers.json");
-            if (fragments.Count == 0) return; // no config = no performer definitions
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Presentation/performers.json", ConfigMergePolicy.ArrayById, "id");
+            var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
+            if (merged.Count == 0) return;
 
-            // Merge definitions from ALL mods (later mods can override by ID).
-            foreach (var root in fragments)
+            for (int i = 0; i < merged.Count; i++)
             {
-                if (root is not JsonArray arr) continue;
-                foreach (var node in arr)
-                {
-                    if (node == null) continue;
-                    var def = ParseDefinition(node);
-                    if (def != null)
-                        _registry.Register(def.Id, def);
-                }
+                var def = ParseDefinition(merged[i].Node);
+                if (def != null)
+                    _registry.Register(def.Id, def);
             }
         }
 

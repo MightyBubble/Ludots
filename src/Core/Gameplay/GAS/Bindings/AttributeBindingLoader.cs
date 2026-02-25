@@ -20,53 +20,27 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
             _registry = registry;
         }
 
-        public void Load(string relativePath = "GAS/attribute_bindings.json")
+        public void Load(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "GAS/attribute_bindings.json")
         {
             _registry.Clear();
 
-            var arrays = _pipeline.CollectJsonArrays(relativePath);
-            var mergedNodes = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "Id");
+            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
-            foreach (var array in arrays)
-            {
-                foreach (var node in array)
-                {
-                    if (node is not JsonObject obj) continue;
-
-                    if (!TryGetId(obj, out var id))
-                    {
-                        throw new InvalidOperationException($"Attribute binding entry missing 'id' in {relativePath}.");
-                    }
-
-                    if (mergedNodes.TryGetValue(id, out var existingNode))
-                    {
-                        JsonMerger.Merge(existingNode, node);
-                    }
-                    else
-                    {
-                        mergedNodes[id] = node.DeepClone();
-                    }
-                }
-            }
-
-            var merged = new List<(string Id, JsonObject Node)>(mergedNodes.Count);
-            foreach (var kvp in mergedNodes)
-            {
-                if (kvp.Value is not JsonObject obj)
-                {
-                    throw new InvalidOperationException($"Attribute binding '{kvp.Key}' in {relativePath} is not an object.");
-                }
-                merged.Add((kvp.Key, obj));
-            }
-
-            merged.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
+            var sorted = new List<(string Id, JsonObject Node)>(merged.Count);
+            for (int i = 0; i < merged.Count; i++)
+                sorted.Add((merged[i].Id, merged[i].Node));
+            sorted.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
 
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
-            var compiled = new List<(int SinkId, int Order, AttributeBindingEntry Entry)>(merged.Count);
+            var compiled = new List<(int SinkId, int Order, AttributeBindingEntry Entry)>(sorted.Count);
 
-            for (int i = 0; i < merged.Count; i++)
+            for (int i = 0; i < sorted.Count; i++)
             {
-                var (id, obj) = merged[i];
+                var (id, obj) = sorted[i];
                 var cfg = obj.Deserialize<AttributeBindingConfig>(options);
                 if (cfg == null)
                 {
@@ -145,27 +119,6 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
 
             groups.Add(new AttributeBindingGroup(currentSink, start, compiled.Count - start));
             return groups.ToArray();
-        }
-
-        private static bool TryGetId(JsonObject obj, out string id)
-        {
-            if (obj.TryGetPropertyValue("Id", out var idNode) || obj.TryGetPropertyValue("id", out idNode))
-            {
-                id = idNode?.ToString() ?? string.Empty;
-                return !string.IsNullOrWhiteSpace(id);
-            }
-
-            foreach (var kvp in obj)
-            {
-                if (string.Equals(kvp.Key, "Id", StringComparison.OrdinalIgnoreCase))
-                {
-                    id = kvp.Value?.ToString() ?? string.Empty;
-                    return !string.IsNullOrWhiteSpace(id);
-                }
-            }
-
-            id = string.Empty;
-            return false;
         }
 
         private static AttributeBindingMode ParseMode(string mode, string ownerId, string relativePath)

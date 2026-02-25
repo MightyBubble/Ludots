@@ -19,23 +19,13 @@ namespace Ludots.Core.Engine
             _pipeline = pipeline;
         }
 
-        public EngineClockConfig Load(string relativePath = "Engine/clock.json")
+        public EngineClockConfig Load(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "Engine/clock.json")
         {
-            var fragments = _pipeline.CollectFragments(relativePath);
-            JsonObject mergedObject = null;
-
-            for (int i = 0; i < fragments.Count; i++)
-            {
-                if (fragments[i] is not JsonObject obj) continue;
-                if (mergedObject == null)
-                {
-                    mergedObject = (JsonObject)obj.DeepClone();
-                }
-                else
-                {
-                    JsonMerger.Merge(mergedObject, obj);
-                }
-            }
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
 
             if (mergedObject == null)
             {
@@ -62,4 +52,3 @@ namespace Ludots.Core.Engine
         }
     }
 }
-

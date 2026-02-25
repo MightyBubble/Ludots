@@ -38,7 +38,10 @@ namespace Ludots.Core.Config
 
             if (entry.MergePolicy == ConfigMergePolicy.ArrayById)
             {
-                return MergeArrayByIdWithReport(fragments, entry, report);
+                var entries = MergeArrayByIdToEntriesReported(fragments, in entry, report);
+                var result = new JsonArray();
+                for (int i = 0; i < entries.Count; i++) result.Add(entries[i].Node);
+                return result;
             }
 
             var nodes = new JsonNode[fragments.Count];
@@ -78,6 +81,36 @@ namespace Ludots.Core.Config
 
         private static JsonNode MergeArrayById(IReadOnlyList<JsonNode> fragments, string idField, string[] arrayAppendFields)
         {
+            var entries = MergeArrayByIdToEntriesCore(fragments, idField, arrayAppendFields, report: null, relativePath: null);
+            var result = new JsonArray();
+            for (int i = 0; i < entries.Count; i++) result.Add(entries[i].Node);
+            return result;
+        }
+
+        public static List<MergedConfigEntry> MergeArrayByIdToEntries(
+            IReadOnlyList<ConfigFragment> fragments,
+            in ConfigCatalogEntry entry,
+            ConfigConflictReport report = null)
+        {
+            if (report != null)
+            {
+                for (int i = 0; i < fragments.Count; i++)
+                    report.RecordFragment(entry.RelativePath, fragments[i].SourceUri);
+            }
+
+            var nodes = new JsonNode[fragments.Count];
+            for (int i = 0; i < fragments.Count; i++) nodes[i] = fragments[i].Node;
+
+            if (report == null)
+                return MergeArrayByIdToEntriesCore(nodes, entry.IdField, entry.ArrayAppendFields, report: null, relativePath: null);
+
+            return MergeArrayByIdToEntriesReported(fragments, in entry, report);
+        }
+
+        private static List<MergedConfigEntry> MergeArrayByIdToEntriesCore(
+            IReadOnlyList<JsonNode> fragments, string idField, string[] arrayAppendFields,
+            ConfigConflictReport report, string relativePath)
+        {
             var orderedIds = new List<string>(capacity: 256);
             var mergedNodes = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
 
@@ -115,10 +148,66 @@ namespace Ludots.Core.Config
                 }
             }
 
-            var result = new JsonArray();
+            var result = new List<MergedConfigEntry>(orderedIds.Count);
             for (int i = 0; i < orderedIds.Count; i++)
             {
-                if (mergedNodes.TryGetValue(orderedIds[i], out var n)) result.Add(n);
+                if (mergedNodes.TryGetValue(orderedIds[i], out var n) && n is JsonObject jObj)
+                    result.Add(new MergedConfigEntry(orderedIds[i], jObj));
+            }
+            return result;
+        }
+
+        private static List<MergedConfigEntry> MergeArrayByIdToEntriesReported(
+            IReadOnlyList<ConfigFragment> fragments,
+            in ConfigCatalogEntry entry,
+            ConfigConflictReport report)
+        {
+            var orderedIds = new List<string>(capacity: 256);
+            var mergedNodes = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
+
+            for (int i = 0; i < fragments.Count; i++)
+            {
+                if (fragments[i].Node is not JsonArray arr) continue;
+                string src = fragments[i].SourceUri;
+
+                foreach (var node in arr)
+                {
+                    if (node is not JsonObject obj) continue;
+                    if (!TryReadId(obj, entry.IdField, out string id)) continue;
+
+                    if (IsDeleted(obj))
+                    {
+                        mergedNodes.Remove(id);
+                        report.RecordDeleted(entry.RelativePath, id, src);
+                        for (int oi = orderedIds.Count - 1; oi >= 0; oi--)
+                        {
+                            if (string.Equals(orderedIds[oi], id, StringComparison.OrdinalIgnoreCase))
+                            {
+                                orderedIds.RemoveAt(oi);
+                                break;
+                            }
+                        }
+                        continue;
+                    }
+
+                    if (!mergedNodes.TryGetValue(id, out var existing))
+                    {
+                        mergedNodes[id] = obj.DeepClone();
+                        orderedIds.Add(id);
+                        report.RecordWinner(entry.RelativePath, id, src);
+                        continue;
+                    }
+
+                    MergeObject(existing, obj, entry.ArrayAppendFields);
+                    report.RecordWinner(entry.RelativePath, id, src);
+                }
+            }
+
+            var result = new List<MergedConfigEntry>(orderedIds.Count);
+            for (int i = 0; i < orderedIds.Count; i++)
+            {
+                if (mergedNodes.TryGetValue(orderedIds[i], out var n) && n is JsonObject jObj)
+                    result.Add(new MergedConfigEntry(orderedIds[i], jObj));
             }
             return result;
         }
@@ -209,55 +298,5 @@ namespace Ludots.Core.Config
             return false;
         }
 
-        private static JsonNode MergeArrayByIdWithReport(IReadOnlyList<ConfigFragment> fragments, in ConfigCatalogEntry entry, ConfigConflictReport report)
-        {
-            var orderedIds = new List<string>(capacity: 256);
-            var mergedNodes = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
-
-            for (int i = 0; i < fragments.Count; i++)
-            {
-                if (fragments[i].Node is not JsonArray arr) continue;
-                string src = fragments[i].SourceUri;
-
-                foreach (var node in arr)
-                {
-                    if (node is not JsonObject obj) continue;
-                    if (!TryReadId(obj, entry.IdField, out string id)) continue;
-
-                    if (IsDeleted(obj))
-                    {
-                        mergedNodes.Remove(id);
-                        report.RecordDeleted(entry.RelativePath, id, src);
-                        for (int oi = orderedIds.Count - 1; oi >= 0; oi--)
-                        {
-                            if (string.Equals(orderedIds[oi], id, StringComparison.OrdinalIgnoreCase))
-                            {
-                                orderedIds.RemoveAt(oi);
-                                break;
-                            }
-                        }
-                        continue;
-                    }
-
-                    if (!mergedNodes.TryGetValue(id, out var existing))
-                    {
-                        mergedNodes[id] = obj.DeepClone();
-                        orderedIds.Add(id);
-                        report.RecordWinner(entry.RelativePath, id, src);
-                        continue;
-                    }
-
-                    MergeObject(existing, obj, entry.ArrayAppendFields);
-                    report.RecordWinner(entry.RelativePath, id, src);
-                }
-            }
-
-            var result = new JsonArray();
-            for (int i = 0; i < orderedIds.Count; i++)
-            {
-                if (mergedNodes.TryGetValue(orderedIds[i], out var n)) result.Add(n);
-            }
-            return result;
-        }
     }
 }

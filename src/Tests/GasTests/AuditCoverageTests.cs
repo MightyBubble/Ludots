@@ -411,7 +411,7 @@ namespace Ludots.Tests.GAS
             var registry = new EffectTemplateRegistry();
             var loader = new EffectTemplateLoader(pipeline, registry);
 
-            Assert.DoesNotThrow(() => loader.Load("GAS/effects.json"),
+            Assert.DoesNotThrow(() => loader.Load(relativePath: "GAS/effects.json"),
                 "Loading MobaDemoMod effects.json via VFS + ConfigPipeline must not throw");
 
             // Verify key MobaDemoMod templates are loaded
@@ -453,7 +453,7 @@ namespace Ludots.Tests.GAS
             var registry = new EffectTemplateRegistry();
             var loader = new EffectTemplateLoader(pipeline, registry);
 
-            Assert.DoesNotThrow(() => loader.Load("GAS/effects.json"),
+            Assert.DoesNotThrow(() => loader.Load(relativePath: "GAS/effects.json"),
                 "Core effects.json must load without exceptions");
         }
 

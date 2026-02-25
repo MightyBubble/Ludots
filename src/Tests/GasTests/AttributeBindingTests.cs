@@ -57,7 +57,7 @@ namespace Ludots.Tests.GAS
 
                 var registry = new AttributeBindingRegistry();
                 var loader = new AttributeBindingLoader(pipeline, sinks, registry);
-                loader.Load("GAS/attribute_bindings.json");
+                loader.Load(relativePath: "GAS/attribute_bindings.json");
 
                 using var world = World.Create();
                 int fxId = AttributeRegistry.Register("Physics.ForceRequestX");

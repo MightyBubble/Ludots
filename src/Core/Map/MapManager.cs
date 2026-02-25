@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -14,16 +14,23 @@ namespace Ludots.Core.Map
         private readonly IVirtualFileSystem _vfs;
         private readonly TriggerManager _triggerManager;
         private readonly ModLoader _modLoader;
-        
+        private ConfigPipeline _configPipeline;
+
         // Registry for Map Definitions (Code-First)
         private readonly Dictionary<MapId, MapDefinition> _definitions = new Dictionary<MapId, MapDefinition>();
         private readonly Dictionary<Type, MapDefinition> _typeToDefinition = new Dictionary<Type, MapDefinition>();
 
-        public MapManager(IVirtualFileSystem vfs, TriggerManager triggerManager, ModLoader modLoader)
+        public MapManager(IVirtualFileSystem vfs, TriggerManager triggerManager, ModLoader modLoader, ConfigPipeline configPipeline = null)
         {
             _vfs = vfs;
             _triggerManager = triggerManager;
             _modLoader = modLoader;
+            _configPipeline = configPipeline;
+        }
+
+        public void SetConfigPipeline(ConfigPipeline pipeline)
+        {
+            _configPipeline = pipeline;
         }
 
         public void RegisterMap(MapDefinition definition)
@@ -80,24 +87,44 @@ namespace Ludots.Core.Map
 
                 // 1. Find all config fragments
                 var configs = new List<MapConfig>();
-            
+
                 // If definition exists, use its DataFilePath. Otherwise use default convention.
                 string jsonPath = definition != null ? definition.DataFilePath : $"Maps/{mapId}.json";
-            
+
                 // Normalize path to remove leading slash if any
                 if (jsonPath.StartsWith("/") || jsonPath.StartsWith("\\")) jsonPath = jsonPath.Substring(1);
 
-                // 1a. Core Assets (Try Configs/ first, then assets/)
-                TryLoadConfigFromUri($"Core:Configs/{jsonPath}", configs);
-                TryLoadConfigFromUri($"Core:assets/{jsonPath}", configs);
-                // Also try root of assets if not found (e.g. Core:Maps/...)
-                TryLoadConfigFromUri($"Core:{jsonPath}", configs);
-
-                // 1b. Mods
-                foreach (var modId in _modLoader.LoadedModIds)
+                if (_configPipeline != null)
                 {
-                    TryLoadConfigFromUri($"{modId}:assets/{jsonPath}", configs);
-                    TryLoadConfigFromUri($"{modId}:{jsonPath}", configs);
+                    // Use ConfigPipeline to collect fragments from all sources
+                    var fragments = _configPipeline.CollectFragments(jsonPath);
+                    var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    for (int fi = 0; fi < fragments.Count; fi++)
+                    {
+                        try
+                        {
+                            var jsonStr = fragments[fi].ToJsonString();
+                            var config = JsonSerializer.Deserialize<MapConfig>(jsonStr, jsonOptions);
+                            if (config != null) configs.Add(config);
+                        }
+                        catch (JsonException ex)
+                        {
+                            Console.WriteLine($"[MapManager] Invalid JSON fragment for '{jsonPath}': {ex.Message}");
+                        }
+                    }
+                }
+                else
+                {
+                    // Fallback: direct VFS scanning (for cases without ConfigPipeline)
+                    TryLoadConfigFromUri($"Core:Configs/{jsonPath}", configs);
+                    TryLoadConfigFromUri($"Core:assets/{jsonPath}", configs);
+                    TryLoadConfigFromUri($"Core:{jsonPath}", configs);
+
+                    foreach (var modId in _modLoader.LoadedModIds)
+                    {
+                        TryLoadConfigFromUri($"{modId}:assets/{jsonPath}", configs);
+                        TryLoadConfigFromUri($"{modId}:{jsonPath}", configs);
+                    }
                 }
 
                 if (configs.Count == 0 && definition == null)

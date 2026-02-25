@@ -47,7 +47,7 @@ namespace Ludots.Tests.GAS
 
                 var registry = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, registry);
-                loader.Load("GAS/effects.json");
+                loader.Load(relativePath: "GAS/effects.json");
 
                 That(EffectTemplateIdRegistry.GetId("Effect_A"), Is.EqualTo(1));
                 That(EffectTemplateIdRegistry.GetId("Effect_B"), Is.EqualTo(2));
@@ -95,7 +95,7 @@ namespace Ludots.Tests.GAS
                 var registry = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, registry);
 
-                Throws<InvalidOperationException>(() => loader.Load("GAS/effects.json"));
+                Throws<InvalidOperationException>(() => loader.Load(relativePath: "GAS/effects.json"));
             }
             finally
             {
@@ -133,7 +133,7 @@ namespace Ludots.Tests.GAS
 
                 var registry = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, registry);
-                loader.Load("GAS/effects.json");
+                loader.Load(relativePath: "GAS/effects.json");
 
                 int tplId = EffectTemplateIdRegistry.GetId("Effect_Preset_Force");
                 That(tplId, Is.GreaterThan(0));

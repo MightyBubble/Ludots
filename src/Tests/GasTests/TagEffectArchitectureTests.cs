@@ -412,7 +412,7 @@ namespace Ludots.Tests.GAS
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
-            loader.Load("GAS/effects.json");
+            loader.Load(relativePath: "GAS/effects.json");
 
             int tplId = EffectTemplateIdRegistry.GetId("test_buff");
             That(tplId, Is.GreaterThan(0));
@@ -447,7 +447,7 @@ namespace Ludots.Tests.GAS
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
-            loader.Load("GAS/effects.json");
+            loader.Load(relativePath: "GAS/effects.json");
 
             int tplId = EffectTemplateIdRegistry.GetId("test_slow");
             That(tplId, Is.GreaterThan(0));
@@ -484,7 +484,7 @@ namespace Ludots.Tests.GAS
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
-            loader.Load("GAS/effects.json");
+            loader.Load(relativePath: "GAS/effects.json");
 
             int tplId = EffectTemplateIdRegistry.GetId("test_stackable");
             That(tplId, Is.GreaterThan(0));

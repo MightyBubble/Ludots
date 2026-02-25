@@ -16,44 +16,27 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         }
 
-        public List<(int TagId, TagRuleSet RuleSet)> Load(string relativePath = "GAS/tag_rules.json")
+        public List<(int TagId, TagRuleSet RuleSet)> Load(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "GAS/tag_rules.json")
         {
-            var arrays = _pipeline.CollectJsonArrays(relativePath);
-            var mergedNodes = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var array in arrays)
-            {
-                foreach (var node in array)
-                {
-                    if (node is not JsonObject obj) continue;
-                    string id = obj["id"]?.GetValue<string>();
-                    if (string.IsNullOrWhiteSpace(id)) continue;
-
-                    if (mergedNodes.TryGetValue(id, out var existing))
-                    {
-                        JsonMerger.Merge(existing, node);
-                    }
-                    else
-                    {
-                        mergedNodes[id] = node.DeepClone();
-                    }
-                }
-            }
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
             var errors = new List<string>();
-            var results = new List<(int TagId, TagRuleSet RuleSet)>(mergedNodes.Count);
-            foreach (var kvp in mergedNodes)
+            var results = new List<(int TagId, TagRuleSet RuleSet)>(merged.Count);
+            for (int i = 0; i < merged.Count; i++)
             {
-                if (kvp.Value is not JsonObject obj) continue;
                 try
                 {
-                    int tagId = TagRegistry.Register(kvp.Key);
-                    var ruleSet = CompileRuleSet(obj, kvp.Key, relativePath);
+                    int tagId = TagRegistry.Register(merged[i].Id);
+                    var ruleSet = CompileRuleSet(merged[i].Node, merged[i].Id, relativePath);
                     results.Add((tagId, ruleSet));
                 }
                 catch (Exception ex)
                 {
-                    errors.Add($"TagRuleSet '{kvp.Key}': {ex.Message}");
+                    errors.Add($"TagRuleSet '{merged[i].Id}': {ex.Message}");
                 }
             }
 

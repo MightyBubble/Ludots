@@ -37,6 +37,24 @@ namespace Ludots.Core.Config
             return _winnerById.TryGetValue((relativePath, id), out sourceUri);
         }
 
+        public IReadOnlyList<string> GetFragments(string relativePath)
+        {
+            if (_fragmentsByPath.TryGetValue(relativePath, out var list))
+                return list;
+            return Array.Empty<string>();
+        }
+
+        public IReadOnlyList<(string Path, string Id)> GetDeletions(string relativePath)
+        {
+            var result = new List<(string, string)>();
+            foreach (var d in _deleted)
+            {
+                if (string.Equals(d.Path, relativePath, StringComparison.OrdinalIgnoreCase))
+                    result.Add(d);
+            }
+            return result;
+        }
+
         public void PrintSummary(int maxLinesPerPath = 10)
         {
             foreach (var kvp in _fragmentsByPath)

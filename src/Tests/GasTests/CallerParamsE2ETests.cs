@@ -56,7 +56,7 @@ namespace Ludots.Tests.GAS
 
                 var templates = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, templates);
-                loader.Load("GAS/effects.json");
+                loader.Load(relativePath: "GAS/effects.json");
 
                 using var world = World.Create();
                 int fxAttrId = AttributeRegistry.GetId("Physics.ForceRequestX");
@@ -120,7 +120,7 @@ namespace Ludots.Tests.GAS
 
                 var templates = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, templates);
-                loader.Load("GAS/effects.json");
+                loader.Load(relativePath: "GAS/effects.json");
 
                 using var world = World.Create();
                 int fxAttrId = AttributeRegistry.GetId("Physics.ForceRequestX");

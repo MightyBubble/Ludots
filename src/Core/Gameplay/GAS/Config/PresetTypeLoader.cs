@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Text.Json.Nodes;
+using Ludots.Core.Config;
 
 namespace Ludots.Core.Gameplay.GAS.Config
 {
@@ -8,9 +10,37 @@ namespace Ludots.Core.Gameplay.GAS.Config
     /// and default phase handlers (builtin or graph).
     /// Must be called before EffectTemplateLoader.Load().
     /// </summary>
-    public static class PresetTypeLoader
+    public sealed class PresetTypeLoader
     {
-        public static void Load(PresetTypeRegistry registry, string json)
+        private readonly ConfigPipeline _pipeline;
+        private readonly PresetTypeRegistry _registry;
+
+        public PresetTypeLoader(ConfigPipeline pipeline, PresetTypeRegistry registry)
+        {
+            _pipeline = pipeline;
+            _registry = registry;
+        }
+
+        public void Load(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "GAS/preset_types.json")
+        {
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+
+            for (int i = 0; i < merged.Count; i++)
+            {
+                var def = ParseDefinition(merged[i].Node);
+                _registry.Register(in def);
+            }
+        }
+
+        /// <summary>
+        /// Load preset type definitions from a raw JSON string.
+        /// Used by tests and scenarios without a ConfigPipeline.
+        /// </summary>
+        public static void LoadFromJson(PresetTypeRegistry registry, string json)
         {
             var array = JsonNode.Parse(json)?.AsArray();
             if (array == null) throw new System.InvalidOperationException("PresetTypeLoader: JSON root must be an array.");
@@ -81,8 +111,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return def;
         }
 
-        // All enum parsing delegated to GasEnumParser (single source of truth)
-
         private static PhaseHandler ParsePhaseHandler(JsonObject obj)
         {
             if (obj == null) return PhaseHandler.None;
@@ -98,19 +126,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (type == "graph")
             {
-                // Graph id resolution happens at load time — store 0 for now,
-                // the actual graph program ID will be resolved from the graph name
-                // by the caller who has access to GraphProgramRegistry.
-                // For preset_types.json, graph IDs are typically numeric.
                 if (int.TryParse(id, out int graphId))
                     return PhaseHandler.Graph(graphId);
-                // Named graph: fail-fast since graph must be resolved at load time
                 throw new System.InvalidOperationException($"PresetTypeLoader: Cannot resolve named graph '{id}'. Graph names must be pre-registered as numeric IDs.");
             }
 
             return PhaseHandler.None;
         }
-
-        // Removed local ParseBuiltinHandlerId — use GasEnumParser.ParseBuiltinHandlerId (single source of truth)
     }
 }

@@ -160,7 +160,7 @@ namespace ModdingTest
             try
             {
                 var inputConfigPath = Path.Combine(assetsDir, "Configs", "Input", "default_input.json");
-                var inputConfig = InputConfigLoader.LoadFromFile(inputConfigPath);
+                var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
                 var backend = new DummyInputBackend();
                 var inputHandler = new PlayerInputHandler(backend, inputConfig);
                 inputHandler.PushContext("Default_Gameplay");

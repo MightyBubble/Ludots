@@ -22,48 +22,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _symbolResolver = symbolResolver ?? throw new ArgumentNullException(nameof(symbolResolver));
         }
 
-        public List<GraphProgramPackage> LoadIdsAndCompile(string relativePath = "GAS/graphs.json")
+        public List<GraphProgramPackage> LoadIdsAndCompile(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "GAS/graphs.json")
         {
             _registry.Clear();
             GraphIdRegistry.Clear();
 
-            var arrays = _pipeline.CollectJsonArrays(relativePath);
-            var mergedNodes = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
-            foreach (var array in arrays)
-            {
-                foreach (var node in array)
-                {
-                    if (node is not JsonObject obj) continue;
-                    string id = obj["id"]?.GetValue<string>();
-                    if (string.IsNullOrWhiteSpace(id)) continue;
-
-                    if (mergedNodes.TryGetValue(id, out var existing))
-                    {
-                        JsonMerger.Merge(existing, node);
-                    }
-                    else
-                    {
-                        mergedNodes[id] = node.DeepClone();
-                    }
-                }
-            }
-
-            var merged = new List<(string Id, JsonObject Node)>(mergedNodes.Count);
-            foreach (var kvp in mergedNodes)
-            {
-                if (kvp.Value is not JsonObject obj) continue;
-                merged.Add((kvp.Key, obj));
-            }
-            merged.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
+            var sorted = new List<(string Id, JsonObject Node)>(merged.Count);
+            for (int i = 0; i < merged.Count; i++)
+                sorted.Add((merged[i].Id, merged[i].Node));
+            sorted.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
 
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
-            var packages = new List<GraphProgramPackage>(merged.Count);
+            var packages = new List<GraphProgramPackage>(sorted.Count);
             var errors = new List<string>();
 
-            for (int i = 0; i < merged.Count; i++)
+            for (int i = 0; i < sorted.Count; i++)
             {
-                var (id, obj) = merged[i];
+                var (id, obj) = sorted[i];
                 try
                 {
                     var cfg = obj.Deserialize<GraphConfig>(options);

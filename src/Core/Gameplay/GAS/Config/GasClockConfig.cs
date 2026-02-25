@@ -22,23 +22,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _pipeline = pipeline;
         }
 
-        public GasClockConfig Load(string relativePath = "GAS/clock.json")
+        public GasClockConfig Load(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "GAS/clock.json")
         {
-            var fragments = _pipeline.CollectFragments(relativePath);
-            JsonObject mergedObject = null;
-
-            for (int i = 0; i < fragments.Count; i++)
-            {
-                if (fragments[i] is not JsonObject obj) continue;
-                if (mergedObject == null)
-                {
-                    mergedObject = (JsonObject)obj.DeepClone();
-                }
-                else
-                {
-                    JsonMerger.Merge(mergedObject, obj);
-                }
-            }
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
 
             if (mergedObject == null)
             {

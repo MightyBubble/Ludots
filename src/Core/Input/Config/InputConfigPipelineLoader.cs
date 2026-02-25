@@ -21,9 +21,18 @@ namespace Ludots.Core.Input.Config
             _pipeline = pipeline;
         }
 
-        public InputConfigRoot Load(string relativePath = "Input/default_input.json")
+        public InputConfigRoot Load(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "Input/default_input.json")
         {
-            var fragments = _pipeline.CollectFragments(relativePath);
+            var fragments = _pipeline.CollectFragmentsWithSources(relativePath);
+
+            if (report != null)
+            {
+                for (int i = 0; i < fragments.Count; i++)
+                    report.RecordFragment(relativePath, fragments[i].SourceUri);
+            }
 
             var actions = new Dictionary<string, InputActionDef>(StringComparer.OrdinalIgnoreCase);
             var actionOrder = new List<string>();
@@ -33,7 +42,7 @@ namespace Ludots.Core.Input.Config
 
             for (int i = 0; i < fragments.Count; i++)
             {
-                if (fragments[i] is not JsonObject obj) continue;
+                if (fragments[i].Node is not JsonObject obj) continue;
 
                 var fragmentConfig = obj.Deserialize<InputConfigRoot>(_options);
                 if (fragmentConfig == null) continue;

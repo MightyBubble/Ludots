@@ -265,7 +265,7 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < 10; i++)
             {
                 var reg = new PresetTypeRegistry();
-                PresetTypeLoader.Load(reg, json);
+                PresetTypeLoader.LoadFromJson(reg, json);
             }
 
             var sw = Stopwatch.StartNew();
@@ -273,7 +273,7 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < iterations; i++)
             {
                 var reg = new PresetTypeRegistry();
-                PresetTypeLoader.Load(reg, json);
+                PresetTypeLoader.LoadFromJson(reg, json);
             }
             sw.Stop();
 

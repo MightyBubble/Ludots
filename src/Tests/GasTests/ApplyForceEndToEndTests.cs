@@ -83,13 +83,13 @@ namespace Ludots.Tests.GAS
 
                 var templates = new EffectTemplateRegistry();
                 var templateLoader = new EffectTemplateLoader(pipeline, templates);
-                templateLoader.Load("GAS/effects.json");
+                templateLoader.Load(relativePath: "GAS/effects.json");
 
                 var sinks = new AttributeSinkRegistry();
                 GasAttributeSinks.RegisterBuiltins(sinks);
                 var bindings = new AttributeBindingRegistry();
                 var bindingLoader = new AttributeBindingLoader(pipeline, sinks, bindings);
-                bindingLoader.Load("GAS/attribute_bindings.json");
+                bindingLoader.Load(relativePath: "GAS/attribute_bindings.json");
 
                 var graphCfg = new GraphConfig
                 {

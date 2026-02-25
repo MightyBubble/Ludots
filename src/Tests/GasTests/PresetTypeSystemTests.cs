@@ -368,7 +368,7 @@ namespace Ludots.Tests.GAS
             ]";
 
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.Load(reg, json);
+            PresetTypeLoader.LoadFromJson(reg, json);
 
             That(reg.IsRegistered(EffectPresetType.Search), Is.True);
             ref readonly var def = ref reg.Get(EffectPresetType.Search);
@@ -403,7 +403,7 @@ namespace Ludots.Tests.GAS
             ]";
 
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.Load(reg, json);
+            PresetTypeLoader.LoadFromJson(reg, json);
 
             That(reg.IsRegistered(EffectPresetType.InstantDamage), Is.True);
             That(reg.IsRegistered(EffectPresetType.Buff), Is.True);
@@ -426,7 +426,7 @@ namespace Ludots.Tests.GAS
             ]";
 
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.Load(reg, json);
+            PresetTypeLoader.LoadFromJson(reg, json);
 
             ref readonly var def = ref reg.Get(EffectPresetType.Heal);
             var h = def.DefaultPhaseHandlers[EffectPhaseId.OnCalculate];
@@ -438,7 +438,7 @@ namespace Ludots.Tests.GAS
         public void PresetTypeLoader_EmptyJson_DoesNotThrow()
         {
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.Load(reg, "[]");
+            PresetTypeLoader.LoadFromJson(reg, "[]");
             That(reg.IsRegistered(EffectPresetType.None), Is.False);
         }
 
@@ -450,7 +450,7 @@ namespace Ludots.Tests.GAS
             ]";
 
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.Load(reg, json);
+            PresetTypeLoader.LoadFromJson(reg, json);
             // Unknown type maps to None
             That(reg.IsRegistered(EffectPresetType.None), Is.True);
         }
@@ -660,7 +660,7 @@ namespace Ludots.Tests.GAS
                 System.IO.Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "preset_types.json"));
 
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.Load(reg, json);
+            PresetTypeLoader.LoadFromJson(reg, json);
 
             // None (0) is not a real preset type — it should NOT be in the JSON
             That(reg.IsRegistered(EffectPresetType.None), Is.False);

@@ -15,33 +15,34 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _pipeline = pipeline;
         }
 
-        public void Load(string relativePath = "GAS/attribute_constraints.json")
+        public void Load(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "GAS/attribute_constraints.json")
         {
             if (_pipeline == null) return;
 
-            var fragments = _pipeline.CollectFragments(relativePath);
-            for (int fi = 0; fi < fragments.Count; fi++)
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
+            if (mergedObject == null) return;
+
+            foreach (var kvp in mergedObject)
             {
-                if (fragments[fi] is not JsonObject root) continue;
+                if (string.IsNullOrWhiteSpace(kvp.Key) || kvp.Value is not JsonObject obj) continue;
 
-                foreach (var kvp in root)
-                {
-                    if (string.IsNullOrWhiteSpace(kvp.Key) || kvp.Value is not JsonObject obj) continue;
+                bool clampToBase = GetBool(obj, "clampToBase", defaultValue: false);
+                bool hasMin = TryGetFloat(obj, "min", out var min);
+                bool hasMax = TryGetFloat(obj, "max", out var max);
 
-                    bool clampToBase = GetBool(obj, "clampToBase", defaultValue: false);
-                    bool hasMin = TryGetFloat(obj, "min", out var min);
-                    bool hasMax = TryGetFloat(obj, "max", out var max);
+                var constraints = AttributeRegistry.AttributeConstraints.Create(
+                    clampToBase: clampToBase,
+                    hasMin: hasMin,
+                    min: min,
+                    hasMax: hasMax,
+                    max: max
+                );
 
-                    var constraints = AttributeRegistry.AttributeConstraints.Create(
-                        clampToBase: clampToBase,
-                        hasMin: hasMin,
-                        min: min,
-                        hasMax: hasMax,
-                        max: max
-                    );
-
-                    AttributeRegistry.SetConstraints(kvp.Key, constraints);
-                }
+                AttributeRegistry.SetConstraints(kvp.Key, constraints);
             }
         }
 

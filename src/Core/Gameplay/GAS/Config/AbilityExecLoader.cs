@@ -29,43 +29,26 @@ namespace Ludots.Core.Gameplay.GAS.Config
         /// <summary>
         /// Load abilities from the config pipeline and register them.
         /// </summary>
-        public void Load(string relativePath = "GAS/abilities.json")
+        public void Load(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "GAS/abilities.json")
         {
-            var arrays = _pipeline.CollectJsonArrays(relativePath);
-            var mergedNodes = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var array in arrays)
-            {
-                foreach (var node in array)
-                {
-                    if (node is not JsonObject obj) continue;
-                    string id = obj["id"]?.GetValue<string>();
-                    if (string.IsNullOrWhiteSpace(id)) continue;
-
-                    if (mergedNodes.TryGetValue(id, out var existing))
-                    {
-                        JsonMerger.Merge(existing, node);
-                    }
-                    else
-                    {
-                        mergedNodes[id] = node.DeepClone();
-                    }
-                }
-            }
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
             var errors = new List<string>();
-            foreach (var kvp in mergedNodes)
+            for (int i = 0; i < merged.Count; i++)
             {
-                if (kvp.Value is not JsonObject obj) continue;
                 try
                 {
-                    var def = CompileAbility(obj, kvp.Key, relativePath);
-                    int abilityId = TagRegistry.Register(kvp.Key);
+                    var def = CompileAbility(merged[i].Node, merged[i].Id, relativePath);
+                    int abilityId = TagRegistry.Register(merged[i].Id);
                     _registry.Register(abilityId, in def);
                 }
                 catch (Exception ex)
                 {
-                    errors.Add($"Ability '{kvp.Key}': {ex.Message}");
+                    errors.Add($"Ability '{merged[i].Id}': {ex.Message}");
                 }
             }
 

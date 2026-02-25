@@ -1,21 +1,36 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Ludots.Core.Config;
 
 namespace Ludots.Core.Navigation.Pathing.Config
 {
-    public static class PathingConfigLoader
+    public sealed class PathingConfigLoader
     {
-        public static PathingConfig Load(Stream stream)
+        private readonly ConfigPipeline _pipeline;
+
+        public PathingConfigLoader(ConfigPipeline pipeline)
         {
-            if (stream == null) throw new ArgumentNullException(nameof(stream));
+            _pipeline = pipeline;
+        }
+
+        public PathingConfig Load(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "Navigation/pathing.json")
+        {
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
+            if (mergedObject == null) throw new InvalidOperationException("PathingConfig not found in any source.");
+
             var opts = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             };
             opts.Converters.Add(new JsonStringEnumConverter());
-            var cfg = JsonSerializer.Deserialize<PathingConfig>(stream, opts);
+            var cfg = mergedObject.Deserialize<PathingConfig>(opts);
             if (cfg == null) throw new InvalidOperationException("Failed to deserialize PathingConfig.");
             Validate(cfg);
             return cfg;
@@ -41,4 +56,3 @@ namespace Ludots.Core.Navigation.Pathing.Config
         }
     }
 }
-

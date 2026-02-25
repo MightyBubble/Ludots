@@ -137,42 +137,50 @@ namespace Ludots.Core.Config
         }
 
         /// <summary>
-        /// Collects JsonArrays from all matching files in Core and Mods.
-        /// Use this when each file contains a list of objects (e.g., templates.json).
+        /// ArrayById convenience: returns ordered MergedConfigEntry list for compile-phase consumption.
         /// </summary>
-        public List<JsonArray> CollectJsonArrays(string relativePath)
+        public IReadOnlyList<MergedConfigEntry> MergeArrayByIdFromCatalog(
+            in ConfigCatalogEntry entry, ConfigConflictReport report = null)
         {
-            var arrays = new List<JsonArray>();
-            LoadFromAllSources(relativePath, (stream, sourceUri) =>
-            {
-                try
-                {
-                    var node = JsonNode.Parse(stream);
-                    if (node is JsonArray arr)
-                    {
-                        arrays.Add(arr);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[ConfigPipeline] Warning: Expected JsonArray but got {node?.GetType().Name} in {relativePath}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[ConfigPipeline] Error parsing JSON Array from {sourceUri}: {ex.Message}");
-                }
-            });
-            return arrays;
+            var fragments = CollectFragmentsWithSources(entry.RelativePath);
+            return ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
+        }
+
+        /// <summary>
+        /// DeepObject convenience: returns a single merged JsonObject.
+        /// </summary>
+        public JsonObject MergeDeepObjectFromCatalog(
+            in ConfigCatalogEntry entry, ConfigConflictReport report = null)
+        {
+            var deepEntry = new ConfigCatalogEntry(entry.RelativePath, ConfigMergePolicy.DeepObject);
+            var result = report != null
+                ? MergeFromCatalog(in deepEntry, report)
+                : MergeFromCatalog(in deepEntry);
+            return result as JsonObject;
+        }
+
+        /// <summary>
+        /// Catalog lookup helper: returns the catalog entry or a default with specified policy.
+        /// </summary>
+        public static ConfigCatalogEntry GetEntryOrDefault(
+            ConfigCatalog catalog, string path,
+            ConfigMergePolicy defaultPolicy, string defaultIdField = "Id")
+        {
+            if (catalog != null && catalog.TryGet(path, out var found))
+                return found;
+            return new ConfigCatalogEntry(path, defaultPolicy, defaultIdField);
         }
 
         private void LoadFromAllSources(string relativePath, Action<Stream, string> onStreamOpened)
         {
             // Normalize path
-            if (relativePath.StartsWith("/") || relativePath.StartsWith("\\")) 
+            if (relativePath.StartsWith("/") || relativePath.StartsWith("\\"))
                 relativePath = relativePath.Substring(1);
 
             // 1. Core Configs (highest priority - engine defaults)
             TryLoad(ConfigSourcePaths.CoreConfig(relativePath), onStreamOpened);
+            // Also try Core:{path} directly (for Maps/ and other non-Configs paths)
+            TryLoad($"Core:{relativePath}", onStreamOpened);
 
             // 2. Mods (in dependency/priority order)
             if (_modLoader != null && _modLoader.LoadedModIds != null)
