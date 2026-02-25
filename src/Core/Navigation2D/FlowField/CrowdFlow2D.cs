@@ -2,7 +2,6 @@
 // Refactor CrowdFlowTile2D to use fixed-size buffers or switch to Dictionary<long, ...>.
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Arch.LowLevel;
@@ -31,17 +30,6 @@ namespace Ludots.Core.Navigation2D.FlowField
         /// </summary>
         public float MaxPotential { get; set; } = 300f;
 
-        // #region agent log
-        private static readonly string _dbgLogPath = @"c:\AIProjects\Ludots\.cursor\debug.log";
-        private int _dbgStepCount;
-        private static int _dbgFlowIdCounter;
-        private readonly int _dbgFlowId;
-        private static void DbgLog(string hypothesisId, string location, string message, string dataJson)
-        {
-            try { File.AppendAllText(_dbgLogPath, $"{{\"hypothesisId\":\"{hypothesisId}\",\"location\":\"{location}\",\"message\":\"{message}\",\"data\":{dataJson},\"timestamp\":{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}}}\n"); } catch { }
-        }
-        // #endregion
-
         public CrowdFlow2D(CrowdSurface2D surface, int initialTileCapacity = 256, int initialFrontierCapacity = 1024)
         {
             _surface = surface ?? throw new ArgumentNullException(nameof(surface));
@@ -54,23 +42,12 @@ namespace Ludots.Core.Navigation2D.FlowField
             _needsRebuild = true;
             _goalCm = default;
             _goalRadiusCm = Fix64.Zero;
-            // #region agent log
-            _dbgFlowId = _dbgFlowIdCounter++;
-            // #endregion
         }
-
-        // #region agent log
-        private int _dbgSetGoalCount;
-        // #endregion
 
         public void SetGoalPoint(in Fix64Vec2 goalCm, Fix64 radiusCm)
         {
             // Fix2: 仅当目标实际改变时才标记需要重建
             bool changed = _goalCm.X != goalCm.X || _goalCm.Y != goalCm.Y || _goalRadiusCm != radiusCm;
-            // #region agent log
-            _dbgSetGoalCount++;
-            if (_dbgSetGoalCount % 60 == 1) DbgLog("H2", "CrowdFlow2D.SetGoalPoint", "goal_set", $"{{\"flowId\":{_dbgFlowId},\"callCount\":{_dbgSetGoalCount},\"changed\":{changed.ToString().ToLower()},\"goalCm\":\"{goalCm.X.ToFloat():F0},{goalCm.Y.ToFloat():F0}\",\"wasAlreadyNeedingRebuild\":{_needsRebuild.ToString().ToLower()}}}");
-            // #endregion
             _goalCm = goalCm;
             _goalRadiusCm = radiusCm;
             if (changed)
@@ -98,15 +75,7 @@ namespace Ludots.Core.Navigation2D.FlowField
         public void Step(int iterations)
         {
             if (iterations <= 0) return;
-            // #region agent log
-            _dbgStepCount++;
-            bool dbgLog = _dbgStepCount % 60 == 1;
-            bool didRebuild = _needsRebuild;
-            // #endregion
             if (_needsRebuild) Rebuild();
-            // #region agent log
-            int frontierAfterRebuild = _frontier.Count;
-            // #endregion
             if (_frontier.Count == 0) return;
 
             // Fix3b: 8邻域BFS传播（对角线代价√2），生成更平滑的类欧几里得距离场
@@ -130,15 +99,7 @@ namespace Ludots.Core.Navigation2D.FlowField
                 TryRelaxNeighbor(cx - 1, cy + 1, current, DiagCost);
                 TryRelaxNeighbor(cx - 1, cy - 1, current, DiagCost);
             }
-            // #region agent log
-            int consumed = iterations - remaining - 1;
-            if (dbgLog) DbgLog("H2,H5", "CrowdFlow2D.Step", "step_summary", $"{{\"flowId\":{_dbgFlowId},\"didRebuild\":{didRebuild.ToString().ToLower()},\"frontierAfterRebuild\":{frontierAfterRebuild},\"itersUsed\":{consumed},\"itersTotal\":{iterations},\"frontierRemaining\":{_frontier.Count},\"tileCount\":{_tiles.Count},\"goalCm\":\"{_goalCm.X.ToFloat():F0},{_goalCm.Y.ToFloat():F0}\"}}");
-            // #endregion
         }
-
-        // #region agent log
-        private int _dbgSampleCounter;
-        // #endregion
 
         public bool TrySampleDesiredVelocityCm(in Fix64Vec2 positionCm, Fix64 maxSpeedCmPerSec, out Fix64Vec2 desiredVelocityCmPerSec)
         {
@@ -178,11 +139,6 @@ namespace Ludots.Core.Navigation2D.FlowField
             float invLen = 1f / len;
             float maxSpd = maxSpeedCmPerSec.ToFloat();
             desiredVelocityCmPerSec = Fix64Vec2.FromFloat(dx * invLen * maxSpd, dy * invLen * maxSpd);
-
-            // #region agent log
-            _dbgSampleCounter++;
-            if (_dbgSampleCounter % 3000 == 1) DbgLog("H3", "CrowdFlow2D.TrySample", "sample_result", $"{{\"flowId\":{_dbgFlowId},\"cell\":\"{cx},{cy}\",\"p0\":{p0:F2},\"gx\":{gx:F3},\"gy\":{gy:F3},\"dir\":\"{dx * invLen:F3},{dy * invLen:F3}\"}}");
-            // #endregion
 
             return true;
         }

@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Arch.Buffer;
@@ -37,15 +36,6 @@ namespace Ludots.Core.Physics2D.Systems
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         }
 
-        // #region agent log
-        private static readonly string _dbgLogPath = @"c:\AIProjects\Ludots\.cursor\debug.log";
-        private int _dbgFrameCounter;
-        private static void DbgLog(string hypothesisId, string location, string message, string dataJson)
-        {
-            try { File.AppendAllText(_dbgLogPath, $"{{\"hypothesisId\":\"{hypothesisId}\",\"location\":\"{location}\",\"message\":\"{message}\",\"data\":{dataJson},\"timestamp\":{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}}}\n"); } catch { }
-        }
-        // #endregion
-
         public override void Update(in float deltaTime)
         {
             EnsureForceInput();
@@ -61,11 +51,6 @@ namespace Ludots.Core.Physics2D.Systems
 
             BuildAgentSoA();
             _runtime.CellMap.Build(_runtime.AgentSoA.PositionsCm.AsSpan());
-
-            // #region agent log
-            _dbgFrameCounter++;
-            if (_dbgFrameCounter % 60 == 1) DbgLog("H1", "SteeringSystem.Update", "frame_state", $"{{\"frame\":{_dbgFrameCounter},\"flowEnabled\":{_runtime.FlowEnabled.ToString().ToLower()},\"flowCount\":{_runtime.FlowCount},\"agentCount\":{_runtime.AgentSoA.Count},\"flowItersPerTick\":{_runtime.FlowIterationsPerTick}}}");
-            // #endregion
 
             float dt = deltaTime > 1e-6f ? deltaTime : 1e-6f;
 
@@ -202,38 +187,15 @@ namespace Ludots.Core.Physics2D.Systems
             }
         }
 
-        // #region agent log
-        private int _dbgPrefVelSampleCounter;
-        // #endregion
-
         private Vector2 ComputePreferredVelocity(Entity e, Fix64Vec2 posCm, Fix64 maxSpeedCmPerSec)
         {
-            // #region agent log
-            bool dbgSample = (_dbgFrameCounter % 60 == 1) && (_dbgPrefVelSampleCounter++ < 3);
-            // #endregion
-
             if (_runtime.FlowEnabled && World.TryGet(e, out NavFlowBinding2D binding))
             {
                 var flow = _runtime.TryGetFlow(binding.FlowId);
                 if (flow != null && flow.TrySampleDesiredVelocityCm(posCm, maxSpeedCmPerSec, out Fix64Vec2 desired))
                 {
-                    // #region agent log
-                    if (dbgSample) DbgLog("H1,H3", "ComputePreferredVelocity", "flow_path_used", $"{{\"entityId\":{e.Id},\"flowId\":{binding.FlowId},\"posCm\":\"{posCm.X.ToFloat():F1},{posCm.Y.ToFloat():F1}\",\"desired\":\"{desired.X.ToFloat():F1},{desired.Y.ToFloat():F1}\"}}");
-                    // #endregion
                     return desired.ToVector2();
                 }
-                else
-                {
-                    // #region agent log
-                    if (dbgSample) DbgLog("H1,H2", "ComputePreferredVelocity", "flow_sample_failed", $"{{\"entityId\":{e.Id},\"flowId\":{binding.FlowId},\"flowNull\":{(flow == null).ToString().ToLower()},\"posCm\":\"{posCm.X.ToFloat():F1},{posCm.Y.ToFloat():F1}\"}}");
-                    // #endregion
-                }
-            }
-            else
-            {
-                // #region agent log
-                if (dbgSample) DbgLog("H1", "ComputePreferredVelocity", "flow_disabled_or_no_binding", $"{{\"entityId\":{e.Id},\"flowEnabled\":{_runtime.FlowEnabled.ToString().ToLower()},\"hasBinding\":{World.Has<NavFlowBinding2D>(e).ToString().ToLower()}}}");
-                // #endregion
             }
 
             if (World.TryGet(e, out NavGoal2D goal) && goal.Kind == NavGoalKind2D.Point)
@@ -242,9 +204,6 @@ namespace Ludots.Core.Physics2D.Systems
                 float len = delta.Length();
                 if (len > 1e-6f)
                 {
-                    // #region agent log
-                    if (dbgSample) { var dir = delta / len; DbgLog("H1", "ComputePreferredVelocity", "goal_fallback_used", $"{{\"entityId\":{e.Id},\"dir\":\"{dir.X:F3},{dir.Y:F3}\"}}"); }
-                    // #endregion
                     return delta / len * maxSpeedCmPerSec.ToFloat();
                 }
             }
