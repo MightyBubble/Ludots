@@ -2,7 +2,7 @@ using System.IO;
 using Ludots.Core.Navigation.NavMesh;
 using NUnit.Framework;
 
-namespace GasTests
+namespace Ludots.Tests.Navigation2D
 {
     public class NavMeshFormatTests
     {

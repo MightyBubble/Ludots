@@ -9,7 +9,7 @@ using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.Navigation2D
 {
     [TestFixture]
     [NonParallelizable]

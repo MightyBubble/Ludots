@@ -7,7 +7,7 @@ using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using NUnit.Framework;
 
-namespace GasTests
+namespace Ludots.Tests.Navigation2D
 {
     public class NavMeshTests
     {

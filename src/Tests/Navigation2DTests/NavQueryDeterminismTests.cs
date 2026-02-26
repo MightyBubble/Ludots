@@ -4,7 +4,7 @@ using NUnit.Framework;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.NavMesh;
 
-namespace GasTests
+namespace Ludots.Tests.Navigation2D
 {
     /// <summary>
     /// Verifies that NavQueryService computations are deterministic across runs.
