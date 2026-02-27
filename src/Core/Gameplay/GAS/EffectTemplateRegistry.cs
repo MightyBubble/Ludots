@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Teams;
 
@@ -252,7 +253,7 @@ namespace Ludots.Core.Gameplay.GAS
                 {
                     string existingMod = _registrationSource.TryGetValue(templateId, out var em) ? em : "(core)";
                     string newMod = modId ?? "(core)";
-                    Console.WriteLine($"[EffectTemplateRegistry] WARNING: TemplateId {templateId} registered by '{existingMod}', overwritten by '{newMod}' (last-wins).");
+                    Log.Warn(in LogChannels.GAS, $"TemplateId {templateId} registered by '{existingMod}', overwritten by '{newMod}' (last-wins).");
                     _conflictReport?.Add("EffectTemplateRegistry", templateId.ToString(), existingMod, newMod);
                 }
             }

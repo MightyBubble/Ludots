@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Ludots.Core.Diagnostics;
 
 namespace Ludots.Core.Engine
 {
@@ -91,7 +92,7 @@ namespace Ludots.Core.Engine
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[GameTask] Error in WaitUntil predicate: {ex}");
+                    Log.Error(in LogChannels.Engine, $"Error in WaitUntil predicate: {ex}");
                     ActiveConditionWaiters.RemoveAt(i);
                     waiter.Tcs.TrySetException(ex);
                     continue;

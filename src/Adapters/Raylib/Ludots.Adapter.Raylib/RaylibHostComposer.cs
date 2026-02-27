@@ -1,7 +1,9 @@
 using System;
 using Ludots.Adapter.Raylib.UI;
+using Ludots.Client.Raylib.Diagnostics;
 using Ludots.Client.Raylib.Input;
 using Ludots.Core.Config;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
@@ -18,9 +20,27 @@ namespace Ludots.Adapter.Raylib
     {
         public static RaylibHostSetup Compose(string baseDir, string? gameConfigFile = null)
         {
+            // Initialize log with colored console backend before anything else
+            var consoleBackend = new RaylibConsoleLogBackend();
+            ILogBackend backend = consoleBackend;
+
+            // Check if file logging is requested after config merge
+            Log.Initialize(backend);
+
             var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "game.json");
             var engine = result.Engine;
             var config = result.Config;
+
+            // Upgrade backend with file logging if configured
+            if (config.Logging.FileLogging)
+            {
+                var fileBackend = new FileLogBackend(config.Logging.LogFilePath);
+                var multiBackend = new MultiLogBackend(consoleBackend, fileBackend);
+                Log.Initialize(multiBackend, Enum.TryParse<LogLevel>(config.Logging.GlobalLevel, true, out var lvl) ? lvl : LogLevel.Info);
+                LogConfigApplier.Apply(config.Logging);
+            }
+
+            engine.GlobalContext[ContextKeys.LogBackend] = Log.Backend;
 
             var uiRoot = new UIRoot();
             engine.GlobalContext[ContextKeys.UIRoot] = uiRoot;

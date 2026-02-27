@@ -1,7 +1,9 @@
 using System;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 
@@ -11,7 +13,7 @@ namespace GasTests
     public class MapManagerInheritanceTests
     {
         [Test]
-        public void LoadMap_WhenChildOmitsSpatial_InheritsParentSpatial()
+        public void LoadMap_WhenChildOmitsBoards_InheritsParentBoards()
         {
             var tempRoot = CreateTempDir();
             try
@@ -19,14 +21,17 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "parent", """
                 {
                   "id": "parent",
-                  "spatial": {
-                    "spatialType": "Hex",
-                    "widthInTiles": 128,
-                    "heightInTiles": 64,
-                    "gridCellSizeCm": 200,
-                    "hexEdgeLengthCm": 900,
-                    "chunkSizeCells": 32
-                  }
+                  "boards": [
+                    {
+                      "name": "default",
+                      "spatialType": "Hex",
+                      "widthInTiles": 128,
+                      "heightInTiles": 64,
+                      "gridCellSizeCm": 200,
+                      "hexEdgeLengthCm": 900,
+                      "chunkSizeCells": 32
+                    }
+                  ]
                 }
                 """);
 
@@ -41,10 +46,12 @@ namespace GasTests
                 var cfg = manager.LoadMap("child");
 
                 Assert.That(cfg, Is.Not.Null);
-                Assert.That(cfg!.Spatial, Is.Not.Null);
-                Assert.That(cfg.Spatial!.SpatialType, Is.EqualTo("Hex"));
-                Assert.That(cfg.Spatial.WidthInTiles, Is.EqualTo(128));
-                Assert.That(cfg.Spatial.HexEdgeLengthCm, Is.EqualTo(900));
+                Assert.That(cfg!.Boards, Is.Not.Null);
+                Assert.That(cfg.Boards.Count, Is.EqualTo(1));
+                var board = cfg.Boards[0];
+                Assert.That(board.SpatialType, Is.EqualTo("Hex"));
+                Assert.That(board.WidthInTiles, Is.EqualTo(128));
+                Assert.That(board.HexEdgeLengthCm, Is.EqualTo(900));
             }
             finally
             {

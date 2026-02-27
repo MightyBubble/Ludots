@@ -5,6 +5,7 @@ using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
 
@@ -14,13 +15,11 @@ namespace GasTests
     public class MapLoadCleanupTests
     {
         private World _world;
-        private ChunkedGridSpatialPartitionWorld _partition;
 
         [SetUp]
         public void SetUp()
         {
             _world = World.Create();
-            _partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4);
         }
 
         [TearDown]
@@ -29,19 +28,43 @@ namespace GasTests
             _world?.Dispose();
         }
 
-        private Entity SpawnMapEntity(string mapId, int cellX, int cellY)
+        private static BoardConfig DefaultBoardConfig() => new BoardConfig
+        {
+            Name = "default",
+            SpatialType = "Grid",
+            WidthInTiles = 1,
+            HeightInTiles = 1,
+            GridCellSizeCm = 100,
+            ChunkSizeCells = 4
+        };
+
+        private static MapSession CreateSessionWithBoard(string mapId)
+        {
+            var cfg = new MapConfig { Id = mapId };
+            var session = new MapSession(new MapId(mapId), cfg);
+            var boardCfg = DefaultBoardConfig();
+            var board = new GridBoard(new BoardId(boardCfg.Name), boardCfg.Name, boardCfg);
+            session.AddBoard(board);
+            return session;
+        }
+
+        private Entity SpawnMapEntity(MapSession session, string mapId, int cellX, int cellY)
         {
             var entity = _world.Create(new MapEntity { MapId = new MapId(mapId) });
-            _partition.Add(entity, cellX, cellY);
+            var board = session.PrimaryBoard;
+            if (board?.SpatialPartition != null)
+                board.SpatialPartition.Add(entity, cellX, cellY);
             return entity;
         }
 
         [Test]
         public void LoadMap_ClearsOldEntities()
         {
+            var session = CreateSessionWithBoard("map_a");
+
             // Spawn 5 entities for "map_a"
             for (int i = 0; i < 5; i++)
-                SpawnMapEntity("map_a", i, 0);
+                SpawnMapEntity(session, "map_a", i, 0);
 
             // Verify 5 map entities exist
             int countBefore = 0;
@@ -49,8 +72,7 @@ namespace GasTests
             Assert.That(countBefore, Is.EqualTo(5));
 
             // Cleanup via MapSession
-            var session = new MapSession(new MapId("map_a"), new MapConfig { Id = "map_a" });
-            session.Cleanup(_world, _partition);
+            session.Cleanup(_world);
 
             // Verify all map entities destroyed
             int countAfter = 0;
@@ -61,37 +83,42 @@ namespace GasTests
         [Test]
         public void LoadMap_RebuildsSpatialIndex()
         {
-            // Add entities to spatial partition
-            SpawnMapEntity("map_a", 2, 3);
-            SpawnMapEntity("map_a", 4, 5);
+            var session = CreateSessionWithBoard("map_a");
+            var partition = session.PrimaryBoard.SpatialPartition;
+
+            // Add entities to spatial partition via board
+            SpawnMapEntity(session, "map_a", 2, 3);
+            SpawnMapEntity(session, "map_a", 4, 5);
 
             // Verify spatial partition has data
             Span<Entity> buffer = stackalloc Entity[16];
-            int countBefore = _partition.Query(new IntRect(0, 0, 10, 10), buffer, out _);
+            int countBefore = partition.Query(new IntRect(0, 0, 10, 10), buffer, out _);
             Assert.That(countBefore, Is.EqualTo(2));
 
-            // Cleanup
-            var session = new MapSession(new MapId("map_a"), new MapConfig { Id = "map_a" });
-            session.Cleanup(_world, _partition);
+            // Cleanup — disposes boards which clears spatial partition
+            session.Cleanup(_world);
 
-            // Spatial partition should be empty
-            int countAfter = _partition.Query(new IntRect(0, 0, 10, 10), buffer, out _);
+            // Spatial partition should be empty after board disposal
+            int countAfter = partition.Query(new IntRect(0, 0, 10, 10), buffer, out _);
             Assert.That(countAfter, Is.EqualTo(0));
         }
 
         [Test]
         public void LoadMap_MultipleLoads_NoAccumulation()
         {
+            var sessionA = CreateSessionWithBoard("map_a");
+
             // Simulate loading map_a
             for (int i = 0; i < 3; i++)
-                SpawnMapEntity("map_a", i, 0);
+                SpawnMapEntity(sessionA, "map_a", i, 0);
 
-            // Cleanup map_a, then simulate loading map_b
-            var sessionA = new MapSession(new MapId("map_a"), new MapConfig { Id = "map_a" });
-            sessionA.Cleanup(_world, _partition);
+            // Cleanup map_a
+            sessionA.Cleanup(_world);
 
+            // Simulate loading map_b
+            var sessionB = CreateSessionWithBoard("map_b");
             for (int i = 0; i < 4; i++)
-                SpawnMapEntity("map_b", i, 1);
+                SpawnMapEntity(sessionB, "map_b", i, 1);
 
             // Only map_b entities should exist
             int count = 0;
@@ -99,8 +126,7 @@ namespace GasTests
             Assert.That(count, Is.EqualTo(4));
 
             // Cleanup map_b
-            var sessionB = new MapSession(new MapId("map_b"), new MapConfig { Id = "map_b" });
-            sessionB.Cleanup(_world, _partition);
+            sessionB.Cleanup(_world);
 
             int countFinal = 0;
             _world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => countFinal++);

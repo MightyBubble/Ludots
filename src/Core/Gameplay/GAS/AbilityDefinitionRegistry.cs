@@ -1,5 +1,6 @@
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -86,7 +87,7 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 string existingMod = _registrationSource.TryGetValue(abilityId, out var em) ? em : "(core)";
                 string newMod = modId ?? "(core)";
-                System.Console.WriteLine($"[AbilityDefinitionRegistry] WARNING: AbilityId {abilityId} registered by '{existingMod}', overwritten by '{newMod}' (last-wins).");
+                Log.Warn(in LogChannels.GAS, $"AbilityId {abilityId} registered by '{existingMod}', overwritten by '{newMod}' (last-wins).");
                 _conflictReport?.Add("AbilityDefinitionRegistry", abilityId.ToString(), existingMod, newMod);
             }
 #endif

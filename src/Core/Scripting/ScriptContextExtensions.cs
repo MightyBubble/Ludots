@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Map;
@@ -70,7 +71,7 @@ namespace Ludots.Core.Scripting
         // Logging
         public static void Log(this ScriptContext ctx, string message)
         {
-            Console.WriteLine($"[Script] {message}");
+            Diagnostics.Log.Info(in LogChannels.Engine, message);
         }
     }
 }

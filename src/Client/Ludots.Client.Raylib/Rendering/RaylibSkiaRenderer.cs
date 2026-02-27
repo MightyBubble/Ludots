@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Diagnostics;
 using SkiaSharp;
 using Raylib_cs;
 
@@ -22,7 +23,7 @@ namespace Ludots.Client.Raylib.Rendering
             // Defaulting to CPU (Raster) rendering.
             _useGpu = false;
             
-            Console.WriteLine($"[RaylibSkiaRenderer] GPU Accelerated: {_useGpu}");
+            Log.Info(in LogChannels.Presentation, $"GPU Accelerated: {_useGpu}");
 
             Resize(width, height);
         }
@@ -54,7 +55,7 @@ namespace Ludots.Client.Raylib.Rendering
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[RaylibSkiaRenderer] GPU Surface init failed: {ex.Message}");
+                    Log.Error(in LogChannels.Presentation, $"GPU Surface init failed: {ex.Message}");
                     _useGpu = false;
                     _surface = null;
                 }
@@ -64,7 +65,7 @@ namespace Ludots.Client.Raylib.Rendering
             {
                  if (_useGpu) 
                  {
-                     Console.WriteLine("[RaylibSkiaRenderer] GPU Surface creation failed, falling back to CPU");
+                     Log.Warn(in LogChannels.Presentation, "GPU Surface creation failed, falling back to CPU");
                      _useGpu = false;
                  }
                  

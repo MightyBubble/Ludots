@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Modding;
 
 namespace Ludots.Core.Config
@@ -113,12 +114,12 @@ namespace Ludots.Core.Config
                     if (node != null)
                     {
                         fragments.Add(new ConfigFragment(node, sourceUri));
-                        Console.WriteLine($"[ConfigPipeline] Merged fragment from: {sourceUri}");
+                        Log.Info(in LogChannels.Config, $"Merged fragment from: {sourceUri}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ConfigPipeline] Error parsing JSON from {sourceUri}: {ex.Message}");
+                    Log.Error(in LogChannels.Config, $"Error parsing JSON from {sourceUri}: {ex.Message}");
                 }
             });
             return fragments;
@@ -208,7 +209,7 @@ namespace Ludots.Core.Config
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ConfigPipeline] Error loading {uri}: {ex.Message}");
+                Log.Error(in LogChannels.Config, $"Error loading {uri}: {ex.Message}");
             }
         }
     }

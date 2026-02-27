@@ -1,5 +1,7 @@
 {
   "Id": "entry",
-  "DataFile": "terrain_bench.vtxm"
+  "Boards": [
+    { "Name": "default", "DataFile": "terrain_bench.vtxm" }
+  ]
 }
 

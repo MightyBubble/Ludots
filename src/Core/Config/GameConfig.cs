@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Navigation2D.Config;
 
 namespace Ludots.Core.Config
@@ -41,6 +42,8 @@ namespace Ludots.Core.Config
         public int WorldHeightInTiles { get; set; } = 64;
 
         public Navigation2DConfig Navigation2D { get; set; } = new Navigation2DConfig();
+
+        public LogConfig Logging { get; set; } = new LogConfig();
 
         /// <summary>
         /// Game constants table - merged from all Mods via ConfigPipeline.

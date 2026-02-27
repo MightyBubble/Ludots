@@ -4,6 +4,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Map;
 
 namespace Ludots.Core.Systems
@@ -54,12 +55,12 @@ namespace Ludots.Core.Systems
             {
                 if (entityData == null)
                 {
-                    Console.WriteLine($"[MapLoader] Warning: Null entity entry in map '{mapConfig.Id}', skipping.");
+                    Log.Warn(in LogChannels.Map, $"Null entity entry in map '{mapConfig.Id}', skipping.");
                     continue;
                 }
                 if (string.IsNullOrWhiteSpace(entityData.Template))
                 {
-                    Console.WriteLine($"[MapLoader] Warning: Entity entry missing template in map '{mapConfig.Id}', skipping.");
+                    Log.Warn(in LogChannels.Map, $"Entity entry missing template in map '{mapConfig.Id}', skipping.");
                     continue;
                 }
                 builder.UseTemplate(entityData.Template);
@@ -93,7 +94,7 @@ namespace Ludots.Core.Systems
                  
                  if (width != _worldMap.WidthInTiles || height != _worldMap.HeightInTiles)
                  {
-                     Console.WriteLine($"[MapLoader] Warning: Map dimensions mismatch. Expected {_worldMap.WidthInTiles}x{_worldMap.HeightInTiles}, got {width}x{height}");
+                     Log.Warn(in LogChannels.Map, $"Map dimensions mismatch. Expected {_worldMap.WidthInTiles}x{_worldMap.HeightInTiles}, got {width}x{height}");
                  }
                  
                  // Skip content for now as per previous implementation

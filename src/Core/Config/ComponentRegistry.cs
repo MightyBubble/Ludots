@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics;
@@ -67,7 +68,7 @@ namespace Ludots.Core.Config
             {
                 string existingMod = _registrationSource.TryGetValue(name, out var em) ? em : "(core)";
                 string newMod = modId ?? "(core)";
-                Console.WriteLine($"[ComponentRegistry] WARNING: Component '{name}' registered by '{existingMod}', overwritten by '{newMod}' (last-wins).");
+                Log.Warn(in LogChannels.Config, $"Component '{name}' registered by '{existingMod}', overwritten by '{newMod}' (last-wins).");
                 _conflictReport?.Add("ComponentRegistry", name, existingMod, newMod);
             }
 #endif
@@ -79,7 +80,7 @@ namespace Ludots.Core.Config
         {
             if (data == null)
             {
-                Console.WriteLine($"[ComponentRegistry] Warning: Component '{componentName}' data is null, skipping.");
+                Log.Warn(in LogChannels.Config, $"Component '{componentName}' data is null, skipping.");
                 return;
             }
             if (_setters.TryGetValue(componentName, out var setter))
@@ -89,7 +90,7 @@ namespace Ludots.Core.Config
             else
             {
                 // Log warning: Unknown component
-                Console.WriteLine($"[ComponentRegistry] Warning: Unknown component '{componentName}'");
+                Log.Warn(in LogChannels.Config, $"Unknown component '{componentName}'");
             }
         }
 
