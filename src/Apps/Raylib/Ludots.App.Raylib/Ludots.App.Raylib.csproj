@@ -19,11 +19,21 @@
              Properties="Configuration=Release" />
   </Target>
 
-  <ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <None Include="..\..\..\Platforms\Desktop\raylib.dll">
       <Link>raylib.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <None Include="..\..\..\Platforms\Desktop\libraylib.so">
+      <Link>libraylib.so</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\..\Platforms\Desktop\instancing.vs">
       <Link>instancing.vs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

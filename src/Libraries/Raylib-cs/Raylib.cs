@@ -256,6 +256,8 @@ namespace Raylib_cs
         public float* animNormals;
         public byte* boneIds;
         public float* boneWeights;
+        public RaylibMatrix* boneMatrices;
+        public int boneCount;
 
         // OpenGL identifiers
         public uint vaoId;
