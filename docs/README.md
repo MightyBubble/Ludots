@@ -12,4 +12,4 @@
 
 本文为历史入口兼容，新的全局入口位于：
 
-- `docs/00_文档总览/00_README.md`
+- `docs/developer-guide/README.md`

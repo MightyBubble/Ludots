@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using Ludots.Core.Modding;
 using Ludots.ModLauncher.Config;
 
 namespace Ludots.ModLauncher
@@ -936,10 +937,15 @@ namespace Ludots.ModLauncher
                 try
                 {
                     var content = File.ReadAllText(modJson);
-                    if (!TryParseManifestStrict(content, modJson, out var manifestName, out var manifestVersion, out var manifestDescription, out var manifestMain, out var manifestDependencies, out var manifestError))
+                    ModManifest manifest;
+                    try
                     {
-                        Debug.WriteLine($"Invalid mod.json at {modJson}: {manifestError}");
-                        Application.Current.Dispatcher.Invoke(() => BuildLog += $"ERROR: {manifestError}\n");
+                        manifest = ModManifestJson.ParseStrict(content, modJson);
+                    }
+                    catch (Exception parseEx)
+                    {
+                        Debug.WriteLine($"Invalid mod.json at {modJson}: {parseEx.Message}");
+                        Application.Current.Dispatcher.Invoke(() => BuildLog += $"ERROR: {parseEx.Message}\n");
                         return;
                     }
 
@@ -948,13 +954,13 @@ namespace Ludots.ModLauncher
 
                     var modVm = new ModViewModel
                     {
-                        Name = manifestName,
-                        Version = manifestVersion,
-                        Description = manifestDescription,
-                        Main = manifestMain,
+                        Name = manifest.Name,
+                        Version = manifest.Version,
+                        Description = manifest.Description ?? "",
+                        Main = manifest.Main,
                         Path = modPath,
                         IsActive = isActive,
-                        Dependencies = manifestDependencies,
+                        Dependencies = new Dictionary<string, string>(manifest.Dependencies, StringComparer.Ordinal),
                         Parent = this
                     };
 
@@ -1311,122 +1317,6 @@ namespace Ludots.ModLauncher
 
                     DependencyGraphEdges.Add(new DependencyGraphEdgeViewModel(from, to, rangeText ?? "", isError));
                 }
-            }
-        }
-
-        private static bool TryParseManifestStrict(
-            string json,
-            string manifestPath,
-            out string name,
-            out string version,
-            out string description,
-            out string main,
-            out Dictionary<string, string> dependencies,
-            out string error)
-        {
-            name = null;
-            version = null;
-            description = "";
-            main = null;
-            dependencies = new Dictionary<string, string>(StringComparer.Ordinal);
-            error = null;
-
-            try
-            {
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.ValueKind != JsonValueKind.Object)
-                {
-                    error = $"Invalid mod.json (root is not object): {manifestPath}";
-                    return false;
-                }
-
-                var root = doc.RootElement;
-                var allowed = new HashSet<string>(StringComparer.Ordinal)
-                {
-                    "name",
-                    "version",
-                    "description",
-                    "main",
-                    "priority",
-                    "dependencies"
-                };
-
-                foreach (var prop in root.EnumerateObject())
-                {
-                    if (!allowed.Contains(prop.Name))
-                    {
-                        error = $"Invalid mod.json (unknown/forbidden field '{prop.Name}'): {manifestPath}";
-                        return false;
-                    }
-                }
-
-                if (!root.TryGetProperty("name", out var nameEl) || nameEl.ValueKind != JsonValueKind.String)
-                {
-                    error = $"Invalid mod.json (missing 'name'): {manifestPath}";
-                    return false;
-                }
-                if (!root.TryGetProperty("version", out var verEl) || verEl.ValueKind != JsonValueKind.String)
-                {
-                    error = $"Invalid mod.json (missing 'version'): {manifestPath}";
-                    return false;
-                }
-                if (!root.TryGetProperty("main", out var mainEl) || mainEl.ValueKind != JsonValueKind.String)
-                {
-                    error = $"Invalid mod.json (missing 'main'): {manifestPath}";
-                    return false;
-                }
-
-                name = nameEl.GetString();
-                version = verEl.GetString();
-                main = mainEl.GetString();
-
-                if (string.IsNullOrWhiteSpace(name))
-                {
-                    error = $"Invalid mod.json ('name' is empty): {manifestPath}";
-                    return false;
-                }
-                if (string.IsNullOrWhiteSpace(version))
-                {
-                    error = $"Invalid mod.json ('version' is empty): {manifestPath}";
-                    return false;
-                }
-                if (string.IsNullOrWhiteSpace(main))
-                {
-                    error = $"Invalid mod.json ('main' is empty): {manifestPath}";
-                    return false;
-                }
-
-                if (root.TryGetProperty("description", out var descEl) && descEl.ValueKind == JsonValueKind.String)
-                {
-                    description = descEl.GetString() ?? "";
-                }
-
-                if (root.TryGetProperty("dependencies", out var depsEl))
-                {
-                    if (depsEl.ValueKind != JsonValueKind.Object)
-                    {
-                        error = $"Invalid mod.json ('dependencies' must be object): {manifestPath}";
-                        return false;
-                    }
-
-                    foreach (var depProp in depsEl.EnumerateObject())
-                    {
-                        if (depProp.Value.ValueKind != JsonValueKind.String)
-                        {
-                            error = $"Invalid mod.json ('dependencies.{depProp.Name}' must be string): {manifestPath}";
-                            return false;
-                        }
-
-                        dependencies[depProp.Name] = depProp.Value.GetString();
-                    }
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                error = $"Invalid mod.json ({ex.Message}): {manifestPath}";
-                return false;
             }
         }
 
