@@ -85,6 +85,15 @@ namespace Ludots.Core.Scripting
         public const string NavMeshProfiles = "NavMeshProfiles";
         public const string NavQueryServices = "NavQueryServices";
 
+        public const string LogBackend = "LogBackend";
+
+        public const string MapSessions = "MapSessions";
+        public const string BoardIdRegistry = "BoardIdRegistry";
+        public const string MapContext = "MapContext";
+
+        public const string SystemFactoryRegistry = "SystemFactoryRegistry";
+        public const string TriggerDecoratorRegistry = "TriggerDecoratorRegistry";
+
         public const string Navigation2DPlayground_AgentDeltaPerTeam = "Navigation2DPlayground_AgentDeltaPerTeam";
         public const string Navigation2DPlayground_ResetScenario = "Navigation2DPlayground_ResetScenario";
         public const string Navigation2DPlayground_AgentsPerTeam = "Navigation2DPlayground_AgentsPerTeam";

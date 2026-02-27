@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ludots.Core.Diagnostics;
+using Ludots.Core.Map;
 
 namespace Ludots.Core.Scripting
 {
@@ -21,11 +23,18 @@ namespace Ludots.Core.Scripting
 
     public class TriggerManager
     {
-        // Event Key -> List of Triggers
+        // Event Key -> List of Triggers (global, non-map triggers)
         private readonly Dictionary<EventKey, List<Trigger>> _triggers = new Dictionary<EventKey, List<Trigger>>();
-        
+
         // Type -> Singleton Trigger Instance
         private readonly Dictionary<Type, Trigger> _typeRegistry = new Dictionary<Type, Trigger>();
+
+        // Map-scoped trigger tracking
+        private readonly Dictionary<MapId, List<Trigger>> _mapTriggers = new Dictionary<MapId, List<Trigger>>();
+
+        // EventHandler storage (non-Trigger, simple callbacks registered by Mods)
+        private readonly Dictionary<EventKey, List<Func<ScriptContext, Task>>> _eventHandlers
+            = new Dictionary<EventKey, List<Func<ScriptContext, Task>>>();
 
         private readonly List<TriggerError> _errors = new List<TriggerError>();
         private readonly object _errorsLock = new object();
@@ -48,7 +57,7 @@ namespace Ludots.Core.Scripting
         public void RegisterTrigger(Trigger trigger)
         {
             if (trigger == null) return;
-            
+
             // 1. Register Singleton by Type
             var type = trigger.GetType();
             if (!_typeRegistry.ContainsKey(type))
@@ -57,21 +66,15 @@ namespace Ludots.Core.Scripting
             }
             else
             {
-                // If it's the base Trigger class (anonymous/builder usage), we don't overwrite the singleton registry 
-                // unless we want to support only one anonymous trigger? 
-                // Actually, Builder created triggers are usually instances of 'Trigger' class directly.
-                // We only register subclasses as singletons usually.
                 if (type != typeof(Trigger))
                 {
-                    Console.WriteLine($"[TriggerManager] Warning: Duplicate registration for trigger type {type.Name}. Keeping original.");
+                    Log.Warn(in LogChannels.Engine, $"Duplicate registration for trigger type {type.Name}. Keeping original.");
                 }
             }
 
             // 2. Register for Event
             if (string.IsNullOrEmpty(trigger.EventKey.Value))
             {
-                 // Some triggers might not be event-driven but just hooks? 
-                 // But usually they need an event to start.
                  return;
             }
 
@@ -81,7 +84,7 @@ namespace Ludots.Core.Scripting
             }
             _triggers[trigger.EventKey].Add(trigger);
         }
-        
+
         public T Get<T>() where T : Trigger
         {
             if (_typeRegistry.TryGetValue(typeof(T), out var trigger))
@@ -91,24 +94,137 @@ namespace Ludots.Core.Scripting
             return null;
         }
 
+        /// <summary>
+        /// Register triggers owned by a specific map. They will be auto-unregistered on map unload.
+        /// </summary>
+        public void RegisterMapTriggers(MapId mapId, IReadOnlyList<Trigger> triggers)
+        {
+            if (triggers == null || triggers.Count == 0) return;
+
+            var list = new List<Trigger>(triggers.Count);
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                RegisterTrigger(triggers[i]);
+                list.Add(triggers[i]);
+            }
+            _mapTriggers[mapId] = list;
+            Log.Info(in LogChannels.Engine, $"Registered {list.Count} triggers for map '{mapId}'.");
+        }
+
+        /// <summary>
+        /// Unregister all triggers owned by a map. Calls OnMapExit before unregistering.
+        /// </summary>
+        public void UnregisterMapTriggers(MapId mapId, ScriptContext context)
+        {
+            if (!_mapTriggers.TryGetValue(mapId, out var list)) return;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                try
+                {
+                    list[i].OnMapExit(context);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(in LogChannels.Engine, $"Error in OnMapExit for trigger '{list[i].Name}': {ex.Message}");
+                }
+            }
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                UnregisterTrigger(list[i]);
+            }
+
+            _mapTriggers.Remove(mapId);
+            Log.Info(in LogChannels.Engine, $"Unregistered all triggers for map '{mapId}'.");
+        }
+
+        // ────────────────────────────────────────────────────────────
+        // Map-scoped event firing — only triggers belonging to the
+        // specified map are evaluated, sorted by Priority (ascending).
+        // ────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Fire an event only to triggers registered for the given map.
+        /// Triggers are sorted by Priority (lower values execute first).
+        /// Also invokes matching EventHandlers.
+        /// </summary>
+        public void FireMapEvent(MapId mapId, EventKey eventKey, ScriptContext context)
+        {
+            // EventHandlers (mod callbacks) always fire
+            FireEventHandlers(eventKey, context);
+
+            if (!_mapTriggers.TryGetValue(mapId, out var mapList) || mapList.Count == 0)
+                return;
+
+            // Collect matching triggers for this event key, sorted by Priority
+            var matching = CollectSortedMapTriggers(mapList, eventKey);
+            if (matching.Count == 0) return;
+
+            for (int i = 0; i < matching.Count; i++)
+            {
+                _ = FireTriggerAsync(matching[i], eventKey, context, propagateExceptions: false);
+            }
+        }
+
+        /// <summary>
+        /// Async version of FireMapEvent.
+        /// </summary>
+        public Task FireMapEventAsync(MapId mapId, EventKey eventKey, ScriptContext context)
+        {
+            // EventHandlers (mod callbacks)
+            var handlerTask = FireEventHandlersAsync(eventKey, context);
+
+            if (!_mapTriggers.TryGetValue(mapId, out var mapList) || mapList.Count == 0)
+                return handlerTask;
+
+            var matching = CollectSortedMapTriggers(mapList, eventKey);
+            if (matching.Count == 0) return handlerTask;
+
+            var tasks = new Task[matching.Count + 1];
+            tasks[0] = handlerTask;
+            for (int i = 0; i < matching.Count; i++)
+            {
+                tasks[i + 1] = FireTriggerAsync(matching[i], eventKey, context, propagateExceptions: true);
+            }
+            return Task.WhenAll(tasks);
+        }
+
+        private static List<Trigger> CollectSortedMapTriggers(List<Trigger> mapList, EventKey eventKey)
+        {
+            var matching = new List<Trigger>();
+            for (int i = 0; i < mapList.Count; i++)
+            {
+                if (mapList[i].EventKey == eventKey)
+                    matching.Add(mapList[i]);
+            }
+
+            // Sort by Priority ascending (lower Priority executes first)
+            matching.Sort((a, b) => a.Priority.CompareTo(b.Priority));
+            return matching;
+        }
+
+        // ────────────────────────────────────────────────────────────
+        // Global event firing (for non-map events: GameStart, Tick, etc.)
+        // Now also sorted by Priority.
+        // ────────────────────────────────────────────────────────────
+
         public void FireEvent(EventKey eventKey, ScriptContext context)
         {
+            FireEventHandlers(eventKey, context);
+
             if (!_triggers.TryGetValue(eventKey, out var triggerList))
             {
                 return;
             }
 
-            // Console.WriteLine($"[TriggerManager] Firing event '{eventKey}' - Found {triggerList.Count} triggers.");
+            // Create a snapshot sorted by Priority
+            var currentTriggers = new List<Trigger>(triggerList);
+            currentTriggers.Sort((a, b) => a.Priority.CompareTo(b.Priority));
 
-            // Create a snapshot to safely iterate
-            var currentTriggers = triggerList.ToList();
-
-            foreach (var trigger in currentTriggers)
+            for (int i = 0; i < currentTriggers.Count; i++)
             {
-                // We launch the async execution. 
-                // Since we are on GameSyncContext (Main Thread), the synchronous parts run immediately.
-                // Awaits will post back to the context.
-                _ = FireTriggerAsync(trigger, eventKey, context, propagateExceptions: false);
+                _ = FireTriggerAsync(currentTriggers[i], eventKey, context, propagateExceptions: false);
             }
         }
 
@@ -119,16 +235,21 @@ namespace Ludots.Core.Scripting
 
         public Task FireEventAsync(EventKey eventKey, ScriptContext context)
         {
+            var handlerTask = FireEventHandlersAsync(eventKey, context);
+
             if (!_triggers.TryGetValue(eventKey, out var triggerList) || triggerList.Count == 0)
             {
-                return Task.CompletedTask;
+                return handlerTask;
             }
 
-            var currentTriggers = triggerList.ToList();
-            var tasks = new Task[currentTriggers.Count];
+            var currentTriggers = new List<Trigger>(triggerList);
+            currentTriggers.Sort((a, b) => a.Priority.CompareTo(b.Priority));
+
+            var tasks = new Task[currentTriggers.Count + 1];
+            tasks[0] = handlerTask;
             for (int i = 0; i < currentTriggers.Count; i++)
             {
-                tasks[i] = FireTriggerAsync(currentTriggers[i], eventKey, context, propagateExceptions: true);
+                tasks[i + 1] = FireTriggerAsync(currentTriggers[i], eventKey, context, propagateExceptions: true);
             }
             return Task.WhenAll(tasks);
         }
@@ -137,6 +258,70 @@ namespace Ludots.Core.Scripting
         {
             return FireEventAsync(new EventKey(eventKey), context);
         }
+
+        // ────────────────────────────────────────────────────────────
+        // EventHandler registration (simple mod callbacks, not Triggers)
+        // ────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Register a simple event handler callback. Unlike Triggers, handlers have
+        /// no conditions, priority, or lifecycle hooks — they just execute.
+        /// Primarily for Mod OnLoad callbacks via IModContext.OnEvent().
+        /// </summary>
+        public void RegisterEventHandler(EventKey eventKey, Func<ScriptContext, Task> handler)
+        {
+            if (handler == null) return;
+
+            if (!_eventHandlers.TryGetValue(eventKey, out var list))
+            {
+                list = new List<Func<ScriptContext, Task>>();
+                _eventHandlers[eventKey] = list;
+            }
+            list.Add(handler);
+        }
+
+        private void FireEventHandlers(EventKey eventKey, ScriptContext context)
+        {
+            if (!_eventHandlers.TryGetValue(eventKey, out var handlers) || handlers.Count == 0)
+                return;
+
+            for (int i = 0; i < handlers.Count; i++)
+            {
+                try
+                {
+                    _ = handlers[i](context);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex.Message}");
+                }
+            }
+        }
+
+        private Task FireEventHandlersAsync(EventKey eventKey, ScriptContext context)
+        {
+            if (!_eventHandlers.TryGetValue(eventKey, out var handlers) || handlers.Count == 0)
+                return Task.CompletedTask;
+
+            var tasks = new Task[handlers.Count];
+            for (int i = 0; i < handlers.Count; i++)
+            {
+                try
+                {
+                    tasks[i] = handlers[i](context);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(in LogChannels.Engine, $"Error in event handler for '{eventKey}': {ex.Message}");
+                    tasks[i] = Task.CompletedTask;
+                }
+            }
+            return Task.WhenAll(tasks);
+        }
+
+        // ────────────────────────────────────────────────────────────
+        // Core
+        // ────────────────────────────────────────────────────────────
 
         public void ClearErrors()
         {
@@ -148,23 +333,16 @@ namespace Ludots.Core.Scripting
 
         private async Task FireTriggerAsync(Trigger trigger, EventKey eventKey, ScriptContext context, bool propagateExceptions)
         {
-            // Console.WriteLine($"[TriggerManager] Checking trigger '{trigger.Name}'...");
             try
             {
-                // Lifecycle hook: OnMapEnter check? 
-                // This is a bit tricky. When do we call OnMapEnter? 
-                // Ideally, GameEngine calls OnMapEnter on all triggers when map loads?
-                // For now, let's assume OnMapEnter is called separately or we handle it here if event is MapLoaded.
-                
                 if (trigger.EventKey == GameEvents.MapLoaded)
                 {
                      trigger.OnMapEnter(context);
                 }
-                
+
                 // Check condition
                 if (trigger.CheckConditions(context))
                 {
-                    // Console.WriteLine($"[TriggerManager] Executing trigger '{trigger.Name}'...");
                     await trigger.ExecuteAsync(context);
                 }
             }
@@ -174,11 +352,11 @@ namespace Ludots.Core.Scripting
                 {
                     _errors.Add(new TriggerError(eventKey, trigger?.Name ?? string.Empty, ex));
                 }
-                Console.WriteLine($"[TriggerManager] Error executing trigger {trigger.Name}: {ex}");
+                Log.Error(in LogChannels.Engine, $"Error executing trigger {trigger.Name}: {ex}");
                 if (propagateExceptions) throw;
             }
         }
-        
+
         public void UnregisterTrigger(Trigger trigger)
         {
              if (trigger == null) return;
@@ -186,7 +364,12 @@ namespace Ludots.Core.Scripting
              {
                  list.Remove(trigger);
              }
-             // We don't remove from TypeRegistry typically, unless unloading mod?
+             // Remove from type registry if it's the same instance
+             var type = trigger.GetType();
+             if (_typeRegistry.TryGetValue(type, out var registered) && ReferenceEquals(registered, trigger))
+             {
+                 _typeRegistry.Remove(type);
+             }
         }
     }
 }
