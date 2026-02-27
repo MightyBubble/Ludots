@@ -35,8 +35,18 @@ dotnet test src/Tests/Navigation2DTests/Navigation2DTests.csproj  # 28 tests
 dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj  # 1 test
 ```
 
+### Raylib desktop app on Linux
+
+The Raylib desktop app now works on Linux. Key changes:
+
+- `libraylib.so` (raylib 5.5, x64) is checked into `src/Platforms/Desktop/`
+- `SkiaSharp.NativeAssets.Linux` NuGet package provides `libSkiaSharp.so` for UI rendering
+- The csproj uses OS-conditional `<ItemGroup>` to copy the correct native lib per platform
+- System dependencies needed: `libx11-dev`, `libxrandr-dev`, `libxi-dev`, `libxcursor-dev`, `libxinerama-dev`, `libgl1-mesa-dev`
+
+Run with: `dotnet run --project src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj -c Release -- game.navigation2d.json`
+
 ### Known issues on Linux
 
 - `src/Tools/Ludots.Editor.React/src/App.tsx` has a case-sensitive import (`@/Components/...` vs `@/components/...`). A fix has been committed on this branch. Without the fix, `tsc` type-checking fails and Vite may fail to resolve the module.
 - ESLint reports ~71 pre-existing errors in the React Editor (mostly `@typescript-eslint/no-explicit-any` and `no-case-declarations`). These are pre-existing, not introduced by environment setup.
-- The Raylib desktop app (`src/Apps/Raylib/`) will not run on Linux without building `libraylib.so` from source or obtaining a Linux native binary.
