@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { TerrainStore } from '../../Core/Map/TerrainStore';
+import { hexToWorldCm, worldCmToHex } from '../../Core/Map/HexMetrics';
 import type { Camera } from 'three';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 
@@ -233,11 +234,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const mapJson = await mapRes.json();
         const mapCfg = mapJson.map ?? null;
         const entities = Array.isArray(mapCfg?.Entities) ? mapCfg.Entities : (Array.isArray(mapCfg?.entities) ? mapCfg.entities : []);
-        const spawnEntities = entities.map((e: any) => ({
-            template: String(e.Template ?? e.template ?? ''),
-            position: { x: Number(e.Position?.X ?? e.position?.x ?? 0), y: Number(e.Position?.Y ?? e.position?.y ?? 0) },
-            overrides: (e.Overrides ?? e.overrides ?? {}) as Record<string, any>
-        }));
+        const spawnEntities = entities.map((e: any) => {
+            const template = String(e.Template ?? e.template ?? '');
+            const overrides = (e.Overrides ?? e.overrides ?? {}) as Record<string, any>;
+            const wpcm = overrides?.WorldPositionCm?.Value ?? overrides?.worldPositionCm?.value;
+            let posX: number, posY: number;
+            if (wpcm && (wpcm.X !== undefined || wpcm.Y !== undefined)) {
+                const hex = worldCmToHex(Number(wpcm.X ?? 0), Number(wpcm.Y ?? 0));
+                posX = hex.col;
+                posY = hex.row;
+            } else {
+                posX = Number(e.Position?.X ?? e.position?.x ?? 0);
+                posY = Number(e.Position?.Y ?? e.position?.y ?? 0);
+            }
+            return { template, position: { x: posX, y: posY }, overrides };
+        });
 
         set({ mapConfig: mapCfg, spawnEntities, selectedEntityIndex: null, entitiesVersion: Date.now() });
 
@@ -262,11 +273,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
         setLoading(true, 'Saving MapConfig...', 20);
         mapConfig.Id = selectedMapId;
-        mapConfig.Entities = spawnEntities.map((e) => ({
-            Template: e.template,
-            Position: { X: e.position.x, Y: e.position.y },
-            Overrides: e.overrides ?? {}
-        }));
+        mapConfig.Entities = spawnEntities.map((e) => {
+            const cm = hexToWorldCm(e.position.x, e.position.y);
+            const overrides = { ...(e.overrides ?? {}) };
+            overrides['WorldPositionCm'] = { Value: { X: cm.xCm, Y: cm.yCm } };
+            return {
+                Template: e.template,
+                Position: { X: e.position.x, Y: e.position.y },
+                Overrides: overrides,
+            };
+        });
         const mapRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -296,7 +312,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         if (!state.selectedTemplateId) return state;
         const next = state.spawnEntities.slice();
         const idx = next.findIndex((e) => e.position.x === c && e.position.y === r);
-        const entity = { template: state.selectedTemplateId, position: { x: c, y: r }, overrides: {} as Record<string, any> };
+        const cm = hexToWorldCm(c, r);
+        const overrides: Record<string, any> = {
+            WorldPositionCm: { Value: { X: cm.xCm, Y: cm.yCm } },
+        };
+        const entity = { template: state.selectedTemplateId, position: { x: c, y: r }, overrides };
         if (idx >= 0) next[idx] = entity;
         else next.push(entity);
         return { spawnEntities: next, selectedEntityIndex: idx >= 0 ? idx : next.length - 1, entitiesVersion: Date.now() };

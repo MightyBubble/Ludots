@@ -10,3 +10,17 @@ export function getHexPosition(col: number, row: number, height: number, hScale:
     const y = height * hScale;
     return { x, y, z };
 }
+
+export function hexToWorldCm(col: number, row: number): { xCm: number; yCm: number } {
+    const x = HEX_WIDTH * (col + 0.5 * (row & 1));
+    const z = ROW_SPACING * row;
+    return { xCm: Math.round(x * 100), yCm: Math.round(z * 100) };
+}
+
+export function worldCmToHex(xCm: number, yCm: number): { col: number; row: number } {
+    const xM = xCm * 0.01;
+    const zM = yCm * 0.01;
+    const row = Math.round(zM / ROW_SPACING);
+    const col = Math.round(xM / HEX_WIDTH - 0.5 * (row & 1));
+    return { col, row };
+}

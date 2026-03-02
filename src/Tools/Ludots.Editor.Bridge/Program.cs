@@ -901,6 +901,19 @@ static class EditorRepo
         return defs.OrderBy(kvp => kvp.Key).Select(kvp => kvp.Value).ToArray();
     }
 
+
+    public static string GetPrimaryDataFile(Ludots.Core.Config.MapConfig map)
+    {
+        if (map.Boards != null)
+        {
+            foreach (var b in map.Boards)
+            {
+                if (!string.IsNullOrWhiteSpace(b.DataFile)) return b.DataFile;
+            }
+        }
+        return null;
+    }
+
     private static void MergeMapConfig(Ludots.Core.Config.MapConfig target, Ludots.Core.Config.MapConfig source)
     {
         if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
