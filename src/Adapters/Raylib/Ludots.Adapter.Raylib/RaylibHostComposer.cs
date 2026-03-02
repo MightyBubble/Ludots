@@ -35,12 +35,12 @@ namespace Ludots.Adapter.Raylib
             if (config.Logging.FileLogging)
             {
                 var fileBackend = new FileLogBackend(config.Logging.LogFilePath);
-                var multiBackend = new MultiLogBackend(consoleBackend, fileBackend);
-                Log.Initialize(multiBackend, Enum.TryParse<LogLevel>(config.Logging.GlobalLevel, true, out var lvl) ? lvl : LogLevel.Info);
+                backend = new MultiLogBackend(consoleBackend, fileBackend);
+                Log.Initialize(backend, Enum.TryParse<LogLevel>(config.Logging.GlobalLevel, true, out var lvl) ? lvl : LogLevel.Info);
                 LogConfigApplier.Apply(config.Logging);
             }
 
-            engine.GlobalContext[ContextKeys.LogBackend] = Log.Backend;
+            engine.GlobalContext[ContextKeys.LogBackend] = backend;
 
             var uiRoot = new UIRoot();
             engine.GlobalContext[ContextKeys.UIRoot] = uiRoot;
