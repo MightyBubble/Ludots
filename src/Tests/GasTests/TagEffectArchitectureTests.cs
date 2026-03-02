@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using Ludots.Core.Mathematics.FixedPoint;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -361,7 +362,7 @@ namespace Ludots.Tests.GAS
             world.Query(in query, (ref ProjectileState ps) =>
             {
                 count++;
-                That(ps.Speed, Is.EqualTo(500));
+                That(ps.Speed, Is.EqualTo(Fix64.FromInt(500)));
                 That(ps.ImpactEffectTemplateId, Is.EqualTo(42));
             });
             That(count, Is.EqualTo(1));

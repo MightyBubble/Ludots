@@ -3,6 +3,7 @@ using Arch.Core.Extensions;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Components;
+using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -26,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ReResolveAndDispatch, HandleReResolveAndDispatch);
             registry.Register(BuiltinHandlerId.CreateProjectile, HandleCreateProjectile);
             registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit);
+            registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -128,19 +130,16 @@ namespace Ludots.Core.Gameplay.GAS
             ref readonly var proj = ref templateData.Projectile;
             if (proj.Speed <= 0) return;
 
-            // Create a projectile entity with the configured parameters.
-            // The projectile carries its ImpactEffectTemplateId for dispatch on collision.
-            Entity projectile = world.Create(
+            Entity projectile = EntityCreationHelper.CreateProjectile(world,
                 new ProjectileState
                 {
-                    Speed = proj.Speed,
+                    Speed = Fix64.FromInt(proj.Speed),
                     Range = proj.Range,
                     ArcHeight = proj.ArcHeight,
                     ImpactEffectTemplateId = proj.ImpactEffectTemplateId,
                     Source = context.Source,
                     Target = context.Target,
-                }
-            );
+                });
             if (world.IsAlive(context.Source) && world.Has<WorldPositionCm>(context.Source))
             {
                 var pos = world.Get<WorldPositionCm>(context.Source);
@@ -166,17 +165,44 @@ namespace Ludots.Core.Gameplay.GAS
 
             for (int i = 0; i < unit.Count; i++)
             {
-                var spawned = world.Create(
+                EntityCreationHelper.CreateSpawnedUnit(world,
                     new SpawnedUnitState
                     {
                         UnitTypeId = unit.UnitTypeId,
                         OffsetRadius = unit.OffsetRadius,
                         OnSpawnEffectTemplateId = unit.OnSpawnEffectTemplateId,
                         Spawner = context.Source,
-                    }
-                );
-                _ = spawned; // Created; spawn system picks it up
+                    });
             }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        //  8. ApplyDisplacement — create displacement state entity
+        // ══════════════════════════════════════════════════════════════
+
+        public static void HandleApplyDisplacement(
+            World world, Entity effectEntity,
+            ref EffectContext context, in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            if (!world.IsAlive(context.Target)) return;
+
+            ref readonly var disp = ref templateData.Displacement;
+            if (disp.TotalDurationTicks <= 0 || disp.TotalDistanceCm <= 0) return;
+
+            EntityCreationHelper.CreateDisplacement(world,
+                new DisplacementState
+                {
+                    TargetEntity = context.Target,
+                    SourceEntity = context.Source,
+                    DirectionMode = disp.DirectionMode,
+                    FixedDirectionRad = Fix64.FromInt(disp.FixedDirectionDeg) * Fix64.Deg2Rad,
+                    TotalDistanceCm = disp.TotalDistanceCm,
+                    RemainingDistanceCm = Fix64.FromInt(disp.TotalDistanceCm),
+                    TotalDurationTicks = disp.TotalDurationTicks,
+                    RemainingTicks = disp.TotalDurationTicks,
+                    OverrideNavigation = disp.OverrideNavigation,
+                });
         }
     }
 
@@ -188,13 +214,13 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public struct ProjectileState
     {
-        public int Speed;
+        public Fix64 Speed;
         public int Range;
         public int ArcHeight;
         public int ImpactEffectTemplateId;
         public Entity Source;
         public Entity Target;
-        public int TraveledCm;
+        public Fix64 TraveledCm;
     }
 
     /// <summary>
@@ -207,5 +233,27 @@ namespace Ludots.Core.Gameplay.GAS
         public int OffsetRadius;
         public int OnSpawnEffectTemplateId;
         public Entity Spawner;
+    }
+
+    /// <summary>
+    /// Centralized entity creation for GAS-spawned entities (projectiles, units).
+    /// Wraps World.Create() calls for future CommandBuffer migration.
+    /// </summary>
+    public static class EntityCreationHelper
+    {
+        public static Entity CreateProjectile(World world, in ProjectileState state)
+        {
+            return world.Create(state);
+        }
+
+        public static Entity CreateSpawnedUnit(World world, in SpawnedUnitState state)
+        {
+            return world.Create(state);
+        }
+
+        public static Entity CreateDisplacement(World world, in DisplacementState state)
+        {
+            return world.Create(state);
+        }
     }
 }

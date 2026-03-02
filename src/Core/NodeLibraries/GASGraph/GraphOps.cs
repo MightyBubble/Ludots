@@ -87,6 +87,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         LoadContextSource        = 320,  // E[dst] = EffectContext.Source
         LoadContextTarget        = 321,  // E[dst] = EffectContext.Target
         LoadContextTargetContext = 322,  // E[dst] = EffectContext.TargetContext
+
+        // ── Self attribute access for derived graphs (330-331) ──
+        LoadSelfAttribute        = 330,  // F[dst] = Caster.Attribute[Imm] (no EffectContext needed)
+        WriteSelfAttribute       = 331,  // Caster.Attribute[Imm] = F[A] (direct SetCurrent, bypasses modifiers)
     }
 
     public static class GraphNodeOpParser

@@ -761,6 +761,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, gasChainTags, gasPresentationEvents, SpatialQueries, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, clock, effectRequestQueue), SystemGroup.EffectProcessing);
             RegisterSystem(new SpawnedUnitRuntimeSystem(World, effectRequestQueue), SystemGroup.EffectProcessing);
+            RegisterSystem(new DisplacementRuntimeSystem(World), SystemGroup.EffectProcessing);
             
             // Phase 4: AttributeCalculation
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);

@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
@@ -144,6 +145,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // ── Dynamic dispatch (202-203) ──
             h[(ushort)GraphNodeOp.ApplyEffectDynamic] = HandleApplyEffectDynamic;
             h[(ushort)GraphNodeOp.FanOutApplyEffectDynamic] = HandleFanOutApplyEffectDynamic;
+
+            // ── Self attribute access for derived graphs (330-331) ──
+            h[(ushort)GraphNodeOp.LoadSelfAttribute] = HandleLoadSelfAttribute;
+            h[(ushort)GraphNodeOp.WriteSelfAttribute] = HandleWriteSelfAttribute;
 
             return h;
         }
@@ -588,6 +593,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 var target = span[i];
                 if (!s.World.IsAlive(target)) continue;
                 s.Api.ApplyEffectTemplate(s.Caster, target, templateId);
+            }
+        }
+
+        // ── Self attribute access for derived graphs (330-331) ──
+
+        private static void HandleLoadSelfAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // F[dst] = Caster.Attribute[Imm] — reads current aggregated value from self entity
+            var self = s.Caster;
+            if (s.World.IsAlive(self) && s.World.Has<AttributeBuffer>(self))
+            {
+                ref var buf = ref s.World.Get<AttributeBuffer>(self);
+                s.F[ins.Dst] = buf.GetCurrent(ins.Imm);
+            }
+            else
+            {
+                s.F[ins.Dst] = 0f;
+            }
+        }
+
+        private static void HandleWriteSelfAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // Caster.Attribute[Imm] = F[A] — direct SetCurrent bypassing modifier pipeline
+            var self = s.Caster;
+            if (s.World.IsAlive(self) && s.World.Has<AttributeBuffer>(self))
+            {
+                ref var buf = ref s.World.Get<AttributeBuffer>(self);
+                buf.SetCurrent(ins.Imm, s.F[ins.A]);
             }
         }
     }

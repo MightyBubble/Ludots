@@ -1,11 +1,10 @@
-using System;
+using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -14,6 +13,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     {
         private static readonly QueryDescription _query = new QueryDescription().WithAll<SpawnedUnitState>();
         private readonly EffectRequestQueue _effectRequests;
+        private readonly List<Entity> _toDestroy = new();
+        private readonly List<PendingSpawn> _pendingSpawns = new();
 
         public SpawnedUnitRuntimeSystem(World world, EffectRequestQueue effectRequests) : base(world)
         {
@@ -22,11 +23,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override void Update(in float dt)
         {
+            _toDestroy.Clear();
+            _pendingSpawns.Clear();
+
             World.Query(in _query, (Entity e, ref SpawnedUnitState spawn) =>
             {
                 if (!World.IsAlive(spawn.Spawner))
                 {
-                    World.Destroy(e);
+                    _toDestroy.Add(e);
                     return;
                 }
 
@@ -37,39 +41,63 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 var offset = ComputeOffsetCm(e.Id, spawn.OffsetRadius);
-                var unitPos = basePos + Fix64Vec2.FromInt(offset.X, offset.Y);
+                var unitPos = basePos + offset;
+
+                bool hasTeam = World.Has<Team>(spawn.Spawner);
+                Team spawnerTeam = hasTeam ? World.Get<Team>(spawn.Spawner) : default;
+
+                _pendingSpawns.Add(new PendingSpawn
+                {
+                    UnitPos = unitPos,
+                    Spawner = spawn.Spawner,
+                    OnSpawnEffectTemplateId = spawn.OnSpawnEffectTemplateId,
+                    HasTeam = hasTeam,
+                    SpawnerTeam = spawnerTeam,
+                });
+
+                _toDestroy.Add(e);
+            });
+
+            // Deferred entity creation (outside query)
+            for (int i = 0; i < _pendingSpawns.Count; i++)
+            {
+                var pending = _pendingSpawns[i];
 
                 Entity unit = World.Create(
-                    new Name { Value = $"Unit:{UnitTypeRegistry.GetName(spawn.UnitTypeId)}" },
-                    new WorldPositionCm { Value = unitPos },
-                    new PreviousWorldPositionCm { Value = unitPos },
+                    new WorldPositionCm { Value = pending.UnitPos },
+                    new PreviousWorldPositionCm { Value = pending.UnitPos },
                     new AttributeBuffer()
                 );
 
-                if (World.Has<Team>(spawn.Spawner))
+                if (pending.HasTeam)
                 {
-                    World.Add(unit, World.Get<Team>(spawn.Spawner));
+                    World.Add(unit, pending.SpawnerTeam);
                 }
 
-                if (_effectRequests != null && spawn.OnSpawnEffectTemplateId > 0)
+                if (_effectRequests != null && pending.OnSpawnEffectTemplateId > 0)
                 {
                     _effectRequests.Publish(new EffectRequest
                     {
                         RootId = 0,
-                        Source = spawn.Spawner,
+                        Source = pending.Spawner,
                         Target = unit,
                         TargetContext = default,
-                        TemplateId = spawn.OnSpawnEffectTemplateId
+                        TemplateId = pending.OnSpawnEffectTemplateId
                     });
                 }
+            }
 
-                World.Destroy(e);
-            });
+            // Deferred entity destruction (outside query)
+            for (int i = 0; i < _toDestroy.Count; i++)
+            {
+                if (World.IsAlive(_toDestroy[i]))
+                    World.Destroy(_toDestroy[i]);
+            }
         }
 
-        private static (int X, int Y) ComputeOffsetCm(int seed, int radiusCm)
+        private static Fix64Vec2 ComputeOffsetCm(int seed, int radiusCm)
         {
-            if (radiusCm <= 0) return (0, 0);
+            if (radiusCm <= 0) return Fix64Vec2.Zero;
 
             unchecked
             {
@@ -78,13 +106,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 x ^= x >> 17;
                 x ^= x << 5;
 
-                float angle = (x % 360u) * (MathF.PI / 180f);
-                float r = radiusCm * (0.5f + ((x >> 9) & 1023) / 2047f);
+                Fix64 angleDeg = Fix64.FromInt((int)(x % 360u));
+                Fix64 angleRad = angleDeg * Fix64.Deg2Rad;
 
-                int ox = (int)MathF.Round(MathF.Cos(angle) * r);
-                int oy = (int)MathF.Round(MathF.Sin(angle) * r);
-                return (ox, oy);
+                Fix64 fraction = Fix64.HalfValue + Fix64.FromInt((int)((x >> 9) & 1023)) / Fix64.FromInt(2047);
+                Fix64 r = Fix64.FromInt(radiusCm) * fraction;
+
+                Fix64 ox = r * Fix64Math.Cos(angleRad);
+                Fix64 oy = r * Fix64Math.Sin(angleRad);
+                return new Fix64Vec2(ox, oy);
             }
+        }
+
+        private struct PendingSpawn
+        {
+            public Fix64Vec2 UnitPos;
+            public Entity Spawner;
+            public int OnSpawnEffectTemplateId;
+            public bool HasTeam;
+            public Team SpawnerTeam;
         }
     }
 }

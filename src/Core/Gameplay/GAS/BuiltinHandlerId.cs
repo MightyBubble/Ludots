@@ -30,5 +30,9 @@ namespace Ludots.Core.Gameplay.GAS
         CreateProjectile = 30,
         /// <summary>Read UnitCreationParams, create unit entity/entities via EntityBuilder.</summary>
         CreateUnit = 31,
+
+        // ── Displacement ──
+        /// <summary>Read DisplacementParams, create displacement state entity.</summary>
+        ApplyDisplacement = 40,
     }
 }

@@ -21,6 +21,8 @@ namespace Ludots.Core.Gameplay.GAS
         PeriodicSearch = 8,
         LaunchProjectile = 9,
         CreateUnit = 10,
+        /// <summary>Displacement effect: dash, knockback, pull, blink.</summary>
+        Displacement = 11,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──
@@ -171,6 +173,38 @@ namespace Ludots.Core.Gameplay.GAS
         public int OnSpawnEffectTemplateId;
     }
 
+    /// <summary>
+    /// Direction mode for displacement effects.
+    /// </summary>
+    public enum DisplacementDirectionMode : byte
+    {
+        /// <summary>Move toward target entity.</summary>
+        ToTarget = 0,
+        /// <summary>Move away from source entity (knockback).</summary>
+        AwayFromSource = 1,
+        /// <summary>Move toward source entity (pull/hook).</summary>
+        TowardSource = 2,
+        /// <summary>Fixed direction in radians (blink, no animation).</summary>
+        Fixed = 3,
+    }
+
+    /// <summary>
+    /// Parameters for Displacement effects.
+    /// All distances in centimeters, all durations in ticks.
+    /// </summary>
+    public struct DisplacementDescriptor
+    {
+        public DisplacementDirectionMode DirectionMode;
+        /// <summary>Fixed direction in radians (only used when DirectionMode=Fixed). Stored as int for Fix64 conversion.</summary>
+        public int FixedDirectionDeg;
+        /// <summary>Total distance to travel in centimeters.</summary>
+        public int TotalDistanceCm;
+        /// <summary>Total duration in ticks.</summary>
+        public int TotalDurationTicks;
+        /// <summary>Whether to override navigation input during displacement.</summary>
+        public bool OverrideNavigation;
+    }
+
     // ── EffectTemplateData ──
 
     public struct EffectTemplateData
@@ -193,9 +227,10 @@ namespace Ludots.Core.Gameplay.GAS
         public TargetFilterDescriptor TargetFilter;
         public TargetDispatchDescriptor TargetDispatch;
 
-        // ── Projectile + UnitCreation ──
+        // ── Projectile + UnitCreation + Displacement ──
         public ProjectileDescriptor Projectile;
         public UnitCreationDescriptor UnitCreation;
+        public DisplacementDescriptor Displacement;
 
         // ── Phase Graph bindings (replaces legacy callbacks) ──
         public EffectPhaseGraphBindings PhaseGraphBindings;

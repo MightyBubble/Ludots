@@ -43,3 +43,10 @@
 12. [数据配置类与通用合并策略最佳实践](12_config_data_merge_best_practices.md)
     *   单例对象、键控表、多维配置的统一 merge 规则
     *   Mod 自定义配置类接入 ConfigPipeline 的标准流程
+13. [GAS 战斗体系基建与 MOBA 实践指南](13_gas_combat_infrastructure.md)
+    *   伤害管线、CC、护盾、自动攻击、资源系统的现有实现
+    *   属性派生与位移效果的计划设计
+14. [3C 系统：相机、角色与控制](14_3c_camera_character_control.md)
+    *   相机状态、控制器与表现管线
+    *   角色位置真相链与渲染插值
+    *   输入系统与交互模式

@@ -65,7 +65,6 @@ namespace PerformanceVisualizationMod.Triggers
             var abilityTemplateEntity = world.Create();
             world.Add(abilityTemplateEntity, new AbilityTemplate());
             world.Add(abilityTemplateEntity, new AbilityCooldown { CooldownValueAttributeId = cdAttrId, CooldownTagId = cdTagId });
-            world.Add(abilityTemplateEntity, new AbilityCost { CostValueAttributeId = costAttrId, CostResourceAttributeId = manaId });
             var targetingEntity = world.Create();
             world.Add(targetingEntity, new TargetSelector { Shape = TargetShape.Single });
             var instructions = new InstructionBuffer();
