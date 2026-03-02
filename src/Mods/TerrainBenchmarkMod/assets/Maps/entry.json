@@ -1,7 +1,7 @@
 {
   "Id": "entry",
   "Boards": [
-    { "Name": "default", "DataFile": "terrain_bench.vtxm" }
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "terrain_bench.vtxm" }
   ]
 }
 
