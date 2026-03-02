@@ -25,6 +25,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "PeriodicSearch", EffectPresetType.PeriodicSearch },
             { "LaunchProjectile", EffectPresetType.LaunchProjectile },
             { "CreateUnit", EffectPresetType.CreateUnit },
+            { "Displacement", EffectPresetType.Displacement },
         };
 
         /// <summary>
@@ -131,6 +132,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "ApplyForce", BuiltinHandlerId.ApplyForce },
             { "CreateProjectile", BuiltinHandlerId.CreateProjectile },
             { "CreateUnit", BuiltinHandlerId.CreateUnit },
+            { "ApplyDisplacement", BuiltinHandlerId.ApplyDisplacement },
         };
 
         /// <summary>

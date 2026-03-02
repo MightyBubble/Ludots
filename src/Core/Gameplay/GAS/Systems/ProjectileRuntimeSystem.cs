@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -11,6 +11,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     {
         private static readonly QueryDescription _query = new QueryDescription().WithAll<ProjectileState, WorldPositionCm>();
         private readonly EffectRequestQueue _effectRequests;
+        private readonly List<Entity> _toDestroy = new();
 
         public ProjectileRuntimeSystem(World world, IClock clock, EffectRequestQueue effectRequests) : base(world)
         {
@@ -21,73 +22,69 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (_effectRequests == null) return;
 
-            float deltaTime = dt; // Copy to local — 'in' params can't be captured in lambdas
+            _toDestroy.Clear();
+            Fix64 deltaTime = Fix64.FromFloat(dt);
+
             World.Query(in _query, (Entity e, ref ProjectileState ps, ref WorldPositionCm pos) =>
             {
                 if (!World.IsAlive(ps.Source))
                 {
-                    World.Destroy(e);
+                    _toDestroy.Add(e);
                     return;
                 }
 
-                if (ps.Speed <= 0 || ps.Range <= 0)
+                if (ps.Speed <= Fix64.Zero || ps.Range <= 0)
+
                 {
-                    World.Destroy(e);
+                    _toDestroy.Add(e);
                     return;
                 }
 
-                float stepCm = ps.Speed * deltaTime;
-                if (stepCm <= 0f) return;
+                Fix64 stepCm = ps.Speed * deltaTime;
+                if (stepCm <= Fix64.Zero) return;
 
                 Fix64Vec2 current = pos.Value;
-                Fix64Vec2 next = current;
+                Fix64Vec2 next;
 
                 if (World.IsAlive(ps.Target) && World.Has<WorldPositionCm>(ps.Target))
                 {
                     var targetPos = World.Get<WorldPositionCm>(ps.Target).Value;
                     var delta = targetPos - current;
-                    float dx = delta.X.ToFloat();
-                    float dy = delta.Y.ToFloat();
-                    float dist = MathF.Sqrt(dx * dx + dy * dy);
-                    if (dist <= stepCm || dist <= 1f)
+                    Fix64 dist = delta.Length();
+
+                    if (dist <= stepCm || dist <= Fix64.OneValue)
                     {
-                        next = targetPos;
-                        Hit(e, ref ps, next);
+                        pos.Value = targetPos;
+                        PublishImpact(ref ps);
+                        _toDestroy.Add(e);
                         return;
                     }
 
-                    float inv = 1f / dist;
-                    float ux = dx * inv;
-                    float uy = dy * inv;
-                    next = current + Fix64Vec2.FromFloat(ux * stepCm, uy * stepCm);
+                    next = current + delta.Normalized() * stepCm;
                 }
                 else
                 {
-                    next = current + Fix64Vec2.FromFloat(stepCm, 0f);
+                    next = current + new Fix64Vec2(stepCm, Fix64.Zero);
                 }
 
-                ps.TraveledCm += (int)MathF.Round(stepCm);
+                ps.TraveledCm += stepCm;
                 pos.Value = next;
 
-                if (ps.TraveledCm >= ps.Range)
+                if (ps.TraveledCm >= Fix64.FromInt(ps.Range))
                 {
-                    if (ps.ImpactEffectTemplateId > 0 && World.IsAlive(ps.Target))
-                    {
-                        _effectRequests.Publish(new EffectRequest
-                        {
-                            RootId = 0,
-                            Source = ps.Source,
-                            Target = ps.Target,
-                            TargetContext = default,
-                            TemplateId = ps.ImpactEffectTemplateId
-                        });
-                    }
-                    World.Destroy(e);
+                    PublishImpact(ref ps);
+                    _toDestroy.Add(e);
                 }
             });
+
+            for (int i = 0; i < _toDestroy.Count; i++)
+            {
+                if (World.IsAlive(_toDestroy[i]))
+                    World.Destroy(_toDestroy[i]);
+            }
         }
 
-        private void Hit(Entity projectile, ref ProjectileState ps, Fix64Vec2 hitPos)
+        private void PublishImpact(ref ProjectileState ps)
         {
             if (ps.ImpactEffectTemplateId > 0 && World.IsAlive(ps.Target))
             {
@@ -100,7 +97,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     TemplateId = ps.ImpactEffectTemplateId
                 });
             }
-            World.Destroy(projectile);
         }
     }
 }
