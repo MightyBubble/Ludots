@@ -1,4 +1,5 @@
 {
+  "interactionMode": "SmartCast",
   "mappings": [
     {
       "actionId": "SkillQ",
@@ -6,6 +7,8 @@
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 0 },
       "requireSelection": false,
+      "selectionType": "Entity",
+      "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
     {
@@ -14,6 +17,8 @@
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 1 },
       "requireSelection": false,
+      "selectionType": "Entity",
+      "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
     {
@@ -22,6 +27,8 @@
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 2 },
       "requireSelection": false,
+      "selectionType": "Position",
+      "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
     {
@@ -30,6 +37,8 @@
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 3 },
       "requireSelection": false,
+      "selectionType": "Position",
+      "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
     {
@@ -38,7 +47,8 @@
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 4 },
       "requireSelection": true,
-      "selectionType": "Ground",
+      "selectionType": "Position",
+      "isSkillMapping": false,
       "modifierBehavior": "QueueOnModifier"
     },
     {
@@ -47,6 +57,7 @@
       "orderTagKey": "stop",
       "argsTemplate": {},
       "requireSelection": false,
+      "isSkillMapping": false,
       "modifierBehavior": "IgnoreModifier"
     }
   ],

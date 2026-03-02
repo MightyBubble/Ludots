@@ -665,7 +665,7 @@ namespace Ludots.Tests.GAS
             // None (0) is not a real preset type — it should NOT be in the JSON
             That(reg.IsRegistered(EffectPresetType.None), Is.False);
 
-            // All 10 real preset types should be registered
+            // All 11 real preset types should be registered
             That(reg.IsRegistered(EffectPresetType.ApplyForce2D), Is.True);
             That(reg.IsRegistered(EffectPresetType.InstantDamage), Is.True);
             That(reg.IsRegistered(EffectPresetType.DoT), Is.True);
@@ -676,6 +676,7 @@ namespace Ludots.Tests.GAS
             That(reg.IsRegistered(EffectPresetType.PeriodicSearch), Is.True);
             That(reg.IsRegistered(EffectPresetType.LaunchProjectile), Is.True);
             That(reg.IsRegistered(EffectPresetType.CreateUnit), Is.True);
+            That(reg.IsRegistered(EffectPresetType.Displacement), Is.True);
 
             // Spot-check ApplyForce2D builtin handler
             ref readonly var af = ref reg.Get(EffectPresetType.ApplyForce2D);
@@ -688,6 +689,12 @@ namespace Ludots.Tests.GAS
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].IsValid, Is.True);
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].HandlerId,
                 Is.EqualTo((int)BuiltinHandlerId.ReResolveAndDispatch));
+
+            // Spot-check Displacement builtin handler
+            ref readonly var disp = ref reg.Get(EffectPresetType.Displacement);
+            var hDisp = disp.DefaultPhaseHandlers[EffectPhaseId.OnApply];
+            That(hDisp.Kind, Is.EqualTo(PhaseHandlerKind.Builtin));
+            That(hDisp.HandlerId, Is.EqualTo((int)BuiltinHandlerId.ApplyDisplacement));
         }
 
         // ════════════════════════════════════════════════════════════════════

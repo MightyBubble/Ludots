@@ -91,5 +91,14 @@
     "defaultPhaseHandlers": {
       "OnApply": { "type": "builtin", "id": "CreateUnit" }
     }
+  },
+  {
+    "id": "Displacement",
+    "components": [],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "ApplyDisplacement" }
+    }
   }
 ]
