@@ -1114,9 +1114,9 @@ namespace Ludots.Core.Engine
                         if (vtxMap != null)
                         {
                             terrainBoard.VertexMap = vtxMap;
-                            // Set engine-level VertexMap for backward compat
                             VertexMap = vtxMap;
                             GlobalContext[ContextKeys.VertexMap] = vtxMap;
+                            Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded VertexMap {vtxMap.WidthInChunks}x{vtxMap.HeightInChunks} for board '{board.Name}'");
                         }
                     }
                 }

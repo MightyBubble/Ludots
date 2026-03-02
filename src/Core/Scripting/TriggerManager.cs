@@ -154,6 +154,9 @@ namespace Ludots.Core.Scripting
             // EventHandlers (mod callbacks) always fire
             FireEventHandlers(eventKey, context);
 
+            // Global triggers also respond to map events for backward compatibility
+            FireEvent(eventKey, context);
+
             if (!_mapTriggers.TryGetValue(mapId, out var mapList) || mapList.Count == 0)
                 return;
 
