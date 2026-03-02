@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Arch.Core;
@@ -499,6 +500,62 @@ namespace GasTests
             int count = 0;
             world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => count++);
             Assert.That(count, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void SetMapEntitiesSuspended_AddsTagOnlyForTargetMap()
+        {
+            var engine = new GameEngine();
+            engine.InitializeMinimal();
+            var world = (World)typeof(GameEngine).GetProperty("World", BindingFlags.Public | BindingFlags.Instance)!.GetValue(engine)!;
+            var mapA = new MapId("map_a");
+            var mapB = new MapId("map_b");
+
+            for (int i = 0; i < 3; i++) world.Create(new MapEntity { MapId = mapA });
+            for (int i = 0; i < 2; i++) world.Create(new MapEntity { MapId = mapB });
+
+            var method = typeof(GameEngine).GetMethod("SetMapEntitiesSuspended", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            method.Invoke(engine, new object[] { mapA, true });
+
+            int aSuspended = 0;
+            int bSuspended = 0;
+            world.Query(new QueryDescription().WithAll<MapEntity, SuspendedTag>(), (Entity _, ref MapEntity me) =>
+            {
+                if (me.MapId == mapA) aSuspended++;
+                if (me.MapId == mapB) bSuspended++;
+            });
+
+            Assert.That(aSuspended, Is.EqualTo(3));
+            Assert.That(bSuspended, Is.EqualTo(0));
+            world.Dispose();
+        }
+
+        [Test]
+        public void SetMapEntitiesSuspended_RemoveTagOnlyForTargetMap()
+        {
+            var engine = new GameEngine();
+            engine.InitializeMinimal();
+            var world = (World)typeof(GameEngine).GetProperty("World", BindingFlags.Public | BindingFlags.Instance)!.GetValue(engine)!;
+            var mapA = new MapId("map_a");
+            var mapB = new MapId("map_b");
+
+            for (int i = 0; i < 2; i++) world.Create(new MapEntity { MapId = mapA }, new SuspendedTag());
+            for (int i = 0; i < 2; i++) world.Create(new MapEntity { MapId = mapB }, new SuspendedTag());
+
+            var method = typeof(GameEngine).GetMethod("SetMapEntitiesSuspended", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            method.Invoke(engine, new object[] { mapA, false });
+
+            int aSuspended = 0;
+            int bSuspended = 0;
+            world.Query(new QueryDescription().WithAll<MapEntity, SuspendedTag>(), (Entity _, ref MapEntity me) =>
+            {
+                if (me.MapId == mapA) aSuspended++;
+                if (me.MapId == mapB) bSuspended++;
+            });
+
+            Assert.That(aSuspended, Is.EqualTo(0));
+            Assert.That(bSuspended, Is.EqualTo(2));
+            world.Dispose();
         }
 
         // ────────────────────────────────────────────────────────

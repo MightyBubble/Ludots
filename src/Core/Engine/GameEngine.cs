@@ -132,6 +132,7 @@ namespace Ludots.Core.Engine
 
         private ChunkedGridSpatialPartitionWorld _spatialPartition;
         public HexGridAOI HexGridAOI { get; private set; }
+        private static readonly QueryDescription _mapEntitySuspendQuery = new QueryDescription().WithAll<MapEntity>();
         
         // GAS
         public GameplayEventBus EventBus { get; private set; } // Added EventBus
@@ -840,10 +841,16 @@ namespace Ludots.Core.Engine
 
             if (mapConfig != null)
             {
+                var previousFocused = MapSessions.FocusedSession;
+
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
                 CreateBoardsForSession(session, mapConfig);
                 MapSessions.PushFocused(mid);   // old focused → Suspended
+                if (previousFocused != null)
+                {
+                    SetMapEntitiesSuspended(previousFocused.MapId, true);
+                }
                 CurrentMapSession = session;
                 GlobalContext[ContextKeys.MapSession] = session;
 
@@ -858,6 +865,7 @@ namespace Ludots.Core.Engine
                 LoadNavForMap(mapId, mapConfig);
                 Diagnostics.Log.Info(in LogChannels.Engine, "Creating Entities from MapConfig...");
                 MapLoader.LoadEntities(mapConfig);
+                SetMapEntitiesSuspended(mid, false);
 
                 // Instantiate map triggers + apply decorators
                 var definition = ((MapManager)MapManager).GetDefinition(mid);
@@ -929,7 +937,9 @@ namespace Ludots.Core.Engine
                 {
                     ApplyBoardSpatialConfig(primaryBoard);
                     LoadBoardTerrainData(restored, restored.MapConfig);
+                    LoadNavForMap(restored.MapId.Value, restored.MapConfig);
                 }
+                SetMapEntitiesSuspended(restored.MapId, false);
 
                 var resumeCtx = CreateContext();
                 resumeCtx.Set(ContextKeys.MapId, restored.MapId);
@@ -967,6 +977,10 @@ namespace Ludots.Core.Engine
 
             // Push focus — outer becomes Suspended
             MapSessions.PushFocused(inner);
+            if (outerSession != null)
+            {
+                SetMapEntitiesSuspended(outerSession.MapId, true);
+            }
             CurrentMapSession = session;
             GlobalContext[ContextKeys.MapSession] = session;
 
@@ -975,9 +989,11 @@ namespace Ludots.Core.Engine
             {
                 ApplyBoardSpatialConfig(primaryBoard);
                 LoadBoardTerrainData(session, mapConfig);
+                LoadNavForMap(innerMapId, mapConfig);
             }
 
             MapLoader.LoadEntities(mapConfig);
+            SetMapEntitiesSuspended(inner, false);
 
             // Fire MapSuspended on outer (scoped)
             if (outerSession != null)
@@ -1046,7 +1062,9 @@ namespace Ludots.Core.Engine
                 {
                     ApplyBoardSpatialConfig(primaryBoard);
                     LoadBoardTerrainData(outerSession, outerSession.MapConfig);
+                    LoadNavForMap(outerSession.MapId.Value, outerSession.MapConfig);
                 }
+                SetMapEntitiesSuspended(outerSession.MapId, false);
 
                 var resumeCtx = CreateContext();
                 resumeCtx.Set(ContextKeys.MapId, outerSession.MapId);
@@ -1064,6 +1082,36 @@ namespace Ludots.Core.Engine
                 var board = BoardFactory.Create(boardCfg, BoardIdRegistry);
                 session.AddBoard(board);
                 Diagnostics.Log.Info(in LogChannels.Engine, $"Created Board '{boardCfg.Name}' (type={boardCfg.SpatialType}) for map '{session.MapId}'");
+            }
+        }
+
+        private void SetMapEntitiesSuspended(MapId mapId, bool suspended)
+        {
+            var entities = new List<Entity>();
+            World.Query(in _mapEntitySuspendQuery, (Entity entity, ref MapEntity mapEntity) =>
+            {
+                if (mapEntity.MapId == mapId)
+                {
+                    entities.Add(entity);
+                }
+            });
+
+            for (int i = 0; i < entities.Count; i++)
+            {
+                var entity = entities[i];
+                if (!World.IsAlive(entity)) continue;
+
+                if (suspended)
+                {
+                    if (!World.Has<SuspendedTag>(entity))
+                    {
+                        World.Add(entity, new SuspendedTag());
+                    }
+                }
+                else if (World.Has<SuspendedTag>(entity))
+                {
+                    World.Remove<SuspendedTag>(entity);
+                }
             }
         }
 
