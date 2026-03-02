@@ -4,15 +4,15 @@ namespace Ludots.Core.Presentation.Camera
 {
     public readonly struct CameraRenderState3D
     {
-        public Vector3 PositionCm { get; }
-        public Vector3 TargetCm { get; }
+        public Vector3 Position { get; }
+        public Vector3 Target { get; }
         public Vector3 Up { get; }
         public float FovYDeg { get; }
 
-        public CameraRenderState3D(Vector3 positionCm, Vector3 targetCm, Vector3 up, float fovYDeg)
+        public CameraRenderState3D(Vector3 position, Vector3 target, Vector3 up, float fovYDeg)
         {
-            PositionCm = positionCm;
-            TargetCm = targetCm;
+            Position = position;
+            Target = target;
             Up = up;
             FovYDeg = fovYDeg;
         }

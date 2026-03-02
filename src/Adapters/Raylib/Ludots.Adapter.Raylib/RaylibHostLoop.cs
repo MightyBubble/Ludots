@@ -169,6 +169,11 @@ namespace Ludots.Adapter.Raylib
 
                         Rl.EndMode3D();
 
+                        // Terrain debug HUD
+                        string vtxmStatus = engine.VertexMap == null ? "NULL" : $"{engine.VertexMap.WidthInChunks}x{engine.VertexMap.HeightInChunks}";
+                        Rl.DrawText($"VertexMap: {vtxmStatus} | Chunks: {terrainRenderer.DrawnChunkCountLastFrame} Verts: {terrainRenderer.TerrainVertexCountLastFrame} Cached: {terrainRenderer.CachedChunkCount}", 10, 40, 14, Raylib_cs.Color.YELLOW);
+                        Rl.DrawText($"CamPos: ({activeCamera.position.X:F1},{activeCamera.position.Y:F1},{activeCamera.position.Z:F1}) Target: ({activeCamera.target.X:F1},{activeCamera.target.Y:F1},{activeCamera.target.Z:F1})", 10, 56, 14, Raylib_cs.Color.YELLOW);
+
                         if (engine.GlobalContext.TryGetValue(ContextKeys.PresentationPrimitiveDrawBuffer, out var drawObj2) &&
                             drawObj2 is PrimitiveDrawBuffer draw2)
                         {

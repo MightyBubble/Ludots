@@ -300,7 +300,7 @@ namespace Ludots.Tests.ThreeC
             // offsetX = 7.071 * sin(0) = 0
             // offsetZ = -7.071 * cos(0) = -7.071
             // position ≈ (0, 7.071, -7.071)
-            var pos = adapter.LastState.PositionCm;
+            var pos = adapter.LastState.Position;
             That(pos.X, Is.EqualTo(0f).Within(0.1f));
             That(pos.Y, Is.EqualTo(7.071f).Within(0.1f));
             That(pos.Z, Is.EqualTo(-7.071f).Within(0.1f));
@@ -336,12 +336,12 @@ namespace Ludots.Tests.ThreeC
             var state = new CameraState { Yaw = 0f, Pitch = 45f, DistanceCm = 1000f, FovYDeg = 60f };
             state.TargetCm = Vector2.Zero;
             presenter.Update(state, 0.016f);
-            var firstPos = adapter.LastState.PositionCm;
+            var firstPos = adapter.LastState.Position;
 
             // Second frame: move target → position should lerp, not snap
             state.TargetCm = new Vector2(5000f, 5000f); // 50m offset
             presenter.Update(state, 0.016f);
-            var secondPos = adapter.LastState.PositionCm;
+            var secondPos = adapter.LastState.Position;
 
             // The target changed dramatically, but with SmoothSpeed=10 and dt=0.016,
             // t = clamp(10*0.016, 0, 1) = 0.16, so position should move only ~16% of the way

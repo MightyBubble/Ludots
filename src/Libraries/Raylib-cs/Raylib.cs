@@ -256,6 +256,8 @@ namespace Raylib_cs
         public float* animNormals;
         public byte* boneIds;
         public float* boneWeights;
+        public RaylibMatrix* boneMatrices;
+        public int boneCount;
 
         // OpenGL identifiers
         public uint vaoId;
@@ -480,5 +482,11 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern int GetCharPressed();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlDisableBackfaceCulling();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlEnableBackfaceCulling();
     }
 }
