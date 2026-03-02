@@ -173,11 +173,11 @@ namespace Ludots.Core.Presentation.Rendering
                         t2p3 = GetVertex(c, r + 1);
                     }
 
-                    AddFace(t1p1, t1p3, t1p2, simplifiedCliffs, dst.Terrain);
-                    AddFace(t2p1, t2p3, t2p2, simplifiedCliffs, dst.Terrain);
+                    AddFace(t1p1, t1p2, t1p3, simplifiedCliffs, dst.Terrain);
+                    AddFace(t2p1, t2p2, t2p3, simplifiedCliffs, dst.Terrain);
 
-                    AddWaterTri(t1p1, t1p3, t1p2, dst.Water);
-                    AddWaterTri(t2p1, t2p3, t2p2, dst.Water);
+                    AddWaterTri(t1p1, t1p2, t1p3, dst.Water);
+                    AddWaterTri(t2p1, t2p2, t2p3, dst.Water);
                 }
             }
         }
