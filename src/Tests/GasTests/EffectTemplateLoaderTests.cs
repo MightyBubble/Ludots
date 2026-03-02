@@ -148,6 +148,55 @@ namespace Ludots.Tests.GAS
             }
         }
 
+        [Test]
+        public void Load_PresetType_Displacement_CompilesPresetFields()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Preset_Displacement",
+                        "tags": ["Effect.Displacement"],
+                        "presetType": "Displacement",
+                        "lifetime": "Instant",
+                        "displacement": {
+                          "directionMode": "AwayFromSource",
+                          "totalDistanceCm": 320,
+                          "totalDurationTicks": 8,
+                          "overrideNavigation": true
+                        }
+                      }
+                    ]
+                    """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+
+                var registry = new EffectTemplateRegistry();
+                var loader = new EffectTemplateLoader(pipeline, registry);
+                loader.Load(relativePath: "GAS/effects.json");
+
+                int tplId = EffectTemplateIdRegistry.GetId("Effect_Preset_Displacement");
+                That(tplId, Is.GreaterThan(0));
+                That(registry.TryGet(tplId, out var tpl), Is.True);
+                That(tpl.PresetType, Is.EqualTo(EffectPresetType.Displacement));
+                That(tpl.Displacement.DirectionMode, Is.EqualTo(DisplacementDirectionMode.AwayFromSource));
+                That(tpl.Displacement.TotalDistanceCm, Is.EqualTo(320));
+                That(tpl.Displacement.TotalDurationTicks, Is.EqualTo(8));
+                That(tpl.Displacement.OverrideNavigation, Is.True);
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
         private static string CreateTempRoot()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_EffectTemplateLoaderTests", Guid.NewGuid().ToString("N"));

@@ -5,6 +5,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -48,6 +49,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 _pendingSpawns.Add(new PendingSpawn
                 {
+                    UnitTypeId = spawn.UnitTypeId,
                     UnitPos = unitPos,
                     Spawner = spawn.Spawner,
                     OnSpawnEffectTemplateId = spawn.OnSpawnEffectTemplateId,
@@ -62,8 +64,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             for (int i = 0; i < _pendingSpawns.Count; i++)
             {
                 var pending = _pendingSpawns[i];
+                string unitTypeName = UnitTypeRegistry.GetName(pending.UnitTypeId);
+                string nameValue = string.IsNullOrWhiteSpace(unitTypeName) ? "Unit:Unknown" : $"Unit:{unitTypeName}";
 
                 Entity unit = World.Create(
+                    new Name { Value = nameValue },
                     new WorldPositionCm { Value = pending.UnitPos },
                     new PreviousWorldPositionCm { Value = pending.UnitPos },
                     new AttributeBuffer()
@@ -120,6 +125,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private struct PendingSpawn
         {
+            public int UnitTypeId;
             public Fix64Vec2 UnitPos;
             public Entity Spawner;
             public int OnSpawnEffectTemplateId;

@@ -1,8 +1,15 @@
+using System;
+using System.IO;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -185,6 +192,82 @@ namespace Ludots.Tests.GAS
 
             That(world.IsAlive(dispEntity), Is.False,
                 "Displacement should be cleaned up when target dies");
+        }
+
+        [Test]
+        public void Displacement_LoaderToRuntime_EndToEnd()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Test_Displacement",
+                        "tags": ["Effect.Test.Displacement"],
+                        "presetType": "Displacement",
+                        "lifetime": "Instant",
+                        "displacement": {
+                          "directionMode": "AwayFromSource",
+                          "totalDistanceCm": 400,
+                          "totalDurationTicks": 8,
+                          "overrideNavigation": true
+                        }
+                      }
+                    ]
+                    """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+                var pipeline = new Ludots.Core.Config.ConfigPipeline(vfs, modLoader);
+
+                var templates = new EffectTemplateRegistry();
+                var loader = new EffectTemplateLoader(pipeline, templates);
+                loader.Load(relativePath: "GAS/effects.json");
+
+                int tplId = EffectTemplateIdRegistry.GetId("Effect_Test_Displacement");
+                That(tplId, Is.GreaterThan(0));
+                That(templates.TryGet(tplId, out var tpl), Is.True);
+
+                using var world = World.Create();
+                var source = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
+                var target = world.Create(new WorldPositionCm { Value = Fix64Vec2.FromInt(1000, 0) });
+                var effect = world.Create();
+                var ctx = new EffectContext { Source = source, Target = target };
+                var merged = new EffectConfigParams();
+
+                BuiltinHandlers.HandleApplyDisplacement(world, effect, ref ctx, in merged, in tpl);
+                var runtime = new DisplacementRuntimeSystem(world);
+                for (int i = 0; i < 8; i++) runtime.Update(0f);
+
+                var finalPos = world.Get<WorldPositionCm>(target).Value;
+                That(finalPos.X.ToFloat(), Is.EqualTo(1400f).Within(5f), "Target should be displaced by 400cm away from source");
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        private static string CreateTempRoot()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_DisplacementPresetTests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            return root;
+        }
+
+        private static void TryDeleteDirectory(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
+            }
+            catch
+            {
+            }
         }
     }
 }

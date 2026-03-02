@@ -30,6 +30,8 @@ namespace Ludots.Core.Gameplay.GAS
         ProjectileParams = 1 << 6,
         /// <summary>Unit creation parameters (JSON: "unitCreation").</summary>
         UnitCreationParams = 1 << 7,
+        /// <summary>Displacement parameters (JSON: "displacement").</summary>
+        DisplacementParams = 1 << 8,
 
         // ── Capability components (declare structural abilities) ──
 

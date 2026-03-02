@@ -150,13 +150,23 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private static readonly Dictionary<string, ComponentFlags> ComponentFlagMap = new(StringComparer.OrdinalIgnoreCase)
         {
             { "ModifierParams", ComponentFlags.ModifierParams },
+            { "Modifiers", ComponentFlags.ModifierParams },
             { "DurationParams", ComponentFlags.DurationParams },
+            { "Duration", ComponentFlags.DurationParams },
             { "TargetQueryParams", ComponentFlags.TargetQueryParams },
+            { "TargetQuery", ComponentFlags.TargetQueryParams },
             { "TargetFilterParams", ComponentFlags.TargetFilterParams },
+            { "TargetFilter", ComponentFlags.TargetFilterParams },
             { "TargetDispatchParams", ComponentFlags.TargetDispatchParams },
+            { "TargetDispatch", ComponentFlags.TargetDispatchParams },
             { "ForceParams", ComponentFlags.ForceParams },
+            { "Force", ComponentFlags.ForceParams },
             { "ProjectileParams", ComponentFlags.ProjectileParams },
+            { "Projectile", ComponentFlags.ProjectileParams },
             { "UnitCreationParams", ComponentFlags.UnitCreationParams },
+            { "UnitCreation", ComponentFlags.UnitCreationParams },
+            { "DisplacementParams", ComponentFlags.DisplacementParams },
+            { "Displacement", ComponentFlags.DisplacementParams },
             { "PhaseGraphBindings", ComponentFlags.PhaseGraphBindings },
             { "PhaseListenerSetup", ComponentFlags.PhaseListenerSetup },
         };

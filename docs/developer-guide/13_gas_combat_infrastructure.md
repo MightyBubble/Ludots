@@ -3,7 +3,7 @@
 本篇讲清楚两件事：
 
 *   GAS 现有基建如何支撑完整的 MOBA 战斗体系（伤害管线、CC、护盾、自动攻击、资源系统）。
-*   哪些能力尚在计划中（属性派生、位移效果），以及当前的临时方案。
+*   哪些能力尚在计划中（属性派生），以及当前已落地能力（含位移效果）的实现边界。
 
 核心原则：**一切战斗逻辑通过 Effect + Graph + Tag 组合实现，不硬编码公式。**
 
@@ -18,7 +18,7 @@ GAS 提供 8 个基建能力，覆盖所有战斗场景：
 *   **Tag 系统**：256-bit 定容位集，支持 HasTag/ContainsAll/Intersects；TagCountContainer 支持堆叠层数。
 *   **属性聚合**：Reset→Apply Modifiers(Add/Mul/Override)→标脏→Sink 落地。
 *   **Sink**：跨层数据边界，集中处理类型转换（float↔Fix64）、写入策略、时钟域解耦。
-*   **Preset Type**：内建效果类型（InstantDamage/DoT/HoT/Buff/Search/PeriodicSearch/LaunchProjectile/CreateUnit/ApplyForce2D），每种 Preset 预绑定默认 Phase Handler。
+*   **Preset Type**：内建效果类型（InstantDamage/DoT/HoT/Buff/Search/PeriodicSearch/LaunchProjectile/CreateUnit/ApplyForce2D/Displacement），每种 Preset 预绑定默认 Phase Handler。
 
 参考：
 
@@ -289,29 +289,33 @@ Graph 程序通过 `LoadSelfAttribute` / `WriteSelfAttribute` 读写当前实体
 
 参考：`src/Core/Gameplay/GAS/Systems/AttributeAggregatorSystem.cs`
 
-## 8 位移效果（Displacement）— [计划中]
+## 8 位移效果（Displacement）
 
-> **状态**：计划中，尚未实现。
+> **状态**：已实现（运行时 + Preset Handler + 配置链路）。
 
-### 8.1 现状
+### 8.1 当前能力
 
-当前 `ForceInput2DSink` 仅做力注入（每帧加力），不具备位移语义：
+`Displacement` 已作为 `EffectPresetType` 接入：
 
-*   无法覆盖导航输入（位移期间玩家仍可操作）
-*   无法按固定距离/时长驱动位移
-*   无法中断位移
+*   生命周期：`Instant`
+*   Phase：`OnApply`
+*   内建处理器：`ApplyDisplacement`
+*   方向模式：`ToTarget` / `AwayFromSource` / `TowardSource` / `Fixed`
+*   关键参数：`totalDistanceCm`、`totalDurationTicks`、`overrideNavigation`
 
-### 8.2 目标设计
+### 8.2 运行时职责
 
-新增 `Displacement` Preset Effect Type：
+`DisplacementRuntimeSystem` 每 tick 驱动位移实体：
 
-*   **覆盖导航**：位移期间接管移动控制
-*   **持续时间**：按 tick 驱动（dash 20 ticks，knockback 15 ticks）
-*   **方向模式**：ToTarget（冲刺）/ AwayFromSource（击退）/ TowardSource（拉拽）/ Fixed（闪现）
-*   **可中断**：特定 Tag（如 Cleanse）可提前终止
-*   **全程 Fix64**：确定性数学
+*   按总距离/总时长拆分步进距离
+*   使用 `Fix64` / `Fix64Vec2` 保证确定性
+*   结束条件满足后销毁位移实体（目标实体保留）
 
-参考：`src/Core/Gameplay/GAS/Bindings/ForceInput2DSink.cs`
+参考：
+
+*   `src/Core/Gameplay/GAS/Systems/DisplacementRuntimeSystem.cs`
+*   `src/Core/Gameplay/GAS/BuiltinHandlers.cs`
+*   `src/Core/Gameplay/GAS/Config/EffectTemplateLoader.cs`
 
 ## 9 约束清单
 

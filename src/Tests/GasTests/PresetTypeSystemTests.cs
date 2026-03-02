@@ -167,11 +167,12 @@ namespace Ludots.Tests.GAS
         [Test]
         public void ComponentFlags_ParameterAndCapability_NoBitOverlap()
         {
-            // Parameter components use bits 0-7, capability components use bits 16-17
+            // Parameter components use bits 0-8, capability components use bits 16-17
             var allParams = ComponentFlags.ModifierParams | ComponentFlags.DurationParams |
                             ComponentFlags.TargetQueryParams | ComponentFlags.TargetFilterParams |
                             ComponentFlags.TargetDispatchParams | ComponentFlags.ForceParams |
-                            ComponentFlags.ProjectileParams | ComponentFlags.UnitCreationParams;
+                            ComponentFlags.ProjectileParams | ComponentFlags.UnitCreationParams |
+                            ComponentFlags.DisplacementParams;
             var allCaps = ComponentFlags.PhaseGraphBindings | ComponentFlags.PhaseListenerSetup;
             That((allParams & allCaps), Is.EqualTo(ComponentFlags.None), "No overlap between param and capability flags");
         }
@@ -654,7 +655,7 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void PresetTypeLoader_FullPresetTypesJson_LoadsAll10Types()
+        public void PresetTypeLoader_FullPresetTypesJson_LoadsAll11Types()
         {
             string json = System.IO.File.ReadAllText(
                 System.IO.Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "preset_types.json"));
@@ -665,7 +666,7 @@ namespace Ludots.Tests.GAS
             // None (0) is not a real preset type — it should NOT be in the JSON
             That(reg.IsRegistered(EffectPresetType.None), Is.False);
 
-            // All 10 real preset types should be registered
+            // All 11 real preset types should be registered
             That(reg.IsRegistered(EffectPresetType.ApplyForce2D), Is.True);
             That(reg.IsRegistered(EffectPresetType.InstantDamage), Is.True);
             That(reg.IsRegistered(EffectPresetType.DoT), Is.True);
@@ -676,6 +677,7 @@ namespace Ludots.Tests.GAS
             That(reg.IsRegistered(EffectPresetType.PeriodicSearch), Is.True);
             That(reg.IsRegistered(EffectPresetType.LaunchProjectile), Is.True);
             That(reg.IsRegistered(EffectPresetType.CreateUnit), Is.True);
+            That(reg.IsRegistered(EffectPresetType.Displacement), Is.True);
 
             // Spot-check ApplyForce2D builtin handler
             ref readonly var af = ref reg.Get(EffectPresetType.ApplyForce2D);
@@ -688,6 +690,12 @@ namespace Ludots.Tests.GAS
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].IsValid, Is.True);
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].HandlerId,
                 Is.EqualTo((int)BuiltinHandlerId.ReResolveAndDispatch));
+
+            // Spot-check Displacement builtin handler
+            ref readonly var disp = ref reg.Get(EffectPresetType.Displacement);
+            var hDisp = disp.DefaultPhaseHandlers[EffectPhaseId.OnApply];
+            That(hDisp.Kind, Is.EqualTo(PhaseHandlerKind.Builtin));
+            That(hDisp.HandlerId, Is.EqualTo((int)BuiltinHandlerId.ApplyDisplacement));
         }
 
         // ════════════════════════════════════════════════════════════════════

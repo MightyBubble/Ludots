@@ -30,6 +30,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ConfigConflictReport report = null,
             string relativePath = "GAS/effects.json")
         {
+            // Ensure special config key IDs are available before template compilation.
+            // This is idempotent and keeps loader behavior deterministic in tests/tools.
+            EffectParamKeys.Initialize();
+
             _registry.Clear();
             EffectTemplateIdRegistry.Clear();
             UnitTypeRegistry.Clear();
@@ -142,6 +146,18 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 // They are resolved below after configParams compilation.
                 reserved = 2;
             }
+            else if (presetType == EffectPresetType.Displacement)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException($"Effect template '{cfg.Id}' in {relativePath}: presetType Displacement requires lifetime=Instant.");
+                }
+
+                if (cfg.Displacement == null)
+                {
+                    throw new InvalidOperationException($"Effect template '{cfg.Id}' in {relativePath}: presetType Displacement requires a 'displacement' block.");
+                }
+            }
 
             var modifiers = default(EffectModifiers);
             if (cfg.Modifiers != null && cfg.Modifiers.Count > 0)
@@ -231,6 +247,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             var projectile = CompileProjectile(cfg.Projectile, cfg.Id, relativePath);
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
+            var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
 
             return new EffectTemplateData
             {
@@ -250,6 +267,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 TargetDispatch = targetDispatch,
                 Projectile = projectile,
                 UnitCreation = unitCreation,
+                Displacement = displacement,
                 PhaseGraphBindings = behaviorTemplate,
                 ConfigParams = configParams,
                 ListenerSetup = listenerSetup,
@@ -311,6 +329,49 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 OffsetRadius = cfg.OffsetRadius,
                 OnSpawnEffectTemplateId = onSpawnId
             };
+        }
+
+        private static DisplacementDescriptor CompileDisplacement(DisplacementConfig cfg, string ownerId, string relativePath)
+        {
+            if (cfg == null) return default;
+
+            if (cfg.TotalDistanceCm <= 0)
+            {
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: displacement.totalDistanceCm must be > 0.");
+            }
+
+            if (cfg.TotalDurationTicks <= 0)
+            {
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: displacement.totalDurationTicks must be > 0.");
+            }
+
+            return new DisplacementDescriptor
+            {
+                DirectionMode = ParseDisplacementDirectionMode(cfg.DirectionMode, ownerId, relativePath),
+                FixedDirectionDeg = cfg.FixedDirectionDeg,
+                TotalDistanceCm = cfg.TotalDistanceCm,
+                TotalDurationTicks = cfg.TotalDurationTicks,
+                OverrideNavigation = cfg.OverrideNavigation
+            };
+        }
+
+        private static DisplacementDirectionMode ParseDisplacementDirectionMode(string value, string ownerId, string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return DisplacementDirectionMode.ToTarget;
+
+            if (string.Equals(value, "ToTarget", StringComparison.OrdinalIgnoreCase))
+                return DisplacementDirectionMode.ToTarget;
+            if (string.Equals(value, "AwayFromSource", StringComparison.OrdinalIgnoreCase))
+                return DisplacementDirectionMode.AwayFromSource;
+            if (string.Equals(value, "TowardSource", StringComparison.OrdinalIgnoreCase))
+                return DisplacementDirectionMode.TowardSource;
+            if (string.Equals(value, "Fixed", StringComparison.OrdinalIgnoreCase))
+                return DisplacementDirectionMode.Fixed;
+
+            throw new InvalidOperationException(
+                $"Effect template '{ownerId}' in {relativePath}: unsupported displacement.directionMode '{value}'. " +
+                "Supported: ToTarget, AwayFromSource, TowardSource, Fixed.");
         }
 
         private static ModifierOp ParseModifierOp(string op, string ownerId, string relativePath, int modifierIndex)

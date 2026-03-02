@@ -45,7 +45,7 @@
     *   Mod 自定义配置类接入 ConfigPipeline 的标准流程
 13. [GAS 战斗体系基建与 MOBA 实践指南](13_gas_combat_infrastructure.md)
     *   伤害管线、CC、护盾、自动攻击、资源系统的现有实现
-    *   属性派生与位移效果的计划设计
+    *   属性派生规划与位移效果已落地实现
 14. [3C 系统：相机、角色与控制](14_3c_camera_character_control.md)
     *   相机状态、控制器与表现管线
     *   角色位置真相链与渲染插值
@@ -54,3 +54,6 @@
     *   最近提交的架构审计发现与修复矩阵
     *   触发器兼容、地图生命周期、工具链对齐的回归验证
     *   AuditPlaygroundMod 可玩交互演示（I/O/P）
+16. [GAS / Input / Order：Effect Preset 交互验收矩阵](16_gas_input_order_effect_preset_acceptance_matrix.md)
+    *   覆盖全部 Effect Preset Type 的 WOW / DOTA / LOL 验收矩阵
+    *   输入到订单、订单到效果的自动化回归落点

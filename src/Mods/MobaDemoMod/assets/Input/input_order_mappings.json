@@ -1,12 +1,16 @@
 {
+  "interactionMode": "TargetFirst",
   "mappings": [
     {
       "actionId": "SkillQ",
       "trigger": "PressedThisFrame",
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 0 },
-      "requireSelection": false,
-      "modifierBehavior": "QueueOnModifier"
+      "requireSelection": true,
+      "selectionType": "Entity",
+      "modifierBehavior": "QueueOnModifier",
+      "isSkillMapping": true,
+      "castModeOverride": "TargetFirst"
     },
     {
       "actionId": "SkillW",
@@ -14,23 +18,32 @@
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 1 },
       "requireSelection": false,
-      "modifierBehavior": "QueueOnModifier"
+      "selectionType": "None",
+      "modifierBehavior": "QueueOnModifier",
+      "isSkillMapping": true,
+      "castModeOverride": "SmartCast"
     },
     {
       "actionId": "SkillE",
       "trigger": "PressedThisFrame",
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 2 },
-      "requireSelection": false,
-      "modifierBehavior": "QueueOnModifier"
+      "requireSelection": true,
+      "selectionType": "Position",
+      "modifierBehavior": "QueueOnModifier",
+      "isSkillMapping": true,
+      "castModeOverride": "AimCast"
     },
     {
       "actionId": "SkillR",
       "trigger": "PressedThisFrame",
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 3 },
-      "requireSelection": false,
-      "modifierBehavior": "QueueOnModifier"
+      "requireSelection": true,
+      "selectionType": "Position",
+      "modifierBehavior": "QueueOnModifier",
+      "isSkillMapping": true,
+      "castModeOverride": "SmartCastWithIndicator"
     },
     {
       "actionId": "Command",
@@ -38,8 +51,9 @@
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 4 },
       "requireSelection": true,
-      "selectionType": "Ground",
-      "modifierBehavior": "QueueOnModifier"
+      "selectionType": "Position",
+      "modifierBehavior": "QueueOnModifier",
+      "isSkillMapping": false
     },
     {
       "actionId": "Stop",
@@ -47,7 +61,9 @@
       "orderTagKey": "stop",
       "argsTemplate": {},
       "requireSelection": false,
-      "modifierBehavior": "IgnoreModifier"
+      "selectionType": "None",
+      "modifierBehavior": "IgnoreModifier",
+      "isSkillMapping": false
     }
   ],
   "userOverrides": {

@@ -11,5 +11,18 @@
       "_ep.forceXAttribute": { "type": "int", "value": 0 },
       "_ep.forceYAttribute": { "type": "int", "value": 0 }
     }
+  },
+  {
+    "id": "Effect.Preset.Displacement.Knockback",
+    "tags": ["Effect.Displacement"],
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "displacement": {
+      "directionMode": "AwayFromSource",
+      "totalDistanceCm": 300,
+      "totalDurationTicks": 10,
+      "overrideNavigation": true
+    }
   }
 ]
