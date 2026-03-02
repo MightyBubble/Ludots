@@ -519,6 +519,23 @@ namespace Ludots.Adapter.Raylib
             int flowDbgLines = 0;
             if (engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DPlayground_FlowDebugLines, out var fdlObj) && fdlObj is int fdl) flowDbgLines = fdl;
             Rl.DrawText($"FlowDbgLines: {flowDbgLines}", x + 4, y + (h + gap) * 12 + 72, 16, new Color(220, 220, 220, 220));
+
+            // Audit playground counters (render only when present)
+            int auditGlobal = engine.GlobalContext.TryGetValue("Audit.GlobalMapLoadedCount", out var agObj) && agObj is int ag ? ag : -1;
+            int auditScoped = engine.GlobalContext.TryGetValue("Audit.ScopedMapLoadedCount", out var asObj) && asObj is int asc ? asc : -1;
+            int auditNamed = engine.GlobalContext.TryGetValue("Audit.NamedDecoratorCount", out var anObj) && anObj is int an ? an : -1;
+            int auditAnchor = engine.GlobalContext.TryGetValue("Audit.AnchorDecoratorCount", out var aaObj) && aaObj is int aa ? aa : -1;
+            int auditFactory = engine.GlobalContext.TryGetValue("Audit.FactoryActivationCount", out var afObj) && afObj is int af ? af : -1;
+
+            if (auditGlobal >= 0 || auditScoped >= 0 || auditNamed >= 0 || auditAnchor >= 0 || auditFactory >= 0)
+            {
+                int auditYBase = y + (h + gap) * 12 + 96;
+                Rl.DrawText($"Audit Global: {Math.Max(auditGlobal, 0)}", x + 4, auditYBase, 16, new Color(180, 240, 180, 230));
+                Rl.DrawText($"Audit Scoped: {Math.Max(auditScoped, 0)}", x + 4, auditYBase + 18, 16, new Color(180, 240, 180, 230));
+                Rl.DrawText($"Audit Named: {Math.Max(auditNamed, 0)}", x + 4, auditYBase + 36, 16, new Color(180, 240, 180, 230));
+                Rl.DrawText($"Audit Anchor: {Math.Max(auditAnchor, 0)}", x + 4, auditYBase + 54, 16, new Color(180, 240, 180, 230));
+                Rl.DrawText($"Audit Factory: {Math.Max(auditFactory, 0)}", x + 4, auditYBase + 72, 16, new Color(180, 240, 180, 230));
+            }
         }
 
         private static void DrawToggle(int x, int y, int w, int h, string label, bool enabled)
