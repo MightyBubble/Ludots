@@ -164,9 +164,8 @@ namespace MobaDemoMod.Presentation
                 return;
             }
 
-            // F1/F2/F3/F4 or 1/2/3/4: switch interaction mode
             CheckModeSwitchKeys(input);
-            RunAutoDemo(dt);
+            RunAutoDemo(dt, input);
 
             if (_modeChangePending)
             {
@@ -232,43 +231,82 @@ namespace MobaDemoMod.Presentation
             y += 20;
             buf.AddText(x, y, "[LClick] Select  [RClick] Move  [S] Stop", 14, new Vector4(0.55f, 0.55f, 0.55f, 1));
 
-            if (_autoDemoEnabled)
+            if (_autoDemoEnabled && _autoDemoStep < AutoDemoScript.Length)
             {
                 y += 18;
-                buf.AddText(x, y, $"[AutoDemo] Step={_autoDemoStep} Timer={_autoDemoTimer:F1}s", 12, new Vector4(1, 0.5f, 0, 1));
+                string nextLabel = AutoDemoScript[_autoDemoStep].label;
+                buf.AddText(x, y, $"[AutoDemo] next: {nextLabel} ({_autoDemoTimer:F1}s)", 12, new Vector4(1, 0.5f, 0, 1));
             }
         }
 
-        // Auto-demo: cycles through modes and skills for recording purposes.
-        // Activated by env var MOBA_AUTO_DEMO=1. Disables itself after one full cycle.
+        // Auto-demo: cycles through modes and fires skills via InjectAction.
+        // Activated by env var MOBA_AUTO_DEMO=1. Uses the real input pipeline.
         private float _autoDemoTimer;
         private int _autoDemoStep;
-        private bool _autoDemoEnabled = System.Environment.GetEnvironmentVariable("MOBA_AUTO_DEMO") == "1";
-        private static readonly (InteractionModeType mode, string label)[] AutoDemoSequence =
+        private bool _autoDemoEnabled;
+        private bool _autoDemoChecked;
+
+        private static readonly (string actionId, string label)[] AutoDemoScript =
         {
-            (InteractionModeType.SmartCast,             "LoL SmartCast"),
-            (InteractionModeType.TargetFirst,           "WoW TargetFirst"),
-            (InteractionModeType.AimCast,               "DotA AimCast"),
-            (InteractionModeType.SmartCastWithIndicator, "LoL+ Indicator"),
-            (InteractionModeType.SmartCast,             "Back to LoL"),
+            ("ModeWoW",    "Switch → WoW (TargetFirst)"),
+            (null,         "pause"),
+            ("SkillQ",     "Cast Q: Fireball"),
+            (null,         "pause"),
+            ("ModeLoL",    "Switch → LoL (SmartCast)"),
+            (null,         "pause"),
+            ("SkillW",     "Cast W: Heal"),
+            (null,         "pause"),
+            ("ModeDotA",   "Switch → DotA (AimCast)"),
+            (null,         "pause"),
+            ("SkillE",     "Cast E: ConeAoE"),
+            (null,         "pause"),
+            ("ModeLoLPlus","Switch → LoL+ (Indicator)"),
+            (null,         "pause"),
+            ("SkillR",     "Cast R: Blizzard"),
+            (null,         "pause"),
+            ("ModeLoL",    "Switch → LoL (back)"),
         };
 
-        private void RunAutoDemo(float dt)
+        private void RunAutoDemo(float dt, PlayerInputHandler input)
         {
+            if (!_autoDemoChecked)
+            {
+                _autoDemoChecked = true;
+                _autoDemoEnabled = _globals.ContainsKey("MobaDemo.AutoDemo");
+            }
             if (!_autoDemoEnabled) return;
             _autoDemoTimer += dt;
-            if (_autoDemoTimer < 2f) return; // 2s per step
+            if (_autoDemoTimer < 1.5f) return;
             _autoDemoTimer = 0f;
 
-            if (_autoDemoStep < AutoDemoSequence.Length)
-            {
-                _currentMode = AutoDemoSequence[_autoDemoStep].mode;
-                _modeChangePending = true;
-                _autoDemoStep++;
-            }
-            else
+            if (_autoDemoStep >= AutoDemoScript.Length)
             {
                 _autoDemoEnabled = false;
+                return;
+            }
+
+            var (actionId, _) = AutoDemoScript[_autoDemoStep];
+            _autoDemoStep++;
+
+            if (actionId != null)
+            {
+                // For mode-switch actions, directly set the mode to avoid injection timing issues
+                if (actionId.StartsWith("Mode"))
+                {
+                    _currentMode = actionId switch
+                    {
+                        "ModeWoW" => InteractionModeType.TargetFirst,
+                        "ModeLoL" => InteractionModeType.SmartCast,
+                        "ModeDotA" => InteractionModeType.AimCast,
+                        "ModeLoLPlus" => InteractionModeType.SmartCastWithIndicator,
+                        _ => _currentMode
+                    };
+                    _modeChangePending = true;
+                }
+                else
+                {
+                    input.InjectButtonPress(actionId);
+                }
             }
         }
 

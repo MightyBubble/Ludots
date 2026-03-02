@@ -70,6 +70,8 @@ namespace MobaDemoMod.Triggers
                 MobaDemoAbilityDefinitions.RegisterBuiltins(defs, mobaConfig);
             }
 
+            engine.GlobalContext["MobaDemo.AutoDemo"] = true;
+
             if (engine.GlobalContext.TryGetValue(ContextKeys.OrderQueue, out var ordersObj) &&
                 ordersObj is OrderQueue orders)
             {
