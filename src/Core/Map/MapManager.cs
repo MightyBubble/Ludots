@@ -291,6 +291,9 @@ namespace Ludots.Core.Map
                     }
                 }
             }
+
+            // Merge DefaultCamera (source wins)
+            if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
         }
     }
 }

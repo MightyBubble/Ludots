@@ -1,6 +1,14 @@
 {
   "Id": "entry",
   "Tags": ["moba_demo"],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 45,
+    "DistanceCm": 14142,
+    "FovYDeg": 60
+  },
   "Entities": [
     {
       "Template": "moba_hero",

@@ -72,7 +72,7 @@ namespace Ludots.Adapter.Raylib
                     position = new Vector3(10.0f, 10.0f, 10.0f),
                     target = new Vector3(0.0f, 0.0f, 0.0f),
                     up = new Vector3(0.0f, 1.0f, 0.0f),
-                    fovy = 45.0f,
+                    fovy = 60.0f,
                     projection = CameraProjection.CAMERA_PERSPECTIVE
                 };
 

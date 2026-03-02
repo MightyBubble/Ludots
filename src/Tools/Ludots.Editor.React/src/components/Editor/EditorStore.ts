@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { TerrainStore } from '../../Core/Map/TerrainStore';
 import { hexToWorldCm, worldCmToHex } from '../../Core/Map/HexMetrics';
-import type { Camera } from 'three';
+import type { Camera, PerspectiveCamera } from 'three';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 
 export type ToolCategory = 'Height' | 'Water' | 'Biome' | 'Vegetation' | 'Ramp' | 'Layers' | 'Territory' | 'Entities';
@@ -252,6 +252,39 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
         set({ mapConfig: mapCfg, spawnEntities, selectedEntityIndex: null, entitiesVersion: Date.now() });
 
+        // Apply DefaultCamera from map config to editor camera
+        const defCam = mapCfg?.DefaultCamera ?? mapCfg?.defaultCamera;
+        if (defCam) {
+            const cam = get().cameraRef.current;
+            const controls = get().controlsRef.current;
+            if (cam && controls) {
+                const HEX_W = 6.92820323;
+                const ROW_S = 6.0;
+                const yaw = (defCam.Yaw ?? defCam.yaw ?? 180) * Math.PI / 180;
+                const pitch = (defCam.Pitch ?? defCam.pitch ?? 45) * Math.PI / 180;
+                const distCm = defCam.DistanceCm ?? defCam.distanceCm ?? 14142;
+                const fov = defCam.FovYDeg ?? defCam.fovYDeg ?? 60;
+                const txCm = defCam.TargetXCm ?? defCam.targetXCm ?? 0;
+                const tyCm = defCam.TargetYCm ?? defCam.targetYCm ?? 0;
+
+                const distM = distCm * 0.01;
+                const hDist = distM * Math.cos(pitch);
+                const vDist = distM * Math.sin(pitch);
+                const targetX = txCm * 0.01;
+                const targetZ = tyCm * 0.01;
+
+                const camX = targetX + hDist * Math.sin(yaw);
+                const camY = vDist;
+                const camZ = targetZ - hDist * Math.cos(yaw);
+
+                cam.position.set(camX, camY, camZ);
+                (cam as PerspectiveCamera).fov = fov;
+                (cam as PerspectiveCamera).updateProjectionMatrix();
+                controls.target.set(targetX, 0, targetZ);
+                controls.update();
+            }
+        }
+
         setLoading(true, 'Loading Terrain...', 40);
         const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react`);
         if (!terrRes.ok) throw new Error(`Bridge error ${terrRes.status}`);
@@ -273,6 +306,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
         setLoading(true, 'Saving MapConfig...', 20);
         mapConfig.Id = selectedMapId;
+
+        // Save current editor camera as DefaultCamera
+        const cam = get().cameraRef.current;
+        const controls = get().controlsRef.current;
+        if (cam && controls) {
+            const target = controls.target;
+            const pos = cam.position;
+            const dx = pos.x - target.x;
+            const dy = pos.y - target.y;
+            const dz = pos.z - target.z;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            const hDist = Math.sqrt(dx * dx + dz * dz);
+            const pitch = Math.atan2(dy, hDist) * 180 / Math.PI;
+            const yaw = Math.atan2(dx, -dz) * 180 / Math.PI;
+            mapConfig.DefaultCamera = {
+                TargetXCm: Math.round(target.x * 100),
+                TargetYCm: Math.round(target.z * 100),
+                Yaw: Math.round(yaw * 10) / 10,
+                Pitch: Math.round(pitch * 10) / 10,
+                DistanceCm: Math.round(dist * 100),
+                FovYDeg: (cam as PerspectiveCamera).fov,
+            };
+        }
+
         mapConfig.Entities = spawnEntities.map((e) => {
             const cm = hexToWorldCm(e.position.x, e.position.y);
             const overrides = { ...(e.overrides ?? {}) };

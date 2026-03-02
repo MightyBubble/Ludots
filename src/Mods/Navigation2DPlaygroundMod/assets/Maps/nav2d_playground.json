@@ -3,5 +3,13 @@
   "Tags": [
     "nav_playground"
   ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 45,
+    "DistanceCm": 18000,
+    "FovYDeg": 60
+  },
   "Entities": []
 }

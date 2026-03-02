@@ -58,3 +58,7 @@
     *   最近提交的架构审计发现与修复矩阵
     *   触发器兼容、地图生命周期、工具链对齐的回归验证
     *   AuditPlaygroundMod 可玩交互演示（I/O/P）
+16. [Camera 标准规范](16_camera_standards.md)
+    *   Editor ↔ Raylib 轨道相机模型统一
+    *   MapConfig.DefaultCamera 配置规范
+    *   Yaw 方向约定与坐标映射

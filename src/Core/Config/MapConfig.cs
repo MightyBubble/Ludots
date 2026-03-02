@@ -16,15 +16,34 @@ namespace Ludots.Core.Config
 
         /// <summary>
         /// Board configurations for this map. Each board is a spatial domain.
-        /// Replaces the old Spatial and DataFile fields.
         /// </summary>
         public List<BoardConfig> Boards { get; set; } = new List<BoardConfig>();
 
         /// <summary>
         /// Trigger type names declared by this map (JSON data-first path).
-        /// Merged with MapDefinition.TriggerTypes at load time.
         /// </summary>
         public List<string> TriggerTypes { get; set; } = new List<string>();
+
+        /// <summary>
+        /// Default camera state when this map is loaded.
+        /// If null, the engine uses CameraState defaults.
+        /// Editor reads/writes this to ensure camera consistency across tools.
+        /// </summary>
+        public CameraConfig DefaultCamera { get; set; }
+    }
+
+    /// <summary>
+    /// Camera configuration for a map. Matches the CameraState orbit model.
+    /// All fields are optional; null/0 means "use engine default".
+    /// </summary>
+    public class CameraConfig
+    {
+        public float? TargetXCm { get; set; }
+        public float? TargetYCm { get; set; }
+        public float? Yaw { get; set; }
+        public float? Pitch { get; set; }
+        public float? DistanceCm { get; set; }
+        public float? FovYDeg { get; set; }
     }
 
     public class EntitySpawnData

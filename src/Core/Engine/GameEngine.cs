@@ -886,6 +886,8 @@ namespace Ludots.Core.Engine
 
                 foreach (var kvp in GlobalContext) finalCtx.Set(kvp.Key, kvp.Value);
 
+                ApplyDefaultCamera(mapConfig);
+
                 Diagnostics.Log.Info(in LogChannels.Engine, $"Firing MapLoaded event for {mapId}...");
                 TriggerManager.FireMapEvent(mid, GameEvents.MapLoaded, finalCtx);
             }
@@ -1071,6 +1073,21 @@ namespace Ludots.Core.Engine
                 foreach (var kvp in GlobalContext) resumeCtx.Set(kvp.Key, kvp.Value);
                 TriggerManager.FireMapEvent(outerSession.MapId, GameEvents.MapResumed, resumeCtx);
             }
+        }
+
+        private void ApplyDefaultCamera(MapConfig mapConfig)
+        {
+            var cam = mapConfig?.DefaultCamera;
+            if (cam == null) return;
+
+            var state = GameSession.Camera.State;
+            if (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
+                state.TargetCm = new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f);
+            if (cam.Yaw.HasValue) state.Yaw = cam.Yaw.Value;
+            if (cam.Pitch.HasValue) state.Pitch = cam.Pitch.Value;
+            if (cam.DistanceCm.HasValue) state.DistanceCm = cam.DistanceCm.Value;
+            if (cam.FovYDeg.HasValue) state.FovYDeg = cam.FovYDeg.Value;
+            Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
         }
 
         private void CreateBoardsForSession(MapSession session, MapConfig mapConfig)
