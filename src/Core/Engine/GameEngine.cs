@@ -590,7 +590,7 @@ namespace Ludots.Core.Engine
             var attributeBindings = new AttributeBindingRegistry();
             new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load();
             var bindingSystem = new AttributeBindingSystem(World, attributeSinks, attributeBindings);
-            var aggSystem = new AttributeAggregatorSystem(World, graphProgramRegistry, gasGraphApi);
+            var aggSystem = new AttributeAggregatorSystem(World);
             var sessionSystem = new GameSessionSystem(GameSession);
             _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext);
             _inputRuntimeSystem.Initialize();
