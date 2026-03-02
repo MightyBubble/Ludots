@@ -684,6 +684,7 @@ namespace Ludots.Core.Engine
             GlobalContext[ContextKeys.PresentationPrimitiveDrawBuffer] = primitiveDrawBuffer;
             GlobalContext[ContextKeys.PresentationWorldHudBuffer] = worldHudBuffer;
             GlobalContext[ContextKeys.PresentationWorldHudStrings] = worldHudStrings;
+            GlobalContext[ContextKeys.ScreenOverlayBuffer] = new Ludots.Core.Presentation.Hud.ScreenOverlayBuffer();
             GlobalContext[ContextKeys.TransientMarkerBuffer] = transientMarkerBuffer;
             GlobalContext[ContextKeys.GasPresentationEventBuffer] = gasPresentationEvents;
             GlobalContext[ContextKeys.GroundOverlayBuffer] = groundOverlayBuffer;

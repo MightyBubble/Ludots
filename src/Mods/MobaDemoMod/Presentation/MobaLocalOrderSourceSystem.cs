@@ -10,6 +10,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -28,7 +29,7 @@ namespace MobaDemoMod.Presentation
     ///
     /// F1/F2/F3 keys switch the interaction mode at runtime:
     ///   F1 = WoW (TargetFirst), F2 = LoL (SmartCast), F3 = DotA (AimCast)
-    /// Current mode is exposed via GlobalContext["MobaDemo.InteractionMode"] for HUD display.
+    /// Current mode is rendered to ScreenOverlayBuffer (generic core HUD buffer).
     /// </summary>
     public sealed class MobaLocalOrderSourceSystem : ISystem<float>
     {
@@ -191,6 +192,9 @@ namespace MobaDemoMod.Presentation
 
         private void UpdateHudState()
         {
+            if (!_globals.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var bufObj) || bufObj is not ScreenOverlayBuffer buf)
+                return;
+
             string modeName = _currentMode switch
             {
                 InteractionModeType.TargetFirst => "WoW (TargetFirst)",
@@ -199,9 +203,33 @@ namespace MobaDemoMod.Presentation
                 InteractionModeType.SmartCastWithIndicator => "LoL+ (Indicator)",
                 _ => _currentMode.ToString()
             };
-            _globals["MobaDemo.InteractionMode"] = modeName;
-            _globals["MobaDemo.IsAiming"] = _inputOrderMapping?.IsAiming ?? false;
-            _globals["MobaDemo.AimingAction"] = _inputOrderMapping?.AimingActionId ?? "";
+
+            int x = 840;
+            int y = 40;
+
+            buf.AddRect(x - 6, y - 6, 356, 120,
+                new Vector4(0, 0, 0, 0.7f), new Vector4(0, 0.78f, 1, 0.78f));
+
+            buf.AddText(x, y, $"Mode: {modeName}", 20, new Vector4(0, 1, 0.78f, 1));
+            y += 24;
+            buf.AddText(x, y, "[F1] WoW  [F2] LoL  [F3] DotA  [F4] LoL+", 14, new Vector4(0.7f, 0.7f, 0.7f, 1));
+            y += 18;
+            buf.AddText(x, y, "[Q] Fireball  [W] Heal  [E] ConeAoE  [R] Blizzard", 14, new Vector4(0.78f, 0.78f, 0.4f, 1));
+            y += 20;
+
+            bool isAiming = _inputOrderMapping?.IsAiming ?? false;
+            string aimAction = _inputOrderMapping?.AimingActionId ?? "";
+
+            if (isAiming && !string.IsNullOrEmpty(aimAction))
+            {
+                buf.AddText(x, y, $">>> AIMING: {aimAction} (click to cast) <<<", 16, new Vector4(1, 0.4f, 0.2f, 1));
+            }
+            else
+            {
+                buf.AddText(x, y, "Click entity to select, then use skills", 14, new Vector4(0.55f, 0.55f, 0.55f, 1));
+            }
+            y += 20;
+            buf.AddText(x, y, "[LClick] Select  [RClick] Move  [S] Stop", 14, new Vector4(0.55f, 0.55f, 0.55f, 1));
         }
 
         private void CheckModeSwitchKeys(PlayerInputHandler input)

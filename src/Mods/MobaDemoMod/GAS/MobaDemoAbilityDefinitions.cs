@@ -14,10 +14,14 @@ namespace MobaDemoMod.GAS
             config ??= new MobaConfig();
             var ab = config.Abilities;
 
-            Register(registry, MobaAbilityIds.SkillQ, "Effect.Moba.Damage.Q", "Cooldown.Skill.Q", ab.SkillQ.CooldownTicks, ab.SkillQ.RangeCm, TargetShape.Single, ab);
+            // Q = Fireball (LaunchProjectile → arrow flies toward target, impact deals damage)
+            Register(registry, MobaAbilityIds.SkillQ, "Effect.Moba.Projectile.Arrow", "Cooldown.Skill.Q", ab.SkillQ.CooldownTicks, ab.SkillQ.RangeCm, TargetShape.Single, ab);
+            // W = Heal (instant heal on self)
             Register(registry, MobaAbilityIds.SkillW, "Effect.Moba.Heal.W", "Cooldown.Skill.W", ab.SkillW.CooldownTicks, ab.SkillW.RangeCm, TargetShape.Self, ab);
+            // E = Cone AoE (Search → dispatch damage to targets in cone)
             Register(registry, MobaAbilityIds.SkillE, "Effect.Moba.Damage.E", "Cooldown.Skill.E", ab.SkillE.CooldownTicks, ab.SkillE.RangeCm, TargetShape.Cone, ab);
-            Register(registry, MobaAbilityIds.SkillR, "Effect.Moba.Damage.R", "Cooldown.Skill.R", ab.SkillR.CooldownTicks, ab.SkillR.RangeCm, TargetShape.Circle, ab);
+            // R = Blizzard Zone (PeriodicSearch → persistent AoE damage zone)
+            Register(registry, MobaAbilityIds.SkillR, "Effect.Moba.Search.BlizzardZone", "Cooldown.Skill.R", ab.SkillR.CooldownTicks, ab.SkillR.RangeCm, TargetShape.Circle, ab);
             RegisterMove(registry);
         }
 

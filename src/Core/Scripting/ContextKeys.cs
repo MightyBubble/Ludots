@@ -54,6 +54,7 @@ namespace Ludots.Core.Scripting
         public const string PresentationPrimitiveDrawBuffer = "PresentationPrimitiveDrawBuffer";
         public const string PresentationWorldHudBuffer = "PresentationWorldHudBuffer";
         public const string PresentationWorldHudStrings = "PresentationWorldHudStrings";
+        public const string ScreenOverlayBuffer = "ScreenOverlayBuffer";
         public const string WorldSizeSpec = "WorldSizeSpec";
         public const string SpatialCoordinateConverter = "SpatialCoordinateConverter";
         public const string SpatialQueryService = "SpatialQueryService";
