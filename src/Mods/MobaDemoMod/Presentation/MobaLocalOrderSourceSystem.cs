@@ -164,8 +164,9 @@ namespace MobaDemoMod.Presentation
                 return;
             }
 
-            // F1/F2/F3/F4: switch interaction mode (always process, even without player entity)
+            // F1/F2/F3/F4 or 1/2/3/4: switch interaction mode
             CheckModeSwitchKeys(input);
+            RunAutoDemo(dt);
 
             if (_modeChangePending)
             {
@@ -212,7 +213,7 @@ namespace MobaDemoMod.Presentation
 
             buf.AddText(x, y, $"Mode: {modeName}", 20, new Vector4(0, 1, 0.78f, 1));
             y += 24;
-            buf.AddText(x, y, "[F1] WoW  [F2] LoL  [F3] DotA  [F4] LoL+", 14, new Vector4(0.7f, 0.7f, 0.7f, 1));
+            buf.AddText(x, y, "[1/F1] WoW  [2/F2] LoL  [3/F3] DotA  [4/F4] LoL+", 14, new Vector4(0.7f, 0.7f, 0.7f, 1));
             y += 18;
             buf.AddText(x, y, "[Q] Fireball  [W] Heal  [E] ConeAoE  [R] Blizzard", 14, new Vector4(0.78f, 0.78f, 0.4f, 1));
             y += 20;
@@ -230,26 +231,65 @@ namespace MobaDemoMod.Presentation
             }
             y += 20;
             buf.AddText(x, y, "[LClick] Select  [RClick] Move  [S] Stop", 14, new Vector4(0.55f, 0.55f, 0.55f, 1));
+
+            if (_autoDemoEnabled)
+            {
+                y += 18;
+                buf.AddText(x, y, $"[AutoDemo] Step={_autoDemoStep} Timer={_autoDemoTimer:F1}s", 12, new Vector4(1, 0.5f, 0, 1));
+            }
+        }
+
+        // Auto-demo: cycles through modes and skills for recording purposes.
+        // Activated by env var MOBA_AUTO_DEMO=1. Disables itself after one full cycle.
+        private float _autoDemoTimer;
+        private int _autoDemoStep;
+        private bool _autoDemoEnabled = System.Environment.GetEnvironmentVariable("MOBA_AUTO_DEMO") == "1";
+        private static readonly (InteractionModeType mode, string label)[] AutoDemoSequence =
+        {
+            (InteractionModeType.SmartCast,             "LoL SmartCast"),
+            (InteractionModeType.TargetFirst,           "WoW TargetFirst"),
+            (InteractionModeType.AimCast,               "DotA AimCast"),
+            (InteractionModeType.SmartCastWithIndicator, "LoL+ Indicator"),
+            (InteractionModeType.SmartCast,             "Back to LoL"),
+        };
+
+        private void RunAutoDemo(float dt)
+        {
+            if (!_autoDemoEnabled) return;
+            _autoDemoTimer += dt;
+            if (_autoDemoTimer < 2f) return; // 2s per step
+            _autoDemoTimer = 0f;
+
+            if (_autoDemoStep < AutoDemoSequence.Length)
+            {
+                _currentMode = AutoDemoSequence[_autoDemoStep].mode;
+                _modeChangePending = true;
+                _autoDemoStep++;
+            }
+            else
+            {
+                _autoDemoEnabled = false;
+            }
         }
 
         private void CheckModeSwitchKeys(PlayerInputHandler input)
         {
-            if (input.PressedThisFrame("ModeWoW"))
+            if (input.PressedThisFrame("ModeWoW") || input.PressedThisFrame("Hotkey1"))
             {
                 _currentMode = InteractionModeType.TargetFirst;
                 _modeChangePending = true;
             }
-            else if (input.PressedThisFrame("ModeLoL"))
+            else if (input.PressedThisFrame("ModeLoL") || input.PressedThisFrame("Hotkey2"))
             {
                 _currentMode = InteractionModeType.SmartCast;
                 _modeChangePending = true;
             }
-            else if (input.PressedThisFrame("ModeDotA"))
+            else if (input.PressedThisFrame("ModeDotA") || input.PressedThisFrame("Hotkey3"))
             {
                 _currentMode = InteractionModeType.AimCast;
                 _modeChangePending = true;
             }
-            else if (input.PressedThisFrame("ModeLoLPlus"))
+            else if (input.PressedThisFrame("ModeLoLPlus") || input.PressedThisFrame("Hotkey4"))
             {
                 _currentMode = InteractionModeType.SmartCastWithIndicator;
                 _modeChangePending = true;
