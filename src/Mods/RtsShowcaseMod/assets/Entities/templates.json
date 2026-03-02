@@ -1,44 +1,103 @@
 [
   {
-    "Id": "rts_base",
-    "Components": {
-      "Name": { "Value": "Base" },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualModel": { "MeshId": 1, "ScaleX": 4.0, "ScaleY": 2.0, "ScaleZ": 4.0, "ColorR": 200, "ColorG": 200, "ColorB": 200 }
+    "id": "rts_base",
+    "components": {
+      "Name": {
+        "Value": "Base"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2000
+        }
+      }
     }
   },
   {
-    "Id": "rts_barracks",
-    "Components": {
-      "Name": { "Value": "Barracks" },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualModel": { "MeshId": 1, "ScaleX": 3.0, "ScaleY": 1.5, "ScaleZ": 3.0, "ColorR": 180, "ColorG": 140, "ColorB": 80 }
+    "id": "rts_barracks",
+    "components": {
+      "Name": {
+        "Value": "Barracks"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000
+        }
+      }
     }
   },
   {
-    "Id": "rts_infantry",
-    "Components": {
-      "Name": { "Value": "Infantry" },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Team": { "Id": 1 },
-      "VisualModel": { "MeshId": 2, "ScaleX": 0.8, "ScaleY": 0.8, "ScaleZ": 0.8, "ColorR": 50, "ColorG": 150, "ColorB": 255 }
+    "id": "rts_infantry",
+    "components": {
+      "Name": {
+        "Value": "Infantry"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "Team": {
+        "Id": 1
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        }
+      }
     }
   },
   {
-    "Id": "rts_tank",
-    "Components": {
-      "Name": { "Value": "Tank" },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Team": { "Id": 1 },
-      "VisualModel": { "MeshId": 1, "ScaleX": 2.0, "ScaleY": 1.0, "ScaleZ": 3.0, "ColorR": 100, "ColorG": 180, "ColorB": 60 }
+    "id": "rts_tank",
+    "components": {
+      "Name": {
+        "Value": "Tank"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "Team": {
+        "Id": 1
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500
+        }
+      }
     }
   },
   {
-    "Id": "rts_mineral",
-    "Components": {
-      "Name": { "Value": "Mineral" },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualModel": { "MeshId": 1, "ScaleX": 1.5, "ScaleY": 1.5, "ScaleZ": 1.5, "ColorR": 80, "ColorG": 200, "ColorB": 255 }
+    "id": "rts_mineral",
+    "components": {
+      "Name": {
+        "Value": "Mineral"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1500
+        }
+      }
     }
   }
 ]
