@@ -160,11 +160,11 @@ app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string
         var ctx = EditorRepo.CreateContext(repoRoot, modId);
         var mapR = EditorRepo.LoadMergedMapConfig(ctx, mapId);
         if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {mapId}" });
-        if (string.IsNullOrWhiteSpace(mapR.Map.DataFile)) return Results.BadRequest(new { ok = false, error = "MapConfig.DataFile is empty." });
+        if (string.IsNullOrWhiteSpace(EditorRepo.GetPrimaryDataFile(mapR.Map))) return Results.BadRequest(new { ok = false, error = "MapConfig.DataFile is empty." });
 
-        if (!EditorRepo.TryResolveDataFile(ctx, mapR.Map.DataFile, out var fullPath, out var checkedPaths))
+        if (!EditorRepo.TryResolveDataFile(ctx, EditorRepo.GetPrimaryDataFile(mapR.Map), out var fullPath, out var checkedPaths))
         {
-            return Results.NotFound(new { ok = false, error = $"DataFile not found: {mapR.Map.DataFile}", checkedPaths });
+            return Results.NotFound(new { ok = false, error = $"DataFile not found: {EditorRepo.GetPrimaryDataFile(mapR.Map)}", checkedPaths });
         }
 
         using var fs = File.OpenRead(fullPath);
@@ -194,9 +194,9 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, 
 
     var mapR = EditorRepo.LoadMergedMapConfig(ctx, mapId);
     if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {mapId}" });
-    if (string.IsNullOrWhiteSpace(mapR.Map.DataFile)) return Results.BadRequest(new { ok = false, error = "MapConfig.DataFile is empty." });
+    if (string.IsNullOrWhiteSpace(EditorRepo.GetPrimaryDataFile(mapR.Map))) return Results.BadRequest(new { ok = false, error = "MapConfig.DataFile is empty." });
 
-    string outFile = EditorRepo.ResolveWritableDataFilePath(ctx, mapR.Map.DataFile);
+    string outFile = EditorRepo.ResolveWritableDataFilePath(ctx, EditorRepo.GetPrimaryDataFile(mapR.Map));
     Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
 
     string tempPath = Path.Combine(Path.GetTempPath(), $"ludots_map_{Guid.NewGuid():N}.bin");
@@ -871,9 +871,21 @@ static class EditorRepo
         return defs.OrderBy(kvp => kvp.Key).Select(kvp => kvp.Value).ToArray();
     }
 
+
+    public static string GetPrimaryDataFile(Ludots.Core.Config.MapConfig map)
+    {
+        if (map.Boards != null)
+        {
+            foreach (var b in map.Boards)
+            {
+                if (!string.IsNullOrWhiteSpace(b.DataFile)) return b.DataFile;
+            }
+        }
+        return null;
+    }
+
     private static void MergeMapConfig(Ludots.Core.Config.MapConfig target, Ludots.Core.Config.MapConfig source)
     {
-        if (!string.IsNullOrEmpty(source.DataFile)) target.DataFile = source.DataFile;
         if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
 
         if (source.Dependencies != null)
@@ -905,7 +917,30 @@ static class EditorRepo
                 }
             }
         }
-        if (source.Spatial != null) target.Spatial = source.Spatial;
+        if (source.Boards != null)
+        {
+            foreach (var srcBoard in source.Boards)
+            {
+                bool found = false;
+                for (int i = 0; i < target.Boards.Count; i++)
+                {
+                    if (string.Equals(target.Boards[i].Name, srcBoard.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        target.Boards[i] = srcBoard;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) target.Boards.Add(srcBoard);
+            }
+        }
+        if (source.TriggerTypes != null)
+        {
+            foreach (var tt in source.TriggerTypes)
+            {
+                if (!target.TriggerTypes.Contains(tt)) target.TriggerTypes.Add(tt);
+            }
+        }
     }
 
     private static ModInfo ReadModInfo(string id, string rootPath, string modJsonPath)
