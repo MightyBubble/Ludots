@@ -1,7 +1,66 @@
 {
   "Id": "entry",
+  "ParentId": null,
+  "Dependencies": {},
+  "Tags": [
+    "moba_demo"
+  ],
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Position": {},
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 0,
+            "Y": 0
+          }
+        }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Position": {},
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 693,
+            "Y": 0
+          }
+        },
+        "Name": {
+          "Value": "Enemy1"
+        }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Position": {},
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 693,
+            "Y": 0
+          }
+        },
+        "Name": {
+          "Value": "Enemy2"
+        }
+      }
+    }
+  ],
   "Boards": [
-    { "Name": "default", "DataFile": "terrain_bench.vtxm" }
-  ]
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInTiles": 64,
+      "HeightInTiles": 64,
+      "GridCellSizeCm": 100,
+      "HexEdgeLengthCm": 400,
+      "ChunkSizeCells": 64,
+      "DataFile": "terrain_bench.vtxm",
+      "NavigationEnabled": false
+    }
+  ],
+  "TriggerTypes": []
 }
-

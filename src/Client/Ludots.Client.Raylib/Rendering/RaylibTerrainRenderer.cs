@@ -88,14 +88,16 @@ namespace Ludots.Client.Raylib.Rendering
                     chunk.LastUsedFrame = _frameIndex;
 
                     RaylibMatrix identity = RaylibMatrix.Identity;
+                    Rl.rlDisableBackfaceCulling();
                     Rl.DrawMesh(chunk.TerrainMesh, _terrainMaterial, identity);
-                    DrawnChunkCountLastFrame++;
-                    TerrainVertexCountLastFrame += chunk.TerrainMesh.vertexCount;
                     if (chunk.WaterMesh.vertexCount > 0)
                     {
                         Rl.DrawMesh(chunk.WaterMesh, _waterMaterial, identity);
                         WaterVertexCountLastFrame += chunk.WaterMesh.vertexCount;
                     }
+                    Rl.rlEnableBackfaceCulling();
+                    DrawnChunkCountLastFrame++;
+                    TerrainVertexCountLastFrame += chunk.TerrainMesh.vertexCount;
                 }
             }
 

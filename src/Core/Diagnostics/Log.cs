@@ -164,6 +164,6 @@ namespace Ludots.Core.Diagnostics
         /// <summary>
         /// Get current backend. For testing only.
         /// </summary>
-        internal static ILogBackend Backend => _backend;
+        public static ILogBackend Backend => _backend;
     }
 }

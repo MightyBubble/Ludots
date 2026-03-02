@@ -17,8 +17,8 @@ namespace Ludots.Adapter.Raylib.Services
         public void UpdateCamera(in CameraRenderState3D state)
         {
             Camera3D cam = Camera;
-            cam.position = state.PositionCm * 0.01f;
-            cam.target = state.TargetCm * 0.01f;
+            cam.position = state.Position;
+            cam.target = state.Target;
             cam.up = state.Up;
             cam.fovy = state.FovYDeg;
 
