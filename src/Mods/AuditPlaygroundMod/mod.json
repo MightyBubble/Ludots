@@ -1,0 +1,10 @@
+{
+  "name": "AuditPlaygroundMod",
+  "version": "1.0.0",
+  "description": "Interactive audit playground for map lifecycle and trigger compatibility.",
+  "main": "bin/Release/net8.0/AuditPlaygroundMod.dll",
+  "priority": 210,
+  "dependencies": {
+    "LudotsCoreMod": ">=1.0.0"
+  }
+}

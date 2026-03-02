@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Arch.Core;
@@ -90,6 +91,51 @@ namespace GasTests
             Assert.That(results, Has.Count.EqualTo(2));
             Assert.That(results[0], Is.EqualTo("A"));
             Assert.That(results[1], Is.EqualTo("B"));
+        }
+
+        [Test]
+        public void FireMapEvent_GlobalAndMapScoped_BothFireWithoutDuplication()
+        {
+            var tm = new TriggerManager();
+            int globalCount = 0;
+            int mapCount = 0;
+
+            var globalTrigger = new Trigger { EventKey = GameEvents.MapLoaded, Priority = 20 };
+            globalTrigger.AddAction(new DelegateCommand(_ => { globalCount++; return Task.CompletedTask; }));
+            tm.RegisterTrigger(globalTrigger);
+
+            var mapTrigger = new Trigger { EventKey = GameEvents.MapLoaded, Priority = 10 };
+            mapTrigger.AddAction(new DelegateCommand(_ => { mapCount++; return Task.CompletedTask; }));
+
+            var mapId = new MapId("map_scoped");
+            tm.RegisterMapTriggers(mapId, new List<Trigger> { mapTrigger });
+
+            tm.FireMapEvent(mapId, GameEvents.MapLoaded, new ScriptContext());
+
+            Assert.That(mapCount, Is.EqualTo(1), "Map-scoped trigger should fire exactly once");
+            Assert.That(globalCount, Is.EqualTo(1), "Global trigger should still fire for compatibility");
+        }
+
+        [Test]
+        public void FireMapEvent_OtherMap_FiresGlobalButNotForeignMapScoped()
+        {
+            var tm = new TriggerManager();
+            int globalCount = 0;
+            int mapACount = 0;
+
+            var globalTrigger = new Trigger { EventKey = GameEvents.MapLoaded, Priority = 0 };
+            globalTrigger.AddAction(new DelegateCommand(_ => { globalCount++; return Task.CompletedTask; }));
+            tm.RegisterTrigger(globalTrigger);
+
+            var mapATrigger = new Trigger { EventKey = GameEvents.MapLoaded, Priority = 0 };
+            mapATrigger.AddAction(new DelegateCommand(_ => { mapACount++; return Task.CompletedTask; }));
+            tm.RegisterMapTriggers(new MapId("map_a"), new List<Trigger> { mapATrigger });
+
+            // Fire for map_b: global should fire, map_a scoped should not.
+            tm.FireMapEvent(new MapId("map_b"), GameEvents.MapLoaded, new ScriptContext());
+
+            Assert.That(globalCount, Is.EqualTo(1));
+            Assert.That(mapACount, Is.EqualTo(0));
         }
 
         // ────────────────────────────────────────────────────────
@@ -454,6 +500,62 @@ namespace GasTests
             int count = 0;
             world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => count++);
             Assert.That(count, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void SetMapEntitiesSuspended_AddsTagOnlyForTargetMap()
+        {
+            var engine = new GameEngine();
+            engine.InitializeMinimal();
+            var world = (World)typeof(GameEngine).GetProperty("World", BindingFlags.Public | BindingFlags.Instance)!.GetValue(engine)!;
+            var mapA = new MapId("map_a");
+            var mapB = new MapId("map_b");
+
+            for (int i = 0; i < 3; i++) world.Create(new MapEntity { MapId = mapA });
+            for (int i = 0; i < 2; i++) world.Create(new MapEntity { MapId = mapB });
+
+            var method = typeof(GameEngine).GetMethod("SetMapEntitiesSuspended", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            method.Invoke(engine, new object[] { mapA, true });
+
+            int aSuspended = 0;
+            int bSuspended = 0;
+            world.Query(new QueryDescription().WithAll<MapEntity, SuspendedTag>(), (Entity _, ref MapEntity me) =>
+            {
+                if (me.MapId == mapA) aSuspended++;
+                if (me.MapId == mapB) bSuspended++;
+            });
+
+            Assert.That(aSuspended, Is.EqualTo(3));
+            Assert.That(bSuspended, Is.EqualTo(0));
+            world.Dispose();
+        }
+
+        [Test]
+        public void SetMapEntitiesSuspended_RemoveTagOnlyForTargetMap()
+        {
+            var engine = new GameEngine();
+            engine.InitializeMinimal();
+            var world = (World)typeof(GameEngine).GetProperty("World", BindingFlags.Public | BindingFlags.Instance)!.GetValue(engine)!;
+            var mapA = new MapId("map_a");
+            var mapB = new MapId("map_b");
+
+            for (int i = 0; i < 2; i++) world.Create(new MapEntity { MapId = mapA }, new SuspendedTag());
+            for (int i = 0; i < 2; i++) world.Create(new MapEntity { MapId = mapB }, new SuspendedTag());
+
+            var method = typeof(GameEngine).GetMethod("SetMapEntitiesSuspended", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            method.Invoke(engine, new object[] { mapA, false });
+
+            int aSuspended = 0;
+            int bSuspended = 0;
+            world.Query(new QueryDescription().WithAll<MapEntity, SuspendedTag>(), (Entity _, ref MapEntity me) =>
+            {
+                if (me.MapId == mapA) aSuspended++;
+                if (me.MapId == mapB) bSuspended++;
+            });
+
+            Assert.That(aSuspended, Is.EqualTo(0));
+            Assert.That(bSuspended, Is.EqualTo(2));
+            world.Dispose();
         }
 
         // ────────────────────────────────────────────────────────

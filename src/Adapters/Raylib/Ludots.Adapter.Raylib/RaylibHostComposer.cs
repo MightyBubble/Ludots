@@ -22,10 +22,10 @@ namespace Ludots.Adapter.Raylib
         {
             // Initialize log with colored console backend before anything else
             var consoleBackend = new RaylibConsoleLogBackend();
-            ILogBackend backend = consoleBackend;
+            ILogBackend effectiveBackend = consoleBackend;
 
             // Check if file logging is requested after config merge
-            Log.Initialize(backend);
+            Log.Initialize(effectiveBackend);
 
             var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "game.json");
             var engine = result.Engine;
@@ -36,11 +36,12 @@ namespace Ludots.Adapter.Raylib
             {
                 var fileBackend = new FileLogBackend(config.Logging.LogFilePath);
                 var multiBackend = new MultiLogBackend(consoleBackend, fileBackend);
+                effectiveBackend = multiBackend;
                 Log.Initialize(multiBackend, Enum.TryParse<LogLevel>(config.Logging.GlobalLevel, true, out var lvl) ? lvl : LogLevel.Info);
                 LogConfigApplier.Apply(config.Logging);
             }
 
-            engine.GlobalContext[ContextKeys.LogBackend] = Log.Backend;
+            engine.GlobalContext[ContextKeys.LogBackend] = effectiveBackend;
 
             var uiRoot = new UIRoot();
             engine.GlobalContext[ContextKeys.UIRoot] = uiRoot;
