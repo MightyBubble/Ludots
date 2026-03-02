@@ -92,6 +92,51 @@ namespace GasTests
             Assert.That(results[1], Is.EqualTo("B"));
         }
 
+        [Test]
+        public void FireMapEvent_GlobalAndMapScoped_BothFireWithoutDuplication()
+        {
+            var tm = new TriggerManager();
+            int globalCount = 0;
+            int mapCount = 0;
+
+            var globalTrigger = new Trigger { EventKey = GameEvents.MapLoaded, Priority = 20 };
+            globalTrigger.AddAction(new DelegateCommand(_ => { globalCount++; return Task.CompletedTask; }));
+            tm.RegisterTrigger(globalTrigger);
+
+            var mapTrigger = new Trigger { EventKey = GameEvents.MapLoaded, Priority = 10 };
+            mapTrigger.AddAction(new DelegateCommand(_ => { mapCount++; return Task.CompletedTask; }));
+
+            var mapId = new MapId("map_scoped");
+            tm.RegisterMapTriggers(mapId, new List<Trigger> { mapTrigger });
+
+            tm.FireMapEvent(mapId, GameEvents.MapLoaded, new ScriptContext());
+
+            Assert.That(mapCount, Is.EqualTo(1), "Map-scoped trigger should fire exactly once");
+            Assert.That(globalCount, Is.EqualTo(1), "Global trigger should still fire for compatibility");
+        }
+
+        [Test]
+        public void FireMapEvent_OtherMap_FiresGlobalButNotForeignMapScoped()
+        {
+            var tm = new TriggerManager();
+            int globalCount = 0;
+            int mapACount = 0;
+
+            var globalTrigger = new Trigger { EventKey = GameEvents.MapLoaded, Priority = 0 };
+            globalTrigger.AddAction(new DelegateCommand(_ => { globalCount++; return Task.CompletedTask; }));
+            tm.RegisterTrigger(globalTrigger);
+
+            var mapATrigger = new Trigger { EventKey = GameEvents.MapLoaded, Priority = 0 };
+            mapATrigger.AddAction(new DelegateCommand(_ => { mapACount++; return Task.CompletedTask; }));
+            tm.RegisterMapTriggers(new MapId("map_a"), new List<Trigger> { mapATrigger });
+
+            // Fire for map_b: global should fire, map_a scoped should not.
+            tm.FireMapEvent(new MapId("map_b"), GameEvents.MapLoaded, new ScriptContext());
+
+            Assert.That(globalCount, Is.EqualTo(1));
+            Assert.That(mapACount, Is.EqualTo(0));
+        }
+
         // ────────────────────────────────────────────────────────
         // Priority sorting — lower Priority executes first
         // ────────────────────────────────────────────────────────
