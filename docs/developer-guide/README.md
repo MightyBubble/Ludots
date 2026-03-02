@@ -4,6 +4,10 @@
 
 ## 目录
 
+0.  [文档编写规范](00_documentation_standards.md)
+    *   读者假设与禁止内容
+    *   文件命名、结构与语言风格
+    *   维护规则与检查清单
 1.  [ECS 开发实践与 SoA 原则](01_ecs_soa_principles.md)
     *   Arch ECS 使用规范
     *   组件结构与设计
