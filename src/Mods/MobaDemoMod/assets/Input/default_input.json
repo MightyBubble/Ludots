@@ -5,7 +5,11 @@
     { "id": "SkillE", "name": "Gameplay_SkillE", "type": "Button" },
     { "id": "SkillR", "name": "Gameplay_SkillR", "type": "Button" },
     { "id": "Select", "name": "Gameplay_Select", "type": "Button" },
-    { "id": "Command", "name": "Gameplay_Command", "type": "Button" }
+    { "id": "Command", "name": "Gameplay_Command", "type": "Button" },
+    { "id": "ModeWoW", "name": "Switch_WoW_Mode", "type": "Button" },
+    { "id": "ModeLoL", "name": "Switch_LoL_Mode", "type": "Button" },
+    { "id": "ModeDotA", "name": "Switch_DotA_Mode", "type": "Button" },
+    { "id": "ModeLoLPlus", "name": "Switch_LoLPlus_Mode", "type": "Button" }
   ],
   "contexts": [
     {
@@ -18,7 +22,11 @@
         { "actionId": "SkillE", "path": "<Keyboard>/e" },
         { "actionId": "SkillR", "path": "<Keyboard>/r" },
         { "actionId": "Select", "path": "<Mouse>/LeftButton" },
-        { "actionId": "Command", "path": "<Mouse>/RightButton" }
+        { "actionId": "Command", "path": "<Mouse>/RightButton" },
+        { "actionId": "ModeWoW", "path": "<Keyboard>/F1" },
+        { "actionId": "ModeLoL", "path": "<Keyboard>/F2" },
+        { "actionId": "ModeDotA", "path": "<Keyboard>/F3" },
+        { "actionId": "ModeLoLPlus", "path": "<Keyboard>/F4" }
       ]
     }
   ]

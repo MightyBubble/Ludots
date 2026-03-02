@@ -47,7 +47,17 @@ namespace MobaDemoMod.Triggers
             engine.GlobalContext[InstalledKey] = true;
 
             // Load MobaConfig via VFS
-            var mobaConfig = MobaConfig.Load(_ctx);
+            MobaConfig mobaConfig;
+            try
+            {
+                mobaConfig = MobaConfig.Load(_ctx);
+                _ctx.Log("[MobaDemoMod] MobaConfig loaded.");
+            }
+            catch (System.Exception ex)
+            {
+                _ctx.Log($"[MobaDemoMod] ERROR loading MobaConfig: {ex.Message}");
+                return Task.CompletedTask;
+            }
             engine.GlobalContext[MobaConfigKey] = mobaConfig;
 
             // GameConfig is required — it must be loaded before GameStart
@@ -64,6 +74,11 @@ namespace MobaDemoMod.Triggers
                 ordersObj is OrderQueue orders)
             {
                 engine.RegisterPresentationSystem(new MobaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx));
+                _ctx.Log("[MobaDemoMod] MobaLocalOrderSourceSystem installed.");
+            }
+            else
+            {
+                _ctx.Log($"[MobaDemoMod] WARNING: OrderQueue not found! HasKey={engine.GlobalContext.ContainsKey(ContextKeys.OrderQueue)}");
             }
 
             if (engine.GlobalContext.TryGetValue(ContextKeys.OrderTypeRegistry, out var registryObj) &&

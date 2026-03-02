@@ -55,6 +55,7 @@ namespace Ludots.Adapter.Raylib
             {
                 Rl.InitWindow(screenWidth, screenHeight, title);
                 windowOpened = true;
+                Rl.SetExitKey(0); // Disable ESC closing the window (used for game input)
                 Rl.SetTargetFPS(targetFps);
 
                 using var uiRenderer = new RaylibSkiaRenderer(screenWidth, screenHeight);
@@ -196,6 +197,7 @@ namespace Ludots.Adapter.Raylib
                         Rl.DrawFPS(screenWidth - 100, 10);
                         Rl.DrawText($"Scale | Grid=1.00m | HexWidth={HexCoordinates.HexWidth:F3}m | RowSpacing={HexCoordinates.RowSpacing:F3}m | HeightScale={terrainRenderer.HeightScale:F2}", 10, screenHeight - 35, 20, Raylib_cs.Color.WHITE);
                         DrawOverlay(drawTerrain, drawPrimitives, drawDebugDraw, drawSkiaUi, engine, primitiveRenderer);
+                        DrawInteractionModeHud(engine, screenWidth, screenHeight);
 
                         Rl.EndDrawing();
                     }
@@ -557,6 +559,45 @@ namespace Ludots.Adapter.Raylib
         private static bool Hit(Vector2 p, int x, int y, int w, int h)
         {
             return p.X >= x && p.X <= x + w && p.Y >= y && p.Y <= y + h;
+        }
+
+        private static void DrawInteractionModeHud(GameEngine engine, int screenWidth, int screenHeight)
+        {
+            int x = screenWidth - 360;
+            int y = 40;
+
+            string mode = "N/A";
+            if (engine.GlobalContext.TryGetValue("MobaDemo.InteractionMode", out var modeObj) && modeObj is string mStr)
+                mode = mStr;
+
+            bool isAiming = false;
+            if (engine.GlobalContext.TryGetValue("MobaDemo.IsAiming", out var aimObj) && aimObj is bool a)
+                isAiming = a;
+
+            string aimAction = "";
+            if (engine.GlobalContext.TryGetValue("MobaDemo.AimingAction", out var aaObj) && aaObj is string aa)
+                aimAction = aa;
+
+            Rl.DrawRectangle(x - 6, y - 6, 356, 130, new Color(0, 0, 0, 180));
+            Rl.DrawRectangleLines(x - 6, y - 6, 356, 130, new Color(0, 200, 255, 200));
+
+            Rl.DrawText($"Mode: {mode}", x, y, 20, new Color(0, 255, 200, 255));
+            y += 24;
+            Rl.DrawText("[F1] WoW  [F2] LoL  [F3] DotA  [F4] LoL+", x, y, 14, new Color(180, 180, 180, 255));
+            y += 20;
+            Rl.DrawText("[Q] Damage  [W] Heal  [E] AoE  [R] Zone", x, y, 14, new Color(200, 200, 100, 255));
+            y += 20;
+
+            if (isAiming && !string.IsNullOrEmpty(aimAction))
+            {
+                Rl.DrawText($">>> AIMING: {aimAction} (click to confirm) <<<", x, y, 16, new Color(255, 100, 50, 255));
+            }
+            else
+            {
+                Rl.DrawText("Click entity to select, then use skills", x, y, 14, new Color(140, 140, 140, 255));
+            }
+            y += 20;
+            Rl.DrawText("[RightClick] Move  [S] Stop  [LClick] Select", x, y, 14, new Color(140, 140, 140, 255));
         }
     }
 }

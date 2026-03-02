@@ -277,6 +277,9 @@ namespace Raylib_cs
         public static extern bool WindowShouldClose();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SetExitKey(int key);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void BeginDrawing();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]

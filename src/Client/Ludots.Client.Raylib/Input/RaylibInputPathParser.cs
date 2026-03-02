@@ -21,11 +21,18 @@ namespace Ludots.Client.Raylib.Input
                 if (c >= '0' && c <= '9') return (KeyboardKey)((int)KeyboardKey.KEY_ZERO + (c - '0'));
             }
 
+            // F-keys: F1–F12
+            if (keyName.Length >= 2 && keyName[0] == 'F' && int.TryParse(keyName.AsSpan(1), out int fNum) && fNum >= 1 && fNum <= 12)
+                return (KeyboardKey)((int)KeyboardKey.KEY_F1 + (fNum - 1));
+
             return keyName switch
             {
                 "SPACE" => KeyboardKey.KEY_SPACE,
                 "ENTER" => KeyboardKey.KEY_ENTER,
                 "ESCAPE" => KeyboardKey.KEY_ESCAPE,
+                "TAB" => KeyboardKey.KEY_TAB,
+                "BACKSPACE" => KeyboardKey.KEY_BACKSPACE,
+                "DELETE" => KeyboardKey.KEY_DELETE,
                 "LEFT" => KeyboardKey.KEY_LEFT,
                 "RIGHT" => KeyboardKey.KEY_RIGHT,
                 "UP" => KeyboardKey.KEY_UP,

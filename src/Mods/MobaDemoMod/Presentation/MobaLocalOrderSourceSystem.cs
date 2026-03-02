@@ -25,6 +25,10 @@ namespace MobaDemoMod.Presentation
     /// The interaction mode (TargetFirst/SmartCast/AimCast) is handled entirely
     /// inside InputOrderMappingSystem based on the config's InteractionMode setting.
     /// This system only wires up the callbacks and bridges aiming state to indicators.
+    ///
+    /// F1/F2/F3 keys switch the interaction mode at runtime:
+    ///   F1 = WoW (TargetFirst), F2 = LoL (SmartCast), F3 = DotA (AimCast)
+    /// Current mode is exposed via GlobalContext["MobaDemo.InteractionMode"] for HUD display.
     /// </summary>
     public sealed class MobaLocalOrderSourceSystem : ISystem<float>
     {
@@ -35,9 +39,10 @@ namespace MobaDemoMod.Presentation
         private readonly int _castAbilityTagId;
         private readonly int _stopTagId;
         
-        // Configuration-driven input-order mapping
         private InputOrderMappingSystem? _inputOrderMapping;
         private bool _initialized = false;
+        private InteractionModeType _currentMode = InteractionModeType.SmartCast;
+        private bool _modeChangePending = false;
 
         public MobaLocalOrderSourceSystem(World world, Dictionary<string, object> globals, OrderQueue orders, IModContext ctx)
         {
@@ -152,18 +157,74 @@ namespace MobaDemoMod.Presentation
 
         public void Update(in float dt)
         {
-            InitializeInputOrderMapping();
-            
-            if (!_globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) || inputObj is not PlayerInputHandler input) return;
-            if (!_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var actorObj) || actorObj is not Entity localPlayer) return;
-            if (!_world.IsAlive(localPlayer)) return;
-
-            var actor = GetControlledActor();
-            
-            if (_inputOrderMapping != null)
+            if (!_globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) || inputObj is not PlayerInputHandler input)
             {
-                _inputOrderMapping.SetLocalPlayer(actor, 1);
-                _inputOrderMapping.Update(dt);
+                UpdateHudState();
+                return;
+            }
+
+            // F1/F2/F3/F4: switch interaction mode (always process, even without player entity)
+            CheckModeSwitchKeys(input);
+
+            if (_modeChangePending)
+            {
+                _modeChangePending = false;
+                _initialized = false;
+                _inputOrderMapping?.CancelAiming();
+                _inputOrderMapping = null;
+            }
+
+            InitializeInputOrderMapping();
+
+            if (_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var actorObj) && actorObj is Entity localPlayer && _world.IsAlive(localPlayer))
+            {
+                var actor = GetControlledActor();
+                if (_inputOrderMapping != null)
+                {
+                    _inputOrderMapping.SetLocalPlayer(actor, 1);
+                    _inputOrderMapping.Update(dt);
+                }
+            }
+
+            UpdateHudState();
+        }
+
+        private void UpdateHudState()
+        {
+            string modeName = _currentMode switch
+            {
+                InteractionModeType.TargetFirst => "WoW (TargetFirst)",
+                InteractionModeType.SmartCast => "LoL (SmartCast)",
+                InteractionModeType.AimCast => "DotA (AimCast)",
+                InteractionModeType.SmartCastWithIndicator => "LoL+ (Indicator)",
+                _ => _currentMode.ToString()
+            };
+            _globals["MobaDemo.InteractionMode"] = modeName;
+            _globals["MobaDemo.IsAiming"] = _inputOrderMapping?.IsAiming ?? false;
+            _globals["MobaDemo.AimingAction"] = _inputOrderMapping?.AimingActionId ?? "";
+        }
+
+        private void CheckModeSwitchKeys(PlayerInputHandler input)
+        {
+            if (input.PressedThisFrame("ModeWoW"))
+            {
+                _currentMode = InteractionModeType.TargetFirst;
+                _modeChangePending = true;
+            }
+            else if (input.PressedThisFrame("ModeLoL"))
+            {
+                _currentMode = InteractionModeType.SmartCast;
+                _modeChangePending = true;
+            }
+            else if (input.PressedThisFrame("ModeDotA"))
+            {
+                _currentMode = InteractionModeType.AimCast;
+                _modeChangePending = true;
+            }
+            else if (input.PressedThisFrame("ModeLoLPlus"))
+            {
+                _currentMode = InteractionModeType.SmartCastWithIndicator;
+                _modeChangePending = true;
             }
         }
 
@@ -205,7 +266,9 @@ namespace MobaDemoMod.Presentation
         {
             string uri = $"{_ctx.ModId}:assets/Input/input_order_mappings.json";
             using var stream = _ctx.VFS.GetStream(uri);
-            return InputOrderMappingLoader.LoadFromStream(stream);
+            var config = InputOrderMappingLoader.LoadFromStream(stream);
+            config.InteractionMode = _currentMode;
+            return config;
         }
 
         public void BeforeUpdate(in float dt) { }
