@@ -1,0 +1,10 @@
+{
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine — RTS Showcase",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../Mods/LudotsCoreMod",
+    "../../../../../../Mods/RtsShowcaseMod"
+  ]
+}

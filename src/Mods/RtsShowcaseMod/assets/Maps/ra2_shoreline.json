@@ -1,0 +1,25 @@
+{
+  "Id": "ra2_shoreline",
+  "Tags": ["rts_showcase", "ra2"],
+  "DefaultCamera": {
+    "TargetXCm": 15000,
+    "TargetYCm": 15000,
+    "Yaw": 200,
+    "Pitch": 55,
+    "DistanceCm": 25000,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "ra2_shoreline.vtxm" }
+  ],
+  "Entities": [
+    { "Template": "rts_base", "Overrides": { "WorldPositionCm": { "Value": { "X": 5000, "Y": 25000 } }, "Name": { "Value": "Allied Base" }, "Team": { "Id": 1 } } },
+    { "Template": "rts_barracks", "Overrides": { "WorldPositionCm": { "Value": { "X": 7000, "Y": 24000 } }, "Name": { "Value": "War Factory" } } },
+    { "Template": "rts_tank", "Overrides": { "WorldPositionCm": { "Value": { "X": 9000, "Y": 23000 } }, "Team": { "Id": 1 } } },
+    { "Template": "rts_tank", "Overrides": { "WorldPositionCm": { "Value": { "X": 9500, "Y": 23500 } }, "Team": { "Id": 1 } } },
+    { "Template": "rts_base", "Overrides": { "WorldPositionCm": { "Value": { "X": 30000, "Y": 5000 } }, "Name": { "Value": "Soviet Base" }, "Team": { "Id": 2 } } },
+    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 28000, "Y": 7000 } }, "Team": { "Id": 2 } } },
+    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 28500, "Y": 7500 } }, "Team": { "Id": 2 } } },
+    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 29000, "Y": 8000 } }, "Team": { "Id": 2 } } }
+  ]
+}

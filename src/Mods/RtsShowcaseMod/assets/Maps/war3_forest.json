@@ -1,0 +1,25 @@
+{
+  "Id": "war3_forest",
+  "Tags": ["rts_showcase", "war3"],
+  "DefaultCamera": {
+    "TargetXCm": 18000,
+    "TargetYCm": 18000,
+    "Yaw": 160,
+    "Pitch": 45,
+    "DistanceCm": 20000,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "war3_forest.vtxm" }
+  ],
+  "Entities": [
+    { "Template": "rts_base", "Overrides": { "WorldPositionCm": { "Value": { "X": 5000, "Y": 5000 } }, "Name": { "Value": "Human Town Hall" }, "Team": { "Id": 1 } } },
+    { "Template": "rts_barracks", "Overrides": { "WorldPositionCm": { "Value": { "X": 6500, "Y": 4000 } }, "Name": { "Value": "Barracks" } } },
+    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 8000, "Y": 5000 } }, "Team": { "Id": 1 } } },
+    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 8500, "Y": 5500 } }, "Team": { "Id": 1 } } },
+    { "Template": "rts_mineral", "Overrides": { "WorldPositionCm": { "Value": { "X": 3000, "Y": 3000 } }, "Name": { "Value": "Gold Mine" } } },
+    { "Template": "rts_base", "Overrides": { "WorldPositionCm": { "Value": { "X": 30000, "Y": 30000 } }, "Name": { "Value": "Orc Fortress" }, "Team": { "Id": 2 } } },
+    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 28000, "Y": 28000 } }, "Team": { "Id": 2 } } },
+    { "Template": "rts_tank", "Overrides": { "WorldPositionCm": { "Value": { "X": 27000, "Y": 27000 } }, "Name": { "Value": "Kodo Beast" }, "Team": { "Id": 2 } } }
+  ]
+}

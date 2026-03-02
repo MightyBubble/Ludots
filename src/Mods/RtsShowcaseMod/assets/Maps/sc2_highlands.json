@@ -1,0 +1,27 @@
+{
+  "Id": "sc2_highlands",
+  "Tags": ["rts_showcase", "sc2"],
+  "DefaultCamera": {
+    "TargetXCm": 20000,
+    "TargetYCm": 20000,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 30000,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "sc2_highlands.vtxm" }
+  ],
+  "Entities": [
+    { "Template": "rts_base", "Overrides": { "WorldPositionCm": { "Value": { "X": 5000, "Y": 5000 } }, "Name": { "Value": "P1 Base" }, "Team": { "Id": 1 } } },
+    { "Template": "rts_barracks", "Overrides": { "WorldPositionCm": { "Value": { "X": 7000, "Y": 5000 } }, "Name": { "Value": "P1 Barracks" } } },
+    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 9000, "Y": 6000 } } } },
+    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 9500, "Y": 6500 } } } },
+    { "Template": "rts_tank", "Overrides": { "WorldPositionCm": { "Value": { "X": 8000, "Y": 7000 } } } },
+    { "Template": "rts_mineral", "Overrides": { "WorldPositionCm": { "Value": { "X": 3000, "Y": 4000 } }, "Name": { "Value": "Mineral Patch A" } } },
+    { "Template": "rts_mineral", "Overrides": { "WorldPositionCm": { "Value": { "X": 3500, "Y": 4500 } }, "Name": { "Value": "Mineral Patch B" } } },
+    { "Template": "rts_base", "Overrides": { "WorldPositionCm": { "Value": { "X": 35000, "Y": 35000 } }, "Name": { "Value": "P2 Base" }, "Team": { "Id": 2 } } },
+    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 33000, "Y": 34000 } }, "Team": { "Id": 2 } } },
+    { "Template": "rts_tank", "Overrides": { "WorldPositionCm": { "Value": { "X": 32000, "Y": 33000 } }, "Team": { "Id": 2 } } }
+  ]
+}

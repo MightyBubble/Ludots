@@ -1,0 +1,10 @@
+{
+  "name": "RtsShowcaseMod",
+  "version": "1.0.0",
+  "description": "RTS Showcase — SC2, RA2, War3 style maps with entity placement",
+  "main": "bin/Release/net8.0/RtsShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}
