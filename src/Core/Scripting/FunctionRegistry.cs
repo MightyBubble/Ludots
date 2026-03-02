@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Modding;
 
 namespace Ludots.Core.Scripting
@@ -25,7 +26,7 @@ namespace Ludots.Core.Scripting
             {
                 string existingMod = _registrationSource.TryGetValue(id, out var em) ? em : "(core)";
                 string newMod = modId ?? "(core)";
-                Console.WriteLine($"[FunctionRegistry] WARNING: Function '{id}' registered by '{existingMod}', overwritten by '{newMod}' (last-wins).");
+                Log.Warn(in LogChannels.Config, $"Function '{id}' registered by '{existingMod}', overwritten by '{newMod}' (last-wins).");
                 _conflictReport?.Add("FunctionRegistry", id, existingMod, newMod);
             }
 #endif

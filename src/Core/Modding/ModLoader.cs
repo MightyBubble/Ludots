@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Ludots.Core.Diagnostics;
+using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
 using Ludots.Core.Map;
 
@@ -13,26 +15,34 @@ namespace Ludots.Core.Modding
         private readonly IVirtualFileSystem _vfs;
         private readonly FunctionRegistry _functionRegistry;
         private readonly TriggerManager _triggerManager;
+        private readonly SystemFactoryRegistry _systemFactoryRegistry;
+        private readonly TriggerDecoratorRegistry _triggerDecoratorRegistry;
         private readonly List<IMod> _loadedMods = new List<IMod>();
         private readonly List<ModLoadContext> _loadContexts = new List<ModLoadContext>();
         private readonly Dictionary<string, Assembly> _sharedAssemblies = new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, string> _modDirectories = new Dictionary<string, string>();
-        
+
         public IMapManager MapManager { get; set; }
         public List<string> LoadedModIds { get; private set; } = new List<string>();
 
-        public ModLoader(IVirtualFileSystem vfs, FunctionRegistry fr, TriggerManager tm)
+        public ModLoader(IVirtualFileSystem vfs, FunctionRegistry fr, TriggerManager tm,
+            SystemFactoryRegistry sfr = null, TriggerDecoratorRegistry tdr = null)
         {
             _vfs = vfs;
             _functionRegistry = fr;
             _triggerManager = tm;
+            _systemFactoryRegistry = sfr ?? new SystemFactoryRegistry();
+            _triggerDecoratorRegistry = tdr ?? new TriggerDecoratorRegistry();
         }
+
+        public SystemFactoryRegistry SystemFactoryRegistry => _systemFactoryRegistry;
+        public TriggerDecoratorRegistry TriggerDecoratorRegistry => _triggerDecoratorRegistry;
 
         public void LoadMods(string modsRootPath)
         {
             if (!Directory.Exists(modsRootPath))
             {
-                Console.WriteLine($"Mods directory not found: {modsRootPath}");
+                Log.Warn(in LogChannels.ModLoader, $"Mods directory not found: {modsRootPath}");
                 return;
             }
 
@@ -82,7 +92,7 @@ namespace Ludots.Core.Modding
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Failed to load manifest from {dir}: {ex.Message}");
+                        Log.Error(in LogChannels.ModLoader, $"Failed to load manifest from {dir}: {ex.Message}");
                     }
                 }
             }
@@ -96,14 +106,14 @@ namespace Ludots.Core.Modding
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Dependency resolution failed: {ex.Message}");
+                Log.Error(in LogChannels.ModLoader, $"Dependency resolution failed: {ex.Message}");
                 throw;
             }
 
-            Console.WriteLine("Mod Load Order:");
+            Log.Info(in LogChannels.ModLoader, "Mod Load Order:");
             foreach(var m in sortedManifests)
             {
-                Console.WriteLine($"- {m.Name} (P:{m.Priority})");
+                Log.Info(in LogChannels.ModLoader, $"- {m.Name} (P:{m.Priority})");
             }
 
             // 3. Load Assemblies and Init
@@ -116,7 +126,7 @@ namespace Ludots.Core.Modding
 
         private void LoadModAssembly(ModManifest manifest)
         {
-            Console.WriteLine($"[ModLoader] >>> DEBUG: Entering LoadModAssembly for {manifest.Name} <<<");
+            Log.Dbg(in LogChannels.ModLoader, $"Entering LoadModAssembly for {manifest.Name}");
 
             if (!_modDirectories.TryGetValue(manifest.Name, out var modDir))
                 return;
@@ -135,14 +145,14 @@ namespace Ludots.Core.Modding
                         $"Found:\n- {string.Join("\n- ", matches)}");
                 }
 
-                Console.WriteLine($"[ModLoader] Warning: No DLL found for {manifest.Name} (asset-only mod?): expected {dllPath}");
+                Log.Warn(in LogChannels.ModLoader, $"No DLL found for {manifest.Name} (asset-only mod?): expected {dllPath}");
                 return;
             }
 
             try
                 {
                     dllPath = Path.GetFullPath(dllPath);
-                    Console.WriteLine($"[ModLoader] Loading DLL for {manifest.Name} at {dllPath}");
+                    Log.Info(in LogChannels.ModLoader, $"Loading DLL for {manifest.Name} at {dllPath}");
                     var loadContext = new ModLoadContext(dllPath, ResolveSharedAssembly);
                     var assembly = loadContext.LoadFromAssemblyPath(dllPath);
                     _loadContexts.Add(loadContext);
@@ -156,36 +166,36 @@ namespace Ludots.Core.Modding
                     catch (ReflectionTypeLoadException rtle)
                     {
                         allTypes = rtle.Types.Where(t => t != null).ToArray();
-                        Console.WriteLine($"[ModLoader] Warning: Type load failures while scanning {manifest.Name}: {rtle.LoaderExceptions?.Length ?? 0}");
+                        Log.Warn(in LogChannels.ModLoader, $"Type load failures while scanning {manifest.Name}: {rtle.LoaderExceptions?.Length ?? 0}");
                         if (rtle.LoaderExceptions != null)
                         {
                             foreach (var le in rtle.LoaderExceptions)
                             {
-                                Console.WriteLine($"[ModLoader]   LoaderException: {le}");
+                                Log.Warn(in LogChannels.ModLoader, $"  LoaderException: {le}");
                             }
                         }
                     }
 
-                    Console.WriteLine($"[ModLoader] Scanning {allTypes.Length} types in assembly...");
+                    Log.Info(in LogChannels.ModLoader, $"Scanning {allTypes.Length} types in assembly...");
                     
                     // Scan for IMod
                     var modType = allTypes.FirstOrDefault(t => typeof(IMod).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
                     if (modType != null)
                     {
                         var modInstance = (IMod)Activator.CreateInstance(modType);
-                        Console.WriteLine($"[ModLoader] Instantiated entry for {manifest.Name}. Calling OnLoad...");
-                        var context = new ModContext(manifest.Name, _vfs, _functionRegistry, _triggerManager);
+                        Log.Info(in LogChannels.ModLoader, $"Instantiated entry for {manifest.Name}. Calling OnLoad...");
+                        var context = new ModContext(manifest.Name, _vfs, _functionRegistry, _triggerManager, _systemFactoryRegistry, _triggerDecoratorRegistry);
                         modInstance.OnLoad(context);
-                        Console.WriteLine($"[ModLoader] {manifest.Name} OnLoad completed.");
+                        Log.Info(in LogChannels.ModLoader, $"{manifest.Name} OnLoad completed.");
                         _loadedMods.Add(modInstance);
-                        Console.WriteLine($"[ModLoader] Loaded {manifest.Name}");
+                        Log.Info(in LogChannels.ModLoader, $"Loaded {manifest.Name}");
                         
                         // Fire ModLoaded event (will be implemented in future TriggerManager)
                         // _triggerManager.FireEvent(GameEvents.ModLoaded, ...); 
                     }
                     else
                     {
-                        Console.WriteLine($"[ModLoader] No IMod implementation found in {dllPath}");
+                        Log.Info(in LogChannels.ModLoader, $"No IMod implementation found in {dllPath}");
                     }
                     
                     // Scan for MapDefinition
@@ -201,14 +211,14 @@ namespace Ludots.Core.Modding
                             }
                             catch (Exception ex)
                             {
-                                Console.WriteLine($"[ModLoader] Failed to register map {mapType.Name}: {ex}");
+                                Log.Error(in LogChannels.ModLoader, $"Failed to register map {mapType.Name}: {ex}");
                             }
                         }
                     }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ModLoader] Failed to load DLL for {manifest.Name}: {ex}");
+                Log.Error(in LogChannels.ModLoader, $"Failed to load DLL for {manifest.Name}: {ex}");
             }
         }
 

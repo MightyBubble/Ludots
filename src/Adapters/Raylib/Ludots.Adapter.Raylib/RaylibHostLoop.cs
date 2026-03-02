@@ -3,6 +3,7 @@ using System.Numerics;
 using Ludots.Adapter.Raylib.Services;
 using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Components;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
@@ -200,7 +201,7 @@ namespace Ludots.Adapter.Raylib
                     }
                     catch (Exception ex)
                     {
-                        Console.Error.WriteLine(ex);
+                        Log.Error(in LogChannels.Engine, $"Unhandled exception in game loop: {ex}");
                         break;
                     }
                 }

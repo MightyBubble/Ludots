@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Diagnostics;
 
 namespace Ludots.Core.Config
 {
@@ -60,11 +61,11 @@ namespace Ludots.Core.Config
             foreach (var kvp in _fragmentsByPath)
             {
                 int n = kvp.Value.Count;
-                Console.WriteLine($"[ConfigConflictReport] {kvp.Key}: fragments={n}");
+                Log.Info(in LogChannels.Config, $"{kvp.Key}: fragments={n}");
                 int shown = 0;
                 for (int i = 0; i < kvp.Value.Count && shown < maxLinesPerPath; i++, shown++)
                 {
-                    Console.WriteLine($"  - {kvp.Value[i]}");
+                    Log.Info(in LogChannels.Config, $"  - {kvp.Value[i]}");
                 }
             }
         }

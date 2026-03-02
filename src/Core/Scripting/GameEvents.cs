@@ -41,5 +41,21 @@ namespace Ludots.Core.Scripting
 
         public static readonly EventKey GasRunStarted = new EventKey("GasRunStarted");
         public static readonly EventKey GasRunCompleted = new EventKey("GasRunCompleted");
+
+        /// <summary>
+        /// Fired when a map is about to be unloaded.
+        /// Triggers' OnMapExit is called during this event.
+        /// </summary>
+        public static readonly EventKey MapUnloaded = new EventKey("MapUnloaded");
+
+        /// <summary>
+        /// Fired when a map is suspended (e.g., an inner map is pushed on top).
+        /// </summary>
+        public static readonly EventKey MapSuspended = new EventKey("MapSuspended");
+
+        /// <summary>
+        /// Fired when a previously suspended map is restored to active.
+        /// </summary>
+        public static readonly EventKey MapResumed = new EventKey("MapResumed");
     }
 }

@@ -19,7 +19,7 @@ GAS 的宏观分层由 `GameEngine.SystemGroup` 固化，按顺序组织：
 
 这一层的目标是：保证执行顺序可预期，避免系统之间通过“隐式顺序”耦合。
 
-参考实现：[GameEngine.SystemGroup](file:///c:/AIProjects/Ludots/src/Core/Engine/GameEngine.cs#L57-L90)
+参考实现：`src/Core/Engine/GameEngine.cs` (L57-L90)
 
 ### 1.2 EffectPhase 是微观分层 SSOT
 
@@ -32,8 +32,8 @@ Effect 的生命周期被分解为一组 Phase（例如 OnPropose/OnResolve/OnAp
 
 参考实现：
 
-*   Phase 执行器的四段式：[EffectPhaseExecutor](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs#L10-L24)
-*   Listeners 分发与排序：[EffectPhaseExecutor](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs#L170-L240)
+*   Phase 执行器的四段式：`src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` (L10-L24)
+*   Listeners 分发与排序：`src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` (L170-L240)
 
 ## 2 核心链路概览
 
@@ -43,10 +43,10 @@ AbilityActivation 阶段的目标是把输入/指令转成“可处理的请求�
 
 两条典型路径：
 
-*   `AbilitySystem`：按 AbilityDefinition 直接发布 `EffectRequest`  
-  参考：[AbilitySystem](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Systems/AbilitySystem.cs#L51-L175)
-*   `AbilityExecSystem`：按时间线/步骤执行，并在 step 中发布 `EffectRequest`  
-  参考：[AbilityExecSystem 发请求](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs#L513-L568)
+*   `AbilitySystem`：按 AbilityDefinition 直接发布 `EffectRequest`
+  参考：`src/Core/Gameplay/GAS/Systems/AbilitySystem.cs` (L51-L175)
+*   `AbilityExecSystem`：按时间线/步骤执行，并在 step 中发布 `EffectRequest`
+  参考：`src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs` (L513-L568)
 
 ### 2.2 Effect 主循环与响应链
 
@@ -56,14 +56,14 @@ EffectProcessing 不是一次性处理完所有事情，而是一个“可控的
 *   Lifetime：持续效果 tick
 *   PostLifetimeProposalAndApply：生命周期结束后的收尾处理
 
-参考：[EffectProcessingLoopSystem](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Systems/EffectProcessingLoopSystem.cs#L13-L160)
+参考：`src/Core/Gameplay/GAS/Systems/EffectProcessingLoopSystem.cs` (L13-L160)
 
 响应链窗口的关键点是：OnPropose 在进入响应链之前，OnCalculate 在 resolve 之后，用于把“响应修改”纳入最终结算。
 
 参考：
 
-*   窗口打开与 OnPropose：[EffectProposalProcessingSystem](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Systems/EffectProposalProcessingSystem.cs#L330-L376)
-*   Resolve 与 OnCalculate：[EffectProposalProcessingSystem](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Systems/EffectProposalProcessingSystem.cs#L697-L869)
+*   窗口打开与 OnPropose：`src/Core/Gameplay/GAS/Systems/EffectProposalProcessingSystem.cs` (L330-L376)
+*   Resolve 与 OnCalculate：`src/Core/Gameplay/GAS/Systems/EffectProposalProcessingSystem.cs` (L697-L869)
 
 ### 2.3 结构变更延迟回放
 
@@ -71,8 +71,8 @@ Effect Apply 涉及大量结构变更（创建实体、挂组件、注册 listen
 
 参考：
 
-*   Apply 分阶段：[EffectApplicationSystem](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Systems/EffectApplicationSystem.cs#L79-L92)
-*   listeners 延迟注册回放：[EffectApplicationSystem](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Systems/EffectApplicationSystem.cs#L583-L628)
+*   Apply 分阶段：`src/Core/Gameplay/GAS/Systems/EffectApplicationSystem.cs` (L79-L92)
+*   listeners 延迟注册回放：`src/Core/Gameplay/GAS/Systems/EffectApplicationSystem.cs` (L583-L628)
 
 ## 3 为什么要用 Sink
 
@@ -89,9 +89,9 @@ Sink 用来定义“层与层之间的边界”，把跨层的数据转换、尺
 
 参考：
 
-*   Registry：[AttributeSinkRegistry](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Bindings/AttributeSinkRegistry.cs)
-*   Binding loader：[AttributeBindingLoader](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Bindings/AttributeBindingLoader.cs#L23-L125)
-*   Binding apply：[AttributeBindingSystem](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Systems/AttributeBindingSystem.cs#L18-L28)
+*   Registry：`src/Core/Gameplay/GAS/Bindings/AttributeSinkRegistry.cs`
+*   Binding loader：`src/Core/Gameplay/GAS/Bindings/AttributeBindingLoader.cs` (L23-L125)
+*   Binding apply：`src/Core/Gameplay/GAS/Systems/AttributeBindingSystem.cs` (L18-L28)
 
 ## 4 最佳实践示例一：Attribute 分层 Sink
 
@@ -119,8 +119,8 @@ Attribute 层的“输出”应当通过 sink 落地，而不是在 effect phase
 
 参考：
 
-*   sink 实现：[ForceInput2DSink](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Bindings/ForceInput2DSink.cs)
-*   内建 sink 注册：[GasAttributeSinks](file:///c:/AIProjects/Ludots/src/Core/Gameplay/GAS/Bindings/GasAttributeSinks.cs#L3-L13)
+*   sink 实现：`src/Core/Gameplay/GAS/Bindings/ForceInput2DSink.cs`
+*   内建 sink 注册：`src/Core/Gameplay/GAS/Bindings/GasAttributeSinks.cs` (L3-L13)
 
 ### 5.1 为什么这是最佳规范
 
@@ -132,8 +132,8 @@ Physics2D 的时钟域与事件出口由 `Physics2DController` 管理，并通�
 
 参考：
 
-*   controller：[Physics2DController](file:///c:/AIProjects/Ludots/src/Core/Engine/Physics2D/Physics2DController.cs)
-*   controller 注入 FireEvent：[GameEngine 初始化 controllers](file:///c:/AIProjects/Ludots/src/Core/Engine/GameEngine.cs#L603-L608)
+*   controller：`src/Core/Engine/Physics2D/Physics2DController.cs`
+*   controller 注入 FireEvent：`src/Core/Engine/GameEngine.cs` (L603-L608)
 
 ## 6 约束清单
 

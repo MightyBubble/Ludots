@@ -4,6 +4,8 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Diagnostics;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 
@@ -38,16 +40,21 @@ namespace Ludots.Core.Map
             if (definition == null) return;
             if (_definitions.ContainsKey(definition.Id))
             {
-                Console.WriteLine($"[MapManager] Warning: Overwriting map definition for {definition.Id}");
+                Log.Warn(in LogChannels.Map, $"Overwriting map definition for {definition.Id}");
             }
             _definitions[definition.Id] = definition;
             _typeToDefinition[definition.GetType()] = definition;
-            Console.WriteLine($"[MapManager] Registered Map Definition: {definition.Id} ({definition.GetType().Name})");
+            Log.Info(in LogChannels.Map, $"Registered Map Definition: {definition.Id} ({definition.GetType().Name})");
         }
         
         public MapDefinition GetDefinition<T>() where T : MapDefinition
         {
             return _typeToDefinition.TryGetValue(typeof(T), out var def) ? def : null;
+        }
+
+        public MapDefinition GetDefinition(MapId mapId)
+        {
+            return _definitions.TryGetValue(mapId, out var def) ? def : null;
         }
 
         public MapConfig LoadMap(string mapId)
@@ -64,7 +71,7 @@ namespace Ludots.Core.Map
 
         private MapConfig LoadMapInternal(MapId mapId, HashSet<string> visiting, List<string> chain)
         {
-            Console.WriteLine($"[MapManager] Loading Map: {mapId}");
+            Log.Info(in LogChannels.Map, $"Loading Map: {mapId}");
 
             var mapIdValue = mapId.Value;
             if (!visiting.Add(mapIdValue))
@@ -82,7 +89,7 @@ namespace Ludots.Core.Map
                 if (_definitions.TryGetValue(mapId, out var def))
                 {
                     definition = def;
-                    Console.WriteLine($"[MapManager] Found Code Definition: {def.GetType().Name}");
+                    Log.Info(in LogChannels.Map, $"Found Code Definition: {def.GetType().Name}");
                 }
 
                 // 1. Find all config fragments
@@ -109,7 +116,7 @@ namespace Ludots.Core.Map
                         }
                         catch (JsonException ex)
                         {
-                            Console.WriteLine($"[MapManager] Invalid JSON fragment for '{jsonPath}': {ex.Message}");
+                            Log.Error(in LogChannels.Map, $"Invalid JSON fragment for '{jsonPath}': {ex.Message}");
                         }
                     }
                 }
@@ -129,7 +136,7 @@ namespace Ludots.Core.Map
 
                 if (configs.Count == 0 && definition == null)
                 {
-                    Console.WriteLine($"[MapManager] Error: Map '{mapId}' not found (No Definition, No Data).");
+                    Log.Error(in LogChannels.Map, $"Map '{mapId}' not found (No Definition, No Data).");
                     return null;
                 }
 
@@ -140,11 +147,11 @@ namespace Ludots.Core.Map
                     MergeMapConfig(finalConfig, cfg);
                 }
             
-                // 3. Apply Definition Metadata (Tags)
+                // 3. Apply Definition Metadata (Tags + Boards from code-first)
                 if (definition != null)
                 {
                     if (finalConfig.Tags == null) finalConfig.Tags = new List<string>();
-                
+
                     foreach (var tag in definition.Tags)
                     {
                         if (!finalConfig.Tags.Contains(tag.Name))
@@ -152,12 +159,29 @@ namespace Ludots.Core.Map
                             finalConfig.Tags.Add(tag.Name);
                         }
                     }
+
+                    // Merge code-first Boards into finalConfig (by name, code-first is base)
+                    if (definition.Boards != null && definition.Boards.Count > 0)
+                    {
+                        var existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var b in finalConfig.Boards)
+                        {
+                            if (!string.IsNullOrEmpty(b.Name)) existingNames.Add(b.Name);
+                        }
+                        foreach (var codeBoardCfg in definition.Boards)
+                        {
+                            if (!existingNames.Contains(codeBoardCfg.Name))
+                            {
+                                finalConfig.Boards.Add(codeBoardCfg.Clone());
+                            }
+                        }
+                    }
                 }
 
                 // 4. Handle Inheritance (ParentId)
                 if (!string.IsNullOrEmpty(finalConfig.ParentId))
                 {
-                    Console.WriteLine($"[MapManager] Loading Parent Map: {finalConfig.ParentId}");
+                    Log.Info(in LogChannels.Map, $"Loading Parent Map: {finalConfig.ParentId}");
                     var parentConfig = LoadMapInternal(new MapId(finalConfig.ParentId), visiting, chain);
                     if (parentConfig != null)
                     {
@@ -167,7 +191,7 @@ namespace Ludots.Core.Map
                     }
                 }
                 
-                Console.WriteLine($"[MapManager] Map '{mapId}' loaded.");
+                Log.Info(in LogChannels.Map, $"Map '{mapId}' loaded.");
                 return finalConfig;
             }
             finally
@@ -203,20 +227,18 @@ namespace Ludots.Core.Map
             }
             catch (JsonException ex)
             {
-                Console.WriteLine($"[MapManager] Invalid JSON at '{uri}': {ex.Message}");
+                Log.Error(in LogChannels.Map, $"Invalid JSON at '{uri}': {ex.Message}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[MapManager] Failed to load '{uri}': {ex.Message}");
+                Log.Error(in LogChannels.Map, $"Failed to load '{uri}': {ex.Message}");
             }
         }
 
         private void MergeMapConfig(MapConfig target, MapConfig source)
         {
-            if (!string.IsNullOrEmpty(source.DataFile)) target.DataFile = source.DataFile;
             if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
-            if (source.Spatial != null) target.Spatial = CloneSpatial(source.Spatial);
-            
+
             if (source.Dependencies != null)
             {
                 foreach (var kvp in source.Dependencies)
@@ -225,7 +247,7 @@ namespace Ludots.Core.Map
                 }
             }
             if (source.Entities != null) target.Entities.AddRange(source.Entities);
-            
+
             // Merge Tags
             if (source.Tags != null)
             {
@@ -235,19 +257,40 @@ namespace Ludots.Core.Map
                     if (!target.Tags.Contains(t)) target.Tags.Add(t);
                 }
             }
-        }
 
-        private static MapSpatialConfig CloneSpatial(MapSpatialConfig source)
-        {
-            return new MapSpatialConfig
+            // Merge Boards (append by name: if same name exists, source overwrites)
+            if (source.Boards != null)
             {
-                SpatialType = source.SpatialType,
-                WidthInTiles = source.WidthInTiles,
-                HeightInTiles = source.HeightInTiles,
-                GridCellSizeCm = source.GridCellSizeCm,
-                HexEdgeLengthCm = source.HexEdgeLengthCm,
-                ChunkSizeCells = source.ChunkSizeCells
-            };
+                foreach (var srcBoard in source.Boards)
+                {
+                    bool found = false;
+                    for (int i = 0; i < target.Boards.Count; i++)
+                    {
+                        if (string.Equals(target.Boards[i].Name, srcBoard.Name, StringComparison.OrdinalIgnoreCase))
+                        {
+                            target.Boards[i] = srcBoard.Clone();
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                    {
+                        target.Boards.Add(srcBoard.Clone());
+                    }
+                }
+            }
+
+            // Merge TriggerTypes (dedup)
+            if (source.TriggerTypes != null)
+            {
+                foreach (var tt in source.TriggerTypes)
+                {
+                    if (!target.TriggerTypes.Contains(tt))
+                    {
+                        target.TriggerTypes.Add(tt);
+                    }
+                }
+            }
         }
     }
 }

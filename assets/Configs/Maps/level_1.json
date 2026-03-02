@@ -1,6 +1,8 @@
 {
   "id": "level_1_forest",
-  "dataFile": "level_1.bin",
+  "boards": [
+    { "name": "default", "dataFile": "level_1.bin" }
+  ],
   "entities": [
     {
       "template": "orc_grunt",

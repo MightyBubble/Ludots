@@ -51,6 +51,8 @@ using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Engine.Navigation2D;
+using Ludots.Core.Diagnostics;
+using Ludots.Core.Map.Board;
 
 namespace Ludots.Core.Engine
 {
@@ -111,6 +113,8 @@ namespace Ludots.Core.Engine
         public IMapManager MapManager { get; private set; }
         public ConfigPipeline ConfigPipeline { get; private set; }
         public MapLoader MapLoader { get; private set; }
+        public SystemFactoryRegistry SystemFactoryRegistry { get; private set; }
+        public TriggerDecoratorRegistry TriggerDecoratorRegistry { get; private set; }
         
         // Game State
         public World World { get; private set; }
@@ -121,6 +125,10 @@ namespace Ludots.Core.Engine
         public WorldSizeSpec WorldSizeSpec { get; private set; }
         public ISpatialCoordinateConverter SpatialCoords { get; private set; }
         public ISpatialQueryService SpatialQueries { get; private set; }
+
+        // Board infrastructure
+        public MapSessionManager MapSessions { get; private set; }
+        public BoardIdRegistry BoardIdRegistry { get; private set; }
 
         private ChunkedGridSpatialPartitionWorld _spatialPartition;
         public HexGridAOI HexGridAOI { get; private set; }
@@ -203,8 +211,11 @@ namespace Ludots.Core.Engine
 
         public void InitializeWithConfigPipeline(List<string> modPaths, string assetsRoot)
         {
-            Console.WriteLine("[GameEngine] Initializing with ConfigPipeline...");
-            
+            // Early log bootstrap with console backend — will be upgraded after config merge
+            if (Diagnostics.Log.Backend is NullLogBackend)
+                Diagnostics.Log.Initialize(new ConsoleLogBackend());
+            Diagnostics.Log.Info(in LogChannels.Engine, "Initializing with ConfigPipeline...");
+
             // Setup Async Context
             SyncContext = new GameSynchronizationContext();
             System.Threading.SynchronizationContext.SetSynchronizationContext(SyncContext);
@@ -220,10 +231,14 @@ namespace Ludots.Core.Engine
             FunctionRegistry = new FunctionRegistry();
             FunctionRegistry.SetConflictReport(ConflictReport);
             TriggerManager = new TriggerManager();
-            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager);
+            SystemFactoryRegistry = new SystemFactoryRegistry();
+            TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
+            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
             MapManager = new MapManager(VFS, TriggerManager, ModLoader);
             ModLoader.MapManager = MapManager;
-            
+            GlobalContext[ContextKeys.SystemFactoryRegistry] = SystemFactoryRegistry;
+            GlobalContext[ContextKeys.TriggerDecoratorRegistry] = TriggerDecoratorRegistry;
+
             // 2. Load Mods first (so ConfigPipeline can access their game.json)
             if (modPaths != null && modPaths.Count > 0)
             {
@@ -238,9 +253,12 @@ namespace Ludots.Core.Engine
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
             RebuildAiRuntime();
-            
-            Console.WriteLine($"[GameEngine] Merged GameConfig: StartupMapId={MergedConfig.StartupMapId}, DefaultCoreMod={MergedConfig.DefaultCoreMod}");
-            Console.WriteLine($"[GameEngine] Constants loaded: OrderTags={MergedConfig.Constants.OrderTags.Count}, GasOrderTags={MergedConfig.Constants.GasOrderTags.Count}");
+
+            // Apply log config from merged game.json
+            LogConfigApplier.Apply(MergedConfig.Logging);
+
+            Diagnostics.Log.Info(in LogChannels.Engine, $"Merged GameConfig: StartupMapId={MergedConfig.StartupMapId}, DefaultCoreMod={MergedConfig.DefaultCoreMod}");
+            Diagnostics.Log.Info(in LogChannels.Engine, $"Constants loaded: OrderTags={MergedConfig.Constants.OrderTags.Count}, GasOrderTags={MergedConfig.Constants.GasOrderTags.Count}");
             
             // Store merged config in GlobalContext for access throughout the engine
             GlobalContext[ContextKeys.GameConfig] = MergedConfig;
@@ -323,7 +341,7 @@ namespace Ludots.Core.Engine
         [Obsolete("Use InitializeWithConfigPipeline instead")]
         public void Initialize(GameConfig config, string assetsRoot)
         {
-            Console.WriteLine("[GameEngine] Initializing from Config (legacy)...");
+            Diagnostics.Log.Info(in LogChannels.Engine, "Initializing from Config (legacy)...");
             
             // Setup Async Context
             SyncContext = new GameSynchronizationContext();
@@ -335,7 +353,9 @@ namespace Ludots.Core.Engine
 
             FunctionRegistry = new FunctionRegistry();
             TriggerManager = new TriggerManager();
-            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager);
+            SystemFactoryRegistry = new SystemFactoryRegistry();
+            TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
+            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
             MapManager = new MapManager(VFS, TriggerManager, ModLoader);
             ModLoader.MapManager = MapManager;
             ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
@@ -384,7 +404,7 @@ namespace Ludots.Core.Engine
         [Obsolete("Use InitializeWithConfigPipeline instead")]
         public void Initialize(string assetsRoot)
         {
-            Console.WriteLine("[GameEngine] Initializing...");
+            Diagnostics.Log.Info(in LogChannels.Engine, "Initializing...");
             
             // Setup Async Context
             SyncContext = new GameSynchronizationContext();
@@ -396,7 +416,9 @@ namespace Ludots.Core.Engine
 
             FunctionRegistry = new FunctionRegistry();
             TriggerManager = new TriggerManager();
-            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager);
+            SystemFactoryRegistry = new SystemFactoryRegistry();
+            TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
+            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
             MapManager = new MapManager(VFS, TriggerManager, ModLoader);
             ModLoader.MapManager = MapManager;
             ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
@@ -430,7 +452,7 @@ namespace Ludots.Core.Engine
             }
             else
             {
-                Console.WriteLine($"[GameEngine] Warning: Mods directory not found at {modsPath}");
+                Diagnostics.Log.Warn(in LogChannels.Engine, $"Mods directory not found at {modsPath}");
             }
             
             // Create default config and merge from ConfigPipeline
@@ -452,7 +474,7 @@ namespace Ludots.Core.Engine
             // Initialize JobScheduler if not already set (Static per AppDomain usually, but we manage it here)
             if (World.SharedJobScheduler == null)
             {
-                Console.WriteLine("[GameEngine] Initializing JobScheduler...");
+                Diagnostics.Log.Info(in LogChannels.Engine, "Initializing JobScheduler...");
                 _jobScheduler = new JobScheduler(new JobScheduler.Config
                 {
                     ThreadPrefixName = "LudotsWorker",
@@ -476,7 +498,7 @@ namespace Ludots.Core.Engine
 
         private void InitializeCoreSystems(GameConfig config)
         {
-            Console.WriteLine("[GameEngine] Initializing Core GAS Systems...");
+            Diagnostics.Log.Info(in LogChannels.Engine, "Initializing Core GAS Systems...");
             // Instantiate GAS Systems
             var engineClockConfigLoader = new EngineClockConfigLoader(ConfigPipeline);
             var engineClockConfig = engineClockConfigLoader.Load();
@@ -568,7 +590,7 @@ namespace Ludots.Core.Engine
             var attributeBindings = new AttributeBindingRegistry();
             new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load();
             var bindingSystem = new AttributeBindingSystem(World, attributeSinks, attributeBindings);
-            var aggSystem = new AttributeAggregatorSystem(World);
+            var aggSystem = new AttributeAggregatorSystem(World, graphProgramRegistry, gasGraphApi);
             var sessionSystem = new GameSessionSystem(GameSession);
             _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext);
             _inputRuntimeSystem.Initialize();
@@ -795,32 +817,59 @@ namespace Ludots.Core.Engine
 
         public void LoadMap(string mapId)
         {
-            Console.WriteLine($"[GameEngine] Loading Map: {mapId}");
+            Diagnostics.Log.Info(in LogChannels.Engine, $"Loading Map: {mapId}");
+            var mid = new MapId(mapId);
 
-            // Clean up previous map session
-            if (CurrentMapSession != null)
+            // Initialize MapSessionManager if first time
+            if (MapSessions == null)
             {
-                CurrentMapSession.Cleanup(World, _spatialPartition, HexGridAOI);
+                MapSessions = new MapSessionManager();
+                BoardIdRegistry = new BoardIdRegistry();
+                GlobalContext[ContextKeys.MapSessions] = MapSessions;
+                GlobalContext[ContextKeys.BoardIdRegistry] = BoardIdRegistry;
+            }
+
+            // Backward compat: if same ID already loaded, unload first then reload
+            if (MapSessions.GetSession(mid) != null)
+            {
+                UnloadMap(mapId);
             }
 
             var mapConfig = MapManager.LoadMap(mapId);
-            
+
             if (mapConfig != null)
             {
-                // Create new map session
-                CurrentMapSession = new MapSession(new MapId(mapId), mapConfig);
-                GlobalContext[ContextKeys.MapSession] = CurrentMapSession;
+                // Create new session with boards (additive — old sessions stay)
+                var session = MapSessions.CreateSession(mid, mapConfig, null);
+                CreateBoardsForSession(session, mapConfig);
+                MapSessions.PushFocused(mid);   // old focused → Suspended
+                CurrentMapSession = session;
+                GlobalContext[ContextKeys.MapSession] = session;
 
-                // Apply per-map spatial configuration (or use global defaults)
-                ApplyMapSpatialConfig(mapConfig);
+                // Apply primary board spatial config to engine-level services
+                var primaryBoard = session.PrimaryBoard;
+                if (primaryBoard != null)
+                {
+                    ApplyBoardSpatialConfig(primaryBoard);
+                    LoadBoardTerrainData(session, mapConfig);
+                }
 
-                LoadVertexMap(mapConfig);
                 LoadNavForMap(mapId, mapConfig);
-                Console.WriteLine("[GameEngine] Creating Entities from MapConfig...");
+                Diagnostics.Log.Info(in LogChannels.Engine, "Creating Entities from MapConfig...");
                 MapLoader.LoadEntities(mapConfig);
 
+                // Instantiate map triggers + apply decorators
+                var definition = ((MapManager)MapManager).GetDefinition(mid);
+                var triggers = InstantiateMapTriggers(definition, mapConfig);
+                ApplyTriggerDecorators(triggers);
+                if (triggers.Count > 0)
+                {
+                    foreach (var t in triggers) session.AddTrigger(t);
+                    TriggerManager.RegisterMapTriggers(mid, triggers);
+                }
+
                 var finalCtx = CreateContext();
-                finalCtx.Set(ContextKeys.MapId, new MapId(mapId));
+                finalCtx.Set(ContextKeys.MapId, mid);
                 finalCtx.Set(ContextKeys.MapTags, mapConfig.Tags);
                 var featureFlags = MapFeatureFlags.FromTags(mapConfig.Tags);
                 GlobalContext[ContextKeys.MapFeatureFlags] = featureFlags;
@@ -828,53 +877,214 @@ namespace Ludots.Core.Engine
 
                 foreach (var kvp in GlobalContext) finalCtx.Set(kvp.Key, kvp.Value);
 
-                Console.WriteLine($"[GameEngine] Firing MapLoaded event for {mapId}...");
-                TriggerManager.FireEvent(GameEvents.MapLoaded, finalCtx);
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Firing MapLoaded event for {mapId}...");
+                TriggerManager.FireMapEvent(mid, GameEvents.MapLoaded, finalCtx);
             }
             else
             {
-                Console.WriteLine($"[GameEngine] Failed to load map {mapId}");
+                Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to load map {mapId}");
             }
         }
 
         /// <summary>
-        /// Apply per-map spatial configuration, rebuilding spatial services if the map specifies
-        /// custom spatial parameters. Falls back to global game.json defaults when not specified.
+        /// Explicitly unload a map by ID. Fires MapUnloaded, unregisters triggers,
+        /// cleans up session. If the map is at the top of the focus stack, pops it
+        /// and fires MapResumed on the restored map.
         /// </summary>
-        private void ApplyMapSpatialConfig(MapConfig mapConfig)
+        public void UnloadMap(string mapId)
         {
-            var spatial = mapConfig.Spatial;
-            if (spatial == null) return; // Use engine defaults (already initialized)
+            var mid = new MapId(mapId);
+            if (MapSessions == null) return;
 
-            Console.WriteLine($"[GameEngine] Applying MapSpatialConfig: type={spatial.SpatialType}, " +
-                              $"size={spatial.WidthInTiles}x{spatial.HeightInTiles}, " +
-                              $"gridCell={spatial.GridCellSizeCm}cm, hexEdge={spatial.HexEdgeLengthCm}cm, " +
-                              $"chunk={spatial.ChunkSizeCells}");
+            var session = MapSessions.GetSession(mid);
+            if (session == null)
+            {
+                Diagnostics.Log.Warn(in LogChannels.Engine, $"UnloadMap: No session for '{mapId}'.");
+                return;
+            }
 
-            // Rebuild WorldSizeSpec with per-map dimensions
-            int gridCellSizeCm = spatial.GridCellSizeCm;
-            int worldWidthCm = spatial.WidthInTiles * 256 * gridCellSizeCm;
-            int worldHeightCm = spatial.HeightInTiles * 256 * gridCellSizeCm;
-            WorldSizeSpec = new WorldSizeSpec(
-                new WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm: gridCellSizeCm);
-            SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
+            // Fire MapUnloaded — scoped to this map's triggers
+            var unloadCtx = CreateContext();
+            unloadCtx.Set(ContextKeys.MapId, mid);
+            foreach (var kvp in GlobalContext) unloadCtx.Set(kvp.Key, kvp.Value);
+            TriggerManager.FireMapEvent(mid, GameEvents.MapUnloaded, unloadCtx);
+            TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
 
-            // Rebuild spatial partition
-            _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: spatial.ChunkSizeCells);
-            var queryService = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
-            SpatialQueries = queryService;
+            // Check if this map is at the top of the focus stack
+            var focused = MapSessions.FocusedSession;
+            bool wasFocused = focused != null && focused.MapId == mid;
+
+            MapSessions.UnloadSession(mid, World);
+
+            if (wasFocused && MapSessions.FocusedSession != null)
+            {
+                // The stack auto-pops in UnloadSession; restore next focused
+                var restored = MapSessions.FocusedSession;
+                CurrentMapSession = restored;
+                GlobalContext[ContextKeys.MapSession] = restored;
+
+                var primaryBoard = restored.PrimaryBoard;
+                if (primaryBoard != null)
+                {
+                    ApplyBoardSpatialConfig(primaryBoard);
+                    LoadBoardTerrainData(restored, restored.MapConfig);
+                }
+
+                var resumeCtx = CreateContext();
+                resumeCtx.Set(ContextKeys.MapId, restored.MapId);
+                foreach (var kvp in GlobalContext) resumeCtx.Set(kvp.Key, kvp.Value);
+                TriggerManager.FireMapEvent(restored.MapId, GameEvents.MapResumed, resumeCtx);
+            }
+        }
+
+        /// <summary>
+        /// Push a nested inner map (三国志12 mode). Outer map is suspended, inner map becomes active.
+        /// </summary>
+        public void PushMap(string innerMapId, Dictionary<string, object> passthrough = null)
+        {
+            var inner = new MapId(innerMapId);
+            var outerSession = MapSessions?.FocusedSession;
+
+            var mapConfig = MapManager.LoadMap(innerMapId);
+            if (mapConfig == null)
+            {
+                Diagnostics.Log.Error(in LogChannels.Engine, $"PushMap: Failed to load inner map '{innerMapId}'");
+                return;
+            }
+
+            // Create inner session with parent context from outer
+            MapContext parentCtx = outerSession?.Context;
+            var session = MapSessions.CreateSession(inner, mapConfig, parentCtx);
+
+            // Pass through data to inner context
+            if (passthrough != null)
+            {
+                foreach (var kvp in passthrough) session.Context.Set(kvp.Key, kvp.Value);
+            }
+
+            CreateBoardsForSession(session, mapConfig);
+
+            // Push focus — outer becomes Suspended
+            MapSessions.PushFocused(inner);
+            CurrentMapSession = session;
+            GlobalContext[ContextKeys.MapSession] = session;
+
+            var primaryBoard = session.PrimaryBoard;
+            if (primaryBoard != null)
+            {
+                ApplyBoardSpatialConfig(primaryBoard);
+                LoadBoardTerrainData(session, mapConfig);
+            }
+
+            MapLoader.LoadEntities(mapConfig);
+
+            // Fire MapSuspended on outer (scoped)
+            if (outerSession != null)
+            {
+                var suspendCtx = CreateContext();
+                suspendCtx.Set(ContextKeys.MapId, outerSession.MapId);
+                foreach (var kvp in GlobalContext) suspendCtx.Set(kvp.Key, kvp.Value);
+                TriggerManager.FireMapEvent(outerSession.MapId, GameEvents.MapSuspended, suspendCtx);
+            }
+
+            // Instantiate, decorate, and register inner map triggers
+            var definition = ((MapManager)MapManager).GetDefinition(inner);
+            var triggers = InstantiateMapTriggers(definition, mapConfig);
+            ApplyTriggerDecorators(triggers);
+            if (triggers.Count > 0)
+            {
+                foreach (var t in triggers) session.AddTrigger(t);
+                TriggerManager.RegisterMapTriggers(inner, triggers);
+            }
+
+            var ctx = CreateContext();
+            ctx.Set(ContextKeys.MapId, inner);
+            ctx.Set(ContextKeys.MapTags, mapConfig.Tags);
+            foreach (var kvp in GlobalContext) ctx.Set(kvp.Key, kvp.Value);
+            TriggerManager.FireMapEvent(inner, GameEvents.MapLoaded, ctx);
+        }
+
+        /// <summary>
+        /// Pop the inner map, restoring the outer map to Active.
+        /// </summary>
+        public void PopMap()
+        {
+            if (MapSessions == null || MapSessions.All.Count <= 1)
+            {
+                Diagnostics.Log.Warn(in LogChannels.Engine, "PopMap: No inner map to pop.");
+                return;
+            }
+
+            var innerSession = MapSessions.FocusedSession;
+            if (innerSession != null)
+            {
+                // Fire MapUnloaded (scoped) + unregister triggers
+                var unloadCtx = CreateContext();
+                unloadCtx.Set(ContextKeys.MapId, innerSession.MapId);
+                foreach (var kvp in GlobalContext) unloadCtx.Set(kvp.Key, kvp.Value);
+                TriggerManager.FireMapEvent(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx);
+                TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
+            }
+
+            // Pop focus — restores previous session
+            var poppedId = MapSessions.PopFocused();
+            if (innerSession != null)
+            {
+                MapSessions.UnloadSession(poppedId, World);
+            }
+
+            // Restore outer
+            var outerSession = MapSessions.FocusedSession;
+            if (outerSession != null)
+            {
+                CurrentMapSession = outerSession;
+                GlobalContext[ContextKeys.MapSession] = outerSession;
+
+                var primaryBoard = outerSession.PrimaryBoard;
+                if (primaryBoard != null)
+                {
+                    ApplyBoardSpatialConfig(primaryBoard);
+                    LoadBoardTerrainData(outerSession, outerSession.MapConfig);
+                }
+
+                var resumeCtx = CreateContext();
+                resumeCtx.Set(ContextKeys.MapId, outerSession.MapId);
+                foreach (var kvp in GlobalContext) resumeCtx.Set(kvp.Key, kvp.Value);
+                TriggerManager.FireMapEvent(outerSession.MapId, GameEvents.MapResumed, resumeCtx);
+            }
+        }
+
+        private void CreateBoardsForSession(MapSession session, MapConfig mapConfig)
+        {
+            if (mapConfig.Boards == null || mapConfig.Boards.Count == 0) return;
+
+            foreach (var boardCfg in mapConfig.Boards)
+            {
+                var board = BoardFactory.Create(boardCfg, BoardIdRegistry);
+                session.AddBoard(board);
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Created Board '{boardCfg.Name}' (type={boardCfg.SpatialType}) for map '{session.MapId}'");
+            }
+        }
+
+        /// <summary>
+        /// Apply a board's spatial config to engine-level spatial services.
+        /// Replaces the old ApplyMapSpatialConfig(MapConfig).
+        /// </summary>
+        private void ApplyBoardSpatialConfig(IBoard board)
+        {
+            // Use the board's spatial services as engine-level defaults
+            WorldSizeSpec = board.WorldSize;
+            SpatialCoords = board.CoordinateConverter;
+            _spatialPartition = board.SpatialPartition as ChunkedGridSpatialPartitionWorld ?? _spatialPartition;
+            SpatialQueries = board.QueryService;
             WireUpPositionProvider();
 
-            // Wire up HexMetrics if map uses Hex or Hybrid spatial type
-            string spatialType = spatial.SpatialType?.Trim() ?? "Grid";
-            if (spatialType.Equals("Hex", StringComparison.OrdinalIgnoreCase) ||
-                spatialType.Equals("Hybrid", StringComparison.OrdinalIgnoreCase))
+            // Wire up HexMetrics if this is a hex board
+            if (board is HexGridBoard hexBoard)
             {
-                var hexMetrics = new Map.Hex.HexMetrics(spatial.HexEdgeLengthCm);
-                queryService.SetHexMetrics(hexMetrics);
-                queryService.SetCoordinateConverter(SpatialCoords);
-                GlobalContext[ContextKeys.HexMetrics] = hexMetrics;
+                GlobalContext[ContextKeys.HexMetrics] = hexBoard.HexMetrics;
+                GlobalContext[ContextKeys.LoadedChunks] = hexBoard.HexGridAOI;
+                HexGridAOI = hexBoard.HexGridAOI;
             }
 
             // Update GlobalContext with rebuilt services
@@ -884,18 +1094,52 @@ namespace Ludots.Core.Engine
 
             // Hot-swap registered system references to prevent stale refs
             _worldToGridSyncSystem?.SetCoordinateConverter(SpatialCoords);
-            _spatialPartitionUpdateSystem?.SetPartition(_spatialPartition, WorldSizeSpec);
+            if (_spatialPartition != null)
+                _spatialPartitionUpdateSystem?.SetPartition(_spatialPartition, WorldSizeSpec);
         }
 
-        private void LoadVertexMap(MapConfig mapConfig)
+        private void LoadBoardTerrainData(MapSession session, MapConfig mapConfig)
         {
-            // Unsubscribe old VertexMap from ILoadedChunks to prevent event subscription leak
             VertexMap?.UnsubscribeFromLoadedChunks();
             VertexMap = null;
-            if (mapConfig == null) return;
-            if (string.IsNullOrWhiteSpace(mapConfig.DataFile)) return;
 
-            string dataFile = mapConfig.DataFile;
+            foreach (var board in session.AllBoards)
+            {
+                if (board is ITerrainBoard terrainBoard)
+                {
+                    string dataFile = FindDataFileForBoard(board.Name, mapConfig);
+                    if (!string.IsNullOrWhiteSpace(dataFile))
+                    {
+                        var vtxMap = LoadVertexMapFromFile(dataFile);
+                        if (vtxMap != null)
+                        {
+                            terrainBoard.VertexMap = vtxMap;
+                            // Set engine-level VertexMap for backward compat
+                            VertexMap = vtxMap;
+                            GlobalContext[ContextKeys.VertexMap] = vtxMap;
+                        }
+                    }
+                }
+            }
+        }
+
+        private string FindDataFileForBoard(string boardName, MapConfig mapConfig)
+        {
+            if (mapConfig.Boards == null) return null;
+            foreach (var b in mapConfig.Boards)
+            {
+                if (string.Equals(b.Name, boardName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return b.DataFile;
+                }
+            }
+            return null;
+        }
+
+        private VertexMap LoadVertexMapFromFile(string dataFile)
+        {
+            if (string.IsNullOrWhiteSpace(dataFile)) return null;
+
             if (dataFile.StartsWith("/") || dataFile.StartsWith("\\")) dataFile = dataFile.Substring(1);
 
             string rel = dataFile.Replace('\\', '/');
@@ -933,21 +1177,95 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            if (stream == null) return;
+            if (stream == null) return null;
 
             try
             {
-                VertexMap = VertexMapBinary.Read(stream);
+                return VertexMapBinary.Read(stream);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[GameEngine] Failed to load VertexMapBinary '{mapConfig.DataFile}': {ex.Message}");
-                VertexMap = null;
+                Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to load VertexMapBinary '{dataFile}': {ex.Message}");
+                return null;
             }
             finally
             {
                 stream.Dispose();
             }
+        }
+
+        private List<Trigger> InstantiateMapTriggers(MapDefinition definition, MapConfig mapConfig)
+        {
+            var triggers = new List<Trigger>();
+
+            // From code-first MapDefinition.TriggerTypes
+            if (definition?.TriggerTypes != null)
+            {
+                foreach (var triggerType in definition.TriggerTypes)
+                {
+                    try
+                    {
+                        var trigger = (Trigger)Activator.CreateInstance(triggerType);
+                        triggers.Add(trigger);
+                    }
+                    catch (Exception ex)
+                    {
+                        Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to instantiate trigger type '{triggerType.Name}': {ex.Message}");
+                    }
+                }
+            }
+
+            // From JSON MapConfig.TriggerTypes (type names resolved via reflection)
+            if (mapConfig?.TriggerTypes != null)
+            {
+                foreach (var typeName in mapConfig.TriggerTypes)
+                {
+                    var type = ResolveType(typeName);
+                    if (type != null && typeof(Trigger).IsAssignableFrom(type))
+                    {
+                        try
+                        {
+                            var trigger = (Trigger)Activator.CreateInstance(type);
+                            triggers.Add(trigger);
+                        }
+                        catch (Exception ex)
+                        {
+                            Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to instantiate trigger '{typeName}': {ex.Message}");
+                        }
+                    }
+                    else if (type == null)
+                    {
+                        Diagnostics.Log.Warn(in LogChannels.Engine, $"Could not resolve trigger type '{typeName}'");
+                    }
+                }
+            }
+
+            return triggers;
+        }
+
+        private void ApplyTriggerDecorators(List<Trigger> triggers)
+        {
+            if (TriggerDecoratorRegistry == null || triggers.Count == 0) return;
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                TriggerDecoratorRegistry.Apply(triggers[i]);
+            }
+        }
+
+        private static Type ResolveType(string typeName)
+        {
+            // Try direct resolution first
+            var type = Type.GetType(typeName);
+            if (type != null) return type;
+
+            // Search loaded assemblies
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                type = asm.GetType(typeName);
+                if (type != null) return type;
+            }
+            return null;
         }
 
         private void LoadNavForMap(string mapId, MapConfig mapConfig)
@@ -1115,7 +1433,7 @@ namespace Ludots.Core.Engine
             ctx.Set(ContextKeys.SpatialQueryService, SpatialQueries);
             foreach (var kvp in GlobalContext) ctx.Set(kvp.Key, kvp.Value);
 
-            Console.WriteLine("[GameEngine] Firing GameStart event...");
+            Diagnostics.Log.Info(in LogChannels.Engine, "Firing GameStart event...");
             TriggerManager.FireEvent(GameEvents.GameStart, ctx);
         }
 
@@ -1129,7 +1447,7 @@ namespace Ludots.Core.Engine
             Stop();
             if (_jobScheduler != null)
             {
-                Console.WriteLine("[GameEngine] Disposing JobScheduler...");
+                Diagnostics.Log.Info(in LogChannels.Engine, "Disposing JobScheduler...");
                 _jobScheduler.Dispose();
                 _jobScheduler = null;
                 World.SharedJobScheduler = null;
@@ -1165,7 +1483,7 @@ namespace Ludots.Core.Engine
                 if (fused)
                 {
                     _simulationBudgetFused = true;
-                    Console.WriteLine($"[GameEngine] BudgetFuse: Simulation halted at LogicTick={tickBefore} (budgetMs={SimulationBudgetMsPerFrame}, sliceLimit={SimulationMaxSlicesPerLogicFrame})");
+                    Diagnostics.Log.Warn(in LogChannels.Engine, $"BudgetFuse: Simulation halted at LogicTick={tickBefore} (budgetMs={SimulationBudgetMsPerFrame}, sliceLimit={SimulationMaxSlicesPerLogicFrame})");
 
                     if (World != null)
                     {

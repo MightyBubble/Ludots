@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 
@@ -75,7 +76,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 DefaultRoutedCount++;
                 _commandOrders?.TryEnqueue(order);
 #if DEBUG
-                Console.WriteLine($"[OrderDispatchSystem] Order with unrecognized TagId={order.OrderTagId} routed to command queue (total default-routed: {DefaultRoutedCount})");
+                Log.Warn(in LogChannels.GAS, $"Order with unrecognized TagId={order.OrderTagId} routed to command queue (total default-routed: {DefaultRoutedCount})");
 #endif
             }
         }

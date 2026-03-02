@@ -1,4 +1,5 @@
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Modding;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -909,20 +910,14 @@ static class EditorRepo
 
     private static ModInfo ReadModInfo(string id, string rootPath, string modJsonPath)
     {
-        var doc = JsonNode.Parse(File.ReadAllText(modJsonPath)) as JsonObject ?? new JsonObject();
-        string name = doc["name"]?.ToString() ?? id;
-        string version = doc["version"]?.ToString() ?? "0.0.0";
-        int priority = doc["priority"]?.GetValue<int>() ?? 0;
-        var deps = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (doc["dependencies"] is JsonObject depObj)
-        {
-            foreach (var kvp in depObj)
-            {
-                if (kvp.Value == null) continue;
-                deps[kvp.Key] = kvp.Value.ToString();
-            }
-        }
-        return new ModInfo(id, name, version, priority, deps, rootPath);
+        var manifest = ModManifestJson.ParseStrict(File.ReadAllText(modJsonPath), modJsonPath);
+        return new ModInfo(
+            id,
+            manifest.Name,
+            manifest.Version,
+            manifest.Priority,
+            new Dictionary<string, string>(manifest.Dependencies, StringComparer.Ordinal),
+            rootPath);
     }
 
     private static List<string> ResolveLoadOrder(Dictionary<string, ModInfo> mods, string root)

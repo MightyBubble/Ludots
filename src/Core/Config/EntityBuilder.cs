@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Diagnostics;
 
 namespace Ludots.Core.Config
 {
@@ -30,7 +31,7 @@ namespace Ludots.Core.Config
             _activeTemplate = null;
             if (!string.IsNullOrWhiteSpace(templateId))
             {
-                System.Console.WriteLine($"[EntityBuilder] Warning: Unknown template '{templateId}', spawning entity with overrides only.");
+                Log.Warn(in LogChannels.Config, $"Unknown template '{templateId}', spawning entity with overrides only.");
             }
             return this;
         }
@@ -39,7 +40,7 @@ namespace Ludots.Core.Config
         {
             if (data == null)
             {
-                System.Console.WriteLine($"[EntityBuilder] Warning: Override '{componentName}' is null, skipping.");
+                Log.Warn(in LogChannels.Config, $"Override '{componentName}' is null, skipping.");
                 return this;
             }
             _overrides[componentName] = data;

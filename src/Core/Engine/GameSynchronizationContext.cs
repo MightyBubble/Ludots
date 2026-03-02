@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using Ludots.Core.Diagnostics;
 
 namespace Ludots.Core.Engine
 {
@@ -34,7 +35,7 @@ namespace Ludots.Core.Engine
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[GameSyncContext] Error processing callback: {ex}");
+                    Log.Error(in LogChannels.Engine, $"Error processing callback: {ex}");
                 }
                 count--;
             }

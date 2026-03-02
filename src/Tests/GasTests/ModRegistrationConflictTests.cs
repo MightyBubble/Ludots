@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using NUnit.Framework;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS;
@@ -34,18 +33,9 @@ namespace GasTests
         [Test]
         public void ConflictReport_PrintSummary_NoConflicts()
         {
-            var sw = new StringWriter();
-            Console.SetOut(sw);
-            try
-            {
-                _report.PrintSummary();
-                var output = sw.ToString();
-                Assert.That(output, Does.Contain("No registration conflicts detected"));
-            }
-            finally
-            {
-                Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
-            }
+            // No conflicts — PrintSummary should not throw, and report should be empty
+            Assert.DoesNotThrow(() => _report.PrintSummary());
+            Assert.That(_report.Count, Is.EqualTo(0));
         }
 
         [Test]
@@ -54,20 +44,14 @@ namespace GasTests
             _report.Add("ComponentRegistry", "Health", "CoreMod", "OverrideMod");
             _report.Add("FunctionRegistry", "DamageCalc", "CoreMod", "BalanceMod");
 
-            var sw = new StringWriter();
-            Console.SetOut(sw);
-            try
-            {
-                _report.PrintSummary();
-                var output = sw.ToString();
-                Assert.That(output, Does.Contain("2 registration conflict(s) detected"));
-                Assert.That(output, Does.Contain("'Health' registered by 'CoreMod', overwritten by 'OverrideMod'"));
-                Assert.That(output, Does.Contain("'DamageCalc' registered by 'CoreMod', overwritten by 'BalanceMod'"));
-            }
-            finally
-            {
-                Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
-            }
+            Assert.DoesNotThrow(() => _report.PrintSummary());
+            Assert.That(_report.Count, Is.EqualTo(2));
+            Assert.That(_report.Conflicts[0].Key, Is.EqualTo("Health"));
+            Assert.That(_report.Conflicts[0].ExistingModId, Is.EqualTo("CoreMod"));
+            Assert.That(_report.Conflicts[0].NewModId, Is.EqualTo("OverrideMod"));
+            Assert.That(_report.Conflicts[1].Key, Is.EqualTo("DamageCalc"));
+            Assert.That(_report.Conflicts[1].ExistingModId, Is.EqualTo("CoreMod"));
+            Assert.That(_report.Conflicts[1].NewModId, Is.EqualTo("BalanceMod"));
         }
 
         [Test]

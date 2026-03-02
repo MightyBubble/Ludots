@@ -1,5 +1,6 @@
 using Arch.System;
 using Ludots.Core.Config; // For Time class if needed, or pass it in. Assuming Time is static global.
+using Ludots.Core.Diagnostics;
 
 namespace Ludots.Core.Engine.Pacemaker
 {
@@ -100,7 +101,7 @@ namespace Ludots.Core.Engine.Pacemaker
                     if (_slicesInCurrentStep >= maxSlicesPerLogicFrame)
                     {
                         _budgetFused = true;
-                        Console.WriteLine($"[Pacemaker] BudgetFuse: cooperative step exceeded max slices ({maxSlicesPerLogicFrame}).");
+                        Log.Warn(in LogChannels.Engine, $"BudgetFuse: cooperative step exceeded max slices ({maxSlicesPerLogicFrame}).");
                         cooperativeSimulation.Reset();
                         _stepInProgress = false;
                         _accumulator = 0;
@@ -165,7 +166,7 @@ namespace Ludots.Core.Engine.Pacemaker
                     if (_slicesInCurrentStep >= maxSlicesPerLogicFrame)
                     {
                         _budgetFused = true;
-                        Console.WriteLine($"[Pacemaker] BudgetFuse: cooperative step exceeded max slices ({maxSlicesPerLogicFrame}).");
+                        Log.Warn(in LogChannels.Engine, $"BudgetFuse: cooperative step exceeded max slices ({maxSlicesPerLogicFrame}).");
                         cooperativeSimulation.Reset();
                         _stepInProgress = false;
                         _stepsToRun = 0;

@@ -13,6 +13,6 @@
 arch-guide 在本仓库语境中指外部依赖 Arch ECS 的指南入口（非 Ludots 自身文档体系的一部分）。
 外部指南请从以下位置开始阅读：
 
-- `external/SuperECS/ArchECSPhysics/Arch/README.md`
-- `external/SuperECS/ArchECSPhysics/Arch.Extended/README.md`
+- `src/Libraries/Arch/README.md`
+- `src/Libraries/Arch.Extended/README.md`
 

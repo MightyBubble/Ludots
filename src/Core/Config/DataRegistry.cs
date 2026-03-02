@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Diagnostics;
 
 namespace Ludots.Core.Config
 {
@@ -17,7 +18,7 @@ namespace Ludots.Core.Config
 
         public void Load(string relativePath, ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
-            Console.WriteLine($"[DataRegistry<{typeof(T).Name}>] Loading from {relativePath}...");
+            Log.Info(in LogChannels.Config, $"Loading DataRegistry<{typeof(T).Name}> from {relativePath}...");
 
             var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "Id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
@@ -38,11 +39,11 @@ namespace Ludots.Core.Config
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[DataRegistry] Error deserializing item {merged[i].Id}: {ex.Message}");
+                    Log.Error(in LogChannels.Config, $"Error deserializing item {merged[i].Id}: {ex.Message}");
                 }
             }
 
-            Console.WriteLine($"[DataRegistry<{typeof(T).Name}>] Loaded {count} items.");
+            Log.Info(in LogChannels.Config, $"Loaded {count} DataRegistry<{typeof(T).Name}> items.");
         }
 
         public T Get(string id)

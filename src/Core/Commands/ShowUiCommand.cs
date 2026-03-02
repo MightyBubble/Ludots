@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI;
@@ -12,7 +13,7 @@ namespace Ludots.Core.Commands
 
         public override Task ExecuteAsync(ScriptContext context)
         {
-            System.Console.WriteLine("[ShowUiCommand] Executing...");
+            Log.Info(in LogChannels.Presentation, "Executing ShowUiCommand...");
             // Get UISystem from context? Or directly assume we have UI related objects.
             // The original used context.GetService<IUiSystem>("UISystem") from GameContext.
             // ScriptContext now wraps things.
@@ -44,12 +45,12 @@ namespace Ludots.Core.Commands
             var ui = context.Get<IUiSystem>(ContextKeys.UISystem);
             if (ui != null)
             {
-                System.Console.WriteLine("[ShowUiCommand] Setting HTML...");
+                Log.Info(in LogChannels.Presentation, "Setting HTML...");
                 ui.SetHtml(Html, Css);
             }
             else
             {
-                System.Console.WriteLine("[ShowUiCommand] UISystem not found!");
+                Log.Warn(in LogChannels.Presentation, "UISystem not found!");
             }
             
             return Task.CompletedTask;

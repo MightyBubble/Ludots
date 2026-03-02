@@ -8,5 +8,11 @@
   "simulationMaxSlicesPerLogicFrame": 120,
   "gridCellSizeCm": 100,
   "worldWidthInTiles": 64,
-  "worldHeightInTiles": 64
+  "worldHeightInTiles": 64,
+  "logging": {
+    "globalLevel": "Info",
+    "channelLevels": {},
+    "fileLogging": false,
+    "logFilePath": "ludots.log"
+  }
 }

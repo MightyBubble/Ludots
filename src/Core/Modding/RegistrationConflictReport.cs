@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Diagnostics;
 
 namespace Ludots.Core.Modding
 {
@@ -37,16 +38,16 @@ namespace Ludots.Core.Modding
         {
             if (_conflicts.Count == 0)
             {
-                Console.WriteLine("[RegistrationConflictReport] No registration conflicts detected.");
+                Log.Info(in LogChannels.ModLoader, "No registration conflicts detected.");
                 return;
             }
 
-            Console.WriteLine($"[RegistrationConflictReport] ===== {_conflicts.Count} registration conflict(s) detected =====");
+            Log.Info(in LogChannels.ModLoader, $"===== {_conflicts.Count} registration conflict(s) detected =====");
             foreach (var c in _conflicts)
             {
-                Console.WriteLine($"  [{c.RegistryName}] '{c.Key}' registered by '{c.ExistingModId}', overwritten by '{c.NewModId}'");
+                Log.Info(in LogChannels.ModLoader, $"  [{c.RegistryName}] '{c.Key}' registered by '{c.ExistingModId}', overwritten by '{c.NewModId}'");
             }
-            Console.WriteLine("[RegistrationConflictReport] ===== End of conflict report =====");
+            Log.Info(in LogChannels.ModLoader, "===== End of conflict report =====");
         }
 
         public void Clear()
