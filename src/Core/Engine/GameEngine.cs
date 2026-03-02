@@ -590,7 +590,7 @@ namespace Ludots.Core.Engine
             var attributeBindings = new AttributeBindingRegistry();
             new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load();
             var bindingSystem = new AttributeBindingSystem(World, attributeSinks, attributeBindings);
-            var aggSystem = new AttributeAggregatorSystem(World);
+            var aggSystem = new AttributeAggregatorSystem(World, graphProgramRegistry, gasGraphApi);
             var sessionSystem = new GameSessionSystem(GameSession);
             _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext);
             _inputRuntimeSystem.Initialize();
@@ -927,6 +927,7 @@ namespace Ludots.Core.Engine
                 if (primaryBoard != null)
                 {
                     ApplyBoardSpatialConfig(primaryBoard);
+                    LoadBoardTerrainData(restored, restored.MapConfig);
                 }
 
                 var resumeCtx = CreateContext();
@@ -1043,6 +1044,7 @@ namespace Ludots.Core.Engine
                 if (primaryBoard != null)
                 {
                     ApplyBoardSpatialConfig(primaryBoard);
+                    LoadBoardTerrainData(outerSession, outerSession.MapConfig);
                 }
 
                 var resumeCtx = CreateContext();

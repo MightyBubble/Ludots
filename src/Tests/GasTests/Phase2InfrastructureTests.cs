@@ -2,7 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using Arch.Core;
+using Arch.Core.Extensions;
 using Ludots.Core.Commands;
+using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
@@ -388,6 +392,68 @@ namespace GasTests
             // Strategic is suspended, battle is active
             Assert.That(mgr.GetSession(new MapId("strategic")).State, Is.EqualTo(MapSessionState.Suspended));
             Assert.That(mgr.GetSession(new MapId("battle")).State, Is.EqualTo(MapSessionState.Active));
+        }
+
+        // ────────────────────────────────────────────────────────
+        // Critical #1 regression: Cleanup only destroys its own MapId
+        // ────────────────────────────────────────────────────────
+
+        [Test]
+        public void Cleanup_OnlyDestroysEntitiesForOwnMapId()
+        {
+            using var world = World.Create();
+
+            var mapA = new MapId("strategic");
+            var mapB = new MapId("battle_42");
+
+            // Spawn 3 entities for mapA, 2 for mapB
+            for (int i = 0; i < 3; i++)
+                world.Create(new MapEntity { MapId = mapA });
+            for (int i = 0; i < 2; i++)
+                world.Create(new MapEntity { MapId = mapB });
+
+            // Verify 5 total
+            int total = 0;
+            world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => total++);
+            Assert.That(total, Is.EqualTo(5));
+
+            // Cleanup only mapB
+            var sessionB = new MapSession(mapB, new MapConfig { Id = "battle_42" });
+            sessionB.Cleanup(world);
+
+            // mapA entities should survive, mapB entities destroyed
+            int remaining = 0;
+            var survivorMapIds = new List<MapId>();
+            world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity e, ref MapEntity me) =>
+            {
+                remaining++;
+                survivorMapIds.Add(me.MapId);
+            });
+
+            Assert.That(remaining, Is.EqualTo(3), "Only mapA's 3 entities should survive");
+            for (int i = 0; i < survivorMapIds.Count; i++)
+                Assert.That(survivorMapIds[i], Is.EqualTo(mapA));
+        }
+
+        [Test]
+        public void Cleanup_EmptyMap_DoesNotAffectOtherMaps()
+        {
+            using var world = World.Create();
+
+            var mapA = new MapId("has_entities");
+            var mapEmpty = new MapId("empty_map");
+
+            for (int i = 0; i < 4; i++)
+                world.Create(new MapEntity { MapId = mapA });
+
+            // Cleanup the empty map
+            var sessionEmpty = new MapSession(mapEmpty, new MapConfig { Id = "empty_map" });
+            sessionEmpty.Cleanup(world);
+
+            // All mapA entities must survive
+            int count = 0;
+            world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => count++);
+            Assert.That(count, Is.EqualTo(4));
         }
 
         // ────────────────────────────────────────────────────────

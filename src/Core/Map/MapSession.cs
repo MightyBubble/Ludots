@@ -81,7 +81,7 @@ namespace Ludots.Core.Map
         public IReadOnlyList<Trigger> Triggers => _triggers;
 
         /// <summary>
-        /// Destroy all entities tagged with MapEntity and dispose all boards.
+        /// Destroy entities belonging to THIS map (filtered by MapId) and dispose all boards.
         /// </summary>
         public void Cleanup(World world)
         {
@@ -89,14 +89,23 @@ namespace Ludots.Core.Map
 
             Log.Info(in LogChannels.Map, $"Cleaning up map '{MapId}'...");
 
-            int destroyed = 0;
-            world.Query(in _mapEntityQuery, (Entity entity) =>
+            // Collect entities that belong to THIS map, then destroy.
+            // Two-pass to avoid structural changes during query iteration.
+            var toDestroy = new List<Entity>();
+            var targetMapId = MapId;
+            world.Query(in _mapEntityQuery, (Entity entity, ref MapEntity mapEntity) =>
             {
-                destroyed++;
+                if (mapEntity.MapId == targetMapId)
+                    toDestroy.Add(entity);
             });
 
-            world.Destroy(in _mapEntityQuery);
-            Log.Info(in LogChannels.Map, $"Destroyed {destroyed} map entities.");
+            for (int i = 0; i < toDestroy.Count; i++)
+            {
+                if (world.IsAlive(toDestroy[i]))
+                    world.Destroy(toDestroy[i]);
+            }
+
+            Log.Info(in LogChannels.Map, $"Destroyed {toDestroy.Count} map entities (MapId={MapId}).");
 
             // Dispose all boards
             foreach (var kvp in _boards)
