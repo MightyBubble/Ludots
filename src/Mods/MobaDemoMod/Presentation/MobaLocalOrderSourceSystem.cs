@@ -29,7 +29,7 @@ namespace MobaDemoMod.Presentation
     ///
     /// F1/F2/F3 keys switch the interaction mode at runtime:
     ///   F1 = WoW (TargetFirst), F2 = LoL (SmartCast), F3 = DotA (AimCast)
-    /// Current mode is rendered to ScreenOverlayBuffer (generic core HUD buffer).
+    /// Mode switching via SetInteractionMode (no system rebuild).
     /// </summary>
     public sealed class MobaLocalOrderSourceSystem : ISystem<float>
     {
@@ -42,8 +42,6 @@ namespace MobaDemoMod.Presentation
         
         private InputOrderMappingSystem? _inputOrderMapping;
         private bool _initialized = false;
-        private InteractionModeType _currentMode = InteractionModeType.SmartCast;
-        private bool _modeChangePending = false;
 
         public MobaLocalOrderSourceSystem(World world, Dictionary<string, object> globals, OrderQueue orders, IModContext ctx)
         {
@@ -164,18 +162,8 @@ namespace MobaDemoMod.Presentation
                 return;
             }
 
-            CheckModeSwitchKeys(input);
-            RunAutoDemo(dt, input);
-
-            if (_modeChangePending)
-            {
-                _modeChangePending = false;
-                _initialized = false;
-                _inputOrderMapping?.CancelAiming();
-                _inputOrderMapping = null;
-            }
-
             InitializeInputOrderMapping();
+            CheckModeSwitchKeys(input);
 
             if (_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var actorObj) && actorObj is Entity localPlayer && _world.IsAlive(localPlayer))
             {
@@ -195,13 +183,14 @@ namespace MobaDemoMod.Presentation
             if (!_globals.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var bufObj) || bufObj is not ScreenOverlayBuffer buf)
                 return;
 
-            string modeName = _currentMode switch
+            var currentMode = _inputOrderMapping?.InteractionMode ?? InteractionModeType.SmartCast;
+            string modeName = currentMode switch
             {
                 InteractionModeType.TargetFirst => "WoW (TargetFirst)",
                 InteractionModeType.SmartCast => "LoL (SmartCast)",
                 InteractionModeType.AimCast => "DotA (AimCast)",
                 InteractionModeType.SmartCastWithIndicator => "LoL+ (Indicator)",
-                _ => _currentMode.ToString()
+                _ => currentMode.ToString()
             };
 
             int x = 840;
@@ -231,107 +220,20 @@ namespace MobaDemoMod.Presentation
             y += 20;
             buf.AddText(x, y, "[LClick] Select  [RClick] Move  [S] Stop", 14, new Vector4(0.55f, 0.55f, 0.55f, 1));
 
-            if (_autoDemoEnabled && _autoDemoStep < AutoDemoScript.Length)
-            {
-                y += 18;
-                string nextLabel = AutoDemoScript[_autoDemoStep].label;
-                buf.AddText(x, y, $"[AutoDemo] next: {nextLabel} ({_autoDemoTimer:F1}s)", 12, new Vector4(1, 0.5f, 0, 1));
-            }
-        }
-
-        // Auto-demo: cycles through modes and fires skills via InjectAction.
-        // Activated by env var MOBA_AUTO_DEMO=1. Uses the real input pipeline.
-        private float _autoDemoTimer;
-        private int _autoDemoStep;
-        private bool _autoDemoEnabled;
-        private bool _autoDemoChecked;
-
-        private static readonly (string actionId, string label)[] AutoDemoScript =
-        {
-            ("ModeWoW",    "Switch → WoW (TargetFirst)"),
-            (null,         "pause"),
-            ("SkillQ",     "Cast Q: Fireball"),
-            (null,         "pause"),
-            ("ModeLoL",    "Switch → LoL (SmartCast)"),
-            (null,         "pause"),
-            ("SkillW",     "Cast W: Heal"),
-            (null,         "pause"),
-            ("ModeDotA",   "Switch → DotA (AimCast)"),
-            (null,         "pause"),
-            ("SkillE",     "Cast E: ConeAoE"),
-            (null,         "pause"),
-            ("ModeLoLPlus","Switch → LoL+ (Indicator)"),
-            (null,         "pause"),
-            ("SkillR",     "Cast R: Blizzard"),
-            (null,         "pause"),
-            ("ModeLoL",    "Switch → LoL (back)"),
-        };
-
-        private void RunAutoDemo(float dt, PlayerInputHandler input)
-        {
-            if (!_autoDemoChecked)
-            {
-                _autoDemoChecked = true;
-                _autoDemoEnabled = _globals.ContainsKey("MobaDemo.AutoDemo");
-            }
-            if (!_autoDemoEnabled) return;
-            _autoDemoTimer += dt;
-            if (_autoDemoTimer < 1.5f) return;
-            _autoDemoTimer = 0f;
-
-            if (_autoDemoStep >= AutoDemoScript.Length)
-            {
-                _autoDemoEnabled = false;
-                return;
-            }
-
-            var (actionId, _) = AutoDemoScript[_autoDemoStep];
-            _autoDemoStep++;
-
-            if (actionId != null)
-            {
-                // For mode-switch actions, directly set the mode to avoid injection timing issues
-                if (actionId.StartsWith("Mode"))
-                {
-                    _currentMode = actionId switch
-                    {
-                        "ModeWoW" => InteractionModeType.TargetFirst,
-                        "ModeLoL" => InteractionModeType.SmartCast,
-                        "ModeDotA" => InteractionModeType.AimCast,
-                        "ModeLoLPlus" => InteractionModeType.SmartCastWithIndicator,
-                        _ => _currentMode
-                    };
-                    _modeChangePending = true;
-                }
-                else
-                {
-                    input.InjectButtonPress(actionId);
-                }
-            }
         }
 
         private void CheckModeSwitchKeys(PlayerInputHandler input)
         {
-            if (input.PressedThisFrame("ModeWoW") || input.PressedThisFrame("Hotkey1"))
-            {
-                _currentMode = InteractionModeType.TargetFirst;
-                _modeChangePending = true;
-            }
-            else if (input.PressedThisFrame("ModeLoL") || input.PressedThisFrame("Hotkey2"))
-            {
-                _currentMode = InteractionModeType.SmartCast;
-                _modeChangePending = true;
-            }
-            else if (input.PressedThisFrame("ModeDotA") || input.PressedThisFrame("Hotkey3"))
-            {
-                _currentMode = InteractionModeType.AimCast;
-                _modeChangePending = true;
-            }
-            else if (input.PressedThisFrame("ModeLoLPlus") || input.PressedThisFrame("Hotkey4"))
-            {
-                _currentMode = InteractionModeType.SmartCastWithIndicator;
-                _modeChangePending = true;
-            }
+            if (_inputOrderMapping == null) return;
+
+            if (input.PressedThisFrame("ModeWoW"))
+                _inputOrderMapping.SetInteractionMode(InteractionModeType.TargetFirst);
+            else if (input.PressedThisFrame("ModeLoL"))
+                _inputOrderMapping.SetInteractionMode(InteractionModeType.SmartCast);
+            else if (input.PressedThisFrame("ModeDotA"))
+                _inputOrderMapping.SetInteractionMode(InteractionModeType.AimCast);
+            else if (input.PressedThisFrame("ModeLoLPlus"))
+                _inputOrderMapping.SetInteractionMode(InteractionModeType.SmartCastWithIndicator);
         }
 
         private Entity GetControlledActor()
@@ -372,9 +274,7 @@ namespace MobaDemoMod.Presentation
         {
             string uri = $"{_ctx.ModId}:assets/Input/input_order_mappings.json";
             using var stream = _ctx.VFS.GetStream(uri);
-            var config = InputOrderMappingLoader.LoadFromStream(stream);
-            config.InteractionMode = _currentMode;
-            return config;
+            return InputOrderMappingLoader.LoadFromStream(stream);
         }
 
         public void BeforeUpdate(in float dt) { }

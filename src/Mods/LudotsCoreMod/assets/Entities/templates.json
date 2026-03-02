@@ -23,7 +23,7 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 100 } },
-      "AbilityStateBuffer": { "abilityIds": [1, 2, 3, 4, 5] },
+      "AbilityStateBuffer": { "abilityIds": ["Ability.Moba.SkillQ", "Ability.Moba.SkillW", "Ability.Moba.SkillE", "Ability.Moba.SkillR", "Ability.Moba.Move"] },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},

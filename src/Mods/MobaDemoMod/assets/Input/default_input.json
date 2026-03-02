@@ -30,11 +30,7 @@
         { "actionId": "ModeWoW", "path": "<Keyboard>/F1" },
         { "actionId": "ModeLoL", "path": "<Keyboard>/F2" },
         { "actionId": "ModeDotA", "path": "<Keyboard>/F3" },
-        { "actionId": "ModeLoLPlus", "path": "<Keyboard>/F4" },
-        { "actionId": "ModeWoW", "path": "<Keyboard>/1" },
-        { "actionId": "ModeLoL", "path": "<Keyboard>/2" },
-        { "actionId": "ModeDotA", "path": "<Keyboard>/3" },
-        { "actionId": "ModeLoLPlus", "path": "<Keyboard>/4" }
+        { "actionId": "ModeLoLPlus", "path": "<Keyboard>/F4" }
       ]
     }
   ]

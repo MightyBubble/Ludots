@@ -64,13 +64,7 @@ namespace MobaDemoMod.Triggers
             var config = (GameConfig)engine.GlobalContext[ContextKeys.GameConfig];
             _ = config.Constants.OrderTags["stop"];
 
-            if (engine.GlobalContext.TryGetValue(ContextKeys.AbilityDefinitionRegistry, out var defsObj) &&
-                defsObj is AbilityDefinitionRegistry defs)
-            {
-                MobaDemoAbilityDefinitions.RegisterBuiltins(defs, mobaConfig);
-            }
-
-            engine.GlobalContext["MobaDemo.AutoDemo"] = true;
+            // Abilities loaded from GAS/abilities.json via AbilityExecLoader (production config pipeline)
 
             if (engine.GlobalContext.TryGetValue(ContextKeys.OrderQueue, out var ordersObj) &&
                 ordersObj is OrderQueue orders)
