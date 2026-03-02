@@ -1,6 +1,6 @@
 # Mod 架构与配置系统
 
-Ludots 采用了“一切皆 Mod”的设计理念，不仅允许用户扩展内容，就连引擎本身的核心内容也以 `Core` Mod 的形式存在。
+Ludots 采用了"一切皆 Mod"的设计理念，不仅允许用户扩展内容，就连引擎本身的核心内容也以 `Core` Mod 的形式存在。
 
 ## 1 Mod 加载流程
 
@@ -10,8 +10,8 @@ Ludots 采用了“一切皆 Mod”的设计理念，不仅允许用户扩展内
 2.  **解析 mod.json**：读取每个 Mod 根目录下的 `mod.json` 文件。`name` 字段是 Mod 的唯一标识（下文称 ModId）。
 3.  **依赖排序**：根据 `dependencies` 解析依赖图，计算加载顺序，确保先加载前置依赖。
 4.  **挂载虚拟文件系统**：把每个 Mod 的根目录挂载为 `ModId:` 前缀，用于资源与配置读取。
-5.  **程序集加载**：如果 `mod.json` 声明 `main`（入口 DLL 相对路径），则加载该程序集并查找入口类型进行初始化；没有 `main` 的 Mod 也可以作为“纯资源 Mod”存在。
-6.  **初始化**：按加载顺序调用入口的 `OnLoad(ModContext)`，在这里注册 Trigger、函数、配置等扩展点。
+5.  **程序集加载**：如果 `mod.json` 声明 `main`（入口 DLL 相对路径），则加载该程序集并查找入口类型进行初始化；没有 `main` 的 Mod 也可以作为"纯资源 Mod"存在。
+6.  **初始化**：按加载顺序调用入口的 `OnLoad(IModContext)`，在这里通过正式 API 注册事件处理、System 工厂、Trigger 修饰器等扩展点。
 
 ### mod.json 示例
 
@@ -27,7 +27,51 @@ Ludots 采用了“一切皆 Mod”的设计理念，不仅允许用户扩展内
 }
 ```
 
-## 2 虚拟文件系统
+## 2 IModContext — Mod 扩展 API
+
+Mod 在 `OnLoad(IModContext context)` 中获得以下扩展点：
+
+| API | 用途 |
+|-----|------|
+| `context.OnEvent(eventKey, handler)` | 注册事件回调（GameStart、MapLoaded、自定义事件） |
+| `context.SystemFactoryRegistry` | 注册 System 工厂，由 Map Trigger 按需激活 |
+| `context.TriggerDecorators` | 修饰 Map 声明的 Trigger（按类型/名称/锚点） |
+| `context.FunctionRegistry` | 注册脚本函数 |
+| `context.VFS` | 访问虚拟文件系统资源 |
+| `context.Log(message)` | 日志输出（自动带 Mod 前缀） |
+
+### OnLoad 示例
+
+```csharp
+public void OnLoad(IModContext context)
+{
+    // 1. 全局事件：注册能力定义
+    context.OnEvent(GameEvents.GameStart, async ctx =>
+    {
+        var registry = ctx.Get<AbilityDefinitionRegistry>(ContextKeys.AbilityDefinitionRegistry);
+        registry.Register(/* ... */);
+    });
+
+    // 2. Map 事件：根据地图 tags 执行初始化
+    context.OnEvent(GameEvents.MapLoaded, async ctx =>
+    {
+        var tags = ctx.Get<List<string>>(ContextKeys.MapTags);
+        if (tags?.Contains("moba") != true) return;
+        // MOBA 地图专属逻辑
+    });
+
+    // 3. System 工厂注册（不立即创建，由 Map 激活）
+    context.SystemFactoryRegistry.Register("MySystem", SystemGroup.Cleanup,
+        ctx => new MySystem(ctx.GetWorld()));
+
+    // 4. Trigger 修饰（扩展 Map 声明的 Trigger）
+    context.TriggerDecorators.RegisterAnchor("map_ready", new MyCameraCommand());
+}
+```
+
+> **注意**：`context.TriggerManager` 已不再对 Mod 暴露。所有 Mod 必须使用 `OnEvent()`、`SystemFactoryRegistry` 或 `TriggerDecorators`。
+
+## 3 虚拟文件系统
 
 Ludots 通过 `VirtualFileSystem`（下文简称 VFS）统一管理所有资源路径，实现跨平台与 Mod 隔离。
 
@@ -49,7 +93,7 @@ if (vfs.TryResolveFullPath("MyMod:assets/Configs/game.json", out var fullPath))
 }
 ```
 
-## 3 配置加载与合并总览
+## 4 配置加载与合并总览
 
 引擎启动时通过 `ConfigPipeline` 自动合并各来源的 `game.json` 片段。这允许 Mod 覆盖或扩展核心配置，而无需修改核心文件。
 
@@ -78,6 +122,6 @@ if (vfs.TryResolveFullPath("MyMod:assets/Configs/game.json", out var fullPath))
 ```
 引擎最终运行时使用的配置将是合并后的结果。
 
-如需了解更完整的“配置来源、优先级、合并规则与限制”，参见 [07_config_pipeline.md](07_config_pipeline.md)。
+如需了解更完整的"配置来源、优先级、合并规则与限制"，参见 [07_config_pipeline.md](07_config_pipeline.md)。
 
 地图配置与地图切换的生命周期（以及空间服务的热切换）参见 [10_map_mod_spatial.md](10_map_mod_spatial.md)。
