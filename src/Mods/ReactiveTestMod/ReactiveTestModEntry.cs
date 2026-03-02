@@ -53,7 +53,7 @@ namespace ReactiveTestMod
         public void OnLoad(IModContext context)
         {
             context.Log("ReactiveTestMod Loaded!");
-            context.TriggerManager.RegisterTrigger(new ReactiveStartTrigger(context));
+            context.OnEvent(GameEvents.MapLoaded, new ReactiveStartTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload() { }

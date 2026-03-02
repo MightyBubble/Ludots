@@ -1,4 +1,5 @@
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using Navigation2DPlaygroundMod.Triggers;
 
 namespace Navigation2DPlaygroundMod
@@ -7,7 +8,7 @@ namespace Navigation2DPlaygroundMod
     {
         public void OnLoad(IModContext context)
         {
-            context.TriggerManager.RegisterTrigger(new EnableNavigation2DPlaygroundOnEntryTrigger(context));
+            context.OnEvent(GameEvents.MapLoaded, new EnableNavigation2DPlaygroundOnEntryTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload()

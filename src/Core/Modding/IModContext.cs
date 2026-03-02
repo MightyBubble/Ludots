@@ -17,13 +17,9 @@ namespace Ludots.Core.Modding
         LogChannel LogChannel { get; }
 
         /// <summary>
-        /// Register a simple event handler. For non-map events (e.g. custom mod events).
+        /// Register a simple event handler. Fires for both global and map-scoped events.
         /// </summary>
         void OnEvent(EventKey eventKey, Func<ScriptContext, Task> handler);
-
-        // Keep TriggerManager during transition (Phase 2a → 2c)
-        [Obsolete("Use SystemFactoryRegistry, TriggerDecorators, or OnEvent instead. Will be removed in Phase 2c.")]
-        TriggerManager TriggerManager { get; }
 
         void Log(string message);
         void Log(LogLevel level, string message);

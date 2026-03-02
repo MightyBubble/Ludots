@@ -14,8 +14,8 @@ namespace Ludots.Core.Modding
         public FunctionRegistry FunctionRegistry { get; }
         public SystemFactoryRegistry SystemFactoryRegistry { get; }
         public TriggerDecoratorRegistry TriggerDecorators { get; }
-        public TriggerManager TriggerManager { get; }
 
+        private readonly TriggerManager _triggerManager;
         private readonly LogChannel _logChannel;
         public LogChannel LogChannel => _logChannel;
 
@@ -30,7 +30,7 @@ namespace Ludots.Core.Modding
             ModId = modId;
             VFS = vfs;
             FunctionRegistry = fr;
-            TriggerManager = tm;
+            _triggerManager = tm;
             SystemFactoryRegistry = sfr;
             TriggerDecorators = tdr;
             _logChannel = Diagnostics.Log.GetOrCreateModChannel(modId);
@@ -38,7 +38,7 @@ namespace Ludots.Core.Modding
 
         public void OnEvent(EventKey eventKey, Func<ScriptContext, Task> handler)
         {
-            TriggerManager.RegisterEventHandler(eventKey, handler);
+            _triggerManager.RegisterEventHandler(eventKey, handler);
         }
 
         public void Log(string message)

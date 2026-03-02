@@ -31,7 +31,6 @@ namespace Ludots.Core.Scripting
 
         // Map-scoped trigger tracking
         private readonly Dictionary<MapId, List<Trigger>> _mapTriggers = new Dictionary<MapId, List<Trigger>>();
-        private readonly HashSet<Trigger> _mapOwnedTriggers = new HashSet<Trigger>();
 
         // EventHandler storage (non-Trigger, simple callbacks registered by Mods)
         private readonly Dictionary<EventKey, List<Func<ScriptContext, Task>>> _eventHandlers
@@ -106,7 +105,6 @@ namespace Ludots.Core.Scripting
             for (int i = 0; i < triggers.Count; i++)
             {
                 RegisterTrigger(triggers[i]);
-                _mapOwnedTriggers.Add(triggers[i]);
                 list.Add(triggers[i]);
             }
             _mapTriggers[mapId] = list;
@@ -135,7 +133,6 @@ namespace Ludots.Core.Scripting
             for (int i = 0; i < list.Count; i++)
             {
                 UnregisterTrigger(list[i]);
-                _mapOwnedTriggers.Remove(list[i]);
             }
 
             _mapTriggers.Remove(mapId);
@@ -157,8 +154,11 @@ namespace Ludots.Core.Scripting
             // EventHandlers (mod callbacks) always fire
             FireEventHandlers(eventKey, context);
 
-            // Collect map-scoped triggers + compatible global triggers (excluding map-owned).
-            var matching = CollectSortedMapAndGlobalTriggers(mapId, eventKey);
+            if (!_mapTriggers.TryGetValue(mapId, out var mapList) || mapList.Count == 0)
+                return;
+
+            // Only map-scoped triggers — no global fallback
+            var matching = CollectSortedMapTriggers(mapList, eventKey);
             if (matching.Count == 0) return;
 
             for (int i = 0; i < matching.Count; i++)
@@ -175,8 +175,11 @@ namespace Ludots.Core.Scripting
             // EventHandlers (mod callbacks)
             var handlerTask = FireEventHandlersAsync(eventKey, context);
 
-            // Collect map-scoped triggers + compatible global triggers (excluding map-owned).
-            var matching = CollectSortedMapAndGlobalTriggers(mapId, eventKey);
+            if (!_mapTriggers.TryGetValue(mapId, out var mapList) || mapList.Count == 0)
+                return handlerTask;
+
+            // Only map-scoped triggers — no global fallback
+            var matching = CollectSortedMapTriggers(mapList, eventKey);
             if (matching.Count == 0) return handlerTask;
 
             var tasks = new Task[matching.Count + 1];
@@ -186,33 +189,6 @@ namespace Ludots.Core.Scripting
                 tasks[i + 1] = FireTriggerAsync(matching[i], eventKey, context, propagateExceptions: true);
             }
             return Task.WhenAll(tasks);
-        }
-
-        private List<Trigger> CollectSortedMapAndGlobalTriggers(MapId mapId, EventKey eventKey)
-        {
-            var matching = new List<Trigger>();
-
-            if (_mapTriggers.TryGetValue(mapId, out var mapList) && mapList.Count > 0)
-            {
-                for (int i = 0; i < mapList.Count; i++)
-                {
-                    if (mapList[i].EventKey == eventKey)
-                        matching.Add(mapList[i]);
-                }
-            }
-
-            if (_triggers.TryGetValue(eventKey, out var globalList) && globalList.Count > 0)
-            {
-                for (int i = 0; i < globalList.Count; i++)
-                {
-                    var trigger = globalList[i];
-                    if (_mapOwnedTriggers.Contains(trigger)) continue; // avoid duplicate map trigger execution
-                    matching.Add(trigger);
-                }
-            }
-
-            matching.Sort((a, b) => a.Priority.CompareTo(b.Priority));
-            return matching;
         }
 
         private static List<Trigger> CollectSortedMapTriggers(List<Trigger> mapList, EventKey eventKey)

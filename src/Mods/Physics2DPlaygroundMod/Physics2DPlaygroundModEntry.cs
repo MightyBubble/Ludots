@@ -1,4 +1,5 @@
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using Physics2DPlaygroundMod.Triggers;
 
 namespace Physics2DPlaygroundMod
@@ -7,7 +8,7 @@ namespace Physics2DPlaygroundMod
     {
         public void OnLoad(IModContext context)
         {
-            context.TriggerManager.RegisterTrigger(new EnablePhysics2DPlaygroundOnEntryTrigger(context));
+            context.OnEvent(GameEvents.MapLoaded, new EnablePhysics2DPlaygroundOnEntryTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload()

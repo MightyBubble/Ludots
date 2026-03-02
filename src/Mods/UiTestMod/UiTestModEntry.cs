@@ -1,5 +1,7 @@
 using System;
+using System.Threading.Tasks;
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using UiTestMod.Triggers;
 
 namespace UiTestMod
@@ -9,7 +11,8 @@ namespace UiTestMod
         public void OnLoad(IModContext context)
         {
             context.Log("UiTestMod Loaded!");
-            context.TriggerManager.RegisterTrigger(new UiStartTrigger());
+            var uiTrigger = new UiStartTrigger();
+            context.OnEvent(GameEvents.MapLoaded, ctx => uiTrigger.CheckConditions(ctx) ? uiTrigger.ExecuteAsync(ctx) : Task.CompletedTask);
         }
 
         public void OnUnload()

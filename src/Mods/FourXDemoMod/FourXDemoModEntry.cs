@@ -1,5 +1,6 @@
 using FourXDemoMod.Triggers;
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 
 namespace FourXDemoMod
 {
@@ -8,8 +9,8 @@ namespace FourXDemoMod
         public void OnLoad(IModContext context)
         {
             context.Log("[FourXDemoMod] Loaded");
-            context.TriggerManager.RegisterTrigger(new InstallFourXDemoOnGameStartTrigger(context));
-            context.TriggerManager.RegisterTrigger(new FourXSetupOnMapLoadedTrigger(context));
+            context.OnEvent(GameEvents.GameStart, new InstallFourXDemoOnGameStartTrigger(context).ExecuteAsync);
+            context.OnEvent(GameEvents.MapLoaded, new FourXSetupOnMapLoadedTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload()

@@ -1,4 +1,5 @@
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using RtsDemoMod.Triggers;
 
 namespace RtsDemoMod
@@ -8,8 +9,8 @@ namespace RtsDemoMod
         public void OnLoad(IModContext context)
         {
             context.Log("[RtsDemoMod] Loaded");
-            context.TriggerManager.RegisterTrigger(new InstallRtsDemoOnGameStartTrigger(context));
-            context.TriggerManager.RegisterTrigger(new RtsSetupOnMapLoadedTrigger(context));
+            context.OnEvent(GameEvents.GameStart, new InstallRtsDemoOnGameStartTrigger(context).ExecuteAsync);
+            context.OnEvent(GameEvents.MapLoaded, new RtsSetupOnMapLoadedTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload()

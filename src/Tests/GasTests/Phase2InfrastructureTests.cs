@@ -94,7 +94,7 @@ namespace GasTests
         }
 
         [Test]
-        public void FireMapEvent_GlobalAndMapScoped_BothFireWithoutDuplication()
+        public void FireMapEvent_GlobalTriggersDoNotFireDuringMapEvent()
         {
             var tm = new TriggerManager();
             int globalCount = 0;
@@ -112,12 +112,12 @@ namespace GasTests
 
             tm.FireMapEvent(mapId, GameEvents.MapLoaded, new ScriptContext());
 
-            Assert.That(mapCount, Is.EqualTo(1), "Map-scoped trigger should fire exactly once");
-            Assert.That(globalCount, Is.EqualTo(1), "Global trigger should still fire for compatibility");
+            Assert.That(mapCount, Is.EqualTo(1), "Map-scoped trigger should fire");
+            Assert.That(globalCount, Is.EqualTo(0), "Global trigger should NOT fire during FireMapEvent (Phase 2: no compatibility fallback)");
         }
 
         [Test]
-        public void FireMapEvent_OtherMap_FiresGlobalButNotForeignMapScoped()
+        public void FireMapEvent_OtherMap_NeitherGlobalNorForeignMapScopedFire()
         {
             var tm = new TriggerManager();
             int globalCount = 0;
@@ -131,11 +131,11 @@ namespace GasTests
             mapATrigger.AddAction(new DelegateCommand(_ => { mapACount++; return Task.CompletedTask; }));
             tm.RegisterMapTriggers(new MapId("map_a"), new List<Trigger> { mapATrigger });
 
-            // Fire for map_b: global should fire, map_a scoped should not.
+            // Fire for map_b: neither global nor map_a scoped should fire.
             tm.FireMapEvent(new MapId("map_b"), GameEvents.MapLoaded, new ScriptContext());
 
-            Assert.That(globalCount, Is.EqualTo(1));
-            Assert.That(mapACount, Is.EqualTo(0));
+            Assert.That(globalCount, Is.EqualTo(0), "Global trigger should NOT fire during FireMapEvent");
+            Assert.That(mapACount, Is.EqualTo(0), "Foreign map-scoped trigger should NOT fire");
         }
 
         // ────────────────────────────────────────────────────────

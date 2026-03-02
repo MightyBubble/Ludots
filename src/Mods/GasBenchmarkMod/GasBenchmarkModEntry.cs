@@ -21,9 +21,11 @@ namespace GasBenchmarkMod
         {
             context.Log("[GasBenchmarkMod] Loaded!");
 
-            context.TriggerManager.RegisterTrigger(new GasBenchmarkTrigger(context));
-            context.TriggerManager.RegisterTrigger(new GasBenchmarkEntryMenuTrigger());
-            context.TriggerManager.RegisterTrigger(new GasBenchmarkMapUiTrigger());
+            context.OnEvent(GasBenchmarkEvents.RunGasBenchmark, new GasBenchmarkTrigger(context).ExecuteAsync);
+            var entryTrigger = new GasBenchmarkEntryMenuTrigger();
+            context.OnEvent(GameEvents.MapLoaded, ctx => entryTrigger.CheckConditions(ctx) ? entryTrigger.ExecuteAsync(ctx) : Task.CompletedTask);
+            var mapUiTrigger = new GasBenchmarkMapUiTrigger();
+            context.OnEvent(GameEvents.MapLoaded, ctx => mapUiTrigger.CheckConditions(ctx) ? mapUiTrigger.ExecuteAsync(ctx) : Task.CompletedTask);
         }
 
         public void OnUnload()

@@ -9,8 +9,8 @@ namespace MobaDemoMod
         public void OnLoad(IModContext context)
         {
             context.Log("[MobaDemoMod] Loaded");
-            context.TriggerManager.RegisterTrigger(new InstallMobaDemoOnGameStartTrigger(context));
-            context.TriggerManager.RegisterTrigger(new MobaCameraOnEntryMapLoadedTrigger(context));
+            context.OnEvent(GameEvents.GameStart, new InstallMobaDemoOnGameStartTrigger(context).ExecuteAsync);
+            context.OnEvent(GameEvents.MapLoaded, new MobaCameraOnEntryMapLoadedTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload()

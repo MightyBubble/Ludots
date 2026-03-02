@@ -10,7 +10,7 @@ namespace TerrainBenchmarkMod
         {
             context.Log("[TerrainBenchmarkMod] Loaded");
             TerrainBenchmarkMapGenerator.EnsureGenerated(context);
-            context.TriggerManager.RegisterTrigger(new TerrainBenchmarkOnEntryMapLoadedTrigger(context));
+            context.OnEvent(GameEvents.MapLoaded, new TerrainBenchmarkOnEntryMapLoadedTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload()

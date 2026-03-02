@@ -1,5 +1,6 @@
 using ArpgDemoMod.Triggers;
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 
 namespace ArpgDemoMod
 {
@@ -8,8 +9,8 @@ namespace ArpgDemoMod
         public void OnLoad(IModContext context)
         {
             context.Log("[ArpgDemoMod] Loaded");
-            context.TriggerManager.RegisterTrigger(new InstallArpgDemoOnGameStartTrigger(context));
-            context.TriggerManager.RegisterTrigger(new ArpgSetupOnMapLoadedTrigger(context));
+            context.OnEvent(GameEvents.GameStart, new InstallArpgDemoOnGameStartTrigger(context).ExecuteAsync);
+            context.OnEvent(GameEvents.MapLoaded, new ArpgSetupOnMapLoadedTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload()

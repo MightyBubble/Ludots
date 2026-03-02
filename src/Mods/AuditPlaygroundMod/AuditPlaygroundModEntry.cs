@@ -14,8 +14,8 @@ namespace AuditPlaygroundMod
         {
             context.Log("[AuditPlaygroundMod] Loaded.");
 
-            // Compatibility path: legacy global trigger registration.
-            context.TriggerManager.RegisterTrigger(new AuditGlobalMapLoadedTrigger());
+            // Phase2 formal pipeline: use OnEvent instead of legacy RegisterTrigger.
+            context.OnEvent(GameEvents.MapLoaded, new AuditGlobalMapLoadedTrigger().ExecuteAsync);
 
             // Phase2 path: activate presentation control system via factory.
             context.SystemFactoryRegistry.RegisterPresentation("AuditMapControlPresentation", scriptCtx =>

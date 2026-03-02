@@ -1,4 +1,5 @@
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using AIInspectorMod.Triggers;
 
 namespace AIInspectorMod
@@ -8,7 +9,7 @@ namespace AIInspectorMod
         public void OnLoad(IModContext context)
         {
             context.Log("[AIInspectorMod] Loaded.");
-            context.TriggerManager.RegisterTrigger(new PrintAiConfigTrigger(context));
+            context.OnEvent(AIInspectorEvents.PrintAiConfig, new PrintAiConfigTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload()

@@ -1,5 +1,6 @@
 using System;
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using HtmlTestMod.Triggers;
 
 namespace HtmlTestMod
@@ -9,7 +10,7 @@ namespace HtmlTestMod
         public void OnLoad(IModContext context)
         {
             context.Log("HtmlTestMod Loaded!");
-            context.TriggerManager.RegisterTrigger(new HtmlStartTrigger());
+            context.OnEvent(GameEvents.MapLoaded, new HtmlStartTrigger().ExecuteAsync);
         }
 
         public void OnUnload()

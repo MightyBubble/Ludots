@@ -9,7 +9,7 @@ namespace Universal3CCameraMod
         public void OnLoad(IModContext context)
         {
             context.Log("[Universal3CCameraMod] Loaded");
-            context.TriggerManager.RegisterTrigger(new Universal3CCameraOnMapLoadedTrigger(context));
+            context.OnEvent(GameEvents.MapLoaded, new Universal3CCameraOnMapLoadedTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload()

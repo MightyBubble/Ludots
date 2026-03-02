@@ -1,5 +1,7 @@
 using System;
+using System.Threading.Tasks;
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using PerformanceMod.Triggers;
 
 namespace PerformanceMod
@@ -9,8 +11,10 @@ namespace PerformanceMod
         public void OnLoad(IModContext context)
         {
             context.Log("PerformanceMod Loaded!");
-            context.TriggerManager.RegisterTrigger(new BenchmarkTrigger());
-            context.TriggerManager.RegisterTrigger(new EntryBenchmarkMenuTrigger());
+            var benchTrigger = new BenchmarkTrigger();
+            context.OnEvent(GameEvents.MapLoaded, ctx => benchTrigger.CheckConditions(ctx) ? benchTrigger.ExecuteAsync(ctx) : Task.CompletedTask);
+            var entryTrigger = new EntryBenchmarkMenuTrigger();
+            context.OnEvent(GameEvents.MapLoaded, ctx => entryTrigger.CheckConditions(ctx) ? entryTrigger.ExecuteAsync(ctx) : Task.CompletedTask);
         }
 
         public void OnUnload()

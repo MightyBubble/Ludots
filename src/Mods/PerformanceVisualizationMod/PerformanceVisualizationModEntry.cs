@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Ludots.Core.Modding;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
@@ -11,9 +12,11 @@ namespace PerformanceVisualizationMod
         public void OnLoad(IModContext context)
         {
             context.Log("[PerformanceVisualizationMod] Loaded!");
-            context.TriggerManager.RegisterTrigger(new VisualBenchmarkTrigger(context));
-            context.TriggerManager.RegisterTrigger(new VisualBenchmarkEntryMenuTrigger());
-            context.TriggerManager.RegisterTrigger(new VisualBenchmarkMapUiTrigger());
+            context.OnEvent(VisualBenchmarkEvents.RunVisualBenchmark, new VisualBenchmarkTrigger(context).ExecuteAsync);
+            var entryTrigger = new VisualBenchmarkEntryMenuTrigger();
+            context.OnEvent(GameEvents.MapLoaded, ctx => entryTrigger.CheckConditions(ctx) ? entryTrigger.ExecuteAsync(ctx) : Task.CompletedTask);
+            var mapUiTrigger = new VisualBenchmarkMapUiTrigger();
+            context.OnEvent(GameEvents.MapLoaded, ctx => mapUiTrigger.CheckConditions(ctx) ? mapUiTrigger.ExecuteAsync(ctx) : Task.CompletedTask);
         }
 
         public void OnUnload()

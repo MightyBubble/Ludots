@@ -1,4 +1,5 @@
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using TcgDemoMod.Triggers;
 
 namespace TcgDemoMod
@@ -8,8 +9,8 @@ namespace TcgDemoMod
         public void OnLoad(IModContext context)
         {
             context.Log("[TcgDemoMod] Loaded");
-            context.TriggerManager.RegisterTrigger(new InstallTcgDemoOnGameStartTrigger(context));
-            context.TriggerManager.RegisterTrigger(new TcgSetupOnMapLoadedTrigger(context));
+            context.OnEvent(GameEvents.GameStart, new InstallTcgDemoOnGameStartTrigger(context).ExecuteAsync);
+            context.OnEvent(GameEvents.MapLoaded, new TcgSetupOnMapLoadedTrigger(context).ExecuteAsync);
         }
 
         public void OnUnload()

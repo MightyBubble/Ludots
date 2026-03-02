@@ -14,9 +14,10 @@ namespace LudotsCoreMod
         public void OnLoad(IModContext context)
         {
             context.Log("[LudotsCoreMod] Loaded - Core game framework initialized");
-            
-            // Register core system installation trigger
-            context.TriggerManager.RegisterTrigger(new InstallCoreSystemsOnGameStartTrigger());
+
+            // Register core system installation via OnEvent (Phase 2 formal pipeline)
+            var installTrigger = new InstallCoreSystemsOnGameStartTrigger();
+            context.OnEvent(GameEvents.GameStart, installTrigger.ExecuteAsync);
         }
 
         public void OnUnload()
