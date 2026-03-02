@@ -394,7 +394,7 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 2000f;
+            manager.State.DistanceCm = 30000f; // large distance → viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
@@ -419,7 +419,7 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 2000f;
+            manager.State.DistanceCm = 30000f; // large distance → viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
@@ -444,7 +444,7 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 2000f;
+            manager.State.DistanceCm = 30000f; // large distance → viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
