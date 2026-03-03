@@ -11,7 +11,12 @@
     { "id": "ModeWoW", "name": "Gameplay_ModeWoW", "type": "Button" },
     { "id": "ModeLoL", "name": "Gameplay_ModeLoL", "type": "Button" },
     { "id": "ModeSC2", "name": "Gameplay_ModeSC2", "type": "Button" },
-    { "id": "ModeIndicator", "name": "Gameplay_ModeIndicator", "type": "Button" }
+    { "id": "ModeIndicator", "name": "Gameplay_ModeIndicator", "type": "Button" },
+    { "id": "DemoShowcaseToggle", "name": "Gameplay_DemoShowcaseToggle", "type": "Button" },
+    { "id": "DemoShowcaseReset", "name": "Gameplay_DemoShowcaseReset", "type": "Button" },
+    { "id": "DemoFireball", "name": "Gameplay_DemoFireball", "type": "Button" },
+    { "id": "DemoMagicCircle", "name": "Gameplay_DemoMagicCircle", "type": "Button" },
+    { "id": "DemoSummon", "name": "Gameplay_DemoSummon", "type": "Button" }
   ],
   "contexts": [
     {
@@ -30,7 +35,12 @@
         { "actionId": "ModeWoW", "path": "<Keyboard>/F1" },
         { "actionId": "ModeLoL", "path": "<Keyboard>/F2" },
         { "actionId": "ModeSC2", "path": "<Keyboard>/F3" },
-        { "actionId": "ModeIndicator", "path": "<Keyboard>/F4" }
+        { "actionId": "ModeIndicator", "path": "<Keyboard>/F4" },
+        { "actionId": "DemoShowcaseToggle", "path": "<Keyboard>/F6" },
+        { "actionId": "DemoShowcaseReset", "path": "<Keyboard>/F7" },
+        { "actionId": "DemoFireball", "path": "<Keyboard>/F9" },
+        { "actionId": "DemoMagicCircle", "path": "<Keyboard>/F10" },
+        { "actionId": "DemoSummon", "path": "<Keyboard>/F11" }
       ]
     }
   ]

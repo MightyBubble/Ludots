@@ -35,10 +35,12 @@ namespace MobaDemoMod.Presentation
         private readonly IModContext _ctx;
         private readonly int _castAbilityTagId;
         private readonly int _stopTagId;
+        private readonly int _hoverScopeId = 99002;
         
         // Configuration-driven input-order mapping
         private InputOrderMappingSystem? _inputOrderMapping;
         private bool _initialized = false;
+        private Entity _hoveredIndicatorOwner;
 
         public MobaLocalOrderSourceSystem(World world, Dictionary<string, object> globals, OrderQueue orders, IModContext ctx)
         {
@@ -169,6 +171,7 @@ namespace MobaDemoMod.Presentation
             }
 
             RenderModeHud();
+            UpdateHoverIndicator();
         }
 
         private Entity GetControlledActor()
@@ -250,23 +253,59 @@ namespace MobaDemoMod.Presentation
                 x: 8,
                 y: 8,
                 width: 620,
-                height: 74,
+                height: 98,
                 fill: new Vector4(0f, 0f, 0f, 0.45f),
                 border: new Vector4(1f, 1f, 1f, 0.16f));
-            overlay.AddText(16, 16, $"模式: {ToModeLabel(_inputOrderMapping.InteractionMode)}", 20, new Vector4(1f, 1f, 0.6f, 1f));
+            overlay.AddText(16, 16, $"Mode: {ToModeLabel(_inputOrderMapping.InteractionMode)}", 20, new Vector4(1f, 1f, 0.6f, 1f));
             overlay.AddText(16, 42, "F1 WoW(TargetFirst) | F2 LoL(SmartCast) | F3 SC2(AimCast) | F4 Indicator", 16, new Vector4(0.78f, 0.92f, 1f, 1f));
+            overlay.AddText(16, 66, "F6 Showcase Toggle | F7 Showcase Reset | F9 Fireball | F10 Circle | F11 Summon", 16, new Vector4(0.85f, 1f, 0.85f, 1f));
         }
 
         private static string ToModeLabel(InteractionModeType mode)
         {
             return mode switch
             {
-                InteractionModeType.TargetFirst => "WoW / 先选目标后施法",
-                InteractionModeType.SmartCast => "LoL / 智能施法",
-                InteractionModeType.AimCast => "SC2 / 先瞄准再确认",
-                InteractionModeType.SmartCastWithIndicator => "LoL Indicator / 按住显示抬起释放",
+                InteractionModeType.TargetFirst => "WoW / TargetFirst",
+                InteractionModeType.SmartCast => "LoL / SmartCast",
+                InteractionModeType.AimCast => "SC2 / AimCast",
+                InteractionModeType.SmartCastWithIndicator => "LoL Indicator / Hold-Release",
                 _ => mode.ToString()
             };
+        }
+
+        private void UpdateHoverIndicator()
+        {
+            if (!_globals.TryGetValue(ContextKeys.PresentationCommandBuffer, out var cmdObj) || cmdObj is not PresentationCommandBuffer commands)
+                return;
+            if (!_globals.TryGetValue(InstallMobaDemoOnGameStartTrigger.MobaConfigKey, out var cfgObj) || cfgObj is not MobaConfig cfg)
+                return;
+
+            int hoverDefId = cfg.Presentation.HoverIndicatorDefId;
+            bool hasHovered = TryGetHovered(out var hovered);
+            if (hasHovered && _world.IsAlive(hovered) && hovered == _hoveredIndicatorOwner)
+                return;
+
+            if (_hoveredIndicatorOwner != default)
+            {
+                commands.TryAdd(new PresentationCommand
+                {
+                    Kind = PresentationCommandKind.DestroyPerformerScope,
+                    IdA = _hoverScopeId
+                });
+                _hoveredIndicatorOwner = default;
+            }
+
+            if (hasHovered && _world.IsAlive(hovered))
+            {
+                commands.TryAdd(new PresentationCommand
+                {
+                    Kind = PresentationCommandKind.CreatePerformer,
+                    IdA = hoverDefId,
+                    IdB = _hoverScopeId,
+                    Source = hovered
+                });
+                _hoveredIndicatorOwner = hovered;
+            }
         }
 
         public void BeforeUpdate(in float dt) { }

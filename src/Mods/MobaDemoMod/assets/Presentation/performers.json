@@ -49,5 +49,64 @@
     "defaultScale": 6.0,
     "defaultLifetime": -1,
     "visibility": { "inline": "OwnerCullVisible" }
+  },
+  {
+    "_comment": "悬停目标指示器 - instance-scoped, 白色小球悬浮在目标头顶",
+    "id": 5005,
+    "visualKind": "Marker3D",
+    "meshOrShapeId": 2,
+    "defaultColor": [1.0, 1.0, 1.0, 0.9],
+    "defaultScale": 0.12,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 1.05, 0]
+  },
+  {
+    "_comment": "火球施法瞬间 - instance-scoped, 橙色短促球体",
+    "id": 5006,
+    "visualKind": "Marker3D",
+    "meshOrShapeId": 2,
+    "defaultColor": [1.0, 0.45, 0.1, 0.95],
+    "defaultScale": 0.48,
+    "defaultLifetime": 0.95,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.8, 0]
+  },
+  {
+    "_comment": "法阵演示 - instance-scoped, 地面环形覆盖",
+    "id": 5007,
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": 3,
+    "defaultColor": [0.2, 0.7, 1.0, 0.34],
+    "defaultScale": 6.8,
+    "defaultLifetime": 2.4,
+    "alphaFadeOverLifetime": true,
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 5.2 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.03 }
+    ]
+  },
+  {
+    "_comment": "召唤演示 - instance-scoped, 绿色脉冲球",
+    "id": 5008,
+    "visualKind": "Marker3D",
+    "meshOrShapeId": 2,
+    "defaultColor": [0.2, 1.0, 0.45, 0.95],
+    "defaultScale": 0.72,
+    "defaultLifetime": 1.6,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.55, 0]
+  },
+  {
+    "_comment": "展台模式目标指示 - instance-scoped, 金色地面环",
+    "id": 5009,
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": 3,
+    "defaultColor": [1.0, 0.82, 0.2, 0.18],
+    "defaultScale": 3.0,
+    "defaultLifetime": -1,
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 1.9 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.025 }
+    ]
   }
 ]

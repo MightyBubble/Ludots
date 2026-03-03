@@ -1,4 +1,3 @@
-using System.Numerics;
 using System.Threading.Tasks;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -6,15 +5,10 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
-using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
-using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
-using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
-using MobaDemoMod.GAS;
 using MobaDemoMod.Presentation;
 
 namespace MobaDemoMod.Triggers
@@ -60,6 +54,7 @@ namespace MobaDemoMod.Triggers
                 _ctx.Log("[MobaDemoMod] OrderQueue ready, registering local order source.");
                 engine.RegisterPresentationSystem(new MobaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx));
             }
+            engine.RegisterPresentationSystem(new MobaSkillDemoPresentationSystem(engine.World, engine.GlobalContext, _ctx));
 
             if (engine.GlobalContext.TryGetValue(ContextKeys.OrderTypeRegistry, out var registryObj) &&
                 registryObj is OrderTypeRegistry orderTypeRegistry)
@@ -69,11 +64,6 @@ namespace MobaDemoMod.Triggers
             }
 
             // ── 选择系统 ──
-            // TransientMarkerBuffer 用于位置一次性特效（无实体锚点）
-            TransientMarkerBuffer markerBuffer = null;
-            if (engine.GlobalContext.TryGetValue(ContextKeys.TransientMarkerBuffer, out var markerObj) && markerObj is TransientMarkerBuffer tmb)
-                markerBuffer = tmb;
-
             // PresentationCommandBuffer 用于实体锚点的 Performer 生命周期管理
             PresentationCommandBuffer cmdBuffer = null;
             if (engine.GlobalContext.TryGetValue(ContextKeys.PresentationCommandBuffer, out var cmdObj) && cmdObj is PresentationCommandBuffer pcb)
@@ -106,19 +96,6 @@ namespace MobaDemoMod.Triggers
             engine.RegisterPresentationSystem(clickSelect);
             
             var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
-            // CircleEnemy 选区标记（位置一次性特效，走 TransientMarkerBuffer）
-            var capturedMarkerBuffer = markerBuffer;
-            gasSelection.OnSelectionTriggered = (req, worldCm) =>
-            {
-                if (capturedMarkerBuffer != null && req.RequestTagId == SelectionRequestTags.CircleEnemy)
-                {
-                    var mk = mobaConfig.Presentation.CircleEnemyMarker;
-                    var p = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: mk.YOffsetMeters);
-                    var scale = new Vector3(mk.Scale[0], mk.Scale[1], mk.Scale[2]);
-                    var color = new Vector4(mk.Color[0], mk.Color[1], mk.Color[2], mk.Color[3]);
-                    capturedMarkerBuffer.TryAdd(PrimitiveMeshAssetIds.Sphere, p, scale, color, mk.LifetimeSeconds);
-                }
-            };
             engine.RegisterPresentationSystem(gasSelection);
 
             // Core 通用输入响应系统

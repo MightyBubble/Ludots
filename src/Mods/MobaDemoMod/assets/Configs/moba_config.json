@@ -22,18 +22,25 @@
     "selectionIndicatorDefId": 5002,
     "selectionScopeId": 99001,
     "rangeCircleIndicatorDefId": 5004,
-    "circleEnemyMarker": {
-      "scale": [1.2, 0.08, 1.2],
-      "color": [0.8, 0.2, 1.0, 0.75],
-      "lifetimeSeconds": 0.35,
-      "yOffsetMeters": 0.1
-    }
+    "hoverIndicatorDefId": 5005,
+    "demoFireballDefId": 5006,
+    "demoMagicCircleDefId": 5007,
+    "demoSummonDefId": 5008,
+    "demoTargetDefId": 5009
   },
   "camera": {
     "zoomCmPerWheel": 2000,
     "rotateDegPerSecond": 90,
     "initialYawDegrees": 35,
     "initialPitchDegrees": 60,
-    "initialDistanceCm": 25000
+    "initialDistanceCm": 14000
+  },
+  "skillDemo": {
+    "showcaseStepIntervalSeconds": 2.2,
+    "showcaseEnabledOnStart": true,
+    "showcaseScopeId": 99100,
+    "manualFireballEffectId": "Effect.Moba.Projectile.Arrow",
+    "manualMagicCircleEffectId": "Effect.Moba.Search.BlizzardZone",
+    "manualSummonEffectId": "Effect.Moba.Summon.Skeleton"
   }
 }

@@ -28,6 +28,9 @@ namespace MobaDemoMod
         [JsonPropertyName("camera")]
         public CameraConfig Camera { get; set; } = new();
 
+        [JsonPropertyName("skillDemo")]
+        public SkillDemoConfig SkillDemo { get; set; } = new();
+
         // ── Nested config classes ──
 
         public sealed class AbilityConfig
@@ -69,15 +72,11 @@ namespace MobaDemoMod
             [JsonPropertyName("selectionIndicatorDefId")] public int SelectionIndicatorDefId { get; set; } = 5002;
             [JsonPropertyName("selectionScopeId")] public int SelectionScopeId { get; set; } = 99001;
             [JsonPropertyName("rangeCircleIndicatorDefId")] public int RangeCircleIndicatorDefId { get; set; } = 5004;
-            [JsonPropertyName("circleEnemyMarker")] public CircleEnemyMarkerConfig CircleEnemyMarker { get; set; } = new();
-        }
-
-        public sealed class CircleEnemyMarkerConfig
-        {
-            [JsonPropertyName("scale")] public float[] Scale { get; set; } = { 1.2f, 0.08f, 1.2f };
-            [JsonPropertyName("color")] public float[] Color { get; set; } = { 0.8f, 0.2f, 1f, 0.75f };
-            [JsonPropertyName("lifetimeSeconds")] public float LifetimeSeconds { get; set; } = 0.35f;
-            [JsonPropertyName("yOffsetMeters")] public float YOffsetMeters { get; set; } = 0.1f;
+            [JsonPropertyName("hoverIndicatorDefId")] public int HoverIndicatorDefId { get; set; } = 5005;
+            [JsonPropertyName("demoFireballDefId")] public int DemoFireballDefId { get; set; } = 5006;
+            [JsonPropertyName("demoMagicCircleDefId")] public int DemoMagicCircleDefId { get; set; } = 5007;
+            [JsonPropertyName("demoSummonDefId")] public int DemoSummonDefId { get; set; } = 5008;
+            [JsonPropertyName("demoTargetDefId")] public int DemoTargetDefId { get; set; } = 5009;
         }
 
         public sealed class CameraConfig
@@ -86,7 +85,17 @@ namespace MobaDemoMod
             [JsonPropertyName("rotateDegPerSecond")] public float RotateDegPerSecond { get; set; } = 90f;
             [JsonPropertyName("initialYawDegrees")] public float InitialYawDegrees { get; set; } = 35f;
             [JsonPropertyName("initialPitchDegrees")] public float InitialPitchDegrees { get; set; } = 60f;
-            [JsonPropertyName("initialDistanceCm")] public float InitialDistanceCm { get; set; } = 25000f;
+            [JsonPropertyName("initialDistanceCm")] public float InitialDistanceCm { get; set; } = 14000f;
+        }
+
+        public sealed class SkillDemoConfig
+        {
+            [JsonPropertyName("showcaseStepIntervalSeconds")] public float ShowcaseStepIntervalSeconds { get; set; } = 2.2f;
+            [JsonPropertyName("showcaseEnabledOnStart")] public bool ShowcaseEnabledOnStart { get; set; } = true;
+            [JsonPropertyName("showcaseScopeId")] public int ShowcaseScopeId { get; set; } = 99100;
+            [JsonPropertyName("manualFireballEffectId")] public string ManualFireballEffectId { get; set; } = "Effect.Moba.Projectile.Arrow";
+            [JsonPropertyName("manualMagicCircleEffectId")] public string ManualMagicCircleEffectId { get; set; } = "Effect.Moba.Search.BlizzardZone";
+            [JsonPropertyName("manualSummonEffectId")] public string ManualSummonEffectId { get; set; } = "Effect.Moba.Summon.Skeleton";
         }
 
         // ── Loading ──
