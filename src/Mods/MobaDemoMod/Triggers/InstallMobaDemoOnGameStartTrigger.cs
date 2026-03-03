@@ -135,7 +135,7 @@ namespace MobaDemoMod.Triggers
                     Id = CameraControllerIds.Orbit3C,
                     Config = new Orbit3CCameraConfig
                     {
-                        EnablePan = false,
+                        EnablePan = true,
                         ZoomCmPerWheel = mobaConfig.Camera.ZoomCmPerWheel,
                         RotateDegPerSecond = mobaConfig.Camera.RotateDegPerSecond
                     }
