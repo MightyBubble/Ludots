@@ -132,7 +132,8 @@ namespace Ludots.Adapter.Raylib
                         var activeCamera = cameraAdapter.Camera;
                         Rl.BeginMode3D(activeCamera);
 
-                        DrawInfiniteGrid(activeCamera.position, 120, 1.0f, 10);
+                        // 锚定到 target，网格以观察点为中心；halfCount 越大边界越远
+                        DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
 
                         var t = activeCamera.target;
                         Rl.DrawLine3D(t, t + new Vector3(2.0f, 0, 0), Color.RED);
@@ -186,7 +187,7 @@ namespace Ludots.Adapter.Raylib
                         foreach (var chunk in wpQuery) wpCount += chunk.Count;
                         Rl.DrawText($"WorldPositionCm Entities: {wpCount}", 10, 34, 20, Raylib_cs.Color.YELLOW);
 
-                        RenderWorldHud(engine, screenProjector);
+                        RenderWorldHud(engine, screenProjector, screenWidth, screenHeight);
 
                         if (drawSkiaUi && uiRoot.IsDirty)
                         {
@@ -202,7 +203,7 @@ namespace Ludots.Adapter.Raylib
                         Rl.DrawFPS(screenWidth - 100, 10);
                         Rl.DrawText($"Scale | Grid=1.00m | HexWidth={HexCoordinates.HexWidth:F3}m | RowSpacing={HexCoordinates.RowSpacing:F3}m | HeightScale={terrainRenderer.HeightScale:F2}", 10, screenHeight - 35, 20, Raylib_cs.Color.WHITE);
                         DrawOverlay(drawTerrain, drawPrimitives, drawDebugDraw, drawSkiaUi, engine, primitiveRenderer);
-                        DrawScreenOverlays(engine);
+                        DrawScreenOverlays(engine, screenWidth, screenHeight);
 
                         Rl.EndDrawing();
                     }
@@ -292,18 +293,24 @@ namespace Ludots.Adapter.Raylib
             }
         }
 
-        private static void RenderWorldHud(GameEngine engine, IScreenProjector projector)
+        private static void RenderWorldHud(GameEngine engine, IScreenProjector projector, int screenWidth, int screenHeight)
         {
             if (!engine.GlobalContext.TryGetValue(ContextKeys.PresentationWorldHudBuffer, out var hudObj)) return;
             engine.GlobalContext.TryGetValue(ContextKeys.PresentationWorldHudStrings, out var strObj);
             if (hudObj is not WorldHudBatchBuffer hud) return;
             var strings = strObj as Ludots.Core.Presentation.Config.WorldHudStringTable;
 
+            const int maxBarDim = 512;
+            const int margin = 200;
+
             var span = hud.GetSpan();
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
                 Vector2 screen = projector.WorldToScreen(item.WorldPosition);
+                if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) || float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
+                    continue;
+
                 float x = screen.X - item.Width * 0.5f;
                 float y = screen.Y;
 
@@ -314,6 +321,9 @@ namespace Ludots.Adapter.Raylib
 
                 if (item.Kind == WorldHudItemKind.Bar)
                 {
+                    if (iw <= 0 || ih <= 0 || iw > maxBarDim || ih > maxBarDim) continue;
+                    if (ix + iw < -margin || iy + ih < -margin || ix > screenWidth + margin || iy > screenHeight + margin) continue;
+
                     var bg = ToRaylibColor(item.Color0);
                     var fg = ToRaylibColor(item.Color1);
 
@@ -566,10 +576,12 @@ namespace Ludots.Adapter.Raylib
             return p.X >= x && p.X <= x + w && p.Y >= y && p.Y <= y + h;
         }
 
-        private static void DrawScreenOverlays(GameEngine engine)
+        private static void DrawScreenOverlays(GameEngine engine, int screenWidth, int screenHeight)
         {
             if (!engine.GlobalContext.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var bufferObj)) return;
             if (bufferObj is not ScreenOverlayBuffer buffer) return;
+
+            const int maxOverlayDim = 4096;
 
             var span = buffer.GetSpan();
             for (int i = 0; i < span.Length; i++)
@@ -589,6 +601,7 @@ namespace Ludots.Adapter.Raylib
                     }
                     case ScreenOverlayItemKind.Rect:
                     {
+                        if (item.Width <= 0 || item.Height <= 0 || item.Width > maxOverlayDim || item.Height > maxOverlayDim) break;
                         Rl.DrawRectangle(item.X, item.Y, item.Width, item.Height, ToRaylibColor(item.BackgroundColor));
                         if (item.Color.W > 0.01f)
                         {

@@ -1,5 +1,8 @@
+using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
+using Arch.Core;
+using CoreInputMod.Triggers;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -68,61 +71,56 @@ namespace MobaDemoMod.Triggers
                 engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.AbilityMoveWorldCmSystem(engine.World, engine.EventBus, mobaConfig.Movement.SpeedCmPerSec, mobaConfig.Movement.StopRadiusCm), SystemGroup.AbilityActivation);
             }
 
-            // ── 选择系统 ──
-            // TransientMarkerBuffer 用于位置一次性特效（无实体锚点）
+            // ── 选择系统回调（CoreInputMod 已注册系统，此处注入 MOBA 视觉反馈）──
             TransientMarkerBuffer markerBuffer = null;
             if (engine.GlobalContext.TryGetValue(ContextKeys.TransientMarkerBuffer, out var markerObj) && markerObj is TransientMarkerBuffer tmb)
                 markerBuffer = tmb;
 
-            // PresentationCommandBuffer 用于实体锚点的 Performer 生命周期管理
             PresentationCommandBuffer cmdBuffer = null;
             if (engine.GlobalContext.TryGetValue(ContextKeys.PresentationCommandBuffer, out var cmdObj) && cmdObj is PresentationCommandBuffer pcb)
                 cmdBuffer = pcb;
 
-            var clickSelect = new EntityClickSelectSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
-            // 选中指示器：通过 Performer 直接 API 管理（定义 5002）
-            var capturedCmdBuffer = cmdBuffer;
-            clickSelect.OnEntitySelected = (worldCm, entity) =>
+            if (engine.GlobalContext.TryGetValue(InstallCoreInputOnGameStartTrigger.EntitySelectionCallbacksKey, out var selObj) &&
+                selObj is List<System.Action<WorldCmInt2, Entity>> selectionCallbacks)
             {
-                if (capturedCmdBuffer == null) return;
-                // 销毁旧选中 scope
-                capturedCmdBuffer.TryAdd(new PresentationCommand
+                var capturedCmdBuffer = cmdBuffer;
+                selectionCallbacks.Add((worldCm, entity) =>
                 {
-                    Kind = PresentationCommandKind.DestroyPerformerScope,
-                    IdA = mobaConfig.Presentation.SelectionScopeId
-                });
-                // 若选中了有效实体，创建新指示器
-                if (engine.World.IsAlive(entity))
-                {
+                    if (capturedCmdBuffer == null) return;
                     capturedCmdBuffer.TryAdd(new PresentationCommand
                     {
-                        Kind = PresentationCommandKind.CreatePerformer,
-                        IdA = mobaConfig.Presentation.SelectionIndicatorDefId,
-                        IdB = mobaConfig.Presentation.SelectionScopeId,
-                        Source = entity
+                        Kind = PresentationCommandKind.DestroyPerformerScope,
+                        IdA = mobaConfig.Presentation.SelectionScopeId
                     });
-                }
-            };
-            engine.RegisterPresentationSystem(clickSelect);
-            
-            var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
-            // CircleEnemy 选区标记（位置一次性特效，走 TransientMarkerBuffer）
-            var capturedMarkerBuffer = markerBuffer;
-            gasSelection.OnSelectionTriggered = (req, worldCm) =>
-            {
-                if (capturedMarkerBuffer != null && req.RequestTagId == SelectionRequestTags.CircleEnemy)
-                {
-                    var mk = mobaConfig.Presentation.CircleEnemyMarker;
-                    var p = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: mk.YOffsetMeters);
-                    var scale = new Vector3(mk.Scale[0], mk.Scale[1], mk.Scale[2]);
-                    var color = new Vector4(mk.Color[0], mk.Color[1], mk.Color[2], mk.Color[3]);
-                    capturedMarkerBuffer.TryAdd(PrimitiveMeshAssetIds.Sphere, p, scale, color, mk.LifetimeSeconds);
-                }
-            };
-            engine.RegisterPresentationSystem(gasSelection);
+                    if (engine.World.IsAlive(entity))
+                    {
+                        capturedCmdBuffer.TryAdd(new PresentationCommand
+                        {
+                            Kind = PresentationCommandKind.CreatePerformer,
+                            IdA = mobaConfig.Presentation.SelectionIndicatorDefId,
+                            IdB = mobaConfig.Presentation.SelectionScopeId,
+                            Source = entity
+                        });
+                    }
+                });
+            }
 
-            // Core 通用输入响应系统
-            engine.RegisterPresentationSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext));
+            if (engine.GlobalContext.TryGetValue(InstallCoreInputOnGameStartTrigger.SelectionTriggeredCallbacksKey, out var trigObj) &&
+                trigObj is List<System.Action<SelectionRequest, WorldCmInt2>> triggeredCallbacks)
+            {
+                var capturedMarkerBuffer = markerBuffer;
+                triggeredCallbacks.Add((req, worldCm) =>
+                {
+                    if (capturedMarkerBuffer != null && req.RequestTagId == SelectionRequestTags.CircleEnemy)
+                    {
+                        var mk = mobaConfig.Presentation.CircleEnemyMarker;
+                        var p = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: mk.YOffsetMeters);
+                        var scale = new Vector3(mk.Scale[0], mk.Scale[1], mk.Scale[2]);
+                        var color = new Vector4(mk.Color[0], mk.Color[1], mk.Color[2], mk.Color[3]);
+                        capturedMarkerBuffer.TryAdd(PrimitiveMeshAssetIds.Sphere, p, scale, color, mk.LifetimeSeconds);
+                    }
+                });
+            }
 
             // 单位渲染由 performers.json 定义 5001（entity-scoped Marker3D）驱动
             // 团队颜色由 EntityColor 绑定解析

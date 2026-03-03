@@ -1,8 +1,7 @@
+using System;
+using System.Numerics;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Mathematics;
-using System.Numerics;
-using System;
 
 namespace PerformanceVisualizationMod.Systems
 {
@@ -24,21 +23,12 @@ namespace PerformanceVisualizationMod.Systems
 
             if (move.LengthSquared() > 0)
             {
-                var yawRad = ToRadians(state.Yaw);
-                var sin = (float)Math.Sin(yawRad);
-                var cos = (float)Math.Cos(yawRad);
-
-                var forward = new Vector2(sin, cos);
-                var right = new Vector2(cos, -sin);
-
-                var moveDir = right * -move.X + forward * move.Y;
-                
+                var moveDir = OrbitCameraDirectionUtil.MoveInputToDirection(state.Yaw, move);
                 if (moveDir.LengthSquared() > 0)
-                    moveDir = Vector2.Normalize(moveDir);
-
-                float moveStep = MoveSpeed * dt;
-                var delta = new Vector2(moveDir.X * moveStep, moveDir.Y * moveStep);
-                state.TargetCm = state.TargetCm + delta;
+                {
+                    float moveStep = MoveSpeed * dt;
+                    state.TargetCm += moveDir * moveStep;
+                }
             }
 
             var rotateLeft = _input.ReadAction<float>("RotateLeft");
@@ -60,9 +50,5 @@ namespace PerformanceVisualizationMod.Systems
             }
         }
 
-        private static float ToRadians(float degrees)
-        {
-            return degrees * (float)(Math.PI / 180.0);
-        }
     }
 }

@@ -795,6 +795,8 @@ namespace Ludots.Core.Engine
             
             // WorldToVisualSyncSystem: 插值 WorldPositionCm → VisualTransform（必须在 PresentationFrameSetup 之后）
             RegisterPresentationSystem(new WorldToVisualSyncSystem(World));
+            // TerrainHeightSyncSystem: 采样地形高度写入 VisualTransform.Y，使实体贴附地表
+            RegisterPresentationSystem(new TerrainHeightSyncSystem(World, GlobalContext));
             
             RegisterPresentationSystem(new ResponseChainDirectorSystem(World, orderRequestQueue, responseChainTelemetry, responseChainUiState, presentationCommandBuffer));
             RegisterPresentationSystem(new ResponseChainHumanOrderSourceSystem(GlobalContext, responseChainUiState, chainOrderQueue));
