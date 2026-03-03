@@ -7,7 +7,6 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.DebugDraw;
@@ -65,8 +64,6 @@ namespace Ludots.Adapter.Raylib
                 bool drawPrimitives = true;
                 bool drawDebugDraw = true;
                 bool drawSkiaUi = true;
-                int navAgentDeltaPerTeam = 0;
-                bool navAgentReset = false;
 
                 var initialCamera = new Camera3D
                 {
@@ -105,20 +102,6 @@ namespace Ludots.Adapter.Raylib
                     try
                     {
                         float dt = Rl.GetFrameTime();
-
-                        navAgentDeltaPerTeam = 0;
-                        navAgentReset = false;
-                        Navigation2DRuntime? navRuntime = null;
-                        if (engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DRuntime, out var navObj) && navObj is Navigation2DRuntime nr) navRuntime = nr;
-                        ApplyOverlayToggles(ref drawTerrain, ref drawPrimitives, ref drawDebugDraw, ref drawSkiaUi, ref navAgentDeltaPerTeam, ref navAgentReset, navRuntime);
-                        if (navAgentDeltaPerTeam != 0)
-                        {
-                            engine.GlobalContext[ContextKeys.Navigation2DPlayground_AgentDeltaPerTeam] = navAgentDeltaPerTeam;
-                        }
-                        if (navAgentReset)
-                        {
-                            engine.GlobalContext[ContextKeys.Navigation2DPlayground_ResetScenario] = true;
-                        }
 
                         bool uiCaptured = drawSkiaUi && UpdateInput(uiRoot);
                         engine.GlobalContext[ContextKeys.UiCaptured] = uiCaptured;
@@ -201,7 +184,6 @@ namespace Ludots.Adapter.Raylib
 
                         Rl.DrawFPS(screenWidth - 100, 10);
                         Rl.DrawText($"Scale | Grid=1.00m | HexWidth={HexCoordinates.HexWidth:F3}m | RowSpacing={HexCoordinates.RowSpacing:F3}m | HeightScale={terrainRenderer.HeightScale:F2}", 10, screenHeight - 35, 20, Raylib_cs.Color.WHITE);
-                        DrawOverlay(drawTerrain, drawPrimitives, drawDebugDraw, drawSkiaUi, engine, primitiveRenderer);
                         DrawScreenOverlays(engine);
 
                         Rl.EndDrawing();
@@ -443,127 +425,6 @@ namespace Ludots.Adapter.Raylib
             if (v < 0f) return 0f;
             if (v > 1f) return 1f;
             return v;
-        }
-
-        private static void ApplyOverlayToggles(ref bool drawTerrain, ref bool drawPrimitives, ref bool drawDebugDraw, ref bool drawSkiaUi, ref int navAgentDeltaPerTeam, ref bool navAgentReset, Navigation2DRuntime? navRuntime)
-        {
-            var mousePos = Rl.GetMousePosition();
-            bool clicked = Rl.IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON);
-
-            int x = 10;
-            int y = 60;
-            int w = 190;
-            int h = 22;
-            int gap = 6;
-
-            if (clicked)
-            {
-                if (Hit(mousePos, x, y + (h + gap) * 0, w, h)) drawTerrain = !drawTerrain;
-                else if (Hit(mousePos, x, y + (h + gap) * 1, w, h)) drawPrimitives = !drawPrimitives;
-                else if (Hit(mousePos, x, y + (h + gap) * 2, w, h)) drawDebugDraw = !drawDebugDraw;
-                else if (Hit(mousePos, x, y + (h + gap) * 3, w, h)) drawSkiaUi = !drawSkiaUi;
-                else if (Hit(mousePos, x, y + (h + gap) * 4, w, h) && navRuntime != null) navRuntime.FlowEnabled = !navRuntime.FlowEnabled;
-                else if (Hit(mousePos, x, y + (h + gap) * 5, w, h) && navRuntime != null) navRuntime.FlowDebugEnabled = !navRuntime.FlowDebugEnabled;
-                else if (Hit(mousePos, x, y + (h + gap) * 6, w, h) && navRuntime != null) navRuntime.FlowDebugMode = (navRuntime.FlowDebugMode + 1) % 3;
-                else if (Hit(mousePos, x, y + (h + gap) * 7, w, h)) navAgentDeltaPerTeam = 500;
-                else if (Hit(mousePos, x, y + (h + gap) * 8, w, h)) navAgentDeltaPerTeam = -500;
-                else if (Hit(mousePos, x, y + (h + gap) * 9, w, h)) navAgentReset = true;
-                else if (Hit(mousePos, x, y + (h + gap) * 10, w, h) && navRuntime != null) navRuntime.FlowIterationsPerTick = Math.Clamp(navRuntime.FlowIterationsPerTick + 512, 0, 131072);
-                else if (Hit(mousePos, x, y + (h + gap) * 11, w, h) && navRuntime != null) navRuntime.FlowIterationsPerTick = Math.Clamp(navRuntime.FlowIterationsPerTick - 512, 0, 131072);
-            }
-        }
-
-        private static void DrawOverlay(bool drawTerrain, bool drawPrimitives, bool drawDebugDraw, bool drawSkiaUi, GameEngine engine, RaylibPrimitiveRenderer primitiveRenderer)
-        {
-            int x = 10;
-            int y = 60;
-            int w = 190;
-            int h = 22;
-            int gap = 6;
-
-            DrawToggle(x, y + (h + gap) * 0, w, h, "Terrain", drawTerrain);
-            DrawToggle(x, y + (h + gap) * 1, w, h, "Primitives", drawPrimitives);
-            DrawToggle(x, y + (h + gap) * 2, w, h, "DebugDraw", drawDebugDraw);
-            DrawToggle(x, y + (h + gap) * 3, w, h, "SkiaUI", drawSkiaUi);
-
-            bool flowEnabled = false;
-            bool flowDebug = false;
-            int flowDebugMode = 0;
-            int flowIters = 0;
-            if (engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DRuntime, out var navObj) && navObj is Navigation2DRuntime nr)
-            {
-                flowEnabled = nr.FlowEnabled;
-                flowDebug = nr.FlowDebugEnabled;
-                flowDebugMode = nr.FlowDebugMode;
-                flowIters = nr.FlowIterationsPerTick;
-            }
-
-            DrawToggle(x, y + (h + gap) * 4, w, h, "FlowField", flowEnabled);
-            DrawToggle(x, y + (h + gap) * 5, w, h, "FlowDebug", flowDebug);
-            DrawButton(x, y + (h + gap) * 6, w, h, flowDebugMode switch { 1 => "DbgMode: Flow0", 2 => "DbgMode: Flow1", _ => "DbgMode: Both" });
-            DrawButton(x, y + (h + gap) * 7, w, h, "Agents +500/team");
-            DrawButton(x, y + (h + gap) * 8, w, h, "Agents -500/team");
-            DrawButton(x, y + (h + gap) * 9, w, h, "Reset positions");
-            DrawButton(x, y + (h + gap) * 10, w, h, $"FlowIter +512 ({flowIters})");
-            DrawButton(x, y + (h + gap) * 11, w, h, $"FlowIter -512 ({flowIters})");
-
-            int agentsPerTeam = 0;
-            int liveTotal = 0;
-            if (engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DPlayground_AgentsPerTeam, out var aptObj) && aptObj is int apt) agentsPerTeam = apt;
-            if (engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DPlayground_LiveAgentsTotal, out var ltObj) && ltObj is int lt) liveTotal = lt;
-
-            Rl.DrawText($"Agents/team: {agentsPerTeam}", x + 4, y + (h + gap) * 12 + 0, 16, new Color(220, 220, 220, 220));
-            Rl.DrawText($"Live agents: {liveTotal}", x + 4, y + (h + gap) * 12 + 18, 16, new Color(220, 220, 220, 220));
-            Rl.DrawText($"Instanced: {primitiveRenderer.LastInstancedInstances} ({primitiveRenderer.LastInstancedBatches} batches)", x + 4, y + (h + gap) * 12 + 36, 16, new Color(220, 220, 220, 220));
-
-            int ddLines = 0;
-            if (engine.GlobalContext.TryGetValue(ContextKeys.DebugDrawCommandBuffer, out var ddObj) && ddObj is DebugDrawCommandBuffer dd)
-            {
-                ddLines = dd.Lines.Count;
-            }
-            Rl.DrawText($"DebugLines: {ddLines}", x + 4, y + (h + gap) * 12 + 54, 16, new Color(220, 220, 220, 220));
-
-            int flowDbgLines = 0;
-            if (engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DPlayground_FlowDebugLines, out var fdlObj) && fdlObj is int fdl) flowDbgLines = fdl;
-            Rl.DrawText($"FlowDbgLines: {flowDbgLines}", x + 4, y + (h + gap) * 12 + 72, 16, new Color(220, 220, 220, 220));
-
-            // Audit playground counters (render only when present)
-            int auditGlobal = engine.GlobalContext.TryGetValue("Audit.GlobalMapLoadedCount", out var agObj) && agObj is int ag ? ag : -1;
-            int auditScoped = engine.GlobalContext.TryGetValue("Audit.ScopedMapLoadedCount", out var asObj) && asObj is int asc ? asc : -1;
-            int auditNamed = engine.GlobalContext.TryGetValue("Audit.NamedDecoratorCount", out var anObj) && anObj is int an ? an : -1;
-            int auditAnchor = engine.GlobalContext.TryGetValue("Audit.AnchorDecoratorCount", out var aaObj) && aaObj is int aa ? aa : -1;
-            int auditFactory = engine.GlobalContext.TryGetValue("Audit.FactoryActivationCount", out var afObj) && afObj is int af ? af : -1;
-
-            if (auditGlobal >= 0 || auditScoped >= 0 || auditNamed >= 0 || auditAnchor >= 0 || auditFactory >= 0)
-            {
-                int auditYBase = y + (h + gap) * 12 + 96;
-                Rl.DrawText($"Audit Global: {Math.Max(auditGlobal, 0)}", x + 4, auditYBase, 16, new Color(180, 240, 180, 230));
-                Rl.DrawText($"Audit Scoped: {Math.Max(auditScoped, 0)}", x + 4, auditYBase + 18, 16, new Color(180, 240, 180, 230));
-                Rl.DrawText($"Audit Named: {Math.Max(auditNamed, 0)}", x + 4, auditYBase + 36, 16, new Color(180, 240, 180, 230));
-                Rl.DrawText($"Audit Anchor: {Math.Max(auditAnchor, 0)}", x + 4, auditYBase + 54, 16, new Color(180, 240, 180, 230));
-                Rl.DrawText($"Audit Factory: {Math.Max(auditFactory, 0)}", x + 4, auditYBase + 72, 16, new Color(180, 240, 180, 230));
-            }
-        }
-
-        private static void DrawToggle(int x, int y, int w, int h, string label, bool enabled)
-        {
-            var col = enabled ? new Color(0, 180, 0, 220) : new Color(140, 0, 0, 220);
-            Rl.DrawRectangle(x, y, w, h, new Color(0, 0, 0, 160));
-            Rl.DrawRectangleLines(x, y, w, h, col);
-            Rl.DrawText($"{label}: {(enabled ? "ON" : "OFF")}", x + 8, y + 3, 16, col);
-        }
-
-        private static void DrawButton(int x, int y, int w, int h, string label)
-        {
-            var col = new Color(90, 150, 220, 220);
-            Rl.DrawRectangle(x, y, w, h, new Color(0, 0, 0, 160));
-            Rl.DrawRectangleLines(x, y, w, h, col);
-            Rl.DrawText(label, x + 8, y + 3, 16, col);
-        }
-
-        private static bool Hit(Vector2 p, int x, int y, int w, int h)
-        {
-            return p.X >= x && p.X <= x + w && p.Y >= y && p.Y <= y + h;
         }
 
         private static void DrawScreenOverlays(GameEngine engine)

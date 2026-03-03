@@ -13,8 +13,10 @@
     <ProjectReference Include="..\..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
   </ItemGroup>
 
-  <Target Name="BuildModsRelease" BeforeTargets="Build">
-    <MSBuild Projects="..\..\..\Mods\MobaDemoMod\MobaDemoMod.csproj;..\..\..\Mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj;..\..\..\Mods\TerrainBenchmarkMod\TerrainBenchmarkMod.csproj;..\..\..\Mods\Physics2DPlaygroundMod\Physics2DPlaygroundMod.csproj;..\..\..\Mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj"
+  <Target Name="BuildModsRelease"
+          BeforeTargets="Build"
+          Condition="'$(ModsToBuild)'!=''">
+    <MSBuild Projects="$(ModsToBuild)"
              Targets="Restore;Build"
              Properties="Configuration=Release" />
   </Target>
