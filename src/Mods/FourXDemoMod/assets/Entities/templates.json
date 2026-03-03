@@ -6,7 +6,16 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 100, "Production": 0, "Gold": 0, "TechProgress": 0, "FoodProduction": 0 } },
-      "AbilityStateBuffer": { "abilityIds": [4101, 4102, 4103, 4104, 4105, 4106] },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.4X.BuildOutpost",
+          "Ability.4X.Colonize",
+          "Ability.4X.Blockade",
+          "Ability.4X.TechResearch",
+          "Ability.4X.DiplomacyPact",
+          "Ability.4X.TradeRoute"
+        ]
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardEntityBuffer": {},

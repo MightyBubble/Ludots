@@ -231,6 +231,26 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             var projectile = CompileProjectile(cfg.Projectile, cfg.Id, relativePath);
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
+            var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
+
+            if (cfg.Displacement != null && presetType != EffectPresetType.Displacement)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'displacement' block is only valid when presetType=Displacement.");
+            }
+            if (presetType == EffectPresetType.Displacement)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Displacement requires lifetime=Instant.");
+                }
+                if (cfg.Displacement == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Displacement requires a 'displacement' block.");
+                }
+            }
 
             return new EffectTemplateData
             {
@@ -250,6 +270,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 TargetDispatch = targetDispatch,
                 Projectile = projectile,
                 UnitCreation = unitCreation,
+                Displacement = displacement,
                 PhaseGraphBindings = behaviorTemplate,
                 ConfigParams = configParams,
                 ListenerSetup = listenerSetup,
@@ -258,6 +279,42 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 StackPolicy = stackPolicy,
                 StackOverflowPolicy = stackOverflowPolicy,
                 StackLimit = stackLimit,
+            };
+        }
+
+        private static DisplacementDescriptor CompileDisplacement(DisplacementConfig cfg, string ownerId, string relativePath)
+        {
+            if (cfg == null) return default;
+
+            DisplacementDirectionMode directionMode = cfg.DirectionMode switch
+            {
+                "ToTarget" => DisplacementDirectionMode.ToTarget,
+                "AwayFromSource" => DisplacementDirectionMode.AwayFromSource,
+                "TowardSource" => DisplacementDirectionMode.TowardSource,
+                "Fixed" => DisplacementDirectionMode.Fixed,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported displacement.directionMode '{cfg.DirectionMode}'. " +
+                    "Supported: ToTarget, AwayFromSource, TowardSource, Fixed.")
+            };
+
+            if (cfg.TotalDistanceCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: displacement.totalDistanceCm must be > 0.");
+            }
+            if (cfg.TotalDurationTicks <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: displacement.totalDurationTicks must be > 0.");
+            }
+
+            return new DisplacementDescriptor
+            {
+                DirectionMode = directionMode,
+                FixedDirectionDeg = cfg.FixedDirectionDeg,
+                TotalDistanceCm = cfg.TotalDistanceCm,
+                TotalDurationTicks = cfg.TotalDurationTicks,
+                OverrideNavigation = cfg.OverrideNavigation
             };
         }
 

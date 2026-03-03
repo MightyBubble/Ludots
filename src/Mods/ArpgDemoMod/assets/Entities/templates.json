@@ -6,7 +6,16 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 100, "Armor": 0 } },
-      "AbilityStateBuffer": { "abilityIds": [3101, 3102, 3103, 3104, 3105, 3106] },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Arpg.FireArrow",
+          "Ability.Arpg.HealPotion",
+          "Ability.Arpg.SummonWolf",
+          "Ability.Arpg.Stun",
+          "Ability.Arpg.Bleed",
+          "Ability.Arpg.IronSkin"
+        ]
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},

@@ -6,7 +6,12 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 100, "Attack": 0 } },
-      "AbilityStateBuffer": { "abilityIds": [2101, 2102] },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Tcg.Fireball",
+          "Ability.Tcg.PoisonCounter"
+        ]
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardEntityBuffer": {},

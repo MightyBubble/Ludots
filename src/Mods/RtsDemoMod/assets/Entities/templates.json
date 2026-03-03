@@ -6,7 +6,11 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 60, "Minerals": 500 } },
-      "AbilityStateBuffer": { "abilityIds": [5001] },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.BuildBarracks"
+        ]
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
@@ -21,7 +25,12 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 400, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 1000 } },
-      "AbilityStateBuffer": { "abilityIds": [5002, 5003] },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.TrainMarine",
+          "Ability.Rts.ResearchStim"
+        ]
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
@@ -36,7 +45,11 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 40, "Shield": 0, "AttackSpeed": 100 } },
-      "AbilityStateBuffer": { "abilityIds": [5004] },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StimPack"
+        ]
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
@@ -51,7 +64,11 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 150, "Shield": 0 } },
-      "AbilityStateBuffer": { "abilityIds": [5005] },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.SiegeModeAoe"
+        ]
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
@@ -66,7 +83,12 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 200, "Energy": 200 } },
-      "AbilityStateBuffer": { "abilityIds": [5006, 5007] },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.ShieldAura",
+          "Ability.Rts.Irradiate"
+        ]
+      },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},

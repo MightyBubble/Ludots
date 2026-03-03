@@ -55,6 +55,7 @@ namespace Ludots.Adapter.Raylib
             {
                 Rl.InitWindow(screenWidth, screenHeight, title);
                 windowOpened = true;
+                Rl.SetExitKey(0);
                 Rl.SetTargetFPS(targetFps);
 
                 using var uiRenderer = new RaylibSkiaRenderer(screenWidth, screenHeight);
@@ -201,6 +202,7 @@ namespace Ludots.Adapter.Raylib
                         Rl.DrawFPS(screenWidth - 100, 10);
                         Rl.DrawText($"Scale | Grid=1.00m | HexWidth={HexCoordinates.HexWidth:F3}m | RowSpacing={HexCoordinates.RowSpacing:F3}m | HeightScale={terrainRenderer.HeightScale:F2}", 10, screenHeight - 35, 20, Raylib_cs.Color.WHITE);
                         DrawOverlay(drawTerrain, drawPrimitives, drawDebugDraw, drawSkiaUi, engine, primitiveRenderer);
+                        DrawScreenOverlays(engine);
 
                         Rl.EndDrawing();
                     }
@@ -562,6 +564,42 @@ namespace Ludots.Adapter.Raylib
         private static bool Hit(Vector2 p, int x, int y, int w, int h)
         {
             return p.X >= x && p.X <= x + w && p.Y >= y && p.Y <= y + h;
+        }
+
+        private static void DrawScreenOverlays(GameEngine engine)
+        {
+            if (!engine.GlobalContext.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var bufferObj)) return;
+            if (bufferObj is not ScreenOverlayBuffer buffer) return;
+
+            var span = buffer.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                switch (item.Kind)
+                {
+                    case ScreenOverlayItemKind.Text:
+                    {
+                        string? text = buffer.GetString(item.StringId);
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
+                            Rl.DrawText(text, item.X, item.Y, fontSize, ToRaylibColor(item.Color));
+                        }
+                        break;
+                    }
+                    case ScreenOverlayItemKind.Rect:
+                    {
+                        Rl.DrawRectangle(item.X, item.Y, item.Width, item.Height, ToRaylibColor(item.BackgroundColor));
+                        if (item.Color.W > 0.01f)
+                        {
+                            Rl.DrawRectangleLines(item.X, item.Y, item.Width, item.Height, ToRaylibColor(item.Color));
+                        }
+                        break;
+                    }
+                }
+            }
+
+            buffer.Clear();
         }
     }
 }

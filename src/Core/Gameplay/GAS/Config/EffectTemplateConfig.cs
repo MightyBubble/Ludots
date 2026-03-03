@@ -41,6 +41,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public ProjectileConfig Projectile { get; set; }
         /// <summary>Unit creation parameters.</summary>
         public UnitCreationConfig UnitCreation { get; set; }
+        /// <summary>Displacement parameters (dash / knockback / pull).</summary>
+        public DisplacementConfig Displacement { get; set; }
 
         // ── Capability blocks ──
 
@@ -183,6 +185,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public int Count { get; set; } = 1;
         public int OffsetRadius { get; set; }
         public string OnSpawnEffect { get; set; }
+    }
+
+    /// <summary>Displacement component configuration.</summary>
+    public sealed class DisplacementConfig
+    {
+        public string DirectionMode { get; set; } = "ToTarget";
+        public int FixedDirectionDeg { get; set; }
+        public int TotalDistanceCm { get; set; }
+        public int TotalDurationTicks { get; set; }
+        public bool OverrideNavigation { get; set; } = true;
     }
 
     /// <summary>

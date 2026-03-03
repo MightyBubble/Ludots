@@ -260,5 +260,32 @@
     "grantedTags": [
       { "tag": "Status.Silenced", "formula": "Fixed", "amount": 1 }
     ]
+  },
+  {
+    "id": "Effect.Moba.Force.E",
+    "tags": ["Effect.Moba.ApplyForce"],
+    "presetType": "ApplyForce2D",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "configParams": {
+      "_ep.forceXTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestX" },
+      "_ep.forceYTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestY" },
+      "_ep.forceXAttribute": { "type": "float", "value": 250.0 },
+      "_ep.forceYAttribute": { "type": "float", "value": 0.0 }
+    }
+  },
+  {
+    "id": "Effect.Moba.Displacement.R",
+    "tags": ["Effect.Moba.Displacement"],
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "displacement": {
+      "directionMode": "AwayFromSource",
+      "fixedDirectionDeg": 0,
+      "totalDistanceCm": 350,
+      "totalDurationTicks": 12,
+      "overrideNavigation": true
+    }
   }
 ]

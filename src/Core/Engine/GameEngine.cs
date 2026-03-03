@@ -537,6 +537,7 @@ namespace Ludots.Core.Engine
             abilityDefinitions.SetConflictReport(ConflictReport);
             EffectParamKeys.Initialize();
             _effectTemplateLoader.Load();
+            new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             graphConfigLoader.PatchAndRegister(graphPackages);
             var gasGraphApi = new GasGraphRuntimeApi(World, SpatialQueries, SpatialCoords, EventBus, effectRequestQueue, tagOps);
             var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus);
@@ -684,6 +685,7 @@ namespace Ludots.Core.Engine
             GlobalContext[ContextKeys.PresentationPrimitiveDrawBuffer] = primitiveDrawBuffer;
             GlobalContext[ContextKeys.PresentationWorldHudBuffer] = worldHudBuffer;
             GlobalContext[ContextKeys.PresentationWorldHudStrings] = worldHudStrings;
+            GlobalContext[ContextKeys.ScreenOverlayBuffer] = new ScreenOverlayBuffer();
             GlobalContext[ContextKeys.TransientMarkerBuffer] = transientMarkerBuffer;
             GlobalContext[ContextKeys.GasPresentationEventBuffer] = gasPresentationEvents;
             GlobalContext[ContextKeys.GroundOverlayBuffer] = groundOverlayBuffer;
