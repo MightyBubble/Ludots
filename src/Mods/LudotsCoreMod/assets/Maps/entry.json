@@ -19,15 +19,37 @@
     {
       "Template": "moba_dummy",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 600, "Y": 0 } },
+        "WorldPositionCm": { "Value": { "X": 900, "Y": 0 } },
         "Name": { "Value": "Enemy1" }
       }
     },
     {
       "Template": "moba_dummy",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 700, "Y": 200 } },
+        "WorldPositionCm": { "Value": { "X": 1050, "Y": 220 } },
         "Name": { "Value": "Enemy2" }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 980, "Y": -260 } },
+        "Name": { "Value": "Enemy3" }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 1220, "Y": 80 } },
+        "Name": { "Value": "Enemy4" }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 450, "Y": -220 } },
+        "Team": { "Id": 1 },
+        "Name": { "Value": "Ally1" }
       }
     }
   ]

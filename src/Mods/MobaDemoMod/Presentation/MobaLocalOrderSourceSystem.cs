@@ -10,6 +10,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -99,12 +100,9 @@ namespace MobaDemoMod.Presentation
                 return TryGetSelected(out entity);
             });
 
-            // Hovered entity provider (for SmartCast: entity under cursor)
-            // TODO: Wire up actual hover-detection from EntityClickSelectSystem
             _inputOrderMapping.SetHoveredEntityProvider((out Entity entity) =>
             {
-                entity = default;
-                return false; // Not yet implemented — falls back to selected
+                return TryGetHovered(out entity);
             });
             
             // Order submit handler
@@ -153,18 +151,24 @@ namespace MobaDemoMod.Presentation
         public void Update(in float dt)
         {
             InitializeInputOrderMapping();
-            
-            if (!_globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) || inputObj is not PlayerInputHandler input) return;
-            if (!_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var actorObj) || actorObj is not Entity localPlayer) return;
-            if (!_world.IsAlive(localPlayer)) return;
 
-            var actor = GetControlledActor();
-            
-            if (_inputOrderMapping != null)
+            if (_inputOrderMapping != null &&
+                _globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) &&
+                inputObj is PlayerInputHandler input)
             {
-                _inputOrderMapping.SetLocalPlayer(actor, 1);
-                _inputOrderMapping.Update(dt);
+                CheckModeSwitchKeys(input, _inputOrderMapping);
+
+                if (_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var actorObj) &&
+                    actorObj is Entity localPlayer &&
+                    _world.IsAlive(localPlayer))
+                {
+                    var actor = GetControlledActor();
+                    _inputOrderMapping.SetLocalPlayer(actor, 1);
+                    _inputOrderMapping.Update(dt);
+                }
             }
+
+            RenderModeHud();
         }
 
         private Entity GetControlledActor()
@@ -190,6 +194,15 @@ namespace MobaDemoMod.Presentation
             return true;
         }
 
+        private bool TryGetHovered(out Entity target)
+        {
+            target = default;
+            if (!_globals.TryGetValue(ContextKeys.HoveredEntity, out var obj) || obj is not Entity e) return false;
+            if (!_world.IsAlive(e)) return false;
+            target = e;
+            return true;
+        }
+
         private bool TryGetCommandWorldPoint(out WorldCmInt2 worldCm)
         {
             worldCm = default;
@@ -206,6 +219,54 @@ namespace MobaDemoMod.Presentation
             string uri = $"{_ctx.ModId}:assets/Input/input_order_mappings.json";
             using var stream = _ctx.VFS.GetStream(uri);
             return InputOrderMappingLoader.LoadFromStream(stream);
+        }
+
+        private static void CheckModeSwitchKeys(PlayerInputHandler input, InputOrderMappingSystem mapping)
+        {
+            if (input.PressedThisFrame("ModeWoW"))
+            {
+                mapping.SetInteractionMode(InteractionModeType.TargetFirst);
+            }
+            else if (input.PressedThisFrame("ModeLoL"))
+            {
+                mapping.SetInteractionMode(InteractionModeType.SmartCast);
+            }
+            else if (input.PressedThisFrame("ModeSC2"))
+            {
+                mapping.SetInteractionMode(InteractionModeType.AimCast);
+            }
+            else if (input.PressedThisFrame("ModeIndicator"))
+            {
+                mapping.SetInteractionMode(InteractionModeType.SmartCastWithIndicator);
+            }
+        }
+
+        private void RenderModeHud()
+        {
+            if (_inputOrderMapping == null) return;
+            if (!_globals.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var overlayObj) || overlayObj is not ScreenOverlayBuffer overlay) return;
+
+            overlay.AddRect(
+                x: 8,
+                y: 8,
+                width: 620,
+                height: 74,
+                fill: new Vector4(0f, 0f, 0f, 0.45f),
+                border: new Vector4(1f, 1f, 1f, 0.16f));
+            overlay.AddText(16, 16, $"模式: {ToModeLabel(_inputOrderMapping.InteractionMode)}", 20, new Vector4(1f, 1f, 0.6f, 1f));
+            overlay.AddText(16, 42, "F1 WoW(TargetFirst) | F2 LoL(SmartCast) | F3 SC2(AimCast) | F4 Indicator", 16, new Vector4(0.78f, 0.92f, 1f, 1f));
+        }
+
+        private static string ToModeLabel(InteractionModeType mode)
+        {
+            return mode switch
+            {
+                InteractionModeType.TargetFirst => "WoW / 先选目标后施法",
+                InteractionModeType.SmartCast => "LoL / 智能施法",
+                InteractionModeType.AimCast => "SC2 / 先瞄准再确认",
+                InteractionModeType.SmartCastWithIndicator => "LoL Indicator / 按住显示抬起释放",
+                _ => mode.ToString()
+            };
         }
 
         public void BeforeUpdate(in float dt) { }

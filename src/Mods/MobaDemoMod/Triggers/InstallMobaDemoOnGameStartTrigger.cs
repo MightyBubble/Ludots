@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
-using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Camera;
@@ -49,20 +48,16 @@ namespace MobaDemoMod.Triggers
             // Load MobaConfig via VFS
             var mobaConfig = MobaConfig.Load(_ctx);
             engine.GlobalContext[MobaConfigKey] = mobaConfig;
+            _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/Configs/moba_config.json");
 
             // GameConfig is required — it must be loaded before GameStart
             var config = (GameConfig)engine.GlobalContext[ContextKeys.GameConfig];
             _ = config.Constants.OrderTags["stop"];
 
-            if (engine.GlobalContext.TryGetValue(ContextKeys.AbilityDefinitionRegistry, out var defsObj) &&
-                defsObj is AbilityDefinitionRegistry defs)
-            {
-                MobaDemoAbilityDefinitions.RegisterBuiltins(defs, mobaConfig);
-            }
-
             if (engine.GlobalContext.TryGetValue(ContextKeys.OrderQueue, out var ordersObj) &&
                 ordersObj is OrderQueue orders)
             {
+                _ctx.Log("[MobaDemoMod] OrderQueue ready, registering local order source.");
                 engine.RegisterPresentationSystem(new MobaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx));
             }
 
