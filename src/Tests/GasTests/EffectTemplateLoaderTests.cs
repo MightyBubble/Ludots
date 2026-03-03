@@ -13,6 +13,12 @@ namespace Ludots.Tests.GAS
 {
     public class EffectTemplateLoaderTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            EffectParamKeys.Initialize();
+        }
+
         [Test]
         public void Load_EffectsJson_RegistersTemplatesAndResolvesCallbacks()
         {
