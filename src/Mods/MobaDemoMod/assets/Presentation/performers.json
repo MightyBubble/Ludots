@@ -1,14 +1,17 @@
 [
   {
-    "_comment": "单位方块渲染 - entity-scoped, 查询所有有 VisualTransform 的实体",
+    "_comment": "单位体块渲染 - entity-scoped, 使用椭球体 primitive 作为当前可用 mesh 近似",
     "id": 5001,
     "visualKind": "Marker3D",
     "entityScope": "AllWithVisualTransform",
-    "meshOrShapeId": 1,
-    "defaultScale": 0.35,
-    "positionOffset": [0, 0.25, 0],
+    "meshOrShapeId": 2,
+    "defaultScale": 0.42,
+    "positionOffset": [0, 0.42, 0],
     "visibility": { "inline": "OwnerCullVisible" },
     "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.34 },
+      { "paramKey": 2, "source": "constant", "constantValue": 0.58 },
+      { "paramKey": 3, "source": "constant", "constantValue": 0.34 },
       { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
       { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
       { "paramKey": 6, "source": "entityColor", "sourceId": 2 },

@@ -39,9 +39,9 @@
   },
   "skillDemo": {
     "showcaseStepIntervalSeconds": 2.2,
-    "showcaseEnabledOnStart": true,
+    "showcaseEnabledOnStart": false,
     "showcaseScopeId": 99100,
-    "manualFireballEffectId": "Effect.Moba.Projectile.Arrow",
+    "manualFireballEffectId": "Effect.Moba.Damage.Q",
     "manualMagicCircleEffectId": "Effect.Moba.Search.BlizzardZone",
     "manualSummonEffectId": "Effect.Moba.Summon.Skeleton"
   }

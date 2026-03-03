@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -15,6 +16,7 @@ namespace Ludots.Core.Presentation.Config
     /// </summary>
     public sealed class PerformerDefinitionConfigLoader
     {
+        private static int _debugLoaderLogsRemaining = 4;
         private readonly ConfigPipeline _configs;
         private readonly PerformerDefinitionRegistry _registry;
         private readonly Func<string, int> _resolveAttributeName;
@@ -40,6 +42,14 @@ namespace Ludots.Core.Presentation.Config
             var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Presentation/performers.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
             if (merged.Count == 0) return;
+
+            if (_debugLoaderLogsRemaining > 0)
+            {
+                _debugLoaderLogsRemaining--;
+                #region agent log
+                File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new { hypothesisId = "H1", location = "PerformerDefinitionConfigLoader:Load", message = "Merged performer definitions", data = new { mergedCount = merged.Count }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n");
+                #endregion
+            }
 
             for (int i = 0; i < merged.Count; i++)
             {
@@ -68,6 +78,27 @@ namespace Ludots.Core.Presentation.Config
             def.VisibilityCondition = ParseConditionRef(node["visibility"]);
             def.Rules = ParseRules(node["rules"]);
             def.Bindings = ParseBindings(node["bindings"]);
+
+            if (_debugLoaderLogsRemaining > 0 && (def.Id == 5001 || def.Id == 9010 || def.Id == 9011))
+            {
+                _debugLoaderLogsRemaining--;
+                int p0SourceId = -1;
+                int p1SourceId = -1;
+                int p15SourceId = -1;
+                int p16SourceId = -1;
+                for (int i = 0; i < def.Bindings.Length; i++)
+                {
+                    int key = def.Bindings[i].ParamKey;
+                    if (key == 0) p0SourceId = def.Bindings[i].Value.SourceId;
+                    else if (key == 1) p1SourceId = def.Bindings[i].Value.SourceId;
+                    else if (key == 15) p15SourceId = def.Bindings[i].Value.SourceId;
+                    else if (key == 16) p16SourceId = def.Bindings[i].Value.SourceId;
+                }
+
+                #region agent log
+                File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new { hypothesisId = "H1", location = "PerformerDefinitionConfigLoader:ParseDefinition", message = "Parsed key performer definition", data = new { defId = def.Id, visualKind = def.VisualKind.ToString(), entityScope = def.EntityScope.ToString(), meshOrShapeId = def.MeshOrShapeId, bindingCount = def.Bindings.Length, param0SourceId = p0SourceId, param1SourceId = p1SourceId, param15SourceId = p15SourceId, param16SourceId = p16SourceId }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n");
+                #endregion
+            }
 
             return def;
         }

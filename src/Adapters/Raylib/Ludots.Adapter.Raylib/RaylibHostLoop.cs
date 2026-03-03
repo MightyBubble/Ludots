@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using System.Numerics;
+using System.Text.Json;
 using Ludots.Adapter.Raylib.Services;
 using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Components;
@@ -26,6 +28,7 @@ namespace Ludots.Adapter.Raylib
     internal static class RaylibHostLoop
     {
         private static bool _uiPointerCaptured;
+        private static int _debugWorldHudRenderLogsRemaining = 8;
 
         public static void Run(RaylibHostSetup setup)
         {
@@ -335,6 +338,13 @@ namespace Ludots.Adapter.Raylib
 
                     if (!string.IsNullOrEmpty(text))
                     {
+                        if (_debugWorldHudRenderLogsRemaining > 0)
+                        {
+                            _debugWorldHudRenderLogsRemaining--;
+                            #region agent log
+                            File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new { hypothesisId = "H2", location = "RaylibHostLoop:RenderWorldHud", message = "HUD text formatted", data = new { text, id0 = item.Id0, id1 = item.Id1, value0 = item.Value0, value1 = item.Value1 }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n");
+                            #endregion
+                        }
                         Rl.DrawText(text, ix, iy, fontSize, col);
                     }
                 }

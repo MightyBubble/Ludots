@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
+using System.Text.Json;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Runtime;
@@ -24,6 +27,7 @@ namespace MobaDemoMod.Presentation
     /// </summary>
     public sealed class MobaSkillDemoPresentationSystem : ISystem<float>
     {
+        private static int _debugShowcaseLogsRemaining = 20;
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly IModContext _ctx;
@@ -43,6 +47,7 @@ namespace MobaDemoMod.Presentation
         private int _magicCircleEffectId;
         private int _summonEffectId;
         private int _displacementEffectId;
+        private int _healthAttributeId;
 
         public MobaSkillDemoPresentationSystem(World world, Dictionary<string, object> globals, IModContext ctx)
         {
@@ -84,8 +89,17 @@ namespace MobaDemoMod.Presentation
             _magicCircleEffectId = ResolveEffectId(cfg.SkillDemo.ManualMagicCircleEffectId);
             _summonEffectId = ResolveEffectId(cfg.SkillDemo.ManualSummonEffectId);
             _displacementEffectId = EffectTemplateIdRegistry.GetId("Effect.Moba.Displacement.R");
+            _healthAttributeId = AttributeRegistry.GetId("Health");
+            if (_healthAttributeId <= 0) _healthAttributeId = AttributeRegistry.Register("Health");
 
             _ctx.Log("[MobaDemoMod] SkillDemo initialized.");
+            if (_debugShowcaseLogsRemaining > 0)
+            {
+                _debugShowcaseLogsRemaining--;
+                // #region agent log
+                File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new { hypothesisId = "H5", location = "MobaSkillDemoPresentationSystem:EnsureInitialized", message = "Skill demo initialized", data = new { showcaseEnabled = _showcaseEnabled, showcaseIntervalSec = _cfg?.SkillDemo.ShowcaseStepIntervalSeconds ?? 0f, fireballEffectId = _fireballEffectId, healthAttributeId = _healthAttributeId }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n");
+                // #endregion
+            }
             return true;
         }
 
@@ -200,6 +214,13 @@ namespace MobaDemoMod.Presentation
 
         private void RunShowcaseStep()
         {
+            if (_debugShowcaseLogsRemaining > 0)
+            {
+                _debugShowcaseLogsRemaining--;
+                // #region agent log
+                File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new { hypothesisId = "H5", location = "MobaSkillDemoPresentationSystem:RunShowcaseStep", message = "Showcase step", data = new { step = _showcaseStep, heroAlive = _world.IsAlive(_hero), enemyAAlive = _world.IsAlive(_enemyA), enemyBAlive = _world.IsAlive(_enemyB) }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n");
+                // #endregion
+            }
             switch (_showcaseStep)
             {
                 case 0:
@@ -224,6 +245,21 @@ namespace MobaDemoMod.Presentation
         private void TriggerFireball()
         {
             if (!_world.IsAlive(_hero) || !_world.IsAlive(_enemyA)) return;
+            if (_debugShowcaseLogsRemaining > 0)
+            {
+                float enemyCurrent = -1f;
+                float enemyBase = -1f;
+                if (_world.Has<AttributeBuffer>(_enemyA))
+                {
+                    ref var attrs = ref _world.Get<AttributeBuffer>(_enemyA);
+                    enemyCurrent = attrs.GetCurrent(_healthAttributeId);
+                    enemyBase = attrs.GetBase(_healthAttributeId);
+                }
+                _debugShowcaseLogsRemaining--;
+                // #region agent log
+                File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new { hypothesisId = "H5", location = "MobaSkillDemoPresentationSystem:TriggerFireball", message = "Fireball trigger", data = new { heroId = _hero.Id, enemyId = _enemyA.Id, enemyHealthCurrent = enemyCurrent, enemyHealthBase = enemyBase }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n");
+                // #endregion
+            }
             PublishEffect(_fireballEffectId, _hero, _enemyA);
             if (_cfg == null) return;
             if (_globals.TryGetValue(ContextKeys.PresentationCommandBuffer, out var cmdObj) && cmdObj is PresentationCommandBuffer commands)
