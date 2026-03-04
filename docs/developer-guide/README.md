@@ -62,3 +62,6 @@
     *   Editor ↔ Raylib 轨道相机模型统一
     *   MapConfig.DefaultCamera 配置规范
     *   Yaw 方向约定与坐标映射
+17. [Mod 运行时唯一真相与收束准则](17_mod_runtime_single_source_of_truth.md)
+    *   ModLoader/Launcher/CLI 的统一规则与无回退约束
+    *   配置 `id` 语义、容量边界可观测与主线收束检查清单
