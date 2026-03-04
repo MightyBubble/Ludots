@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Numerics;
-using System.Text.Json;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Rendering;
 using Raylib_cs;
@@ -18,7 +16,6 @@ namespace Ludots.Client.Raylib.Rendering
 
     public sealed unsafe class RaylibPrimitiveRenderer : IDisposable
     {
-        private static int _debugRendererLogsRemaining = 12;
         private readonly RaylibPrimitiveRenderMode _mode;
 
         private bool _initialized;
@@ -49,13 +46,9 @@ namespace Ludots.Client.Raylib.Rendering
             LastInstancedBatches = 0;
 
             var span = draw.GetSpan();
-            int unknownMeshCount = 0;
-            int cubeCount = 0;
-            int sphereCount = 0;
             if (_mode == RaylibPrimitiveRenderMode.Immediate)
             {
-                DrawImmediate(span, meshes, ref unknownMeshCount, ref cubeCount, ref sphereCount);
-                EmitDebugDrawSummary(span.Length, unknownMeshCount, cubeCount, sphereCount);
+                DrawImmediate(span, meshes);
                 return;
             }
 
@@ -66,13 +59,11 @@ namespace Ludots.Client.Raylib.Rendering
                 ref readonly var item = ref span[i];
                 if (!meshes.TryGetPrimitiveKind(item.MeshAssetId, out var kind))
                 {
-                    unknownMeshCount++;
                     continue;
                 }
 
                 if (kind == PrimitiveMeshKind.Cube)
                 {
-                    cubeCount++;
                     uint key = PackRgba(item.Color);
                     var matrix = RaylibMatrix.FromScaleTranslation(item.Position.X, item.Position.Y, item.Position.Z, item.Scale.X, item.Scale.Y, item.Scale.Z);
                     AddInstance(_cubeBatches, key, matrix);
@@ -81,7 +72,6 @@ namespace Ludots.Client.Raylib.Rendering
 
                 if (kind == PrimitiveMeshKind.Sphere)
                 {
-                    sphereCount++;
                     uint key = PackRgba(item.Color);
                     var matrix = RaylibMatrix.FromScaleTranslation(item.Position.X, item.Position.Y, item.Position.Z, item.Scale.X, item.Scale.Y, item.Scale.Z);
                     AddInstance(_sphereBatches, key, matrix);
@@ -89,58 +79,29 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             FlushInstancedBatches();
-            EmitDebugDrawSummary(span.Length, unknownMeshCount, cubeCount, sphereCount);
         }
 
-        private void DrawImmediate(ReadOnlySpan<PrimitiveDrawItem> span, MeshAssetRegistry meshes, ref int unknownMeshCount, ref int cubeCount, ref int sphereCount)
+        private void DrawImmediate(ReadOnlySpan<PrimitiveDrawItem> span, MeshAssetRegistry meshes)
         {
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
                 if (!meshes.TryGetPrimitiveKind(item.MeshAssetId, out var kind))
                 {
-                    unknownMeshCount++;
                     continue;
                 }
 
                 var color = ToRaylibColor(item.Color);
                 if (kind == PrimitiveMeshKind.Cube)
                 {
-                    cubeCount++;
                     Rl.DrawCube(item.Position, item.Scale.X, item.Scale.Y, item.Scale.Z, color);
                 }
                 else if (kind == PrimitiveMeshKind.Sphere)
                 {
-                    sphereCount++;
                     float r = MathF.Max(item.Scale.X, MathF.Max(item.Scale.Y, item.Scale.Z)) * 0.5f;
                     Rl.DrawSphere(item.Position, r, color);
                 }
             }
-        }
-
-        private void EmitDebugDrawSummary(int drawItemCount, int unknownMeshCount, int cubeCount, int sphereCount)
-        {
-            if (_debugRendererLogsRemaining <= 0) return;
-            _debugRendererLogsRemaining--;
-            // #region agent log
-            File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new
-            {
-                hypothesisId = "H1",
-                location = "RaylibPrimitiveRenderer:Draw",
-                message = "Primitive renderer summary",
-                data = new
-                {
-                    mode = _mode.ToString(),
-                    drawItemCount,
-                    cubeCount,
-                    sphereCount,
-                    unknownMeshCount,
-                    instancedInstances = LastInstancedInstances,
-                    instancedBatches = LastInstancedBatches
-                },
-                timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-            }) + "\n");
-            // #endregion
         }
 
         private void AddInstance(List<Batch> batches, uint colorKey, in RaylibMatrix matrix)

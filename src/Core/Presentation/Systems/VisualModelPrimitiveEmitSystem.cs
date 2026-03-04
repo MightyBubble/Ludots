@@ -1,7 +1,5 @@
 using System;
-using System.IO;
 using System.Numerics;
-using System.Text.Json;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Assets;
@@ -16,7 +14,6 @@ namespace Ludots.Core.Presentation.Systems
     /// </summary>
     public sealed class VisualModelPrimitiveEmitSystem : BaseSystem<World, float>
     {
-        private static int _debugVisualModelLogsRemaining = 8;
         private readonly PrimitiveDrawBuffer _primitives;
         private readonly Func<World, Entity, Vector4> _colorResolver;
         private readonly QueryDescription _withCull = new QueryDescription().WithAll<VisualTransform, VisualModel, CullState>();
@@ -31,24 +28,8 @@ namespace Ludots.Core.Presentation.Systems
 
         public override void Update(in float dt)
         {
-            int emitted = 0;
-            emitted += EmitQuery(_noCull, requireCullCheck: false);
-            emitted += EmitQuery(_withCull, requireCullCheck: true);
-
-            if (_debugVisualModelLogsRemaining > 0)
-            {
-                _debugVisualModelLogsRemaining--;
-                // #region agent log
-                File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new
-                {
-                    hypothesisId = "H1",
-                    location = "VisualModelPrimitiveEmitSystem:Update",
-                    message = "VisualModel primitive emit summary",
-                    data = new { emitted },
-                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                }) + "\n");
-                // #endregion
-            }
+            EmitQuery(_noCull, requireCullCheck: false);
+            EmitQuery(_withCull, requireCullCheck: true);
         }
 
         private int EmitQuery(QueryDescription query, bool requireCullCheck)
