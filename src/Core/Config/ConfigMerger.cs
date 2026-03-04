@@ -113,7 +113,7 @@ namespace Ludots.Core.Config
             ConfigConflictReport report, string relativePath)
         {
             var orderedIds = new List<string>(capacity: 256);
-            var mergedNodes = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
+            var mergedNodes = new Dictionary<string, JsonNode>();
 
             for (int i = 0; i < fragments.Count; i++)
             {
@@ -129,7 +129,7 @@ namespace Ludots.Core.Config
                         mergedNodes.Remove(id);
                         for (int oi = orderedIds.Count - 1; oi >= 0; oi--)
                         {
-                            if (string.Equals(orderedIds[oi], id, StringComparison.OrdinalIgnoreCase))
+                            if (string.Equals(orderedIds[oi], id, StringComparison.Ordinal))
                             {
                                 orderedIds.RemoveAt(oi);
                                 break;
@@ -164,7 +164,7 @@ namespace Ludots.Core.Config
             ConfigConflictReport report)
         {
             var orderedIds = new List<string>(capacity: 256);
-            var mergedNodes = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
+            var mergedNodes = new Dictionary<string, JsonNode>();
 
             for (int i = 0; i < fragments.Count; i++)
             {
@@ -182,7 +182,7 @@ namespace Ludots.Core.Config
                         report.RecordDeleted(entry.RelativePath, id, src);
                         for (int oi = orderedIds.Count - 1; oi >= 0; oi--)
                         {
-                            if (string.Equals(orderedIds[oi], id, StringComparison.OrdinalIgnoreCase))
+                            if (string.Equals(orderedIds[oi], id, StringComparison.Ordinal))
                             {
                                 orderedIds.RemoveAt(oi);
                                 break;
@@ -274,7 +274,7 @@ namespace Ludots.Core.Config
         {
             for (int i = 0; i < arrayAppendFields.Length; i++)
             {
-                if (string.Equals(arrayAppendFields[i], fieldName, StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.Equals(arrayAppendFields[i], fieldName, StringComparison.Ordinal)) return true;
             }
             return false;
         }

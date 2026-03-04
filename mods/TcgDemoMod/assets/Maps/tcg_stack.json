@@ -1,5 +1,5 @@
 {
-  "Id": "tcg_stack",
+  "id": "tcg_stack",
   "Tags": ["tcg_stack"],
   "DefaultCamera": {
     "TargetXCm": 250,

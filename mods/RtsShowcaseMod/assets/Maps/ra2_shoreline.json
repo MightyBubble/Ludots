@@ -1,5 +1,5 @@
 {
-  "Id": "ra2_shoreline",
+  "id": "ra2_shoreline",
   "Tags": ["rts_showcase", "ra2"],
   "DefaultCamera": {
     "TargetXCm": 15000,

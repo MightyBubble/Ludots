@@ -1,5 +1,5 @@
 {
-  "Id": "feature_hub",
+  "id": "feature_hub",
   "Tags": ["hub"],
   "DefaultCamera": {
     "TargetXCm": 0,

@@ -1,7 +1,7 @@
 [
   {
     "_comment": "4X entity marker — renders all entities with VisualTransform",
-    "id": 6201,
+    "id": "6201",
     "visualKind": "Marker3D",
     "entityScope": "AllWithVisualTransform",
     "meshOrShapeId": 1,

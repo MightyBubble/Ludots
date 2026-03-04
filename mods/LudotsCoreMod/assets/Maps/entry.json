@@ -1,5 +1,5 @@
 {
-  "Id": "entry",
+  "id": "entry",
   "Tags": ["moba_demo"],
   "DefaultCamera": {
     "TargetXCm": 0,

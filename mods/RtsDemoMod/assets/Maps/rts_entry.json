@@ -1,5 +1,5 @@
 {
-  "Id": "rts_entry",
+  "id": "rts_entry",
   "Tags": ["rts"],
   "DefaultCamera": {
     "TargetXCm": 300,

@@ -1,6 +1,6 @@
 [
                   {
-                    "Id": "TestUnit",
+                    "id": "TestUnit",
                     "Components": {
                       "Health": { "Value": 999 },
                       "Mana": { "Value": 50 },

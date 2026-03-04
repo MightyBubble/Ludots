@@ -1,10 +1,10 @@
 {
-  "Id": "benchmark_map",
+  "id": "benchmark_map",
   "Boards": [
     { "Name": "default", "DataFile": "benchmark.bin" }
   ],
   "Dependencies": [
-    { "Id": "PerformanceMod", "MinVersion": "1.0.0" }
+    { "id": "PerformanceMod", "MinVersion": "1.0.0" }
   ],
   "Entities": []
 }

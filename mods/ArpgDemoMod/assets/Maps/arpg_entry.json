@@ -1,5 +1,5 @@
 {
-  "Id": "arpg_entry",
+  "id": "arpg_entry",
   "Tags": ["arpg"],
   "DefaultCamera": {
     "TargetXCm": 400,

@@ -1,5 +1,5 @@
 {
-  "Id": "tcg_grant",
+  "id": "tcg_grant",
   "Tags": ["tcg_grant"],
   "DefaultCamera": {
     "TargetXCm": 250,

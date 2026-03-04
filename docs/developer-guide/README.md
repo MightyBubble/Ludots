@@ -68,3 +68,9 @@
 18. [版本收束处置矩阵（分支 / PR / Issue）](18_convergence_disposition_matrix.md)
     *   open PR 与远端分支的处置建议（merge/cherry-pick/close）
     *   issue 关闭/保留建议与证据映射
+19. [Godot 适配层](19_godot_adapter.md)
+    *   Godot 4 适配层结构、与 Raylib 的差异
+    *   CLI 命令与启动流程
+20. [Config ID 格式规范](20_config_id_standards.md)
+    *   IdField 统一、ID 值类型、ModId 约束
+    *   新增配置检查清单

@@ -1,10 +1,10 @@
 {
-  "Id": "example_map",
+  "id": "example_map",
   "Boards": [
     { "Name": "default", "DataFile": "example_map.bin" }
   ],
   "Dependencies": [
-    { "Id": "ExampleMod", "MinVersion": "1.0.0" }
+    { "id": "ExampleMod", "MinVersion": "1.0.0" }
   ],
   "Entities": []
 }

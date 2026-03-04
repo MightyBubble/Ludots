@@ -1,5 +1,5 @@
 {
-  "Id": "war3_forest",
+  "id": "war3_forest",
   "Tags": ["rts_showcase", "war3"],
   "DefaultCamera": {
     "TargetXCm": 18000,

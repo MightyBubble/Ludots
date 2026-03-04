@@ -8,7 +8,7 @@ namespace Ludots.Core.Config
 {
     public class DataRegistry<T> where T : class, IIdentifiable
     {
-        private readonly Dictionary<string, T> _data = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, T> _data = new Dictionary<string, T>();
         private readonly ConfigPipeline _pipeline;
 
         public DataRegistry(ConfigPipeline pipeline)

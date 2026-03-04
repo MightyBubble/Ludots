@@ -1,5 +1,5 @@
 {
-  "Id": "tcg_chain",
+  "id": "tcg_chain",
   "Tags": ["tcg_chain"],
   "DefaultCamera": {
     "TargetXCm": 250,

@@ -473,10 +473,10 @@ namespace Ludots.Tests.GAS
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // Scenario 18: Case-insensitive ID matching
+        // Scenario 18: Case-sensitive ID matching (Ordinal)
         // ═══════════════════════════════════════════════════════════════════
         [Test]
-        public void Scenario_CaseInsensitiveId_MergesCorrectly()
+        public void Scenario_CaseSensitiveId_TwoDistinctEntries()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
@@ -489,8 +489,15 @@ namespace Ludots.Tests.GAS
             var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
-            That(merged.Count, Is.EqualTo(1), "Case-insensitive: should merge as one entry");
-            That(merged[0].Node["damage"]?.GetValue<int>(), Is.EqualTo(200));
+            That(merged.Count, Is.EqualTo(2), "Case-sensitive: Fireball and fireball are distinct");
+            int fireballDamage = 0, fireballLowerDamage = 0;
+            for (int i = 0; i < merged.Count; i++)
+            {
+                if (merged[i].Id == "Fireball") fireballDamage = merged[i].Node["damage"]?.GetValue<int>() ?? 0;
+                if (merged[i].Id == "fireball") fireballLowerDamage = merged[i].Node["damage"]?.GetValue<int>() ?? 0;
+            }
+            That(fireballDamage, Is.EqualTo(100));
+            That(fireballLowerDamage, Is.EqualTo(200));
         }
     }
 }

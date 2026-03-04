@@ -1,5 +1,5 @@
 {
-  "Id": "tcg_modify",
+  "id": "tcg_modify",
   "Tags": ["tcg_modify"],
   "DefaultCamera": {
     "TargetXCm": 250,

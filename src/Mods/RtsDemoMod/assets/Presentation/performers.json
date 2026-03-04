@@ -1,7 +1,7 @@
 [
   {
     "_comment": "RTS unit cube — renders all entities with VisualTransform",
-    "id": 7001,
+    "id": "7001",
     "visualKind": "Marker3D",
     "entityScope": "AllWithVisualTransform",
     "meshOrShapeId": 1,

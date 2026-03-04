@@ -1,5 +1,5 @@
 {
-  "Id": "tcg_hook",
+  "id": "tcg_hook",
   "Tags": ["tcg_hook"],
   "DefaultCamera": {
     "TargetXCm": 250,

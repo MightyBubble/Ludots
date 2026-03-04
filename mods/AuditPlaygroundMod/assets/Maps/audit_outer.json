@@ -1,5 +1,5 @@
 {
-  "Id": "audit_outer",
+  "id": "audit_outer",
   "Tags": [ "audit_demo", "audit_outer" ],
   "DefaultCamera": {
     "TargetXCm": 0,

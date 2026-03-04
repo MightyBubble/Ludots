@@ -1,7 +1,7 @@
 [
   {
     "_comment": "TCG entity marker — renders all entities with VisualTransform",
-    "id": 6101,
+    "id": "6101",
     "visualKind": "Marker3D",
     "entityScope": "AllWithVisualTransform",
     "meshOrShapeId": 1,
