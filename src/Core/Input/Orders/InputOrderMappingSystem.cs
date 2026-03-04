@@ -136,8 +136,8 @@ namespace Ludots.Core.Input.Orders
         private bool _isVectorAiming;
 
         /// <summary>
-        /// Change global interaction mode at runtime.
-        /// The change takes effect immediately and will cancel current aiming state.
+        /// Change the global interaction mode at runtime.
+        /// Takes effect immediately — no system rebuild needed.
         /// </summary>
         public void SetInteractionMode(InteractionModeType mode)
         {
@@ -146,7 +146,7 @@ namespace Ludots.Core.Input.Orders
             _config.InteractionMode = mode;
         }
 
-        /// <summary>The current global interaction mode.</summary>
+        /// <summary>The current interaction mode.</summary>
         public InteractionModeType InteractionMode => _config.InteractionMode;
 
         /// <summary>Whether the system is currently in aiming state (AimCast).</summary>

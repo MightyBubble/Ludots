@@ -21,13 +21,9 @@ namespace Ludots.Client.Raylib.Input
                 if (c >= '0' && c <= '9') return (KeyboardKey)((int)KeyboardKey.KEY_ZERO + (c - '0'));
             }
 
-            if (keyName.Length >= 2 &&
-                keyName[0] == 'F' &&
-                int.TryParse(keyName.AsSpan(1), out int fNum) &&
-                fNum >= 1 && fNum <= 12)
-            {
+            // F-keys: F1–F12
+            if (keyName.Length >= 2 && keyName[0] == 'F' && int.TryParse(keyName.AsSpan(1), out int fNum) && fNum >= 1 && fNum <= 12)
                 return (KeyboardKey)((int)KeyboardKey.KEY_F1 + (fNum - 1));
-            }
 
             return keyName switch
             {

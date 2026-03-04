@@ -689,6 +689,12 @@ namespace Ludots.Tests.GAS
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].IsValid, Is.True);
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].HandlerId,
                 Is.EqualTo((int)BuiltinHandlerId.ReResolveAndDispatch));
+
+            // Spot-check Displacement builtin handler
+            ref readonly var disp = ref reg.Get(EffectPresetType.Displacement);
+            var hDisp = disp.DefaultPhaseHandlers[EffectPhaseId.OnApply];
+            That(hDisp.Kind, Is.EqualTo(PhaseHandlerKind.Builtin));
+            That(hDisp.HandlerId, Is.EqualTo((int)BuiltinHandlerId.ApplyDisplacement));
         }
 
         // ════════════════════════════════════════════════════════════════════

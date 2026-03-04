@@ -17,7 +17,7 @@
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 1 },
       "requireSelection": false,
-      "selectionType": "None",
+      "selectionType": "Entity",
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
@@ -27,7 +27,7 @@
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 2 },
       "requireSelection": false,
-      "selectionType": "Entity",
+      "selectionType": "Position",
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
@@ -37,7 +37,7 @@
       "orderTagKey": "castAbility",
       "argsTemplate": { "i0": 3 },
       "requireSelection": false,
-      "selectionType": "Entity",
+      "selectionType": "Position",
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
@@ -57,7 +57,6 @@
       "orderTagKey": "stop",
       "argsTemplate": {},
       "requireSelection": false,
-      "selectionType": "None",
       "isSkillMapping": false,
       "modifierBehavior": "IgnoreModifier"
     }

@@ -56,7 +56,7 @@ namespace Ludots.Adapter.Raylib
             {
                 Rl.InitWindow(screenWidth, screenHeight, title);
                 windowOpened = true;
-                Rl.SetExitKey(0);
+                Rl.SetExitKey(0); // Disable ESC closing the window (used for game input)
                 Rl.SetTargetFPS(targetFps);
 
                 using var uiRenderer = new RaylibSkiaRenderer(screenWidth, screenHeight);

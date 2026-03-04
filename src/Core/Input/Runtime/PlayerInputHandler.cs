@@ -15,7 +15,11 @@ namespace Ludots.Core.Input.Runtime
         private readonly Dictionary<string, Vector3> _tempValues;
         private readonly string[] _actionIds;
         private readonly InputConfigRoot _config;
-        private readonly Dictionary<string, Vector3> _injections = new Dictionary<string, Vector3>();
+        // Per-action injection buffer: actionId → injected raw value.
+        // Written by InjectAction(), consumed and cleared in Update().
+        // This bypasses IInputBackend entirely — the action sees the
+        // injected value as if it came from a physical device.
+        private readonly Dictionary<string, Vector3> _injections = new();
 
         public bool InputBlocked { get; set; } = false;
 
@@ -93,16 +97,19 @@ namespace Ludots.Core.Input.Runtime
         }
 
         /// <summary>
-        /// Inject action value for next Update() tick.
-        /// Primarily for automation and deterministic test driving.
+        /// Inject a raw value for an action, bypassing IInputBackend.
+        /// The value is consumed on the next Update() call and auto-cleared.
+        /// Use Vector3.One for button press, Vector3.Zero for release.
         /// </summary>
         public void InjectAction(string actionId, Vector3 value)
         {
             _injections[actionId] = value;
         }
 
+        /// <summary>Convenience: inject a button press (one frame).</summary>
         public void InjectButtonPress(string actionId) => InjectAction(actionId, Vector3.One);
 
+        /// <summary>Convenience: inject a button release (clear injection).</summary>
         public void InjectButtonRelease(string actionId) => _injections.Remove(actionId);
 
         public void Update()
@@ -144,12 +151,11 @@ namespace Ludots.Core.Input.Runtime
                 }
             }
 
-            foreach (var (actionId, value) in _injections)
+            // Merge injections (override backend values for injected actions)
+            foreach (var kvp in _injections)
             {
-                if (_tempValues.ContainsKey(actionId))
-                {
-                    _tempValues[actionId] = value;
-                }
+                if (_tempValues.ContainsKey(kvp.Key))
+                    _tempValues[kvp.Key] = kvp.Value;
             }
             _injections.Clear();
 

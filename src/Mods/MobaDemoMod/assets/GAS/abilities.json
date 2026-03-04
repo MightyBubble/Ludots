@@ -22,8 +22,6 @@
         { "kind": "TagClip", "tick": 0, "duration": 15, "tag": "Cooldown.GCD" },
         { "kind": "TagClip", "tick": 0, "duration": 300, "tag": "Cooldown.Skill.W" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Heal.W" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.HOT.Regen" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Buff.SpeedBoost" },
         { "kind": "End", "tick": 0 }
       ]
     },
@@ -39,8 +37,6 @@
         { "kind": "TagClip", "tick": 0, "duration": 15, "tag": "Cooldown.GCD" },
         { "kind": "TagClip", "tick": 0, "duration": 240, "tag": "Cooldown.Skill.E" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Damage.E" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Projectile.Arrow" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Force.E" },
         { "kind": "End", "tick": 0 }
       ]
     },
@@ -55,10 +51,8 @@
       "items": [
         { "kind": "TagClip", "tick": 0, "duration": 15, "tag": "Cooldown.GCD" },
         { "kind": "TagClip", "tick": 0, "duration": 600, "tag": "Cooldown.Skill.R" },
+        { "kind": "SelectionGate", "tick": 0, "tag": "Selection.CircleEnemy" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Search.BlizzardZone" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.DOT.Burn" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Summon.Skeleton" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Moba.Displacement.R" },
         { "kind": "End", "tick": 0 }
       ]
     },
@@ -67,7 +61,7 @@
     }
   },
   {
-    "id": "Ability.Nav.Move",
+    "id": "Ability.Moba.Move",
     "exec": {
       "clockId": "Step",
       "items": [

@@ -49,7 +49,17 @@ namespace MobaDemoMod.Triggers
             engine.GlobalContext[InstalledKey] = true;
 
             // Load MobaConfig via VFS
-            var mobaConfig = MobaConfig.Load(_ctx);
+            MobaConfig mobaConfig;
+            try
+            {
+                mobaConfig = MobaConfig.Load(_ctx);
+                _ctx.Log("[MobaDemoMod] MobaConfig loaded.");
+            }
+            catch (System.Exception ex)
+            {
+                _ctx.Log($"[MobaDemoMod] ERROR loading MobaConfig: {ex.Message}");
+                return Task.CompletedTask;
+            }
             engine.GlobalContext[MobaConfigKey] = mobaConfig;
             _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/Configs/moba_config.json");
 
@@ -57,11 +67,18 @@ namespace MobaDemoMod.Triggers
             var config = (GameConfig)engine.GlobalContext[ContextKeys.GameConfig];
             _ = config.Constants.OrderTags["stop"];
 
+            // Abilities loaded from GAS/abilities.json via AbilityExecLoader (production config pipeline)
+
             if (engine.GlobalContext.TryGetValue(ContextKeys.OrderQueue, out var ordersObj) &&
                 ordersObj is OrderQueue orders)
             {
                 _ctx.Log("[MobaDemoMod] OrderQueue ready, registering local order source.");
                 engine.RegisterPresentationSystem(new MobaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx));
+                _ctx.Log("[MobaDemoMod] MobaLocalOrderSourceSystem installed.");
+            }
+            else
+            {
+                _ctx.Log($"[MobaDemoMod] WARNING: OrderQueue not found! HasKey={engine.GlobalContext.ContainsKey(ContextKeys.OrderQueue)}");
             }
 
             if (engine.GlobalContext.TryGetValue(ContextKeys.OrderTypeRegistry, out var registryObj) &&

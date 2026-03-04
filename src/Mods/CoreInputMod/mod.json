@@ -2,7 +2,7 @@
   "name": "CoreInputMod",
   "version": "1.0.0",
   "description": "Generic input systems: entity click-select, GAS selection/input response. Use with Universal3CCameraMod for camera.",
-  "main": "bin/Release/net8.0/CoreInputMod.dll",
+  "main": "bin/net8.0/CoreInputMod.dll",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"

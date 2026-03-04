@@ -26,6 +26,10 @@ namespace MobaDemoMod.Presentation
     /// The interaction mode (TargetFirst/SmartCast/AimCast) is handled entirely
     /// inside InputOrderMappingSystem based on the config's InteractionMode setting.
     /// This system only wires up the callbacks and bridges aiming state to indicators.
+    ///
+    /// F1/F2/F3 keys switch the interaction mode at runtime:
+    ///   F1 = WoW (TargetFirst), F2 = LoL (SmartCast), F3 = DotA (AimCast)
+    /// Mode switching via SetInteractionMode (no system rebuild).
     /// </summary>
     public sealed class MobaLocalOrderSourceSystem : ISystem<float>
     {
@@ -36,7 +40,6 @@ namespace MobaDemoMod.Presentation
         private readonly int _castAbilityTagId;
         private readonly int _stopTagId;
         
-        // Configuration-driven input-order mapping
         private InputOrderMappingSystem? _inputOrderMapping;
         private bool _initialized = false;
 
@@ -150,25 +153,83 @@ namespace MobaDemoMod.Presentation
 
         public void Update(in float dt)
         {
-            InitializeInputOrderMapping();
-
-            if (_inputOrderMapping != null &&
-                _globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) &&
-                inputObj is PlayerInputHandler input)
+            if (!_globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) || inputObj is not PlayerInputHandler input)
             {
-                CheckModeSwitchKeys(input, _inputOrderMapping);
+                UpdateHudState();
+                return;
+            }
 
-                if (_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var actorObj) &&
-                    actorObj is Entity localPlayer &&
-                    _world.IsAlive(localPlayer))
+            InitializeInputOrderMapping();
+            CheckModeSwitchKeys(input);
+
+            if (_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var actorObj) && actorObj is Entity localPlayer && _world.IsAlive(localPlayer))
+            {
+                var actor = GetControlledActor();
+                if (_inputOrderMapping != null)
                 {
-                    var actor = GetControlledActor();
                     _inputOrderMapping.SetLocalPlayer(actor, 1);
                     _inputOrderMapping.Update(dt);
                 }
             }
 
-            RenderModeHud();
+            UpdateHudState();
+        }
+
+        private void UpdateHudState()
+        {
+            if (!_globals.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var bufObj) || bufObj is not ScreenOverlayBuffer buf)
+                return;
+
+            var currentMode = _inputOrderMapping?.InteractionMode ?? InteractionModeType.SmartCast;
+            string modeName = currentMode switch
+            {
+                InteractionModeType.TargetFirst => "WoW (TargetFirst)",
+                InteractionModeType.SmartCast => "LoL (SmartCast)",
+                InteractionModeType.AimCast => "DotA (AimCast)",
+                InteractionModeType.SmartCastWithIndicator => "LoL+ (Indicator)",
+                _ => currentMode.ToString()
+            };
+
+            int x = 840;
+            int y = 40;
+
+            buf.AddRect(x - 6, y - 6, 356, 120,
+                new Vector4(0, 0, 0, 0.7f), new Vector4(0, 0.78f, 1, 0.78f));
+
+            buf.AddText(x, y, $"Mode: {modeName}", 20, new Vector4(0, 1, 0.78f, 1));
+            y += 24;
+            buf.AddText(x, y, "[1/F1] WoW  [2/F2] LoL  [3/F3] DotA  [4/F4] LoL+", 14, new Vector4(0.7f, 0.7f, 0.7f, 1));
+            y += 18;
+            buf.AddText(x, y, "[Q] Fireball  [W] Heal  [E] ConeAoE  [R] Blizzard", 14, new Vector4(0.78f, 0.78f, 0.4f, 1));
+            y += 20;
+
+            bool isAiming = _inputOrderMapping?.IsAiming ?? false;
+            string aimAction = _inputOrderMapping?.AimingActionId ?? "";
+
+            if (isAiming && !string.IsNullOrEmpty(aimAction))
+            {
+                buf.AddText(x, y, $">>> AIMING: {aimAction} (click to cast) <<<", 16, new Vector4(1, 0.4f, 0.2f, 1));
+            }
+            else
+            {
+                buf.AddText(x, y, "Click entity to select, then use skills", 14, new Vector4(0.55f, 0.55f, 0.55f, 1));
+            }
+            y += 20;
+            buf.AddText(x, y, "[LClick] Select  [RClick] Move  [S] Stop", 14, new Vector4(0.55f, 0.55f, 0.55f, 1));
+        }
+
+        private void CheckModeSwitchKeys(PlayerInputHandler input)
+        {
+            if (_inputOrderMapping == null) return;
+
+            if (input.PressedThisFrame("ModeWoW"))
+                _inputOrderMapping.SetInteractionMode(InteractionModeType.TargetFirst);
+            else if (input.PressedThisFrame("ModeLoL"))
+                _inputOrderMapping.SetInteractionMode(InteractionModeType.SmartCast);
+            else if (input.PressedThisFrame("ModeDotA"))
+                _inputOrderMapping.SetInteractionMode(InteractionModeType.AimCast);
+            else if (input.PressedThisFrame("ModeLoLPlus"))
+                _inputOrderMapping.SetInteractionMode(InteractionModeType.SmartCastWithIndicator);
         }
 
         private Entity GetControlledActor()
@@ -246,13 +307,9 @@ namespace MobaDemoMod.Presentation
             if (_inputOrderMapping == null) return;
             if (!_globals.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var overlayObj) || overlayObj is not ScreenOverlayBuffer overlay) return;
 
-            overlay.AddRect(
-                x: 8,
-                y: 8,
-                width: 620,
-                height: 74,
-                fill: new Vector4(0f, 0f, 0f, 0.45f),
-                border: new Vector4(1f, 1f, 1f, 0.16f));
+            overlay.AddRect(8, 8, 620, 74,
+                new Vector4(0f, 0f, 0f, 0.45f),
+                new Vector4(1f, 1f, 1f, 0.16f));
             overlay.AddText(16, 16, $"模式: {ToModeLabel(_inputOrderMapping.InteractionMode)}", 20, new Vector4(1f, 1f, 0.6f, 1f));
             overlay.AddText(16, 42, "F1 WoW(TargetFirst) | F2 LoL(SmartCast) | F3 SC2(AimCast) | F4 Indicator", 16, new Vector4(0.78f, 0.92f, 1f, 1f));
         }
