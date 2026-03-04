@@ -67,15 +67,21 @@
 ```
 main (ce04ef9)
   │
-  ├─ 1. 合并 cursor/gas-mod-dcf5
+  ├─ 1. 合并 cursor/gas-mod-dcf5  ✅ 已完成 (c00d9aa)
   │      （Ability JSON、测试覆盖，改动相对集中）
   │
-  ├─ 2. 合并 cursor/gas-input-order-933a
+  ├─ 2. 合并 cursor/gas-input-order-933a  ✅ 已完成 (eff2c03)
   │      （全链路生产化、HUD 迁移，可能与 gas-mod 有冲突需解决）
   │
-  └─ 3. 合并 cursor/performer-skill-demo-mod-5a21
+  └─ 3. 合并 cursor/performer-skill-demo-mod-5a21  ⏸ 暂缓
          （MOBA 技能展示、3C 相机，依赖前序合并）
+         → 冲突：WorldCmInt2/CircleEnemyMarker/WorldUnits/PrimitiveMeshAssetIds 等类型不匹配，
+           MobaSkillDemoPresentationSystem.AddRect 签名差异，需逐文件适配
 ```
+
+### 4.1b P0 Issue 文档
+
+- `docs/audits/issue_generate_gas_production_report_target_resolver.md` — GenerateGasProductionReport TargetResolver 锥形查询问题，供提 GitHub Issue 使用
 
 ### 4.2 冲突预判
 
