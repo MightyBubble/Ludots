@@ -1,6 +1,14 @@
 {
   "Id": "audit_inner",
   "Tags": [ "audit_demo", "audit_inner" ],
+  "DefaultCamera": {
+    "TargetXCm": 1000,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 45,
+    "DistanceCm": 10000,
+    "FovYDeg": 60
+  },
   "Boards": [
     {
       "Name": "default",

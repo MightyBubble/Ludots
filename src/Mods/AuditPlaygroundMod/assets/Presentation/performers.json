@@ -1,0 +1,17 @@
+[
+  {
+    "_comment": "Audit entity cube — renders all entities with VisualTransform for map Push/Pop visibility",
+    "id": 6301,
+    "visualKind": "Marker3D",
+    "entityScope": "AllWithVisualTransform",
+    "meshOrShapeId": 1,
+    "defaultScale": 0.45,
+    "positionOffset": [0, 0.3, 0],
+    "bindings": [
+      { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
+      { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
+      { "paramKey": 6, "source": "entityColor", "sourceId": 2 },
+      { "paramKey": 7, "source": "entityColor", "sourceId": 3 }
+    ]
+  }
+]

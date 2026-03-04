@@ -1,6 +1,14 @@
 {
   "Id": "tcg_grant",
   "Tags": ["tcg_grant"],
+  "DefaultCamera": {
+    "TargetXCm": 250,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 45,
+    "DistanceCm": 8000,
+    "FovYDeg": 60
+  },
   "Entities": [
     {
       "Template": "tcg_hero",

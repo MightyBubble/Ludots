@@ -1,6 +1,14 @@
 {
   "Id": "tcg_hook",
   "Tags": ["tcg_hook"],
+  "DefaultCamera": {
+    "TargetXCm": 250,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 45,
+    "DistanceCm": 8000,
+    "FovYDeg": 60
+  },
   "Entities": [
     { "Template": "tcg_hero" },
     { "Template": "tcg_enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } } } }

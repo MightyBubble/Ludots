@@ -1,0 +1,10 @@
+{
+  "name": "DiagnosticsOverlayMod",
+  "version": "1.0.0",
+  "description": "Runtime diagnostic overlays: Config Pipeline viewer, Mod inspector, Attribute inspector. Toggle with F5/F6/F7.",
+  "main": "bin/Release/net8.0/DiagnosticsOverlayMod.dll",
+  "priority": 900,
+  "dependencies": {
+    "LudotsCoreMod": ">=1.0.0"
+  }
+}

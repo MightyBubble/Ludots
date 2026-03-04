@@ -1,6 +1,14 @@
 {
   "Id": "fourx_entry",
   "Tags": ["fourx"],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 60,
+    "DistanceCm": 40000,
+    "FovYDeg": 60
+  },
   "Entities": [
     {
       "Template": "fourx_governor",
