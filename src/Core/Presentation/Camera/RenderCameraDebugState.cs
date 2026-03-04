@@ -33,6 +33,17 @@ namespace Ludots.Core.Presentation.Camera
         /// </summary>
         public bool DrawLogicalCullingDebug { get; set; }
 
+        /// <summary>
+        /// Global render-only scale multiplier for acceptance checks.
+        /// </summary>
+        public float AcceptanceScaleMultiplier { get; set; } = 1f;
+
+        /// <summary>
+        /// Draw position probes for emitted draw items.
+        /// Helps verify "entity exists but model not visible" cases.
+        /// </summary>
+        public bool DrawAcceptanceProbes { get; set; }
+
         public void Reset()
         {
             Enabled = false;
@@ -40,6 +51,8 @@ namespace Ludots.Core.Presentation.Camera
             PositionOffsetMeters = Vector3.Zero;
             TargetOffsetMeters = Vector3.Zero;
             DrawLogicalCullingDebug = false;
+            AcceptanceScaleMultiplier = 1f;
+            DrawAcceptanceProbes = false;
         }
     }
 }

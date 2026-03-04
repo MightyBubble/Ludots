@@ -104,5 +104,10 @@ namespace Ludots.Core.Scripting
 
         public const string RenderCameraDebugState = "RenderCameraDebugState";
         public const string CameraCullingDebugState = "CameraCullingDebugState";
+        public const string RenderModelDrawCalls = "RenderModelDrawCalls";
+        public const string RenderModelCacheCount = "RenderModelCacheCount";
+        public const string RenderModelLoadFailures = "RenderModelLoadFailures";
+        public const string RenderModelFallbackDraws = "RenderModelFallbackDraws";
+        public const string RenderMissingModelAssetId = "RenderMissingModelAssetId";
     }
 }

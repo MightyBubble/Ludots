@@ -2,7 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
+using Arch.Core;
+using Ludots.Core.Components;
+using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
@@ -11,6 +17,7 @@ namespace Ludots.Adapter.Raylib.Debug
 {
     internal sealed class RaylibGmCommandConsole
     {
+        private readonly GameEngine _engine;
         private readonly IDictionary<string, object> _globals;
         private readonly RenderCameraDebugState _cameraDebug;
         private readonly Dictionary<string, CommandDef> _commands =
@@ -37,8 +44,9 @@ namespace Ludots.Adapter.Raylib.Debug
 
         public bool IsOpen { get; private set; }
 
-        public RaylibGmCommandConsole(IDictionary<string, object> globals, RenderCameraDebugState cameraDebug)
+        public RaylibGmCommandConsole(GameEngine engine, IDictionary<string, object> globals, RenderCameraDebugState cameraDebug)
         {
+            _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _cameraDebug = cameraDebug ?? throw new ArgumentNullException(nameof(cameraDebug));
             RegisterBuiltInCommands();
@@ -149,7 +157,7 @@ namespace Ludots.Adapter.Raylib.Debug
         private void RegisterBuiltInCommands()
         {
             Register("help", "gm help", _ =>
-                "可用: cam.detach cam.pull cam.offset cam.target_offset cam.reset cull.debug cull.state");
+                "可用: cam.detach cam.pull cam.offset cam.target_offset cam.reset cull.debug cull.state accept.case accept.focus accept.scale accept.probe accept.inspect");
 
             Register("cam.detach", "gm cam.detach on|off", args =>
             {
@@ -207,7 +215,7 @@ namespace Ludots.Adapter.Raylib.Debug
 
             Register("cull.state", "gm cull.state", _ =>
             {
-                if (_globals.TryGetValue(Ludots.Core.Scripting.ContextKeys.CameraCullingDebugState, out var obj) &&
+                if (_globals.TryGetValue(ContextKeys.CameraCullingDebugState, out var obj) &&
                     obj is CameraCullingDebugState state)
                 {
                     return $"Cull target=({state.LogicalTargetCm.X:F0},{state.LogicalTargetCm.Y:F0}) " +
@@ -216,6 +224,79 @@ namespace Ludots.Adapter.Raylib.Debug
                 }
 
                 return "Cull state 不可用";
+            });
+
+            Register("accept.case", "gm accept.case on|off", args =>
+            {
+                if (args.Length != 1 || !TryParseBool(args[0], out bool on))
+                    return "用法: gm accept.case on|off";
+
+                if (on)
+                {
+                    _cameraDebug.Enabled = true;
+                    _cameraDebug.PullBackMeters = Math.Max(_cameraDebug.PullBackMeters, 20f);
+                    _cameraDebug.DrawLogicalCullingDebug = true;
+                    _cameraDebug.DrawAcceptanceProbes = true;
+                    _cameraDebug.AcceptanceScaleMultiplier = Math.Max(_cameraDebug.AcceptanceScaleMultiplier, 2f);
+                    return "验收用例模式 ON（逻辑裁剪+探针+放大比例）";
+                }
+
+                _cameraDebug.DrawAcceptanceProbes = false;
+                _cameraDebug.DrawLogicalCullingDebug = false;
+                _cameraDebug.AcceptanceScaleMultiplier = 1f;
+                return "验收用例模式 OFF";
+            });
+
+            Register("accept.focus", "gm accept.focus <nameKeyword> [distanceCm]", args =>
+            {
+                if (args.Length < 1 || args.Length > 2)
+                    return "用法: gm accept.focus <nameKeyword> [distanceCm]";
+
+                float distanceCm = _engine.GameSession.Camera.State.DistanceCm;
+                if (args.Length == 2)
+                {
+                    if (!TryParseFloat(args[1], out distanceCm))
+                        return "distanceCm 需要是数字";
+                }
+
+                if (!TryFocusByName(args[0], distanceCm, out string result))
+                    return result;
+
+                return result;
+            });
+
+            Register("accept.scale", "gm accept.scale <factor>", args =>
+            {
+                if (args.Length != 1 || !TryParseFloat(args[0], out float factor))
+                    return "用法: gm accept.scale <factor>";
+
+                if (factor <= 0f) return "factor 必须 > 0";
+                _cameraDebug.AcceptanceScaleMultiplier = factor;
+                return $"验收比例缩放: x{factor:F2}";
+            });
+
+            Register("accept.probe", "gm accept.probe on|off", args =>
+            {
+                if (args.Length != 1 || !TryParseBool(args[0], out bool on))
+                    return "用法: gm accept.probe on|off";
+
+                _cameraDebug.DrawAcceptanceProbes = on;
+                return $"验收探针: {(on ? "ON" : "OFF")}";
+            });
+
+            Register("accept.inspect", "gm accept.inspect", _ =>
+            {
+                int drawItems = TryGetInt(ContextKeys.PresentationPrimitiveDrawBuffer, b =>
+                {
+                    if (b is PrimitiveDrawBuffer pb) return pb.Count;
+                    return -1;
+                });
+                int modelDraw = TryGetInt(ContextKeys.RenderModelDrawCalls);
+                int modelCache = TryGetInt(ContextKeys.RenderModelCacheCount);
+                int modelFail = TryGetInt(ContextKeys.RenderModelLoadFailures);
+                int fallback = TryGetInt(ContextKeys.RenderModelFallbackDraws);
+                int missingId = TryGetInt(ContextKeys.RenderMissingModelAssetId);
+                return $"Inspect draw={drawItems} model(draw/cache/fail/fallback)={modelDraw}/{modelCache}/{modelFail}/{fallback} missingAsset={missingId}";
             });
         }
 
@@ -272,6 +353,44 @@ namespace Ludots.Adapter.Raylib.Debug
             bool pressed = current && !previous;
             previous = current;
             return pressed;
+        }
+
+        private bool TryFocusByName(string keyword, float distanceCm, out string result)
+        {
+            var world = _engine.World;
+            var queryDesc = new QueryDescription().WithAll<Name, WorldPositionCm>();
+            var query = world.Query(in queryDesc);
+
+            string key = keyword.Trim();
+            foreach (var chunk in query)
+            {
+                var names = chunk.GetArray<Name>();
+                var positions = chunk.GetArray<WorldPositionCm>();
+                for (int i = 0; i < chunk.Count; i++)
+                {
+                    string name = names[i].Value ?? string.Empty;
+                    if (name.IndexOf(key, StringComparison.OrdinalIgnoreCase) < 0) continue;
+
+                    var state = _engine.GameSession.Camera.State;
+                    var p = positions[i].Value;
+                    state.TargetCm = new Vector2(p.X.ToFloat(), p.Y.ToFloat());
+                    state.DistanceCm = Math.Clamp(distanceCm, 2000f, 120000f);
+                    state.Pitch = Math.Clamp(state.Pitch, 10f, 80f);
+                    result = $"已聚焦 `{name}` (entity={chunk.Entity(i).Id}) 距离={state.DistanceCm:F0}cm";
+                    return true;
+                }
+            }
+
+            result = $"未找到名称包含 `{keyword}` 的实体";
+            return false;
+        }
+
+        private int TryGetInt(string key, Func<object, int> convert = null)
+        {
+            if (!_globals.TryGetValue(key, out var obj) || obj == null) return -1;
+            if (convert != null) return convert(obj);
+            if (obj is int v) return v;
+            return -1;
         }
     }
 }

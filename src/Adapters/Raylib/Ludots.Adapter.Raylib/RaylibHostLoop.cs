@@ -82,7 +82,7 @@ namespace Ludots.Adapter.Raylib
                 var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
                 var renderCameraDebug = new RenderCameraDebugState();
                 engine.GlobalContext[ContextKeys.RenderCameraDebugState] = renderCameraDebug;
-                var gmConsole = new RaylibGmCommandConsole(engine.GlobalContext, renderCameraDebug);
+                var gmConsole = new RaylibGmCommandConsole(engine, engine.GlobalContext, renderCameraDebug);
 
                 IScreenProjector screenProjector = new RaylibScreenProjector(cameraAdapter);
                 engine.GlobalContext[ContextKeys.ScreenProjector] = screenProjector;
@@ -149,14 +149,19 @@ namespace Ludots.Adapter.Raylib
                             terrainRenderer.Render(engine.VertexMap, activeCamera);
                         }
 
+                        PrimitiveDrawBuffer? currentDraw = null;
+                        MeshAssetRegistry? currentMeshes = null;
                         if (drawPrimitives &&
                             engine.GlobalContext.TryGetValue(ContextKeys.PresentationPrimitiveDrawBuffer, out var drawObj) &&
                             engine.GlobalContext.TryGetValue(ContextKeys.PresentationMeshAssetRegistry, out var meshObj) &&
                             drawObj is PrimitiveDrawBuffer draw &&
                             meshObj is MeshAssetRegistry meshes)
                         {
-                            primitiveRenderer.Draw(draw, meshes);
+                            currentDraw = draw;
+                            currentMeshes = meshes;
+                            primitiveRenderer.Draw(draw, meshes, renderCameraDebug.AcceptanceScaleMultiplier);
                         }
+                        PublishRenderDiagnostics(engine, primitiveRenderer);
 
                         // Draw ground overlays (range circles, cones, etc.)
                         if (engine.GlobalContext.TryGetValue(ContextKeys.GroundOverlayBuffer, out var goObj) &&
@@ -175,6 +180,11 @@ namespace Ludots.Adapter.Raylib
                         if (renderCameraDebug.DrawLogicalCullingDebug)
                         {
                             DrawLogicalCullingDebug(engine);
+                        }
+
+                        if (renderCameraDebug.DrawAcceptanceProbes && currentDraw != null && currentMeshes != null)
+                        {
+                            DrawAcceptanceProbes(currentDraw, currentMeshes);
                         }
 
                         Rl.EndMode3D();
@@ -488,6 +498,60 @@ namespace Ludots.Adapter.Raylib
             }
         }
 
+        private static void DrawAcceptanceProbes(PrimitiveDrawBuffer draw, MeshAssetRegistry meshes)
+        {
+            var span = draw.GetSpan();
+            int count = Math.Min(span.Length, 64);
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly var item = ref span[i];
+                var basePos = item.Position;
+                float height = MathF.Max(MathF.Abs(item.Scale.Y), 3.0f);
+                float sx = MathF.Max(MathF.Abs(item.Scale.X), 2.0f);
+                float sy = MathF.Max(MathF.Abs(item.Scale.Y), 2.0f);
+                float sz = MathF.Max(MathF.Abs(item.Scale.Z), 2.0f);
+
+                Color lineColor;
+                Color boxColor;
+                if (meshes.TryGetDescriptor(item.MeshAssetId, out var desc))
+                {
+                    lineColor = desc.Type switch
+                    {
+                        MeshAssetType.Model => new Color(80, 255, 80, 230),
+                        MeshAssetType.Prefab => new Color(255, 210, 40, 230),
+                        _ => new Color(80, 255, 255, 230),
+                    };
+                    boxColor = desc.Type switch
+                    {
+                        MeshAssetType.Model => new Color(20, 120, 20, 80),
+                        MeshAssetType.Prefab => new Color(150, 110, 20, 80),
+                        _ => new Color(20, 120, 120, 80),
+                    };
+                }
+                else
+                {
+                    lineColor = new Color(255, 0, 255, 230);
+                    boxColor = new Color(150, 0, 150, 100);
+                }
+
+                var boxCenter = new Vector3(basePos.X, basePos.Y + sy * 0.5f, basePos.Z);
+                Rl.DrawCube(boxCenter, sx, sy, sz, boxColor);
+
+                var tip = new Vector3(basePos.X, basePos.Y + height, basePos.Z);
+                Rl.DrawLine3D(basePos, tip, lineColor);
+                Rl.DrawSphere(tip, 0.35f, new Color(255, 255, 40, 255));
+            }
+        }
+
+        private static void PublishRenderDiagnostics(GameEngine engine, RaylibPrimitiveRenderer primitiveRenderer)
+        {
+            engine.GlobalContext[ContextKeys.RenderModelDrawCalls] = primitiveRenderer.LastModelDrawCalls;
+            engine.GlobalContext[ContextKeys.RenderModelCacheCount] = primitiveRenderer.CachedModelCount;
+            engine.GlobalContext[ContextKeys.RenderModelLoadFailures] = primitiveRenderer.LastModelLoadFailures;
+            engine.GlobalContext[ContextKeys.RenderModelFallbackDraws] = primitiveRenderer.LastModelFallbackDraws;
+            engine.GlobalContext[ContextKeys.RenderMissingModelAssetId] = primitiveRenderer.LastMissingModelAssetId;
+        }
+
         private static Color ToRaylibColor(Vector4 c)
         {
             byte r = (byte)(Clamp01(c.X) * 255f);
@@ -600,7 +664,19 @@ namespace Ludots.Adapter.Raylib
                 ? "CullDebug: ON (logic frustum/LOD)"
                 : "CullDebug: OFF";
             Rl.DrawText(cullDebug, x + 4, y + (h + gap) * 12 + 108, 16, new Color(180, 220, 255, 230));
-            Rl.DrawText("GM: F8 -> gm help", x + 4, y + (h + gap) * 12 + 126, 16, new Color(180, 220, 255, 230));
+            Rl.DrawText(
+                $"ModelDiag draw/cache/fail/fallback: {primitiveRenderer.LastModelDrawCalls}/{primitiveRenderer.CachedModelCount}/{primitiveRenderer.LastModelLoadFailures}/{primitiveRenderer.LastModelFallbackDraws} missId={primitiveRenderer.LastMissingModelAssetId}",
+                x + 4,
+                y + (h + gap) * 12 + 126,
+                16,
+                new Color(255, 190, 255, 230));
+            Rl.DrawText("GM: F8 -> gm help", x + 4, y + (h + gap) * 12 + 144, 16, new Color(180, 220, 255, 230));
+            Rl.DrawText(
+                $"Accept scale/probe: x{renderCameraDebug.AcceptanceScaleMultiplier:F2}/{(renderCameraDebug.DrawAcceptanceProbes ? "ON" : "OFF")}",
+                x + 4,
+                y + (h + gap) * 12 + 162,
+                16,
+                new Color(180, 220, 255, 230));
 
             if (engine.GlobalContext.TryGetValue(ContextKeys.CameraCullingDebugState, out var cullObj) &&
                 cullObj is CameraCullingDebugState cullState)
@@ -608,8 +684,8 @@ namespace Ludots.Adapter.Raylib
                 Rl.DrawText(
                     $"Cull LOD H/M/L={cullState.VisibleHighCount}/{cullState.VisibleMediumCount}/{cullState.VisibleLowCount} Culled={cullState.CulledCount}",
                     x + 4,
-                    y + (h + gap) * 12 + 144,
-                    16,
+                y + (h + gap) * 12 + 180,
+                16,
                     new Color(180, 220, 255, 230));
             }
 
@@ -622,7 +698,7 @@ namespace Ludots.Adapter.Raylib
 
             if (auditGlobal >= 0 || auditScoped >= 0 || auditNamed >= 0 || auditAnchor >= 0 || auditFactory >= 0)
             {
-                int auditYBase = y + (h + gap) * 12 + 168;
+                int auditYBase = y + (h + gap) * 12 + 204;
                 Rl.DrawText($"Audit Global: {Math.Max(auditGlobal, 0)}", x + 4, auditYBase, 16, new Color(180, 240, 180, 230));
                 Rl.DrawText($"Audit Scoped: {Math.Max(auditScoped, 0)}", x + 4, auditYBase + 18, 16, new Color(180, 240, 180, 230));
                 Rl.DrawText($"Audit Named: {Math.Max(auditNamed, 0)}", x + 4, auditYBase + 36, 16, new Color(180, 240, 180, 230));
