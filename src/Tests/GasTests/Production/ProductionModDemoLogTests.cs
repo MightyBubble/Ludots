@@ -39,7 +39,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[MOBA] 进入英雄竞技场。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "MobaDemoMod" }, "entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" }, "entry", engine =>
             {
                 var world = engine.World;
                 var (hero, enemy1, enemy2) = FindEntities3(world, "Hero", "Enemy1", "Enemy2");

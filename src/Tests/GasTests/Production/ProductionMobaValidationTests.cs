@@ -31,6 +31,7 @@ namespace Ludots.Tests.GAS.Production
                     new()
                     {
                         Path.Combine(modsRoot, "LudotsCoreMod"),
+                        Path.Combine(modsRoot, "CoreInputMod"),
                         Path.Combine(modsRoot, "MobaDemoMod")
                     },
                     assetsRoot);
