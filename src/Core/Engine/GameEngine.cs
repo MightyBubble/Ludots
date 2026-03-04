@@ -413,7 +413,7 @@ namespace Ludots.Core.Engine
             new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             graphConfigLoader.PatchAndRegister(graphPackages);
             var gasGraphApi = new GasGraphRuntimeApi(World, SpatialQueries, SpatialCoords, EventBus, effectRequestQueue, tagOps);
-            var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus);
+            var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus, budget: gasBudget);
             var tagRules = new TagRuleSetLoader(ConfigPipeline).Load();
             for (int i = 0; i < tagRules.Count; i++)
             {
@@ -654,7 +654,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
             
             // Phase 6: Cleanup
-            RegisterSystem(new GameplayEventDispatchSystem(EventBus), SystemGroup.EventDispatch);
+            RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget), SystemGroup.EventDispatch);
             
             // Phase 7.1: ClearPresentationFlags

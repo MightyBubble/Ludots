@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -104,6 +105,147 @@ namespace Ludots.Tests.GAS
             {
                 world.Dispose();
             }
+        }
+
+        [Test]
+        public void EffectApplicationSystem_WhenActiveEffectContainerFull_TracksDroppedInBudget()
+        {
+            var world = World.Create();
+            try
+            {
+                var budget = new GasBudget();
+                var app = new EffectApplicationSystem(world, effectRequests: null, budget: budget);
+
+                var source = world.Create();
+                var target = world.Create();
+
+                var container = new ActiveEffectContainer();
+                for (int i = 0; i < ActiveEffectContainer.CAPACITY; i++)
+                {
+                    That(container.Add(world.Create()), Is.True);
+                }
+                world.Add(target, container);
+
+                var effect = GameplayEffectFactory.CreateEffect(
+                    world,
+                    rootId: 1,
+                    source: source,
+                    target: target,
+                    durationTicks: 60,
+                    lifetimeKind: EffectLifetimeKind.After);
+
+                app.Update(0.016f);
+
+                That(world.IsAlive(effect), Is.False, "overflow attachment should drop and destroy effect");
+                That(budget.ActiveEffectContainerAttachDropped, Is.EqualTo(1));
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
+        [Test]
+        public void EffectPhaseExecutor_WhenListenerCollectionTruncates_TracksDroppedInBudget()
+        {
+            var world = World.Create();
+            try
+            {
+                var budget = new GasBudget();
+                var eventBus = new GameplayEventBus();
+                var globalRegistry = new GlobalPhaseListenerRegistry();
+
+                var executor = new EffectPhaseExecutor(
+                    new Ludots.Core.GraphRuntime.GraphProgramRegistry(),
+                    new PresetTypeRegistry(),
+                    new BuiltinHandlerRegistry(),
+                    Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable.Instance,
+                    new EffectTemplateRegistry(),
+                    globalListeners: globalRegistry,
+                    eventBus: eventBus,
+                    budget: budget);
+
+                var caster = world.Create();
+                var target = world.Create();
+
+                var targetBuffer = new EffectPhaseListenerBuffer();
+                for (int i = 0; i < EffectPhaseListenerBuffer.CAPACITY; i++)
+                {
+                    That(targetBuffer.TryAdd(
+                        listenTagId: 0,
+                        listenEffectId: 0,
+                        phase: EffectPhaseId.OnApply,
+                        scope: PhaseListenerScope.Target,
+                        flags: PhaseListenerActionFlags.PublishEvent,
+                        graphProgramId: 0,
+                        eventTagId: i + 1,
+                        priority: 0,
+                        ownerEffectId: 1), Is.True);
+                }
+                world.Add(target, targetBuffer);
+
+                var sourceBuffer = new EffectPhaseListenerBuffer();
+                for (int i = 0; i < EffectPhaseListenerBuffer.CAPACITY; i++)
+                {
+                    That(sourceBuffer.TryAdd(
+                        listenTagId: 0,
+                        listenEffectId: 0,
+                        phase: EffectPhaseId.OnApply,
+                        scope: PhaseListenerScope.Source,
+                        flags: PhaseListenerActionFlags.PublishEvent,
+                        graphProgramId: 0,
+                        eventTagId: 1000 + i + 1,
+                        priority: 0,
+                        ownerEffectId: 1), Is.True);
+                }
+                world.Add(caster, sourceBuffer);
+
+                for (int i = 0; i < GlobalPhaseListenerRegistry.MAX_LISTENERS; i++)
+                {
+                    That(globalRegistry.Register(
+                        listenTagId: 0,
+                        listenEffectId: 0,
+                        phase: EffectPhaseId.OnApply,
+                        flags: PhaseListenerActionFlags.PublishEvent,
+                        graphProgramId: 0,
+                        eventTagId: 2000 + i + 1,
+                        priority: 0), Is.True);
+                }
+
+                executor.DispatchPhaseListeners(
+                    world,
+                    api: null!,
+                    caster: caster,
+                    target: target,
+                    targetContext: default,
+                    targetPos: default,
+                    phase: EffectPhaseId.OnApply,
+                    effectTagId: 1,
+                    effectTemplateId: 1);
+
+                That(budget.PhaseListenerDispatchDropped, Is.EqualTo(16));
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
+        [Test]
+        public void GameplayEventDispatchSystem_WhenBusOverflows_TracksDroppedInBudget()
+        {
+            var bus = new GameplayEventBus();
+            var budget = new GasBudget();
+            var dispatch = new GameplayEventDispatchSystem(bus, budget);
+
+            for (int i = 0; i < GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME + 7; i++)
+            {
+                bus.Publish(new GameplayEvent { TagId = i + 1 });
+            }
+
+            dispatch.Update(0.016f);
+
+            That(budget.GameplayEventBusDropped, Is.EqualTo(7));
         }
     }
 }

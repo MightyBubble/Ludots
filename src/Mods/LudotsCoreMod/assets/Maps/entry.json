@@ -19,14 +19,14 @@
     {
       "Template": "moba_dummy",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 900, "Y": 0 } },
+        "WorldPositionCm": { "Value": { "X": 700, "Y": 50 } },
         "Name": { "Value": "Enemy1" }
       }
     },
     {
       "Template": "moba_dummy",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 1050, "Y": 220 } },
+        "WorldPositionCm": { "Value": { "X": 650, "Y": -180 } },
         "Name": { "Value": "Enemy2" }
       }
     },

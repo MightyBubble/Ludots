@@ -33,6 +33,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectTemplateRegistry _templates;
         private readonly GlobalPhaseListenerRegistry? _globalListeners;
         private readonly GameplayEventBus? _eventBus;
+        private readonly GasBudget? _budget;
 
         // Scratch register arrays — reused across calls to avoid per-call allocations.
         private readonly float[] _floatRegs = new float[GraphVmLimits.MaxFloatRegisters];
@@ -51,7 +52,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             GasGraphOpHandlerTable handlers,
             EffectTemplateRegistry templates,
             GlobalPhaseListenerRegistry? globalListeners = null,
-            GameplayEventBus? eventBus = null)
+            GameplayEventBus? eventBus = null,
+            GasBudget? budget = null)
         {
             _programs = programs;
             _presetTypes = presetTypes;
@@ -60,6 +62,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _templates = templates;
             _globalListeners = globalListeners;
             _eventBus = eventBus;
+            _budget = budget;
         }
 
         /// <summary>
@@ -183,28 +186,37 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             Span<PhaseListenerCollectedAction> scratch = _collectedActions;
             int totalCollected = 0;
+            int totalDropped = 0;
 
             // a. Target entity's buffer (scope = Target)
             if (world.IsAlive(target) && world.Has<EffectPhaseListenerBuffer>(target))
             {
                 ref var buf = ref world.Get<EffectPhaseListenerBuffer>(target);
-                int n = buf.Collect(effectTagId, effectTemplateId, phase, PhaseListenerScope.Target, scratch.Slice(totalCollected));
+                int n = buf.Collect(effectTagId, effectTemplateId, phase, PhaseListenerScope.Target, scratch.Slice(totalCollected), out int dropped);
                 totalCollected += n;
+                totalDropped += dropped;
             }
 
             // b. Caster entity's buffer (scope = Source)
             if (world.IsAlive(caster) && world.Has<EffectPhaseListenerBuffer>(caster))
             {
                 ref var buf = ref world.Get<EffectPhaseListenerBuffer>(caster);
-                int n = buf.Collect(effectTagId, effectTemplateId, phase, PhaseListenerScope.Source, scratch.Slice(totalCollected));
+                int n = buf.Collect(effectTagId, effectTemplateId, phase, PhaseListenerScope.Source, scratch.Slice(totalCollected), out int dropped);
                 totalCollected += n;
+                totalDropped += dropped;
             }
 
             // c. Global listeners
             if (_globalListeners != null)
             {
-                int n = _globalListeners.Collect(phase, effectTagId, effectTemplateId, scratch.Slice(totalCollected));
+                int n = _globalListeners.Collect(phase, effectTagId, effectTemplateId, scratch.Slice(totalCollected), out int dropped);
                 totalCollected += n;
+                totalDropped += dropped;
+            }
+
+            if (totalDropped > 0 && _budget != null)
+            {
+                _budget.PhaseListenerDispatchDropped += totalDropped;
             }
 
             if (totalCollected == 0) return;
