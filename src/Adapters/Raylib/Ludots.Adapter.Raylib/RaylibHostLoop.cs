@@ -451,7 +451,6 @@ namespace Ludots.Adapter.Raylib
         }
 
         private static void DrawScreenOverlays(GameEngine engine)
-        private static void DrawScreenOverlays(GameEngine engine)
         {
             if (!engine.GlobalContext.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var bufferObj)) return;
             if (bufferObj is not ScreenOverlayBuffer buffer) return;

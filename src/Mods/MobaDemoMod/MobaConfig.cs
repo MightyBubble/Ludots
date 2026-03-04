@@ -93,9 +93,9 @@ namespace MobaDemoMod
         public sealed class SkillDemoConfig
         {
             [JsonPropertyName("showcaseStepIntervalSeconds")] public float ShowcaseStepIntervalSeconds { get; set; } = 2.2f;
-            [JsonPropertyName("showcaseEnabledOnStart")] public bool ShowcaseEnabledOnStart { get; set; } = true;
+            [JsonPropertyName("showcaseEnabledOnStart")] public bool ShowcaseEnabledOnStart { get; set; } = false;
             [JsonPropertyName("showcaseScopeId")] public int ShowcaseScopeId { get; set; } = 99100;
-            [JsonPropertyName("manualFireballEffectId")] public string ManualFireballEffectId { get; set; } = "Effect.Moba.Projectile.Arrow";
+            [JsonPropertyName("manualFireballEffectId")] public string ManualFireballEffectId { get; set; } = "Effect.Moba.Damage.Q";
             [JsonPropertyName("manualMagicCircleEffectId")] public string ManualMagicCircleEffectId { get; set; } = "Effect.Moba.Search.BlizzardZone";
             [JsonPropertyName("manualSummonEffectId")] public string ManualSummonEffectId { get; set; } = "Effect.Moba.Summon.Skeleton";
         }

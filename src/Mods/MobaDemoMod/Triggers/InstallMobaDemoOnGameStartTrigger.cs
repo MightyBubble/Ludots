@@ -66,7 +66,7 @@ namespace MobaDemoMod.Triggers
             }
 
             // ── 选择系统回调（CoreInputMod 已注册系统，此处注入 MOBA 视觉反馈）──
-            PresentationCommandBuffer cmdBuffer = null;
+            PresentationCommandBuffer? cmdBuffer = null;
             if (engine.GlobalContext.TryGetValue(ContextKeys.PresentationCommandBuffer, out var cmdObj) && cmdObj is PresentationCommandBuffer pcb)
                 cmdBuffer = pcb;
 
