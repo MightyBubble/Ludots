@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
+using System.Text.Json;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -29,6 +32,7 @@ namespace MobaDemoMod.Presentation
     /// </summary>
     public sealed class MobaLocalOrderSourceSystem : ISystem<float>
     {
+        private static int _debugModeHudLogsRemaining = 4;
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly OrderQueue _orders;
@@ -259,6 +263,20 @@ namespace MobaDemoMod.Presentation
             overlay.AddText(16, 16, $"Mode: {ToModeLabel(_inputOrderMapping.InteractionMode)}", 20, new Vector4(1f, 1f, 0.6f, 1f));
             overlay.AddText(16, 42, "F1 WoW(TargetFirst) | F2 LoL(SmartCast) | F3 SC2(AimCast) | F4 Indicator", 16, new Vector4(0.78f, 0.92f, 1f, 1f));
             overlay.AddText(16, 66, "F6 Showcase Toggle | F7 Showcase Reset | F9 Fireball | F10 Circle | F11 Summon", 16, new Vector4(0.85f, 1f, 0.85f, 1f));
+            if (_debugModeHudLogsRemaining > 0)
+            {
+                _debugModeHudLogsRemaining--;
+                // #region agent log
+                File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new
+                {
+                    hypothesisId = "H3",
+                    location = "MobaLocalOrderSourceSystem:RenderModeHud",
+                    message = "Mode HUD overlay drawn",
+                    data = new { rectX = 8, rectY = 8, rectWidth = 620, rectHeight = 98, titleY = 16, line2Y = 42, line3Y = 66 },
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                }) + "\n");
+                // #endregion
+            }
         }
 
         private static string ToModeLabel(InteractionModeType mode)

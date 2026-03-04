@@ -13,6 +13,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Layers;
 using Ludots.Core.Modding;
 using Ludots.Core.Physics;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Config
@@ -32,6 +33,7 @@ namespace Ludots.Core.Config
             Register<Health>("Health");
             Register<Name>("Name");
             Register("WorldPositionCm", SetWorldPositionCm);
+            Register("VisualModel", SetVisualModel);
             Register<Ludots.Core.Gameplay.Components.Team>("Team");
             Register<Ludots.Core.Gameplay.Components.PlayerOwner>("PlayerOwner");
             Register<Ludots.Core.Gameplay.Components.TeamIdentity>("TeamIdentity");
@@ -151,6 +153,20 @@ namespace Ludots.Core.Config
             entity.Add(new PreviousWorldPositionCm { Value = fix64Pos });
             entity.Add(VisualTransform.Default);
             entity.Add(new CullState { IsVisible = true, LOD = LODLevel.High });
+        }
+
+        private static void SetVisualModel(Entity entity, JsonNode data)
+        {
+            int meshId = PrimitiveMeshAssetIds.Cube;
+            int materialId = 0;
+            float baseScale = 0.85f;
+            if (data is JsonObject obj)
+            {
+                if (obj.TryGetPropertyValue("MeshId", out var meshNode)) meshId = meshNode?.GetValue<int>() ?? meshId;
+                if (obj.TryGetPropertyValue("MaterialId", out var materialNode)) materialId = materialNode?.GetValue<int>() ?? materialId;
+                if (obj.TryGetPropertyValue("BaseScale", out var scaleNode)) baseScale = scaleNode?.GetValue<float>() ?? baseScale;
+            }
+            entity.Add(new VisualModel { MeshId = meshId, MaterialId = materialId, BaseScale = baseScale });
         }
 
         private static void SetEntityLayer(Entity entity, JsonNode data)

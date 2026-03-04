@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
+using System.Text.Json;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -24,6 +26,7 @@ namespace MobaDemoMod.Presentation
     /// </summary>
     public sealed class MobaSkillDemoPresentationSystem : ISystem<float>
     {
+        private static int _debugDemoHudLogsRemaining = 4;
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly IModContext _ctx;
@@ -366,6 +369,20 @@ namespace MobaDemoMod.Presentation
             overlay.AddText(x + 10, y + 8, $"Skill Showcase: {showcaseState} | Step: {GetStepLabel(_showcaseStep)}", 18, new Vector4(1f, 0.92f, 0.5f, 1f));
             overlay.AddText(x + 10, y + 32, "F6 Toggle Showcase | F7 Reset Showcase", 16, new Vector4(0.86f, 0.95f, 1f, 1f));
             overlay.AddText(x + 10, y + 54, "F9 Fireball | F10 Magic Circle | F11 Summon", 16, new Vector4(0.82f, 1f, 0.82f, 1f));
+            if (_debugDemoHudLogsRemaining > 0)
+            {
+                _debugDemoHudLogsRemaining--;
+                // #region agent log
+                File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new
+                {
+                    hypothesisId = "H3",
+                    location = "MobaSkillDemoPresentationSystem:RenderDemoHud",
+                    message = "Skill demo HUD overlay drawn",
+                    data = new { rectX = x, rectY = y, rectWidth = panelWidth, rectHeight = panelHeight, titleY = y + 8, line2Y = y + 32, line3Y = y + 54 },
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                }) + "\n");
+                // #endregion
+            }
         }
 
         private static string GetStepLabel(int step)

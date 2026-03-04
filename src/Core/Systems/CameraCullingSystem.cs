@@ -1,6 +1,8 @@
 using System;
+using System.IO;
 using System.Numerics;
 using System.Collections.Generic;
+using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Camera;
@@ -12,6 +14,7 @@ namespace Ludots.Core.Systems
 {
     public class CameraCullingSystem : BaseSystem<World, float>
     {
+        private static int _debugCullLogsRemaining = 12;
         private readonly CameraManager _cameraManager;
         private readonly ISpatialQueryService _spatial;
         private readonly IViewController _view;
@@ -36,6 +39,9 @@ namespace Ludots.Core.Systems
 
         public override void Update(in float dt)
         {
+            int skippedNoVisualModel = 0;
+            int skippedNoPositionOrCull = 0;
+            int updatedCullCount = 0;
             var target = _cameraManager.State.TargetCm;
             float distanceCm = _cameraManager.State.DistanceCm;
             
@@ -91,7 +97,16 @@ namespace Ludots.Core.Systems
             {
                 var e = _buffer[idx];
                 if (!World.IsAlive(e)) continue;
-                if (!World.Has<WorldPositionCm>(e) || !World.Has<CullState>(e) || !World.Has<VisualModel>(e)) continue;
+                if (!World.Has<WorldPositionCm>(e) || !World.Has<CullState>(e))
+                {
+                    skippedNoPositionOrCull++;
+                    continue;
+                }
+                if (!World.Has<VisualModel>(e))
+                {
+                    skippedNoVisualModel++;
+                    continue;
+                }
 
                 var wp = World.Get<WorldPositionCm>(e).Value;
                 float px = wp.X.ToFloat();
@@ -99,6 +114,7 @@ namespace Ludots.Core.Systems
                 bool inViewport = (px >= minX && px <= maxX && py >= minY && py <= maxY);
 
                 ref var cull = ref World.Get<CullState>(e);
+                updatedCullCount++;
                 if (!inViewport) { cull.LOD = LODLevel.Culled; cull.IsVisible = false; continue; }
 
                 // 2. Distance Check (Logic Space)
@@ -146,6 +162,28 @@ namespace Ludots.Core.Systems
             var tmp = _prevVisible;
             _prevVisible = _nextVisible;
             _nextVisible = tmp;
+
+            if (_debugCullLogsRemaining > 0)
+            {
+                _debugCullLogsRemaining--;
+                // #region agent log
+                File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new
+                {
+                    hypothesisId = "H1",
+                    location = "CameraCullingSystem:Update",
+                    message = "Cull summary",
+                    data = new
+                    {
+                        queryResultCount = r.Count,
+                        updatedCullCount,
+                        visibleCount = _prevVisible.Count,
+                        skippedNoVisualModel,
+                        skippedNoPositionOrCull
+                    },
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                }) + "\n");
+                // #endregion
+            }
         }
     }
 }

@@ -1,9 +1,9 @@
 [
   {
-    "_comment": "单位体块渲染 - entity-scoped, 使用椭球体 primitive 作为当前可用 mesh 近似",
+    "_comment": "单位体块渲染（旧占位）- 已切换为 VisualModel 渲染路径，保留定义供回退使用",
     "id": 5001,
     "visualKind": "Marker3D",
-    "entityScope": "AllWithVisualTransform",
+    "entityScope": "None",
     "meshOrShapeId": 2,
     "defaultScale": 0.42,
     "positionOffset": [0, 0.42, 0],

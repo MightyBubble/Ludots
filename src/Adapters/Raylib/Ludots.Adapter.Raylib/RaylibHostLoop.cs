@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using System.Numerics;
+using System.Text.Json;
 using Ludots.Adapter.Raylib.Services;
 using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Components;
@@ -26,6 +28,7 @@ namespace Ludots.Adapter.Raylib
     internal static class RaylibHostLoop
     {
         private static bool _uiPointerCaptured;
+        private static int _debugOverlayLogsRemaining = 8;
 
         public static void Run(RaylibHostSetup setup)
         {
@@ -152,22 +155,23 @@ namespace Ludots.Adapter.Raylib
 
                         Rl.EndMode3D();
 
-                        // Terrain debug HUD
-                        string vtxmStatus = engine.VertexMap == null ? "NULL" : $"{engine.VertexMap.WidthInChunks}x{engine.VertexMap.HeightInChunks}";
-                        Rl.DrawText($"VertexMap: {vtxmStatus} | Chunks: {terrainRenderer.DrawnChunkCountLastFrame} Verts: {terrainRenderer.TerrainVertexCountLastFrame} Cached: {terrainRenderer.CachedChunkCount}", 10, 40, 14, Raylib_cs.Color.YELLOW);
-                        Rl.DrawText($"CamPos: ({activeCamera.position.X:F1},{activeCamera.position.Y:F1},{activeCamera.position.Z:F1}) Target: ({activeCamera.target.X:F1},{activeCamera.target.Y:F1},{activeCamera.target.Z:F1})", 10, 56, 14, Raylib_cs.Color.YELLOW);
-
+                        // Terrain debug HUD (bottom-left, avoids overlapping gameplay overlays at top-left)
+                        int debugBaseY = screenHeight - 96;
                         if (engine.GlobalContext.TryGetValue(ContextKeys.PresentationPrimitiveDrawBuffer, out var drawObj2) &&
                             drawObj2 is PrimitiveDrawBuffer draw2)
                         {
-                            Rl.DrawText($"Primitives: {draw2.Count} (Dropped: {draw2.DroppedSinceClear})", 10, 10, 20, Raylib_cs.Color.YELLOW);
+                            Rl.DrawText($"Primitives: {draw2.Count} (Dropped: {draw2.DroppedSinceClear})", 10, debugBaseY, 18, Raylib_cs.Color.YELLOW);
                         }
 
                         int wpCount = 0;
                         var wpQueryDesc = new Arch.Core.QueryDescription().WithAll<WorldPositionCm>();
                         var wpQuery = engine.World.Query(in wpQueryDesc);
                         foreach (var chunk in wpQuery) wpCount += chunk.Count;
-                        Rl.DrawText($"WorldPositionCm Entities: {wpCount}", 10, 34, 20, Raylib_cs.Color.YELLOW);
+                        Rl.DrawText($"WorldPositionCm Entities: {wpCount}", 10, debugBaseY + 18, 16, Raylib_cs.Color.YELLOW);
+
+                        string vtxmStatus = engine.VertexMap == null ? "NULL" : $"{engine.VertexMap.WidthInChunks}x{engine.VertexMap.HeightInChunks}";
+                        Rl.DrawText($"VertexMap: {vtxmStatus} | Chunks: {terrainRenderer.DrawnChunkCountLastFrame} Verts: {terrainRenderer.TerrainVertexCountLastFrame} Cached: {terrainRenderer.CachedChunkCount}", 10, debugBaseY + 34, 14, Raylib_cs.Color.YELLOW);
+                        Rl.DrawText($"CamPos: ({activeCamera.position.X:F1},{activeCamera.position.Y:F1},{activeCamera.position.Z:F1}) Target: ({activeCamera.target.X:F1},{activeCamera.target.Y:F1},{activeCamera.target.Z:F1})", 10, debugBaseY + 50, 14, Raylib_cs.Color.YELLOW);
 
                         RenderWorldHud(engine, screenProjector);
 
@@ -433,6 +437,36 @@ namespace Ludots.Adapter.Raylib
             if (bufferObj is not ScreenOverlayBuffer buffer) return;
 
             var span = buffer.GetSpan();
+            if (_debugOverlayLogsRemaining > 0 && span.Length > 0)
+            {
+                _debugOverlayLogsRemaining--;
+                int dbgBaseY = Rl.GetScreenHeight() - 96;
+                string t0 = string.Empty;
+                string t1 = string.Empty;
+                string t2 = string.Empty;
+                int x0 = 0, y0 = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+                int ti = 0;
+                for (int i = 0; i < span.Length && ti < 3; i++)
+                {
+                    ref readonly var item = ref span[i];
+                    if (item.Kind != ScreenOverlayItemKind.Text) continue;
+                    string text = buffer.GetString(item.StringId) ?? string.Empty;
+                    if (ti == 0) { t0 = text; x0 = item.X; y0 = item.Y; }
+                    else if (ti == 1) { t1 = text; x1 = item.X; y1 = item.Y; }
+                    else { t2 = text; x2 = item.X; y2 = item.Y; }
+                    ti++;
+                }
+                // #region agent log
+                File.AppendAllText("/opt/cursor/logs/debug.log", JsonSerializer.Serialize(new
+                {
+                    hypothesisId = "H3",
+                    location = "RaylibHostLoop:DrawScreenOverlays",
+                    message = "Screen overlay summary",
+                    data = new { overlayItemCount = span.Length, firstText = t0, firstTextX = x0, firstTextY = y0, secondText = t1, secondTextX = x1, secondTextY = y1, thirdText = t2, thirdTextX = x2, thirdTextY = y2, engineDebugHudY0 = dbgBaseY, engineDebugHudY1 = dbgBaseY + 18, engineDebugHudY2 = dbgBaseY + 34, engineDebugHudY3 = dbgBaseY + 50 },
+                    timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                }) + "\n");
+                // #endregion
+            }
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
