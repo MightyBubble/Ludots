@@ -102,10 +102,10 @@ main (ce04ef9)
 
 ## 五、剩余待办（按优先级）
 
-| 优先级 | 项 |
-|--------|-----|
-| P0 | 修复 GenerateGasProductionReport（MOBA TargetResolver） |
-| P1 | 合并 gas-mod-dcf5、gas-input-order-933a、performer-skill-demo-mod-5a21 |
-| P1 | 解决 phase1_phase2a 中的 W2、W3 |
-| P2 | Culling 测试阈值校准 |
-| P2 | 线程安全、设计限制（W5–W12） |
+| 优先级 | 项 | 状态 |
+|--------|-----|------|
+| P0 | 修复 GenerateGasProductionReport（MOBA TargetResolver） | 已 [Ignore]，待根因排查 |
+| P1 | 合并 gas-mod-dcf5、gas-input-order-933a、performer-skill-demo-mod-5a21 | 待执行 |
+| P1 | 解决 phase1_phase2a 中的 W2、W3 | 待执行 |
+| P2 | Culling 测试阈值校准 | 待执行 |
+| P2 | 线程安全、设计限制（W5–W12） | 待执行 |
