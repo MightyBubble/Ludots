@@ -2,7 +2,7 @@
   "name": "HtmlTestMod",
   "version": "1.0.0",
   "description": "Testing HTML/CSS Engine via Mod System",
-  "main": "bin/Release/net8.0/HtmlTestMod.dll",
+  "main": "bin/net8.0/HtmlTestMod.dll",
   "priority": 200,
   "dependencies": {}
 }

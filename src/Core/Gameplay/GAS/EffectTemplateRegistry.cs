@@ -106,7 +106,7 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationshipFilter RelationFilter; // Replaces legacy byte TeamFilter
         public bool ExcludeSource;
         public int MaxTargets;         // 0 = unlimited (budget-limited only)
-        public uint LayerMask;         // 0 = no layer filter (backward compat)
+        public uint LayerMask;         // 0 = no layer filter
     }
 
     // ── Three-layer Target Resolution ──

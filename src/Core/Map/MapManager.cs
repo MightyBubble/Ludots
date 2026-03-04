@@ -101,36 +101,22 @@ namespace Ludots.Core.Map
                 // Normalize path to remove leading slash if any
                 if (jsonPath.StartsWith("/") || jsonPath.StartsWith("\\")) jsonPath = jsonPath.Substring(1);
 
-                if (_configPipeline != null)
-                {
-                    // Use ConfigPipeline to collect fragments from all sources
-                    var fragments = _configPipeline.CollectFragments(jsonPath);
-                    var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                    for (int fi = 0; fi < fragments.Count; fi++)
-                    {
-                        try
-                        {
-                            var jsonStr = fragments[fi].ToJsonString();
-                            var config = JsonSerializer.Deserialize<MapConfig>(jsonStr, jsonOptions);
-                            if (config != null) configs.Add(config);
-                        }
-                        catch (JsonException ex)
-                        {
-                            Log.Error(in LogChannels.Map, $"Invalid JSON fragment for '{jsonPath}': {ex.Message}");
-                        }
-                    }
-                }
-                else
-                {
-                    // Fallback: direct VFS scanning (for cases without ConfigPipeline)
-                    TryLoadConfigFromUri($"Core:Configs/{jsonPath}", configs);
-                    TryLoadConfigFromUri($"Core:assets/{jsonPath}", configs);
-                    TryLoadConfigFromUri($"Core:{jsonPath}", configs);
+                if (_configPipeline == null)
+                    throw new InvalidOperationException("MapManager requires ConfigPipeline. Call SetConfigPipeline before LoadMap.");
 
-                    foreach (var modId in _modLoader.LoadedModIds)
+                var fragments = _configPipeline.CollectFragments(jsonPath);
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                for (int fi = 0; fi < fragments.Count; fi++)
+                {
+                    try
                     {
-                        TryLoadConfigFromUri($"{modId}:assets/{jsonPath}", configs);
-                        TryLoadConfigFromUri($"{modId}:{jsonPath}", configs);
+                        var jsonStr = fragments[fi].ToJsonString();
+                        var config = JsonSerializer.Deserialize<MapConfig>(jsonStr, jsonOptions);
+                        if (config != null) configs.Add(config);
+                    }
+                    catch (JsonException ex)
+                    {
+                        Log.Error(in LogChannels.Map, $"Invalid JSON fragment for '{jsonPath}': {ex.Message}");
                     }
                 }
 
@@ -201,37 +187,6 @@ namespace Ludots.Core.Map
                     chain.RemoveAt(chain.Count - 1);
                 }
                 visiting.Remove(mapIdValue);
-            }
-        }
-
-        private void TryLoadConfigFromUri(string uri, List<MapConfig> configs)
-        {
-            try 
-            {
-                using (var stream = _vfs.GetStream(uri))
-                using (var reader = new StreamReader(stream))
-                {
-                    string json = reader.ReadToEnd();
-                    var config = JsonSerializer.Deserialize<MapConfig>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    if (config != null)
-                    {
-                        configs.Add(config);
-                    }
-                }
-            }
-            catch (FileNotFoundException)
-            {
-            }
-            catch (DirectoryNotFoundException)
-            {
-            }
-            catch (JsonException ex)
-            {
-                Log.Error(in LogChannels.Map, $"Invalid JSON at '{uri}': {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Log.Error(in LogChannels.Map, $"Failed to load '{uri}': {ex.Message}");
             }
         }
 

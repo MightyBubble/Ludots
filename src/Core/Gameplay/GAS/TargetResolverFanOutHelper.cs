@@ -41,7 +41,7 @@ namespace Ludots.Core.Gameplay.GAS
     ///   OnResolve: spatial query → collect candidate entities
     ///   OnHit:     per-candidate hit validation (built-in filters + user Graph)
     ///
-    /// Legacy one-shot method <see cref="CollectFanOutTargets"/> is preserved for backward compat.
+    /// One-shot resolution: spatial query + hit validation in a single call.
     /// </summary>
     public static class TargetResolverFanOutHelper
     {

@@ -40,6 +40,7 @@
     <ProjectReference Include="..\..\Mods\Universal3CCameraMod\Universal3CCameraMod.csproj" />
     <ProjectReference Include="..\..\Mods\VersionMismatchMod\VersionMismatchMod.csproj" />
     <ProjectReference Include="..\..\Mods\FourXDemoMod\FourXDemoMod.csproj" />
+    <ProjectReference Include="..\..\Mods\RtsDemoMod\RtsDemoMod.csproj" />
     <ProjectReference Include="..\..\Mods\TcgDemoMod\TcgDemoMod.csproj" />
     <ProjectReference Include="..\..\Mods\ArpgDemoMod\ArpgDemoMod.csproj" />
     <ProjectReference Include="..\..\Mods\AIDemoMod\AIDemoMod.csproj" />

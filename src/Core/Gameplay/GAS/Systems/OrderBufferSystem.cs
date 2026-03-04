@@ -16,7 +16,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     /// System that manages per-Entity OrderBuffer components.
     /// Handles order expiration, queue promotion, tag synchronization,
     /// and routes incoming orders from the global OrderQueue to per-entity buffers.
-    /// Replaces OrderDispatchSystem as the single entry point for all orders.
+    /// Single entry point for all orders.
     /// Chain orders (ResponseChain) are filtered and routed to a separate queue.
     /// </summary>
     public sealed class OrderBufferSystem : BaseSystem<World, float>

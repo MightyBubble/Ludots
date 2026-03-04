@@ -672,7 +672,7 @@ namespace Ludots.Core.Input.Orders
             // Store both points in List mode: point[0] = origin, point[1] = endpoint
             args.Spatial.Kind = OrderSpatialKind.WorldCm;
             args.Spatial.Mode = OrderCollectionMode.List;
-            args.Spatial.WorldCm = origin; // Primary point (also stored as WorldCm for backward compat)
+            args.Spatial.WorldCm = origin;
             args.Spatial.AddPointWorldCm((int)origin.X, (int)origin.Y, (int)origin.Z);
             args.Spatial.AddPointWorldCm((int)endpoint.X, (int)endpoint.Y, (int)endpoint.Z);
             

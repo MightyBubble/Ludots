@@ -339,133 +339,6 @@ namespace Ludots.Core.Engine
             GlobalContext[ContextKeys.AiRuntime] = AiRuntime;
         }
 
-        [Obsolete("Use InitializeWithConfigPipeline instead")]
-        public void Initialize(GameConfig config, string assetsRoot)
-        {
-            Diagnostics.Log.Info(in LogChannels.Engine, "Initializing from Config (legacy)...");
-            
-            // Setup Async Context
-            SyncContext = new GameSynchronizationContext();
-            System.Threading.SynchronizationContext.SetSynchronizationContext(SyncContext);
-            
-            // 1. Setup Infrastructure
-            VFS = new VirtualFileSystem();
-            VFS.Mount("Core", assetsRoot); // Mount Core Assets
-
-            FunctionRegistry = new FunctionRegistry();
-            TriggerManager = new TriggerManager();
-            SystemFactoryRegistry = new SystemFactoryRegistry();
-            TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
-            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
-            MapManager = new MapManager(VFS, TriggerManager, ModLoader);
-            ModLoader.MapManager = MapManager;
-            ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
-
-            // 2. Setup ECS & Session
-            InitializeWorld(config?.WorldWidthInTiles ?? 64, config?.WorldHeightInTiles ?? 64);
-            WorldMap = new WorldMap(config?.WorldWidthInTiles ?? 64, config?.WorldHeightInTiles ?? 64);
-            GameSession = new GameSession();
-            int gridCellSizeCm = config?.GridCellSizeCm ?? 100;
-            int worldWidthCm = WorldMap.TotalWidth * gridCellSizeCm;
-            int worldHeightCm = WorldMap.TotalHeight * gridCellSizeCm;
-            WorldSizeSpec = new WorldSizeSpec(
-                new WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm: gridCellSizeCm);
-            SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
-            _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
-            SpatialQueries = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
-            WireUpPositionProvider();
-            GlobalContext[ContextKeys.WorldSizeSpec] = WorldSizeSpec;
-            GlobalContext[ContextKeys.SpatialCoordinateConverter] = SpatialCoords;
-            GlobalContext[ContextKeys.SpatialQueryService] = SpatialQueries;
-            
-            // 3. Setup Data Loaders
-            MapLoader = new MapLoader(World, WorldMap, ConfigPipeline);
-
-            // 4. Load Mods from Config
-            if (config != null && config.ModPaths != null)
-            {
-                ModLoader.LoadMods(config.ModPaths);
-            }
-            
-            // Store config
-            MergedConfig = config ?? new GameConfig();
-            GlobalContext[ContextKeys.GameConfig] = MergedConfig;
-
-            InitializeCoreSystems(MergedConfig);
-
-            SimulationBudgetMsPerFrame = config?.SimulationBudgetMsPerFrame ?? SimulationBudgetMsPerFrame;
-            SimulationMaxSlicesPerLogicFrame = config?.SimulationMaxSlicesPerLogicFrame ?? SimulationMaxSlicesPerLogicFrame;
-            
-            // 5. Post-Mod Load Initialization
-            // Now that Mods are loaded, we can load all templates
-            MapLoader.LoadTemplates();
-        }
-
-        [Obsolete("Use InitializeWithConfigPipeline instead")]
-        public void Initialize(string assetsRoot)
-        {
-            Diagnostics.Log.Info(in LogChannels.Engine, "Initializing...");
-            
-            // Setup Async Context
-            SyncContext = new GameSynchronizationContext();
-            System.Threading.SynchronizationContext.SetSynchronizationContext(SyncContext);
-            
-            // 1. Setup Infrastructure
-            VFS = new VirtualFileSystem();
-            VFS.Mount("Core", assetsRoot); // Mount Core Assets
-
-            FunctionRegistry = new FunctionRegistry();
-            TriggerManager = new TriggerManager();
-            SystemFactoryRegistry = new SystemFactoryRegistry();
-            TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
-            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
-            MapManager = new MapManager(VFS, TriggerManager, ModLoader);
-            ModLoader.MapManager = MapManager;
-            ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
-
-            // 2. Setup ECS & Session
-            InitializeWorld(widthInTiles: 64, heightInTiles: 64);
-            WorldMap = new WorldMap(widthInChunks: 64, heightInChunks: 64);
-            GameSession = new GameSession();
-            int gridCellSizeCm = 100;
-            int worldWidthCm = WorldMap.TotalWidth * gridCellSizeCm;
-            int worldHeightCm = WorldMap.TotalHeight * gridCellSizeCm;
-            WorldSizeSpec = new WorldSizeSpec(
-                new WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm: gridCellSizeCm);
-            SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
-            _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
-            SpatialQueries = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
-            WireUpPositionProvider();
-            GlobalContext[ContextKeys.WorldSizeSpec] = WorldSizeSpec;
-            GlobalContext[ContextKeys.SpatialCoordinateConverter] = SpatialCoords;
-            GlobalContext[ContextKeys.SpatialQueryService] = SpatialQueries;
-            
-            // 3. Setup Data Loaders
-            MapLoader = new MapLoader(World, WorldMap, ConfigPipeline);
-
-            // 4. Prepare Mod Loading
-            string modsPath = Path.Combine(assetsRoot, "Mods");
-            if (Directory.Exists(modsPath))
-            {
-                ModLoader.LoadMods(modsPath);
-            }
-            else
-            {
-                Diagnostics.Log.Warn(in LogChannels.Engine, $"Mods directory not found at {modsPath}");
-            }
-            
-            // Create default config and merge from ConfigPipeline
-            MergedConfig = ConfigPipeline.MergeGameConfig();
-            GlobalContext[ContextKeys.GameConfig] = MergedConfig;
-
-            InitializeCoreSystems(MergedConfig);
-            
-            // 5. Post-Mod Load Initialization
-            MapLoader.LoadTemplates();
-        }
-
         private void InitializeWorld(int widthInTiles, int heightInTiles)
         {
             World = World.Create();
@@ -833,7 +706,7 @@ namespace Ludots.Core.Engine
                 GlobalContext[ContextKeys.BoardIdRegistry] = BoardIdRegistry;
             }
 
-            // Backward compat: if same ID already loaded, unload first then reload
+            // Unload first when same map already loaded, then reload
             if (MapSessions.GetSession(mid) != null)
             {
                 UnloadMap(mapId);
