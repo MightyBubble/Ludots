@@ -195,8 +195,8 @@ namespace Ludots.Tests.GAS.Production
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
-            engine.GlobalContext[ContextKeys.InputHandler] = inputHandler;
-            engine.GlobalContext[ContextKeys.UiCaptured] = false;
+            engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
         }
 
         private sealed class NullInputBackend : IInputBackend

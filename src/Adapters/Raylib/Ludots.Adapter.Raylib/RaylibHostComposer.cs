@@ -41,11 +41,11 @@ namespace Ludots.Adapter.Raylib
                 LogConfigApplier.Apply(config.Logging);
             }
 
-            engine.GlobalContext[ContextKeys.LogBackend] = effectiveBackend;
+            engine.SetService(CoreServiceKeys.LogBackend, effectiveBackend);
 
             var uiRoot = new UIRoot();
-            engine.GlobalContext[ContextKeys.UIRoot] = uiRoot;
-            engine.GlobalContext[ContextKeys.UISystem] = new DesktopUiSystem(uiRoot);
+            engine.SetService(CoreServiceKeys.UIRoot, (object)uiRoot);
+            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new DesktopUiSystem(uiRoot));
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             IInputBackend inputBackend = new RaylibInputBackend();
@@ -60,8 +60,8 @@ namespace Ludots.Adapter.Raylib
                     }
                 }
             }
-            engine.GlobalContext[ContextKeys.InputHandler] = inputHandler;
-            engine.GlobalContext[ContextKeys.InputBackend] = inputBackend;
+            engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+            engine.SetService(CoreServiceKeys.InputBackend, (Core.Input.Runtime.IInputBackend)inputBackend);
 
             ValidateRequiredContextBeforeStart(engine);
 
@@ -70,10 +70,10 @@ namespace Ludots.Adapter.Raylib
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
         {
-            ValidateKey<UIRoot>(engine, ContextKeys.UIRoot);
-            ValidateKey<Ludots.Core.UI.IUiSystem>(engine, ContextKeys.UISystem);
-            ValidateKey<PlayerInputHandler>(engine, ContextKeys.InputHandler);
-            ValidateKey<IInputBackend>(engine, ContextKeys.InputBackend);
+            ValidateKey<object>(engine, CoreServiceKeys.UIRoot.Name);
+            ValidateKey<Core.UI.IUiSystem>(engine, CoreServiceKeys.UISystem.Name);
+            ValidateKey<PlayerInputHandler>(engine, CoreServiceKeys.InputHandler.Name);
+            ValidateKey<IInputBackend>(engine, CoreServiceKeys.InputBackend.Name);
         }
 
         private static void ValidateKey<T>(GameEngine engine, string key)

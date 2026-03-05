@@ -46,8 +46,8 @@ namespace Ludots.Core.Presentation.Systems
 
         public void Update(in float dt)
         {
-            if (!_globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) || inputObj is not PlayerInputHandler input) return;
-            if (!_globals.TryGetValue(ContextKeys.ScreenRayProvider, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return;
 
             var mouse = input.ReadAction<System.Numerics.Vector2>("PointerPos");
             var ray = rayProvider.GetRay(mouse);
@@ -56,26 +56,26 @@ namespace Ludots.Core.Presentation.Systems
                 var hovered = FindNearestEntity(hoveredWorldCm, PickRadiusCm);
                 if (_world.IsAlive(hovered))
                 {
-                    _globals[ContextKeys.HoveredEntity] = hovered;
+                    _globals[CoreServiceKeys.HoveredEntity.Name] = hovered;
                 }
                 else
                 {
-                    _globals.Remove(ContextKeys.HoveredEntity);
+                    _globals.Remove(CoreServiceKeys.HoveredEntity.Name);
                 }
             }
             else
             {
-                _globals.Remove(ContextKeys.HoveredEntity);
+                _globals.Remove(CoreServiceKeys.HoveredEntity.Name);
             }
 
             // 如果当前无选中实体或选中实体已死亡，自动回退到 LocalPlayerEntity
-            if (!_globals.TryGetValue(ContextKeys.SelectedEntity, out var existingSelObj) 
+            if (!_globals.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var existingSelObj) 
                 || existingSelObj is not Entity existingSel 
                 || !_world.IsAlive(existingSel))
             {
-                if (_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var localObj) && localObj is Entity local && _world.IsAlive(local))
+                if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) && localObj is Entity local && _world.IsAlive(local))
                 {
-                    _globals[ContextKeys.SelectedEntity] = local;
+                    _globals[CoreServiceKeys.SelectedEntity.Name] = local;
                 }
             }
 
@@ -84,7 +84,7 @@ namespace Ludots.Core.Presentation.Systems
             if (!GroundRaycastUtil.TryGetGroundWorldCm(in ray, out var worldCm)) return;
 
             var selected = FindNearestEntity(worldCm, PickRadiusCm);
-            _globals[ContextKeys.SelectedEntity] = selected;
+            _globals[CoreServiceKeys.SelectedEntity.Name] = selected;
 
             OnEntitySelected?.Invoke(worldCm, selected);
         }

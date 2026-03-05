@@ -27,10 +27,10 @@ namespace FourXDemoMod.Triggers
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            var mapTags = context.Get<List<string>>(ContextKeys.MapTags) ?? new List<string>();
+            var mapTags = context.Get(CoreServiceKeys.MapTags) ?? new List<string>();
             if (!HasTag(mapTags, "fourx")) return Task.CompletedTask;
 
-            if (!engine.GlobalContext.TryGetValue(ContextKeys.TagOps, out var tagOpsObj) || tagOpsObj is not TagOps tagOps)
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.TagOps.Name, out var tagOpsObj) || tagOpsObj is not TagOps tagOps)
             {
                 return Task.CompletedTask;
             }

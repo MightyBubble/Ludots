@@ -20,12 +20,12 @@ namespace Ludots.Core.Systems
  
         public void Update(in float dt)
         {
-            if (!_globals.TryGetValue(ContextKeys.InputHandler, out var handlerObj) || handlerObj is not PlayerInputHandler input)
+            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var handlerObj) || handlerObj is not PlayerInputHandler input)
             {
                 return;
             }
  
-            bool uiCaptured = _globals.TryGetValue(ContextKeys.UiCaptured, out var capturedObj) && capturedObj is bool b && b;
+            bool uiCaptured = _globals.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var capturedObj) && capturedObj is bool b && b;
             input.InputBlocked = uiCaptured;
             input.Update();
         }

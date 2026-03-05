@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Presentation.Camera
@@ -43,33 +44,33 @@ namespace Ludots.Core.Presentation.Camera
         /// </summary>
         /// <param name="state">The player's camera state.</param>
         /// <param name="deltaTime">Time elapsed since last frame.</param>
-        public void Update(CameraState state, float deltaTime)
+        /// <param name="cameraDebug">Optional debug overrides (pullback, offset). Null = no override.</param>
+        public void Update(CameraState state, float deltaTime, RenderCameraDebugState cameraDebug = null)
         {
             if (state == null) return;
 
-            // 1. Calculate Target Position (Visual World Space)
             Vector3 targetPos = new Vector3(WorldUnits.CmToM(state.TargetCm.X), 0f, WorldUnits.CmToM(state.TargetCm.Y));
             CurrentTargetPosition = targetPos;
 
-            // 2. Calculate Camera Offset (Spherical Coordinates)
-            // We assume Y-Up convention for the Visual Space (Standard for Unity/Godot)
             float yawRad = ToRadians(state.Yaw);
             float pitchRad = ToRadians(state.Pitch);
 
-            // Calculate horizontal and vertical distances
-            // Pitch: 0 = Horizontal, 90 = Top-down
             float distanceM = WorldUnits.CmToM(state.DistanceCm);
+
+            if (cameraDebug is { Enabled: true })
+                distanceM += cameraDebug.PullBackMeters;
+
             float hDist = distanceM * (float)System.Math.Cos(pitchRad);
             float vDist = distanceM * (float)System.Math.Sin(pitchRad);
 
-            // Calculate offset vector
-            // Yaw: 0 = Looking along +Z (North)
-            // Camera position is "behind" the target direction
             float offsetX = hDist * (float)System.Math.Sin(yawRad);
             float offsetZ = -hDist * (float)System.Math.Cos(yawRad);
 
             Vector3 offset = new Vector3(offsetX, vDist, offsetZ);
             Vector3 desiredPos = targetPos + offset;
+
+            if (cameraDebug is { Enabled: true })
+                desiredPos += cameraDebug.PositionOffsetMeters;
 
             Vector3 forward = Vector3.Normalize(targetPos - desiredPos);
             Vector3 up = Vector3.UnitY;
@@ -78,7 +79,6 @@ namespace Ludots.Core.Presentation.Camera
                 up = Vector3.UnitZ;
             }
 
-            // 4. Apply Smoothing
             if (_isFirstUpdate)
             {
                 _currentPosition = desiredPos;
@@ -94,7 +94,6 @@ namespace Ludots.Core.Presentation.Camera
                 _currentUp = Vector3.Normalize(Vector3.Lerp(_currentUp, up, t));
             }
 
-            // 5. Send to Adapter
             _adapter.UpdateCamera(new CameraRenderState3D(_currentPosition, _currentTarget, _currentUp, state.FovYDeg));
         }
 

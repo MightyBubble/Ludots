@@ -25,7 +25,7 @@ namespace Ludots.Core.Presentation.Systems
         public void Update(in float dt)
         {
             if (!_ui.Dirty) return;
-            if (!_globals.TryGetValue(ContextKeys.UISystem, out var uiObj) || uiObj is not IUiSystem uiSystem) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.UISystem.Name, out var uiObj) || uiObj is not IUiSystem uiSystem) return;
  
             if (!_ui.Visible)
             {

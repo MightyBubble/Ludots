@@ -128,7 +128,7 @@ namespace Physics2DPlaygroundMod.Systems
 
         private void AppendSolidPrimitives()
         {
-            if (!_engine.GlobalContext.TryGetValue(ContextKeys.PresentationPrimitiveDrawBuffer, out var drawObj)) return;
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationPrimitiveDrawBuffer.Name, out var drawObj)) return;
             if (drawObj is not PrimitiveDrawBuffer draw) return;
 
             // 直接从 VisualTransform 读取插值后的位置（统一数据流）
@@ -510,7 +510,7 @@ namespace Physics2DPlaygroundMod.Systems
  
             EnsureChainDemoEntity(templateId);
  
-            if (!_engine.GlobalContext.TryGetValue(ContextKeys.EffectRequestQueue, out var qObj) || qObj is not EffectRequestQueue q) return;
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.EffectRequestQueue.Name, out var qObj) || qObj is not EffectRequestQueue q) return;
             var caller = default(EffectConfigParams);
             caller.TryAddFloat(EffectParamKeys.ForceXAttribute, 10f);
             caller.TryAddFloat(EffectParamKeys.ForceYAttribute, 0f);
@@ -587,13 +587,13 @@ namespace Physics2DPlaygroundMod.Systems
 
         private PlayerInputHandler? TryGetInput()
         {
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.InputHandler, out var obj) && obj is PlayerInputHandler i) return i;
+            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.InputHandler.Name, out var obj) && obj is PlayerInputHandler i) return i;
             return null;
         }
 
         private IScreenRayProvider? TryGetScreenRayProvider()
         {
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.ScreenRayProvider, out var obj) && obj is IScreenRayProvider p) return p;
+            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var obj) && obj is IScreenRayProvider p) return p;
             return null;
         }
 

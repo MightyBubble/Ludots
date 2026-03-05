@@ -17,7 +17,7 @@ namespace Ludots.Core.Commands
         {
             Log.Info(in LogChannels.Engine, $"Executing... Spawning {Count} entities.");
             
-            var world = context.Get<World>(ContextKeys.World);
+            var world = context.Get(CoreServiceKeys.World);
             if (world == null)
             {
                 Log.Error(in LogChannels.Engine, "World not found in context!");

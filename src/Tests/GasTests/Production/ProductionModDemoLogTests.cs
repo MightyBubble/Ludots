@@ -62,7 +62,7 @@ namespace Ludots.Tests.GAS.Production
 
                 // ── W: 自我治疗 ──
                 // 先让 hero 受点伤
-                var effectRequests = (EffectRequestQueue)engine.GlobalContext[ContextKeys.EffectRequestQueue];
+                var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
                 int qTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Damage.Q");
                 effectRequests.Publish(new EffectRequest { RootId = 0, Source = enemy1, Target = hero, TargetContext = default, TemplateId = qTplId });
                 Tick(engine, 5);
@@ -153,7 +153,7 @@ namespace Ludots.Tests.GAS.Production
                 int summonTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Summon.Skeleton");
                 if (summonTplId > 0)
                 {
-                    if (engine.GlobalContext.TryGetValue(ContextKeys.EffectTemplateRegistry, out var tplObj) &&
+                    if (engine.GlobalContext.TryGetValue(CoreServiceKeys.EffectTemplateRegistry.Name, out var tplObj) &&
                         tplObj is EffectTemplateRegistry tplRegistry &&
                         tplRegistry.TryGet(summonTplId, out var summonTpl))
                     {
@@ -170,7 +170,7 @@ namespace Ludots.Tests.GAS.Production
                 int displacementTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Displacement.R");
                 if (displacementTplId > 0 && world.Has<WorldPositionCm>(enemy2))
                 {
-                    if (engine.GlobalContext.TryGetValue(ContextKeys.EffectTemplateRegistry, out var tplObj) &&
+                    if (engine.GlobalContext.TryGetValue(CoreServiceKeys.EffectTemplateRegistry.Name, out var tplObj) &&
                         tplObj is EffectTemplateRegistry tplRegistry &&
                         tplRegistry.TryGet(displacementTplId, out var displacementTpl))
                     {
@@ -240,7 +240,7 @@ namespace Ludots.Tests.GAS.Production
                 LogEntityState(sb, "[TCG]", "初始状态", world, enemy, "TcgEnemy", new[] { healthId }, new[] { "Health" });
 
                 // PoisonCounter slot 1 (ability 2102) - stackable DoT, limit 5, AddDuration
-                var effectRequests = (EffectRequestQueue)engine.GlobalContext[ContextKeys.EffectRequestQueue];
+                var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
                 int poisonId = EffectTemplateIdRegistry.GetId("Effect.Tcg.PoisonCounter");
 
                 for (int stack = 1; stack <= 3; stack++)
@@ -281,7 +281,7 @@ namespace Ludots.Tests.GAS.Production
 
                 // MagicBarrier (slot 0, ability 2103 on tcg_grant map) - grants Immune.Spell
                 sb.AppendLine("[TCG] TcgHero 施放【魔法屏障】→ 自身 (Infinite Buff, GrantedTags: Immune.Spell)。");
-                var effectRequests = (EffectRequestQueue)engine.GlobalContext[ContextKeys.EffectRequestQueue];
+                var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
                 int magicBarrierId = EffectTemplateIdRegistry.GetId("Effect.Tcg.MagicBarrier");
                 effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = hero, TargetContext = default, TemplateId = magicBarrierId });
                 Tick(engine, 10);
@@ -334,7 +334,7 @@ namespace Ludots.Tests.GAS.Production
 
                 // ── Slot 1 (3102): HealPotion +25HP ──
                 // 先让 hero 受伤
-                var effectRequests = (EffectRequestQueue)engine.GlobalContext[ContextKeys.EffectRequestQueue];
+                var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
                 int poisonId = EffectTemplateIdRegistry.GetId("Effect.Arpg.Poison");
                 effectRequests.Publish(new EffectRequest { RootId = 0, Source = enemy, Target = hero, TargetContext = default, TemplateId = poisonId });
                 Tick(engine, 15);
@@ -462,7 +462,7 @@ namespace Ludots.Tests.GAS.Production
                 LogTags(sb, "[4X]", world, engine, governor, "Governor", new[] { "Status.Allied" });
 
                 // ── Slot 5 (4106): TradeRoute - stackable Gold buff, limit 5, KeepDuration ──
-                var effectRequests = (EffectRequestQueue)engine.GlobalContext[ContextKeys.EffectRequestQueue];
+                var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
                 int tradeId = EffectTemplateIdRegistry.GetId("Effect.4X.TradeRoute");
                 float goldBefore = world.Get<AttributeBuffer>(governor).GetCurrent(goldId);
                 sb.AppendLine("[4X] 对 Governor 施加 3 层【贸易路线】(stackable Gold buff, KeepDuration, limit=5)。");
@@ -619,7 +619,7 @@ namespace Ludots.Tests.GAS.Production
                 InstallDummyInput(engine);
                 engine.Start();
                 engine.LoadMap(mapId);
-                engine.GlobalContext.Remove(ContextKeys.CameraControllerRequest);
+                engine.GlobalContext.Remove(CoreServiceKeys.CameraControllerRequest.Name);
 
                 // Warm up
                 Tick(engine, 5);
@@ -640,7 +640,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static void CastAbility(GameEngine engine, Entity actor, Entity target, int slot)
         {
-            var orderQueue = (OrderQueue)engine.GlobalContext[ContextKeys.OrderQueue];
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue);
             int castAbilityTagId = engine.MergedConfig.Constants.OrderTags["castAbility"];
             orderQueue.TryEnqueue(new Order
             {
@@ -653,7 +653,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static void Tick(GameEngine engine, int frames)
         {
-            var stepPolicy = (GasClockStepPolicy)engine.GlobalContext[ContextKeys.GasClockStepPolicy];
+            var stepPolicy = engine.GetService(CoreServiceKeys.GasClockStepPolicy);
             for (int i = 0; i < frames; i++)
             {
                 if (stepPolicy.Mode == GasStepMode.Manual) stepPolicy.RequestStep(1);
@@ -686,7 +686,7 @@ namespace Ludots.Tests.GAS.Production
                 sb.AppendLine($"{prefix} [{entityName} Tags] (no GameplayTagContainer)");
                 return;
             }
-            var tagOps = (TagOps)engine.GlobalContext[ContextKeys.TagOps];
+            var tagOps = engine.GetService(CoreServiceKeys.TagOps);
             ref var tags = ref world.Get<GameplayTagContainer>(entity);
             sb.Append($"{prefix} [{entityName} Tags]");
             for (int i = 0; i < tagNames.Length; i++)
@@ -779,8 +779,8 @@ namespace Ludots.Tests.GAS.Production
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
-            engine.GlobalContext[ContextKeys.InputHandler] = inputHandler;
-            engine.GlobalContext[ContextKeys.UiCaptured] = false;
+            engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
         }
 
         private sealed class NullInputBackend : IInputBackend

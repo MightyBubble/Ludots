@@ -23,6 +23,8 @@
 
   { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/mesh_assets.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/prefabs.json", "Policy": "ArrayById", "IdField": "id" },
 
   { "Path": "Input/default_input.json", "Policy": "DeepObject" },
   { "Path": "Input/input_order_mappings.json", "Policy": "DeepObject" },

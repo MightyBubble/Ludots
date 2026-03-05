@@ -40,14 +40,14 @@ namespace Navigation2DPlaygroundMod.Triggers
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            var mapId = context.Get<MapId>(ContextKeys.MapId);
+            var mapId = context.Get(CoreServiceKeys.MapId);
             bool isEntry = mapId.Value == engine.MergedConfig.StartupMapId;
 
             if (isEntry)
             {
                 if (!_installed)
                 {
-                    if (!engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DRuntime, out var navObj) || navObj is not Navigation2DRuntime navRuntime)
+                    if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.Navigation2DRuntime.Name, out var navObj) || navObj is not Navigation2DRuntime navRuntime)
                     {
                         throw new InvalidOperationException("Navigation2DPlaygroundMod requires Navigation2D.Enabled=true so Navigation2DRuntime exists in GlobalContext.");
                     }
@@ -56,7 +56,7 @@ namespace Navigation2DPlaygroundMod.Triggers
                     navRuntime.FlowEnabled = true;
 
                     var debugDrawBuffer = new DebugDrawCommandBuffer();
-                    engine.GlobalContext[ContextKeys.DebugDrawCommandBuffer] = debugDrawBuffer;
+                    engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDrawBuffer);
 
                     engine.RegisterSystem(new Physics2DToWorldPositionSyncSystem(engine.World), SystemGroup.PostMovement);
                     engine.RegisterSystem(new IntegrationSystem2D(engine.World), SystemGroup.InputCollection);
@@ -65,8 +65,8 @@ namespace Navigation2DPlaygroundMod.Triggers
                     engine.RegisterPresentationSystem(new Navigation2DPlaygroundPresentationSystem(engine, debugDrawBuffer));
 
                     Navigation2DPlaygroundControlSystem.SpawnScenario(engine.World, Navigation2DPlaygroundState.AgentsPerTeam);
-                    engine.GlobalContext[ContextKeys.Navigation2DPlayground_AgentsPerTeam] = Navigation2DPlaygroundState.AgentsPerTeam;
-                    engine.GlobalContext[ContextKeys.Navigation2DPlayground_LiveAgentsTotal] = Navigation2DPlaygroundState.AgentsPerTeam * 2;
+                    engine.SetService(Navigation2DPlaygroundKeys.AgentsPerTeam, Navigation2DPlaygroundState.AgentsPerTeam);
+                    engine.SetService(Navigation2DPlaygroundKeys.LiveAgentsTotal, Navigation2DPlaygroundState.AgentsPerTeam * 2);
 
                     _installed = true;
                     _ctx.Log("[Navigation2DPlaygroundMod] Installed systems and spawned two-team pass-through scenario.");
@@ -74,8 +74,8 @@ namespace Navigation2DPlaygroundMod.Triggers
 
                 Navigation2DPlaygroundState.Enabled = true;
 
-                var session = context.Get<GameSession>(ContextKeys.GameSession);
-                var input = context.Get<PlayerInputHandler>(ContextKeys.InputHandler);
+                var session = context.Get(CoreServiceKeys.GameSession);
+                var input = context.Get(CoreServiceKeys.InputHandler);
                 if (session != null && input != null)
                 {
                     if (!_inputContextActive)
@@ -91,7 +91,7 @@ namespace Navigation2DPlaygroundMod.Triggers
 
                     if (session.Camera.Controller == null)
                     {
-                        engine.GlobalContext[ContextKeys.CameraControllerRequest] = new CameraControllerRequest
+                        engine.SetService(CoreServiceKeys.CameraControllerRequest, new CameraControllerRequest
                         {
                             Id = CameraControllerIds.Orbit3C,
                             Config = new Orbit3CCameraConfig
@@ -101,14 +101,14 @@ namespace Navigation2DPlaygroundMod.Triggers
                                 ZoomCmPerWheel = 10000f,
                                 RotateDegPerSecond = 90f
                             }
-                        };
+                        });
                     }
                 }
             }
             else
             {
                 Navigation2DPlaygroundState.Enabled = false;
-                var input = context.Get<PlayerInputHandler>(ContextKeys.InputHandler);
+                var input = context.Get(CoreServiceKeys.InputHandler);
                 if (input != null && _inputContextActive)
                 {
                     input.PopContext(InputContextId);

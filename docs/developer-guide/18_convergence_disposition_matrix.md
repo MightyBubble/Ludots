@@ -36,6 +36,13 @@
   - `origin/fix/camera-wasd-grid-and-overlay`
   - `origin/fix/moba-test-coreinputmod-dependency`
 
+## 1.3 本轮新增 PR 处置
+
+| PR | 标题 | 建议动作 | 理由 |
+|---|---|---|---|
+| #19 | 资产导入架构文档 | **关闭 PR** | Draft；内容已被 `feat/entity-visual-pipeline` 正式实现覆盖（MeshAssetType/Model/Prefab + ConfigPipeline + OBJ/GLTF 加载）。 |
+| #11 | 实体外观显示系统 | **关闭 PR（同 1.1）** | 有价值片段（GM Console、OBJ 加载）已在 `GmConsoleMod` + `RaylibPrimitiveRenderer` 重新实现，符合六边形架构。 |
+
 ## 2 Issue 状态更新建议
 
 ## 2.1 可直接关闭
@@ -59,8 +66,12 @@
    当前依据：Bridge/Runtime 侧配置与位置链路已统一到当前收束语义。
 
 2. **#6 统一 Editor ↔ Raylib 相机初始状态**  
-   建议：补一次端到端证据后关闭。  
-   当前依据：主线已使用 `MapConfig.DefaultCamera` 作为显式入口，并完成 camera 规范文档化。
+   建议：**关闭**  
+   证据：`MapConfig.DefaultCamera` 为唯一入口；`CameraPresenter` 支持 `RenderCameraDebugState` 可选拉远/偏移；`GmConsoleMod` 提供 `cam.detach`/`cam.pull`/`cam.offset` 命令。
+
+3. **#18 RaylibHostLoop 硬编码调试 UI 迁移**  
+   建议：**关闭**  
+   证据：`origin/main` 已完成迁移（`ab98f24`~`e3b4f2b`）；`RenderDebugState` 为 Core 层 SSOT；`DiagnosticsOverlayMod` 消费输入动作驱动。
 
 ## 2.3 建议保留并拆分
 
@@ -78,6 +89,16 @@
 - P0 报告与容量边界修复：`f607dca`
 - 空间查询防御性修复（全量回归中发现）：`cfd142c`
 - 唯一真相规则文档：`ef291d9`
+
+### 3.1 Entity Visual Pipeline 正式化（`feat/entity-visual-pipeline` 分支）
+
+- MeshAssetRegistry 扩展：支持 Primitive / Model / Prefab 三种类型，字符串 key 为一等公民
+- ConfigPipeline 接入：`mesh_assets.json` + `prefabs.json` 通过 config_catalog 注册
+- Raylib OBJ/GLTF 加载：`RaylibPrimitiveRenderer` 扩展 Model 绑定 + Prefab 递归展开 + 缓存
+- RenderCameraDebugState + CameraCullingDebugState：Core 层相机/裁剪调试状态
+- GmConsoleMod：独立 Mod，Backquote 唤出，支持 cam/cull/accept 命令族
+- CullingVisualizationPresentationSystem：通过 DebugDrawCommandBuffer 渲染裁剪 AABB + LOD 环
+- InputRuntimeSystem bugfix：`CoreServiceKeys.UiCaptured` → `.Name`
 
 ## 4 执行顺序建议
 

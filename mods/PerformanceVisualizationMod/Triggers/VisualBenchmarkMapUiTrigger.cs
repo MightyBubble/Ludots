@@ -54,7 +54,7 @@ namespace PerformanceVisualizationMod.Triggers
         public override Task ExecuteAsync(ScriptContext context)
         {
             var engine = context.GetEngine();
-            var uiRoot = context.Get<UIRoot>(ContextKeys.UIRoot);
+            var uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
             if (engine == null || uiRoot == null) return Task.CompletedTask;
 
             // Register UI Refresh System to force redraws
@@ -62,7 +62,7 @@ namespace PerformanceVisualizationMod.Triggers
             engine.RegisterPresentationSystem(refreshSystem);
 
             // Retrieve ScreenProjector service
-            var screenProjector = context.Get<IScreenProjector>(ContextKeys.ScreenProjector);
+            var screenProjector = context.Get(CoreServiceKeys.ScreenProjector);
 
             var rootWidget = new FlexNodeWidget();
             Reconciler.Render(

@@ -138,6 +138,13 @@ namespace Ludots.Core.Engine
         public GameplayEventBus EventBus { get; private set; } // Added EventBus
 
         public Dictionary<string, object> GlobalContext { get; } = new Dictionary<string, object>();
+
+        public void SetService<T>(ServiceKey<T> key, T value)
+            => GlobalContext[key.Name] = value;
+
+        public T GetService<T>(ServiceKey<T> key)
+            => GlobalContext.TryGetValue(key.Name, out var v) && v is T t ? t : default;
+
         public GameSynchronizationContext SyncContext { get; private set; }
 
         // Systems - 按Phase分组
@@ -184,14 +191,14 @@ namespace Ludots.Core.Engine
         public ScriptContext CreateContext()
         {
             var ctx = new ScriptContext();
-            ctx.Set(ContextKeys.World, World);
-            ctx.Set(ContextKeys.WorldMap, WorldMap);
-            ctx.Set(ContextKeys.VertexMap, VertexMap);
-            ctx.Set(ContextKeys.GameSession, GameSession);
-            ctx.Set(ContextKeys.Engine, this);
-            ctx.Set(ContextKeys.WorldSizeSpec, WorldSizeSpec);
-            ctx.Set(ContextKeys.SpatialCoordinateConverter, SpatialCoords);
-            ctx.Set(ContextKeys.SpatialQueryService, SpatialQueries);
+            ctx.Set(CoreServiceKeys.World, World);
+            ctx.Set(CoreServiceKeys.WorldMap, WorldMap);
+            ctx.Set(CoreServiceKeys.VertexMap, VertexMap);
+            ctx.Set(CoreServiceKeys.GameSession, GameSession);
+            ctx.Set(CoreServiceKeys.Engine, this);
+            ctx.Set(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
+            ctx.Set(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
+            ctx.Set(CoreServiceKeys.SpatialQueryService, SpatialQueries);
 
             foreach (var kvp in GlobalContext)
             {
@@ -237,8 +244,8 @@ namespace Ludots.Core.Engine
             ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
             MapManager = new MapManager(VFS, TriggerManager, ModLoader);
             ModLoader.MapManager = MapManager;
-            GlobalContext[ContextKeys.SystemFactoryRegistry] = SystemFactoryRegistry;
-            GlobalContext[ContextKeys.TriggerDecoratorRegistry] = TriggerDecoratorRegistry;
+            SetService(CoreServiceKeys.SystemFactoryRegistry, SystemFactoryRegistry);
+            SetService(CoreServiceKeys.TriggerDecoratorRegistry, TriggerDecoratorRegistry);
 
             // 2. Load Mods first (so ConfigPipeline can access their game.json)
             if (modPaths != null && modPaths.Count > 0)
@@ -262,10 +269,10 @@ namespace Ludots.Core.Engine
             Diagnostics.Log.Info(in LogChannels.Engine, $"Constants loaded: OrderTags={MergedConfig.Constants.OrderTags.Count}, GasOrderTags={MergedConfig.Constants.GasOrderTags.Count}");
             
             // Store merged config in GlobalContext for access throughout the engine
-            GlobalContext[ContextKeys.GameConfig] = MergedConfig;
-            GlobalContext[ContextKeys.ConfigCatalog] = ConfigCatalog;
-            GlobalContext[ContextKeys.ConfigConflictReport] = ConfigConflictReport;
-            GlobalContext[ContextKeys.AiRuntime] = AiRuntime;
+            SetService(CoreServiceKeys.GameConfig, MergedConfig);
+            SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
+            SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
+            SetService(CoreServiceKeys.AiRuntime, AiRuntime);
 
             // 4. Setup ECS & Session using merged config values
             InitializeWorld(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
@@ -281,13 +288,13 @@ namespace Ludots.Core.Engine
             _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
             SpatialQueries = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
             WireUpPositionProvider();
-            GlobalContext[ContextKeys.WorldSizeSpec] = WorldSizeSpec;
-            GlobalContext[ContextKeys.SpatialCoordinateConverter] = SpatialCoords;
-            GlobalContext[ContextKeys.SpatialQueryService] = SpatialQueries;
+            SetService(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
+            SetService(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
+            SetService(CoreServiceKeys.SpatialQueryService, SpatialQueries);
 
             // 4b. Create HexGridAOI as ILoadedChunks SSOT
             HexGridAOI = new HexGridAOI();
-            GlobalContext[ContextKeys.LoadedChunks] = HexGridAOI;
+            SetService(CoreServiceKeys.LoadedChunks, (ILoadedChunks)HexGridAOI);
 
             // 5. Setup Data Loaders
             MapLoader = new MapLoader(World, WorldMap, ConfigPipeline);
@@ -334,9 +341,9 @@ namespace Ludots.Core.Engine
 
             if (reloadAi) RebuildAiRuntime();
 
-            GlobalContext[ContextKeys.ConfigCatalog] = ConfigCatalog;
-            GlobalContext[ContextKeys.ConfigConflictReport] = ConfigConflictReport;
-            GlobalContext[ContextKeys.AiRuntime] = AiRuntime;
+            SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
+            SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
+            SetService(CoreServiceKeys.AiRuntime, AiRuntime);
         }
 
         private void InitializeWorld(int widthInTiles, int heightInTiles)
@@ -461,6 +468,7 @@ namespace Ludots.Core.Engine
             var performerEmitSystem = new PerformerEmitSystem(World, performerInstances, performerDefinitions, groundOverlayBuffer, primitiveDrawBuffer, worldHudBuffer, graphProgramRegistry, performerGraphApi, GlobalContext,
                 entityColorResolver: (world, entity) => Ludots.Core.Presentation.Utils.TeamColorResolver.Resolve(world, entity));
             new PerformerDefinitionConfigLoader(ConfigPipeline, performerDefinitions, Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId).Load();
+            new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load();
             var worldHudStrings = new WorldHudStringTable();
             new AttributeConstraintsLoader(ConfigPipeline).Load();
 
@@ -521,58 +529,56 @@ namespace Ludots.Core.Engine
 
             // Register systems in Phase order according to GAS design document
             // Phase 0: SchemaUpdate
-            GlobalContext[ContextKeys.ExtensionAttributeRegistry] = extensionAttributeRegistry;
-            GlobalContext[ContextKeys.AttributeSchemaUpdateQueue] = attributeSchemaUpdateQueue;
-            GlobalContext[ContextKeys.GasBudget] = gasBudget;
-            GlobalContext[ContextKeys.EffectTemplateRegistry] = effectTemplateRegistry;
-            GlobalContext[ContextKeys.GraphProgramRegistry] = graphProgramRegistry;
-            GlobalContext[ContextKeys.EffectRequestQueue] = effectRequestQueue;
-            GlobalContext[ContextKeys.Clock] = clock;
-            GlobalContext[ContextKeys.GasClockStepPolicy] = clockStepPolicy;
-            GlobalContext[ContextKeys.GasClocks] = gasClocks;
-            GlobalContext[ContextKeys.Physics2DTickPolicy] = physics2dTickPolicy;
-            GlobalContext[ContextKeys.Navigation2DTickPolicy] = navigation2dTickPolicy;
-            GlobalContext[ContextKeys.Physics2DController] = _physics2DController;
-            GlobalContext[ContextKeys.SimulationLoopController] = simulationLoopController;
-            GlobalContext[ContextKeys.GasController] = _gasController;
-            GlobalContext[ContextKeys.GasConditionRegistry] = gasConditions;
-            GlobalContext[ContextKeys.TagOps] = tagOps;
-            GlobalContext[ContextKeys.EffectTemplateRegistry] = effectTemplateRegistry;
-            GlobalContext[ContextKeys.AbilityDefinitionRegistry] = abilityDefinitions;
-            GlobalContext[ContextKeys.InputRequestQueue] = inputRequestQueue;
-            GlobalContext[ContextKeys.AbilityInputRequestQueue] = abilityInputRequestQueue;
-            GlobalContext[ContextKeys.InputResponseBuffer] = inputResponseBuffer;
-            GlobalContext[ContextKeys.SelectionRequestQueue] = selectionRequestQueue;
-            GlobalContext[ContextKeys.SelectionResponseBuffer] = selectionResponseBuffer;
-            GlobalContext[ContextKeys.OrderQueue] = orderQueue;
-            GlobalContext[ContextKeys.OrderTypeRegistry] = orderTypeRegistry;
-            GlobalContext[ContextKeys.OrderBufferSystem] = orderBufferSystem;
-            GlobalContext[ContextKeys.OrderRequestQueue] = orderRequestQueue;
-            // OrderSchemaRegistry removed — use OrderTypeRegistry for label lookup
-            GlobalContext[ContextKeys.ResponseChainTelemetryBuffer] = responseChainTelemetry;
-            GlobalContext[ContextKeys.ChainOrderQueue] = chainOrderQueue;
-            GlobalContext[ContextKeys.AttributeSinkRegistry] = attributeSinks;
-            GlobalContext[ContextKeys.AttributeBindingRegistry] = attributeBindings;
-            GlobalContext[ContextKeys.PresentationEventStream] = presentationEventStream;
-            GlobalContext[ContextKeys.PresentationCommandBuffer] = presentationCommandBuffer;
-            GlobalContext[ContextKeys.PresentationPrefabRegistry] = presentationPrefabs;
-            GlobalContext[ContextKeys.PresentationMeshAssetRegistry] = meshAssets;
+            SetService(CoreServiceKeys.ExtensionAttributeRegistry, extensionAttributeRegistry);
+            SetService(CoreServiceKeys.AttributeSchemaUpdateQueue, attributeSchemaUpdateQueue);
+            SetService(CoreServiceKeys.GasBudget, gasBudget);
+            SetService(CoreServiceKeys.EffectTemplateRegistry, effectTemplateRegistry);
+            SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
+            SetService(CoreServiceKeys.EffectRequestQueue, effectRequestQueue);
+            SetService(CoreServiceKeys.Clock, (IClock)clock);
+            SetService(CoreServiceKeys.GasClockStepPolicy, clockStepPolicy);
+            SetService(CoreServiceKeys.GasClocks, gasClocks);
+            SetService(CoreServiceKeys.Physics2DTickPolicy, physics2dTickPolicy);
+            SetService(CoreServiceKeys.Navigation2DTickPolicy, navigation2dTickPolicy);
+            SetService(CoreServiceKeys.Physics2DController, _physics2DController);
+            SetService(CoreServiceKeys.SimulationLoopController, simulationLoopController);
+            SetService(CoreServiceKeys.GasController, _gasController);
+            SetService(CoreServiceKeys.GasConditionRegistry, gasConditions);
+            SetService(CoreServiceKeys.TagOps, tagOps);
+            SetService(CoreServiceKeys.AbilityDefinitionRegistry, abilityDefinitions);
+            SetService(CoreServiceKeys.InputRequestQueue, inputRequestQueue);
+            SetService(CoreServiceKeys.AbilityInputRequestQueue, abilityInputRequestQueue);
+            SetService(CoreServiceKeys.InputResponseBuffer, inputResponseBuffer);
+            SetService(CoreServiceKeys.SelectionRequestQueue, selectionRequestQueue);
+            SetService(CoreServiceKeys.SelectionResponseBuffer, selectionResponseBuffer);
+            SetService(CoreServiceKeys.OrderQueue, orderQueue);
+            SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);
+            SetService(CoreServiceKeys.OrderBufferSystem, orderBufferSystem);
+            SetService(CoreServiceKeys.OrderRequestQueue, orderRequestQueue);
+            SetService(CoreServiceKeys.ResponseChainTelemetryBuffer, responseChainTelemetry);
+            SetService(CoreServiceKeys.ChainOrderQueue, chainOrderQueue);
+            SetService(CoreServiceKeys.AttributeSinkRegistry, attributeSinks);
+            SetService(CoreServiceKeys.AttributeBindingRegistry, attributeBindings);
+            SetService(CoreServiceKeys.PresentationEventStream, presentationEventStream);
+            SetService(CoreServiceKeys.PresentationCommandBuffer, presentationCommandBuffer);
+            SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
+            SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
             _primitiveDrawBuffer = primitiveDrawBuffer;
             _gasPresentationEvents = gasPresentationEvents;
             _groundOverlayBuffer = groundOverlayBuffer;
             _worldHudBuffer = worldHudBuffer;
-            GlobalContext[ContextKeys.PresentationPrimitiveDrawBuffer] = primitiveDrawBuffer;
-            GlobalContext[ContextKeys.PresentationWorldHudBuffer] = worldHudBuffer;
-            GlobalContext[ContextKeys.PresentationWorldHudStrings] = worldHudStrings;
+            SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, primitiveDrawBuffer);
+            SetService(CoreServiceKeys.PresentationWorldHudBuffer, worldHudBuffer);
+            SetService(CoreServiceKeys.PresentationWorldHudStrings, worldHudStrings);
             var screenHudBuffer = new ScreenHudBatchBuffer();
-            GlobalContext[ContextKeys.PresentationScreenHudBuffer] = screenHudBuffer;
-            GlobalContext[ContextKeys.ScreenOverlayBuffer] = new ScreenOverlayBuffer();
-            GlobalContext[ContextKeys.RenderDebugState] = new RenderDebugState();
-            GlobalContext[ContextKeys.TransientMarkerBuffer] = transientMarkerBuffer;
-            GlobalContext[ContextKeys.GasPresentationEventBuffer] = gasPresentationEvents;
-            GlobalContext[ContextKeys.GroundOverlayBuffer] = groundOverlayBuffer;
-            GlobalContext[ContextKeys.PerformerDefinitionRegistry] = performerDefinitions;
-            GlobalContext[ContextKeys.PerformerInstanceBuffer] = performerInstances;
+            SetService(CoreServiceKeys.PresentationScreenHudBuffer, screenHudBuffer);
+            SetService(CoreServiceKeys.ScreenOverlayBuffer, new ScreenOverlayBuffer());
+            SetService(CoreServiceKeys.RenderDebugState, new RenderDebugState());
+            SetService(CoreServiceKeys.TransientMarkerBuffer, transientMarkerBuffer);
+            SetService(CoreServiceKeys.GasPresentationEventBuffer, gasPresentationEvents);
+            SetService(CoreServiceKeys.GroundOverlayBuffer, groundOverlayBuffer);
+            SetService(CoreServiceKeys.PerformerDefinitionRegistry, performerDefinitions);
+            SetService(CoreServiceKeys.PerformerInstanceBuffer, performerInstances);
             var cameraControllers = new CameraControllerRegistry();
             cameraControllers.Register(CameraControllerIds.Orbit3C, (configObj, services) =>
             {
@@ -585,10 +591,10 @@ namespace Ludots.Core.Engine
 
                 return new Orbit3CCameraController(cfg, services.Input);
             });
-            GlobalContext[ContextKeys.CameraControllerRegistry] = cameraControllers;
+            SetService(CoreServiceKeys.CameraControllerRegistry, cameraControllers);
             var cameraPresetRegistry = new CameraPresetRegistry();
             new CameraPresetLoader(ConfigPipeline, cameraPresetRegistry).Load(ConfigCatalog, ConfigConflictReport);
-            GlobalContext[ContextKeys.CameraPresetRegistry] = cameraPresetRegistry;
+            SetService(CoreServiceKeys.CameraPresetRegistry, cameraPresetRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
             
@@ -608,7 +614,7 @@ namespace Ludots.Core.Engine
             {
                 var navigation2dRuntime = new Navigation2DRuntime(maxAgents: config.Navigation2D.MaxAgents, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: HexGridAOI);
                 navigation2dRuntime.FlowIterationsPerTick = config.Navigation2D.FlowIterationsPerTick;
-                GlobalContext[ContextKeys.Navigation2DRuntime] = navigation2dRuntime;
+                SetService(CoreServiceKeys.Navigation2DRuntime, navigation2dRuntime);
 
                 const string nav2dSystemTypeName = "Ludots.Core.Physics2D.Systems.Navigation2DSimulationSystem2D";
                 const string physics2dAssemblyName = "Ludots.Physics2D";
@@ -656,7 +662,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
             
             // Phase 5: DeferredTriggerCollection
-            GlobalContext[ContextKeys.DeferredTriggerQueue] = deferredTriggerQueue;
+            SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
             RegisterSystem(deferredTriggerCollectionSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
             
@@ -670,13 +676,13 @@ namespace Ludots.Core.Engine
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(_systemGroups, OnFixedStepCompleted);
 
             var responseChainUiState = new ResponseChainUiState();
-            GlobalContext[ContextKeys.ResponseChainUiState] = responseChainUiState;
+            SetService(CoreServiceKeys.ResponseChainUiState, responseChainUiState);
             
             // PresentationFrameSetupSystem MUST be the first presentation system
             // It calculates InterpolationAlpha for all visual sync systems
             var presentationFrameSetup = new PresentationFrameSetupSystem(World, Pacemaker);
             RegisterPresentationSystem(presentationFrameSetup);
-            GlobalContext[ContextKeys.PresentationFrameSetup] = presentationFrameSetup;
+            SetService(CoreServiceKeys.PresentationFrameSetup, presentationFrameSetup);
             
             // WorldToVisualSyncSystem: 插值 WorldPositionCm → VisualTransform（必须在 PresentationFrameSetup 之后）
             RegisterPresentationSystem(new WorldToVisualSyncSystem(World));
@@ -716,8 +722,8 @@ namespace Ludots.Core.Engine
             {
                 MapSessions = new MapSessionManager();
                 BoardIdRegistry = new BoardIdRegistry();
-                GlobalContext[ContextKeys.MapSessions] = MapSessions;
-                GlobalContext[ContextKeys.BoardIdRegistry] = BoardIdRegistry;
+                SetService(CoreServiceKeys.MapSessions, MapSessions);
+                SetService(CoreServiceKeys.BoardIdRegistry, BoardIdRegistry);
             }
 
             // Unload first when same map already loaded, then reload
@@ -741,7 +747,7 @@ namespace Ludots.Core.Engine
                     SetMapEntitiesSuspended(previousFocused.MapId, true);
                 }
                 CurrentMapSession = session;
-                GlobalContext[ContextKeys.MapSession] = session;
+                SetService(CoreServiceKeys.MapSession, session);
 
                 // Apply primary board spatial config to engine-level services
                 var primaryBoard = session.PrimaryBoard;
@@ -767,11 +773,11 @@ namespace Ludots.Core.Engine
                 }
 
                 var finalCtx = CreateContext();
-                finalCtx.Set(ContextKeys.MapId, mid);
-                finalCtx.Set(ContextKeys.MapTags, mapConfig.Tags);
+                finalCtx.Set(CoreServiceKeys.MapId, mid);
+                finalCtx.Set(CoreServiceKeys.MapTags, mapConfig.Tags);
                 var featureFlags = MapFeatureFlags.FromTags(mapConfig.Tags);
-                GlobalContext[ContextKeys.MapFeatureFlags] = featureFlags;
-                finalCtx.Set(ContextKeys.MapFeatureFlags, featureFlags);
+                SetService(CoreServiceKeys.MapFeatureFlags, featureFlags);
+                finalCtx.Set(CoreServiceKeys.MapFeatureFlags, featureFlags);
 
                 foreach (var kvp in GlobalContext) finalCtx.Set(kvp.Key, kvp.Value);
 
@@ -805,7 +811,7 @@ namespace Ludots.Core.Engine
 
             // Fire MapUnloaded — scoped to this map's triggers
             var unloadCtx = CreateContext();
-            unloadCtx.Set(ContextKeys.MapId, mid);
+            unloadCtx.Set(CoreServiceKeys.MapId, mid);
             foreach (var kvp in GlobalContext) unloadCtx.Set(kvp.Key, kvp.Value);
             TriggerManager.FireMapEvent(mid, GameEvents.MapUnloaded, unloadCtx);
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
@@ -821,7 +827,7 @@ namespace Ludots.Core.Engine
                 // The stack auto-pops in UnloadSession; restore next focused
                 var restored = MapSessions.FocusedSession;
                 CurrentMapSession = restored;
-                GlobalContext[ContextKeys.MapSession] = restored;
+                SetService(CoreServiceKeys.MapSession, restored);
 
                 var primaryBoard = restored.PrimaryBoard;
                 if (primaryBoard != null)
@@ -833,7 +839,7 @@ namespace Ludots.Core.Engine
                 SetMapEntitiesSuspended(restored.MapId, false);
 
                 var resumeCtx = CreateContext();
-                resumeCtx.Set(ContextKeys.MapId, restored.MapId);
+                resumeCtx.Set(CoreServiceKeys.MapId, restored.MapId);
                 foreach (var kvp in GlobalContext) resumeCtx.Set(kvp.Key, kvp.Value);
                 TriggerManager.FireMapEvent(restored.MapId, GameEvents.MapResumed, resumeCtx);
             }
@@ -873,7 +879,7 @@ namespace Ludots.Core.Engine
                 SetMapEntitiesSuspended(outerSession.MapId, true);
             }
             CurrentMapSession = session;
-            GlobalContext[ContextKeys.MapSession] = session;
+            SetService(CoreServiceKeys.MapSession, session);
 
             var primaryBoard = session.PrimaryBoard;
             if (primaryBoard != null)
@@ -890,7 +896,7 @@ namespace Ludots.Core.Engine
             if (outerSession != null)
             {
                 var suspendCtx = CreateContext();
-                suspendCtx.Set(ContextKeys.MapId, outerSession.MapId);
+                suspendCtx.Set(CoreServiceKeys.MapId, outerSession.MapId);
                 foreach (var kvp in GlobalContext) suspendCtx.Set(kvp.Key, kvp.Value);
                 TriggerManager.FireMapEvent(outerSession.MapId, GameEvents.MapSuspended, suspendCtx);
             }
@@ -906,8 +912,8 @@ namespace Ludots.Core.Engine
             }
 
             var ctx = CreateContext();
-            ctx.Set(ContextKeys.MapId, inner);
-            ctx.Set(ContextKeys.MapTags, mapConfig.Tags);
+            ctx.Set(CoreServiceKeys.MapId, inner);
+            ctx.Set(CoreServiceKeys.MapTags, mapConfig.Tags);
             foreach (var kvp in GlobalContext) ctx.Set(kvp.Key, kvp.Value);
             TriggerManager.FireMapEvent(inner, GameEvents.MapLoaded, ctx);
         }
@@ -928,7 +934,7 @@ namespace Ludots.Core.Engine
             {
                 // Fire MapUnloaded (scoped) + unregister triggers
                 var unloadCtx = CreateContext();
-                unloadCtx.Set(ContextKeys.MapId, innerSession.MapId);
+                unloadCtx.Set(CoreServiceKeys.MapId, innerSession.MapId);
                 foreach (var kvp in GlobalContext) unloadCtx.Set(kvp.Key, kvp.Value);
                 TriggerManager.FireMapEvent(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx);
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
@@ -946,7 +952,7 @@ namespace Ludots.Core.Engine
             if (outerSession != null)
             {
                 CurrentMapSession = outerSession;
-                GlobalContext[ContextKeys.MapSession] = outerSession;
+                SetService(CoreServiceKeys.MapSession, outerSession);
 
                 var primaryBoard = outerSession.PrimaryBoard;
                 if (primaryBoard != null)
@@ -958,7 +964,7 @@ namespace Ludots.Core.Engine
                 SetMapEntitiesSuspended(outerSession.MapId, false);
 
                 var resumeCtx = CreateContext();
-                resumeCtx.Set(ContextKeys.MapId, outerSession.MapId);
+                resumeCtx.Set(CoreServiceKeys.MapId, outerSession.MapId);
                 foreach (var kvp in GlobalContext) resumeCtx.Set(kvp.Key, kvp.Value);
                 TriggerManager.FireMapEvent(outerSession.MapId, GameEvents.MapResumed, resumeCtx);
             }
@@ -972,9 +978,9 @@ namespace Ludots.Core.Engine
             var state = GameSession.Camera.State;
 
             // Apply preset first if PresetId is set
+            var presetReg = GetService(CoreServiceKeys.CameraPresetRegistry);
             if (!string.IsNullOrWhiteSpace(cam.PresetId) &&
-                GlobalContext.TryGetValue(ContextKeys.CameraPresetRegistry, out var regObj) &&
-                regObj is CameraPresetRegistry presetReg &&
+                presetReg != null &&
                 presetReg.TryGet(cam.PresetId, out var preset))
             {
                 state.DistanceCm = preset.DistanceCm;
@@ -1051,15 +1057,15 @@ namespace Ludots.Core.Engine
             // Wire up HexMetrics if this is a hex board
             if (board is HexGridBoard hexBoard)
             {
-                GlobalContext[ContextKeys.HexMetrics] = hexBoard.HexMetrics;
-                GlobalContext[ContextKeys.LoadedChunks] = hexBoard.HexGridAOI;
+                SetService(CoreServiceKeys.HexMetrics, hexBoard.HexMetrics);
+                SetService(CoreServiceKeys.LoadedChunks, (ILoadedChunks)hexBoard.HexGridAOI);
                 HexGridAOI = hexBoard.HexGridAOI;
             }
 
             // Update GlobalContext with rebuilt services
-            GlobalContext[ContextKeys.WorldSizeSpec] = WorldSizeSpec;
-            GlobalContext[ContextKeys.SpatialCoordinateConverter] = SpatialCoords;
-            GlobalContext[ContextKeys.SpatialQueryService] = SpatialQueries;
+            SetService(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
+            SetService(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
+            SetService(CoreServiceKeys.SpatialQueryService, SpatialQueries);
 
             // Hot-swap registered system references to prevent stale refs
             _worldToGridSyncSystem?.SetCoordinateConverter(SpatialCoords);
@@ -1084,7 +1090,7 @@ namespace Ludots.Core.Engine
                         {
                             terrainBoard.VertexMap = vtxMap;
                             VertexMap = vtxMap;
-                            GlobalContext[ContextKeys.VertexMap] = vtxMap;
+                            SetService(CoreServiceKeys.VertexMap, vtxMap);
                             Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded VertexMap {vtxMap.WidthInChunks}x{vtxMap.HeightInChunks} for board '{board.Name}'");
                         }
                     }
@@ -1239,9 +1245,9 @@ namespace Ludots.Core.Engine
 
         private void LoadNavForMap(string mapId, MapConfig mapConfig)
         {
-            GlobalContext.Remove(ContextKeys.NavMeshBakeConfig);
-            GlobalContext.Remove(ContextKeys.NavMeshProfiles);
-            GlobalContext.Remove(ContextKeys.NavQueryServices);
+            GlobalContext.Remove(CoreServiceKeys.NavMeshBakeConfig.Name);
+            GlobalContext.Remove(CoreServiceKeys.NavMeshProfiles.Name);
+            GlobalContext.Remove(CoreServiceKeys.NavQueryServices.Name);
 
             if (mapConfig?.Tags == null || mapConfig.Tags.Count == 0) return;
             bool navEnabled = false;
@@ -1258,10 +1264,10 @@ namespace Ludots.Core.Engine
             if (VertexMap == null) throw new InvalidOperationException($"NavMesh enabled but VertexMap is not loaded for map '{mapId}'.");
 
             var bakeConfig = LoadNavMeshBakeConfig();
-            GlobalContext[ContextKeys.NavMeshBakeConfig] = bakeConfig;
+            SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
 
             var profileRegistry = new NavMeshProfileRegistry(bakeConfig);
-            GlobalContext[ContextKeys.NavMeshProfiles] = profileRegistry;
+            SetService(CoreServiceKeys.NavMeshProfiles, profileRegistry);
             var areaCosts = BuildAreaCostTable(bakeConfig);
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
 
@@ -1301,7 +1307,7 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            GlobalContext[ContextKeys.NavQueryServices] = new NavQueryServiceRegistry(stores);
+            SetService(CoreServiceKeys.NavQueryServices, new NavQueryServiceRegistry(stores));
         }
 
         private NavMeshBakeConfig LoadNavMeshBakeConfig()
@@ -1393,13 +1399,13 @@ namespace Ludots.Core.Engine
             if (Pacemaker is RealtimePacemaker realtime) realtime.Reset();
 
             var ctx = new ScriptContext();
-            ctx.Set(ContextKeys.World, World);
-            ctx.Set(ContextKeys.WorldMap, WorldMap);
-            ctx.Set(ContextKeys.GameSession, GameSession);
-            ctx.Set(ContextKeys.Engine, this);
-            ctx.Set(ContextKeys.WorldSizeSpec, WorldSizeSpec);
-            ctx.Set(ContextKeys.SpatialCoordinateConverter, SpatialCoords);
-            ctx.Set(ContextKeys.SpatialQueryService, SpatialQueries);
+            ctx.Set(CoreServiceKeys.World, World);
+            ctx.Set(CoreServiceKeys.WorldMap, WorldMap);
+            ctx.Set(CoreServiceKeys.GameSession, GameSession);
+            ctx.Set(CoreServiceKeys.Engine, this);
+            ctx.Set(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
+            ctx.Set(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
+            ctx.Set(CoreServiceKeys.SpatialQueryService, SpatialQueries);
             foreach (var kvp in GlobalContext) ctx.Set(kvp.Key, kvp.Value);
 
             Diagnostics.Log.Info(in LogChannels.Engine, "Firing GameStart event...");
@@ -1496,30 +1502,23 @@ namespace Ludots.Core.Engine
 
         private void ApplyCameraControllerRequest()
         {
-            if (!GlobalContext.TryGetValue(ContextKeys.CameraControllerRequest, out var reqObj)) return;
-            if (reqObj is not CameraControllerRequest request)
-            {
-                throw new InvalidOperationException($"{ContextKeys.CameraControllerRequest} must be a {nameof(CameraControllerRequest)}.");
-            }
+            var request = GetService(CoreServiceKeys.CameraControllerRequest);
+            if (request == null) return;
 
             if (GameSession.Camera.Controller != null)
             {
                 throw new InvalidOperationException("Camera controller already set. Refuse to override without explicit teardown.");
             }
 
-            if (!GlobalContext.TryGetValue(ContextKeys.CameraControllerRegistry, out var regObj) || regObj is not CameraControllerRegistry registry)
-            {
-                throw new InvalidOperationException("Camera controller registry is missing.");
-            }
+            var registry = GetService(CoreServiceKeys.CameraControllerRegistry)
+                ?? throw new InvalidOperationException("Camera controller registry is missing.");
 
-            if (!GlobalContext.TryGetValue(ContextKeys.InputHandler, out var inputObj) || inputObj is not PlayerInputHandler input)
-            {
-                throw new InvalidOperationException("PlayerInputHandler is required to build camera controller.");
-            }
+            var input = GetService(CoreServiceKeys.InputHandler)
+                ?? throw new InvalidOperationException("PlayerInputHandler is required to build camera controller.");
 
             var controller = registry.Create(request, new CameraControllerBuildServices(input));
             GameSession.Camera.SetController(controller);
-            GlobalContext.Remove(ContextKeys.CameraControllerRequest);
+            GlobalContext.Remove(CoreServiceKeys.CameraControllerRequest.Name);
         }
     }
 }

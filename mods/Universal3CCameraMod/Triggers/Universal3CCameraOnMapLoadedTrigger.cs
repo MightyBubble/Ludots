@@ -21,14 +21,14 @@ namespace Universal3CCameraMod.Triggers
 
         public override Task ExecuteAsync(ScriptContext context)
         {
-            var session = context.Get<GameSession>(ContextKeys.GameSession);
+            var session = context.Get(CoreServiceKeys.GameSession);
             if (session == null) return Task.CompletedTask;
             if (session.Camera.Controller != null) return Task.CompletedTask;
 
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            var vertexMap = context.Get<VertexMap>(ContextKeys.VertexMap);
+            var vertexMap = context.Get(CoreServiceKeys.VertexMap);
             if (vertexMap != null)
             {
                 int cellsW = vertexMap.WidthInChunks * VertexChunk.ChunkSize;
@@ -51,14 +51,14 @@ namespace Universal3CCameraMod.Triggers
             session.Camera.State.Yaw = 35f;
             session.Camera.State.Pitch = 60f;
 
-            engine.GlobalContext[ContextKeys.CameraControllerRequest] = new CameraControllerRequest
+            engine.SetService(CoreServiceKeys.CameraControllerRequest, new CameraControllerRequest
             {
                 Id = CameraControllerIds.Orbit3C,
                 Config = new Orbit3CCameraConfig
                 {
                     EnablePan = false
                 }
-            };
+            });
 
             _context.Log("[Universal3CCameraMod] Requested Orbit3C camera controller");
             return Task.CompletedTask;

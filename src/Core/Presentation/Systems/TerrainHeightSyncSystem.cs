@@ -37,7 +37,7 @@ namespace Ludots.Core.Presentation.Systems
 
         public void Update(in float dt)
         {
-            if (!_globals.TryGetValue(ContextKeys.VertexMap, out var vtxObj) || vtxObj is not VertexMap vertexMap)
+            if (!_globals.TryGetValue(CoreServiceKeys.VertexMap.Name, out var vtxObj) || vtxObj is not VertexMap vertexMap)
                 return;
 
             var job = new SyncJob { VertexMap = vertexMap, HeightScale = HeightScale };

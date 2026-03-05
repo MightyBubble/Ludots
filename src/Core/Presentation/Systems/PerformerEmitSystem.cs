@@ -429,7 +429,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private bool IsLocalPlayer(Entity entity)
         {
-            if (!_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var obj)) return false;
+            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var obj)) return false;
             return obj is Entity lp && lp == entity;
         }
 

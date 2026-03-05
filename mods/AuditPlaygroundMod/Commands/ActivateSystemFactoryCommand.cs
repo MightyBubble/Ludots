@@ -20,7 +20,7 @@ namespace AuditPlaygroundMod.Commands
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            var registry = context.Get<SystemFactoryRegistry>(ContextKeys.SystemFactoryRegistry);
+            var registry = context.Get(CoreServiceKeys.SystemFactoryRegistry);
             if (registry == null)
             {
                 Log.Warn(in LogChannels.Engine, $"[AuditPlaygroundMod] SystemFactoryRegistry missing. name={_factoryName}");

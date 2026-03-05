@@ -1,5 +1,12 @@
+using System;
+
 namespace Ludots.Core.Scripting
 {
+    /// <summary>
+    /// Legacy string-based context keys. Use <see cref="CoreServiceKeys"/> with
+    /// <see cref="ServiceKey{T}"/> for compile-time type safety instead.
+    /// </summary>
+    [Obsolete("Use CoreServiceKeys with ServiceKey<T> for type-safe access. This class will be removed in a future release.")]
     public static class ContextKeys
     {
         public const string World = "World";
@@ -58,6 +65,8 @@ namespace Ludots.Core.Scripting
         public const string PresentationScreenHudBuffer = "PresentationScreenHudBuffer";
         public const string ScreenOverlayBuffer = "ScreenOverlayBuffer";
         public const string RenderDebugState = "RenderDebugState";
+        public const string RenderCameraDebugState = "RenderCameraDebugState";
+        public const string CameraCullingDebugState = "CameraCullingDebugState";
         public const string WorldSizeSpec = "WorldSizeSpec";
         public const string SpatialCoordinateConverter = "SpatialCoordinateConverter";
         public const string SpatialQueryService = "SpatialQueryService";
@@ -99,9 +108,5 @@ namespace Ludots.Core.Scripting
 
         public const string SystemFactoryRegistry = "SystemFactoryRegistry";
         public const string TriggerDecoratorRegistry = "TriggerDecoratorRegistry";
-
-        public const string Navigation2DPlayground_AgentsPerTeam = "Navigation2DPlayground_AgentsPerTeam";
-        public const string Navigation2DPlayground_LiveAgentsTotal = "Navigation2DPlayground_LiveAgentsTotal";
-        public const string Navigation2DPlayground_FlowDebugLines = "Navigation2DPlayground_FlowDebugLines";
     }
 }

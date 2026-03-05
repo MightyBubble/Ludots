@@ -1,0 +1,10 @@
+{
+  "name": "GmConsoleMod",
+  "version": "1.0.0",
+  "description": "GM command console for camera debug, culling visualization, and acceptance scale control. Toggle with Backquote (`).",
+  "main": "bin/net8.0/GmConsoleMod.dll",
+  "priority": 910,
+  "dependencies": {
+    "LudotsCoreMod": ">=1.0.0"
+  }
+}

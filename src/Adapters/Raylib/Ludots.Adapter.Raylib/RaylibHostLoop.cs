@@ -73,19 +73,25 @@ namespace Ludots.Adapter.Raylib
                 var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
 
                 var viewController = new RaylibViewController(cameraAdapter);
-                engine.GlobalContext[ContextKeys.ViewController] = viewController;
+                engine.GlobalContext[CoreServiceKeys.ViewController.Name] = viewController;
 
                 var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
-                engine.GlobalContext[ContextKeys.ScreenProjector] = screenProjector;
-                engine.GlobalContext[ContextKeys.ScreenRayProvider] = new RaylibScreenRayProvider(cameraAdapter);
+                engine.GlobalContext[CoreServiceKeys.ScreenProjector.Name] = screenProjector;
+                engine.GlobalContext[CoreServiceKeys.ScreenRayProvider.Name] = new RaylibScreenRayProvider(cameraAdapter);
 
                 var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
                 engine.RegisterPresentationSystem(cullingSystem);
+                engine.GlobalContext[CoreServiceKeys.CameraCullingDebugState.Name] = cullingSystem.DebugState;
 
-                if (engine.GlobalContext.TryGetValue(ContextKeys.PresentationWorldHudBuffer, out var whObj) && whObj is WorldHudBatchBuffer worldHud &&
-                    engine.GlobalContext.TryGetValue(ContextKeys.PresentationScreenHudBuffer, out var shObj) && shObj is ScreenHudBatchBuffer screenHud)
+                var renderCameraDebug = new RenderCameraDebugState();
+                engine.GlobalContext[CoreServiceKeys.RenderCameraDebugState.Name] = renderCameraDebug;
+
+                engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
+
+                if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudBuffer.Name, out var whObj) && whObj is WorldHudBatchBuffer worldHud &&
+                    engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationScreenHudBuffer.Name, out var shObj) && shObj is ScreenHudBatchBuffer screenHud)
                 {
-                    engine.GlobalContext.TryGetValue(ContextKeys.PresentationWorldHudStrings, out var strObj);
+                    engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudStrings.Name, out var strObj);
                     var worldHudStrings = strObj as Ludots.Core.Presentation.Config.WorldHudStringTable;
                     engine.RegisterPresentationSystem(new WorldHudToScreenSystem(engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud));
                 }
@@ -100,7 +106,7 @@ namespace Ludots.Adapter.Raylib
                 engine.LoadMap(config.StartupMapId);
 
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
-                using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced);
+                using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Immediate, engine.VFS);
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
@@ -127,10 +133,10 @@ namespace Ludots.Adapter.Raylib
                         bool drawSkiaUi = renderDebug.DrawSkiaUi;
 
                         bool uiCaptured = drawSkiaUi && UpdateInput(uiRoot);
-                        engine.GlobalContext[ContextKeys.UiCaptured] = uiCaptured;
+                        engine.GlobalContext[CoreServiceKeys.UiCaptured.Name] = uiCaptured;
                         engine.Tick(dt);
 
-                        cameraPresenter.Update(engine.GameSession.Camera.State, dt);
+                        cameraPresenter.Update(engine.GameSession.Camera.State, dt, renderCameraDebug);
 
                         Rl.BeginDrawing();
                         Rl.ClearBackground(new Raylib_cs.Color(0, 0, 0, 255));
@@ -152,23 +158,23 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         if (drawPrimitives &&
-                            engine.GlobalContext.TryGetValue(ContextKeys.PresentationPrimitiveDrawBuffer, out var drawObj) &&
-                            engine.GlobalContext.TryGetValue(ContextKeys.PresentationMeshAssetRegistry, out var meshObj) &&
+                            engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationPrimitiveDrawBuffer.Name, out var drawObj) &&
+                            engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationMeshAssetRegistry.Name, out var meshObj) &&
                             drawObj is PrimitiveDrawBuffer draw &&
                             meshObj is MeshAssetRegistry meshes)
                         {
-                            primitiveRenderer.Draw(draw, meshes);
+                            primitiveRenderer.Draw(draw, meshes, renderDebug.AcceptanceScaleMultiplier);
                         }
 
                         // Draw ground overlays (range circles, cones, etc.)
-                        if (engine.GlobalContext.TryGetValue(ContextKeys.GroundOverlayBuffer, out var goObj) &&
+                        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.GroundOverlayBuffer.Name, out var goObj) &&
                             goObj is GroundOverlayBuffer overlays && overlays.Count > 0)
                         {
                             DrawGroundOverlays(overlays);
                         }
 
                         if (drawDebugDraw &&
-                            engine.GlobalContext.TryGetValue(ContextKeys.DebugDrawCommandBuffer, out var ddObj) &&
+                            engine.GlobalContext.TryGetValue(CoreServiceKeys.DebugDrawCommandBuffer.Name, out var ddObj) &&
                             ddObj is DebugDrawCommandBuffer dd)
                         {
                             debugDrawRenderer.Draw(dd);
@@ -211,9 +217,9 @@ namespace Ludots.Adapter.Raylib
 
         private static void ValidateRequiredContextBeforeLoop(GameEngine engine)
         {
-            ValidateKey<IScreenProjector>(engine, ContextKeys.ScreenProjector);
-            ValidateKey<IScreenRayProvider>(engine, ContextKeys.ScreenRayProvider);
-            ValidateKey<RenderDebugState>(engine, ContextKeys.RenderDebugState);
+            ValidateKey<IScreenProjector>(engine, CoreServiceKeys.ScreenProjector.Name);
+            ValidateKey<IScreenRayProvider>(engine, CoreServiceKeys.ScreenRayProvider.Name);
+            ValidateKey<RenderDebugState>(engine, CoreServiceKeys.RenderDebugState.Name);
         }
 
         private static void ValidateKey<T>(GameEngine engine, string key)
@@ -226,13 +232,13 @@ namespace Ludots.Adapter.Raylib
 
         private static RenderDebugState ResolveRenderDebugState(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(ContextKeys.RenderDebugState, out var obj) &&
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out var obj) &&
                 obj is RenderDebugState state)
             {
                 return state;
             }
 
-            throw new InvalidOperationException($"GlobalContext missing or invalid: {ContextKeys.RenderDebugState} expected {typeof(RenderDebugState).FullName}");
+            throw new InvalidOperationException($"GlobalContext missing or invalid: {CoreServiceKeys.RenderDebugState.Name} expected {typeof(RenderDebugState).FullName}");
         }
 
         private static bool UpdateInput(UIRoot uiRoot)
@@ -294,8 +300,8 @@ namespace Ludots.Adapter.Raylib
 
         private static void DrawScreenHud(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(ContextKeys.PresentationScreenHudBuffer, out var hudObj)) return;
-            engine.GlobalContext.TryGetValue(ContextKeys.PresentationWorldHudStrings, out var strObj);
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationScreenHudBuffer.Name, out var hudObj)) return;
+            engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudStrings.Name, out var strObj);
             if (hudObj is not ScreenHudBatchBuffer hud) return;
             var strings = strObj as Ludots.Core.Presentation.Config.WorldHudStringTable;
 
@@ -429,7 +435,7 @@ namespace Ludots.Adapter.Raylib
 
         private static void DrawScreenOverlays(GameEngine engine, int screenWidth, int screenHeight)
         {
-            if (!engine.GlobalContext.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var bufferObj)) return;
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var bufferObj)) return;
             if (bufferObj is not ScreenOverlayBuffer buffer) return;
 
             const int maxOverlayDim = 4096;

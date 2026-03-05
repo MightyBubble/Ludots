@@ -73,7 +73,7 @@ namespace ReactiveTestMod
         {
             _modContext.Log("[ReactiveTestMod] Setting up Reactive UI...");
 
-            var uiRoot = context.Get<UIRoot>(ContextKeys.UIRoot);
+            var uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
             if (uiRoot == null)
             {
                 _modContext.Log("[ReactiveTestMod] ERROR: UIRoot not found in context.");

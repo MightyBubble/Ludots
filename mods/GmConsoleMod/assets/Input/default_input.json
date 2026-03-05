@@ -1,0 +1,19 @@
+{
+  "actions": [
+    { "id": "GM_ToggleConsole", "name": "GM_ToggleConsole", "type": "Button" },
+    { "id": "GM_Submit", "name": "GM_Submit", "type": "Button" },
+    { "id": "GM_Backspace", "name": "GM_Backspace", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "GmConsole",
+      "name": "GM Console",
+      "priority": 130,
+      "bindings": [
+        { "actionId": "GM_ToggleConsole", "path": "<Keyboard>/grave" },
+        { "actionId": "GM_Submit", "path": "<Keyboard>/enter" },
+        { "actionId": "GM_Backspace", "path": "<Keyboard>/backspace" }
+      ]
+    }
+  ]
+}

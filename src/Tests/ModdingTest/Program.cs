@@ -165,17 +165,17 @@ namespace ModdingTest
                 var backend = new DummyInputBackend();
                 var inputHandler = new PlayerInputHandler(backend, inputConfig);
                 inputHandler.PushContext("Default_Gameplay");
-                engine.GlobalContext[ContextKeys.InputHandler] = inputHandler;
+                engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
 
                 engine.GameSession.Camera.State.Yaw = 0f;
                 engine.GameSession.Camera.State.Pitch = 60f;
                 engine.GameSession.Camera.State.DistanceCm = 60000f;
 
-                engine.GlobalContext[ContextKeys.CameraControllerRequest] = new CameraControllerRequest
+                engine.SetService(CoreServiceKeys.CameraControllerRequest, new CameraControllerRequest
                 {
                     Id = CameraControllerIds.Orbit3C,
                     Config = new Orbit3CCameraConfig { EnablePan = true }
-                };
+                });
 
                 engine.Start();
 

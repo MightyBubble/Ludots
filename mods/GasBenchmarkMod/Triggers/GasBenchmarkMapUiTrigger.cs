@@ -25,7 +25,7 @@ namespace GasBenchmarkMod.Triggers
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            var uiRoot = context.Get<UIRoot>(ContextKeys.UIRoot);
+            var uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
             if (uiRoot == null)
             {
                 Console.WriteLine("[GasBenchmarkMod] UIRoot missing in ScriptContext.");

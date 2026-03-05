@@ -56,10 +56,10 @@ namespace Ludots.Core.Presentation.Systems
 
         public void Update(in float dt)
         {
-            if (!_globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) || inputObj is not PlayerInputHandler input) return;
-            if (!_globals.TryGetValue(ContextKeys.ScreenRayProvider, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return;
-            if (!_globals.TryGetValue(ContextKeys.SelectionRequestQueue, out var reqObj) || reqObj is not SelectionRequestQueue requests) return;
-            if (!_globals.TryGetValue(ContextKeys.SelectionResponseBuffer, out var respObj) || respObj is not SelectionResponseBuffer responses) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.SelectionRequestQueue.Name, out var reqObj) || reqObj is not SelectionRequestQueue requests) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.SelectionResponseBuffer.Name, out var respObj) || respObj is not SelectionResponseBuffer responses) return;
 
             if (!_hasActiveRequest && requests.TryDequeue(out var req))
             {

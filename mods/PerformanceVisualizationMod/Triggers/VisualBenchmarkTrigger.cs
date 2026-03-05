@@ -38,8 +38,8 @@ namespace PerformanceVisualizationMod.Triggers
             if (world == null) return Task.CompletedTask;
 
             // Register Camera Controller
-            var gameSession = context.Get<GameSession>(ContextKeys.GameSession);
-            var inputHandler = context.Get<PlayerInputHandler>(ContextKeys.InputHandler);
+            var gameSession = context.Get(CoreServiceKeys.GameSession);
+            var inputHandler = context.Get(CoreServiceKeys.InputHandler);
 
             if (gameSession != null && inputHandler != null)
             {

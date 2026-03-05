@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
@@ -13,20 +14,15 @@ namespace Ludots.Core.Scripting
 {
     public static class ScriptContextExtensions
     {
-        // Core Systems
-        public static GameEngine GetEngine(this ScriptContext ctx) => ctx.Get<GameEngine>(ContextKeys.Engine);
-        public static World GetWorld(this ScriptContext ctx) => ctx.Get<World>(ContextKeys.World);
-        public static WorldMap GetWorldMap(this ScriptContext ctx) => ctx.Get<WorldMap>(ContextKeys.WorldMap);
-        public static GameSession GetSession(this ScriptContext ctx) => ctx.Get<GameSession>(ContextKeys.GameSession);
-        
-        // UI
-        public static IUiSystem GetUI(this ScriptContext ctx) => ctx.Get<IUiSystem>(ContextKeys.UISystem);
-        // UIRoot is not available in Core. Mods referencing UI library should use ctx.Get<UIRoot>("UIRoot") directly.
+        public static GameEngine GetEngine(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.Engine);
+        public static World GetWorld(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.World);
+        public static WorldMap GetWorldMap(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.WorldMap);
+        public static GameSession GetSession(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.GameSession);
+        public static IUiSystem GetUI(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.UISystem);
 
-        // Map Helpers
         public static bool IsMap(this ScriptContext ctx, MapId mapId)
         {
-            var typed = ctx.Get<MapId>(ContextKeys.MapId);
+            var typed = ctx.Get(CoreServiceKeys.MapId);
             return typed == mapId;
         }
 
@@ -34,7 +30,7 @@ namespace Ludots.Core.Scripting
 
         public static bool IsMap<TMap>(this ScriptContext ctx) where TMap : MapDefinition
         {
-            var mapId = ctx.Get<MapId>(ContextKeys.MapId);
+            var mapId = ctx.Get(CoreServiceKeys.MapId);
             var engine = ctx.GetEngine();
             if (engine != null)
             {
@@ -47,28 +43,23 @@ namespace Ludots.Core.Scripting
 
         public static bool MapHasTag(this ScriptContext ctx, MapTag tag)
         {
-            var tags = ctx.Get<List<string>>(ContextKeys.MapTags);
+            var tags = ctx.Get(CoreServiceKeys.MapTags);
             if (tags == null) return false;
-            
-            // MapTag.Name corresponds to the string in JSON/Config
             return tags.Contains(tag.Name);
         }
 
-        // Global Variables
         public static Dictionary<string, object> GetGlobals(this ScriptContext ctx)
         {
             var session = ctx.GetSession();
             return session?.Globals;
         }
-        
-        // Mod Helpers
+
         public static bool IsModLoaded(this ScriptContext ctx, string modId)
         {
              var engine = ctx.GetEngine();
              return engine?.ModLoader.LoadedModIds.Contains(modId) ?? false;
         }
-        
-        // Logging
+
         public static void Log(this ScriptContext ctx, string message)
         {
             Diagnostics.Log.Info(in LogChannels.Engine, message);

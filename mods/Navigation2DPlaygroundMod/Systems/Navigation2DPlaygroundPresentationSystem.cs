@@ -63,7 +63,7 @@ namespace Navigation2DPlaygroundMod.Systems
 
         private void AppendSolidPrimitives()
         {
-            if (!_engine.GlobalContext.TryGetValue(ContextKeys.PresentationPrimitiveDrawBuffer, out var drawObj)) return;
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationPrimitiveDrawBuffer.Name, out var drawObj)) return;
             if (drawObj is not PrimitiveDrawBuffer draw) return;
 
             foreach (ref var chunk in _world.Query(in _query))
@@ -117,7 +117,7 @@ namespace Navigation2DPlaygroundMod.Systems
 
         private void AppendFlowFieldDebug()
         {
-            if (!_engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DRuntime, out var navObj)) return;
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.Navigation2DRuntime.Name, out var navObj)) return;
             if (navObj is not Navigation2DRuntime nav) return;
             if (!nav.FlowDebugEnabled) return;
 
@@ -162,7 +162,7 @@ namespace Navigation2DPlaygroundMod.Systems
                 }
             }
 
-            _engine.GlobalContext[ContextKeys.Navigation2DPlayground_FlowDebugLines] = _debugDraw.Lines.Count - beforeLines;
+            _engine.SetService(Navigation2DPlaygroundKeys.FlowDebugLines, _debugDraw.Lines.Count - beforeLines);
         }
 
         private void AddArrow(Vector2 from, Vector2 to, DebugDrawColor color)
@@ -188,7 +188,7 @@ namespace Navigation2DPlaygroundMod.Systems
 
         private void AppendControlOverlay()
         {
-            if (!_engine.GlobalContext.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var overlayObj) ||
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var overlayObj) ||
                 overlayObj is not ScreenOverlayBuffer overlay)
             {
                 return;
@@ -198,7 +198,7 @@ namespace Navigation2DPlaygroundMod.Systems
             bool flowDebug = false;
             int flowMode = 0;
             int flowIters = 0;
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DRuntime, out var navObj) &&
+            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.Navigation2DRuntime.Name, out var navObj) &&
                 navObj is Navigation2DRuntime navRuntime)
             {
                 flowEnabled = navRuntime.FlowEnabled;
@@ -210,9 +210,9 @@ namespace Navigation2DPlaygroundMod.Systems
             int agentsPerTeam = 0;
             int liveTotal = 0;
             int flowDbgLines = 0;
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DPlayground_AgentsPerTeam, out var aptObj) && aptObj is int apt) agentsPerTeam = apt;
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DPlayground_LiveAgentsTotal, out var ltObj) && ltObj is int lt) liveTotal = lt;
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DPlayground_FlowDebugLines, out var fdlObj) && fdlObj is int fdl) flowDbgLines = fdl;
+            agentsPerTeam = _engine.GetService(Navigation2DPlaygroundKeys.AgentsPerTeam);
+            liveTotal = _engine.GetService(Navigation2DPlaygroundKeys.LiveAgentsTotal);
+            flowDbgLines = _engine.GetService(Navigation2DPlaygroundKeys.FlowDebugLines);
 
             int x = 16;
             int y = 180;

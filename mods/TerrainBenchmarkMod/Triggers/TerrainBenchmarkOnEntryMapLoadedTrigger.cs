@@ -28,12 +28,12 @@ namespace TerrainBenchmarkMod.Triggers
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            var mapId = context.Get<MapId>(ContextKeys.MapId);
+            var mapId = context.Get(CoreServiceKeys.MapId);
             if (mapId.Value != engine.MergedConfig.StartupMapId) return Task.CompletedTask;
 
-            var session = context.Get<GameSession>(ContextKeys.GameSession);
-            var input = context.Get<PlayerInputHandler>(ContextKeys.InputHandler);
-            var vertexMap = context.Get<VertexMap>(ContextKeys.VertexMap);
+            var session = context.Get(CoreServiceKeys.GameSession);
+            var input = context.Get(CoreServiceKeys.InputHandler);
+            var vertexMap = context.Get(CoreServiceKeys.VertexMap);
             if (session == null || input == null) return Task.CompletedTask;
             if (session.Camera.Controller != null) return Task.CompletedTask;
 
@@ -61,7 +61,7 @@ namespace TerrainBenchmarkMod.Triggers
 
             if (!_registered)
             {
-                if (!engine.GlobalContext.TryGetValue(ContextKeys.CameraControllerRegistry, out var obj) || obj is not CameraControllerRegistry registry)
+                if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.CameraControllerRegistry.Name, out var obj) || obj is not CameraControllerRegistry registry)
                 {
                     throw new System.InvalidOperationException("CameraControllerRegistry is missing.");
                 }
@@ -81,7 +81,7 @@ namespace TerrainBenchmarkMod.Triggers
                 _registered = true;
             }
 
-            engine.GlobalContext[ContextKeys.CameraControllerRequest] = new CameraControllerRequest
+            engine.SetService(CoreServiceKeys.CameraControllerRequest, new CameraControllerRequest
             {
                 Id = ControllerId,
                 Config = new TerrainBenchmarkCameraConfig
@@ -89,7 +89,7 @@ namespace TerrainBenchmarkMod.Triggers
                     CenterCm = center * 100f,
                     AutoRadiusCm = autoRadius * 100f
                 }
-            };
+            });
 
             _context.Log("[TerrainBenchmarkMod] Camera controller requested");
             return Task.CompletedTask;

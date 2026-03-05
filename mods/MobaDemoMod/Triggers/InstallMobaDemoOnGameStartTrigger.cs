@@ -54,17 +54,17 @@ namespace MobaDemoMod.Triggers
             _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/Configs/moba_config.json");
 
             // GameConfig is required — it must be loaded before GameStart
-            var config = (GameConfig)engine.GlobalContext[ContextKeys.GameConfig];
+            var config = engine.GetService(CoreServiceKeys.GameConfig);
             _ = config.Constants.OrderTags["stop"];
 
-            if (engine.GlobalContext.TryGetValue(ContextKeys.OrderQueue, out var ordersObj) &&
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var ordersObj) &&
                 ordersObj is OrderQueue orders)
             {
                 _ctx.Log("[MobaDemoMod] OrderQueue ready, registering local order source.");
                 engine.RegisterPresentationSystem(new MobaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx));
             }
 
-            if (engine.GlobalContext.TryGetValue(ContextKeys.OrderTypeRegistry, out var registryObj) &&
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var registryObj) &&
                 registryObj is OrderTypeRegistry orderTypeRegistry)
             {
                 engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.StopOrderSystem(engine.World, orderTypeRegistry), SystemGroup.AbilityActivation);
@@ -73,11 +73,11 @@ namespace MobaDemoMod.Triggers
 
             // ── 选择系统回调（CoreInputMod 已注册系统，此处注入 MOBA 视觉反馈）──
             TransientMarkerBuffer markerBuffer = null;
-            if (engine.GlobalContext.TryGetValue(ContextKeys.TransientMarkerBuffer, out var markerObj) && markerObj is TransientMarkerBuffer tmb)
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markerObj) && markerObj is TransientMarkerBuffer tmb)
                 markerBuffer = tmb;
 
             PresentationCommandBuffer cmdBuffer = null;
-            if (engine.GlobalContext.TryGetValue(ContextKeys.PresentationCommandBuffer, out var cmdObj) && cmdObj is PresentationCommandBuffer pcb)
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var cmdObj) && cmdObj is PresentationCommandBuffer pcb)
                 cmdBuffer = pcb;
 
             if (engine.GlobalContext.TryGetValue(InstallCoreInputOnGameStartTrigger.EntitySelectionCallbacksKey, out var selObj) &&
@@ -125,10 +125,10 @@ namespace MobaDemoMod.Triggers
             // 单位渲染由 performers.json 定义 5001（entity-scoped Marker3D）驱动
             // 团队颜色由 EntityColor 绑定解析
 
-            var session = context.Get<Ludots.Core.Gameplay.GameSession>(ContextKeys.GameSession);
+            var session = context.Get(CoreServiceKeys.GameSession);
             if (session != null && session.Camera.Controller == null)
             {
-                engine.GlobalContext[ContextKeys.CameraControllerRequest] = new CameraControllerRequest
+                engine.SetService(CoreServiceKeys.CameraControllerRequest, new CameraControllerRequest
                 {
                     Id = CameraControllerIds.Orbit3C,
                     Config = new Orbit3CCameraConfig
@@ -137,7 +137,7 @@ namespace MobaDemoMod.Triggers
                         ZoomCmPerWheel = mobaConfig.Camera.ZoomCmPerWheel,
                         RotateDegPerSecond = mobaConfig.Camera.RotateDegPerSecond
                     }
-                };
+                });
             }
 
             return Task.CompletedTask;

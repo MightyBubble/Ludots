@@ -46,7 +46,7 @@ namespace Navigation2DPlaygroundMod.Systems
             ResolveInput();
             if (_input == null) return;
 
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.Navigation2DRuntime, out var runtimeObj) &&
+            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.Navigation2DRuntime.Name, out var runtimeObj) &&
                 runtimeObj is Navigation2DRuntime navRuntime)
             {
                 HandlePressed(Navigation2DPlaygroundInputActions.ToggleFlowEnabled, () =>
@@ -85,7 +85,7 @@ namespace Navigation2DPlaygroundMod.Systems
         private void ResolveInput()
         {
             if (_input != null) return;
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.InputHandler, out var inputObj) &&
+            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) &&
                 inputObj is PlayerInputHandler handler)
             {
                 _input = handler;
@@ -211,8 +211,8 @@ namespace Navigation2DPlaygroundMod.Systems
                 total += chunk.Count;
             }
 
-            _engine.GlobalContext[ContextKeys.Navigation2DPlayground_AgentsPerTeam] = Navigation2DPlaygroundState.AgentsPerTeam;
-            _engine.GlobalContext[ContextKeys.Navigation2DPlayground_LiveAgentsTotal] = total;
+            _engine.SetService(Navigation2DPlaygroundKeys.AgentsPerTeam, Navigation2DPlaygroundState.AgentsPerTeam);
+            _engine.SetService(Navigation2DPlaygroundKeys.LiveAgentsTotal, total);
         }
     }
 }

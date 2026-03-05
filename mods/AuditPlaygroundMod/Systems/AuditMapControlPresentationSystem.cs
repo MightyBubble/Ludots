@@ -37,7 +37,7 @@ namespace AuditPlaygroundMod.Systems
         public void Update(in float t)
         {
             if (_input == null &&
-                _engine.GlobalContext.TryGetValue(ContextKeys.InputHandler, out var inputObj) &&
+                _engine.GlobalContext.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) &&
                 inputObj is PlayerInputHandler input)
             {
                 EnsureInputSchema(input);
@@ -102,7 +102,7 @@ namespace AuditPlaygroundMod.Systems
 
         private void RenderAuditOverlay()
         {
-            if (!_engine.GlobalContext.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var overlayObj) ||
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var overlayObj) ||
                 overlayObj is not ScreenOverlayBuffer overlay)
             {
                 return;

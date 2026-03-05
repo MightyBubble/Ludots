@@ -25,7 +25,7 @@ namespace Ludots.Core.Presentation.Systems
  
         public void Update(in float dt)
         {
-            if (_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var obj) && obj is Entity existing && _world.IsAlive(existing))
+            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var obj) && obj is Entity existing && _world.IsAlive(existing))
             {
                 return;
             }
@@ -34,7 +34,7 @@ namespace Ludots.Core.Presentation.Systems
             _world.InlineEntityQuery<FindJob, PlayerOwner>(in _query, ref job);
             if (_world.IsAlive(job.Found))
             {
-                _globals[ContextKeys.LocalPlayerEntity] = job.Found;
+                _globals[CoreServiceKeys.LocalPlayerEntity.Name] = job.Found;
             }
         }
  

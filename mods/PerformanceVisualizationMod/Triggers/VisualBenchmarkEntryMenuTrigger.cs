@@ -28,7 +28,7 @@ namespace PerformanceVisualizationMod.Triggers
         public override Task ExecuteAsync(ScriptContext context)
         {
             var engine = context.GetEngine();
-            var uiRoot = context.Get<UIRoot>(ContextKeys.UIRoot);
+            var uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
             if (engine == null || uiRoot == null) return Task.CompletedTask;
 
             var rootWidget = new FlexNodeWidget();

@@ -38,7 +38,7 @@ namespace Ludots.Tests.GAS.Production
 
                 engine.Start();
                 engine.LoadMap(engine.MergedConfig.StartupMapId);
-                engine.GlobalContext.Remove(Ludots.Core.Scripting.ContextKeys.CameraControllerRequest);
+                engine.GlobalContext.Remove(Ludots.Core.Scripting.CoreServiceKeys.CameraControllerRequest.Name);
 
                 for (int i = 0; i < 5; i++)
                 {
@@ -46,7 +46,7 @@ namespace Ludots.Tests.GAS.Production
                 }
 
                 Assert.That(
-                    engine.GlobalContext.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var overlayObj) &&
+                    engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var overlayObj) &&
                     overlayObj is ScreenOverlayBuffer,
                     Is.True,
                     "ScreenOverlayBuffer must be registered in GlobalContext.");
@@ -66,7 +66,7 @@ namespace Ludots.Tests.GAS.Production
                 if (healthId <= 0) healthId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register("Health");
                 float enemyHealthBefore = enemyAttrsBefore.GetCurrent(healthId);
 
-                var orderQueue = (OrderQueue)engine.GlobalContext[Ludots.Core.Scripting.ContextKeys.OrderQueue];
+                var orderQueue = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.OrderQueue);
                 int castAbilityTagId = engine.MergedConfig.Constants.OrderTags["castAbility"];
                 orderQueue.TryEnqueue(new Order
                 {

@@ -25,7 +25,7 @@ namespace ArpgDemoMod.Triggers
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            var mapTags = context.Get<List<string>>(ContextKeys.MapTags) ?? new List<string>();
+            var mapTags = context.Get(CoreServiceKeys.MapTags) ?? new List<string>();
             if (!HasTag(mapTags, "arpg")) return Task.CompletedTask;
 
             var world = engine.World;

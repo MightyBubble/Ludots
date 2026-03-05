@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Rendering;
 using Raylib_cs;
@@ -18,6 +19,8 @@ namespace Ludots.Client.Raylib.Rendering
     public sealed unsafe class RaylibPrimitiveRenderer : IDisposable
     {
         private readonly RaylibPrimitiveRenderMode _mode;
+        private readonly IVirtualFileSystem _vfs;
+        private const int MaxPrefabDepth = 6;
 
         private bool _initialized;
         private Mesh _cubeMesh;
@@ -30,15 +33,20 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
 
+        private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
+
         public int LastInstancedInstances { get; private set; }
         public int LastInstancedBatches { get; private set; }
 
-        public RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate)
+        public RaylibPrimitiveRenderer(
+            RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
+            IVirtualFileSystem vfs = null)
         {
             _mode = mode;
+            _vfs = vfs;
         }
 
-        public void Draw(PrimitiveDrawBuffer draw, MeshAssetRegistry meshes)
+        public void Draw(PrimitiveDrawBuffer draw, MeshAssetRegistry meshes, float scaleMul = 1f)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
@@ -47,14 +55,139 @@ namespace Ludots.Client.Raylib.Rendering
             LastInstancedBatches = 0;
 
             var span = draw.GetSpan();
-            if (_mode == RaylibPrimitiveRenderMode.Immediate)
+            DrawImmediateWithDescriptors(span, meshes, scaleMul);
+        }
+
+        private void DrawImmediateWithDescriptors(ReadOnlySpan<PrimitiveDrawItem> span, MeshAssetRegistry meshes, float scaleMul)
+        {
+            for (int i = 0; i < span.Length; i++)
             {
-                DrawImmediate(span, meshes);
+                ref readonly var item = ref span[i];
+                DrawAssetRecursive(
+                    item.MeshAssetId, item.Position,
+                    item.Scale * scaleMul, item.Color,
+                    meshes, 0);
+            }
+        }
+
+        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color, MeshAssetRegistry meshes, int depth)
+        {
+            if (depth > MaxPrefabDepth) return;
+            if (!meshes.TryGetDescriptor(meshAssetId, out var desc)) return;
+
+            switch (desc.Type)
+            {
+                case MeshAssetType.Primitive:
+                    DrawPrimitive(desc.PrimitiveKind, position, scale, color);
+                    break;
+
+                case MeshAssetType.Model:
+                    DrawModel(meshAssetId, desc, position, scale, color);
+                    break;
+
+                case MeshAssetType.Prefab:
+                    if (desc.PrefabParts != null)
+                    {
+                        for (int p = 0; p < desc.PrefabParts.Length; p++)
+                        {
+                            ref var part = ref desc.PrefabParts[p];
+                            var childPos = position + part.LocalPosition * scale;
+                            var childScale = scale * part.LocalScale;
+                            var childColor = new Vector4(
+                                color.X * part.ColorTint.X,
+                                color.Y * part.ColorTint.Y,
+                                color.Z * part.ColorTint.Z,
+                                color.W * part.ColorTint.W);
+                            DrawAssetRecursive(part.MeshAssetId, childPos, childScale, childColor, meshes, depth + 1);
+                        }
+                    }
+                    break;
+            }
+        }
+
+        private void DrawPrimitive(PrimitiveMeshKind kind, Vector3 position, Vector3 scale, Vector4 color)
+        {
+            var c = ToRaylibColor(color);
+            if (kind == PrimitiveMeshKind.Cube)
+            {
+                Rl.DrawCube(position, scale.X, scale.Y, scale.Z, c);
+            }
+            else if (kind == PrimitiveMeshKind.Sphere)
+            {
+                float r = MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.5f;
+                Rl.DrawSphere(position, r, c);
+            }
+        }
+
+        private void DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color)
+        {
+            if (!TryGetOrLoadModel(meshAssetId, desc, out var cached))
+            {
+                DrawMissingModelMarker(position, scale);
                 return;
             }
 
+            var tint = ToRaylibColor(color);
+            var model = cached.Model;
+            Rl.DrawModelEx(model, position, Vector3.UnitY, 0f, scale, tint);
+        }
+
+        private bool TryGetOrLoadModel(int meshAssetId, in MeshAssetDescriptor desc, out CachedModel cached)
+        {
+            if (_modelCache.TryGetValue(meshAssetId, out cached))
+                return cached.Loaded;
+
+            cached = new CachedModel { Loaded = false };
+
+            if (_vfs == null || desc.SourceUris == null || desc.SourceUris.Length == 0)
+            {
+                _modelCache[meshAssetId] = cached;
+                return false;
+            }
+
+            for (int u = 0; u < desc.SourceUris.Length; u++)
+            {
+                string uri = desc.SourceUris[u];
+                if (string.IsNullOrWhiteSpace(uri)) continue;
+
+                if (!_vfs.TryResolveFullPath(uri, out string fullPath)) continue;
+                if (!File.Exists(fullPath)) continue;
+
+                var model = Rl.LoadModel(fullPath);
+                if (model.meshCount > 0)
+                {
+                    cached = new CachedModel { Model = model, Loaded = true };
+                    _modelCache[meshAssetId] = cached;
+                    return true;
+                }
+
+                Rl.UnloadModel(model);
+            }
+
+            _modelCache[meshAssetId] = cached;
+            return false;
+        }
+
+        private static void DrawMissingModelMarker(Vector3 position, Vector3 scale)
+        {
+            float s = MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.3f;
+            if (s < 0.05f) s = 0.3f;
+            Rl.DrawCube(position, s, s, s, new Color(255, 0, 255, 255));
+        }
+
+        // ── Instanced rendering (unchanged from original) ──
+
+        public void DrawInstanced(PrimitiveDrawBuffer draw, MeshAssetRegistry meshes)
+        {
+            if (draw == null) throw new ArgumentNullException(nameof(draw));
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            LastInstancedInstances = 0;
+            LastInstancedBatches = 0;
+
             EnsureInitialized();
 
+            var span = draw.GetSpan();
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
@@ -77,26 +210,6 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             FlushInstancedBatches();
-        }
-
-        private void DrawImmediate(ReadOnlySpan<PrimitiveDrawItem> span, MeshAssetRegistry meshes)
-        {
-            for (int i = 0; i < span.Length; i++)
-            {
-                ref readonly var item = ref span[i];
-                if (!meshes.TryGetPrimitiveKind(item.MeshAssetId, out var kind)) continue;
-
-                var color = ToRaylibColor(item.Color);
-                if (kind == PrimitiveMeshKind.Cube)
-                {
-                    Rl.DrawCube(item.Position, item.Scale.X, item.Scale.Y, item.Scale.Z, color);
-                }
-                else if (kind == PrimitiveMeshKind.Sphere)
-                {
-                    float r = MathF.Max(item.Scale.X, MathF.Max(item.Scale.Y, item.Scale.Z)) * 0.5f;
-                    Rl.DrawSphere(item.Position, r, color);
-                }
-            }
         }
 
         private void AddInstance(List<Batch> batches, uint colorKey, in RaylibMatrix matrix)
@@ -222,12 +335,25 @@ namespace Ludots.Client.Raylib.Rendering
 
         public void Dispose()
         {
+            foreach (var kvp in _modelCache)
+            {
+                if (kvp.Value.Loaded)
+                    Rl.UnloadModel(kvp.Value.Model);
+            }
+            _modelCache.Clear();
+
             if (!_initialized) return;
 
             if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
             if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);
+        }
+
+        private struct CachedModel
+        {
+            public Model Model;
+            public bool Loaded;
         }
 
         private struct Batch

@@ -17,7 +17,7 @@ namespace ExampleMod.Triggers
 
         public override Task ExecuteAsync(ScriptContext context)
         {
-            var policy = context.Get<GasClockStepPolicy>(ContextKeys.GasClockStepPolicy);
+            var policy = context.Get(CoreServiceKeys.GasClockStepPolicy);
             if (policy == null)
             {
                 Console.WriteLine("[ExampleMod] GasClockStepPolicy not found in context.");

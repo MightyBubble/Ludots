@@ -264,6 +264,35 @@ namespace Raylib_cs
         public uint* vboId;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct BoneInfo
+    {
+        public fixed byte name[32];
+        public int parent;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Transform
+    {
+        public Vector3 translation;
+        public Vector4 rotation;
+        public Vector3 scale;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public unsafe struct Model
+    {
+        public RaylibMatrix transform;
+        public int meshCount;
+        public int materialCount;
+        public Mesh* meshes;
+        public Material* materials;
+        public int* meshMaterial;
+        public int boneCount;
+        public BoneInfo* bones;
+        public Transform* bindPose;
+    }
+
     public static class Raylib
     {
         private const string NativeLib = "raylib";
@@ -488,5 +517,19 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void rlEnableBackfaceCulling();
+
+        // --- Model APIs ---
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Model LoadModel(string fileName);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UnloadModel(Model model);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void DrawModel(Model model, Vector3 position, float scale, Color tint);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void DrawModelEx(Model model, Vector3 position, Vector3 rotationAxis, float rotationAngle, Vector3 scale, Color tint);
     }
 }

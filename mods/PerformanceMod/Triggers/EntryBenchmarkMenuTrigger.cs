@@ -30,7 +30,7 @@ namespace PerformanceMod.Triggers
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            var uiRoot = context.Get<UIRoot>(ContextKeys.UIRoot);
+            var uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
             if (uiRoot == null) return Task.CompletedTask;
 
             var rootWidget = new FlexNodeWidget();

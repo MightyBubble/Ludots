@@ -17,7 +17,7 @@ namespace AIInspectorMod.Triggers
 
         public override Task ExecuteAsync(ScriptContext context)
         {
-            var engine = context.Get<GameEngine>(ContextKeys.Engine);
+            var engine = context.Get(CoreServiceKeys.Engine);
             if (engine == null)
             {
                 _modContext.Log("[AIInspectorMod] Missing GameEngine in ScriptContext.");

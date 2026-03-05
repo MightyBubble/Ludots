@@ -18,6 +18,8 @@ namespace Ludots.Core.Systems
         private Entity[] _buffer = new Entity[4096];
         private HashSet<Entity> _prevVisible = new HashSet<Entity>();
         private HashSet<Entity> _nextVisible = new HashSet<Entity>();
+
+        public CameraCullingDebugState DebugState { get; } = new CameraCullingDebugState();
         
         /// <summary>
         /// LOD 距离阈值（厘米）。实体到相机距离小于该值则使用对应 LOD。
@@ -146,6 +148,16 @@ namespace Ludots.Core.Systems
             var tmp = _prevVisible;
             _prevVisible = _nextVisible;
             _nextVisible = tmp;
+
+            DebugState.MinX = minX;
+            DebugState.MaxX = maxX;
+            DebugState.MinY = minY;
+            DebugState.MaxY = maxY;
+            DebugState.HighLodDist = HighLODDistCm;
+            DebugState.MediumLodDist = MediumLODDistCm;
+            DebugState.LowLodDist = LowLODDistCm;
+            DebugState.CameraTargetCm = new System.Numerics.Vector2(target.X, target.Y);
+            DebugState.VisibleEntityCount = _prevVisible.Count;
         }
     }
 }

@@ -26,7 +26,7 @@ namespace DiagnosticsOverlayMod
                 var engine = ctx.GetEngine();
                 if (engine != null)
                 {
-                    if (engine.GlobalContext.TryGetValue(ContextKeys.InputHandler, out var inputObj) &&
+                    if (engine.GlobalContext.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) &&
                         inputObj is PlayerInputHandler input)
                     {
                         EnsureOverlayInputSchema(input);

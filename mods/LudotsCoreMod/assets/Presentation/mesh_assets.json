@@ -1,0 +1,12 @@
+[
+  {
+    "id": "cube",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "sphere",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  }
+]

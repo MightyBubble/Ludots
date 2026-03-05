@@ -26,7 +26,7 @@ namespace Ludots.Core.Presentation.Systems
             _chainOrders = chainOrders;
             
             // Get chain tags from GameConfig if available, otherwise use defaults
-            if (_globals.TryGetValue(ContextKeys.GameConfig, out var configObj) && configObj is GameConfig config)
+            if (_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) && configObj is GameConfig config)
             {
                 _chainTags = new GasChainOrderTags
                 {
@@ -46,7 +46,7 @@ namespace Ludots.Core.Presentation.Systems
         public void Update(in float dt)
         {
             if (!_ui.Visible) return;
-            if (!_globals.TryGetValue(ContextKeys.InputBackend, out var backendObj) || backendObj is not IInputBackend backend) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.InputBackend.Name, out var backendObj) || backendObj is not IInputBackend backend) return;
  
             bool space = backend.GetButton("<Keyboard>/Space");
             bool n = backend.GetButton("<Keyboard>/N");

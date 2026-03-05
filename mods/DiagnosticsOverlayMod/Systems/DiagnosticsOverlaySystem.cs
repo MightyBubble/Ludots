@@ -66,7 +66,7 @@ namespace DiagnosticsOverlayMod.Systems
             HandleTurnBasedToggle();
             HandleTurnStep();
 
-            if (!_engine.GlobalContext.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var obj) ||
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var obj) ||
                 obj is not ScreenOverlayBuffer overlay) return;
 
             RenderRuntimeHud(overlay, renderDebugState, t);
@@ -104,7 +104,7 @@ namespace DiagnosticsOverlayMod.Systems
         private void ResolveInput()
         {
             if (_input != null) return;
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.InputHandler, out var inputObj) &&
+            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) &&
                 inputObj is PlayerInputHandler input)
             {
                 _input = input;
@@ -129,13 +129,13 @@ namespace DiagnosticsOverlayMod.Systems
 
         private RenderDebugState ResolveRenderDebugState()
         {
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.RenderDebugState, out var debugObj) &&
+            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out var debugObj) &&
                 debugObj is RenderDebugState state)
             {
                 return state;
             }
 
-            throw new InvalidOperationException($"{ContextKeys.RenderDebugState} must be present in GlobalContext.");
+            throw new InvalidOperationException($"{CoreServiceKeys.RenderDebugState.Name} must be present in GlobalContext.");
         }
 
         private void BuildConfigInfo()
@@ -291,7 +291,7 @@ namespace DiagnosticsOverlayMod.Systems
         {
             int primitives = 0;
             int primitivesDropped = 0;
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.PresentationPrimitiveDrawBuffer, out var drawObj) &&
+            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationPrimitiveDrawBuffer.Name, out var drawObj) &&
                 drawObj is Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer draw)
             {
                 primitives = draw.Count;
@@ -314,7 +314,7 @@ namespace DiagnosticsOverlayMod.Systems
             int y = 16;
             int w = 620;
             int h = 156;
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.ViewController, out var viewObj) &&
+            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.ViewController.Name, out var viewObj) &&
                 viewObj is IViewController view)
             {
                 x = Math.Max(16, (int)view.Resolution.X - w - 16);

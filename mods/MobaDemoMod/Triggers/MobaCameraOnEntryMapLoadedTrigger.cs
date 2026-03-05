@@ -24,18 +24,18 @@ namespace MobaDemoMod.Triggers
 
         public override Task ExecuteAsync(ScriptContext context)
         {
-            var mapId = context.Get<MapId>(ContextKeys.MapId);
+            var mapId = context.Get(CoreServiceKeys.MapId);
             
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            var config = (GameConfig)engine.GlobalContext[ContextKeys.GameConfig];
+            var config = engine.GetService(CoreServiceKeys.GameConfig);
             string startupMapId = config.StartupMapId;
             
             bool isEntry = mapId.Value == startupMapId;
             if (!isEntry) return Task.CompletedTask;
 
-            var session = context.Get<GameSession>(ContextKeys.GameSession);
+            var session = context.Get(CoreServiceKeys.GameSession);
             if (session == null) return Task.CompletedTask;
 
             // MobaConfig is guaranteed to be in GlobalContext by InstallMobaDemoOnGameStartTrigger

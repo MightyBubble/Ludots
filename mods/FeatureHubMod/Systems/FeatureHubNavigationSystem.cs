@@ -42,7 +42,7 @@ namespace FeatureHubMod.Systems
             ResolveInput();
             if (_input == null) return;
 
-            if (!_engine.GlobalContext.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var obj) ||
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var obj) ||
                 obj is not ScreenOverlayBuffer overlay) return;
 
             RenderMenu(overlay);
@@ -55,7 +55,7 @@ namespace FeatureHubMod.Systems
         private void ResolveInput()
         {
             if (_input != null) return;
-            if (_engine.GlobalContext.TryGetValue(ContextKeys.InputBackend, out var inputObj) &&
+            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.InputBackend.Name, out var inputObj) &&
                 inputObj is IInputBackend backend)
                 _input = backend;
         }

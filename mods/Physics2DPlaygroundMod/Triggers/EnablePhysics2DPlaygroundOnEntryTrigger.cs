@@ -36,7 +36,7 @@ namespace Physics2DPlaygroundMod.Triggers
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            var mapId = context.Get<MapId>(ContextKeys.MapId);
+            var mapId = context.Get(CoreServiceKeys.MapId);
             bool isEntry = mapId.Value == engine.MergedConfig.StartupMapId;
 
             if (isEntry)
@@ -44,10 +44,10 @@ namespace Physics2DPlaygroundMod.Triggers
                 if (!_installed)
                 {
                     var debugDrawBuffer = new DebugDrawCommandBuffer();
-                    engine.GlobalContext[ContextKeys.DebugDrawCommandBuffer] = debugDrawBuffer;
+                    engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDrawBuffer);
 
-                    var clock = context.Get<IClock>(ContextKeys.Clock);
-                    var tickPolicy = context.Get<Physics2DTickPolicy>(ContextKeys.Physics2DTickPolicy);
+                    var clock = context.Get(CoreServiceKeys.Clock);
+                    var tickPolicy = context.Get(CoreServiceKeys.Physics2DTickPolicy);
                     _sim = new Physics2DSimulationSystem(engine.World, clock, tickPolicy);
                     engine.RegisterSystem(_sim, Ludots.Core.Engine.SystemGroup.InputCollection);
                     
@@ -68,8 +68,8 @@ namespace Physics2DPlaygroundMod.Triggers
                 Physics2DPlaygroundState.Enabled = true;
                 if (_sim != null) _sim.Enabled = true;
 
-                var session = context.Get<GameSession>(ContextKeys.GameSession);
-                var input = context.Get<PlayerInputHandler>(ContextKeys.InputHandler);
+                var session = context.Get(CoreServiceKeys.GameSession);
+                var input = context.Get(CoreServiceKeys.InputHandler);
                 if (session != null && input != null)
                 {
                     if (!_inputContextActive)
@@ -85,7 +85,7 @@ namespace Physics2DPlaygroundMod.Triggers
 
                     if (session.Camera.Controller == null)
                     {
-                        engine.GlobalContext[ContextKeys.CameraControllerRequest] = new CameraControllerRequest
+                        engine.SetService(CoreServiceKeys.CameraControllerRequest, new CameraControllerRequest
                         {
                             Id = CameraControllerIds.Orbit3C,
                             Config = new Orbit3CCameraConfig
@@ -95,7 +95,7 @@ namespace Physics2DPlaygroundMod.Triggers
                                 ZoomCmPerWheel = 10000f,
                                 RotateDegPerSecond = 90f
                             }
-                        };
+                        });
                     }
                 }
             }
@@ -103,12 +103,12 @@ namespace Physics2DPlaygroundMod.Triggers
             {
                 Physics2DPlaygroundState.Enabled = false;
                 if (_sim != null) _sim.Enabled = false;
-                if (engine.GlobalContext.TryGetValue(ContextKeys.Physics2DController, out var physicsCtlObj) && physicsCtlObj is Ludots.Core.Engine.Physics2D.Physics2DController physicsCtl)
+                if (engine.GlobalContext.TryGetValue(CoreServiceKeys.Physics2DController.Name, out var physicsCtlObj) && physicsCtlObj is Ludots.Core.Engine.Physics2D.Physics2DController physicsCtl)
                 {
                     physicsCtl.Disable();
                 }
-                var session = context.Get<GameSession>(ContextKeys.GameSession);
-                var input = context.Get<PlayerInputHandler>(ContextKeys.InputHandler);
+                var session = context.Get(CoreServiceKeys.GameSession);
+                var input = context.Get(CoreServiceKeys.InputHandler);
                 if (input != null && _inputContextActive)
                 {
                     input.PopContext(InputContextId);

@@ -47,7 +47,7 @@ namespace MobaDemoMod.Presentation
             _orders = orders;
             _ctx = ctx;
             
-            if (_globals.TryGetValue(ContextKeys.GameConfig, out var configObj) && configObj is GameConfig config)
+            if (_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) && configObj is GameConfig config)
             {
                 _castAbilityTagId = config.Constants.OrderTags["castAbility"];
                 _stopTagId = config.Constants.OrderTags["stop"];
@@ -67,7 +67,7 @@ namespace MobaDemoMod.Presentation
             if (_initialized) return;
             _initialized = true;
             
-            if (!_globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) || inputObj is not PlayerInputHandler input)
+            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input)
                 return;
             
             // Load input-order mappings from mod assets via VFS
@@ -115,7 +115,7 @@ namespace MobaDemoMod.Presentation
 
             // Aiming state → Performer direct API (for AimCast mode)
             // Uses PresentationCommandBuffer to create/destroy a performer scope.
-            if (_globals.TryGetValue(ContextKeys.PresentationCommandBuffer, out var cmdObj) && cmdObj is PresentationCommandBuffer commands)
+            if (_globals.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var cmdObj) && cmdObj is PresentationCommandBuffer commands)
             {
                 var mc = (MobaConfig)_globals[InstallMobaDemoOnGameStartTrigger.MobaConfigKey];
                 int rangeCircleDefId = mc.Presentation.RangeCircleIndicatorDefId;
@@ -153,12 +153,12 @@ namespace MobaDemoMod.Presentation
             InitializeInputOrderMapping();
 
             if (_inputOrderMapping != null &&
-                _globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) &&
+                _globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) &&
                 inputObj is PlayerInputHandler input)
             {
                 CheckModeSwitchKeys(input, _inputOrderMapping);
 
-                if (_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var actorObj) &&
+                if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) &&
                     actorObj is Entity localPlayer &&
                     _world.IsAlive(localPlayer))
                 {
@@ -173,11 +173,11 @@ namespace MobaDemoMod.Presentation
 
         private Entity GetControlledActor()
         {
-            if (!_globals.TryGetValue(ContextKeys.LocalPlayerEntity, out var actorObj) || actorObj is not Entity localPlayer)
+            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) || actorObj is not Entity localPlayer)
                 return default;
             if (!_world.IsAlive(localPlayer)) return default;
 
-            if (_globals.TryGetValue(ContextKeys.SelectedEntity, out var obj) && obj is Entity selected && _world.IsAlive(selected))
+            if (_globals.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var obj) && obj is Entity selected && _world.IsAlive(selected))
             {
                 if (_world.TryGet(selected, out Ludots.Core.Gameplay.Components.PlayerOwner owner) && owner.PlayerId == 1)
                     return selected;
@@ -188,7 +188,7 @@ namespace MobaDemoMod.Presentation
         private bool TryGetSelected(out Entity target)
         {
             target = default;
-            if (!_globals.TryGetValue(ContextKeys.SelectedEntity, out var obj) || obj is not Entity e) return false;
+            if (!_globals.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var obj) || obj is not Entity e) return false;
             if (!_world.IsAlive(e)) return false;
             target = e;
             return true;
@@ -197,7 +197,7 @@ namespace MobaDemoMod.Presentation
         private bool TryGetHovered(out Entity target)
         {
             target = default;
-            if (!_globals.TryGetValue(ContextKeys.HoveredEntity, out var obj) || obj is not Entity e) return false;
+            if (!_globals.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out var obj) || obj is not Entity e) return false;
             if (!_world.IsAlive(e)) return false;
             target = e;
             return true;
@@ -206,8 +206,8 @@ namespace MobaDemoMod.Presentation
         private bool TryGetCommandWorldPoint(out WorldCmInt2 worldCm)
         {
             worldCm = default;
-            if (!_globals.TryGetValue(ContextKeys.ScreenRayProvider, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return false;
-            if (!_globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) || inputObj is not PlayerInputHandler input) return false;
+            if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return false;
+            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input) return false;
 
             Vector2 mouse = input.ReadAction<Vector2>("PointerPos");
             var ray = rayProvider.GetRay(mouse);
@@ -244,7 +244,7 @@ namespace MobaDemoMod.Presentation
         private void RenderModeHud()
         {
             if (_inputOrderMapping == null) return;
-            if (!_globals.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var overlayObj) || overlayObj is not ScreenOverlayBuffer overlay) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var overlayObj) || overlayObj is not ScreenOverlayBuffer overlay) return;
 
             overlay.AddRect(
                 x: 8,

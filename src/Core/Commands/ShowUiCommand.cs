@@ -19,7 +19,7 @@ namespace Ludots.Core.Commands
             // ScriptContext now wraps things.
             
             // Assuming ScriptContext has a way to access services or "Engine"
-            var engine = context.Get<GameEngine>(ContextKeys.Engine);
+            var engine = context.Get(CoreServiceKeys.Engine);
             // Or maybe a UIRoot? 
             
             // For now, let's keep the logic compatible with old context usage where possible,
@@ -42,7 +42,7 @@ namespace Ludots.Core.Commands
             // New context is ScriptContext.
             // Let's see if we can get "UISystem".
             
-            var ui = context.Get<IUiSystem>(ContextKeys.UISystem);
+            var ui = context.Get(CoreServiceKeys.UISystem);
             if (ui != null)
             {
                 Log.Info(in LogChannels.Presentation, "Setting HTML...");
