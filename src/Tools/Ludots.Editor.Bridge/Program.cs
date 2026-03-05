@@ -32,6 +32,14 @@ app.UseCors("dev");
 
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
+app.MapGet("/api/presets", () =>
+{
+    string repoRoot = FindAssetsRoot();
+    var presetsDir = Path.Combine(repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib");
+    var presets = Ludots.Core.Modding.Workspace.GamePreset.DiscoverPresets(presetsDir);
+    return Results.Ok(new { ok = true, presets });
+});
+
 app.MapGet("/api/mods", () =>
 {
     string repoRoot = FindAssetsRoot();

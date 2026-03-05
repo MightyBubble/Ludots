@@ -30,8 +30,18 @@ namespace Ludots.Tool
             var initCommand = new Command("init", "Initialize a new mod project");
             var modIdOption = new Option<string>("--id", "The ID of the mod");
             modIdOption.IsRequired = true;
+            var dirOption = new Option<string>("--dir", "Directory to create the mod in (default: mods/)");
+            var templateOption = new Option<string>("--template", () => "empty", "Template: empty, gameplay");
             initCommand.AddOption(modIdOption);
-            initCommand.SetHandler((string id) => InitMod(id), modIdOption);
+            initCommand.AddOption(dirOption);
+            initCommand.AddOption(templateOption);
+            initCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var id = ctx.ParseResult.GetValueForOption(modIdOption);
+                var dir = ctx.ParseResult.GetValueForOption(dirOption);
+                var template = ctx.ParseResult.GetValueForOption(templateOption) ?? "empty";
+                InitMod(id, dir, template);
+            });
             
             // 'build' command
             var buildCommand = new Command("build", "Build the mod project");
@@ -245,33 +255,44 @@ namespace Ludots.Tool
             return await rootCommand.InvokeAsync(args);
         }
 
-        static void InitMod(string modId)
+        static void InitMod(string modId, string dir, string template)
         {
-            Console.WriteLine($"Initializing mod '{modId}'...");
-            
-            // Assuming we are in repo root or mods?
-            // Let's enforce a standard structure: mods/{ModId}
-            
-            // Try to find mods from current directory up to root
-            var modsRoot = FindModsRoot();
-            if (modsRoot == null)
+            Console.WriteLine($"Initializing mod '{modId}' (template={template})...");
+
+            string modDir;
+            if (!string.IsNullOrWhiteSpace(dir))
             {
-                 Console.WriteLine("Error: Could not find 'mods' in hierarchy.");
-                 return;
+                modDir = Path.GetFullPath(Path.Combine(dir, modId));
             }
-            
-            var modDir = Path.Combine(modsRoot, modId);
+            else
+            {
+                var modsRoot = FindModsRoot();
+                if (modsRoot == null)
+                {
+                    Console.WriteLine("Error: Could not find 'mods' in hierarchy. Use --dir to specify a target directory.");
+                    return;
+                }
+                modDir = Path.Combine(modsRoot, modId);
+            }
+
             if (Directory.Exists(modDir))
             {
                 Console.WriteLine($"Error: Directory '{modDir}' already exists.");
                 return;
             }
-            
+
+            bool isGameplay = string.Equals(template, "gameplay", StringComparison.OrdinalIgnoreCase);
+            if (!isGameplay && !string.Equals(template, "empty", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"Error: Unknown template '{template}'. Valid values: empty, gameplay");
+                return;
+            }
+
             Directory.CreateDirectory(modDir);
             Directory.CreateDirectory(Path.Combine(modDir, "assets"));
             Directory.CreateDirectory(Path.Combine(modDir, "assets", "maps"));
-            
-            // Create mod.json using canonical schema shared with runtime loader.
+            Directory.CreateDirectory(Path.Combine(modDir, "assets", "Launcher"));
+
             var manifest = new ModManifest
             {
                 Name = modId,
@@ -279,14 +300,26 @@ namespace Ludots.Tool
                 Description = "A new Ludots mod.",
                 Main = $"bin/net8.0/{modId}.dll",
                 Priority = 0,
-                Dependencies = new Dictionary<string, string>()
+                Dependencies = new Dictionary<string, string>(),
+                Changelog = "CHANGELOG.md"
             };
+
+            if (isGameplay)
+            {
+                manifest.Dependencies["LudotsCoreMod"] = "^1.0.0";
+            }
+
             var jsonContent = ModManifestJson.ToCanonicalJson(manifest);
             File.WriteAllText(Path.Combine(modDir, "mod.json"), jsonContent);
-            
-            // Create .csproj
-            // We need relative path to Ludots.Core
-            // If we are in mods/{ModId}, Core is at ../../src/Core/Ludots.Core.csproj
+
+            var changelogContent = $@"# {modId} Changelog
+
+## 1.0.0
+- Initial release
+";
+            File.WriteAllText(Path.Combine(modDir, "CHANGELOG.md"), changelogContent);
+
+            var coreRelPath = Path.GetRelativePath(modDir, Path.Combine(FindAssetsRoot() ?? Directory.GetCurrentDirectory(), "src", "Core", "Ludots.Core.csproj"));
             var csprojContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -295,15 +328,53 @@ namespace Ludots.Tool
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include=""..\..\src\Core\Ludots.Core.csproj"">
+    <ProjectReference Include=""{coreRelPath}"">
         <Private>false</Private>
     </ProjectReference>
   </ItemGroup>
 </Project>";
             File.WriteAllText(Path.Combine(modDir, $"{modId}.csproj"), csprojContent);
-            
-            // Create Entry Class
-            var classContent = $@"using System;
+
+            if (isGameplay)
+            {
+                var mapsDir = Path.Combine(modDir, "assets", "Maps");
+                Directory.CreateDirectory(mapsDir);
+
+                var mapConfig = $@"{{
+  ""MapId"": ""{modId}_entry"",
+  ""DisplayName"": ""{modId} Entry Map"",
+  ""Width"": 64,
+  ""Height"": 64
+}}";
+                File.WriteAllText(Path.Combine(mapsDir, $"{modId}_entry.json"), mapConfig);
+
+                var gameJson = $@"{{
+  ""StartupMapId"": ""{modId}_entry""
+}}";
+                File.WriteAllText(Path.Combine(modDir, "assets", "game.json"), gameJson);
+
+                var triggerContent = $@"using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
+
+namespace {modId}
+{{
+    public class {modId}Entry : IMod
+    {{
+        public void OnLoad(IModContext context)
+        {{
+            context.Log(""{modId} Loaded!"");
+        }}
+
+        public void OnUnload()
+        {{
+        }}
+    }}
+}}";
+                File.WriteAllText(Path.Combine(modDir, $"{modId}Entry.cs"), triggerContent);
+            }
+            else
+            {
+                var classContent = $@"using System;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 
@@ -318,12 +389,12 @@ namespace {modId}
 
         public void OnUnload()
         {{
-            // Cleanup
         }}
     }}
 }}";
-            File.WriteAllText(Path.Combine(modDir, $"{modId}Entry.cs"), classContent);
-            
+                File.WriteAllText(Path.Combine(modDir, $"{modId}Entry.cs"), classContent);
+            }
+
             Console.WriteLine($"Mod '{modId}' initialized at {modDir}");
         }
 

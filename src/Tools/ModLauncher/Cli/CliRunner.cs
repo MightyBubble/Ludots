@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Ludots.Core.Modding;
+using Ludots.Core.Modding.Workspace;
 using Ludots.ModLauncher.Config;
 using Ludots.ModLauncher.ModSdk;
 
@@ -57,7 +58,33 @@ namespace Ludots.ModLauncher.Cli
 
             if (parsed.Primary == "run")
             {
-                context.RunRaylib();
+                string? presetFile = null;
+                if (!string.IsNullOrWhiteSpace(parsed.PresetId))
+                {
+                    var presetsDir = Path.Combine(rootDir, "src", "Apps", "Raylib", "Ludots.App.Raylib");
+                    var presets = GamePreset.DiscoverPresets(presetsDir);
+                    var match = presets.Find(p => string.Equals(p.Id, parsed.PresetId, StringComparison.OrdinalIgnoreCase));
+                    if (match == null)
+                        throw new InvalidOperationException($"Preset not found: {parsed.PresetId}");
+                    presetFile = Path.GetFileName(match.FilePath);
+                }
+                context.RunRaylib(presetFile);
+                return 0;
+            }
+
+            if (parsed.Primary == "presets" && parsed.Secondary == "list")
+            {
+                var presetsDir = Path.Combine(rootDir, "src", "Apps", "Raylib", "Ludots.App.Raylib");
+                var presets = GamePreset.DiscoverPresets(presetsDir);
+
+                Console.WriteLine($"{"Id",-20} {"Title",-45} {"Mods",5}  File");
+                Console.WriteLine(new string('-', 90));
+                foreach (var p in presets)
+                {
+                    Console.WriteLine($"{p.Id,-20} {p.WindowTitle,-45} {p.ModPaths.Count,5}  {Path.GetFileName(p.FilePath)}");
+                }
+                Console.WriteLine();
+                Console.WriteLine($"Found {presets.Count} preset(s) in {presetsDir}");
                 return 0;
             }
 
@@ -290,16 +317,22 @@ namespace Ludots.ModLauncher.Cli
                 Log($"Wrote game.json: {_gameJsonPath}");
             }
 
-            public void RunRaylib()
+            public void RunRaylib(string? presetFile = null)
             {
                 if (!File.Exists(_gameExePath)) throw new FileNotFoundException($"Game exe not found: {_gameExePath}");
                 Log($"Starting: {_gameExePath}");
-                Process.Start(new ProcessStartInfo
+                var psi = new ProcessStartInfo
                 {
                     FileName = _gameExePath,
                     WorkingDirectory = Path.GetDirectoryName(_gameExePath) ?? _rootDir,
                     UseShellExecute = true
-                });
+                };
+                if (!string.IsNullOrWhiteSpace(presetFile))
+                {
+                    psi.Arguments = presetFile;
+                    Log($"  preset: {presetFile}");
+                }
+                Process.Start(psi);
             }
 
             private int RunDotnet(string args)

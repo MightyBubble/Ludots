@@ -14,7 +14,11 @@ namespace Ludots.Core.Modding
             "description",
             "main",
             "priority",
-            "dependencies"
+            "dependencies",
+            "author",
+            "url",
+            "changelog",
+            "tags"
         };
 
         private static readonly JsonSerializerOptions CanonicalJsonOptions = new JsonSerializerOptions
@@ -90,6 +94,39 @@ namespace Ludots.Core.Modding
                     }
 
                     manifest.Dependencies[depProp.Name] = depProp.Value.GetString() ?? string.Empty;
+                }
+            }
+
+            if (root.TryGetProperty("author", out var authorEl) && authorEl.ValueKind == JsonValueKind.String)
+            {
+                manifest.Author = authorEl.GetString();
+            }
+
+            if (root.TryGetProperty("url", out var urlEl) && urlEl.ValueKind == JsonValueKind.String)
+            {
+                manifest.Url = urlEl.GetString();
+            }
+
+            if (root.TryGetProperty("changelog", out var changelogEl) && changelogEl.ValueKind == JsonValueKind.String)
+            {
+                manifest.Changelog = changelogEl.GetString();
+            }
+
+            if (root.TryGetProperty("tags", out var tagsEl))
+            {
+                if (tagsEl.ValueKind != JsonValueKind.Array)
+                {
+                    throw new Exception($"Invalid mod.json ('tags' must be array): {manifestPath}");
+                }
+
+                manifest.Tags = new List<string>();
+                foreach (var tagItem in tagsEl.EnumerateArray())
+                {
+                    if (tagItem.ValueKind != JsonValueKind.String)
+                    {
+                        throw new Exception($"Invalid mod.json ('tags' elements must be strings): {manifestPath}");
+                    }
+                    manifest.Tags.Add(tagItem.GetString());
                 }
             }
 

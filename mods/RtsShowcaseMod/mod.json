@@ -6,5 +6,7 @@
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"
-  }
+  },
+  "author": "Ludots Team",
+  "tags": ["rts", "showcase"]
 }

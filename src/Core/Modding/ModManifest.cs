@@ -22,5 +22,17 @@ namespace Ludots.Core.Modding
 
         [JsonPropertyName("dependencies")]
         public Dictionary<string, string> Dependencies { get; set; } = new Dictionary<string, string>();
+
+        [JsonPropertyName("author")]
+        public string Author { get; set; }
+
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
+
+        [JsonPropertyName("changelog")]
+        public string Changelog { get; set; }
+
+        [JsonPropertyName("tags")]
+        public List<string> Tags { get; set; }
     }
 }
