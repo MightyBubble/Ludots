@@ -9,6 +9,7 @@ namespace Ludots.ModLauncher.Cli
         public string Secondary { get; private set; } = "";
         public string? PresetId { get; private set; }
         public string? ConfigPath { get; private set; }
+        public string Platform { get; private set; } = "raylib";
         public List<string> ModNames { get; } = new List<string>();
 
         public static CliArgs Parse(string[] args)
@@ -31,6 +32,12 @@ namespace Ludots.ModLauncher.Cli
                 if (tok == "--config" && i + 1 < args.Length)
                 {
                     a.ConfigPath = args[++i];
+                    continue;
+                }
+
+                if (tok == "--platform" && i + 1 < args.Length)
+                {
+                    a.Platform = args[++i].ToLowerInvariant();
                     continue;
                 }
 

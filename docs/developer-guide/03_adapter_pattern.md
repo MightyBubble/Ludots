@@ -52,6 +52,16 @@ public interface IInputBackend
 *   `src/Adapters/Raylib/Ludots.Adapter.Raylib`: Host、平台服务与 UI 系统
 *   `src/Client/Ludots.Client.Raylib`: 输入后端、渲染器实现
 
+### Godot 实现导航
+
+以 Godot 4 平台为例：
+
+1.  **Host**：`src/Adapters/Godot/Ludots.Adapter.Godot/GodotHostLoop.cs` 封装 `Initialize` 与 `Tick`；`GodotHostComposer` 负责组装依赖；主场景 `Main.cs` 在 `_Process` 中调用 `Tick`。
+2.  **输入适配**：`src/Client/Ludots.Client.Godot/Input/GodotInputBackend.cs` 实现 `IInputBackend`，把 Godot 输入映射为 `devicePath` 语义。
+3.  **平台服务**：`GodotViewController`、`GodotCameraAdapter`、`GodotScreenRayProvider` 实现 `IViewController`、`ICameraAdapter`、`IScreenRayProvider`。`ScreenProjector` 使用 Core 的 `CoreScreenProjector`，无需平台实现。
+
+详见 [19 Godot 适配层](19_godot_adapter.md)。
+
 ## 4 适配器原则
 
 1.  **单向依赖**: Adapter 依赖 Core，Core **绝不** 依赖 Adapter。

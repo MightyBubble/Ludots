@@ -45,30 +45,44 @@ namespace Ludots.ModLauncher.Cli
 
             if (parsed.Primary == "app" && parsed.Secondary == "build")
             {
-                context.BuildRaylibRelease();
+                if (parsed.Platform == "godot")
+                {
+                    context.BuildGodotRelease();
+                }
+                else
+                {
+                    context.BuildRaylibRelease();
+                }
                 return 0;
             }
 
             if (parsed.Primary == "gamejson" && parsed.Secondary == "write")
             {
                 var mods = context.ResolveActiveMods(parsed.PresetId, parsed.ModNames);
-                context.WriteGameJson(mods);
+                context.WriteGameJson(mods, parsed.Platform);
                 return 0;
             }
 
             if (parsed.Primary == "run")
             {
-                string? presetFile = null;
-                if (!string.IsNullOrWhiteSpace(parsed.PresetId))
+                if (parsed.Platform == "godot")
                 {
-                    var presetsDir = Path.Combine(rootDir, "src", "Apps", "Raylib", "Ludots.App.Raylib");
-                    var presets = GamePreset.DiscoverPresets(presetsDir);
-                    var match = presets.Find(p => string.Equals(p.Id, parsed.PresetId, StringComparison.OrdinalIgnoreCase));
-                    if (match == null)
-                        throw new InvalidOperationException($"Preset not found: {parsed.PresetId}");
-                    presetFile = Path.GetFileName(match.FilePath);
+                    context.RunGodot();
                 }
-                context.RunRaylib(presetFile);
+                else
+                {
+                    string? presetFile = null;
+                    if (!string.IsNullOrWhiteSpace(parsed.PresetId))
+                    {
+                        var presetsDir = Path.Combine(rootDir, "src", "Apps", "Raylib", "Ludots.App.Raylib");
+                        var presets = GamePreset.DiscoverPresets(presetsDir);
+                        var match = presets.Find(p => string.Equals(p.Id, parsed.PresetId, StringComparison.OrdinalIgnoreCase));
+                        if (match == null)
+                            throw new InvalidOperationException($"Preset not found: {parsed.PresetId}");
+                        presetFile = Path.GetFileName(match.FilePath);
+                    }
+                    context.RunRaylib(presetFile);
+                }
                 return 0;
             }
 
@@ -110,6 +124,8 @@ namespace Ludots.ModLauncher.Cli
             private readonly string _modsDir;
             private readonly string _gameExePath;
             private readonly string _gameJsonPath;
+            private readonly string _godotProjectPath;
+            private readonly string _godotGameJsonPath;
             private readonly ModLauncherConfig _config;
 
             public CliContext(string rootDir, ModLauncherConfig config)
@@ -119,6 +135,8 @@ namespace Ludots.ModLauncher.Cli
                 _modsDir = Path.Combine(_rootDir, "mods");
                 _gameExePath = Path.Combine(_rootDir, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", "net8.0", "Ludots.App.Raylib.exe");
                 _gameJsonPath = Path.Combine(Path.GetDirectoryName(_gameExePath) ?? _rootDir, "game.json");
+                _godotProjectPath = Path.Combine(_rootDir, "src", "Apps", "Godot", "Ludots.App.Godot");
+                _godotGameJsonPath = Path.Combine(_godotProjectPath, "game.json");
                 _config = config ?? new ModLauncherConfig();
             }
 
@@ -288,7 +306,7 @@ namespace Ludots.ModLauncher.Cli
                 if (exit != 0) throw new InvalidOperationException($"Raylib app build failed (exit={exit})");
             }
 
-            public void WriteGameJson(List<ModInfo> mods)
+            public void WriteGameJson(List<ModInfo> mods, string platform = "raylib")
             {
                 // Ensure LudotsCoreMod is always first (required for constants)
                 var coreModPath = Path.Combine(_modsDir, "LudotsCoreMod");
@@ -307,14 +325,23 @@ namespace Ludots.ModLauncher.Cli
                     }
                 }
                 
-                // Calculate relative paths from game.json location
-                var gameJsonDir = Path.GetDirectoryName(_gameJsonPath) ?? _rootDir;
+                var gameJsonPath = platform == "godot" ? _godotGameJsonPath : _gameJsonPath;
+                var gameJsonDir = Path.GetDirectoryName(gameJsonPath) ?? _rootDir;
                 var modPaths = orderedMods.Select(p => Path.GetRelativePath(gameJsonDir, p).Replace('\\', '/')).ToArray();
                 var json = JsonSerializer.Serialize(new { ModPaths = modPaths }, new JsonSerializerOptions { WriteIndented = true });
 
                 Directory.CreateDirectory(gameJsonDir);
-                File.WriteAllText(_gameJsonPath, json);
-                Log($"Wrote game.json: {_gameJsonPath}");
+                File.WriteAllText(gameJsonPath, json);
+                Log($"Wrote game.json: {gameJsonPath}");
+            }
+
+            public void BuildGodotRelease()
+            {
+                var csproj = Path.Combine(_godotProjectPath, "Ludots.App.Godot.csproj");
+                if (!File.Exists(csproj)) throw new FileNotFoundException($"Godot app csproj not found: {csproj}");
+                Log("Building Godot app (Release)");
+                int exit = RunDotnet($"build \"{csproj}\" -c Release");
+                if (exit != 0) throw new InvalidOperationException($"Godot app build failed (exit={exit})");
             }
 
             public void RunRaylib(string? presetFile = null)
@@ -333,6 +360,22 @@ namespace Ludots.ModLauncher.Cli
                     Log($"  preset: {presetFile}");
                 }
                 Process.Start(psi);
+            }
+
+            public void RunGodot()
+            {
+                var godotExe = _config.GodotExecutablePath ?? Environment.GetEnvironmentVariable("GODOT_PATH");
+                if (string.IsNullOrWhiteSpace(godotExe)) throw new InvalidOperationException("Godot executable not found. Set GODOT_PATH env var or GodotExecutablePath in config.");
+                if (!File.Exists(godotExe)) throw new FileNotFoundException($"Godot executable not found: {godotExe}");
+                if (!Directory.Exists(_godotProjectPath)) throw new DirectoryNotFoundException($"Godot project not found: {_godotProjectPath}");
+                Log($"Starting Godot: {godotExe} --path \"{_godotProjectPath}\"");
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = godotExe,
+                    Arguments = $"--path \"{_godotProjectPath}\"",
+                    WorkingDirectory = _godotProjectPath,
+                    UseShellExecute = true
+                });
             }
 
             private int RunDotnet(string args)

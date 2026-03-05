@@ -12,6 +12,11 @@ namespace Ludots.ModLauncher.Config
         public Dictionary<string, ModPreset> Presets { get; set; } = new Dictionary<string, ModPreset>(StringComparer.OrdinalIgnoreCase);
 
         public LauncherViewMode ViewMode { get; set; } = LauncherViewMode.Cards;
+
+        /// <summary>
+        /// Path to Godot executable for cli run --platform godot. Falls back to GODOT_PATH env var.
+        /// </summary>
+        public string? GodotExecutablePath { get; set; }
     }
 
     public sealed class ModPreset

@@ -1,0 +1,16 @@
+<Project Sdk="Godot.NET.Sdk/4.4.1">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
+    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'ios' ">net9.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>Ludots.App.Godot</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Adapters\Godot\Ludots.Adapter.Godot\Ludots.Adapter.Godot.csproj" />
+    <ProjectReference Include="..\..\..\Client\Ludots.Client.Godot\Ludots.Client.Godot.csproj" />
+  </ItemGroup>
+</Project>
