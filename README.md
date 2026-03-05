@@ -51,18 +51,17 @@ dotnet run --project .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.cspro
 
 ## 📂 Project Structure
 
-*   `src/Core`: The heart of the engine (ECS, GAS, Physics, Math).
-*   `src/Apps`: Application entry points (Desktop/Raylib, Web).
-*   `src/Mods`: Built-in mods and examples (MobaDemo, RtsDemo).
-*   `src/Tools`: Developer tools (Editor, ModLauncher, NavBake).
-*   `assets`: Game assets and configurations.
-*   `docs`: Comprehensive documentation.
+*   `src/Core/`: The heart of the engine (ECS, GAS, Physics, Math).
+*   `src/Apps/`: Application entry points (Desktop/Raylib, Web).
+*   `mods/`: 30+ built-in and demo mods (outside `src/` for UGC parity).
+*   `src/Tools/`: Developer tools (Editor, ModLauncher, NavBake).
+*   `src/Libraries/`: Source-integrated third-party (Arch, DotRecast, Raylib-cs).
+*   `docs/`: Documentation (conventions + architecture guides).
 
 ## 📚 Documentation
 
-Detailed documentation can be found in the `docs/` directory.
-
-*   [Architecture Guide](docs/arch-guide/README.md)
+*   **[开发规范 (Conventions)](docs/conventions/README.md)** — 编码标准、Feature 开发工作流、AI 辅助开发规范、环境配置
+*   [架构文档 (Developer Guide)](docs/developer-guide/README.md) — 20 篇子系统架构详解（中文）
 
 ## 🤝 Contributing
 
