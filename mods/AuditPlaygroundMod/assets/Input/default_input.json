@@ -1,0 +1,19 @@
+{
+  "actions": [
+    { "id": "Audit_PushInner", "name": "Audit_PushInner", "type": "Button" },
+    { "id": "Audit_PopInner", "name": "Audit_PopInner", "type": "Button" },
+    { "id": "Audit_ReloadOuter", "name": "Audit_ReloadOuter", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Audit_Playground",
+      "name": "Audit Playground",
+      "priority": 100,
+      "bindings": [
+        { "actionId": "Audit_PushInner", "path": "<Keyboard>/i" },
+        { "actionId": "Audit_PopInner", "path": "<Keyboard>/o" },
+        { "actionId": "Audit_ReloadOuter", "path": "<Keyboard>/p" }
+      ]
+    }
+  ]
+}

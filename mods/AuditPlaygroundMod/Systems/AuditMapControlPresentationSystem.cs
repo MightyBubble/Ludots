@@ -1,4 +1,5 @@
 using Arch.System;
+using AuditPlaygroundMod.Input;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Runtime;
@@ -18,10 +19,8 @@ namespace AuditPlaygroundMod.Systems
     public sealed class AuditMapControlPresentationSystem : ISystem<float>
     {
         private readonly GameEngine _engine;
-        private IInputBackend? _input;
-        private bool _prevPush;
-        private bool _prevPop;
-        private bool _prevReload;
+        private PlayerInputHandler? _input;
+        private bool _inputContextPushed;
 
         public AuditMapControlPresentationSystem(GameEngine engine)
         {
@@ -38,20 +37,23 @@ namespace AuditPlaygroundMod.Systems
         public void Update(in float t)
         {
             if (_input == null &&
-                _engine.GlobalContext.TryGetValue(ContextKeys.InputBackend, out var inputObj) &&
-                inputObj is IInputBackend backend)
+                _engine.GlobalContext.TryGetValue(ContextKeys.InputHandler, out var inputObj) &&
+                inputObj is PlayerInputHandler input)
             {
-                _input = backend;
+                EnsureInputSchema(input);
+                _input = input;
+                _input.PushContext(AuditPlaygroundInputContexts.Playground);
+                _inputContextPushed = true;
             }
 
             if (_input == null) return;
 
-            HandlePressed("<Keyboard>/i", ref _prevPush, () =>
+            HandlePressed(AuditPlaygroundInputActions.PushInner, () =>
             {
                 _engine.PushMap("audit_inner");
             });
 
-            HandlePressed("<Keyboard>/o", ref _prevPop, () =>
+            HandlePressed(AuditPlaygroundInputActions.PopInner, () =>
             {
                 if (_engine.MapSessions == null || _engine.MapSessions.All.Count <= 1)
                 {
@@ -61,7 +63,7 @@ namespace AuditPlaygroundMod.Systems
                 _engine.PopMap();
             });
 
-            HandlePressed("<Keyboard>/p", ref _prevReload, () =>
+            HandlePressed(AuditPlaygroundInputActions.ReloadOuter, () =>
             {
                 _engine.LoadMap("audit_outer");
             });
@@ -70,17 +72,32 @@ namespace AuditPlaygroundMod.Systems
         }
 
         public void AfterUpdate(in float t) { }
-        public void Dispose() { }
-
-        private void HandlePressed(string path, ref bool previous, System.Action onPressed)
+        public void Dispose()
         {
-            bool down = _input!.GetButton(path);
-            if (down && !previous)
+            if (_input != null && _inputContextPushed)
+            {
+                _input.PopContext(AuditPlaygroundInputContexts.Playground);
+                _inputContextPushed = false;
+            }
+        }
+
+        private void HandlePressed(string actionId, System.Action onPressed)
+        {
+            if (_input!.PressedThisFrame(actionId))
             {
                 onPressed();
             }
+        }
 
-            previous = down;
+        private static void EnsureInputSchema(PlayerInputHandler input)
+        {
+            if (!input.HasContext(AuditPlaygroundInputContexts.Playground))
+            {
+                throw new System.InvalidOperationException($"Missing input context: {AuditPlaygroundInputContexts.Playground}");
+            }
+            if (!input.HasAction(AuditPlaygroundInputActions.PushInner)) throw new System.InvalidOperationException($"Missing input action: {AuditPlaygroundInputActions.PushInner}");
+            if (!input.HasAction(AuditPlaygroundInputActions.PopInner)) throw new System.InvalidOperationException($"Missing input action: {AuditPlaygroundInputActions.PopInner}");
+            if (!input.HasAction(AuditPlaygroundInputActions.ReloadOuter)) throw new System.InvalidOperationException($"Missing input action: {AuditPlaygroundInputActions.ReloadOuter}");
         }
 
         private void RenderAuditOverlay()
