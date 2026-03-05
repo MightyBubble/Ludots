@@ -53,9 +53,21 @@ function connectWebSocket(): void {
   const ws = new WebSocket(wsUrl);
   ws.binaryType = 'arraybuffer';
 
-  ws.addEventListener('open', () => console.log('[WS] Connected'));
+  let inputInterval: ReturnType<typeof setInterval> | null = null;
+
+  ws.addEventListener('open', () => {
+    console.log('[WS] Connected');
+    inputInterval = setInterval(() => {
+      if (ws.readyState !== WebSocket.OPEN) {
+        if (inputInterval) { clearInterval(inputInterval); inputInterval = null; }
+        return;
+      }
+      ws.send(inputCapture.encoder.encode());
+    }, 50);
+  });
   ws.addEventListener('close', () => {
     console.log('[WS] Disconnected, reconnecting in 2s...');
+    if (inputInterval) { clearInterval(inputInterval); inputInterval = null; }
     _meshMapApplied = false;
     setTimeout(connectWebSocket, 2000);
   });
@@ -77,11 +89,6 @@ function connectWebSocket(): void {
 
     interpolator.pushFrame(frame.primitives, frame.timestampMs);
   });
-
-  const inputInterval = setInterval(() => {
-    if (ws.readyState !== WebSocket.OPEN) { clearInterval(inputInterval); return; }
-    ws.send(inputCapture.encoder.encode());
-  }, 50);
 }
 
 function worldToScreen2D(worldX: number, worldY: number): [number, number] | null {

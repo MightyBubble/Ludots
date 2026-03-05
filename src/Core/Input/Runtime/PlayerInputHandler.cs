@@ -195,7 +195,6 @@ namespace Ludots.Core.Input.Runtime
                 else if (binding.Path.StartsWith("<Keyboard>") || binding.Path.StartsWith("<Mouse>"))
                 {
                     bool isDown = _backend.GetButton(binding.Path);
-                    // if (isDown) Console.WriteLine($"[Input] Key Down: {binding.Path}");
                     return isDown ? Vector3.One : Vector3.Zero;
                 }
                 // Add Gamepad etc.

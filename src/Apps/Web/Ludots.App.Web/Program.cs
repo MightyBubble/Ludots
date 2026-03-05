@@ -14,6 +14,8 @@ var setup = gameHost.Setup;
 var cts = new CancellationTokenSource();
 var gameLoopTask = Task.Run(() => gameHost.Run(cts.Token));
 
+app.UseWebSockets();
+
 var clientPath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "..", "..", "..", "src", "Client", "Web", "dist"));
 if (Directory.Exists(clientPath))
 {
@@ -43,8 +45,6 @@ app.Map("/ws", async (HttpContext context) =>
     var ws = await context.WebSockets.AcceptWebSocketAsync();
     await setup.Transport.HandleClientAsync(ws, cts.Token);
 });
-
-app.UseWebSockets();
 
 Console.WriteLine($"Web server starting on http://0.0.0.0:5200 ...");
 Console.WriteLine($"Static files: {(Directory.Exists(clientPath) ? clientPath : "NOT FOUND — run 'npx vite build' in src/Client/Web")}");
