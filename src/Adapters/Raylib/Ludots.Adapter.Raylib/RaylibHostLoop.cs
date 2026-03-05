@@ -37,7 +37,7 @@ namespace Ludots.Adapter.Raylib
 
             int screenWidth = config.WindowWidth <= 0 ? 1280 : config.WindowWidth;
             int screenHeight = config.WindowHeight <= 0 ? 720 : config.WindowHeight;
-            string title = string.IsNullOrWhiteSpace(config.WindowTitle) ? "Ludots Engine (Raylib)" : config.WindowTitle;
+            string title = string.IsNullOrWhiteSpace(config.WindowTitle) ? "Ludots Engine" : config.WindowTitle;
             // targetFps = 0 表示不锁帧，< 0 使用默认 60
             int targetFps = config.TargetFps == 0 ? 0 : (config.TargetFps < 0 ? 60 : config.TargetFps);
             bool windowOpened = false;

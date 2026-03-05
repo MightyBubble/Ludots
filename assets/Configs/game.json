@@ -2,7 +2,7 @@
   "defaultCoreMod": "LudotsCoreMod",
   "windowWidth": 1280,
   "windowHeight": 720,
-  "windowTitle": "Ludots Engine (Raylib)",
+  "windowTitle": "Ludots Engine",
   "targetFps": 0,
   "simulationBudgetMsPerFrame": 4,
   "simulationMaxSlicesPerLogicFrame": 120,

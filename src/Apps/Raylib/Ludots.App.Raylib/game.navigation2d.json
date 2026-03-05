@@ -4,7 +4,7 @@
   ],
   "WindowWidth": 1280,
   "WindowHeight": 720,
-  "WindowTitle": "Ludots Engine (Raylib) - Navigation2D Playground",
+  "WindowTitle": "Ludots Engine — Navigation2D Playground",
   "TargetFps": 60,
   "ModPaths": [
     "../../../../../../../mods/LudotsCoreMod",
