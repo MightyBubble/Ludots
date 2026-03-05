@@ -47,6 +47,97 @@ app.MapGet("/api/mods", () =>
     return Results.Ok(new { ok = true, mods });
 });
 
+app.MapGet("/api/mods/{modId}/thumbnail", (string modId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    var mods = EditorRepo.DiscoverMods(repoRoot);
+    var mod = mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
+    if (mod == null) return Results.NotFound();
+
+    foreach (var ext in new[] { ".png", ".jpg", ".jpeg", ".webp" })
+    {
+        var path = Path.Combine(mod.RootPath, "assets", "Launcher", "thumbnail" + ext);
+        if (File.Exists(path))
+        {
+            var contentType = ext switch { ".png" => "image/png", ".jpg" or ".jpeg" => "image/jpeg", ".webp" => "image/webp", _ => "application/octet-stream" };
+            return Results.File(File.ReadAllBytes(path), contentType);
+        }
+    }
+    return Results.NotFound();
+});
+
+app.MapGet("/api/mods/{modId}/readme", (string modId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    var mods = EditorRepo.DiscoverMods(repoRoot);
+    var mod = mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
+    if (mod == null) return Results.NotFound(new { ok = false });
+
+    var readmePath = Path.Combine(mod.RootPath, "README.md");
+    if (!File.Exists(readmePath)) return Results.NotFound(new { ok = false });
+
+    return Results.Ok(new { ok = true, content = File.ReadAllText(readmePath) });
+});
+
+app.MapGet("/api/mods/{modId}/changelog", (string modId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    var mods = EditorRepo.DiscoverMods(repoRoot);
+    var mod = mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
+    if (mod == null) return Results.NotFound(new { ok = false });
+
+    if (string.IsNullOrWhiteSpace(mod.ChangelogFile))
+        return Results.NotFound(new { ok = false });
+
+    var changelogPath = Path.Combine(mod.RootPath, mod.ChangelogFile);
+    if (!File.Exists(changelogPath)) return Results.NotFound(new { ok = false });
+
+    return Results.Ok(new { ok = true, content = File.ReadAllText(changelogPath) });
+});
+
+app.MapGet("/api/workspace", () =>
+{
+    string repoRoot = FindAssetsRoot();
+    var wsPath = Path.Combine(repoRoot, "modworkspace.json");
+    if (!File.Exists(wsPath))
+        return Results.Ok(new { ok = true, sources = new[] { Path.Combine(repoRoot, "mods") } });
+
+    var ws = Ludots.Core.Modding.Workspace.ModWorkspace.Load(wsPath);
+    return Results.Ok(new { ok = true, sources = ws.Sources });
+});
+
+app.MapPost("/api/workspace/add-source", async (HttpRequest req) =>
+{
+    string repoRoot = FindAssetsRoot();
+    var wsPath = Path.Combine(repoRoot, "modworkspace.json");
+
+    using var sr = new StreamReader(req.Body);
+    string body = await sr.ReadToEndAsync();
+    var payload = JsonSerializer.Deserialize<JsonElement>(body);
+    if (!payload.TryGetProperty("path", out var pathEl))
+        return Results.BadRequest(new { ok = false, error = "Missing 'path' field" });
+
+    string newSource = pathEl.GetString() ?? "";
+    if (string.IsNullOrWhiteSpace(newSource) || !Directory.Exists(newSource))
+        return Results.BadRequest(new { ok = false, error = $"Directory not found: {newSource}" });
+
+    newSource = Path.GetFullPath(newSource);
+
+    Ludots.Core.Modding.Workspace.ModWorkspace ws;
+    if (File.Exists(wsPath))
+        ws = Ludots.Core.Modding.Workspace.ModWorkspace.Load(wsPath);
+    else
+        ws = new Ludots.Core.Modding.Workspace.ModWorkspace();
+
+    if (!ws.Sources.Contains(newSource, StringComparer.OrdinalIgnoreCase))
+        ws.Sources.Add(newSource);
+
+    var json = JsonSerializer.Serialize(new { sources = ws.Sources.Select(s => Path.GetRelativePath(repoRoot, s).Replace('\\', '/')) }, new JsonSerializerOptions { WriteIndented = true });
+    File.WriteAllText(wsPath, json);
+
+    return Results.Ok(new { ok = true, sources = ws.Sources });
+});
+
 app.MapGet("/api/mods/{modId}/load-order", (string modId) =>
 {
     string repoRoot = FindAssetsRoot();
@@ -609,7 +700,11 @@ readonly record struct TileBakeResult(int Cx, int Cy, bool Ok, string? NavTileBa
 
 static class EditorRepo
 {
-    public sealed record ModInfo(string Id, string Name, string Version, int Priority, Dictionary<string, string> Dependencies, string RootPath);
+    public sealed record ModInfo(
+        string Id, string Name, string Version, int Priority,
+        Dictionary<string, string> Dependencies, string RootPath,
+        string Description, string Author, List<string> Tags,
+        string ChangelogFile, bool HasThumbnail, bool HasReadme);
 
     public sealed class ModContext
     {
@@ -636,6 +731,18 @@ static class EditorRepo
                 if (mods.ContainsKey(id)) continue;
                 mods[id] = ReadModInfo(id, dir, jsonPath);
             }
+        }
+
+        var wsPath = Path.Combine(repoRoot, "modworkspace.json");
+        if (File.Exists(wsPath))
+        {
+            try
+            {
+                var ws = Ludots.Core.Modding.Workspace.ModWorkspace.Load(wsPath);
+                foreach (var source in ws.Sources)
+                    ScanModsRoot(source);
+            }
+            catch { }
         }
 
         ScanModsRoot(Path.Combine(repoRoot, "mods"));
@@ -991,13 +1098,24 @@ static class EditorRepo
     private static ModInfo ReadModInfo(string id, string rootPath, string modJsonPath)
     {
         var manifest = ModManifestJson.ParseStrict(File.ReadAllText(modJsonPath), modJsonPath);
+
+        bool hasThumbnail = File.Exists(Path.Combine(rootPath, "assets", "Launcher", "thumbnail.png"))
+                         || File.Exists(Path.Combine(rootPath, "assets", "Launcher", "thumbnail.jpg"));
+        bool hasReadme = File.Exists(Path.Combine(rootPath, "README.md"));
+
         return new ModInfo(
             id,
             manifest.Name,
             manifest.Version,
             manifest.Priority,
             new Dictionary<string, string>(manifest.Dependencies, StringComparer.Ordinal),
-            rootPath);
+            rootPath,
+            manifest.Description ?? "",
+            manifest.Author ?? "",
+            manifest.Tags ?? new List<string>(),
+            manifest.Changelog ?? "",
+            hasThumbnail,
+            hasReadme);
     }
 
     private static List<string> ResolveLoadOrder(Dictionary<string, ModInfo> mods, string root)
