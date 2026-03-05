@@ -191,8 +191,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     if (now >= effect.NextTickAtTick)
                     {
-                        // Note: Legacy EffectCallbackComponent has been removed.
-                        // OnPeriod callbacks are now handled via Phase Graph bindings.
+                        // OnPeriod callbacks are handled via Phase Graph bindings.
 
                         // Collect for TargetResolver period fan-out
                         if (World.Has<EffectTemplateRef>(entity))
@@ -274,8 +273,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     return;
                 }
 
-                // Note: Legacy EffectCallbackComponent has been removed.
-                // OnExpire/OnRemove callbacks are now handled via Phase Graph bindings.
+                // OnExpire/OnRemove callbacks are handled via Phase Graph bindings.
 
                 // Collect for Phase Graph execution (OnExpire + OnRemove)
                 if (World.Has<EffectTemplateRef>(entity))
