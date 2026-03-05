@@ -1,0 +1,17 @@
+[
+  {
+    "_comment": "4X entity marker — renders all entities with VisualTransform",
+    "id": "6201",
+    "visualKind": "Marker3D",
+    "entityScope": "AllWithVisualTransform",
+    "meshOrShapeId": 1,
+    "defaultScale": 0.5,
+    "positionOffset": [0, 0.35, 0],
+    "bindings": [
+      { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
+      { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
+      { "paramKey": 6, "source": "entityColor", "sourceId": 2 },
+      { "paramKey": 7, "source": "entityColor", "sourceId": 3 }
+    ]
+  }
+]

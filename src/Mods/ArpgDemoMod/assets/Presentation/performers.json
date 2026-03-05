@@ -1,0 +1,28 @@
+[
+  {
+    "_comment": "ARPG unit cube — renders all entities with VisualTransform",
+    "id": "6001",
+    "visualKind": "Marker3D",
+    "entityScope": "AllWithVisualTransform",
+    "meshOrShapeId": 1,
+    "defaultScale": 0.4,
+    "positionOffset": [0, 0.3, 0],
+    "bindings": [
+      { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
+      { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
+      { "paramKey": 6, "source": "entityColor", "sourceId": 2 },
+      { "paramKey": 7, "source": "entityColor", "sourceId": 3 }
+    ]
+  },
+  {
+    "_comment": "ARPG damage flash — red flash on hit",
+    "id": "6002",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": 2,
+    "defaultColor": [1, 0.2, 0.2, 0.85],
+    "defaultScale": 0.15,
+    "defaultLifetime": 0.3,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.6, 0]
+  }
+]

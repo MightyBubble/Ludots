@@ -1,6 +1,14 @@
 {
-  "Id": "arpg_entry",
+  "id": "arpg_entry",
   "Tags": ["arpg"],
+  "DefaultCamera": {
+    "TargetXCm": 400,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 45,
+    "DistanceCm": 10000,
+    "FovYDeg": 60
+  },
   "Entities": [
     { "Template": "arpg_hero", "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } } },
     { "Template": "arpg_enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 800, "Y": 0 } } } }

@@ -1,6 +1,14 @@
 {
-  "Id": "rts_entry",
+  "id": "rts_entry",
   "Tags": ["rts"],
+  "DefaultCamera": {
+    "TargetXCm": 300,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 25000,
+    "FovYDeg": 60
+  },
   "Entities": [
     { "Template": "rts_scv", "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } } },
     { "Template": "rts_barracks", "Overrides": { "WorldPositionCm": { "Value": { "X": 400, "Y": 0 } } } },

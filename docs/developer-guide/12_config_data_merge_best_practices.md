@@ -29,7 +29,7 @@
 
 推荐：
 
-*   `ArrayById`，并指定稳定主键（默认 `Id`，也可在 `ConfigCatalogEntry` 指定其他字段）。
+*   `ArrayById`，并指定稳定主键（统一为 `id`，参见 [Config ID 格式规范](18_config_id_standards.md)）。
 *   删除用 `__delete=true`（兼容 `Disabled=true`）。
 
 ### 1.3 追加表（Append List）
@@ -53,7 +53,7 @@
 
 ### 2.1 主键字段必须稳定
 
-*   任何需要增量覆盖的表，必须有稳定主键（如 `Id`）。
+*   任何需要增量覆盖的表，必须有稳定主键（统一为 `id`，且值必须为 JSON 字符串）。
 *   主键禁止使用索引/位置语义（例如“第 3 条”）。
 
 ### 2.2 字段类型只做三件事

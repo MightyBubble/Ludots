@@ -1,0 +1,13 @@
+{
+  "id": "feature_hub",
+  "Tags": ["hub"],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 60,
+    "DistanceCm": 5000,
+    "FovYDeg": 60
+  },
+  "Entities": []
+}

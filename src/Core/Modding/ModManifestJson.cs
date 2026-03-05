@@ -135,6 +135,11 @@ namespace Ludots.Core.Modding
                 throw new Exception($"Invalid mod.json ('name' is empty): {manifestPath}");
             }
 
+            if (manifest.Name.Contains(":") || manifest.Name.Contains("/"))
+            {
+                throw new Exception($"Invalid mod.json ('name' cannot contain ':' or '/'): {manifestPath}");
+            }
+
             if (string.IsNullOrWhiteSpace(manifest.Version))
             {
                 throw new Exception($"Invalid mod.json ('version' is empty): {manifestPath}");

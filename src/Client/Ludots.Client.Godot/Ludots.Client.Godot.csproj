@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Platform\Ludots.Platform.Abstractions\Ludots.Platform.Abstractions.csproj" />
+    <PackageReference Include="GodotSharp" Version="4.4.1" />
+  </ItemGroup>
+
+</Project>
