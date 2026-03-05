@@ -68,6 +68,9 @@
 18. [版本收束处置矩阵（分支 / PR / Issue）](18_convergence_disposition_matrix.md)
     *   open PR 与远端分支的处置建议（merge/cherry-pick/close）
     *   issue 关闭/保留建议与证据映射
-19. [Feature 开发工作流规范](19_feature_development_workflow.md)
-    *   发现阶段（已有能力检索清单）、设计阶段（挂靠点与 API 引用验证）
-    *   AI Agent 防幻觉专项规则与能力清单速查表
+
+## 开发规范
+
+编码标准、Feature 开发工作流、AI 辅助开发规范、环境配置等**规范性文档**已移至 `docs/conventions/`。
+
+*   [开发规范总索引](../conventions/README.md)
