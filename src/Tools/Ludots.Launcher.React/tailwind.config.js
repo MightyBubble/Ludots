@@ -5,9 +5,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        surface: { DEFAULT: "#1a1a2e", light: "#22223a", lighter: "#2a2a44" },
-        accent: { DEFAULT: "#0f7dff", hover: "#3399ff", dim: "#0f7dff33" },
+        bg: { DEFAULT: "#0e0e16", panel: "#14141f", card: "#1a1a28", hover: "#20202f", border: "#2a2a3a" },
+        accent: { DEFAULT: "#3b82f6", hover: "#60a5fa", dim: "#3b82f620", glow: "#3b82f640" },
+        warn: { DEFAULT: "#f59e0b", bg: "#f59e0b15" },
+        err: { DEFAULT: "#ef4444", bg: "#ef444415" },
+        ok: { DEFAULT: "#22c55e", bg: "#22c55e15" },
       },
+      fontSize: { "2xs": ["0.625rem", { lineHeight: "0.875rem" }] },
     },
   },
   plugins: [],

@@ -603,6 +603,179 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
     }
 });
 
+app.MapPost("/api/mods/create", async (HttpRequest req) =>
+{
+    using var sr = new StreamReader(req.Body);
+    string body = await sr.ReadToEndAsync();
+    var payload = JsonSerializer.Deserialize<JsonElement>(body);
+    
+    if (!payload.TryGetProperty("id", out var idEl) || string.IsNullOrWhiteSpace(idEl.GetString()))
+        return Results.BadRequest(new { ok = false, error = "Missing 'id'" });
+    
+    string modId = idEl.GetString()!;
+    string template = "empty";
+    if (payload.TryGetProperty("template", out var tplEl) && tplEl.ValueKind == JsonValueKind.String)
+        template = tplEl.GetString() ?? "empty";
+    
+    string? targetDir = null;
+    if (payload.TryGetProperty("dir", out var dirEl) && dirEl.ValueKind == JsonValueKind.String)
+        targetDir = dirEl.GetString();
+    
+    string repoRoot = FindAssetsRoot();
+    var toolCsproj = Path.Combine(repoRoot, "src", "Tools", "Ludots.Tool", "Ludots.Tool.csproj");
+    
+    var args = $"run --project \"{toolCsproj}\" -- mod init --id {modId} --template {template}";
+    if (!string.IsNullOrWhiteSpace(targetDir))
+        args += $" --dir \"{targetDir}\"";
+    
+    var (exitCode, output) = await RunProcessAsync("dotnet", args, repoRoot, timeoutMs: 60000);
+    
+    if (exitCode != 0)
+        return Results.BadRequest(new { ok = false, error = $"mod init failed (exit={exitCode})", output });
+    
+    return Results.Ok(new { ok = true, modId, output });
+});
+
+app.MapPost("/api/mods/{modId}/build", async (string modId) =>
+{
+    string repoRoot = FindAssetsRoot();
+    var mods = EditorRepo.DiscoverMods(repoRoot);
+    var mod = mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
+    if (mod == null) return Results.NotFound(new { ok = false, error = $"Mod not found: {modId}" });
+    
+    var csprojFiles = Directory.GetFiles(mod.RootPath, "*.csproj", SearchOption.TopDirectoryOnly);
+    if (csprojFiles.Length == 0)
+        return Results.BadRequest(new { ok = false, error = $"No .csproj found in {mod.RootPath}" });
+    
+    var (exitCode, output) = await RunProcessAsync("dotnet", $"build \"{csprojFiles[0]}\" -c Release", repoRoot, timeoutMs: 120000);
+    
+    return Results.Ok(new { ok = exitCode == 0, exitCode, output });
+});
+
+app.MapPost("/api/mods/build-all", async (HttpRequest req) =>
+{
+    using var sr = new StreamReader(req.Body);
+    string body = await sr.ReadToEndAsync();
+    var payload = JsonSerializer.Deserialize<JsonElement>(body);
+    
+    var modIds = new List<string>();
+    if (payload.TryGetProperty("modIds", out var arr) && arr.ValueKind == JsonValueKind.Array)
+    {
+        foreach (var item in arr.EnumerateArray())
+            if (item.ValueKind == JsonValueKind.String) modIds.Add(item.GetString()!);
+    }
+    
+    string repoRoot = FindAssetsRoot();
+    var allMods = EditorRepo.DiscoverMods(repoRoot);
+    var byId = allMods.ToDictionary(m => m.Id, StringComparer.OrdinalIgnoreCase);
+    
+    var results = new List<object>();
+    foreach (var id in modIds)
+    {
+        if (!byId.TryGetValue(id, out var mod)) { results.Add(new { id, ok = false, error = "not found" }); continue; }
+        var csprojFiles = Directory.GetFiles(mod.RootPath, "*.csproj", SearchOption.TopDirectoryOnly);
+        if (csprojFiles.Length == 0) { results.Add(new { id, ok = false, error = "no csproj" }); continue; }
+        
+        var (exitCode, output) = await RunProcessAsync("dotnet", $"build \"{csprojFiles[0]}\" -c Release", repoRoot, timeoutMs: 120000);
+        results.Add(new { id, ok = exitCode == 0, exitCode, output });
+    }
+    
+    return Results.Ok(new { ok = true, results });
+});
+
+app.MapPost("/api/launch", async (HttpRequest req) =>
+{
+    using var sr = new StreamReader(req.Body);
+    string body = await sr.ReadToEndAsync();
+    var payload = JsonSerializer.Deserialize<JsonElement>(body);
+    
+    string repoRoot = FindAssetsRoot();
+    var raylibCsproj = Path.Combine(repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "Ludots.App.Raylib.csproj");
+    
+    string configArg = "";
+    if (payload.TryGetProperty("presetId", out var presetEl) && presetEl.ValueKind == JsonValueKind.String)
+    {
+        string presetId = presetEl.GetString()!;
+        string configFile = presetId == "default" ? "game.json" : $"game.{presetId}.json";
+        configArg = configFile;
+    }
+    
+    if (payload.TryGetProperty("modPaths", out var pathsEl) && pathsEl.ValueKind == JsonValueKind.Array)
+    {
+        var paths = new List<string>();
+        foreach (var p in pathsEl.EnumerateArray())
+            if (p.ValueKind == JsonValueKind.String) paths.Add(p.GetString()!);
+        
+        var buildDir = Path.Combine(repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", "net8.0");
+        Directory.CreateDirectory(buildDir);
+        var customJson = JsonSerializer.Serialize(new { ModPaths = paths }, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(Path.Combine(buildDir, "game.json"), customJson);
+        configArg = "game.json";
+    }
+    
+    var args = $"run --project \"{raylibCsproj}\" -c Release";
+    if (!string.IsNullOrWhiteSpace(configArg)) args += $" -- {configArg}";
+    
+    var psi = new System.Diagnostics.ProcessStartInfo("dotnet", args)
+    {
+        WorkingDirectory = repoRoot,
+        UseShellExecute = false,
+        RedirectStandardOutput = false,
+        RedirectStandardError = false,
+    };
+    try
+    {
+        var proc = System.Diagnostics.Process.Start(psi);
+        return Results.Ok(new { ok = true, pid = proc?.Id ?? -1, config = configArg });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+});
+
+app.MapPost("/api/mods/generate-sln", async (HttpRequest req) =>
+{
+    using var sr = new StreamReader(req.Body);
+    string body = await sr.ReadToEndAsync();
+    var payload = JsonSerializer.Deserialize<JsonElement>(body);
+    
+    if (!payload.TryGetProperty("modId", out var idEl) || string.IsNullOrWhiteSpace(idEl.GetString()))
+        return Results.BadRequest(new { ok = false, error = "Missing 'modId'" });
+    
+    string modId = idEl.GetString()!;
+    string repoRoot = FindAssetsRoot();
+    var allMods = EditorRepo.DiscoverMods(repoRoot);
+    var mod = allMods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
+    if (mod == null) return Results.NotFound(new { ok = false, error = $"Mod not found: {modId}" });
+    
+    var slnPath = Path.Combine(mod.RootPath, $"{modId}.sln");
+    
+    var (rc1, out1) = await RunProcessAsync("dotnet", $"new sln -n {modId} --force", mod.RootPath, 30000);
+    if (rc1 != 0) return Results.BadRequest(new { ok = false, error = "sln creation failed", output = out1 });
+    
+    var csprojFiles = Directory.GetFiles(mod.RootPath, "*.csproj", SearchOption.TopDirectoryOnly);
+    if (csprojFiles.Length > 0)
+    {
+        await RunProcessAsync("dotnet", $"sln \"{slnPath}\" add \"{csprojFiles[0]}\"", mod.RootPath, 30000);
+    }
+    
+    foreach (var depName in mod.Dependencies.Keys)
+    {
+        var depMod = allMods.FirstOrDefault(m => string.Equals(m.Id, depName, StringComparison.OrdinalIgnoreCase));
+        if (depMod == null) continue;
+        var depCsprojs = Directory.GetFiles(depMod.RootPath, "*.csproj", SearchOption.TopDirectoryOnly);
+        if (depCsprojs.Length > 0)
+            await RunProcessAsync("dotnet", $"sln \"{slnPath}\" add \"{depCsprojs[0]}\"", mod.RootPath, 30000);
+    }
+    
+    var coreCsproj = Path.Combine(repoRoot, "src", "Core", "Ludots.Core.csproj");
+    if (File.Exists(coreCsproj))
+        await RunProcessAsync("dotnet", $"sln \"{slnPath}\" add \"{coreCsproj}\"", mod.RootPath, 30000);
+    
+    return Results.Ok(new { ok = true, slnPath });
+});
+
 app.Run("http://localhost:5299");
 
 static float ParseFloat(string? s, float fallback)
@@ -683,6 +856,34 @@ static List<(int cx, int cy)> ResolveTargets(VertexMap map, string? dirtyJson, b
                 targets.Add((cx, cy));
     }
     return targets;
+}
+
+static async Task<(int exitCode, string output)> RunProcessAsync(string fileName, string arguments, string workingDirectory, int timeoutMs = 60000)
+{
+    var psi = new System.Diagnostics.ProcessStartInfo(fileName, arguments)
+    {
+        WorkingDirectory = workingDirectory,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+        CreateNoWindow = true,
+    };
+    
+    using var proc = System.Diagnostics.Process.Start(psi);
+    if (proc == null) return (-1, "Failed to start process");
+    
+    var stdout = proc.StandardOutput.ReadToEndAsync();
+    var stderr = proc.StandardError.ReadToEndAsync();
+    
+    bool exited = proc.WaitForExit(timeoutMs);
+    if (!exited)
+    {
+        try { proc.Kill(entireProcessTree: true); } catch { }
+        return (-1, "Process timed out");
+    }
+    
+    string output = (await stdout) + "\n" + (await stderr);
+    return (proc.ExitCode, output.Trim());
 }
 
 static string FindAssetsRoot()

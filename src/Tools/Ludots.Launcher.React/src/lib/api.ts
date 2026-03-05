@@ -91,3 +91,47 @@ export async function checkHealth(): Promise<boolean> {
     return false;
   }
 }
+
+export async function createMod(id: string, template: string): Promise<{ ok: boolean; output?: string; error?: string }> {
+  const r = await fetch(`${BASE}/api/mods/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, template }),
+  });
+  return r.json();
+}
+
+export async function buildMod(modId: string): Promise<{ ok: boolean; exitCode?: number; output?: string }> {
+  const r = await fetch(`${BASE}/api/mods/${modId}/build`, { method: "POST" });
+  return r.json();
+}
+
+export async function buildAllMods(modIds: string[]): Promise<{ ok: boolean; results?: Array<{ id: string; ok: boolean; output?: string }> }> {
+  const r = await fetch(`${BASE}/api/mods/build-all`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ modIds }),
+  });
+  return r.json();
+}
+
+export async function launchGame(presetId?: string, modPaths?: string[]): Promise<{ ok: boolean; pid?: number; error?: string }> {
+  const body: Record<string, unknown> = {};
+  if (presetId) body.presetId = presetId;
+  if (modPaths) body.modPaths = modPaths;
+  const r = await fetch(`${BASE}/api/launch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+
+export async function generateSln(modId: string): Promise<{ ok: boolean; slnPath?: string; error?: string }> {
+  const r = await fetch(`${BASE}/api/mods/generate-sln`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ modId }),
+  });
+  return r.json();
+}
