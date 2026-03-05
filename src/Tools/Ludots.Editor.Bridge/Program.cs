@@ -246,8 +246,8 @@ app.MapGet("/api/mods/{modId}/mesh-assets", (string modId) =>
 {
     var primitives = new[]
     {
-        new { meshId = Ludots.Core.Presentation.Assets.PrimitiveMeshAssetIds.Cube, kind = "Cube" },
-        new { meshId = Ludots.Core.Presentation.Assets.PrimitiveMeshAssetIds.Sphere, kind = "Sphere" }
+        new { meshKey = Ludots.Core.Presentation.Assets.WellKnownMeshKeys.Cube, kind = "Cube" },
+        new { meshKey = Ludots.Core.Presentation.Assets.WellKnownMeshKeys.Sphere, kind = "Sphere" }
     };
     return Results.Ok(new { ok = true, primitives });
 });

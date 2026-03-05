@@ -19,9 +19,9 @@
     "maxPerFrame": 128
   },
   "presentation": {
-    "selectionIndicatorDefId": 5002,
+    "selectionIndicatorDefKey": "moba_selection_indicator",
     "selectionScopeId": 99001,
-    "rangeCircleIndicatorDefId": 5004,
+    "rangeCircleIndicatorDefKey": "moba_ability_range",
     "circleEnemyMarker": {
       "scale": [1.2, 0.08, 1.2],
       "color": [0.8, 0.2, 1.0, 0.75],

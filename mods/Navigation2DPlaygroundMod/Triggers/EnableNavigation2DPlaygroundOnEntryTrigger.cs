@@ -12,6 +12,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
@@ -62,7 +63,8 @@ namespace Navigation2DPlaygroundMod.Triggers
                     engine.RegisterSystem(new IntegrationSystem2D(engine.World), SystemGroup.InputCollection);
 
                     engine.RegisterPresentationSystem(new Navigation2DPlaygroundControlSystem(engine));
-                    engine.RegisterPresentationSystem(new Navigation2DPlaygroundPresentationSystem(engine, debugDrawBuffer));
+                    var meshRegistry = context.Get(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry;
+                    engine.RegisterPresentationSystem(new Navigation2DPlaygroundPresentationSystem(engine, debugDrawBuffer, meshRegistry));
 
                     Navigation2DPlaygroundControlSystem.SpawnScenario(engine.World, Navigation2DPlaygroundState.AgentsPerTeam);
                     engine.SetService(Navigation2DPlaygroundKeys.AgentsPerTeam, Navigation2DPlaygroundState.AgentsPerTeam);

@@ -1,37 +1,39 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Registry;
 
 namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
-    /// Stores <see cref="PerformerDefinition"/> instances by integer ID.
-    /// Populated at load time from configuration; read at runtime by
-    /// PerformerRuleSystem and PerformerEmitSystem.
+    /// Stores <see cref="PerformerDefinition"/> instances keyed by string.
+    /// Uses <see cref="StringIntRegistry"/> for the string-to-int mapping;
+    /// int IDs are auto-assigned and opaque.
     /// </summary>
     public sealed class PerformerDefinitionRegistry
     {
+        private readonly StringIntRegistry _ids;
         private PerformerDefinition[] _items;
         private bool[] _has;
+
+        public IReadOnlyList<int> RegisteredIds => _registeredIds;
         private readonly List<int> _registeredIds = new();
 
-        /// <summary>All registered definition IDs (for enumeration).</summary>
-        public IReadOnlyList<int> RegisteredIds => _registeredIds;
+        public int Version { get; private set; }
 
         public PerformerDefinitionRegistry(int capacity = 1024)
         {
+            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0);
             _items = new PerformerDefinition[capacity];
             _has = new bool[capacity];
         }
 
-        /// <summary>Incremented on each registration; used by systems to detect stale caches.</summary>
-        public int Version { get; private set; }
-
         /// <summary>
-        /// Register a definition. Overwrites any existing definition at the same ID.
-        /// Automatically builds the O(1) binding index.
+        /// Register a definition by string key. Returns the auto-assigned int ID.
+        /// Overwrites if the key was already registered.
         /// </summary>
-        public void Register(int id, PerformerDefinition definition)
+        public int Register(string key, PerformerDefinition definition)
         {
+            int id = _ids.Register(key);
             EnsureCapacity(id);
             definition.Id = id;
             definition.BuildBindingIndex();
@@ -41,16 +43,14 @@ namespace Ludots.Core.Presentation.Performers
                 _has[id] = true;
                 _registeredIds.Add(id);
             }
-            else
-            {
-                _items[id] = definition;
-            }
             Version++;
+            return id;
         }
 
-        /// <summary>
-        /// Try to retrieve a definition by ID.
-        /// </summary>
+        public int GetId(string key) => _ids.GetId(key);
+
+        public string GetName(int id) => _ids.GetName(id);
+
         public bool TryGet(int id, out PerformerDefinition definition)
         {
             if (id >= 0 && id < _items.Length && _has[id])
@@ -62,13 +62,10 @@ namespace Ludots.Core.Presentation.Performers
             return false;
         }
 
-        /// <summary>
-        /// Retrieve a definition by ID. Throws if not found.
-        /// </summary>
         public PerformerDefinition Get(int id)
         {
             if (!TryGet(id, out var def))
-                throw new InvalidOperationException($"PerformerDefinition {id} not registered.");
+                throw new InvalidOperationException($"PerformerDefinition '{_ids.GetName(id)}' (id={id}) not registered.");
             return def;
         }
 

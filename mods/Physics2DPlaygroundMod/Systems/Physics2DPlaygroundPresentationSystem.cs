@@ -35,6 +35,8 @@ namespace Physics2DPlaygroundMod.Systems
         private readonly Physics2DSimulationSystem _sim;
         private readonly DebugDrawCommandBuffer _buffer;
         private readonly Physics2DDebugDrawSystem _physicsDebugDraw;
+        private readonly int _cubeMeshId;
+        private readonly int _sphereMeshId;
 
         private readonly List<int> _queryResults = new List<int>(1024);
         private readonly List<Entity> _selectedEntities = new List<Entity>(1024);
@@ -58,13 +60,15 @@ namespace Physics2DPlaygroundMod.Systems
         private int _spawnCount = 10;
         private float _impulseMagnitude = 10f;
 
-        public Physics2DPlaygroundPresentationSystem(GameEngine engine, Physics2DSimulationSystem sim, DebugDrawCommandBuffer buffer)
+        public Physics2DPlaygroundPresentationSystem(GameEngine engine, Physics2DSimulationSystem sim, DebugDrawCommandBuffer buffer, MeshAssetRegistry meshes)
         {
             _engine = engine;
             _world = engine.World;
             _sim = sim;
             _buffer = buffer;
             _physicsDebugDraw = new Physics2DDebugDrawSystem(_world, _buffer);
+            _cubeMeshId = meshes.GetId(WellKnownMeshKeys.Cube);
+            _sphereMeshId = meshes.GetId(WellKnownMeshKeys.Sphere);
         }
 
         private struct ImpulseViz
@@ -170,7 +174,7 @@ namespace Physics2DPlaygroundMod.Systems
                         var scale = new Vector3(halfWM * 2f, 0.5f, halfHM * 2f);
                         draw.TryAdd(new PrimitiveDrawItem
                         {
-                            MeshAssetId = PrimitiveMeshAssetIds.Cube,
+                            MeshAssetId = _cubeMeshId,
                             Position = pos,
                             Scale = scale,
                             Color = col
@@ -187,7 +191,7 @@ namespace Physics2DPlaygroundMod.Systems
                         float d = circle.Radius.ToFloat() * 2f * 0.01f;  // 厘米转米
                         draw.TryAdd(new PrimitiveDrawItem
                         {
-                            MeshAssetId = PrimitiveMeshAssetIds.Sphere,
+                            MeshAssetId = _sphereMeshId,
                             Position = pos,
                             Scale = new Vector3(d, d, d),
                             Color = col

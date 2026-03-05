@@ -1,28 +1,28 @@
 using System;
-using System.Collections.Generic;
+using Ludots.Core.Registry;
 
 namespace Ludots.Core.Presentation.Assets
 {
     public sealed class MeshAssetRegistry
     {
-        private readonly MeshAssetDescriptor[] _descriptors;
-        private readonly Dictionary<string, int> _keyToId = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        private int _nextAutoId;
+        private readonly StringIntRegistry _ids;
+        private MeshAssetDescriptor[] _data;
 
         public MeshAssetRegistry(int capacity = 4096)
         {
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
-            _descriptors = new MeshAssetDescriptor[capacity];
-            _nextAutoId = 100;
+            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, StringComparer.OrdinalIgnoreCase);
+            _data = new MeshAssetDescriptor[capacity];
 
-            RegisterWellKnown("cube", PrimitiveMeshAssetIds.Cube, MeshAssetDescriptor.Primitive(PrimitiveMeshAssetIds.Cube, PrimitiveMeshKind.Cube));
-            RegisterWellKnown("sphere", PrimitiveMeshAssetIds.Sphere, MeshAssetDescriptor.Primitive(PrimitiveMeshAssetIds.Sphere, PrimitiveMeshKind.Sphere));
+            RegisterPrimitive(WellKnownMeshKeys.Cube, PrimitiveMeshKind.Cube);
+            RegisterPrimitive(WellKnownMeshKeys.Sphere, PrimitiveMeshKind.Sphere);
         }
 
-        private void RegisterWellKnown(string key, int id, in MeshAssetDescriptor descriptor)
+        private void RegisterPrimitive(string key, PrimitiveMeshKind kind)
         {
-            _descriptors[id] = descriptor;
-            _keyToId[key] = id;
+            int id = _ids.Register(key);
+            EnsureDataCapacity(id);
+            _data[id] = MeshAssetDescriptor.Primitive(id, kind);
         }
 
         /// <summary>
@@ -31,50 +31,26 @@ namespace Ludots.Core.Presentation.Assets
         /// </summary>
         public int Register(string key, in MeshAssetDescriptor descriptor)
         {
-            if (string.IsNullOrWhiteSpace(key)) throw new ArgumentException("Key must not be empty.", nameof(key));
-
-            if (_keyToId.TryGetValue(key, out int existingId))
-            {
-                var updated = descriptor;
-                updated.Id = existingId;
-                _descriptors[existingId] = updated;
-                return existingId;
-            }
-
-            int id = _nextAutoId++;
-            if ((uint)id >= (uint)_descriptors.Length)
-                throw new InvalidOperationException($"MeshAssetRegistry capacity ({_descriptors.Length}) exceeded.");
-
+            int id = _ids.Register(key);
+            EnsureDataCapacity(id);
             var desc = descriptor;
             desc.Id = id;
-            _descriptors[id] = desc;
-            _keyToId[key] = id;
+            _data[id] = desc;
             return id;
         }
 
-        /// <summary>
-        /// Register by explicit int ID (backward compat for hardcoded PrimitiveMeshAssetIds).
-        /// </summary>
-        public void Register(in MeshAssetDescriptor descriptor)
-        {
-            if ((uint)descriptor.Id >= (uint)_descriptors.Length)
-                throw new ArgumentOutOfRangeException(nameof(descriptor.Id));
-            _descriptors[descriptor.Id] = descriptor;
-        }
+        public int GetId(string key) => _ids.GetId(key);
 
-        public void RegisterPrimitive(int meshAssetId, PrimitiveMeshKind kind)
-        {
-            Register(MeshAssetDescriptor.Primitive(meshAssetId, kind));
-        }
+        public string GetName(int id) => _ids.GetName(id);
 
         public bool TryGetDescriptor(int meshAssetId, out MeshAssetDescriptor descriptor)
         {
-            if ((uint)meshAssetId >= (uint)_descriptors.Length)
+            if ((uint)meshAssetId >= (uint)_data.Length)
             {
                 descriptor = default;
                 return false;
             }
-            descriptor = _descriptors[meshAssetId];
+            descriptor = _data[meshAssetId];
             return descriptor.Type != MeshAssetType.None;
         }
 
@@ -89,10 +65,11 @@ namespace Ludots.Core.Presentation.Assets
             return false;
         }
 
-        public int ResolveIdOrZero(string key)
+        private void EnsureDataCapacity(int id)
         {
-            if (string.IsNullOrWhiteSpace(key)) return 0;
-            return _keyToId.TryGetValue(key, out int id) ? id : 0;
+            if (id < _data.Length) return;
+            int newLen = Math.Max(_data.Length * 2, id + 1);
+            Array.Resize(ref _data, newLen);
         }
     }
 }

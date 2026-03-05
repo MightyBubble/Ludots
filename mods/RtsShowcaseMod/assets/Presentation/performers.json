@@ -1,10 +1,10 @@
 [
   {
     "_comment": "RTS unit cube marker — renders all entities with VisualTransform",
-    "id": "8001",
+    "id": "rts_unit_marker",
     "visualKind": "Marker3D",
     "entityScope": "AllWithVisualTransform",
-    "meshOrShapeId": 1,
+    "meshOrShapeId": "cube",
     "defaultScale": 1.0,
     "positionOffset": [0, 0.5, 0],
     "bindings": [

@@ -1,0 +1,284 @@
+using System;
+using System.Buffers.Binary;
+using System.Runtime.InteropServices;
+using Ludots.Adapter.Web.Protocol;
+using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Rendering;
+
+namespace Ludots.Adapter.Web.Streaming
+{
+    /// <summary>
+    /// Delta encoder: compares current frame against previous and emits only changed items.
+    /// Falls back to full frame if delta would exceed the full size.
+    /// </summary>
+    public sealed class DeltaCompressor
+    {
+        private PrimitiveDrawItem[] _prevPrimitives = Array.Empty<PrimitiveDrawItem>();
+        private int _prevPrimitiveCount;
+        private int _prevDebugLineHash;
+        private int _prevDebugCircleHash;
+        private int _prevDebugBoxHash;
+        private int _prevGroundOverlayHash;
+        private int _prevWorldHudHash;
+
+        private byte[] _buffer = new byte[128 * 1024];
+        private int _pos;
+
+        public int EncodedLength { get; private set; }
+
+        public int CopyTo(byte[] destination)
+        {
+            int len = EncodedLength;
+            if (destination.Length < len)
+                throw new ArgumentException($"Destination too small: {destination.Length} < {len}");
+            Buffer.BlockCopy(_buffer, 0, destination, 0, len);
+            return len;
+        }
+
+        public bool TryEncodeDelta(
+            uint frameNumber,
+            int simTick,
+            long timestampMs,
+            in CameraRenderState3D camera,
+            PrimitiveDrawBuffer? primitives,
+            GroundOverlayBuffer? groundOverlays,
+            WorldHudBatchBuffer? worldHud,
+            DebugDrawCommandBuffer? debugDraw)
+        {
+            _pos = 0;
+            EnsureCapacity(FrameProtocol.FrameHeaderSize);
+
+            _buffer[_pos++] = FrameProtocol.MsgTypeDelta;
+            WriteUInt32(frameNumber);
+            WriteInt32(simTick);
+            WriteInt64(timestampMs);
+
+            WriteCameraSection(in camera);
+            int primChanges = WritePrimitiveDelta(primitives);
+            WriteGroundOverlayIfChanged(groundOverlays);
+            WriteWorldHudIfChanged(worldHud);
+            WriteDebugDrawIfChanged(debugDraw);
+
+            EnsureCapacity(1);
+            _buffer[_pos++] = FrameProtocol.SectionEnd;
+            EncodedLength = _pos;
+
+            SnapshotPrimitives(primitives);
+            return true;
+        }
+
+        private void WriteCameraSection(in CameraRenderState3D cam)
+        {
+            int itemBytes = WireCameraState.SizeInBytes;
+            WriteSectionHeader(FrameProtocol.SectionCamera, 1, itemBytes);
+            EnsureCapacity(itemBytes);
+            WriteFloat(cam.Position.X); WriteFloat(cam.Position.Y); WriteFloat(cam.Position.Z);
+            WriteFloat(cam.Target.X); WriteFloat(cam.Target.Y); WriteFloat(cam.Target.Z);
+            WriteFloat(cam.Up.X); WriteFloat(cam.Up.Y); WriteFloat(cam.Up.Z);
+            WriteFloat(cam.FovYDeg);
+        }
+
+        private int WritePrimitiveDelta(PrimitiveDrawBuffer? buf)
+        {
+            int curCount = buf?.Count ?? 0;
+            ReadOnlySpan<PrimitiveDrawItem> curSpan = buf != null ? buf.GetSpan() : ReadOnlySpan<PrimitiveDrawItem>.Empty;
+
+            int changedCount = 0;
+            int maxItems = Math.Max(curCount, _prevPrimitiveCount);
+
+            int startPos = _pos;
+            WriteSectionHeader(FrameProtocol.SectionPrimitivesDelta, 0, 0);
+            EnsureCapacity(4);
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)curCount);
+            _pos += 2;
+            _pos += 2; // reserved
+
+            for (int i = 0; i < maxItems; i++)
+            {
+                bool changed;
+                if (i >= curCount || i >= _prevPrimitiveCount)
+                    changed = true;
+                else
+                    changed = !curSpan[i].Equals(_prevPrimitives[i]);
+
+                if (changed && i < curCount)
+                {
+                    EnsureCapacity(2 + WirePrimitiveDrawItem.SizeInBytes);
+                    BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)i);
+                    _pos += 2;
+                    ref readonly var item = ref curSpan[i];
+                    WriteInt32(item.MeshAssetId);
+                    WriteFloat(item.Position.X); WriteFloat(item.Position.Y); WriteFloat(item.Position.Z);
+                    WriteFloat(item.Scale.X); WriteFloat(item.Scale.Y); WriteFloat(item.Scale.Z);
+                    WriteFloat(item.Color.X); WriteFloat(item.Color.Y); WriteFloat(item.Color.Z); WriteFloat(item.Color.W);
+                    changedCount++;
+                }
+            }
+
+            int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
+            _buffer[startPos] = FrameProtocol.SectionPrimitivesDelta;
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(startPos + 1), (ushort)changedCount);
+            BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
+            return changedCount;
+        }
+
+        private void WriteGroundOverlayIfChanged(GroundOverlayBuffer? buf)
+        {
+            int hash = HashBuffer(buf);
+            if (hash == _prevGroundOverlayHash) return;
+            _prevGroundOverlayHash = hash;
+
+            if (buf == null || buf.Count == 0) return;
+            var span = buf.GetSpan();
+            int count = span.Length;
+            int itemBytes = count * WireGroundOverlayItem.SizeInBytes;
+            WriteSectionHeader(FrameProtocol.SectionGroundOverlays, (ushort)count, itemBytes);
+            EnsureCapacity(itemBytes);
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly var item = ref span[i];
+                _buffer[_pos++] = (byte)item.Shape;
+                WriteFloat(item.Center.X); WriteFloat(item.Center.Y); WriteFloat(item.Center.Z);
+                WriteFloat(item.Radius); WriteFloat(item.InnerRadius); WriteFloat(item.Angle);
+                WriteFloat(item.Rotation); WriteFloat(item.Length); WriteFloat(item.Width);
+                WriteFloat(item.FillColor.X); WriteFloat(item.FillColor.Y); WriteFloat(item.FillColor.Z); WriteFloat(item.FillColor.W);
+                WriteFloat(item.BorderColor.X); WriteFloat(item.BorderColor.Y); WriteFloat(item.BorderColor.Z); WriteFloat(item.BorderColor.W);
+                WriteFloat(item.BorderWidth);
+            }
+        }
+
+        private void WriteWorldHudIfChanged(WorldHudBatchBuffer? buf)
+        {
+            int hash = buf?.Count ?? 0;
+            if (hash == _prevWorldHudHash && hash == 0) return;
+            _prevWorldHudHash = hash;
+
+            if (buf == null || buf.Count == 0) return;
+            var span = buf.GetSpan();
+            int count = span.Length;
+            int itemBytes = count * WireWorldHudItem.SizeInBytes;
+            WriteSectionHeader(FrameProtocol.SectionWorldHud, (ushort)count, itemBytes);
+            EnsureCapacity(itemBytes);
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly var item = ref span[i];
+                _buffer[_pos++] = (byte)item.Kind;
+                WriteFloat(item.WorldPosition.X); WriteFloat(item.WorldPosition.Y); WriteFloat(item.WorldPosition.Z);
+                WriteFloat(item.Color0.X); WriteFloat(item.Color0.Y); WriteFloat(item.Color0.Z); WriteFloat(item.Color0.W);
+                WriteFloat(item.Color1.X); WriteFloat(item.Color1.Y); WriteFloat(item.Color1.Z); WriteFloat(item.Color1.W);
+                WriteFloat(item.Width); WriteFloat(item.Height);
+                WriteFloat(item.Value0); WriteFloat(item.Value1);
+                WriteInt32(item.Id0); WriteInt32(item.Id1);
+                WriteInt32(item.FontSize);
+            }
+        }
+
+        private void WriteDebugDrawIfChanged(DebugDrawCommandBuffer? buf)
+        {
+            if (buf == null) return;
+            int lHash = buf.Lines.Count;
+            int cHash = buf.Circles.Count;
+            int bHash = buf.Boxes.Count;
+
+            if (lHash != _prevDebugLineHash)
+            {
+                _prevDebugLineHash = lHash;
+                if (buf.Lines.Count > 0)
+                {
+                    int count = buf.Lines.Count;
+                    int itemBytes = count * WireDebugLine.SizeInBytes;
+                    WriteSectionHeader(FrameProtocol.SectionDebugLines, (ushort)Math.Min(count, ushort.MaxValue), itemBytes);
+                    EnsureCapacity(itemBytes);
+                    for (int i = 0; i < count; i++)
+                    {
+                        var l = buf.Lines[i];
+                        WriteFloat(l.A.X); WriteFloat(l.A.Y); WriteFloat(l.B.X); WriteFloat(l.B.Y);
+                        WriteFloat(l.Thickness);
+                        _buffer[_pos++] = l.Color.R; _buffer[_pos++] = l.Color.G;
+                        _buffer[_pos++] = l.Color.B; _buffer[_pos++] = l.Color.A;
+                    }
+                }
+            }
+
+            if (cHash != _prevDebugCircleHash)
+            {
+                _prevDebugCircleHash = cHash;
+                if (buf.Circles.Count > 0)
+                {
+                    int count = buf.Circles.Count;
+                    int itemBytes = count * WireDebugCircle.SizeInBytes;
+                    WriteSectionHeader(FrameProtocol.SectionDebugCircles, (ushort)Math.Min(count, ushort.MaxValue), itemBytes);
+                    EnsureCapacity(itemBytes);
+                    for (int i = 0; i < count; i++)
+                    {
+                        var c = buf.Circles[i];
+                        WriteFloat(c.Center.X); WriteFloat(c.Center.Y);
+                        WriteFloat(c.Radius); WriteFloat(c.Thickness);
+                        _buffer[_pos++] = c.Color.R; _buffer[_pos++] = c.Color.G;
+                        _buffer[_pos++] = c.Color.B; _buffer[_pos++] = c.Color.A;
+                    }
+                }
+            }
+
+            if (bHash != _prevDebugBoxHash)
+            {
+                _prevDebugBoxHash = bHash;
+                if (buf.Boxes.Count > 0)
+                {
+                    int count = buf.Boxes.Count;
+                    int itemBytes = count * WireDebugBox.SizeInBytes;
+                    WriteSectionHeader(FrameProtocol.SectionDebugBoxes, (ushort)Math.Min(count, ushort.MaxValue), itemBytes);
+                    EnsureCapacity(itemBytes);
+                    for (int i = 0; i < count; i++)
+                    {
+                        var b = buf.Boxes[i];
+                        WriteFloat(b.Center.X); WriteFloat(b.Center.Y);
+                        WriteFloat(b.HalfWidth); WriteFloat(b.HalfHeight);
+                        WriteFloat(b.RotationRadians); WriteFloat(b.Thickness);
+                        _buffer[_pos++] = b.Color.R; _buffer[_pos++] = b.Color.G;
+                        _buffer[_pos++] = b.Color.B; _buffer[_pos++] = b.Color.A;
+                    }
+                }
+            }
+        }
+
+        private void SnapshotPrimitives(PrimitiveDrawBuffer? buf)
+        {
+            int count = buf?.Count ?? 0;
+            if (_prevPrimitives.Length < count)
+                _prevPrimitives = new PrimitiveDrawItem[count * 2];
+            if (count > 0)
+                buf!.GetSpan().CopyTo(_prevPrimitives.AsSpan());
+            _prevPrimitiveCount = count;
+        }
+
+        private static int HashBuffer(GroundOverlayBuffer? buf)
+        {
+            return buf?.Count ?? 0;
+        }
+
+        private void WriteSectionHeader(byte sectionType, ushort itemCount, int byteLength)
+        {
+            EnsureCapacity(FrameProtocol.SectionHeaderSize);
+            _buffer[_pos++] = sectionType;
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), itemCount);
+            _pos += 2;
+            BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(_pos), byteLength);
+            _pos += 4;
+        }
+
+        private void WriteFloat(float value) { BinaryPrimitives.WriteSingleLittleEndian(_buffer.AsSpan(_pos), value); _pos += 4; }
+        private void WriteInt32(int value) { BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(_pos), value); _pos += 4; }
+        private void WriteUInt32(uint value) { BinaryPrimitives.WriteUInt32LittleEndian(_buffer.AsSpan(_pos), value); _pos += 4; }
+        private void WriteInt64(long value) { BinaryPrimitives.WriteInt64LittleEndian(_buffer.AsSpan(_pos), value); _pos += 8; }
+
+        private void EnsureCapacity(int additionalBytes)
+        {
+            int required = _pos + additionalBytes;
+            if (required <= _buffer.Length) return;
+            Array.Resize(ref _buffer, Math.Max(_buffer.Length * 2, required));
+        }
+    }
+}

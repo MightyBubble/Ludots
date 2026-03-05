@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
@@ -59,7 +60,8 @@ namespace Physics2DPlaygroundMod.Triggers
                     engine.RegisterSystem(new Physics2DToWorldPositionSyncSystem(engine.World), Ludots.Core.Engine.SystemGroup.PostMovement);
                     
                     engine.RegisterPresentationSystem(new WorldToVisualSyncSystem(engine.World));
-                    engine.RegisterPresentationSystem(new Physics2DPlaygroundPresentationSystem(engine, _sim, debugDrawBuffer));
+                    var meshRegistry = context.Get(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry;
+                    engine.RegisterPresentationSystem(new Physics2DPlaygroundPresentationSystem(engine, _sim, debugDrawBuffer, meshRegistry));
 
                     _installed = true;
                     _ctx.Log("[Physics2DPlaygroundMod] Installed simulation + presentation systems.");

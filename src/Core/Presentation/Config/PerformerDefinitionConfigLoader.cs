@@ -1,38 +1,42 @@
 using System;
 using System.Numerics;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Config
 {
     /// <summary>
     /// Loads <see cref="PerformerDefinition"/> entries from
     /// <c>Presentation/performers.json</c> via <see cref="ConfigPipeline"/>.
+    /// All ID fields are string-only — no numeric IDs accepted.
     /// </summary>
     public sealed class PerformerDefinitionConfigLoader
     {
         private readonly ConfigPipeline _configs;
         private readonly PerformerDefinitionRegistry _registry;
         private readonly Func<string, int> _resolveAttributeName;
+        private readonly Func<string, int> _resolveMeshId;
 
-        /// <param name="resolveAttributeName">
-        /// Resolves an attribute name (e.g. "Health") to its integer ID.
-        /// Injected to avoid direct coupling to <c>Gameplay.GAS.Registry.AttributeRegistry</c>.
+        /// <param name="resolveMeshId">
+        /// Resolves a mesh asset key (e.g. "cube") to its int ID.
+        /// Injected from <c>MeshAssetRegistry.GetId</c>.
         /// </param>
-        public PerformerDefinitionConfigLoader(ConfigPipeline configs, PerformerDefinitionRegistry registry, Func<string, int> resolveAttributeName = null)
+        public PerformerDefinitionConfigLoader(
+            ConfigPipeline configs,
+            PerformerDefinitionRegistry registry,
+            Func<string, int> resolveAttributeName = null,
+            Func<string, int> resolveMeshId = null)
         {
             _configs = configs;
             _registry = registry;
             _resolveAttributeName = resolveAttributeName ?? (_ => 0);
+            _resolveMeshId = resolveMeshId ?? (_ => 0);
         }
 
-        /// <summary>
-        /// Load and register all performer definitions. Safe to call if config file is missing (no-op).
-        /// </summary>
         public void Load(
             ConfigCatalog catalog = null,
             ConfigConflictReport report = null)
@@ -43,21 +47,21 @@ namespace Ludots.Core.Presentation.Config
 
             for (int i = 0; i < merged.Count; i++)
             {
-                var def = ParseDefinition(merged[i].Node);
-                if (def != null)
-                    _registry.Register(def.Id, def);
+                var (key, def) = ParseDefinition(merged[i].Node);
+                if (key != null && def != null)
+                    _registry.Register(key, def);
             }
         }
 
-        private PerformerDefinition? ParseDefinition(JsonNode node)
+        private (string key, PerformerDefinition def) ParseDefinition(JsonNode node)
         {
-            var def = new PerformerDefinition();
-            def.Id = int.TryParse(node["id"]?.GetValue<string>(), out var parsedId) ? parsedId : 0;
-            if (def.Id <= 0) return null;
+            string key = node["id"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(key)) return (null, null);
 
+            var def = new PerformerDefinition();
             def.VisualKind = ParseEnum(node["visualKind"]?.GetValue<string>(), PerformerVisualKind.GroundOverlay);
             def.EntityScope = ParseEnum(node["entityScope"]?.GetValue<string>(), EntityScopeFilter.None);
-            def.MeshOrShapeId = node["meshOrShapeId"]?.GetValue<int>() ?? 0;
+            def.MeshOrShapeId = ResolveMeshOrShape(node["meshOrShapeId"], def.VisualKind);
             def.DefaultColor = ParseColor(node["defaultColor"]);
             def.DefaultScale = node["defaultScale"]?.GetValue<float>() ?? 1f;
             def.DefaultLifetime = node["defaultLifetime"]?.GetValue<float>() ?? 0f;
@@ -69,12 +73,28 @@ namespace Ludots.Core.Presentation.Config
             def.Rules = ParseRules(node["rules"]);
             def.Bindings = ParseBindings(node["bindings"]);
 
-            return def;
+            return (key, def);
+        }
+
+        private int ResolveMeshOrShape(JsonNode meshNode, PerformerVisualKind visualKind)
+        {
+            if (meshNode == null) return 0;
+            string meshStr = meshNode.ToString().Trim('"');
+            if (string.IsNullOrWhiteSpace(meshStr)) return 0;
+
+            if (visualKind == PerformerVisualKind.GroundOverlay)
+            {
+                if (Enum.TryParse<GroundOverlayShape>(meshStr, ignoreCase: true, out var shape))
+                    return (int)shape;
+                return 0;
+            }
+
+            return _resolveMeshId(meshStr);
         }
 
         // ── Rules ──
 
-        private PerformerRule[] ParseRules(JsonNode? node)
+        private PerformerRule[] ParseRules(JsonNode node)
         {
             if (node is not JsonArray arr || arr.Count == 0)
                 return Array.Empty<PerformerRule>();
@@ -97,7 +117,7 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
-        private EventFilter ParseEventFilter(JsonNode? node)
+        private EventFilter ParseEventFilter(JsonNode node)
         {
             if (node == null) return default;
             return new EventFilter
@@ -107,13 +127,17 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
-        private PerformerCommand ParsePerformerCommand(JsonNode? node)
+        private PerformerCommand ParsePerformerCommand(JsonNode node)
         {
             if (node == null) return default;
+
+            string perfRef = node["performerDefinitionId"]?.GetValue<string>();
+            int perfId = string.IsNullOrWhiteSpace(perfRef) ? 0 : _registry.GetId(perfRef);
+
             return new PerformerCommand
             {
                 CommandKind = ParseEnum(node["commandKind"]?.GetValue<string>(), PresentationCommandKind.None),
-                PerformerDefinitionId = node["performerDefinitionId"]?.GetValue<int>() ?? 0,
+                PerformerDefinitionId = perfId,
                 ScopeId = node["scopeId"]?.GetValue<int>() ?? -1,
                 ParamKey = node["paramKey"]?.GetValue<int>() ?? 0,
                 ParamValue = node["paramValue"]?.GetValue<float>() ?? 0f,
@@ -123,7 +147,7 @@ namespace Ludots.Core.Presentation.Config
 
         // ── Bindings ──
 
-        private PerformerParamBinding[] ParseBindings(JsonNode? node)
+        private PerformerParamBinding[] ParseBindings(JsonNode node)
         {
             if (node is not JsonArray arr || arr.Count == 0)
                 return Array.Empty<PerformerParamBinding>();
@@ -147,7 +171,7 @@ namespace Ludots.Core.Presentation.Config
 
         private ValueRef ParseValueRef(JsonNode node)
         {
-            string? source = node["source"]?.GetValue<string>();
+            string source = node["source"]?.GetValue<string>();
             return source?.ToLowerInvariant() switch
             {
                 "attribute" => ValueRef.FromAttribute(ResolveAttributeId(node)),
@@ -159,19 +183,12 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
-        /// <summary>
-        /// Resolves an attribute reference from JSON. Supports both:
-        ///   "sourceId": 3              (numeric ID directly)
-        ///   "attributeName": "Health"  (resolved via injected resolver)
-        /// </summary>
         private int ResolveAttributeId(JsonNode node)
         {
-            // Prefer explicit numeric ID
             var idNode = node["sourceId"];
             if (idNode != null) return idNode.GetValue<int>();
 
-            // Fall back to name-based resolution via injected delegate
-            string? name = node["attributeName"]?.GetValue<string>();
+            string name = node["attributeName"]?.GetValue<string>();
             if (!string.IsNullOrWhiteSpace(name))
                 return _resolveAttributeName(name);
 
@@ -180,12 +197,12 @@ namespace Ludots.Core.Presentation.Config
 
         // ── ConditionRef ──
 
-        private ConditionRef ParseConditionRef(JsonNode? node)
+        private ConditionRef ParseConditionRef(JsonNode node)
         {
             if (node == null) return ConditionRef.AlwaysTrue;
 
             var cond = new ConditionRef();
-            string? inline = node["inline"]?.GetValue<string>();
+            string inline = node["inline"]?.GetValue<string>();
             if (!string.IsNullOrWhiteSpace(inline))
             {
                 cond.Inline = ParseEnum(inline, InlineConditionKind.None);
@@ -196,7 +213,7 @@ namespace Ludots.Core.Presentation.Config
 
         // ── Vector3 ──
 
-        private Vector3 ParseVector3(JsonNode? node)
+        private Vector3 ParseVector3(JsonNode node)
         {
             if (node is JsonArray arr && arr.Count >= 3)
             {
@@ -210,7 +227,7 @@ namespace Ludots.Core.Presentation.Config
 
         // ── Color ──
 
-        private Vector4 ParseColor(JsonNode? node)
+        private Vector4 ParseColor(JsonNode node)
         {
             if (node is JsonArray arr && arr.Count >= 4)
             {
@@ -225,7 +242,7 @@ namespace Ludots.Core.Presentation.Config
 
         // ── Enum parsing ──
 
-        private static T ParseEnum<T>(string? s, T fallback) where T : struct, Enum
+        private static T ParseEnum<T>(string s, T fallback) where T : struct, Enum
         {
             if (string.IsNullOrWhiteSpace(s)) return fallback;
             if (Enum.TryParse<T>(s, ignoreCase: true, out var parsed)) return parsed;

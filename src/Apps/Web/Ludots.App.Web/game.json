@@ -1,0 +1,13 @@
+{
+  "StartupInputContexts": [
+    "Default_Gameplay"
+  ],
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine — Web",
+  "TargetFps": 30,
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/Navigation2DPlaygroundMod"
+  ]
+}

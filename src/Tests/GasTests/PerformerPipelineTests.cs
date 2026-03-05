@@ -13,6 +13,7 @@ using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
@@ -612,21 +613,23 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Register_AllBuiltinIds_Present()
         {
+            var meshes = new MeshAssetRegistry();
             var registry = new PerformerDefinitionRegistry();
-            BuiltinPerformerDefinitions.Register(registry);
+            BuiltinPerformerDefinitions.Register(registry, meshes);
 
-            Assert.That(registry.TryGet(BuiltinPerformerIds.CastCommittedMarker, out _), Is.True);
-            Assert.That(registry.TryGet(BuiltinPerformerIds.CastFailedMarker, out _), Is.True);
-            Assert.That(registry.TryGet(BuiltinPerformerIds.FloatingCombatText, out _), Is.True);
-            Assert.That(registry.TryGet(BuiltinPerformerIds.EntityHealthBar, out _), Is.True);
+            Assert.That(registry.TryGet(registry.GetId(WellKnownPerformerKeys.CastCommittedMarker), out _), Is.True);
+            Assert.That(registry.TryGet(registry.GetId(WellKnownPerformerKeys.CastFailedMarker), out _), Is.True);
+            Assert.That(registry.TryGet(registry.GetId(WellKnownPerformerKeys.FloatingCombatText), out _), Is.True);
+            Assert.That(registry.TryGet(registry.GetId(WellKnownPerformerKeys.EntityHealthBar), out _), Is.True);
         }
 
         [Test]
         public void FloatingCombatText_HasYDriftAndAlphaFade()
         {
+            var meshes = new MeshAssetRegistry();
             var registry = new PerformerDefinitionRegistry();
-            BuiltinPerformerDefinitions.Register(registry);
-            registry.TryGet(BuiltinPerformerIds.FloatingCombatText, out var def);
+            BuiltinPerformerDefinitions.Register(registry, meshes);
+            registry.TryGet(registry.GetId(WellKnownPerformerKeys.FloatingCombatText), out var def);
 
             Assert.That(def.PositionYDriftPerSecond, Is.GreaterThan(0f));
             Assert.That(def.AlphaFadeOverLifetime, Is.True);
@@ -636,9 +639,10 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void EntityHealthBar_IsEntityScoped()
         {
+            var meshes = new MeshAssetRegistry();
             var registry = new PerformerDefinitionRegistry();
-            BuiltinPerformerDefinitions.Register(registry);
-            registry.TryGet(BuiltinPerformerIds.EntityHealthBar, out var def);
+            BuiltinPerformerDefinitions.Register(registry, meshes);
+            registry.TryGet(registry.GetId(WellKnownPerformerKeys.EntityHealthBar), out var def);
 
             Assert.That(def.EntityScope, Is.EqualTo(EntityScopeFilter.AllWithAttributes));
             Assert.That(def.VisualKind, Is.EqualTo(PerformerVisualKind.WorldBar));

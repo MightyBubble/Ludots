@@ -26,6 +26,7 @@ namespace Ludots.Adapter.Raylib
     internal static class RaylibHostLoop
     {
         private static bool _uiPointerCaptured;
+        private static bool _emptyBufferWarned;
 
         public static void Run(RaylibHostSetup setup)
         {
@@ -163,6 +164,11 @@ namespace Ludots.Adapter.Raylib
                             drawObj is PrimitiveDrawBuffer draw &&
                             meshObj is MeshAssetRegistry meshes)
                         {
+                            if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
+                            {
+                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame — no Marker3D performers emitting?");
+                                _emptyBufferWarned = true;
+                            }
                             primitiveRenderer.Draw(draw, meshes, renderDebug.AcceptanceScaleMultiplier);
                         }
 

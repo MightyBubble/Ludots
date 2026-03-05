@@ -1,10 +1,10 @@
 [
   {
     "_comment": "单位方块渲染 - entity-scoped, 查询所有有 VisualTransform 的实体",
-    "id": "5001",
+    "id": "moba_unit_marker",
     "visualKind": "Marker3D",
     "entityScope": "AllWithVisualTransform",
-    "meshOrShapeId": 1,
+    "meshOrShapeId": "cube",
     "defaultScale": 0.35,
     "positionOffset": [0, 0.25, 0],
     "visibility": { "inline": "OwnerCullVisible" },
@@ -17,9 +17,9 @@
   },
   {
     "_comment": "选中指示器 - instance-scoped, 黄色球体悬浮在选中单位头顶",
-    "id": "5002",
+    "id": "moba_selection_indicator",
     "visualKind": "Marker3D",
-    "meshOrShapeId": 2,
+    "meshOrShapeId": "sphere",
     "defaultColor": [1, 1, 0, 1],
     "defaultScale": 0.18,
     "defaultLifetime": -1,
@@ -27,9 +27,9 @@
   },
   {
     "_comment": "选区范围标记 - instance-scoped, 紫色扁球短暂闪烁(CircleEnemy)",
-    "id": "5003",
+    "id": "moba_area_marker",
     "visualKind": "Marker3D",
-    "meshOrShapeId": 2,
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.8, 0.2, 1.0, 0.75],
     "defaultLifetime": 0.35,
     "alphaFadeOverLifetime": true,
@@ -42,9 +42,9 @@
   },
   {
     "_comment": "技能范围圈 - instance-scoped, 瞄准时的地面圆形指示器",
-    "id": "5004",
+    "id": "moba_ability_range",
     "visualKind": "GroundOverlay",
-    "meshOrShapeId": 0,
+    "meshOrShapeId": "circle",
     "defaultColor": [0.3, 0.7, 1.0, 0.2],
     "defaultScale": 6.0,
     "defaultLifetime": -1,

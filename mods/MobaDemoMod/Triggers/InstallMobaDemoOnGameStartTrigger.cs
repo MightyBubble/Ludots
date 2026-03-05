@@ -13,6 +13,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
@@ -84,6 +85,8 @@ namespace MobaDemoMod.Triggers
                 selObj is List<System.Action<WorldCmInt2, Entity>> selectionCallbacks)
             {
                 var capturedCmdBuffer = cmdBuffer;
+                var perfReg = context.Get(CoreServiceKeys.PerformerDefinitionRegistry) as PerformerDefinitionRegistry;
+                int selectionIndicatorDefId = perfReg?.GetId(mobaConfig.Presentation.SelectionIndicatorDefKey) ?? 0;
                 selectionCallbacks.Add((worldCm, entity) =>
                 {
                     if (capturedCmdBuffer == null) return;
@@ -97,7 +100,7 @@ namespace MobaDemoMod.Triggers
                         capturedCmdBuffer.TryAdd(new PresentationCommand
                         {
                             Kind = PresentationCommandKind.CreatePerformer,
-                            IdA = mobaConfig.Presentation.SelectionIndicatorDefId,
+                            IdA = selectionIndicatorDefId,
                             IdB = mobaConfig.Presentation.SelectionScopeId,
                             Source = entity
                         });
@@ -109,6 +112,8 @@ namespace MobaDemoMod.Triggers
                 trigObj is List<System.Action<SelectionRequest, WorldCmInt2>> triggeredCallbacks)
             {
                 var capturedMarkerBuffer = markerBuffer;
+                var meshReg = context.Get(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry;
+                int sphereMeshId = meshReg?.GetId(WellKnownMeshKeys.Sphere) ?? 0;
                 triggeredCallbacks.Add((req, worldCm) =>
                 {
                     if (capturedMarkerBuffer != null && req.RequestTagId == SelectionRequestTags.CircleEnemy)
@@ -117,12 +122,12 @@ namespace MobaDemoMod.Triggers
                         var p = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: mk.YOffsetMeters);
                         var scale = new Vector3(mk.Scale[0], mk.Scale[1], mk.Scale[2]);
                         var color = new Vector4(mk.Color[0], mk.Color[1], mk.Color[2], mk.Color[3]);
-                        capturedMarkerBuffer.TryAdd(PrimitiveMeshAssetIds.Sphere, p, scale, color, mk.LifetimeSeconds);
+                        capturedMarkerBuffer.TryAdd(sphereMeshId, p, scale, color, mk.LifetimeSeconds);
                     }
                 });
             }
 
-            // 单位渲染由 performers.json 定义 5001（entity-scoped Marker3D）驱动
+            // 单位渲染由 performers.json 定义 moba_unit_marker（entity-scoped Marker3D）驱动
             // 团队颜色由 EntityColor 绑定解析
 
             var session = context.Get(CoreServiceKeys.GameSession);

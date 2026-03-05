@@ -88,7 +88,8 @@ namespace Ludots.Tests.Presentation
 
             _healthAttrId = AttributeRegistry.Register("Health");
 
-            BuiltinPerformerDefinitions.Register(_defs);
+            var meshes = new MeshAssetRegistry();
+            BuiltinPerformerDefinitions.Register(_defs, meshes);
 
             var session = new GameSession();
             var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
@@ -222,7 +223,7 @@ namespace Ludots.Tests.Presentation
             {
                 entities[i] = _world.Create(new VisualTransform { Position = new Vector3(i, 0, i) });
                 // Allocate to FloatingCombatText (has AlphaFade, YDrift, bindings)
-                _instances.TryAllocate(BuiltinPerformerIds.FloatingCombatText, entities[i], -1, out _);
+                _instances.TryAllocate(_defs.GetId(WellKnownPerformerKeys.FloatingCombatText), entities[i], -1, out _);
             }
 
             WarmUpGC();

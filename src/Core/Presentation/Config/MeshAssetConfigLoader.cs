@@ -55,14 +55,14 @@ namespace Ludots.Core.Presentation.Config
                 if (string.IsNullOrWhiteSpace(prefabKey)) continue;
 
                 string meshRef = node["meshAssetId"]?.GetValue<string>();
-                int meshAssetId = string.IsNullOrWhiteSpace(meshRef) ? 0 : _meshRegistry.ResolveIdOrZero(meshRef);
+                int meshAssetId = string.IsNullOrWhiteSpace(meshRef) ? 0 : _meshRegistry.GetId(meshRef);
 
                 var parts = ParseParts(node["parts"]);
 
                 if (parts.Length > 0 && meshAssetId == 0 && parts.Length == 1)
                     meshAssetId = parts[0].MeshAssetId;
 
-                int prefabId = _meshRegistry.ResolveIdOrZero(prefabKey);
+                int prefabId = _meshRegistry.GetId(prefabKey);
                 if (prefabId == 0)
                 {
                     var prefabDesc = parts.Length > 0
@@ -71,9 +71,8 @@ namespace Ludots.Core.Presentation.Config
                     prefabId = _meshRegistry.Register(prefabKey, in prefabDesc);
                 }
 
-                _prefabRegistry.Register(new PrefabDefinition
+                _prefabRegistry.Register(prefabKey, new PrefabDefinition
                 {
-                    PrefabId = prefabId,
                     MeshAssetId = meshAssetId > 0 ? meshAssetId : prefabId,
                     BaseScale = node["baseScale"]?.GetValue<float>() ?? 1f,
                 });
@@ -133,9 +132,7 @@ namespace Ludots.Core.Presentation.Config
                 string meshRef = p?["meshAssetId"]?.GetValue<string>();
                 int meshId = 0;
                 if (!string.IsNullOrWhiteSpace(meshRef))
-                    meshId = _meshRegistry.ResolveIdOrZero(meshRef);
-                if (meshId == 0 && int.TryParse(meshRef, out int numericId))
-                    meshId = numericId;
+                    meshId = _meshRegistry.GetId(meshRef);
 
                 parts[j] = new PrefabPart
                 {

@@ -19,6 +19,7 @@ namespace Navigation2DPlaygroundMod.Systems
         private readonly GameEngine _engine;
         private readonly World _world;
         private readonly DebugDrawCommandBuffer _debugDraw;
+        private int _sphereMeshId;
         private const int DesiredVelocityDrawStride = 8;
 
         private static readonly QueryDescription _query = new QueryDescription()
@@ -27,15 +28,18 @@ namespace Navigation2DPlaygroundMod.Systems
         private static readonly QueryDescription _desiredVelQuery = new QueryDescription()
             .WithAll<NavAgent2D, VisualTransform, NavDesiredVelocity2D, NavPlaygroundTeam>();
 
-        public Navigation2DPlaygroundPresentationSystem(GameEngine engine, DebugDrawCommandBuffer debugDraw)
+        public Navigation2DPlaygroundPresentationSystem(GameEngine engine, DebugDrawCommandBuffer debugDraw, MeshAssetRegistry meshes)
         {
             _engine = engine;
             _world = engine.World;
             _debugDraw = debugDraw;
+            _sphereMeshId = meshes.GetId(WellKnownMeshKeys.Sphere);
         }
 
         public void Initialize()
         {
+            var meshReg = _engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
+            _sphereMeshId = meshReg?.GetId(WellKnownMeshKeys.Sphere) ?? 2;
         }
 
         public void BeforeUpdate(in float t)
@@ -78,7 +82,7 @@ namespace Navigation2DPlaygroundMod.Systems
 
                     draw.TryAdd(new PrimitiveDrawItem
                     {
-                        MeshAssetId = PrimitiveMeshAssetIds.Sphere,
+                        MeshAssetId = _sphereMeshId,
                         Position = new Vector3(vt.Position.X, 0.25f, vt.Position.Z),
                         Scale = new Vector3(0.6f, 0.6f, 0.6f),
                         Color = color

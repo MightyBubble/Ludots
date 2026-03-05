@@ -118,7 +118,8 @@ namespace MobaDemoMod.Presentation
             if (_globals.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var cmdObj) && cmdObj is PresentationCommandBuffer commands)
             {
                 var mc = (MobaConfig)_globals[InstallMobaDemoOnGameStartTrigger.MobaConfigKey];
-                int rangeCircleDefId = mc.Presentation.RangeCircleIndicatorDefId;
+                var perfReg = _globals.TryGetValue(CoreServiceKeys.PerformerDefinitionRegistry.Name, out var prObj) && prObj is PerformerDefinitionRegistry pr ? pr : null;
+                int rangeCircleDefId = perfReg?.GetId(mc.Presentation.RangeCircleIndicatorDefKey) ?? 0;
 
                 _inputOrderMapping.SetAimingStateChangedHandler((isAiming, mapping) =>
                 {
