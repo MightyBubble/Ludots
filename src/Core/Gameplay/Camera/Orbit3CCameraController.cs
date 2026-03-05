@@ -4,6 +4,7 @@ using Ludots.Core.Input.Runtime;
 
 namespace Ludots.Core.Gameplay.Camera
 {
+    [System.Obsolete("Use CompositeCameraController via CameraPreset system. See CameraControllerFactory.FromPreset.")]
     public sealed class Orbit3CCameraController : ICameraController
     {
         private readonly Orbit3CCameraConfig _config;

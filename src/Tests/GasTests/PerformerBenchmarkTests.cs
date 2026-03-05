@@ -137,7 +137,7 @@ namespace Ludots.Tests.Presentation
             // Register multiple definitions with rules to stress the matching loop
             for (int d = 100; d < 120; d++)
             {
-                _defs.Register(d, new PerformerDefinition
+                _defs.Register($"bench_{d}", new PerformerDefinition
                 {
                     VisualKind = PerformerVisualKind.Marker3D,
                     MeshOrShapeId = 1,
@@ -540,7 +540,7 @@ namespace Ludots.Tests.Presentation
         public void Benchmark_ParamResolution_ManyBindings()
         {
             // Register a definition with many bindings to stress ResolveParam's linear scan
-            _defs.Register(200, new PerformerDefinition
+            _defs.Register("test_200", new PerformerDefinition
             {
                 VisualKind = PerformerVisualKind.WorldBar,
                 EntityScope = EntityScopeFilter.AllWithAttributes,
@@ -671,7 +671,7 @@ namespace Ludots.Tests.Presentation
 
                 for (int d = 0; d < defCount; d++)
                 {
-                    defs.Register(d + 1000, new PerformerDefinition
+                    defs.Register($"bench_{d + 1000}", new PerformerDefinition
                     {
                         VisualKind = PerformerVisualKind.Marker3D,
                         Rules = new[]

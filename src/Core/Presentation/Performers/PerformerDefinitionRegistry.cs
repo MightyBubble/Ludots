@@ -49,6 +49,13 @@ namespace Ludots.Core.Presentation.Performers
 
         public int GetId(string key) => _ids.GetId(key);
 
+        /// <summary>
+        /// Register the key and return its id without storing a definition.
+        /// Use when the definition needs to reference its own id (e.g. self-referential rules).
+        /// Follow with <see cref="Register"/> to store the full definition.
+        /// </summary>
+        public int GetOrRegisterId(string key) => _ids.Register(key);
+
         public string GetName(int id) => _ids.GetName(id);
 
         public bool TryGet(int id, out PerformerDefinition definition)

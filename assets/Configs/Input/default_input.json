@@ -109,6 +109,11 @@
       "id": "ChainDemo",
       "name": "Gameplay_ChainDemo",
       "type": "Button"
+    },
+    {
+      "id": "CameraLock",
+      "name": "Gameplay_CameraLock",
+      "type": "Button"
     }
   ],
   "contexts": [
@@ -171,6 +176,10 @@
           "processors": [
             { "type": "Scale", "parameters": [{ "name": "Factor", "value": 0.1 }] }
           ]
+        },
+        {
+          "actionId": "CameraLock",
+          "path": "<Keyboard>/space"
         }
       ]
     },

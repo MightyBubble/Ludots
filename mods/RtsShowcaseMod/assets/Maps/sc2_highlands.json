@@ -170,9 +170,7 @@
   ],
   "TriggerTypes": [],
   "DefaultCamera": {
-    "TargetXCm": 0,
-    "TargetYCm": 0,
-    "Yaw": 180,
+    "PresetId": "Rts",
     "Pitch": 45,
     "DistanceCm": 14142,
     "FovYDeg": 60

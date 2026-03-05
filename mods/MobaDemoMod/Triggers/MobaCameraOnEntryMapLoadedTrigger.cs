@@ -25,25 +25,18 @@ namespace MobaDemoMod.Triggers
         public override Task ExecuteAsync(ScriptContext context)
         {
             var mapId = context.Get(CoreServiceKeys.MapId);
-            
+
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
             var config = engine.GetService(CoreServiceKeys.GameConfig);
             string startupMapId = config.StartupMapId;
-            
+
             bool isEntry = mapId.Value == startupMapId;
             if (!isEntry) return Task.CompletedTask;
 
             var session = context.Get(CoreServiceKeys.GameSession);
             if (session == null) return Task.CompletedTask;
-
-            // MobaConfig is guaranteed to be in GlobalContext by InstallMobaDemoOnGameStartTrigger
-            var mobaConfig = (MobaConfig)engine.GlobalContext[InstallMobaDemoOnGameStartTrigger.MobaConfigKey];
-
-            session.Camera.State.Yaw = mobaConfig.Camera.InitialYawDegrees;
-            session.Camera.State.Pitch = mobaConfig.Camera.InitialPitchDegrees;
-            session.Camera.State.DistanceCm = mobaConfig.Camera.InitialDistanceCm;
 
             var world = engine.World;
             var q = new QueryDescription().WithAll<PlayerOwner, WorldPositionCm>();
@@ -56,7 +49,9 @@ namespace MobaDemoMod.Triggers
                 {
                     if (owners[i].PlayerId != 1) continue;
                     var p = positions[i].Value;
-                    session.Camera.State.TargetCm = p.ToVector2();
+                    var pos2d = p.ToVector2();
+                    session.Camera.FollowTargetPositionCm = pos2d;
+                    session.Camera.State.TargetCm = pos2d;
                     _ctx.Log("[MobaDemoMod] Camera centered on local player.");
                     return Task.CompletedTask;
                 }

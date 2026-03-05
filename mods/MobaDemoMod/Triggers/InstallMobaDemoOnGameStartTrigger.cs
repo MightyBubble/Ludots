@@ -8,7 +8,6 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
@@ -129,21 +128,6 @@ namespace MobaDemoMod.Triggers
 
             // 单位渲染由 performers.json 定义 moba_unit_marker（entity-scoped Marker3D）驱动
             // 团队颜色由 EntityColor 绑定解析
-
-            var session = context.Get(CoreServiceKeys.GameSession);
-            if (session != null && session.Camera.Controller == null)
-            {
-                engine.SetService(CoreServiceKeys.CameraControllerRequest, new CameraControllerRequest
-                {
-                    Id = CameraControllerIds.Orbit3C,
-                    Config = new Orbit3CCameraConfig
-                    {
-                        EnablePan = false,
-                        ZoomCmPerWheel = mobaConfig.Camera.ZoomCmPerWheel,
-                        RotateDegPerSecond = mobaConfig.Camera.RotateDegPerSecond
-                    }
-                });
-            }
 
             return Task.CompletedTask;
         }

@@ -25,9 +25,6 @@ namespace MobaDemoMod
         [JsonPropertyName("presentation")]
         public PresentationConfig Presentation { get; set; } = new();
 
-        [JsonPropertyName("camera")]
-        public CameraConfig Camera { get; set; } = new();
-
         // ── Nested config classes ──
 
         public sealed class AbilityConfig
@@ -78,15 +75,6 @@ namespace MobaDemoMod
             [JsonPropertyName("color")] public float[] Color { get; set; } = { 0.8f, 0.2f, 1f, 0.75f };
             [JsonPropertyName("lifetimeSeconds")] public float LifetimeSeconds { get; set; } = 0.35f;
             [JsonPropertyName("yOffsetMeters")] public float YOffsetMeters { get; set; } = 0.1f;
-        }
-
-        public sealed class CameraConfig
-        {
-            [JsonPropertyName("zoomCmPerWheel")] public float ZoomCmPerWheel { get; set; } = 2000f;
-            [JsonPropertyName("rotateDegPerSecond")] public float RotateDegPerSecond { get; set; } = 90f;
-            [JsonPropertyName("initialYawDegrees")] public float InitialYawDegrees { get; set; } = 35f;
-            [JsonPropertyName("initialPitchDegrees")] public float InitialPitchDegrees { get; set; } = 60f;
-            [JsonPropertyName("initialDistanceCm")] public float InitialDistanceCm { get; set; } = 25000f;
         }
 
         // ── Loading ──

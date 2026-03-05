@@ -14,7 +14,7 @@ var setup = gameHost.Setup;
 var cts = new CancellationTokenSource();
 var gameLoopTask = Task.Run(() => gameHost.Run(cts.Token));
 
-var clientPath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "..", "..", "src", "Client", "Web", "dist"));
+var clientPath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "..", "..", "..", "src", "Client", "Web", "dist"));
 if (Directory.Exists(clientPath))
 {
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(clientPath) });

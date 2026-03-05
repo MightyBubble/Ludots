@@ -19,6 +19,7 @@ namespace Ludots.Core.Presentation.Camera
         private Vector3 _currentPosition;
         private Vector3 _currentTarget;
         private Vector3 _currentUp;
+        private float _currentFovYDeg;
         private bool _isFirstUpdate = true;
 
         /// <summary>
@@ -31,6 +32,12 @@ namespace Ludots.Core.Presentation.Camera
         /// Exposed for AOI systems.
         /// </summary>
         public Vector3 CurrentTargetPosition { get; private set; }
+
+        /// <summary>
+        /// The smoothed render-state that matches the actual 3D camera used for rendering.
+        /// HUD projection should use this to stay in sync with 3D meshes.
+        /// </summary>
+        public CameraRenderState3D SmoothedRenderState { get; private set; }
 
         public CameraPresenter(ISpatialCoordinateConverter coords, ICameraAdapter adapter)
         {
@@ -94,7 +101,9 @@ namespace Ludots.Core.Presentation.Camera
                 _currentUp = Vector3.Normalize(Vector3.Lerp(_currentUp, up, t));
             }
 
-            _adapter.UpdateCamera(new CameraRenderState3D(_currentPosition, _currentTarget, _currentUp, state.FovYDeg));
+            _currentFovYDeg = state.FovYDeg;
+            SmoothedRenderState = new CameraRenderState3D(_currentPosition, _currentTarget, _currentUp, _currentFovYDeg);
+            _adapter.UpdateCamera(SmoothedRenderState);
         }
 
         private float ToRadians(float degrees) => degrees * (float)System.Math.PI / 180.0f;

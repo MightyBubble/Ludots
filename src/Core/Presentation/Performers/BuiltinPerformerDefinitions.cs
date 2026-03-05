@@ -25,6 +25,7 @@ namespace Ludots.Core.Presentation.Performers
         private static void RegisterCastCommittedMarker(PerformerDefinitionRegistry registry, int sphereId)
         {
             string key = WellKnownPerformerKeys.CastCommittedMarker;
+            int id = registry.GetOrRegisterId(key);
             registry.Register(key, new PerformerDefinition
             {
                 VisualKind = PerformerVisualKind.Marker3D,
@@ -47,7 +48,7 @@ namespace Ludots.Core.Presentation.Performers
                         Command = new PerformerCommand
                         {
                             CommandKind = PresentationCommandKind.CreatePerformer,
-                            PerformerDefinitionId = registry.GetId(key),
+                            PerformerDefinitionId = id,
                             ScopeId = -1,
                         }
                     }
@@ -58,6 +59,7 @@ namespace Ludots.Core.Presentation.Performers
         private static void RegisterCastFailedMarker(PerformerDefinitionRegistry registry, int sphereId)
         {
             string key = WellKnownPerformerKeys.CastFailedMarker;
+            int id = registry.GetOrRegisterId(key);
             registry.Register(key, new PerformerDefinition
             {
                 VisualKind = PerformerVisualKind.Marker3D,
@@ -80,7 +82,7 @@ namespace Ludots.Core.Presentation.Performers
                         Command = new PerformerCommand
                         {
                             CommandKind = PresentationCommandKind.CreatePerformer,
-                            PerformerDefinitionId = registry.GetId(key),
+                            PerformerDefinitionId = id,
                             ScopeId = -1,
                         }
                     }
@@ -91,6 +93,7 @@ namespace Ludots.Core.Presentation.Performers
         private static void RegisterFloatingCombatText(PerformerDefinitionRegistry registry)
         {
             string key = WellKnownPerformerKeys.FloatingCombatText;
+            int id = registry.GetOrRegisterId(key);
             registry.Register(key, new PerformerDefinition
             {
                 VisualKind = PerformerVisualKind.WorldText,
@@ -113,7 +116,7 @@ namespace Ludots.Core.Presentation.Performers
                         Command = new PerformerCommand
                         {
                             CommandKind = PresentationCommandKind.CreatePerformer,
-                            PerformerDefinitionId = registry.GetId(key),
+                            PerformerDefinitionId = id,
                             ScopeId = -1,
                         }
                     }

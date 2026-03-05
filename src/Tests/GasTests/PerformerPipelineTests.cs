@@ -179,7 +179,7 @@ namespace Ludots.Tests.Presentation
                     }
                 }
             };
-            _defs.Register(1, def);
+            _defs.Register("test_1", def);
 
             var actor = _world.Create();
             _events.TryAdd(new PresentationEvent
@@ -219,7 +219,7 @@ namespace Ludots.Tests.Presentation
                     }
                 }
             };
-            _defs.Register(1, def);
+            _defs.Register("test_1", def);
 
             _events.TryAdd(new PresentationEvent
             {
@@ -361,8 +361,8 @@ namespace Ludots.Tests.Presentation
                 DefaultScale = 0.5f,
                 DefaultLifetime = 1f,
             };
-            _defs.Register(50, def);
-            _instances.TryAllocate(50, entity, 0, out _);
+            int defId = _defs.Register("test_50", def);
+            _instances.TryAllocate(defId, entity, 0, out _);
 
             _system.Update(0.016f);
 
@@ -382,8 +382,8 @@ namespace Ludots.Tests.Presentation
                 MeshOrShapeId = 1,
                 DefaultLifetime = 0.1f,
             };
-            _defs.Register(60, def);
-            _instances.TryAllocate(60, entity, 0, out int handle);
+            int defId = _defs.Register("test_60", def);
+            _instances.TryAllocate(defId, entity, 0, out int handle);
 
             // Tick past lifetime
             _system.Update(0.05f);
@@ -406,8 +406,8 @@ namespace Ludots.Tests.Presentation
                 DefaultLifetime = 1f,
                 AlphaFadeOverLifetime = true,
             };
-            _defs.Register(70, def);
-            _instances.TryAllocate(70, entity, 0, out _);
+            int defId = _defs.Register("test_70", def);
+            _instances.TryAllocate(defId, entity, 0, out _);
 
             // Tick to 50% of lifetime
             _system.Update(0.5f);
@@ -429,8 +429,8 @@ namespace Ludots.Tests.Presentation
                 DefaultLifetime = 2f,
                 PositionYDriftPerSecond = 1f, // 1 meter per second
             };
-            _defs.Register(80, def);
-            _instances.TryAllocate(80, entity, 0, out _);
+            int defId = _defs.Register("test_80", def);
+            _instances.TryAllocate(defId, entity, 0, out _);
 
             _system.Update(1f); // 1 second → Y should be ~1.0
             var span = _primitives.GetSpan();
@@ -454,7 +454,7 @@ namespace Ludots.Tests.Presentation
                 DefaultColor = new Vector4(0, 1, 0, 1),
                 PositionOffset = new Vector3(0, 0.5f, 0),
             };
-            _defs.Register(90, def);
+            _defs.Register("test_90", def);
 
             _system.Update(0.016f);
 
@@ -480,7 +480,7 @@ namespace Ludots.Tests.Presentation
                 EntityScope = EntityScopeFilter.AllWithAttributes,
                 VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
             };
-            _defs.Register(91, def);
+            _defs.Register("test_91", def);
 
             _system.Update(0.016f);
 

@@ -35,6 +35,9 @@ namespace Ludots.Adapter.Web
             engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
+            var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
+            screenProjector.BindPresenter(cameraPresenter);
+
             var cullingSystem = new CameraCullingSystem(
                 engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
             engine.RegisterPresentationSystem(cullingSystem);
@@ -45,17 +48,17 @@ namespace Ludots.Adapter.Web
 
             engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
 
+            WorldHudToScreenSystem hudProjection = null;
             if (engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHud &&
                 engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer) is ScreenHudBatchBuffer screenHud)
             {
                 var worldHudStrings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
-                engine.RegisterPresentationSystem(new WorldHudToScreenSystem(
-                    engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud));
+                hudProjection = new WorldHudToScreenSystem(
+                    engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud);
             }
 
             ValidateRequiredContext(engine);
 
-            var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
             var extractor = new PresentationExtractor(engine, cameraAdapter);
 
             engine.Start();
@@ -93,6 +96,7 @@ namespace Ludots.Adapter.Web
                         engine.SetService(CoreServiceKeys.UiCaptured, false);
                         engine.Tick(dt);
                         cameraPresenter.Update(engine.GameSession!.Camera.State, dt, renderCameraDebug);
+                        hudProjection?.Update(dt);
 
                         if (setup.Transport.HasClients)
                         {

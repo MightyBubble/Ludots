@@ -74,7 +74,7 @@ namespace Ludots.Tests.Presentation
             _healthAttrId = AttributeRegistry.Register("Health");
 
             // Register built-in definitions (CastCommitted marker, CastFailed marker, FloatingCombatText, EntityHealthBar)
-            BuiltinPerformerDefinitions.Register(_defs);
+            BuiltinPerformerDefinitions.Register(_defs, new MeshAssetRegistry());
 
             var session = new GameSession();
             var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
@@ -382,7 +382,8 @@ namespace Ludots.Tests.Presentation
                 DefaultScale = 5f,
                 DefaultColor = new Vector4(0.3f, 0.7f, 1f, 0.5f),
             };
-            _defs.Register(1, def);
+            _defs.Register("test_overlay", def);
+            int overlayDefId = _defs.GetId("test_overlay");
 
             var owner = _world.Create(new VisualTransform { Position = new Vector3(5, 0, 5) });
             int scopeId = 42;
@@ -391,7 +392,7 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.CreatePerformer,
-                IdA = 1,
+                IdA = overlayDefId,
                 IdB = scopeId,
                 Source = owner,
             });

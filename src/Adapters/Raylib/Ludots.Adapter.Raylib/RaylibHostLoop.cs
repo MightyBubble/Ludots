@@ -77,6 +77,7 @@ namespace Ludots.Adapter.Raylib
                 engine.GlobalContext[CoreServiceKeys.ViewController.Name] = viewController;
 
                 var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
+                screenProjector.BindPresenter(cameraPresenter);
                 engine.GlobalContext[CoreServiceKeys.ScreenProjector.Name] = screenProjector;
                 engine.GlobalContext[CoreServiceKeys.ScreenRayProvider.Name] = new RaylibScreenRayProvider(cameraAdapter);
 
@@ -89,12 +90,13 @@ namespace Ludots.Adapter.Raylib
 
                 engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
 
+                WorldHudToScreenSystem hudProjection = null;
                 if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudBuffer.Name, out var whObj) && whObj is WorldHudBatchBuffer worldHud &&
                     engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationScreenHudBuffer.Name, out var shObj) && shObj is ScreenHudBatchBuffer screenHud)
                 {
                     engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudStrings.Name, out var strObj);
                     var worldHudStrings = strObj as Ludots.Core.Presentation.Config.WorldHudStringTable;
-                    engine.RegisterPresentationSystem(new WorldHudToScreenSystem(engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud));
+                    hudProjection = new WorldHudToScreenSystem(engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud);
                 }
 
                 ValidateRequiredContextBeforeLoop(engine);
@@ -138,6 +140,7 @@ namespace Ludots.Adapter.Raylib
                         engine.Tick(dt);
 
                         cameraPresenter.Update(engine.GameSession.Camera.State, dt, renderCameraDebug);
+                        hudProjection?.Update(dt);
 
                         Rl.BeginDrawing();
                         Rl.ClearBackground(new Raylib_cs.Color(0, 0, 0, 255));

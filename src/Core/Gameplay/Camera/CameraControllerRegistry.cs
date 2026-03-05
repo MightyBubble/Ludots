@@ -1,16 +1,19 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Presentation.Camera;
 
 namespace Ludots.Core.Gameplay.Camera
 {
     public readonly struct CameraControllerBuildServices
     {
         public PlayerInputHandler Input { get; }
+        public IViewController Viewport { get; }
 
-        public CameraControllerBuildServices(PlayerInputHandler input)
+        public CameraControllerBuildServices(PlayerInputHandler input, IViewController viewport = null)
         {
             Input = input ?? throw new ArgumentNullException(nameof(input));
+            Viewport = viewport;
         }
     }
 

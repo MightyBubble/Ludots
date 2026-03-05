@@ -28,12 +28,5 @@
       "lifetimeSeconds": 0.35,
       "yOffsetMeters": 0.1
     }
-  },
-  "camera": {
-    "zoomCmPerWheel": 2000,
-    "rotateDegPerSecond": 90,
-    "initialYawDegrees": 35,
-    "initialPitchDegrees": 60,
-    "initialDistanceCm": 25000
   }
 }

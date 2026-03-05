@@ -11,6 +11,7 @@ namespace Ludots.Core.Gameplay.Camera
         public object? Config { get; set; }
     }
 
+    [System.Obsolete("Use CameraPreset with CompositeCameraController instead.")]
     public sealed class Orbit3CCameraConfig
     {
         public bool EnablePan { get; set; } = true;

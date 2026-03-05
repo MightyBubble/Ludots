@@ -2,6 +2,7 @@
   "Id": "war3_forest",
   "Tags": ["rts_showcase", "war3"],
   "DefaultCamera": {
+    "PresetId": "Rts",
     "TargetXCm": 18000,
     "TargetYCm": 18000,
     "Yaw": 160,

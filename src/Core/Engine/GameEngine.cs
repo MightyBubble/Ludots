@@ -157,6 +157,7 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
+        private CameraFollowSystem _cameraFollowSystem;
 
         // Spatial systems — kept for hot-swap on map load
         private WorldToGridSyncSystem _worldToGridSyncSystem;
@@ -981,29 +982,57 @@ namespace Ludots.Core.Engine
         private void ApplyDefaultCamera(MapConfig mapConfig)
         {
             var cam = mapConfig?.DefaultCamera;
-            if (cam == null) return;
-
             var state = GameSession.Camera.State;
+            CameraPreset preset = null;
 
-            // Apply preset first if PresetId is set
             var presetReg = GetService(CoreServiceKeys.CameraPresetRegistry);
-            if (!string.IsNullOrWhiteSpace(cam.PresetId) &&
-                presetReg != null &&
-                presetReg.TryGet(cam.PresetId, out var preset))
+
+            if (cam != null && !string.IsNullOrWhiteSpace(cam.PresetId) && presetReg != null)
+                presetReg.TryGet(cam.PresetId, out preset);
+
+            if (preset == null && presetReg != null)
+                presetReg.TryGet("Default", out preset);
+
+            if (preset != null)
             {
                 state.DistanceCm = preset.DistanceCm;
                 state.Pitch = preset.Pitch;
                 state.FovYDeg = preset.FovYDeg;
                 state.Yaw = preset.Yaw;
+                GameSession.Camera.FollowMode = preset.FollowMode;
             }
 
-            // Explicit fields override preset
-            if (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
-                state.TargetCm = new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f);
-            if (cam.Yaw.HasValue) state.Yaw = cam.Yaw.Value;
-            if (cam.Pitch.HasValue) state.Pitch = cam.Pitch.Value;
-            if (cam.DistanceCm.HasValue) state.DistanceCm = cam.DistanceCm.Value;
-            if (cam.FovYDeg.HasValue) state.FovYDeg = cam.FovYDeg.Value;
+            if (cam != null)
+            {
+                if (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
+                    state.TargetCm = new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f);
+                if (cam.Yaw.HasValue) state.Yaw = cam.Yaw.Value;
+                if (cam.Pitch.HasValue) state.Pitch = cam.Pitch.Value;
+                if (cam.DistanceCm.HasValue) state.DistanceCm = cam.DistanceCm.Value;
+                if (cam.FovYDeg.HasValue) state.FovYDeg = cam.FovYDeg.Value;
+            }
+
+            if (preset != null && GameSession.Camera.Controller == null)
+            {
+                var input = GetService(CoreServiceKeys.InputHandler);
+                var viewport = GetService(CoreServiceKeys.ViewController);
+                if (input != null && viewport != null)
+                {
+                    var ctx = new CameraBehaviorContext(input, viewport);
+                    var controller = CameraControllerFactory.FromPreset(preset, ctx);
+                    GameSession.Camera.SetController(controller);
+                    Diagnostics.Log.Info(in LogChannels.Engine,
+                        $"Built CompositeCameraController from preset '{preset.Id}' (pan={preset.PanMode} rotate={preset.RotateMode} follow={preset.FollowMode})");
+
+                    if (preset.FollowMode != CameraFollowMode.None)
+                    {
+                        _cameraFollowSystem = new CameraFollowSystem(GameSession.Camera, input, preset.FollowActionId);
+                        Diagnostics.Log.Info(in LogChannels.Engine,
+                            $"CameraFollowSystem created (mode={preset.FollowMode} action={preset.FollowActionId})");
+                    }
+                }
+            }
+
             Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
         }
 
@@ -1495,6 +1524,7 @@ namespace Ludots.Core.Engine
         {
             _inputRuntimeSystem?.Update(dt);
             ApplyCameraControllerRequest();
+            _cameraFollowSystem?.Update(dt);
             GameSession.Update(dt);
 
             _primitiveDrawBuffer?.Clear();
@@ -1524,7 +1554,8 @@ namespace Ludots.Core.Engine
             var input = GetService(CoreServiceKeys.InputHandler)
                 ?? throw new InvalidOperationException("PlayerInputHandler is required to build camera controller.");
 
-            var controller = registry.Create(request, new CameraControllerBuildServices(input));
+            var viewport = GetService(CoreServiceKeys.ViewController);
+            var controller = registry.Create(request, new CameraControllerBuildServices(input, viewport));
             GameSession.Camera.SetController(controller);
             GlobalContext.Remove(CoreServiceKeys.CameraControllerRequest.Name);
         }
