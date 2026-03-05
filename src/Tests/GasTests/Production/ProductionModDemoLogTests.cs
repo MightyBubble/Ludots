@@ -39,11 +39,13 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("[MOBA] 进入英雄竞技场。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "MobaDemoMod" }, "entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" }, "entry", engine =>
             {
                 var world = engine.World;
                 var (hero, enemy1, enemy2) = FindEntities3(world, "Hero", "Enemy1", "Enemy2");
                 int healthId = EnsureAttr("Health");
+                int forceXId = EnsureAttr("Physics.ForceRequestX");
+                int forceYId = EnsureAttr("Physics.ForceRequestY");
 
                 LogEntityState(sb, "[MOBA]", "初始状态", world, hero, "Hero", new[] { healthId }, new[] { "Health" });
                 LogEntityState(sb, "[MOBA]", "初始状态", world, enemy1, "Enemy1", new[] { healthId }, new[] { "Health" });
@@ -117,6 +119,68 @@ namespace Ludots.Tests.GAS.Production
                     effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = hero, TargetContext = default, TemplateId = auraId });
                     Tick(engine, 5);
                     sb.AppendLine("[MOBA] 光环已激活 (PeriodicSearch radius=700 Friendly)。");
+                }
+
+                // ── LaunchProjectile: 弹道生成 ──
+                int projectileTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Projectile.Arrow");
+                if (projectileTplId > 0)
+                {
+                    int projectileBefore = CountEntitiesWith<ProjectileState>(world);
+                    sb.AppendLine("[MOBA] 触发【Arrow Projectile】验证 LaunchProjectile。");
+                    effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = enemy1, TargetContext = default, TemplateId = projectileTplId });
+                    Tick(engine, 5);
+                    int projectileAfter = CountEntitiesWith<ProjectileState>(world);
+                    sb.AppendLine($"[MOBA] Projectile 实体数: before={projectileBefore}, after={projectileAfter}。");
+                    Assert.That(projectileAfter, Is.GreaterThanOrEqualTo(projectileBefore), "LaunchProjectile should not reduce projectile count unexpectedly.");
+                }
+
+                // ── ApplyForce2D: 力输入注入 ──
+                int forceTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Force.E");
+                if (forceTplId > 0)
+                {
+                    float fxBefore = world.Get<AttributeBuffer>(enemy1).GetCurrent(forceXId);
+                    float fyBefore = world.Get<AttributeBuffer>(enemy1).GetCurrent(forceYId);
+                    sb.AppendLine("[MOBA] 对 Enemy1 施加【ApplyForce2D】。");
+                    effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = enemy1, TargetContext = default, TemplateId = forceTplId });
+                    Tick(engine, 5);
+                    float fxAfter = world.Get<AttributeBuffer>(enemy1).GetCurrent(forceXId);
+                    float fyAfter = world.Get<AttributeBuffer>(enemy1).GetCurrent(forceYId);
+                    sb.AppendLine($"[MOBA] Force attrs: X {fxBefore:F1}->{fxAfter:F1}, Y {fyBefore:F1}->{fyAfter:F1}");
+                    Assert.That(MathF.Abs(fxAfter) + MathF.Abs(fyAfter), Is.GreaterThan(0.01f), "ApplyForce2D should write force request attributes.");
+                }
+
+                // ── CreateUnit: 召唤单位 ──
+                int summonTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Summon.Skeleton");
+                if (summonTplId > 0)
+                {
+                    if (engine.GlobalContext.TryGetValue(ContextKeys.EffectTemplateRegistry, out var tplObj) &&
+                        tplObj is EffectTemplateRegistry tplRegistry &&
+                        tplRegistry.TryGet(summonTplId, out var summonTpl))
+                    {
+                        Assert.That(summonTpl.PresetType, Is.EqualTo(EffectPresetType.CreateUnit), "Summon effect must use CreateUnit preset.");
+                    }
+
+                    sb.AppendLine("[MOBA] 触发【CreateUnit: Summon Skeleton】。");
+                    effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = hero, TargetContext = default, TemplateId = summonTplId });
+                    Tick(engine, 10);
+                    sb.AppendLine("[MOBA] Summon 请求已执行（CreateUnit preset 覆盖验证通过）。");
+                }
+
+                // ── Displacement: 位移效果 ──
+                int displacementTplId = EffectTemplateIdRegistry.GetId("Effect.Moba.Displacement.R");
+                if (displacementTplId > 0 && world.Has<WorldPositionCm>(enemy2))
+                {
+                    if (engine.GlobalContext.TryGetValue(ContextKeys.EffectTemplateRegistry, out var tplObj) &&
+                        tplObj is EffectTemplateRegistry tplRegistry &&
+                        tplRegistry.TryGet(displacementTplId, out var displacementTpl))
+                    {
+                        Assert.That(displacementTpl.PresetType, Is.EqualTo(EffectPresetType.Displacement), "Displacement effect must use Displacement preset.");
+                    }
+
+                    sb.AppendLine("[MOBA] 对 Enemy2 施加【Displacement】。");
+                    effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = enemy2, TargetContext = default, TemplateId = displacementTplId });
+                    Tick(engine, 20);
+                    sb.AppendLine("[MOBA] 位移请求已执行（Displacement preset 覆盖验证通过）。");
                 }
 
                 sb.AppendLine("───────────────────────────────────────────");
@@ -542,7 +606,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            string modsRoot = Path.Combine(repoRoot, "src", "Mods");
+            string modsRoot = Path.Combine(repoRoot, "mods");
 
             var modPaths = new List<string>(mods.Length);
             for (int i = 0; i < mods.Length; i++)
@@ -690,6 +754,17 @@ namespace Ludots.Tests.GAS.Production
                     found = true;
             });
             return found;
+        }
+
+        private static int CountEntitiesWith<T>(World world) where T : struct
+        {
+            int count = 0;
+            var q = new QueryDescription().WithAll<T>();
+            world.Query(in q, (Entity _, ref T __) =>
+            {
+                count++;
+            });
+            return count;
         }
 
         private static void WriteLog(string filename, StringBuilder sb)

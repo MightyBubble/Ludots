@@ -1,0 +1,36 @@
+[
+  {
+    "id": "arpg_hero",
+    "components": {
+      "Name": { "Value": "ArpgHero" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 100, "Armor": 0 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Arpg.FireArrow",
+          "Ability.Arpg.HealPotion",
+          "Ability.Arpg.SummonWolf",
+          "Ability.Arpg.Stun",
+          "Ability.Arpg.Bleed",
+          "Ability.Arpg.IronSkin"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "arpg_enemy",
+    "components": {
+      "Name": { "Value": "ArpgEnemy" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 800, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 100, "Armor": 0 } }
+    }
+  }
+]
+

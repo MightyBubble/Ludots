@@ -14,12 +14,12 @@ namespace Ludots.Tests.GAS
         public void ConfigMerger_ArrayById_MergesById()
         {
             var baseArr = JsonNode.Parse(@"[
-  { ""Id"": ""A"", ""X"": 1, ""Tags"": [""t0""] },
-  { ""Id"": ""B"", ""X"": 2 }
+  { ""id"": ""A"", ""X"": 1, ""Tags"": [""t0""] },
+  { ""id"": ""B"", ""X"": 2 }
 ]")!;
 
             var modArr = JsonNode.Parse(@"[
-  { ""Id"": ""A"", ""X"": 9, ""Tags"": [""t1""] }
+  { ""id"": ""A"", ""X"": 9, ""Tags"": [""t1""] }
 ]")!;
 
             var merged = ConfigMerger.MergeMany(
@@ -36,12 +36,12 @@ namespace Ludots.Tests.GAS
         public void ConfigMerger_ArrayById_DeletesByDisabled()
         {
             var baseArr = JsonNode.Parse(@"[
-  { ""Id"": ""A"", ""X"": 1 },
-  { ""Id"": ""B"", ""X"": 2 }
+  { ""id"": ""A"", ""X"": 1 },
+  { ""id"": ""B"", ""X"": 2 }
 ]")!;
 
             var modArr = JsonNode.Parse(@"[
-  { ""Id"": ""B"", ""Disabled"": true }
+  { ""id"": ""B"", ""Disabled"": true }
 ]")!;
 
             var merged = ConfigMerger.MergeMany(
@@ -50,18 +50,18 @@ namespace Ludots.Tests.GAS
 
             Assert.That(merged, Is.Not.Null);
             Assert.That(merged!.Count, Is.EqualTo(1));
-            Assert.That(merged[0]!["Id"]!.ToString(), Is.EqualTo("A"));
+            Assert.That(merged[0]!["id"]!.ToString(), Is.EqualTo("A"));
         }
 
         [Test]
         public void ConfigMerger_ArrayById_AppendsConfiguredArrayFields()
         {
             var baseArr = JsonNode.Parse(@"[
-  { ""Id"": ""A"", ""Tags"": [""t0""] }
+  { ""id"": ""A"", ""Tags"": [""t0""] }
 ]")!;
 
             var modArr = JsonNode.Parse(@"[
-  { ""Id"": ""A"", ""Tags"": [""t1""] }
+  { ""id"": ""A"", ""Tags"": [""t1""] }
 ]")!;
 
             var merged = ConfigMerger.MergeMany(
@@ -85,10 +85,10 @@ namespace Ludots.Tests.GAS
             Directory.CreateDirectory(Path.Combine(mod, "assets", "Configs"));
 
             Directory.CreateDirectory(Path.Combine(core, "Configs", "AI"));
-            File.WriteAllText(Path.Combine(core, "Configs", "AI", "atoms.json"), "[ { \"Id\": \"A\" } ]");
+            File.WriteAllText(Path.Combine(core, "Configs", "AI", "atoms.json"), "[ { \"id\": \"A\" } ]");
 
             Directory.CreateDirectory(Path.Combine(mod, "assets", "Configs", "AI"));
-            File.WriteAllText(Path.Combine(mod, "assets", "Configs", "AI", "atoms.json"), "[ { \"Id\": \"B\" } ]");
+            File.WriteAllText(Path.Combine(mod, "assets", "Configs", "AI", "atoms.json"), "[ { \"id\": \"B\" } ]");
 
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", core);

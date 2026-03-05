@@ -53,6 +53,30 @@ CameraPresenter:
   where hDist = distance * cos(pitch), vDist = distance * sin(pitch)
 ```
 
+## 视口与同屏数量
+
+Core 层通过 `CameraViewportUtil` 和 `CameraCullingSystem` 完全掌控视口公式与同屏实体数量：
+
+- **视口公式**：`logicHeight = 2×DistanceCm×tan(FovY/2)/sin(Pitch)`，`logicWidth = logicHeight×AspectRatio`（含 1.5× 安全边距）
+- **同屏数量**：由 `CameraCullingSystem` 根据视口 AABB 与 LOD 距离阈值决定
+- **工具类**：`CameraViewportUtil.ComputeViewportExtent`、`DistanceForVerticalExtent`、`WorldToScreen`（纯数学，平台无关）
+
+## 相机预设 (Camera Preset)
+
+预设从 `Camera/presets.json` 加载，经 ConfigPipeline 合并（Mod 可扩展/覆盖）。内置预设：Moba、Rts、TopDown、Tactical、Default、TPS、FPS。
+
+MapConfig 可通过 `PresetId` 引用预设，显式字段覆盖预设值：
+
+```json
+{
+  "DefaultCamera": {
+    "PresetId": "Moba",
+    "TargetXCm": 0,
+    "TargetYCm": 0
+  }
+}
+```
+
 ## MapConfig.DefaultCamera
 
 每张地图在 JSON 中声明默认相机：
@@ -70,6 +94,8 @@ CameraPresenter:
   }
 }
 ```
+
+或使用 `PresetId` 引用预设（见上文）。
 
 ### 加载优先级
 

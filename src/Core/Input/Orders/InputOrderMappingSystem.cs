@@ -135,6 +135,20 @@ namespace Ludots.Core.Input.Orders
         private Vector3 _vectorAimOrigin;
         private bool _isVectorAiming;
 
+        /// <summary>
+        /// Change global interaction mode at runtime.
+        /// The change takes effect immediately and will cancel current aiming state.
+        /// </summary>
+        public void SetInteractionMode(InteractionModeType mode)
+        {
+            if (_config.InteractionMode == mode) return;
+            if (_isAiming) ExitAimingState();
+            _config.InteractionMode = mode;
+        }
+
+        /// <summary>The current global interaction mode.</summary>
+        public InteractionModeType InteractionMode => _config.InteractionMode;
+
         /// <summary>Whether the system is currently in aiming state (AimCast).</summary>
         public bool IsAiming => _isAiming;
 
@@ -658,7 +672,7 @@ namespace Ludots.Core.Input.Orders
             // Store both points in List mode: point[0] = origin, point[1] = endpoint
             args.Spatial.Kind = OrderSpatialKind.WorldCm;
             args.Spatial.Mode = OrderCollectionMode.List;
-            args.Spatial.WorldCm = origin; // Primary point (also stored as WorldCm for backward compat)
+            args.Spatial.WorldCm = origin; // Primary point
             args.Spatial.AddPointWorldCm((int)origin.X, (int)origin.Y, (int)origin.Z);
             args.Spatial.AddPointWorldCm((int)endpoint.X, (int)endpoint.Y, (int)endpoint.Z);
             

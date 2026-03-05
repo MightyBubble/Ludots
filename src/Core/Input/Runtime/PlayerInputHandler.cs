@@ -15,6 +15,7 @@ namespace Ludots.Core.Input.Runtime
         private readonly Dictionary<string, Vector3> _tempValues;
         private readonly string[] _actionIds;
         private readonly InputConfigRoot _config;
+        private readonly Dictionary<string, Vector3> _injections = new Dictionary<string, Vector3>();
 
         public bool InputBlocked { get; set; } = false;
 
@@ -91,6 +92,19 @@ namespace Ludots.Core.Input.Runtime
             return _actionStates.TryGetValue(actionId, out var instance) && instance.ReleasedThisFrame;
         }
 
+        /// <summary>
+        /// Inject action value for next Update() tick.
+        /// Primarily for automation and deterministic test driving.
+        /// </summary>
+        public void InjectAction(string actionId, Vector3 value)
+        {
+            _injections[actionId] = value;
+        }
+
+        public void InjectButtonPress(string actionId) => InjectAction(actionId, Vector3.One);
+
+        public void InjectButtonRelease(string actionId) => _injections.Remove(actionId);
+
         public void Update()
         {
             if (InputBlocked)
@@ -129,6 +143,15 @@ namespace Ludots.Core.Input.Runtime
                     _tempValues[binding.ActionId] = acc;
                 }
             }
+
+            foreach (var (actionId, value) in _injections)
+            {
+                if (_tempValues.ContainsKey(actionId))
+                {
+                    _tempValues[actionId] = value;
+                }
+            }
+            _injections.Clear();
 
             // Update States
             for (int i = 0; i < _actionIds.Length; i++)

@@ -61,7 +61,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
 
         /// <summary>
-        /// Creates the legacy ear-clipping triangulator (kept for reference/testing).
+        /// Creates the ear-clipping triangulator (kept for reference/testing).
         /// </summary>
         public static ITriangulator CreateEarClipping()
         {

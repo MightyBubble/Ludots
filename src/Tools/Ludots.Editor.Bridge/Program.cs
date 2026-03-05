@@ -630,8 +630,7 @@ static class EditorRepo
             }
         }
 
-        ScanModsRoot(Path.Combine(repoRoot, "src", "Mods"));
-        ScanModsRoot(Path.Combine(repoRoot, "assets", "Mods"));
+        ScanModsRoot(Path.Combine(repoRoot, "mods"));
 
         return mods.Values.OrderBy(m => m.Priority).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase).ToList();
     }
@@ -865,7 +864,7 @@ static class EditorRepo
         }
 
         sources = sourcesLocal;
-        return mergedNodes.Values.OrderBy(n => n?["Id"]?.ToString() ?? n?["id"]?.ToString() ?? string.Empty, StringComparer.OrdinalIgnoreCase).ToArray();
+        return mergedNodes.Values.OrderBy(n => n?["id"]?.ToString() ?? string.Empty, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     public static JsonNode[] LoadMergedPerformers(ModContext ctx, bool includeSources, out List<string> sources)
@@ -882,7 +881,7 @@ static class EditorRepo
             foreach (var item in arr)
             {
                 if (item is not JsonObject obj) continue;
-                int id = obj["id"]?.GetValue<int>() ?? 0;
+                int id = int.TryParse(obj["id"]?.GetValue<string>(), out int parsedId) ? parsedId : 0;
                 if (id <= 0) continue;
                 defs[id] = obj.DeepClone();
             }
@@ -1049,24 +1048,10 @@ static class EditorRepo
     private static bool TryReadId(JsonObject obj, out string id)
     {
         id = string.Empty;
-        if (obj.TryGetPropertyValue("Id", out var idNode) && idNode != null)
-        {
-            id = idNode.ToString();
-            return !string.IsNullOrWhiteSpace(id);
-        }
-        if (obj.TryGetPropertyValue("id", out idNode) && idNode != null)
-        {
-            id = idNode.ToString();
-            return !string.IsNullOrWhiteSpace(id);
-        }
-        foreach (var kvp in obj)
-        {
-            if (!string.Equals(kvp.Key, "Id", StringComparison.OrdinalIgnoreCase)) continue;
-            if (kvp.Value == null) return false;
-            id = kvp.Value.ToString();
-            return !string.IsNullOrWhiteSpace(id);
-        }
-        return false;
+        if (!obj.TryGetPropertyValue("id", out var idNode) || idNode == null) return false;
+        if (idNode.GetValueKind() != JsonValueKind.String) return false;
+        id = idNode.GetValue<string>();
+        return !string.IsNullOrWhiteSpace(id);
     }
 
     private static string SanitizeId(string raw)

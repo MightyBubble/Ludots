@@ -40,7 +40,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly GasChainOrderTags _chainTags;
         private readonly GasPresentationEventBuffer _presentationEvents;
 
-        // ── Phase Graph execution (optional, null = legacy-only mode) ──
+        // ── Phase Graph execution (optional) ──
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;

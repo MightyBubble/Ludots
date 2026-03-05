@@ -4,7 +4,8 @@
   "WindowTitle": "Ludots Engine (Raylib) - Moba Demo",
   "TargetFps": 60,
   "ModPaths": [
-    "../../../../../../Mods/LudotsCoreMod",
-    "../../../../../../Mods/MobaDemoMod"
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/MobaDemoMod"
   ]
 }

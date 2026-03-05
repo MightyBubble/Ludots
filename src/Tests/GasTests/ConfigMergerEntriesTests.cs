@@ -23,9 +23,9 @@ namespace Ludots.Tests.GAS
         {
             var frags = new List<ConfigFragment>
             {
-                MakeFrag(@"[{""Id"":""B"",""v"":2}, {""Id"":""A"",""v"":1}]")
+                MakeFrag(@"[{""id"":""B"",""v"":2}, {""id"":""A"",""v"":1}]")
             };
-            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
             var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry);
 
             That(result.Count, Is.EqualTo(2));
@@ -40,10 +40,10 @@ namespace Ludots.Tests.GAS
         {
             var frags = new List<ConfigFragment>
             {
-                MakeFrag(@"[{""Id"":""A"",""x"":1,""y"":2}]", "Core:test.json"),
-                MakeFrag(@"[{""Id"":""A"",""x"":10}]", "ModA:test.json")
+                MakeFrag(@"[{""id"":""A"",""x"":1,""y"":2}]", "Core:test.json"),
+                MakeFrag(@"[{""id"":""A"",""x"":10}]", "ModA:test.json")
             };
-            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
             var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry);
 
             That(result.Count, Is.EqualTo(1));
@@ -56,10 +56,10 @@ namespace Ludots.Tests.GAS
         {
             var frags = new List<ConfigFragment>
             {
-                MakeFrag(@"[{""Id"":""A"",""v"":1}, {""Id"":""B"",""v"":2}]"),
-                MakeFrag(@"[{""Id"":""A"",""__delete"":true}]")
+                MakeFrag(@"[{""id"":""A"",""v"":1}, {""id"":""B"",""v"":2}]"),
+                MakeFrag(@"[{""id"":""A"",""__delete"":true}]")
             };
-            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
             var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry);
 
             That(result.Count, Is.EqualTo(1));
@@ -71,10 +71,10 @@ namespace Ludots.Tests.GAS
         {
             var frags = new List<ConfigFragment>
             {
-                MakeFrag(@"[{""Id"":""A"",""v"":1}, {""Id"":""B"",""v"":2}]"),
-                MakeFrag(@"[{""Id"":""B"",""Disabled"":true}]")
+                MakeFrag(@"[{""id"":""A"",""v"":1}, {""id"":""B"",""v"":2}]"),
+                MakeFrag(@"[{""id"":""B"",""Disabled"":true}]")
             };
-            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
             var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry);
 
             That(result.Count, Is.EqualTo(1));
@@ -86,10 +86,10 @@ namespace Ludots.Tests.GAS
         {
             var frags = new List<ConfigFragment>
             {
-                MakeFrag(@"[{""Id"":""A"",""v"":1}]", "Core:test.json"),
-                MakeFrag(@"[{""Id"":""A"",""v"":2}, {""Id"":""B"",""v"":3}]", "ModA:test.json")
+                MakeFrag(@"[{""id"":""A"",""v"":1}]", "Core:test.json"),
+                MakeFrag(@"[{""id"":""A"",""v"":2}, {""id"":""B"",""v"":3}]", "ModA:test.json")
             };
-            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
             var report = new ConfigConflictReport();
             var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry, report);
 
@@ -104,10 +104,10 @@ namespace Ludots.Tests.GAS
         {
             var frags = new List<ConfigFragment>
             {
-                MakeFrag(@"[{""Id"":""A"",""v"":1}]", "Core:test.json"),
-                MakeFrag(@"[{""Id"":""A"",""__delete"":true}]", "ModA:test.json")
+                MakeFrag(@"[{""id"":""A"",""v"":1}]", "Core:test.json"),
+                MakeFrag(@"[{""id"":""A"",""__delete"":true}]", "ModA:test.json")
             };
-            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
             var report = new ConfigConflictReport();
             var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry, report);
 
@@ -121,7 +121,7 @@ namespace Ludots.Tests.GAS
         public void MergeArrayByIdToEntries_EmptyFragments_ReturnsEmpty()
         {
             var frags = new List<ConfigFragment>();
-            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
             var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry);
 
             That(result.Count, Is.EqualTo(0));
@@ -132,10 +132,10 @@ namespace Ludots.Tests.GAS
         {
             var frags = new List<ConfigFragment>
             {
-                MakeFrag(@"[{""Id"":""Fireball"",""v"":1}]"),
-                MakeFrag(@"[{""Id"":""fireball"",""v"":2}]")
+                MakeFrag(@"[{""id"":""Fireball"",""v"":1}]"),
+                MakeFrag(@"[{""id"":""fireball"",""v"":2}]")
             };
-            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
             var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry);
 
             That(result.Count, Is.EqualTo(1), "Case-insensitive merge");
@@ -147,9 +147,9 @@ namespace Ludots.Tests.GAS
         {
             var frags = new List<ConfigFragment>
             {
-                MakeFrag(@"[{""Id"":""A"",""v"":1}, 42, ""str"", null]")
+                MakeFrag(@"[{""id"":""A"",""v"":1}, 42, ""str"", null]")
             };
-            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
             var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry);
 
             That(result.Count, Is.EqualTo(1));
@@ -161,9 +161,9 @@ namespace Ludots.Tests.GAS
         {
             var frags = new List<ConfigFragment>
             {
-                MakeFrag(@"{""Id"":""A"",""v"":1}")
+                MakeFrag(@"{""id"":""A"",""v"":1}")
             };
-            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
             var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry);
 
             That(result.Count, Is.EqualTo(0), "Non-array fragments are skipped");

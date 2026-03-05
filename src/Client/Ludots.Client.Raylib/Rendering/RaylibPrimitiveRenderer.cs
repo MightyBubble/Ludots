@@ -216,21 +216,9 @@ namespace Ludots.Client.Raylib.Rendering
             return r | (g << 8) | (b << 16) | (a << 24);
         }
 
-        private static Color ToRaylibColor(in Vector4 c)
-        {
-            byte r = Clamp01ToByte(c.X);
-            byte g = Clamp01ToByte(c.Y);
-            byte b = Clamp01ToByte(c.Z);
-            byte a = Clamp01ToByte(c.W);
-            return new Color(r, g, b, a);
-        }
+        private static Color ToRaylibColor(in Vector4 c) => RaylibColorUtil.ToRaylibColor(in c);
 
-        private static byte Clamp01ToByte(float v)
-        {
-            if (v <= 0f) return 0;
-            if (v >= 1f) return 255;
-            return (byte)(v * 255f);
-        }
+        private static byte Clamp01ToByte(float v) => RaylibColorUtil.Clamp01ToByte(v);
 
         public void Dispose()
         {

@@ -1,0 +1,8 @@
+<Project>
+  <!-- 开发即发布：Mod 统一输出到 bin/net8.0/，无 Debug/Release 区分 -->
+  <PropertyGroup>
+    <BaseOutputPath>$(MSBuildProjectDirectory)\bin\</BaseOutputPath>
+    <OutputPath>$(BaseOutputPath)net8.0\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+</Project>

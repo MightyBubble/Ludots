@@ -40,7 +40,7 @@ Target framework: .NET 8.0. Test framework: NUnit 4.2.2 with BenchmarkDotNet.
 - `src/Apps/Raylib/` — Desktop app entry point (`Program.cs` → `RaylibGameHost`)
 - `src/Adapters/Raylib/` — Host loop, dependency composition
 - `src/Client/Ludots.Client.Raylib/` — Raylib input/rendering adapters
-- `src/Mods/` — 20+ built-in and demo mods (each with `mod.json`)
+- `mods/` — 30+ built-in and demo mods (each with `mod.json`), outside `src/` for UGC parity
 - `src/Tools/` — ModLauncher (CLI/GUI), Editor Bridge, NavBake
 - `src/Libraries/` — Source-integrated: Arch ECS, Arch.Extended, DotRecast, Raylib-cs
 - `src/Tests/` — GasTests (core gameplay), ArchitectureTests (boundaries), ModdingTest
@@ -82,6 +82,7 @@ All systems must belong to exactly one group. Execution order within phases is d
 - `mod.json` manifest: `name` (unique ModId), `version`, optional `main` (DLL path), `dependencies`, `priority`
 - ModLoader: scans → parses manifests → topological sort by dependencies → VFS mount → DLL load → `OnLoad(ModContext)`
 - VFS paths: `ModId:Path/To/Resource` (e.g., `Core:Configs/game.json`)
+- `modworkspace.json` at repo root: lists mod source directories (like VS Code workspaces)
 - ConfigPipeline merges `game.json` from Core + mods in load order; objects merge recursively, arrays/scalars override
 
 ### Startup Flow

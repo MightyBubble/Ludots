@@ -1,9 +1,10 @@
 {
   "ModPaths": [
-    "../../../../../../Mods/LudotsCoreMod",
-    "../../../../../../Mods/MobaDemoMod",
-    "../../../../../../Mods/PerformanceVisualizationMod",
-    "../../../../../../Mods/TerrainBenchmarkMod",
-    "../../../../../../Mods/Physics2DPlaygroundMod"
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/MobaDemoMod",
+    "../../../../../../../mods/PerformanceVisualizationMod",
+    "../../../../../../../mods/TerrainBenchmarkMod",
+    "../../../../../../../mods/Physics2DPlaygroundMod"
   ]
 }

@@ -13,7 +13,7 @@ namespace Ludots.Core.Presentation.Systems
     /// <summary>
     /// Consumes PresentationCommands and manages performer lifecycle.
     ///
-    /// Handles both legacy one-shot performers (PlayOneShotPerformer → TransientMarker)
+    /// Handles both one-shot performers (PlayOneShotPerformer → TransientMarker)
     /// and the new persistent performer commands (CreatePerformer / DestroyPerformer /
     /// DestroyPerformerScope / SetPerformerParam → PerformerInstanceBuffer).
     /// </summary>

@@ -49,6 +49,25 @@ namespace Ludots.Core.Presentation.Systems
             if (!_globals.TryGetValue(ContextKeys.InputHandler, out var inputObj) || inputObj is not PlayerInputHandler input) return;
             if (!_globals.TryGetValue(ContextKeys.ScreenRayProvider, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return;
 
+            var mouse = input.ReadAction<System.Numerics.Vector2>("PointerPos");
+            var ray = rayProvider.GetRay(mouse);
+            if (GroundRaycastUtil.TryGetGroundWorldCm(in ray, out var hoveredWorldCm))
+            {
+                var hovered = FindNearestEntity(hoveredWorldCm, PickRadiusCm);
+                if (_world.IsAlive(hovered))
+                {
+                    _globals[ContextKeys.HoveredEntity] = hovered;
+                }
+                else
+                {
+                    _globals.Remove(ContextKeys.HoveredEntity);
+                }
+            }
+            else
+            {
+                _globals.Remove(ContextKeys.HoveredEntity);
+            }
+
             // 如果当前无选中实体或选中实体已死亡，自动回退到 LocalPlayerEntity
             if (!_globals.TryGetValue(ContextKeys.SelectedEntity, out var existingSelObj) 
                 || existingSelObj is not Entity existingSel 
@@ -62,8 +81,6 @@ namespace Ludots.Core.Presentation.Systems
 
             if (!input.PressedThisFrame("Select")) return;
 
-            var mouse = input.ReadAction<System.Numerics.Vector2>("PointerPos");
-            var ray = rayProvider.GetRay(mouse);
             if (!GroundRaycastUtil.TryGetGroundWorldCm(in ray, out var worldCm)) return;
 
             var selected = FindNearestEntity(worldCm, PickRadiusCm);

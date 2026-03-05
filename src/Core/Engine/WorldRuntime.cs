@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using Ludots.Core.Config;
 using Ludots.Core.Spatial;
 
@@ -16,8 +18,18 @@ namespace Ludots.Core.Engine
 
         public static WorldRuntime Create(GameConfig config, string assetsRoot)
         {
+            var baseDir = Path.GetDirectoryName(Path.GetFullPath(assetsRoot)) ?? ".";
+            var modPaths = config?.ModPaths ?? new List<string>();
+            var resolved = new List<string>();
+            for (int i = 0; i < modPaths.Count; i++)
+            {
+                var raw = modPaths[i];
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+                var path = Path.IsPathRooted(raw) ? raw : Path.Combine(baseDir, raw);
+                resolved.Add(Path.GetFullPath(path));
+            }
             var engine = new GameEngine();
-            engine.Initialize(config, assetsRoot);
+            engine.InitializeWithConfigPipeline(resolved, assetsRoot);
             return new WorldRuntime(engine);
         }
 

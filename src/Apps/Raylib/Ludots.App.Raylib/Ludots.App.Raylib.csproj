@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <Target Name="BuildModsRelease" BeforeTargets="Build">
-    <MSBuild Projects="..\..\..\Mods\MobaDemoMod\MobaDemoMod.csproj;..\..\..\Mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj;..\..\..\Mods\TerrainBenchmarkMod\TerrainBenchmarkMod.csproj;..\..\..\Mods\Physics2DPlaygroundMod\Physics2DPlaygroundMod.csproj;..\..\..\Mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj"
+    <MSBuild Projects="..\..\..\..\mods\MobaDemoMod\MobaDemoMod.csproj;..\..\..\..\mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj;..\..\..\..\mods\TerrainBenchmarkMod\TerrainBenchmarkMod.csproj;..\..\..\..\mods\Physics2DPlaygroundMod\Physics2DPlaygroundMod.csproj;..\..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj"
              Targets="Restore;Build"
              Properties="Configuration=Release" />
   </Target>

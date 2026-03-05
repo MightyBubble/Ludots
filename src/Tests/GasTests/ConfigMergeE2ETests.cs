@@ -86,14 +86,14 @@ namespace Ludots.Tests.GAS
         public void Scenario_ModOverridesEffectProperty_MergedCorrectly()
         {
             WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""Id"" }]");
+                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/effects.json",
-                @"[{ ""Id"": ""Fireball"", ""presetType"": ""Damage"", ""damage"": 100 }]");
+                @"[{ ""id"": ""Fireball"", ""presetType"": ""Damage"", ""damage"": 100 }]");
             WriteAssetFile("ModA", "GAS/effects.json",
-                @"[{ ""Id"": ""Fireball"", ""damage"": 200 }]");
+                @"[{ ""id"": ""Fireball"", ""damage"": 200 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var report = new ConfigConflictReport();
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
@@ -154,14 +154,14 @@ namespace Ludots.Tests.GAS
         public void Scenario_ModDeletesEntry_ViaDisabled()
         {
             WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""Id"" }]");
+                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/effects.json",
-                @"[{ ""Id"": ""Heal"", ""amount"": 50 }, { ""Id"": ""Poison"", ""amount"": 10 }]");
+                @"[{ ""id"": ""Heal"", ""amount"": 50 }, { ""id"": ""Poison"", ""amount"": 10 }]");
             WriteAssetFile("ModA", "GAS/effects.json",
-                @"[{ ""Id"": ""Heal"", ""Disabled"": true }]");
+                @"[{ ""id"": ""Heal"", ""Disabled"": true }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(1));
@@ -198,16 +198,16 @@ namespace Ludots.Tests.GAS
         public void Scenario_ThreeModLayering_LastModWins()
         {
             WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""Id"" }]");
+                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/effects.json",
-                @"[{ ""Id"": ""Fireball"", ""damage"": 100, ""element"": ""fire"" }]");
+                @"[{ ""id"": ""Fireball"", ""damage"": 100, ""element"": ""fire"" }]");
             WriteAssetFile("ModA", "GAS/effects.json",
-                @"[{ ""Id"": ""Fireball"", ""damage"": 150 }]");
+                @"[{ ""id"": ""Fireball"", ""damage"": 150 }]");
             WriteAssetFile("ModB", "GAS/effects.json",
-                @"[{ ""Id"": ""Fireball"", ""damage"": 200, ""splash"": true }]");
+                @"[{ ""id"": ""Fireball"", ""damage"": 200, ""splash"": true }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA", "ModB" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(1));
@@ -223,14 +223,14 @@ namespace Ludots.Tests.GAS
         public void Scenario_ConflictReport_RecordsFragmentsAndWinners()
         {
             WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""Id"" }]");
+                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/effects.json",
-                @"[{ ""Id"": ""A"", ""v"": 1 }, { ""Id"": ""B"", ""v"": 2 }]");
+                @"[{ ""id"": ""A"", ""v"": 1 }, { ""id"": ""B"", ""v"": 2 }]");
             WriteAssetFile("ModA", "GAS/effects.json",
-                @"[{ ""Id"": ""A"", ""v"": 10 }, { ""Id"": ""C"", ""v"": 3 }]");
+                @"[{ ""id"": ""A"", ""v"": 10 }, { ""id"": ""C"", ""v"": 3 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var report = new ConfigConflictReport();
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
@@ -269,10 +269,10 @@ namespace Ludots.Tests.GAS
         {
             WriteFile("Core", "config_catalog.json", "[]");
             WriteFile("Core", "Custom/my_config.json",
-                @"[{ ""Id"": ""X"", ""v"": 1 }]");
+                @"[{ ""id"": ""X"", ""v"": 1 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Custom/my_config.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Custom/my_config.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(1));
@@ -314,18 +314,18 @@ namespace Ludots.Tests.GAS
         public void Scenario_ModReAddsDeletedEntry()
         {
             WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""Id"" }]");
+                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/effects.json",
-                @"[{ ""Id"": ""Heal"", ""amount"": 50 }]");
+                @"[{ ""id"": ""Heal"", ""amount"": 50 }]");
             // ModA deletes Heal
             WriteAssetFile("ModA", "GAS/effects.json",
-                @"[{ ""Id"": ""Heal"", ""__delete"": true }]");
+                @"[{ ""id"": ""Heal"", ""__delete"": true }]");
             // ModB re-adds Heal with different values
             WriteAssetFile("ModB", "GAS/effects.json",
-                @"[{ ""Id"": ""Heal"", ""amount"": 100, ""type"": ""holy"" }]");
+                @"[{ ""id"": ""Heal"", ""amount"": 100, ""type"": ""holy"" }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA", "ModB" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(1));
@@ -396,13 +396,13 @@ namespace Ludots.Tests.GAS
         public void Scenario_EmptyModFragment_CorePreserved()
         {
             WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""Id"" }]");
+                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/effects.json",
-                @"[{ ""Id"": ""Fireball"", ""damage"": 100 }]");
+                @"[{ ""id"": ""Fireball"", ""damage"": 100 }]");
             WriteAssetFile("ModA", "GAS/effects.json", "[]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(1));
@@ -418,7 +418,7 @@ namespace Ludots.Tests.GAS
             WriteFile("Core", "config_catalog.json", "[]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "NonExistent/stuff.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "NonExistent/stuff.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(0));
@@ -433,11 +433,11 @@ namespace Ludots.Tests.GAS
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "Presentation/performers.json", @"[
-                { ""id"": 1, ""visualKind"": ""GroundOverlay"", ""defaultScale"": 1.0 },
-                { ""id"": 2, ""visualKind"": ""GroundOverlay"", ""defaultScale"": 2.0 }
+                { ""id"": ""1"", ""visualKind"": ""GroundOverlay"", ""defaultScale"": 1.0 },
+                { ""id"": ""2"", ""visualKind"": ""GroundOverlay"", ""defaultScale"": 2.0 }
             ]");
             WriteAssetFile("ModA", "Presentation/performers.json", @"[
-                { ""id"": 1, ""defaultScale"": 1.5 }
+                { ""id"": ""1"", ""defaultScale"": 1.5 }
             ]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
@@ -458,12 +458,12 @@ namespace Ludots.Tests.GAS
         public void Scenario_InsertionOrder_Preserved()
         {
             WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""Id"" }]");
+                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/effects.json",
-                @"[{ ""Id"": ""C"" }, { ""Id"": ""A"" }, { ""Id"": ""B"" }]");
+                @"[{ ""id"": ""C"" }, { ""id"": ""A"" }, { ""id"": ""B"" }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(3));
@@ -479,14 +479,14 @@ namespace Ludots.Tests.GAS
         public void Scenario_CaseInsensitiveId_MergesCorrectly()
         {
             WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""Id"" }]");
+                @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/effects.json",
-                @"[{ ""Id"": ""Fireball"", ""damage"": 100 }]");
+                @"[{ ""id"": ""Fireball"", ""damage"": 100 }]");
             WriteAssetFile("ModA", "GAS/effects.json",
-                @"[{ ""Id"": ""fireball"", ""damage"": 200 }]");
+                @"[{ ""id"": ""fireball"", ""damage"": 200 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(1), "Case-insensitive: should merge as one entry");

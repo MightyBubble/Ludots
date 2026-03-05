@@ -64,7 +64,14 @@ namespace Ludots.Core.Gameplay.GAS
         public int Collect(EffectPhaseId phase, int effectTagId, int effectTemplateId,
                            Span<PhaseListenerCollectedAction> output)
         {
+            return Collect(phase, effectTagId, effectTemplateId, output, out _);
+        }
+
+        public int Collect(EffectPhaseId phase, int effectTagId, int effectTemplateId,
+                           Span<PhaseListenerCollectedAction> output, out int dropped)
+        {
             int collected = 0;
+            dropped = 0;
             byte phaseB = (byte)phase;
             for (int i = 0; i < _count; i++)
             {
@@ -81,6 +88,10 @@ namespace Ludots.Core.Gameplay.GAS
                         Priority = _priorities[i],
                     };
                     collected++;
+                }
+                else
+                {
+                    dropped++;
                 }
             }
             return collected;

@@ -9,10 +9,10 @@
   "WindowTitle": "Ludots Engine (Raylib)",
   "TargetFps": 60,
   "ModPaths": [
-    "../../../../../Mods/MobaDemoMod",
-    "../../../../../Mods/PerformanceVisualizationMod",
-    "../../../../../Mods/TerrainBenchmarkMod",
-    "../../../../../Mods/Physics2DPlaygroundMod",
-    "../../../../../Mods/Navigation2DPlaygroundMod"
+    "../../../../../../mods/MobaDemoMod",
+    "../../../../../../mods/PerformanceVisualizationMod",
+    "../../../../../../mods/TerrainBenchmarkMod",
+    "../../../../../../mods/Physics2DPlaygroundMod",
+    "../../../../../../mods/Navigation2DPlaygroundMod"
   ]
 }

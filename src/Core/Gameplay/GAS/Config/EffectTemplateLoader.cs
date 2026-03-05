@@ -34,7 +34,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             EffectTemplateIdRegistry.Clear();
             UnitTypeRegistry.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var mergedEntries = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
             var merged = new List<(string Id, JsonObject Node)>(mergedEntries.Count);
@@ -110,7 +110,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (string.IsNullOrWhiteSpace(cfg.Lifetime))
             {
-                throw new InvalidOperationException($"Effect template '{cfg.Id}' in {relativePath}: 'lifetime' field is required. Legacy 'durationType' schema is no longer supported.");
+                throw new InvalidOperationException($"Effect template '{cfg.Id}' in {relativePath}: 'lifetime' field is required.");
             }
 
             // New schema: explicit lifetime field + Duration block
@@ -166,9 +166,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     modifiers.Add(attrId, op, m.Value);
                 }
             }
-
-            // Legacy callback fields (onApplyEffect, etc.) have been removed from EffectTemplateConfig.
-            // If old JSON configs contain them, System.Text.Json will silently ignore unknown properties.
 
             // ── Phase Graph bindings ──
             var behaviorTemplate = default(EffectPhaseGraphBindings);
@@ -231,6 +228,26 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             var projectile = CompileProjectile(cfg.Projectile, cfg.Id, relativePath);
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
+            var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
+
+            if (cfg.Displacement != null && presetType != EffectPresetType.Displacement)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'displacement' block is only valid when presetType=Displacement.");
+            }
+            if (presetType == EffectPresetType.Displacement)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Displacement requires lifetime=Instant.");
+                }
+                if (cfg.Displacement == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Displacement requires a 'displacement' block.");
+                }
+            }
 
             return new EffectTemplateData
             {
@@ -250,6 +267,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 TargetDispatch = targetDispatch,
                 Projectile = projectile,
                 UnitCreation = unitCreation,
+                Displacement = displacement,
                 PhaseGraphBindings = behaviorTemplate,
                 ConfigParams = configParams,
                 ListenerSetup = listenerSetup,
@@ -258,6 +276,42 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 StackPolicy = stackPolicy,
                 StackOverflowPolicy = stackOverflowPolicy,
                 StackLimit = stackLimit,
+            };
+        }
+
+        private static DisplacementDescriptor CompileDisplacement(DisplacementConfig cfg, string ownerId, string relativePath)
+        {
+            if (cfg == null) return default;
+
+            DisplacementDirectionMode directionMode = cfg.DirectionMode switch
+            {
+                "ToTarget" => DisplacementDirectionMode.ToTarget,
+                "AwayFromSource" => DisplacementDirectionMode.AwayFromSource,
+                "TowardSource" => DisplacementDirectionMode.TowardSource,
+                "Fixed" => DisplacementDirectionMode.Fixed,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported displacement.directionMode '{cfg.DirectionMode}'. " +
+                    "Supported: ToTarget, AwayFromSource, TowardSource, Fixed.")
+            };
+
+            if (cfg.TotalDistanceCm <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: displacement.totalDistanceCm must be > 0.");
+            }
+            if (cfg.TotalDurationTicks <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: displacement.totalDurationTicks must be > 0.");
+            }
+
+            return new DisplacementDescriptor
+            {
+                DirectionMode = directionMode,
+                FixedDirectionDeg = cfg.FixedDirectionDeg,
+                TotalDistanceCm = cfg.TotalDistanceCm,
+                TotalDurationTicks = cfg.TotalDurationTicks,
+                OverrideNavigation = cfg.OverrideNavigation
             };
         }
 
@@ -334,8 +388,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
             throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unsupported targetResolver.shape '{shape}'.");
         }
 
-        // ── Legacy TeamFilter → RelationshipFilter migration ──
-        // Mapping table: old teamFilter vocabulary → canonical RelationshipFilter names.
+        // ── TeamFilter vocabulary mapping ──
+        // Mapping table: teamFilter vocabulary → canonical RelationshipFilter names.
         // Lives in the Loader (migration boundary), NOT in RelationshipFilterUtil (clean API).
         private static ContextSlot ParseContextSlot(string slot, ContextSlot defaultValue)
         {

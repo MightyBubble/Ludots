@@ -107,7 +107,20 @@ namespace Ludots.Core.Config
             {
                 for (int i = 0; i < arr.Count && buffer.Count < AbilityStateBuffer.CAPACITY; i++)
                 {
-                    int id = arr[i]?.GetValue<int>() ?? 0;
+                    var elem = arr[i];
+                    if (elem == null) continue;
+
+                    int id;
+                    if (elem.GetValueKind() == JsonValueKind.String)
+                    {
+                        var abilityTag = elem.GetValue<string>();
+                        id = string.IsNullOrWhiteSpace(abilityTag) ? 0 : TagRegistry.Register(abilityTag);
+                    }
+                    else
+                    {
+                        id = elem.GetValue<int>();
+                    }
+
                     if (id > 0) buffer.AddAbility(id);
                 }
             }

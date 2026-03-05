@@ -23,20 +23,20 @@ namespace Ludots.Core.Gameplay.AI.Config
 
         public AiCompiledRuntime LoadAndCompile(ConfigCatalog catalog, ConfigConflictReport? report = null)
         {
-            var atomEntry = GetEntry(catalog, "AI/atoms.json", ConfigMergePolicy.ArrayById, idField: "Id");
+            var atomEntry = GetEntry(catalog, "AI/atoms.json", ConfigMergePolicy.ArrayById, idField: "id");
             var atomNode = Merge(in atomEntry, report);
             if (atomNode is JsonArray atomsArr)
             {
                 for (int i = 0; i < atomsArr.Count; i++)
                 {
                     if (atomsArr[i] is not JsonObject obj) continue;
-                    if (!TryReadString(obj, "Id", out string id)) continue;
+                    if (!TryReadString(obj, "id", out string id)) continue;
                     _atoms.GetOrAdd(id);
                 }
             }
 
             var projectionRules = Array.Empty<WorldStateProjectionRule>();
-            var projectionEntry = GetEntry(catalog, "AI/projection.json", ConfigMergePolicy.ArrayById, idField: "Id");
+            var projectionEntry = GetEntry(catalog, "AI/projection.json", ConfigMergePolicy.ArrayById, idField: "id");
             var projectionNode = Merge(in projectionEntry, report);
             if (projectionNode is JsonArray projArr)
             {
@@ -61,7 +61,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             var projectionTable = new WorldStateProjectionTable(projectionRules, atomCapacity: _atoms.Capacity);
 
             var goalDefs = Array.Empty<UtilityGoalPresetDefinition>();
-            var utilityEntry = GetEntry(catalog, "AI/utility.json", ConfigMergePolicy.ArrayById, idField: "Id");
+            var utilityEntry = GetEntry(catalog, "AI/utility.json", ConfigMergePolicy.ArrayById, idField: "id");
             var utilityNode = Merge(in utilityEntry, report);
             if (utilityNode is JsonArray goalsArr)
             {
@@ -98,7 +98,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             var goalSelector = UtilityGoalSelectorCompiled256.Compile(goalDefs);
 
             var goapActions = Array.Empty<ActionOpDefinition256>();
-            var goapEntry = GetEntry(catalog, "AI/goap_actions.json", ConfigMergePolicy.ArrayById, idField: "Id");
+            var goapEntry = GetEntry(catalog, "AI/goap_actions.json", ConfigMergePolicy.ArrayById, idField: "id");
             var goapNode = Merge(in goapEntry, report);
             if (goapNode is JsonArray actArr)
             {
@@ -152,7 +152,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             var actionLibrary = ActionLibraryCompiled256.Compile(goapActions);
 
             var goapGoals = Array.Empty<GoapGoalPreset256>();
-            var goapGoalEntry = GetEntry(catalog, "AI/goap_goals.json", ConfigMergePolicy.ArrayById, idField: "Id");
+            var goapGoalEntry = GetEntry(catalog, "AI/goap_goals.json", ConfigMergePolicy.ArrayById, idField: "id");
             var goapGoalNode = Merge(in goapGoalEntry, report);
             if (goapGoalNode is JsonArray gArr)
             {
@@ -174,7 +174,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             var htnDomain = new HtnDomainCompiled256(Array.Empty<HtnCompoundTask>(), Array.Empty<HtnMethod256>(), Array.Empty<HtnSubtask>());
             var htnRoots = new HtnRootTable(Array.Empty<(int GoalPresetId, int RootTaskId)>());
 
-            var htnEntry = GetEntry(catalog, "AI/htn_domain.json", ConfigMergePolicy.DeepObject, idField: "Id");
+            var htnEntry = GetEntry(catalog, "AI/htn_domain.json", ConfigMergePolicy.DeepObject, idField: "id");
             var htnNode = Merge(in htnEntry, report);
             if (htnNode is JsonObject htnObj)
             {

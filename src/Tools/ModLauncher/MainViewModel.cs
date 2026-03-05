@@ -661,6 +661,18 @@ namespace Ludots.ModLauncher
             return Path.Combine(_rootDir, modPath);
         }
 
+        private static bool IsIgnoredModJsonPath(string modJsonPath)
+        {
+            var normalized = NormalizePath(modJsonPath);
+            return normalized.Contains("/bin/", StringComparison.OrdinalIgnoreCase)
+                || normalized.Contains("/obj/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizePath(string path)
+        {
+            return path.Replace('\\', '/');
+        }
+
         private void RefreshBuildStateFromDisk(ModViewModel mod, string fullModPath)
         {
             if (mod.HasNoProject)
@@ -725,7 +737,7 @@ namespace Ludots.ModLauncher
                 return assetCsproj;
             }
 
-            var repoProject = Path.Combine(_rootDir, "src", "Mods", mod.Name, $"{mod.Name}.csproj");
+            var repoProject = Path.Combine(_rootDir, "mods", mod.Name, $"{mod.Name}.csproj");
             if (File.Exists(repoProject))
             {
                 return repoProject;
@@ -761,7 +773,7 @@ namespace Ludots.ModLauncher
                     fullModPath = Path.Combine(_rootDir, mod.Path);
                 }
 
-                var repoProject = Path.Combine(_rootDir, "src", "Mods", mod.Name, $"{mod.Name}.csproj");
+                var repoProject = Path.Combine(_rootDir, "mods", mod.Name, $"{mod.Name}.csproj");
                 if (File.Exists(repoProject))
                 {
                     StatusMessage = $"Using repo project for {mod.Name}: {repoProject}";
@@ -879,7 +891,7 @@ namespace Ludots.ModLauncher
             {
                 _rootDir = dir.FullName;
                 _assetsDir = Path.Combine(_rootDir, "assets");
-                _modsDir = Path.Combine(_assetsDir, "Mods");
+                _modsDir = Path.Combine(_rootDir, "mods");
                 
                 // Let's find the Raylib app build output
                 _gameExePath = Path.Combine(_rootDir, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", "net8.0", "Ludots.App.Raylib.exe");
@@ -915,9 +927,15 @@ namespace Ludots.ModLauncher
                     using var doc = JsonDocument.Parse(json);
                     if (doc.RootElement.TryGetProperty("ModPaths", out var paths))
                     {
+                        var gameJsonDir = Path.GetDirectoryName(_gameJsonPath) ?? _rootDir;
                         foreach (var p in paths.EnumerateArray())
                         {
-                            activePaths.Add(p.GetString()?.Replace("\\", "/"));
+                            var raw = p.GetString();
+                            if (string.IsNullOrWhiteSpace(raw)) continue;
+                            var resolved = Path.IsPathRooted(raw)
+                                ? Path.GetFullPath(raw)
+                                : Path.GetFullPath(Path.Combine(gameJsonDir, raw));
+                            activePaths.Add(NormalizePath(resolved));
                         }
                     }
                 }
@@ -949,8 +967,8 @@ namespace Ludots.ModLauncher
                         return;
                     }
 
-                    var modPath = dir.Replace("\\", "/");
-                    bool isActive = activePaths.Contains(modPath);
+                    var modPath = Path.GetFullPath(dir);
+                    bool isActive = activePaths.Contains(NormalizePath(modPath));
 
                     var modVm = new ModViewModel
                     {
@@ -987,11 +1005,12 @@ namespace Ludots.ModLauncher
             {
                 if (!Directory.Exists(rootDir)) continue;
 
-                TryLoadModFromDirectory(rootDir);
-
-                foreach (var dir in Directory.GetDirectories(rootDir))
+                foreach (var modJson in Directory.EnumerateFiles(rootDir, "mod.json", SearchOption.AllDirectories))
                 {
-                    TryLoadModFromDirectory(dir);
+                    if (IsIgnoredModJsonPath(modJson)) continue;
+                    var modDir = Path.GetDirectoryName(modJson);
+                    if (string.IsNullOrWhiteSpace(modDir)) continue;
+                    TryLoadModFromDirectory(modDir);
                 }
             }
             
@@ -1525,7 +1544,11 @@ namespace Ludots.ModLauncher
                 return false;
             }
 
-            var activeMods = Mods.Where(m => m.IsActive).Select(m => m.Path).ToList();
+            var gameJsonDir = Path.GetDirectoryName(_gameJsonPath) ?? _rootDir;
+            var activeMods = Mods
+                .Where(m => m.IsActive)
+                .Select(m => Path.GetRelativePath(gameJsonDir, ResolveFullModPath(m.Path)).Replace('\\', '/'))
+                .ToList();
             var config = new { ModPaths = activeMods };
             
             try

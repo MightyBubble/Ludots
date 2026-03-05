@@ -14,6 +14,7 @@ namespace Ludots.Core.Scripting
         public const string UiCaptured = "UiCaptured";
         public const string InputHandler = "InputHandler";
         public const string InputBackend = "InputBackend";
+        public const string ViewController = "ViewController";
         public const string ScreenProjector = "ScreenProjector";
         public const string ScreenRayProvider = "ScreenRayProvider";
         public const string DebugDrawCommandBuffer = "DebugDrawCommandBuffer";
@@ -54,6 +55,8 @@ namespace Ludots.Core.Scripting
         public const string PresentationPrimitiveDrawBuffer = "PresentationPrimitiveDrawBuffer";
         public const string PresentationWorldHudBuffer = "PresentationWorldHudBuffer";
         public const string PresentationWorldHudStrings = "PresentationWorldHudStrings";
+        public const string PresentationScreenHudBuffer = "PresentationScreenHudBuffer";
+        public const string ScreenOverlayBuffer = "ScreenOverlayBuffer";
         public const string WorldSizeSpec = "WorldSizeSpec";
         public const string SpatialCoordinateConverter = "SpatialCoordinateConverter";
         public const string SpatialQueryService = "SpatialQueryService";
@@ -67,8 +70,10 @@ namespace Ludots.Core.Scripting
         public const string MapFeatureFlags = "MapFeatureFlags";
         public const string CameraControllerRequest = "CameraControllerRequest";
         public const string CameraControllerRegistry = "CameraControllerRegistry";
+        public const string CameraPresetRegistry = "CameraPresetRegistry";
         public const string LocalPlayerEntity = "LocalPlayerEntity";
         public const string SelectedEntity = "SelectedEntity";
+        public const string HoveredEntity = "HoveredEntity";
         public const string AbilityInputRequestQueue = "AbilityInputRequestQueue";
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";

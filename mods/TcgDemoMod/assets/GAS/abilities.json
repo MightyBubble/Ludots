@@ -1,0 +1,42 @@
+[
+  {
+    "id": "Ability.Tcg.Fireball",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Tcg.Fireball" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Tcg.PoisonCounter",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Tcg.PoisonCounter" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Tcg.MagicBarrier",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Tcg.MagicBarrier" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Tcg.PowerBoost",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Tcg.PowerBoost" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  }
+]

@@ -128,7 +128,7 @@ namespace Ludots.Core.Input.Orders
     public enum HeldPolicy
     {
         /// <summary>
-        /// Fire an order every frame while held (default, legacy behavior).
+        /// Fire an order every frame while held (default).
         /// </summary>
         EveryFrame = 0,
         

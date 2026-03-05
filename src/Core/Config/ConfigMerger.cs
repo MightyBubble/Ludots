@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Ludots.Core.Config
@@ -281,21 +282,10 @@ namespace Ludots.Core.Config
         private static bool TryReadId(JsonObject obj, string idField, out string id)
         {
             id = string.Empty;
-            if (obj.TryGetPropertyValue(idField, out var idNode) && idNode != null)
-            {
-                id = idNode.ToString();
-                return !string.IsNullOrWhiteSpace(id);
-            }
-
-            foreach (var kvp in obj)
-            {
-                if (!string.Equals(kvp.Key, idField, StringComparison.OrdinalIgnoreCase)) continue;
-                if (kvp.Value == null) return false;
-                id = kvp.Value.ToString();
-                return !string.IsNullOrWhiteSpace(id);
-            }
-
-            return false;
+            if (!obj.TryGetPropertyValue(idField, out var idNode) || idNode == null) return false;
+            if (idNode.GetValueKind() != JsonValueKind.String) return false;
+            id = idNode.GetValue<string>();
+            return !string.IsNullOrWhiteSpace(id);
         }
 
     }

@@ -57,3 +57,18 @@ public interface IInputBackend
 1.  **单向依赖**: Adapter 依赖 Core，Core **绝不** 依赖 Adapter。
 2.  **最小接口**: 仅暴露 Core 运行所需的最小功能集。
 3.  **数据转换**: Adapter 负责将平台特有的数据格式（如 `Vector3`, `Texture2D`）转换为 Core 通用的数据格式（如 `Fix64Vec2`, `ResourceHandle`）。
+
+## 5 Core 掌控范围与 Adapter 最小职责
+
+**Core 层完全掌控**：相机逻辑、视口公式、同屏实体数量、WorldToScreen 投影、HUD 屏幕裁切。所有相关数学与逻辑均在 Core 实现，与平台无关。
+
+**Adapter 层最小职责**：
+
+| 接口 | Adapter 职责 |
+|------|--------------|
+| `IViewController` | 提供 `Resolution`、`AspectRatio`（实时从窗口读取） |
+| `ICameraAdapter` | 接收 `CameraRenderState3D`，应用到平台相机 |
+| `IScreenProjector` | 由 Core 的 `CoreScreenProjector` 实现，Adapter 不提供 |
+| HUD 绘制 | 仅遍历 `ScreenHudBatchBuffer` 绘制，无投影、无裁切 |
+
+**分辨率**：统一通过 `IViewController.Resolution` 获取，Adapter 在窗口 resize 时更新 UI/Skia 等。

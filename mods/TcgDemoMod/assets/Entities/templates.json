@@ -1,0 +1,31 @@
+[
+  {
+    "id": "tcg_hero",
+    "components": {
+      "Name": { "Value": "TcgHero" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 100, "Attack": 0 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Tcg.Fireball",
+          "Ability.Tcg.PoisonCounter"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "tcg_enemy",
+    "components": {
+      "Name": { "Value": "TcgEnemy" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 100, "Attack": 0 } }
+    }
+  }
+]
+

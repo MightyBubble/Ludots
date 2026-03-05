@@ -5,7 +5,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
     /// Each step is a (Phase, Slot, GraphProgramId) triple — no StepKind needed,
     /// because all behavior (trigger child effect, compute formula, write BB) is
     /// expressed as Graph nodes.
-    /// Replaces the legacy EffectCallbackComponent.
     /// </summary>
     public unsafe struct EffectPhaseGraphBindings
     {

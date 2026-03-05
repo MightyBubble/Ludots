@@ -1,0 +1,37 @@
+{
+  "actions": [
+    { "id": "SkillQ", "name": "Gameplay_SkillQ", "type": "Button" },
+    { "id": "SkillW", "name": "Gameplay_SkillW", "type": "Button" },
+    { "id": "SkillE", "name": "Gameplay_SkillE", "type": "Button" },
+    { "id": "SkillR", "name": "Gameplay_SkillR", "type": "Button" },
+    { "id": "Select", "name": "Gameplay_Select", "type": "Button" },
+    { "id": "Command", "name": "Gameplay_Command", "type": "Button" },
+    { "id": "Stop", "name": "Gameplay_Stop", "type": "Button" },
+    { "id": "Cancel", "name": "Gameplay_Cancel", "type": "Button" },
+    { "id": "ModeWoW", "name": "Gameplay_ModeWoW", "type": "Button" },
+    { "id": "ModeLoL", "name": "Gameplay_ModeLoL", "type": "Button" },
+    { "id": "ModeSC2", "name": "Gameplay_ModeSC2", "type": "Button" },
+    { "id": "ModeIndicator", "name": "Gameplay_ModeIndicator", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Moba_Gameplay",
+      "name": "MOBA Gameplay",
+      "priority": 50,
+      "bindings": [
+        { "actionId": "SkillQ", "path": "<Keyboard>/q" },
+        { "actionId": "SkillW", "path": "<Keyboard>/w" },
+        { "actionId": "SkillE", "path": "<Keyboard>/e" },
+        { "actionId": "SkillR", "path": "<Keyboard>/r" },
+        { "actionId": "Select", "path": "<Mouse>/LeftButton" },
+        { "actionId": "Command", "path": "<Mouse>/RightButton" },
+        { "actionId": "Stop", "path": "<Keyboard>/s" },
+        { "actionId": "Cancel", "path": "<Keyboard>/Escape" },
+        { "actionId": "ModeWoW", "path": "<Keyboard>/F1" },
+        { "actionId": "ModeLoL", "path": "<Keyboard>/F2" },
+        { "actionId": "ModeSC2", "path": "<Keyboard>/F3" },
+        { "actionId": "ModeIndicator", "path": "<Keyboard>/F4" }
+      ]
+    }
+  ]
+}

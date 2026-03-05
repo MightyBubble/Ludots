@@ -27,7 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
         {
             _registry.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
             var sorted = new List<(string Id, JsonObject Node)>(merged.Count);

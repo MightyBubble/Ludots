@@ -555,14 +555,26 @@ WorldToVisualSyncSystem
 | `src/Core/Input/Config/InputConfigRoot.cs` | 输入配置模型 |
 | `src/Core/Input/Orders/InputOrderMappingSystem.cs` | 指令映射系统 |
 
+### Core 投影与 HUD
+
+| 文件 | 说明 |
+|------|------|
+| `src/Core/Gameplay/Camera/CameraViewportUtil.cs` | 视口公式、WorldToScreen 纯数学实现 |
+| `src/Core/Presentation/Camera/CoreScreenProjector.cs` | 实现 IScreenProjector，平台无关 |
+| `src/Core/Presentation/Hud/ScreenHudBatchBuffer.cs` | 屏幕空间 HUD 缓冲 |
+| `src/Core/Presentation/Systems/WorldHudToScreenSystem.cs` | WorldHud → ScreenHud 投影与裁切 |
+| `src/Core/Gameplay/Camera/CameraPreset.cs` | 相机预设数据结构 |
+| `src/Core/Gameplay/Camera/CameraPresetRegistry.cs` | 预设注册表 |
+| `src/Core/Gameplay/Camera/CameraPresetLoader.cs` | 从 ConfigPipeline 加载预设 |
+
 ### Adapter
 
 | 文件 | 说明 |
 |------|------|
 | `src/Adapters/Raylib/.../RaylibCameraAdapter.cs` | Raylib 相机实现 |
+| `src/Adapters/Raylib/.../RaylibViewController.cs` | IViewController 实现（Resolution/AspectRatio） |
 | `src/Client/Ludots.Client.Raylib/.../RaylibInputBackend.cs` | Raylib 输入实现 |
 | `src/Client/Ludots.Client.Raylib/.../RaylibScreenRayProvider.cs` | Screen→World 射线 |
-| `src/Client/Ludots.Client.Raylib/.../RaylibScreenProjector.cs` | World→Screen 投影 |
 
 ### 交叉引用
 

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "Ability.Arpg.FireArrow",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Arpg.FireArrow" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Arpg.HealPotion",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Arpg.HealPotion" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Arpg.SummonWolf",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Arpg.SummonWolf" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Arpg.Stun",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 60, "tag": "Status.Stunned" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Arpg.Bleed",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Arpg.Bleed" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Arpg.IronSkin",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Arpg.IronSkin" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  }
+]

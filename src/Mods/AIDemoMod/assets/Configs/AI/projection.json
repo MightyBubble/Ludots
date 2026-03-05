@@ -1,9 +1,0 @@
-[
-  {
-    "Id": "HasEnemy.FromTarget",
-    "Atom": "HasEnemy",
-    "Op": "EntityIsNonNull",
-    "EntityKey": 1000
-  }
-]
-

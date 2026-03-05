@@ -1,0 +1,9 @@
+[
+  { "id": "Moba", "DisplayName": "MOBA", "DistanceCm": 25000, "Pitch": 60, "FovYDeg": 60, "Yaw": 180, "MinDistanceCm": 15000, "MaxDistanceCm": 40000, "MinPitchDeg": 45, "MaxPitchDeg": 75 },
+  { "id": "Rts", "DisplayName": "RTS", "DistanceCm": 18000, "Pitch": 50, "FovYDeg": 60, "Yaw": 180, "MinDistanceCm": 8000, "MaxDistanceCm": 60000, "MinPitchDeg": 35, "MaxPitchDeg": 65 },
+  { "id": "TopDown", "DisplayName": "TopDown", "DistanceCm": 20000, "Pitch": 75, "FovYDeg": 60, "Yaw": 180, "MinDistanceCm": 10000, "MaxDistanceCm": 50000, "MinPitchDeg": 65, "MaxPitchDeg": 85 },
+  { "id": "Tactical", "DisplayName": "Tactical", "DistanceCm": 12000, "Pitch": 55, "FovYDeg": 60, "Yaw": 180, "MinDistanceCm": 6000, "MaxDistanceCm": 25000, "MinPitchDeg": 45, "MaxPitchDeg": 70 },
+  { "id": "Default", "DisplayName": "Default", "DistanceCm": 14142, "Pitch": 45, "FovYDeg": 60, "Yaw": 180, "MinDistanceCm": 500, "MaxDistanceCm": 200000, "MinPitchDeg": 10, "MaxPitchDeg": 85 },
+  { "id": "TPS", "DisplayName": "TPS", "DistanceCm": 400, "Pitch": 0, "FovYDeg": 60, "Yaw": 180, "MinDistanceCm": 100, "MaxDistanceCm": 800, "MinPitchDeg": -30, "MaxPitchDeg": 30 },
+  { "id": "FPS", "DisplayName": "FPS", "DistanceCm": 0, "Pitch": 0, "FovYDeg": 60, "Yaw": 180, "MinDistanceCm": 0, "MaxDistanceCm": 0, "MinPitchDeg": -89, "MaxPitchDeg": 89 }
+]

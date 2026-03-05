@@ -163,7 +163,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingEffectRequestQueue");
             }
 
-            // Convert legacy EffectArgs to CallerParams
+            // Convert EffectArgs to CallerParams
             var req = new Ludots.Core.Gameplay.GAS.EffectRequest
             {
                 Source = caster,
@@ -175,8 +175,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (args.FloatCount > 0)
             {
                 req.HasCallerParams = true;
-                // Legacy: F0/F1 mapped to positional keys for backward compat with existing graph programs.
-                // New graph programs should use LoadConfig* + ApplyEffectDynamic instead.
+                // F0/F1 mapped to positional keys used by graph programs.
                 req.CallerParams.TryAddFloat(
                     Ludots.Core.Gameplay.GAS.EffectParamKeys.ForceXAttribute, args.F0);
                 if (args.FloatCount > 1)

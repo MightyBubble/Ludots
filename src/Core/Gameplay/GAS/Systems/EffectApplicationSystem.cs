@@ -73,6 +73,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly List<FanOutCommand> _fanOutCommands = new(256);
         private int _fanOutDropped;
         private readonly Entity[] _resolverBuffer = new Entity[256];
+        private int _activeEffectAttachDropped;
+        private int _listenerRegistrationDropped;
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
 
@@ -102,7 +104,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectTemplateRegistry _templates;
         private readonly ISpatialQueryService _spatialQueries;
 
-        // ── Phase Graph execution (optional, null = legacy-only mode) ──
+        // ── Phase Graph execution (optional) ──
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
@@ -146,6 +148,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _onApplyCreateBudget.NextFrame();
                 _onApplyDropped = 0;
                 _fanOutDropped = 0;
+                _activeEffectAttachDropped = 0;
+                _listenerRegistrationDropped = 0;
 
                 var collectJob = new CollectPendingEffectsJob { World = World, PendingEffects = _pendingEffects };
                 World.InlineEntityQuery<CollectPendingEffectsJob, GameplayEffect>(in _pendingEffectsQuery, ref collectJob);
@@ -235,9 +239,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             }
                         }
 
-                        // Note: Legacy EffectCallbackComponent has been removed.
-                        // OnApply callbacks are now handled via Phase Graph bindings.
-
                         if (isInstant)
                         {
                             if ((_phaseExecutor == null || _graphApi == null) && World.IsAlive(context.Target) && World.Has<AttributeBuffer>(context.Target))
@@ -277,12 +278,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 }
                             }
 
+                            bool attachRejectedByCapacity = false;
                             if (attachToActiveEffects && World.IsAlive(context.Target))
                             {
                                 if (World.Has<ActiveEffectContainer>(context.Target))
                                 {
                                     ref var container = ref World.Get<ActiveEffectContainer>(context.Target);
-                                    container.Add(effectEntity);
+                                    if (!container.Add(effectEntity))
+                                    {
+                                        _activeEffectAttachDropped++;
+                                        attachRejectedByCapacity = true;
+                                    }
                                 }
                                 else
                                 {
@@ -292,7 +298,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             }
 
                             effect.State = EffectState.Committed;
-                            _effectsToActivate.Add(effectEntity);
+                            if (attachRejectedByCapacity)
+                            {
+                                _effectsToDestroy.Add(effectEntity);
+                            }
+                            else
+                            {
+                                _effectsToActivate.Add(effectEntity);
+                            }
                         }
 
                         workUnits++;
@@ -359,7 +372,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (World.Has<ActiveEffectContainer>(item.Target))
                         {
                             ref var container = ref World.Get<ActiveEffectContainer>(item.Target);
-                            container.Add(item.Effect);
+                            if (!container.Add(item.Effect))
+                            {
+                                _activeEffectAttachDropped++;
+                                if (World.IsAlive(item.Effect))
+                                {
+                                    _effectsToDestroy.Add(item.Effect);
+                                }
+                            }
                         }
                         workUnits++;
                     }
@@ -456,6 +476,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 ApplyOnApplyCallbacks();
+                if (_budget != null)
+                {
+                    if (_activeEffectAttachDropped > 0)
+                    {
+                        _budget.ActiveEffectContainerAttachDropped += _activeEffectAttachDropped;
+                    }
+                    if (_listenerRegistrationDropped > 0)
+                    {
+                        _budget.PhaseListenerRegistrationDropped += _listenerRegistrationDropped;
+                    }
+                }
                 _sliceActive = false;
                 return true;
             }
@@ -475,6 +506,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _onApplyCallbacks.Clear();
             _fanOutCommands.Clear();
             _pendingListenerRegistrations.Clear();
+            _activeEffectAttachDropped = 0;
+            _listenerRegistrationDropped = 0;
         }
 
         private struct CollectPendingEffectsJob : IForEachWithEntity<GameplayEffect>
@@ -622,7 +655,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     setup.Priorities[i],
                     ownerEffectId))
                 {
-                    // Listener buffer full — silently drop (budget mode)
+                    _listenerRegistrationDropped++;
                 }
             }
         }

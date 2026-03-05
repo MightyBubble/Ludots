@@ -1,0 +1,70 @@
+[
+  {
+    "id": "Ability.4X.BuildOutpost",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 10, "tag": "Cooldown.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.BuildOutpost" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.4X.Colonize",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 120, "tag": "Status.Colonizing" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": {
+      "requiredAll": ["Status.CanColonize"],
+      "blockedAny": ["Status.Blocked"]
+    }
+  },
+  {
+    "id": "Ability.4X.Blockade",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 120, "tag": "Status.Blocked" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.4X.TechResearch",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 10, "tag": "Cooldown.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.TechResearch" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.4X.DiplomacyPact",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 10, "tag": "Cooldown.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.DiplomacyPact" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.4X.TradeRoute",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 10, "tag": "Cooldown.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.TradeRoute" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  }
+]

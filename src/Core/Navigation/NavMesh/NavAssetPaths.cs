@@ -14,13 +14,6 @@ namespace Ludots.Core.Navigation.NavMesh
             return $"assets/Data/Nav/{mapId}/layer{layer}/profile_{safe}/{xDir}/navtile_{chunkX}_{chunkY}.ntil";
         }
 
-        public static string GetNavTileRelativePathLegacy(string mapId, int layer, int profileIndex, int chunkX, int chunkY)
-        {
-            if (string.IsNullOrWhiteSpace(mapId)) throw new ArgumentException("mapId is required.", nameof(mapId));
-            string xDir = "x" + chunkX.ToString("00", CultureInfo.InvariantCulture);
-            return $"assets/Data/Nav/{mapId}/layer{layer}/profile{profileIndex}/{xDir}/navtile_{chunkX}_{chunkY}.ntil";
-        }
-
         public static string GetObstacleRelativePath(string mapId)
         {
             if (string.IsNullOrWhiteSpace(mapId)) throw new ArgumentException("mapId is required.", nameof(mapId));

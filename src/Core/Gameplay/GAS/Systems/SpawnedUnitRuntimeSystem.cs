@@ -5,6 +5,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -50,6 +51,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     UnitPos = unitPos,
                     Spawner = spawn.Spawner,
+                    UnitTypeId = spawn.UnitTypeId,
                     OnSpawnEffectTemplateId = spawn.OnSpawnEffectTemplateId,
                     HasTeam = hasTeam,
                     SpawnerTeam = spawnerTeam,
@@ -68,6 +70,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     new PreviousWorldPositionCm { Value = pending.UnitPos },
                     new AttributeBuffer()
                 );
+
+                if (pending.UnitTypeId > 0)
+                {
+                    string typeName = UnitTypeRegistry.GetName(pending.UnitTypeId);
+                    if (!string.IsNullOrEmpty(typeName))
+                        World.Add(unit, new Name { Value = "Unit:" + typeName });
+                }
 
                 if (pending.HasTeam)
                 {
@@ -122,6 +131,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             public Fix64Vec2 UnitPos;
             public Entity Spawner;
+            public int UnitTypeId;
             public int OnSpawnEffectTemplateId;
             public bool HasTeam;
             public Team SpawnerTeam;

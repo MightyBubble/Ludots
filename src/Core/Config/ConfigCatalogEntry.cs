@@ -11,7 +11,7 @@ namespace Ludots.Core.Config
         {
             RelativePath = relativePath ?? string.Empty;
             MergePolicy = mergePolicy;
-            IdField = string.IsNullOrWhiteSpace(idField) ? "Id" : idField!;
+            IdField = string.IsNullOrWhiteSpace(idField) ? "id" : idField!;
             ArrayAppendFields = arrayAppendFields ?? System.Array.Empty<string>();
         }
     }

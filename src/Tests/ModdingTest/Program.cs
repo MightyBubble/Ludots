@@ -31,7 +31,8 @@ namespace ModdingTest
                 return;
             }
 
-            string modsPath = Path.Combine(assetsDir, "Mods");
+            string repoRoot = Directory.GetParent(assetsDir)?.FullName ?? rootDir;
+            string modsPath = Path.Combine(repoRoot, "mods");
             string testModPath = Path.Combine(modsPath, "PipelineTestMod");
             string inputPatchModPath = Path.Combine(modsPath, "InputPatchTestMod");
 

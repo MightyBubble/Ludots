@@ -15,6 +15,10 @@ namespace Ludots.Core.Gameplay.GAS
         public int OnApplyCreatesDropped;
         public int DurationCallbackCreatesDropped;
         public int TagCountOverflowDropped;
+        public int ActiveEffectContainerAttachDropped;
+        public int PhaseListenerRegistrationDropped;
+        public int PhaseListenerDispatchDropped;
+        public int GameplayEventBusDropped;
 
         public void Reset()
         {
@@ -29,6 +33,10 @@ namespace Ludots.Core.Gameplay.GAS
             OnApplyCreatesDropped = 0;
             DurationCallbackCreatesDropped = 0;
             TagCountOverflowDropped = 0;
+            ActiveEffectContainerAttachDropped = 0;
+            PhaseListenerRegistrationDropped = 0;
+            PhaseListenerDispatchDropped = 0;
+            GameplayEventBusDropped = 0;
         }
 
         public bool HasWarnings =>
@@ -38,6 +46,10 @@ namespace Ludots.Core.Gameplay.GAS
             ResponseQueueOverflowDropped != 0 ||
             OnApplyCreatesDropped != 0 ||
             DurationCallbackCreatesDropped != 0 ||
-            TagCountOverflowDropped != 0;
+            TagCountOverflowDropped != 0 ||
+            ActiveEffectContainerAttachDropped != 0 ||
+            PhaseListenerRegistrationDropped != 0 ||
+            PhaseListenerDispatchDropped != 0 ||
+            GameplayEventBusDropped != 0;
     }
 }

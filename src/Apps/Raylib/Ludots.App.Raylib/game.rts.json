@@ -4,7 +4,7 @@
   "WindowTitle": "Ludots Engine — RTS Showcase",
   "TargetFps": 60,
   "ModPaths": [
-    "../../../../../../Mods/LudotsCoreMod",
-    "../../../../../../Mods/RtsShowcaseMod"
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/RtsShowcaseMod"
   ]
 }

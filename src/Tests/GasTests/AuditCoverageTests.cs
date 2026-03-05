@@ -381,7 +381,7 @@ namespace Ludots.Tests.GAS
         public void MobaDemoMod_EffectsJson_LoadsAllTemplatesViaVfs()
         {
             string repoRoot = FindRepoRoot();
-            string mobaModDir = Path.Combine(repoRoot, "src", "Mods", "MobaDemoMod");
+            string mobaModDir = Path.Combine(repoRoot, "mods", "MobaDemoMod");
             string coreAssetsDir = Path.Combine(repoRoot, "assets");
 
             if (!Directory.Exists(mobaModDir))

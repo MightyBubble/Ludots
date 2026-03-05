@@ -14,7 +14,6 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>
         /// Optional caller-supplied parameter overrides.
         /// Merged into template ConfigParams at runtime (caller wins on key conflict).
-        /// Replaces the legacy F0-F3/I0-I1 untyped payload fields.
         /// </summary>
         public EffectConfigParams CallerParams;
         public bool HasCallerParams;

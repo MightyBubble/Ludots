@@ -1,0 +1,18 @@
+{
+  "Id": "tcg_grant",
+  "Tags": ["tcg_grant"],
+  "Entities": [
+    {
+      "Template": "tcg_hero",
+      "Overrides": {
+        "AbilityStateBuffer": {
+          "abilityIds": [
+            "Ability.Tcg.MagicBarrier",
+            "Ability.Tcg.PowerBoost"
+          ]
+        }
+      }
+    },
+    { "Template": "tcg_enemy", "Overrides": { "WorldPositionCm": { "Value": { "X": 500, "Y": 0 } } } }
+  ]
+}

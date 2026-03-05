@@ -1,7 +1,7 @@
 [
   {
     "id": "InstantDamage",
-    "components": ["Modifiers"],
+    "components": ["ModifierParams"],
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
@@ -10,7 +10,7 @@
   },
   {
     "id": "Heal",
-    "components": ["Modifiers"],
+    "components": ["ModifierParams"],
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
@@ -19,7 +19,7 @@
   },
   {
     "id": "Buff",
-    "components": ["Modifiers", "Duration"],
+    "components": ["ModifierParams", "DurationParams"],
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["After", "Infinite"],
     "defaultPhaseHandlers": {
@@ -28,7 +28,7 @@
   },
   {
     "id": "DoT",
-    "components": ["Modifiers", "Duration"],
+    "components": ["ModifierParams", "DurationParams"],
     "activePhases": ["OnApply", "OnPeriod"],
     "allowedLifetimes": ["After"],
     "defaultPhaseHandlers": {
@@ -38,7 +38,7 @@
   },
   {
     "id": "HoT",
-    "components": ["Modifiers", "Duration"],
+    "components": ["ModifierParams", "DurationParams"],
     "activePhases": ["OnApply", "OnPeriod"],
     "allowedLifetimes": ["After"],
     "defaultPhaseHandlers": {
@@ -48,7 +48,7 @@
   },
   {
     "id": "ApplyForce2D",
-    "components": ["Force"],
+    "components": ["ForceParams"],
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
@@ -57,7 +57,7 @@
   },
   {
     "id": "Search",
-    "components": ["TargetQuery", "TargetDispatch"],
+    "components": ["TargetQueryParams", "TargetDispatchParams"],
     "activePhases": ["OnResolve", "OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
@@ -67,7 +67,7 @@
   },
   {
     "id": "PeriodicSearch",
-    "components": ["TargetQuery", "TargetDispatch", "Duration"],
+    "components": ["TargetQueryParams", "TargetDispatchParams", "DurationParams"],
     "activePhases": ["OnPeriod"],
     "allowedLifetimes": ["After"],
     "defaultPhaseHandlers": {
@@ -76,7 +76,7 @@
   },
   {
     "id": "LaunchProjectile",
-    "components": ["Projectile"],
+    "components": ["ProjectileParams"],
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
@@ -85,11 +85,20 @@
   },
   {
     "id": "CreateUnit",
-    "components": ["UnitCreation"],
+    "components": ["UnitCreationParams"],
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
       "OnApply": { "type": "builtin", "id": "CreateUnit" }
+    }
+  },
+  {
+    "id": "Displacement",
+    "components": [],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "ApplyDisplacement" }
     }
   }
 ]

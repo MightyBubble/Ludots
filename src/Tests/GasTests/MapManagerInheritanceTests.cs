@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using Ludots.Core.Config;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
@@ -95,7 +96,8 @@ namespace GasTests
             vfs.Mount("Core", coreRoot);
             var trigger = new TriggerManager();
             var modLoader = new ModLoader(vfs, new FunctionRegistry(), trigger);
-            return new MapManager(vfs, trigger, modLoader);
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            return new MapManager(vfs, trigger, modLoader, pipeline);
         }
 
         private static void WriteMapConfig(string root, string mapId, string json)

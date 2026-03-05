@@ -35,9 +35,15 @@ namespace Ludots.Core.Config
     /// <summary>
     /// Camera configuration for a map. Matches the CameraState orbit model.
     /// All fields are optional; null/0 means "use engine default".
+    /// If PresetId is set, preset values are applied first; explicit fields override.
     /// </summary>
     public class CameraConfig
     {
+        /// <summary>
+        /// Optional preset ID (e.g. "Moba", "Rts", "Default"). Loaded from Camera/presets.json.
+        /// </summary>
+        public string PresetId { get; set; }
+
         public float? TargetXCm { get; set; }
         public float? TargetYCm { get; set; }
         public float? Yaw { get; set; }

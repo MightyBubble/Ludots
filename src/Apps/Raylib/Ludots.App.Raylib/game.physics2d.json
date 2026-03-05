@@ -7,7 +7,7 @@
   "WindowTitle": "Ludots Engine (Raylib) - Physics2D Playground",
   "TargetFps": 60,
   "ModPaths": [
-    "../../../../../../Mods/LudotsCoreMod",
-    "../../../../../../Mods/Physics2DPlaygroundMod"
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/Physics2DPlaygroundMod"
   ]
 }

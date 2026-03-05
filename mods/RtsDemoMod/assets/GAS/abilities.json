@@ -1,0 +1,78 @@
+[
+  {
+    "id": "Ability.Rts.BuildBarracks",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.BuildCost.Barracks" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.BuildBarracks" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Rts.TrainMarine",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.TrainCost.Marine" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.TrainMarine" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Rts.ResearchStim",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 120, "tag": "Status.Researching" },
+        { "kind": "EffectSignal", "tick": 120, "template": "Effect.Rts.ResearchComplete" },
+        { "kind": "End", "tick": 120 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Rts.StimPack",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.StimBuff" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": {
+      "requiredAll": ["Tech.Stim"]
+    }
+  },
+  {
+    "id": "Ability.Rts.SiegeModeAoe",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.SiegeTankAoe" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Rts.ShieldAura",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.ShieldAura" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Rts.Irradiate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Irradiate" },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  }
+]

@@ -72,7 +72,7 @@ namespace Ludots.Core.Spatial
 
         /// <summary>
         /// Set the hex metrics for parameterized hex cell bounding box calculations.
-        /// If not set, falls back to the legacy HexCoordinates constants.
+        /// If not set, falls back to HexMetrics default values.
         /// </summary>
         public void SetHexMetrics(Map.Hex.HexMetrics metrics)
         {
@@ -253,7 +253,7 @@ namespace Ludots.Core.Spatial
         private SpatialQueryResult QueryHexCells(Span<HexCoordinates> hexes, Span<Entity> buffer)
         {
             // Half-extents of one hex cell's bounding box (pointy-top)
-            // Use HexMetrics if available, otherwise fall back to legacy constants
+            // Use HexMetrics if available, otherwise fall back to default values
             int halfW, halfH;
             if (_hexMetrics is not null)
             {

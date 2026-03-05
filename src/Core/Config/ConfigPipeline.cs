@@ -165,7 +165,7 @@ namespace Ludots.Core.Config
         /// </summary>
         public static ConfigCatalogEntry GetEntryOrDefault(
             ConfigCatalog catalog, string path,
-            ConfigMergePolicy defaultPolicy, string defaultIdField = "Id")
+            ConfigMergePolicy defaultPolicy, string defaultIdField = "id")
         {
             if (catalog != null && catalog.TryGet(path, out var found))
                 return found;

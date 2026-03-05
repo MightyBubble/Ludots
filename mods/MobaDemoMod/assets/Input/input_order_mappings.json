@@ -1,0 +1,69 @@
+{
+  "interactionMode": "SmartCast",
+  "mappings": [
+    {
+      "actionId": "SkillQ",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "castAbility",
+      "argsTemplate": { "i0": 0 },
+      "requireSelection": false,
+      "selectionType": "Entity",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillW",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "castAbility",
+      "argsTemplate": { "i0": 1 },
+      "requireSelection": false,
+      "selectionType": "None",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillE",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "castAbility",
+      "argsTemplate": { "i0": 2 },
+      "requireSelection": false,
+      "selectionType": "Entity",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillR",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "castAbility",
+      "argsTemplate": { "i0": 3 },
+      "requireSelection": false,
+      "selectionType": "Entity",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "Command",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "castAbility",
+      "argsTemplate": { "i0": 4 },
+      "requireSelection": true,
+      "selectionType": "Position",
+      "isSkillMapping": false,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "Stop",
+      "trigger": "PressedThisFrame",
+      "orderTagKey": "stop",
+      "argsTemplate": {},
+      "requireSelection": false,
+      "selectionType": "None",
+      "isSkillMapping": false,
+      "modifierBehavior": "IgnoreModifier"
+    }
+  ],
+  "userOverrides": {
+    "enabled": true,
+    "persistPath": "user://MobaDemoMod/input_preferences.json"
+  }
+}

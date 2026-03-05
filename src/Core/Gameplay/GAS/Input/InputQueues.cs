@@ -98,7 +98,7 @@ namespace Ludots.Core.Gameplay.GAS.Input
         }
     }
 
-    // ── Concrete types (backward-compatible aliases) ──
+    // ── Concrete types ──
 
     public sealed class InputRequestQueue : RingBuffer<InputRequest>
     {

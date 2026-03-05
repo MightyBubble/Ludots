@@ -30,7 +30,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "MobaDemoMod",
-                    new[] { "LudotsCoreMod", "MobaDemoMod" },
+                    new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" },
                     true))
                 .SetName("ProdModSmoke_MobaDemoMod");
 
@@ -148,7 +148,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            string modsRoot = Path.Combine(repoRoot, "src", "Mods");
+            string modsRoot = Path.Combine(repoRoot, "mods");
 
             var modPaths = new List<string>(modCase.Mods.Length);
             for (int i = 0; i < modCase.Mods.Length; i++)

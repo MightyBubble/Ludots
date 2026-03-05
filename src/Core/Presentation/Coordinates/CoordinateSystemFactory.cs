@@ -8,7 +8,7 @@ namespace Ludots.Core.Presentation.Coordinates
         Unreal,
         Godot,
         Web,
-        Raylib
+        RightHandedYUp
     }
 
     public static class CoordinateSystemFactory
@@ -21,7 +21,7 @@ namespace Ludots.Core.Presentation.Coordinates
                 PlatformType.Unreal => new UnrealCoordinateMapper(),
                 PlatformType.Godot => new GodotCoordinateMapper(),
                 PlatformType.Web => new WebCoordinateMapper(),
-                PlatformType.Raylib => new RaylibCoordinateMapper(),
+                PlatformType.RightHandedYUp => new RightHandedYUpMapper(),
                 _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
             };
         }

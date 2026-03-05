@@ -103,10 +103,10 @@ namespace Ludots.Core.Gameplay.GAS
         public int HalfHeightCm;       // Rectangle half-height
         public int RotationDeg;        // Rectangle rotation
         public int LengthCm;           // Line length
-        public RelationshipFilter RelationFilter; // Replaces legacy byte TeamFilter
+        public RelationshipFilter RelationFilter;
         public bool ExcludeSource;
         public int MaxTargets;         // 0 = unlimited (budget-limited only)
-        public uint LayerMask;         // 0 = no layer filter (backward compat)
+        public uint LayerMask;         // 0 = no layer filter
     }
 
     // ── Three-layer Target Resolution ──
@@ -232,7 +232,7 @@ namespace Ludots.Core.Gameplay.GAS
         public UnitCreationDescriptor UnitCreation;
         public DisplacementDescriptor Displacement;
 
-        // ── Phase Graph bindings (replaces legacy callbacks) ──
+        // ── Phase Graph bindings ──
         public EffectPhaseGraphBindings PhaseGraphBindings;
         public EffectConfigParams ConfigParams;
 

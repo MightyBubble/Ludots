@@ -136,6 +136,12 @@ namespace Ludots.Core.Modding
 
             if (!hasDll)
             {
+                if (string.IsNullOrWhiteSpace(manifest.Main))
+                {
+                    Log.Info(in LogChannels.ModLoader, $"Skip code load for {manifest.Name}: manifest has no 'main' (asset-only mod).");
+                    return;
+                }
+
                 var matches = FindAllBuiltDllCandidates(modDir, manifest.Name);
                 if (matches.Count > 0)
                 {
@@ -254,76 +260,11 @@ namespace Ludots.Core.Modding
                 }
 
                 dllPath = primary;
-                var debugFallback = TryResolveDebugFallback(modDirFull, relative);
-                bool primaryExists = File.Exists(primary);
-                bool debugExists = !string.IsNullOrWhiteSpace(debugFallback) && File.Exists(debugFallback);
-
-#if DEBUG
-                if (debugExists)
-                {
-                    dllPath = debugFallback;
-                    return true;
-                }
-#endif
-
-                if (primaryExists && debugExists)
-                {
-                    var primaryTime = File.GetLastWriteTimeUtc(primary);
-                    var debugTime = File.GetLastWriteTimeUtc(debugFallback);
-                    if (debugTime > primaryTime)
-                    {
-                        dllPath = debugFallback;
-                    }
-                    return true;
-                }
-
-                if (primaryExists) return true;
-
-                if (debugExists)
-                {
-                    dllPath = debugFallback;
-                    return true;
-                }
-
-                return false;
+                return File.Exists(primary);
             }
 
-            var defaultName = $"{manifest.Name}.dll";
-            var candidates = new List<string>(8)
-            {
-                Path.Combine(modDirFull, "bin", "Release", "net8.0", defaultName),
-                Path.Combine(modDirFull, "bin", "Release", "net8.0-windows", defaultName),
-                Path.Combine(modDirFull, "bin", "Debug", "net8.0", defaultName),
-                Path.Combine(modDirFull, "bin", "Debug", "net8.0-windows", defaultName)
-            };
-
-            foreach (var c in candidates)
-            {
-                var full = Path.GetFullPath(c);
-                if (!full.StartsWith(modDirFull, StringComparison.OrdinalIgnoreCase)) continue;
-                if (File.Exists(full))
-                {
-                    dllPath = full;
-                    return true;
-                }
-            }
-
-            dllPath = candidates[0];
+            dllPath = "(no main)";
             return false;
-        }
-
-        private static string TryResolveDebugFallback(string modDirFull, string relativeMain)
-        {
-            if (string.IsNullOrWhiteSpace(relativeMain)) return null;
-            var normalized = relativeMain.Replace('\\', '/');
-            const string releaseToken = "bin/Release/";
-            int idx = normalized.IndexOf(releaseToken, StringComparison.OrdinalIgnoreCase);
-            if (idx < 0) return null;
-
-            var debugRelative = normalized.Substring(0, idx) + "bin/Debug/" + normalized.Substring(idx + releaseToken.Length);
-            var debugFull = Path.GetFullPath(Path.Combine(modDirFull, debugRelative.Replace('/', Path.DirectorySeparatorChar)));
-            if (!debugFull.StartsWith(modDirFull, StringComparison.OrdinalIgnoreCase)) return null;
-            return debugFull;
         }
 
         private static List<string> FindAllBuiltDllCandidates(string modDir, string modName)

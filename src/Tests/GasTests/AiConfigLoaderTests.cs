@@ -23,14 +23,14 @@ namespace Ludots.Tests.GAS
             Directory.CreateDirectory(Path.Combine(core, "Configs", "AI"));
             Directory.CreateDirectory(Path.Combine(mod, "assets", "Configs", "AI"));
 
-            File.WriteAllText(Path.Combine(core, "Configs", "AI", "atoms.json"), "[ { \"Id\": \"HasEnemy\" } ]");
-            File.WriteAllText(Path.Combine(core, "Configs", "AI", "projection.json"), "[ { \"Id\": \"R0\", \"Atom\": \"HasEnemy\", \"Op\": \"EntityIsNonNull\", \"EntityKey\": 1 } ]");
-            File.WriteAllText(Path.Combine(core, "Configs", "AI", "utility.json"), "[ { \"Id\": \"G0\", \"GoalPresetId\": 1, \"PlanningStrategyId\": 1, \"Weight\": 1, \"Bool\": [ { \"Atom\": \"HasEnemy\", \"TrueScore\": 1, \"FalseScore\": 0 } ] } ]");
-            File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_actions.json"), "[ { \"Id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderTagId\": 1234, \"SubmitMode\": 0, \"PlayerId\": 0 }, \"Bindings\": [] } ]");
-            File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_goals.json"), "[ { \"Id\": \"GG0\", \"GoalPresetId\": 1, \"HeuristicWeight\": 1, \"Goal\": { \"Mask\": [\"HasEnemy\"], \"Values\": [\"HasEnemy\"] } } ]");
+            File.WriteAllText(Path.Combine(core, "Configs", "AI", "atoms.json"), "[ { \"id\": \"HasEnemy\" } ]");
+            File.WriteAllText(Path.Combine(core, "Configs", "AI", "projection.json"), "[ { \"id\": \"R0\", \"Atom\": \"HasEnemy\", \"Op\": \"EntityIsNonNull\", \"EntityKey\": 1 } ]");
+            File.WriteAllText(Path.Combine(core, "Configs", "AI", "utility.json"), "[ { \"id\": \"G0\", \"GoalPresetId\": 1, \"PlanningStrategyId\": 1, \"Weight\": 1, \"Bool\": [ { \"Atom\": \"HasEnemy\", \"TrueScore\": 1, \"FalseScore\": 0 } ] } ]");
+            File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_actions.json"), "[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderTagId\": 1234, \"SubmitMode\": 0, \"PlayerId\": 0 }, \"Bindings\": [] } ]");
+            File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_goals.json"), "[ { \"id\": \"GG0\", \"GoalPresetId\": 1, \"HeuristicWeight\": 1, \"Goal\": { \"Mask\": [\"HasEnemy\"], \"Values\": [\"HasEnemy\"] } } ]");
             File.WriteAllText(Path.Combine(core, "Configs", "AI", "htn_domain.json"), "{ \"Tasks\": [], \"Methods\": [], \"Subtasks\": [], \"Roots\": [] }");
 
-            File.WriteAllText(Path.Combine(mod, "assets", "Configs", "AI", "atoms.json"), "[ { \"Id\": \"HasCover\" } ]");
+            File.WriteAllText(Path.Combine(mod, "assets", "Configs", "AI", "atoms.json"), "[ { \"id\": \"HasCover\" } ]");
 
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", core);

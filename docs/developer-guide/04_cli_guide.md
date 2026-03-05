@@ -64,6 +64,12 @@ dotnet run --project src/Tools/ModLauncher/Ludots.ModLauncher.csproj -c Release 
 *   `--mod <name>`：追加一个 Mod（可重复）。
 *   `--mods "<a;b;c>"`：一次传多个 Mod，分隔符是分号 `;`。
 
+### 2.3 推荐 Mod 组合
+
+*   **通用输入**：`CoreInputMod` — 点击选单位、GAS 选区/技能输入响应。与 `Universal3CCameraMod` 搭配可获得相机控制。
+*   **RTS 展示**：`RtsShowcaseMod` + `CoreInputMod` + `Universal3CCameraMod` — 地形实体 + 输入 + 相机。
+*   **MOBA 演示**：`MobaDemoMod`（已依赖 `CoreInputMod`）— 完整 MOBA 玩法。
+
 ## 3 调试与工作目录
 
 ### 3.1 工作目录约定

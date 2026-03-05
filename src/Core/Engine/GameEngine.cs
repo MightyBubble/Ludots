@@ -339,133 +339,6 @@ namespace Ludots.Core.Engine
             GlobalContext[ContextKeys.AiRuntime] = AiRuntime;
         }
 
-        [Obsolete("Use InitializeWithConfigPipeline instead")]
-        public void Initialize(GameConfig config, string assetsRoot)
-        {
-            Diagnostics.Log.Info(in LogChannels.Engine, "Initializing from Config (legacy)...");
-            
-            // Setup Async Context
-            SyncContext = new GameSynchronizationContext();
-            System.Threading.SynchronizationContext.SetSynchronizationContext(SyncContext);
-            
-            // 1. Setup Infrastructure
-            VFS = new VirtualFileSystem();
-            VFS.Mount("Core", assetsRoot); // Mount Core Assets
-
-            FunctionRegistry = new FunctionRegistry();
-            TriggerManager = new TriggerManager();
-            SystemFactoryRegistry = new SystemFactoryRegistry();
-            TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
-            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
-            MapManager = new MapManager(VFS, TriggerManager, ModLoader);
-            ModLoader.MapManager = MapManager;
-            ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
-
-            // 2. Setup ECS & Session
-            InitializeWorld(config?.WorldWidthInTiles ?? 64, config?.WorldHeightInTiles ?? 64);
-            WorldMap = new WorldMap(config?.WorldWidthInTiles ?? 64, config?.WorldHeightInTiles ?? 64);
-            GameSession = new GameSession();
-            int gridCellSizeCm = config?.GridCellSizeCm ?? 100;
-            int worldWidthCm = WorldMap.TotalWidth * gridCellSizeCm;
-            int worldHeightCm = WorldMap.TotalHeight * gridCellSizeCm;
-            WorldSizeSpec = new WorldSizeSpec(
-                new WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm: gridCellSizeCm);
-            SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
-            _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
-            SpatialQueries = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
-            WireUpPositionProvider();
-            GlobalContext[ContextKeys.WorldSizeSpec] = WorldSizeSpec;
-            GlobalContext[ContextKeys.SpatialCoordinateConverter] = SpatialCoords;
-            GlobalContext[ContextKeys.SpatialQueryService] = SpatialQueries;
-            
-            // 3. Setup Data Loaders
-            MapLoader = new MapLoader(World, WorldMap, ConfigPipeline);
-
-            // 4. Load Mods from Config
-            if (config != null && config.ModPaths != null)
-            {
-                ModLoader.LoadMods(config.ModPaths);
-            }
-            
-            // Store config
-            MergedConfig = config ?? new GameConfig();
-            GlobalContext[ContextKeys.GameConfig] = MergedConfig;
-
-            InitializeCoreSystems(MergedConfig);
-
-            SimulationBudgetMsPerFrame = config?.SimulationBudgetMsPerFrame ?? SimulationBudgetMsPerFrame;
-            SimulationMaxSlicesPerLogicFrame = config?.SimulationMaxSlicesPerLogicFrame ?? SimulationMaxSlicesPerLogicFrame;
-            
-            // 5. Post-Mod Load Initialization
-            // Now that Mods are loaded, we can load all templates
-            MapLoader.LoadTemplates();
-        }
-
-        [Obsolete("Use InitializeWithConfigPipeline instead")]
-        public void Initialize(string assetsRoot)
-        {
-            Diagnostics.Log.Info(in LogChannels.Engine, "Initializing...");
-            
-            // Setup Async Context
-            SyncContext = new GameSynchronizationContext();
-            System.Threading.SynchronizationContext.SetSynchronizationContext(SyncContext);
-            
-            // 1. Setup Infrastructure
-            VFS = new VirtualFileSystem();
-            VFS.Mount("Core", assetsRoot); // Mount Core Assets
-
-            FunctionRegistry = new FunctionRegistry();
-            TriggerManager = new TriggerManager();
-            SystemFactoryRegistry = new SystemFactoryRegistry();
-            TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
-            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
-            MapManager = new MapManager(VFS, TriggerManager, ModLoader);
-            ModLoader.MapManager = MapManager;
-            ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
-
-            // 2. Setup ECS & Session
-            InitializeWorld(widthInTiles: 64, heightInTiles: 64);
-            WorldMap = new WorldMap(widthInChunks: 64, heightInChunks: 64);
-            GameSession = new GameSession();
-            int gridCellSizeCm = 100;
-            int worldWidthCm = WorldMap.TotalWidth * gridCellSizeCm;
-            int worldHeightCm = WorldMap.TotalHeight * gridCellSizeCm;
-            WorldSizeSpec = new WorldSizeSpec(
-                new WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm: gridCellSizeCm);
-            SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
-            _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
-            SpatialQueries = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
-            WireUpPositionProvider();
-            GlobalContext[ContextKeys.WorldSizeSpec] = WorldSizeSpec;
-            GlobalContext[ContextKeys.SpatialCoordinateConverter] = SpatialCoords;
-            GlobalContext[ContextKeys.SpatialQueryService] = SpatialQueries;
-            
-            // 3. Setup Data Loaders
-            MapLoader = new MapLoader(World, WorldMap, ConfigPipeline);
-
-            // 4. Prepare Mod Loading
-            string modsPath = Path.Combine(assetsRoot, "Mods");
-            if (Directory.Exists(modsPath))
-            {
-                ModLoader.LoadMods(modsPath);
-            }
-            else
-            {
-                Diagnostics.Log.Warn(in LogChannels.Engine, $"Mods directory not found at {modsPath}");
-            }
-            
-            // Create default config and merge from ConfigPipeline
-            MergedConfig = ConfigPipeline.MergeGameConfig();
-            GlobalContext[ContextKeys.GameConfig] = MergedConfig;
-
-            InitializeCoreSystems(MergedConfig);
-            
-            // 5. Post-Mod Load Initialization
-            MapLoader.LoadTemplates();
-        }
-
         private void InitializeWorld(int widthInTiles, int heightInTiles)
         {
             World = World.Create();
@@ -492,6 +365,12 @@ namespace Ludots.Core.Engine
             var w = World;
             ((SpatialQueryService)SpatialQueries).SetPositionProvider(entity =>
             {
+                if (!w.IsAlive(entity) || !w.Has<WorldPositionCm>(entity))
+                {
+                    // Spatial backend may momentarily contain stale entities during structural transitions.
+                    // Return a far-away sentinel position so fine-shape filtering excludes them safely.
+                    return new WorldCmInt2(1_000_000_000, 1_000_000_000);
+                }
                 ref var pos = ref w.Get<WorldPositionCm>(entity);
                 return pos.Value.ToWorldCmInt2();
             });
@@ -537,9 +416,10 @@ namespace Ludots.Core.Engine
             abilityDefinitions.SetConflictReport(ConflictReport);
             EffectParamKeys.Initialize();
             _effectTemplateLoader.Load();
+            new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             graphConfigLoader.PatchAndRegister(graphPackages);
             var gasGraphApi = new GasGraphRuntimeApi(World, SpatialQueries, SpatialCoords, EventBus, effectRequestQueue, tagOps);
-            var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus);
+            var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus, budget: gasBudget);
             var tagRules = new TagRuleSetLoader(ConfigPipeline).Load();
             for (int i = 0; i < tagRules.Count; i++)
             {
@@ -684,6 +564,9 @@ namespace Ludots.Core.Engine
             GlobalContext[ContextKeys.PresentationPrimitiveDrawBuffer] = primitiveDrawBuffer;
             GlobalContext[ContextKeys.PresentationWorldHudBuffer] = worldHudBuffer;
             GlobalContext[ContextKeys.PresentationWorldHudStrings] = worldHudStrings;
+            var screenHudBuffer = new ScreenHudBatchBuffer();
+            GlobalContext[ContextKeys.PresentationScreenHudBuffer] = screenHudBuffer;
+            GlobalContext[ContextKeys.ScreenOverlayBuffer] = new ScreenOverlayBuffer();
             GlobalContext[ContextKeys.TransientMarkerBuffer] = transientMarkerBuffer;
             GlobalContext[ContextKeys.GasPresentationEventBuffer] = gasPresentationEvents;
             GlobalContext[ContextKeys.GroundOverlayBuffer] = groundOverlayBuffer;
@@ -702,6 +585,9 @@ namespace Ludots.Core.Engine
                 return new Orbit3CCameraController(cfg, services.Input);
             });
             GlobalContext[ContextKeys.CameraControllerRegistry] = cameraControllers;
+            var cameraPresetRegistry = new CameraPresetRegistry();
+            new CameraPresetLoader(ConfigPipeline, cameraPresetRegistry).Load(ConfigCatalog, ConfigConflictReport);
+            GlobalContext[ContextKeys.CameraPresetRegistry] = cameraPresetRegistry;
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
             
@@ -774,7 +660,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
             
             // Phase 6: Cleanup
-            RegisterSystem(new GameplayEventDispatchSystem(EventBus), SystemGroup.EventDispatch);
+            RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget), SystemGroup.EventDispatch);
             
             // Phase 7.1: ClearPresentationFlags
@@ -793,6 +679,8 @@ namespace Ludots.Core.Engine
             
             // WorldToVisualSyncSystem: 插值 WorldPositionCm → VisualTransform（必须在 PresentationFrameSetup 之后）
             RegisterPresentationSystem(new WorldToVisualSyncSystem(World));
+            // TerrainHeightSyncSystem: 采样地形高度写入 VisualTransform.Y，使实体贴附地表
+            RegisterPresentationSystem(new TerrainHeightSyncSystem(World, GlobalContext));
             
             RegisterPresentationSystem(new ResponseChainDirectorSystem(World, orderRequestQueue, responseChainTelemetry, responseChainUiState, presentationCommandBuffer));
             RegisterPresentationSystem(new ResponseChainHumanOrderSourceSystem(GlobalContext, responseChainUiState, chainOrderQueue));
@@ -831,7 +719,7 @@ namespace Ludots.Core.Engine
                 GlobalContext[ContextKeys.BoardIdRegistry] = BoardIdRegistry;
             }
 
-            // Backward compat: if same ID already loaded, unload first then reload
+            // Unload first when same map already loaded, then reload
             if (MapSessions.GetSession(mid) != null)
             {
                 UnloadMap(mapId);
@@ -1081,6 +969,20 @@ namespace Ludots.Core.Engine
             if (cam == null) return;
 
             var state = GameSession.Camera.State;
+
+            // Apply preset first if PresetId is set
+            if (!string.IsNullOrWhiteSpace(cam.PresetId) &&
+                GlobalContext.TryGetValue(ContextKeys.CameraPresetRegistry, out var regObj) &&
+                regObj is CameraPresetRegistry presetReg &&
+                presetReg.TryGet(cam.PresetId, out var preset))
+            {
+                state.DistanceCm = preset.DistanceCm;
+                state.Pitch = preset.Pitch;
+                state.FovYDeg = preset.FovYDeg;
+                state.Yaw = preset.Yaw;
+            }
+
+            // Explicit fields override preset
             if (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
                 state.TargetCm = new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f);
             if (cam.Yaw.HasValue) state.Yaw = cam.Yaw.Value;

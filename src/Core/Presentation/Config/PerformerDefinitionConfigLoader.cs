@@ -52,7 +52,7 @@ namespace Ludots.Core.Presentation.Config
         private PerformerDefinition? ParseDefinition(JsonNode node)
         {
             var def = new PerformerDefinition();
-            def.Id = node["id"]?.GetValue<int>() ?? 0;
+            def.Id = int.TryParse(node["id"]?.GetValue<string>(), out var parsedId) ? parsedId : 0;
             if (def.Id <= 0) return null;
 
             def.VisualKind = ParseEnum(node["visualKind"]?.GetValue<string>(), PerformerVisualKind.GroundOverlay);

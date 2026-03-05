@@ -7,7 +7,7 @@
   "WindowTitle": "Ludots Engine (Raylib) - Audit Playground",
   "TargetFps": 60,
   "ModPaths": [
-    "../../../../../../Mods/LudotsCoreMod",
-    "../../../../../../Mods/AuditPlaygroundMod"
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/AuditPlaygroundMod"
   ]
 }

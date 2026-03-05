@@ -9,6 +9,7 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
@@ -55,6 +56,7 @@ namespace Ludots.Adapter.Raylib
             {
                 Rl.InitWindow(screenWidth, screenHeight, title);
                 windowOpened = true;
+                Rl.SetExitKey(0);
                 Rl.SetTargetFPS(targetFps);
 
                 using var uiRenderer = new RaylibSkiaRenderer(screenWidth, screenHeight);
@@ -79,15 +81,25 @@ namespace Ludots.Adapter.Raylib
                 var cameraAdapter = new RaylibCameraAdapter(initialCamera);
                 var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
 
-                IScreenProjector screenProjector = new RaylibScreenProjector(cameraAdapter);
+                var viewController = new RaylibViewController(cameraAdapter);
+                engine.GlobalContext[ContextKeys.ViewController] = viewController;
+
+                var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
                 engine.GlobalContext[ContextKeys.ScreenProjector] = screenProjector;
                 engine.GlobalContext[ContextKeys.ScreenRayProvider] = new RaylibScreenRayProvider(cameraAdapter);
 
-                ValidateRequiredContextBeforeLoop(engine);
-
-                var viewController = new RaylibViewController(cameraAdapter);
                 var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
                 engine.RegisterPresentationSystem(cullingSystem);
+
+                if (engine.GlobalContext.TryGetValue(ContextKeys.PresentationWorldHudBuffer, out var whObj) && whObj is WorldHudBatchBuffer worldHud &&
+                    engine.GlobalContext.TryGetValue(ContextKeys.PresentationScreenHudBuffer, out var shObj) && shObj is ScreenHudBatchBuffer screenHud)
+                {
+                    engine.GlobalContext.TryGetValue(ContextKeys.PresentationWorldHudStrings, out var strObj);
+                    var worldHudStrings = strObj as Ludots.Core.Presentation.Config.WorldHudStringTable;
+                    engine.RegisterPresentationSystem(new WorldHudToScreenSystem(engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud));
+                }
+
+                ValidateRequiredContextBeforeLoop(engine);
 
                 engine.Start();
                 if (string.IsNullOrWhiteSpace(config.StartupMapId))
@@ -99,10 +111,23 @@ namespace Ludots.Adapter.Raylib
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced);
 
+                int lastW = screenWidth;
+                int lastH = screenHeight;
+
                 while (!Rl.WindowShouldClose())
                 {
                     try
                     {
+                        int w = Rl.GetScreenWidth();
+                        int h = Rl.GetScreenHeight();
+                        if (w != lastW || h != lastH)
+                        {
+                            lastW = w;
+                            lastH = h;
+                            uiRenderer.Resize(w, h);
+                            uiRoot.Resize(w, h);
+                        }
+
                         float dt = Rl.GetFrameTime();
 
                         navAgentDeltaPerTeam = 0;
@@ -131,7 +156,8 @@ namespace Ludots.Adapter.Raylib
                         var activeCamera = cameraAdapter.Camera;
                         Rl.BeginMode3D(activeCamera);
 
-                        DrawInfiniteGrid(activeCamera.position, 120, 1.0f, 10);
+                        // 锚定到 target，网格以观察点为中心；halfCount 越大边界越远
+                        DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
 
                         var t = activeCamera.target;
                         Rl.DrawLine3D(t, t + new Vector3(2.0f, 0, 0), Color.RED);
@@ -185,7 +211,7 @@ namespace Ludots.Adapter.Raylib
                         foreach (var chunk in wpQuery) wpCount += chunk.Count;
                         Rl.DrawText($"WorldPositionCm Entities: {wpCount}", 10, 34, 20, Raylib_cs.Color.YELLOW);
 
-                        RenderWorldHud(engine, screenProjector);
+                        DrawScreenHud(engine);
 
                         if (drawSkiaUi && uiRoot.IsDirty)
                         {
@@ -198,9 +224,11 @@ namespace Ludots.Adapter.Raylib
                             uiRenderer.Draw();
                         }
 
-                        Rl.DrawFPS(screenWidth - 100, 10);
-                        Rl.DrawText($"Scale | Grid=1.00m | HexWidth={HexCoordinates.HexWidth:F3}m | RowSpacing={HexCoordinates.RowSpacing:F3}m | HeightScale={terrainRenderer.HeightScale:F2}", 10, screenHeight - 35, 20, Raylib_cs.Color.WHITE);
+                        var res = viewController.Resolution;
+                        Rl.DrawFPS((int)(res.X - 100), 10);
+                        Rl.DrawText($"Scale | Grid=1.00m | HexWidth={HexCoordinates.HexWidth:F3}m | RowSpacing={HexCoordinates.RowSpacing:F3}m | HeightScale={terrainRenderer.HeightScale:F2}", 10, (int)(res.Y - 35), 20, Raylib_cs.Color.WHITE);
                         DrawOverlay(drawTerrain, drawPrimitives, drawDebugDraw, drawSkiaUi, engine, primitiveRenderer);
+                        DrawScreenOverlays(engine, (int)res.X, (int)res.Y);
 
                         Rl.EndDrawing();
                     }
@@ -290,23 +318,19 @@ namespace Ludots.Adapter.Raylib
             }
         }
 
-        private static void RenderWorldHud(GameEngine engine, IScreenProjector projector)
+        private static void DrawScreenHud(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(ContextKeys.PresentationWorldHudBuffer, out var hudObj)) return;
+            if (!engine.GlobalContext.TryGetValue(ContextKeys.PresentationScreenHudBuffer, out var hudObj)) return;
             engine.GlobalContext.TryGetValue(ContextKeys.PresentationWorldHudStrings, out var strObj);
-            if (hudObj is not WorldHudBatchBuffer hud) return;
+            if (hudObj is not ScreenHudBatchBuffer hud) return;
             var strings = strObj as Ludots.Core.Presentation.Config.WorldHudStringTable;
 
             var span = hud.GetSpan();
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                Vector2 screen = projector.WorldToScreen(item.WorldPosition);
-                float x = screen.X - item.Width * 0.5f;
-                float y = screen.Y;
-
-                int ix = (int)x;
-                int iy = (int)y;
+                int ix = (int)item.ScreenX;
+                int iy = (int)item.ScreenY;
                 int iw = (int)item.Width;
                 int ih = (int)item.Height;
 
@@ -427,21 +451,7 @@ namespace Ludots.Adapter.Raylib
             Rl.DrawLine3D(a, b, ToRaylibColor(item.BorderColor));
         }
 
-        private static Color ToRaylibColor(Vector4 c)
-        {
-            byte r = (byte)(Clamp01(c.X) * 255f);
-            byte g = (byte)(Clamp01(c.Y) * 255f);
-            byte b = (byte)(Clamp01(c.Z) * 255f);
-            byte a = (byte)(Clamp01(c.W) * 255f);
-            return new Color(r, g, b, a);
-        }
-
-        private static float Clamp01(float v)
-        {
-            if (v < 0f) return 0f;
-            if (v > 1f) return 1f;
-            return v;
-        }
+        private static Color ToRaylibColor(Vector4 c) => RaylibColorUtil.ToRaylibColor(in c);
 
         private static void ApplyOverlayToggles(ref bool drawTerrain, ref bool drawPrimitives, ref bool drawDebugDraw, ref bool drawSkiaUi, ref int navAgentDeltaPerTeam, ref bool navAgentReset, Navigation2DRuntime? navRuntime)
         {
@@ -562,6 +572,45 @@ namespace Ludots.Adapter.Raylib
         private static bool Hit(Vector2 p, int x, int y, int w, int h)
         {
             return p.X >= x && p.X <= x + w && p.Y >= y && p.Y <= y + h;
+        }
+
+        private static void DrawScreenOverlays(GameEngine engine, int screenWidth, int screenHeight)
+        {
+            if (!engine.GlobalContext.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var bufferObj)) return;
+            if (bufferObj is not ScreenOverlayBuffer buffer) return;
+
+            const int maxOverlayDim = 4096;
+
+            var span = buffer.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                switch (item.Kind)
+                {
+                    case ScreenOverlayItemKind.Text:
+                    {
+                        string? text = buffer.GetString(item.StringId);
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
+                            Rl.DrawText(text, item.X, item.Y, fontSize, ToRaylibColor(item.Color));
+                        }
+                        break;
+                    }
+                    case ScreenOverlayItemKind.Rect:
+                    {
+                        if (item.Width <= 0 || item.Height <= 0 || item.Width > maxOverlayDim || item.Height > maxOverlayDim) break;
+                        Rl.DrawRectangle(item.X, item.Y, item.Width, item.Height, ToRaylibColor(item.BackgroundColor));
+                        if (item.Color.W > 0.01f)
+                        {
+                            Rl.DrawRectangleLines(item.X, item.Y, item.Width, item.Height, ToRaylibColor(item.Color));
+                        }
+                        break;
+                    }
+                }
+            }
+
+            buffer.Clear();
         }
     }
 }

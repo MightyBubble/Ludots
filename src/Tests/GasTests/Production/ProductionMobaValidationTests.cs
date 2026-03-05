@@ -8,6 +8,8 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
@@ -20,7 +22,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            string modsRoot = Path.Combine(repoRoot, "src", "Mods");
+            string modsRoot = Path.Combine(repoRoot, "mods");
 
             var engine = new GameEngine();
             try
@@ -29,6 +31,7 @@ namespace Ludots.Tests.GAS.Production
                     new()
                     {
                         Path.Combine(modsRoot, "LudotsCoreMod"),
+                        Path.Combine(modsRoot, "CoreInputMod"),
                         Path.Combine(modsRoot, "MobaDemoMod")
                     },
                     assetsRoot);
@@ -41,6 +44,12 @@ namespace Ludots.Tests.GAS.Production
                 {
                     engine.Tick(1f / 60f);
                 }
+
+                Assert.That(
+                    engine.GlobalContext.TryGetValue(ContextKeys.ScreenOverlayBuffer, out var overlayObj) &&
+                    overlayObj is ScreenOverlayBuffer,
+                    Is.True,
+                    "ScreenOverlayBuffer must be registered in GlobalContext.");
 
                 var startErrors = engine.TriggerManager.Errors;
                 if (startErrors.Count > 0)

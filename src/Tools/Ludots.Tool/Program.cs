@@ -249,16 +249,15 @@ namespace Ludots.Tool
         {
             Console.WriteLine($"Initializing mod '{modId}'...");
             
-            // Assuming we are in root or src/Mods?
-            // Let's enforce a standard structure: src/Mods/{ModId}
+            // Assuming we are in repo root or mods?
+            // Let's enforce a standard structure: mods/{ModId}
             
-            // Try to find src/Mods from current directory up to root
+            // Try to find mods from current directory up to root
             var modsRoot = FindModsRoot();
             if (modsRoot == null)
             {
-                 // Fallback: Create in current directory
-                 modsRoot = Directory.GetCurrentDirectory();
-                 Console.WriteLine($"Warning: Could not find 'src/Mods' in hierarchy. Creating in current directory: {modsRoot}");
+                 Console.WriteLine("Error: Could not find 'mods' in hierarchy.");
+                 return;
             }
             
             var modDir = Path.Combine(modsRoot, modId);
@@ -278,7 +277,7 @@ namespace Ludots.Tool
                 Name = modId,
                 Version = "1.0.0",
                 Description = "A new Ludots mod.",
-                Main = $"bin/Release/net8.0/{modId}.dll",
+                Main = $"bin/net8.0/{modId}.dll",
                 Priority = 0,
                 Dependencies = new Dictionary<string, string>()
             };
@@ -287,30 +286,19 @@ namespace Ludots.Tool
             
             // Create .csproj
             // We need relative path to Ludots.Core
-            // If we are in src/Mods/{ModId}, Core is at ../../Core/Ludots.Core.csproj
+            // If we are in mods/{ModId}, Core is at ../../src/Core/Ludots.Core.csproj
             var csprojContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <OutputPath>..\..\..\assets\Mods\{modId}\bin</OutputPath>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include=""..\..\Core\Ludots.Core.csproj"">
+    <ProjectReference Include=""..\..\src\Core\Ludots.Core.csproj"">
         <Private>false</Private>
     </ProjectReference>
   </ItemGroup>
-  
-  <Target Name=""PostBuild"" AfterTargets=""PostBuildEvent"">
-    <Copy SourceFiles=""mod.json"" DestinationFolder=""..\..\..\assets\Mods\{modId}"" />
-    <ItemGroup>
-        <AssetFiles Include=""assets\**\*.*"" />
-    </ItemGroup>
-    <Copy SourceFiles=""@(AssetFiles)"" DestinationFolder=""..\..\..\assets\Mods\{modId}\assets\%(RecursiveDir)"" />
-  </Target>
 </Project>";
             File.WriteAllText(Path.Combine(modDir, $"{modId}.csproj"), csprojContent);
             
@@ -346,7 +334,7 @@ namespace {modId}
             var modsRoot = FindModsRoot();
             if (modsRoot == null)
             {
-                Console.WriteLine("Error: Could not find 'src/Mods' directory.");
+                Console.WriteLine("Error: Could not find 'mods' directory.");
                 return;
             }
             
@@ -365,7 +353,7 @@ namespace {modId}
             
             if (process.ExitCode == 0)
             {
-                Console.WriteLine($"Build success! Output deployed to assets/Mods/{modId}");
+                Console.WriteLine($"Build success! Output at mods/{modId}/bin/net8.0");
             }
             else
             {
@@ -382,19 +370,11 @@ namespace {modId}
                 return 1;
             }
 
-            var modDir = Path.Combine(assetsRoot, "assets", "Mods", modId);
+            var modDir = Path.Combine(assetsRoot, "mods", modId);
             if (!Directory.Exists(modDir))
             {
-                var srcModDir = Path.Combine(assetsRoot, "src", "Mods", modId);
-                if (Directory.Exists(srcModDir))
-                {
-                    modDir = srcModDir;
-                }
-                else
-                {
-                    Console.WriteLine($"Error: Mod directory not found at {modDir}");
-                    return 1;
-                }
+                Console.WriteLine($"Error: Mod directory not found at {modDir}");
+                return 1;
             }
 
             var graphsJsonPath = Path.Combine(modDir, "assets", "Configs", "GAS", "graphs.json");
@@ -494,12 +474,8 @@ namespace {modId}
             var current = Directory.GetCurrentDirectory();
             while (current != null)
             {
-                var check = Path.Combine(current, "src", "Mods");
+                var check = Path.Combine(current, "mods");
                 if (Directory.Exists(check)) return check;
-                
-                // Also check if we are IN src
-                if (Path.GetFileName(current) == "src" && Directory.Exists(Path.Combine(current, "Mods")))
-                    return Path.Combine(current, "Mods");
 
                 current = Directory.GetParent(current)?.FullName;
             }

@@ -37,7 +37,7 @@ namespace GasTests
             var directories = new[]
             {
                 Path.Combine(repoRoot, "src", "Core"),
-                Path.Combine(repoRoot, "src", "Mods"),
+                Path.Combine(repoRoot, "mods"),
                 Path.Combine(repoRoot, "src", "Platforms")
             };
 

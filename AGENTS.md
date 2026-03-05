@@ -50,3 +50,11 @@ Run with: `dotnet run --project src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Ray
 
 - `src/Tools/Ludots.Editor.React/src/App.tsx` has a case-sensitive import (`@/Components/...` vs `@/components/...`). A fix has been committed on this branch. Without the fix, `tsc` type-checking fails and Vite may fail to resolve the module.
 - ESLint reports ~71 pre-existing errors in the React Editor (mostly `@typescript-eslint/no-explicit-any` and `no-case-declarations`). These are pre-existing, not introduced by environment setup.
+
+### Mod directory structure
+
+Mods live at the repo root in `mods/`, NOT in `src/Mods/`. This mirrors UGC distribution layout — mod authors and players use the same structure.
+
+- `modworkspace.json` at repo root lists directories to scan for mods (like VS Code workspaces)
+- Each game.json `ModPaths` entry points to a mod directory containing `mod.json`
+- No hardcoded paths — all mod discovery goes through workspace config or explicit `ModPaths`

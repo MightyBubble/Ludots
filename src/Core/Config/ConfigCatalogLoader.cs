@@ -21,7 +21,7 @@ namespace Ludots.Core.Config
                 if (!TryReadString(obj, "Policy", out string pol)) continue;
                 if (!TryParsePolicy(pol, out var policy)) continue;
 
-                string idField = "Id";
+                string idField = "id";
                 if (TryReadString(obj, "IdField", out string idf)) idField = idf;
 
                 string[] appendFields = Array.Empty<string>();

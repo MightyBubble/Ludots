@@ -7,8 +7,8 @@
   "WindowTitle": "Ludots Engine (Raylib) - Navigation2D Playground",
   "TargetFps": 60,
   "ModPaths": [
-    "../../../../../../Mods/LudotsCoreMod",
-    "../../../../../../Mods/Navigation2DPlaygroundMod"
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/Navigation2DPlaygroundMod"
   ]
 }
 

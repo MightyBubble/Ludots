@@ -20,7 +20,7 @@ namespace Ludots.Core.Config
         {
             Log.Info(in LogChannels.Config, $"Loading DataRegistry<{typeof(T).Name}> from {relativePath}...");
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "Id");
+            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
             int count = 0;

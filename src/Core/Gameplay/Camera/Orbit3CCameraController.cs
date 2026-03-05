@@ -68,17 +68,12 @@ namespace Ludots.Core.Gameplay.Camera
 
             if (_config.EnablePan && dt > 0f)
             {
-                float yawRad = state.Yaw * (MathF.PI / 180f);
-                Vector2 forward = new Vector2(MathF.Sin(yawRad), MathF.Cos(yawRad));
-                Vector2 right = new Vector2(forward.Y, -forward.X);
-
                 Vector2 move = _input.ReadAction<Vector2>(_config.MoveActionId);
                 if (move.LengthSquared() > 0.0001f)
                 {
-                    Vector2 dir = forward * move.Y + right * move.X;
+                    Vector2 dir = OrbitCameraDirectionUtil.MoveInputToDirection(state.Yaw, move);
                     if (dir.LengthSquared() > 0.0001f)
                     {
-                        dir = Vector2.Normalize(dir);
                         state.TargetCm += dir * (_config.PanCmPerSecond * dt);
                     }
                 }
