@@ -1,12 +1,13 @@
 import { useLauncherStore } from "@/stores/launcherStore";
-import { Play, ChevronDown } from "lucide-react";
+import { Play, ChevronDown, Hammer } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function PresetBar() {
-  const { presets, selectedPresetId, activeMods, selectPreset } =
+  const { presets, selectedPresetId, activeMods, selectPreset, launch, buildActive, building, launching } =
     useLauncherStore();
 
   const isCustom = selectedPresetId === null;
+  const busy = building || launching;
 
   return (
     <div className="flex items-center gap-4 px-6 py-3 bg-surface-lighter border-b border-white/5">
@@ -50,13 +51,29 @@ export function PresetBar() {
       <div className="flex-1" />
 
       <button
+        onClick={buildActive}
+        disabled={busy}
+        className={cn(
+          "flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm transition",
+          "bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10",
+          "disabled:opacity-40 disabled:cursor-not-allowed"
+        )}
+      >
+        <Hammer size={14} />
+        {building ? "Building..." : "Build"}
+      </button>
+
+      <button
+        onClick={launch}
+        disabled={busy}
         className={cn(
           "flex items-center gap-2 px-8 py-2.5 rounded-lg font-semibold text-sm transition",
-          "bg-accent hover:bg-accent-hover text-white shadow-lg shadow-accent/20"
+          "bg-accent hover:bg-accent-hover text-white shadow-lg shadow-accent/20",
+          "disabled:opacity-40 disabled:cursor-not-allowed"
         )}
       >
         <Play size={16} fill="currentColor" />
-        LAUNCH
+        {launching ? "LAUNCHING..." : "LAUNCH"}
       </button>
     </div>
   );

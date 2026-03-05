@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   fetchMods, fetchPresets, fetchReadme, fetchChangelog,
   fetchWorkspaceSources, addWorkspaceSource, checkHealth,
+  buildAllMods, launchGame, createMod, generateSln,
   type ModInfo, type GamePreset,
 } from "@/lib/api";
 
@@ -19,6 +20,9 @@ interface LauncherState {
   detailTab: "info" | "readme" | "changelog";
   workspaceSources: string[];
   showWorkspace: boolean;
+  buildLog: string;
+  building: boolean;
+  launching: boolean;
 
   init: () => Promise<void>;
   selectPreset: (id: string) => void;
@@ -27,6 +31,11 @@ interface LauncherState {
   setDetailTab: (tab: "info" | "readme" | "changelog") => void;
   addSource: (path: string) => Promise<boolean>;
   toggleWorkspace: () => void;
+  buildActive: () => Promise<void>;
+  launch: () => Promise<void>;
+  createNewMod: (id: string, template: string) => Promise<boolean>;
+  generateSlnForMod: (modId: string) => Promise<string | null>;
+  appendLog: (msg: string) => void;
 }
 
 function resolveDeps(modId: string, byId: Map<string, ModInfo>, out: Set<string>) {
@@ -61,6 +70,7 @@ export const useLauncherStore = create<LauncherState>((set, get) => ({
   activeMods: new Set(), bridgeOnline: false, loading: true,
   readme: null, changelog: null, detailTab: "info",
   workspaceSources: [], showWorkspace: false,
+  buildLog: "", building: false, launching: false,
 
   init: async () => {
     set({ loading: true });
@@ -117,5 +127,93 @@ export const useLauncherStore = create<LauncherState>((set, get) => ({
       set({ workspaceSources: sources, mods });
     }
     return ok;
+  },
+
+  appendLog: (msg) => set((s) => ({ buildLog: s.buildLog + msg + "\n" })),
+
+  buildActive: async () => {
+    const { mods, activeMods } = get();
+    const byId = new Map(mods.map((m) => [m.id, m]));
+    const ordered: string[] = [];
+    const visited = new Set<string>();
+    function topoSort(id: string) {
+      if (visited.has(id)) return;
+      visited.add(id);
+      const mod = byId.get(id);
+      if (mod) for (const dep of Object.keys(mod.dependencies)) topoSort(dep);
+      ordered.push(id);
+    }
+    for (const id of activeMods) topoSort(id);
+
+    set({ building: true, buildLog: `Building ${ordered.length} mod(s)...\n` });
+    try {
+      const res = await buildAllMods(ordered);
+      if (res.ok && res.results) {
+        for (const r of res.results) {
+          get().appendLog(`[${r.id}] ${r.ok ? "OK" : "FAIL"}`);
+          if (r.output) get().appendLog(r.output);
+        }
+      } else {
+        get().appendLog("Build request failed.");
+      }
+    } catch (e) {
+      get().appendLog(`Error: ${e}`);
+    }
+    set({ building: false });
+  },
+
+  launch: async () => {
+    const { selectedPresetId, activeMods, presets, mods } = get();
+    set({ launching: true });
+    get().appendLog("Launching game...");
+    try {
+      let modPaths: string[] | undefined;
+      if (!selectedPresetId) {
+        modPaths = [...activeMods].map((id) => {
+          const mod = mods.find((m) => m.id === id);
+          return mod?.rootPath ?? id;
+        });
+      }
+      const res = await launchGame(selectedPresetId ?? undefined, modPaths);
+      if (res.ok) {
+        get().appendLog(`Game launched (PID: ${res.pid})`);
+      } else {
+        get().appendLog(`Launch failed: ${res.error ?? "unknown error"}`);
+      }
+    } catch (e) {
+      get().appendLog(`Launch error: ${e}`);
+    }
+    set({ launching: false });
+  },
+
+  createNewMod: async (id, template) => {
+    try {
+      const res = await createMod(id, template);
+      if (res.ok) {
+        get().appendLog(`Mod "${id}" created.`);
+        await get().init();
+        return true;
+      }
+      get().appendLog(`Create mod failed: ${res.error ?? "unknown"}`);
+      return false;
+    } catch (e) {
+      get().appendLog(`Create mod error: ${e}`);
+      return false;
+    }
+  },
+
+  generateSlnForMod: async (modId) => {
+    try {
+      const res = await generateSln(modId);
+      if (res.ok && res.slnPath) {
+        get().appendLog(`.sln generated: ${res.slnPath}`);
+        return res.slnPath;
+      }
+      get().appendLog(`Generate .sln failed: ${res.error ?? "unknown"}`);
+      return null;
+    } catch (e) {
+      get().appendLog(`Generate .sln error: ${e}`);
+      return null;
+    }
   },
 }));

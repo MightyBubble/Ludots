@@ -1,12 +1,36 @@
+import { useState } from "react";
 import { useLauncherStore } from "@/stores/launcherStore";
-import { thumbnailUrl } from "@/lib/api";
+import { thumbnailUrl, buildMod } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { X, GitBranch, User, Tag, FileText, BookOpen, History } from "lucide-react";
+import { X, GitBranch, User, Tag, FileText, BookOpen, History, Hammer, FileCode } from "lucide-react";
 
 export function ModDetail() {
-  const { mods, selectedModId, selectMod, detailTab, setDetailTab, readme, changelog } = useLauncherStore();
+  const { mods, selectedModId, selectMod, detailTab, setDetailTab, readme, changelog, appendLog, generateSlnForMod } = useLauncherStore();
   const mod = mods.find((m) => m.id === selectedModId);
+  const [buildingThis, setBuildingThis] = useState(false);
+  const [slnPath, setSlnPath] = useState<string | null>(null);
+  const [generatingSln, setGeneratingSln] = useState(false);
   if (!mod) return null;
+
+  const handleBuild = async () => {
+    setBuildingThis(true);
+    appendLog(`Building ${mod.id}...`);
+    try {
+      const res = await buildMod(mod.id);
+      appendLog(`[${mod.id}] ${res.ok ? "OK" : "FAIL"} (exit ${res.exitCode})`);
+      if (res.output) appendLog(res.output);
+    } catch (e) {
+      appendLog(`Build error: ${e}`);
+    }
+    setBuildingThis(false);
+  };
+
+  const handleGenerateSln = async () => {
+    setGeneratingSln(true);
+    const path = await generateSlnForMod(mod.id);
+    if (path) setSlnPath(path);
+    setGeneratingSln(false);
+  };
 
   const deps = Object.entries(mod.dependencies);
   const tabs = [
@@ -33,6 +57,27 @@ export function ModDetail() {
             <span className="font-mono">v{mod.version}</span>
             {mod.author && (<span className="flex items-center gap-0.5"><User size={10} />{mod.author}</span>)}
           </div>
+          <div className="flex items-center gap-1.5 mt-2">
+            <button
+              onClick={handleBuild}
+              disabled={buildingThis}
+              className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-white/5 hover:bg-white/10 border border-white/10 rounded transition disabled:opacity-40"
+            >
+              <Hammer size={10} />
+              {buildingThis ? "Building..." : "Build"}
+            </button>
+            <button
+              onClick={handleGenerateSln}
+              disabled={generatingSln}
+              className="flex items-center gap-1 px-2.5 py-1 text-[10px] bg-white/5 hover:bg-white/10 border border-white/10 rounded transition disabled:opacity-40"
+            >
+              <FileCode size={10} />
+              {generatingSln ? "Generating..." : "Open in IDE"}
+            </button>
+          </div>
+          {slnPath && (
+            <p className="text-[9px] text-gray-500 mt-1 break-all">.sln: {slnPath}</p>
+          )}
         </div>
       </div>
 

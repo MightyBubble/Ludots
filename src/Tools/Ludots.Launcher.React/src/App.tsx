@@ -6,6 +6,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { ModGrid } from "@/components/ModGrid";
 import { ModDetail } from "@/components/ModDetail";
 import { DepGraph } from "@/components/DepGraph";
+import { BuildLog } from "@/components/BuildLog";
 import { Loader2, GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -85,6 +86,7 @@ export default function App() {
         <ModGrid />
         <ModDetail />
       </div>
+      <BuildLog />
     </div>
   );
 }
