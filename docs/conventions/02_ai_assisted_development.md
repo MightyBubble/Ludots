@@ -59,7 +59,73 @@ AI Agent 不得在未经搜索的情况下创建以下内容：
 
 完整发现阶段流程见 [01_feature_development_workflow.md](01_feature_development_workflow.md)。
 
-## 4 能力清单速查表
+## 4 任务执行决策规范
+
+Agent 在收到任务后、写第一行代码前，必须依次做出以下三个判断。任何一个判断结果为"否"时，不得继续编码。
+
+### 4.1 判断一：这是不是我该直接做的事
+
+**问自己**：这个任务是业务 feature，还是基建扩展？是在已有管线上做增量，还是需要新建管线？
+
+| 判断结果 | 行动 |
+|---------|------|
+| 已有管线足以支撑，只需增量 | 继续，进入判断二 |
+| 需要新建管线或修改 Core 接口 | **停下来**，向用户说明"这不是一个 feature 任务，而是一个基建任务"，给出基建方案，等用户确认后再动手 |
+| 任务描述模糊，无法判断 | **停下来**，向用户提出具体问题，不得基于猜测开工 |
+
+**禁止行为**：闷声把基建变更混在 feature 代码里提交。基建变更必须单独提出、单独 commit。
+
+### 4.2 判断二：我需要复用什么基建
+
+**必须显式列出**复用清单，格式：
+
+```
+复用基建：
+- Registry: <具体 Registry 名> — 用于 <什么>
+- Pipeline: <具体管线名> — 数据从 <哪> 流向 <哪>
+- System: <已有 System> — 扩展/组合方式
+- Mod: <已有 Mod> — 是否可在其基础上扩展
+```
+
+此清单不得为空。如果列不出任何复用项，说明发现阶段没做到位——回到 §3.2 重做。
+
+### 4.3 判断三：基建够不够用
+
+用复用清单逐项检查：已有基建是否完整覆盖需求？如果发现缺口：
+
+| 缺口类型 | 行动 |
+|---------|------|
+| 缺一个 Registry 方法或字段 | **先补基建**：在已有 Registry 上扩展，单独 commit，再回来做 feature |
+| 缺一整条管线 | **停下来**，向用户报告缺口，提出基建方案，不得在 feature 代码里临时造一条 |
+| 已有管线接口不匹配 | **停下来**，说明不匹配的具体点，提出重构方案，不得绕过管线自己写 |
+
+**禁止行为**：
+
+*   发现基建不足时静默跳过、用 hack 绕过、或在 feature 代码中内联一个"临时方案"
+*   自己闷声重写一个功能近似的 Registry/System 而不先检查已有的
+
+### 4.4 Mod 提取规则
+
+写 feature 时必须评估：这段逻辑是单个 Mod 专用的，还是多个 Mod 可能复用的？
+
+| 情况 | 行动 |
+|------|------|
+| 逻辑只服务于当前 Mod | 放在当前 Mod 内 |
+| 2 个以上 Mod 可能用到同样逻辑 | **提取到 Core**：作为 System/Registry/Sink，通过 `SystemFactoryRegistry` 注册为可选 |
+| 逻辑是完整的可独立功能（如 GM 控制台、诊断覆盖层） | **提取为独立 Mod**（如 `GmConsoleMod`、`DiagnosticsOverlayMod`） |
+| 不确定 | **停下来问用户**，不要先写死在一个 Mod 里再说"以后再重构" |
+
+**本仓库的正面案例**：
+
+*   `DiagnosticsOverlayMod`：调试 UI 从 RaylibHostLoop 硬编码提取为独立 Mod（Issue #18）
+*   `GmConsoleMod`：GM 控制台从散落的调试代码提取为独立 Mod
+*   `CoreInputMod`：输入映射从 MobaDemoMod 提取为公共 Mod，多个 Demo Mod 依赖
+
+**本仓库的反面案例**：
+
+*   PR #11 实体外观系统直接写在 Host 层，与已有 FeatureHub/DiagnosticsOverlay 重叠，被关闭
+
+## 5 能力清单速查表（不超过 20 秒即可扫完）
 
 以下是仓库中已有的核心基础设施。新功能开发时优先在此基础上扩展，不要另起炉灶。
 
@@ -108,7 +174,7 @@ Cleanup → EventDispatch → ClearPresentationFlags
 
 新增 System 必须明确归属某个 phase，不得游离。
 
-## 5 相关文档
+## 6 相关文档
 
 *   编码标准：见 [00_coding_standards.md](00_coding_standards.md)
 *   Feature 开发工作流：见 [01_feature_development_workflow.md](01_feature_development_workflow.md)
