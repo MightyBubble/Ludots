@@ -1024,12 +1024,9 @@ namespace Ludots.Core.Engine
                     Diagnostics.Log.Info(in LogChannels.Engine,
                         $"Built CompositeCameraController from preset '{preset.Id}' (pan={preset.PanMode} rotate={preset.RotateMode} follow={preset.FollowMode})");
 
-                    if (preset.FollowMode != CameraFollowMode.None)
-                    {
-                        _cameraFollowSystem = new CameraFollowSystem(GameSession.Camera, input, preset.FollowActionId);
-                        Diagnostics.Log.Info(in LogChannels.Engine,
-                            $"CameraFollowSystem created (mode={preset.FollowMode} action={preset.FollowActionId})");
-                    }
+                    _cameraFollowSystem = new CameraFollowSystem(GameSession.Camera, input, preset.FollowActionId);
+                    Diagnostics.Log.Info(in LogChannels.Engine,
+                        $"CameraFollowSystem created (mode={preset.FollowMode} action={preset.FollowActionId})");
                 }
             }
 
