@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Numerics;
-using System.Text.Json;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -115,31 +113,6 @@ namespace MobaDemoMod.Presentation
             // via GAS → PresentationEvent bridge — no mod-level marker logic needed.
             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
             {
-                if (order.OrderTagId == _castAbilityTagId && ShouldDebugAbilitySlot(order.Args.I0))
-                {
-                    int selectedId = TryGetSelected(out var selected) ? selected.Id : 0;
-                    int hoveredId = TryGetHovered(out var hovered) ? hovered.Id : 0;
-
-                    #region agent log
-                    DebugLog("H4", "MobaLocalOrderSourceSystem.InitializeInputOrderMapping:submit", "Order submitted to queue", new
-                    {
-                        actorId = order.Actor.Id,
-                        actorName = GetEntityName(order.Actor),
-                        targetId = order.Target.Id,
-                        targetName = GetEntityName(order.Target),
-                        abilitySlot = order.Args.I0,
-                        orderTagId = order.OrderTagId,
-                        interactionMode = _inputOrderMapping?.InteractionMode.ToString() ?? "null",
-                        selectedId,
-                        selectedName = GetEntityName(selected),
-                        hoveredId,
-                        hoveredName = GetEntityName(hovered),
-                        spatialKind = order.Args.Spatial.Kind.ToString(),
-                        spatialMode = order.Args.Spatial.Mode.ToString()
-                    });
-                    #endregion
-                }
-
                 _orders.TryEnqueue(order);
             });
 
@@ -298,22 +271,6 @@ namespace MobaDemoMod.Presentation
                 InteractionModeType.SmartCastWithIndicator => "LoL Indicator / 按住显示抬起释放",
                 _ => mode.ToString()
             };
-        }
-
-        private static bool ShouldDebugAbilitySlot(int abilitySlot)
-            => abilitySlot is 0 or 2 or 3;
-
-        private string GetEntityName(Entity entity)
-        {
-            if (!_world.IsAlive(entity)) return string.Empty;
-            return _world.TryGet(entity, out Name name) ? name.Value ?? string.Empty : string.Empty;
-        }
-
-        private static void DebugLog(string hypothesisId, string location, string message, object data)
-        {
-            File.AppendAllText("/opt/cursor/logs/debug.log",
-                JsonSerializer.Serialize(new { hypothesisId, location, message, data, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) +
-                Environment.NewLine);
         }
 
         public void BeforeUpdate(in float dt) { }

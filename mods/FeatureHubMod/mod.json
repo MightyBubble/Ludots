@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Feature showcase hub — press number keys to navigate between demo scenes.",
   "main": "bin/net8.0/FeatureHubMod.dll",
-  "priority": 950,
+  "priority": -950,
   "dependencies": {
     "LudotsCoreMod": ">=1.0.0"
   }

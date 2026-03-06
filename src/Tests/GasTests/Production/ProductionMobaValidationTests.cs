@@ -46,6 +46,24 @@ namespace Ludots.Tests.GAS.Production
                 }
 
                 Assert.That(
+                    engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
+                    localObj is Entity localPlayer &&
+                    localPlayer != Entity.Null &&
+                    engine.World.IsAlive(localPlayer),
+                    Is.True,
+                    "Moba demo should wire LocalPlayerEntity on map load.");
+
+                Assert.That(
+                    engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var selectedObj) &&
+                    selectedObj is Entity selected &&
+                    selected == (Entity)localObj!,
+                    Is.True,
+                    "Moba demo should default SelectedEntity to the local hero.");
+
+                Assert.That(engine.World.Has<TimedTagBuffer>((Entity)localObj!), Is.True,
+                    "Moba hero should receive TimedTagBuffer for cooldown and tag-driven gameplay.");
+
+                Assert.That(
                     engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var overlayObj) &&
                     overlayObj is ScreenOverlayBuffer,
                     Is.True,
