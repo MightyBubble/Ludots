@@ -124,12 +124,16 @@ namespace MobaDemoMod.Presentation
                     DebugLog("H4", "MobaLocalOrderSourceSystem.InitializeInputOrderMapping:submit", "Order submitted to queue", new
                     {
                         actorId = order.Actor.Id,
+                        actorName = GetEntityName(order.Actor),
                         targetId = order.Target.Id,
+                        targetName = GetEntityName(order.Target),
                         abilitySlot = order.Args.I0,
                         orderTagId = order.OrderTagId,
                         interactionMode = _inputOrderMapping?.InteractionMode.ToString() ?? "null",
                         selectedId,
+                        selectedName = GetEntityName(selected),
                         hoveredId,
+                        hoveredName = GetEntityName(hovered),
                         spatialKind = order.Args.Spatial.Kind.ToString(),
                         spatialMode = order.Args.Spatial.Mode.ToString()
                     });
@@ -298,6 +302,12 @@ namespace MobaDemoMod.Presentation
 
         private static bool ShouldDebugAbilitySlot(int abilitySlot)
             => abilitySlot is 0 or 2 or 3;
+
+        private string GetEntityName(Entity entity)
+        {
+            if (!_world.IsAlive(entity)) return string.Empty;
+            return _world.TryGet(entity, out Name name) ? name.Value ?? string.Empty : string.Empty;
+        }
 
         private static void DebugLog(string hypothesisId, string location, string message, object data)
         {
