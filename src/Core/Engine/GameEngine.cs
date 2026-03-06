@@ -621,7 +621,7 @@ namespace Ludots.Core.Engine
 
             if (config.Navigation2D.Enabled)
             {
-                var navigation2dRuntime = new Navigation2DRuntime(maxAgents: config.Navigation2D.MaxAgents, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: HexGridAOI);
+                var navigation2dRuntime = new Navigation2DRuntime(config.Navigation2D, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: HexGridAOI);
                 navigation2dRuntime.FlowIterationsPerTick = config.Navigation2D.FlowIterationsPerTick;
                 SetService(CoreServiceKeys.Navigation2DRuntime, navigation2dRuntime);
 

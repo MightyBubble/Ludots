@@ -1,8 +1,43 @@
-{
+﻿{
   "startupMapId": "nav2d_playground",
   "Navigation2D": {
     "Enabled": true,
     "MaxAgents": 50000,
-    "FlowIterationsPerTick": 8192
+    "FlowIterationsPerTick": 8192,
+    "Steering": {
+      "Mode": "Hybrid",
+      "QueryBudget": {
+        "MaxNeighborsPerAgent": 8,
+        "MaxCandidateChecksPerAgent": 24
+      },
+      "Orca": {
+        "Enabled": true,
+        "FallbackToPreferredVelocity": true
+      },
+      "Sonar": {
+        "Enabled": true,
+        "MaxSteerAngleDeg": 280,
+        "BackwardPenaltyAngleDeg": 230,
+        "IgnoreBehindMovingAgents": true,
+        "BlockedStop": false,
+        "PredictionTimeScale": 0.9
+      },
+      "Hybrid": {
+        "Enabled": true,
+        "DenseNeighborThreshold": 6,
+        "MinSpeedForOrcaCmPerSec": 120,
+        "MinOpposingNeighborsForOrca": 1,
+        "OpposingVelocityDotThreshold": -0.25
+      },
+      "SmartStop": {
+        "Enabled": true,
+        "QueryRadiusCm": 100,
+        "MaxNeighbors": 6,
+        "SelfGoalDistanceLimitCm": 180,
+        "GoalToleranceCm": 80,
+        "ArrivedSlackCm": 20,
+        "StoppedSpeedThresholdCmPerSec": 5
+      }
+    }
   }
 }

@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.FlowField;
 using Ludots.Core.Navigation2D.Spatial;
 using Ludots.Core.Spatial;
@@ -14,17 +15,21 @@ namespace Ludots.Core.Navigation2D.Runtime
         public readonly CrowdFlow2D[] Flows;
         private readonly CrowdFlowChunkStreaming? _streaming;
 
+        public Navigation2DConfig Config { get; }
+
         public bool FlowEnabled { get; set; } = false;
         public bool FlowDebugEnabled { get; set; } = false;
         public int FlowDebugMode { get; set; } = 0;
 
-        public int FlowIterationsPerTick { get; set; } = 1024;
+        public int FlowIterationsPerTick { get; set; }
 
-        public Navigation2DRuntime(int maxAgents, int gridCellSizeCm, ILoadedChunks? loadedChunks)
+        public Navigation2DRuntime(Navigation2DConfig config, int gridCellSizeCm, ILoadedChunks? loadedChunks)
         {
+            Config = (config ?? new Navigation2DConfig()).CloneValidated();
+
             var cellSize = Fix64.FromInt(gridCellSizeCm);
-            AgentSoA = new Navigation2DWorld(new Navigation2DWorldSettings(maxAgents, cellSize));
-            CellMap = new Nav2DCellMap(cellSize, initialAgentCapacity: maxAgents, initialCellCapacity: Math.Max(128, maxAgents / 2));
+            AgentSoA = new Navigation2DWorld(new Navigation2DWorldSettings(Config.MaxAgents, cellSize));
+            CellMap = new Nav2DCellMap(cellSize, initialAgentCapacity: Config.MaxAgents, initialCellCapacity: Math.Max(128, Config.MaxAgents / 2));
 
             Surface = new CrowdSurface2D(cellSize, tileSizeCells: 64, initialTileCapacity: 256);
             Flows = new[]
@@ -33,10 +38,17 @@ namespace Ludots.Core.Navigation2D.Runtime
                 new CrowdFlow2D(Surface, initialTileCapacity: 256),
             };
 
+            FlowIterationsPerTick = Config.FlowIterationsPerTick;
+
             if (loadedChunks != null)
             {
                 _streaming = new CrowdFlowChunkStreaming(loadedChunks, Flows);
             }
+        }
+
+        public Navigation2DRuntime(int maxAgents, int gridCellSizeCm, ILoadedChunks? loadedChunks)
+            : this(new Navigation2DConfig { Enabled = true, MaxAgents = maxAgents }, gridCellSizeCm, loadedChunks)
+        {
         }
 
         public int FlowCount => Flows.Length;

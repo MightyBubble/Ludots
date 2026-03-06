@@ -1,7 +1,42 @@
-{
+﻿{
   "Navigation2D": {
     "Enabled": false,
     "MaxAgents": 50000,
-    "FlowIterationsPerTick": 4096
+    "FlowIterationsPerTick": 4096,
+    "Steering": {
+      "Mode": "Hybrid",
+      "QueryBudget": {
+        "MaxNeighborsPerAgent": 8,
+        "MaxCandidateChecksPerAgent": 32
+      },
+      "Orca": {
+        "Enabled": true,
+        "FallbackToPreferredVelocity": true
+      },
+      "Sonar": {
+        "Enabled": true,
+        "MaxSteerAngleDeg": 280,
+        "BackwardPenaltyAngleDeg": 230,
+        "IgnoreBehindMovingAgents": true,
+        "BlockedStop": false,
+        "PredictionTimeScale": 0.9
+      },
+      "Hybrid": {
+        "Enabled": true,
+        "DenseNeighborThreshold": 6,
+        "MinSpeedForOrcaCmPerSec": 120,
+        "MinOpposingNeighborsForOrca": 1,
+        "OpposingVelocityDotThreshold": -0.25
+      },
+      "SmartStop": {
+        "Enabled": true,
+        "QueryRadiusCm": 100,
+        "MaxNeighbors": 8,
+        "SelfGoalDistanceLimitCm": 160,
+        "GoalToleranceCm": 80,
+        "ArrivedSlackCm": 20,
+        "StoppedSpeedThresholdCmPerSec": 5
+      }
+    }
   }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using Arch.LowLevel;
 
@@ -19,6 +19,11 @@ namespace Ludots.Core.Navigation2D.Runtime
         public UnsafeList<Vector2> PreferredVelocities;
         public UnsafeList<Vector2> OutputForces;
         public UnsafeList<Vector2> OutputDesiredVelocities;
+        public UnsafeList<Vector2> GoalPositions;
+        public UnsafeList<float> GoalRadii;
+        public UnsafeList<float> GoalDistances;
+        public UnsafeList<byte> HasPointGoals;
+        public UnsafeList<byte> SmartStopFlags;
 
         public int Count => Positions.Count;
 
@@ -37,6 +42,11 @@ namespace Ludots.Core.Navigation2D.Runtime
             PreferredVelocities = new UnsafeList<Vector2>(settings.MaxAgents);
             OutputForces = new UnsafeList<Vector2>(settings.MaxAgents);
             OutputDesiredVelocities = new UnsafeList<Vector2>(settings.MaxAgents);
+            GoalPositions = new UnsafeList<Vector2>(settings.MaxAgents);
+            GoalRadii = new UnsafeList<float>(settings.MaxAgents);
+            GoalDistances = new UnsafeList<float>(settings.MaxAgents);
+            HasPointGoals = new UnsafeList<byte>(settings.MaxAgents);
+            SmartStopFlags = new UnsafeList<byte>(settings.MaxAgents);
         }
 
         public bool TryAdd(
@@ -48,7 +58,11 @@ namespace Ludots.Core.Navigation2D.Runtime
             float neighborDistance,
             float timeHorizon,
             int maxNeighbors,
-            in Vector2 preferredVelocity)
+            in Vector2 preferredVelocity,
+            bool hasPointGoal,
+            in Vector2 goalPosition,
+            float goalRadius,
+            float goalDistance)
         {
             if (Count >= Settings.MaxAgents)
             {
@@ -66,6 +80,11 @@ namespace Ludots.Core.Navigation2D.Runtime
             PreferredVelocities.Add(preferredVelocity);
             OutputForces.Add(Vector2.Zero);
             OutputDesiredVelocities.Add(Vector2.Zero);
+            GoalPositions.Add(goalPosition);
+            GoalRadii.Add(goalRadius);
+            GoalDistances.Add(goalDistance);
+            HasPointGoals.Add(hasPointGoal ? (byte)1 : (byte)0);
+            SmartStopFlags.Add(0);
             return true;
         }
 
@@ -82,6 +101,11 @@ namespace Ludots.Core.Navigation2D.Runtime
             PreferredVelocities.Clear();
             OutputForces.Clear();
             OutputDesiredVelocities.Clear();
+            GoalPositions.Clear();
+            GoalRadii.Clear();
+            GoalDistances.Clear();
+            HasPointGoals.Clear();
+            SmartStopFlags.Clear();
         }
 
         public void Dispose()
@@ -97,6 +121,11 @@ namespace Ludots.Core.Navigation2D.Runtime
             PreferredVelocities.Dispose();
             OutputForces.Dispose();
             OutputDesiredVelocities.Dispose();
+            GoalPositions.Dispose();
+            GoalRadii.Dispose();
+            GoalDistances.Dispose();
+            HasPointGoals.Dispose();
+            SmartStopFlags.Dispose();
         }
     }
 }
