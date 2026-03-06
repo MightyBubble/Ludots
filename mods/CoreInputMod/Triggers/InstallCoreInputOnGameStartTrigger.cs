@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod.Systems;
+using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Mathematics;
@@ -64,7 +65,11 @@ namespace CoreInputMod.Triggers
             engine.RegisterPresentationSystem(new SkillBarOverlaySystem(engine.World, engine.GlobalContext));
             engine.RegisterPresentationSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext, engine.SpatialQueries));
 
-            _ctx.Log("[CoreInputMod] EntityClickSelect, GasSelectionResponse, GasInputResponse, SkillBar, TabTarget registered");
+            var vmManager = new ViewModeManager(engine.World, engine.GlobalContext, engine.GameSession.Camera);
+            engine.GlobalContext[ViewModeManager.GlobalKey] = vmManager;
+            engine.RegisterPresentationSystem(new ViewModeSwitchSystem(engine.GlobalContext));
+
+            _ctx.Log("[CoreInputMod] EntityClickSelect, GasSelectionResponse, GasInputResponse, SkillBar, TabTarget, ViewMode registered");
             return Task.CompletedTask;
         }
     }

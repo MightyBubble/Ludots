@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod.Triggers;
+using CoreInputMod.ViewMode;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -63,6 +64,8 @@ namespace MobaDemoMod.Triggers
                 _ctx.Log("[MobaDemoMod] OrderQueue ready, registering local order source.");
                 engine.RegisterPresentationSystem(new MobaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx));
             }
+
+            ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Moba");
 
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var registryObj) &&
                 registryObj is OrderTypeRegistry orderTypeRegistry)

@@ -23,6 +23,8 @@ namespace CoreInputMod.Systems
     /// </summary>
     public sealed class LocalOrderSourceHelper
     {
+        public const string ActiveMappingKey = "CoreInputMod.ActiveInputOrderMapping";
+
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly OrderQueue _orders;
@@ -73,6 +75,7 @@ namespace CoreInputMod.Systems
             mapping.SetHoveredEntityProvider((out Entity e) => TryGetEntity(CoreServiceKeys.HoveredEntity.Name, out e));
             mapping.SetOrderSubmitHandler((in Order o) => _orders.TryEnqueue(o));
 
+            _globals[ActiveMappingKey] = mapping;
             return mapping;
         }
 

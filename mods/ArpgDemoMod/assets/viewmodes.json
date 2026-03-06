@@ -1,0 +1,32 @@
+[
+  {
+    "id": "TPS",
+    "displayName": "TPS (3rd Person)",
+    "cameraPresetId": "TPS",
+    "followTargetKind": "LocalPlayer",
+    "inputContextId": "Arpg_Gameplay",
+    "interactionMode": "TargetFirst",
+    "skillBarKeyLabels": ["1", "2", "3", "4", "5", "6"],
+    "skillBarEnabled": true
+  },
+  {
+    "id": "Moba",
+    "displayName": "MOBA Overhead",
+    "cameraPresetId": "Moba",
+    "followTargetKind": "LocalPlayer",
+    "inputContextId": "Arpg_Gameplay",
+    "interactionMode": "SmartCast",
+    "skillBarKeyLabels": ["1", "2", "3", "4", "5", "6"],
+    "skillBarEnabled": true
+  },
+  {
+    "id": "Rts",
+    "displayName": "RTS Free Cam",
+    "cameraPresetId": "Rts",
+    "followTargetKind": "None",
+    "inputContextId": "Arpg_Gameplay",
+    "interactionMode": "AimCast",
+    "skillBarKeyLabels": ["1", "2", "3", "4", "5", "6"],
+    "skillBarEnabled": true
+  }
+]
