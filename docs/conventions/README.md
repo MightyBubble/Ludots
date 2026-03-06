@@ -23,18 +23,17 @@
 
 ## 任务 Recipes
 
-常见开发任务的最小完整示例，照着做就能产出符合架构的代码：[recipes/README.md](recipes/README.md)
+按业务场景找到对应的 Recipe 组合：[recipes/README.md](recipes/README.md)
 
-| Recipe | 场景 |
-|--------|------|
-| [new_mod](recipes/new_mod.md) | 新建 Mod |
-| [new_ability](recipes/new_ability.md) | 新增 GAS 技能 |
-| [new_system](recipes/new_system.md) | 新增 ECS System |
-| [new_component](recipes/new_component.md) | 新增 ECS Component |
-| [new_order](recipes/new_order.md) | 新增交互/命令 |
-| [new_presenter](recipes/new_presenter.md) | 新增表现/UI |
-| [new_config](recipes/new_config.md) | 新增配置类型 |
-| [new_trigger](recipes/new_trigger.md) | 新增事件触发器 |
+| 我要做什么 | 对应 Recipe 组合 |
+|-----------|-----------------|
+| 做一个新英雄/角色 | component → ability → input → order → presenter |
+| 做一张新地图 | map → trigger → config |
+| 加一种新操作方式 | input → order |
+| 加一个 gameplay 机制 | system → component → config |
+| 做一个独立功能模块 | mod → 按需组合 |
+
+共 10 个原子 Recipe，完整索引见 [recipes/README.md](recipes/README.md)。
 
 ## 规范自身的迭代规则
 
