@@ -8,7 +8,8 @@ namespace Ludots.Core.Navigation2D.Avoidance
     public static class SonarSolver2D
     {
         private const float Epsilon = 1e-5f;
-        private const int MaxIntervals = 96;
+        private const float EpsilonSq = Epsilon * Epsilon;
+        public const int MaxIntervals = 96;
 
         public readonly struct Obstacle
         {
@@ -24,15 +25,55 @@ namespace Ludots.Core.Navigation2D.Avoidance
             }
         }
 
-        private struct Interval
+        public struct Interval
         {
             public float Min;
             public float Max;
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public Interval(float min, float max)
             {
                 Min = min;
                 Max = max;
+            }
+        }
+
+        public readonly struct SolveConfig
+        {
+            public readonly float MaxSteerAngle;
+            public readonly float BackwardPenaltyAngle;
+            public readonly float PredictionTimeScale;
+            public readonly bool IgnoreBehindMovingAgents;
+            public readonly bool BlockedStop;
+            public readonly bool FallbackToPreferredVelocity;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public SolveConfig(
+                float maxSteerAngle,
+                float backwardPenaltyAngle,
+                float predictionTimeScale,
+                bool ignoreBehindMovingAgents,
+                bool blockedStop,
+                bool fallbackToPreferredVelocity)
+            {
+                MaxSteerAngle = maxSteerAngle;
+                BackwardPenaltyAngle = backwardPenaltyAngle;
+                PredictionTimeScale = predictionTimeScale;
+                IgnoreBehindMovingAgents = ignoreBehindMovingAgents;
+                BlockedStop = blockedStop;
+                FallbackToPreferredVelocity = fallbackToPreferredVelocity;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static SolveConfig FromConfig(Navigation2DSonarConfig config, bool fallbackToPreferredVelocity)
+            {
+                return new SolveConfig(
+                    maxSteerAngle: SonarSolver2D.DegreesToRadians(config.MaxSteerAngleDeg) * 0.5f,
+                    backwardPenaltyAngle: SonarSolver2D.DegreesToRadians(config.BackwardPenaltyAngleDeg) * 0.5f,
+                    predictionTimeScale: config.PredictionTimeScale,
+                    ignoreBehindMovingAgents: config.IgnoreBehindMovingAgents,
+                    blockedStop: config.BlockedStop,
+                    fallbackToPreferredVelocity: fallbackToPreferredVelocity);
             }
         }
 
@@ -47,99 +88,18 @@ namespace Ludots.Core.Navigation2D.Avoidance
             Navigation2DSonarConfig config,
             bool fallbackToPreferredVelocity)
         {
-            float preferredLen = preferredVelocity.Length();
-            if (preferredLen <= Epsilon || maxSpeed <= Epsilon)
-            {
-                return Vector2.Zero;
-            }
-
-            Vector2 desiredDir = preferredVelocity / preferredLen;
-            float preferredAngle = MathF.Atan2(desiredDir.Y, desiredDir.X);
-            float maxSteerAngle = DegreesToRadians(config.MaxSteerAngleDeg) * 0.5f;
-            float backwardPenaltyAngle = DegreesToRadians(config.BackwardPenaltyAngleDeg) * 0.5f;
-
-            Span<Interval> available = stackalloc Interval[MaxIntervals];
-            int availableCount = 1;
-            available[0] = new Interval(-MathF.PI, MathF.PI);
-
-            if (maxSteerAngle < MathF.PI)
-            {
-                availableCount = SubtractBlockedInterval(available, availableCount, maxSteerAngle, MathF.PI);
-                availableCount = SubtractBlockedInterval(available, availableCount, -MathF.PI, -maxSteerAngle);
-            }
-
-            if (backwardPenaltyAngle > Epsilon && velocity.LengthSquared() > Epsilon * Epsilon)
-            {
-                float backwardAngle = WrapAngle(RelativeAngle(-Vector2.Normalize(velocity), desiredDir));
-                availableCount = SubtractBlockedIntervalWrapped(
-                    available,
-                    availableCount,
-                    backwardAngle - backwardPenaltyAngle,
-                    backwardAngle + backwardPenaltyAngle);
-            }
-
-            float predictionTime = MathF.Max(0f, timeHorizon * config.PredictionTimeScale);
-            for (int i = 0; i < obstacles.Length && availableCount > 0; i++)
-            {
-                ref readonly var obstacle = ref obstacles[i];
-                Vector2 relativePosition = obstacle.Position - position;
-                Vector2 relativeVelocity = obstacle.Velocity - velocity;
-                Vector2 predictedOffset = relativePosition + relativeVelocity * predictionTime;
-                float distanceSq = predictedOffset.LengthSquared();
-                float combinedRadius = radius + obstacle.Radius;
-
-                if (distanceSq <= Epsilon)
-                {
-                    return config.BlockedStop ? Vector2.Zero : ClampPreferred(preferredVelocity, maxSpeed, fallbackToPreferredVelocity);
-                }
-
-                if (config.IgnoreBehindMovingAgents && obstacle.Velocity.LengthSquared() > Epsilon * Epsilon)
-                {
-                    Vector2 offsetDir = Vector2.Normalize(predictedOffset);
-                    if (Vector2.Dot(desiredDir, offsetDir) < 0f)
-                    {
-                        continue;
-                    }
-                }
-
-                float distance = MathF.Sqrt(distanceSq);
-                float blockHalfAngle;
-                if (distance <= combinedRadius + Epsilon)
-                {
-                    blockHalfAngle = MathF.PI;
-                }
-                else
-                {
-                    float ratio = Math.Clamp(combinedRadius / distance, 0f, 1f);
-                    blockHalfAngle = MathF.Asin(ratio);
-                }
-
-                float obstacleAngle = RelativeAngle(predictedOffset, desiredDir);
-                availableCount = SubtractBlockedIntervalWrapped(
-                    available,
-                    availableCount,
-                    obstacleAngle - blockHalfAngle,
-                    obstacleAngle + blockHalfAngle);
-            }
-
-            if (ContainsAngleZero(available, availableCount))
-            {
-                return ScaleToPreferredSpeed(desiredDir, preferredLen, maxSpeed);
-            }
-
-            if (TrySelectClosestAngle(available, availableCount, out float relativeAngle))
-            {
-                float solvedAngle = preferredAngle + relativeAngle;
-                Vector2 solvedDirection = new Vector2(MathF.Cos(solvedAngle), MathF.Sin(solvedAngle));
-                return ScaleToPreferredSpeed(solvedDirection, preferredLen, maxSpeed);
-            }
-
-            if (config.BlockedStop)
-            {
-                return Vector2.Zero;
-            }
-
-            return ClampPreferred(preferredVelocity, maxSpeed, fallbackToPreferredVelocity);
+            Span<Interval> intervalScratch = stackalloc Interval[MaxIntervals];
+            var solveConfig = SolveConfig.FromConfig(config, fallbackToPreferredVelocity);
+            return ComputeDesiredVelocity(
+                position,
+                velocity,
+                preferredVelocity,
+                maxSpeed,
+                radius,
+                timeHorizon,
+                obstacles,
+                solveConfig,
+                intervalScratch);
         }
 
         public static Vector2 ComputeDesiredVelocity(
@@ -156,38 +116,52 @@ namespace Ludots.Core.Navigation2D.Avoidance
             Navigation2DSonarConfig config,
             bool fallbackToPreferredVelocity)
         {
-            float preferredLen = preferredVelocity.Length();
-            if (preferredLen <= Epsilon || maxSpeed <= Epsilon)
+            Span<Interval> intervalScratch = stackalloc Interval[MaxIntervals];
+            var solveConfig = SolveConfig.FromConfig(config, fallbackToPreferredVelocity);
+            return ComputeDesiredVelocity(
+                position,
+                velocity,
+                preferredVelocity,
+                maxSpeed,
+                radius,
+                timeHorizon,
+                obstacleIndices,
+                obstaclePositions,
+                obstacleVelocities,
+                obstacleRadii,
+                solveConfig,
+                intervalScratch);
+        }
+
+        public static Vector2 ComputeDesiredVelocity(
+            Vector2 position,
+            Vector2 velocity,
+            Vector2 preferredVelocity,
+            float maxSpeed,
+            float radius,
+            float timeHorizon,
+            ReadOnlySpan<int> obstacleIndices,
+            ReadOnlySpan<Vector2> obstaclePositions,
+            ReadOnlySpan<Vector2> obstacleVelocities,
+            ReadOnlySpan<float> obstacleRadii,
+            in SolveConfig solveConfig,
+            Span<Interval> intervalScratch)
+        {
+            if (!TryBeginSolve(
+                velocity,
+                preferredVelocity,
+                maxSpeed,
+                timeHorizon,
+                solveConfig,
+                intervalScratch,
+                out float preferredLen,
+                out Vector2 desiredDir,
+                out float predictionTime,
+                out int availableCount))
             {
                 return Vector2.Zero;
             }
 
-            Vector2 desiredDir = preferredVelocity / preferredLen;
-            float preferredAngle = MathF.Atan2(desiredDir.Y, desiredDir.X);
-            float maxSteerAngle = DegreesToRadians(config.MaxSteerAngleDeg) * 0.5f;
-            float backwardPenaltyAngle = DegreesToRadians(config.BackwardPenaltyAngleDeg) * 0.5f;
-
-            Span<Interval> available = stackalloc Interval[MaxIntervals];
-            int availableCount = 1;
-            available[0] = new Interval(-MathF.PI, MathF.PI);
-
-            if (maxSteerAngle < MathF.PI)
-            {
-                availableCount = SubtractBlockedInterval(available, availableCount, maxSteerAngle, MathF.PI);
-                availableCount = SubtractBlockedInterval(available, availableCount, -MathF.PI, -maxSteerAngle);
-            }
-
-            if (backwardPenaltyAngle > Epsilon && velocity.LengthSquared() > Epsilon * Epsilon)
-            {
-                float backwardAngle = WrapAngle(RelativeAngle(-Vector2.Normalize(velocity), desiredDir));
-                availableCount = SubtractBlockedIntervalWrapped(
-                    available,
-                    availableCount,
-                    backwardAngle - backwardPenaltyAngle,
-                    backwardAngle + backwardPenaltyAngle);
-            }
-
-            float predictionTime = MathF.Max(0f, timeHorizon * config.PredictionTimeScale);
             for (int i = 0; i < obstacleIndices.Length && availableCount > 0; i++)
             {
                 int obstacleIndex = obstacleIndices[i];
@@ -201,40 +175,198 @@ namespace Ludots.Core.Navigation2D.Avoidance
                 float distanceSq = predictedOffset.LengthSquared();
                 float combinedRadius = radius + obstacleRadius;
 
-                if (distanceSq <= Epsilon)
+                if (distanceSq <= EpsilonSq)
                 {
-                    return config.BlockedStop ? Vector2.Zero : ClampPreferred(preferredVelocity, maxSpeed, fallbackToPreferredVelocity);
+                    return solveConfig.BlockedStop
+                        ? Vector2.Zero
+                        : ClampPreferred(preferredVelocity, maxSpeed, solveConfig.FallbackToPreferredVelocity);
                 }
 
-                if (config.IgnoreBehindMovingAgents && obstacleVelocity.LengthSquared() > Epsilon * Epsilon)
+                if (solveConfig.IgnoreBehindMovingAgents && obstacleVelocity.LengthSquared() > EpsilonSq && Vector2.Dot(desiredDir, predictedOffset) < 0f)
                 {
-                    Vector2 offsetDir = Vector2.Normalize(predictedOffset);
-                    if (Vector2.Dot(desiredDir, offsetDir) < 0f)
-                    {
-                        continue;
-                    }
+                    continue;
                 }
 
-                float distance = MathF.Sqrt(distanceSq);
                 float blockHalfAngle;
-                if (distance <= combinedRadius + Epsilon)
+                float combinedRadiusWithSlack = combinedRadius + Epsilon;
+                if (distanceSq <= combinedRadiusWithSlack * combinedRadiusWithSlack)
                 {
                     blockHalfAngle = MathF.PI;
                 }
                 else
                 {
+                    float distance = MathF.Sqrt(distanceSq);
                     float ratio = Math.Clamp(combinedRadius / distance, 0f, 1f);
                     blockHalfAngle = MathF.Asin(ratio);
                 }
 
                 float obstacleAngle = RelativeAngle(predictedOffset, desiredDir);
                 availableCount = SubtractBlockedIntervalWrapped(
-                    available,
+                    intervalScratch,
                     availableCount,
                     obstacleAngle - blockHalfAngle,
                     obstacleAngle + blockHalfAngle);
             }
 
+            return FinishSolve(
+                desiredDir,
+                preferredLen,
+                maxSpeed,
+                preferredVelocity,
+                solveConfig,
+                intervalScratch,
+                availableCount);
+        }
+
+        private static Vector2 ComputeDesiredVelocity(
+            Vector2 position,
+            Vector2 velocity,
+            Vector2 preferredVelocity,
+            float maxSpeed,
+            float radius,
+            float timeHorizon,
+            ReadOnlySpan<Obstacle> obstacles,
+            in SolveConfig solveConfig,
+            Span<Interval> intervalScratch)
+        {
+            if (!TryBeginSolve(
+                velocity,
+                preferredVelocity,
+                maxSpeed,
+                timeHorizon,
+                solveConfig,
+                intervalScratch,
+                out float preferredLen,
+                out Vector2 desiredDir,
+                out float predictionTime,
+                out int availableCount))
+            {
+                return Vector2.Zero;
+            }
+
+            for (int i = 0; i < obstacles.Length && availableCount > 0; i++)
+            {
+                ref readonly var obstacle = ref obstacles[i];
+                Vector2 relativePosition = obstacle.Position - position;
+                Vector2 relativeVelocity = obstacle.Velocity - velocity;
+                Vector2 predictedOffset = relativePosition + relativeVelocity * predictionTime;
+                float distanceSq = predictedOffset.LengthSquared();
+                float combinedRadius = radius + obstacle.Radius;
+
+                if (distanceSq <= EpsilonSq)
+                {
+                    return solveConfig.BlockedStop
+                        ? Vector2.Zero
+                        : ClampPreferred(preferredVelocity, maxSpeed, solveConfig.FallbackToPreferredVelocity);
+                }
+
+                if (solveConfig.IgnoreBehindMovingAgents && obstacle.Velocity.LengthSquared() > EpsilonSq && Vector2.Dot(desiredDir, predictedOffset) < 0f)
+                {
+                    continue;
+                }
+
+                float blockHalfAngle;
+                float combinedRadiusWithSlack = combinedRadius + Epsilon;
+                if (distanceSq <= combinedRadiusWithSlack * combinedRadiusWithSlack)
+                {
+                    blockHalfAngle = MathF.PI;
+                }
+                else
+                {
+                    float distance = MathF.Sqrt(distanceSq);
+                    float ratio = Math.Clamp(combinedRadius / distance, 0f, 1f);
+                    blockHalfAngle = MathF.Asin(ratio);
+                }
+
+                float obstacleAngle = RelativeAngle(predictedOffset, desiredDir);
+                availableCount = SubtractBlockedIntervalWrapped(
+                    intervalScratch,
+                    availableCount,
+                    obstacleAngle - blockHalfAngle,
+                    obstacleAngle + blockHalfAngle);
+            }
+
+            return FinishSolve(
+                desiredDir,
+                preferredLen,
+                maxSpeed,
+                preferredVelocity,
+                solveConfig,
+                intervalScratch,
+                availableCount);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool TryBeginSolve(
+            Vector2 velocity,
+            Vector2 preferredVelocity,
+            float maxSpeed,
+            float timeHorizon,
+            in SolveConfig solveConfig,
+            Span<Interval> intervalScratch,
+            out float preferredLen,
+            out Vector2 desiredDir,
+            out float predictionTime,
+            out int availableCount)
+        {
+            preferredLen = preferredVelocity.Length();
+            if (preferredLen <= Epsilon || maxSpeed <= Epsilon)
+            {
+                desiredDir = Vector2.Zero;
+                predictionTime = 0f;
+                availableCount = 0;
+                return false;
+            }
+
+            desiredDir = preferredVelocity / preferredLen;
+            availableCount = InitializeAvailableIntervals(intervalScratch, velocity, desiredDir, solveConfig.MaxSteerAngle, solveConfig.BackwardPenaltyAngle);
+            predictionTime = MathF.Max(0f, timeHorizon * solveConfig.PredictionTimeScale);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int InitializeAvailableIntervals(
+            Span<Interval> available,
+            Vector2 velocity,
+            Vector2 desiredDir,
+            float maxSteerAngle,
+            float backwardPenaltyAngle)
+        {
+            int availableCount = 1;
+            available[0] = new Interval(-MathF.PI, MathF.PI);
+
+            if (maxSteerAngle < MathF.PI)
+            {
+                availableCount = SubtractBlockedInterval(available, availableCount, maxSteerAngle, MathF.PI);
+                availableCount = SubtractBlockedInterval(available, availableCount, -MathF.PI, -maxSteerAngle);
+            }
+
+            float velocityLenSq = velocity.LengthSquared();
+            if (availableCount > 0 && backwardPenaltyAngle > Epsilon && velocityLenSq > EpsilonSq)
+            {
+                float invVelocityLen = 1f / MathF.Sqrt(velocityLenSq);
+                Vector2 backwardDir = -velocity * invVelocityLen;
+                float backwardAngle = RelativeAngle(backwardDir, desiredDir);
+                availableCount = SubtractBlockedIntervalWrapped(
+                    available,
+                    availableCount,
+                    backwardAngle - backwardPenaltyAngle,
+                    backwardAngle + backwardPenaltyAngle);
+            }
+
+            return availableCount;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector2 FinishSolve(
+            Vector2 desiredDir,
+            float preferredLen,
+            float maxSpeed,
+            Vector2 preferredVelocity,
+            in SolveConfig solveConfig,
+            ReadOnlySpan<Interval> available,
+            int availableCount)
+        {
             if (ContainsAngleZero(available, availableCount))
             {
                 return ScaleToPreferredSpeed(desiredDir, preferredLen, maxSpeed);
@@ -242,17 +374,18 @@ namespace Ludots.Core.Navigation2D.Avoidance
 
             if (TrySelectClosestAngle(available, availableCount, out float relativeAngle))
             {
+                float preferredAngle = MathF.Atan2(desiredDir.Y, desiredDir.X);
                 float solvedAngle = preferredAngle + relativeAngle;
                 Vector2 solvedDirection = new Vector2(MathF.Cos(solvedAngle), MathF.Sin(solvedAngle));
                 return ScaleToPreferredSpeed(solvedDirection, preferredLen, maxSpeed);
             }
 
-            if (config.BlockedStop)
+            if (solveConfig.BlockedStop)
             {
                 return Vector2.Zero;
             }
 
-            return ClampPreferred(preferredVelocity, maxSpeed, fallbackToPreferredVelocity);
+            return ClampPreferred(preferredVelocity, maxSpeed, solveConfig.FallbackToPreferredVelocity);
         }
 
         private static int SubtractBlockedIntervalWrapped(Span<Interval> available, int availableCount, float blockedMin, float blockedMax)
@@ -385,8 +518,7 @@ namespace Ludots.Core.Navigation2D.Avoidance
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static float RelativeAngle(Vector2 vector, Vector2 referenceDirection)
         {
-            float angle = MathF.Atan2(vector.Y, vector.X) - MathF.Atan2(referenceDirection.Y, referenceDirection.X);
-            return WrapAngle(angle);
+            return MathF.Atan2(Det(referenceDirection, vector), Vector2.Dot(referenceDirection, vector));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -420,6 +552,8 @@ namespace Ludots.Core.Navigation2D.Avoidance
                 available[i] = available[i - 1];
             }
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float Det(Vector2 a, Vector2 b) => a.X * b.Y - a.Y * b.X;
     }
 }
-

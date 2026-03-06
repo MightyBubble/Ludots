@@ -118,9 +118,30 @@ namespace Ludots.Core.Physics2D.Systems
                 var preferredVelocities = agentSoA.PreferredVelocities.AsSpan();
                 var smartStopFlags = agentSoA.SmartStopFlags.AsSpan();
 
+                bool forceOrca = false;
+                bool forceSonar = false;
+                switch (config.Mode)
+                {
+                    case Navigation2DAvoidanceMode.Orca:
+                        forceOrca = config.Orca.Enabled;
+                        forceSonar = !forceOrca;
+                        break;
+                    case Navigation2DAvoidanceMode.Sonar:
+                        forceSonar = true;
+                        break;
+                    case Navigation2DAvoidanceMode.Hybrid:
+                        forceSonar = !config.Orca.Enabled || !config.Hybrid.Enabled;
+                        break;
+                    default:
+                        forceSonar = true;
+                        break;
+                }
+
                 Span<int> neighborIdxScratch = stackalloc int[MaxNeighborsHard];
                 Span<OrcaSolver2D.OrcaLine> lineScratch = stackalloc OrcaSolver2D.OrcaLine[MaxNeighborsHard];
                 Span<OrcaSolver2D.OrcaLine> projectionLineScratch = stackalloc OrcaSolver2D.OrcaLine[OrcaSolver2D.MaxProjectionLines];
+                Span<SonarSolver2D.Interval> sonarIntervalScratch = stackalloc SonarSolver2D.Interval[SonarSolver2D.MaxIntervals];
+                var sonarSolveConfig = SonarSolver2D.SolveConfig.FromConfig(config.Sonar, config.Orca.FallbackToPreferredVelocity);
 
                 foreach (var entityIndex in chunk)
                 {
@@ -179,7 +200,7 @@ namespace Ludots.Core.Physics2D.Systems
                     }
                     else
                     {
-                        bool useOrca = ShouldUseOrca(config, velocities, vel, preferred, neighborIdxScratch.Slice(0, neighborCount));
+                        bool useOrca = forceOrca || (!forceSonar && ShouldUseOrcaHybrid(config.Hybrid, velocities, vel, preferred, neighborIdxScratch.Slice(0, neighborCount)));
                         if (useOrca)
                         {
                             newVel = OrcaSolver2D.ComputeDesiredVelocity(
@@ -210,8 +231,8 @@ namespace Ludots.Core.Physics2D.Systems
                                 obstaclePositions: positions,
                                 obstacleVelocities: velocities,
                                 obstacleRadii: radii,
-                                config: config.Sonar,
-                                fallbackToPreferredVelocity: config.Orca.FallbackToPreferredVelocity);
+                                solveConfig: sonarSolveConfig,
+                                intervalScratch: sonarIntervalScratch);
                         }
                     }
 
@@ -328,42 +349,20 @@ namespace Ludots.Core.Physics2D.Systems
             }
         }
 
-        private static bool ShouldUseOrca(
-            Navigation2DSteeringConfig config,
+        private static bool ShouldUseOrcaHybrid(
+            Navigation2DHybridAvoidanceConfig config,
             ReadOnlySpan<Vector2> velocities,
             Vector2 selfVelocity,
             Vector2 preferredVelocity,
             ReadOnlySpan<int> neighborIndices)
         {
-            if (!config.Orca.Enabled)
-            {
-                return false;
-            }
-
-            switch (config.Mode)
-            {
-                case Navigation2DAvoidanceMode.Orca:
-                    return true;
-                case Navigation2DAvoidanceMode.Sonar:
-                    return false;
-                case Navigation2DAvoidanceMode.Hybrid:
-                    break;
-                default:
-                    return false;
-            }
-
-            if (!config.Hybrid.Enabled)
-            {
-                return false;
-            }
-
-            if (neighborIndices.Length >= config.Hybrid.DenseNeighborThreshold)
+            if (neighborIndices.Length >= config.DenseNeighborThreshold)
             {
                 return true;
             }
 
             float selfSpeed = selfVelocity.Length();
-            if (selfSpeed < config.Hybrid.MinSpeedForOrcaCmPerSec)
+            if (selfSpeed < config.MinSpeedForOrcaCmPerSec)
             {
                 return false;
             }
@@ -376,16 +375,18 @@ namespace Ludots.Core.Physics2D.Systems
             for (int n = 0; n < neighborIndices.Length; n++)
             {
                 Vector2 otherVelocity = velocities[neighborIndices[n]];
-                if (otherVelocity.LengthSquared() <= 1e-6f)
+                float otherSpeedSq = otherVelocity.LengthSquared();
+                if (otherSpeedSq <= 1e-6f)
                 {
                     continue;
                 }
 
-                float dot = Vector2.Dot(Vector2.Normalize(otherVelocity), referenceDirection);
-                if (dot <= config.Hybrid.OpposingVelocityDotThreshold)
+                float otherInvSpeed = 1f / MathF.Sqrt(otherSpeedSq);
+                float dot = Vector2.Dot(otherVelocity * otherInvSpeed, referenceDirection);
+                if (dot <= config.OpposingVelocityDotThreshold)
                 {
                     opposingCount++;
-                    if (opposingCount >= config.Hybrid.MinOpposingNeighborsForOrca)
+                    if (opposingCount >= config.MinOpposingNeighborsForOrca)
                     {
                         return true;
                     }
