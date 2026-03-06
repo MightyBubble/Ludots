@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
@@ -42,6 +43,8 @@ namespace RtsDemoMod.Triggers
                 engine.RegisterPresentationSystem(new RtsLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx));
                 _ctx.Log("[RtsDemoMod] RtsLocalOrderSourceSystem registered");
             }
+
+            ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");
 
             return Task.CompletedTask;
         }

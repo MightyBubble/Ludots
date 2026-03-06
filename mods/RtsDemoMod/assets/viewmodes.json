@@ -1,0 +1,32 @@
+[
+  {
+    "id": "Rts",
+    "displayName": "RTS (SC2)",
+    "cameraPresetId": "Rts",
+    "followTargetKind": "None",
+    "inputContextId": "Rts_Gameplay",
+    "interactionMode": "AimCast",
+    "skillBarKeyLabels": ["Q", "W", "E"],
+    "skillBarEnabled": true
+  },
+  {
+    "id": "Moba",
+    "displayName": "MOBA Follow",
+    "cameraPresetId": "Moba",
+    "followTargetKind": "SelectedOrLocalPlayer",
+    "inputContextId": "Rts_Gameplay",
+    "interactionMode": "SmartCast",
+    "skillBarKeyLabels": ["Q", "W", "E"],
+    "skillBarEnabled": true
+  },
+  {
+    "id": "TPS",
+    "displayName": "TPS Chase",
+    "cameraPresetId": "TPS",
+    "followTargetKind": "SelectedOrLocalPlayer",
+    "inputContextId": "Rts_Gameplay",
+    "interactionMode": "TargetFirst",
+    "skillBarKeyLabels": ["Q", "W", "E"],
+    "skillBarEnabled": true
+  }
+]

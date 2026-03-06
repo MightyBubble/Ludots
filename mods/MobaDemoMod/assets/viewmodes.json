@@ -1,0 +1,32 @@
+[
+  {
+    "id": "Moba",
+    "displayName": "MOBA (LoL)",
+    "cameraPresetId": "Moba",
+    "followTargetKind": "SelectedOrLocalPlayer",
+    "inputContextId": "Moba_Gameplay",
+    "interactionMode": "SmartCast",
+    "skillBarKeyLabels": ["Q", "W", "E", "R"],
+    "skillBarEnabled": true
+  },
+  {
+    "id": "Rts",
+    "displayName": "RTS (SC2)",
+    "cameraPresetId": "Rts",
+    "followTargetKind": "None",
+    "inputContextId": "Moba_Gameplay",
+    "interactionMode": "AimCast",
+    "skillBarKeyLabels": ["Q", "W", "E", "R"],
+    "skillBarEnabled": true
+  },
+  {
+    "id": "TPS",
+    "displayName": "TPS (WoW)",
+    "cameraPresetId": "TPS",
+    "followTargetKind": "SelectedOrLocalPlayer",
+    "inputContextId": "Moba_Gameplay",
+    "interactionMode": "TargetFirst",
+    "skillBarKeyLabels": ["1", "2", "3", "4"],
+    "skillBarEnabled": true
+  }
+]

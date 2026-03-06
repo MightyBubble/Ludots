@@ -124,6 +124,16 @@
       "id": "TabTargetReverse",
       "name": "Gameplay_TabTargetReverse",
       "type": "Button"
+    },
+    {
+      "id": "ViewModeNext",
+      "name": "Gameplay_ViewModeNext",
+      "type": "Button"
+    },
+    {
+      "id": "ViewModePrev",
+      "name": "Gameplay_ViewModePrev",
+      "type": "Button"
     }
   ],
   "contexts": [
@@ -190,6 +200,14 @@
         {
           "actionId": "CameraLock",
           "path": "<Keyboard>/space"
+        },
+        {
+          "actionId": "ViewModeNext",
+          "path": "<Keyboard>/v"
+        },
+        {
+          "actionId": "ViewModePrev",
+          "path": "<Keyboard>/b"
         }
       ]
     },

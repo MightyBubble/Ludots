@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Modding;
@@ -41,6 +42,8 @@ namespace ArpgDemoMod.Triggers
                 engine.RegisterPresentationSystem(new ArpgLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx));
                 _ctx.Log("[ArpgDemoMod] ArpgLocalOrderSourceSystem registered");
             }
+
+            ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "TPS");
 
             return Task.CompletedTask;
         }
