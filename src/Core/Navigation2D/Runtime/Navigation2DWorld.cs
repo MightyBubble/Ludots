@@ -5,6 +5,18 @@ using Arch.LowLevel;
 
 namespace Ludots.Core.Navigation2D.Runtime
 {
+    public readonly struct Navigation2DWorldSyncResult
+    {
+        public readonly bool SpatialDirty;
+        public readonly bool SmartStopDirty;
+
+        public Navigation2DWorldSyncResult(bool spatialDirty, bool smartStopDirty)
+        {
+            SpatialDirty = spatialDirty;
+            SmartStopDirty = smartStopDirty;
+        }
+    }
+
     public sealed unsafe class Navigation2DWorld : IDisposable
     {
         public readonly Navigation2DWorldSettings Settings;
@@ -14,17 +26,16 @@ namespace Ludots.Core.Navigation2D.Runtime
         public UnsafeList<Vector2> Positions;
         public UnsafeList<Vector2> Velocities;
         public UnsafeList<float> Radii;
-        public UnsafeList<float> MaxSpeeds;
-        public UnsafeList<float> MaxAccels;
-        public UnsafeList<float> NeighborDistances;
-        public UnsafeList<float> TimeHorizons;
-        public UnsafeList<int> MaxNeighbors;
-        public UnsafeList<Vector2> PreferredVelocities;
         public UnsafeList<Vector2> GoalPositions;
         public UnsafeList<float> GoalRadii;
         public UnsafeList<float> GoalDistances;
         public UnsafeList<byte> HasPointGoals;
         public UnsafeList<byte> SmartStopFlags;
+
+        private UnsafeList<int> _seenSyncStamps;
+        private int _syncStamp;
+        private bool _spatialDirty;
+        private bool _smartStopDirty;
 
         public int Count => Positions.Count;
 
@@ -40,61 +51,115 @@ namespace Ludots.Core.Navigation2D.Runtime
             Positions = new UnsafeList<Vector2>(settings.MaxAgents);
             Velocities = new UnsafeList<Vector2>(settings.MaxAgents);
             Radii = new UnsafeList<float>(settings.MaxAgents);
-            MaxSpeeds = new UnsafeList<float>(settings.MaxAgents);
-            MaxAccels = new UnsafeList<float>(settings.MaxAgents);
-            NeighborDistances = new UnsafeList<float>(settings.MaxAgents);
-            TimeHorizons = new UnsafeList<float>(settings.MaxAgents);
-            MaxNeighbors = new UnsafeList<int>(settings.MaxAgents);
-            PreferredVelocities = new UnsafeList<Vector2>(settings.MaxAgents);
             GoalPositions = new UnsafeList<Vector2>(settings.MaxAgents);
             GoalRadii = new UnsafeList<float>(settings.MaxAgents);
             GoalDistances = new UnsafeList<float>(settings.MaxAgents);
             HasPointGoals = new UnsafeList<byte>(settings.MaxAgents);
             SmartStopFlags = new UnsafeList<byte>(settings.MaxAgents);
+            _seenSyncStamps = new UnsafeList<int>(settings.MaxAgents);
+            _syncStamp = 0;
+            _spatialDirty = true;
+            _smartStopDirty = true;
         }
 
-        public bool TryAdd(
+        public void BeginSync()
+        {
+            if (_syncStamp == int.MaxValue)
+            {
+                if (_seenSyncStamps.Count > 0)
+                {
+                    _seenSyncStamps.AsSpan().Clear();
+                }
+
+                _syncStamp = 0;
+            }
+
+            _syncStamp++;
+            _spatialDirty = false;
+            _smartStopDirty = false;
+        }
+
+        public bool SyncAgent(
             int entityId,
             in Vector2 position,
             in Vector2 velocity,
             float radius,
-            float maxSpeed,
-            float maxAccel,
-            float neighborDistance,
-            float timeHorizon,
-            int maxNeighbors,
-            in Vector2 preferredVelocity,
             bool hasPointGoal,
             in Vector2 goalPosition,
             float goalRadius,
             float goalDistance)
         {
-            if (entityId < 0 || Count >= Settings.MaxAgents)
+            if (entityId < 0)
             {
                 return false;
             }
 
-            EnsureEntityIndexCapacity(entityId);
+            byte hasPointGoalByte = hasPointGoal ? (byte)1 : (byte)0;
+            if (!TryGetAgentIndex(entityId, out int agentIndex))
+            {
+                if (Count >= Settings.MaxAgents)
+                {
+                    return false;
+                }
 
-            int agentIndex = Count;
-            EntityIds.Add(entityId);
-            EntityToAgentIndex[entityId] = agentIndex;
+                EnsureEntityIndexCapacity(entityId);
 
-            Positions.Add(position);
-            Velocities.Add(velocity);
-            Radii.Add(radius);
-            MaxSpeeds.Add(maxSpeed);
-            MaxAccels.Add(maxAccel);
-            NeighborDistances.Add(neighborDistance);
-            TimeHorizons.Add(timeHorizon);
-            MaxNeighbors.Add(maxNeighbors);
-            PreferredVelocities.Add(preferredVelocity);
-            GoalPositions.Add(goalPosition);
-            GoalRadii.Add(goalRadius);
-            GoalDistances.Add(goalDistance);
-            HasPointGoals.Add(hasPointGoal ? (byte)1 : (byte)0);
-            SmartStopFlags.Add(0);
+                agentIndex = Count;
+                EntityIds.Add(entityId);
+                _seenSyncStamps.Add(_syncStamp);
+                EntityToAgentIndex[entityId] = agentIndex;
+
+                Positions.Add(position);
+                Velocities.Add(velocity);
+                Radii.Add(radius);
+                GoalPositions.Add(goalPosition);
+                GoalRadii.Add(goalRadius);
+                GoalDistances.Add(goalDistance);
+                HasPointGoals.Add(hasPointGoalByte);
+                SmartStopFlags.Add(0);
+
+                _spatialDirty = true;
+                _smartStopDirty = true;
+                return true;
+            }
+
+            _seenSyncStamps[agentIndex] = _syncStamp;
+
+            if (Positions[agentIndex] != position)
+            {
+                Positions[agentIndex] = position;
+                _spatialDirty = true;
+                _smartStopDirty = true;
+            }
+            else
+            {
+                Positions[agentIndex] = position;
+            }
+
+            if (Velocities[agentIndex] != velocity ||
+                GoalPositions[agentIndex] != goalPosition ||
+                GoalRadii[agentIndex] != goalRadius ||
+                GoalDistances[agentIndex] != goalDistance ||
+                HasPointGoals[agentIndex] != hasPointGoalByte)
+            {
+                _smartStopDirty = true;
+            }
+
+            Velocities[agentIndex] = velocity;
+            Radii[agentIndex] = radius;
+            GoalPositions[agentIndex] = goalPosition;
+            GoalRadii[agentIndex] = goalRadius;
+            GoalDistances[agentIndex] = goalDistance;
+            HasPointGoals[agentIndex] = hasPointGoalByte;
             return true;
+        }
+
+        public Navigation2DWorldSyncResult EndSync()
+        {
+            bool removedAny = RemoveMissingAgents();
+            return new Navigation2DWorldSyncResult(
+                spatialDirty: _spatialDirty || removedAny,
+                smartStopDirty: _smartStopDirty || removedAny);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -126,17 +191,15 @@ namespace Ludots.Core.Navigation2D.Runtime
             Positions.Clear();
             Velocities.Clear();
             Radii.Clear();
-            MaxSpeeds.Clear();
-            MaxAccels.Clear();
-            NeighborDistances.Clear();
-            TimeHorizons.Clear();
-            MaxNeighbors.Clear();
-            PreferredVelocities.Clear();
             GoalPositions.Clear();
             GoalRadii.Clear();
             GoalDistances.Clear();
             HasPointGoals.Clear();
             SmartStopFlags.Clear();
+            _seenSyncStamps.Clear();
+            _syncStamp = 0;
+            _spatialDirty = true;
+            _smartStopDirty = true;
         }
 
         public void Dispose()
@@ -146,17 +209,71 @@ namespace Ludots.Core.Navigation2D.Runtime
             Positions.Dispose();
             Velocities.Dispose();
             Radii.Dispose();
-            MaxSpeeds.Dispose();
-            MaxAccels.Dispose();
-            NeighborDistances.Dispose();
-            TimeHorizons.Dispose();
-            MaxNeighbors.Dispose();
-            PreferredVelocities.Dispose();
             GoalPositions.Dispose();
             GoalRadii.Dispose();
             GoalDistances.Dispose();
             HasPointGoals.Dispose();
             SmartStopFlags.Dispose();
+            _seenSyncStamps.Dispose();
+        }
+
+        private bool RemoveMissingAgents()
+        {
+            bool removedAny = false;
+            for (int index = Count - 1; index >= 0; index--)
+            {
+                if (_seenSyncStamps[index] == _syncStamp)
+                {
+                    continue;
+                }
+
+                RemoveAtSwapBack(index);
+                removedAny = true;
+            }
+
+            return removedAny;
+        }
+
+        private void RemoveAtSwapBack(int index)
+        {
+            int lastIndex = Count - 1;
+            int removedEntityId = EntityIds[index];
+            if ((uint)removedEntityId < (uint)EntityToAgentIndex.Length)
+            {
+                EntityToAgentIndex[removedEntityId] = -1;
+            }
+
+            if (index != lastIndex)
+            {
+                int movedEntityId = EntityIds[lastIndex];
+
+                EntityIds[index] = EntityIds[lastIndex];
+                Positions[index] = Positions[lastIndex];
+                Velocities[index] = Velocities[lastIndex];
+                Radii[index] = Radii[lastIndex];
+                GoalPositions[index] = GoalPositions[lastIndex];
+                GoalRadii[index] = GoalRadii[lastIndex];
+                GoalDistances[index] = GoalDistances[lastIndex];
+                HasPointGoals[index] = HasPointGoals[lastIndex];
+                SmartStopFlags[index] = SmartStopFlags[lastIndex];
+                _seenSyncStamps[index] = _seenSyncStamps[lastIndex];
+
+                if ((uint)movedEntityId < (uint)EntityToAgentIndex.Length)
+                {
+                    EntityToAgentIndex[movedEntityId] = index;
+                }
+            }
+
+            EntityIds.RemoveAt(lastIndex);
+            Positions.RemoveAt(lastIndex);
+            Velocities.RemoveAt(lastIndex);
+            Radii.RemoveAt(lastIndex);
+            GoalPositions.RemoveAt(lastIndex);
+            GoalRadii.RemoveAt(lastIndex);
+            GoalDistances.RemoveAt(lastIndex);
+            HasPointGoals.RemoveAt(lastIndex);
+            SmartStopFlags.RemoveAt(lastIndex);
+            _seenSyncStamps.RemoveAt(lastIndex);
         }
 
         private void EnsureEntityIndexCapacity(int entityId)

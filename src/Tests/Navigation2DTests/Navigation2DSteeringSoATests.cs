@@ -1,3 +1,4 @@
+using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
@@ -44,12 +45,7 @@ namespace Ludots.Tests.Navigation2D
             system.Update(1f / 60f);
 
             Assert.That(runtime.AgentSoA.Count, Is.EqualTo(1));
-            Assert.That(runtime.AgentSoA.MaxAccels[0], Is.EqualTo(kinematics.MaxAccelCmPerSec2.ToFloat()).Within(0.001f));
-            Assert.That(runtime.AgentSoA.NeighborDistances[0], Is.EqualTo(kinematics.NeighborDistCm.ToFloat()).Within(0.001f));
-            Assert.That(runtime.AgentSoA.TimeHorizons[0], Is.EqualTo(kinematics.TimeHorizonSec.ToFloat()).Within(0.001f));
-            Assert.That(runtime.AgentSoA.MaxNeighbors[0], Is.EqualTo(kinematics.MaxNeighbors));
-            Assert.That(runtime.AgentSoA.PreferredVelocities[0].X, Is.EqualTo(kinematics.MaxSpeedCmPerSec.ToFloat()).Within(0.001f));
-            Assert.That(runtime.AgentSoA.PreferredVelocities[0].Y, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(runtime.AgentSoA.Radii[0], Is.EqualTo(kinematics.RadiusCm.ToFloat()).Within(0.001f));
             Assert.That(runtime.AgentSoA.HasPointGoals[0], Is.EqualTo(1));
             Assert.That(runtime.AgentSoA.GoalDistances[0], Is.EqualTo(1000f).Within(0.01f));
         }
@@ -157,6 +153,70 @@ namespace Ludots.Tests.Navigation2D
             var desired = world.Get<NavDesiredVelocity2D>(actor).ValueCmPerSec;
             Assert.That(desired.X.ToFloat(), Is.EqualTo(0f).Within(0.01f));
             Assert.That(desired.Y.ToFloat(), Is.EqualTo(0f).Within(0.01f));
+        }
+
+
+        [Test]
+        public void Navigation2DWorldSync_ReusesStableSlot_WhenAgentDataIsUnchanged()
+        {
+            using var agentSoA = new Navigation2DWorld(new Navigation2DWorldSettings(8, Fix64.FromInt(100)));
+
+            agentSoA.BeginSync();
+            Assert.That(agentSoA.SyncAgent(
+                entityId: 42,
+                position: Fix64Vec2.FromInt(10, 20).ToVector2(),
+                velocity: Fix64Vec2.FromInt(1, 0).ToVector2(),
+                radius: 30f,
+                hasPointGoal: true,
+                goalPosition: Fix64Vec2.FromInt(100, 20).ToVector2(),
+                goalRadius: 10f,
+                goalDistance: 90f), Is.True);
+            var firstSync = agentSoA.EndSync();
+
+            Assert.That(firstSync.SpatialDirty, Is.True);
+            Assert.That(firstSync.SmartStopDirty, Is.True);
+            Assert.That(agentSoA.TryGetAgentIndex(42, out int firstIndex), Is.True);
+            Assert.That(firstIndex, Is.EqualTo(0));
+
+            agentSoA.BeginSync();
+            Assert.That(agentSoA.SyncAgent(
+                entityId: 42,
+                position: Fix64Vec2.FromInt(10, 20).ToVector2(),
+                velocity: Fix64Vec2.FromInt(1, 0).ToVector2(),
+                radius: 30f,
+                hasPointGoal: true,
+                goalPosition: Fix64Vec2.FromInt(100, 20).ToVector2(),
+                goalRadius: 10f,
+                goalDistance: 90f), Is.True);
+            var secondSync = agentSoA.EndSync();
+
+            Assert.That(secondSync.SpatialDirty, Is.False);
+            Assert.That(secondSync.SmartStopDirty, Is.False);
+            Assert.That(agentSoA.TryGetAgentIndex(42, out int secondIndex), Is.True);
+            Assert.That(secondIndex, Is.EqualTo(firstIndex));
+            Assert.That(agentSoA.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Navigation2DWorldSync_RemovesMissingAgent_WithSwapBackMappingUpdate()
+        {
+            using var agentSoA = new Navigation2DWorld(new Navigation2DWorldSettings(8, Fix64.FromInt(100)));
+
+            agentSoA.BeginSync();
+            Assert.That(agentSoA.SyncAgent(1, Fix64Vec2.FromInt(0, 0).ToVector2(), Fix64Vec2.Zero.ToVector2(), 30f, false, Vector2.Zero, 0f, 0f), Is.True);
+            Assert.That(agentSoA.SyncAgent(2, Fix64Vec2.FromInt(10, 0).ToVector2(), Fix64Vec2.Zero.ToVector2(), 30f, false, Vector2.Zero, 0f, 0f), Is.True);
+            agentSoA.EndSync();
+
+            agentSoA.BeginSync();
+            Assert.That(agentSoA.SyncAgent(2, Fix64Vec2.FromInt(10, 0).ToVector2(), Fix64Vec2.Zero.ToVector2(), 30f, false, Vector2.Zero, 0f, 0f), Is.True);
+            var sync = agentSoA.EndSync();
+
+            Assert.That(sync.SpatialDirty, Is.True);
+            Assert.That(sync.SmartStopDirty, Is.True);
+            Assert.That(agentSoA.Count, Is.EqualTo(1));
+            Assert.That(agentSoA.TryGetAgentIndex(1, out _), Is.False);
+            Assert.That(agentSoA.TryGetAgentIndex(2, out int index), Is.True);
+            Assert.That(index, Is.EqualTo(0));
         }
 
         private static Fix64Vec2 RunDesiredVelocity(int maxNeighbors, Navigation2DAvoidanceMode mode)

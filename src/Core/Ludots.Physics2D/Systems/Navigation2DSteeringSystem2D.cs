@@ -53,15 +53,23 @@ namespace Ludots.Core.Physics2D.Systems
                 }
             }
 
-            BuildAgentSoA();
+            var syncResult = SyncAgentSoA();
             var agentSoA = _runtime.AgentSoA;
             if (agentSoA.Count <= 0)
             {
                 return;
             }
 
-            _runtime.CellMap.Build(agentSoA.Positions.AsSpan());
-            ComputeSmartStopFlags();
+            if (syncResult.SpatialDirty)
+            {
+                _runtime.CellMap.Build(agentSoA.Positions.AsSpan());
+            }
+
+            if (syncResult.SmartStopDirty || !_runtime.Config.Steering.SmartStop.Enabled)
+            {
+                ComputeSmartStopFlags();
+            }
+
             ApplySteering(deltaTime);
         }
 
@@ -102,7 +110,21 @@ namespace Ludots.Core.Physics2D.Systems
                 }
 
                 ref var entityFirst = ref chunk.Entity(0);
-                chunk.GetSpan<ForceInput2D, NavDesiredVelocity2D>(out var forces, out var desiredVelocities);
+                chunk.GetSpan<Position2D, Velocity2D, NavKinematics2D, ForceInput2D, NavDesiredVelocity2D>(out var positionsCm, out var velocitiesCm, out var kinematics, out var forces, out var desiredVelocities);
+
+                bool hasGoal = chunk.Has<NavGoal2D>();
+                Span<NavGoal2D> goals = default;
+                if (hasGoal)
+                {
+                    goals = chunk.GetSpan<NavGoal2D>();
+                }
+
+                bool hasFlowBinding = Runtime.FlowEnabled && chunk.Has<NavFlowBinding2D>();
+                Span<NavFlowBinding2D> flowBindings = default;
+                if (hasFlowBinding)
+                {
+                    flowBindings = chunk.GetSpan<NavFlowBinding2D>();
+                }
 
                 var agentSoA = Runtime.AgentSoA;
                 var config = Runtime.Config.Steering;
@@ -110,12 +132,6 @@ namespace Ludots.Core.Physics2D.Systems
                 var positions = agentSoA.Positions.AsSpan();
                 var velocities = agentSoA.Velocities.AsSpan();
                 var radii = agentSoA.Radii.AsSpan();
-                var maxSpeeds = agentSoA.MaxSpeeds.AsSpan();
-                var maxAccels = agentSoA.MaxAccels.AsSpan();
-                var neighborDistances = agentSoA.NeighborDistances.AsSpan();
-                var timeHorizons = agentSoA.TimeHorizons.AsSpan();
-                var maxNeighbors = agentSoA.MaxNeighbors.AsSpan();
-                var preferredVelocities = agentSoA.PreferredVelocities.AsSpan();
                 var smartStopFlags = agentSoA.SmartStopFlags.AsSpan();
 
                 bool forceOrca = false;
@@ -164,15 +180,43 @@ namespace Ludots.Core.Physics2D.Systems
                         continue;
                     }
 
-                    Vector2 pos = positions[i];
-                    Vector2 vel = velocities[i];
-                    float radius = radii[i];
-                    float maxSpeed = maxSpeeds[i];
-                    float maxAccel = maxAccels[i];
-                    float neighborDistance = neighborDistances[i];
-                    float timeHorizon = timeHorizons[i];
-                    int neighborLimit = GetEffectiveNeighborLimit(maxNeighbors[i], config.QueryBudget.MaxNeighborsPerAgent);
-                    Vector2 preferred = preferredVelocities[i];
+                    var positionCm = positionsCm[entityIndex].Value;
+                    var velocityCm = velocitiesCm[entityIndex].Linear;
+                    var kin = kinematics[entityIndex];
+
+                    Vector2 pos = positionCm.ToVector2();
+                    Vector2 vel = velocityCm.ToVector2();
+                    float radius = kin.RadiusCm.ToFloat();
+                    float maxSpeed = kin.MaxSpeedCmPerSec.ToFloat();
+                    float maxAccel = kin.MaxAccelCmPerSec2.ToFloat();
+                    float neighborDistance = kin.NeighborDistCm.ToFloat();
+                    float timeHorizon = kin.TimeHorizonSec.ToFloat();
+                    int neighborLimit = GetEffectiveNeighborLimit(ClampMaxNeighbors(kin.MaxNeighbors), config.QueryBudget.MaxNeighborsPerAgent);
+                    Vector2 preferred = Vector2.Zero;
+
+                    if (hasGoal)
+                    {
+                        var goal = goals[entityIndex];
+                        if (goal.Kind == NavGoalKind2D.Point)
+                        {
+                            Vector2 goalPosition = goal.TargetCm.ToVector2();
+                            Vector2 toGoal = goalPosition - pos;
+                            float goalDistanceSq = toGoal.LengthSquared();
+                            if (goalDistanceSq > 1e-8f && maxSpeed > 0f)
+                            {
+                                preferred = toGoal * (maxSpeed / MathF.Sqrt(goalDistanceSq));
+                            }
+                        }
+                    }
+
+                    if (hasFlowBinding)
+                    {
+                        var flow = Runtime.TryGetFlow(flowBindings[entityIndex].FlowId);
+                        if (flow != null && flow.TrySampleDesiredVelocityCm(positionCm, kin.MaxSpeedCmPerSec, out Fix64Vec2 desiredCm))
+                        {
+                            preferred = desiredCm.ToVector2();
+                        }
+                    }
 
                     if (smartStopFlags[i] != 0)
                     {
@@ -424,9 +468,9 @@ namespace Ludots.Core.Physics2D.Systems
             }
         }
 
-        private void BuildAgentSoA()
+        private Navigation2DWorldSyncResult SyncAgentSoA()
         {
-            _runtime.AgentSoA.Clear();
+            _runtime.AgentSoA.BeginSync();
 
             foreach (ref var chunk in World.Query(in _agentQuery))
             {
@@ -459,8 +503,6 @@ namespace Ludots.Core.Physics2D.Systems
                     Vector2 position = positionCm.ToVector2();
                     Vector2 velocity = velocityCm.ToVector2();
                     float maxSpeed = kin.MaxSpeedCmPerSec.ToFloat();
-                    Vector2 preferredVelocity = Vector2.Zero;
-
                     bool hasPointGoal = false;
                     Vector2 goalPosition = Vector2.Zero;
                     float goalRadius = 0f;
@@ -480,43 +522,26 @@ namespace Ludots.Core.Physics2D.Systems
                             if (goalDistanceSq > 1e-8f)
                             {
                                 goalDistance = MathF.Sqrt(goalDistanceSq);
-                                if (maxSpeed > 0f)
-                                {
-                                    preferredVelocity = toGoal * (maxSpeed / goalDistance);
-                                }
                             }
                         }
                     }
 
-                    if (hasFlowBinding)
-                    {
-                        var flow = _runtime.TryGetFlow(flowBindings[index].FlowId);
-                        if (flow != null && flow.TrySampleDesiredVelocityCm(positionCm, kin.MaxSpeedCmPerSec, out Fix64Vec2 desiredCm))
-                        {
-                            preferredVelocity = desiredCm.ToVector2();
-                        }
-                    }
-
-                    if (!_runtime.AgentSoA.TryAdd(
+                    if (!_runtime.AgentSoA.SyncAgent(
                         entity.Id,
                         position,
                         velocity,
                         kin.RadiusCm.ToFloat(),
-                        maxSpeed,
-                        kin.MaxAccelCmPerSec2.ToFloat(),
-                        kin.NeighborDistCm.ToFloat(),
-                        kin.TimeHorizonSec.ToFloat(),
-                        ClampMaxNeighbors(kin.MaxNeighbors),
-                        preferredVelocity,
                         hasPointGoal,
                         goalPosition,
                         goalRadius,
                         goalDistance))
                     {
-                        return;
+                        return _runtime.AgentSoA.EndSync();
                     }
                 }
             }
+
+            return _runtime.AgentSoA.EndSync();
         }
 
         private void ComputeSmartStopFlags()
