@@ -1,4 +1,7 @@
+using System;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
@@ -160,6 +163,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 // Submit through OrderSubmitter (handles queuing, priority, tag activation)
+                bool shouldDebugCast = order.OrderTagId == OrderStateTags.Active_CastAbility &&
+                                       (order.Args.I0 == 0 || order.Args.I0 == 2 || order.Args.I0 == 3);
+                bool hadActiveBefore = false;
+                int activeOrderTagIdBefore = 0;
+                int activeAbilitySlotBefore = -1;
+                int queuedCountBefore = 0;
+                if (shouldDebugCast)
+                {
+                    ref var debugBuffer = ref World.Get<OrderBuffer>(order.Actor);
+                    hadActiveBefore = debugBuffer.HasActive;
+                    queuedCountBefore = debugBuffer.QueuedCount;
+                    if (debugBuffer.HasActive)
+                    {
+                        activeOrderTagIdBefore = debugBuffer.ActiveOrder.Order.OrderTagId;
+                        activeAbilitySlotBefore = debugBuffer.ActiveOrder.Order.Args.I0;
+                    }
+                }
+
                 var result = OrderSubmitter.Submit(
                     World,
                     order.Actor,
@@ -168,6 +189,27 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _tagRuleRegistry,
                     currentStep,
                     _stepRateHz);
+
+                if (shouldDebugCast)
+                {
+                    ref var debugBuffer = ref World.Get<OrderBuffer>(order.Actor);
+                    DebugLog("H5", "OrderBufferSystem.ProcessIncomingOrders", "Order submit processed", new
+                    {
+                        actorId = order.Actor.Id,
+                        targetId = order.Target.Id,
+                        abilitySlot = order.Args.I0,
+                        submitMode = order.SubmitMode.ToString(),
+                        result = result.ToString(),
+                        hadActiveBefore,
+                        activeOrderTagIdBefore,
+                        activeAbilitySlotBefore,
+                        queuedCountBefore,
+                        hasActiveAfter = debugBuffer.HasActive,
+                        activeOrderTagIdAfter = debugBuffer.HasActive ? debugBuffer.ActiveOrder.Order.OrderTagId : 0,
+                        activeAbilitySlotAfter = debugBuffer.HasActive ? debugBuffer.ActiveOrder.Order.Args.I0 : -1,
+                        queuedCountAfter = debugBuffer.QueuedCount
+                    });
+                }
                 
                 // If blocked, store as pending for automatic retry when current order completes
                 if (result == OrderSubmitResult.Blocked && config.PendingBufferWindowMs > 0)
@@ -262,5 +304,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         /// Get the TagRuleRegistry.
         /// </summary>
         public TagRuleRegistry TagRuleRegistry => _tagRuleRegistry;
+
+        private static void DebugLog(string hypothesisId, string location, string message, object data)
+        {
+            File.AppendAllText("/opt/cursor/logs/debug.log",
+                JsonSerializer.Serialize(new { hypothesisId, location, message, data, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) +
+                Environment.NewLine);
+        }
     }
 }
