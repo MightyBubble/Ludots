@@ -31,10 +31,10 @@ namespace Ludots.Core.Presentation.Performers
                 VisualKind = PerformerVisualKind.Marker3D,
                 MeshOrShapeId = sphereId,
                 DefaultColor = new Vector4(0f, 1f, 1f, 0.9f),
-                DefaultScale = 0.55f,
-                DefaultLifetime = 0.22f,
+                DefaultScale = 0.4f,
+                DefaultLifetime = 0.5f,
                 AlphaFadeOverLifetime = true,
-                PositionOffset = new Vector3(0f, 0.6f, 0f),
+                PositionOffset = new Vector3(0f, 1.2f, 0f),
                 Rules = new[]
                 {
                     new PerformerRule
@@ -64,11 +64,11 @@ namespace Ludots.Core.Presentation.Performers
             {
                 VisualKind = PerformerVisualKind.Marker3D,
                 MeshOrShapeId = sphereId,
-                DefaultColor = new Vector4(0.7f, 0.7f, 0.7f, 0.6f),
-                DefaultScale = 0.2f,
-                DefaultLifetime = 0.15f,
+                DefaultColor = new Vector4(1f, 0.3f, 0.3f, 0.8f),
+                DefaultScale = 0.3f,
+                DefaultLifetime = 0.4f,
                 AlphaFadeOverLifetime = true,
-                PositionOffset = new Vector3(0f, 0.9f, 0f),
+                PositionOffset = new Vector3(0f, 1.4f, 0f),
                 Rules = new[]
                 {
                     new PerformerRule
@@ -98,10 +98,10 @@ namespace Ludots.Core.Presentation.Performers
             {
                 VisualKind = PerformerVisualKind.WorldText,
                 DefaultColor = new Vector4(1f, 0.2f, 0.1f, 1f),
-                DefaultFontSize = 18,
-                DefaultLifetime = 1.2f,
-                PositionOffset = new Vector3(0f, 1.0f, 0f),
-                PositionYDriftPerSecond = 0.8f,
+                DefaultFontSize = 24,
+                DefaultLifetime = 1.5f,
+                PositionOffset = new Vector3(0f, 1.6f, 0f),
+                PositionYDriftPerSecond = 1.0f,
                 AlphaFadeOverLifetime = true,
                 Rules = new[]
                 {

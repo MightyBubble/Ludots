@@ -211,8 +211,8 @@ namespace Ludots.Tests.Presentation
             TickPipeline(0.016f);
             Assert.That(_hud.GetSpan().Length, Is.GreaterThan(0), "Precondition: text should exist");
 
-            // Act — tick well past the 1.2s lifetime
-            TickPipeline(1.3f);
+            // Act — tick well past the 1.5s lifetime
+            TickPipeline(1.6f);
 
             // Assert — no more output
             var span = _hud.GetSpan();
@@ -263,8 +263,8 @@ namespace Ludots.Tests.Presentation
             TickPipeline(0.016f);
             Assert.That(_primitives.GetSpan().Length, Is.GreaterThan(0), "Precondition: marker should exist");
 
-            // Act — tick past 0.22s lifetime
-            TickPipeline(0.3f);
+            // Act — tick past 0.5s lifetime
+            TickPipeline(0.6f);
 
             // Assert — marker expired
             Assert.That(_primitives.GetSpan().Length, Is.EqualTo(0), "Marker should expire after DefaultLifetime");
