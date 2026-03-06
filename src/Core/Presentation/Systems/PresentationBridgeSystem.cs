@@ -69,6 +69,7 @@ namespace Ludots.Core.Presentation.Systems
                                 PayloadB = ge.AbilitySlot,
                             });
                             break;
+                        case GasPresentationEventKind.CastStarted:
                         case GasPresentationEventKind.CastCommitted:
                             _stream.TryAdd(new PresentationEvent
                             {
