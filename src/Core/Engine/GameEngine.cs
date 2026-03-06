@@ -38,6 +38,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Gameplay.GAS.Presentation;
 // Indicators directory removed — unified into Performers
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Tween;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Spatial;
@@ -581,7 +582,19 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationWorldHudStrings, worldHudStrings);
             var screenHudBuffer = new ScreenHudBatchBuffer();
             SetService(CoreServiceKeys.PresentationScreenHudBuffer, screenHudBuffer);
-            SetService(CoreServiceKeys.ScreenOverlayBuffer, new ScreenOverlayBuffer());
+            var screenOverlayBuffer = new ScreenOverlayBuffer();
+            SetService(CoreServiceKeys.ScreenOverlayBuffer, screenOverlayBuffer);
+            var tweenCommands = new TweenCommandBuffer();
+            var tweenInstances = new TweenInstanceBuffer();
+            var tweenSinks = new TweenSinkRegistry();
+            var tweenService = new TweenService(tweenCommands, tweenSinks);
+            var tweenedScreenOverlayRegistry = new TweenedScreenOverlayRegistry();
+            tweenSinks.Register(TweenBuiltInSinkKeys.ScreenOverlayItem, new ScreenOverlayTweenSink(tweenedScreenOverlayRegistry));
+            SetService(CoreServiceKeys.TweenCommandBuffer, tweenCommands);
+            SetService(CoreServiceKeys.TweenInstanceBuffer, tweenInstances);
+            SetService(CoreServiceKeys.TweenSinkRegistry, tweenSinks);
+            SetService(CoreServiceKeys.TweenService, tweenService);
+            SetService(CoreServiceKeys.TweenedScreenOverlayRegistry, tweenedScreenOverlayRegistry);
             SetService(CoreServiceKeys.RenderDebugState, new RenderDebugState());
             SetService(CoreServiceKeys.TransientMarkerBuffer, transientMarkerBuffer);
             SetService(CoreServiceKeys.GasPresentationEventBuffer, gasPresentationEvents);
@@ -692,6 +705,8 @@ namespace Ludots.Core.Engine
             var presentationFrameSetup = new PresentationFrameSetupSystem(World, Pacemaker);
             RegisterPresentationSystem(presentationFrameSetup);
             SetService(CoreServiceKeys.PresentationFrameSetup, presentationFrameSetup);
+            RegisterPresentationSystem(new TweenRuntimeSystem(World, tweenCommands, tweenInstances, tweenSinks));
+            RegisterPresentationSystem(new TweenedScreenOverlayEmitSystem(World, tweenedScreenOverlayRegistry, screenOverlayBuffer));
             
             // WorldToVisualSyncSystem: 插值 WorldPositionCm → VisualTransform（必须在 PresentationFrameSetup 之后）
             RegisterPresentationSystem(new WorldToVisualSyncSystem(World));

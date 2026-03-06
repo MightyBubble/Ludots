@@ -64,6 +64,11 @@ namespace Ludots.Core.Scripting
         public const string PresentationWorldHudStrings = "PresentationWorldHudStrings";
         public const string PresentationScreenHudBuffer = "PresentationScreenHudBuffer";
         public const string ScreenOverlayBuffer = "ScreenOverlayBuffer";
+        public const string TweenCommandBuffer = "TweenCommandBuffer";
+        public const string TweenInstanceBuffer = "TweenInstanceBuffer";
+        public const string TweenSinkRegistry = "TweenSinkRegistry";
+        public const string TweenService = "TweenService";
+        public const string TweenedScreenOverlayRegistry = "TweenedScreenOverlayRegistry";
         public const string RenderDebugState = "RenderDebugState";
         public const string RenderCameraDebugState = "RenderCameraDebugState";
         public const string CameraCullingDebugState = "CameraCullingDebugState";
