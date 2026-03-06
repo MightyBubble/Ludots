@@ -145,5 +145,43 @@ namespace Ludots.Tests.Navigation2D
 
             Assert.That(count, Is.LessThanOrEqualTo(1));
         }
+
+        [Test]
+        public void UpdatePositions_WhenAgentCrossesCell_RefreshesSpatialLookup()
+        {
+            var cellSize = Fix64.FromInt(100);
+            using var map = new Nav2DCellMap(cellSize, 16, 16);
+
+            var positions = new[]
+            {
+                new Vector2(0, 0),
+                new Vector2(150, 0),
+            };
+
+            map.Build(positions);
+
+            Span<int> neighbors = stackalloc int[4];
+            int initialCount = map.CollectNeighbors(
+                selfIndex: 0,
+                selfPos: positions[0],
+                radius: 100,
+                positions: positions,
+                neighborsOut: neighbors);
+
+            Assert.That(initialCount, Is.EqualTo(0));
+
+            positions[1] = new Vector2(50, 0);
+            map.UpdatePositions(positions, new[] { 1 });
+
+            int updatedCount = map.CollectNeighbors(
+                selfIndex: 0,
+                selfPos: positions[0],
+                radius: 100,
+                positions: positions,
+                neighborsOut: neighbors);
+
+            Assert.That(updatedCount, Is.EqualTo(1));
+            Assert.That(neighbors[0], Is.EqualTo(1));
+        }
     }
 }

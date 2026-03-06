@@ -53,11 +53,12 @@ namespace Ludots.Core.Physics2D.Systems
                 }
             }
 
-            Navigation2DWorldSyncResult syncResult;
-            if (!TrySteadyStateSyncAgentSoA(out syncResult))
+            bool usedSteadyStateSync = TrySteadyStateSyncAgentSoA(out Navigation2DWorldSyncResult syncResult);
+            if (!usedSteadyStateSync)
             {
                 syncResult = SyncAgentSoA();
             }
+
             var agentSoA = _runtime.AgentSoA;
             if (agentSoA.Count <= 0)
             {
@@ -66,7 +67,14 @@ namespace Ludots.Core.Physics2D.Systems
 
             if (syncResult.SpatialDirty)
             {
-                _runtime.CellMap.Build(agentSoA.Positions.AsSpan());
+                if (usedSteadyStateSync)
+                {
+                    _runtime.CellMap.UpdatePositions(agentSoA.Positions.AsSpan(), agentSoA.SpatialDirtyAgentIndices.AsSpan());
+                }
+                else
+                {
+                    _runtime.CellMap.Build(agentSoA.Positions.AsSpan());
+                }
             }
 
             if (syncResult.SmartStopDirty || !_runtime.Config.Steering.SmartStop.Enabled)

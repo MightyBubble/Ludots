@@ -32,9 +32,12 @@ namespace Ludots.Core.Navigation2D.Runtime
         public UnsafeList<float> GoalDistances;
         public UnsafeList<byte> HasPointGoals;
         public UnsafeList<byte> SmartStopFlags;
+        public UnsafeList<int> SpatialDirtyAgentIndices;
 
         private UnsafeList<int> _seenSyncStamps;
+        private UnsafeArray<int> _steadySpatialDirtyStamps;
         private int _syncStamp;
+        private int _steadySpatialDirtyStamp;
         private bool _spatialDirty;
         private bool _smartStopDirty;
         private int _steadySpatialDirty;
@@ -60,8 +63,11 @@ namespace Ludots.Core.Navigation2D.Runtime
             GoalDistances = new UnsafeList<float>(settings.MaxAgents);
             HasPointGoals = new UnsafeList<byte>(settings.MaxAgents);
             SmartStopFlags = new UnsafeList<byte>(settings.MaxAgents);
+            SpatialDirtyAgentIndices = new UnsafeList<int>(settings.MaxAgents);
             _seenSyncStamps = new UnsafeList<int>(settings.MaxAgents);
+            _steadySpatialDirtyStamps = new UnsafeArray<int>(Math.Max(8, settings.MaxAgents));
             _syncStamp = 0;
+            _steadySpatialDirtyStamp = 0;
             _spatialDirty = true;
             _smartStopDirty = true;
         }
@@ -81,13 +87,22 @@ namespace Ludots.Core.Navigation2D.Runtime
             _syncStamp++;
             _spatialDirty = false;
             _smartStopDirty = false;
+            SpatialDirtyAgentIndices.Clear();
         }
 
         public void BeginSteadyStateUpdate()
         {
+            if (_steadySpatialDirtyStamp == int.MaxValue)
+            {
+                UnsafeArray.Fill(ref _steadySpatialDirtyStamps, 0);
+                _steadySpatialDirtyStamp = 0;
+            }
+
+            _steadySpatialDirtyStamp++;
             _steadySpatialDirty = 0;
             _steadySmartStopDirty = 0;
             _steadyFallbackRequired = 0;
+            SpatialDirtyAgentIndices.Clear();
         }
 
         public void MarkSteadyStateFallbackRequired()
@@ -102,8 +117,14 @@ namespace Ludots.Core.Navigation2D.Runtime
 
         public Navigation2DWorldSyncResult EndSteadyStateUpdate()
         {
+            bool spatialDirty = Volatile.Read(ref _steadySpatialDirty) != 0;
+            if (spatialDirty)
+            {
+                CollectSteadySpatialDirtyAgentIndices();
+            }
+
             return new Navigation2DWorldSyncResult(
-                spatialDirty: Volatile.Read(ref _steadySpatialDirty) != 0,
+                spatialDirty: spatialDirty,
                 smartStopDirty: Volatile.Read(ref _steadySmartStopDirty) != 0);
         }
 
@@ -122,6 +143,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             if (Positions[agentIndex] != position)
             {
                 Positions[agentIndex] = position;
+                MarkSteadySpatialDirtyAgent(agentIndex);
                 Interlocked.Exchange(ref _steadySpatialDirty, 1);
                 Interlocked.Exchange(ref _steadySmartStopDirty, 1);
             }
@@ -185,6 +207,7 @@ namespace Ludots.Core.Navigation2D.Runtime
                 GoalDistances.Add(goalDistance);
                 HasPointGoals.Add(hasPointGoalByte);
                 SmartStopFlags.Add(0);
+                SpatialDirtyAgentIndices.Add(agentIndex);
 
                 _spatialDirty = true;
                 _smartStopDirty = true;
@@ -196,6 +219,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             if (Positions[agentIndex] != position)
             {
                 Positions[agentIndex] = position;
+                SpatialDirtyAgentIndices.Add(agentIndex);
                 _spatialDirty = true;
                 _smartStopDirty = true;
             }
@@ -225,6 +249,11 @@ namespace Ludots.Core.Navigation2D.Runtime
         public Navigation2DWorldSyncResult EndSync()
         {
             bool removedAny = RemoveMissingAgents();
+            if (removedAny)
+            {
+                SpatialDirtyAgentIndices.Clear();
+            }
+
             return new Navigation2DWorldSyncResult(
                 spatialDirty: _spatialDirty || removedAny,
                 smartStopDirty: _smartStopDirty || removedAny);
@@ -264,8 +293,11 @@ namespace Ludots.Core.Navigation2D.Runtime
             GoalDistances.Clear();
             HasPointGoals.Clear();
             SmartStopFlags.Clear();
+            SpatialDirtyAgentIndices.Clear();
             _seenSyncStamps.Clear();
+            UnsafeArray.Fill(ref _steadySpatialDirtyStamps, 0);
             _syncStamp = 0;
+            _steadySpatialDirtyStamp = 0;
             _spatialDirty = true;
             _smartStopDirty = true;
         }
@@ -282,7 +314,9 @@ namespace Ludots.Core.Navigation2D.Runtime
             GoalDistances.Dispose();
             HasPointGoals.Dispose();
             SmartStopFlags.Dispose();
+            SpatialDirtyAgentIndices.Dispose();
             _seenSyncStamps.Dispose();
+            _steadySpatialDirtyStamps.Dispose();
         }
 
         private bool RemoveMissingAgents()
@@ -360,6 +394,24 @@ namespace Ludots.Core.Navigation2D.Runtime
 
             EntityToAgentIndex = UnsafeArray.Resize(ref EntityToAgentIndex, newLength);
             EntityToAgentIndex.AsSpan().Slice(oldLength, newLength - oldLength).Fill(-1);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void MarkSteadySpatialDirtyAgent(int agentIndex)
+        {
+            _steadySpatialDirtyStamps[agentIndex] = _steadySpatialDirtyStamp;
+        }
+
+        private void CollectSteadySpatialDirtyAgentIndices()
+        {
+            SpatialDirtyAgentIndices.Clear();
+            for (int i = 0; i < Count; i++)
+            {
+                if (_steadySpatialDirtyStamps[i] == _steadySpatialDirtyStamp)
+                {
+                    SpatialDirtyAgentIndices.Add(i);
+                }
+            }
         }
     }
 }

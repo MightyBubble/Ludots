@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Arch.LowLevel;
@@ -12,34 +12,33 @@ namespace Ludots.Core.Navigation2D.Spatial
         private readonly LongKeyMap<int> _heads;
 
         private UnsafeArray<int> _next;
+        private UnsafeArray<int> _prev;
+        private UnsafeArray<long> _cellKeys;
         private int _agentCapacity;
+        private int _agentCount;
 
         public Nav2DCellMap(Fix64 cellSizeCm, int initialAgentCapacity, int initialCellCapacity)
         {
             float cellSize = cellSizeCm.ToFloat();
             _invCellSizeCm = cellSize > 1e-6f ? (1f / cellSize) : 0f;
             _heads = new LongKeyMap<int>(initialCellCapacity);
-            _next = new UnsafeArray<int>(Math.Max(8, initialAgentCapacity));
-            _agentCapacity = _next.Length;
+            int capacity = Math.Max(8, initialAgentCapacity);
+            _next = new UnsafeArray<int>(capacity);
+            _prev = new UnsafeArray<int>(capacity);
+            _cellKeys = new UnsafeArray<long>(capacity);
+            _agentCapacity = capacity;
+            _agentCount = 0;
         }
 
         public void Build(ReadOnlySpan<Vector2> positions)
         {
             _heads.Clear();
             EnsureAgentCapacity(positions.Length);
+            _agentCount = positions.Length;
 
             for (int i = 0; i < positions.Length; i++)
             {
-                Vector2 p = positions[i];
-                int cx = FloorToCell(p.X);
-                int cy = FloorToCell(p.Y);
-                long key = Nav2DKeyPacking.PackInt2(cx, cy);
-
-                ref int head = ref _heads.GetValueRefOrAddDefault(key, out bool existed);
-                if (!existed) head = -1;
-
-                _next[i] = head;
-                head = i;
+                AttachBuiltAgent(i, ToCellKey(positions[i]));
             }
         }
 
@@ -47,19 +46,25 @@ namespace Ludots.Core.Navigation2D.Spatial
         {
             _heads.Clear();
             EnsureAgentCapacity(positionsCm.Length);
+            _agentCount = positionsCm.Length;
 
             for (int i = 0; i < positionsCm.Length; i++)
             {
-                Fix64Vec2 p = positionsCm[i];
-                int cx = FloorToCell(p.X.ToFloat());
-                int cy = FloorToCell(p.Y.ToFloat());
-                long key = Nav2DKeyPacking.PackInt2(cx, cy);
+                AttachBuiltAgent(i, ToCellKey(positionsCm[i].X.ToFloat(), positionsCm[i].Y.ToFloat()));
+            }
+        }
 
-                ref int head = ref _heads.GetValueRefOrAddDefault(key, out bool existed);
-                if (!existed) head = -1;
+        public void UpdatePositions(ReadOnlySpan<Vector2> positions, ReadOnlySpan<int> dirtyAgentIndices)
+        {
+            for (int i = 0; i < dirtyAgentIndices.Length; i++)
+            {
+                int agentIndex = dirtyAgentIndices[i];
+                if ((uint)agentIndex >= (uint)_agentCount || (uint)agentIndex >= (uint)positions.Length)
+                {
+                    continue;
+                }
 
-                _next[i] = head;
-                head = i;
+                UpdateAgentCell(agentIndex, positions[agentIndex]);
             }
         }
 
@@ -322,6 +327,8 @@ namespace Ludots.Core.Navigation2D.Spatial
         {
             _heads.Dispose();
             _next.Dispose();
+            _prev.Dispose();
+            _cellKeys.Dispose();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -337,15 +344,119 @@ namespace Ludots.Core.Navigation2D.Spatial
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private long ToCellKey(in Vector2 position)
+        {
+            return ToCellKey(position.X, position.Y);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private long ToCellKey(float x, float y)
+        {
+            return Nav2DKeyPacking.PackInt2(FloorToCell(x), FloorToCell(y));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureAgentCapacity(int required)
         {
             if (required <= _agentCapacity) return;
             int nextCap = _agentCapacity;
             while (nextCap < required) nextCap *= 2;
-            var old = _next;
-            _next = new UnsafeArray<int>(nextCap);
-            old.Dispose();
+            _next = UnsafeArray.Resize(ref _next, nextCap);
+            _prev = UnsafeArray.Resize(ref _prev, nextCap);
+            _cellKeys = UnsafeArray.Resize(ref _cellKeys, nextCap);
             _agentCapacity = nextCap;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AttachBuiltAgent(int agentIndex, long key)
+        {
+            _cellKeys[agentIndex] = key;
+            _prev[agentIndex] = -1;
+
+            ref int head = ref _heads.GetValueRefOrAddDefault(key, out bool existed);
+            if (!existed)
+            {
+                head = -1;
+            }
+
+            int next = head;
+            _next[agentIndex] = next;
+            if (next >= 0)
+            {
+                _prev[next] = agentIndex;
+            }
+
+            head = agentIndex;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void UpdateAgentCell(int agentIndex, in Vector2 position)
+        {
+            long newKey = ToCellKey(position);
+            long oldKey = _cellKeys[agentIndex];
+            if (newKey == oldKey)
+            {
+                return;
+            }
+
+            DetachAgent(agentIndex, oldKey);
+            AttachAgent(agentIndex, newKey);
+        }
+
+        private void DetachAgent(int agentIndex, long key)
+        {
+            if (!_heads.TryGetSlot(key, out int slot))
+            {
+                _prev[agentIndex] = -1;
+                _next[agentIndex] = -1;
+                return;
+            }
+
+            ref int head = ref _heads.GetValueRefBySlot(slot);
+            int prev = _prev[agentIndex];
+            int next = _next[agentIndex];
+
+            if (prev >= 0)
+            {
+                _next[prev] = next;
+            }
+            else
+            {
+                head = next;
+            }
+
+            if (next >= 0)
+            {
+                _prev[next] = prev;
+            }
+
+            _prev[agentIndex] = -1;
+            _next[agentIndex] = -1;
+
+            if (head < 0)
+            {
+                _heads.Remove(key, out _);
+            }
+        }
+
+        private void AttachAgent(int agentIndex, long key)
+        {
+            ref int head = ref _heads.GetValueRefOrAddDefault(key, out bool existed);
+            if (!existed)
+            {
+                head = -1;
+            }
+
+            int next = head;
+            _cellKeys[agentIndex] = key;
+            _prev[agentIndex] = -1;
+            _next[agentIndex] = next;
+            if (next >= 0)
+            {
+                _prev[next] = agentIndex;
+            }
+
+            head = agentIndex;
         }
     }
 }
