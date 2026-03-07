@@ -15,6 +15,7 @@ namespace Ludots.Core.Navigation2D.FlowField
         private readonly int _tileShift;
         private readonly int _tileMask;
         private readonly Dictionary<long, CrowdWorldTile2D> _tiles;
+        private readonly Dictionary<long, int> _retainCounts;
 
         public CrowdSurface2D(Fix64 cellSizeCm, int tileSizeCells, int initialTileCapacity = 256)
         {
@@ -26,6 +27,7 @@ namespace Ludots.Core.Navigation2D.FlowField
             _tileMask = tileSizeCells - 1;
             _tileShift = BitOperations.TrailingZeroCount((uint)tileSizeCells);
             _tiles = new Dictionary<long, CrowdWorldTile2D>(Math.Max(8, initialTileCapacity));
+            _retainCounts = new Dictionary<long, int>(Math.Max(8, initialTileCapacity));
         }
 
         public bool TryGetTile(long tileKey, out CrowdWorldTile2D tile) => _tiles.TryGetValue(tileKey, out tile);
@@ -37,11 +39,39 @@ namespace Ludots.Core.Navigation2D.FlowField
                 tile = new CrowdWorldTile2D(TileSizeCells);
                 _tiles[tileKey] = tile;
             }
+
             return tile;
+        }
+
+        public CrowdWorldTile2D RetainTile(long tileKey)
+        {
+            var tile = GetOrCreateTile(tileKey);
+            _retainCounts.TryGetValue(tileKey, out int count);
+            _retainCounts[tileKey] = count + 1;
+            return tile;
+        }
+
+        public void ReleaseTile(long tileKey)
+        {
+            if (!_retainCounts.TryGetValue(tileKey, out int count))
+            {
+                return;
+            }
+
+            count--;
+            if (count > 0)
+            {
+                _retainCounts[tileKey] = count;
+                return;
+            }
+
+            _retainCounts.Remove(tileKey);
+            _tiles.Remove(tileKey);
         }
 
         public void RemoveTile(long tileKey)
         {
+            _retainCounts.Remove(tileKey);
             _tiles.Remove(tileKey);
         }
 

@@ -1,8 +1,15 @@
-﻿{
+{
   "Navigation2D": {
     "Enabled": false,
     "MaxAgents": 50000,
     "FlowIterationsPerTick": 4096,
+    "FlowStreaming": {
+      "Enabled": true,
+      "ActivationRadiusTiles": 2,
+      "MaxActiveTilesPerFlow": 256,
+      "UnloadGraceTicks": 8,
+      "MaxPotentialCells": 300
+    },
     "Steering": {
       "Mode": "Hybrid",
       "QueryBudget": {
@@ -40,3 +47,4 @@
     }
   }
 }
+

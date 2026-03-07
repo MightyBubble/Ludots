@@ -30,8 +30,12 @@ namespace Ludots.Core.Physics2D.Systems
         private static readonly QueryDescription _flowGoalQuery = new QueryDescription()
             .WithAll<NavFlowGoal2D>();
 
+        private static readonly QueryDescription _flowDemandQuery = new QueryDescription()
+            .WithAll<NavAgent2D, Position2D, NavFlowBinding2D>();
+
         private readonly Navigation2DRuntime _runtime;
         private readonly CommandBuffer _commandBuffer = new();
+        private int _flowStreamingTick;
 
         private const int MaxNeighborsHard = 64;
 
@@ -43,15 +47,7 @@ namespace Ludots.Core.Physics2D.Systems
         public override void Update(in float deltaTime)
         {
             EnsureSteeringOutputs();
-
             TryApplyFlowGoal();
-            if (_runtime.FlowEnabled)
-            {
-                for (int f = 0; f < _runtime.FlowCount; f++)
-                {
-                    _runtime.Flows[f].Step(_runtime.FlowIterationsPerTick);
-                }
-            }
 
             bool usedSteadyStateSync = TrySteadyStateSyncAgentSoA(out Navigation2DWorldSyncResult syncResult);
             if (!usedSteadyStateSync)
@@ -75,6 +71,11 @@ namespace Ludots.Core.Physics2D.Systems
                 {
                     _runtime.CellMap.Build(agentSoA.Positions.AsSpan());
                 }
+            }
+
+            if (_runtime.FlowEnabled)
+            {
+                StepFlowFields();
             }
 
             if (syncResult.SmartStopDirty || !_runtime.Config.Steering.SmartStop.Enabled)
@@ -677,6 +678,30 @@ namespace Ludots.Core.Physics2D.Systems
             return _runtime.AgentSoA.EndSync();
         }
 
+        private void StepFlowFields()
+        {
+            int tick = unchecked(++_flowStreamingTick);
+            for (int f = 0; f < _runtime.FlowCount; f++)
+            {
+                _runtime.Flows[f].BeginDemandFrame(tick);
+            }
+
+            foreach (ref var chunk in World.Query(in _flowDemandQuery))
+            {
+                var positions = chunk.GetSpan<Position2D>();
+                var bindings = chunk.GetSpan<NavFlowBinding2D>();
+                foreach (var index in chunk)
+                {
+                    var flow = _runtime.TryGetFlow(bindings[index].FlowId);
+                    flow?.AddDemandPoint(positions[index].Value);
+                }
+            }
+
+            for (int f = 0; f < _runtime.FlowCount; f++)
+            {
+                _runtime.Flows[f].Step(_runtime.FlowIterationsPerTick);
+            }
+        }
         private void ComputeSmartStopFlags()
         {
             var smartStop = _runtime.Config.Steering.SmartStop;
@@ -772,3 +797,5 @@ namespace Ludots.Core.Physics2D.Systems
 
     }
 }
+
+

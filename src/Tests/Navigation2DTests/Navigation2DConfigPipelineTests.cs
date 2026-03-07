@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Ludots.Core.Config;
 using Ludots.Core.Modding;
@@ -26,6 +26,13 @@ namespace Ludots.Tests.Navigation2D
   ""Navigation2D"": {
     ""Enabled"": true,
     ""MaxAgents"": 4096,
+    ""FlowStreaming"": {
+      ""Enabled"": true,
+      ""ActivationRadiusTiles"": 4,
+      ""MaxActiveTilesPerFlow"": 320,
+      ""UnloadGraceTicks"": 10,
+      ""MaxPotentialCells"": 420
+    },
     ""Spatial"": {
       ""UpdateMode"": ""Adaptive"",
       ""RebuildCellMigrationsThreshold"": 64,
@@ -115,10 +122,18 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(gameConfig.Navigation2D.Steering.Hybrid.DenseNeighborThreshold, Is.EqualTo(5));
             Assert.That(gameConfig.Navigation2D.Steering.Hybrid.MinOpposingNeighborsForOrca, Is.EqualTo(2));
             Assert.That(gameConfig.Navigation2D.Steering.SmartStop.MaxNeighbors, Is.EqualTo(6));
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.Enabled, Is.True);
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.ActivationRadiusTiles, Is.EqualTo(4));
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.MaxActiveTilesPerFlow, Is.EqualTo(320));
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.UnloadGraceTicks, Is.EqualTo(10));
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.MaxPotentialCells, Is.EqualTo(420f).Within(0.001f));
             Assert.That(runtime.Config.Playground.DefaultAgentsPerTeam, Is.EqualTo(3200));
             Assert.That(runtime.Config.Playground.Scenarios[0].Kind, Is.EqualTo(Navigation2DPlaygroundScenarioKind.GoalQueue));
             Assert.That(runtime.Config.Spatial.UpdateMode, Is.EqualTo(Navigation2DSpatialUpdateMode.Adaptive));
+            Assert.That(runtime.Config.FlowStreaming.MaxActiveTilesPerFlow, Is.EqualTo(320));
             Assert.That(runtime.Config.Steering.Mode, Is.EqualTo(Navigation2DAvoidanceMode.Hybrid));
         }
     }
 }
+
+

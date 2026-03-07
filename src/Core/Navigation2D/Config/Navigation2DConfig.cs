@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Ludots.Core.Navigation2D.Config
@@ -76,6 +76,15 @@ namespace Ludots.Core.Navigation2D.Config
         public int RebuildAccumulatedCellMigrationsThreshold { get; set; } = 1024;
     }
 
+    public sealed class Navigation2DFlowStreamingConfig
+    {
+        public bool Enabled { get; set; } = true;
+        public int ActivationRadiusTiles { get; set; } = 2;
+        public int MaxActiveTilesPerFlow { get; set; } = 256;
+        public int UnloadGraceTicks { get; set; } = 8;
+        public float MaxPotentialCells { get; set; } = 300f;
+    }
+
     public sealed class Navigation2DPlaygroundScenarioConfig
     {
         public string Id { get; set; } = string.Empty;
@@ -120,12 +129,14 @@ namespace Ludots.Core.Navigation2D.Config
         public Navigation2DSteeringConfig Steering { get; set; } = new();
         public Navigation2DSpatialPartitionConfig Spatial { get; set; } = new();
         public Navigation2DPlaygroundConfig Playground { get; set; } = new();
+        public Navigation2DFlowStreamingConfig FlowStreaming { get; set; } = new();
 
         public Navigation2DConfig CloneValidated()
         {
             var steering = Steering;
             var spatial = Spatial;
             var playground = Playground;
+            var flowStreaming = FlowStreaming;
 
             return new Navigation2DConfig
             {
@@ -179,10 +190,17 @@ namespace Ludots.Core.Navigation2D.Config
                     RebuildCellMigrationsThreshold = ClampAtLeast(spatial?.RebuildCellMigrationsThreshold ?? 128, 0),
                     RebuildAccumulatedCellMigrationsThreshold = ClampAtLeast(spatial?.RebuildAccumulatedCellMigrationsThreshold ?? 1024, 0),
                 },
-                Playground = ClonePlaygroundValidated(playground)
+                Playground = ClonePlaygroundValidated(playground),
+                FlowStreaming = new Navigation2DFlowStreamingConfig
+                {
+                    Enabled = flowStreaming?.Enabled ?? true,
+                    ActivationRadiusTiles = ClampAtLeast(flowStreaming?.ActivationRadiusTiles ?? 2, 0),
+                    MaxActiveTilesPerFlow = ClampAtLeast(flowStreaming?.MaxActiveTilesPerFlow ?? 256, 1),
+                    UnloadGraceTicks = ClampAtLeast(flowStreaming?.UnloadGraceTicks ?? 8, 0),
+                    MaxPotentialCells = ClampAtLeast(flowStreaming?.MaxPotentialCells ?? 300f, 1f),
+                }
             };
         }
-
         private static Navigation2DPlaygroundConfig ClonePlaygroundValidated(Navigation2DPlaygroundConfig? playground)
         {
             int defaultAgentsPerTeam = ClampAtLeast(playground?.DefaultAgentsPerTeam ?? 5000, 0);
@@ -368,3 +386,5 @@ namespace Ludots.Core.Navigation2D.Config
         }
     }
 }
+
+

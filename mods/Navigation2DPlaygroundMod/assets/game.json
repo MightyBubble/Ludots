@@ -1,9 +1,16 @@
-﻿{
+{
   "startupMapId": "nav2d_playground",
   "Navigation2D": {
     "Enabled": true,
     "MaxAgents": 50000,
     "FlowIterationsPerTick": 8192,
+    "FlowStreaming": {
+      "Enabled": true,
+      "ActivationRadiusTiles": 3,
+      "MaxActiveTilesPerFlow": 512,
+      "UnloadGraceTicks": 12,
+      "MaxPotentialCells": 384
+    },
     "Spatial": {
       "UpdateMode": "Adaptive",
       "RebuildCellMigrationsThreshold": 128,
@@ -121,3 +128,4 @@
     }
   }
 }
+

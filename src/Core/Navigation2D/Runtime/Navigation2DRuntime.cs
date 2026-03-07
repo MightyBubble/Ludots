@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.FlowField;
@@ -20,7 +20,6 @@ namespace Ludots.Core.Navigation2D.Runtime
         public bool FlowEnabled { get; set; } = false;
         public bool FlowDebugEnabled { get; set; } = false;
         public int FlowDebugMode { get; set; } = 0;
-
         public int FlowIterationsPerTick { get; set; }
 
         public Navigation2DRuntime(Navigation2DConfig config, int gridCellSizeCm, ILoadedChunks? loadedChunks)
@@ -38,12 +37,11 @@ namespace Ludots.Core.Navigation2D.Runtime
             Surface = new CrowdSurface2D(cellSize, tileSizeCells: 64, initialTileCapacity: 256);
             Flows = new[]
             {
-                new CrowdFlow2D(Surface, initialTileCapacity: 256),
-                new CrowdFlow2D(Surface, initialTileCapacity: 256),
+                new CrowdFlow2D(Surface, Config.FlowStreaming, initialTileCapacity: 256),
+                new CrowdFlow2D(Surface, Config.FlowStreaming, initialTileCapacity: 256),
             };
 
             FlowIterationsPerTick = Config.FlowIterationsPerTick;
-
             if (loadedChunks != null)
             {
                 _streaming = new CrowdFlowChunkStreaming(loadedChunks, Flows);
@@ -59,7 +57,11 @@ namespace Ludots.Core.Navigation2D.Runtime
 
         public CrowdFlow2D? TryGetFlow(int flowId)
         {
-            if ((uint)flowId >= (uint)Flows.Length) return null;
+            if ((uint)flowId >= (uint)Flows.Length)
+            {
+                return null;
+            }
+
             return Flows[flowId];
         }
 
@@ -70,6 +72,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             {
                 Flows[i].Dispose();
             }
+
             CellMap.Dispose();
             AgentSoA.Dispose();
         }

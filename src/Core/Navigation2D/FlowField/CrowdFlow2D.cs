@@ -1,11 +1,10 @@
-// TODO: CrowdFlowTile2D is a class but LongKeyMap<T> requires unmanaged struct.
-// Refactor CrowdFlowTile2D to use fixed-size buffers or switch to Dictionary<long, ...>.
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Arch.LowLevel;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.Spatial;
 
 namespace Ludots.Core.Navigation2D.FlowField
@@ -14,71 +13,138 @@ namespace Ludots.Core.Navigation2D.FlowField
     {
         private readonly CrowdSurface2D _surface;
         private readonly Dictionary<long, CrowdFlowTile2D> _tiles;
+        private readonly HashSet<long> _loadedTiles;
+        private readonly Dictionary<long, int> _activeTileExpiryTicks;
+        private readonly List<TileCandidate> _candidateTiles;
+        private readonly List<long> _removalScratch;
         private UnsafeQueue<long> _frontier;
 
         private Fix64Vec2 _goalCm;
         private Fix64 _goalRadiusCm;
+        private bool _hasGoal;
         private bool _needsRebuild;
 
         private readonly int _tileShift;
         private readonly int _tileMask;
+        private Navigation2DFlowStreamingConfig _streamingConfig;
 
-        /// <summary>
-        /// BFS 传播的最大势能上限。超过此值的格子不再入队，防止 flowfield 无限扩展。
-        /// 值的含义：大致等于从目标出发的"格子距离"（cardinal=1, diagonal≈1.414）。
-        /// 默认 300 ≈ 覆盖半径 300 格 × CellSize 的区域。
-        /// </summary>
+        private int _currentTick;
+        private bool _hasDemandBounds;
+        private int _demandMinTileX;
+        private int _demandMinTileY;
+        private int _demandMaxTileX;
+        private int _demandMaxTileY;
+
         public float MaxPotential { get; set; } = 300f;
+        public int ActiveTileCount => _tiles.Count;
+        public int LoadedTileCount => _loadedTiles.Count;
 
-        public CrowdFlow2D(CrowdSurface2D surface, int initialTileCapacity = 256, int initialFrontierCapacity = 1024)
+        public CrowdFlow2D(
+            CrowdSurface2D surface,
+            Navigation2DFlowStreamingConfig? streamingConfig = null,
+            int initialTileCapacity = 256,
+            int initialFrontierCapacity = 1024)
         {
             _surface = surface ?? throw new ArgumentNullException(nameof(surface));
             _tiles = new Dictionary<long, CrowdFlowTile2D>(Math.Max(8, initialTileCapacity));
+            _loadedTiles = new HashSet<long>();
+            _activeTileExpiryTicks = new Dictionary<long, int>(Math.Max(8, initialTileCapacity));
+            _candidateTiles = new List<TileCandidate>(Math.Max(8, initialTileCapacity));
+            _removalScratch = new List<long>(Math.Max(8, initialTileCapacity));
             _frontier = new UnsafeQueue<long>(Math.Max(16, initialFrontierCapacity));
 
             int tileSize = surface.TileSizeCells;
             _tileMask = tileSize - 1;
             _tileShift = BitOperations.TrailingZeroCount((uint)tileSize);
-            _needsRebuild = true;
             _goalCm = default;
             _goalRadiusCm = Fix64.Zero;
+            _hasGoal = false;
+            _needsRebuild = true;
+            _streamingConfig = streamingConfig ?? new Navigation2DFlowStreamingConfig();
+            MaxPotential = _streamingConfig.MaxPotentialCells;
+        }
+
+        public void ConfigureStreaming(Navigation2DFlowStreamingConfig config)
+        {
+            _streamingConfig = config ?? new Navigation2DFlowStreamingConfig();
+            MaxPotential = _streamingConfig.MaxPotentialCells;
+            _needsRebuild = true;
         }
 
         public void SetGoalPoint(in Fix64Vec2 goalCm, Fix64 radiusCm)
         {
-            // Fix2: 仅当目标实际改变时才标记需要重建
-            bool changed = _goalCm.X != goalCm.X || _goalCm.Y != goalCm.Y || _goalRadiusCm != radiusCm;
+            bool changed = !_hasGoal || _goalCm.X != goalCm.X || _goalCm.Y != goalCm.Y || _goalRadiusCm != radiusCm;
             _goalCm = goalCm;
             _goalRadiusCm = radiusCm;
+            _hasGoal = true;
             if (changed)
             {
                 _needsRebuild = true;
             }
         }
 
+        public void BeginDemandFrame(int tick)
+        {
+            _currentTick = tick;
+            _hasDemandBounds = false;
+        }
+
+        public void AddDemandPoint(in Fix64Vec2 positionCm)
+        {
+            WorldToTile(positionCm, out int tileX, out int tileY);
+            if (!_hasDemandBounds)
+            {
+                _demandMinTileX = tileX;
+                _demandMinTileY = tileY;
+                _demandMaxTileX = tileX;
+                _demandMaxTileY = tileY;
+                _hasDemandBounds = true;
+                return;
+            }
+
+            if (tileX < _demandMinTileX) _demandMinTileX = tileX;
+            if (tileY < _demandMinTileY) _demandMinTileY = tileY;
+            if (tileX > _demandMaxTileX) _demandMaxTileX = tileX;
+            if (tileY > _demandMaxTileY) _demandMaxTileY = tileY;
+        }
+
+        public bool IsTileActive(long tileKey) => _tiles.ContainsKey(tileKey);
+
         public void OnTileLoaded(long tileKey)
         {
-            _surface.GetOrCreateTile(tileKey);
-            if (!_tiles.ContainsKey(tileKey))
-            {
-                _tiles[tileKey] = new CrowdFlowTile2D(_surface.TileSizeCells);
-            }
+            _loadedTiles.Add(tileKey);
+            _needsRebuild = true;
         }
 
         public void OnTileUnloaded(long tileKey)
         {
-            _tiles.Remove(tileKey);
-            _surface.RemoveTile(tileKey);
-            _needsRebuild = true;
+            _loadedTiles.Remove(tileKey);
+            _activeTileExpiryTicks.Remove(tileKey);
+            if (_tiles.Remove(tileKey))
+            {
+                _surface.ReleaseTile(tileKey);
+                _needsRebuild = true;
+            }
         }
 
         public void Step(int iterations)
         {
-            if (iterations <= 0) return;
-            if (_needsRebuild) Rebuild();
-            if (_frontier.Count == 0) return;
+            RefreshActiveTiles();
+            if (iterations <= 0)
+            {
+                return;
+            }
 
-            // Fix3b: 8邻域BFS传播（对角线代价√2），生成更平滑的类欧几里得距离场
+            if (_needsRebuild)
+            {
+                Rebuild();
+            }
+
+            if (_frontier.Count == 0)
+            {
+                return;
+            }
+
             const float DiagCost = 1.41421356f;
             int remaining = iterations;
             while (remaining-- > 0 && _frontier.Count > 0)
@@ -86,14 +152,15 @@ namespace Ludots.Core.Navigation2D.FlowField
                 long cellKey = _frontier.Dequeue();
                 Nav2DKeyPacking.UnpackInt2(cellKey, out int cx, out int cy);
                 float current = GetPotential(cx, cy);
-                if (float.IsPositiveInfinity(current)) continue;
+                if (float.IsPositiveInfinity(current))
+                {
+                    continue;
+                }
 
-                // 4 cardinal neighbors (cost 1)
                 TryRelaxNeighbor(cx + 1, cy, current, 1f);
                 TryRelaxNeighbor(cx - 1, cy, current, 1f);
                 TryRelaxNeighbor(cx, cy + 1, current, 1f);
                 TryRelaxNeighbor(cx, cy - 1, current, 1f);
-                // 4 diagonal neighbors (cost √2)
                 TryRelaxNeighbor(cx + 1, cy + 1, current, DiagCost);
                 TryRelaxNeighbor(cx + 1, cy - 1, current, DiagCost);
                 TryRelaxNeighbor(cx - 1, cy + 1, current, DiagCost);
@@ -105,85 +172,243 @@ namespace Ludots.Core.Navigation2D.FlowField
         {
             desiredVelocityCmPerSec = default;
 
-            if (_needsRebuild) Rebuild();
+            if (_needsRebuild)
+            {
+                Rebuild();
+            }
 
             _surface.WorldToCell(positionCm, out int cx, out int cy);
             float p0 = GetPotential(cx, cy);
-            if (float.IsPositiveInfinity(p0)) return false;
-            if (p0 <= 0.001f) return false;
+            if (float.IsPositiveInfinity(p0) || p0 <= 0.001f)
+            {
+                return false;
+            }
 
-            // Fix3: 使用中心差分计算势场梯度，产出平滑连续方向
-            // 采样 8 邻域用于梯度计算
-            float pxp = GetPotentialClamped(cx + 1, cy, p0);   // +X
-            float pxn = GetPotentialClamped(cx - 1, cy, p0);   // -X
-            float pyp = GetPotentialClamped(cx, cy + 1, p0);   // +Y
-            float pyn = GetPotentialClamped(cx, cy - 1, p0);   // -Y
-            float ppp = GetPotentialClamped(cx + 1, cy + 1, p0); // +X+Y
-            float ppn = GetPotentialClamped(cx + 1, cy - 1, p0); // +X-Y
-            float pnp = GetPotentialClamped(cx - 1, cy + 1, p0); // -X+Y
-            float pnn = GetPotentialClamped(cx - 1, cy - 1, p0); // -X-Y
+            float pxp = GetPotentialClamped(cx + 1, cy, p0);
+            float pxn = GetPotentialClamped(cx - 1, cy, p0);
+            float pyp = GetPotentialClamped(cx, cy + 1, p0);
+            float pyn = GetPotentialClamped(cx, cy - 1, p0);
+            float ppp = GetPotentialClamped(cx + 1, cy + 1, p0);
+            float ppn = GetPotentialClamped(cx + 1, cy - 1, p0);
+            float pnp = GetPotentialClamped(cx - 1, cy + 1, p0);
+            float pnn = GetPotentialClamped(cx - 1, cy - 1, p0);
 
-            // Sobel-like gradient: 对角方向贡献 1/√2 ≈ 0.7071
             const float diag = 0.7071f;
             float gx = (pxp - pxn) + diag * ((ppp - pnp) + (ppn - pnn));
             float gy = (pyp - pyn) + diag * ((ppp - ppn) + (pnp - pnn));
-
-            // 梯度指向 potential 增大方向，我们要往 potential 减小方向走，取反
             float dx = -gx;
             float dy = -gy;
 
             float len = MathF.Sqrt(dx * dx + dy * dy);
-            if (len < 1e-6f) return false;
+            if (len < 1e-6f)
+            {
+                return false;
+            }
 
-            // 归一化后乘以最大速度
             float invLen = 1f / len;
-            float maxSpd = maxSpeedCmPerSec.ToFloat();
-            desiredVelocityCmPerSec = Fix64Vec2.FromFloat(dx * invLen * maxSpd, dy * invLen * maxSpd);
-
+            float maxSpeed = maxSpeedCmPerSec.ToFloat();
+            desiredVelocityCmPerSec = Fix64Vec2.FromFloat(dx * invLen * maxSpeed, dy * invLen * maxSpeed);
             return true;
         }
 
-        /// <summary>
-        /// 获取势场值；如果目标格不可达(Infinity/障碍)，返回 fallback 以避免梯度被 Infinity 污染。
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float GetPotentialClamped(int cellX, int cellY, float fallback)
         {
-            if (_surface.IsBlockedCell(cellX, cellY)) return fallback;
-            float v = GetPotential(cellX, cellY);
-            return float.IsPositiveInfinity(v) ? fallback : v;
+            if (_surface.IsBlockedCell(cellX, cellY))
+            {
+                return fallback;
+            }
+
+            float value = GetPotential(cellX, cellY);
+            return float.IsPositiveInfinity(value) ? fallback : value;
+        }
+
+        private void RefreshActiveTiles()
+        {
+            if (!_streamingConfig.Enabled)
+            {
+                MirrorLoadedTiles();
+                return;
+            }
+
+            _candidateTiles.Clear();
+            if (TryBuildActivationWindow(out int minTileX, out int minTileY, out int maxTileX, out int maxTileY, out int priorityTileX, out int priorityTileY))
+            {
+                foreach (long tileKey in _loadedTiles)
+                {
+                    Nav2DKeyPacking.UnpackInt2(tileKey, out int tileX, out int tileY);
+                    if (tileX < minTileX || tileX > maxTileX || tileY < minTileY || tileY > maxTileY)
+                    {
+                        continue;
+                    }
+
+                    int distance = Math.Abs(tileX - priorityTileX) + Math.Abs(tileY - priorityTileY);
+                    int priority = _tiles.ContainsKey(tileKey) ? distance : distance + 1024;
+                    _candidateTiles.Add(new TileCandidate(tileKey, priority));
+                }
+
+                _candidateTiles.Sort(static (a, b) =>
+                {
+                    int priorityCompare = a.Priority.CompareTo(b.Priority);
+                    return priorityCompare != 0 ? priorityCompare : a.TileKey.CompareTo(b.TileKey);
+                });
+
+                int maxActive = Math.Max(1, _streamingConfig.MaxActiveTilesPerFlow);
+                int takeCount = Math.Min(maxActive, _candidateTiles.Count);
+                int expiryTick = _currentTick + _streamingConfig.UnloadGraceTicks;
+                for (int i = 0; i < takeCount; i++)
+                {
+                    long tileKey = _candidateTiles[i].TileKey;
+                    EnsureTileActive(tileKey);
+                    _activeTileExpiryTicks[tileKey] = expiryTick;
+                }
+            }
+
+            _removalScratch.Clear();
+            foreach (var kvp in _activeTileExpiryTicks)
+            {
+                if (_loadedTiles.Contains(kvp.Key) && kvp.Value >= _currentTick)
+                {
+                    continue;
+                }
+
+                _removalScratch.Add(kvp.Key);
+            }
+
+            for (int i = 0; i < _removalScratch.Count; i++)
+            {
+                long tileKey = _removalScratch[i];
+                _activeTileExpiryTicks.Remove(tileKey);
+                if (_tiles.Remove(tileKey))
+                {
+                    _surface.ReleaseTile(tileKey);
+                    _needsRebuild = true;
+                }
+            }
+        }
+
+        private bool TryBuildActivationWindow(out int minTileX, out int minTileY, out int maxTileX, out int maxTileY, out int priorityTileX, out int priorityTileY)
+        {
+            int radius = Math.Max(0, _streamingConfig.ActivationRadiusTiles);
+            if (_hasGoal)
+            {
+                WorldToTile(_goalCm, out int goalTileX, out int goalTileY);
+                priorityTileX = goalTileX;
+                priorityTileY = goalTileY;
+
+                if (_hasDemandBounds)
+                {
+                    minTileX = Math.Min(_demandMinTileX, goalTileX) - radius;
+                    minTileY = Math.Min(_demandMinTileY, goalTileY) - radius;
+                    maxTileX = Math.Max(_demandMaxTileX, goalTileX) + radius;
+                    maxTileY = Math.Max(_demandMaxTileY, goalTileY) + radius;
+                    return true;
+                }
+
+                minTileX = goalTileX - radius;
+                minTileY = goalTileY - radius;
+                maxTileX = goalTileX + radius;
+                maxTileY = goalTileY + radius;
+                return true;
+            }
+
+            if (_hasDemandBounds)
+            {
+                minTileX = _demandMinTileX - radius;
+                minTileY = _demandMinTileY - radius;
+                maxTileX = _demandMaxTileX + radius;
+                maxTileY = _demandMaxTileY + radius;
+                priorityTileX = (_demandMinTileX + _demandMaxTileX) >> 1;
+                priorityTileY = (_demandMinTileY + _demandMaxTileY) >> 1;
+                return true;
+            }
+
+            minTileX = minTileY = maxTileX = maxTileY = priorityTileX = priorityTileY = 0;
+            return false;
+        }
+
+        private void MirrorLoadedTiles()
+        {
+            foreach (long tileKey in _loadedTiles)
+            {
+                EnsureTileActive(tileKey);
+                _activeTileExpiryTicks[tileKey] = int.MaxValue;
+            }
+
+            _removalScratch.Clear();
+            foreach (long tileKey in _tiles.Keys)
+            {
+                if (_loadedTiles.Contains(tileKey))
+                {
+                    continue;
+                }
+
+                _removalScratch.Add(tileKey);
+            }
+
+            for (int i = 0; i < _removalScratch.Count; i++)
+            {
+                long tileKey = _removalScratch[i];
+                _activeTileExpiryTicks.Remove(tileKey);
+                if (_tiles.Remove(tileKey))
+                {
+                    _surface.ReleaseTile(tileKey);
+                    _needsRebuild = true;
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureTileActive(long tileKey)
+        {
+            if (_tiles.ContainsKey(tileKey))
+            {
+                return;
+            }
+
+            _surface.RetainTile(tileKey);
+            _tiles[tileKey] = new CrowdFlowTile2D(_surface.TileSizeCells);
+            _needsRebuild = true;
         }
 
         private void Rebuild()
         {
-            foreach (var kv in _tiles)
+            foreach (var tile in _tiles.Values)
             {
-                kv.Value.Reset();
+                tile.Reset();
             }
 
-            while (_frontier.Count > 0) _frontier.Dequeue();
+            while (_frontier.Count > 0)
+            {
+                _frontier.Dequeue();
+            }
+
+            if (!_hasGoal)
+            {
+                _needsRebuild = false;
+                return;
+            }
 
             _surface.WorldToCell(_goalCm, out int gx, out int gy);
             if (_goalRadiusCm > Fix64.Zero)
             {
-                int r = (_goalRadiusCm / _surface.CellSizeCm).CeilToInt();
-                for (int y = gy - r; y <= gy + r; y++)
+                int radius = (_goalRadiusCm / _surface.CellSizeCm).CeilToInt();
+                for (int y = gy - radius; y <= gy + radius; y++)
                 {
-                    for (int x = gx - r; x <= gx + r; x++)
+                    for (int x = gx - radius; x <= gx + radius; x++)
                     {
-                        if (_surface.IsBlockedCell(x, y)) continue;
-                        SetPotential(x, y, 0f);
+                        if (_surface.IsBlockedCell(x, y) || !SetPotential(x, y, 0f))
+                        {
+                            continue;
+                        }
+
                         _frontier.Enqueue(Nav2DKeyPacking.PackInt2(x, y));
                     }
                 }
             }
-            else
+            else if (!_surface.IsBlockedCell(gx, gy) && SetPotential(gx, gy, 0f))
             {
-                if (!_surface.IsBlockedCell(gx, gy))
-                {
-                    SetPotential(gx, gy, 0f);
-                    _frontier.Enqueue(Nav2DKeyPacking.PackInt2(gx, gy));
-                }
+                _frontier.Enqueue(Nav2DKeyPacking.PackInt2(gx, gy));
             }
 
             _needsRebuild = false;
@@ -193,43 +418,62 @@ namespace Ludots.Core.Navigation2D.FlowField
         private float GetPotential(int cellX, int cellY)
         {
             long tileKey = Nav2DKeyPacking.PackInt2(cellX >> _tileShift, cellY >> _tileShift);
-            if (!_tiles.TryGetValue(tileKey, out var tile)) return float.PositiveInfinity;
+            if (!_tiles.TryGetValue(tileKey, out var tile))
+            {
+                return float.PositiveInfinity;
+            }
+
             int lx = cellX & _tileMask;
             int ly = cellY & _tileMask;
             return tile.Potential[ly * _surface.TileSizeCells + lx];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SetPotential(int cellX, int cellY, float value)
+        private bool SetPotential(int cellX, int cellY, float value)
         {
             long tileKey = Nav2DKeyPacking.PackInt2(cellX >> _tileShift, cellY >> _tileShift);
-            _surface.GetOrCreateTile(tileKey);
             if (!_tiles.TryGetValue(tileKey, out var tile))
             {
-                tile = new CrowdFlowTile2D(_surface.TileSizeCells);
-                _tiles[tileKey] = tile;
+                return false;
             }
+
             int lx = cellX & _tileMask;
             int ly = cellY & _tileMask;
             tile.Potential[ly * _surface.TileSizeCells + lx] = value;
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void TryRelaxNeighbor(int nx, int ny, float current, float cost = 1f)
+        private void TryRelaxNeighbor(int nx, int ny, float current, float cost)
         {
             float next = current + cost;
-            // Fix5: 超过最大势能上限的格子不再传播，防止 BFS 无限扩展
-            if (next > MaxPotential) return;
-            if (_surface.IsBlockedCell(nx, ny)) return;
+            if (next > MaxPotential || _surface.IsBlockedCell(nx, ny))
+            {
+                return;
+            }
+
             float old = GetPotential(nx, ny);
-            if (next >= old) return;
-            SetPotential(nx, ny, next);
+            if (next >= old || !SetPotential(nx, ny, next))
+            {
+                return;
+            }
+
             _frontier.Enqueue(Nav2DKeyPacking.PackInt2(nx, ny));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WorldToTile(in Fix64Vec2 worldCm, out int tileX, out int tileY)
+        {
+            _surface.WorldToCell(worldCm, out int cellX, out int cellY);
+            tileX = cellX >> _tileShift;
+            tileY = cellY >> _tileShift;
         }
 
         public void Dispose()
         {
             _frontier.Dispose();
         }
+
+        private readonly record struct TileCandidate(long TileKey, int Priority);
     }
 }
