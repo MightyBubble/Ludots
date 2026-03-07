@@ -18,6 +18,7 @@ internal static class ReactiveShowcasePageFactory
                 true,
                 "Waiting validation",
                 2,
+                1,
                 false,
                 false),
             BuildRoot,
@@ -81,7 +82,8 @@ internal static class ReactiveShowcasePageFactory
                 Ui.Row(
                     UiShowcaseScaffolding.BuildChip(state.CheckboxChecked ? "Checkbox: Checked" : "Checkbox: Off", state.CheckboxChecked, "reactive-checkbox", _ => context.SetState(current => current with { CheckboxChecked = !current.CheckboxChecked })),
                     UiShowcaseScaffolding.BuildChip(state.SwitchEnabled ? "Switch: On" : "Switch: Off", state.SwitchEnabled, "reactive-switch", _ => context.SetState(current => current with { SwitchEnabled = !current.SwitchEnabled })),
-                    UiShowcaseScaffolding.BuildChip("Radio: Primary", true, "reactive-radio"))
+                    Ui.Radio("Radio: Primary", "reactive-mode", state.SelectedMode == 1, _ => context.SetState(current => current with { SelectedMode = 1 })).Id("reactive-radio-primary").Class("control-chip"),
+                    Ui.Radio("Radio: Secondary", "reactive-mode", state.SelectedMode == 2, _ => context.SetState(current => current with { SelectedMode = 2 })).Id("reactive-radio-secondary").Class("control-chip"))
                     .Class("control-row"),
                 Ui.Row(
                     new UiElementBuilder(UiNodeKind.Select, "select").Text("Select / Dropdown").Class("control-chip").FlexGrow(1),
@@ -122,7 +124,18 @@ internal static class ReactiveShowcasePageFactory
                     UiShowcaseScaffolding.BuildSelectableCard("Item 2", state.SelectedItem == 2, "reactive-item-2", _ => context.SetState(current => current with { SelectedItem = 2 })),
                     UiShowcaseScaffolding.BuildSelectableCard("Item 3", state.SelectedItem == 3, "reactive-item-3", _ => context.SetState(current => current with { SelectedItem = 3 })))
                     .Class("control-row"),
-                Ui.Text("ListView / GridView / Tabs 共享同一语义状态模型。")
+                Ui.Table(
+                    Ui.TableRow(
+                        Ui.TableHeaderCell("Name"),
+                        Ui.TableHeaderCell("Role")),
+                    Ui.TableRow(
+                        Ui.TableCell("Sentinel"),
+                        Ui.TableCell("Guardian")),
+                    Ui.TableRow(
+                        Ui.TableCell("Courier"),
+                        Ui.TableCell("Support")))
+                    .Id("reactive-stats-table"),
+                Ui.Text("ListView / GridView / Tabs share one unified state model.")
                     .Class("muted"))
             .Class("skin-card")
             .FlexGrow(1);
@@ -178,5 +191,6 @@ public sealed record ReactiveShowcaseState(
     bool FormError,
     string FormStatus,
     int SelectedItem,
+    int SelectedMode,
     bool ModalOpen,
     bool ToastVisible);

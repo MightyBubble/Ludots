@@ -171,6 +171,52 @@ public static class UiShowcaseStyles
             {
                 style.Set("padding", "18px");
             })
+            .AddRule("button:focus, input:focus, textarea:focus, select:focus", style =>
+            {
+                style.Set("outline-width", "2px");
+                style.Set("outline-color", "var(--accent, #3c82ff)");
+            })
+            .AddRule("input[type=radio]", style =>
+            {
+                style.Set("background-color", "var(--surface-alt, #3a4661)");
+                style.Set("border-width", "1px");
+                style.Set("border-color", "var(--border, #4c5976)");
+                style.Set("border-radius", "8px");
+                style.Set("padding", "8px 10px");
+            })
+            .AddRule("input[type=radio]:checked", style =>
+            {
+                style.Set("background-color", "var(--accent, #3c82ff)");
+                style.Set("border-color", "var(--accent, #3c82ff)");
+                style.Set("color", "var(--accent-contrast, #ffffff)");
+            })
+            .AddRule("table", style =>
+            {
+                style.Set("display", "flex");
+                style.Set("flex-direction", "column");
+                style.Set("border-width", "1px");
+                style.Set("border-color", "var(--border, #4c5976)");
+                style.Set("border-radius", "10px");
+                style.Set("overflow", "hidden");
+            })
+            .AddRule("tr", style =>
+            {
+                style.Set("display", "flex");
+                style.Set("flex-direction", "row");
+            })
+            .AddRule("th, td", style =>
+            {
+                style.Set("flex-grow", "1");
+                style.Set("flex-basis", "0px");
+                style.Set("padding", "8px 10px");
+                style.Set("border-width", "1px");
+                style.Set("border-color", "var(--border, #4c5976)");
+            })
+            .AddRule("th", style =>
+            {
+                style.Set("background-color", "var(--surface-alt, #3a4661)");
+                style.Set("font-weight", "700");
+            })
             .AddRule(".skin-primary", style =>
             {
                 style.Set("background-color", "var(--accent, #3c82ff)");
@@ -236,6 +282,13 @@ public static class UiShowcaseStyles
 .overlay-card { background-color:var(--surface-alt, #3a4661); border-radius:12px; padding:12px; gap:8px; }
 .toast-badge { background-color:var(--accent, #3c82ff); color:var(--accent-contrast, #ffffff); padding:6px 10px; border-radius:999px; font-size:12px; }
 .prototype-box { background-color:var(--surface-alt, #3a4661); padding:10px; border-radius:8px; font-size:13px; }
+button:focus, input:focus, textarea:focus, select:focus { outline-width:2px; outline-color:var(--accent, #3c82ff); }
+input[type=radio] { background-color:var(--surface-alt, #3a4661); border-width:1px; border-color:var(--border, #4c5976); border-radius:8px; padding:8px 10px; }
+input[type=radio]:checked { background-color:var(--accent, #3c82ff); border-color:var(--accent, #3c82ff); color:var(--accent-contrast, #ffffff); }
+table { display:flex; flex-direction:column; border-width:1px; border-color:var(--border, #4c5976); border-radius:10px; overflow:hidden; }
+tr { display:flex; flex-direction:row; }
+th, td { flex-grow:1; flex-basis:0px; padding:8px 10px; border-width:1px; border-color:var(--border, #4c5976); }
+th { background-color:var(--surface-alt, #3a4661); font-weight:700; }
 .density-compact .skin-card { padding:10px; }
 .density-comfortable .skin-card { padding:18px; }
 .skin-primary { background-color:var(--accent, #3c82ff); color:var(--accent-contrast, #ffffff); }

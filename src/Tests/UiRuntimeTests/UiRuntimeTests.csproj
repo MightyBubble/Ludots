@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Libraries\Ludots.UI\Ludots.UI.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj" />
   </ItemGroup>
 
 </Project>

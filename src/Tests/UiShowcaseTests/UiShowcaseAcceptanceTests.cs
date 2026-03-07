@@ -21,6 +21,8 @@ public sealed class UiShowcaseAcceptanceTests
         Assert.That(scene.FindByElementId("compose-form-status"), Is.Not.Null);
         Assert.That(scene.FindByElementId("compose-selected"), Is.Not.Null);
         Assert.That(scene.FindByElementId("compose-density"), Is.Not.Null);
+        Assert.That(scene.FindByElementId("compose-radio-primary"), Is.Not.Null);
+        Assert.That(scene.FindByElementId("compose-stats-table"), Is.Not.Null);
     }
 
     [Test]
@@ -30,6 +32,8 @@ public sealed class UiShowcaseAcceptanceTests
         page.Scene.Layout(1280, 720);
         UiNode button = page.Scene.FindByElementId("reactive-inc")!;
         UiNode counterBefore = page.Scene.FindByElementId("reactive-count")!;
+        Assert.That(page.Scene.FindByElementId("reactive-radio-primary"), Is.Not.Null);
+        Assert.That(page.Scene.FindByElementId("reactive-stats-table"), Is.Not.Null);
 
         UiEventResult result = page.Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Click, 0, button.LayoutRect.X + 2, button.LayoutRect.Y + 2, button.Id));
         page.Scene.Layout(1280, 720);
@@ -80,6 +84,8 @@ public sealed class UiShowcaseAcceptanceTests
         scene.Layout(1280, 720);
 
         Assert.That(scene.FindByElementId("markup-prototype"), Is.Not.Null);
+        Assert.That(scene.FindByElementId("markup-radio-primary"), Is.Not.Null);
+        Assert.That(scene.FindByElementId("markup-stats-table"), Is.Not.Null);
         Assert.That(scene.QuerySelectorAll(".prototype-box").Count, Is.GreaterThanOrEqualTo(3));
     }
 

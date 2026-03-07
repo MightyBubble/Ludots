@@ -8,6 +8,7 @@ public sealed class UiElementBuilder
 {
     private readonly List<UiElementBuilder> _children = new();
     private readonly HashSet<string> _classNames = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _attributes = new(StringComparer.OrdinalIgnoreCase);
     private Action<UiActionContext>? _onClick;
     private UiStyle _style;
     private string? _elementId;
@@ -41,6 +42,55 @@ public sealed class UiElementBuilder
         foreach (string className in classNames)
         {
             _classNames.Add(className);
+        }
+
+        return this;
+    }
+
+    public UiElementBuilder Attribute(string name, string value)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Attribute name is required.", nameof(name));
+        }
+
+        _attributes[name] = value;
+        return this;
+    }
+
+    public UiElementBuilder Name(string value)
+    {
+        return Attribute("name", value);
+    }
+
+    public UiElementBuilder Type(string value)
+    {
+        return Attribute("type", value);
+    }
+
+    public UiElementBuilder Checked(bool value = true)
+    {
+        if (value)
+        {
+            _attributes["checked"] = "true";
+        }
+        else
+        {
+            _attributes.Remove("checked");
+        }
+
+        return this;
+    }
+
+    public UiElementBuilder Disabled(bool value = true)
+    {
+        if (value)
+        {
+            _attributes["disabled"] = "true";
+        }
+        else
+        {
+            _attributes.Remove("disabled");
         }
 
         return this;
@@ -302,6 +352,22 @@ public sealed class UiElementBuilder
             children[i] = _children[i].Build(dispatcher, ref nextId);
         }
 
+        UiAttributeBag attributes = new();
+        foreach (KeyValuePair<string, string> entry in _attributes)
+        {
+            attributes[entry.Key] = entry.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_elementId))
+        {
+            attributes["id"] = _elementId;
+        }
+
+        if (_classNames.Count > 0)
+        {
+            attributes["class"] = string.Join(' ', _classNames);
+        }
+
         return new UiNode(
             new UiNodeId(nextId++),
             Kind,
@@ -311,7 +377,8 @@ public sealed class UiElementBuilder
             actionHandles: actionHandles,
             tagName: TagName,
             elementId: _elementId,
-            classNames: _classNames);
+            classNames: _classNames,
+            attributes: attributes);
     }
 
     private static UiStyle CreateDefaultStyle(UiNodeKind kind)
@@ -322,6 +389,11 @@ public sealed class UiElementBuilder
             UiNodeKind.Column => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Column },
             UiNodeKind.Text => UiStyle.Default with { Display = UiDisplay.Text, Color = SKColors.White },
             UiNodeKind.Button => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Row, AlignItems = UiAlignItems.Center, JustifyContent = UiJustifyContent.Center, Padding = UiThickness.Symmetric(16f, 10f), BackgroundColor = new SKColor(58, 121, 220), BorderRadius = 10f, Color = SKColors.White },
+            UiNodeKind.Checkbox or UiNodeKind.Radio or UiNodeKind.Toggle => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Row, AlignItems = UiAlignItems.Center, Padding = UiThickness.Symmetric(10f, 8f), BorderRadius = 8f },
+            UiNodeKind.Table => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Column, AlignItems = UiAlignItems.Stretch },
+            UiNodeKind.TableHeader or UiNodeKind.TableBody or UiNodeKind.TableFooter => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Column, AlignItems = UiAlignItems.Stretch },
+            UiNodeKind.TableRow => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Row, AlignItems = UiAlignItems.Stretch },
+            UiNodeKind.TableCell or UiNodeKind.TableHeaderCell => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Column, AlignItems = UiAlignItems.Stretch, FlexGrow = 1f, FlexShrink = 1f, FlexBasis = UiLength.Px(0f) },
             UiNodeKind.Card => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Column, Padding = UiThickness.All(16f), BackgroundColor = new SKColor(25, 31, 48), BorderRadius = 12f },
             UiNodeKind.Panel => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Column },
             _ => UiStyle.Default

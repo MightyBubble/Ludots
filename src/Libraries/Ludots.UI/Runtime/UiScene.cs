@@ -11,6 +11,7 @@ public sealed class UiScene
     private readonly List<UiStyleSheet> _styleSheets = new();
     private UiNodeId? _hoveredNodeId;
     private UiNodeId? _pressedNodeId;
+    private UiNodeId? _focusedNodeId;
     private float _layoutWidth;
     private float _layoutHeight;
     private int _nextNodeId = 1;
@@ -28,6 +29,8 @@ public sealed class UiScene
 
     public UiThemePack? Theme { get; private set; }
 
+    public UiNodeId? FocusedNodeId => _focusedNodeId;
+
     public long Version { get; private set; }
 
     public bool IsDirty { get; private set; }
@@ -36,6 +39,8 @@ public sealed class UiScene
     {
         Root = root ?? throw new ArgumentNullException(nameof(root));
         Document = null;
+        ResetInteractionState();
+        InitializeRuntimeState(root);
         Version++;
         IsDirty = true;
     }
@@ -48,7 +53,10 @@ public sealed class UiScene
         Theme = theme;
         _styleSheets.Clear();
         _styleSheets.AddRange(document.StyleSheets);
+        _nextNodeId = 1;
         Root = BuildNode(document.Root);
+        ResetInteractionState();
+        InitializeRuntimeState(Root);
         Version++;
         IsDirty = true;
     }
@@ -101,18 +109,27 @@ public sealed class UiScene
         }
 
         UiNode? targetNode = ResolveTarget(evt);
+        bool sceneChanged = false;
+
         if (evt is UiPointerEvent pointerEvent)
         {
-            UpdatePointerState(pointerEvent, targetNode);
-            if (pointerEvent.PointerEventType != UiPointerEventType.Click)
-            {
-                return targetNode != null ? UiEventResult.CreateHandled() : UiEventResult.Unhandled;
-            }
-        }
+            sceneChanged |= UpdatePointerState(pointerEvent, targetNode);
+            sceneChanged |= UpdateFocusState(pointerEvent, targetNode);
 
-        if (targetNode == null)
-        {
-            return UiEventResult.Unhandled;
+            if (pointerEvent.PointerEventType == UiPointerEventType.Click)
+            {
+                sceneChanged |= UpdateSemanticState(targetNode);
+            }
+            else
+            {
+                if (sceneChanged)
+                {
+                    Version++;
+                    IsDirty = true;
+                }
+
+                return targetNode != null || sceneChanged ? UiEventResult.CreateHandled() : UiEventResult.Unhandled;
+            }
         }
 
         bool handled = false;
@@ -128,13 +145,13 @@ public sealed class UiScene
             currentNode = currentNode.Parent;
         }
 
-        if (handled)
+        if (handled || sceneChanged)
         {
             Version++;
             IsDirty = true;
         }
 
-        return handled ? UiEventResult.CreateHandled() : UiEventResult.Unhandled;
+        return handled || sceneChanged ? UiEventResult.CreateHandled() : UiEventResult.Unhandled;
     }
 
     public UiSceneDiff CreateFullDiff()
@@ -188,7 +205,7 @@ public sealed class UiScene
         string? elementId = attributes["id"];
         IReadOnlyList<string> classNames = attributes.GetClassList();
         UiNode[] children = element.Children.Select(BuildNode).ToArray();
-        UiNode node = new(
+        return new UiNode(
             new UiNodeId(_nextNodeId++),
             element.Kind,
             textContent: element.TextContent,
@@ -198,23 +215,6 @@ public sealed class UiScene
             classNames: classNames,
             attributes: attributes,
             inlineStyle: element.InlineStyle);
-
-        if (attributes.Contains("disabled"))
-        {
-            node.AddPseudoState(UiPseudoState.Disabled);
-        }
-
-        if (attributes.Contains("checked") || IsTruthy(attributes["checked"]))
-        {
-            node.AddPseudoState(UiPseudoState.Checked);
-        }
-
-        if (attributes.Contains("selected") || IsTruthy(attributes["selected"]) || IsTruthy(attributes["aria-selected"]))
-        {
-            node.AddPseudoState(UiPseudoState.Selected);
-        }
-
-        return node;
     }
 
     private static bool IsTruthy(string? value)
@@ -224,6 +224,43 @@ public sealed class UiScene
                 || value.Equals("checked", StringComparison.OrdinalIgnoreCase)
                 || value.Equals("selected", StringComparison.OrdinalIgnoreCase)
                 || value.Equals("1", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ResetInteractionState()
+    {
+        _hoveredNodeId = null;
+        _pressedNodeId = null;
+        _focusedNodeId = null;
+    }
+
+    private void InitializeRuntimeState(UiNode node)
+    {
+        node.RemovePseudoState(UiPseudoState.Hover | UiPseudoState.Active | UiPseudoState.Focus | UiPseudoState.Disabled | UiPseudoState.Checked | UiPseudoState.Selected);
+
+        if (HasBooleanAttribute(node.Attributes, "disabled"))
+        {
+            node.AddPseudoState(UiPseudoState.Disabled);
+        }
+
+        if (HasBooleanAttribute(node.Attributes, "checked"))
+        {
+            node.AddPseudoState(UiPseudoState.Checked);
+        }
+
+        if (HasBooleanAttribute(node.Attributes, "selected") || HasBooleanAttribute(node.Attributes, "aria-selected"))
+        {
+            node.AddPseudoState(UiPseudoState.Selected);
+        }
+
+        foreach (UiNode child in node.Children)
+        {
+            InitializeRuntimeState(child);
+        }
+    }
+
+    private static bool HasBooleanAttribute(UiAttributeBag attributes, string name)
+    {
+        return attributes.Contains(name) || IsTruthy(attributes[name]);
     }
 
     private IReadOnlyList<UiStyleSheet> GetEffectiveStyleSheets()
@@ -267,7 +304,7 @@ public sealed class UiScene
         return false;
     }
 
-    private void UpdatePointerState(UiPointerEvent evt, UiNode? targetNode)
+    private bool UpdatePointerState(UiPointerEvent evt, UiNode? targetNode)
     {
         bool stateChanged = false;
 
@@ -295,6 +332,11 @@ public sealed class UiScene
 
         if (evt.PointerEventType == UiPointerEventType.Down && targetNode != null)
         {
+            if (_pressedNodeId is UiNodeId previousPressedId && previousPressedId.IsValid && previousPressedId != targetNode.Id)
+            {
+                FindNode(previousPressedId)?.RemovePseudoState(UiPseudoState.Active);
+            }
+
             _pressedNodeId = targetNode.Id;
             targetNode.AddPseudoState(UiPseudoState.Active);
             stateChanged = true;
@@ -310,9 +352,197 @@ public sealed class UiScene
             _pressedNodeId = null;
         }
 
-        if (stateChanged)
+        return stateChanged;
+    }
+
+    private bool UpdateFocusState(UiPointerEvent evt, UiNode? targetNode)
+    {
+        return evt.PointerEventType switch
         {
-            IsDirty = true;
+            UiPointerEventType.Down or UiPointerEventType.Click => SetFocusedNode(ResolveFocusableNode(targetNode)),
+            _ => false
+        };
+    }
+
+    private bool UpdateSemanticState(UiNode? targetNode)
+    {
+        UiNode? semanticNode = ResolveSemanticNode(targetNode);
+        if (semanticNode == null || semanticNode.PseudoState.HasFlag(UiPseudoState.Disabled))
+        {
+            return false;
+        }
+
+        if (IsRadioNode(semanticNode))
+        {
+            if (semanticNode.PseudoState.HasFlag(UiPseudoState.Checked))
+            {
+                return false;
+            }
+
+            bool changed = false;
+            string? groupName = semanticNode.Attributes["name"];
+            if (!string.IsNullOrWhiteSpace(groupName) && Root != null)
+            {
+                foreach (UiNode node in EnumerateNodes(Root))
+                {
+                    if (node == semanticNode || !IsRadioNode(node))
+                    {
+                        continue;
+                    }
+
+                    if (string.Equals(node.Attributes["name"], groupName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        changed |= SetCheckedState(node, false);
+                    }
+                }
+            }
+
+            return SetCheckedState(semanticNode, true) || changed;
+        }
+
+        if (IsCheckableNode(semanticNode))
+        {
+            bool isChecked = semanticNode.PseudoState.HasFlag(UiPseudoState.Checked);
+            return SetCheckedState(semanticNode, !isChecked);
+        }
+
+        return false;
+    }
+
+    private bool SetFocusedNode(UiNode? node)
+    {
+        UiNodeId? nextFocusedId = node?.Id;
+        if (_focusedNodeId == nextFocusedId)
+        {
+            return false;
+        }
+
+        if (_focusedNodeId is UiNodeId previousFocusedId && previousFocusedId.IsValid)
+        {
+            FindNode(previousFocusedId)?.RemovePseudoState(UiPseudoState.Focus);
+        }
+
+        _focusedNodeId = nextFocusedId;
+        if (node != null)
+        {
+            node.AddPseudoState(UiPseudoState.Focus);
+        }
+
+        return true;
+    }
+
+    private UiNode? ResolveFocusableNode(UiNode? node)
+    {
+        UiNode? current = node;
+        while (current != null)
+        {
+            if (IsFocusableNode(current))
+            {
+                return current;
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
+    }
+
+    private UiNode? ResolveSemanticNode(UiNode? node)
+    {
+        UiNode? current = node;
+        while (current != null)
+        {
+            if (IsCheckableNode(current) || IsRadioNode(current))
+            {
+                return current;
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
+    }
+
+    private static bool IsFocusableNode(UiNode node)
+    {
+        if (node.PseudoState.HasFlag(UiPseudoState.Disabled))
+        {
+            return false;
+        }
+
+        if (node.Attributes.Contains("tabindex"))
+        {
+            return true;
+        }
+
+        if (node.ActionHandles.Count > 0 && node.Kind != UiNodeKind.Text)
+        {
+            return true;
+        }
+
+        return node.Kind is UiNodeKind.Button
+            or UiNodeKind.Input
+            or UiNodeKind.Checkbox
+            or UiNodeKind.Radio
+            or UiNodeKind.Toggle
+            or UiNodeKind.Slider
+            or UiNodeKind.Select
+            or UiNodeKind.TextArea;
+    }
+
+    private static bool IsCheckableNode(UiNode node)
+    {
+        return node.Kind is UiNodeKind.Checkbox or UiNodeKind.Toggle || IsInputType(node, "checkbox");
+    }
+
+    private static bool IsRadioNode(UiNode node)
+    {
+        return node.Kind == UiNodeKind.Radio || IsInputType(node, "radio");
+    }
+
+    private static bool IsInputType(UiNode node, string type)
+    {
+        return string.Equals(node.TagName, "input", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(node.Attributes["type"], type, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool SetCheckedState(UiNode node, bool value)
+    {
+        bool isChecked = node.PseudoState.HasFlag(UiPseudoState.Checked);
+        if (isChecked == value)
+        {
+            return false;
+        }
+
+        if (value)
+        {
+            node.AddPseudoState(UiPseudoState.Checked);
+            node.Attributes["checked"] = "true";
+            node.Attributes["aria-checked"] = "true";
+        }
+        else
+        {
+            node.RemovePseudoState(UiPseudoState.Checked);
+            node.Attributes["checked"] = null;
+            node.Attributes["aria-checked"] = "false";
+        }
+
+        return true;
+    }
+
+    private static IEnumerable<UiNode> EnumerateNodes(UiNode root)
+    {
+        Stack<UiNode> stack = new();
+        stack.Push(root);
+        while (stack.Count > 0)
+        {
+            UiNode current = stack.Pop();
+            yield return current;
+
+            for (int i = current.Children.Count - 1; i >= 0; i--)
+            {
+                stack.Push(current.Children[i]);
+            }
         }
     }
 
@@ -390,4 +620,3 @@ public sealed class UiScene
         return node;
     }
 }
-

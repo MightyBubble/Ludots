@@ -1,3 +1,4 @@
+using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
 using Ludots.UI.Runtime.Events;
@@ -199,4 +200,97 @@ public sealed class UiDomAndCssTests
         Assert.That(node.Style.FontFamily, Is.EqualTo("Segoe UI, sans-serif"));
         Assert.That(node.Style.WhiteSpace, Is.EqualTo(UiWhiteSpace.PreWrap));
     }
+
+    [Test]
+    public void UiScene_Click_UpdatesFocusAndCheckedPseudoStates_ForCheckboxAndRadioGroup()
+    {
+        UiMarkupLoader loader = new();
+        UiScene scene = loader.LoadScene(
+            """
+            <div id="root">
+              <input id="consent" type="checkbox" />
+              <input id="mode-a" type="radio" name="mode" checked="true" />
+              <input id="mode-b" type="radio" name="mode" />
+            </div>
+            """,
+            """
+            input:focus { outline-width: 2px; outline-color: #00ff00; }
+            input:checked { background-color: #2244ff; }
+            """);
+
+        scene.Layout(320, 200);
+        UiNode consent = scene.FindByElementId("consent")!;
+        UiNode modeA = scene.FindByElementId("mode-a")!;
+        UiNode modeB = scene.FindByElementId("mode-b")!;
+
+        UiEventResult checkboxClick = scene.Dispatch(new UiPointerEvent(UiPointerEventType.Click, 0, consent.LayoutRect.X + 1, consent.LayoutRect.Y + 1, consent.Id));
+        scene.Layout(320, 200);
+        consent = scene.FindByElementId("consent")!;
+
+        Assert.That(checkboxClick.Handled, Is.True);
+        Assert.That(consent.PseudoState.HasFlag(UiPseudoState.Focus), Is.True);
+        Assert.That(consent.PseudoState.HasFlag(UiPseudoState.Checked), Is.True);
+        Assert.That(consent.Style.OutlineWidth, Is.EqualTo(2f).Within(0.01f));
+        Assert.That(consent.Style.BackgroundColor, Is.EqualTo(SKColor.Parse("#2244ff")));
+        Assert.That(scene.FocusedNodeId, Is.EqualTo(consent.Id));
+
+        UiEventResult radioClick = scene.Dispatch(new UiPointerEvent(UiPointerEventType.Click, 0, modeB.LayoutRect.X + 1, modeB.LayoutRect.Y + 1, modeB.Id));
+        scene.Layout(320, 200);
+        modeA = scene.FindByElementId("mode-a")!;
+        modeB = scene.FindByElementId("mode-b")!;
+
+        Assert.That(radioClick.Handled, Is.True);
+        Assert.That(modeA.PseudoState.HasFlag(UiPseudoState.Checked), Is.False);
+        Assert.That(modeA.Attributes.Contains("checked"), Is.False);
+        Assert.That(modeB.PseudoState.HasFlag(UiPseudoState.Checked), Is.True);
+        Assert.That(modeB.PseudoState.HasFlag(UiPseudoState.Focus), Is.True);
+        Assert.That(modeB.Attributes["checked"], Is.EqualTo("true"));
+    }
+
+    [Test]
+    public void UiMarkupLoader_MapsRadioAndTableSemantics_AndLayoutsTableCells()
+    {
+        UiMarkupLoader loader = new();
+        UiScene scene = loader.LoadScene(
+            """
+            <table id="stats-table">
+              <thead>
+                <tr>
+                  <th id="head-name">Name</th>
+                  <th id="head-role">Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td id="cell-name">Alice</td>
+                  <td id="cell-role">Designer</td>
+                </tr>
+              </tbody>
+            </table>
+            <input id="mode" type="radio" name="mode" />
+            """,
+            """
+            #stats-table { width: 320px; }
+            th, td { padding: 6px; border-width: 1px; border-color: #445566; }
+            """);
+
+        scene.Layout(400, 220);
+
+        UiNode table = scene.FindByElementId("stats-table")!;
+        UiNode headerName = scene.FindByElementId("head-name")!;
+        UiNode headerRole = scene.FindByElementId("head-role")!;
+        UiNode cellName = scene.FindByElementId("cell-name")!;
+        UiNode cellRole = scene.FindByElementId("cell-role")!;
+        UiNode radio = scene.FindByElementId("mode")!;
+
+        Assert.That(table.Kind, Is.EqualTo(UiNodeKind.Table));
+        Assert.That(headerName.Kind, Is.EqualTo(UiNodeKind.TableHeaderCell));
+        Assert.That(cellName.Kind, Is.EqualTo(UiNodeKind.TableCell));
+        Assert.That(radio.Kind, Is.EqualTo(UiNodeKind.Radio));
+        Assert.That(headerName.LayoutRect.Width, Is.EqualTo(headerRole.LayoutRect.Width).Within(1.5f));
+        Assert.That(cellName.LayoutRect.Width, Is.EqualTo(cellRole.LayoutRect.Width).Within(1.5f));
+        Assert.That(cellName.LayoutRect.Y, Is.GreaterThan(headerName.LayoutRect.Y));
+        Assert.That(table.LayoutRect.Width, Is.EqualTo(320f).Within(1.5f));
+    }
+
 }

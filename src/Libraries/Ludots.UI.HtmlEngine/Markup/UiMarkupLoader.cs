@@ -122,6 +122,7 @@ public sealed class UiMarkupLoader
             {
                 "button" or "submit" or "reset" => UiNodeKind.Button,
                 "checkbox" => UiNodeKind.Checkbox,
+                "radio" => UiNodeKind.Radio,
                 "range" => UiNodeKind.Slider,
                 _ => UiNodeKind.Input
             };
@@ -134,6 +135,13 @@ public sealed class UiMarkupLoader
             "select" => UiNodeKind.Select,
             "textarea" => UiNodeKind.TextArea,
             "article" => UiNodeKind.Card,
+            "table" => UiNodeKind.Table,
+            "thead" => UiNodeKind.TableHeader,
+            "tbody" => UiNodeKind.TableBody,
+            "tfoot" => UiNodeKind.TableFooter,
+            "tr" => UiNodeKind.TableRow,
+            "td" => UiNodeKind.TableCell,
+            "th" => UiNodeKind.TableHeaderCell,
             "label" or "span" or "p" or "h1" or "h2" or "h3" or "h4" or "h5" or "h6" => UiNodeKind.Text,
             _ => UiNodeKind.Container
         };

@@ -50,4 +50,61 @@ public static class Ui
 
         return builder;
     }
+
+    public static UiElementBuilder Checkbox(string text, bool isChecked = false, Action<Ludots.UI.Runtime.Actions.UiActionContext>? onClick = null)
+    {
+        UiElementBuilder builder = new UiElementBuilder(UiNodeKind.Checkbox, "input").Type("checkbox").Text(text).Checked(isChecked);
+        if (onClick != null)
+        {
+            builder.OnClick(onClick);
+        }
+
+        return builder;
+    }
+
+    public static UiElementBuilder Radio(string text, string? groupName = null, bool isChecked = false, Action<Ludots.UI.Runtime.Actions.UiActionContext>? onClick = null)
+    {
+        UiElementBuilder builder = new UiElementBuilder(UiNodeKind.Radio, "input").Type("radio").Text(text).Checked(isChecked);
+        if (!string.IsNullOrWhiteSpace(groupName))
+        {
+            builder.Name(groupName);
+        }
+
+        if (onClick != null)
+        {
+            builder.OnClick(onClick);
+        }
+
+        return builder;
+    }
+
+    public static UiElementBuilder Table(params UiElementBuilder[] children)
+    {
+        return new UiElementBuilder(UiNodeKind.Table, "table").Children(children);
+    }
+
+    public static UiElementBuilder TableRow(params UiElementBuilder[] children)
+    {
+        return new UiElementBuilder(UiNodeKind.TableRow, "tr").Children(children);
+    }
+
+    public static UiElementBuilder TableCell(string text)
+    {
+        return new UiElementBuilder(UiNodeKind.TableCell, "td").Text(text);
+    }
+
+    public static UiElementBuilder TableCell(params UiElementBuilder[] children)
+    {
+        return new UiElementBuilder(UiNodeKind.TableCell, "td").Children(children);
+    }
+
+    public static UiElementBuilder TableHeaderCell(string text)
+    {
+        return new UiElementBuilder(UiNodeKind.TableHeaderCell, "th").Text(text);
+    }
+
+    public static UiElementBuilder TableHeaderCell(params UiElementBuilder[] children)
+    {
+        return new UiElementBuilder(UiNodeKind.TableHeaderCell, "th").Children(children);
+    }
 }

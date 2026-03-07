@@ -13,6 +13,7 @@ internal sealed class ComposeShowcaseController
     private bool _formError = true;
     private string _formStatus = "Waiting validation";
     private int _selectedItem = 1;
+    private int _selectedMode = 1;
     private bool _modalOpen;
     private bool _toastVisible;
 
@@ -85,7 +86,8 @@ internal sealed class ComposeShowcaseController
                     UiShowcaseScaffolding.BuildChip(_switchEnabled ? "Switch: On" : "Switch: Off", _switchEnabled, "compose-switch", ToggleSwitch))
                     .Class("control-row"),
                 Ui.Row(
-                    UiShowcaseScaffolding.BuildChip("Radio: Primary", true, "compose-radio"),
+                    Ui.Radio("Radio: Primary", "compose-mode", _selectedMode == 1, ctx => SelectMode(ctx, 1)).Id("compose-radio-primary").Class("control-chip"),
+                    Ui.Radio("Radio: Secondary", "compose-mode", _selectedMode == 2, ctx => SelectMode(ctx, 2)).Id("compose-radio-secondary").Class("control-chip"),
                     new UiElementBuilder(UiNodeKind.Select, "select").Text("Select / Dropdown").Class("control-chip").FlexGrow(1),
                     new UiElementBuilder(UiNodeKind.Slider, "slider").Text("Slider 72%").Class("control-chip").FlexGrow(1))
                     .Class("control-row"),
@@ -122,7 +124,18 @@ internal sealed class ComposeShowcaseController
                     UiShowcaseScaffolding.BuildSelectableCard("Item 2", _selectedItem == 2, "compose-item-2", ctx => SelectItem(ctx, 2)),
                     UiShowcaseScaffolding.BuildSelectableCard("Item 3", _selectedItem == 3, "compose-item-3", ctx => SelectItem(ctx, 3)))
                     .Class("control-row"),
-                Ui.Text("ListView / GridView / Tabs 共享同一语义状态模型。")
+                Ui.Table(
+                    Ui.TableRow(
+                        Ui.TableHeaderCell("Name"),
+                        Ui.TableHeaderCell("Role")),
+                    Ui.TableRow(
+                        Ui.TableCell("Sentinel"),
+                        Ui.TableCell("Guardian")),
+                    Ui.TableRow(
+                        Ui.TableCell("Courier"),
+                        Ui.TableCell("Support")))
+                    .Id("compose-stats-table"),
+                Ui.Text("ListView / GridView / Tabs share one unified state model.")
                     .Class("muted"))
             .Class("skin-card")
             .FlexGrow(1);
@@ -214,6 +227,12 @@ internal sealed class ComposeShowcaseController
     private void SelectItem(UiActionContext context, int selectedItem)
     {
         _selectedItem = selectedItem;
+        RebuildScene(context.Scene);
+    }
+
+    private void SelectMode(UiActionContext context, int selectedMode)
+    {
+        _selectedMode = selectedMode;
         RebuildScene(context.Scene);
     }
 

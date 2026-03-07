@@ -15,6 +15,7 @@ internal sealed class MarkupShowcaseCodeBehind
     private bool _formError = true;
     private string _formStatus = "Waiting validation";
     private int _selectedItem = 2;
+    private int _selectedMode = 1;
     private bool _modalOpen;
     private bool _toastVisible;
 
@@ -62,7 +63,8 @@ internal sealed class MarkupShowcaseCodeBehind
       <div class="control-row">
         <button id="markup-checkbox" class="control-chip {{(_checkboxChecked ? "active" : string.Empty)}}" ui-click="ToggleCheckbox">Checkbox: {{(_checkboxChecked ? "Checked" : "Off")}}</button>
         <button id="markup-switch" class="control-chip {{(_switchEnabled ? "active" : string.Empty)}}" ui-click="ToggleSwitch">Switch: {{(_switchEnabled ? "On" : "Off")}}</button>
-        <div id="markup-radio" class="control-chip active">Radio: Primary</div>
+        <input id="markup-radio-primary" class="control-chip" type="radio" name="markup-mode" {{(_selectedMode == 1 ? "checked=\"true\"" : string.Empty)}} ui-click="SelectModePrimary" value="primary" />
+        <input id="markup-radio-secondary" class="control-chip" type="radio" name="markup-mode" {{(_selectedMode == 2 ? "checked=\"true\"" : string.Empty)}} ui-click="SelectModeSecondary" value="secondary" />
       </div>
       <div class="control-row">
         <div class="control-chip">Select / Dropdown</div>
@@ -93,6 +95,24 @@ internal sealed class MarkupShowcaseCodeBehind
         <button id="markup-item-2" class="control-chip {{(_selectedItem == 2 ? "selected-item" : string.Empty)}}" ui-click="SelectItemTwo">Item 2</button>
         <button id="markup-item-3" class="control-chip {{(_selectedItem == 3 ? "selected-item" : string.Empty)}}" ui-click="SelectItemThree">Item 3</button>
       </div>
+      <table id="markup-stats-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Sentinel</td>
+            <td>Guardian</td>
+          </tr>
+          <tr>
+            <td>Courier</td>
+            <td>Support</td>
+          </tr>
+        </tbody>
+      </table>
       <div class="muted">Same semantic page as Compose / Reactive.</div>
     </article>
     <article id="markup-overlays" class="skin-card">
@@ -194,6 +214,8 @@ internal sealed class MarkupShowcaseCodeBehind
     private void SelectItemOne(UiActionContext context) { _selectedItem = 1; Rebuild(context); }
     private void SelectItemTwo(UiActionContext context) { _selectedItem = 2; Rebuild(context); }
     private void SelectItemThree(UiActionContext context) { _selectedItem = 3; Rebuild(context); }
+    private void SelectModePrimary(UiActionContext context) { _selectedMode = 1; Rebuild(context); }
+    private void SelectModeSecondary(UiActionContext context) { _selectedMode = 2; Rebuild(context); }
     private void ToggleModal(UiActionContext context) { _modalOpen = !_modalOpen; Rebuild(context); }
     private void ToggleToast(UiActionContext context) { _toastVisible = !_toastVisible; Rebuild(context); }
 }

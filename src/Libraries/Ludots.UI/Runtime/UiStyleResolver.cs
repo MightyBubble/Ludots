@@ -139,6 +139,26 @@ public sealed class UiStyleResolver
                 BorderRadius = 10f,
                 Color = SKColors.White
             },
+            UiNodeKind.Checkbox or UiNodeKind.Radio or UiNodeKind.Toggle => UiStyle.Default with
+            {
+                Display = UiDisplay.Flex,
+                FlexDirection = UiFlexDirection.Row,
+                AlignItems = UiAlignItems.Center,
+                Padding = UiThickness.Symmetric(10f, 8f),
+                BorderRadius = 8f
+            },
+            UiNodeKind.Table => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Column, AlignItems = UiAlignItems.Stretch },
+            UiNodeKind.TableHeader or UiNodeKind.TableBody or UiNodeKind.TableFooter => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Column, AlignItems = UiAlignItems.Stretch },
+            UiNodeKind.TableRow => UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Row, AlignItems = UiAlignItems.Stretch },
+            UiNodeKind.TableCell or UiNodeKind.TableHeaderCell => UiStyle.Default with
+            {
+                Display = UiDisplay.Flex,
+                FlexDirection = UiFlexDirection.Column,
+                AlignItems = UiAlignItems.Stretch,
+                FlexGrow = 1f,
+                FlexShrink = 1f,
+                FlexBasis = UiLength.Px(0f)
+            },
             UiNodeKind.Card => UiStyle.Default with
             {
                 Display = UiDisplay.Flex,

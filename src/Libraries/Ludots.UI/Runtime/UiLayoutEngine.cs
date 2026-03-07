@@ -177,9 +177,15 @@ public sealed class UiLayoutEngine
             return false;
         }
 
+        if (!string.IsNullOrWhiteSpace(node.TextContent))
+        {
+            return true;
+        }
+
         return node.Kind is UiNodeKind.Button
             or UiNodeKind.Input
             or UiNodeKind.Checkbox
+            or UiNodeKind.Radio
             or UiNodeKind.Toggle
             or UiNodeKind.Slider
             or UiNodeKind.Select
@@ -240,7 +246,7 @@ public sealed class UiLayoutEngine
             UiNodeKind.Button => (140f, 40f),
             UiNodeKind.Image => (160f, 96f),
             UiNodeKind.Input or UiNodeKind.Select or UiNodeKind.TextArea => (220f, 40f),
-            UiNodeKind.Checkbox or UiNodeKind.Toggle => (120f, 28f),
+            UiNodeKind.Checkbox or UiNodeKind.Radio or UiNodeKind.Toggle => (120f, 28f),
             UiNodeKind.Slider => (220f, 24f),
             _ => (0f, 0f)
         };
