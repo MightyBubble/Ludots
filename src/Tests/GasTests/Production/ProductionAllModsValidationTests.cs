@@ -59,6 +59,12 @@ namespace Ludots.Tests.GAS.Production
                 .SetName("ProdModSmoke_Physics2DPlaygroundMod");
 
             yield return new TestCaseData(new ModCase(
+                    "Navigation2DPlaygroundMod",
+                    new[] { "LudotsCoreMod", "Navigation2DPlaygroundMod" },
+                    true))
+                .SetName("ProdModSmoke_Navigation2DPlaygroundMod");
+
+            yield return new TestCaseData(new ModCase(
                     "TerrainBenchmarkMod",
                     new[] { "LudotsCoreMod", "TerrainBenchmarkMod" },
                     true))
