@@ -46,27 +46,27 @@ namespace Ludots.Tests.GAS
             var buffer = OrderBuffer.CreateEmpty();
 
             // Scenario: Player spams Q during another ability's execution
-            var moveOrder = new Order { OrderTagId = 1, OrderId = 1 };
-            var qSkillOrder = new Order { OrderTagId = 10, OrderId = 2 };
-            var wSkillOrder = new Order { OrderTagId = 11, OrderId = 3 };
+            var moveOrder = new Order { OrderTypeId = 1, OrderId = 1 };
+            var qSkillOrder = new Order { OrderTypeId = 10, OrderId = 2 };
+            var wSkillOrder = new Order { OrderTypeId = 11, OrderId = 3 };
 
             // Step 1: Player issues Move order — becomes active
             buffer.SetActiveDirect(in moveOrder, priority: 0);
             sb.AppendLine("[MUD][ORDER] 玩家下达【移动】指令。");
-            sb.AppendLine($"  HasActive={buffer.HasActive} ActiveTag={buffer.ActiveOrder.Order.OrderTagId} HasPending={buffer.HasPending}");
+            sb.AppendLine($"  HasActive={buffer.HasActive} ActiveTag={buffer.ActiveOrder.Order.OrderTypeId} HasPending={buffer.HasPending}");
 
             // Step 2: During move, player presses Q — blocked, goes to pending
             sb.AppendLine("───────────────────────────────────────────────────────────────");
             sb.AppendLine("[MUD][ORDER] 移动中，玩家按下【Q技能】—— 指令被缓冲。");
             buffer.SetPending(in qSkillOrder, priority: 5, expireStep: 50, insertStep: 10);
-            sb.AppendLine($"  HasPending={buffer.HasPending} PendingTag={buffer.PendingOrder.Order.OrderTagId} ExpireStep={buffer.PendingOrder.ExpireStep}");
+            sb.AppendLine($"  HasPending={buffer.HasPending} PendingTag={buffer.PendingOrder.Order.OrderTypeId} ExpireStep={buffer.PendingOrder.ExpireStep}");
 
             // Step 3: Player presses W — overwrites Q in pending (last-write-wins)
             sb.AppendLine("[MUD][ORDER] 玩家又按下【W技能】—— 覆盖之前的Q缓冲。");
             buffer.SetPending(in wSkillOrder, priority: 5, expireStep: 60, insertStep: 15);
-            sb.AppendLine($"  HasPending={buffer.HasPending} PendingTag={buffer.PendingOrder.Order.OrderTagId} (last-write-wins)");
+            sb.AppendLine($"  HasPending={buffer.HasPending} PendingTag={buffer.PendingOrder.Order.OrderTypeId} (last-write-wins)");
 
-            That(buffer.PendingOrder.Order.OrderTagId, Is.EqualTo(11), "W should overwrite Q");
+            That(buffer.PendingOrder.Order.OrderTypeId, Is.EqualTo(11), "W should overwrite Q");
 
             // Step 4: Move completes — pending should be ready to submit
             sb.AppendLine("───────────────────────────────────────────────────────────────");
@@ -77,9 +77,9 @@ namespace Ludots.Tests.GAS
             var pendingOrd = buffer.PendingOrder.Order;
             buffer.ClearPending();
             buffer.SetActiveDirect(in pendingOrd, priority: 5);
-            sb.AppendLine($"  ActiveTag={buffer.ActiveOrder.Order.OrderTagId} HasPending={buffer.HasPending}");
+            sb.AppendLine($"  ActiveTag={buffer.ActiveOrder.Order.OrderTypeId} HasPending={buffer.HasPending}");
 
-            That(buffer.ActiveOrder.Order.OrderTagId, Is.EqualTo(11), "W should now be active");
+            That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(11), "W should now be active");
             That(buffer.HasPending, Is.False);
 
             // Step 5: Test pending expiration
@@ -316,7 +316,7 @@ namespace Ludots.Tests.GAS
                 ref var buffer = ref buffers[entityIdx];
 
                 // Enqueue
-                var order = new Order { OrderTagId = frame % 20, OrderId = frame };
+                var order = new Order { OrderTypeId = frame % 20, OrderId = frame };
                 if (buffer.Enqueue(in order, priority: frame % 5, expireStep: frame + 100, insertStep: frame))
                 {
                     totalEnqueues++;

@@ -15,18 +15,18 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public Entity TargetContext;
  
         public int AllowedCount;
-        public fixed int AllowedOrderTagIds[MaxAllowed];
+        public fixed int AllowedOrderTypeIds[MaxAllowed];
  
-        public void AddAllowed(int orderTagId)
+        public void AddAllowed(int orderTypeId)
         {
             if (AllowedCount >= MaxAllowed) return;
-            AllowedOrderTagIds[AllowedCount++] = orderTagId;
+            AllowedOrderTypeIds[AllowedCount++] = orderTypeId;
         }
  
         public int GetAllowed(int index)
         {
             if ((uint)index >= (uint)AllowedCount) return 0;
-            fixed (int* p = AllowedOrderTagIds) return p[index];
+            fixed (int* p = AllowedOrderTypeIds) return p[index];
         }
     }
  
@@ -80,3 +80,4 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         }
     }
 }
+

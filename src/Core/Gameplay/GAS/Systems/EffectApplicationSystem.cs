@@ -1,4 +1,4 @@
-using Arch.Core;
+﻿using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -73,6 +73,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly List<FanOutCommand> _fanOutCommands = new(256);
         private int _fanOutDropped;
         private readonly Entity[] _resolverBuffer = new Entity[256];
+        private readonly BuiltinHandlerExecutionContext _builtinRuntime = new BuiltinHandlerExecutionContext();
         private int _activeEffectAttachDropped;
         private int _listenerRegistrationDropped;
 
@@ -119,6 +120,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _phaseExecutor = phaseExecutor;
             _graphApiHost = graphApi;
             _graphApi = graphApi;
+            _builtinRuntime.SpatialQueries = spatialQueries;
+            _builtinRuntime.FanOutBudget = _onApplyCreateBudget;
+            _builtinRuntime.FanOutCommands = _fanOutCommands;
+            _builtinRuntime.ResolverBuffer = _resolverBuffer;
         }
 
         public override void Update(in float dt)
@@ -203,39 +208,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         effect.State = EffectState.Calculate;
                         effect.State = EffectState.Apply;
 
-                        // ── TargetResolver fan-out (OnResolve + OnHit phases) ──
-                        if (_templates != null && _spatialQueries != null && World.Has<EffectTemplateRef>(effectEntity))
+                        // Execute phase handlers through the unified phase executor.
+                        if (_templates != null && World.Has<EffectTemplateRef>(effectEntity))
                         {
                             int tplId = World.Get<EffectTemplateRef>(effectEntity).TemplateId;
                             if (tplId > 0 && _templates.TryGetRef(tplId, out int tplIdx))
                             {
                                 ref readonly var tplData = ref _templates.GetRef(tplIdx);
+                                _builtinRuntime.ResetPerEffect();
 
-                                // Execute OnResolve Phase Graphs
-                                ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnResolve);
+                                ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnResolve, _builtinRuntime);
+                                ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnHit, _builtinRuntime);
+                                ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnApply, _builtinRuntime);
 
-                                if (tplData.TargetQuery.Kind != TargetResolverKind.None)
-                                {
-                                    TargetResolverFanOutHelper.CollectFanOutTargets(
-                                        World, in context, in tplData.TargetQuery,
-                                        in tplData.TargetFilter, in tplData.TargetDispatch,
-                                        _spatialQueries, _onApplyCreateBudget,
-                                        _fanOutCommands, _resolverBuffer, ref _fanOutDropped);
-                                }
-
-                                // Execute OnHit Phase Graphs (after fan-out candidates collected)
-                                ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnHit);
-                            }
-                        }
-
-                        // Execute OnApply Phase Graphs
-                        if (_templates != null && World.Has<EffectTemplateRef>(effectEntity))
-                        {
-                            int tplId2 = World.Get<EffectTemplateRef>(effectEntity).TemplateId;
-                            if (tplId2 > 0 && _templates.TryGetRef(tplId2, out int tplIdx2))
-                            {
-                                ref readonly var tplData2 = ref _templates.GetRef(tplIdx2);
-                                ExecutePhaseForEffect(effectEntity, in context, in tplData2, EffectPhaseId.OnApply);
+                                _fanOutDropped += _builtinRuntime.DroppedCount;
                             }
                         }
 
@@ -586,7 +572,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         /// Execute a phase graph for an effect entity, reading its template for behavior and config.
         /// Passes effectTagId and effectTemplateId for Phase Listener matching.
         /// </summary>
-        private void ExecutePhaseForEffect(Entity effectEntity, in EffectContext context, in EffectTemplateData tpl, EffectPhaseId phase)
+        private void ExecutePhaseForEffect(Entity effectEntity, in EffectContext context, in EffectTemplateData tpl, EffectPhaseId phase, BuiltinHandlerExecutionContext? builtinRuntime = null)
         {
             if (_phaseExecutor == null || _graphApi == null) return;
 
@@ -609,7 +595,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 in tpl.PhaseGraphBindings,
                 tpl.PresetType,
                 tpl.TagId,
-                templateId);
+                templateId,
+                builtinRuntime);
 
             _graphApiHost?.ClearConfigContext();
 

@@ -1,10 +1,10 @@
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// Test constants that replace the deleted GasOrderTags class.
+    /// Test constants for response-chain order type ids.
     /// These are used across multiple test files.
     /// </summary>
-    public static class TestGasOrderTags
+    public static class TestResponseChainOrderTypeIds
     {
         public const int ChainPass = 1;
         public const int ChainNegate = 2;

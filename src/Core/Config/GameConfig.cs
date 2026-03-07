@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Navigation2D.Config;
@@ -47,26 +48,28 @@ namespace Ludots.Core.Config
 
         /// <summary>
         /// Game constants table - merged from all Mods via ConfigPipeline.
-        /// Contains orderTags, gasOrderTags, attributes, etc.
+        /// Contains order type ids, response-chain order type ids, attributes, etc.
         /// </summary>
         public GameConstants Constants { get; set; } = new GameConstants();
     }
 
     /// <summary>
-    /// Game constants that were previously hardcoded in OrderTags.cs, GasOrderTags.cs, etc.
+    /// Game constants that were previously hardcoded in runtime constant classes.
     /// Now fully data-driven via game.json merge.
     /// </summary>
     public class GameConstants
     {
         /// <summary>
-        /// Order tags (previously in OrderTags.cs): moveTo, attackTarget, stop, castAbility...
+        /// Order type ids loaded from the `orderTypeIds` constants table in game.json.
         /// </summary>
-        public Dictionary<string, int> OrderTags { get; set; } = new Dictionary<string, int>();
+        [JsonPropertyName("orderTypeIds")]
+        public Dictionary<string, int> OrderTypeIds { get; set; } = new Dictionary<string, int>();
 
         /// <summary>
-        /// GAS order tags (previously in GasOrderTags.cs): chainPass, chainNegate, chainActivateEffect...
+        /// Response-chain order type ids loaded from the `responseChainOrderTypeIds` constants table in game.json.
         /// </summary>
-        public Dictionary<string, int> GasOrderTags { get; set; } = new Dictionary<string, int>();
+        [JsonPropertyName("responseChainOrderTypeIds")]
+        public Dictionary<string, int> ResponseChainOrderTypeIds { get; set; } = new Dictionary<string, int>();
 
         /// <summary>
         /// Attribute names (previously in GameAttributes.cs): health, mana...

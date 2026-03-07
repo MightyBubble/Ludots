@@ -1,0 +1,15 @@
+namespace CoreInputMod.ViewMode
+{
+    public sealed class ViewModeConfig
+    {
+        public string Id { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string CameraPresetId { get; set; } = "Default";
+        public string FollowTargetKind { get; set; } = "None";
+        public string InputContextId { get; set; } = "";
+        public string InteractionMode { get; set; } = "SmartCast";
+        public string[]? SkillBarKeyLabels { get; set; }
+        public bool SkillBarEnabled { get; set; } = true;
+        public string SwitchActionId { get; set; } = "";
+    }
+}

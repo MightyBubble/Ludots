@@ -18,7 +18,7 @@ namespace Ludots.Core.Gameplay.AI.Planning
         {
             var order = new Order
             {
-                OrderTagId = spec.OrderTagId,
+                OrderTypeId = spec.OrderTypeId,
                 PlayerId = spec.PlayerId,
                 Actor = actor,
                 Target = default,
@@ -58,4 +58,5 @@ namespace Ludots.Core.Gameplay.AI.Planning
         }
     }
 }
+
 

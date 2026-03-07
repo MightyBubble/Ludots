@@ -66,7 +66,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public QueuedOrder ActiveOrder;
         
         /// <summary>
-        /// Pending order slot — stores a blocked order for automatic retry when the
+        /// Pending order slot - stores a blocked order for automatic retry when the
         /// current order completes. Only one pending order per entity (last-write-wins).
         /// Used for "input buffering" (e.g., pressing Q during another skill's GCD).
         /// </summary>
@@ -188,15 +188,15 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>
         /// Remove the oldest queued order of a specific type.
         /// </summary>
-        /// <param name="orderTagId">The order tag ID to match.</param>
+        /// <param name="orderTypeId">The order type id to match.</param>
         /// <returns>True if an order was removed, false otherwise.</returns>
-        public bool RemoveOldestOfType(int orderTagId)
+        public bool RemoveOldestOfType(int orderTypeId)
         {
             // Find the oldest (highest index due to FIFO ordering within priority)
             for (int i = QueuedCount - 1; i >= 0; i--)
             {
                 var queued = GetQueued(i);
-                if (queued.Order.OrderTagId == orderTagId)
+                if (queued.Order.OrderTypeId == orderTypeId)
                 {
                     RemoveAt(i);
                     return true;
@@ -208,15 +208,15 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>
         /// Remove all queued orders of a specific type.
         /// </summary>
-        /// <param name="orderTagId">The order tag ID to match.</param>
+        /// <param name="orderTypeId">The order type id to match.</param>
         /// <returns>Number of orders removed.</returns>
-        public int RemoveAllOfType(int orderTagId)
+        public int RemoveAllOfType(int orderTypeId)
         {
             int removed = 0;
             for (int i = QueuedCount - 1; i >= 0; i--)
             {
                 var queued = GetQueued(i);
-                if (queued.Order.OrderTagId == orderTagId)
+                if (queued.Order.OrderTypeId == orderTypeId)
                 {
                     RemoveAt(i);
                     removed++;
@@ -228,14 +228,14 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>
         /// Count queued orders of a specific type.
         /// </summary>
-        /// <param name="orderTagId">The order tag ID to match.</param>
+        /// <param name="orderTypeId">The order type id to match.</param>
         /// <returns>Number of matching orders.</returns>
-        public readonly int CountOfType(int orderTagId)
+        public readonly int CountOfType(int orderTypeId)
         {
             int count = 0;
             for (int i = 0; i < QueuedCount; i++)
             {
-                if (GetQueued(i).Order.OrderTagId == orderTagId)
+                if (GetQueued(i).Order.OrderTypeId == orderTypeId)
                 {
                     count++;
                 }
@@ -258,7 +258,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         
         /// <summary>
         /// Set the active order directly (for orders activated via HandleImmediateMode
-        /// that bypass the queue). Ensures buffer.HasActive stays consistent with tags.
+        /// that bypass the queue). Ensures buffer.HasActive stays consistent with the active-order slot.
         /// </summary>
         public void SetActiveDirect(in Order order, int priority)
         {
@@ -372,3 +372,4 @@ namespace Ludots.Core.Gameplay.GAS.Components
         }
     }
 }
+

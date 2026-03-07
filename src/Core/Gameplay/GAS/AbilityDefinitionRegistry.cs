@@ -26,7 +26,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public struct AbilityToggleSpec
     {
-        /// <summary>Tag ID used to track toggle state. If present on actor â†’ ability is ON.</summary>
+        /// <summary>Tag ID used to track toggle state. If present on actor â†?ability is ON.</summary>
         public int ToggleTagId;
         
         /// <summary>
@@ -76,6 +76,13 @@ namespace Ludots.Core.Gameplay.GAS
         public void SetConflictReport(Ludots.Core.Modding.RegistrationConflictReport report)
         {
             _conflictReport = report;
+        }
+
+        public void Clear()
+        {
+            System.Array.Clear(_items, 0, _items.Length);
+            System.Array.Clear(_has, 0, _has.Length);
+            _registrationSource.Clear();
         }
 
         public void Register(int abilityId, in AbilityDefinition definition, string modId = null)
@@ -152,3 +159,4 @@ namespace Ludots.Core.Gameplay.GAS
         }
     }
 }
+

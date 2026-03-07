@@ -6,7 +6,8 @@ namespace Ludots.Core.Gameplay.GAS
 {
     /// <summary>
     /// Delegate signature for builtin phase handlers.
-    /// Matches the same context available to Graph programs.
+    /// Matches the same effect/template context available to graph programs.
+    /// Runtime-only services are exposed through <see cref="BuiltinHandlerRuntimeScope"/>.
     /// </summary>
     public delegate void BuiltinHandlerFn(
         World world,
@@ -41,11 +42,14 @@ namespace Ludots.Core.Gameplay.GAS
             Entity effectEntity,
             ref EffectContext context,
             in EffectConfigParams mergedParams,
-            in EffectTemplateData templateData)
+            in EffectTemplateData templateData,
+            BuiltinHandlerExecutionContext? runtimeContext = null)
         {
             int idx = (int)id;
             if ((uint)idx >= MaxHandlers || _handlers[idx] == null)
                 throw new InvalidOperationException($"No builtin handler registered for {id} ({idx}).");
+
+            using var scope = BuiltinHandlerRuntimeScope.Push(runtimeContext);
             _handlers[idx](world, effectEntity, ref context, in mergedParams, in templateData);
         }
 

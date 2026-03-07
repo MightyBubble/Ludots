@@ -32,7 +32,7 @@ namespace Ludots.Core.Gameplay.GAS
         public int TagId;
         public int ProposalIndex;
         public int PromptTagId;
-        public int OrderTagId;
+        public int OrderTypeId;
         public ResponseChainResolveOutcome Outcome;
         public Entity Source;
         public Entity Target;
@@ -77,3 +77,4 @@ namespace Ludots.Core.Gameplay.GAS
         }
     }
 }
+

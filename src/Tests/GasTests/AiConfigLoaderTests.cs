@@ -26,7 +26,7 @@ namespace Ludots.Tests.GAS
             File.WriteAllText(Path.Combine(core, "Configs", "AI", "atoms.json"), "[ { \"id\": \"HasEnemy\" } ]");
             File.WriteAllText(Path.Combine(core, "Configs", "AI", "projection.json"), "[ { \"id\": \"R0\", \"Atom\": \"HasEnemy\", \"Op\": \"EntityIsNonNull\", \"EntityKey\": 1 } ]");
             File.WriteAllText(Path.Combine(core, "Configs", "AI", "utility.json"), "[ { \"id\": \"G0\", \"GoalPresetId\": 1, \"PlanningStrategyId\": 1, \"Weight\": 1, \"Bool\": [ { \"Atom\": \"HasEnemy\", \"TrueScore\": 1, \"FalseScore\": 0 } ] } ]");
-            File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_actions.json"), "[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderTagId\": 1234, \"SubmitMode\": 0, \"PlayerId\": 0 }, \"Bindings\": [] } ]");
+            File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_actions.json"), "[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderTypeId\": 1234, \"SubmitMode\": 0, \"PlayerId\": 0 }, \"Bindings\": [] } ]");
             File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_goals.json"), "[ { \"id\": \"GG0\", \"GoalPresetId\": 1, \"HeuristicWeight\": 1, \"Goal\": { \"Mask\": [\"HasEnemy\"], \"Values\": [\"HasEnemy\"] } } ]");
             File.WriteAllText(Path.Combine(core, "Configs", "AI", "htn_domain.json"), "{ \"Tasks\": [], \"Methods\": [], \"Subtasks\": [], \"Roots\": [] }");
 
@@ -51,4 +51,5 @@ namespace Ludots.Tests.GAS
         }
     }
 }
+
 

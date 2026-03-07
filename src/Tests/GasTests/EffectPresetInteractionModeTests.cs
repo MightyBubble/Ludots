@@ -63,7 +63,7 @@ namespace Ludots.Tests.GAS
                     {
                         ActionId = "SkillQ",
                         Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTagKey = "castAbility",
+                        OrderTypeKey = "castAbility",
                         IsSkillMapping = true,
                         RequireSelection = false,
                         SelectionType = OrderSelectionType.Entity
@@ -76,7 +76,7 @@ namespace Ludots.Tests.GAS
             var actor = world.Create();
             var target = world.Create();
             mapping.SetLocalPlayer(actor, 1);
-            mapping.SetTagKeyResolver(key => key == "castAbility" ? 1001 : 0);
+            mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
             mapping.SetSelectedEntityProvider((out Entity e) => { e = target; return true; });
             mapping.SetHoveredEntityProvider((out Entity e) => { e = target; return true; });
 
@@ -159,3 +159,4 @@ namespace Ludots.Tests.GAS
         }
     }
 }
+

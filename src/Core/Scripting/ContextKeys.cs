@@ -16,7 +16,6 @@ namespace Ludots.Core.Scripting
         public const string Engine = "Engine";
         public const string MapId = "MapId";
         public const string MapTags = "MapTags";
-        public const string UISystem = "UISystem";
         public const string UIRoot = "UIRoot";
         public const string UiCaptured = "UiCaptured";
         public const string InputHandler = "InputHandler";
@@ -45,6 +44,8 @@ namespace Ludots.Core.Scripting
         public const string InputResponseBuffer = "InputResponseBuffer";
         public const string SelectionRequestQueue = "SelectionRequestQueue";
         public const string SelectionResponseBuffer = "SelectionResponseBuffer";
+        public const string SelectionRuleRegistry = "SelectionRuleRegistry";
+        public const string InteractionActionBindings = "InteractionActionBindings";
         public const string OrderQueue = "OrderQueue";
         public const string OrderTypeRegistry = "OrderTypeRegistry";
         public const string OrderBufferSystem = "OrderBufferSystem";
@@ -88,10 +89,10 @@ namespace Ludots.Core.Scripting
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";
         public const string TransientMarkerBuffer = "TransientMarkerBuffer";
-        // WorldHudConfig removed — unified into Performer entity-scoped definitions
+        // WorldHudConfig removed �?unified into Performer entity-scoped definitions
         public const string GasPresentationEventBuffer = "GasPresentationEventBuffer";
         public const string GroundOverlayBuffer = "GroundOverlayBuffer";
-        // IndicatorRequestBuffer removed — unified into Performer direct API
+        // IndicatorRequestBuffer removed �?unified into Performer direct API
         public const string PerformerDefinitionRegistry = "PerformerDefinitionRegistry";
         public const string PerformerInstanceBuffer = "PerformerInstanceBuffer";
         public const string Navigation2DRuntime = "Navigation2DRuntime";

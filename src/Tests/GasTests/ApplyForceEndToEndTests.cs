@@ -135,8 +135,8 @@ namespace Ludots.Tests.GAS
                 GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPos: new IntVector2(0, 0), program, api);
 
                 var chainOrders = new OrderQueue();
-                chainOrders.TryEnqueue(new Order { OrderTagId = TestGasOrderTags.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTagId = TestGasOrderTags.ChainPass });
+                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposal = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(world, requests, budget: null, templates: templates, inputRequests: null, chainOrders: chainOrders);
                 proposal.Update(0.016f);
@@ -177,3 +177,4 @@ namespace Ludots.Tests.GAS
         }
     }
 }
+

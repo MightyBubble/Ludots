@@ -1,75 +1,122 @@
 {
   "orderTypes": {
     "castAbility": {
-      "orderTagId": 100,
+      "orderTypeId": 100,
       "label": "Cast Ability",
       "maxQueueSize": 3,
       "sameTypePolicy": "Queue",
       "queueFullPolicy": "DropOldest",
       "priority": 100,
       "bufferWindowMs": 500,
+      "pendingBufferWindowMs": 400,
       "canInterruptSelf": false,
-      "orderStateTagId": 100,
       "queuedModeMaxSize": 8,
       "allowQueuedMode": true,
-      "clearQueueOnActivate": true
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": 112,
+      "entityBlackboardKey": 111,
+      "intArg0BlackboardKey": 110,
+      "validationGraphId": 0
     },
     "attackTarget": {
-      "orderTagId": 102,
+      "orderTypeId": 102,
       "label": "Attack Target",
       "maxQueueSize": 1,
       "sameTypePolicy": "Replace",
       "queueFullPolicy": "DropOldest",
       "priority": 75,
       "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 400,
       "canInterruptSelf": true,
-      "orderStateTagId": 102,
       "queuedModeMaxSize": 8,
       "allowQueuedMode": true,
-      "clearQueueOnActivate": true
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": 121,
+      "entityBlackboardKey": 120,
+      "intArg0BlackboardKey": -1,
+      "validationGraphId": 0
     },
     "stop": {
-      "orderTagId": 103,
+      "orderTypeId": 103,
       "label": "Stop",
       "maxQueueSize": 1,
       "sameTypePolicy": "Replace",
       "queueFullPolicy": "DropOldest",
       "priority": 200,
       "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 400,
       "canInterruptSelf": false,
-      "orderStateTagId": 103,
       "queuedModeMaxSize": 1,
       "allowQueuedMode": false,
-      "clearQueueOnActivate": true
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": -1,
+      "entityBlackboardKey": -1,
+      "intArg0BlackboardKey": -1,
+      "validationGraphId": 0
+    },
+    "chainPass": {
+      "orderTypeId": 1,
+      "label": "Pass",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "RejectNew",
+      "priority": 10,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": false,
+      "spatialBlackboardKey": -1,
+      "entityBlackboardKey": -1,
+      "intArg0BlackboardKey": -1,
+      "validationGraphId": 0
+    },
+    "chainNegate": {
+      "orderTypeId": 2,
+      "label": "Negate",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "RejectNew",
+      "priority": 20,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": false,
+      "spatialBlackboardKey": -1,
+      "entityBlackboardKey": -1,
+      "intArg0BlackboardKey": -1,
+      "validationGraphId": 0
+    },
+    "chainActivateEffect": {
+      "orderTypeId": 3,
+      "label": "Chain",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "RejectNew",
+      "priority": 30,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": false,
+      "spatialBlackboardKey": -1,
+      "entityBlackboardKey": -1,
+      "intArg0BlackboardKey": -1,
+      "validationGraphId": 0
     }
   },
-  "tagRules": {
-    "castAbility": {
-      "tagId": 100,
-      "requiredTags": [],
-      "blockedTags": [],
-      "attachedTags": [110],
-      "removedTags": [],
-      "disabledIfTags": [],
-      "removeIfTags": []
-    },
-    "attackTarget": {
-      "tagId": 102,
-      "requiredTags": [],
-      "blockedTags": [],
-      "attachedTags": [110],
-      "removedTags": [],
-      "disabledIfTags": [],
-      "removeIfTags": []
-    },
+  "orderRules": {
     "stop": {
-      "tagId": 103,
-      "requiredTags": [],
-      "blockedTags": [],
-      "attachedTags": [110],
-      "removedTags": [100, 102],
-      "disabledIfTags": [],
-      "removeIfTags": []
+      "orderTypeId": 103,
+      "blockedActiveOrderTypeIds": [],
+      "interruptsActiveOrderTypeIds": [
+        100,
+        102
+      ]
     }
   }
 }

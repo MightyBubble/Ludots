@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using System.Text;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
-using Ludots.Core.UI;
+using System.Numerics;
  
 namespace Ludots.Core.Presentation.Systems
 {
@@ -24,41 +24,59 @@ namespace Ludots.Core.Presentation.Systems
  
         public void Update(in float dt)
         {
-            if (!_ui.Dirty) return;
-            if (!_globals.TryGetValue(CoreServiceKeys.UISystem.Name, out var uiObj) || uiObj is not IUiSystem uiSystem) return;
- 
-            if (!_ui.Visible)
+            if (!_globals.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var overlayObj) || overlayObj is not ScreenOverlayBuffer overlay)
             {
-                uiSystem.SetHtml("", "");
-                _ui.MarkClean();
                 return;
             }
- 
-            var sb = new StringBuilder(512);
-            sb.Append("<div style='position:absolute;left:12px;top:12px;background:rgba(0,0,0,0.75);color:#fff;padding:10px;border-radius:8px;font-family:monospace;font-size:14px;min-width:260px;'>");
-            sb.Append("<div style='font-weight:bold;margin-bottom:6px;'>Chain</div>");
-            sb.Append("<div>RootId: ").Append(_ui.RootId).Append("</div>");
-            sb.Append("<div>PlayerId: ").Append(_ui.PlayerId).Append("</div>");
-            sb.Append("<div>PromptTagId: ").Append(_ui.PromptTagId).Append("</div>");
-            sb.Append("<div style='margin-top:8px;'>Allowed:</div><ul style='margin:6px 0 0 18px;padding:0;'>");
- 
+
+            if (!_ui.Visible)
+            {
+                if (_ui.Dirty)
+                {
+                    _ui.MarkClean();
+                }
+                return;
+            }
+
+            Vector4 bg = new(0f, 0f, 0f, 0.78f);
+            Vector4 border = new(0.35f, 0.55f, 1f, 0.85f);
+            Vector4 title = new(1f, 0.92f, 0.35f, 1f);
+            Vector4 text = new(1f, 1f, 1f, 0.95f);
+            Vector4 hint = new(0.72f, 0.82f, 0.95f, 0.9f);
+
+            int x = 12;
+            int y = 12;
+            int width = 340;
+            int lineHeight = 18;
+            int padding = 10;
+            int panelHeight = 126 + (_ui.AllowedCount * lineHeight);
+
+            overlay.AddRect(x, y, width, panelHeight, bg, border);
+            overlay.AddText(x + padding, y + padding, "Response Chain", 16, title);
+            overlay.AddText(x + padding, y + 32, $"RootId: {_ui.RootId}  Player: {_ui.PlayerId}", 14, text);
+            overlay.AddText(x + padding, y + 50, $"PromptTagId: {_ui.PromptTagId}", 14, text);
+            overlay.AddText(x + padding, y + 70, "Allowed Orders:", 14, text);
+
+            int lineY = y + 88;
             for (int i = 0; i < _ui.AllowedCount; i++)
             {
-                int tag = _ui.AllowedOrderTagIds[i];
-                string label = tag.ToString();
-                if (_orderTypeRegistry.TryGet(tag, out var config) && !string.IsNullOrEmpty(config.Label))
+                int orderTypeId = _ui.AllowedOrderTypeIds[i];
+                string label = orderTypeId.ToString();
+                if (_orderTypeRegistry.TryGet(orderTypeId, out var config) && !string.IsNullOrEmpty(config.Label))
                 {
                     label = config.Label;
                 }
-                sb.Append("<li>").Append(label).Append(" (").Append(tag).Append(")</li>");
+
+                overlay.AddText(x + padding + 6, lineY, $"- {label} ({orderTypeId})", 13, text);
+                lineY += lineHeight;
             }
- 
-            sb.Append("</ul>");
-            sb.Append("<div style='margin-top:8px;opacity:0.8;'>Space:Pass  N:Negate  1:Chain</div>");
-            sb.Append("</div>");
- 
-            uiSystem.SetHtml(sb.ToString(), "");
-            _ui.MarkClean();
+
+            overlay.AddText(x + padding, lineY + 4, "Space=Pass  N=Negate  1=Chain", 13, hint);
+
+            if (_ui.Dirty)
+            {
+                _ui.MarkClean();
+            }
         }
  
         public void BeforeUpdate(in float dt) { }

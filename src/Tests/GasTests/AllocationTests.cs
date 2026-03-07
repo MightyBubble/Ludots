@@ -144,8 +144,8 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < 64; i++)
             {
-                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTagId = TestGasOrderTags.ChainPass });
-                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTagId = TestGasOrderTags.ChainPass });
+                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 requests.Publish(new EffectRequest { Target = target, TemplateId = 1 });
                 proposal.Update(0.016f);
                 bindingSystem.Update(0.016f);
@@ -159,8 +159,8 @@ namespace Ludots.Tests.GAS
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 10_000; i++)
             {
-                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTagId = TestGasOrderTags.ChainPass });
-                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTagId = TestGasOrderTags.ChainPass });
+                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 requests.Publish(new EffectRequest { Target = target, TemplateId = 1 });
                 proposal.Update(0.016f);
                 bindingSystem.Update(0.016f);
@@ -171,3 +171,4 @@ namespace Ludots.Tests.GAS
         }
     }
 }
+

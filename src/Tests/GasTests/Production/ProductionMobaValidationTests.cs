@@ -67,10 +67,10 @@ namespace Ludots.Tests.GAS.Production
                 float enemyHealthBefore = enemyAttrsBefore.GetCurrent(healthId);
 
                 var orderQueue = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.OrderQueue);
-                int castAbilityTagId = engine.MergedConfig.Constants.OrderTags["castAbility"];
+                int castAbilityOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["castAbility"];
                 orderQueue.TryEnqueue(new Order
                 {
-                    OrderTagId = castAbilityTagId,
+                    OrderTypeId = castAbilityOrderTypeId,
                     Actor = hero,
                     Target = enemy,
                     Args = new OrderArgs { I0 = 0 }

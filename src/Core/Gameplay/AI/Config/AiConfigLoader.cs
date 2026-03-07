@@ -115,10 +115,10 @@ namespace Ludots.Core.Gameplay.AI.Config
                     var execKind = ActionExecutorKind.SubmitOrder;
                     if (obj.TryGetPropertyValue("Order", out var orderNode) && orderNode is JsonObject orderObj)
                     {
-                        int orderTagId = TryReadInt(orderObj, "OrderTagId", out int ot) ? ot : 0;
+                        int orderTypeId = TryReadInt(orderObj, "OrderTypeId", out int ot) ? ot : 0;
                         byte submitModeByte = TryReadByte(orderObj, "SubmitMode", out byte sm) ? sm : (byte)OrderSubmitMode.Immediate;
                         int playerId = TryReadInt(orderObj, "PlayerId", out int pid) ? pid : 0;
-                        orderSpec = new ActionOrderSpec(orderTagId, (OrderSubmitMode)submitModeByte, playerId);
+                        orderSpec = new ActionOrderSpec(orderTypeId, (OrderSubmitMode)submitModeByte, playerId);
                     }
 
                     var bindings = Array.Empty<ActionBinding>();
@@ -354,3 +354,4 @@ namespace Ludots.Core.Gameplay.AI.Config
         }
     }
 }
+

@@ -614,7 +614,7 @@ namespace Ludots.Core.Engine
 
             if (config.Navigation2D.Enabled)
             {
-                var navigation2dRuntime = new Navigation2DRuntime(config.Navigation2D, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: HexGridAOI);
+                var navigation2dRuntime = new Navigation2DRuntime(maxAgents: config.Navigation2D.MaxAgents, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: HexGridAOI);
                 navigation2dRuntime.FlowIterationsPerTick = config.Navigation2D.FlowIterationsPerTick;
                 SetService(CoreServiceKeys.Navigation2DRuntime, navigation2dRuntime);
 
@@ -647,7 +647,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(abilitySystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
             
-            // Phase 3: EffectProcessing (闁告凹鍋勯幖閿嬫償閺冨牊鎳?
+            // Phase 3: EffectProcessing (闁告凹鍋勯幖閿嬫償閺冨牊�?
             var responseChainOrderTypes = new ResponseChainOrderTypes
             {
                 ChainPass = cfgChainPass,
@@ -741,7 +741,7 @@ namespace Ludots.Core.Engine
                                 // Create new session with boards (additive - old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
                 CreateBoardsForSession(session, mapConfig);
-                MapSessions.PushFocused(mid);   // old focused 闁?Suspended
+                MapSessions.PushFocused(mid);   // old focused �?Suspended
                 if (previousFocused != null)
                 {
                     SetMapEntitiesSuspended(previousFocused.MapId, true);
@@ -1521,4 +1521,5 @@ namespace Ludots.Core.Engine
         }
     }
 }
+
 

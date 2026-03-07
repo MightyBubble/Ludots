@@ -170,7 +170,7 @@ namespace Ludots.Tests.ThreeC
         public void CameraManager_NullController_UpdateDoesNotThrow()
         {
             var manager = new CameraManager();
-            // Controller is null by default â€” Update must not throw
+            // Controller is null by default â€?Update must not throw
             Assert.DoesNotThrow(() => manager.Update(0.016f));
         }
 
@@ -223,14 +223,14 @@ namespace Ludots.Tests.ThreeC
             var state = new CameraState { DistanceCm = 1000f };
 
             // Zoom in far beyond min
-            backend.MouseWheel = 10f; // large positive â†’ subtract from distance
+            backend.MouseWheel = 10f; // large positive â†?subtract from distance
             handler.Update();
             controller.Update(state, 0.016f);
             That(state.DistanceCm, Is.EqualTo(cfg.MinDistanceCm), "Should clamp to MinDistanceCm");
 
             // Zoom out far beyond max
             state.DistanceCm = 4000f;
-            backend.MouseWheel = -10f; // large negative â†’ add to distance
+            backend.MouseWheel = -10f; // large negative â†?add to distance
             handler.Update();
             controller.Update(state, 0.016f);
             That(state.DistanceCm, Is.EqualTo(cfg.MaxDistanceCm), "Should clamp to MaxDistanceCm");
@@ -244,12 +244,12 @@ namespace Ludots.Tests.ThreeC
             var controller = new Orbit3CCameraController(cfg, handler);
             var state = new CameraState { Yaw = 355f };
 
-            // RotateRight = true â†’ positive yaw delta
+            // RotateRight = true â†?positive yaw delta
             backend.Buttons["<Keyboard>/e"] = true;
             handler.Update();
             controller.Update(state, 1f); // 90Â° per second Ã— 1 second
 
-            // 355 + 90 = 445 â†’ wraps to 85
+            // 355 + 90 = 445 â†?wraps to 85
             That(state.Yaw, Is.GreaterThanOrEqualTo(0f));
             That(state.Yaw, Is.LessThan(360f));
             That(state.Yaw, Is.EqualTo(85f).Within(0.01f));
@@ -269,7 +269,7 @@ namespace Ludots.Tests.ThreeC
             handler.Update();
             controller.Update(state, 0.016f); // first frame: records lastPointerPos
 
-            // Second frame: large downward delta â†’ positive pitch
+            // Second frame: large downward delta â†?positive pitch
             backend.MousePos = new Vector2(100f, 500f);
             handler.Update();
             controller.Update(state, 0.016f);
@@ -294,12 +294,12 @@ namespace Ludots.Tests.ThreeC
 
             presenter.Update(state, 0.016f);
 
-            // Yaw=0 â†’ sin(0)=0, cos(0)=1
-            // Pitch=45Â° â†’ cos(Ï€/4)â‰ˆ0.7071, sin(Ï€/4)â‰ˆ0.7071
-            // distM = 10m, hDist = 10*cos(45Â°)â‰ˆ7.071, vDist = 10*sin(45Â°)â‰ˆ7.071
+            // Yaw=0 â†?sin(0)=0, cos(0)=1
+            // Pitch=45Â° â†?cos(Ï€/4)â‰?.7071, sin(Ï€/4)â‰?.7071
+            // distM = 10m, hDist = 10*cos(45Â°)â‰?.071, vDist = 10*sin(45Â°)â‰?.071
             // offsetX = 7.071 * sin(0) = 0
             // offsetZ = -7.071 * cos(0) = -7.071
-            // position â‰ˆ (0, 7.071, -7.071)
+            // position â‰?(0, 7.071, -7.071)
             var pos = adapter.LastState.Position;
             That(pos.X, Is.EqualTo(0f).Within(0.1f));
             That(pos.Y, Is.EqualTo(7.071f).Within(0.1f));
@@ -314,7 +314,7 @@ namespace Ludots.Tests.ThreeC
             var coords = new StubSpatialCoordinateConverter();
             var presenter = new CameraPresenter(coords, adapter);
 
-            // Pitch â‰ˆ 89Â° â†’ forward â‰ˆ (0, -1, 0) â†’ dot(forward, UnitY) > 0.99 â†’ up switches to UnitZ
+            // Pitch â‰?89Â° â†?forward â‰?(0, -1, 0) â†?dot(forward, UnitY) > 0.99 â†?up switches to UnitZ
             var state = new CameraState { Yaw = 0f, Pitch = 89f, DistanceCm = 1000f, FovYDeg = 60f };
             state.TargetCm = Vector2.Zero;
 
@@ -338,7 +338,7 @@ namespace Ludots.Tests.ThreeC
             presenter.Update(state, 0.016f);
             var firstPos = adapter.LastState.Position;
 
-            // Second frame: move target â†’ position should lerp, not snap
+            // Second frame: move target â†?position should lerp, not snap
             state.TargetCm = new Vector2(5000f, 5000f); // 50m offset
             presenter.Update(state, 0.016f);
             var secondPos = adapter.LastState.Position;
@@ -394,15 +394,15 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance â†’ viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance â†?viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~7000cm from origin â†’ between High(4000) and Medium(10000)
-            var entity = CreateCullableEntity(world, 5000, 5000); // dist â‰ˆ 7071cm
+            // Place entity at ~7000cm from origin â†?between High(4000) and Medium(10000)
+            var entity = CreateCullableEntity(world, 5000, 5000); // dist â‰?7071cm
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view);
@@ -419,15 +419,15 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance â†’ viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance â†?viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~14142cm from origin â†’ between Medium(10000) and Low(20000)
-            var entity = CreateCullableEntity(world, 10000, 10000); // dist â‰ˆ 14142cm
+            // Place entity at ~14142cm from origin â†?between Medium(10000) and Low(20000)
+            var entity = CreateCullableEntity(world, 10000, 10000); // dist â‰?14142cm
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view);
@@ -444,15 +444,15 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance â†’ viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance â†?viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~28284cm â†’ beyond Low(20000) threshold
-            var entity = CreateCullableEntity(world, 20000, 20000); // dist â‰ˆ 28284cm
+            // Place entity at ~28284cm â†?beyond Low(20000) threshold
+            var entity = CreateCullableEntity(world, 20000, 20000); // dist â‰?28284cm
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view);
@@ -565,7 +565,7 @@ namespace Ludots.Tests.ThreeC
             system.Update(0.016f);
 
             ref var visual = ref world.Get<VisualTransform>(entity);
-            // Midpoint: (500, 1000) cm â†’ (5, 0, 10) m (XY logic â†’ XZ visual)
+            // Midpoint: (500, 1000) cm â†?(5, 0, 10) m (XY logic â†?XZ visual)
             That(visual.Position.X, Is.EqualTo(5f).Within(0.05f));
             That(visual.Position.Y, Is.EqualTo(0f).Within(0.01f));
             That(visual.Position.Z, Is.EqualTo(10f).Within(0.05f));
@@ -606,7 +606,7 @@ namespace Ludots.Tests.ThreeC
                 new PresentationFrameStateTag()
             );
 
-            // Entity WITHOUT CullState component â€” should always sync
+            // Entity WITHOUT CullState component â€?should always sync
             var entity = world.Create(
                 WorldPositionCm.FromCm(300, 400),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(300, 400) },
@@ -617,7 +617,7 @@ namespace Ludots.Tests.ThreeC
             system.Update(0.016f);
 
             ref var visual = ref world.Get<VisualTransform>(entity);
-            // (300, 400) cm â†’ (3, 0, 4) m
+            // (300, 400) cm â†?(3, 0, 4) m
             That(visual.Position.X, Is.EqualTo(3f).Within(0.05f));
             That(visual.Position.Z, Is.EqualTo(4f).Within(0.05f));
         }
@@ -716,7 +716,7 @@ namespace Ludots.Tests.ThreeC
                     {
                         ActionId = "Move",
                         Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTagKey = "moveTo",
+                        OrderTypeKey = "moveTo",
                         IsSkillMapping = false,
                         SelectionType = OrderSelectionType.Position,
                         RequireSelection = false
@@ -725,7 +725,7 @@ namespace Ludots.Tests.ThreeC
             };
 
             var system = new InputOrderMappingSystem(handler, orderConfig);
-            system.SetTagKeyResolver(key => key == "moveTo" ? 1 : 0);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 1 : 0);
             system.SetGroundPositionProvider((out Vector3 pos) =>
             {
                 pos = new Vector3(1000, 0, 2000);
@@ -753,8 +753,9 @@ namespace Ludots.Tests.ThreeC
             system.Update(0.016f);
 
             That(capturedOrder, Is.Not.Null, "Order should be submitted on press");
-            That(capturedOrder.Value.OrderTagId, Is.EqualTo(1));
+            That(capturedOrder.Value.OrderTypeId, Is.EqualTo(1));
             That(capturedOrder.Value.PlayerId, Is.EqualTo(1));
         }
     }
 }
+

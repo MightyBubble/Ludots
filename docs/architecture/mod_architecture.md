@@ -110,7 +110,7 @@ if (vfs.TryResolveFullPath("MyMod:assets/Configs/game.json", out var fullPath))
 {
   "WorldSize": { "Width": 1000, "Height": 1000 },
   "FixedHz": 60,
-  "OrderTags": [ "Attack", "Move" ]
+  "Constants": { "orderTypeIds": { "attackTarget": 102, "moveTo": 101 } }
 }
 ```
 

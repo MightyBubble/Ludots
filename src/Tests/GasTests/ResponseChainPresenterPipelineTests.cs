@@ -15,7 +15,7 @@ namespace Ludots.Tests.GAS
     public class ResponseChainPresenterPipelineTests
     {
         [Test]
-        public void PromptInput_PublishesOrderRequest_AndConsumesOrderTagId()
+        public void PromptInput_PublishesOrderRequest_AndConsumesOrderTypeId()
         {
             var world = World.Create();
             try
@@ -73,9 +73,9 @@ namespace Ludots.Tests.GAS
  
                 var args = default(OrderArgs);
                 args.I0 = tplRoot;
-                chainOrders.TryEnqueue(new Order { OrderTagId = TestGasOrderTags.ChainActivateEffect, PlayerId = 1, Actor = target, Target = target, Args = args });
-                chainOrders.TryEnqueue(new Order { OrderTagId = TestGasOrderTags.ChainPass, PlayerId = 1, Actor = target, Target = target });
-                chainOrders.TryEnqueue(new Order { OrderTagId = TestGasOrderTags.ChainPass, PlayerId = 1, Actor = target, Target = target });
+                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, PlayerId = 1, Actor = target, Target = target, Args = args });
+                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = target, Target = target });
+                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = target, Target = target });
  
                 processing.Update(0f);
  
@@ -98,3 +98,4 @@ namespace Ludots.Tests.GAS
         }
     }
 }
+

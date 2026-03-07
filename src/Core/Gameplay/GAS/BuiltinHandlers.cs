@@ -1,23 +1,18 @@
-using Arch.Core;
+﻿using Arch.Core;
 using Arch.Core.Extensions;
-using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.GAS
 {
     /// <summary>
-    /// Concrete implementations of all builtin phase handlers.
-    /// Each method matches the <see cref="BuiltinHandlerFn"/> delegate signature.
-    /// Registered once at startup via <see cref="RegisterAll"/>.
+    /// Concrete implementations of builtin phase handlers.
+    /// Registered once at startup and executed through <see cref="Systems.EffectPhaseExecutor"/>.
     /// </summary>
     public static class BuiltinHandlers
     {
-        /// <summary>
-        /// Register all builtin handlers into the given registry.
-        /// Call once during GAS initialization.
-        /// </summary>
         public static void RegisterAll(BuiltinHandlerRegistry registry)
         {
             registry.Register(BuiltinHandlerId.ApplyModifiers, HandleApplyModifiers);
@@ -30,13 +25,11 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
         }
 
-        // ══════════════════════════════════════════════════════════════
-        //  1. ApplyModifiers — read template modifiers, apply to target
-        // ══════════════════════════════════════════════════════════════
-
         public static void HandleApplyModifiers(
-            World world, Entity effectEntity,
-            ref EffectContext context, in EffectConfigParams mergedParams,
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
             if (!world.IsAlive(context.Target)) return;
@@ -47,13 +40,11 @@ namespace Ludots.Core.Gameplay.GAS
             EffectModifierOps.Apply(in modifiers, ref attrBuffer);
         }
 
-        // ══════════════════════════════════════════════════════════════
-        //  2. ApplyForce — read force X/Y from merged params, apply
-        // ══════════════════════════════════════════════════════════════
-
         public static void HandleApplyForce(
-            World world, Entity effectEntity,
-            ref EffectContext context, in EffectConfigParams mergedParams,
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
             if (!world.IsAlive(context.Target)) return;
@@ -69,60 +60,112 @@ namespace Ludots.Core.Gameplay.GAS
                 attrBuffer.SetCurrent(templateData.PresetAttribute1, attrBuffer.GetCurrent(templateData.PresetAttribute1) + fy);
         }
 
-        // ══════════════════════════════════════════════════════════════
-        //  3. SpatialQuery — execute spatial query, populate EffectContext target list
-        // ══════════════════════════════════════════════════════════════
-
         public static void HandleSpatialQuery(
-            World world, Entity effectEntity,
-            ref EffectContext context, in EffectConfigParams mergedParams,
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            // SpatialQuery requires ISpatialQueryService which is not available via this delegate.
-            // The existing TargetResolverFanOutHelper.ResolveTargets handles this flow.
-            // This handler serves as the explicit registration point; actual spatial query
-            // execution is delegated through the EffectApplicationSystem which has the service reference.
-            //
-            // In the future, ISpatialQueryService could be injected via a closure or context object.
-            // For now, this handler is a no-op marker — the application system checks for 
-            // HasTargetResolver and calls TargetResolverFanOutHelper directly.
-        }
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.SpatialQueries == null || runtime.ResolverBuffer == null)
+            {
+                return;
+            }
 
-        // ══════════════════════════════════════════════════════════════
-        //  4. DispatchPayload — dispatch payload effect to each resolved target
-        // ══════════════════════════════════════════════════════════════
+            int candidateCount = TargetResolverFanOutHelper.ResolveTargets(
+                world,
+                in context,
+                in templateData.TargetQuery,
+                runtime.SpatialQueries,
+                runtime.ResolverBuffer);
+
+            runtime.SetResolvedCandidateCount(candidateCount);
+        }
 
         public static void HandleDispatchPayload(
-            World world, Entity effectEntity,
-            ref EffectContext context, in EffectConfigParams mergedParams,
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            // Similar to SpatialQuery — payload dispatch requires EffectRequestQueue
-            // which is not available via the handler delegate.
-            // The actual dispatch is handled by EffectApplicationSystem's fan-out stage.
-            // This handler serves as the explicit registration point for the preset type system.
-        }
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.FanOutBudget == null || runtime.FanOutCommands == null || runtime.ResolverBuffer == null)
+            {
+                return;
+            }
 
-        // ══════════════════════════════════════════════════════════════
-        //  5. ReResolveAndDispatch — periodic: re-query + dispatch
-        // ══════════════════════════════════════════════════════════════
+            int candidateCount = runtime.ResolvedCandidateCount;
+            if (candidateCount <= 0)
+            {
+                return;
+            }
+
+            int dropped = 0;
+            TargetResolverFanOutHelper.ValidateAndCollect(
+                world,
+                in context,
+                in templateData.TargetQuery,
+                in templateData.TargetFilter,
+                in templateData.TargetDispatch,
+                runtime.ResolverBuffer,
+                candidateCount,
+                runtime.FanOutBudget,
+                runtime.FanOutCommands,
+                ref dropped);
+
+            runtime.AddDropped(dropped);
+            runtime.ClearResolvedCandidates();
+        }
 
         public static void HandleReResolveAndDispatch(
-            World world, Entity effectEntity,
-            ref EffectContext context, in EffectConfigParams mergedParams,
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            // Periodic re-resolve is handled by EffectLifetimeSystem's ProcessPeriodFanOut.
-            // This handler is the explicit registration point for the preset type system.
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.SpatialQueries == null || runtime.FanOutBudget == null || runtime.FanOutCommands == null || runtime.ResolverBuffer == null)
+            {
+                return;
+            }
+
+            int candidateCount = TargetResolverFanOutHelper.ResolveTargets(
+                world,
+                in context,
+                in templateData.TargetQuery,
+                runtime.SpatialQueries,
+                runtime.ResolverBuffer);
+            if (candidateCount <= 0)
+            {
+                runtime.ClearResolvedCandidates();
+                return;
+            }
+
+            int dropped = 0;
+            TargetResolverFanOutHelper.ValidateAndCollect(
+                world,
+                in context,
+                in templateData.TargetQuery,
+                in templateData.TargetFilter,
+                in templateData.TargetDispatch,
+                runtime.ResolverBuffer,
+                candidateCount,
+                runtime.FanOutBudget,
+                runtime.FanOutCommands,
+                ref dropped);
+
+            runtime.AddDropped(dropped);
+            runtime.ClearResolvedCandidates();
         }
 
-        // ══════════════════════════════════════════════════════════════
-        //  6. CreateProjectile — read ProjectileParams, create entity
-        // ══════════════════════════════════════════════════════════════
-
         public static void HandleCreateProjectile(
-            World world, Entity effectEntity,
-            ref EffectContext context, in EffectConfigParams mergedParams,
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
             if (!world.IsAlive(context.Source)) return;
@@ -146,16 +189,13 @@ namespace Ludots.Core.Gameplay.GAS
                 world.Add(projectile, pos);
                 world.Add(projectile, new PreviousWorldPositionCm { Value = pos.Value });
             }
-            _ = projectile; // Created; movement system picks it up
         }
 
-        // ══════════════════════════════════════════════════════════════
-        //  7. CreateUnit — read UnitCreationParams, create entity/entities
-        // ══════════════════════════════════════════════════════════════
-
         public static void HandleCreateUnit(
-            World world, Entity effectEntity,
-            ref EffectContext context, in EffectConfigParams mergedParams,
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
             if (!world.IsAlive(context.Source)) return;
@@ -176,13 +216,11 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        // ══════════════════════════════════════════════════════════════
-        //  8. ApplyDisplacement — create displacement state entity
-        // ══════════════════════════════════════════════════════════════
-
         public static void HandleApplyDisplacement(
-            World world, Entity effectEntity,
-            ref EffectContext context, in EffectConfigParams mergedParams,
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
             if (!world.IsAlive(context.Target)) return;
@@ -190,13 +228,35 @@ namespace Ludots.Core.Gameplay.GAS
             ref readonly var disp = ref templateData.Displacement;
             if (disp.TotalDurationTicks <= 0 || disp.TotalDistanceCm <= 0) return;
 
+            Entity directionTargetEntity = context.TargetContext;
+            Fix64Vec2 targetPointCm = default;
+            bool hasTargetPoint = false;
+
+            if (world.IsAlive(context.TargetContext) && world.Has<WorldPositionCm>(context.TargetContext))
+            {
+                targetPointCm = world.Get<WorldPositionCm>(context.TargetContext).Value;
+                hasTargetPoint = true;
+            }
+            else if (world.IsAlive(context.Source) && world.Has<AbilityExecInstance>(context.Source))
+            {
+                ref readonly var sourceExec = ref world.Get<AbilityExecInstance>(context.Source);
+                if (sourceExec.HasTargetPos != 0)
+                {
+                    targetPointCm = sourceExec.TargetPosCm;
+                    hasTargetPoint = true;
+                }
+            }
+
             EntityCreationHelper.CreateDisplacement(world,
                 new DisplacementState
                 {
                     TargetEntity = context.Target,
                     SourceEntity = context.Source,
+                    DirectionTargetEntity = directionTargetEntity,
                     DirectionMode = disp.DirectionMode,
                     FixedDirectionRad = Fix64.FromInt(disp.FixedDirectionDeg) * Fix64.Deg2Rad,
+                    TargetPointCm = targetPointCm,
+                    HasTargetPoint = hasTargetPoint,
                     TotalDistanceCm = disp.TotalDistanceCm,
                     RemainingDistanceCm = Fix64.FromInt(disp.TotalDistanceCm),
                     TotalDurationTicks = disp.TotalDurationTicks,
@@ -206,12 +266,6 @@ namespace Ludots.Core.Gameplay.GAS
         }
     }
 
-    // ── Marker components for projectile and unit creation ──
-
-    /// <summary>
-    /// Component placed on newly created projectile entities by the CreateProjectile handler.
-    /// The projectile movement system reads this to drive flight, and on impact dispatches the ImpactEffectTemplateId.
-    /// </summary>
     public struct ProjectileState
     {
         public Fix64 Speed;
@@ -223,10 +277,6 @@ namespace Ludots.Core.Gameplay.GAS
         public Fix64 TraveledCm;
     }
 
-    /// <summary>
-    /// Component placed on newly created unit entities by the CreateUnit handler.
-    /// The spawn system reads this to finalize unit initialization.
-    /// </summary>
     public struct SpawnedUnitState
     {
         public int UnitTypeId;
@@ -235,10 +285,6 @@ namespace Ludots.Core.Gameplay.GAS
         public Entity Spawner;
     }
 
-    /// <summary>
-    /// Centralized entity creation for GAS-spawned entities (projectiles, units).
-    /// Wraps World.Create() calls for future CommandBuffer migration.
-    /// </summary>
     public static class EntityCreationHelper
     {
         public static Entity CreateProjectile(World world, in ProjectileState state)
