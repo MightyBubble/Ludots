@@ -60,6 +60,7 @@ namespace Ludots.Tests.Navigation2D
         {
             EnsureSharedScheduler();
             ScenarioRunConfig settings = GetScenarioRunConfig(scenario);
+            PrimeBenchmarkCodePaths(mode, scenario, settings);
 
             var sampleAvgMs = new double[settings.SampleCount];
             var sampleAllocBytes = new long[settings.SampleCount];
@@ -102,6 +103,17 @@ namespace Ludots.Tests.Navigation2D
             }
 
             PrintResult(mode, label, scenario, settings, sampleAvgMs, sampleAllocBytes, sampleCellMapMs, sampleDirtyAgentsPerTick, sampleCellMigrationsPerTick);
+        }
+
+        private static void PrimeBenchmarkCodePaths(Navigation2DAvoidanceMode mode, NavBenchmarkScenario scenario, ScenarioRunConfig settings)
+        {
+            using var harness = CreateHarness(mode, scenario);
+            int primeIterations = Math.Max(128, settings.WarmupIterations + settings.MeasuredIterations * 2);
+            for (int tick = 0; tick < primeIterations; tick++)
+            {
+                harness.ApplyScenarioStep(scenario, tick);
+                harness.System.Update(DeltaTime);
+            }
         }
 
         private static void EnsureSharedScheduler()
