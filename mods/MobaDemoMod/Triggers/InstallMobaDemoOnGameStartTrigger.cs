@@ -3,11 +3,13 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod.Triggers;
+using CoreInputMod.ViewMode;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
@@ -18,7 +20,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using MobaDemoMod.GAS;
-using MobaDemoMod.Presentation;
+using MobaDemoMod.Systems;
 
 namespace MobaDemoMod.Triggers
 {
@@ -52,26 +54,29 @@ namespace MobaDemoMod.Triggers
             var mobaConfig = MobaConfig.Load(_ctx);
             engine.GlobalContext[MobaConfigKey] = mobaConfig;
             _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/Configs/moba_config.json");
-
-            // GameConfig is required — it must be loaded before GameStart
+            // GameConfig is required; it must be loaded before GameStart.
             var config = engine.GetService(CoreServiceKeys.GameConfig);
-            _ = config.Constants.OrderTags["stop"];
+            _ = config.Constants.OrderTypeIds["stop"];
 
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var ordersObj) &&
                 ordersObj is OrderQueue orders)
             {
                 _ctx.Log("[MobaDemoMod] OrderQueue ready, registering local order source.");
-                engine.RegisterPresentationSystem(new MobaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx));
+                engine.RegisterSystem(new MobaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.InputCollection);
             }
+
+            ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Moba");
 
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var registryObj) &&
                 registryObj is OrderTypeRegistry orderTypeRegistry)
             {
-                engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.StopOrderSystem(engine.World, orderTypeRegistry), SystemGroup.AbilityActivation);
+                int navMoveAbilityTagId = TagRegistry.Register(MobaDemoAbilityDefinitions.Move);
+                engine.RegisterSystem(new StopOrderNavMoveCleanupSystem(engine.World, config.Constants.OrderTypeIds["stop"], navMoveAbilityTagId), SystemGroup.AbilityActivation);
+                engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.StopOrderSystem(engine.World, orderTypeRegistry, config.Constants.OrderTypeIds["stop"]), SystemGroup.AbilityActivation);
                 engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.AbilityMoveWorldCmSystem(engine.World, engine.EventBus, mobaConfig.Movement.SpeedCmPerSec, mobaConfig.Movement.StopRadiusCm), SystemGroup.AbilityActivation);
             }
 
-            // ── 选择系统回调（CoreInputMod 已注册系统，此处注入 MOBA 视觉反馈）──
+            // Selection feedback hooks are provided by CoreInputMod; MOBA injects only the visual callbacks here.
             TransientMarkerBuffer markerBuffer = null;
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markerObj) && markerObj is TransientMarkerBuffer tmb)
                 markerBuffer = tmb;
@@ -126,10 +131,11 @@ namespace MobaDemoMod.Triggers
                 });
             }
 
-            // 单位渲染由 performers.json 定义 moba_unit_marker（entity-scoped Marker3D）驱动
-            // 团队颜色由 EntityColor 绑定解析
+            // 鍗曚綅娓叉煋鐢?performers.json 瀹氫箟 moba_unit_marker锛坋ntity-scoped Marker3D锛夐┍鍔?
+            // 鍥㈤槦棰滆壊鐢?EntityColor 缁戝畾瑙ｆ瀽
 
             return Task.CompletedTask;
         }
     }
 }
+

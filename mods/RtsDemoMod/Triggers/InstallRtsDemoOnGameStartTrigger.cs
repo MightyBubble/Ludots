@@ -1,15 +1,17 @@
 using System.Threading.Tasks;
+using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using RtsDemoMod.Systems;
 
 namespace RtsDemoMod.Triggers
 {
     /// <summary>
-    /// Registers RTS abilities and sets up 3-faction team relationships on game start.
-    /// Covers: Ability Cost (multi-signal), PeriodicSearch aura, Search AOE, CreateUnit,
-    ///         Buff with GrantedTags, StimPack (RequiredAll activation), 3-team asymmetric relations.
+    /// Registers RTS abilities, 3-faction teams, and SC2-style order source on game start.
+    /// Camera is driven by map DefaultCamera PresetId "Rts" 鈥?no manual setup needed.
     /// </summary>
     public sealed class InstallRtsDemoOnGameStartTrigger : Trigger
     {
@@ -32,12 +34,17 @@ namespace RtsDemoMod.Triggers
             engine.GlobalContext[InstalledKey] = true;
             _ctx.Log("[RtsDemoMod] Ability definitions loaded via GAS/abilities.json");
 
-            // ── Setup 3-faction team relationships ──
-            // Team 1: Terran, Team 2: Zerg, Team 3: Protoss
-            // All pairs are mutually hostile (asymmetric capable, but symmetric here).
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
             TeamManager.SetRelationshipSymmetric(1, 3, TeamRelationship.Hostile);
             TeamManager.SetRelationshipSymmetric(2, 3, TeamRelationship.Hostile);
+
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var oq) && oq is OrderQueue orders)
+            {
+                engine.RegisterSystem(new RtsLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.InputCollection);
+                _ctx.Log("[RtsDemoMod] RtsLocalOrderSourceSystem registered");
+            }
+
+            ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");
 
             return Task.CompletedTask;
         }

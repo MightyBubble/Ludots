@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
@@ -5,6 +6,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
@@ -17,7 +19,7 @@ using Ludots.Platform.Abstractions;
 using MobaDemoMod.Triggers;
 using MobaDemoMod.Utils;
 
-namespace MobaDemoMod.Presentation
+namespace MobaDemoMod.Systems
 {
     /// <summary>
     /// System that converts local player input to Orders using InputOrderMappingSystem.
@@ -33,8 +35,8 @@ namespace MobaDemoMod.Presentation
         private readonly Dictionary<string, object> _globals;
         private readonly OrderQueue _orders;
         private readonly IModContext _ctx;
-        private readonly int _castAbilityTagId;
-        private readonly int _stopTagId;
+        private readonly int _castAbilityOrderTypeId;
+        private readonly int _stopOrderTypeId;
         
         // Configuration-driven input-order mapping
         private InputOrderMappingSystem? _inputOrderMapping;
@@ -49,14 +51,14 @@ namespace MobaDemoMod.Presentation
             
             if (_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) && configObj is GameConfig config)
             {
-                _castAbilityTagId = config.Constants.OrderTags["castAbility"];
-                _stopTagId = config.Constants.OrderTags["stop"];
+                _castAbilityOrderTypeId = config.Constants.OrderTypeIds["castAbility"];
+                _stopOrderTypeId = config.Constants.OrderTypeIds["stop"];
             }
             else
             {
                 throw new System.InvalidOperationException(
-                    "MobaLocalOrderSourceSystem requires GameConfig in globals with orderTags (castAbility, stop). " +
-                    "Ensure game.json constants.orderTags is properly configured.");
+                    "MobaLocalOrderSourceSystem requires GameConfig in globals with order type ids (castAbility, stop). " +
+                    "Ensure game.json constants.orderTypeIds is properly configured.");
             }
         }
 
@@ -73,12 +75,14 @@ namespace MobaDemoMod.Presentation
             // Load input-order mappings from mod assets via VFS
             var config = LoadInputOrderMappings();
             _inputOrderMapping = new InputOrderMappingSystem(input, config);
+            _globals[CoreInputMod.Systems.LocalOrderSourceHelper.ActiveMappingKey] = _inputOrderMapping;
+            _globals[CoreInputMod.Systems.SkillBarOverlaySystem.SkillBarKeyLabelsKey] = new[] { "Q", "W", "E", "R" };
             
-            // Tag key resolver
-            _inputOrderMapping.SetTagKeyResolver(key => key switch
+            // Order type key resolver
+            _inputOrderMapping.SetOrderTypeKeyResolver(key => key switch
             {
-                "castAbility" => _castAbilityTagId,
-                "stop" => _stopTagId,
+                "castAbility" => _castAbilityOrderTypeId,
+                "stop" => _stopOrderTypeId,
                 _ => 0
             });
             
@@ -99,6 +103,13 @@ namespace MobaDemoMod.Presentation
             {
                 return TryGetSelected(out entity);
             });
+            _inputOrderMapping.SetSelectedEntitiesProvider((ref OrderEntitySelection entities) =>
+            {
+                entities = default;
+                if (!TryGetSelected(out var entity)) return false;
+                entities.Add(entity);
+                return true;
+            });
 
             _inputOrderMapping.SetHoveredEntityProvider((out Entity entity) =>
             {
@@ -107,13 +118,20 @@ namespace MobaDemoMod.Presentation
             
             // Order submit handler
             // Visual feedback (markers, cooldown text) is handled by Core PerformerRuleSystem
-            // via GAS → PresentationEvent bridge — no mod-level marker logic needed.
+            // via GAS -> PresentationEvent bridge; no mod-level marker logic needed.
             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
             {
                 _orders.TryEnqueue(order);
             });
 
-            // Aiming state → Performer direct API (for AimCast mode)
+            if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var bindingsObj) && bindingsObj is InteractionActionBindings bindings)
+            {
+                _inputOrderMapping.ConfirmActionId = bindings.ConfirmActionId;
+                _inputOrderMapping.CancelActionId = bindings.CancelActionId;
+                _inputOrderMapping.CommandActionId = bindings.CommandActionId;
+            }
+
+            // Aiming state -> Performer direct API (for AimCast mode)
             // Uses PresentationCommandBuffer to create/destroy a performer scope.
             if (_globals.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var cmdObj) && cmdObj is PresentationCommandBuffer commands)
             {
@@ -145,7 +163,7 @@ namespace MobaDemoMod.Presentation
                     }
                 });
 
-                // No update handler needed — Performer position resolves from Owner entity each frame.
+                // No update handler needed; performer position resolves from Owner entity each frame.
             }
         }
 
@@ -254,7 +272,7 @@ namespace MobaDemoMod.Presentation
                 height: 74,
                 fill: new Vector4(0f, 0f, 0f, 0.45f),
                 border: new Vector4(1f, 1f, 1f, 0.16f));
-            overlay.AddText(16, 16, $"模式: {ToModeLabel(_inputOrderMapping.InteractionMode)}", 20, new Vector4(1f, 1f, 0.6f, 1f));
+            overlay.AddText(16, 16, $"Mode: {ToModeLabel(_inputOrderMapping.InteractionMode)}", 20, new Vector4(1f, 1f, 0.6f, 1f));
             overlay.AddText(16, 42, "F1 WoW(TargetFirst) | F2 LoL(SmartCast) | F3 SC2(AimCast) | F4 Indicator", 16, new Vector4(0.78f, 0.92f, 1f, 1f));
         }
 
@@ -262,16 +280,16 @@ namespace MobaDemoMod.Presentation
         {
             return mode switch
             {
-                InteractionModeType.TargetFirst => "WoW / 先选目标后施法",
-                InteractionModeType.SmartCast => "LoL / 智能施法",
-                InteractionModeType.AimCast => "SC2 / 先瞄准再确认",
-                InteractionModeType.SmartCastWithIndicator => "LoL Indicator / 按住显示抬起释放",
+                InteractionModeType.TargetFirst => "WoW / target first",
+                InteractionModeType.SmartCast => "LoL / smart cast",
+                InteractionModeType.AimCast => "SC2 / aim then confirm",
+                InteractionModeType.SmartCastWithIndicator => "LoL Indicator / hold to show, release to cast",
                 _ => mode.ToString()
             };
         }
-
         public void BeforeUpdate(in float dt) { }
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }
     }
 }
+

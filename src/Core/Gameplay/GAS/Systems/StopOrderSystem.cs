@@ -3,7 +3,6 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Navigation2D.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -11,24 +10,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public sealed class StopOrderSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription _query = new QueryDescription()
-            .WithAll<GameplayTagContainer, OrderBuffer>();
+            .WithAll<OrderBuffer>();
 
         private readonly OrderTypeRegistry _orderTypeRegistry;
-        private readonly int _navMoveTagId;
-
-        public StopOrderSystem(World world, OrderTypeRegistry orderTypeRegistry) : base(world)
+        private readonly int _stopOrderTypeId;
+        public StopOrderSystem(
+            World world,
+            OrderTypeRegistry orderTypeRegistry,
+            int stopOrderTypeId) : base(world)
         {
             _orderTypeRegistry = orderTypeRegistry;
-            _navMoveTagId = TagRegistry.Register("Ability.Nav.Move");
+            _stopOrderTypeId = stopOrderTypeId;
         }
 
         public override void Update(in float dt)
         {
-            if (_orderTypeRegistry == null) return;
-
             foreach (ref var chunk in World.Query(in _query))
             {
-                var tags = chunk.GetSpan<GameplayTagContainer>();
+                var buffers = chunk.GetSpan<OrderBuffer>();
                 ref var entityFirst = ref chunk.Entity(0);
 
                 foreach (var index in chunk)
@@ -36,12 +35,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     var entity = Unsafe.Add(ref entityFirst, index);
                     if (!World.IsAlive(entity)) continue;
 
-                    ref var t = ref tags[index];
-                    if (!t.HasTag(OrderStateTags.Active_Stop)) continue;
-
-                    if (_navMoveTagId > 0 && t.HasTag(_navMoveTagId))
+                    ref var buffer = ref buffers[index];
+                    if (!buffer.HasActive || buffer.ActiveOrder.Order.OrderTypeId != _stopOrderTypeId)
                     {
-                        t.RemoveTag(_navMoveTagId);
+                        continue;
                     }
 
                     if (World.Has<AbilityExecInstance>(entity))
@@ -61,4 +58,3 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
     }
 }
-
