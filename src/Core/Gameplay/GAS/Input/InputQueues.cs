@@ -1,4 +1,4 @@
-namespace Ludots.Core.Gameplay.GAS.Input
+﻿namespace Ludots.Core.Gameplay.GAS.Input
 {
     /// <summary>
     /// Generic ring buffer for request types with auto-incrementing RequestId.
@@ -28,6 +28,18 @@ namespace Ludots.Core.Gameplay.GAS.Input
             _items[_tail] = r;
             _tail = (_tail + 1) % _items.Length;
             _count++;
+            return true;
+        }
+
+        public bool TryPeek(out T request)
+        {
+            if (_count == 0)
+            {
+                request = default;
+                return false;
+            }
+
+            request = _items[_head];
             return true;
         }
 
@@ -97,8 +109,6 @@ namespace Ludots.Core.Gameplay.GAS.Input
             _count = 0;
         }
     }
-
-    // ── Concrete types ──
 
     public sealed class InputRequestQueue : RingBuffer<InputRequest>
     {

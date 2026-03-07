@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
@@ -94,8 +94,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             while (!UpdateSlice(dt, int.MaxValue)) { }
             
-            // After Phase 2 finishes abilities (which calls NotifyOrderComplete → 
-            // promotes next queued order → activates tags), re-run Phase 1 to pick up
+            // After Phase 2 finishes abilities (which calls NotifyOrderComplete 鈫?
+            // promotes next queued order 鈫?activates tags), re-run Phase 1 to pick up
             // newly promoted orders in the same frame. Without this, there would be 
             // a one-frame delay between ability completion and the next queued ability starting.
             for (int rescan = 0; rescan < MaxRescanIterations; rescan++)
@@ -111,7 +111,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             int workUnits = 0;
 
-            // ── Phase 1: Query entities with Active_CastAbility tag + Blackboard (no AbilityExecInstance yet) ──
+            // 鈹€鈹€ Phase 1: Query entities with Active_CastAbility tag + Blackboard (no AbilityExecInstance yet) 鈹€鈹€
             if (_castAbilityOrderTagId > 0)
             {
                 int newCount = World.CountEntities(in _newOrderQuery);
@@ -205,7 +205,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                     }
 
-                    // ── Toggle check: if ability has toggle spec and toggle tag is ON, deactivate instead ──
+                    // 鈹€鈹€ Toggle check: if ability has toggle spec and toggle tag is ON, deactivate instead 鈹€鈹€
                     if (slot.AbilityId > 0 && _abilityDefinitions != null &&
                         _abilityDefinitions.TryGet(slot.AbilityId, out var toggleDef) &&
                         toggleDef.HasToggleSpec && toggleDef.ToggleSpec.ToggleTagId > 0 &&
@@ -278,7 +278,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
 
-            // ── Phase 2: Advance all active exec instances ──
+            // 鈹€鈹€ Phase 2: Advance all active exec instances 鈹€鈹€
             if (!_sliceActive)
             {
                 _sliceActive = true;
@@ -323,7 +323,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (slot.AbilityId <= 0 || _abilityDefinitions == null || !_abilityDefinitions.TryGet(slot.AbilityId, out var def))
                 {
-                    // No valid ability definition found — fail-fast, remove exec instance
+                    // No valid ability definition found 鈥?fail-fast, remove exec instance
                     World.Remove<AbilityExecInstance>(actor);
                     workUnits++;
                     continue;
@@ -416,7 +416,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _execEntityCount = 0;
         }
 
-        // ──────────────────── Item processing ────────────────────
+        // 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Item processing 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
         private void AdvanceItems(Entity actor, ref AbilityExecSpec spec,
             ref AbilityExecCallerParamsPool callerPool, bool hasCallerPool,
@@ -444,7 +444,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         inst.State = AbilityExecRunState.Finished;
                         return;
 
-                    // ── Clips ──
+                    // 鈹€鈹€ Clips 鈹€鈹€
                     case ExecItemKind.EffectClip:
                         FireEffectItem(actor, ref spec, idx, ref callerPool, hasCallerPool, ref inst);
                         inst.NextItemIndex++;
@@ -461,7 +461,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         inst.NextItemIndex++;
                         continue;
 
-                    // ── Signals ──
+                    // 鈹€鈹€ Signals 鈹€鈹€
                     case ExecItemKind.EffectSignal:
                         FireEffectItem(actor, ref spec, idx, ref callerPool, hasCallerPool, ref inst);
                         inst.NextItemIndex++;
@@ -488,7 +488,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         inst.NextItemIndex++;
                         continue;
 
-                    // ── Gates ──
+                    // 鈹€鈹€ Gates 鈹€鈹€
                     case ExecItemKind.InputGate:
                     case ExecItemKind.EventGate:
                     case ExecItemKind.SelectionGate:
@@ -510,7 +510,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             inst.State = AbilityExecRunState.Finished;
         }
 
-        // ── Effect dispatch (shared for EffectClip & EffectSignal) ──
+        // 鈹€鈹€ Effect dispatch (shared for EffectClip & EffectSignal) 鈹€鈹€
 
         private void FireEffectItem(Entity actor, ref AbilityExecSpec spec, int idx,
             ref AbilityExecCallerParamsPool callerPool, bool hasCallerPool,
@@ -567,7 +567,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _effectRequests.Publish(req);
         }
 
-        // ── Tag Clip (add at start, auto-remove via TimedTag) ──
+        // 鈹€鈹€ Tag Clip (add at start, auto-remove via TimedTag) 鈹€鈹€
 
         private void FireTagClip(Entity actor, ref AbilityExecSpec spec, int idx,
             ref AbilityExecInstance inst)
@@ -593,7 +593,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        // ── Tag Signal (instant add/remove) ──
+        // 鈹€鈹€ Tag Signal (instant add/remove) 鈹€鈹€
 
         private void FireTagSignal(Entity actor, ref AbilityExecSpec spec, int idx)
         {
@@ -624,7 +624,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        // ── Event Signal ──
+        // 鈹€鈹€ Event Signal 鈹€鈹€
 
         private void FireEventSignal(Entity actor, ref AbilityExecSpec spec, int idx,
             ref AbilityExecInstance inst)
@@ -653,7 +653,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _phaseExecutor.ExecuteGraph(World, _graphApi, actor, target, default, default, graphProgramId);
         }
 
-        // ── Gate enter / process ──
+        // 鈹€鈹€ Gate enter / process 鈹€鈹€
 
         private void EnterGate(Entity actor, ref AbilityExecSpec spec, int idx,
             ref AbilityExecInstance inst)
@@ -758,6 +758,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             var chosen = resp.GetEntity(0);
                             if (World.IsAlive(chosen)) inst.Target = chosen;
                         }
+                        if (World.IsAlive(resp.TargetContext))
+                        {
+                            inst.TargetContext = resp.TargetContext;
+                        }
+                        if (resp.TryGetWorldPoint(out var worldPoint))
+                        {
+                            inst.TargetPosCm = Fix64Vec2.FromInt(worldPoint.X, worldPoint.Y);
+                            inst.HasTargetPos = 1;
+                        }
                         inst.WaitRequestId = 0;
                         inst.NextItemIndex++;
                         inst.State = AbilityExecRunState.Running;
@@ -797,7 +806,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        // ──────────────────── Toggle Helpers ────────────────────
+        // 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Toggle Helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
         /// <summary>
         /// Activate toggle: add toggle tag and apply infinite active effects.
@@ -880,7 +889,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
             else
             {
-                // No deactivate timeline — instant deactivation, just complete the order
+                // No deactivate timeline 鈥?instant deactivation, just complete the order
                 _presentationEvents?.Publish(new GasPresentationEvent
                 {
                     Kind = GasPresentationEventKind.CastFinished,
@@ -897,7 +906,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        // ──────────────────── Helpers ────────────────────
+        // 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
         private void EnsureTagComponents(Entity actor)
         {
@@ -921,3 +930,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
     }
 }
+
+
+

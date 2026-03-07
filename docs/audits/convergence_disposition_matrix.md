@@ -112,3 +112,10 @@
 - Mod 运行时唯一真相与收束准则：见 [Mod 运行时唯一真相与收束准则](../architecture/mod_runtime_single_source_of_truth.md)
 - ConfigPipeline 合并管线：见 [ConfigPipeline 合并管线](../architecture/config_pipeline.md)
 
+
+## 3.2 Selection Protocol Closure (2026-03-08)
+
+- `SelectionResponse` now carries confirmed world point and preserved target context instead of only entity ids.
+- `GasSelectionResponseSystem` consumes requests in FIFO order and fails fast when the response buffer is full.
+- `AbilityExecSystem` now restores `TargetContext` and `TargetPosCm` when a `SelectionGate` response is consumed.
+- Regression coverage lives in `src/Tests/GasTests/InteractionSelectionConvergenceTests.cs`.

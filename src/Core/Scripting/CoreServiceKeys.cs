@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
@@ -16,6 +16,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
@@ -107,6 +108,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<InputResponseBuffer> InputResponseBuffer = new("InputResponseBuffer");
         public static readonly ServiceKey<SelectionRequestQueue> SelectionRequestQueue = new("SelectionRequestQueue");
         public static readonly ServiceKey<SelectionResponseBuffer> SelectionResponseBuffer = new("SelectionResponseBuffer");
+        public static readonly ServiceKey<SelectionRuleRegistry> SelectionRuleRegistry = new("SelectionRuleRegistry");
+        public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
         public static readonly ServiceKey<OrderQueue> OrderQueue = new("OrderQueue");
         public static readonly ServiceKey<OrderTypeRegistry> OrderTypeRegistry = new("OrderTypeRegistry");
         public static readonly ServiceKey<OrderBufferSystem> OrderBufferSystem = new("OrderBufferSystem");
@@ -172,3 +175,5 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ILogBackend> LogBackend = new("LogBackend");
     }
 }
+
+
