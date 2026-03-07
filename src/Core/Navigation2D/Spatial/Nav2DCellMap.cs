@@ -1,462 +1,1221 @@
 using System;
+
+using System.Diagnostics;
+
 using System.Numerics;
+
 using System.Runtime.CompilerServices;
+
 using Arch.LowLevel;
+
 using Ludots.Core.Mathematics.FixedPoint;
 
+using Ludots.Core.Navigation2D.Config;
+
+
+
 namespace Ludots.Core.Navigation2D.Spatial
+
 {
-    public sealed unsafe class Nav2DCellMap : IDisposable
+
+    public readonly record struct Nav2DCellMapSettings(
+
+        Navigation2DSpatialUpdateMode UpdateMode,
+
+        int RebuildCellMigrationsThreshold,
+
+        int RebuildAccumulatedCellMigrationsThreshold)
+
     {
+
+        public static Nav2DCellMapSettings Default => new(
+
+            Navigation2DSpatialUpdateMode.Adaptive,
+
+            RebuildCellMigrationsThreshold: 128,
+
+            RebuildAccumulatedCellMigrationsThreshold: 1024);
+
+
+
+        public static Nav2DCellMapSettings FromConfig(Navigation2DSpatialPartitionConfig? config)
+
+        {
+
+            if (config == null)
+
+            {
+
+                return Default;
+
+            }
+
+
+
+            return new Nav2DCellMapSettings(
+
+                config.UpdateMode,
+
+                Math.Max(0, config.RebuildCellMigrationsThreshold),
+
+                Math.Max(0, config.RebuildAccumulatedCellMigrationsThreshold));
+
+        }
+
+    }
+
+
+
+    public sealed unsafe class Nav2DCellMap : IDisposable
+
+    {
+
         private readonly float _invCellSizeCm;
+
         private readonly LongKeyMap<int> _heads;
 
+        private readonly Nav2DCellMapSettings _settings;
+
+
+
         private UnsafeArray<int> _next;
+
         private UnsafeArray<int> _prev;
+
         private UnsafeArray<long> _cellKeys;
+
         private int _agentCapacity;
+
         private int _agentCount;
 
+        private int _migrationsSinceBuild;
+
+
+
+        public long InstrumentedUpdateTicks;
+
+        public long InstrumentedUpdateCalls;
+
+        public long InstrumentedDirtyAgents;
+
+        public long InstrumentedCellMigrations;
+
+        public long InstrumentedFullRebuilds;
+
+        public long InstrumentedIncrementalUpdates;
+
+
+
+        public Navigation2DSpatialUpdateMode UpdateMode => _settings.UpdateMode;
+
+
+
         public Nav2DCellMap(Fix64 cellSizeCm, int initialAgentCapacity, int initialCellCapacity)
+
+            : this(cellSizeCm, initialAgentCapacity, initialCellCapacity, Nav2DCellMapSettings.Default)
+
         {
-            float cellSize = cellSizeCm.ToFloat();
-            _invCellSizeCm = cellSize > 1e-6f ? (1f / cellSize) : 0f;
-            _heads = new LongKeyMap<int>(initialCellCapacity);
-            int capacity = Math.Max(8, initialAgentCapacity);
-            _next = new UnsafeArray<int>(capacity);
-            _prev = new UnsafeArray<int>(capacity);
-            _cellKeys = new UnsafeArray<long>(capacity);
-            _agentCapacity = capacity;
-            _agentCount = 0;
+
         }
+
+
+
+        public Nav2DCellMap(Fix64 cellSizeCm, int initialAgentCapacity, int initialCellCapacity, Nav2DCellMapSettings settings)
+
+        {
+
+            float cellSize = cellSizeCm.ToFloat();
+
+            _invCellSizeCm = cellSize > 1e-6f ? (1f / cellSize) : 0f;
+
+            _heads = new LongKeyMap<int>(initialCellCapacity);
+
+            _settings = settings;
+
+            int capacity = Math.Max(8, initialAgentCapacity);
+
+            _next = new UnsafeArray<int>(capacity);
+
+            _prev = new UnsafeArray<int>(capacity);
+
+            _cellKeys = new UnsafeArray<long>(capacity);
+
+            _agentCapacity = capacity;
+
+            _agentCount = 0;
+
+            _migrationsSinceBuild = 0;
+
+        }
+
+
 
         public void Build(ReadOnlySpan<Vector2> positions)
+
         {
+
             _heads.Clear();
+
             EnsureAgentCapacity(positions.Length);
+
             _agentCount = positions.Length;
 
+            _migrationsSinceBuild = 0;
+
+
+
             for (int i = 0; i < positions.Length; i++)
+
             {
+
                 AttachBuiltAgent(i, ToCellKey(positions[i]));
+
             }
+
         }
+
+
 
         public void Build(ReadOnlySpan<Fix64Vec2> positionsCm)
+
         {
+
             _heads.Clear();
+
             EnsureAgentCapacity(positionsCm.Length);
+
             _agentCount = positionsCm.Length;
 
+            _migrationsSinceBuild = 0;
+
+
+
             for (int i = 0; i < positionsCm.Length; i++)
+
             {
+
                 AttachBuiltAgent(i, ToCellKey(positionsCm[i].X.ToFloat(), positionsCm[i].Y.ToFloat()));
+
             }
+
         }
+
+
 
         public void UpdatePositions(ReadOnlySpan<Vector2> positions, ReadOnlySpan<int> dirtyAgentIndices)
+
         {
-            for (int i = 0; i < dirtyAgentIndices.Length; i++)
+
+            long t0 = Stopwatch.GetTimestamp();
+
+            CountDirtyAgentsAndCellMigrations(positions, dirtyAgentIndices, out int dirtyAgents, out int cellMigrations);
+
+
+
+            if (cellMigrations > 0)
+
             {
-                int agentIndex = dirtyAgentIndices[i];
-                if ((uint)agentIndex >= (uint)_agentCount || (uint)agentIndex >= (uint)positions.Length)
+
+                if (ShouldRebuild(cellMigrations))
+
                 {
-                    continue;
+
+                    Build(positions);
+
+                    InstrumentedFullRebuilds++;
+
                 }
 
-                UpdateAgentCell(agentIndex, positions[agentIndex]);
+                else
+
+                {
+
+                    ApplyIncrementalUpdates(positions, dirtyAgentIndices);
+
+                    _migrationsSinceBuild += cellMigrations;
+
+                    InstrumentedIncrementalUpdates++;
+
+                }
+
             }
+
+
+
+            InstrumentedUpdateTicks += Stopwatch.GetTimestamp() - t0;
+
+            InstrumentedUpdateCalls++;
+
+            InstrumentedDirtyAgents += dirtyAgents;
+
+            InstrumentedCellMigrations += cellMigrations;
+
         }
+
+
+
+        public void ResetInstrumentation()
+
+        {
+
+            InstrumentedUpdateTicks = 0;
+
+            InstrumentedUpdateCalls = 0;
+
+            InstrumentedDirtyAgents = 0;
+
+            InstrumentedCellMigrations = 0;
+
+            InstrumentedFullRebuilds = 0;
+
+            InstrumentedIncrementalUpdates = 0;
+
+        }
+
+
 
         public int CollectNeighbors(int selfIndex, Vector2 selfPos, float radius, ReadOnlySpan<Vector2> positions, Span<int> neighborsOut)
+
         {
+
             float radiusSq = radius * radius;
+
+
 
             int cx = FloorToCell(selfPos.X);
+
             int cy = FloorToCell(selfPos.Y);
+
             int r = CeilToCells(radius);
 
+
+
             float sx = selfPos.X;
+
             float sy = selfPos.Y;
 
+
+
             int count = 0;
+
             for (int y = cy - r; y <= cy + r; y++)
+
             {
+
                 for (int x = cx - r; x <= cx + r; x++)
+
                 {
+
                     long key = Nav2DKeyPacking.PackInt2(x, y);
-                    if (!_heads.TryGetSlot(key, out int slot)) continue;
-                    int head = _heads.GetValueRefBySlot(slot);
-                    int it = head;
-                    while (it >= 0)
+
+                    if (!_heads.TryGetSlot(key, out int slot))
+
                     {
+
+                        continue;
+
+                    }
+
+
+
+                    int it = _heads.GetValueRefBySlot(slot);
+
+                    while (it >= 0)
+
+                    {
+
                         if (it != selfIndex)
+
                         {
+
                             Vector2 op = positions[it];
+
                             float dx = op.X - sx;
+
                             float dy = op.Y - sy;
+
                             float d2 = dx * dx + dy * dy;
+
                             if (d2 <= radiusSq)
+
                             {
+
                                 if (count < neighborsOut.Length)
+
                                 {
+
                                     neighborsOut[count++] = it;
+
                                 }
+
                                 else
+
                                 {
+
                                     return count;
+
                                 }
+
                             }
+
                         }
 
+
+
                         it = _next[it];
+
                     }
+
                 }
+
             }
 
+
+
             return count;
+
         }
+
+
 
         public int CollectNeighbors(int selfIndex, Fix64Vec2 selfPosCm, Fix64 radiusCm, ReadOnlySpan<Fix64Vec2> positionsCm, Span<int> neighborsOut)
+
         {
+
             float radius = radiusCm.ToFloat();
+
             float radiusSq = radius * radius;
+
+
 
             float sx = selfPosCm.X.ToFloat();
+
             float sy = selfPosCm.Y.ToFloat();
+
             int cx = FloorToCell(sx);
+
             int cy = FloorToCell(sy);
+
             int r = CeilToCells(radius);
 
+
+
             int count = 0;
+
             for (int y = cy - r; y <= cy + r; y++)
+
             {
+
                 for (int x = cx - r; x <= cx + r; x++)
+
                 {
+
                     long key = Nav2DKeyPacking.PackInt2(x, y);
-                    if (!_heads.TryGetSlot(key, out int slot)) continue;
-                    int head = _heads.GetValueRefBySlot(slot);
-                    int it = head;
-                    while (it >= 0)
+
+                    if (!_heads.TryGetSlot(key, out int slot))
+
                     {
+
+                        continue;
+
+                    }
+
+
+
+                    int it = _heads.GetValueRefBySlot(slot);
+
+                    while (it >= 0)
+
+                    {
+
                         if (it != selfIndex)
+
                         {
+
                             Fix64Vec2 op = positionsCm[it];
+
                             float dx = op.X.ToFloat() - sx;
+
                             float dy = op.Y.ToFloat() - sy;
+
                             float d2 = dx * dx + dy * dy;
+
                             if (d2 <= radiusSq)
+
                             {
+
                                 if (count < neighborsOut.Length)
+
                                 {
+
                                     neighborsOut[count++] = it;
+
                                 }
+
                                 else
+
                                 {
+
                                     return count;
+
                                 }
+
                             }
+
                         }
 
+
+
                         it = _next[it];
+
                     }
+
                 }
+
             }
 
+
+
             return count;
+
         }
+
+
 
         public int CollectNearestNeighborsBudgeted(
+
             int selfIndex,
+
             Vector2 selfPos,
+
             float radius,
+
             ReadOnlySpan<Vector2> positions,
+
             Span<int> neighborsOut,
+
             int maxCandidateChecks)
+
         {
+
             if (neighborsOut.Length == 0 || radius <= 0f)
+
             {
+
                 return 0;
+
             }
+
+
 
             float radiusSq = radius * radius;
+
             float sx = selfPos.X;
+
             float sy = selfPos.Y;
+
             int cx = FloorToCell(sx);
+
             int cy = FloorToCell(sy);
+
             int ringLimit = CeilToCells(radius);
+
             int effectiveMaxChecks = maxCandidateChecks > 0 ? maxCandidateChecks : int.MaxValue;
 
+
+
             int count = 0;
+
             int checks = 0;
 
+
+
             if (!VisitCell(cx, cy, selfIndex, sx, sy, radiusSq, positions, neighborsOut, ref count, ref checks, effectiveMaxChecks))
+
             {
+
                 return count;
+
             }
+
+
 
             for (int ring = 1; ring <= ringLimit; ring++)
+
             {
+
                 int minX = cx - ring;
+
                 int maxX = cx + ring;
+
                 int minY = cy - ring;
+
                 int maxY = cy + ring;
 
+
+
                 for (int x = minX; x <= maxX; x++)
+
                 {
+
                     if (!VisitCell(x, minY, selfIndex, sx, sy, radiusSq, positions, neighborsOut, ref count, ref checks, effectiveMaxChecks))
+
                     {
+
                         return count;
+
                     }
+
                     if (!VisitCell(x, maxY, selfIndex, sx, sy, radiusSq, positions, neighborsOut, ref count, ref checks, effectiveMaxChecks))
+
                     {
+
                         return count;
+
                     }
+
                 }
+
+
 
                 for (int y = minY + 1; y < maxY; y++)
+
                 {
+
                     if (!VisitCell(minX, y, selfIndex, sx, sy, radiusSq, positions, neighborsOut, ref count, ref checks, effectiveMaxChecks))
+
                     {
+
                         return count;
+
                     }
+
                     if (!VisitCell(maxX, y, selfIndex, sx, sy, radiusSq, positions, neighborsOut, ref count, ref checks, effectiveMaxChecks))
+
                     {
+
                         return count;
+
                     }
+
                 }
+
             }
+
+
 
             return count;
+
         }
+
+
 
         private bool VisitCell(
+
             int cx,
+
             int cy,
+
             int selfIndex,
+
             float sx,
+
             float sy,
+
             float radiusSq,
+
             ReadOnlySpan<Vector2> positions,
+
             Span<int> neighborsOut,
+
             ref int count,
+
             ref int checks,
+
             int maxCandidateChecks)
+
         {
+
             long key = Nav2DKeyPacking.PackInt2(cx, cy);
+
             if (!_heads.TryGetSlot(key, out int slot))
+
             {
+
                 return true;
+
             }
+
+
 
             int it = _heads.GetValueRefBySlot(slot);
+
             while (it >= 0)
+
             {
+
                 if (it != selfIndex)
+
                 {
+
                     checks++;
 
+
+
                     Vector2 op = positions[it];
+
                     float dx = op.X - sx;
+
                     float dy = op.Y - sy;
+
                     float d2 = dx * dx + dy * dy;
+
                     if (d2 <= radiusSq)
+
                     {
+
                         InsertNearest(neighborsOut, ref count, it, d2, sx, sy, positions);
+
                     }
+
+
 
                     if (checks >= maxCandidateChecks)
+
                     {
+
                         return false;
+
                     }
+
                 }
+
+
 
                 it = _next[it];
+
             }
+
+
 
             return true;
+
         }
+
+
 
         private static void InsertNearest(Span<int> neighborsOut, ref int count, int candidateIndex, float candidateDistanceSq, float sx, float sy, ReadOnlySpan<Vector2> positions)
+
         {
+
             int capacity = neighborsOut.Length;
+
             if (capacity == 0)
+
             {
+
                 return;
+
             }
+
+
 
             int insertAt = count;
+
             if (count < capacity)
+
             {
+
                 while (insertAt > 0 && DistanceSq(neighborsOut[insertAt - 1], sx, sy, positions) > candidateDistanceSq)
+
                 {
+
                     neighborsOut[insertAt] = neighborsOut[insertAt - 1];
+
                     insertAt--;
+
                 }
 
+
+
                 neighborsOut[insertAt] = candidateIndex;
+
                 count++;
+
                 return;
+
             }
+
+
 
             if (DistanceSq(neighborsOut[capacity - 1], sx, sy, positions) <= candidateDistanceSq)
+
             {
+
                 return;
+
             }
+
+
 
             insertAt = capacity - 1;
+
             while (insertAt > 0 && DistanceSq(neighborsOut[insertAt - 1], sx, sy, positions) > candidateDistanceSq)
+
             {
+
                 neighborsOut[insertAt] = neighborsOut[insertAt - 1];
+
                 insertAt--;
+
             }
+
+
 
             neighborsOut[insertAt] = candidateIndex;
+
         }
 
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         private static float DistanceSq(int index, float sx, float sy, ReadOnlySpan<Vector2> positions)
+
         {
+
             Vector2 op = positions[index];
+
             float dx = op.X - sx;
+
             float dy = op.Y - sy;
+
             return dx * dx + dy * dy;
+
         }
+
+
 
         public void Dispose()
+
         {
+
             _heads.Dispose();
+
             _next.Dispose();
+
             _prev.Dispose();
+
             _cellKeys.Dispose();
+
         }
 
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         private int FloorToCell(float value)
+
         {
+
             return (int)MathF.Floor(value * _invCellSizeCm);
+
         }
 
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         private int CeilToCells(float value)
+
         {
+
             return Math.Max(0, (int)MathF.Ceiling(value * _invCellSizeCm));
+
         }
 
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         private long ToCellKey(in Vector2 position)
+
         {
+
             return ToCellKey(position.X, position.Y);
+
         }
 
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         private long ToCellKey(float x, float y)
+
         {
+
             return Nav2DKeyPacking.PackInt2(FloorToCell(x), FloorToCell(y));
+
         }
 
+
+
+        private void CountDirtyAgentsAndCellMigrations(ReadOnlySpan<Vector2> positions, ReadOnlySpan<int> dirtyAgentIndices, out int dirtyAgents, out int cellMigrations)
+
+        {
+
+            dirtyAgents = 0;
+
+            cellMigrations = 0;
+
+
+
+            for (int i = 0; i < dirtyAgentIndices.Length; i++)
+
+            {
+
+                int agentIndex = dirtyAgentIndices[i];
+
+                if ((uint)agentIndex >= (uint)_agentCount || (uint)agentIndex >= (uint)positions.Length)
+
+                {
+
+                    continue;
+
+                }
+
+
+
+                dirtyAgents++;
+
+                if (ToCellKey(positions[agentIndex]) != _cellKeys[agentIndex])
+
+                {
+
+                    cellMigrations++;
+
+                }
+
+            }
+
+        }
+
+
+
+        private void ApplyIncrementalUpdates(ReadOnlySpan<Vector2> positions, ReadOnlySpan<int> dirtyAgentIndices)
+
+        {
+
+            for (int i = 0; i < dirtyAgentIndices.Length; i++)
+
+            {
+
+                int agentIndex = dirtyAgentIndices[i];
+
+                if ((uint)agentIndex >= (uint)_agentCount || (uint)agentIndex >= (uint)positions.Length)
+
+                {
+
+                    continue;
+
+                }
+
+
+
+                UpdateAgentCell(agentIndex, positions[agentIndex]);
+
+            }
+
+        }
+
+
+
+        private bool ShouldRebuild(int cellMigrations)
+
+        {
+
+            if (cellMigrations <= 0)
+
+            {
+
+                return false;
+
+            }
+
+
+
+            return _settings.UpdateMode switch
+
+            {
+
+                Navigation2DSpatialUpdateMode.Incremental => false,
+
+                Navigation2DSpatialUpdateMode.RebuildOnAnyCellMigration => true,
+
+                _ => ShouldAdaptiveRebuild(cellMigrations)
+
+            };
+
+        }
+
+
+
+        private bool ShouldAdaptiveRebuild(int cellMigrations)
+
+        {
+
+            if (_settings.RebuildCellMigrationsThreshold > 0 && cellMigrations >= _settings.RebuildCellMigrationsThreshold)
+
+            {
+
+                return true;
+
+            }
+
+
+
+            if (_settings.RebuildAccumulatedCellMigrationsThreshold > 0 &&
+
+                _migrationsSinceBuild + cellMigrations >= _settings.RebuildAccumulatedCellMigrationsThreshold)
+
+            {
+
+                return true;
+
+            }
+
+
+
+            return false;
+
+        }
+
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         private void EnsureAgentCapacity(int required)
+
         {
-            if (required <= _agentCapacity) return;
+
+            if (required <= _agentCapacity)
+
+            {
+
+                return;
+
+            }
+
+
+
             int nextCap = _agentCapacity;
-            while (nextCap < required) nextCap *= 2;
+
+            while (nextCap < required)
+
+            {
+
+                nextCap *= 2;
+
+            }
+
+
+
             _next = UnsafeArray.Resize(ref _next, nextCap);
+
             _prev = UnsafeArray.Resize(ref _prev, nextCap);
+
             _cellKeys = UnsafeArray.Resize(ref _cellKeys, nextCap);
+
             _agentCapacity = nextCap;
+
         }
 
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         private void AttachBuiltAgent(int agentIndex, long key)
+
         {
+
             _cellKeys[agentIndex] = key;
+
             _prev[agentIndex] = -1;
 
+
+
             ref int head = ref _heads.GetValueRefOrAddDefault(key, out bool existed);
+
             if (!existed)
+
             {
+
                 head = -1;
+
             }
+
+
 
             int next = head;
+
             _next[agentIndex] = next;
+
             if (next >= 0)
+
             {
+
                 _prev[next] = agentIndex;
+
             }
+
+
 
             head = agentIndex;
+
         }
 
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void UpdateAgentCell(int agentIndex, in Vector2 position)
+
+        private bool UpdateAgentCell(int agentIndex, in Vector2 position)
+
         {
+
             long newKey = ToCellKey(position);
+
             long oldKey = _cellKeys[agentIndex];
+
             if (newKey == oldKey)
+
             {
-                return;
+
+                return false;
+
             }
+
+
 
             DetachAgent(agentIndex, oldKey);
+
             AttachAgent(agentIndex, newKey);
+
+            return true;
+
         }
+
+
 
         private void DetachAgent(int agentIndex, long key)
+
         {
+
             if (!_heads.TryGetSlot(key, out int slot))
+
             {
+
                 _prev[agentIndex] = -1;
+
                 _next[agentIndex] = -1;
+
                 return;
+
             }
+
+
 
             ref int head = ref _heads.GetValueRefBySlot(slot);
+
             int prev = _prev[agentIndex];
+
             int next = _next[agentIndex];
 
+
+
             if (prev >= 0)
+
             {
+
                 _next[prev] = next;
+
             }
+
             else
+
             {
+
                 head = next;
+
             }
+
+
 
             if (next >= 0)
+
             {
+
                 _prev[next] = prev;
+
             }
 
+
+
             _prev[agentIndex] = -1;
+
             _next[agentIndex] = -1;
 
+
+
             if (head < 0)
+
             {
+
                 _heads.Remove(key, out _);
+
             }
+
         }
+
+
 
         private void AttachAgent(int agentIndex, long key)
+
         {
+
             ref int head = ref _heads.GetValueRefOrAddDefault(key, out bool existed);
+
             if (!existed)
+
             {
+
                 head = -1;
+
             }
+
+
 
             int next = head;
+
             _cellKeys[agentIndex] = key;
+
             _prev[agentIndex] = -1;
+
             _next[agentIndex] = next;
+
             if (next >= 0)
+
             {
+
                 _prev[next] = agentIndex;
+
             }
 
+
+
             head = agentIndex;
+
         }
+
     }
+
 }

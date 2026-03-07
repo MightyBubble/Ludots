@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Numerics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.Spatial;
 using NUnit.Framework;
 
@@ -182,6 +183,87 @@ namespace Ludots.Tests.Navigation2D
 
             Assert.That(updatedCount, Is.EqualTo(1));
             Assert.That(neighbors[0], Is.EqualTo(1));
+        }
+
+        [Test]
+        public void UpdatePositions_RepeatedCrossCellMigration_KeepsNeighborQueriesCorrect()
+        {
+            var cellSize = Fix64.FromInt(100);
+            using var map = new Nav2DCellMap(cellSize, 16, 16);
+
+            var positions = new[]
+            {
+                new Vector2(50, 50),
+                new Vector2(250, 50),
+                new Vector2(450, 50),
+            };
+
+            map.Build(positions);
+
+            Span<int> neighbors = stackalloc int[4];
+            for (int step = 0; step < 256; step++)
+            {
+                positions[1] = (step & 1) == 0 ? new Vector2(150, 50) : new Vector2(350, 50);
+                map.UpdatePositions(positions, new[] { 1 });
+
+                int nearLeft = map.CollectNeighbors(
+                    selfIndex: 0,
+                    selfPos: positions[0],
+                    radius: 120,
+                    positions: positions,
+                    neighborsOut: neighbors);
+
+                int nearRight = map.CollectNeighbors(
+                    selfIndex: 2,
+                    selfPos: positions[2],
+                    radius: 120,
+                    positions: positions,
+                    neighborsOut: neighbors);
+
+                if ((step & 1) == 0)
+                {
+                    Assert.That(nearLeft, Is.EqualTo(1), $"step {step} should neighbor left agent");
+                    Assert.That(nearRight, Is.EqualTo(0), $"step {step} should not neighbor right agent");
+                }
+                else
+                {
+                    Assert.That(nearLeft, Is.EqualTo(0), $"step {step} should not neighbor left agent");
+                    Assert.That(nearRight, Is.EqualTo(1), $"step {step} should neighbor right agent");
+                }
+            }
+        }
+
+        [Test]
+        public void UpdatePositions_RebuildOnAnyCellMigration_TriggersFullRebuildAndPreservesQueries()
+        {
+            var cellSize = Fix64.FromInt(100);
+            var settings = new Nav2DCellMapSettings(Navigation2DSpatialUpdateMode.RebuildOnAnyCellMigration, 0, 0);
+            using var map = new Nav2DCellMap(cellSize, 16, 16, settings);
+
+            var positions = new[]
+            {
+                new Vector2(0, 0),
+                new Vector2(150, 0),
+            };
+
+            map.Build(positions);
+            map.ResetInstrumentation();
+
+            positions[1] = new Vector2(50, 0);
+            map.UpdatePositions(positions, new[] { 1 });
+
+            Span<int> neighbors = stackalloc int[4];
+            int count = map.CollectNeighbors(
+                selfIndex: 0,
+                selfPos: positions[0],
+                radius: 100,
+                positions: positions,
+                neighborsOut: neighbors);
+
+            Assert.That(count, Is.EqualTo(1));
+            Assert.That(neighbors[0], Is.EqualTo(1));
+            Assert.That(map.InstrumentedFullRebuilds, Is.EqualTo(1));
+            Assert.That(map.InstrumentedIncrementalUpdates, Is.EqualTo(0));
         }
     }
 }

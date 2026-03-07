@@ -1,0 +1,9 @@
+{"event_id":"nav2d-spatial-001","step":"config_pipeline","status":"done","detail":"Merged explicit Navigation2D.Spatial config with UpdateMode=Adaptive, RebuildCellMigrationsThreshold=128, RebuildAccumulatedCellMigrationsThreshold=1024."}
+{"event_id":"nav2d-spatial-002","step":"playground_config","status":"done","detail":"Navigation2DPlaygroundMod reads Constants.IntValues.navigation2d_playground_agents_per_team=5000 and exposes spatial counters on HUD."}
+{"event_id":"nav2d-spatial-003","step":"regression_suite","status":"done","detail":"Navigation2DTests non-benchmark filter passed 39/39 in 19s."}
+{"event_id":"nav2d-spatial-004","step":"benchmark_static_orca","status":"done","detail":"StaticCrowd ORCA median_avg_ms_per_tick=9.5508 agents=10000 allocated_bytes_current_thread=0."}
+{"event_id":"nav2d-spatial-005","step":"benchmark_cross_orca","status":"done","detail":"QuarterCrossCellMigration ORCA avg_ms_per_tick=11.7765 cell_map_ms=0.2523 dirty_agents_per_tick=2500.0 cell_migrations_per_tick=416.7."}
+{"event_id":"nav2d-spatial-006","step":"benchmark_cross_hybrid","status":"done","detail":"QuarterCrossCellMigration Hybrid avg_ms_per_tick=10.7081 cell_map_ms=0.2493 dirty_agents_per_tick=2500.0 cell_migrations_per_tick=416.7."}
+{"event_id":"nav2d-spatial-007","step":"benchmark_cross_sonar","status":"done","detail":"QuarterCrossCellMigration Sonar avg_ms_per_tick=11.2656 cell_map_ms=0.2212 dirty_agents_per_tick=2500.1 cell_migrations_per_tick=416.7."}
+{"event_id":"nav2d-spatial-008","step":"release_build","status":"done","detail":"Built src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj in Release with 0 errors."}
+{"event_id":"nav2d-spatial-009","step":"outcome","status":"done","detail":"Adaptive rebuild eliminates the prior churn-induced hitch; the 10k migration scenario remains within low double-digit milliseconds."}

@@ -12,6 +12,7 @@ namespace Ludots.Core.Navigation2D.Spatial
         private UnsafeArray<byte> _states;
         private UnsafeArray<T> _values;
         private int _count;
+        private int _tombstoneCount;
         private int _mask;
 
         public int Count => _count;
@@ -24,6 +25,7 @@ namespace Ludots.Core.Navigation2D.Spatial
             _values = new UnsafeArray<T>(size);
             _mask = size - 1;
             _count = 0;
+            _tombstoneCount = 0;
         }
 
         public bool TryGet(long key, out T value)
@@ -59,10 +61,15 @@ namespace Ludots.Core.Navigation2D.Spatial
             int slot = FindSlotForInsert(key, out existed);
             if (!existed)
             {
+                byte priorState = _states[slot];
                 _keys[slot] = key;
                 _states[slot] = 1;
                 _values[slot] = default;
                 _count++;
+                if (priorState == 2)
+                {
+                    _tombstoneCount--;
+                }
             }
 
             return ref _values[slot];
@@ -81,6 +88,7 @@ namespace Ludots.Core.Navigation2D.Spatial
             _states[slot] = 2;
             _values[slot] = default;
             _count--;
+            _tombstoneCount++;
             return true;
         }
 
@@ -88,6 +96,7 @@ namespace Ludots.Core.Navigation2D.Spatial
         {
             UnsafeArray.Fill(ref _states, (byte)0);
             _count = 0;
+            _tombstoneCount = 0;
         }
 
         public void Dispose()
@@ -187,8 +196,15 @@ namespace Ludots.Core.Navigation2D.Spatial
         {
             int size = _states.Length;
             int threshold = (int)(size * MaxLoadFactor);
-            if (_count + 1 <= threshold) return;
-            Rehash(size * 2);
+            if (_count + _tombstoneCount + 1 > threshold)
+            {
+                int targetSize = _count + 1 > threshold ? size * 2 : size;
+                Rehash(targetSize);
+            }
+            else if (_tombstoneCount > (size >> 1))
+            {
+                Rehash(size);
+            }
         }
 
         private void Rehash(int newSize)
@@ -204,6 +220,7 @@ namespace Ludots.Core.Navigation2D.Spatial
 
             int oldLen = oldStates.Length;
             _count = 0;
+            _tombstoneCount = 0;
 
             for (int i = 0; i < oldLen; i++)
             {

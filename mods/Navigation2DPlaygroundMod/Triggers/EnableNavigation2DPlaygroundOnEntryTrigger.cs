@@ -2,22 +2,18 @@ using System;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
-using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
-using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Runtime;
-using Ludots.Core.Presentation.Components;
+using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.DebugDraw;
-using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
-using Ludots.Core.Physics2D.Components;
-using Ludots.Core.Physics2D.Systems;
 using Navigation2DPlaygroundMod.Input;
 using Navigation2DPlaygroundMod.Systems;
 
@@ -29,6 +25,7 @@ namespace Navigation2DPlaygroundMod.Triggers
         private bool _installed;
         private bool _inputContextActive;
         private const string InputContextId = Navigation2DPlaygroundInputContexts.Playground;
+        private const string AgentsPerTeamConfigKey = "navigation2d_playground_agents_per_team";
 
         public EnableNavigation2DPlaygroundOnEntryTrigger(IModContext ctx)
         {
@@ -39,7 +36,10 @@ namespace Navigation2DPlaygroundMod.Triggers
         public override Task ExecuteAsync(ScriptContext context)
         {
             var engine = context.GetEngine();
-            if (engine == null) return Task.CompletedTask;
+            if (engine == null)
+            {
+                return Task.CompletedTask;
+            }
 
             var mapId = context.Get(CoreServiceKeys.MapId);
             bool isEntry = mapId.Value == engine.MergedConfig.StartupMapId;
@@ -53,7 +53,6 @@ namespace Navigation2DPlaygroundMod.Triggers
                         throw new InvalidOperationException("Navigation2DPlaygroundMod requires Navigation2D.Enabled=true so Navigation2DRuntime exists in GlobalContext.");
                     }
 
-                    // Fix1: Playground场景自动开启FlowField导航
                     navRuntime.FlowEnabled = true;
 
                     var debugDrawBuffer = new DebugDrawCommandBuffer();
@@ -66,6 +65,7 @@ namespace Navigation2DPlaygroundMod.Triggers
                     var meshRegistry = context.Get(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry;
                     engine.RegisterPresentationSystem(new Navigation2DPlaygroundPresentationSystem(engine, debugDrawBuffer, meshRegistry));
 
+                    Navigation2DPlaygroundState.AgentsPerTeam = ResolveConfiguredAgentsPerTeam(engine);
                     Navigation2DPlaygroundControlSystem.SpawnScenario(engine.World, Navigation2DPlaygroundState.AgentsPerTeam);
                     engine.SetService(Navigation2DPlaygroundKeys.AgentsPerTeam, Navigation2DPlaygroundState.AgentsPerTeam);
                     engine.SetService(Navigation2DPlaygroundKeys.LiveAgentsTotal, Navigation2DPlaygroundState.AgentsPerTeam * 2);
@@ -88,8 +88,8 @@ namespace Navigation2DPlaygroundMod.Triggers
                     }
 
                     session.Camera.State.TargetCm = System.Numerics.Vector2.Zero;
-                        session.Camera.State.Pitch = 65f;
-                        session.Camera.State.DistanceCm = 18000f;
+                    session.Camera.State.Pitch = 65f;
+                    session.Camera.State.DistanceCm = 18000f;
 
                     if (session.Camera.Controller == null)
                     {
@@ -119,6 +119,18 @@ namespace Navigation2DPlaygroundMod.Triggers
             }
 
             return Task.CompletedTask;
+        }
+
+        private static int ResolveConfiguredAgentsPerTeam(GameEngine engine)
+        {
+            GameConfig? config = engine.GetService(CoreServiceKeys.GameConfig);
+            if (config?.Constants?.IntValues != null &&
+                config.Constants.IntValues.TryGetValue(AgentsPerTeamConfigKey, out int configuredAgentsPerTeam))
+            {
+                return Math.Clamp(configuredAgentsPerTeam, 0, 25000);
+            }
+
+            return Navigation2DPlaygroundState.AgentsPerTeam;
         }
 
         private static void EnsurePlaygroundInputSchema(PlayerInputHandler input)

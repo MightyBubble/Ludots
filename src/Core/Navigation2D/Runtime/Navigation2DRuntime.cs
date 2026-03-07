@@ -29,7 +29,11 @@ namespace Ludots.Core.Navigation2D.Runtime
 
             var cellSize = Fix64.FromInt(gridCellSizeCm);
             AgentSoA = new Navigation2DWorld(new Navigation2DWorldSettings(Config.MaxAgents, cellSize));
-            CellMap = new Nav2DCellMap(cellSize, initialAgentCapacity: Config.MaxAgents, initialCellCapacity: Math.Max(128, Config.MaxAgents / 2));
+            CellMap = new Nav2DCellMap(
+                cellSize,
+                initialAgentCapacity: Config.MaxAgents,
+                initialCellCapacity: Math.Max(128, Config.MaxAgents / 2),
+                settings: Nav2DCellMapSettings.FromConfig(Config.Spatial));
 
             Surface = new CrowdSurface2D(cellSize, tileSizeCells: 64, initialTileCapacity: 256);
             Flows = new[]

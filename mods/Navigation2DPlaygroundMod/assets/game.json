@@ -1,9 +1,19 @@
-﻿{
+{
   "startupMapId": "nav2d_playground",
+  "Constants": {
+    "IntValues": {
+      "navigation2d_playground_agents_per_team": 5000
+    }
+  },
   "Navigation2D": {
     "Enabled": true,
     "MaxAgents": 50000,
     "FlowIterationsPerTick": 8192,
+    "Spatial": {
+      "UpdateMode": "Adaptive",
+      "RebuildCellMigrationsThreshold": 128,
+      "RebuildAccumulatedCellMigrationsThreshold": 1024
+    },
     "Steering": {
       "Mode": "Hybrid",
       "QueryBudget": {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Ludots.Core.Config;
 using Ludots.Core.Modding;
@@ -21,11 +21,16 @@ namespace Ludots.Tests.Navigation2D
             Directory.CreateDirectory(Path.Combine(core, "Configs"));
             Directory.CreateDirectory(Path.Combine(mod, "assets"));
 
-            File.WriteAllText(Path.Combine(core, "Configs", "game.json"), "{ \"Navigation2D\": { \"Enabled\": true } }");
+            File.WriteAllText(Path.Combine(core, "Configs", "game.json"), @"{ ""Navigation2D"": { ""Enabled"": true } }");
             File.WriteAllText(Path.Combine(mod, "assets", "game.json"), @"{
   ""Navigation2D"": {
     ""Enabled"": true,
     ""MaxAgents"": 4096,
+    ""Spatial"": {
+      ""UpdateMode"": ""Adaptive"",
+      ""RebuildCellMigrationsThreshold"": 64,
+      ""RebuildAccumulatedCellMigrationsThreshold"": 256
+    },
     ""Steering"": {
       ""Mode"": ""Hybrid"",
       ""QueryBudget"": {
@@ -67,6 +72,9 @@ namespace Ludots.Tests.Navigation2D
             using var runtime = new Navigation2DRuntime(gameConfig.Navigation2D, gridCellSizeCm: 100, loadedChunks: null);
 
             Assert.That(gameConfig.Navigation2D.MaxAgents, Is.EqualTo(4096));
+            Assert.That(gameConfig.Navigation2D.Spatial.UpdateMode, Is.EqualTo(Navigation2DSpatialUpdateMode.Adaptive));
+            Assert.That(gameConfig.Navigation2D.Spatial.RebuildCellMigrationsThreshold, Is.EqualTo(64));
+            Assert.That(gameConfig.Navigation2D.Spatial.RebuildAccumulatedCellMigrationsThreshold, Is.EqualTo(256));
             Assert.That(gameConfig.Navigation2D.Steering.Mode, Is.EqualTo(Navigation2DAvoidanceMode.Hybrid));
             Assert.That(gameConfig.Navigation2D.Steering.QueryBudget.MaxNeighborsPerAgent, Is.EqualTo(12));
             Assert.That(gameConfig.Navigation2D.Steering.QueryBudget.MaxCandidateChecksPerAgent, Is.EqualTo(48));
@@ -74,6 +82,9 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(gameConfig.Navigation2D.Steering.Hybrid.DenseNeighborThreshold, Is.EqualTo(5));
             Assert.That(gameConfig.Navigation2D.Steering.Hybrid.MinOpposingNeighborsForOrca, Is.EqualTo(2));
             Assert.That(gameConfig.Navigation2D.Steering.SmartStop.MaxNeighbors, Is.EqualTo(6));
+            Assert.That(runtime.Config.Spatial.UpdateMode, Is.EqualTo(Navigation2DSpatialUpdateMode.Adaptive));
+            Assert.That(runtime.Config.Spatial.RebuildCellMigrationsThreshold, Is.EqualTo(64));
+            Assert.That(runtime.Config.Spatial.RebuildAccumulatedCellMigrationsThreshold, Is.EqualTo(256));
             Assert.That(runtime.Config.Steering.Mode, Is.EqualTo(Navigation2DAvoidanceMode.Hybrid));
         }
     }

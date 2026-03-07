@@ -202,6 +202,11 @@ namespace Navigation2DPlaygroundMod.Systems
             bool flowDebug = false;
             int flowMode = 0;
             int flowIters = 0;
+            string spatialMode = "Unavailable";
+            long spatialRebuilds = 0;
+            long spatialIncrementalUpdates = 0;
+            long spatialDirtyAgents = 0;
+            long spatialCellMigrations = 0;
             if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.Navigation2DRuntime.Name, out var navObj) &&
                 navObj is Navigation2DRuntime navRuntime)
             {
@@ -209,6 +214,11 @@ namespace Navigation2DPlaygroundMod.Systems
                 flowDebug = navRuntime.FlowDebugEnabled;
                 flowMode = navRuntime.FlowDebugMode;
                 flowIters = navRuntime.FlowIterationsPerTick;
+                spatialMode = navRuntime.Config.Spatial.UpdateMode.ToString();
+                spatialRebuilds = navRuntime.CellMap.InstrumentedFullRebuilds;
+                spatialIncrementalUpdates = navRuntime.CellMap.InstrumentedIncrementalUpdates;
+                spatialDirtyAgents = navRuntime.CellMap.InstrumentedDirtyAgents;
+                spatialCellMigrations = navRuntime.CellMap.InstrumentedCellMigrations;
             }
 
             int agentsPerTeam = 0;
@@ -221,7 +231,7 @@ namespace Navigation2DPlaygroundMod.Systems
             int x = 16;
             int y = 180;
             int w = 500;
-            int h = 150;
+            int h = 170;
             var bg = new Vector4(0.04f, 0.05f, 0.08f, 0.68f);
             var border = new Vector4(0.35f, 0.75f, 1f, 0.5f);
             var title = new Vector4(0.9f, 0.95f, 1f, 1f);
@@ -232,9 +242,11 @@ namespace Navigation2DPlaygroundMod.Systems
             overlay.AddText(x + 10, y + 8, "Navigation2D Playground", 16, title);
             overlay.AddText(x + 10, y + 30, $"FlowEnabled={flowEnabled}  FlowDebug={flowDebug}  Mode={flowMode}  Iter={flowIters}", 14, text);
             overlay.AddText(x + 10, y + 50, $"Agents/team={agentsPerTeam}  Live={liveTotal}  FlowDbgLines={flowDbgLines}", 14, text);
-            overlay.AddText(x + 10, y + 76, "G ToggleFlow | H ToggleDebug | J CycleMode", 13, hint);
-            overlay.AddText(x + 10, y + 94, "U +Iter | Y -Iter | K +500/team | L -500/team", 13, hint);
-            overlay.AddText(x + 10, y + 112, "R ResetScenario", 13, hint);
+            overlay.AddText(x + 10, y + 70, $"Spatial={spatialMode}  Rebuilds={spatialRebuilds}  Incremental={spatialIncrementalUpdates}", 14, text);
+            overlay.AddText(x + 10, y + 90, $"DirtyTotal={spatialDirtyAgents}  CellMigrations={spatialCellMigrations}", 14, text);
+            overlay.AddText(x + 10, y + 116, "G ToggleFlow | H ToggleDebug | J CycleMode", 13, hint);
+            overlay.AddText(x + 10, y + 134, "U +Iter | Y -Iter | K +500/team | L -500/team", 13, hint);
+            overlay.AddText(x + 10, y + 152, "R ResetScenario", 13, hint);
         }
     }
 }
