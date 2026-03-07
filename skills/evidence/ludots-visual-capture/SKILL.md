@@ -25,13 +25,25 @@ Use this skill to produce deterministic screenshots and recordings.
 3. Always write an evidence manifest.
 - Every capture run must produce a machine-readable manifest.
 
+4. Never wait without bound.
+- Run preflight before launching capture.
+- If the target process or window does not become capturable within the startup budget, stop.
+- If capture makes no observable progress within the completion budget, stop.
+- Default automatic retries are capped at 1 unless the user explicitly asks for more.
+
 ## Workflow
 
 1. Consume `visual.capture.requested`.
-2. Run the requested scenario and capture screenshots or video.
-3. Store artifacts under `artifacts/evidence/<subject>/capture/`.
-4. Write `artifacts/evidence/<subject>/manifest.json`.
-5. Emit `visual.capture.completed` or `visual.capture.blocked`.
+2. Run preflight:
+- verify launch command, target config, output directory, and capture tool.
+3. Wait for capturable target within startup budget.
+4. Capture screenshots or video into `artifacts/evidence/<subject>/capture/`.
+5. Write `artifacts/evidence/<subject>/manifest.json`.
+6. Emit `visual.capture.completed`.
+7. If startup fails, prerequisites are missing, or no progress is observed in budget:
+- write a blocked packet with `execution` and `blocker`
+- emit `visual.capture.blocked`
+- stop instead of looping
 
 ## Output Requirements
 
@@ -39,3 +51,4 @@ Provide:
 - evidence manifest
 - raw screenshot and/or video paths
 - capture notes with tool and scenario
+- blocked packet when capture cannot start or cannot progress

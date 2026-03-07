@@ -23,18 +23,23 @@ Use this skill to fail fast on missing evidence and incomplete collaboration pac
 3. Report exact missing paths.
 - Every failure must identify the missing or invalid packet or artifact.
 
+4. Never wait forever for evidence.
+- Blocked packets are explicit non-pass states.
+- Missing successor packets beyond declared budget are failures, not reasons to keep polling.
+
 ## Workflow
 
 1. Gather subject packet set.
 2. Verify required hook packets and linked artifact paths.
-3. Write result:
+3. Treat `*.blocked` packets as explicit blockers that must be surfaced in the result.
+4. Write result:
 - `artifacts/ci-audit/<subject>/result.md`
 - `artifacts/ci-audit/<subject>/result.json`
-4. Emit `ci.audit.completed`.
+5. Emit `ci.audit.completed`.
 
 ## Output Requirements
 
 Provide:
 - pass/fail gate summary
-- exact missing packets or artifacts
+- exact missing packets, blocked packets, or artifacts
 - linked reviewer-ready evidence map

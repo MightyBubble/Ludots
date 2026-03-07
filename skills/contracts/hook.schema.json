@@ -111,6 +111,73 @@
       },
       "default": []
     },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "stage": {
+          "type": "string"
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "startup_timeout_sec": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "completion_timeout_sec": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "poll_interval_ms": {
+          "type": "integer",
+          "minimum": 50
+        },
+        "last_progress_at_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "observed_progress": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "blocker": {
+      "type": "object",
+      "required": [
+        "stage",
+        "code",
+        "summary",
+        "retryable"
+      ],
+      "properties": {
+        "stage": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "suggested_action": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
     "artifacts": {
       "type": "array",
       "items": {
@@ -153,5 +220,27 @@
       "additionalProperties": false
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "blocked",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "blocker"
+        ]
+      }
+    }
+  ],
   "additionalProperties": false
 }

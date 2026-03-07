@@ -23,13 +23,24 @@ Use this skill to convert recordings into review-friendly frame artifacts.
 3. Keep review artifacts compact.
 - Produce both raw frames and a contact sheet when practical.
 
+4. Never loop on missing prerequisites.
+- If the manifest contains no usable video, if `ffmpeg` is missing, or if extraction yields no reviewable frames within budget, stop.
+- Emit `visual.frames.blocked` instead of retrying forever.
+
 ## Workflow
 
 1. Consume `visual.capture.completed`.
-2. Identify relevant recording files from the evidence manifest.
+2. Run preflight:
+- verify evidence manifest exists
+- verify at least one recording artifact is present
+- verify extraction tool is available
 3. Extract keyframes into `artifacts/evidence/<subject>/frames/`.
 4. Produce contact sheet and update manifest.
 5. Emit `visual.frames.ready`.
+6. If prerequisites fail or extraction cannot finish within budget:
+- write a blocked packet with `execution` and `blocker`
+- emit `visual.frames.blocked`
+- stop instead of polling forever
 
 ## Output Requirements
 
@@ -37,3 +48,4 @@ Provide:
 - keyframe image set
 - contact sheet
 - updated evidence manifest or companion note
+- blocked packet when frame extraction cannot proceed

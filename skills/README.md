@@ -8,6 +8,7 @@
 - leaf skill 必须保持统一结构：`SKILL.md`、`agents/openai.yaml`、`agents/claude.md`、按需 `references/`、`scripts/`、`assets/`。
 - hook 采用显式文件契约，不允许“偷偷调用另一个 agent”。跨 agent 协作只能通过 packet + artifact + registry 完成。
 - 视觉证据是一等公民：截图、录屏、关键帧、联系图、审阅结果都必须可追溯。
+- 所有长时运行 skill 都必须有边界：前置检查、启动超时、完成超时、最大重试次数、blocked 退出。
 - 不做兼容层；旧的本地 skill 副本视为同步目标，不再是规范来源。
 
 ## 1 分层结构
@@ -47,7 +48,9 @@
 - `visual.capture.completed`
 - `visual.capture.blocked`
 - `visual.frames.ready`
+- `visual.frames.blocked`
 - `visual.review.completed`
+- `visual.review.blocked`
 - `handoff.ready`
 - `pr.packet.ready`
 - `ci.audit.completed`
@@ -61,6 +64,8 @@
 5. `ludots-cloud-handoff` 组织上下文并发出 `handoff.ready`
 6. `ludots-pr-issue-orchestration` 产出 PR / Issue 包并发出 `pr.packet.ready`
 7. `ludots-ci-audit-gate` 校验证据完整性并发出 `ci.audit.completed`
+
+任一阶段若未在预算内启动、无进展、或前置条件不满足，必须发出对应 `*.blocked` packet，而不是继续等待。
 
 `ludots-hook-orchestrator` 负责按 `skills/registry.json` 路由和校验，不直接替代其他 skill 的职责。
 
@@ -86,6 +91,13 @@
 - `artifacts/handoffs/`：handoff 包
 - `artifacts/pr/`：Issue / PR packet
 - `artifacts/ci-audit/`：CI gate 结果
+
+blocked 退出时，hook packet 至少应记录：
+
+- timeout / retry 预算
+- 当前阶段
+- 最后一次观测到的进展
+- blocker code / summary / retryable
 
 具体 JSON 结构见：
 
