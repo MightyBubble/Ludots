@@ -1,6 +1,6 @@
-# 启动顺序与入口点
+﻿# 启动顺序与入口点
 
-本篇说明 Ludots 从进程启动到进入第一张地图的完整顺序：入口点在哪里、`game.json` 在启动阶段承担什么职责、引擎初始化时会做哪些关键步骤。
+本篇说明 Ludots 从进程启动到进入第一张地图的完整顺序：入口点在哪里、`game.json` 在启动阶段承担什么职责、引擎初始化时会做哪些关键步骤，以及 Raylib / Web 两条主线入口如何保持一致。
 
 ## 1 入口点一览
 
@@ -11,18 +11,38 @@ Raylib App 的入口在 `src/Apps/Raylib/Ludots.App.Raylib/Program.cs`。
 职责：
 
 *   解析命令行参数：首个参数作为 `game.json` 路径；未提供则默认使用 `game.json`。
-*   创建平台 Host（RaylibGameHost）并进入运行循环。
+*   创建平台 Host（`RaylibGameHost`）并进入运行循环。
 
-### 1.2 Raylib Host 与 Compose
+### 1.2 Web App
 
-Raylib Host 在 `src/Adapters/Raylib/Ludots.Adapter.Raylib`。
+Web App 的入口在 `src/Apps/Web/Ludots.App.Web/Program.cs`。
+
+职责：
+
+*   解析命令行参数：首个参数作为 `game.json` 路径；未提供则默认使用 `game.json`。
+*   创建平台 Host（`WebGameHost`）并在后台驱动 `WebHostLoop`。
+*   暴露 `/ws` WebSocket 入口，供浏览器客户端上传输入、接收表现帧。
+*   如果存在 `src/Client/Web/dist` 构建产物，则将其作为静态前端资源提供。
+
+### 1.3 Raylib Host 与 Compose
+
+Raylib Host 位于 `src/Adapters/Raylib/Ludots.Adapter.Raylib`。
 
 职责：
 
 *   Compose：把引擎、配置、输入、UI 等依赖组装好并注入 `engine.GlobalContext`。
 *   Loop：每帧驱动 `engine.Tick(dt)`，并在启动阶段调用 `engine.Start()` 与 `engine.LoadMap(startupMapId)`。
 
-### 1.3 ModLauncher CLI
+### 1.4 Web Host 与 Compose
+
+Web Host 位于 `src/Adapters/Web/Ludots.Adapter.Web`。
+
+职责：
+
+*   Compose：把引擎、配置、输入、UI、视口、相机、传输层等依赖组装好并注入 `engine.GlobalContext`。
+*   Loop：每帧驱动 `engine.Tick(dt)`，提取 Core 产出的表现缓冲，并通过 `WebTransportLayer` 广播给浏览器客户端。
+
+### 1.5 ModLauncher CLI
 
 ModLauncher 既可以以 GUI 方式运行，也可以以 `cli` 模式运行。
 
@@ -33,7 +53,7 @@ ModLauncher 既可以以 GUI 方式运行，也可以以 `cli` 模式运行。
 
 ## 2 app/game.json 的职责边界
 
-App 旁边的 `game.json` 在启动流程里只承担"引导"职责：
+App 旁边的 `game.json` 在启动流程里只承担“引导”职责：
 
 *   仅包含 `ModPaths`，用于告诉引擎要加载哪些 Mod 目录。
 *   不承载实际运行配置。实际运行配置来自 ConfigPipeline 合并（Core + Mods）。
@@ -44,36 +64,41 @@ App 旁边的 `game.json` 在启动流程里只承担"引导"职责：
 
 以 `GameBootstrapper.InitializeFromBaseDirectory` 为主线：
 
-1.  找到 `assets` 根目录（从 baseDirectory 往上寻找，直到发现 `assets/`）。
-2.  读取 app/game.json，仅解析 `ModPaths` 并校验每个目录包含 `mod.json`。
+1.  找到 `assets` 根目录（从 `baseDirectory` 往上寻找，直到发现 `assets/`）。
+2.  读取 app `game.json`，仅解析 `ModPaths` 并校验每个目录包含 `mod.json`。
 3.  创建 `GameEngine` 并调用 `InitializeWithConfigPipeline(modPaths, assetsRoot)`。
 
 在 `InitializeWithConfigPipeline` 内部，关键步骤是：
 
 1.  初始化 VFS 并挂载 Core：`VFS.Mount("Core", assetsRoot)`。
-2.  初始化基础设施：FunctionRegistry、TriggerManager、SystemFactoryRegistry、TriggerDecoratorRegistry、ModLoader、MapManager。
+2.  初始化基础设施：`FunctionRegistry`、`TriggerManager`、`SystemFactoryRegistry`、`TriggerDecoratorRegistry`、`ModLoader`、`MapManager`。
 3.  加载 Mods（按依赖顺序）：`ModLoader.LoadMods(modPaths)`。
     *   每个 Mod 的 `OnLoad(IModContext)` 通过 `OnEvent()`、`SystemFactoryRegistry`、`TriggerDecorators` 等 API 注册扩展。
-4.  创建 ConfigPipeline，并合并得到最终 GameConfig：`MergedConfig = ConfigPipeline.MergeGameConfig()`。
-5.  初始化 ECS World、空间服务与 GameSession。
+4.  创建 `ConfigPipeline`，并合并得到最终 `GameConfig`：`MergedConfig = ConfigPipeline.MergeGameConfig()`。
+5.  初始化 ECS World、空间服务与 `GameSession`。
 6.  初始化核心系统组与表现系统组，并把关键服务写入 `GlobalContext`。
 7.  注册必要的内建 Trigger（例如配置热重载）。
 
 ## 4 从启动到进入第一张地图
 
-RaylibHostLoop 的启动顺序是：
+Raylib 与 Web 的 HostLoop 在启动语义上保持一致：
 
 1.  `engine.Start()`：触发 `GameStart` 事件。
-    *   EventHandler 按注册顺序执行（Mod 的 GameStart 回调：能力注册、团队关系等）
-    *   全局 Trigger 按 Priority 升序执行
-2.  `engine.LoadMap(config.StartupMapId)`：添加式加载 StartupMapId 指定的地图。
-    *   创建 MapSession + Boards
-    *   加载地形/导航/实体
-    *   实例化 Map Trigger → 应用 TriggerDecorators → 注册
-    *   `FireMapEvent(mapId, MapLoaded, ctx)` — EventHandler + Map-scoped Trigger 执行
+    *   `EventHandler` 按注册顺序执行（Mod 的 `GameStart` 回调：能力注册、团队关系等）
+    *   全局 Trigger 按 `Priority` 升序执行
+2.  `engine.LoadMap(config.StartupMapId)`：添加式加载 `StartupMapId` 指定的地图。
+    *   创建 `MapSession` + Boards
+    *   加载地形 / 导航 / 实体
+    *   实例化 Map Trigger → 应用 `TriggerDecorators` → 注册
+    *   `FireMapEvent(mapId, MapLoaded, ctx)` — `EventHandler` + Map-scoped Trigger 执行
 3.  进入主循环：每帧调用 `engine.Tick(platformDeltaTime)`。
 
-其中 `engine.Tick` 会先推进模拟（由 Pacemaker 决定是否推进 FixedStep），再推进表现循环（每帧都会执行）。
+Web 与 Raylib 的差异只在平台职责：
+
+*   Raylib HostLoop 直接消费表现缓冲并在本地窗口绘制。
+*   Web HostLoop 提取表现缓冲，编码为帧，通过 `/ws` 下发给 `src/Client/Web` 浏览器客户端渲染。
+
+其中 `engine.Tick` 会先推进模拟（由 `Pacemaker` 决定是否推进 `FixedStep`），再推进表现循环（每帧都会执行）。
 
 ## 5 完整执行时序
 
@@ -83,10 +108,10 @@ RaylibHostLoop 的启动顺序是：
    FOR EACH mod:
      mod.OnLoad(context):
        ├─ context.OnEvent(GameStart, handler)       ← 能力/团队注册
-       ├─ context.OnEvent(MapLoaded, handler)        ← Map 事件回调
-       ├─ context.SystemFactoryRegistry.Register()   ← System 工厂
-       ├─ context.TriggerDecorators.Register()       ← Trigger 修饰
-       └─ context.FunctionRegistry / VFS / ...       ← 其他扩展
+       ├─ context.OnEvent(MapLoaded, handler)       ← Map 事件回调
+       ├─ context.SystemFactoryRegistry.Register()  ← System 工厂
+       ├─ context.TriggerDecorators.Register()      ← Trigger 修饰
+       └─ context.FunctionRegistry / VFS / ...      ← 其他扩展
 
 === GAME START ===
 2. GameEngine.Start()
@@ -98,7 +123,7 @@ RaylibHostLoop 的启动顺序是：
    ├─ MapManager.LoadMap → 合并 MapConfig
    ├─ CreateSession + Boards
    ├─ PushFocused → 旧 focused 变 Suspended + SuspendedTag
-   ├─ 加载空间/地形/导航/实体
+   ├─ 加载空间 / 地形 / 导航 / 实体
    ├─ 实例化 Map Trigger → ApplyDecorators → RegisterMapTriggers
    └─ FireMapEvent(mapId, MapLoaded, ctx)
        ├─ EventHandler 执行
@@ -111,6 +136,20 @@ RaylibHostLoop 的启动顺序是：
    ├─ MapSession.Cleanup (按 MapId 过滤销毁)
    └─ 恢复外层 Map → Active + FireMapEvent(MapResumed)
 ```
+
+## 6 Web 启动补充
+
+Web 主线运行依赖两部分：
+
+1.  服务端：`src/Apps/Web/Ludots.App.Web`
+2.  浏览器客户端构建产物：`src/Client/Web/dist`
+
+典型本地运行顺序：
+
+1.  `npm --prefix src/Client/Web run build`
+2.  `dotnet run --project src/Apps/Web/Ludots.App.Web/Ludots.App.Web.csproj`
+
+不要再使用旧的 `src/Platforms/Web` 入口；该平行实现不是当前主线运行栈。
 
 相关文档：
 
