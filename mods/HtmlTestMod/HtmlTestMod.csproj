@@ -8,8 +8,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Ludots.Core.csproj">
-        <Private>false</Private>
+      <Private>false</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj" />
+    <ProjectReference Include="..\..\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj" />
   </ItemGroup>
 
 </Project>

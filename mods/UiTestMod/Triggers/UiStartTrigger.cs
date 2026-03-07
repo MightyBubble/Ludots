@@ -1,6 +1,7 @@
 using Ludots.Core.Scripting;
-using Ludots.Core.Commands;
-using Ludots.Core.Engine;
+using Ludots.UI;
+using Ludots.UI.Compose;
+using Ludots.UI.Runtime;
 using UiTestMod.Maps;
 using System.Threading.Tasks;
 
@@ -14,87 +15,44 @@ namespace UiTestMod.Triggers
             AddCondition(ctx => ctx.IsMap<UiTestMap>());
         }
 
-        public override async Task ExecuteAsync(ScriptContext context)
+        public override Task ExecuteAsync(ScriptContext context)
         {
-            System.Console.WriteLine("[UiStartTrigger] Executing...");
-            var engine = context.GetEngine();
-            if (engine == null) 
+            UIRoot? uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
+            if (uiRoot == null)
             {
-                System.Console.WriteLine("[UiStartTrigger] Engine not found!");
-                return;
+                return Task.CompletedTask;
             }
 
-            string html = @"
-                    <div class='container'>
-                        <div class='header'>
-                            <div class='logo'>LUDOTS UI TEST</div>
-                            <div class='nav'>
-                                <div class='nav-item'>Home</div>
-                                <div class='nav-item'>Game</div>
-                            </div>
-                        </div>
-                        <div class='content'>
-                            <div class='card'>
-                                <div class='card-title'>Mod Loaded</div>
-                                <div class='card-body'>UiTestMod is active</div>
-                            </div>
-                        </div>
-                    </div>
-                ";
+            UiElementBuilder root = Ui.Column(
+                    Ui.Row(
+                        Ui.Text("LUDOTS UI TEST").FontSize(30).Bold().Color("#00FF88"),
+                        Ui.Text("Home / Game").FontSize(20).Color("#FFFFFF"))
+                        .Justify(UiJustifyContent.SpaceBetween)
+                        .Align(UiAlignItems.Center)
+                        .Padding(20)
+                        .Background("#323232")
+                        .Height(80),
+                    Ui.Row(
+                        Ui.Card(
+                            Ui.Text("Mod Loaded").FontSize(24).Bold().Color("#FFD700"),
+                            Ui.Text("UiTestMod is active").FontSize(18).Color("#FFFFFF"))
+                            .Width(300)
+                            .Height(200)
+                            .Justify(UiJustifyContent.Center)
+                            .Align(UiAlignItems.Center)
+                            .Background(new SkiaSharp.SKColor(255, 255, 255, 20)))
+                        .Justify(UiJustifyContent.Center)
+                        .Align(UiAlignItems.Center)
+                        .FlexGrow(1)
+                        .Padding(50))
+                .Width(1280)
+                .Height(720)
+                .Background(new SkiaSharp.SKColor(0, 0, 0, 100));
 
-            string css = @"
-                    .container {
-                        display: flex;
-                        flex-direction: column;
-                        width: 1280px;
-                        height: 720px;
-                        background-color: rgba(0, 0, 0, 100);
-                    }
-                    .header {
-                        height: 80px;
-                        display: flex;
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: center;
-                        background-color: rgba(50, 50, 50, 200);
-                        padding: 20px;
-                    }
-                    .logo {
-                        font-size: 30px;
-                        color: #00FF00;
-                        margin-left: 20px;
-                    }
-                    .nav { display: flex; flex-direction: row; }
-                    .nav-item { margin-left: 20px; color: white; font-size: 20px; }
-                    .content {
-                        flex-grow: 1;
-                        display: flex;
-                        flex-direction: row;
-                        justify-content: center;
-                        align-items: center;
-                        padding: 50px;
-                    }
-                    .card {
-                        width: 300px;
-                        height: 200px;
-                        background-color: rgba(255, 255, 255, 20);
-                        margin: 20px;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: center;
-                        padding: 10px;
-                    }
-                    .card-title { font-size: 24px; color: #FFD700; margin-bottom: 10px; }
-                    .card-body { font-size: 18px; color: white; }
-                ";
-
-            var cmd = new ShowUiCommand 
-            { 
-                Html = html,
-                Css = css
-            };
-            await cmd.ExecuteAsync(context);
+            UiScene scene = UiSceneComposer.Compose(root);
+            uiRoot.MountScene(scene);
+            uiRoot.IsDirty = true;
+            return Task.CompletedTask;
         }
     }
 }

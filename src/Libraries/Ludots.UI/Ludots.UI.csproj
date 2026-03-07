@@ -10,4 +10,10 @@
     <PackageReference Include="SkiaSharp" Version="3.119.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Ludots.UI.HtmlEngine\External\FlexLayoutSharp\src\**\*.cs"
+             Exclude="..\Ludots.UI.HtmlEngine\External\FlexLayoutSharp\src\TestFlexLayoutSharp\**\*.cs"
+             LinkBase="External\FlexLayoutSharp" />
+  </ItemGroup>
+
 </Project>

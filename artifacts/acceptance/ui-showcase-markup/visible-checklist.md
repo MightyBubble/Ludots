@@ -1,0 +1,3 @@
+- [x] markup-initial -> screens/markup-initial.png
+- [x] markup-counter -> screens/markup-counter.png
+- [x] markup-modal -> screens/markup-modal.png

@@ -1,0 +1,5 @@
+{"Step":"skin-classic","Kind":"capture","Message":"Skin showcase initial theme hash=97E729683ACEBC49.","Artifact":"screens/skin-classic.png"}
+{"Step":"skin-theme-scifi","Kind":"click","Message":"Switch to Sci-Fi HUD skin pack.","Artifact":""}
+{"Step":"skin-scifi","Kind":"capture","Message":"Skin showcase Sci-Fi hash=97E729683ACEBC49.","Artifact":"screens/skin-scifi.png"}
+{"Step":"skin-theme-paper","Kind":"click","Message":"Switch to Paper skin pack.","Artifact":""}
+{"Step":"skin-paper","Kind":"capture","Message":"Skin showcase Paper hash=97E729683ACEBC49.","Artifact":"screens/skin-paper.png"}

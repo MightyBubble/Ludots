@@ -1,0 +1,3 @@
+- [x] parity-compose -> screens/parity-compose.png
+- [x] parity-reactive -> screens/parity-reactive.png
+- [x] parity-markup -> screens/parity-markup.png

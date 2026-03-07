@@ -1,0 +1,3 @@
+{"Step":"parity-compose","Kind":"capture","Message":"Compose baseline for style parity.","Artifact":"screens/parity-compose.png"}
+{"Step":"parity-reactive","Kind":"capture","Message":"Reactive baseline for style parity.","Artifact":"screens/parity-reactive.png"}
+{"Step":"parity-markup","Kind":"capture","Message":"Markup baseline for style parity.","Artifact":"screens/parity-markup.png"}

@@ -1,0 +1,8 @@
+{
+  "name": "UiReactiveShowcaseMod",
+  "version": "1.0.0",
+  "description": "Dedicated UI showcase mod.",
+  "main": "bin/net8.0/UiReactiveShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {}
+}

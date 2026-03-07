@@ -1,68 +1,70 @@
-using Ludots.Core.Commands;
 using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
+using Ludots.UI;
+using Ludots.UI.HtmlEngine.Markup;
 using System.Threading.Tasks;
 
 namespace HtmlTestMod.Triggers
 {
     public class HtmlStartTrigger : Trigger
     {
+        private static readonly UiMarkupLoader Loader = new();
+
         public HtmlStartTrigger()
         {
             EventKey = GameEvents.MapLoaded;
-            // Should check for HtmlTestMap? But let's assume it runs on any map for now or stick to original behavior.
-            // Original didn't check for specific map, just MapLoaded. 
-            // We can keep it generic or strict. Let's keep it generic for now as I didn't see HtmlTestMap created.
         }
 
-        public override async Task ExecuteAsync(ScriptContext context)
+        public override Task ExecuteAsync(ScriptContext context)
         {
-            var engine = context.GetEngine();
-            if (engine == null) return;
+            UIRoot? uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
+            if (uiRoot == null)
+            {
+                return Task.CompletedTask;
+            }
 
-            var html = @"
-                <div class='root'>
-                  <div class='title'>HTML TEST MOD</div>
-                  <div class='subtitle'>If you can read this, HTML/CSS UI is working.</div>
+            string html = @"
+                <div id='root' class='root'>
+                  <h1 class='title'>HTML TEST MOD</h1>
+                  <p class='subtitle'>Markup + C# runtime is active.</p>
                   <div class='row'>
                     <div class='pill'>Mod: HtmlTestMod</div>
-                    <div class='pill'>Event: MapLoaded</div>
+                    <div class='pill'>Engine: Native DOM</div>
+                    <button id='ok' class='pill primary'>OK</button>
                   </div>
                 </div>
             ";
 
-            var css = @"
-                .root {
+            string css = @"
+                #root {
                   width: 1280px;
                   height: 720px;
                   display: flex;
                   flex-direction: column;
                   justify-content: center;
                   align-items: center;
-                  background-color: rgba(0, 0, 0, 140);
+                  gap: 14px;
+                  background-color: rgba(12, 18, 30, 220);
                 }
-                .title {
-                  font-size: 54px;
-                  color: #ffffff;
-                  margin-bottom: 10px;
-                }
-                .subtitle {
-                  font-size: 20px;
-                  color: #cccccc;
-                  margin-bottom: 24px;
-                }
+                .title { font-size: 54px; color: #ffffff; }
+                .subtitle { font-size: 22px; color: #c8d3e6; }
                 .row { display: flex; flex-direction: row; gap: 12px; }
                 .pill {
-                  padding: 10px 14px;
+                  padding: 12px 16px;
                   border-radius: 16px;
-                  background-color: rgba(255, 255, 255, 28);
-                  color: #00ff88;
+                  background-color: rgba(255,255,255,28);
+                  color: #7fffd4;
                   font-size: 16px;
+                }
+                .primary {
+                  background-color: #3a79dc;
+                  color: #ffffff;
                 }
             ";
 
-            var cmd = new ShowUiCommand { Html = html, Css = css };
-            await cmd.ExecuteAsync(context);
+            uiRoot.MountScene(Loader.LoadScene(html, css));
+            uiRoot.IsDirty = true;
+            return Task.CompletedTask;
         }
     }
 }

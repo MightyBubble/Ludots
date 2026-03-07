@@ -1,0 +1,3 @@
+- [x] skin-classic -> screens/skin-classic.png
+- [x] skin-scifi -> screens/skin-scifi.png
+- [x] skin-paper -> screens/skin-paper.png

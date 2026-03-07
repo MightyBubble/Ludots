@@ -1,0 +1,5 @@
+{"Step":"compose-initial","Kind":"capture","Message":"Compose showcase renders Overview / Controls / Forms / Collections / Overlays / Styles.","Artifact":"screens/compose-initial.png"}
+{"Step":"compose-modal-toggle","Kind":"click","Message":"Compose opens modal overlay.","Artifact":""}
+{"Step":"compose-modal","Kind":"capture","Message":"Compose overlay state becomes visible.","Artifact":"screens/compose-modal.png"}
+{"Step":"compose-item-2","Kind":"click","Message":"Compose switches selected collection item.","Artifact":""}
+{"Step":"compose-selection","Kind":"capture","Message":"Compose collection selection updates visible state.","Artifact":"screens/compose-selection.png"}

@@ -1,0 +1,5 @@
+{"Step":"markup-initial","Kind":"capture","Message":"Markup showcase compiles HTML/CSS into native DOM and binds C# code-behind.","Artifact":"screens/markup-initial.png"}
+{"Step":"markup-inc","Kind":"click","Message":"Markup code-behind increments counter.","Artifact":""}
+{"Step":"markup-counter","Kind":"capture","Message":"Markup counter rerender is visible after C# action.","Artifact":"screens/markup-counter.png"}
+{"Step":"markup-modal-toggle","Kind":"click","Message":"Markup opens overlay from code-behind.","Artifact":""}
+{"Step":"markup-modal","Kind":"capture","Message":"Markup overlay and diagnostics remain visible.","Artifact":"screens/markup-modal.png"}

@@ -1,0 +1,5 @@
+{"Step":"reactive-initial","Kind":"capture","Message":"Reactive showcase renders official semantic pages with stateful counter.","Artifact":"screens/reactive-initial.png"}
+{"Step":"reactive-inc","Kind":"click","Message":"Reactive counter increments via state update.","Artifact":""}
+{"Step":"reactive-counter","Kind":"capture","Message":"Reactive counter rerender is visible.","Artifact":"screens/reactive-counter.png"}
+{"Step":"reactive-modal-toggle","Kind":"click","Message":"Reactive opens modal overlay.","Artifact":""}
+{"Step":"reactive-modal","Kind":"capture","Message":"Reactive overlay state becomes visible.","Artifact":"screens/reactive-modal.png"}

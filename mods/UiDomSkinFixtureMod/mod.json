@@ -1,0 +1,8 @@
+{
+  "name": "UiDomSkinFixtureMod",
+  "version": "1.0.0",
+  "description": "Dedicated UI showcase mod.",
+  "main": "bin/net8.0/UiDomSkinFixtureMod.dll",
+  "priority": 0,
+  "dependencies": {}
+}
