@@ -1,0 +1,10 @@
+flowchart TD
+    A[Configure explicit FlowStreaming world/window budgets] --> B[Load corridor + far sparse tiles]
+    B --> C[Apply flow goal]
+    C --> D[Collect demand tile]
+    D --> E[Clamp activation window to explicit bounds]
+    E --> F[Activate/seed selected tiles]
+    F --> G[Step frontier propagation]
+    G --> H[Move demand outside world budget]
+    H --> I[Observe world clamp + inactive out-of-bounds tile]
+    I --> J[Write battle-report + trace + path]

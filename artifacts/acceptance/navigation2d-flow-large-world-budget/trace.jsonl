@@ -1,0 +1,2 @@
+{"tick":1,"activeTiles":5,"windowWidth":6,"windowHeight":3,"checks":18,"selected":5,"newTiles":5,"evicted":0,"incremental":0,"goalSeeds":1,"frontierProcessed":23170,"rebuilds":1,"budgetClamp":false,"worldClamp":false,"observedTile":20,"observedTileActive":false}
+{"tick":2,"activeTiles":5,"windowWidth":6,"windowHeight":3,"checks":18,"selected":5,"newTiles":0,"evicted":0,"incremental":0,"goalSeeds":0,"frontierProcessed":0,"rebuilds":1,"budgetClamp":false,"worldClamp":true,"observedTile":6,"observedTileActive":false}

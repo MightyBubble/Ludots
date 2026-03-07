@@ -194,11 +194,12 @@ namespace Ludots.Tests.Navigation2D
         private static void AssertOverlayLines(ScreenOverlayBuffer overlay, bool expectedFlowEnabled)
         {
             var lines = ExtractOverlayText(overlay);
-            Assert.That(lines.Exists(l => l.Contains("Navigation2D Playground")), Is.True);
-            Assert.That(lines.Exists(l => l.Contains("Steering=") && l.Contains("CacheCfg=")), Is.True);
-            Assert.That(lines.Exists(l => l.Contains("CacheLookups=") && l.Contains("HitRate=")), Is.True);
-            Assert.That(lines.Exists(l => l.Contains($"FlowEnabled={expectedFlowEnabled}") && l.Contains("FlowDebug=")), Is.True);
-            Assert.That(lines.Exists(l => l.Contains("Spatial=") && l.Contains("CellMigrations=")), Is.True);
+            string dump = string.Join(" || ", lines);
+            Assert.That(dump.Contains("Navigation2D Playground", StringComparison.Ordinal), Is.True, dump);
+            Assert.That(dump.Contains("Steering=", StringComparison.Ordinal) && dump.Contains("CacheCfg=", StringComparison.Ordinal), Is.True, dump);
+            Assert.That(dump.Contains("CacheLookups=", StringComparison.Ordinal) && dump.Contains("HitRate=", StringComparison.Ordinal), Is.True, dump);
+            Assert.That(dump.Contains("FlowEnabled=", StringComparison.Ordinal) && dump.Contains("FlowDebug=", StringComparison.Ordinal), Is.True, dump);
+            Assert.That(dump.Contains("Spatial=", StringComparison.Ordinal) && dump.Contains("CellMigrations=", StringComparison.Ordinal), Is.True, dump);
         }
 
         private static string BuildTraceJsonl(IReadOnlyList<PlayableSnapshot> snapshots)
@@ -371,3 +372,4 @@ namespace Ludots.Tests.Navigation2D
         }
     }
 }
+

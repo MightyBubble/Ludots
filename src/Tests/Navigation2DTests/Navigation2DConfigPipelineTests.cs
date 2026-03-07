@@ -31,7 +31,14 @@ namespace Ludots.Tests.Navigation2D
       ""ActivationRadiusTiles"": 4,
       ""MaxActiveTilesPerFlow"": 320,
       ""UnloadGraceTicks"": 10,
-      ""MaxPotentialCells"": 420
+      ""MaxPotentialCells"": 420,
+      ""MaxActivationWindowWidthTiles"": 18,
+      ""MaxActivationWindowHeightTiles"": 14,
+      ""WorldBoundsEnabled"": true,
+      ""WorldMinTileX"": -400,
+      ""WorldMinTileY"": -300,
+      ""WorldMaxTileX"": 399,
+      ""WorldMaxTileY"": 299
     },
     ""Spatial"": {
       ""UpdateMode"": ""Adaptive"",
@@ -145,10 +152,21 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(gameConfig.Navigation2D.FlowStreaming.MaxActiveTilesPerFlow, Is.EqualTo(320));
             Assert.That(gameConfig.Navigation2D.FlowStreaming.UnloadGraceTicks, Is.EqualTo(10));
             Assert.That(gameConfig.Navigation2D.FlowStreaming.MaxPotentialCells, Is.EqualTo(420f).Within(0.001f));
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.MaxActivationWindowWidthTiles, Is.EqualTo(18));
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.MaxActivationWindowHeightTiles, Is.EqualTo(14));
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.WorldBoundsEnabled, Is.True);
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.WorldMinTileX, Is.EqualTo(-400));
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.WorldMinTileY, Is.EqualTo(-300));
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.WorldMaxTileX, Is.EqualTo(399));
+            Assert.That(gameConfig.Navigation2D.FlowStreaming.WorldMaxTileY, Is.EqualTo(299));
             Assert.That(runtime.Config.Playground.DefaultAgentsPerTeam, Is.EqualTo(3200));
             Assert.That(runtime.Config.Playground.Scenarios[0].Kind, Is.EqualTo(Navigation2DPlaygroundScenarioKind.GoalQueue));
             Assert.That(runtime.Config.Spatial.UpdateMode, Is.EqualTo(Navigation2DSpatialUpdateMode.Adaptive));
             Assert.That(runtime.Config.FlowStreaming.MaxActiveTilesPerFlow, Is.EqualTo(320));
+            Assert.That(runtime.Config.FlowStreaming.MaxActivationWindowWidthTiles, Is.EqualTo(18));
+            Assert.That(runtime.Config.FlowStreaming.MaxActivationWindowHeightTiles, Is.EqualTo(14));
+            Assert.That(runtime.Config.FlowStreaming.WorldBoundsEnabled, Is.True);
+            Assert.That(runtime.Config.FlowStreaming.WorldMaxTileX, Is.EqualTo(399));
             Assert.That(runtime.Config.Steering.Mode, Is.EqualTo(Navigation2DAvoidanceMode.Hybrid));
             Assert.That(runtime.Config.Steering.TemporalCoherence.Enabled, Is.True);
             Assert.That(runtime.Config.Steering.TemporalCoherence.MaxReuseTicks, Is.EqualTo(9));

@@ -8,7 +8,14 @@
       "ActivationRadiusTiles": 2,
       "MaxActiveTilesPerFlow": 256,
       "UnloadGraceTicks": 8,
-      "MaxPotentialCells": 300
+      "MaxPotentialCells": 300,
+      "MaxActivationWindowWidthTiles": 0,
+      "MaxActivationWindowHeightTiles": 0,
+      "WorldBoundsEnabled": false,
+      "WorldMinTileX": -512,
+      "WorldMinTileY": -512,
+      "WorldMaxTileX": 511,
+      "WorldMaxTileY": 511
     },
     "Steering": {
       "Mode": "Hybrid",

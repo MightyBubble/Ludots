@@ -9,7 +9,14 @@
       "ActivationRadiusTiles": 3,
       "MaxActiveTilesPerFlow": 512,
       "UnloadGraceTicks": 12,
-      "MaxPotentialCells": 384
+      "MaxPotentialCells": 384,
+      "MaxActivationWindowWidthTiles": 96,
+      "MaxActivationWindowHeightTiles": 96,
+      "WorldBoundsEnabled": true,
+      "WorldMinTileX": -512,
+      "WorldMinTileY": -512,
+      "WorldMaxTileX": 511,
+      "WorldMaxTileY": 511
     },
     "Spatial": {
       "UpdateMode": "Adaptive",

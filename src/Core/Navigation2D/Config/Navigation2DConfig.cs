@@ -95,6 +95,13 @@ namespace Ludots.Core.Navigation2D.Config
         public int MaxActiveTilesPerFlow { get; set; } = 256;
         public int UnloadGraceTicks { get; set; } = 8;
         public float MaxPotentialCells { get; set; } = 300f;
+        public int MaxActivationWindowWidthTiles { get; set; } = 0;
+        public int MaxActivationWindowHeightTiles { get; set; } = 0;
+        public bool WorldBoundsEnabled { get; set; } = false;
+        public int WorldMinTileX { get; set; } = -512;
+        public int WorldMinTileY { get; set; } = -512;
+        public int WorldMaxTileX { get; set; } = 511;
+        public int WorldMaxTileY { get; set; } = 511;
     }
 
     public sealed class Navigation2DPlaygroundScenarioConfig
@@ -222,6 +229,13 @@ namespace Ludots.Core.Navigation2D.Config
                     MaxActiveTilesPerFlow = ClampAtLeast(flowStreaming?.MaxActiveTilesPerFlow ?? 256, 1),
                     UnloadGraceTicks = ClampAtLeast(flowStreaming?.UnloadGraceTicks ?? 8, 0),
                     MaxPotentialCells = ClampAtLeast(flowStreaming?.MaxPotentialCells ?? 300f, 1f),
+                    MaxActivationWindowWidthTiles = ClampAtLeast(flowStreaming?.MaxActivationWindowWidthTiles ?? 0, 0),
+                    MaxActivationWindowHeightTiles = ClampAtLeast(flowStreaming?.MaxActivationWindowHeightTiles ?? 0, 0),
+                    WorldBoundsEnabled = flowStreaming?.WorldBoundsEnabled ?? false,
+                    WorldMinTileX = flowStreaming?.WorldMinTileX ?? -512,
+                    WorldMinTileY = flowStreaming?.WorldMinTileY ?? -512,
+                    WorldMaxTileX = Math.Max(flowStreaming?.WorldMinTileX ?? -512, flowStreaming?.WorldMaxTileX ?? 511),
+                    WorldMaxTileY = Math.Max(flowStreaming?.WorldMinTileY ?? -512, flowStreaming?.WorldMaxTileY ?? 511),
                 }
             };
         }
