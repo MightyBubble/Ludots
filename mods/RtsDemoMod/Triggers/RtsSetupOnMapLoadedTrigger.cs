@@ -1,19 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
+using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using RtsDemoMod.Systems;
 
 namespace RtsDemoMod.Triggers
 {
-    /// <summary>
-    /// Ensures RTS entities have the required GAS components (tags, timed tags)
-    /// after the "rts" map is loaded.
-    /// </summary>
     public sealed class RtsSetupOnMapLoadedTrigger : Trigger
     {
         private readonly IModContext _ctx;
@@ -27,30 +28,83 @@ namespace RtsDemoMod.Triggers
         public override Task ExecuteAsync(ScriptContext context)
         {
             var engine = context.GetEngine();
-            if (engine == null) return Task.CompletedTask;
+            if (engine == null)
+            {
+                return Task.CompletedTask;
+            }
 
             var mapTags = context.Get(CoreServiceKeys.MapTags) ?? new List<string>();
-            if (!HasTag(mapTags, "rts")) return Task.CompletedTask;
-
-            var world = engine.World;
-            var q = new QueryDescription().WithAll<Name>();
-            world.Query(in q, (Entity e, ref Name name) =>
+            bool isRtsMap = HasTag(mapTags, "rts");
+            engine.GlobalContext[RtsDemoKeys.IsActiveMap] = isRtsMap;
+            if (!isRtsMap)
             {
-                // Ensure all named entities have tag components for GAS interaction
-                if (!world.Has<GameplayTagContainer>(e)) world.Add(e, new GameplayTagContainer());
-                if (!world.Has<TagCountContainer>(e)) world.Add(e, new TagCountContainer());
-                if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
+                engine.GlobalContext.Remove(CoreServiceKeys.SelectionInputHandler.Name);
+                engine.GlobalContext.Remove(CoreServiceKeys.SelectionCandidatePolicy.Name);
+                engine.GlobalContext.Remove(CoreServiceKeys.ActiveSelectionProfileId.Name);
+                if (engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionInteractionState.Name, out var inactiveObj)
+                    && inactiveObj is SelectionInteractionState inactiveState)
+                {
+                    inactiveState.ClearPreview();
+                }
+
+                return Task.CompletedTask;
+            }
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var bindingsObj)
+                || bindingsObj is not InteractionActionBindings bindings)
+            {
+                bindings = new InteractionActionBindings();
+                engine.GlobalContext[CoreServiceKeys.InteractionActionBindings.Name] = bindings;
+            }
+
+            bindings.ConfirmActionId = "Select";
+            bindings.CommandActionId = "Command";
+            bindings.CancelActionId = "Cancel";
+            bindings.PointerPositionActionId = "PointerPos";
+
+            if (engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var viewModeObj) && viewModeObj is ViewModeManager viewModeManager)
+            {
+                viewModeManager.SwitchTo("Rts");
+            }
+
+            var controller = RtsUnitRuntimeSetup.EnsureController(engine.World, engine.GlobalContext);
+            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = controller;
+            SelectionRuntime.ClearSelection(engine.World, engine.GlobalContext, controller);
+
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) && inputObj is PlayerInputHandler input)
+            {
+                var selectionInteractionState = engine.GetService(CoreServiceKeys.SelectionInteractionState) ?? new SelectionInteractionState();
+                selectionInteractionState.ClearPreview();
+                engine.SetService(CoreServiceKeys.SelectionInteractionState, selectionInteractionState);
+                engine.SetService(CoreServiceKeys.SelectionInputHandler, new ScreenSelectionInputHandler(engine.GlobalContext, input, selectionInteractionState));
+                engine.SetService(CoreServiceKeys.SelectionCandidatePolicy, new RtsSelectionCandidatePolicy());
+            }
+
+            var query = new QueryDescription().WithAll<Name, WorldPositionCm>();
+            engine.World.Query(in query, (Entity entity, ref Name _, ref WorldPositionCm _) =>
+            {
+                if (!engine.World.Has<GameplayTagContainer>(entity))
+                {
+                    engine.World.Add(entity, new GameplayTagContainer());
+                }
+
+                RtsUnitRuntimeSetup.EnsureRuntimeComponents(engine.World, entity);
             });
 
+            _ctx.Log("[RtsDemoMod] RTS map activated; controller, camera view mode, shared selection, and runtime navigation components are ready.");
             return Task.CompletedTask;
         }
 
-        private static bool HasTag(List<string> tags, string t)
+        private static bool HasTag(List<string> tags, string tag)
         {
             for (int i = 0; i < tags.Count; i++)
             {
-                if (string.Equals(tags[i], t, StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.Equals(tags[i], tag, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
             }
+
             return false;
         }
     }

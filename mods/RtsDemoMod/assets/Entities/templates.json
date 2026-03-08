@@ -2,12 +2,38 @@
   {
     "id": "rts_scv",
     "components": {
-      "Name": { "Value": "SCV" },
-      "Team": { "Id": 1 },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 60, "Minerals": 500 } },
+      "Name": {
+        "Value": "SCV"
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 60,
+          "Minerals": 500,
+          "MoveSpeedCmPerSec": 360,
+          "NavRadiusCm": 38,
+          "NavMaxAccelCmPerSec2": 1600,
+          "NavNeighborDistCm": 220,
+          "NavTimeHorizonSec": 2.2,
+          "NavMaxNeighbors": 10,
+          "RtsVisualDiameterCm": 96,
+          "RtsVisualHeightCm": 96
+        }
+      },
       "AbilityStateBuffer": {
         "abilityIds": [
+          "Ability.Nav.Move",
           "Ability.Rts.BuildBarracks"
         ]
       },
@@ -21,10 +47,26 @@
   {
     "id": "rts_barracks",
     "components": {
-      "Name": { "Value": "Barracks" },
-      "Team": { "Id": 1 },
-      "WorldPositionCm": { "Value": { "X": 400, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 1000 } },
+      "Name": {
+        "Value": "Barracks"
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 400,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000
+        }
+      },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.TrainMarine",
@@ -41,12 +83,39 @@
   {
     "id": "rts_marine",
     "components": {
-      "Name": { "Value": "Marine" },
-      "Team": { "Id": 1 },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 40, "Shield": 0, "AttackSpeed": 100 } },
+      "Name": {
+        "Value": "Marine"
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 40,
+          "Shield": 0,
+          "AttackSpeed": 100,
+          "MoveSpeedCmPerSec": 500,
+          "NavRadiusCm": 34,
+          "NavMaxAccelCmPerSec2": 2200,
+          "NavNeighborDistCm": 240,
+          "NavTimeHorizonSec": 2.0,
+          "NavMaxNeighbors": 10,
+          "RtsVisualDiameterCm": 84,
+          "RtsVisualHeightCm": 84
+        }
+      },
       "AbilityStateBuffer": {
         "abilityIds": [
+          "Ability.Nav.Move",
           "Ability.Rts.StimPack"
         ]
       },
@@ -60,12 +129,38 @@
   {
     "id": "rts_siege_tank",
     "components": {
-      "Name": { "Value": "SiegeTank" },
-      "Team": { "Id": 1 },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 150, "Shield": 0 } },
+      "Name": {
+        "Value": "SiegeTank"
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 150,
+          "Shield": 0,
+          "MoveSpeedCmPerSec": 330,
+          "NavRadiusCm": 52,
+          "NavMaxAccelCmPerSec2": 1400,
+          "NavNeighborDistCm": 280,
+          "NavTimeHorizonSec": 2.4,
+          "NavMaxNeighbors": 12,
+          "RtsVisualDiameterCm": 132,
+          "RtsVisualHeightCm": 132
+        }
+      },
       "AbilityStateBuffer": {
         "abilityIds": [
+          "Ability.Nav.Move",
           "Ability.Rts.SiegeModeAoe"
         ]
       },
@@ -79,12 +174,38 @@
   {
     "id": "rts_science_vessel",
     "components": {
-      "Name": { "Value": "ScienceVessel" },
-      "Team": { "Id": 1 },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 200, "Energy": 200 } },
+      "Name": {
+        "Value": "ScienceVessel"
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 200,
+          "Energy": 200,
+          "MoveSpeedCmPerSec": 420,
+          "NavRadiusCm": 42,
+          "NavMaxAccelCmPerSec2": 1800,
+          "NavNeighborDistCm": 250,
+          "NavTimeHorizonSec": 2.2,
+          "NavMaxNeighbors": 10,
+          "RtsVisualDiameterCm": 108,
+          "RtsVisualHeightCm": 108
+        }
+      },
       "AbilityStateBuffer": {
         "abilityIds": [
+          "Ability.Nav.Move",
           "Ability.Rts.ShieldAura",
           "Ability.Rts.Irradiate"
         ]
@@ -99,19 +220,114 @@
   {
     "id": "rts_zergling",
     "components": {
-      "Name": { "Value": "Zergling" },
-      "Team": { "Id": 2 },
-      "WorldPositionCm": { "Value": { "X": 2000, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 35 } }
+      "Name": {
+        "Value": "Zergling"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 2000,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 35,
+          "MoveSpeedCmPerSec": 620,
+          "NavRadiusCm": 30,
+          "NavMaxAccelCmPerSec2": 2600,
+          "NavNeighborDistCm": 220,
+          "NavTimeHorizonSec": 1.9,
+          "NavMaxNeighbors": 10,
+          "RtsVisualDiameterCm": 72,
+          "RtsVisualHeightCm": 72
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Nav.Move"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
     }
   },
   {
     "id": "rts_zealot",
     "components": {
-      "Name": { "Value": "Zealot" },
-      "Team": { "Id": 3 },
-      "WorldPositionCm": { "Value": { "X": -2000, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 100, "Shield": 60 } }
+      "Name": {
+        "Value": "Zealot"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": -2000,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100,
+          "Shield": 60,
+          "MoveSpeedCmPerSec": 460,
+          "NavRadiusCm": 42,
+          "NavMaxAccelCmPerSec2": 2100,
+          "NavNeighborDistCm": 250,
+          "NavTimeHorizonSec": 2.1,
+          "NavMaxNeighbors": 10,
+          "RtsVisualDiameterCm": 108,
+          "RtsVisualHeightCm": 108
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Nav.Move"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_blocker",
+    "components": {
+      "Name": {
+        "Value": "Blocker"
+      },
+      "Team": {
+        "Id": 0
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "MoveSpeedCmPerSec": 0,
+          "NavRadiusCm": 58,
+          "NavMaxAccelCmPerSec2": 0,
+          "NavNeighborDistCm": 260,
+          "NavTimeHorizonSec": 2.5,
+          "NavMaxNeighbors": 12,
+          "NavStatic": 1,
+          "RtsVisualDiameterCm": 140,
+          "RtsVisualHeightCm": 220
+        }
+      },
+      "GameplayTagContainer": {}
     }
   }
 ]

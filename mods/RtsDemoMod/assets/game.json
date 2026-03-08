@@ -1,4 +1,46 @@
 {
   "startupMapId": "rts_entry",
-  "startupInputContexts": ["Default_Gameplay"]
+  "startupInputContexts": [
+    "Default_Gameplay"
+  ],
+  "navigation2D": {
+    "enabled": true,
+    "maxAgents": 4096,
+    "flowIterationsPerTick": 0,
+    "steering": {
+      "mode": "Hybrid",
+      "queryBudget": {
+        "maxNeighborsPerAgent": 10,
+        "maxCandidateChecksPerAgent": 48
+      },
+      "orca": {
+        "enabled": true,
+        "fallbackToPreferredVelocity": true
+      },
+      "sonar": {
+        "enabled": true,
+        "maxSteerAngleDeg": 260,
+        "backwardPenaltyAngleDeg": 220,
+        "ignoreBehindMovingAgents": true,
+        "blockedStop": false,
+        "predictionTimeScale": 0.9
+      },
+      "hybrid": {
+        "enabled": true,
+        "denseNeighborThreshold": 6,
+        "minSpeedForOrcaCmPerSec": 120,
+        "minOpposingNeighborsForOrca": 1,
+        "opposingVelocityDotThreshold": -0.25
+      },
+      "smartStop": {
+        "enabled": true,
+        "queryRadiusCm": 120,
+        "maxNeighbors": 8,
+        "selfGoalDistanceLimitCm": 180,
+        "goalToleranceCm": 90,
+        "arrivedSlackCm": 20,
+        "stoppedSpeedThresholdCmPerSec": 5
+      }
+    }
+  }
 }

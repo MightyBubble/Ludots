@@ -1,5 +1,17 @@
 [
   {
+    "id": "Ability.Nav.Move",
+    "exec": {
+      "clockId": "Step",
+      "items": [
+        { "kind": "TagSignal", "tick": 0, "tag": "Ability.Nav.Move", "payloadA": 0 },
+        { "kind": "EventGate", "tick": 0, "tag": "Event.Nav.Arrived" },
+        { "kind": "TagSignal", "tick": 0, "tag": "Ability.Nav.Move", "payloadA": 1 },
+        { "kind": "End", "tick": 0 }
+      ]
+    }
+  },
+  {
     "id": "Ability.Rts.BuildBarracks",
     "exec": {
       "clockId": "FixedFrame",

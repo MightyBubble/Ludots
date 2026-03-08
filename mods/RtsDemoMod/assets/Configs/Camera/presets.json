@@ -1,0 +1,27 @@
+[
+  {
+    "id": "Rts",
+    "DisplayName": "RTS",
+    "DistanceCm": 4000,
+    "Pitch": 56,
+    "FovYDeg": 50,
+    "Yaw": 180,
+    "MinDistanceCm": 1600,
+    "MaxDistanceCm": 9000,
+    "MinPitchDeg": 42,
+    "MaxPitchDeg": 68,
+    "PanMode": "KeyboardAndEdge",
+    "EdgePanMarginPx": 10,
+    "EdgePanSpeedCmPerSec": 8000,
+    "PanCmPerSecond": 8000,
+    "EnableGrabDrag": true,
+    "RotateMode": "None",
+    "EnableZoom": true,
+    "ZoomCmPerWheel": 600,
+    "FollowMode": "None",
+    "MinTargetXCm": -4200,
+    "MaxTargetXCm": 4200,
+    "MinTargetYCm": -3400,
+    "MaxTargetYCm": 3400
+  }
+]

@@ -1,4 +1,4 @@
-using Ludots.Core.Mathematics.FixedPoint;
+﻿using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Physics2D.Components
 {
@@ -47,9 +47,5 @@ namespace Ludots.Core.Physics2D.Components
     public struct AppliedDamping
     {
         public Fix64 TotalFieldDamping;
-    }
-
-    public struct SelectedTag
-    {
     }
 }

@@ -46,6 +46,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Components;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -341,6 +342,10 @@ namespace Ludots.Core.Engine
                          || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("AI/", StringComparison.OrdinalIgnoreCase));
 
             if (reloadAi) RebuildAiRuntime();
+
+            var selectionProfiles = new SelectionProfileRegistry(ConfigPipeline);
+            selectionProfiles.Load("Selection/profiles.json", ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.SelectionProfileRegistry, selectionProfiles);
 
             SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
             SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);

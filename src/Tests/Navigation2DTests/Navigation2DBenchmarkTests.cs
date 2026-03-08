@@ -1,12 +1,13 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
+using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.Runtime;
-using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Physics2D.Systems;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Navigation2D
@@ -16,10 +17,17 @@ namespace Ludots.Tests.Navigation2D
     public class Navigation2DBenchmarkTests
     {
         [Test]
-        public void Benchmark_Navigation2DSteering_10kAgents()
+        public void Benchmark_Navigation2DSteering_10kAgents_ByMode()
+        {
+            RunBenchmark(Navigation2DAvoidanceMode.Orca, "ORCA");
+            RunBenchmark(Navigation2DAvoidanceMode.Sonar, "Sonar");
+            RunBenchmark(Navigation2DAvoidanceMode.Hybrid, "Hybrid");
+        }
+
+        private static void RunBenchmark(Navigation2DAvoidanceMode mode, string label)
         {
             using var world = World.Create();
-            using var runtime = new Navigation2DRuntime(maxAgents: 20000, gridCellSizeCm: 100, loadedChunks: null)
+            using var runtime = new Navigation2DRuntime(CreateConfig(mode, maxAgents: 20000), gridCellSizeCm: 100, loadedChunks: null)
             {
                 FlowIterationsPerTick = 0
             };
@@ -62,7 +70,7 @@ namespace Ludots.Tests.Navigation2D
                 );
             }
 
-            for (int i = 0; i < 60; i++)
+            for (int i = 0; i < 45; i++)
             {
                 sys.Update(1f / 60f);
             }
@@ -75,7 +83,7 @@ namespace Ludots.Tests.Navigation2D
             long beforeAlloc = GC.GetAllocatedBytesForCurrentThread();
             var sw = Stopwatch.StartNew();
 
-            const int iterations = 300;
+            const int iterations = 180;
             for (int i = 0; i < iterations; i++)
             {
                 sys.Update(1f / 60f);
@@ -85,12 +93,63 @@ namespace Ludots.Tests.Navigation2D
             long afterAlloc = GC.GetAllocatedBytesForCurrentThread();
 
             double avgMs = sw.Elapsed.TotalMilliseconds / iterations;
-            Console.WriteLine($"[Benchmark] Navigation2DSteeringSystem2D");
+            Console.WriteLine($"[Benchmark] Navigation2DSteeringSystem2D / {label}");
             Console.WriteLine($"  Agents: {agentCount}");
             Console.WriteLine($"  Iterations: {iterations}");
             Console.WriteLine($"  Total Time: {sw.Elapsed.TotalMilliseconds:F2}ms");
             Console.WriteLine($"  Avg per Tick: {avgMs:F4}ms");
             Console.WriteLine($"  AllocatedBytes(CurrentThread): {afterAlloc - beforeAlloc}");
+        }
+
+        private static Navigation2DConfig CreateConfig(Navigation2DAvoidanceMode mode, int maxAgents)
+        {
+            return new Navigation2DConfig
+            {
+                Enabled = true,
+                MaxAgents = maxAgents,
+                FlowIterationsPerTick = 0,
+                Steering = new Navigation2DSteeringConfig
+                {
+                    Mode = mode,
+                    QueryBudget = new Navigation2DQueryBudgetConfig
+                    {
+                        MaxNeighborsPerAgent = 8,
+                        MaxCandidateChecksPerAgent = 24,
+                    },
+                    Orca = new Navigation2DOrcaConfig
+                    {
+                        Enabled = true,
+                        FallbackToPreferredVelocity = true,
+                    },
+                    Sonar = new Navigation2DSonarConfig
+                    {
+                        Enabled = true,
+                        MaxSteerAngleDeg = 280,
+                        BackwardPenaltyAngleDeg = 230,
+                        IgnoreBehindMovingAgents = true,
+                        BlockedStop = false,
+                        PredictionTimeScale = 0.9f,
+                    },
+                    Hybrid = new Navigation2DHybridAvoidanceConfig
+                    {
+                        Enabled = true,
+                        DenseNeighborThreshold = 6,
+                        MinSpeedForOrcaCmPerSec = 120,
+                        MinOpposingNeighborsForOrca = 1,
+                        OpposingVelocityDotThreshold = -0.25f,
+                    },
+                    SmartStop = new Navigation2DSmartStopConfig
+                    {
+                        Enabled = true,
+                        QueryRadiusCm = 100,
+                        MaxNeighbors = 6,
+                        SelfGoalDistanceLimitCm = 160,
+                        GoalToleranceCm = 80,
+                        ArrivedSlackCm = 20,
+                        StoppedSpeedThresholdCmPerSec = 5,
+                    }
+                }
+            };
         }
     }
 }

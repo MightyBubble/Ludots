@@ -1,0 +1,18 @@
+[
+  {
+    "id": "Rts",
+    "DragThresholdPx": 8,
+    "PickRadiusPx": 36,
+    "DoubleClickWindowSec": 0.30,
+    "DoubleClickMaxDistancePx": 14,
+    "DragSelectionShape": "Rectangle",
+    "PolygonPointSpacingPx": 18,
+    "EnableAdditiveSelection": true,
+    "EnableToggleSelection": true,
+    "PointExpansion": "SameClassDoubleClick",
+    "AddModifierActionId": "QueueModifier",
+    "ToggleModifierActionId": "PrecisionModifier",
+    "GroupAssignModifierActionId": "PrecisionModifier",
+    "GroupHotkeyActionIds": [ "Hotkey1", "Hotkey2", "Hotkey3", "Hotkey4" ]
+  }
+]
