@@ -85,9 +85,10 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             var temporalCoherence = _runtime.Config.Steering.TemporalCoherence;
+            bool stableSteeringWorld = !syncResult.SpatialDirty && !syncResult.SmartStopDirty;
             bool cacheFrameEnabled = temporalCoherence.Enabled &&
-                (!temporalCoherence.RequireSteadyStateWorld || (!syncResult.SpatialDirty && !syncResult.SmartStopDirty));
-            agentSoA.BeginSteeringFrame(unchecked(++_steeringFrameTick), cacheFrameEnabled);
+                (!temporalCoherence.RequireSteadyStateWorld || stableSteeringWorld);
+            agentSoA.BeginSteeringFrame(unchecked(++_steeringFrameTick), cacheFrameEnabled, stableSteeringWorld);
 
             ApplySteering(deltaTime);
         }
@@ -358,6 +359,36 @@ namespace Ludots.Core.Physics2D.Systems
             return hash;
         }
 
+        private static bool TryReuseStableWorldTemporalCoherenceCache(
+            Navigation2DWorld world,
+            Navigation2DSteeringTemporalCoherenceConfig config,
+            int agentIndex,
+            in Vector2 position,
+            in Vector2 velocity,
+            in Vector2 preferredVelocity,
+            out Vector2 desiredVelocity)
+        {
+            desiredVelocity = Vector2.Zero;
+            if (world.CachedSteeringValid[agentIndex] == 0)
+            {
+                world.RecordSteeringCacheLookup(false);
+                return false;
+            }
+
+            if (world.SteeringFrameTick - world.CachedSteeringTicks[agentIndex] > config.MaxReuseTicks ||
+                !IsWithinTolerance(world.CachedSteeringPositions[agentIndex], position, config.PositionToleranceCm) ||
+                !IsWithinTolerance(world.CachedSteeringVelocities[agentIndex], velocity, config.VelocityToleranceCmPerSec) ||
+                !IsWithinTolerance(world.CachedSteeringPreferredVelocities[agentIndex], preferredVelocity, config.PreferredVelocityToleranceCmPerSec))
+            {
+                world.RecordSteeringCacheLookup(false);
+                return false;
+            }
+
+            desiredVelocity = world.CachedSteeringDesiredVelocities[agentIndex];
+            world.RecordSteeringCacheLookup(true);
+            return true;
+        }
+
         private static bool TryReuseTemporalCoherenceCache(
             Navigation2DWorld world,
             Navigation2DSteeringTemporalCoherenceConfig config,
@@ -437,6 +468,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var config = Runtime.Config.Steering;
                 var temporalCoherence = config.TemporalCoherence;
                 bool useCache = temporalCoherence.Enabled && agentSoA.SteeringCacheFrameEnabled;
+                bool useStableWorldCache = useCache && agentSoA.SteeringCacheStableWorldFrame;
                 int globalMaxNeighbors = config.QueryBudget.MaxNeighborsPerAgent;
                 int maxCandidateChecks = config.QueryBudget.MaxCandidateChecksPerAgent;
                 var entityToAgentIndex = agentSoA.EntityToAgentIndex.AsSpan();
@@ -453,6 +485,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var smartStopFlags = agentSoA.SmartStopFlags.AsSpan();
 
                 Span<int> neighborIdxScratch = stackalloc int[MaxNeighborsHard];
+                Span<float> neighborDistanceScratch = stackalloc float[MaxNeighborsHard];
                 Span<OrcaSolver2D.OrcaLine> lineScratch = stackalloc OrcaSolver2D.OrcaLine[MaxNeighborsHard];
                 Span<OrcaSolver2D.OrcaLine> projectionLineScratch = stackalloc OrcaSolver2D.OrcaLine[OrcaSolver2D.MaxProjectionLines];
 
@@ -510,9 +543,18 @@ namespace Ludots.Core.Physics2D.Systems
                         continue;
                     }
 
+                    Vector2 newVel = Vector2.Zero;
+                    bool reused = false;
+                    bool cacheLookupPerformed = useStableWorldCache;
+                    if (useStableWorldCache && TryReuseStableWorldTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, out newVel))
+                    {
+                        reused = true;
+                        cacheLookupPerformed = true;
+                    }
+
                     int neighborCount = 0;
                     uint neighborSignature = 0u;
-                    if (neighborLimit > 0 && neighborDistance > 0f)
+                    if (!reused && neighborLimit > 0 && neighborDistance > 0f)
                     {
                         neighborCount = Runtime.CellMap.CollectNearestNeighborsBudgeted(
                             selfIndex: i,
@@ -520,6 +562,7 @@ namespace Ludots.Core.Physics2D.Systems
                             radius: neighborDistance,
                             positions: positions,
                             neighborsOut: neighborIdxScratch.Slice(0, neighborLimit),
+                            neighborDistanceSqOut: neighborDistanceScratch.Slice(0, neighborLimit),
                             maxCandidateChecks: maxCandidateChecks);
                         if (useCache)
                         {
@@ -532,37 +575,38 @@ namespace Ludots.Core.Physics2D.Systems
                         }
                     }
 
-                    Vector2 newVel;
-                    bool reused = false;
-                    if (neighborCount <= 0)
+                    if (!reused)
                     {
-                        newVel = ClampToMaxSpeed(preferred, maxSpeed);
-                    }
-                    else if (useCache && TryReuseTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, neighborCount, neighborSignature, out newVel))
-                    {
-                        reused = true;
-                    }
-                    else
-                    {
-                        newVel = OrcaSolver2D.ComputeDesiredVelocity(
-                            position: pos,
-                            velocity: vel,
-                            preferredVelocity: preferred,
-                            maxSpeed: maxSpeed,
-                            radius: radius,
-                            timeHorizon: timeHorizon,
-                            deltaTime: DeltaTime,
-                            neighborIndices: neighborIdxScratch.Slice(0, neighborCount),
-                            neighborPositions: positions,
-                            neighborVelocities: velocities,
-                            neighborRadii: radii,
-                            linesScratch: lineScratch,
-                            projectionLinesScratch: projectionLineScratch);
-                    }
+                        if (neighborCount <= 0)
+                        {
+                            newVel = ClampToMaxSpeed(preferred, maxSpeed);
+                        }
+                        else if (!cacheLookupPerformed && useCache && TryReuseTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, neighborCount, neighborSignature, out newVel))
+                        {
+                            reused = true;
+                        }
+                        else
+                        {
+                            newVel = OrcaSolver2D.ComputeDesiredVelocity(
+                                position: pos,
+                                velocity: vel,
+                                preferredVelocity: preferred,
+                                maxSpeed: maxSpeed,
+                                radius: radius,
+                                timeHorizon: timeHorizon,
+                                deltaTime: DeltaTime,
+                                neighborIndices: neighborIdxScratch.Slice(0, neighborCount),
+                                neighborPositions: positions,
+                                neighborVelocities: velocities,
+                                neighborRadii: radii,
+                                linesScratch: lineScratch,
+                                projectionLinesScratch: projectionLineScratch);
+                        }
 
-                    if (useCache && !reused)
-                    {
-                        StoreTemporalCoherenceCache(agentSoA, i, pos, vel, preferred, neighborCount, neighborSignature, newVel);
+                        if (useCache && !reused)
+                        {
+                            StoreTemporalCoherenceCache(agentSoA, i, pos, vel, preferred, neighborCount, neighborSignature, newVel);
+                        }
                     }
 
                     WriteSteeringOutput(ref force, ref desiredVelocity, vel, newVel, InvDeltaTime, maxAccel);
@@ -593,6 +637,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var config = Runtime.Config.Steering;
                 var temporalCoherence = config.TemporalCoherence;
                 bool useCache = temporalCoherence.Enabled && agentSoA.SteeringCacheFrameEnabled;
+                bool useStableWorldCache = useCache && agentSoA.SteeringCacheStableWorldFrame;
                 int globalMaxNeighbors = config.QueryBudget.MaxNeighborsPerAgent;
                 int maxCandidateChecks = config.QueryBudget.MaxCandidateChecksPerAgent;
                 var entityToAgentIndex = agentSoA.EntityToAgentIndex.AsSpan();
@@ -610,6 +655,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var sonarSolveConfig = SonarSolver2D.SolveConfig.FromConfig(config.Sonar, config.Orca.FallbackToPreferredVelocity);
 
                 Span<int> neighborIdxScratch = stackalloc int[MaxNeighborsHard];
+                Span<float> neighborDistanceScratch = stackalloc float[MaxNeighborsHard];
                 Span<SonarSolver2D.Interval> sonarIntervalScratch = stackalloc SonarSolver2D.Interval[SonarSolver2D.MaxIntervals];
 
                 foreach (var entityIndex in chunk)
@@ -666,9 +712,18 @@ namespace Ludots.Core.Physics2D.Systems
                         continue;
                     }
 
+                    Vector2 newVel = Vector2.Zero;
+                    bool reused = false;
+                    bool cacheLookupPerformed = useStableWorldCache;
+                    if (useStableWorldCache && TryReuseStableWorldTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, out newVel))
+                    {
+                        reused = true;
+                        cacheLookupPerformed = true;
+                    }
+
                     int neighborCount = 0;
                     uint neighborSignature = 0u;
-                    if (neighborLimit > 0 && neighborDistance > 0f)
+                    if (!reused && neighborLimit > 0 && neighborDistance > 0f)
                     {
                         neighborCount = Runtime.CellMap.CollectNearestNeighborsBudgeted(
                             selfIndex: i,
@@ -676,6 +731,7 @@ namespace Ludots.Core.Physics2D.Systems
                             radius: neighborDistance,
                             positions: positions,
                             neighborsOut: neighborIdxScratch.Slice(0, neighborLimit),
+                            neighborDistanceSqOut: neighborDistanceScratch.Slice(0, neighborLimit),
                             maxCandidateChecks: maxCandidateChecks);
                         if (useCache)
                         {
@@ -688,36 +744,37 @@ namespace Ludots.Core.Physics2D.Systems
                         }
                     }
 
-                    Vector2 newVel;
-                    bool reused = false;
-                    if (neighborCount <= 0)
+                    if (!reused)
                     {
-                        newVel = ClampToMaxSpeed(preferred, maxSpeed);
-                    }
-                    else if (useCache && TryReuseTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, neighborCount, neighborSignature, out newVel))
-                    {
-                        reused = true;
-                    }
-                    else
-                    {
-                        newVel = SonarSolver2D.ComputeDesiredVelocity(
-                            position: pos,
-                            velocity: vel,
-                            preferredVelocity: preferred,
-                            maxSpeed: maxSpeed,
-                            radius: radius,
-                            timeHorizon: timeHorizon,
-                            obstacleIndices: neighborIdxScratch.Slice(0, neighborCount),
-                            obstaclePositions: positions,
-                            obstacleVelocities: velocities,
-                            obstacleRadii: radii,
-                            solveConfig: sonarSolveConfig,
-                            intervalScratch: sonarIntervalScratch);
-                    }
+                        if (neighborCount <= 0)
+                        {
+                            newVel = ClampToMaxSpeed(preferred, maxSpeed);
+                        }
+                        else if (!cacheLookupPerformed && useCache && TryReuseTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, neighborCount, neighborSignature, out newVel))
+                        {
+                            reused = true;
+                        }
+                        else
+                        {
+                            newVel = SonarSolver2D.ComputeDesiredVelocity(
+                                position: pos,
+                                velocity: vel,
+                                preferredVelocity: preferred,
+                                maxSpeed: maxSpeed,
+                                radius: radius,
+                                timeHorizon: timeHorizon,
+                                obstacleIndices: neighborIdxScratch.Slice(0, neighborCount),
+                                obstaclePositions: positions,
+                                obstacleVelocities: velocities,
+                                obstacleRadii: radii,
+                                solveConfig: sonarSolveConfig,
+                                intervalScratch: sonarIntervalScratch);
+                        }
 
-                    if (useCache && !reused)
-                    {
-                        StoreTemporalCoherenceCache(agentSoA, i, pos, vel, preferred, neighborCount, neighborSignature, newVel);
+                        if (useCache && !reused)
+                        {
+                            StoreTemporalCoherenceCache(agentSoA, i, pos, vel, preferred, neighborCount, neighborSignature, newVel);
+                        }
                     }
 
                     WriteSteeringOutput(ref force, ref desiredVelocity, vel, newVel, InvDeltaTime, maxAccel);
@@ -750,6 +807,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var hybridConfig = config.Hybrid;
                 var temporalCoherence = config.TemporalCoherence;
                 bool useCache = temporalCoherence.Enabled && agentSoA.SteeringCacheFrameEnabled;
+                bool useStableWorldCache = useCache && agentSoA.SteeringCacheStableWorldFrame;
                 int globalMaxNeighbors = config.QueryBudget.MaxNeighborsPerAgent;
                 int maxCandidateChecks = config.QueryBudget.MaxCandidateChecksPerAgent;
                 var entityToAgentIndex = agentSoA.EntityToAgentIndex.AsSpan();
@@ -767,6 +825,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var sonarSolveConfig = SonarSolver2D.SolveConfig.FromConfig(config.Sonar, config.Orca.FallbackToPreferredVelocity);
 
                 Span<int> neighborIdxScratch = stackalloc int[MaxNeighborsHard];
+                Span<float> neighborDistanceScratch = stackalloc float[MaxNeighborsHard];
                 Span<OrcaSolver2D.OrcaLine> lineScratch = stackalloc OrcaSolver2D.OrcaLine[MaxNeighborsHard];
                 Span<OrcaSolver2D.OrcaLine> projectionLineScratch = stackalloc OrcaSolver2D.OrcaLine[OrcaSolver2D.MaxProjectionLines];
                 Span<SonarSolver2D.Interval> sonarIntervalScratch = stackalloc SonarSolver2D.Interval[SonarSolver2D.MaxIntervals];
@@ -825,9 +884,18 @@ namespace Ludots.Core.Physics2D.Systems
                         continue;
                     }
 
+                    Vector2 newVel = Vector2.Zero;
+                    bool reused = false;
+                    bool cacheLookupPerformed = useStableWorldCache;
+                    if (useStableWorldCache && TryReuseStableWorldTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, out newVel))
+                    {
+                        reused = true;
+                        cacheLookupPerformed = true;
+                    }
+
                     int neighborCount = 0;
                     uint neighborSignature = 0u;
-                    if (neighborLimit > 0 && neighborDistance > 0f)
+                    if (!reused && neighborLimit > 0 && neighborDistance > 0f)
                     {
                         neighborCount = Runtime.CellMap.CollectNearestNeighborsBudgeted(
                             selfIndex: i,
@@ -835,6 +903,7 @@ namespace Ludots.Core.Physics2D.Systems
                             radius: neighborDistance,
                             positions: positions,
                             neighborsOut: neighborIdxScratch.Slice(0, neighborLimit),
+                            neighborDistanceSqOut: neighborDistanceScratch.Slice(0, neighborLimit),
                             maxCandidateChecks: maxCandidateChecks);
                         if (useCache)
                         {
@@ -847,53 +916,54 @@ namespace Ludots.Core.Physics2D.Systems
                         }
                     }
 
-                    Vector2 newVel;
-                    bool reused = false;
-                    if (neighborCount <= 0)
+                    if (!reused)
                     {
-                        newVel = ClampToMaxSpeed(preferred, maxSpeed);
-                    }
-                    else if (useCache && TryReuseTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, neighborCount, neighborSignature, out newVel))
-                    {
-                        reused = true;
-                    }
-                    else if (ShouldUseOrcaHybrid(hybridConfig, velocities, vel, preferred, neighborIdxScratch.Slice(0, neighborCount)))
-                    {
-                        newVel = OrcaSolver2D.ComputeDesiredVelocity(
-                            position: pos,
-                            velocity: vel,
-                            preferredVelocity: preferred,
-                            maxSpeed: maxSpeed,
-                            radius: radius,
-                            timeHorizon: timeHorizon,
-                            deltaTime: DeltaTime,
-                            neighborIndices: neighborIdxScratch.Slice(0, neighborCount),
-                            neighborPositions: positions,
-                            neighborVelocities: velocities,
-                            neighborRadii: radii,
-                            linesScratch: lineScratch,
-                            projectionLinesScratch: projectionLineScratch);
-                    }
-                    else
-                    {
-                        newVel = SonarSolver2D.ComputeDesiredVelocity(
-                            position: pos,
-                            velocity: vel,
-                            preferredVelocity: preferred,
-                            maxSpeed: maxSpeed,
-                            radius: radius,
-                            timeHorizon: timeHorizon,
-                            obstacleIndices: neighborIdxScratch.Slice(0, neighborCount),
-                            obstaclePositions: positions,
-                            obstacleVelocities: velocities,
-                            obstacleRadii: radii,
-                            solveConfig: sonarSolveConfig,
-                            intervalScratch: sonarIntervalScratch);
-                    }
+                        if (neighborCount <= 0)
+                        {
+                            newVel = ClampToMaxSpeed(preferred, maxSpeed);
+                        }
+                        else if (!cacheLookupPerformed && useCache && TryReuseTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, neighborCount, neighborSignature, out newVel))
+                        {
+                            reused = true;
+                        }
+                        else if (ShouldUseOrcaHybrid(hybridConfig, velocities, vel, preferred, neighborIdxScratch.Slice(0, neighborCount)))
+                        {
+                            newVel = OrcaSolver2D.ComputeDesiredVelocity(
+                                position: pos,
+                                velocity: vel,
+                                preferredVelocity: preferred,
+                                maxSpeed: maxSpeed,
+                                radius: radius,
+                                timeHorizon: timeHorizon,
+                                deltaTime: DeltaTime,
+                                neighborIndices: neighborIdxScratch.Slice(0, neighborCount),
+                                neighborPositions: positions,
+                                neighborVelocities: velocities,
+                                neighborRadii: radii,
+                                linesScratch: lineScratch,
+                                projectionLinesScratch: projectionLineScratch);
+                        }
+                        else
+                        {
+                            newVel = SonarSolver2D.ComputeDesiredVelocity(
+                                position: pos,
+                                velocity: vel,
+                                preferredVelocity: preferred,
+                                maxSpeed: maxSpeed,
+                                radius: radius,
+                                timeHorizon: timeHorizon,
+                                obstacleIndices: neighborIdxScratch.Slice(0, neighborCount),
+                                obstaclePositions: positions,
+                                obstacleVelocities: velocities,
+                                obstacleRadii: radii,
+                                solveConfig: sonarSolveConfig,
+                                intervalScratch: sonarIntervalScratch);
+                        }
 
-                    if (useCache && !reused)
-                    {
-                        StoreTemporalCoherenceCache(agentSoA, i, pos, vel, preferred, neighborCount, neighborSignature, newVel);
+                        if (useCache && !reused)
+                        {
+                            StoreTemporalCoherenceCache(agentSoA, i, pos, vel, preferred, neighborCount, neighborSignature, newVel);
+                        }
                     }
 
                     WriteSteeringOutput(ref force, ref desiredVelocity, vel, newVel, InvDeltaTime, maxAccel);

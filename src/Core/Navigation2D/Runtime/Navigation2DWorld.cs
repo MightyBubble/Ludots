@@ -58,6 +58,7 @@ namespace Ludots.Core.Navigation2D.Runtime
         private int _steadyFallbackRequired;
         private int _steeringFrameTick;
         private int _steeringCacheFrameEnabled;
+        private int _steeringCacheStableWorldFrame;
         private int _steeringCacheLookupsFrame;
         private int _steeringCacheHitsFrame;
         private int _steeringCacheStoresFrame;
@@ -68,6 +69,7 @@ namespace Ludots.Core.Navigation2D.Runtime
         public int Count => Positions.Count;
         public int SteeringFrameTick => Volatile.Read(ref _steeringFrameTick);
         public bool SteeringCacheFrameEnabled => Volatile.Read(ref _steeringCacheFrameEnabled) != 0;
+        public bool SteeringCacheStableWorldFrame => Volatile.Read(ref _steeringCacheStableWorldFrame) != 0;
         public int SteeringCacheLookupsFrame => Volatile.Read(ref _steeringCacheLookupsFrame);
         public int SteeringCacheHitsFrame => Volatile.Read(ref _steeringCacheHitsFrame);
         public int SteeringCacheStoresFrame => Volatile.Read(ref _steeringCacheStoresFrame);
@@ -189,10 +191,11 @@ namespace Ludots.Core.Navigation2D.Runtime
                 smartStopDirty: Volatile.Read(ref _steadySmartStopDirty) != 0);
         }
 
-        public void BeginSteeringFrame(int steeringTick, bool cacheEnabled)
+        public void BeginSteeringFrame(int steeringTick, bool cacheEnabled, bool stableWorldFrame)
         {
             Volatile.Write(ref _steeringFrameTick, steeringTick);
             Volatile.Write(ref _steeringCacheFrameEnabled, cacheEnabled ? 1 : 0);
+            Volatile.Write(ref _steeringCacheStableWorldFrame, stableWorldFrame ? 1 : 0);
             Volatile.Write(ref _steeringCacheLookupsFrame, 0);
             Volatile.Write(ref _steeringCacheHitsFrame, 0);
             Volatile.Write(ref _steeringCacheStoresFrame, 0);

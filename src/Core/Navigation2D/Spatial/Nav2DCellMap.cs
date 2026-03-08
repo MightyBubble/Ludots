@@ -266,6 +266,18 @@ namespace Ludots.Core.Navigation2D.Spatial
             Span<int> neighborsOut,
             int maxCandidateChecks)
         {
+            return CollectNearestNeighborsBudgeted(selfIndex, selfPos, radius, positions, neighborsOut, Span<float>.Empty, maxCandidateChecks);
+        }
+
+        public int CollectNearestNeighborsBudgeted(
+            int selfIndex,
+            Vector2 selfPos,
+            float radius,
+            ReadOnlySpan<Vector2> positions,
+            Span<int> neighborsOut,
+            Span<float> neighborDistanceSqOut,
+            int maxCandidateChecks)
+        {
             if (_agentCount <= 0 || neighborsOut.Length == 0 || radius <= 0f)
             {
                 return 0;
@@ -282,7 +294,7 @@ namespace Ludots.Core.Navigation2D.Spatial
             int count = 0;
             int checks = 0;
 
-            if (!VisitCell(cx, cy, selfIndex, sx, sy, radiusSq, positions, neighborsOut, ref count, ref checks, effectiveMaxChecks))
+            if (!VisitCell(cx, cy, selfIndex, sx, sy, radiusSq, positions, neighborsOut, neighborDistanceSqOut, ref count, ref checks, effectiveMaxChecks))
             {
                 return count;
             }
@@ -296,12 +308,12 @@ namespace Ludots.Core.Navigation2D.Spatial
 
                 for (int x = minX; x <= maxX; x++)
                 {
-                    if (!VisitCell(x, minY, selfIndex, sx, sy, radiusSq, positions, neighborsOut, ref count, ref checks, effectiveMaxChecks))
+                    if (!VisitCell(x, minY, selfIndex, sx, sy, radiusSq, positions, neighborsOut, neighborDistanceSqOut, ref count, ref checks, effectiveMaxChecks))
                     {
                         return count;
                     }
 
-                    if (!VisitCell(x, maxY, selfIndex, sx, sy, radiusSq, positions, neighborsOut, ref count, ref checks, effectiveMaxChecks))
+                    if (!VisitCell(x, maxY, selfIndex, sx, sy, radiusSq, positions, neighborsOut, neighborDistanceSqOut, ref count, ref checks, effectiveMaxChecks))
                     {
                         return count;
                     }
@@ -309,12 +321,12 @@ namespace Ludots.Core.Navigation2D.Spatial
 
                 for (int y = minY + 1; y < maxY; y++)
                 {
-                    if (!VisitCell(minX, y, selfIndex, sx, sy, radiusSq, positions, neighborsOut, ref count, ref checks, effectiveMaxChecks))
+                    if (!VisitCell(minX, y, selfIndex, sx, sy, radiusSq, positions, neighborsOut, neighborDistanceSqOut, ref count, ref checks, effectiveMaxChecks))
                     {
                         return count;
                     }
 
-                    if (!VisitCell(maxX, y, selfIndex, sx, sy, radiusSq, positions, neighborsOut, ref count, ref checks, effectiveMaxChecks))
+                    if (!VisitCell(maxX, y, selfIndex, sx, sy, radiusSq, positions, neighborsOut, neighborDistanceSqOut, ref count, ref checks, effectiveMaxChecks))
                     {
                         return count;
                     }
@@ -343,6 +355,7 @@ namespace Ludots.Core.Navigation2D.Spatial
             float radiusSq,
             ReadOnlySpan<Vector2> positions,
             Span<int> neighborsOut,
+            Span<float> neighborDistanceSqOut,
             ref int count,
             ref int checks,
             int maxCandidateChecks)
@@ -369,7 +382,7 @@ namespace Ludots.Core.Navigation2D.Spatial
                 float d2 = dx * dx + dy * dy;
                 if (d2 <= radiusSq)
                 {
-                    InsertNearest(neighborsOut, ref count, candidateIndex, d2, sx, sy, positions);
+                    InsertNearest(neighborsOut, neighborDistanceSqOut, ref count, candidateIndex, d2, sx, sy, positions);
                 }
 
                 if (checks >= maxCandidateChecks)
@@ -381,7 +394,7 @@ namespace Ludots.Core.Navigation2D.Spatial
             return true;
         }
 
-        private static void InsertNearest(Span<int> neighborsOut, ref int count, int candidateIndex, float candidateDistanceSq, float sx, float sy, ReadOnlySpan<Vector2> positions)
+        private static void InsertNearest(Span<int> neighborsOut, Span<float> neighborDistanceSqOut, ref int count, int candidateIndex, float candidateDistanceSq, float sx, float sy, ReadOnlySpan<Vector2> positions)
         {
             int capacity = neighborsOut.Length;
             if (capacity == 0)
@@ -389,16 +402,52 @@ namespace Ludots.Core.Navigation2D.Spatial
                 return;
             }
 
-            int insertAt = count;
-            if (count < capacity)
+            if (neighborDistanceSqOut.Length >= capacity)
             {
-                while (insertAt > 0 && DistanceSq(neighborsOut[insertAt - 1], sx, sy, positions) > candidateDistanceSq)
+                int insertAt = count;
+                if (count < capacity)
+                {
+                    while (insertAt > 0 && neighborDistanceSqOut[insertAt - 1] > candidateDistanceSq)
+                    {
+                        neighborsOut[insertAt] = neighborsOut[insertAt - 1];
+                        neighborDistanceSqOut[insertAt] = neighborDistanceSqOut[insertAt - 1];
+                        insertAt--;
+                    }
+
+                    neighborsOut[insertAt] = candidateIndex;
+                    neighborDistanceSqOut[insertAt] = candidateDistanceSq;
+                    count++;
+                    return;
+                }
+
+                if (neighborDistanceSqOut[capacity - 1] <= candidateDistanceSq)
+                {
+                    return;
+                }
+
+                insertAt = capacity - 1;
+                while (insertAt > 0 && neighborDistanceSqOut[insertAt - 1] > candidateDistanceSq)
                 {
                     neighborsOut[insertAt] = neighborsOut[insertAt - 1];
+                    neighborDistanceSqOut[insertAt] = neighborDistanceSqOut[insertAt - 1];
                     insertAt--;
                 }
 
                 neighborsOut[insertAt] = candidateIndex;
+                neighborDistanceSqOut[insertAt] = candidateDistanceSq;
+                return;
+            }
+
+            int fallbackInsertAt = count;
+            if (count < capacity)
+            {
+                while (fallbackInsertAt > 0 && DistanceSq(neighborsOut[fallbackInsertAt - 1], sx, sy, positions) > candidateDistanceSq)
+                {
+                    neighborsOut[fallbackInsertAt] = neighborsOut[fallbackInsertAt - 1];
+                    fallbackInsertAt--;
+                }
+
+                neighborsOut[fallbackInsertAt] = candidateIndex;
                 count++;
                 return;
             }
@@ -408,14 +457,14 @@ namespace Ludots.Core.Navigation2D.Spatial
                 return;
             }
 
-            insertAt = capacity - 1;
-            while (insertAt > 0 && DistanceSq(neighborsOut[insertAt - 1], sx, sy, positions) > candidateDistanceSq)
+            fallbackInsertAt = capacity - 1;
+            while (fallbackInsertAt > 0 && DistanceSq(neighborsOut[fallbackInsertAt - 1], sx, sy, positions) > candidateDistanceSq)
             {
-                neighborsOut[insertAt] = neighborsOut[insertAt - 1];
-                insertAt--;
+                neighborsOut[fallbackInsertAt] = neighborsOut[fallbackInsertAt - 1];
+                fallbackInsertAt--;
             }
 
-            neighborsOut[insertAt] = candidateIndex;
+            neighborsOut[fallbackInsertAt] = candidateIndex;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

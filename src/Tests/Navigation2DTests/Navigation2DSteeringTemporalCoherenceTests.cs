@@ -66,7 +66,7 @@ namespace Ludots.Tests.Navigation2D
         {
             using var world = new Navigation2DWorld(new Navigation2DWorldSettings(maxAgents: 8, cellSizeCm: Fix64.FromInt(100)));
 
-            world.BeginSteeringFrame(steeringTick: 7, cacheEnabled: true);
+            world.BeginSteeringFrame(steeringTick: 7, cacheEnabled: true, stableWorldFrame: true);
             world.RecordSteeringCacheLookup(hit: true);
             world.RecordSteeringCacheStore();
 
