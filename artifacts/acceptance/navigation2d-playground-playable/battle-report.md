@@ -28,22 +28,22 @@
 - `artifacts/acceptance/navigation2d-playground-playable/path.mmd`
 
 ## Timeline
-- [T+001] warmup | Scenario=1:Pass Through | Agents/team=5000 | Live=10000 | Blockers=0 | Flow=True/False/Mode0 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=178.888ms
-- [T+002] next_scenario | Scenario=2:Orthogonal Cross | Agents/team=5000 | Live=10000 | Blockers=0 | Flow=True/False/Mode0 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=148.874ms
-- [T+003] increase_agents | Scenario=2:Orthogonal Cross | Agents/team=5500 | Live=11000 | Blockers=0 | Flow=True/False/Mode0 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=10.595ms
-- [T+004] toggle_flow_debug | Scenario=2:Orthogonal Cross | Agents/team=5500 | Live=11000 | Blockers=0 | Flow=True/True/Mode0 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=14.289ms
-- [T+005] cycle_flow_mode | Scenario=2:Orthogonal Cross | Agents/team=5500 | Live=11000 | Blockers=0 | Flow=True/True/Mode1 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=9.184ms
-- [T+006] toggle_flow_enabled | Scenario=2:Orthogonal Cross | Agents/team=5500 | Live=11000 | Blockers=0 | Flow=False/True/Mode1 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=8.804ms
+- [T+001] warmup | Scenario=1:Pass Through | Agents/team=5000 | Live=10000 | Blockers=0 | Flow=True/False/Mode0 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=57.246ms
+- [T+002] next_scenario | Scenario=2:Orthogonal Cross | Agents/team=5000 | Live=10000 | Blockers=0 | Flow=True/False/Mode0 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=8.481ms
+- [T+003] increase_agents | Scenario=2:Orthogonal Cross | Agents/team=5500 | Live=11000 | Blockers=0 | Flow=True/False/Mode0 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=5.676ms
+- [T+004] toggle_flow_debug | Scenario=2:Orthogonal Cross | Agents/team=5500 | Live=11000 | Blockers=0 | Flow=True/True/Mode0 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=125.589ms
+- [T+005] cycle_flow_mode | Scenario=2:Orthogonal Cross | Agents/team=5500 | Live=11000 | Blockers=0 | Flow=True/True/Mode1 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=29.448ms
+- [T+006] toggle_flow_enabled | Scenario=2:Orthogonal Cross | Agents/team=5500 | Live=11000 | Blockers=0 | Flow=False/True/Mode1 | FlowDbgLines=0 | CacheHitRate=0.0% | Tick=32.592ms
 
 ## Outcome
 - success: yes
 - verdict: the playable Navigation2D mod is wired through the unified config, input, HUD, and debug draw pipeline.
-- reason: final state reached scenario `Orthogonal Cross` with flow enabled=`False`, flow debug lines=`0`, and median headless tick cost `11.019ms`.
+- reason: final state reached scenario `Orthogonal Cross` with flow enabled=`False`, flow debug lines=`0`, and median headless tick cost `30.102ms`.
 
 ## Summary Stats
 - snapshots captured: `6`
-- median headless tick: `11.019ms`
-- max headless tick: `178.888ms`
+- median headless tick: `30.102ms`
+- max headless tick: `125.589ms`
 - final agents per team: `5500`
 - final live agents: `11000`
 - final flow debug lines: `0`

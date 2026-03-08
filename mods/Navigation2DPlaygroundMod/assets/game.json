@@ -99,7 +99,7 @@
       ]
     },
     "Steering": {
-      "Mode": "Hybrid",
+      "Mode": "Sonar",
       "QueryBudget": {
         "MaxNeighborsPerAgent": 8,
         "MaxCandidateChecksPerAgent": 24
