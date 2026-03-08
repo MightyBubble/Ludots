@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.GraphRuntime;
@@ -45,7 +44,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         // Scratch buffer for collected listener actions
         private readonly PhaseListenerCollectedAction[] _collectedActions = new PhaseListenerCollectedAction[32];
-        private readonly Dictionary<int, ScratchUsage> _scratchUsageByGraphId = new();
+        private int[] _scratchRegisterCountsByGraphId = new int[64];
 
         public EffectPhaseExecutor(
             GraphProgramRegistry programs,
@@ -345,14 +344,35 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private ScratchUsage GetScratchUsage(int graphProgramId, ReadOnlySpan<GraphInstruction> program)
         {
-            if (_scratchUsageByGraphId.TryGetValue(graphProgramId, out var usage))
+            if ((uint)graphProgramId < (uint)_scratchRegisterCountsByGraphId.Length)
             {
-                return usage;
+                int cachedCountPlusOne = _scratchRegisterCountsByGraphId[graphProgramId];
+                if (cachedCountPlusOne != 0)
+                {
+                    return new ScratchUsage(cachedCountPlusOne - 1);
+                }
             }
 
-            usage = AnalyzeScratchUsage(program);
-            _scratchUsageByGraphId[graphProgramId] = usage;
+            var usage = AnalyzeScratchUsage(program);
+            EnsureScratchUsageCapacity(graphProgramId);
+            _scratchRegisterCountsByGraphId[graphProgramId] = usage.RegisterCount + 1;
             return usage;
+        }
+
+        private void EnsureScratchUsageCapacity(int graphProgramId)
+        {
+            if ((uint)graphProgramId < (uint)_scratchRegisterCountsByGraphId.Length)
+            {
+                return;
+            }
+
+            int newSize = _scratchRegisterCountsByGraphId.Length;
+            while (newSize <= graphProgramId)
+            {
+                newSize <<= 1;
+            }
+
+            Array.Resize(ref _scratchRegisterCountsByGraphId, newSize);
         }
 
         private static ScratchUsage AnalyzeScratchUsage(ReadOnlySpan<GraphInstruction> program)
@@ -384,3 +404,4 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly record struct ScratchUsage(int RegisterCount);
     }
 }
+
