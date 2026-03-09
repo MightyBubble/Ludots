@@ -45,6 +45,11 @@ namespace Ludots.Core.Scripting
         public const string SelectionRequestQueue = "SelectionRequestQueue";
         public const string SelectionResponseBuffer = "SelectionResponseBuffer";
         public const string SelectionRuleRegistry = "SelectionRuleRegistry";
+        public const string SelectionProfileRegistry = "SelectionProfileRegistry";
+        public const string ActiveSelectionProfileId = "ActiveSelectionProfileId";
+        public const string SelectionInputHandler = "SelectionInputHandler";
+        public const string SelectionCandidatePolicy = "SelectionCandidatePolicy";
+        public const string SelectionInteractionState = "SelectionInteractionState";
         public const string InteractionActionBindings = "InteractionActionBindings";
         public const string OrderQueue = "OrderQueue";
         public const string OrderTypeRegistry = "OrderTypeRegistry";

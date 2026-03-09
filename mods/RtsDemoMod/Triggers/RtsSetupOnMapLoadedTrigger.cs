@@ -30,7 +30,9 @@ namespace RtsDemoMod.Triggers
             if (engine == null) return Task.CompletedTask;
 
             var mapTags = context.Get(CoreServiceKeys.MapTags) ?? new List<string>();
-            if (!HasTag(mapTags, "rts")) return Task.CompletedTask;
+            bool isRts = HasTag(mapTags, "rts");
+            engine.GlobalContext[RtsDemoKeys.IsActiveMap] = isRts;
+            if (!isRts) return Task.CompletedTask;
 
             var world = engine.World;
             var q = new QueryDescription().WithAll<Name>();

@@ -1,0 +1,146 @@
+{
+  "actions": [
+    {
+      "id": "Select",
+      "name": "RTS_Select",
+      "type": "Button"
+    },
+    {
+      "id": "Command",
+      "name": "RTS_Command",
+      "type": "Button"
+    },
+    {
+      "id": "Cancel",
+      "name": "RTS_Cancel",
+      "type": "Button"
+    },
+    {
+      "id": "Stop",
+      "name": "RTS_Stop",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "Rts_Gameplay",
+      "name": "RTS Gameplay",
+      "priority": 100,
+      "bindings": [
+        {
+          "actionId": "Select",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        },
+        {
+          "actionId": "Cancel",
+          "path": "<Keyboard>/escape"
+        },
+        {
+          "actionId": "Stop",
+          "path": "<Keyboard>/s"
+        },
+        {
+          "actionId": "Hotkey1",
+          "path": "<Keyboard>/1"
+        },
+        {
+          "actionId": "Hotkey2",
+          "path": "<Keyboard>/2"
+        },
+        {
+          "actionId": "Hotkey3",
+          "path": "<Keyboard>/3"
+        },
+        {
+          "actionId": "Hotkey4",
+          "path": "<Keyboard>/4"
+        },
+        {
+          "actionId": "Move",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            {
+              "path": "<Keyboard>/up"
+            },
+            {
+              "path": "<Keyboard>/down"
+            },
+            {
+              "path": "<Keyboard>/left"
+            },
+            {
+              "path": "<Keyboard>/right"
+            }
+          ],
+          "processors": [
+            {
+              "type": "Normalize"
+            }
+          ]
+        },
+        {
+          "actionId": "Move",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            {
+              "path": "<Keyboard>/w"
+            },
+            {
+              "path": "<Keyboard>/s"
+            },
+            {
+              "path": "<Keyboard>/a"
+            },
+            {
+              "path": "<Keyboard>/d"
+            }
+          ],
+          "processors": [
+            {
+              "type": "Normalize"
+            }
+          ]
+        },
+        {
+          "actionId": "RotateLeft",
+          "path": "<Keyboard>/z"
+        },
+        {
+          "actionId": "RotateRight",
+          "path": "<Keyboard>/c"
+        },
+        {
+          "actionId": "PointerPos",
+          "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "OrbitRotateHold",
+          "path": "<Mouse>/MiddleButton"
+        },
+        {
+          "actionId": "Zoom",
+          "path": "<Mouse>/ScrollY",
+          "processors": [
+            {
+              "type": "Scale",
+              "parameters": [
+                {
+                  "name": "Factor",
+                  "value": 0.1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "actionId": "CameraLock",
+          "path": "<Keyboard>/space"
+        }
+      ]
+    }
+  ]
+}

@@ -3,6 +3,7 @@ using Arch.System;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 
@@ -10,14 +11,12 @@ namespace Ludots.Core.Presentation.Systems
 {
     public sealed class ResponseChainHumanOrderSourceSystem : ISystem<float>
     {
+        private static readonly InteractionActionBindings DefaultBindings = new InteractionActionBindings();
+
         private readonly Dictionary<string, object> _globals;
         private readonly ResponseChainUiState _ui;
         private readonly OrderQueue _chainOrders;
         private readonly ResponseChainOrderTypes _responseChainOrderTypes;
-
-        private bool _prevSpace;
-        private bool _prevN;
-        private bool _prev1;
 
         public ResponseChainHumanOrderSourceSystem(Dictionary<string, object> globals, ResponseChainUiState ui, OrderQueue chainOrders)
         {
@@ -45,13 +44,11 @@ namespace Ludots.Core.Presentation.Systems
         public void Update(in float dt)
         {
             if (!_ui.Visible) return;
-            if (!_globals.TryGetValue(CoreServiceKeys.InputBackend.Name, out var backendObj) || backendObj is not IInputBackend backend) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input) return;
 
-            bool space = backend.GetButton("<Keyboard>/Space");
-            bool n = backend.GetButton("<Keyboard>/N");
-            bool one = backend.GetButton("<Keyboard>/1");
+            var bindings = ResolveBindings();
 
-            if (ConsumePressed(space, ref _prevSpace))
+            if (input.PressedThisFrame(bindings.ResponseChainPassActionId))
             {
                 _chainOrders.TryEnqueue(new Order
                 {
@@ -64,7 +61,7 @@ namespace Ludots.Core.Presentation.Systems
                 });
             }
 
-            if (ConsumePressed(n, ref _prevN))
+            if (input.PressedThisFrame(bindings.ResponseChainNegateActionId))
             {
                 _chainOrders.TryEnqueue(new Order
                 {
@@ -77,7 +74,7 @@ namespace Ludots.Core.Presentation.Systems
                 });
             }
 
-            if (ConsumePressed(one, ref _prev1))
+            if (input.PressedThisFrame(bindings.ResponseChainActivateActionId))
             {
                 var args = default(OrderArgs);
                 args.I0 = _ui.PromptTagId;
@@ -93,11 +90,14 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private static bool ConsumePressed(bool current, ref bool prev)
+        private InteractionActionBindings ResolveBindings()
         {
-            bool pressed = current && !prev;
-            prev = current;
-            return pressed;
+            if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var obj) && obj is InteractionActionBindings bindings)
+            {
+                return bindings;
+            }
+
+            return DefaultBindings;
         }
 
         public void BeforeUpdate(in float dt) { }

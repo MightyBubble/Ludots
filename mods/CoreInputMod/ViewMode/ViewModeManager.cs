@@ -102,6 +102,7 @@ namespace CoreInputMod.ViewMode
 
             ApplyCamera(next);
             ApplyInteractionMode(next);
+            ApplySelectionProfile(next);
             ApplySkillBar(next);
             _globals[ActiveModeIdKey] = next.Id;
         }
@@ -177,6 +178,14 @@ namespace CoreInputMod.ViewMode
             if (_globals.TryGetValue(LocalOrderSourceHelper.ActiveMappingKey, out var mappingObj) && mappingObj is InputOrderMappingSystem mapping)
             {
                 mapping.SetInteractionMode(interactionMode);
+            }
+        }
+
+        private void ApplySelectionProfile(ViewModeConfig mode)
+        {
+            if (!string.IsNullOrWhiteSpace(mode.SelectionProfileId))
+            {
+                _globals[CoreServiceKeys.ActiveSelectionProfileId.Name] = mode.SelectionProfileId;
             }
         }
 

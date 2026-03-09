@@ -111,6 +111,21 @@
       "type": "Button"
     },
     {
+      "id": "ResponseChainPass",
+      "name": "Gameplay_ResponseChainPass",
+      "type": "Button"
+    },
+    {
+      "id": "ResponseChainNegate",
+      "name": "Gameplay_ResponseChainNegate",
+      "type": "Button"
+    },
+    {
+      "id": "ResponseChainActivate",
+      "name": "Gameplay_ResponseChainActivate",
+      "type": "Button"
+    },
+    {
       "id": "CameraLock",
       "name": "Gameplay_CameraLock",
       "type": "Button"
@@ -180,6 +195,18 @@
         {
           "actionId": "CameraLock",
           "path": "<Keyboard>/space"
+        },
+        {
+          "actionId": "ResponseChainPass",
+          "path": "<Keyboard>/space"
+        },
+        {
+          "actionId": "ResponseChainNegate",
+          "path": "<Keyboard>/n"
+        },
+        {
+          "actionId": "ResponseChainActivate",
+          "path": "<Keyboard>/1"
         }
       ]
     },
