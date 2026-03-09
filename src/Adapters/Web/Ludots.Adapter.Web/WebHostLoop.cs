@@ -49,6 +49,7 @@ namespace Ludots.Adapter.Web
             engine.SetService(CoreServiceKeys.RenderCameraDebugState, renderCameraDebug);
 
             engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
+            var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
 
             WorldHudToScreenSystem hudProjection = null;
             if (engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHud &&
@@ -100,7 +101,8 @@ namespace Ludots.Adapter.Web
                     {
                         engine.SetService(CoreServiceKeys.UiCaptured, false);
                         engine.Tick(dt);
-                        cameraPresenter.Update(engine.GameSession!.Camera.State, dt, renderCameraDebug);
+                        float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
+                        cameraPresenter.Update(engine.GameSession!.Camera, cameraAlpha, renderCameraDebug);
                         hudProjection?.Update(dt);
 
                         if (setup.Transport.HasClients)

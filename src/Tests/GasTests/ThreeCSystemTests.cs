@@ -242,6 +242,45 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void PresetRuntime_Zoom_AccumulatesAcrossVisualFrames_AndConsumesOncePerFixedTick()
+        {
+            var (backend, handler) = BuildOrbitInputHandler();
+            var manager = CreateOrbitPresetManager(handler, new CameraPreset
+            {
+                Id = "AccumulatedZoom",
+                RigKind = CameraRigKind.Orbit,
+                DistanceCm = 5000f,
+                Pitch = 45f,
+                FovYDeg = 60f,
+                Yaw = 180f,
+                PanMode = CameraPanMode.None,
+                RotateMode = CameraRotateMode.None,
+                EnableZoom = true,
+                MinDistanceCm = 1000f,
+                MaxDistanceCm = 10000f,
+                ZoomCmPerWheel = 500f
+            });
+
+            backend.MouseWheel = 1f;
+            handler.Update();
+            manager.CaptureVisualInput();
+
+            backend.MouseWheel = 1f;
+            handler.Update();
+            manager.CaptureVisualInput();
+
+            backend.MouseWheel = 0f;
+            handler.Update();
+            manager.CaptureVisualInput();
+
+            manager.Update(0.016f);
+            That(manager.State.DistanceCm, Is.EqualTo(4000f), "Two visual-frame wheel steps should be consumed by the next fixed-step camera tick");
+
+            manager.Update(0.016f);
+            That(manager.State.DistanceCm, Is.EqualTo(4000f), "Wheel delta should not be consumed again without a new visual input sample");
+        }
+
+        [Test]
         public void PresetRuntime_KeyboardRotate_YawWraps360()
         {
             var (backend, handler) = BuildOrbitInputHandler();
@@ -319,11 +358,20 @@ namespace Ludots.Tests.ThreeC
             var adapter = new StubCameraAdapter();
             var coords = new StubSpatialCoordinateConverter();
             var presenter = new CameraPresenter(coords, adapter);
+            var manager = new CameraManager();
 
-            var state = new CameraState { Yaw = 0f, Pitch = 45f, DistanceCm = 1000f, FovYDeg = 60f };
-            state.TargetCm = Vector2.Zero;
+            manager.PreviousState.Yaw = 0f;
+            manager.PreviousState.Pitch = 45f;
+            manager.PreviousState.DistanceCm = 1000f;
+            manager.PreviousState.FovYDeg = 60f;
+            manager.PreviousState.TargetCm = Vector2.Zero;
+            manager.State.Yaw = 0f;
+            manager.State.Pitch = 45f;
+            manager.State.DistanceCm = 1000f;
+            manager.State.FovYDeg = 60f;
+            manager.State.TargetCm = Vector2.Zero;
 
-            presenter.Update(state, 0.016f);
+            presenter.Update(manager, 1f);
 
             // Yaw=0 鈫?sin(0)=0, cos(0)=1
             // Pitch=45掳 鈫?cos(蟺/4)鈮?.7071, sin(蟺/4)鈮?.7071
@@ -346,10 +394,19 @@ namespace Ludots.Tests.ThreeC
             var presenter = new CameraPresenter(coords, adapter);
 
             // Pitch 鈮?89掳 鈫?forward 鈮?(0, -1, 0) 鈫?dot(forward, UnitY) > 0.99 鈫?up switches to UnitZ
-            var state = new CameraState { Yaw = 0f, Pitch = 89f, DistanceCm = 1000f, FovYDeg = 60f };
-            state.TargetCm = Vector2.Zero;
+            var manager = new CameraManager();
+            manager.PreviousState.Yaw = 0f;
+            manager.PreviousState.Pitch = 89f;
+            manager.PreviousState.DistanceCm = 1000f;
+            manager.PreviousState.FovYDeg = 60f;
+            manager.PreviousState.TargetCm = Vector2.Zero;
+            manager.State.Yaw = 0f;
+            manager.State.Pitch = 89f;
+            manager.State.DistanceCm = 1000f;
+            manager.State.FovYDeg = 60f;
+            manager.State.TargetCm = Vector2.Zero;
 
-            presenter.Update(state, 0.016f);
+            presenter.Update(manager, 1f);
 
             var up = adapter.LastState.Up;
             // Up should be approximately UnitZ, not UnitY
@@ -357,28 +414,32 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void Presenter_SecondUpdate_AppliesLerpSmoothing()
+        public void Presenter_InterpolatesBetweenPreviousAndCurrentLogicState()
         {
             var adapter = new StubCameraAdapter();
             var coords = new StubSpatialCoordinateConverter();
-            var presenter = new CameraPresenter(coords, adapter) { SmoothSpeed = 10f };
+            var presenter = new CameraPresenter(coords, adapter);
+            var manager = new CameraManager();
 
-            // First frame: snap
-            var state = new CameraState { Yaw = 0f, Pitch = 45f, DistanceCm = 1000f, FovYDeg = 60f };
-            state.TargetCm = Vector2.Zero;
-            presenter.Update(state, 0.016f);
-            var firstPos = adapter.LastState.Position;
+            manager.PreviousState.Yaw = 0f;
+            manager.PreviousState.Pitch = 45f;
+            manager.PreviousState.DistanceCm = 1000f;
+            manager.PreviousState.FovYDeg = 60f;
+            manager.PreviousState.TargetCm = Vector2.Zero;
 
             // Second frame: move target 鈫?position should lerp, not snap
-            state.TargetCm = new Vector2(5000f, 5000f); // 50m offset
-            presenter.Update(state, 0.016f);
-            var secondPos = adapter.LastState.Position;
+            manager.State.Yaw = 0f;
+            manager.State.Pitch = 45f;
+            manager.State.DistanceCm = 1000f;
+            manager.State.FovYDeg = 60f;
+            manager.State.TargetCm = new Vector2(5000f, 5000f);
 
-            // The target changed dramatically, but with SmoothSpeed=10 and dt=0.016,
-            // t = clamp(10*0.016, 0, 1) = 0.16, so position should move only ~16% of the way
-            float targetVisualX = 5000f / 100f; // 50m
-            That(secondPos.X, Is.GreaterThan(firstPos.X), "Position should move toward new target");
-            That(secondPos.X, Is.LessThan(targetVisualX), "Position should not snap to target (smoothing)");
+            presenter.Update(manager, 0.5f);
+
+            That(presenter.CurrentTargetPosition.X, Is.EqualTo(25f).Within(0.01f));
+            That(presenter.CurrentTargetPosition.Z, Is.EqualTo(25f).Within(0.01f));
+            That(adapter.LastState.Position.X, Is.EqualTo(25f).Within(0.01f));
+            That(adapter.LastState.Target.X, Is.EqualTo(25f).Within(0.01f));
         }
 
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲

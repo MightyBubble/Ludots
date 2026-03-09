@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Hud;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -98,17 +99,27 @@ namespace Ludots.Core.Gameplay.Camera
         /// Derive CameraRenderState3D from CameraState (no smoothing).
         /// Same logic as CameraPresenter.
         /// </summary>
-        public static CameraRenderState3D StateToRenderState(CameraState state)
+        public static CameraRenderState3D StateToRenderState(CameraState state, RenderCameraDebugState cameraDebug = null)
         {
             if (state == null)
                 throw new ArgumentNullException(nameof(state));
 
+            return StateToRenderState(CameraStateSnapshot.FromState(state), cameraDebug);
+        }
+
+        public static CameraRenderState3D StateToRenderState(in CameraStateSnapshot state, RenderCameraDebugState cameraDebug = null)
+        {
             Vector3 targetPos = new Vector3(
                 WorldUnits.CmToM(state.TargetCm.X), 0f, WorldUnits.CmToM(state.TargetCm.Y));
 
             float yawRad = state.Yaw * (float)(Math.PI / 180.0);
             float pitchRad = state.Pitch * (float)(Math.PI / 180.0);
             float distanceM = WorldUnits.CmToM(state.DistanceCm);
+            if (cameraDebug is { Enabled: true })
+            {
+                distanceM += cameraDebug.PullBackMeters;
+            }
+
             float hDist = distanceM * (float)Math.Cos(pitchRad);
             float vDist = distanceM * (float)Math.Sin(pitchRad);
 
@@ -116,6 +127,10 @@ namespace Ludots.Core.Gameplay.Camera
             float offsetZ = -hDist * (float)Math.Cos(yawRad);
             Vector3 offset = new Vector3(offsetX, vDist, offsetZ);
             Vector3 desiredPos = targetPos + offset;
+            if (cameraDebug is { Enabled: true })
+            {
+                desiredPos += cameraDebug.PositionOffsetMeters;
+            }
 
             bool firstPerson = state.RigKind == CameraRigKind.FirstPerson || Vector3.DistanceSquared(targetPos, desiredPos) < 0.000001f;
             Vector3 lookTarget = targetPos;

@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Tweening;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -8,18 +9,17 @@ namespace Ludots.Core.Gameplay.Camera
         private readonly VirtualCameraRegistry _registry;
         private RuntimeVirtualCamera? _active;
         private CameraStateSnapshot _blendFrom;
-        private float _blendDuration;
-        private float _blendElapsed;
-        private CameraBlendCurve _blendCurve;
+        private TweenProgress _blendProgress;
 
         public VirtualCameraBrain(VirtualCameraRegistry registry)
         {
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+            _blendProgress.Complete();
         }
 
         public bool HasActiveCamera => _active != null;
         public bool AllowsInput => _active != null && _active.Definition.AllowUserInput && !IsBlending;
-        public bool IsBlending { get; private set; }
+        public bool IsBlending => _blendProgress.IsActive;
         public string ActiveCameraId => _active?.Definition.Id ?? string.Empty;
 
         public void Activate(string id, CameraState currentState, float? blendDurationSeconds = null)
@@ -27,20 +27,17 @@ namespace Ludots.Core.Gameplay.Camera
             if (currentState == null) throw new ArgumentNullException(nameof(currentState));
 
             var definition = _registry.Get(id);
-            _active = new RuntimeVirtualCamera(definition, CameraStateSnapshot.FromDefinition(definition, currentState));
+            _active = new RuntimeVirtualCamera(definition, FromDefinition(definition, currentState));
             _blendFrom = CameraStateSnapshot.FromState(currentState);
-            _blendDuration = Math.Max(0f, blendDurationSeconds ?? definition.DefaultBlendDuration);
-            _blendElapsed = 0f;
-            _blendCurve = definition.BlendCurve;
-            IsBlending = _blendDuration > 0f && _blendCurve != CameraBlendCurve.Cut;
+            _blendProgress.Start(
+                Math.Max(0f, blendDurationSeconds ?? definition.DefaultBlendDuration),
+                ToTweenEasing(definition.BlendCurve));
         }
 
         public void Clear()
         {
             _active = null;
-            _blendDuration = 0f;
-            _blendElapsed = 0f;
-            IsBlending = false;
+            _blendProgress.Complete();
         }
 
         public void ApplyToState(CameraState state, Vector2? followTargetPositionCm, float dt)
@@ -53,15 +50,9 @@ namespace Ludots.Core.Gameplay.Camera
             var desired = ResolveDesiredSnapshot(_active, followTargetPositionCm);
             if (IsBlending)
             {
-                _blendElapsed += Math.Max(0f, dt);
-                float rawT = _blendDuration <= 0f ? 1f : Math.Clamp(_blendElapsed / _blendDuration, 0f, 1f);
-                float t = EvaluateBlend(rawT, _blendCurve);
+                float t = _blendProgress.Tick(dt);
                 var blended = CameraStateSnapshot.Lerp(_blendFrom, desired, t);
                 blended.ApplyTo(state);
-                if (rawT >= 1f)
-                {
-                    IsBlending = false;
-                }
             }
             else
             {
@@ -106,15 +97,14 @@ namespace Ludots.Core.Gameplay.Camera
             return desired;
         }
 
-        private static float EvaluateBlend(float t, CameraBlendCurve curve)
+        private static TweenEasing ToTweenEasing(CameraBlendCurve curve)
         {
-            t = Math.Clamp(t, 0f, 1f);
             return curve switch
             {
-                CameraBlendCurve.Cut => 1f,
-                CameraBlendCurve.Linear => t,
-                CameraBlendCurve.SmoothStep => t * t * (3f - (2f * t)),
-                _ => t
+                CameraBlendCurve.Cut => TweenEasing.Cut,
+                CameraBlendCurve.Linear => TweenEasing.Linear,
+                CameraBlendCurve.SmoothStep => TweenEasing.SmoothStep,
+                _ => TweenEasing.Linear
             };
         }
 
@@ -130,88 +120,21 @@ namespace Ludots.Core.Gameplay.Camera
             public CameraStateSnapshot RuntimeState;
         }
 
-        private struct CameraStateSnapshot
+        private static CameraStateSnapshot FromDefinition(VirtualCameraDefinition definition, CameraState currentState)
         {
-            public Vector2 TargetCm;
-            public float Yaw;
-            public float Pitch;
-            public float DistanceCm;
-            public float FovYDeg;
-            public CameraRigKind RigKind;
-            public bool IsFollowing;
-
-            public static CameraStateSnapshot FromState(CameraState state)
+            return new CameraStateSnapshot
             {
-                return new CameraStateSnapshot
-                {
-                    TargetCm = state.TargetCm,
-                    Yaw = state.Yaw,
-                    Pitch = state.Pitch,
-                    DistanceCm = state.DistanceCm,
-                    FovYDeg = state.FovYDeg,
-                    RigKind = state.RigKind,
-                    IsFollowing = state.IsFollowing
-                };
-            }
-
-            public static CameraStateSnapshot FromDefinition(VirtualCameraDefinition definition, CameraState currentState)
-            {
-                return new CameraStateSnapshot
-                {
-                    TargetCm = definition.TargetSource == VirtualCameraTargetSource.Fixed
-                        ? definition.FixedTargetCm
-                        : currentState.TargetCm,
-                    Yaw = definition.Yaw,
-                    Pitch = definition.Pitch,
-                    DistanceCm = definition.DistanceCm,
-                    FovYDeg = definition.FovYDeg,
-                    RigKind = definition.RigKind,
-                    IsFollowing = false
-                };
-            }
-
-            public static CameraStateSnapshot Lerp(in CameraStateSnapshot from, in CameraStateSnapshot to, float t)
-            {
-                return new CameraStateSnapshot
-                {
-                    TargetCm = Vector2.Lerp(from.TargetCm, to.TargetCm, t),
-                    Yaw = LerpAngleDeg(from.Yaw, to.Yaw, t),
-                    Pitch = LerpScalar(from.Pitch, to.Pitch, t),
-                    DistanceCm = LerpScalar(from.DistanceCm, to.DistanceCm, t),
-                    FovYDeg = LerpScalar(from.FovYDeg, to.FovYDeg, t),
-                    RigKind = to.RigKind,
-                    IsFollowing = to.IsFollowing
-                };
-            }
-
-            public void ApplyTo(CameraState state)
-            {
-                state.TargetCm = TargetCm;
-                state.Yaw = Yaw;
-                state.Pitch = Pitch;
-                state.DistanceCm = DistanceCm;
-                state.FovYDeg = FovYDeg;
-                state.RigKind = RigKind;
-                state.IsFollowing = IsFollowing;
-            }
-
-            private static float LerpScalar(float from, float to, float t)
-            {
-                return from + ((to - from) * t);
-            }
-
-            private static float LerpAngleDeg(float from, float to, float t)
-            {
-                float delta = ((to - from + 540f) % 360f) - 180f;
-                return Normalize360(from + (delta * t));
-            }
-
-            private static float Normalize360(float degrees)
-            {
-                degrees %= 360f;
-                if (degrees < 0f) degrees += 360f;
-                return degrees;
-            }
+                TargetCm = definition.TargetSource == VirtualCameraTargetSource.Fixed
+                    ? definition.FixedTargetCm
+                    : currentState.TargetCm,
+                Yaw = definition.Yaw,
+                Pitch = definition.Pitch,
+                DistanceCm = definition.DistanceCm,
+                FovYDeg = definition.FovYDeg,
+                RigKind = definition.RigKind,
+                ZoomLevel = currentState.ZoomLevel,
+                IsFollowing = false
+            };
         }
     }
 }

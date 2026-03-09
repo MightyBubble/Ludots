@@ -5,16 +5,31 @@ using Ludots.Core.Input.Runtime;
 namespace Ludots.Core.Gameplay.Camera
 {
     /// <summary>
-    /// Manages the active camera state and behavior pipeline.
-    /// Acts as the central service for camera logic within the GameSession.
-    /// No ECS dependency — follow target position is set externally by systems/triggers.
+    /// Manages the authoritative logic camera state.
+    /// Camera logic advances on fixed-step ticks; render systems interpolate between PreviousState and State.
     /// </summary>
     public class CameraManager
     {
+        private readonly CameraInputAccumulator _pendingInput = new();
+        private readonly FrozenInputActionReader _logicInput = new();
+        private readonly CameraState _preVirtualState = new();
+
+        private PlayerInputHandler? _liveInput;
+        private CameraBehaviorContext? _runtimeContext;
+        private CompositeCameraController? _controller;
+        private bool _pendingFollowSnap;
+        private long _lastCapturedInputRevision = -1;
+
         /// <summary>
-        /// The current state of the camera (position, rotation, zoom).
+        /// The current fixed-step logic state of the camera.
         /// </summary>
-        public CameraState State { get; private set; } = new CameraState();
+        public CameraState State { get; } = new();
+
+        /// <summary>
+        /// The previous fixed-step logic state of the camera.
+        /// Presentation systems interpolate between PreviousState and State.
+        /// </summary>
+        public CameraState PreviousState { get; } = new();
 
         public CameraPreset? ActivePreset { get; private set; }
 
@@ -37,18 +52,19 @@ namespace Ludots.Core.Gameplay.Camera
 
         public VirtualCameraBrain? VirtualCameraBrain { get; private set; }
 
-        private CameraBehaviorContext? _runtimeContext;
-        private CompositeCameraController? _controller;
-        private bool _pendingFollowSnap;
-        private readonly CameraState _preVirtualState = new CameraState();
+        public CameraManager()
+        {
+            CopyState(State, PreviousState);
+        }
 
         public void ConfigureRuntime(PlayerInputHandler input, Presentation.Camera.IViewController view)
         {
-            _runtimeContext = new CameraBehaviorContext(input, view);
-            if (ActivePreset != null)
-            {
-                _controller = CameraControllerFactory.FromPreset(ActivePreset, _runtimeContext);
-            }
+            _liveInput = input ?? throw new ArgumentNullException(nameof(input));
+            _runtimeContext = new CameraBehaviorContext(_logicInput, view ?? throw new ArgumentNullException(nameof(view)));
+            _controller = ActivePreset != null ? CameraControllerFactory.FromPreset(ActivePreset, _runtimeContext) : null;
+            ResetInputTracking();
+            CaptureVisualInput();
+            CopyState(State, PreviousState);
         }
 
         public void SetVirtualCameraRegistry(VirtualCameraRegistry registry)
@@ -71,6 +87,7 @@ namespace Ludots.Core.Gameplay.Camera
             FollowTarget = followTarget;
             _pendingFollowSnap = snapToFollowTargetWhenAvailable;
             _controller = _runtimeContext != null ? CameraControllerFactory.FromPreset(preset, _runtimeContext) : null;
+            ResetInputTracking();
             TrySnapToFollowTarget();
             SyncVirtualBaseState();
         }
@@ -116,11 +133,23 @@ namespace Ludots.Core.Gameplay.Camera
         }
 
         /// <summary>
-        /// Updates the camera state using the active Core behavior pipeline.
-        /// Should be called once per frame by the GameSession.
+        /// Captures the latest visual-frame input sample.
+        /// This should run once per render-frame after PlayerInputHandler.Update().
+        /// </summary>
+        public void CaptureVisualInput()
+        {
+            CaptureVisualInput(force: false);
+        }
+
+        /// <summary>
+        /// Advances the authoritative camera logic by one fixed-step tick.
         /// </summary>
         public void Update(float dt)
         {
+            CaptureVisualInput(force: false);
+            _pendingInput.BuildTickSnapshot(_logicInput);
+            CopyState(State, PreviousState);
+
             Vector2? followTargetPosition = ResolveFollowTargetPosition();
             UpdateFollowState(followTargetPosition);
 
@@ -135,9 +164,47 @@ namespace Ludots.Core.Gameplay.Camera
                 {
                     CopyState(State, _preVirtualState);
                 }
+
                 VirtualCameraBrain.ApplyToState(State, followTargetPosition, dt);
                 VirtualCameraBrain.CapturePostControllerState(State);
             }
+        }
+
+        public CameraStateSnapshot GetInterpolatedState(float alpha)
+        {
+            alpha = Math.Clamp(alpha, 0f, 1f);
+            var previous = CameraStateSnapshot.FromState(PreviousState);
+            var current = CameraStateSnapshot.FromState(State);
+            return CameraStateSnapshot.Lerp(previous, current, alpha);
+        }
+
+        private void CaptureVisualInput(bool force)
+        {
+            if (_liveInput == null)
+            {
+                return;
+            }
+
+            if (!force && _liveInput.UpdateRevision == _lastCapturedInputRevision)
+            {
+                return;
+            }
+
+            _lastCapturedInputRevision = _liveInput.UpdateRevision;
+
+            if (ActivePreset != null)
+            {
+                var preset = ActivePreset;
+                _pendingInput.CaptureContinuous(preset.MoveActionId, _liveInput.ReadAction<Vector2>(preset.MoveActionId));
+                _pendingInput.AccumulateOneShot(preset.ZoomActionId, _liveInput.ReadAction<float>(preset.ZoomActionId));
+                _pendingInput.CaptureContinuous(preset.PointerPosActionId, _liveInput.ReadAction<Vector2>(preset.PointerPosActionId));
+                _pendingInput.CaptureContinuous(preset.RotateHoldActionId, _liveInput.ReadAction<bool>(preset.RotateHoldActionId));
+                _pendingInput.CaptureContinuous(preset.RotateLeftActionId, _liveInput.ReadAction<bool>(preset.RotateLeftActionId));
+                _pendingInput.CaptureContinuous(preset.RotateRightActionId, _liveInput.ReadAction<bool>(preset.RotateRightActionId));
+                _pendingInput.CaptureContinuous(preset.GrabDragHoldActionId, _liveInput.ReadAction<bool>(preset.GrabDragHoldActionId));
+            }
+
+            _pendingInput.CaptureContinuous(FollowActionId, _liveInput.ReadAction<bool>(FollowActionId));
         }
 
         private void UpdateFollowState(Vector2? followTargetPosition)
@@ -235,6 +302,13 @@ namespace Ludots.Core.Gameplay.Camera
             }
 
             _preVirtualState.IsFollowing = isFollowing;
+        }
+
+        private void ResetInputTracking()
+        {
+            _pendingInput.Clear();
+            _logicInput.Clear();
+            _lastCapturedInputRevision = -1;
         }
 
         private static void CopyState(CameraState source, CameraState destination)

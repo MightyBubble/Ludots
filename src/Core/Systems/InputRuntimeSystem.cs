@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Arch.System;
+using Ludots.Core.Gameplay;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
  
@@ -28,6 +29,11 @@ namespace Ludots.Core.Systems
             bool uiCaptured = _globals.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var capturedObj) && capturedObj is bool b && b;
             input.InputBlocked = uiCaptured;
             input.Update();
+
+            if (_globals.TryGetValue(CoreServiceKeys.GameSession.Name, out var sessionObj) && sessionObj is GameSession session)
+            {
+                session.Camera.CaptureVisualInput();
+            }
         }
  
         public void BeforeUpdate(in float dt) { }

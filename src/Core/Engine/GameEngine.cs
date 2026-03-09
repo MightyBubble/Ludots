@@ -603,6 +603,7 @@ namespace Ludots.Core.Engine
             var virtualCameraRegistry = new VirtualCameraRegistry();
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             GameSession.Camera.SetVirtualCameraRegistry(virtualCameraRegistry);
+            var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, cameraPresetRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
             
@@ -612,6 +613,7 @@ namespace Ludots.Core.Engine
             // Phase 1: InputCollection
             RegisterSystem(sessionSystem, SystemGroup.InputCollection); // Session handles input gathering
             RegisterSystem(new Ludots.Core.Presentation.Systems.LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
+            RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
@@ -993,7 +995,9 @@ namespace Ludots.Core.Engine
             if (preset != null)
             {
                 EnsureCameraRuntimeConfigured();
-                GameSession.Camera.ApplyPreset(preset, BuildFollowTarget(preset.FollowTargetKind));
+                GameSession.Camera.ApplyPreset(
+                    preset,
+                    CameraFollowTargetFactory.Build(World, GlobalContext, preset.FollowTargetKind));
             }
 
             if (cam != null)
@@ -1460,6 +1464,7 @@ namespace Ludots.Core.Engine
             
             GameTask.Update(dt);
             SyncContext.ProcessQueue();
+            EnsureCameraRuntimeConfigured();
 
             // 1. Simulation Loop (GAS, Physics, AI) - Controlled by Pacemaker
             if (!_simulationBudgetFused)
@@ -1501,11 +1506,6 @@ namespace Ludots.Core.Engine
         private void Update(float dt)
         {
             _inputRuntimeSystem?.Update(dt);
-            EnsureCameraRuntimeConfigured();
-            ApplyCameraPresetRequest();
-            ApplyCameraPoseRequest();
-            ApplyVirtualCameraRequest();
-            GameSession.Update(dt);
 
             _primitiveDrawBuffer?.Clear();
             _groundOverlayBuffer?.Clear();
@@ -1531,85 +1531,6 @@ namespace Ludots.Core.Engine
             {
                 GameSession.Camera.ConfigureRuntime(input, viewport);
             }
-        }
-
-        private void ApplyCameraPresetRequest()
-        {
-            var request = GetService(CoreServiceKeys.CameraPresetRequest);
-            if (request == null)
-            {
-                return;
-            }
-
-            var registry = GetService(CoreServiceKeys.CameraPresetRegistry)
-                ?? throw new InvalidOperationException("CameraPresetRegistry is missing.");
-            if (string.IsNullOrWhiteSpace(request.PresetId))
-            {
-                throw new InvalidOperationException("CameraPresetRequest.PresetId is required.");
-            }
-
-            if (!registry.TryGet(request.PresetId, out var preset) || preset == null)
-            {
-                throw new InvalidOperationException($"Camera preset '{request.PresetId}' is not registered.");
-            }
-
-            EnsureCameraRuntimeConfigured();
-            if (request.ClearActiveVirtualCamera)
-            {
-                GameSession.Camera.ClearVirtualCamera();
-            }
-            GameSession.Camera.ApplyPreset(
-                preset,
-                BuildFollowTarget(request.FollowTargetKindOverride ?? preset.FollowTargetKind),
-                request.SnapToFollowTargetWhenAvailable);
-
-            GlobalContext.Remove(CoreServiceKeys.CameraPresetRequest.Name);
-        }
-
-        private void ApplyCameraPoseRequest()
-        {
-            var request = GetService(CoreServiceKeys.CameraPoseRequest);
-            if (request == null)
-            {
-                return;
-            }
-
-            GameSession.Camera.ApplyPose(request);
-            GlobalContext.Remove(CoreServiceKeys.CameraPoseRequest.Name);
-        }
-
-        private void ApplyVirtualCameraRequest()
-        {
-            var request = GetService(CoreServiceKeys.VirtualCameraRequest);
-            if (request == null)
-            {
-                return;
-            }
-
-            if (request.Clear || string.IsNullOrWhiteSpace(request.Id))
-            {
-                GameSession.Camera.ClearVirtualCamera();
-            }
-            else
-            {
-                GameSession.Camera.ActivateVirtualCamera(request.Id, request.BlendDurationSeconds);
-            }
-
-            GlobalContext.Remove(CoreServiceKeys.VirtualCameraRequest.Name);
-        }
-
-        private ICameraFollowTarget? BuildFollowTarget(CameraFollowTargetKind kind)
-        {
-            return kind switch
-            {
-                CameraFollowTargetKind.None => null,
-                CameraFollowTargetKind.LocalPlayer => new GlobalEntityFollowTarget(World, GlobalContext, CoreServiceKeys.LocalPlayerEntity.Name),
-                CameraFollowTargetKind.SelectedEntity => new GlobalEntityFollowTarget(World, GlobalContext, CoreServiceKeys.SelectedEntity.Name),
-                CameraFollowTargetKind.SelectedOrLocalPlayer => new FallbackChainFollowTarget(
-                    new GlobalEntityFollowTarget(World, GlobalContext, CoreServiceKeys.SelectedEntity.Name),
-                    new GlobalEntityFollowTarget(World, GlobalContext, CoreServiceKeys.LocalPlayerEntity.Name)),
-                _ => throw new InvalidOperationException($"Unsupported camera follow target kind: {kind}")
-            };
         }
     }
 }

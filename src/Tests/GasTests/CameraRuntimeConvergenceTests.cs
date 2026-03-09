@@ -276,6 +276,61 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void CameraManager_VirtualCamera_LinearBlendAdvancesByTweenProgress()
+        {
+            var manager = new CameraManager();
+            var registry = new VirtualCameraRegistry();
+            registry.Register(new VirtualCameraDefinition
+            {
+                Id = "BlendFocus",
+                RigKind = CameraRigKind.TopDown,
+                TargetSource = VirtualCameraTargetSource.Fixed,
+                FixedTargetCm = new Vector2(2000f, 1000f),
+                Yaw = 270f,
+                Pitch = 70f,
+                DistanceCm = 9000f,
+                FovYDeg = 45f,
+                DefaultBlendDuration = 1f,
+                BlendCurve = CameraBlendCurve.Linear,
+                AllowUserInput = false
+            });
+
+            manager.SetVirtualCameraRegistry(registry);
+            manager.ApplyPreset(new CameraPreset
+            {
+                Id = "Base",
+                RigKind = CameraRigKind.Orbit,
+                DistanceCm = 3000f,
+                Pitch = 40f,
+                Yaw = 180f,
+                FovYDeg = 60f
+            });
+            manager.ApplyPose(new CameraPoseRequest
+            {
+                TargetCm = new Vector2(400f, 200f)
+            });
+
+            manager.ActivateVirtualCamera("BlendFocus", 1f);
+            manager.Update(0.5f);
+
+            Assert.That(manager.VirtualCameraBrain?.IsBlending, Is.True);
+            Assert.That(manager.State.TargetCm.X, Is.EqualTo(1200f).Within(0.01f));
+            Assert.That(manager.State.TargetCm.Y, Is.EqualTo(600f).Within(0.01f));
+            Assert.That(manager.State.DistanceCm, Is.EqualTo(6000f).Within(0.01f));
+            Assert.That(manager.State.Pitch, Is.EqualTo(55f).Within(0.01f));
+            Assert.That(manager.State.FovYDeg, Is.EqualTo(52.5f).Within(0.01f));
+
+            manager.Update(0.5f);
+
+            Assert.That(manager.VirtualCameraBrain?.IsBlending, Is.False);
+            Assert.That(manager.State.TargetCm, Is.EqualTo(new Vector2(2000f, 1000f)));
+            Assert.That(manager.State.DistanceCm, Is.EqualTo(9000f));
+            Assert.That(manager.State.Pitch, Is.EqualTo(70f));
+            Assert.That(manager.State.Yaw, Is.EqualTo(270f));
+            Assert.That(manager.State.FovYDeg, Is.EqualTo(45f));
+        }
+
+        [Test]
         public void CameraViewportUtil_FirstPersonStateToRenderState_DoesNotProduceNaN()
         {
             var state = new CameraState

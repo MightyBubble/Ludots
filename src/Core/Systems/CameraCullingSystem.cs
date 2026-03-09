@@ -12,6 +12,9 @@ namespace Ludots.Core.Systems
 {
     public class CameraCullingSystem : BaseSystem<World, float>
     {
+        private static readonly QueryDescription _presentationStateQuery = new QueryDescription()
+            .WithAll<PresentationFrameState>();
+
         private readonly CameraManager _cameraManager;
         private readonly ISpatialQueryService _spatial;
         private readonly IViewController _view;
@@ -38,13 +41,14 @@ namespace Ludots.Core.Systems
 
         public override void Update(in float dt)
         {
-            var target = _cameraManager.State.TargetCm;
-            float distanceCm = _cameraManager.State.DistanceCm;
+            CameraStateSnapshot cameraState = _cameraManager.GetInterpolatedState(ReadPresentationAlpha());
+            var target = cameraState.TargetCm;
+            float distanceCm = cameraState.DistanceCm;
             
             // Calculate Logic Viewport Size
-            float fovY = _cameraManager.State.FovYDeg * (float)(Math.PI / 180.0f);
+            float fovY = cameraState.FovYDeg * (float)(Math.PI / 180.0f);
             float aspectRatio = _view.AspectRatio;
-            float pitchRad = _cameraManager.State.Pitch * (float)(Math.PI / 180.0f);
+            float pitchRad = cameraState.Pitch * (float)(Math.PI / 180.0f);
             
             // H = 2 * Distance * tan(FOV/2)
             float logicHeight = 2.0f * distanceCm * (float)Math.Tan(fovY / 2.0f);
@@ -158,6 +162,28 @@ namespace Ludots.Core.Systems
             DebugState.LowLodDist = LowLODDistCm;
             DebugState.CameraTargetCm = new System.Numerics.Vector2(target.X, target.Y);
             DebugState.VisibleEntityCount = _prevVisible.Count;
+        }
+
+        private float ReadPresentationAlpha()
+        {
+            var job = new ReadAlphaJob();
+            World.InlineQuery<ReadAlphaJob, PresentationFrameState>(in _presentationStateQuery, ref job);
+            return job.Alpha;
+        }
+
+        private struct ReadAlphaJob : IForEach<PresentationFrameState>
+        {
+            public float Alpha;
+
+            public ReadAlphaJob()
+            {
+                Alpha = 1f;
+            }
+
+            public void Update(ref PresentationFrameState state)
+            {
+                Alpha = state.Enabled ? state.InterpolationAlpha : 1f;
+            }
         }
     }
 }

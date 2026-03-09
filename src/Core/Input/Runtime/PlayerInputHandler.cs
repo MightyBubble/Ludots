@@ -5,7 +5,7 @@ using Ludots.Core.Input.Config;
 
 namespace Ludots.Core.Input.Runtime
 {
-    public class PlayerInputHandler
+    public class PlayerInputHandler : IInputActionReader
     {
         private readonly IInputBackend _backend;
         private readonly List<CompiledContext> _activeContexts = new();
@@ -16,6 +16,7 @@ namespace Ludots.Core.Input.Runtime
         private readonly Vector3[] _tempValues;
 
         public bool InputBlocked { get; set; } = false;
+        public long UpdateRevision { get; private set; }
 
         public PlayerInputHandler(IInputBackend backend, InputConfigRoot config)
         {
@@ -110,6 +111,8 @@ namespace Ludots.Core.Input.Runtime
 
         public void Update()
         {
+            UpdateRevision++;
+
             if (InputBlocked)
             {
                 for (int i = 0; i < _actionStates.Length; i++)
