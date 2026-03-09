@@ -1,12 +1,13 @@
 {
   "name": "RtsDemoMod",
   "version": "1.0.0",
-  "description": "RTS demo mod: unit production, aura (PeriodicSearch), AOE combat (Search), resource cost, effect stacking, 3-faction teams.",
+  "description": "Playable RTS demo with box selection, right-click move, and Navigation2D crowd avoidance.",
   "main": "bin/net8.0/RtsDemoMod.dll",
   "priority": 0,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["rts", "demo", "gameplay"]
+  "tags": ["rts", "demo", "navigation2d", "playable"]
 }

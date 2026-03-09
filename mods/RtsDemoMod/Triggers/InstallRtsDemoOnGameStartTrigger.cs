@@ -1,19 +1,19 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
+using Ludots.Core.Navigation2D.Systems;
+using Ludots.Core.Physics2D.Systems;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Scripting;
+using RtsDemoMod.Systems;
 
 namespace RtsDemoMod.Triggers
 {
-    /// <summary>
-    /// Registers RTS abilities and sets up 3-faction team relationships on game start.
-    /// Covers: Ability Cost (multi-signal), PeriodicSearch aura, Search AOE, CreateUnit,
-    ///         Buff with GrantedTags, StimPack (RequiredAll activation), 3-team asymmetric relations.
-    /// </summary>
     public sealed class InstallRtsDemoOnGameStartTrigger : Trigger
     {
-        private const string InstalledKey = "RtsDemoMod.Installed";
         private readonly IModContext _ctx;
 
         public InstallRtsDemoOnGameStartTrigger(IModContext ctx)
@@ -25,20 +25,48 @@ namespace RtsDemoMod.Triggers
         public override Task ExecuteAsync(ScriptContext context)
         {
             var engine = context.GetEngine();
-            if (engine == null) return Task.CompletedTask;
-
-            if (engine.GlobalContext.TryGetValue(InstalledKey, out var obj) && obj is bool b && b)
+            if (engine == null)
+            {
                 return Task.CompletedTask;
-            engine.GlobalContext[InstalledKey] = true;
-            _ctx.Log("[RtsDemoMod] Ability definitions loaded via GAS/abilities.json");
+            }
 
-            // ── Setup 3-faction team relationships ──
-            // Team 1: Terran, Team 2: Zerg, Team 3: Protoss
-            // All pairs are mutually hostile (asymmetric capable, but symmetric here).
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
-            TeamManager.SetRelationshipSymmetric(1, 3, TeamRelationship.Hostile);
-            TeamManager.SetRelationshipSymmetric(2, 3, TeamRelationship.Hostile);
+            if (engine.GlobalContext.TryGetValue(RtsDemoKeys.Installed, out var obj) && obj is bool installed && installed)
+            {
+                return Task.CompletedTask;
+            }
 
+            engine.GlobalContext[RtsDemoKeys.Installed] = true;
+            engine.GlobalContext[RtsDemoKeys.SelectionState] = new RtsSelectionState();
+            engine.GlobalContext[RtsDemoKeys.IsActiveMap] = false;
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.DebugDrawCommandBuffer.Name, out var debugObj) || debugObj is not DebugDrawCommandBuffer debugDraw)
+            {
+                debugDraw = new DebugDrawCommandBuffer();
+                engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
+            }
+
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var orderObj) && orderObj is OrderQueue orders)
+            {
+                engine.RegisterSystem(new RtsScenarioSystem(engine, orders), SystemGroup.InputCollection);
+                engine.RegisterSystem(new RtsLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.InputCollection);
+            }
+
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var registryObj) && registryObj is OrderTypeRegistry orderTypeRegistry)
+            {
+                int stopOrderTagId = engine.GetService(CoreServiceKeys.GameConfig).Constants.OrderTags["stop"];
+                engine.RegisterSystem(new RtsStopOrderNavMoveCleanupSystem(engine.World, stopOrderTagId), SystemGroup.AbilityActivation);
+                engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.StopOrderSystem(engine.World, orderTypeRegistry), SystemGroup.AbilityActivation);
+                engine.RegisterSystem(new NavBlackboardSinkSystem(engine.World), SystemGroup.AbilityActivation);
+                engine.RegisterSystem(new NavArrivalSystem(engine.World, engine.EventBus), SystemGroup.PostMovement);
+            }
+
+            engine.RegisterSystem(new IntegrationSystem2D(engine.World), SystemGroup.InputCollection);
+            engine.RegisterSystem(new Physics2DToWorldPositionSyncSystem(engine.World), SystemGroup.PostMovement);
+
+            var meshes = context.Get(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry ?? new MeshAssetRegistry();
+            engine.RegisterPresentationSystem(new RtsPresentationSystem(engine, debugDraw, meshes));
+
+            _ctx.Log("[RtsDemoMod] Installed playable RTS input, scenario, navigation, and presentation systems.");
             return Task.CompletedTask;
         }
     }

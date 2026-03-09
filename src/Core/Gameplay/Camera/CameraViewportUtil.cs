@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -94,6 +95,41 @@ namespace Ludots.Core.Gameplay.Camera
             return new Vector2(screenX, screenY);
         }
 
+
+        /// <summary>
+        /// Convert a screen-space pixel position to a world-space ray.
+        /// Uses the same projection math as <see cref="WorldToScreen"/>.
+        /// </summary>
+        public static ScreenRay ScreenToRay(
+            Vector2 screen,
+            in CameraRenderState3D camera,
+            Vector2 resolution,
+            float aspectRatio)
+        {
+            float safeWidth = Math.Max(resolution.X, 1f);
+            float safeHeight = Math.Max(resolution.Y, 1f);
+            float ndcX = (screen.X / safeWidth) * 2f - 1f;
+            float ndcY = 1f - (screen.Y / safeHeight) * 2f;
+
+            var view = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.Up);
+            float fovYRad = camera.FovYDeg * (float)(Math.PI / 180.0);
+            var projection = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, aspectRatio, NearPlane, FarPlane);
+            var viewProjection = view * projection;
+            if (!Matrix4x4.Invert(viewProjection, out var inverseViewProjection))
+            {
+                return new ScreenRay(camera.Position, Vector3.Normalize(camera.Target - camera.Position));
+            }
+
+            Vector3 nearPoint = Unproject(new Vector3(ndcX, ndcY, 0f), inverseViewProjection);
+            Vector3 farPoint = Unproject(new Vector3(ndcX, ndcY, 1f), inverseViewProjection);
+            Vector3 direction = farPoint - nearPoint;
+            if (direction.LengthSquared() <= 1e-6f)
+            {
+                direction = camera.Target - camera.Position;
+            }
+
+            return new ScreenRay(nearPoint, Vector3.Normalize(direction));
+        }
         /// <summary>
         /// Derive CameraRenderState3D from CameraState (no smoothing).
         /// Same logic as CameraPresenter.
@@ -138,6 +174,18 @@ namespace Ludots.Core.Gameplay.Camera
             return new CameraRenderState3D(desiredPos, lookTarget, up, state.FovYDeg);
         }
 
+
+        private static Vector3 Unproject(Vector3 ndc, Matrix4x4 inverseViewProjection)
+        {
+            Vector4 clip = new Vector4(ndc, 1f);
+            Vector4 world = Vector4.Transform(clip, inverseViewProjection);
+            if (Math.Abs(world.W) > 1e-6f)
+            {
+                world /= world.W;
+            }
+
+            return new Vector3(world.X, world.Y, world.Z);
+        }
         private static Vector3 ForwardFromYawPitch(float yawRad, float pitchRad)
         {
             float cosPitch = (float)Math.Cos(pitchRad);
@@ -148,3 +196,5 @@ namespace Ludots.Core.Gameplay.Camera
         }
     }
 }
+
+

@@ -77,9 +77,11 @@ namespace Ludots.Adapter.Raylib
                 engine.GlobalContext[CoreServiceKeys.ViewController.Name] = viewController;
 
                 var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
+                var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
                 screenProjector.BindPresenter(cameraPresenter);
+                screenRayProvider.BindPresenter(cameraPresenter);
                 engine.GlobalContext[CoreServiceKeys.ScreenProjector.Name] = screenProjector;
-                engine.GlobalContext[CoreServiceKeys.ScreenRayProvider.Name] = new RaylibScreenRayProvider(cameraAdapter);
+                engine.GlobalContext[CoreServiceKeys.ScreenRayProvider.Name] = screenRayProvider;
 
                 var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
                 engine.RegisterPresentationSystem(cullingSystem);
@@ -148,7 +150,7 @@ namespace Ludots.Adapter.Raylib
                         var activeCamera = cameraAdapter.Camera;
                         Rl.BeginMode3D(activeCamera);
 
-                        // 锚定到 target，网格以观察点为中心；halfCount 越大边界越远
+                        // 锚定�?target，网格以观察点为中心；halfCount 越大边界越远
                         DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
 
                         var t = activeCamera.target;
@@ -169,7 +171,7 @@ namespace Ludots.Adapter.Raylib
                         {
                             if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
                             {
-                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame — no Marker3D performers emitting?");
+                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame �?no Marker3D performers emitting?");
                                 _emptyBufferWarned = true;
                             }
                             primitiveRenderer.Draw(draw, meshes, renderDebug.AcceptanceScaleMultiplier);
@@ -482,3 +484,7 @@ namespace Ludots.Adapter.Raylib
         }
     }
 }
+
+
+
+

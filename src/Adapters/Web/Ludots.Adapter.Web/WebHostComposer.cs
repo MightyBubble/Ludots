@@ -19,7 +19,6 @@ namespace Ludots.Adapter.Web
         WebInputBackend InputBackend,
         WebViewController ViewController,
         WebCameraAdapter CameraAdapter,
-        WebScreenRayProvider ScreenRayProvider,
         WebTransportLayer Transport
     );
 
@@ -58,23 +57,29 @@ namespace Ludots.Adapter.Web
                 foreach (var contextId in config.StartupInputContexts)
                 {
                     if (!string.IsNullOrWhiteSpace(contextId))
+                    {
                         inputHandler.PushContext(contextId);
+                    }
                 }
             }
+
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)inputBackend);
 
             var viewController = new WebViewController();
             var cameraAdapter = new WebCameraAdapter();
-            var screenRayProvider = new WebScreenRayProvider(cameraAdapter, viewController);
             var transport = new WebTransportLayer(inputBackend, viewController);
 
             ValidateRequiredContextBeforeStart(engine);
 
             return new WebHostSetup(
-                engine, config, uiRoot,
-                inputBackend, viewController, cameraAdapter, screenRayProvider, transport
-            );
+                engine,
+                config,
+                uiRoot,
+                inputBackend,
+                viewController,
+                cameraAdapter,
+                transport);
         }
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
@@ -88,7 +93,9 @@ namespace Ludots.Adapter.Web
         private static void ValidateKey<T>(GameEngine engine, string key)
         {
             if (!engine.GlobalContext.TryGetValue(key, out var obj) || obj is not T)
+            {
                 throw new InvalidOperationException($"GlobalContext missing or invalid: {key} expected {typeof(T).FullName}");
+            }
         }
     }
 }

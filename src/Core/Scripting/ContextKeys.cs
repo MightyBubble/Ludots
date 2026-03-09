@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace Ludots.Core.Scripting
 {
@@ -24,6 +24,11 @@ namespace Ludots.Core.Scripting
         public const string ViewController = "ViewController";
         public const string ScreenProjector = "ScreenProjector";
         public const string ScreenRayProvider = "ScreenRayProvider";
+        public const string SelectionProfileRegistry = "SelectionProfileRegistry";
+        public const string ActiveSelectionProfileId = "ActiveSelectionProfileId";
+        public const string SelectionInteractionState = "SelectionInteractionState";
+        public const string SelectionInputHandler = "SelectionInputHandler";
+        public const string SelectionCandidatePolicy = "SelectionCandidatePolicy";
         public const string DebugDrawCommandBuffer = "DebugDrawCommandBuffer";
         public const string ExtensionAttributeRegistry = "ExtensionAttributeRegistry";
         public const string AttributeSchemaUpdateQueue = "AttributeSchemaUpdateQueue";
@@ -45,6 +50,8 @@ namespace Ludots.Core.Scripting
         public const string InputResponseBuffer = "InputResponseBuffer";
         public const string SelectionRequestQueue = "SelectionRequestQueue";
         public const string SelectionResponseBuffer = "SelectionResponseBuffer";
+        public const string SelectionRuleRegistry = "SelectionRuleRegistry";
+        public const string InteractionActionBindings = "InteractionActionBindings";
         public const string OrderQueue = "OrderQueue";
         public const string OrderTypeRegistry = "OrderTypeRegistry";
         public const string OrderBufferSystem = "OrderBufferSystem";
@@ -90,10 +97,8 @@ namespace Ludots.Core.Scripting
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";
         public const string TransientMarkerBuffer = "TransientMarkerBuffer";
-        // WorldHudConfig removed — unified into Performer entity-scoped definitions
         public const string GasPresentationEventBuffer = "GasPresentationEventBuffer";
         public const string GroundOverlayBuffer = "GroundOverlayBuffer";
-        // IndicatorRequestBuffer removed — unified into Performer direct API
         public const string PerformerDefinitionRegistry = "PerformerDefinitionRegistry";
         public const string PerformerInstanceBuffer = "PerformerInstanceBuffer";
         public const string Navigation2DRuntime = "Navigation2DRuntime";
@@ -101,13 +106,10 @@ namespace Ludots.Core.Scripting
         public const string NavMeshBakeConfig = "NavMeshBakeConfig";
         public const string NavMeshProfiles = "NavMeshProfiles";
         public const string NavQueryServices = "NavQueryServices";
-
         public const string LogBackend = "LogBackend";
-
         public const string MapSessions = "MapSessions";
         public const string BoardIdRegistry = "BoardIdRegistry";
         public const string MapContext = "MapContext";
-
         public const string SystemFactoryRegistry = "SystemFactoryRegistry";
         public const string TriggerDecoratorRegistry = "TriggerDecoratorRegistry";
     }

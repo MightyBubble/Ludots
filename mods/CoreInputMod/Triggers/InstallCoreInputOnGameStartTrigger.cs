@@ -1,9 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Systems;
@@ -12,11 +14,9 @@ using Ludots.Core.Scripting;
 namespace CoreInputMod.Triggers
 {
     /// <summary>
-    /// Registers generic input systems on game start: EntityClickSelect, GasSelectionResponse, GasInputResponse.
-    /// Does not include order sources (move/attack/etc) — those are game-mode specific (MobaDemoMod, RtsDemoMod, etc).
-    /// For camera, add Universal3CCameraMod.
-    /// Mods can add callbacks via GlobalContext["CoreInputMod.EntitySelectionCallbacks"] and
-    /// ["CoreInputMod.SelectionTriggeredCallbacks"] to customize visual feedback.
+    /// Registers generic input systems on game start: SelectionCommand, EntityClickSelect,
+    /// GasSelectionResponse, GasInputResponse.
+    /// Does not include order sources (move/attack/etc) — those are game-mode specific.
     /// </summary>
     public sealed class InstallCoreInputOnGameStartTrigger : Trigger
     {
@@ -34,34 +34,66 @@ namespace CoreInputMod.Triggers
         public override Task ExecuteAsync(ScriptContext context)
         {
             var engine = context.GetEngine();
-            if (engine == null) return Task.CompletedTask;
-
-            if (engine.GlobalContext.TryGetValue(InstalledKey, out var obj) && obj is bool b && b)
+            if (engine == null)
+            {
                 return Task.CompletedTask;
-            engine.GlobalContext[InstalledKey] = true;
+            }
 
-            var selectionCallbacks = new List<Action<WorldCmInt2, Arch.Core.Entity>>();
-            var triggeredCallbacks = new List<Action<SelectionRequest, WorldCmInt2>>();
-            engine.GlobalContext[EntitySelectionCallbacksKey] = selectionCallbacks;
-            engine.GlobalContext[SelectionTriggeredCallbacksKey] = triggeredCallbacks;
+            if (engine.GlobalContext.TryGetValue(InstalledKey, out var obj) && obj is bool installed && installed)
+            {
+                return Task.CompletedTask;
+            }
+
+            engine.GlobalContext[InstalledKey] = true;
+            engine.GlobalContext[EntitySelectionCallbacksKey] = new List<Action<WorldCmInt2, Entity>>();
+            engine.GlobalContext[SelectionTriggeredCallbacksKey] = new List<Action<SelectionRequest, WorldCmInt2>>();
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var bindingsObj)
+                || bindingsObj is not InteractionActionBindings)
+            {
+                engine.GlobalContext[CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings();
+            }
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionRuleRegistry.Name, out var rulesObj)
+                || rulesObj is not SelectionRuleRegistry)
+            {
+                engine.GlobalContext[CoreServiceKeys.SelectionRuleRegistry.Name] = SelectionRuleRegistry.CreateWithDefaults();
+            }
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionInteractionState.Name, out var interactionObj)
+                || interactionObj is not SelectionInteractionState)
+            {
+                engine.SetService(CoreServiceKeys.SelectionInteractionState, new SelectionInteractionState());
+            }
+
+            var selectionCallbacks = (List<Action<WorldCmInt2, Entity>>)engine.GlobalContext[EntitySelectionCallbacksKey];
+            var triggeredCallbacks = (List<Action<SelectionRequest, WorldCmInt2>>)engine.GlobalContext[SelectionTriggeredCallbacksKey];
+
+            engine.RegisterSystem(new SelectionCommandSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
 
             var clickSelect = new EntityClickSelectSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
             clickSelect.OnEntitySelected = (worldCm, entity) =>
             {
-                foreach (var cb in selectionCallbacks) cb(worldCm, entity);
+                foreach (var callback in selectionCallbacks)
+                {
+                    callback(worldCm, entity);
+                }
             };
-            engine.RegisterPresentationSystem(clickSelect);
+            engine.RegisterSystem(clickSelect, SystemGroup.InputCollection);
 
             var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
             gasSelection.OnSelectionTriggered = (req, worldCm) =>
             {
-                foreach (var cb in triggeredCallbacks) cb(req, worldCm);
+                foreach (var callback in triggeredCallbacks)
+                {
+                    callback(req, worldCm);
+                }
             };
-            engine.RegisterPresentationSystem(gasSelection);
+            engine.RegisterSystem(gasSelection, SystemGroup.InputCollection);
 
-            engine.RegisterPresentationSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext));
+            engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
 
-            _ctx.Log("[CoreInputMod] EntityClickSelect, GasSelectionResponse, GasInputResponse registered");
+            _ctx.Log("[CoreInputMod] SelectionCommand, EntityClickSelect, GasSelectionResponse, and GasInputResponse registered.");
             return Task.CompletedTask;
         }
     }

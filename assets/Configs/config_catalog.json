@@ -29,5 +29,6 @@
   { "Path": "Input/default_input.json", "Policy": "DeepObject" },
   { "Path": "Input/input_order_mappings.json", "Policy": "DeepObject" },
 
-  { "Path": "Camera/presets.json", "Policy": "ArrayById", "IdField": "id" }
+  { "Path": "Camera/presets.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Selection/profiles.json", "Policy": "ArrayById", "IdField": "id" }
 ]

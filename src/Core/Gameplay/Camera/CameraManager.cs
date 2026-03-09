@@ -7,7 +7,7 @@ namespace Ludots.Core.Gameplay.Camera
     /// <summary>
     /// Manages the active camera state and behavior pipeline.
     /// Acts as the central service for camera logic within the GameSession.
-    /// No ECS dependency â€” follow target position is set externally by systems/triggers.
+    /// No ECS dependency â€?follow target position is set externally by systems/triggers.
     /// </summary>
     public class CameraManager
     {
@@ -103,7 +103,7 @@ namespace Ludots.Core.Gameplay.Camera
 
         public void ClearVirtualCamera()
         {
-            if (VirtualCameraBrain == null)
+            if (VirtualCameraBrain == null || !VirtualCameraBrain.HasActiveCamera)
             {
                 return;
             }
@@ -210,3 +210,4 @@ namespace Ludots.Core.Gameplay.Camera
         }
     }
 }
+
