@@ -117,12 +117,34 @@ namespace Ludots.Core.Gameplay.Camera
             Vector3 offset = new Vector3(offsetX, vDist, offsetZ);
             Vector3 desiredPos = targetPos + offset;
 
-            Vector3 forward = Vector3.Normalize(targetPos - desiredPos);
+            bool firstPerson = state.RigKind == CameraRigKind.FirstPerson || Vector3.DistanceSquared(targetPos, desiredPos) < 0.000001f;
+            Vector3 lookTarget = targetPos;
+            Vector3 forward;
+            if (firstPerson)
+            {
+                desiredPos = targetPos;
+                forward = ForwardFromYawPitch(yawRad, pitchRad);
+                lookTarget = desiredPos + forward;
+            }
+            else
+            {
+                forward = Vector3.Normalize(targetPos - desiredPos);
+            }
+
             Vector3 up = Vector3.UnitY;
             if (Math.Abs(Vector3.Dot(forward, up)) > 0.99f)
                 up = Vector3.UnitZ;
 
-            return new CameraRenderState3D(desiredPos, targetPos, up, state.FovYDeg);
+            return new CameraRenderState3D(desiredPos, lookTarget, up, state.FovYDeg);
+        }
+
+        private static Vector3 ForwardFromYawPitch(float yawRad, float pitchRad)
+        {
+            float cosPitch = (float)Math.Cos(pitchRad);
+            return Vector3.Normalize(new Vector3(
+                cosPitch * (float)Math.Sin(yawRad),
+                (float)Math.Sin(pitchRad),
+                -cosPitch * (float)Math.Cos(yawRad)));
         }
     }
 }

@@ -53,6 +53,7 @@ using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
+using Ludots.Core.Gameplay.Camera.FollowTargets;
 
 namespace Ludots.Core.Engine
 {
@@ -157,7 +158,6 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
-        private CameraFollowSystem _cameraFollowSystem;
 
         // Spatial systems — kept for hot-swap on map load
         private WorldToGridSyncSystem _worldToGridSyncSystem;
@@ -588,22 +588,12 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GroundOverlayBuffer, groundOverlayBuffer);
             SetService(CoreServiceKeys.PerformerDefinitionRegistry, performerDefinitions);
             SetService(CoreServiceKeys.PerformerInstanceBuffer, performerInstances);
-            var cameraControllers = new CameraControllerRegistry();
-            cameraControllers.Register(CameraControllerIds.Orbit3C, (configObj, services) =>
-            {
-                Orbit3CCameraConfig cfg = configObj switch
-                {
-                    null => new Orbit3CCameraConfig(),
-                    Orbit3CCameraConfig c => c,
-                    _ => throw new InvalidOperationException($"Orbit3C controller expects config type {nameof(Orbit3CCameraConfig)}.")
-                };
-
-                return new Orbit3CCameraController(cfg, services.Input);
-            });
-            SetService(CoreServiceKeys.CameraControllerRegistry, cameraControllers);
             var cameraPresetRegistry = new CameraPresetRegistry();
             new CameraPresetLoader(ConfigPipeline, cameraPresetRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.CameraPresetRegistry, cameraPresetRegistry);
+            var virtualCameraRegistry = new VirtualCameraRegistry();
+            SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
+            GameSession.Camera.SetVirtualCameraRegistry(virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
             
@@ -982,7 +972,6 @@ namespace Ludots.Core.Engine
         private void ApplyDefaultCamera(MapConfig mapConfig)
         {
             var cam = mapConfig?.DefaultCamera;
-            var state = GameSession.Camera.State;
             CameraPreset preset = null;
 
             var presetReg = GetService(CoreServiceKeys.CameraPresetRegistry);
@@ -995,44 +984,25 @@ namespace Ludots.Core.Engine
 
             if (preset != null)
             {
-                state.DistanceCm = preset.DistanceCm;
-                state.Pitch = preset.Pitch;
-                state.FovYDeg = preset.FovYDeg;
-                state.Yaw = preset.Yaw;
-                GameSession.Camera.FollowMode = preset.FollowMode;
+                EnsureCameraRuntimeConfigured();
+                GameSession.Camera.ApplyPreset(preset, BuildFollowTarget(preset.FollowTargetKind));
             }
 
             if (cam != null)
             {
-                if (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
-                    state.TargetCm = new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f);
-                if (cam.Yaw.HasValue) state.Yaw = cam.Yaw.Value;
-                if (cam.Pitch.HasValue) state.Pitch = cam.Pitch.Value;
-                if (cam.DistanceCm.HasValue) state.DistanceCm = cam.DistanceCm.Value;
-                if (cam.FovYDeg.HasValue) state.FovYDeg = cam.FovYDeg.Value;
-            }
-
-            if (preset != null && GameSession.Camera.Controller == null)
-            {
-                var input = GetService(CoreServiceKeys.InputHandler);
-                var viewport = GetService(CoreServiceKeys.ViewController);
-                if (input != null && viewport != null)
+                GameSession.Camera.ApplyPose(new CameraPoseRequest
                 {
-                    var ctx = new CameraBehaviorContext(input, viewport);
-                    var controller = CameraControllerFactory.FromPreset(preset, ctx);
-                    GameSession.Camera.SetController(controller);
-                    Diagnostics.Log.Info(in LogChannels.Engine,
-                        $"Built CompositeCameraController from preset '{preset.Id}' (pan={preset.PanMode} rotate={preset.RotateMode} follow={preset.FollowMode})");
-
-                    if (preset.FollowMode != CameraFollowMode.None)
-                    {
-                        _cameraFollowSystem = new CameraFollowSystem(GameSession.Camera, input, preset.FollowActionId);
-                        Diagnostics.Log.Info(in LogChannels.Engine,
-                            $"CameraFollowSystem created (mode={preset.FollowMode} action={preset.FollowActionId})");
-                    }
-                }
+                    TargetCm = (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
+                        ? new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f)
+                        : null,
+                    Yaw = cam.Yaw,
+                    Pitch = cam.Pitch,
+                    DistanceCm = cam.DistanceCm,
+                    FovYDeg = cam.FovYDeg
+                });
             }
 
+            var state = GameSession.Camera.State;
             Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
         }
 
@@ -1523,8 +1493,10 @@ namespace Ludots.Core.Engine
         private void Update(float dt)
         {
             _inputRuntimeSystem?.Update(dt);
-            ApplyCameraControllerRequest();
-            _cameraFollowSystem?.Update(dt);
+            EnsureCameraRuntimeConfigured();
+            ApplyCameraPresetRequest();
+            ApplyCameraPoseRequest();
+            ApplyVirtualCameraRequest();
             GameSession.Update(dt);
 
             _primitiveDrawBuffer?.Clear();
@@ -1538,26 +1510,98 @@ namespace Ludots.Core.Engine
             _gasPresentationEvents?.Clear();
         }
 
-        private void ApplyCameraControllerRequest()
+        private void EnsureCameraRuntimeConfigured()
         {
-            var request = GetService(CoreServiceKeys.CameraControllerRequest);
-            if (request == null) return;
-
-            if (GameSession.Camera.Controller != null)
+            var input = GetService(CoreServiceKeys.InputHandler);
+            var viewport = GetService(CoreServiceKeys.ViewController);
+            if (input == null || viewport == null)
             {
-                throw new InvalidOperationException("Camera controller already set. Refuse to override without explicit teardown.");
+                return;
             }
 
-            var registry = GetService(CoreServiceKeys.CameraControllerRegistry)
-                ?? throw new InvalidOperationException("Camera controller registry is missing.");
+            if (!GameSession.Camera.IsRuntimeConfigured)
+            {
+                GameSession.Camera.ConfigureRuntime(input, viewport);
+            }
+        }
 
-            var input = GetService(CoreServiceKeys.InputHandler)
-                ?? throw new InvalidOperationException("PlayerInputHandler is required to build camera controller.");
+        private void ApplyCameraPresetRequest()
+        {
+            var request = GetService(CoreServiceKeys.CameraPresetRequest);
+            if (request == null)
+            {
+                return;
+            }
 
-            var viewport = GetService(CoreServiceKeys.ViewController);
-            var controller = registry.Create(request, new CameraControllerBuildServices(input, viewport));
-            GameSession.Camera.SetController(controller);
-            GlobalContext.Remove(CoreServiceKeys.CameraControllerRequest.Name);
+            var registry = GetService(CoreServiceKeys.CameraPresetRegistry)
+                ?? throw new InvalidOperationException("CameraPresetRegistry is missing.");
+            if (string.IsNullOrWhiteSpace(request.PresetId))
+            {
+                throw new InvalidOperationException("CameraPresetRequest.PresetId is required.");
+            }
+
+            if (!registry.TryGet(request.PresetId, out var preset) || preset == null)
+            {
+                throw new InvalidOperationException($"Camera preset '{request.PresetId}' is not registered.");
+            }
+
+            EnsureCameraRuntimeConfigured();
+            GameSession.Camera.ApplyPreset(
+                preset,
+                BuildFollowTarget(request.FollowTargetKindOverride ?? preset.FollowTargetKind),
+                request.SnapToFollowTargetWhenAvailable);
+            if (request.ClearActiveVirtualCamera)
+            {
+                GameSession.Camera.ClearVirtualCamera();
+            }
+
+            GlobalContext.Remove(CoreServiceKeys.CameraPresetRequest.Name);
+        }
+
+        private void ApplyCameraPoseRequest()
+        {
+            var request = GetService(CoreServiceKeys.CameraPoseRequest);
+            if (request == null)
+            {
+                return;
+            }
+
+            GameSession.Camera.ApplyPose(request);
+            GlobalContext.Remove(CoreServiceKeys.CameraPoseRequest.Name);
+        }
+
+        private void ApplyVirtualCameraRequest()
+        {
+            var request = GetService(CoreServiceKeys.VirtualCameraRequest);
+            if (request == null)
+            {
+                return;
+            }
+
+            if (request.Clear || string.IsNullOrWhiteSpace(request.Id))
+            {
+                GameSession.Camera.ClearVirtualCamera();
+            }
+            else
+            {
+                GameSession.Camera.ActivateVirtualCamera(request.Id, request.BlendDurationSeconds);
+            }
+
+            GlobalContext.Remove(CoreServiceKeys.VirtualCameraRequest.Name);
+        }
+
+        private ICameraFollowTarget? BuildFollowTarget(CameraFollowTargetKind kind)
+        {
+            return kind switch
+            {
+                CameraFollowTargetKind.None => null,
+                CameraFollowTargetKind.LocalPlayer => new GlobalEntityFollowTarget(World, GlobalContext, CoreServiceKeys.LocalPlayerEntity.Name),
+                CameraFollowTargetKind.SelectedEntity => new GlobalEntityFollowTarget(World, GlobalContext, CoreServiceKeys.SelectedEntity.Name),
+                CameraFollowTargetKind.SelectedOrLocalPlayer => new FallbackChainFollowTarget(
+                    new GlobalEntityFollowTarget(World, GlobalContext, CoreServiceKeys.SelectedEntity.Name),
+                    new GlobalEntityFollowTarget(World, GlobalContext, CoreServiceKeys.LocalPlayerEntity.Name)),
+                _ => throw new InvalidOperationException($"Unsupported camera follow target kind: {kind}")
+            };
         }
     }
 }

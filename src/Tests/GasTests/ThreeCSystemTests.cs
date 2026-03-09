@@ -26,9 +26,9 @@ namespace Ludots.Tests.ThreeC
     [TestFixture]
     public class ThreeCSystemTests
     {
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
         //  Test Doubles
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         /// <summary>Captures CameraRenderState3D sent by CameraPresenter.</summary>
         private sealed class StubCameraAdapter : ICameraAdapter
@@ -99,27 +99,9 @@ namespace Ludots.Tests.ThreeC
             public Ludots.Core.Map.Hex.HexCoordinates WorldToHex(in WorldCmInt2 world) => default;
         }
 
-        /// <summary>Camera controller driven by a lambda.</summary>
-        private sealed class LambdaCameraController : ICameraController
-        {
-            private readonly Action<CameraState, float> _action;
-            public int UpdateCallCount { get; private set; }
-
-            public LambdaCameraController(Action<CameraState, float> action)
-            {
-                _action = action;
-            }
-
-            public void Update(CameraState state, float dt)
-            {
-                UpdateCallCount++;
-                _action?.Invoke(state, dt);
-            }
-        }
-
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
         //  SetUp
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         [SetUp]
         public void Setup()
@@ -136,9 +118,9 @@ namespace Ludots.Tests.ThreeC
             }
         }
 
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
         //  A. Camera State & Manager
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         [Test]
         public void CameraState_DefaultValues_MatchExpected()
@@ -153,30 +135,43 @@ namespace Ludots.Tests.ThreeC
             That(state.TargetCm, Is.EqualTo(Vector2.Zero));
         }
 
-        [Test]
-        public void CameraManager_SetController_DelegatesToUpdate()
+                [Test]
+        public void CameraManager_WithoutRuntimeConfigured_UpdateDoesNotThrow()
         {
             var manager = new CameraManager();
-            var controller = new LambdaCameraController((s, dt) => s.Yaw = 123f);
-            manager.SetController(controller);
-
-            manager.Update(0.016f);
-
-            That(controller.UpdateCallCount, Is.EqualTo(1));
-            That(manager.State.Yaw, Is.EqualTo(123f));
-        }
-
-        [Test]
-        public void CameraManager_NullController_UpdateDoesNotThrow()
-        {
-            var manager = new CameraManager();
-            // Controller is null by default — Update must not throw
             Assert.DoesNotThrow(() => manager.Update(0.016f));
         }
 
-        // ══════════════════════════════════════════════════════════════
-        //  B. Orbit3C Controller
-        // ══════════════════════════════════════════════════════════════
+        [Test]
+        public void CameraManager_ConfiguredPreset_UpdatesStateFromInput()
+        {
+            var (backend, handler) = BuildOrbitInputHandler();
+            var manager = CreateOrbitPresetManager(handler, new CameraPreset
+            {
+                Id = "ManagerRotate",
+                RigKind = CameraRigKind.Orbit,
+                DistanceCm = 1000f,
+                Pitch = 45f,
+                FovYDeg = 60f,
+                Yaw = 355f,
+                PanMode = CameraPanMode.None,
+                RotateMode = CameraRotateMode.KeyRotate,
+                RotateDegPerSecond = 90f,
+                EnableZoom = false,
+                MinPitchDeg = 10f,
+                MaxPitchDeg = 85f
+            });
+
+            backend.Buttons["<Keyboard>/e"] = true;
+            handler.Update();
+            manager.Update(1f);
+
+            That(manager.State.Yaw, Is.EqualTo(85f).Within(0.01f));
+        }
+
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        //  B. Camera Preset Runtime Behaviors
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         private static (StubInputBackend backend, PlayerInputHandler handler) BuildOrbitInputHandler()
         {
@@ -215,72 +210,108 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void Orbit3C_Zoom_ClampsToMinMax()
+        public void PresetRuntime_Zoom_ClampsToMinMax()
         {
             var (backend, handler) = BuildOrbitInputHandler();
-            var cfg = new Orbit3CCameraConfig { MinDistanceCm = 500f, MaxDistanceCm = 5000f, ZoomCmPerWheel = 2000f };
-            var controller = new Orbit3CCameraController(cfg, handler);
-            var state = new CameraState { DistanceCm = 1000f };
+            var manager = CreateOrbitPresetManager(handler, new CameraPreset
+            {
+                Id = "TestZoom",
+                RigKind = CameraRigKind.Orbit,
+                DistanceCm = 1000f,
+                Pitch = 45f,
+                FovYDeg = 60f,
+                Yaw = 180f,
+                PanMode = CameraPanMode.None,
+                RotateMode = CameraRotateMode.None,
+                EnableZoom = true,
+                MinDistanceCm = 500f,
+                MaxDistanceCm = 5000f,
+                ZoomCmPerWheel = 2000f
+            });
 
-            // Zoom in far beyond min
-            backend.MouseWheel = 10f; // large positive → subtract from distance
+            backend.MouseWheel = 10f;
             handler.Update();
-            controller.Update(state, 0.016f);
-            That(state.DistanceCm, Is.EqualTo(cfg.MinDistanceCm), "Should clamp to MinDistanceCm");
+            manager.Update(0.016f);
+            That(manager.State.DistanceCm, Is.EqualTo(500f), "Should clamp to MinDistanceCm");
 
-            // Zoom out far beyond max
-            state.DistanceCm = 4000f;
-            backend.MouseWheel = -10f; // large negative → add to distance
+            manager.ApplyPose(new CameraPoseRequest { DistanceCm = 4000f });
+            backend.MouseWheel = -10f;
             handler.Update();
-            controller.Update(state, 0.016f);
-            That(state.DistanceCm, Is.EqualTo(cfg.MaxDistanceCm), "Should clamp to MaxDistanceCm");
+            manager.Update(0.016f);
+            That(manager.State.DistanceCm, Is.EqualTo(5000f), "Should clamp to MaxDistanceCm");
         }
 
         [Test]
-        public void Orbit3C_KeyboardRotate_YawWraps360()
+        public void PresetRuntime_KeyboardRotate_YawWraps360()
         {
             var (backend, handler) = BuildOrbitInputHandler();
-            var cfg = new Orbit3CCameraConfig { RotateDegPerSecond = 90f };
-            var controller = new Orbit3CCameraController(cfg, handler);
-            var state = new CameraState { Yaw = 355f };
+            var manager = CreateOrbitPresetManager(handler, new CameraPreset
+            {
+                Id = "TestRotate",
+                RigKind = CameraRigKind.Orbit,
+                DistanceCm = 1000f,
+                Pitch = 45f,
+                FovYDeg = 60f,
+                Yaw = 355f,
+                PanMode = CameraPanMode.None,
+                RotateMode = CameraRotateMode.KeyRotate,
+                RotateDegPerSecond = 90f,
+                EnableZoom = false,
+                MinPitchDeg = 10f,
+                MaxPitchDeg = 85f
+            });
 
-            // RotateRight = true → positive yaw delta
             backend.Buttons["<Keyboard>/e"] = true;
             handler.Update();
-            controller.Update(state, 1f); // 90° per second × 1 second
+            manager.Update(1f);
 
-            // 355 + 90 = 445 → wraps to 85
-            That(state.Yaw, Is.GreaterThanOrEqualTo(0f));
-            That(state.Yaw, Is.LessThan(360f));
-            That(state.Yaw, Is.EqualTo(85f).Within(0.01f));
+            That(manager.State.Yaw, Is.GreaterThanOrEqualTo(0f));
+            That(manager.State.Yaw, Is.LessThan(360f));
+            That(manager.State.Yaw, Is.EqualTo(85f).Within(0.01f));
         }
 
         [Test]
-        public void Orbit3C_PitchClamp_RespectsMaxBound()
+        public void PresetRuntime_PitchClamp_RespectsMaxBound()
         {
             var (backend, handler) = BuildOrbitInputHandler();
-            var cfg = new Orbit3CCameraConfig { MaxPitchDeg = 85f, MinPitchDeg = 10f, RotateDegPerPixel = 0.28f };
-            var controller = new Orbit3CCameraController(cfg, handler);
-            var state = new CameraState { Pitch = 80f };
+            var manager = CreateOrbitPresetManager(handler, new CameraPreset
+            {
+                Id = "TestPitch",
+                RigKind = CameraRigKind.Orbit,
+                DistanceCm = 1000f,
+                Pitch = 80f,
+                FovYDeg = 60f,
+                Yaw = 180f,
+                PanMode = CameraPanMode.None,
+                RotateMode = CameraRotateMode.DragRotate,
+                RotateDegPerPixel = 0.28f,
+                MinPitchDeg = 10f,
+                MaxPitchDeg = 85f,
+                EnableZoom = false
+            });
 
-            // Simulate mouse drag: hold middle button, move pointer down
             backend.Buttons["<Mouse>/MiddleButton"] = true;
             backend.MousePos = new Vector2(100f, 100f);
             handler.Update();
-            controller.Update(state, 0.016f); // first frame: records lastPointerPos
+            manager.Update(0.016f);
 
-            // Second frame: large downward delta → positive pitch
             backend.MousePos = new Vector2(100f, 500f);
             handler.Update();
-            controller.Update(state, 0.016f);
+            manager.Update(0.016f);
 
-            That(state.Pitch, Is.LessThanOrEqualTo(cfg.MaxPitchDeg), "Pitch must not exceed MaxPitchDeg");
-            That(state.Pitch, Is.GreaterThanOrEqualTo(cfg.MinPitchDeg), "Pitch must not fall below MinPitchDeg");
+            That(manager.State.Pitch, Is.LessThanOrEqualTo(85f), "Pitch must not exceed MaxPitchDeg");
+            That(manager.State.Pitch, Is.GreaterThanOrEqualTo(10f), "Pitch must not fall below MinPitchDeg");
         }
 
-        // ══════════════════════════════════════════════════════════════
+        private static CameraManager CreateOrbitPresetManager(PlayerInputHandler handler, CameraPreset preset)
+        {
+            var manager = new CameraManager();
+            manager.ConfigureRuntime(handler, new StubViewController());
+            manager.ApplyPreset(preset);
+            return manager;
+        }
         //  C. Camera Presenter
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         [Test]
         public void Presenter_FirstUpdate_SphericalToCartesianCorrect()
@@ -294,12 +325,12 @@ namespace Ludots.Tests.ThreeC
 
             presenter.Update(state, 0.016f);
 
-            // Yaw=0 → sin(0)=0, cos(0)=1
-            // Pitch=45° → cos(π/4)≈0.7071, sin(π/4)≈0.7071
-            // distM = 10m, hDist = 10*cos(45°)≈7.071, vDist = 10*sin(45°)≈7.071
+            // Yaw=0 鈫?sin(0)=0, cos(0)=1
+            // Pitch=45掳 鈫?cos(蟺/4)鈮?.7071, sin(蟺/4)鈮?.7071
+            // distM = 10m, hDist = 10*cos(45掳)鈮?.071, vDist = 10*sin(45掳)鈮?.071
             // offsetX = 7.071 * sin(0) = 0
             // offsetZ = -7.071 * cos(0) = -7.071
-            // position ≈ (0, 7.071, -7.071)
+            // position 鈮?(0, 7.071, -7.071)
             var pos = adapter.LastState.Position;
             That(pos.X, Is.EqualTo(0f).Within(0.1f));
             That(pos.Y, Is.EqualTo(7.071f).Within(0.1f));
@@ -314,7 +345,7 @@ namespace Ludots.Tests.ThreeC
             var coords = new StubSpatialCoordinateConverter();
             var presenter = new CameraPresenter(coords, adapter);
 
-            // Pitch ≈ 89° → forward ≈ (0, -1, 0) → dot(forward, UnitY) > 0.99 → up switches to UnitZ
+            // Pitch 鈮?89掳 鈫?forward 鈮?(0, -1, 0) 鈫?dot(forward, UnitY) > 0.99 鈫?up switches to UnitZ
             var state = new CameraState { Yaw = 0f, Pitch = 89f, DistanceCm = 1000f, FovYDeg = 60f };
             state.TargetCm = Vector2.Zero;
 
@@ -338,7 +369,7 @@ namespace Ludots.Tests.ThreeC
             presenter.Update(state, 0.016f);
             var firstPos = adapter.LastState.Position;
 
-            // Second frame: move target → position should lerp, not snap
+            // Second frame: move target 鈫?position should lerp, not snap
             state.TargetCm = new Vector2(5000f, 5000f); // 50m offset
             presenter.Update(state, 0.016f);
             var secondPos = adapter.LastState.Position;
@@ -350,9 +381,9 @@ namespace Ludots.Tests.ThreeC
             That(secondPos.X, Is.LessThan(targetVisualX), "Position should not snap to target (smoothing)");
         }
 
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
         //  D. Camera Culling
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         private static Entity CreateCullableEntity(World world, int xCm, int yCm)
         {
@@ -394,15 +425,15 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance → viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance 鈫?viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~7000cm from origin → between High(4000) and Medium(10000)
-            var entity = CreateCullableEntity(world, 5000, 5000); // dist ≈ 7071cm
+            // Place entity at ~7000cm from origin 鈫?between High(4000) and Medium(10000)
+            var entity = CreateCullableEntity(world, 5000, 5000); // dist 鈮?7071cm
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view);
@@ -419,15 +450,15 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance → viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance 鈫?viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~14142cm from origin → between Medium(10000) and Low(20000)
-            var entity = CreateCullableEntity(world, 10000, 10000); // dist ≈ 14142cm
+            // Place entity at ~14142cm from origin 鈫?between Medium(10000) and Low(20000)
+            var entity = CreateCullableEntity(world, 10000, 10000); // dist 鈮?14142cm
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view);
@@ -444,15 +475,15 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance → viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance 鈫?viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~28284cm → beyond Low(20000) threshold
-            var entity = CreateCullableEntity(world, 20000, 20000); // dist ≈ 28284cm
+            // Place entity at ~28284cm 鈫?beyond Low(20000) threshold
+            var entity = CreateCullableEntity(world, 20000, 20000); // dist 鈮?28284cm
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view);
@@ -493,9 +524,9 @@ namespace Ludots.Tests.ThreeC
             That(cull.IsVisible, Is.False, "Frame 2: previously visible entity should be marked culled");
         }
 
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
         //  E. Character Position Pipeline
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         [Test]
         public void Physics2DSync_ExactFixedPointCopy()
@@ -565,7 +596,7 @@ namespace Ludots.Tests.ThreeC
             system.Update(0.016f);
 
             ref var visual = ref world.Get<VisualTransform>(entity);
-            // Midpoint: (500, 1000) cm → (5, 0, 10) m (XY logic → XZ visual)
+            // Midpoint: (500, 1000) cm 鈫?(5, 0, 10) m (XY logic 鈫?XZ visual)
             That(visual.Position.X, Is.EqualTo(5f).Within(0.05f));
             That(visual.Position.Y, Is.EqualTo(0f).Within(0.01f));
             That(visual.Position.Z, Is.EqualTo(10f).Within(0.05f));
@@ -606,7 +637,7 @@ namespace Ludots.Tests.ThreeC
                 new PresentationFrameStateTag()
             );
 
-            // Entity WITHOUT CullState component — should always sync
+            // Entity WITHOUT CullState component 鈥?should always sync
             var entity = world.Create(
                 WorldPositionCm.FromCm(300, 400),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(300, 400) },
@@ -617,14 +648,14 @@ namespace Ludots.Tests.ThreeC
             system.Update(0.016f);
 
             ref var visual = ref world.Get<VisualTransform>(entity);
-            // (300, 400) cm → (3, 0, 4) m
+            // (300, 400) cm 鈫?(3, 0, 4) m
             That(visual.Position.X, Is.EqualTo(3f).Within(0.05f));
             That(visual.Position.Z, Is.EqualTo(4f).Within(0.05f));
         }
 
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
         //  F. Input Edge Detection & Order Building
-        // ══════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         private static (StubInputBackend backend, PlayerInputHandler handler) BuildSimpleInputHandler()
         {
@@ -758,3 +789,5 @@ namespace Ludots.Tests.ThreeC
         }
     }
 }
+
+

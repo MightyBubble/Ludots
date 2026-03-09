@@ -167,14 +167,15 @@ namespace ModdingTest
                 inputHandler.PushContext("Default_Gameplay");
                 engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
 
-                engine.GameSession.Camera.State.Yaw = 0f;
-                engine.GameSession.Camera.State.Pitch = 60f;
-                engine.GameSession.Camera.State.DistanceCm = 60000f;
-
-                engine.SetService(CoreServiceKeys.CameraControllerRequest, new CameraControllerRequest
+                engine.SetService(CoreServiceKeys.CameraPresetRequest, new CameraPresetRequest
                 {
-                    Id = CameraControllerIds.Orbit3C,
-                    Config = new Orbit3CCameraConfig { EnablePan = true }
+                    PresetId = "Default"
+                });
+                engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+                {
+                    Yaw = 0f,
+                    Pitch = 60f,
+                    DistanceCm = 60000f
                 });
 
                 engine.Start();
@@ -193,7 +194,7 @@ namespace ModdingTest
                 if (yaw > 0.1f)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("SUCCESS: CameraControllerRequest applied and Orbit3C responds to raw input.");
+                    Console.WriteLine("SUCCESS: CameraPresetRequest applied and orbit camera responds to raw input.");
                 }
                 else
                 {

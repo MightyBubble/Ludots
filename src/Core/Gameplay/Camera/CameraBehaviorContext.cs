@@ -4,7 +4,7 @@ using Ludots.Core.Presentation.Camera;
 
 namespace Ludots.Core.Gameplay.Camera
 {
-    public sealed class CameraBehaviorContext
+    internal sealed class CameraBehaviorContext
     {
         public PlayerInputHandler Input { get; }
         public IViewController Viewport { get; }

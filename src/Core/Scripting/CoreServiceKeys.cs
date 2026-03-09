@@ -79,9 +79,11 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IViewController> ViewController = new("ViewController");
         public static readonly ServiceKey<IScreenProjector> ScreenProjector = new("ScreenProjector");
         public static readonly ServiceKey<IScreenRayProvider> ScreenRayProvider = new("ScreenRayProvider");
-        public static readonly ServiceKey<CameraControllerRequest> CameraControllerRequest = new("CameraControllerRequest");
-        public static readonly ServiceKey<CameraControllerRegistry> CameraControllerRegistry = new("CameraControllerRegistry");
         public static readonly ServiceKey<CameraPresetRegistry> CameraPresetRegistry = new("CameraPresetRegistry");
+        public static readonly ServiceKey<CameraPresetRequest> CameraPresetRequest = new("CameraPresetRequest");
+        public static readonly ServiceKey<CameraPoseRequest> CameraPoseRequest = new("CameraPoseRequest");
+        public static readonly ServiceKey<VirtualCameraRequest> VirtualCameraRequest = new("VirtualCameraRequest");
+        public static readonly ServiceKey<VirtualCameraRegistry> VirtualCameraRegistry = new("VirtualCameraRegistry");
 
         // --- GAS Core ---
         public static readonly ServiceKey<IClock> Clock = new("Clock");

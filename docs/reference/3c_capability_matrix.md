@@ -6,7 +6,7 @@
 
 - [x] Orbit3C 轨道相机（缩放/旋转/平移）
 - [x] 相机状态序列化结构（CameraState）
-- [x] 控制器注册表/工厂模式（Mod 可扩展）
+- [x] `CameraPresetRegistry` / `VirtualCameraRegistry` + request 主线
 - [x] 球坐标→笛卡尔投影 + Lerp 平滑
 - [x] 万向锁防御（Pitch ≈ 90° 切换 Up 向量）
 - [x] 视锥 AABB 裁剪 + 俯仰补偿
@@ -15,7 +15,7 @@
 - [x] Screen→World 射线投射（RaylibScreenRayProvider）
 - [x] World→Screen 投影（RaylibScreenProjector）
 - [x] Mod 级相机配置（JSON 驱动）
-- [x] 多 Mod 相机实现（Universal3C / Moba / Terrain / Benchmark）
+- [x] 多 Mod 通过预设 + request 复用同一 Core 相机主线
 
 ### 未实现
 
@@ -81,4 +81,4 @@
 
 ## 已知死代码
 
-- `CameraLogic.cs` — 全库零引用，已被 ICameraController 模式取代
+- `CameraLogic.cs` — 全库零引用，已被 CameraPreset/request 主线取代

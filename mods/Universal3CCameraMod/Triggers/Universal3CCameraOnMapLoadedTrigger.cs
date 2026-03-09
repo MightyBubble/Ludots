@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using System.Threading.Tasks;
 using Ludots.Core.Gameplay;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Modding;
@@ -36,10 +37,15 @@ namespace Universal3CCameraMod.Triggers
             float mapW = cellsW * HexCoordinates.HexWidth;
             float mapH = cellsH * HexCoordinates.RowSpacing;
 
-            session.Camera.State.TargetCm = new Vector2(mapW * 0.5f, mapH * 0.5f) * 100f;
+            var engine = context.GetEngine();
+            if (engine == null) return Task.CompletedTask;
 
             float baseDistCm = MathF.Min(mapW, mapH) * 100f * 1.2f;
-            session.Camera.State.DistanceCm = MathF.Max(5000f, MathF.Min(200000f, baseDistCm));
+            engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+            {
+                TargetCm = new Vector2(mapW * 0.5f, mapH * 0.5f) * 100f,
+                DistanceCm = MathF.Max(5000f, MathF.Min(200000f, baseDistCm))
+            });
 
             _context.Log("[Universal3CCameraMod] Camera centered on vertex map");
             return Task.CompletedTask;

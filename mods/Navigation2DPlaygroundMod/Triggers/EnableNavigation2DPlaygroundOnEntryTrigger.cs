@@ -87,24 +87,16 @@ namespace Navigation2DPlaygroundMod.Triggers
                         _inputContextActive = true;
                     }
 
-                    session.Camera.State.TargetCm = System.Numerics.Vector2.Zero;
-                        session.Camera.State.Pitch = 65f;
-                        session.Camera.State.DistanceCm = 18000f;
-
-                    if (session.Camera.Controller == null)
+                    engine.SetService(CoreServiceKeys.CameraPresetRequest, new CameraPresetRequest
                     {
-                        engine.SetService(CoreServiceKeys.CameraControllerRequest, new CameraControllerRequest
-                        {
-                            Id = CameraControllerIds.Orbit3C,
-                            Config = new Orbit3CCameraConfig
-                            {
-                                EnablePan = true,
-                                PanCmPerSecond = 12000f,
-                                ZoomCmPerWheel = 10000f,
-                                RotateDegPerSecond = 90f
-                            }
-                        });
-                    }
+                        PresetId = "Default"
+                    });
+                    engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+                    {
+                        TargetCm = System.Numerics.Vector2.Zero,
+                        Pitch = 65f,
+                        DistanceCm = 18000f
+                    });
                 }
             }
             else

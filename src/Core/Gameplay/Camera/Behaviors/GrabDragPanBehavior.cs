@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
-    public sealed class GrabDragPanBehavior : ICameraBehavior
+    internal sealed class GrabDragPanBehavior : ICameraBehavior
     {
         private readonly string _holdActionId;
         private readonly string _pointerPosActionId;
