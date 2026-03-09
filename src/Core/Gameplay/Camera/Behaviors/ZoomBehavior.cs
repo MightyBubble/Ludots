@@ -2,7 +2,7 @@ using System;
 
 namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
-    public sealed class ZoomBehavior : ICameraBehavior
+    internal sealed class ZoomBehavior : ICameraBehavior
     {
         private readonly string _zoomActionId;
         private readonly float _cmPerWheel;

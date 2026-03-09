@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
-    public sealed class DragRotateBehavior : ICameraBehavior
+    internal sealed class DragRotateBehavior : ICameraBehavior
     {
         private readonly string _holdActionId;
         private readonly string _pointerPosActionId;

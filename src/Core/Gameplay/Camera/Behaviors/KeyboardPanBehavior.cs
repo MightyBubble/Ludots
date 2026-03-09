@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
-    public sealed class KeyboardPanBehavior : ICameraBehavior
+    internal sealed class KeyboardPanBehavior : ICameraBehavior
     {
         private readonly string _moveActionId;
         private readonly float _panCmPerSecond;

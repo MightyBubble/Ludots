@@ -6,7 +6,7 @@ namespace Ludots.Core.Gameplay.Camera
     /// <summary>
     /// 与 CameraPresenter 一致的 Orbit 相机方向约定。
     /// TargetCm: X=worldX, Y=worldZ。Yaw 0 = 朝向 +Z。
-    /// 供 Orbit3CCameraController、CameraPresenter 等复用。
+    /// 供 Core 相机行为管线、CameraPresenter 等复用。
     /// </summary>
     public static class OrbitCameraDirectionUtil
     {

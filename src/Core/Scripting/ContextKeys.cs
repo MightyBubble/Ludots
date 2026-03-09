@@ -79,9 +79,11 @@ namespace Ludots.Core.Scripting
         public const string ConfigCatalog = "ConfigCatalog";
         public const string AiRuntime = "AiRuntime";
         public const string MapFeatureFlags = "MapFeatureFlags";
-        public const string CameraControllerRequest = "CameraControllerRequest";
-        public const string CameraControllerRegistry = "CameraControllerRegistry";
         public const string CameraPresetRegistry = "CameraPresetRegistry";
+        public const string CameraPresetRequest = "CameraPresetRequest";
+        public const string CameraPoseRequest = "CameraPoseRequest";
+        public const string VirtualCameraRequest = "VirtualCameraRequest";
+        public const string VirtualCameraRegistry = "VirtualCameraRegistry";
         public const string LocalPlayerEntity = "LocalPlayerEntity";
         public const string SelectedEntity = "SelectedEntity";
         public const string HoveredEntity = "HoveredEntity";

@@ -131,14 +131,21 @@ MapConfig 可通过 `PresetId` 引用预设，显式字段覆盖预设值：
 
 ## Mod 覆盖指南
 
-如果 Mod 需要不同的初始相机（如 MOBA 鸟瞰、RTS 远景），在 MapLoaded trigger 中设置：
+如果 Mod 需要不同的初始相机（如 MOBA 鸟瞰、RTS 远景），在 Trigger 中发起 Core request：
 
 ```csharp
-session.Camera.State.DistanceCm = 25000f;
-session.Camera.State.Pitch = 60f;
+engine.SetService(CoreServiceKeys.CameraPresetRequest, new CameraPresetRequest
+{
+    PresetId = "Moba"
+});
+engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+{
+    DistanceCm = 25000f,
+    Pitch = 60f
+});
 ```
 
-不要修改 `FovYDeg`（保持 60° 统一），除非有特殊需求（如第一人称）。
+不要直接写 `session.Camera.State`，也不要在 Adapter/Mod 装配 controller；统一通过 `CameraPresetRequest` / `CameraPoseRequest` / `VirtualCameraRequest` 进入 Core 主线。除非有特殊需求（如第一人称），否则不要随意改 `FovYDeg`。
 
 ## 已知的遗留配置
 
@@ -155,5 +162,6 @@ session.Camera.State.Pitch = 60f;
 
 ## 废弃项
 
-- `CameraLogic.cs` — 已被 `ICameraController` 替代，距离限制 500-10000 过时
+- `CameraControllerRegistry` / `CameraControllerRequest` — 已移出主线，Mod 不再注册或切换 controller
+- `CameraLogic.cs` — 已被 `CameraPreset` / request 主线取代，距离限制 500-10000 过时
 - Raylib 初始 Camera3D `fovy=45` — 已改为 60 与 CameraState 统一

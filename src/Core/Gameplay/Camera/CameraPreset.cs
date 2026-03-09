@@ -12,6 +12,9 @@ namespace Ludots.Core.Gameplay.Camera
         public string Id { get; set; }
         public string DisplayName { get; set; }
 
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public CameraRigKind RigKind { get; set; } = CameraRigKind.Orbit;
+
         // --- State values ---
         public float DistanceCm { get; set; }
         public float Pitch { get; set; }
@@ -41,6 +44,8 @@ namespace Ludots.Core.Gameplay.Camera
 
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public CameraFollowMode FollowMode { get; set; } = CameraFollowMode.None;
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public CameraFollowTargetKind FollowTargetKind { get; set; } = CameraFollowTargetKind.None;
         public string FollowActionId { get; set; } = "CameraLock";
 
         // --- Input Action IDs (override defaults if needed) ---

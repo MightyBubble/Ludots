@@ -4,9 +4,9 @@ using Arch.Core;
 using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Camera.FollowTargets;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Scripting;
 
 namespace CoreInputMod.ViewMode
@@ -118,21 +118,29 @@ namespace CoreInputMod.ViewMode
                 return;
             }
 
-            _camera.State.DistanceCm = preset.DistanceCm;
-            _camera.State.Pitch = preset.Pitch;
-            _camera.State.FovYDeg = preset.FovYDeg;
-            _camera.State.Yaw = preset.Yaw;
-            _camera.FollowMode = preset.FollowMode;
-
-            if (_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) && inputObj is PlayerInputHandler input &&
-                _globals.TryGetValue(CoreServiceKeys.ViewController.Name, out var viewObj) && viewObj is IViewController view)
-            {
-                var ctx = new CameraBehaviorContext(input, view);
-                var controller = CameraControllerFactory.FromPreset(preset, ctx);
-                _camera.SetController(controller);
-            }
+            _camera.ClearVirtualCamera();
+            _camera.ApplyPreset(preset, BuildFollowTarget(mode.FollowTargetKind));
 
             TrySeedFollowTargetPosition(mode.FollowTargetKind);
+        }
+
+        private ICameraFollowTarget? BuildFollowTarget(string followTargetKind)
+        {
+            if (!Enum.TryParse<CameraFollowTargetKind>(followTargetKind, ignoreCase: true, out var kind))
+            {
+                kind = CameraFollowTargetKind.None;
+            }
+
+            return kind switch
+            {
+                CameraFollowTargetKind.None => null,
+                CameraFollowTargetKind.LocalPlayer => new GlobalEntityFollowTarget(_world, _globals, CoreServiceKeys.LocalPlayerEntity.Name),
+                CameraFollowTargetKind.SelectedEntity => new GlobalEntityFollowTarget(_world, _globals, CoreServiceKeys.SelectedEntity.Name),
+                CameraFollowTargetKind.SelectedOrLocalPlayer => new FallbackChainFollowTarget(
+                    new GlobalEntityFollowTarget(_world, _globals, CoreServiceKeys.SelectedEntity.Name),
+                    new GlobalEntityFollowTarget(_world, _globals, CoreServiceKeys.LocalPlayerEntity.Name)),
+                _ => null
+            };
         }
 
         private void TrySeedFollowTargetPosition(string followTargetKind)

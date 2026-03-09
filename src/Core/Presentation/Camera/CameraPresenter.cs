@@ -79,7 +79,20 @@ namespace Ludots.Core.Presentation.Camera
             if (cameraDebug is { Enabled: true })
                 desiredPos += cameraDebug.PositionOffsetMeters;
 
-            Vector3 forward = Vector3.Normalize(targetPos - desiredPos);
+            bool firstPerson = state.RigKind == CameraRigKind.FirstPerson || Vector3.DistanceSquared(targetPos, desiredPos) < 0.000001f;
+            Vector3 lookTarget = targetPos;
+            Vector3 forward;
+            if (firstPerson)
+            {
+                desiredPos = targetPos;
+                forward = ForwardFromYawPitch(yawRad, pitchRad);
+                lookTarget = desiredPos + forward;
+            }
+            else
+            {
+                forward = Vector3.Normalize(targetPos - desiredPos);
+            }
+
             Vector3 up = Vector3.UnitY;
             if (System.Math.Abs(Vector3.Dot(forward, up)) > 0.99f)
             {
@@ -89,7 +102,7 @@ namespace Ludots.Core.Presentation.Camera
             if (_isFirstUpdate)
             {
                 _currentPosition = desiredPos;
-                _currentTarget = targetPos;
+                _currentTarget = lookTarget;
                 _currentUp = up;
                 _isFirstUpdate = false;
             }
@@ -97,7 +110,7 @@ namespace Ludots.Core.Presentation.Camera
             {
                 float t = Math.Clamp(SmoothSpeed * deltaTime, 0, 1);
                 _currentPosition = Vector3.Lerp(_currentPosition, desiredPos, t);
-                _currentTarget = Vector3.Lerp(_currentTarget, targetPos, t);
+                _currentTarget = Vector3.Lerp(_currentTarget, lookTarget, t);
                 _currentUp = Vector3.Normalize(Vector3.Lerp(_currentUp, up, t));
             }
 
@@ -107,5 +120,14 @@ namespace Ludots.Core.Presentation.Camera
         }
 
         private float ToRadians(float degrees) => degrees * (float)System.Math.PI / 180.0f;
+
+        private static Vector3 ForwardFromYawPitch(float yawRad, float pitchRad)
+        {
+            float cosPitch = (float)System.Math.Cos(pitchRad);
+            return Vector3.Normalize(new Vector3(
+                cosPitch * (float)System.Math.Sin(yawRad),
+                (float)System.Math.Sin(pitchRad),
+                -cosPitch * (float)System.Math.Cos(yawRad)));
+        }
     }
 }

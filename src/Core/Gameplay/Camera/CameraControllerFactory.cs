@@ -3,7 +3,7 @@ using Ludots.Core.Gameplay.Camera.Behaviors;
 
 namespace Ludots.Core.Gameplay.Camera
 {
-    public static class CameraControllerFactory
+    internal static class CameraControllerFactory
     {
         public static CompositeCameraController FromPreset(CameraPreset preset, CameraBehaviorContext ctx)
         {
