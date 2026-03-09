@@ -4,7 +4,7 @@
     {
       "actionId": "SkillQ",
       "trigger": "PressedThisFrame",
-      "orderTagKey": "castAbility",
+      "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 0 },
       "requireSelection": false,
       "selectionType": "Entity",
@@ -14,7 +14,7 @@
     {
       "actionId": "SkillW",
       "trigger": "PressedThisFrame",
-      "orderTagKey": "castAbility",
+      "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 1 },
       "requireSelection": false,
       "selectionType": "None",
@@ -24,7 +24,7 @@
     {
       "actionId": "SkillE",
       "trigger": "PressedThisFrame",
-      "orderTagKey": "castAbility",
+      "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 2 },
       "requireSelection": false,
       "selectionType": "Entity",
@@ -34,7 +34,7 @@
     {
       "actionId": "SkillR",
       "trigger": "PressedThisFrame",
-      "orderTagKey": "castAbility",
+      "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 3 },
       "requireSelection": false,
       "selectionType": "Entity",
@@ -44,7 +44,7 @@
     {
       "actionId": "Command",
       "trigger": "PressedThisFrame",
-      "orderTagKey": "castAbility",
+      "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 4 },
       "requireSelection": true,
       "selectionType": "Position",
@@ -54,7 +54,7 @@
     {
       "actionId": "Stop",
       "trigger": "PressedThisFrame",
-      "orderTagKey": "stop",
+      "orderTypeKey": "stop",
       "argsTemplate": {},
       "requireSelection": false,
       "selectionType": "None",
@@ -67,3 +67,4 @@
     "persistPath": "user://MobaDemoMod/input_preferences.json"
   }
 }
+

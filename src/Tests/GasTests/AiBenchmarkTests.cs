@@ -55,7 +55,7 @@ namespace Ludots.Tests.GAS
                     postValues: in postValues,
                     cost: 1,
                     executorKind: ActionExecutorKind.SubmitOrder,
-                    orderSpec: new ActionOrderSpec(orderTagId: 1234, submitMode: OrderSubmitMode.Immediate, playerId: 0),
+                    orderSpec: new ActionOrderSpec(orderTypeId: 1234, submitMode: OrderSubmitMode.Immediate, playerId: 0),
                     bindings: Array.Empty<ActionBinding>())
             });
 
@@ -136,7 +136,7 @@ namespace Ludots.Tests.GAS
                     postValues: default,
                     cost: 1,
                     executorKind: ActionExecutorKind.SubmitOrder,
-                    orderSpec: new ActionOrderSpec(orderTagId: 5678, submitMode: OrderSubmitMode.Immediate, playerId: 0),
+                    orderSpec: new ActionOrderSpec(orderTypeId: 5678, submitMode: OrderSubmitMode.Immediate, playerId: 0),
                     bindings: Array.Empty<ActionBinding>())
             });
 
@@ -158,3 +158,4 @@ namespace Ludots.Tests.GAS
         }
     }
 }
+

@@ -1,4 +1,4 @@
-using Ludots.UI.Compose;
+锘縰sing Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
 
@@ -35,7 +35,7 @@ internal sealed class ComposeShowcaseController
     private UiElementBuilder BuildRoot()
     {
         return Ui.Column(
-                Ui.Text("Compose Fluent — Official Native C# Style").Class("skin-header"),
+                Ui.Text("Compose Fluent - Official Native C# Style").Class("skin-header"),
                 UiShowcaseScaffolding.BuildThemeToolbar(
                     "compose",
                     ctx => ChangeTheme(ctx, "theme-light"),
@@ -65,7 +65,7 @@ internal sealed class ComposeShowcaseController
     {
         return Ui.Card(
                 Ui.Text("OverviewPage").Class("page-card-title"),
-                Ui.Text("默认生产主路径：静态布局、HUD、主菜单、配置页。")
+                Ui.Text("Official production path for stable layouts, HUD, menus, and settings pages.")
                     .Class("page-copy"),
                 Ui.Text($"Theme: {UiShowcaseScaffolding.ThemeLabel(_themeClass)} / Density: {UiShowcaseScaffolding.DensityLabel(_densityClass)}")
                     .Id("compose-theme")
@@ -101,9 +101,29 @@ internal sealed class ComposeShowcaseController
     {
         return Ui.Card(
                 Ui.Text("FormsPage").Class("page-card-title"),
-                new UiElementBuilder(UiNodeKind.Input, "input").Text("Email: designer@ludots.dev").Class("control-chip"),
-                new UiElementBuilder(UiNodeKind.Custom, "input").Text("Password: ???????").Class("control-chip"),
-                new UiElementBuilder(UiNodeKind.TextArea, "textarea").Text("Textarea / validation summary").Class("control-chip"),
+                Ui.Input()
+                    .Id("compose-email-input")
+                    .Class("control-chip")
+                    .Type("email")
+                    .Placeholder("Email / required / @ludots.dev")
+                    .Required()
+                    .Pattern("^[^@\\s]+@ludots\\.dev$")
+                    .Value(_formError ? string.Empty : "designer@ludots.dev"),
+                Ui.Input()
+                    .Id("compose-password-input")
+                    .Class("control-chip")
+                    .Type("password")
+                    .Placeholder("Password / required / min 8")
+                    .Required()
+                    .MinLength(8)
+                    .Value(_formError ? string.Empty : "hunter22"),
+                new UiElementBuilder(UiNodeKind.TextArea, "textarea")
+                    .Id("compose-notes-input")
+                    .Class("control-chip")
+                    .Placeholder("Validation summary / notes / max 64")
+                    .Required()
+                    .MaxLength(64)
+                    .Value(_formError ? string.Empty : "Textarea / validation summary"),
                 Ui.Text(_formStatus).Id("compose-form-status").Class(_formError ? "error-text" : "ok-text"),
                 Ui.Row(
                     Ui.Button("Invalid", SubmitInvalid),
@@ -126,14 +146,15 @@ internal sealed class ComposeShowcaseController
                     .Class("control-row"),
                 Ui.Table(
                     Ui.TableRow(
-                        Ui.TableHeaderCell("Name"),
+                        Ui.TableHeaderCell("Prototype Identifier"),
                         Ui.TableHeaderCell("Role")),
                     Ui.TableRow(
-                        Ui.TableCell("Sentinel"),
+                        Ui.TableCell("Sentinel Vanguard Frame").RowSpan(2),
                         Ui.TableCell("Guardian")),
                     Ui.TableRow(
-                        Ui.TableCell("Courier"),
-                        Ui.TableCell("Support")))
+                        Ui.TableCell("Escort")),
+                    Ui.TableRow(
+                        Ui.TableCell("Status: Active").ColSpan(2).Class("muted")))
                     .Id("compose-stats-table"),
                 Ui.Text("ListView / GridView / Tabs share one unified state model.")
                     .Class("muted"))
@@ -150,7 +171,7 @@ internal sealed class ComposeShowcaseController
                     Ui.Button(_toastVisible ? "Hide Toast" : "Show Toast", ToggleToast).Id("compose-toast-toggle"))
                     .Class("control-row"),
                 _modalOpen
-                    ? Ui.Card(Ui.Text("Modal opened — deterministic action path.")).Id("compose-modal").Class("overlay-card")
+                    ? Ui.Card(Ui.Text("Modal opened - deterministic action path.")).Id("compose-modal").Class("overlay-card")
                     : Ui.Text("Drawer / Tooltip / Toast share the same overlay semantics.").Class("muted"),
                 _toastVisible
                     ? Ui.Text("Toast: compose action committed.").Id("compose-toast").Class("toast-badge")
@@ -162,8 +183,40 @@ internal sealed class ComposeShowcaseController
     private UiElementBuilder BuildStylesCard()
     {
         return Ui.Card(
-                Ui.Text("StylesPage").Class("page-card-title"),
-                Ui.Text("Typography / spacing / density / token parity.").Class("page-copy"),
+                Ui.Text("AppearancePage").Class("page-card-title"),
+                Ui.Text("Backdrop blur / filter blur / flex wrap / structural pseudo / scroll / clip / density tokens.").Class("page-copy"),
+                new UiElementBuilder(UiNodeKind.Container, "div")
+                    .Id("compose-appearance-host")
+                    .Class("appearance-host")
+                    .Children(
+                        Ui.Row(
+                            new UiElementBuilder(UiNodeKind.Container, "div").Class("appearance-pane-left"),
+                            new UiElementBuilder(UiNodeKind.Container, "div").Class("appearance-pane-right"))
+                            .Class("appearance-background"),
+                        Ui.Card(
+                                Ui.Text("Frosted Glass").Class("page-card-title"),
+                                Ui.Text("Simplified backdrop blur on Skia scene.").Class("muted"),
+                                Ui.Text("Blur badge").Id("compose-blur-chip").Classes("control-chip", "appearance-blur-chip"))
+                            .Id("compose-frosted-card")
+                            .Class("frosted-glass")
+                            .Absolute(18, 18)),
+                new UiElementBuilder(UiNodeKind.Container, "div")
+                    .Id("compose-wrap-demo")
+                    .Class("wrap-demo")
+                    .Children(
+                        UiShowcaseScaffolding.BuildChip("First", true),
+                        UiShowcaseScaffolding.BuildChip("Second", false),
+                        UiShowcaseScaffolding.BuildChip("Third", true),
+                        UiShowcaseScaffolding.BuildChip("Fourth", false),
+                        UiShowcaseScaffolding.BuildChip("Fifth", true),
+                        UiShowcaseScaffolding.BuildChip("Sixth", false)),
+                UiShowcaseScaffolding.BuildAdvancedAppearanceRow("compose"),
+                UiShowcaseScaffolding.BuildPhaseOneRow("compose"),
+                UiShowcaseScaffolding.BuildPhaseTwoPanel("compose"),
+                UiShowcaseScaffolding.BuildPhaseThreePanel("compose"),
+                UiShowcaseScaffolding.BuildPhaseFourPanel("compose"),
+                UiShowcaseScaffolding.BuildPhaseFivePanel("compose"),
+                UiShowcaseScaffolding.BuildScrollClipRow("compose"),
                 Ui.Row(
                     Ui.Button("Compact", ctx => ChangeDensity(ctx, "density-compact")),
                     Ui.Button("Cozy", ctx => ChangeDensity(ctx, "density-cozy")).Class("skin-primary"),

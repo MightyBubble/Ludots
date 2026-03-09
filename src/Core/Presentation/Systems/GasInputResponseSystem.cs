@@ -1,23 +1,22 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Systems
 {
     /// <summary>
-    /// 通用的 GAS InputRequest 响应系统。
-    /// 
-    /// 当 GAS 技能系统发出 InputRequest（例如"等待玩家选择目标"）时，
-    /// 此系统等待玩家点击 "Select" 按钮，然后将当前选中的实体
-    /// 作为 InputResponse 返回给技能系统。
-    /// 
-    /// 此系统不包含任何游戏特定逻辑。
+    /// Generic GAS input-response system.
+    /// Resolves InputRequest to InputResponse using the current interaction bindings
+    /// and the current selected entity from globals.
     /// </summary>
     public sealed class GasInputResponseSystem : ISystem<float>
     {
+        private static readonly InteractionActionBindings DefaultBindings = new InteractionActionBindings();
+
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private InputRequest _active;
@@ -44,7 +43,9 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             if (!_hasActive) return;
-            if (!input.PressedThisFrame("Select")) return;
+
+            var bindings = ResolveBindings();
+            if (!input.PressedThisFrame(bindings.ConfirmActionId)) return;
 
             Entity target = default;
             if (_globals.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var selObj) && selObj is Entity e && _world.IsAlive(e))
@@ -60,11 +61,21 @@ namespace Ludots.Core.Presentation.Systems
                 Target = target,
                 TargetContext = _active.Context,
                 PayloadA = _active.PayloadA,
-                PayloadB = _active.PayloadB
+                PayloadB = _active.PayloadB,
             });
 
             _hasActive = false;
             _active = default;
+        }
+
+        private InteractionActionBindings ResolveBindings()
+        {
+            if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var obj) && obj is InteractionActionBindings bindings)
+            {
+                return bindings;
+            }
+
+            return DefaultBindings;
         }
 
         public void BeforeUpdate(in float dt) { }

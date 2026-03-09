@@ -291,27 +291,26 @@ Graph 程序通过 `LoadSelfAttribute` / `WriteSelfAttribute` 读写当前实体
 
 ## 8 位移效果（Displacement）— [计划中]
 
-> **状态**：计划中，尚未实现。
+> **Status**: production-ready for the original convergence scope (`ToTarget` and `OverrideNavigation` are now closed).
 
-### 8.1 现状
+### 8.1 Current Implementation
 
-当前 `ForceInput2DSink` 仅做力注入（每帧加力），不具备位移语义：
+`Displacement` is now created by `BuiltinHandlers.HandleApplyDisplacement()` and driven in fixed-step by `DisplacementRuntimeSystem`:
 
-*   无法覆盖导航输入（位移期间玩家仍可操作）
-*   无法按固定距离/时长驱动位移
-*   无法中断位移
+*   **Navigation override**: active displacement clears `NavGoal2D`, `NavDesiredVelocity2D`, and `ForceInput2D`, then restores captured navigation state on completion
+*   **Tick-driven motion**: total distance and duration are executed in deterministic `Fix64` / `Fix64Vec2`
+*   **Direction modes**: `ToTarget` resolves from `TargetContext` or `AbilityExecInstance.TargetPosCm`; `AwayFromSource`, `TowardSource`, and `Fixed` continue through the same runtime
+*   **Runtime boundary**: displacement stays inside the GAS fixed-step pipeline instead of relying on presentation / render-side helpers
 
-### 8.2 目标设计
+### 8.2 Design Note
 
-新增 `Displacement` Preset Effect Type：
+The convergence target here is a production-capable unified preset. If a future design needs tag-driven immediate interruption (for example cleanse-like behavior), that should extend the existing GAS effect / tag / cleanup semantics rather than introducing a parallel displacement pipeline.
 
-*   **覆盖导航**：位移期间接管移动控制
-*   **持续时间**：按 tick 驱动（dash 20 ticks，knockback 15 ticks）
-*   **方向模式**：ToTarget（冲刺）/ AwayFromSource（击退）/ TowardSource（拉拽）/ Fixed（闪现）
-*   **可中断**：特定 Tag（如 Cleanse）可提前终止
-*   **全程 Fix64**：确定性数学
-
-参考：`src/Core/Gameplay/GAS/Bindings/ForceInput2DSink.cs`
+References:
+- `src/Core/Gameplay/GAS/BuiltinHandlers.cs`
+- `src/Core/Gameplay/GAS/Systems/DisplacementRuntimeSystem.cs`
+- `src/Core/Gameplay/GAS/Components/DisplacementState.cs`
+- `src/Tests/GasTests/DisplacementPresetTests.cs`
 
 ## 9 约束清单
 

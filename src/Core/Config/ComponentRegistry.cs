@@ -96,7 +96,7 @@ namespace Ludots.Core.Config
 
         private static void SetOrderBuffer(Entity entity, JsonNode data)
         {
-            // OrderBuffer always starts empty — JSON data is ignored (no serializable state)
+            // OrderBuffer always starts empty �?JSON data is ignored (no serializable state)
             entity.Add(OrderBuffer.CreateEmpty());
         }
 
@@ -113,8 +113,19 @@ namespace Ludots.Core.Config
                     int id;
                     if (elem.GetValueKind() == JsonValueKind.String)
                     {
-                        var abilityTag = elem.GetValue<string>();
-                        id = string.IsNullOrWhiteSpace(abilityTag) ? 0 : TagRegistry.Register(abilityTag);
+                        var abilityConfigId = elem.GetValue<string>();
+                        if (string.IsNullOrWhiteSpace(abilityConfigId))
+                        {
+                            id = 0;
+                        }
+                        else
+                        {
+                            id = Ludots.Core.Gameplay.GAS.Registry.AbilityIdRegistry.GetId(abilityConfigId);
+                            if (id <= 0)
+                            {
+                                throw new InvalidOperationException($"Unknown ability id '{abilityConfigId}' in AbilityStateBuffer config.");
+                            }
+                        }
                     }
                     else
                     {
@@ -147,7 +158,7 @@ namespace Ludots.Core.Config
             }
             var fix64Pos = Fix64Vec2.FromInt(x, y);
             entity.Add(new WorldPositionCm { Value = fix64Pos });
-            // 自动添加插值、渲染、剔除所需的伴生组件
+            // 自动添加插值、渲染、剔除所需的伴生组�?
             entity.Add(new PreviousWorldPositionCm { Value = fix64Pos });
             entity.Add(VisualTransform.Default);
             entity.Add(new CullState { IsVisible = true, LOD = LODLevel.High });
@@ -212,3 +223,4 @@ namespace Ludots.Core.Config
         }
     }
 }
+

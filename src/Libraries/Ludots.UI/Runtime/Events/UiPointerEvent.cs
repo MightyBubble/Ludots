@@ -7,5 +7,7 @@ public sealed record UiPointerEvent(
     int PointerId,
     float X,
     float Y,
-    UiNodeId? TargetNodeId = null)
+    UiNodeId? TargetNodeId = null,
+    float DeltaX = 0f,
+    float DeltaY = 0f)
     : UiEvent(UiEventKind.Pointer, TargetNodeId);

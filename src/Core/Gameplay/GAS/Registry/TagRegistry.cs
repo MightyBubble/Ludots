@@ -1,10 +1,10 @@
+using System;
 using System.Collections.Generic;
 
 namespace Ludots.Core.Gameplay.GAS.Registry
 {
     /// <summary>
-    /// Maps GameplayTag strings (e.g., "Status.Stun") to integer IDs.
-    /// IDs 100-127 are reserved for OrderStateTags and skipped during dynamic allocation.
+    /// Maps gameplay tag strings (for gameplay status/effect/event tags only) to integer IDs.
     /// </summary>
     public static class TagRegistry
     {
@@ -15,13 +15,6 @@ namespace Ludots.Core.Gameplay.GAS.Registry
 
         public const int InvalidId = 0;
         public const int MaxTags = 256;
-
-        /// <summary>
-        /// Reserved range for OrderStateTags (hardcoded IDs).
-        /// Dynamic allocation skips this range to prevent ID collision.
-        /// </summary>
-        public const int ReservedRangeStart = 100;
-        public const int ReservedRangeEnd = 127;
 
         public static bool IsFrozen => _frozen;
 
@@ -42,7 +35,12 @@ namespace Ludots.Core.Gameplay.GAS.Registry
         {
             if (_frozen)
             {
-                throw new System.InvalidOperationException("TagRegistry is frozen.");
+                throw new InvalidOperationException("TagRegistry is frozen.");
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("Tag name cannot be null or whitespace.", nameof(name));
             }
 
             if (_nameToId.TryGetValue(name, out var id))
@@ -50,15 +48,9 @@ namespace Ludots.Core.Gameplay.GAS.Registry
                 return id;
             }
 
-            // Skip the reserved range used by OrderStateTags
-            if (_nextId == ReservedRangeStart)
-            {
-                _nextId = ReservedRangeEnd + 1;
-            }
-
             if (_nextId >= MaxTags)
             {
-                throw new System.InvalidOperationException($"GameplayTagContainer supports up to {MaxTags - 1} tags (id 1..{MaxTags - 1}, id 0 reserved). Reserved range {ReservedRangeStart}-{ReservedRangeEnd} excluded.");
+                throw new InvalidOperationException($"GameplayTagContainer supports up to {MaxTags - 1} tags (id 1..{MaxTags - 1}, id 0 reserved).");
             }
 
             id = _nextId++;

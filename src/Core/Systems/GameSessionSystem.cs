@@ -5,7 +5,7 @@ namespace Ludots.Core.Systems
 {
     /// <summary>
     /// Wraps GameSession.FixedUpdate into an ECS System.
-    /// Ensures input gathering and tick increment happen in sync with the simulation loop.
+    /// Keeps the session tick in sync with the fixed-step simulation loop.
     /// </summary>
     public class GameSessionSystem : ISystem<float>
     {

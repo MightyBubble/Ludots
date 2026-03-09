@@ -1,4 +1,22 @@
 {"Step":"markup-initial","Kind":"capture","Message":"Markup showcase compiles HTML/CSS into native DOM and binds C# code-behind.","Artifact":"screens/markup-initial.png"}
+{"Step":"markup-forms","Kind":"capture","Message":"Markup forms block shows required, pattern, password, and textarea validation surfaces from external HTML/CSS assets.","Artifact":"screens/markup-forms.png"}
+{"Step":"markup-appearance","Kind":"capture","Message":"Markup appearance block shows backdrop blur, filter blur, flex wrap, RTL text, and image skin samples.","Artifact":"screens/markup-appearance.png"}
+{"Step":"markup-phase1","Kind":"capture","Message":"Markup selector and stack labs validate advanced selectors plus transformed z-index hit alignment.","Artifact":"screens/markup-phase1.png"}
+{"Step":"markup-phase2","Kind":"capture","Message":"Markup Phase 2 visual lab shows multi-background, multi-shadow, dashed border, mask, and clip-path in one native card.","Artifact":"screens/markup-phase2.png"}
+{"Step":"markup-phase3","Kind":"capture","Message":"Markup Phase 3 text lab shows multilingual copy, RTL alignment, ellipsis, and text decoration in one native panel.","Artifact":"screens/markup-phase3.png"}
+{"Step":"markup-phase4","Kind":"capture","Message":"Markup Phase 4 image lab shows CSS background-image url, inline SVG import, and native canvas binding in one panel.","Artifact":"screens/markup-phase4.png"}
+{"Step":"markup-phase5-start","Kind":"capture","Message":"Markup Phase 5 keyframe lab captures the initial animation state from external CSS files.","Artifact":"screens/markup-phase5-start.png"}
+{"Step":"0.24","Kind":"advance","Message":"Markup keyframe lab advances to a deterministic mid-frame.","Artifact":""}
+{"Step":"markup-phase5-mid","Kind":"capture","Message":"Markup Phase 5 keyframe lab shows mid-animation color, blur, and opacity interpolation.","Artifact":"screens/markup-phase5-mid.png"}
+{"Step":"0.32","Kind":"advance","Message":"Markup keyframe lab reaches the deterministic end frame.","Artifact":""}
+{"Step":"markup-phase5-end","Kind":"capture","Message":"Markup Phase 5 keyframe lab shows the finite animation end state and alternate fill behavior.","Artifact":"screens/markup-phase5-end.png"}
+{"Step":"markup-transition-probe","Kind":"click","Message":"Markup transition probe enters focus state without JS.","Artifact":""}
+{"Step":"0.16","Kind":"advance","Message":"Markup transition runtime advances native tween interpolation.","Artifact":""}
+{"Step":"markup-transition","Kind":"capture","Message":"Markup transition probe shows mid-animation color and opacity interpolation.","Artifact":"screens/markup-transition.png"}
+{"Step":"markup-scroll-host","Kind":"scroll","Message":"Markup scroll host consumes native wheel input.","Artifact":""}
+{"Step":"markup-scroll","Kind":"capture","Message":"Markup scroll container clips content, updates offsets, and keeps clip host bounded.","Artifact":"screens/markup-scroll.png"}
+{"Step":"markup-item-2","Kind":"click","Message":"Markup keeps collection selection on item 2 for the focused crop.","Artifact":""}
+{"Step":"markup-table","Kind":"capture","Message":"Markup table block shows native table semantics, content-aware columns, rowspan, and colspan.","Artifact":"screens/markup-table.png"}
 {"Step":"markup-inc","Kind":"click","Message":"Markup code-behind increments counter.","Artifact":""}
 {"Step":"markup-counter","Kind":"capture","Message":"Markup counter rerender is visible after C# action.","Artifact":"screens/markup-counter.png"}
 {"Step":"markup-modal-toggle","Kind":"click","Message":"Markup opens overlay from code-behind.","Artifact":""}

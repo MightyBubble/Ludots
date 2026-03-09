@@ -1,5 +1,4 @@
 using System;
-using Ludots.Adapter.Raylib.UI;
 using Ludots.Client.Raylib.Diagnostics;
 using Ludots.Client.Raylib.Input;
 using Ludots.Core.Config;
@@ -45,7 +44,6 @@ namespace Ludots.Adapter.Raylib
 
             var uiRoot = new UIRoot();
             engine.SetService(CoreServiceKeys.UIRoot, (object)uiRoot);
-            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new DesktopUiSystem(uiRoot));
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             IInputBackend inputBackend = new RaylibInputBackend();
@@ -71,7 +69,6 @@ namespace Ludots.Adapter.Raylib
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
         {
             ValidateKey<object>(engine, CoreServiceKeys.UIRoot.Name);
-            ValidateKey<Core.UI.IUiSystem>(engine, CoreServiceKeys.UISystem.Name);
             ValidateKey<PlayerInputHandler>(engine, CoreServiceKeys.InputHandler.Name);
             ValidateKey<IInputBackend>(engine, CoreServiceKeys.InputBackend.Name);
         }

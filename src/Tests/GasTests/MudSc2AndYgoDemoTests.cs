@@ -129,12 +129,9 @@ namespace Ludots.Tests.GAS
                 var abilityDefs = new AbilityDefinitionRegistry();
 
                 const int orderCastAbility = 100;
-                const int orderRespondChain = 101;
 
-                var orderTypeRegistry = new OrderTypeRegistry();
-                var tagRuleRegistry = new TagRuleRegistry();
-                OrderTypeConfigLoader.RegisterDefaults(orderTypeRegistry, tagRuleRegistry);
-                var orderBufferSystem = new OrderBufferSystem(world, clock, orderTypeRegistry, tagRuleRegistry, incomingOrders, 30, chainOrders, orderRespondChain);
+                var (orderTypeRegistry, orderRuleRegistry) = CreateTestOrderRuntime(orderCastAbility);
+                var orderBufferSystem = new OrderBufferSystem(world, clock, orderTypeRegistry, orderRuleRegistry, incomingOrders, 30);
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
                 var timedTags = new TimedTagExpirationSystem(world, clock);
@@ -248,15 +245,15 @@ namespace Ludots.Tests.GAS
                     eventBus.Update();
                 }
 
-                incomingOrders.TryEnqueue(new Order { OrderId = 1, OrderTagId = orderCastAbility, Actor = player, Target = player, Args = new OrderArgs { I0 = 0 } });
+                incomingOrders.TryEnqueue(new Order { OrderId = 1, OrderTypeId = orderCastAbility, Actor = player, Target = player, Args = new OrderArgs { I0 = 0 } });
                 sb.AppendLine("[MUD][SC2] 你注射【兴奋剂】。");
                 RunFrame(0);
 
-                incomingOrders.TryEnqueue(new Order { OrderId = 2, OrderTagId = orderCastAbility, Actor = player, Target = player, Args = new OrderArgs { I0 = 1 } });
+                incomingOrders.TryEnqueue(new Order { OrderId = 2, OrderTypeId = orderCastAbility, Actor = player, Target = player, Args = new OrderArgs { I0 = 1 } });
                 sb.AppendLine("[MUD][SC2] 你启动【隐形】。");
                 RunFrame(1);
 
-                incomingOrders.TryEnqueue(new Order { OrderId = 3, OrderTagId = orderCastAbility, Actor = enemy, Target = player, Args = new OrderArgs { I0 = 0 } });
+                incomingOrders.TryEnqueue(new Order { OrderId = 3, OrderTypeId = orderCastAbility, Actor = enemy, Target = player, Args = new OrderArgs { I0 = 0 } });
                 sb.AppendLine("[MUD][SC2] 敌方探测对你施加【显形】。");
                 RunFrame(2);
 
@@ -274,11 +271,11 @@ namespace Ludots.Tests.GAS
                     resp.Versions[1] = enemy2.Version;
                 }
                 selResp.TryAdd(resp);
-                incomingOrders.TryEnqueue(new Order { OrderId = 4, OrderTagId = orderCastAbility, Actor = player, Target = enemy, Args = new OrderArgs { I0 = 2 } });
+                incomingOrders.TryEnqueue(new Order { OrderId = 4, OrderTypeId = orderCastAbility, Actor = player, Target = enemy, Args = new OrderArgs { I0 = 2 } });
                 sb.AppendLine("[MUD][SC2] 你投掷【EMP】覆盖两名敌人。");
                 RunFrame(3);
 
-                incomingOrders.TryEnqueue(new Order { OrderId = 5, OrderTagId = orderCastAbility, Actor = player, Target = player, Args = new OrderArgs { I0 = 3 } });
+                incomingOrders.TryEnqueue(new Order { OrderId = 5, OrderTypeId = orderCastAbility, Actor = player, Target = player, Args = new OrderArgs { I0 = 3 } });
                 sb.AppendLine("[MUD][SC2] 你开始【治疗】自己。");
                 RunFrame(4);
                 RunFrame(5);
@@ -346,14 +343,11 @@ namespace Ludots.Tests.GAS
                 var eventBus = new GameplayEventBus();
 
                 const int orderCastAbility = 100;
-                const int orderRespondChain = 101;
                 const int chainOpenEvent = 220;
                 const int inputRequestTag = 221;
 
-                var orderTypeRegistry2 = new OrderTypeRegistry();
-                var tagRuleRegistry2 = new TagRuleRegistry();
-                OrderTypeConfigLoader.RegisterDefaults(orderTypeRegistry2, tagRuleRegistry2);
-                var orderBufferSystem2 = new OrderBufferSystem(world, clock, orderTypeRegistry2, tagRuleRegistry2, incomingOrders, 30, chainOrders, orderRespondChain);
+                var (orderTypeRegistry2, orderRuleRegistry2) = CreateTestOrderRuntime(orderCastAbility);
+                var orderBufferSystem2 = new OrderBufferSystem(world, clock, orderTypeRegistry2, orderRuleRegistry2, incomingOrders, 30);
                 var effectLoop = new EffectProcessingLoopSystem(world, effectRequests, clock, conditions, budget, templates, inputReq, chainOrders, new ResponseChainTelemetryBuffer(), new OrderRequestQueue());
                 var agg = new AttributeAggregatorSystem(world);
                 var clockPolicy = new GasClockStepPolicy(1);
@@ -399,16 +393,16 @@ namespace Ludots.Tests.GAS
                 That(lastPhase, Is.EqualTo((byte)2));
                 That(lastWindows, Is.EqualTo(1));
 
-                chainOrders.TryEnqueue(new Order { OrderId = 1, OrderTagId = TestGasOrderTags.ChainActivateEffect, Actor = player, Args = new OrderArgs { I0 = tplFireball } });
+                chainOrders.TryEnqueue(new Order { OrderId = 1, OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = player, Args = new OrderArgs { I0 = tplFireball } });
                 sb.AppendLine("[MUD][YGO] 你追加连锁：结算【火球】伤害。");
                 RunStep();
 
-                chainOrders.TryEnqueue(new Order { OrderId = 2, OrderTagId = TestGasOrderTags.ChainNegate, Actor = opponent });
+                chainOrders.TryEnqueue(new Order { OrderId = 2, OrderTypeId = TestResponseChainOrderTypeIds.ChainNegate, Actor = opponent });
                 sb.AppendLine("[MUD][YGO] 对手连锁：发动【无效】（negate 上一个链结）。");
                 RunStep();
 
-                chainOrders.TryEnqueue(new Order { OrderId = 3, OrderTagId = TestGasOrderTags.ChainPass, Actor = player });
-                chainOrders.TryEnqueue(new Order { OrderId = 4, OrderTagId = TestGasOrderTags.ChainPass, Actor = opponent });
+                chainOrders.TryEnqueue(new Order { OrderId = 3, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = player });
+                chainOrders.TryEnqueue(new Order { OrderId = 4, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = opponent });
                 sb.AppendLine("[MUD][YGO] 双方 Pass，连锁窗口关闭，开始 LIFO 结算。");
                 RunStep();
                 That(lastPhase, Is.EqualTo((byte)0));
@@ -465,14 +459,11 @@ namespace Ludots.Tests.GAS
                 var abilityDefs = new AbilityDefinitionRegistry();
 
                 const int orderCastAbility = 100;
-                const int orderRespondChain = 101;
 
                 var inputReq = new InputRequestQueue();
                 var selReq = new SelectionRequestQueue();
-                var orderTypeRegistry3 = new OrderTypeRegistry();
-                var tagRuleRegistry3 = new TagRuleRegistry();
-                OrderTypeConfigLoader.RegisterDefaults(orderTypeRegistry3, tagRuleRegistry3);
-                var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, tagRuleRegistry3, incomingOrders, 30, chainOrders, orderRespondChain);
+                var (orderTypeRegistry3, orderRuleRegistry3) = CreateTestOrderRuntime(orderCastAbility);
+                var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, orderRuleRegistry3, incomingOrders, 30);
                 var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, selReq, selResp, effectRequests, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3);
                 var effectLoop = new EffectProcessingLoopSystem(world, effectRequests, clock, conditions, budget, templates, null, chainOrders, new ResponseChainTelemetryBuffer(), new OrderRequestQueue())
                 {
@@ -506,7 +497,7 @@ namespace Ludots.Tests.GAS
                     clockSystem.Update(1f);
                     for (int t = 0; t < targets.Length; t++)
                     {
-                        incomingOrders.TryEnqueue(new Order { OrderId = (i * targets.Length) + t + 1, OrderTagId = orderCastAbility, Actor = player, Target = targets[t], Args = new OrderArgs { I0 = 0 } });
+                        incomingOrders.TryEnqueue(new Order { OrderId = (i * targets.Length) + t + 1, OrderTypeId = orderCastAbility, Actor = player, Target = targets[t], Args = new OrderArgs { I0 = 0 } });
                     }
                     orderBufferSystem3.Update(1f);
                     abilityExec.Update(1f);
@@ -546,7 +537,7 @@ namespace Ludots.Tests.GAS
                     t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                     for (int t = 0; t < targets.Length; t++)
                     {
-                        incomingOrders.TryEnqueue(new Order { OrderId = (frame * targets.Length) + t + 100000, OrderTagId = orderCastAbility, Actor = player, Target = targets[t], Args = new OrderArgs { I0 = 0 } });
+                        incomingOrders.TryEnqueue(new Order { OrderId = (frame * targets.Length) + t + 100000, OrderTypeId = orderCastAbility, Actor = player, Target = targets[t], Args = new OrderArgs { I0 = 0 } });
                     }
                     ticksEnqueue += System.Diagnostics.Stopwatch.GetTimestamp() - t0;
                     totalRoots += targets.Length;
@@ -599,5 +590,27 @@ namespace Ludots.Tests.GAS
                 world.Dispose();
             }
         }
-    }
+        private static (OrderTypeRegistry Types, OrderRuleRegistry Rules) CreateTestOrderRuntime(int castAbilityOrderTypeId)
+        {
+            var types = new OrderTypeRegistry();
+            types.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                Label = "Cast Ability",
+                MaxQueueSize = 3,
+                SameTypePolicy = SameTypePolicy.Queue,
+                QueueFullPolicy = QueueFullPolicy.DropOldest,
+                Priority = 100,
+                BufferWindowMs = 500,
+                PendingBufferWindowMs = 400,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8,
+                ClearQueueOnActivate = true,
+                SpatialBlackboardKey = OrderBlackboardKeys.Cast_TargetPosition,
+                EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex
+            });
+
+            return (types, new OrderRuleRegistry());
+        }    }
 }

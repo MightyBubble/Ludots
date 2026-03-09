@@ -1,7 +1,7 @@
 namespace Ludots.Adapter.Web.Protocol
 {
     /// <summary>
-    /// Wire constants for server â†’ client binary frame protocol.
+    /// Wire constants for server â†?client binary frame protocol.
     /// [MsgType(1)] [FrameNumber(4)] [SimTick(4)] [Timestamp(8)] [Sections...] [SectionEnd]
     /// Each Section: [SectionType(1)] [ItemCount(2)] [ByteLength(4)] [ItemBytes...]
     /// </summary>
@@ -17,7 +17,7 @@ namespace Ludots.Adapter.Web.Protocol
         public const byte SectionGroundOverlays = 0x03;
         public const byte SectionWorldHud = 0x04;
         public const byte SectionScreenHud = 0x05;
-        public const byte SectionUiHtml = 0x09;
+        public const byte SectionUiSceneDiff = 0x08;
         public const byte SectionScreenOverlay = 0x0A;
         public const byte SectionDebugLines = 0x10;
         public const byte SectionDebugCircles = 0x11;

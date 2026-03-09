@@ -1,9 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
+using CoreInputMod.Systems;
+using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Systems;
@@ -40,28 +43,48 @@ namespace CoreInputMod.Triggers
                 return Task.CompletedTask;
             engine.GlobalContext[InstalledKey] = true;
 
-            var selectionCallbacks = new List<Action<WorldCmInt2, Arch.Core.Entity>>();
+            var selectionCallbacks = new List<Action<WorldCmInt2, Entity>>();
             var triggeredCallbacks = new List<Action<SelectionRequest, WorldCmInt2>>();
             engine.GlobalContext[EntitySelectionCallbacksKey] = selectionCallbacks;
             engine.GlobalContext[SelectionTriggeredCallbacksKey] = triggeredCallbacks;
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var bindingsObj)
+                || bindingsObj is not InteractionActionBindings)
+            {
+                engine.GlobalContext[CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings();
+            }
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionRuleRegistry.Name, out var rulesObj)
+                || rulesObj is not SelectionRuleRegistry)
+            {
+                engine.GlobalContext[CoreServiceKeys.SelectionRuleRegistry.Name] = SelectionRuleRegistry.CreateWithDefaults();
+            }
+
+            var selectionRules = (SelectionRuleRegistry)engine.GlobalContext[CoreServiceKeys.SelectionRuleRegistry.Name];
 
             var clickSelect = new EntityClickSelectSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
             clickSelect.OnEntitySelected = (worldCm, entity) =>
             {
                 foreach (var cb in selectionCallbacks) cb(worldCm, entity);
             };
-            engine.RegisterPresentationSystem(clickSelect);
+            engine.RegisterSystem(clickSelect, SystemGroup.InputCollection);
 
-            var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
+            var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries, selectionRules);
             gasSelection.OnSelectionTriggered = (req, worldCm) =>
             {
                 foreach (var cb in triggeredCallbacks) cb(req, worldCm);
             };
-            engine.RegisterPresentationSystem(gasSelection);
+            engine.RegisterSystem(gasSelection, SystemGroup.InputCollection);
 
-            engine.RegisterPresentationSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext));
+            engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
+            engine.RegisterPresentationSystem(new SkillBarOverlaySystem(engine.World, engine.GlobalContext));
+            engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext, engine.SpatialQueries), SystemGroup.InputCollection);
 
-            _ctx.Log("[CoreInputMod] EntityClickSelect, GasSelectionResponse, GasInputResponse registered");
+            var vmManager = new ViewModeManager(engine.World, engine.GlobalContext, engine.GameSession.Camera);
+            engine.GlobalContext[ViewModeManager.GlobalKey] = vmManager;
+            engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
+
+            _ctx.Log("[CoreInputMod] EntityClickSelect, GasSelectionResponse, GasInputResponse, SkillBar, TabTarget, ViewMode registered");
             return Task.CompletedTask;
         }
     }

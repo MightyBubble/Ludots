@@ -30,18 +30,9 @@ namespace Ludots.Core.Presentation.Camera
 
         public Vector2 WorldToScreen(Vector3 worldPosition)
         {
-            CameraRenderState3D camera;
-
-            if (_presenter != null)
+            if (!TryResolveCamera(out var camera))
             {
-                camera = _presenter.SmoothedRenderState;
-            }
-            else
-            {
-                var state = _cameraManager.State;
-                if (state == null)
-                    return new Vector2(float.NaN, float.NaN);
-                camera = CameraViewportUtil.StateToRenderState(state);
+                return new Vector2(float.NaN, float.NaN);
             }
 
             return CameraViewportUtil.WorldToScreen(
@@ -49,6 +40,25 @@ namespace Ludots.Core.Presentation.Camera
                 camera,
                 _view.Resolution,
                 _view.AspectRatio);
+        }
+
+        private bool TryResolveCamera(out CameraRenderState3D camera)
+        {
+            if (_presenter is { HasSmoothedRenderState: true })
+            {
+                camera = _presenter.SmoothedRenderState;
+                return true;
+            }
+
+            var state = _cameraManager.State;
+            if (state == null)
+            {
+                camera = default;
+                return false;
+            }
+
+            camera = CameraViewportUtil.StateToRenderState(state);
+            return true;
         }
     }
 }

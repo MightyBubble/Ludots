@@ -1,50 +1,115 @@
+﻿using System;
+using System.Numerics;
 using Arch.Core;
 
 namespace Ludots.Core.Input.Selection
 {
-    /// <summary>
-    /// Selection operation types that the selection system processes.
-    /// </summary>
-    public enum SelectionOp : byte
+    public enum SelectionCommandKind : byte
     {
-        /// <summary>Replace selection with clicked entity.</summary>
-        Select = 0,
-        /// <summary>Toggle entity in/out of selection (Shift+click).</summary>
-        Toggle = 1,
-        /// <summary>Select all same-type entities visible (double-click).</summary>
-        SelectSameType = 2,
-        /// <summary>Box-select start (drag begin).</summary>
-        BoxStart = 3,
-        /// <summary>Box-select end (drag release).</summary>
-        BoxEnd = 4,
-        /// <summary>Deselect all.</summary>
-        DeselectAll = 5,
-        /// <summary>Save current selection to control group.</summary>
-        SaveGroup = 6,
-        /// <summary>Recall control group.</summary>
-        RecallGroup = 7,
+        None = 0,
+        SelectAtPoint = 1,
+        SelectInRectangle = 2,
+        SelectInPolygon = 3,
+        Clear = 4,
+        SaveGroup = 5,
+        RecallGroup = 6,
     }
 
-    /// <summary>
-    /// Interface for handling selection input events.
-    /// Implementations are responsible for translating raw input into selection operations.
-    /// The selection system processes these operations against the SelectionBuffer.
-    /// 
-    /// This allows different game genres to have different selection behaviors:
-    ///   - RTS: box select, Shift+click toggle, double-click same-type, Ctrl+group
-    ///   - MOBA: single select only, Tab to cycle
-    ///   - RPG: click to select target, no multi-select
-    /// </summary>
+    public enum SelectionApplyMode : byte
+    {
+        Replace = 0,
+        Add = 1,
+        Toggle = 2,
+    }
+
+    public struct SelectionInputCommand
+    {
+        public SelectionCommandKind Kind;
+        public SelectionApplyMode ApplyMode;
+        public Vector2 PointScreen;
+        public Vector2 RectangleMinScreen;
+        public Vector2 RectangleMaxScreen;
+        public Vector2[]? PolygonScreen;
+        public int GroupIndex;
+        public float PickRadiusPx;
+        public bool ExpandSameClassFromResolvedCandidate;
+        public Entity ExplicitTarget;
+
+        public static SelectionInputCommand CreateClear()
+        {
+            return new SelectionInputCommand
+            {
+                Kind = SelectionCommandKind.Clear,
+                ApplyMode = SelectionApplyMode.Replace,
+            };
+        }
+
+        public static SelectionInputCommand CreateSaveGroup(int groupIndex)
+        {
+            return new SelectionInputCommand
+            {
+                Kind = SelectionCommandKind.SaveGroup,
+                ApplyMode = SelectionApplyMode.Replace,
+                GroupIndex = groupIndex,
+            };
+        }
+
+        public static SelectionInputCommand CreateRecallGroup(int groupIndex)
+        {
+            return new SelectionInputCommand
+            {
+                Kind = SelectionCommandKind.RecallGroup,
+                ApplyMode = SelectionApplyMode.Replace,
+                GroupIndex = groupIndex,
+            };
+        }
+
+        public static SelectionInputCommand CreatePoint(
+            Vector2 pointScreen,
+            float pickRadiusPx,
+            SelectionApplyMode applyMode,
+            bool expandSameClass)
+        {
+            return new SelectionInputCommand
+            {
+                Kind = SelectionCommandKind.SelectAtPoint,
+                ApplyMode = applyMode,
+                PointScreen = pointScreen,
+                PickRadiusPx = pickRadiusPx,
+                ExpandSameClassFromResolvedCandidate = expandSameClass,
+            };
+        }
+
+        public static SelectionInputCommand CreateRectangle(
+            Vector2 rectangleMinScreen,
+            Vector2 rectangleMaxScreen,
+            SelectionApplyMode applyMode)
+        {
+            return new SelectionInputCommand
+            {
+                Kind = SelectionCommandKind.SelectInRectangle,
+                ApplyMode = applyMode,
+                RectangleMinScreen = rectangleMinScreen,
+                RectangleMaxScreen = rectangleMaxScreen,
+            };
+        }
+
+        public static SelectionInputCommand CreatePolygon(
+            Vector2[] polygonScreen,
+            SelectionApplyMode applyMode)
+        {
+            return new SelectionInputCommand
+            {
+                Kind = SelectionCommandKind.SelectInPolygon,
+                ApplyMode = applyMode,
+                PolygonScreen = polygonScreen,
+            };
+        }
+    }
+
     public interface ISelectionInputHandler
     {
-        /// <summary>
-        /// Called each frame to poll for selection operations.
-        /// Implementations should read input state and return the appropriate operation.
-        /// </summary>
-        /// <param name="op">The selection operation to perform.</param>
-        /// <param name="target">Target entity for Select/Toggle operations.</param>
-        /// <param name="groupIndex">Group index for SaveGroup/RecallGroup (0-9).</param>
-        /// <returns>True if an operation should be processed this frame.</returns>
-        bool Poll(out SelectionOp op, out Entity target, out int groupIndex);
+        void Update(float dt);
+        bool Poll(out SelectionInputCommand command);
     }
 }

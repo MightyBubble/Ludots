@@ -29,6 +29,13 @@ public static class MarkupBinder
             node.AddActionHandle(handle);
         }
 
+        string? canvasMethodName = node.Attributes["ui-canvas"] ?? node.Attributes["data-canvas"];
+        if (!string.IsNullOrWhiteSpace(canvasMethodName))
+        {
+            MethodInfo canvasMethod = ResolveCanvasMethod(codeBehind.GetType(), canvasMethodName);
+            node.SetCanvasContent(InvokeCanvasFactory(codeBehind, canvasMethod));
+        }
+
         foreach (UiNode child in node.Children)
         {
             BindNode(scene, child, codeBehind);
@@ -57,6 +64,27 @@ public static class MarkupBinder
         return method;
     }
 
+    private static MethodInfo ResolveCanvasMethod(Type targetType, string methodName)
+    {
+        MethodInfo? method = targetType.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (method == null)
+        {
+            throw new InvalidOperationException($"Canvas factory method '{methodName}' was not found on '{targetType.FullName}'.");
+        }
+
+        if (method.GetParameters().Length != 0)
+        {
+            throw new InvalidOperationException($"Canvas factory method '{methodName}' must not declare parameters.");
+        }
+
+        if (method.ReturnType != typeof(UiCanvasContent))
+        {
+            throw new InvalidOperationException($"Canvas factory method '{methodName}' must return UiCanvasContent.");
+        }
+
+        return method;
+    }
+
     private static void InvokeMethod(object target, MethodInfo method, UiActionContext context)
     {
         object? result = method.GetParameters().Length == 0
@@ -67,5 +95,16 @@ public static class MarkupBinder
         {
             task.GetAwaiter().GetResult();
         }
+    }
+
+    private static UiCanvasContent InvokeCanvasFactory(object target, MethodInfo method)
+    {
+        object? result = method.Invoke(target, null);
+        if (result is not UiCanvasContent canvasContent)
+        {
+            throw new InvalidOperationException($"Canvas factory method '{method.Name}' did not return a UiCanvasContent instance.");
+        }
+
+        return canvasContent;
     }
 }

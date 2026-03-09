@@ -16,7 +16,7 @@ namespace Ludots.Core.Gameplay.AI.Systems
         private readonly OrderQueue _orders;
 
         private static readonly QueryDescription _query = new QueryDescription()
-            .WithAll<AIAgent, AIPlan32, GameplayTagContainer, BlackboardIntBuffer, BlackboardEntityBuffer>();
+            .WithAll<AIAgent, AIPlan32, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>();
 
         public AIPlanExecutionSystem(World world, IClock clock, ActionLibraryCompiled256 library, OrderQueue orders)
             : base(world)
@@ -30,10 +30,10 @@ namespace Ludots.Core.Gameplay.AI.Systems
         {
             int step = _clock.Now(ClockDomainId.Step);
             var job = new ExecuteJob(_library, _orders, step);
-            World.InlineEntityQuery<ExecuteJob, AIAgent, AIPlan32, GameplayTagContainer, BlackboardIntBuffer, BlackboardEntityBuffer>(in _query, ref job);
+            World.InlineEntityQuery<ExecuteJob, AIAgent, AIPlan32, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>(in _query, ref job);
         }
 
-        private struct ExecuteJob : IForEachWithEntity<AIAgent, AIPlan32, GameplayTagContainer, BlackboardIntBuffer, BlackboardEntityBuffer>
+        private struct ExecuteJob : IForEachWithEntity<AIAgent, AIPlan32, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>
         {
             private readonly ActionLibraryCompiled256 _library;
             private readonly OrderQueue _orders;
@@ -51,12 +51,11 @@ namespace Ludots.Core.Gameplay.AI.Systems
                 Entity entity,
                 ref AIAgent agent,
                 ref AIPlan32 plan,
-                ref GameplayTagContainer tags,
+                ref OrderBuffer orderBuffer,
                 ref BlackboardIntBuffer ints,
                 ref BlackboardEntityBuffer entities)
             {
-                if (plan.IsDone) return;
-                if (tags.HasTag(OrderStateTags.State_HasActive)) return;
+                if (plan.IsDone || orderBuffer.HasActive) return;
 
                 if (!plan.TryGetCurrent(out int actionId)) return;
                 if ((uint)actionId >= (uint)_library.Count)

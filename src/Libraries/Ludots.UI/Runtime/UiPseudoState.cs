@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 
 namespace Ludots.UI.Runtime;
 
 [Flags]
-public enum UiPseudoState : byte
+public enum UiPseudoState : ushort
 {
     None = 0,
     Hover = 1 << 0,
@@ -12,5 +12,7 @@ public enum UiPseudoState : byte
     Disabled = 1 << 3,
     Checked = 1 << 4,
     Selected = 1 << 5,
-    Root = 1 << 6
+    Root = 1 << 6,
+    Required = 1 << 7,
+    Invalid = 1 << 8
 }

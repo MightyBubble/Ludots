@@ -26,7 +26,6 @@ namespace Ludots.Adapter.Raylib
     internal static class RaylibHostLoop
     {
         private static bool _uiPointerCaptured;
-        private static bool _emptyBufferWarned;
 
         public static void Run(RaylibHostSetup setup)
         {
@@ -78,8 +77,10 @@ namespace Ludots.Adapter.Raylib
 
                 var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
                 screenProjector.BindPresenter(cameraPresenter);
+                var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
+                screenRayProvider.BindPresenter(cameraPresenter);
                 engine.GlobalContext[CoreServiceKeys.ScreenProjector.Name] = screenProjector;
-                engine.GlobalContext[CoreServiceKeys.ScreenRayProvider.Name] = new RaylibScreenRayProvider(cameraAdapter);
+                engine.GlobalContext[CoreServiceKeys.ScreenRayProvider.Name] = screenRayProvider;
 
                 var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
                 engine.RegisterPresentationSystem(cullingSystem);
@@ -90,13 +91,12 @@ namespace Ludots.Adapter.Raylib
 
                 engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
 
-                WorldHudToScreenSystem hudProjection = null;
                 if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudBuffer.Name, out var whObj) && whObj is WorldHudBatchBuffer worldHud &&
                     engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationScreenHudBuffer.Name, out var shObj) && shObj is ScreenHudBatchBuffer screenHud)
                 {
                     engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudStrings.Name, out var strObj);
                     var worldHudStrings = strObj as Ludots.Core.Presentation.Config.WorldHudStringTable;
-                    hudProjection = new WorldHudToScreenSystem(engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud);
+                    engine.RegisterPresentationSystem(new WorldHudToScreenSystem(engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud));
                 }
 
                 ValidateRequiredContextBeforeLoop(engine);
@@ -107,6 +107,7 @@ namespace Ludots.Adapter.Raylib
                     throw new InvalidOperationException("Invalid game.json: 'StartupMapId' cannot be empty.");
                 }
                 engine.LoadMap(config.StartupMapId);
+                cameraPresenter.Update(engine.GameSession.Camera.State, 0f, renderCameraDebug);
 
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Immediate, engine.VFS);
@@ -138,9 +139,9 @@ namespace Ludots.Adapter.Raylib
                         bool uiCaptured = drawSkiaUi && UpdateInput(uiRoot);
                         engine.GlobalContext[CoreServiceKeys.UiCaptured.Name] = uiCaptured;
                         engine.Tick(dt);
+                        uiRoot.Update(dt);
 
                         cameraPresenter.Update(engine.GameSession.Camera.State, dt, renderCameraDebug);
-                        hudProjection?.Update(dt);
 
                         Rl.BeginDrawing();
                         Rl.ClearBackground(new Raylib_cs.Color(0, 0, 0, 255));
@@ -167,11 +168,6 @@ namespace Ludots.Adapter.Raylib
                             drawObj is PrimitiveDrawBuffer draw &&
                             meshObj is MeshAssetRegistry meshes)
                         {
-                            if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
-                            {
-                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame — no Marker3D performers emitting?");
-                                _emptyBufferWarned = true;
-                            }
                             primitiveRenderer.Draw(draw, meshes, renderDebug.AcceptanceScaleMultiplier);
                         }
 

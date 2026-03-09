@@ -317,9 +317,10 @@ public interface IInputBackend
 
 每个 Binding 可配置处理器链。
 
-**Composite 输入**：
-- `Vector2Composite`：WASD → 2D 方向向量
-- 通过 `InputBindingDef.CompositeType` 配置
+**Composite Input**:
+- `Vector2Composite`: WASD -> 2D direction vector
+- Configure via `InputBindingDef.CompositeType`
+- Runtime precompiles context / binding / processor chains and accumulates by action index to avoid per-frame string lookups on the fixed-step hot path
 
 **InputBlocked**：
 - `handler.InputBlocked = true` → 所有 action 读取返回默认值
@@ -359,7 +360,7 @@ system.SetGroundPositionProvider((out Vector3 pos) => { ... });
 system.SetSelectedEntityProvider((out Entity e) => { ... });
 system.SetHoveredEntityProvider((out Entity e) => { ... });
 system.SetOrderSubmitHandler((in Order order) => { ... });
-system.SetTagKeyResolver(key => tagRegistry.GetId(key));
+system.SetOrderTypeKeyResolver(key => orderTypeRegistry.Get(key));
 system.SetAutoTargetProvider((actor, policy, range, out target) => { ... });
 ```
 
@@ -403,7 +404,7 @@ cameraManager.SetController(
 ### 5.2 自定义输入映射
 
 1. 编写 `default_input.json`（定义 Actions + Contexts + Bindings）
-2. 编写 `input_order_mappings.json`（定义 ActionId → OrderTagKey 映射）
+2. 编写 `input_order_mappings.json`（定义 ActionId → OrderTypeKey 映射）
 3. 在 Trigger 中加载并设置 Provider 回调
 
 ```json

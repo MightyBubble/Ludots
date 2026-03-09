@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
@@ -8,12 +8,16 @@ public sealed class UiStyleResolver
     public void ResolveTree(UiNode root, IReadOnlyList<UiStyleSheet>? styleSheets)
     {
         ArgumentNullException.ThrowIfNull(root);
-        ResolveNode(root, styleSheets ?? Array.Empty<UiStyleSheet>(), parentStyle: null, inheritedVariables: null, isRoot: true);
+
+        IReadOnlyList<UiStyleSheet> effectiveStyleSheets = styleSheets ?? Array.Empty<UiStyleSheet>();
+        IReadOnlyDictionary<string, UiKeyframeDefinition> keyframes = BuildKeyframeIndex(effectiveStyleSheets);
+        ResolveNode(root, effectiveStyleSheets, keyframes, parentStyle: null, inheritedVariables: null, isRoot: true);
     }
 
     private void ResolveNode(
         UiNode node,
         IReadOnlyList<UiStyleSheet> styleSheets,
+        IReadOnlyDictionary<string, UiKeyframeDefinition> keyframes,
         UiStyle? parentStyle,
         IReadOnlyDictionary<string, string>? inheritedVariables,
         bool isRoot)
@@ -69,11 +73,69 @@ public sealed class UiStyleResolver
             resolved = resolved with { Display = UiDisplay.Text };
         }
 
-        node.SetComputedStyle(resolved);
+        UiAnimationSpec? resolvedAnimation = ResolveAnimationSpec(resolved.Animation, keyframes, variables);
+        node.SetComputedStyle(resolved, resolvedAnimation);
         foreach (UiNode child in node.Children)
         {
-            ResolveNode(child, styleSheets, resolved, variables, isRoot: false);
+            ResolveNode(child, styleSheets, keyframes, resolved, variables, isRoot: false);
         }
+    }
+
+    private static IReadOnlyDictionary<string, UiKeyframeDefinition> BuildKeyframeIndex(IReadOnlyList<UiStyleSheet> styleSheets)
+    {
+        Dictionary<string, UiKeyframeDefinition> keyframes = new(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < styleSheets.Count; i++)
+        {
+            foreach (UiKeyframeDefinition definition in styleSheets[i].Keyframes)
+            {
+                keyframes[definition.Name] = definition;
+            }
+        }
+
+        return keyframes;
+    }
+
+    private static UiAnimationSpec? ResolveAnimationSpec(
+        UiAnimationSpec? animation,
+        IReadOnlyDictionary<string, UiKeyframeDefinition> keyframes,
+        IReadOnlyDictionary<string, string> variables)
+    {
+        if (animation == null || animation.Entries.Count == 0)
+        {
+            return null;
+        }
+
+        List<UiAnimationEntry> entries = new(animation.Entries.Count);
+        for (int i = 0; i < animation.Entries.Count; i++)
+        {
+            UiAnimationEntry entry = animation.Entries[i];
+            if (!keyframes.TryGetValue(entry.Name, out UiKeyframeDefinition? definition) || definition == null)
+            {
+                continue;
+            }
+
+            entries.Add(entry with { Keyframes = ResolveKeyframes(definition, variables) });
+        }
+
+        return entries.Count == 0 ? null : new UiAnimationSpec(entries);
+    }
+
+    private static UiKeyframeDefinition ResolveKeyframes(UiKeyframeDefinition definition, IReadOnlyDictionary<string, string> variables)
+    {
+        List<UiKeyframeStop> stops = new(definition.Stops.Count);
+        for (int i = 0; i < definition.Stops.Count; i++)
+        {
+            UiKeyframeStop stop = definition.Stops[i];
+            UiStyleDeclaration resolvedDeclaration = new();
+            foreach (KeyValuePair<string, string> property in stop.Declaration)
+            {
+                resolvedDeclaration.Set(property.Key, ResolveValue(property.Value, variables));
+            }
+
+            stops.Add(new UiKeyframeStop(stop.Offset, resolvedDeclaration));
+        }
+
+        return new UiKeyframeDefinition(definition.Name, stops);
     }
 
     private static void ApplyCustomProperties(UiStyleDeclaration declaration, IDictionary<string, string> variables)
@@ -111,6 +173,26 @@ public sealed class UiStyleResolver
         if (!HasExplicitValue(declaration, "font-weight") && style.Bold == implicitStyle.Bold)
         {
             style = style with { Bold = parentStyle.Bold };
+        }
+
+        if (!HasExplicitValue(declaration, "font-family") && string.Equals(style.FontFamily, implicitStyle.FontFamily, StringComparison.Ordinal))
+        {
+            style = style with { FontFamily = parentStyle.FontFamily };
+        }
+
+        if (!HasExplicitValue(declaration, "white-space") && style.WhiteSpace == implicitStyle.WhiteSpace)
+        {
+            style = style with { WhiteSpace = parentStyle.WhiteSpace };
+        }
+
+        if (!HasExplicitValue(declaration, "direction") && style.Direction == implicitStyle.Direction)
+        {
+            style = style with { Direction = parentStyle.Direction };
+        }
+
+        if (!HasExplicitValue(declaration, "text-align") && style.TextAlign == implicitStyle.TextAlign)
+        {
+            style = style with { TextAlign = parentStyle.TextAlign };
         }
 
         return style;
@@ -272,7 +354,7 @@ public sealed class UiStyleResolver
         return -1;
     }
 
-    private static UiStyle ApplyProperty(UiStyle style, string propertyName, string rawValue)
+    internal static UiStyle ApplyProperty(UiStyle style, string propertyName, string rawValue)
     {
         string value = rawValue.Trim();
         switch (propertyName.Trim().ToLowerInvariant())
@@ -285,6 +367,10 @@ public sealed class UiStyleResolver
                 return style with { JustifyContent = ParseJustifyContent(value) };
             case "align-items":
                 return style with { AlignItems = ParseAlignItems(value) };
+            case "align-content":
+                return style with { AlignContent = ParseAlignContent(value) };
+            case "flex-wrap":
+                return style with { FlexWrap = ParseFlexWrap(value) };
             case "position":
                 return style with { PositionType = ParsePositionType(value) };
             case "left":
@@ -314,7 +400,13 @@ public sealed class UiStyleResolver
             case "flex-shrink":
                 return TryParseFloat(value, out float flexShrink) ? style with { FlexShrink = flexShrink } : style;
             case "gap":
-                return TryParseFloat(value, out float gap) ? style with { Gap = gap } : style;
+                return TryParseGap(value, out float gap, out float rowGap, out float columnGap)
+                    ? style with { Gap = gap, RowGap = rowGap, ColumnGap = columnGap }
+                    : style;
+            case "row-gap":
+                return TryParseFloat(value, out float explicitRowGap) ? style with { RowGap = explicitRowGap } : style;
+            case "column-gap":
+                return TryParseFloat(value, out float explicitColumnGap) ? style with { ColumnGap = explicitColumnGap } : style;
             case "margin":
                 return TryParseThickness(value, out UiThickness margin) ? style with { Margin = margin } : style;
             case "padding":
@@ -323,17 +415,50 @@ public sealed class UiStyleResolver
                 return TryParseFloat(value, out float borderWidth) ? style with { BorderWidth = borderWidth } : style;
             case "border-radius":
                 return TryParseFloat(value, out float borderRadius) ? style with { BorderRadius = borderRadius } : style;
+            case "border-style":
+                return style with { BorderStyle = ParseBorderStyle(value) };
+            case "z-index":
+                return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int zIndex) ? style with { ZIndex = zIndex } : style;
             case "background":
-                if (TryParseLinearGradient(value, out UiLinearGradient? backgroundGradient))
+                if (TryParseBackgroundLayers(value, out IReadOnlyList<UiBackgroundLayer>? backgroundLayers))
                 {
-                    return style with { BackgroundGradient = backgroundGradient };
+                    return style with
+                    {
+                        BackgroundLayers = backgroundLayers,
+                        BackgroundGradient = backgroundLayers.Select(static layer => layer.Gradient).FirstOrDefault(static gradient => gradient != null),
+                        BackgroundColor = backgroundLayers.Count == 1 && backgroundLayers[0].Gradient == null
+                            ? backgroundLayers[0].Color
+                            : style.BackgroundColor
+                    };
                 }
 
-                return TryParseColor(value, out SKColor background) ? style with { BackgroundColor = background } : style;
+                return TryParseColor(value, out SKColor background)
+                    ? style with { BackgroundColor = background, BackgroundLayers = Array.Empty<UiBackgroundLayer>(), BackgroundGradient = null }
+                    : style;
             case "background-color":
-                return TryParseColor(value, out SKColor backgroundColor) ? style with { BackgroundColor = backgroundColor } : style;
+                return TryParseColor(value, out SKColor backgroundColor)
+                    ? style with { BackgroundColor = backgroundColor }
+                    : style;
             case "background-image":
-                return TryParseLinearGradient(value, out UiLinearGradient? backgroundImageGradient) ? style with { BackgroundGradient = backgroundImageGradient } : style;
+                return TryParseBackgroundLayers(value, out IReadOnlyList<UiBackgroundLayer>? backgroundImageLayers)
+                    ? style with
+                    {
+                        BackgroundLayers = backgroundImageLayers,
+                        BackgroundGradient = backgroundImageLayers.Select(static layer => layer.Gradient).FirstOrDefault(static gradient => gradient != null)
+                    }
+                    : style;
+            case "background-size":
+                return TryParseBackgroundSizeList(value, out IReadOnlyList<UiBackgroundSize>? backgroundSizes)
+                    ? style with { BackgroundSizes = backgroundSizes }
+                    : style;
+            case "background-position":
+                return TryParseBackgroundPositionList(value, out IReadOnlyList<UiBackgroundPosition>? backgroundPositions)
+                    ? style with { BackgroundPositions = backgroundPositions }
+                    : style;
+            case "background-repeat":
+                return TryParseBackgroundRepeatList(value, out IReadOnlyList<UiBackgroundRepeat>? backgroundRepeats)
+                    ? style with { BackgroundRepeats = backgroundRepeats }
+                    : style;
             case "border-color":
                 return TryParseColor(value, out SKColor borderColor) ? style with { BorderColor = borderColor } : style;
             case "outline":
@@ -343,7 +468,18 @@ public sealed class UiStyleResolver
             case "outline-color":
                 return TryParseColor(value, out SKColor explicitOutlineColor) ? style with { OutlineColor = explicitOutlineColor } : style;
             case "box-shadow":
-                return TryParseShadow(value, out UiShadow boxShadow) ? style with { BoxShadow = boxShadow } : style;
+                return TryParseShadowList(value, out IReadOnlyList<UiShadow>? boxShadows)
+                    ? style with { BoxShadow = boxShadows[0], BoxShadows = boxShadows }
+                    : style;
+            case "filter":
+                return TryParseBlurFunction(value, out float filterBlurRadius) ? style with { FilterBlurRadius = filterBlurRadius } : style;
+            case "backdrop-filter":
+                return TryParseBlurFunction(value, out float backdropBlurRadius) ? style with { BackdropBlurRadius = backdropBlurRadius } : style;
+            case "mask":
+            case "mask-image":
+                return TryParseMaskGradient(value, out UiLinearGradient? maskGradient) ? style with { MaskGradient = maskGradient } : style;
+            case "clip-path":
+                return TryParseClipPath(value, out UiClipPath? clipPath) ? style with { ClipPath = clipPath } : style;
             case "text-shadow":
                 return TryParseShadow(value, out UiShadow textShadow) ? style with { TextShadow = textShadow } : style;
             case "color":
@@ -356,6 +492,27 @@ public sealed class UiStyleResolver
                 return style with { Bold = IsBold(value) };
             case "white-space":
                 return style with { WhiteSpace = ParseWhiteSpace(value) };
+            case "direction":
+                return style with { Direction = ParseTextDirection(value) };
+            case "text-align":
+                return style with { TextAlign = ParseTextAlign(value) };
+            case "text-decoration":
+            case "text-decoration-line":
+                return style with { TextDecorationLine = ParseTextDecorationLine(value) };
+            case "text-overflow":
+                return style with { TextOverflow = ParseTextOverflow(value) };
+            case "object-fit":
+                return style with { ObjectFit = ParseObjectFit(value) };
+            case "image-slice":
+            case "nine-slice":
+            case "border-image-slice":
+                return TryParseThickness(value, out UiThickness imageSlice) ? style with { ImageSlice = imageSlice } : style;
+            case "transform":
+                return TryParseTransform(value, out UiTransform? transform) ? style with { Transform = transform ?? UiTransform.Identity } : style;
+            case "animation":
+                return TryParseAnimationSpec(value, out UiAnimationSpec? animation) ? style with { Animation = animation } : style;
+            case "transition":
+                return TryParseTransitionSpec(value, out UiTransitionSpec? transition) ? style with { Transition = transition } : style;
             case "opacity":
                 return TryParseFloat(value, out float opacity) ? style with { Opacity = Math.Clamp(opacity, 0f, 1f) } : style;
             case "visibility":
@@ -417,6 +574,30 @@ public sealed class UiStyleResolver
         };
     }
 
+    private static UiAlignContent ParseAlignContent(string value)
+    {
+        return value.ToLowerInvariant() switch
+        {
+            "start" or "flex-start" => UiAlignContent.Start,
+            "center" => UiAlignContent.Center,
+            "end" or "flex-end" => UiAlignContent.End,
+            "space-between" => UiAlignContent.SpaceBetween,
+            "space-around" => UiAlignContent.SpaceAround,
+            "space-evenly" => UiAlignContent.SpaceEvenly,
+            _ => UiAlignContent.Stretch
+        };
+    }
+
+    private static UiFlexWrap ParseFlexWrap(string value)
+    {
+        return value.ToLowerInvariant() switch
+        {
+            "wrap" => UiFlexWrap.Wrap,
+            "wrap-reverse" => UiFlexWrap.WrapReverse,
+            _ => UiFlexWrap.NoWrap
+        };
+    }
+
     private static UiPositionType ParsePositionType(string value)
     {
         return value.ToLowerInvariant() switch
@@ -434,6 +615,51 @@ public sealed class UiStyleResolver
             "scroll" => UiOverflow.Scroll,
             "clip" => UiOverflow.Clip,
             _ => UiOverflow.Visible
+        };
+    }
+
+    private static UiBorderStyle ParseBorderStyle(string value)
+    {
+        string token = SplitWhitespacePreservingFunctions(value).FirstOrDefault() ?? string.Empty;
+        return token.ToLowerInvariant() switch
+        {
+            "dashed" => UiBorderStyle.Dashed,
+            "dotted" => UiBorderStyle.Dotted,
+            _ => UiBorderStyle.Solid
+        };
+    }
+
+    private static UiTextDirection ParseTextDirection(string value)
+    {
+        return value.ToLowerInvariant() switch
+        {
+            "rtl" => UiTextDirection.Rtl,
+            "auto" => UiTextDirection.Auto,
+            _ => UiTextDirection.Ltr
+        };
+    }
+
+    private static UiTextAlign ParseTextAlign(string value)
+    {
+        return value.ToLowerInvariant() switch
+        {
+            "left" => UiTextAlign.Left,
+            "right" => UiTextAlign.Right,
+            "center" => UiTextAlign.Center,
+            "end" => UiTextAlign.End,
+            _ => UiTextAlign.Start
+        };
+    }
+
+    private static UiObjectFit ParseObjectFit(string value)
+    {
+        return value.ToLowerInvariant() switch
+        {
+            "contain" => UiObjectFit.Contain,
+            "cover" => UiObjectFit.Cover,
+            "none" => UiObjectFit.None,
+            "scale-down" => UiObjectFit.ScaleDown,
+            _ => UiObjectFit.Fill
         };
     }
 
@@ -505,6 +731,38 @@ public sealed class UiStyleResolver
         return values.Length > 0;
     }
 
+    private static bool TryParseGap(string value, out float gap, out float rowGap, out float columnGap)
+    {
+        gap = 0f;
+        rowGap = 0f;
+        columnGap = 0f;
+
+        string[] parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 0 || parts.Length > 2)
+        {
+            return false;
+        }
+
+        if (!TryParseFloat(parts[0], out rowGap))
+        {
+            return false;
+        }
+
+        if (parts.Length == 1)
+        {
+            gap = rowGap;
+            columnGap = rowGap;
+            return true;
+        }
+
+        if (!TryParseFloat(parts[1], out columnGap))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     private static bool TryParseColor(string value, out SKColor color)
     {
         color = SKColors.Transparent;
@@ -554,6 +812,31 @@ public sealed class UiStyleResolver
         return false;
     }
 
+    private static UiTextDecorationLine ParseTextDecorationLine(string value)
+    {
+        UiTextDecorationLine decoration = UiTextDecorationLine.None;
+        foreach (string token in SplitWhitespacePreservingFunctions(value))
+        {
+            switch (token.ToLowerInvariant())
+            {
+                case "none":
+                    return UiTextDecorationLine.None;
+                case "underline":
+                    decoration |= UiTextDecorationLine.Underline;
+                    break;
+                case "line-through":
+                    decoration |= UiTextDecorationLine.LineThrough;
+                    break;
+            }
+        }
+        return decoration;
+    }
+
+    private static UiTextOverflow ParseTextOverflow(string value)
+    {
+        return value.Trim().Equals("ellipsis", StringComparison.OrdinalIgnoreCase) ? UiTextOverflow.Ellipsis : UiTextOverflow.Clip;
+    }
+
     private static UiWhiteSpace ParseWhiteSpace(string value)
     {
         return value.ToLowerInvariant() switch
@@ -594,7 +877,7 @@ public sealed class UiStyleResolver
     private static bool TryParseShadow(string value, out UiShadow shadow)
     {
         shadow = default;
-        string segment = SplitTopLevel(value, ',').FirstOrDefault() ?? string.Empty;
+        string segment = value.Trim();
         if (string.IsNullOrWhiteSpace(segment))
         {
             return false;
@@ -635,6 +918,311 @@ public sealed class UiStyleResolver
             lengthCount >= 4 ? lengths[3] : 0f,
             color);
         return true;
+    }
+
+    private static bool TryParseShadowList(string value, out IReadOnlyList<UiShadow> shadows)
+    {
+        List<UiShadow> parsed = new();
+        foreach (string segment in SplitTopLevel(value, ','))
+        {
+            if (!TryParseShadow(segment, out UiShadow shadow))
+            {
+                shadows = Array.Empty<UiShadow>();
+                return false;
+            }
+
+            parsed.Add(shadow);
+        }
+
+        shadows = parsed;
+        return parsed.Count > 0;
+    }
+
+    private static bool TryParseBackgroundLayers(string value, out IReadOnlyList<UiBackgroundLayer> layers)
+    {
+        List<UiBackgroundLayer> parsed = new();
+        foreach (string segment in SplitTopLevel(value, ','))
+        {
+            if (TryParseBackgroundImageSource(segment, out string? imageSource) && imageSource != null)
+            {
+                parsed.Add(UiBackgroundLayer.FromImage(imageSource));
+                continue;
+            }
+
+            if (TryParseLinearGradient(segment, out UiLinearGradient? gradient) && gradient != null)
+            {
+                parsed.Add(UiBackgroundLayer.FromGradient(gradient));
+                continue;
+            }
+
+            if (TryParseColor(segment, out SKColor color))
+            {
+                parsed.Add(UiBackgroundLayer.FromColor(color));
+                continue;
+            }
+
+            layers = Array.Empty<UiBackgroundLayer>();
+            return false;
+        }
+
+        layers = parsed;
+        return parsed.Count > 0;
+    }
+
+    private static bool TryParseBackgroundImageSource(string value, out string? imageSource)
+    {
+        imageSource = null;
+        string trimmed = value.Trim();
+        if (!trimmed.StartsWith("url(", StringComparison.OrdinalIgnoreCase) || !trimmed.EndsWith(')'))
+        {
+            return false;
+        }
+
+        string inner = trimmed[4..^1].Trim();
+        if ((inner.StartsWith('"') && inner.EndsWith('"')) || (inner.StartsWith('\'') && inner.EndsWith('\'')))
+        {
+            inner = inner[1..^1];
+        }
+
+        if (string.IsNullOrWhiteSpace(inner))
+        {
+            return false;
+        }
+
+        imageSource = inner;
+        return true;
+    }
+
+    private static bool TryParseBackgroundSizeList(string value, out IReadOnlyList<UiBackgroundSize> sizes)
+    {
+        List<UiBackgroundSize> parsed = new();
+        foreach (string segment in SplitTopLevel(value, ','))
+        {
+            if (!TryParseBackgroundSize(segment, out UiBackgroundSize size))
+            {
+                sizes = Array.Empty<UiBackgroundSize>();
+                return false;
+            }
+
+            parsed.Add(size);
+        }
+
+        sizes = parsed;
+        return parsed.Count > 0;
+    }
+
+    private static bool TryParseBackgroundPositionList(string value, out IReadOnlyList<UiBackgroundPosition> positions)
+    {
+        List<UiBackgroundPosition> parsed = new();
+        foreach (string segment in SplitTopLevel(value, ','))
+        {
+            if (!TryParseBackgroundPosition(segment, out UiBackgroundPosition position))
+            {
+                positions = Array.Empty<UiBackgroundPosition>();
+                return false;
+            }
+
+            parsed.Add(position);
+        }
+
+        positions = parsed;
+        return parsed.Count > 0;
+    }
+
+    private static bool TryParseBackgroundRepeatList(string value, out IReadOnlyList<UiBackgroundRepeat> repeats)
+    {
+        List<UiBackgroundRepeat> parsed = new();
+        foreach (string segment in SplitTopLevel(value, ','))
+        {
+            if (!TryParseBackgroundRepeat(segment, out UiBackgroundRepeat repeat))
+            {
+                repeats = Array.Empty<UiBackgroundRepeat>();
+                return false;
+            }
+
+            parsed.Add(repeat);
+        }
+
+        repeats = parsed;
+        return parsed.Count > 0;
+    }
+
+    private static bool TryParseBackgroundSize(string value, out UiBackgroundSize size)
+    {
+        size = UiBackgroundSize.Auto;
+        List<string> tokens = SplitWhitespacePreservingFunctions(value);
+        if (tokens.Count == 0)
+        {
+            return false;
+        }
+
+        if (tokens.Count == 1)
+        {
+            string token = tokens[0].Trim().ToLowerInvariant();
+            switch (token)
+            {
+                case "auto":
+                    size = UiBackgroundSize.Auto;
+                    return true;
+                case "cover":
+                    size = UiBackgroundSize.Cover;
+                    return true;
+                case "contain":
+                    size = UiBackgroundSize.Contain;
+                    return true;
+            }
+
+            if (TryParseLength(tokens[0], out UiLength singleLength))
+            {
+                size = UiBackgroundSize.Explicit(singleLength, UiLength.Auto);
+                return true;
+            }
+
+            return false;
+        }
+
+        if (tokens.Count > 2)
+        {
+            return false;
+        }
+
+        if (!TryParseLength(tokens[0], out UiLength width) || !TryParseLength(tokens[1], out UiLength height))
+        {
+            return false;
+        }
+
+        size = width.IsAuto && height.IsAuto
+            ? UiBackgroundSize.Auto
+            : UiBackgroundSize.Explicit(width, height);
+        return true;
+    }
+
+    private static bool TryParseBackgroundPosition(string value, out UiBackgroundPosition position)
+    {
+        position = UiBackgroundPosition.TopLeft;
+        List<string> tokens = SplitWhitespacePreservingFunctions(value);
+        if (tokens.Count == 0)
+        {
+            return false;
+        }
+
+        if (tokens.Count == 1)
+        {
+            string token = tokens[0].Trim().ToLowerInvariant();
+            if (token is "center")
+            {
+                position = UiBackgroundPosition.Center;
+                return true;
+            }
+
+            if (TryParseBackgroundPositionComponent(token, horizontal: true, out UiLength horizontal))
+            {
+                position = new UiBackgroundPosition(horizontal, UiLength.Percent(50f));
+                return true;
+            }
+
+            if (TryParseBackgroundPositionComponent(token, horizontal: false, out UiLength vertical))
+            {
+                position = new UiBackgroundPosition(UiLength.Percent(50f), vertical);
+                return true;
+            }
+
+            return false;
+        }
+
+        string first = tokens[0].Trim().ToLowerInvariant();
+        string second = tokens[1].Trim().ToLowerInvariant();
+        if (TryParseBackgroundPositionComponent(first, horizontal: true, out UiLength x)
+            && TryParseBackgroundPositionComponent(second, horizontal: false, out UiLength y))
+        {
+            position = new UiBackgroundPosition(x, y);
+            return true;
+        }
+
+        if (TryParseBackgroundPositionComponent(first, horizontal: false, out y)
+            && TryParseBackgroundPositionComponent(second, horizontal: true, out x))
+        {
+            position = new UiBackgroundPosition(x, y);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseBackgroundRepeat(string value, out UiBackgroundRepeat repeat)
+    {
+        repeat = UiBackgroundRepeat.Repeat;
+        string trimmed = value.Trim().ToLowerInvariant();
+        switch (trimmed)
+        {
+            case "repeat":
+                repeat = UiBackgroundRepeat.Repeat;
+                return true;
+            case "no-repeat":
+                repeat = UiBackgroundRepeat.NoRepeat;
+                return true;
+            case "repeat-x":
+            case "repeat no-repeat":
+                repeat = UiBackgroundRepeat.RepeatX;
+                return true;
+            case "repeat-y":
+            case "no-repeat repeat":
+                repeat = UiBackgroundRepeat.RepeatY;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static bool TryParseBackgroundPositionComponent(string token, bool horizontal, out UiLength length)
+    {
+        if (TryParseLength(token, out length))
+        {
+            return true;
+        }
+
+        string normalized = token.Trim().ToLowerInvariant();
+        if (horizontal)
+        {
+            return normalized switch
+            {
+                "left" => Assign(UiLength.Percent(0f), out length),
+                "center" => Assign(UiLength.Percent(50f), out length),
+                "right" => Assign(UiLength.Percent(100f), out length),
+                _ => false
+            };
+        }
+
+        return normalized switch
+        {
+            "top" => Assign(UiLength.Percent(0f), out length),
+            "center" => Assign(UiLength.Percent(50f), out length),
+            "bottom" => Assign(UiLength.Percent(100f), out length),
+            _ => false
+        };
+    }
+
+    private static bool Assign(UiLength value, out UiLength target)
+    {
+        target = value;
+        return true;
+    }
+
+    private static bool TryParseBlurFunction(string value, out float blurRadius)
+    {
+        blurRadius = 0f;
+        string trimmed = value.Trim();
+        if (trimmed.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!trimmed.StartsWith("blur(", StringComparison.OrdinalIgnoreCase) || !trimmed.EndsWith(')'))
+        {
+            return false;
+        }
+
+        return TryParseFloat(trimmed[5..^1], out blurRadius);
     }
 
     private static bool TryParseLinearGradient(string value, out UiLinearGradient? gradient)
@@ -704,7 +1292,7 @@ public sealed class UiStyleResolver
     private static bool TryParseGradientAngle(string value, out float angle)
     {
         string trimmed = value.Trim().ToLowerInvariant();
-        if (trimmed.EndsWith("deg", StringComparison.Ordinal) && TryParseFloat(trimmed[..^3], out angle))
+        if (TryParseAngle(trimmed, out angle))
         {
             return true;
         }
@@ -752,6 +1340,527 @@ public sealed class UiStyleResolver
 
         stop = new UiGradientStop(position, color);
         return true;
+    }
+
+    private static bool TryParseTransform(string value, out UiTransform? transform)
+    {
+        transform = null;
+        string trimmed = value.Trim();
+        if (string.Equals(trimmed, "none", StringComparison.OrdinalIgnoreCase))
+        {
+            transform = UiTransform.Identity;
+            return true;
+        }
+
+        List<string> tokens = SplitWhitespacePreservingFunctions(trimmed);
+        if (tokens.Count == 0)
+        {
+            return false;
+        }
+
+        List<UiTransformOperation> operations = new(tokens.Count);
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            if (!TryParseTransformOperation(tokens[i], out UiTransformOperation operation))
+            {
+                transform = null;
+                return false;
+            }
+
+            operations.Add(operation);
+        }
+
+        transform = operations.Count == 0 ? UiTransform.Identity : new UiTransform(operations);
+        return true;
+    }
+
+    private static bool TryParseTransformOperation(string token, out UiTransformOperation operation)
+    {
+        operation = default;
+        int openIndex = token.IndexOf('(');
+        if (openIndex <= 0 || !token.EndsWith(')'))
+        {
+            return false;
+        }
+
+        string name = token[..openIndex].Trim().ToLowerInvariant();
+        string argumentText = token[(openIndex + 1)..^1].Trim();
+        List<string> arguments = SplitTransformArguments(argumentText);
+
+        switch (name)
+        {
+            case "translate":
+                if (arguments.Count is < 1 or > 2 || !TryParseTransformLength(arguments[0], out UiLength translateX))
+                {
+                    return false;
+                }
+
+                UiLength translateY = UiLength.Px(0f);
+                if (arguments.Count == 2 && !TryParseTransformLength(arguments[1], out translateY))
+                {
+                    return false;
+                }
+
+                operation = UiTransformOperation.Translate(translateX, translateY);
+                return true;
+            case "translatex":
+                if (!TryParseTransformLength(argumentText, out UiLength tx))
+                {
+                    return false;
+                }
+
+                operation = UiTransformOperation.Translate(tx, UiLength.Px(0f));
+                return true;
+            case "translatey":
+                if (!TryParseTransformLength(argumentText, out UiLength ty))
+                {
+                    return false;
+                }
+
+                operation = UiTransformOperation.Translate(UiLength.Px(0f), ty);
+                return true;
+            case "scale":
+                if (arguments.Count is < 1 or > 2 || !TryParseFloat(arguments[0], out float scaleX))
+                {
+                    return false;
+                }
+
+                float scaleY = scaleX;
+                if (arguments.Count == 2 && !TryParseFloat(arguments[1], out scaleY))
+                {
+                    return false;
+                }
+
+                operation = UiTransformOperation.Scale(scaleX, scaleY);
+                return true;
+            case "scalex":
+                if (!TryParseFloat(argumentText, out float sx))
+                {
+                    return false;
+                }
+
+                operation = UiTransformOperation.Scale(sx, 1f);
+                return true;
+            case "scaley":
+                if (!TryParseFloat(argumentText, out float sy))
+                {
+                    return false;
+                }
+
+                operation = UiTransformOperation.Scale(1f, sy);
+                return true;
+            case "rotate":
+                if (!TryParseAngle(argumentText, out float angle))
+                {
+                    return false;
+                }
+
+                operation = UiTransformOperation.Rotate(angle);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static List<string> SplitTransformArguments(string value)
+    {
+        List<string> commaSeparated = SplitTopLevel(value, ',');
+        if (commaSeparated.Count > 1)
+        {
+            return commaSeparated;
+        }
+
+        return SplitWhitespacePreservingFunctions(value);
+    }
+
+    private static bool TryParseTransformLength(string value, out UiLength length)
+    {
+        if (TryParseLength(value, out length))
+        {
+            return true;
+        }
+
+        if (TryParseFloat(value, out float pixels))
+        {
+            length = UiLength.Px(pixels);
+            return true;
+        }
+
+        length = UiLength.Auto;
+        return false;
+    }
+
+    private static bool TryParseMaskGradient(string value, out UiLinearGradient? gradient)
+    {
+        string trimmed = value.Trim();
+        if (trimmed.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            gradient = null;
+            return true;
+        }
+
+        return TryParseLinearGradient(trimmed, out gradient);
+    }
+
+    private static bool TryParseClipPath(string value, out UiClipPath? clipPath)
+    {
+        clipPath = null;
+        string trimmed = value.Trim();
+        if (trimmed.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (trimmed.StartsWith("inset(", StringComparison.OrdinalIgnoreCase) && trimmed.EndsWith(')'))
+        {
+            string expression = trimmed["inset(".Length..^1];
+            if (!TryParseThickness(expression, out UiThickness inset))
+            {
+                return false;
+            }
+
+            clipPath = UiClipPath.InsetShape(inset);
+            return true;
+        }
+
+        if (trimmed.StartsWith("circle(", StringComparison.OrdinalIgnoreCase) && trimmed.EndsWith(')'))
+        {
+            string expression = trimmed["circle(".Length..^1].Trim();
+            string[] parts = expression.Split(new[] { " at " }, StringSplitOptions.None);
+            if (!TryParseLength(parts[0].Trim(), out UiLength radius))
+            {
+                return false;
+            }
+
+            UiLength centerX = UiLength.Percent(50f);
+            UiLength centerY = UiLength.Percent(50f);
+            if (parts.Length > 1)
+            {
+                List<string> centerTokens = SplitWhitespacePreservingFunctions(parts[1]);
+                if (centerTokens.Count != 2
+                    || !TryParseLength(centerTokens[0], out centerX)
+                    || !TryParseLength(centerTokens[1], out centerY))
+                {
+                    return false;
+                }
+            }
+
+            clipPath = UiClipPath.Circle(radius, centerX, centerY);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseAngle(string value, out float angle)
+    {
+        string trimmed = value.Trim().ToLowerInvariant();
+        if (trimmed.EndsWith("deg", StringComparison.Ordinal) && TryParseFloat(trimmed[..^3], out angle))
+        {
+            return true;
+        }
+
+        if (trimmed.EndsWith("rad", StringComparison.Ordinal) && TryParseFloat(trimmed[..^3], out float radians))
+        {
+            angle = radians * (180f / MathF.PI);
+            return true;
+        }
+
+        if (trimmed.EndsWith("turn", StringComparison.Ordinal) && TryParseFloat(trimmed[..^4], out float turns))
+        {
+            angle = turns * 360f;
+            return true;
+        }
+
+        return TryParseFloat(trimmed, out angle);
+    }
+
+    private static bool TryParseAnimationSpec(string value, out UiAnimationSpec? animation)
+    {
+        animation = null;
+        if (string.Equals(value.Trim(), "none", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        List<string> parts = SplitTopLevel(value, ',');
+        if (parts.Count == 0)
+        {
+            return false;
+        }
+
+        List<UiAnimationEntry> entries = new(parts.Count);
+        for (int i = 0; i < parts.Count; i++)
+        {
+            if (!TryParseAnimationEntry(parts[i], out UiAnimationEntry entry))
+            {
+                return false;
+            }
+
+            entries.Add(entry);
+        }
+
+        animation = entries.Count == 0 ? null : new UiAnimationSpec(entries);
+        return true;
+    }
+
+    private static bool TryParseAnimationEntry(string value, out UiAnimationEntry entry)
+    {
+        entry = default!;
+        List<string> tokens = SplitWhitespacePreservingFunctions(value);
+        if (tokens.Count == 0)
+        {
+            return false;
+        }
+
+        string? name = null;
+        float durationSeconds = 0f;
+        float delaySeconds = 0f;
+        UiTransitionEasing easing = UiTransitionEasing.Ease;
+        float iterationCount = 1f;
+        UiAnimationDirection direction = UiAnimationDirection.Normal;
+        UiAnimationFillMode fillMode = UiAnimationFillMode.None;
+        UiAnimationPlayState playState = UiAnimationPlayState.Running;
+        bool durationAssigned = false;
+
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            string token = tokens[i].Trim();
+            if (TryParseTime(token, out float timeSeconds))
+            {
+                if (!durationAssigned)
+                {
+                    durationSeconds = timeSeconds;
+                    durationAssigned = true;
+                }
+                else
+                {
+                    delaySeconds = timeSeconds;
+                }
+
+                continue;
+            }
+
+            if (TryParseTransitionEasing(token, out UiTransitionEasing parsedEasing))
+            {
+                easing = parsedEasing;
+                continue;
+            }
+
+            if (TryParseAnimationIterationCount(token, out float parsedIterationCount))
+            {
+                iterationCount = parsedIterationCount;
+                continue;
+            }
+
+            if (TryParseAnimationDirection(token, out UiAnimationDirection parsedDirection))
+            {
+                direction = parsedDirection;
+                continue;
+            }
+
+            if (TryParseAnimationFillMode(token, out UiAnimationFillMode parsedFillMode))
+            {
+                fillMode = parsedFillMode;
+                continue;
+            }
+
+            if (TryParseAnimationPlayState(token, out UiAnimationPlayState parsedPlayState))
+            {
+                playState = parsedPlayState;
+                continue;
+            }
+
+            name = token;
+        }
+
+        if (string.IsNullOrWhiteSpace(name) || durationSeconds <= 0f)
+        {
+            return false;
+        }
+
+        entry = new UiAnimationEntry(name, durationSeconds, delaySeconds, easing, iterationCount, direction, fillMode, playState);
+        return true;
+    }
+
+    private static bool TryParseAnimationIterationCount(string value, out float iterationCount)
+    {
+        if (string.Equals(value, "infinite", StringComparison.OrdinalIgnoreCase))
+        {
+            iterationCount = float.PositiveInfinity;
+            return true;
+        }
+
+        if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsedIterationCount) && parsedIterationCount >= 0f)
+        {
+            iterationCount = parsedIterationCount;
+            return true;
+        }
+
+        iterationCount = 1f;
+        return false;
+    }
+
+    private static bool TryParseAnimationDirection(string value, out UiAnimationDirection direction)
+    {
+        direction = value.ToLowerInvariant() switch
+        {
+            "normal" => UiAnimationDirection.Normal,
+            "reverse" => UiAnimationDirection.Reverse,
+            "alternate" => UiAnimationDirection.Alternate,
+            "alternate-reverse" => UiAnimationDirection.AlternateReverse,
+            _ => UiAnimationDirection.Normal
+        };
+
+        return value.Equals("normal", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("reverse", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("alternate", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("alternate-reverse", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryParseAnimationFillMode(string value, out UiAnimationFillMode fillMode)
+    {
+        fillMode = value.ToLowerInvariant() switch
+        {
+            "none" => UiAnimationFillMode.None,
+            "forwards" => UiAnimationFillMode.Forwards,
+            "backwards" => UiAnimationFillMode.Backwards,
+            "both" => UiAnimationFillMode.Both,
+            _ => UiAnimationFillMode.None
+        };
+
+        return value.Equals("none", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("forwards", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("backwards", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("both", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryParseAnimationPlayState(string value, out UiAnimationPlayState playState)
+    {
+        playState = value.Equals("paused", StringComparison.OrdinalIgnoreCase)
+            ? UiAnimationPlayState.Paused
+            : UiAnimationPlayState.Running;
+        return value.Equals("running", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("paused", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryParseTransitionSpec(string value, out UiTransitionSpec? transition)
+    {
+        transition = null;
+        List<string> parts = SplitTopLevel(value, ',');
+        if (parts.Count == 0)
+        {
+            return false;
+        }
+
+        List<UiTransitionEntry> entries = new(parts.Count);
+        for (int i = 0; i < parts.Count; i++)
+        {
+            if (!TryParseTransitionEntry(parts[i], out UiTransitionEntry entry))
+            {
+                return false;
+            }
+
+            entries.Add(entry);
+        }
+
+        transition = new UiTransitionSpec(entries);
+        return true;
+    }
+
+    private static bool TryParseTransitionEntry(string value, out UiTransitionEntry entry)
+    {
+        entry = default!;
+        List<string> tokens = SplitWhitespacePreservingFunctions(value);
+        if (tokens.Count == 0)
+        {
+            return false;
+        }
+
+        string propertyName = "all";
+        float durationSeconds = 0f;
+        float delaySeconds = 0f;
+        UiTransitionEasing easing = UiTransitionEasing.Ease;
+        bool durationAssigned = false;
+
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            string token = tokens[i].Trim();
+            if (TryParseTime(token, out float timeSeconds))
+            {
+                if (!durationAssigned)
+                {
+                    durationSeconds = timeSeconds;
+                    durationAssigned = true;
+                }
+                else
+                {
+                    delaySeconds = timeSeconds;
+                }
+
+                continue;
+            }
+
+            if (TryParseTransitionEasing(token, out UiTransitionEasing parsedEasing))
+            {
+                easing = parsedEasing;
+                continue;
+            }
+
+            propertyName = NormalizeTransitionPropertyName(token);
+        }
+
+        entry = new UiTransitionEntry(propertyName, durationSeconds, delaySeconds, easing);
+        return durationSeconds > 0f;
+    }
+
+    private static bool TryParseTime(string value, out float seconds)
+    {
+        seconds = 0f;
+        string trimmed = value.Trim();
+        if (trimmed.EndsWith("ms", StringComparison.OrdinalIgnoreCase) && float.TryParse(trimmed[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out float milliseconds))
+        {
+            seconds = milliseconds / 1000f;
+            return true;
+        }
+
+        if (trimmed.EndsWith('s') && float.TryParse(trimmed[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out float parsedSeconds))
+        {
+            seconds = parsedSeconds;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseTransitionEasing(string value, out UiTransitionEasing easing)
+    {
+        easing = value.ToLowerInvariant() switch
+        {
+            "linear" => UiTransitionEasing.Linear,
+            "ease-in" => UiTransitionEasing.EaseIn,
+            "ease-out" => UiTransitionEasing.EaseOut,
+            "ease-in-out" => UiTransitionEasing.EaseInOut,
+            "ease" => UiTransitionEasing.Ease,
+            _ => UiTransitionEasing.Linear
+        };
+
+        return value.Equals("linear", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("ease", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("ease-in", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("ease-out", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("ease-in-out", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeTransitionPropertyName(string value)
+    {
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "background" => "background-color",
+            "filter-blur" => "filter",
+            "backdrop-blur" => "backdrop-filter",
+            _ => value.Trim().ToLowerInvariant()
+        };
     }
 
     private static List<string> SplitTopLevel(string value, char separator)

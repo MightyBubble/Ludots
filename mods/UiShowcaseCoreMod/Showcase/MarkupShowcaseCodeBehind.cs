@@ -31,130 +31,49 @@ internal sealed class MarkupShowcaseCodeBehind
 
     private string BuildHtml()
     {
-        string diagnostics = string.Join(string.Empty, ScanPrototypeDiagnostics().Select(item => $"<div class=\"prototype-box\">{item}</div>"));
-        string modal = _modalOpen
-            ? "<div id=\"markup-modal\" class=\"overlay-card\"><div>Modal opened ¡ª code-behind stays in C#.</div><button ui-click=\"ToggleModal\">Close Modal</button></div>"
-            : "<div class=\"muted\">Tooltip / Drawer / ContextMenu share the same overlay contract.</div>";
-        string toast = _toastVisible
-            ? "<div id=\"markup-toast\" class=\"toast-badge\">Toast: markup action committed.</div>"
-            : "<div class=\"muted\">Toast hidden.</div>";
+        string template = UiShowcaseAssets.GetMarkupShowcaseHtmlTemplate();
+        Dictionary<string, string> values = new(StringComparer.Ordinal)
+        {
+            ["theme_class"] = _themeClass,
+            ["density_class"] = _densityClass,
+            ["count"] = _count.ToString(),
+            ["theme_label"] = UiShowcaseScaffolding.ThemeLabel(_themeClass),
+            ["density_label"] = UiShowcaseScaffolding.DensityLabel(_densityClass),
+            ["density_label_prefixed"] = UiShowcaseScaffolding.DensityLabel(_densityClass),
+            ["checkbox_class"] = _checkboxChecked ? "active" : string.Empty,
+            ["checkbox_label"] = _checkboxChecked ? "Checked" : "Off",
+            ["switch_class"] = _switchEnabled ? "active" : string.Empty,
+            ["switch_label"] = _switchEnabled ? "On" : "Off",
+            ["radio_primary_checked"] = _selectedMode == 1 ? "checked=\"true\"" : string.Empty,
+            ["radio_secondary_checked"] = _selectedMode == 2 ? "checked=\"true\"" : string.Empty,
+            ["email_value"] = _formError ? string.Empty : "markup@ludots.dev",
+            ["password_value"] = _formError ? string.Empty : "hunter22",
+            ["notes_value"] = _formError ? string.Empty : "Textarea / validation summary",
+            ["form_status_class"] = _formError ? "error-text" : "ok-text",
+            ["form_status_text"] = _formStatus,
+            ["selected_item"] = _selectedItem.ToString(),
+            ["item_1_class"] = _selectedItem == 1 ? "selected-item" : string.Empty,
+            ["item_2_class"] = _selectedItem == 2 ? "selected-item" : string.Empty,
+            ["item_3_class"] = _selectedItem == 3 ? "selected-item" : string.Empty,
+            ["modal_toggle_text"] = _modalOpen ? "Close Modal" : "Open Modal",
+            ["toast_toggle_text"] = _toastVisible ? "Hide Toast" : "Show Toast",
+            ["modal_fragment"] = _modalOpen
+                ? "<div id=\"markup-modal\" class=\"overlay-card\"><div>Modal opened - code-behind stays in C#.</div><button ui-click=\"ToggleModal\">Close Modal</button></div>"
+                : "<div class=\"muted\">Tooltip / Drawer / ContextMenu share the same overlay contract.</div>",
+            ["toast_fragment"] = _toastVisible
+                ? "<div id=\"markup-toast\" class=\"toast-badge\">Toast: markup action committed.</div>"
+                : "<div class=\"muted\">Toast hidden.</div>",
+            ["cover_art_data_uri"] = UiShowcaseImageAssets.CoverArtDataUri,
+            ["frame_art_data_uri"] = UiShowcaseImageAssets.FrameArtDataUri,
+            ["diagnostics_fragment"] = string.Join(string.Empty, ScanPrototypeDiagnostics().Select(item => $"<div class=\"prototype-box\">{item}</div>"))
+        };
 
-        return $$"""
-<div class="skin-root {{_themeClass}} {{_densityClass}}">
-  <div class="skin-header">Markup + CodeBehind ¡ª HTML/CSS Prototype</div>
-  <div class="control-row">
-    <button id="markup-theme-light" ui-click="ThemeLight">Light</button>
-    <button id="markup-theme-dark" class="skin-primary" ui-click="ThemeDark">Dark</button>
-    <button id="markup-theme-hud" ui-click="ThemeHud">GameHUD</button>
-  </div>
-  <div class="page-grid-row">
-    <article id="markup-overview" class="skin-card">
-      <div class="page-card-title">OverviewPage</div>
-      <div class="page-copy">Prototype-first authoring, native DOM, all behavior in pure C#.</div>
-      <div id="markup-count">Counter: {{_count}}</div>
-      <div class="control-row">
-        <button id="markup-inc" class="skin-primary" ui-click="Increment">Increment</button>
-        <button id="markup-reset" ui-click="ResetCounter">Reset</button>
-      </div>
-      <div class="muted">Theme: {{UiShowcaseScaffolding.ThemeLabel(_themeClass)}} / Density: {{UiShowcaseScaffolding.DensityLabel(_densityClass)}}</div>
-    </article>
-    <article id="markup-controls" class="skin-card">
-      <div class="page-card-title">ControlsPage</div>
-      <div class="control-row">
-        <button id="markup-checkbox" class="control-chip {{(_checkboxChecked ? "active" : string.Empty)}}" ui-click="ToggleCheckbox">Checkbox: {{(_checkboxChecked ? "Checked" : "Off")}}</button>
-        <button id="markup-switch" class="control-chip {{(_switchEnabled ? "active" : string.Empty)}}" ui-click="ToggleSwitch">Switch: {{(_switchEnabled ? "On" : "Off")}}</button>
-        <input id="markup-radio-primary" class="control-chip" type="radio" name="markup-mode" {{(_selectedMode == 1 ? "checked=\"true\"" : string.Empty)}} ui-click="SelectModePrimary" value="primary" />
-        <input id="markup-radio-secondary" class="control-chip" type="radio" name="markup-mode" {{(_selectedMode == 2 ? "checked=\"true\"" : string.Empty)}} ui-click="SelectModeSecondary" value="secondary" />
-      </div>
-      <div class="control-row">
-        <div class="control-chip">Select / Dropdown</div>
-        <div class="control-chip">Slider 72%</div>
-      </div>
-      <div class="page-copy">ProgressBar</div>
-      <div class="progress-track"><div class="progress-fill" style="width:72%;"></div></div>
-    </article>
-    <article id="markup-forms" class="skin-card">
-      <div class="page-card-title">FormsPage</div>
-      <div class="control-chip">Email: markup@ludots.dev</div>
-      <div class="control-chip">Password: ???????</div>
-      <div class="control-chip">Textarea / validation summary</div>
-      <div id="markup-form-status" class="{{(_formError ? "error-text" : "ok-text")}}">{{_formStatus}}</div>
-      <div class="control-row">
-        <button ui-click="SubmitInvalid">Invalid</button>
-        <button class="skin-primary" ui-click="SubmitValid">Valid</button>
-        <button ui-click="ResetForm">Reset</button>
-      </div>
-    </article>
-  </div>
-  <div class="page-grid-row">
-    <article id="markup-collections" class="skin-card">
-      <div class="page-card-title">CollectionsPage</div>
-      <div id="markup-selected" class="page-copy">Selected item: #{{_selectedItem}}</div>
-      <div class="control-row">
-        <button id="markup-item-1" class="control-chip {{(_selectedItem == 1 ? "selected-item" : string.Empty)}}" ui-click="SelectItemOne">Item 1</button>
-        <button id="markup-item-2" class="control-chip {{(_selectedItem == 2 ? "selected-item" : string.Empty)}}" ui-click="SelectItemTwo">Item 2</button>
-        <button id="markup-item-3" class="control-chip {{(_selectedItem == 3 ? "selected-item" : string.Empty)}}" ui-click="SelectItemThree">Item 3</button>
-      </div>
-      <table id="markup-stats-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Role</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Sentinel</td>
-            <td>Guardian</td>
-          </tr>
-          <tr>
-            <td>Courier</td>
-            <td>Support</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="muted">Same semantic page as Compose / Reactive.</div>
-    </article>
-    <article id="markup-overlays" class="skin-card">
-      <div class="page-card-title">OverlaysPage</div>
-      <div class="control-row">
-        <button id="markup-modal-toggle" class="skin-primary" ui-click="ToggleModal">{{(_modalOpen ? "Close Modal" : "Open Modal")}}</button>
-        <button id="markup-toast-toggle" ui-click="ToggleToast">{{(_toastVisible ? "Hide Toast" : "Show Toast")}}</button>
-      </div>
-      {{modal}}
-      {{toast}}
-    </article>
-    <article id="markup-styles" class="skin-card">
-      <div class="page-card-title">StylesPage</div>
-      <div class="page-copy">Typography / spacing / density / CSS token parity.</div>
-      <div class="control-row">
-        <button ui-click="DensityCompact">Compact</button>
-        <button class="skin-primary" ui-click="DensityCozy">Cozy</button>
-        <button ui-click="DensityComfortable">Comfortable</button>
-      </div>
-      <div id="markup-density" class="muted">Current density: {{UiShowcaseScaffolding.DensityLabel(_densityClass)}}</div>
-      <div class="control-row">
-        <div class="control-chip state-disabled">Disabled</div>
-        <div class="control-chip active">Loading</div>
-        <div class="control-chip error-text">Error</div>
-      </div>
-    </article>
-  </div>
-  <article id="markup-prototype" class="skin-card">
-    <div class="page-card-title">PrototypeImportPage</div>
-    <div class="page-copy">Prototype HTML/CSS compiles into native DOM, then binds back to C# methods.</div>
-    <div class="muted">Unsupported features are surfaced as diagnostics instead of silently ignored.</div>
-    <div class="control-row">{{diagnostics}}</div>
-  </article>
-</div>
-""";
+        return UiShowcaseAssets.RenderTemplate(template, values);
     }
 
     private static string BuildCss()
     {
-        return UiShowcaseStyles.BuildAuthoringCss() + """
-#markup-count { font-size:42px; font-weight:700; }
-""";
+        return UiShowcaseStyles.BuildAuthoringCss() + Environment.NewLine + UiShowcaseAssets.GetMarkupShowcaseCss();
     }
 
     private void ValidatePrototype(UiDocument document)
@@ -171,11 +90,6 @@ internal sealed class MarkupShowcaseCodeBehind
         if (prototypeCss.Contains("grid-template-columns", StringComparison.OrdinalIgnoreCase))
         {
             yield return "Unsupported: CSS Grid layout";
-        }
-
-        if (prototypeCss.Contains("animation:", StringComparison.OrdinalIgnoreCase))
-        {
-            yield return "Unsupported: CSS animations";
         }
 
         if (prototypeCss.Contains("calc(", StringComparison.OrdinalIgnoreCase))
@@ -218,4 +132,5 @@ internal sealed class MarkupShowcaseCodeBehind
     private void SelectModeSecondary(UiActionContext context) { _selectedMode = 2; Rebuild(context); }
     private void ToggleModal(UiActionContext context) { _modalOpen = !_modalOpen; Rebuild(context); }
     private void ToggleToast(UiActionContext context) { _toastVisible = !_toastVisible; Rebuild(context); }
+    private UiCanvasContent BuildPhaseFourCanvas() => UiShowcaseScaffolding.CreatePhaseFourCanvasContent();
 }

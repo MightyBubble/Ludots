@@ -2,40 +2,22 @@ using Arch.Core;
 
 namespace Ludots.Core.Gameplay.GAS.Orders
 {
-    /// <summary>
-    /// Order submission mode.
-    /// </summary>
     public enum OrderSubmitMode : byte
     {
-        /// <summary>
-        /// Immediate mode: Check TagRuleSet for conflicts, may interrupt or queue based on policy.
-        /// </summary>
         Immediate = 0,
-        
-        /// <summary>
-        /// Queued mode (Shift+): Skip conflict check, append to queue end.
-        /// </summary>
         Queued = 1
     }
-    
-    /// <summary>
-    /// An order (command) issued to an entity.
-    /// Orders are "intent declarations" - after submission, they are converted to Tags + Blackboard data.
-    /// </summary>
+
     public struct Order
     {
         public int OrderId;
-        public int OrderTagId;
+        public int OrderTypeId;
         public int PlayerId;
         public Entity Actor;
         public Entity Target;
         public Entity TargetContext;
         public OrderArgs Args;
         public int SubmitStep;
-        
-        /// <summary>
-        /// Submission mode: Immediate (normal) or Queued (Shift+).
-        /// </summary>
         public OrderSubmitMode SubmitMode;
     }
 
@@ -59,9 +41,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public bool TryEnqueue(in Order order)
         {
             if (_count >= _items.Length) return false;
-            var o = order;
-            if (o.OrderId == 0) o.OrderId = _nextOrderId++;
-            _items[_tail] = o;
+            var value = order;
+            if (value.OrderId == 0)
+            {
+                value.OrderId = _nextOrderId++;
+            }
+
+            _items[_tail] = value;
             _tail = (_tail + 1) % _items.Length;
             _count++;
             return true;

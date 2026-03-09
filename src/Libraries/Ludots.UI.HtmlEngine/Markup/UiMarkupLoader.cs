@@ -63,6 +63,11 @@ public sealed class UiMarkupLoader
 
     private static UiElement BuildElement(IElement element)
     {
+        if (TryBuildSpecialElement(element, out UiElement? specialElement))
+        {
+            return specialElement;
+        }
+
         UiElement uiElement = new(element.LocalName, MapKind(element));
         foreach (IAttr attribute in element.Attributes)
         {
@@ -75,6 +80,8 @@ public sealed class UiMarkupLoader
                 uiElement.Attributes[attribute.Name] = attribute.Value;
             }
         }
+
+        ApplyIntrinsicSizing(element, uiElement);
 
         if (element.Children.Length == 0)
         {
@@ -93,6 +100,69 @@ public sealed class UiMarkupLoader
         }
 
         return uiElement;
+    }
+
+    private static bool TryBuildSpecialElement(IElement element, out UiElement? uiElement)
+    {
+        uiElement = null;
+        if (!string.Equals(element.LocalName, "svg", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        uiElement = new UiElement("svg", UiNodeKind.Image);
+        foreach (IAttr attribute in element.Attributes)
+        {
+            if (attribute.Name.Equals("style", StringComparison.OrdinalIgnoreCase))
+            {
+                uiElement.InlineStyle.Merge(UiCssParser.ParseInline(attribute.Value));
+            }
+            else
+            {
+                uiElement.Attributes[attribute.Name] = attribute.Value;
+            }
+        }
+
+        ApplyIntrinsicSizing(element, uiElement);
+        uiElement.Attributes["src"] = EncodeInlineSvgDataUri(element);
+        return true;
+    }
+
+    private static void ApplyIntrinsicSizing(IElement element, UiElement uiElement)
+    {
+        if (uiElement.InlineStyle["width"] == null && TryParsePixelAttribute(element, "width", out string width))
+        {
+            uiElement.InlineStyle.Set("width", width);
+        }
+
+        if (uiElement.InlineStyle["height"] == null && TryParsePixelAttribute(element, "height", out string height))
+        {
+            uiElement.InlineStyle.Set("height", height);
+        }
+    }
+
+    private static bool TryParsePixelAttribute(IElement element, string attributeName, out string value)
+    {
+        value = string.Empty;
+        string? raw = element.GetAttribute(attributeName);
+        if (!float.TryParse(raw, out float pixels) || pixels <= 0.01f)
+        {
+            return false;
+        }
+
+        value = pixels.ToString(System.Globalization.CultureInfo.InvariantCulture) + "px";
+        return true;
+    }
+
+    private static string EncodeInlineSvgDataUri(IElement element)
+    {
+        string markup = element.OuterHtml;
+        if (!markup.Contains("xmlns=", StringComparison.OrdinalIgnoreCase))
+        {
+            markup = markup.Replace("<svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return "data:image/svg+xml;utf8," + Uri.EscapeDataString(markup);
     }
 
     private static void AppendNode(UiElement parent, INode node)
@@ -135,6 +205,7 @@ public sealed class UiMarkupLoader
             "select" => UiNodeKind.Select,
             "textarea" => UiNodeKind.TextArea,
             "article" => UiNodeKind.Card,
+            "canvas" => UiNodeKind.Custom,
             "table" => UiNodeKind.Table,
             "thead" => UiNodeKind.TableHeader,
             "tbody" => UiNodeKind.TableBody,

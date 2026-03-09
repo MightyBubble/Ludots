@@ -8,25 +8,25 @@ namespace Ludots.Core.Input.Orders
     /// Interaction mode determines HOW InputActions become Orders.
     /// This is a game-level / player-preference setting, NOT per-ability.
     ///
-    /// TargetFirst (WoW): player selects target first, then presses ability key â†’ order submitted immediately.
-    /// SmartCast (LoL): player presses ability key â†’ order submitted immediately at cursor/hovered entity.
-    /// AimCast (DotA/WC3): player presses ability key â†’ enters aiming phase â†’ click to confirm, right-click/ESC to cancel.
+    /// TargetFirst (WoW): player selects target first, then presses ability key â†?order submitted immediately.
+    /// SmartCast (LoL): player presses ability key â†?order submitted immediately at cursor/hovered entity.
+    /// AimCast (DotA/WC3): player presses ability key â†?enters aiming phase â†?click to confirm, right-click/ESC to cancel.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum InteractionModeType
     {
-        /// <summary>WoW style: select target, press key â†’ instant cast.</summary>
+        /// <summary>WoW style: select target, press key â†?instant cast.</summary>
         TargetFirst = 0,
 
-        /// <summary>LoL style: press key â†’ cast at cursor / hovered entity.</summary>
+        /// <summary>LoL style: press key â†?cast at cursor / hovered entity.</summary>
         SmartCast = 1,
 
-        /// <summary>DotA/WC3 style: press key â†’ aiming â†’ click confirm.</summary>
+        /// <summary>DotA/WC3 style: press key â†?aiming â†?click confirm.</summary>
         AimCast = 2,
 
         /// <summary>
-        /// LoL "Quick Cast with Indicator" style: hold key â†’ show indicator,
-        /// release key â†’ cast at cursor position. Right-click/ESC cancels.
+        /// LoL "Quick Cast with Indicator" style: hold key â†?show indicator,
+        /// release key â†?cast at cursor position. Right-click/ESC cancels.
         /// </summary>
         SmartCastWithIndicator = 3,
     }
@@ -52,7 +52,7 @@ namespace Ludots.Core.Input.Orders
         Held = 2,
         
         /// <summary>
-        /// Double-tap trigger. This does not belong in InputTriggerType â€” double-click-select-same-type
+        /// Double-tap trigger. This does not belong in InputTriggerType â€?double-click-select-same-type
         /// is a selection system concern (see advanced selection system design).
         /// Retained for enum stability; will be removed when selection system is implemented.
         /// </summary>
@@ -134,7 +134,7 @@ namespace Ludots.Core.Input.Orders
         
         /// <summary>
         /// Emit a Start order on press and an End order on release.
-        /// The OrderTagKey is suffixed with ".Start" and ".End" respectively.
+        /// The OrderTypeKey is suffixed with ".Start" and ".End" respectively.
         /// No orders are emitted between press and release.
         /// </summary>
         StartEnd = 1
@@ -209,7 +209,7 @@ namespace Ludots.Core.Input.Orders
         /// <summary>
         /// The order type key (must match a key in OrderTypeRegistry).
         /// </summary>
-        public string OrderTagKey { get; set; } = string.Empty;
+        public string OrderTypeKey { get; set; } = string.Empty;
         
         /// <summary>
         /// Template for order arguments.
@@ -318,3 +318,4 @@ namespace Ludots.Core.Input.Orders
         public UserOverrideSettings UserOverrides { get; set; } = new();
     }
 }
+

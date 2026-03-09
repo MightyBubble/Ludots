@@ -14,7 +14,12 @@ public sealed class UiNodeDiff
         string tagName,
         string? elementId,
         IReadOnlyList<string> classNames,
-        UiRect layoutRect)
+        string? imageSource,
+        UiRect layoutRect,
+        float scrollOffsetX,
+        float scrollOffsetY,
+        float scrollContentWidth,
+        float scrollContentHeight)
     {
         Id = id;
         Kind = kind;
@@ -25,7 +30,12 @@ public sealed class UiNodeDiff
         TagName = tagName;
         ElementId = elementId;
         ClassNames = classNames;
+        ImageSource = imageSource;
         LayoutRect = layoutRect;
+        ScrollOffsetX = scrollOffsetX;
+        ScrollOffsetY = scrollOffsetY;
+        ScrollContentWidth = scrollContentWidth;
+        ScrollContentHeight = scrollContentHeight;
     }
 
     public UiNodeId Id { get; }
@@ -46,12 +56,22 @@ public sealed class UiNodeDiff
 
     public IReadOnlyList<string> ClassNames { get; }
 
+    public string? ImageSource { get; }
+
     public UiRect LayoutRect { get; }
+
+    public float ScrollOffsetX { get; }
+
+    public float ScrollOffsetY { get; }
+
+    public float ScrollContentWidth { get; }
+
+    public float ScrollContentHeight { get; }
 
     public static UiNodeDiff FromNode(UiNode node)
     {
         UiNodeDiff[] childDiffs = node.Children.Select(FromNode).ToArray();
         UiActionHandle[] actionHandles = node.ActionHandles.ToArray();
-        return new UiNodeDiff(node.Id, node.Kind, node.Style, node.TextContent, actionHandles, childDiffs, node.TagName, node.ElementId, node.ClassNames.ToArray(), node.LayoutRect);
+        return new UiNodeDiff(node.Id, node.Kind, node.RenderStyle, node.TextContent, actionHandles, childDiffs, node.TagName, node.ElementId, node.ClassNames.ToArray(), node.Attributes["src"], node.LayoutRect, node.ScrollOffsetX, node.ScrollOffsetY, node.ScrollContentWidth, node.ScrollContentHeight);
     }
 }

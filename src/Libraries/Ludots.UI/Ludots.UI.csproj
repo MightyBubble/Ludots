@@ -8,12 +8,11 @@
 
   <ItemGroup>
     <PackageReference Include="SkiaSharp" Version="3.119.1" />
+    <PackageReference Include="Svg.Skia" Version="3.4.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Ludots.UI.HtmlEngine\External\FlexLayoutSharp\src\**\*.cs"
-             Exclude="..\Ludots.UI.HtmlEngine\External\FlexLayoutSharp\src\TestFlexLayoutSharp\**\*.cs"
-             LinkBase="External\FlexLayoutSharp" />
+    <Compile Include="..\Ludots.UI.HtmlEngine\External\FlexLayoutSharp\src\**\*.cs" Exclude="..\Ludots.UI.HtmlEngine\External\FlexLayoutSharp\src\TestFlexLayoutSharp\**\*.cs" LinkBase="External\FlexLayoutSharp" />
   </ItemGroup>
 
 </Project>

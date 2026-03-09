@@ -6,7 +6,6 @@ namespace Ludots.Core.Gameplay
     public class GameSession
     {
         private readonly List<Player> _players = new List<Player>();
-        private readonly Dictionary<int, PlayerInputFrame> _inputCache = new Dictionary<int, PlayerInputFrame>();
 
         public Dictionary<string, object> Globals { get; } = new Dictionary<string, object>();
 
@@ -26,14 +25,6 @@ namespace Ludots.Core.Gameplay
 
         public void FixedUpdate()
         {
-            // Gather inputs for the current tick
-            _inputCache.Clear();
-            foreach (var player in _players)
-            {
-                var input = player.Source.GetInput(CurrentTick);
-                _inputCache[player.Id] = input;
-            }
-
             CurrentTick++;
         }
 
@@ -44,10 +35,6 @@ namespace Ludots.Core.Gameplay
 
         public PlayerInputFrame GetInput(int playerId)
         {
-            if (_inputCache.TryGetValue(playerId, out var input))
-            {
-                return input;
-            }
             return default;
         }
 

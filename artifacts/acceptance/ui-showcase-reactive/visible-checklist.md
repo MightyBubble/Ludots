@@ -1,3 +1,15 @@
 - [x] reactive-initial -> screens/reactive-initial.png
+- [x] reactive-forms -> screens/reactive-forms.png
+- [x] reactive-appearance -> screens/reactive-appearance.png
+- [x] reactive-phase1 -> screens/reactive-phase1.png
+- [x] reactive-phase2 -> screens/reactive-phase2.png
+- [x] reactive-phase3 -> screens/reactive-phase3.png
+- [x] reactive-phase4 -> screens/reactive-phase4.png
+- [x] reactive-phase5-start -> screens/reactive-phase5-start.png
+- [x] reactive-phase5-mid -> screens/reactive-phase5-mid.png
+- [x] reactive-phase5-end -> screens/reactive-phase5-end.png
+- [x] reactive-transition -> screens/reactive-transition.png
+- [x] reactive-scroll -> screens/reactive-scroll.png
+- [x] reactive-table -> screens/reactive-table.png
 - [x] reactive-counter -> screens/reactive-counter.png
 - [x] reactive-modal -> screens/reactive-modal.png

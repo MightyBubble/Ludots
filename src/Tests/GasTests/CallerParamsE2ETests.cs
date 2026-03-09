@@ -21,12 +21,12 @@ namespace Ludots.Tests.GAS
 {
     /// <summary>
     /// End-to-end scenario tests for the CallerParams pipeline:
-    ///   EffectRequest â†’ EffectProposal â†’ phase execution with merged config.
+    ///   EffectRequest â†?EffectProposal â†?phase execution with merged config.
     /// Tests cover:
     ///   - CallerParams override template ConfigParams for instant effects
     ///   - CallerParams propagation to duration effect entities
     ///   - Multiple CallerParams keys in a single request
-    ///   - Graph â†’ ApplyEffectTemplate â†’ CallerParams bridge
+    ///   - Graph â†?ApplyEffectTemplate â†?CallerParams bridge
     /// </summary>
     [TestFixture]
     public class CallerParamsE2ETests
@@ -83,8 +83,8 @@ namespace Ludots.Tests.GAS
                 requests.Publish(req);
 
                 var chainOrders = new OrderQueue();
-                chainOrders.TryEnqueue(new Order { OrderTagId = TestGasOrderTags.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTagId = TestGasOrderTags.ChainPass });
+                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, budget: null, templates: templates,
@@ -140,8 +140,8 @@ namespace Ludots.Tests.GAS
                 requests.Publish(req);
 
                 var chainOrders = new OrderQueue();
-                chainOrders.TryEnqueue(new Order { OrderTagId = TestGasOrderTags.ChainPass });
-                chainOrders.TryEnqueue(new Order { OrderTagId = TestGasOrderTags.ChainPass });
+                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, budget: null, templates: templates,
@@ -172,7 +172,7 @@ namespace Ludots.Tests.GAS
 
             var target = world.Create();
 
-            // Graph: ConstFloat(5.5) â†’ fx, ConstFloat(-3.3) â†’ fy, ApplyEffectTemplate(target, fx, fy)
+            // Graph: ConstFloat(5.5) â†?fx, ConstFloat(-3.3) â†?fy, ApplyEffectTemplate(target, fx, fy)
             var program = new GraphInstruction[]
             {
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 5.5f },
@@ -254,3 +254,4 @@ namespace Ludots.Tests.GAS
         }
     }
 }
+

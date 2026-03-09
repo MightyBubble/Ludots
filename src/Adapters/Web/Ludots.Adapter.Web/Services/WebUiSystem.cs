@@ -1,44 +1,38 @@
-using System.Threading;
-using Ludots.Core.UI;
+using Ludots.UI;
+using Ludots.UI.Runtime.Serialization;
 
 namespace Ludots.Adapter.Web.Services
 {
-    public sealed class WebUiSystem : IUiSystem
+    public sealed class WebUiFrameSource
     {
-        private readonly object _lock = new();
-        private string? _html;
-        private string? _css;
-        private bool _dirty;
+        private readonly UIRoot _uiRoot;
+        private readonly WebViewController _viewController;
+        private readonly UiSceneDiffJsonSerializer _sceneDiffSerializer = new();
+        private long _lastSceneVersion = -1;
 
-        public void SetHtml(string html, string css)
+        public WebUiFrameSource(UIRoot uiRoot, WebViewController viewController)
         {
-            lock (_lock)
-            {
-                _html = html;
-                _css = css;
-                _dirty = true;
-            }
+            _uiRoot = uiRoot;
+            _viewController = viewController;
         }
 
-        /// <summary>
-        /// Consumes pending UI HTML/CSS if dirty. Returns false if nothing changed.
-        /// Called from the frame encoding path each tick.
-        /// </summary>
-        public bool TryConsume(out string? html, out string? css)
+        public bool TryConsume(out string? sceneDiffJson)
         {
-            lock (_lock)
+            sceneDiffJson = null;
+            if (_uiRoot.Scene == null)
             {
-                if (!_dirty)
-                {
-                    html = null;
-                    css = null;
-                    return false;
-                }
-                html = _html;
-                css = _css;
-                _dirty = false;
-                return true;
+                return false;
             }
+
+            if (!_uiRoot.Scene.IsDirty && _uiRoot.Scene.Version == _lastSceneVersion)
+            {
+                return false;
+            }
+
+            var resolution = _viewController.Resolution;
+            sceneDiffJson = _sceneDiffSerializer.Serialize(_uiRoot.Scene, resolution.X, resolution.Y);
+            _lastSceneVersion = _uiRoot.Scene.Version;
+            return true;
         }
     }
 }

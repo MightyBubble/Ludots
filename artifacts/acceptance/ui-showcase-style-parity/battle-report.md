@@ -2,7 +2,7 @@
 
 ## Scenario Card
 - Goal: validate visible, interactive, acceptance-ready official UI showcase behavior.
-- Viewport: 1280x720.
+- Viewport: 1280x720 for full-scene captures, focused crops for below-the-fold capability blocks.
 - Driver: headless Skia renderer + deterministic click simulation.
 
 ## Battle Log
@@ -14,4 +14,4 @@
 - PASS: parity baseline captured across three official modes = True.
 - INFO: compose root bg = #ff1d2433.
 - INFO: reactive root bg = #ff08131f.
-- INFO: markup root bg = #00ffffff.
+- INFO: markup root bg = #fff3f6fb.

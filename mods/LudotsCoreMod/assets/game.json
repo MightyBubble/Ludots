@@ -2,13 +2,13 @@
   "startupMapId": "entry",
   "startupInputContexts": ["Default_Gameplay"],
   "constants": {
-    "orderTags": {
+    "orderTypeIds": {
       "castAbility": 100,
       "moveTo": 101,
       "attackTarget": 102,
       "stop": 103
     },
-    "gasOrderTags": {
+    "responseChainOrderTypeIds": {
       "chainPass": 1,
       "chainNegate": 2,
       "chainActivateEffect": 3

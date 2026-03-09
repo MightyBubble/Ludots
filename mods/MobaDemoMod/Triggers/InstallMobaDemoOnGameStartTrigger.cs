@@ -1,135 +1,141 @@
-using System.Collections.Generic;
-using System.Numerics;
-using System.Threading.Tasks;
-using Arch.Core;
-using CoreInputMod.Triggers;
-using Ludots.Core.Config;
-using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.GAS;
-using Ludots.Core.Gameplay.GAS.Input;
-using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Mathematics;
-using Ludots.Core.Modding;
-using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Commands;
-using Ludots.Core.Presentation.Performers;
-using Ludots.Core.Presentation.Rendering;
-using Ludots.Core.Presentation.Systems;
-using Ludots.Core.Presentation.Utils;
-using Ludots.Core.Scripting;
-using MobaDemoMod.GAS;
-using MobaDemoMod.Presentation;
-
-namespace MobaDemoMod.Triggers
-{
-    public sealed class InstallMobaDemoOnGameStartTrigger : Trigger
-    {
-        private const string InstalledKey = "MobaDemoMod.Installed";
-        public const string MobaConfigKey = "MobaDemoMod.Config";
-
-        private readonly IModContext _ctx;
-
-        public InstallMobaDemoOnGameStartTrigger(IModContext ctx)
-        {
-            _ctx = ctx;
-            EventKey = GameEvents.GameStart;
-        }
-
-        public override Task ExecuteAsync(ScriptContext context)
-        {
-            var engine = context.GetEngine();
-            if (engine == null) return Task.CompletedTask;
-
-            if (engine.GlobalContext.TryGetValue(InstalledKey, out var installedObj) &&
-                installedObj is bool installed &&
-                installed)
-            {
-                return Task.CompletedTask;
-            }
-            engine.GlobalContext[InstalledKey] = true;
-
-            // Load MobaConfig via VFS
-            var mobaConfig = MobaConfig.Load(_ctx);
-            engine.GlobalContext[MobaConfigKey] = mobaConfig;
-            _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/Configs/moba_config.json");
-
-            // GameConfig is required — it must be loaded before GameStart
-            var config = engine.GetService(CoreServiceKeys.GameConfig);
-            _ = config.Constants.OrderTags["stop"];
-
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var ordersObj) &&
-                ordersObj is OrderQueue orders)
-            {
-                _ctx.Log("[MobaDemoMod] OrderQueue ready, registering local order source.");
-                engine.RegisterPresentationSystem(new MobaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx));
-            }
-
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var registryObj) &&
-                registryObj is OrderTypeRegistry orderTypeRegistry)
-            {
-                engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.StopOrderSystem(engine.World, orderTypeRegistry), SystemGroup.AbilityActivation);
-                engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.AbilityMoveWorldCmSystem(engine.World, engine.EventBus, mobaConfig.Movement.SpeedCmPerSec, mobaConfig.Movement.StopRadiusCm), SystemGroup.AbilityActivation);
-            }
-
-            // ── 选择系统回调（CoreInputMod 已注册系统，此处注入 MOBA 视觉反馈）──
-            TransientMarkerBuffer markerBuffer = null;
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markerObj) && markerObj is TransientMarkerBuffer tmb)
-                markerBuffer = tmb;
-
-            PresentationCommandBuffer cmdBuffer = null;
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var cmdObj) && cmdObj is PresentationCommandBuffer pcb)
-                cmdBuffer = pcb;
-
-            if (engine.GlobalContext.TryGetValue(InstallCoreInputOnGameStartTrigger.EntitySelectionCallbacksKey, out var selObj) &&
-                selObj is List<System.Action<WorldCmInt2, Entity>> selectionCallbacks)
-            {
-                var capturedCmdBuffer = cmdBuffer;
-                var perfReg = context.Get(CoreServiceKeys.PerformerDefinitionRegistry) as PerformerDefinitionRegistry;
-                int selectionIndicatorDefId = perfReg?.GetId(mobaConfig.Presentation.SelectionIndicatorDefKey) ?? 0;
-                selectionCallbacks.Add((worldCm, entity) =>
-                {
-                    if (capturedCmdBuffer == null) return;
-                    capturedCmdBuffer.TryAdd(new PresentationCommand
-                    {
-                        Kind = PresentationCommandKind.DestroyPerformerScope,
-                        IdA = mobaConfig.Presentation.SelectionScopeId
-                    });
-                    if (engine.World.IsAlive(entity))
-                    {
-                        capturedCmdBuffer.TryAdd(new PresentationCommand
-                        {
-                            Kind = PresentationCommandKind.CreatePerformer,
-                            IdA = selectionIndicatorDefId,
-                            IdB = mobaConfig.Presentation.SelectionScopeId,
-                            Source = entity
-                        });
-                    }
-                });
-            }
-
-            if (engine.GlobalContext.TryGetValue(InstallCoreInputOnGameStartTrigger.SelectionTriggeredCallbacksKey, out var trigObj) &&
-                trigObj is List<System.Action<SelectionRequest, WorldCmInt2>> triggeredCallbacks)
-            {
-                var capturedMarkerBuffer = markerBuffer;
-                var meshReg = context.Get(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry;
-                int sphereMeshId = meshReg?.GetId(WellKnownMeshKeys.Sphere) ?? 0;
-                triggeredCallbacks.Add((req, worldCm) =>
-                {
-                    if (capturedMarkerBuffer != null && req.RequestTagId == SelectionRequestTags.CircleEnemy)
-                    {
-                        var mk = mobaConfig.Presentation.CircleEnemyMarker;
-                        var p = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: mk.YOffsetMeters);
-                        var scale = new Vector3(mk.Scale[0], mk.Scale[1], mk.Scale[2]);
-                        var color = new Vector4(mk.Color[0], mk.Color[1], mk.Color[2], mk.Color[3]);
-                        capturedMarkerBuffer.TryAdd(sphereMeshId, p, scale, color, mk.LifetimeSeconds);
-                    }
-                });
-            }
-
-            // 单位渲染由 performers.json 定义 moba_unit_marker（entity-scoped Marker3D）驱动
-            // 团队颜色由 EntityColor 绑定解析
-
-            return Task.CompletedTask;
-        }
-    }
-}
+using System.Collections.Generic;
+using System.Numerics;
+using System.Threading.Tasks;
+using Arch.Core;
+using CoreInputMod.Triggers;
+using CoreInputMod.ViewMode;
+using Ludots.Core.Config;
+using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Scripting;
+using MobaDemoMod.GAS;
+using MobaDemoMod.Systems;
+
+namespace MobaDemoMod.Triggers
+{
+    public sealed class InstallMobaDemoOnGameStartTrigger : Trigger
+    {
+        private const string InstalledKey = "MobaDemoMod.Installed";
+        public const string MobaConfigKey = "MobaDemoMod.Config";
+
+        private readonly IModContext _ctx;
+
+        public InstallMobaDemoOnGameStartTrigger(IModContext ctx)
+        {
+            _ctx = ctx;
+            EventKey = GameEvents.GameStart;
+        }
+
+        public override Task ExecuteAsync(ScriptContext context)
+        {
+            var engine = context.GetEngine();
+            if (engine == null) return Task.CompletedTask;
+
+            if (engine.GlobalContext.TryGetValue(InstalledKey, out var installedObj) &&
+                installedObj is bool installed &&
+                installed)
+            {
+                return Task.CompletedTask;
+            }
+            engine.GlobalContext[InstalledKey] = true;
+
+            // Load MobaConfig via VFS
+            var mobaConfig = MobaConfig.Load(_ctx);
+            engine.GlobalContext[MobaConfigKey] = mobaConfig;
+            _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/Configs/moba_config.json");
+            // GameConfig is required; it must be loaded before GameStart.
+            var config = engine.GetService(CoreServiceKeys.GameConfig);
+            _ = config.Constants.OrderTypeIds["stop"];
+
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var ordersObj) &&
+                ordersObj is OrderQueue orders)
+            {
+                _ctx.Log("[MobaDemoMod] OrderQueue ready, registering local order source.");
+                engine.RegisterSystem(new MobaLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.InputCollection);
+            }
+
+            ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Moba");
+
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var registryObj) &&
+                registryObj is OrderTypeRegistry orderTypeRegistry)
+            {
+                int navMoveAbilityTagId = TagRegistry.Register(MobaDemoAbilityDefinitions.Move);
+                engine.RegisterSystem(new StopOrderNavMoveCleanupSystem(engine.World, config.Constants.OrderTypeIds["stop"], navMoveAbilityTagId), SystemGroup.AbilityActivation);
+                engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.StopOrderSystem(engine.World, orderTypeRegistry, config.Constants.OrderTypeIds["stop"]), SystemGroup.AbilityActivation);
+                engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.AbilityMoveWorldCmSystem(engine.World, engine.EventBus, mobaConfig.Movement.SpeedCmPerSec, mobaConfig.Movement.StopRadiusCm), SystemGroup.AbilityActivation);
+            }
+
+            // Selection feedback hooks are provided by CoreInputMod; MOBA injects only the visual callbacks here.
+            TransientMarkerBuffer markerBuffer = null;
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markerObj) && markerObj is TransientMarkerBuffer tmb)
+                markerBuffer = tmb;
+
+            PresentationCommandBuffer cmdBuffer = null;
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var cmdObj) && cmdObj is PresentationCommandBuffer pcb)
+                cmdBuffer = pcb;
+
+            if (engine.GlobalContext.TryGetValue(InstallCoreInputOnGameStartTrigger.EntitySelectionCallbacksKey, out var selObj) &&
+                selObj is List<System.Action<WorldCmInt2, Entity>> selectionCallbacks)
+            {
+                var capturedCmdBuffer = cmdBuffer;
+                var perfReg = context.Get(CoreServiceKeys.PerformerDefinitionRegistry) as PerformerDefinitionRegistry;
+                int selectionIndicatorDefId = perfReg?.GetId(mobaConfig.Presentation.SelectionIndicatorDefKey) ?? 0;
+                selectionCallbacks.Add((worldCm, entity) =>
+                {
+                    if (capturedCmdBuffer == null) return;
+                    capturedCmdBuffer.TryAdd(new PresentationCommand
+                    {
+                        Kind = PresentationCommandKind.DestroyPerformerScope,
+                        IdA = mobaConfig.Presentation.SelectionScopeId
+                    });
+                    if (engine.World.IsAlive(entity))
+                    {
+                        capturedCmdBuffer.TryAdd(new PresentationCommand
+                        {
+                            Kind = PresentationCommandKind.CreatePerformer,
+                            IdA = selectionIndicatorDefId,
+                            IdB = mobaConfig.Presentation.SelectionScopeId,
+                            Source = entity
+                        });
+                    }
+                });
+            }
+
+            if (engine.GlobalContext.TryGetValue(InstallCoreInputOnGameStartTrigger.SelectionTriggeredCallbacksKey, out var trigObj) &&
+                trigObj is List<System.Action<SelectionRequest, WorldCmInt2>> triggeredCallbacks)
+            {
+                var capturedMarkerBuffer = markerBuffer;
+                var meshReg = context.Get(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry;
+                int sphereMeshId = meshReg?.GetId(WellKnownMeshKeys.Sphere) ?? 0;
+                triggeredCallbacks.Add((req, worldCm) =>
+                {
+                    if (capturedMarkerBuffer != null && req.RequestTagId == SelectionRequestTags.CircleEnemy)
+                    {
+                        var mk = mobaConfig.Presentation.CircleEnemyMarker;
+                        var p = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: mk.YOffsetMeters);
+                        var scale = new Vector3(mk.Scale[0], mk.Scale[1], mk.Scale[2]);
+                        var color = new Vector4(mk.Color[0], mk.Color[1], mk.Color[2], mk.Color[3]);
+                        capturedMarkerBuffer.TryAdd(sphereMeshId, p, scale, color, mk.LifetimeSeconds);
+                    }
+                });
+            }
+
+            // 鍗曚綅娓叉煋鐢?performers.json 瀹氫箟 moba_unit_marker锛坋ntity-scoped Marker3D锛夐┍鍔?
+            // 鍥㈤槦棰滆壊鐢?EntityColor 缁戝畾瑙ｆ瀽
+
+            return Task.CompletedTask;
+        }
+    }
+}
+

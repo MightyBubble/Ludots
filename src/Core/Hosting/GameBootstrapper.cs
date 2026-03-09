@@ -11,12 +11,17 @@ namespace Ludots.Core.Hosting
     public readonly record struct GameBootstrapResult(GameEngine Engine, GameConfig Config, string AssetsRoot);
 
     /// <summary>
-    /// App-level game.json - only contains ModPaths for bootstrap.
-    /// All actual game configuration comes from ConfigPipeline merge.
+    /// App-level bootstrap config.
+    /// Uses ModPaths to locate mods before ConfigPipeline runs, and can optionally
+    /// override a few app-host display settings such as window size/title/fps.
     /// </summary>
     public class AppBootstrapConfig
     {
         public List<string> ModPaths { get; set; } = new List<string>();
+        public int? WindowWidth { get; set; }
+        public int? WindowHeight { get; set; }
+        public string? WindowTitle { get; set; }
+        public int? TargetFps { get; set; }
     }
 
     public static class GameBootstrapper
@@ -28,10 +33,10 @@ namespace Ludots.Core.Hosting
 
         /// <summary>
         /// New initialization flow using ConfigPipeline for game.json merge:
-        /// 1. Read App's game.json for ModPaths only
+        /// 1. Read app bootstrap config for ModPaths + optional host display overrides
         /// 2. Initialize VFS and ModLoader
         /// 3. Use ConfigPipeline to merge all game.json files (Core -> Mods)
-        /// 4. Pass merged config to GameEngine
+        /// 4. Apply app-host display overrides onto merged config
         /// </summary>
         public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory, string gameConfigFile)
         {
@@ -41,7 +46,6 @@ namespace Ludots.Core.Hosting
             var baseDir = Path.GetFullPath(baseDirectory);
             var assetsRoot = FindAssetsRootStrict(baseDir);
 
-            // Step 1: Read App's game.json for ModPaths only
             string gameJsonPath = Path.IsPathRooted(gameConfigFile)
                 ? Path.GetFullPath(gameConfigFile)
                 : Path.Combine(baseDir, gameConfigFile);
@@ -65,7 +69,6 @@ namespace Ludots.Core.Hosting
             if (bootstrapConfig.ModPaths == null)
                 bootstrapConfig.ModPaths = new List<string>();
 
-            // Resolve mod paths
             var resolvedModPaths = new List<string>();
             for (int i = 0; i < bootstrapConfig.ModPaths.Count; i++)
             {
@@ -86,15 +89,36 @@ namespace Ludots.Core.Hosting
                 resolvedModPaths.Add(resolved);
             }
 
-            // Step 2 & 3: Initialize engine with resolved mod paths
-            // Engine will internally use ConfigPipeline to merge game.json
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(resolvedModPaths, assetsRoot);
 
-            // Get the merged config from engine
             var mergedConfig = engine.MergedConfig;
+            ApplyAppDisplayOverrides(mergedConfig, bootstrapConfig);
 
             return new GameBootstrapResult(engine, mergedConfig, assetsRoot);
+        }
+
+        private static void ApplyAppDisplayOverrides(GameConfig mergedConfig, AppBootstrapConfig bootstrapConfig)
+        {
+            if (bootstrapConfig.WindowWidth.HasValue)
+            {
+                mergedConfig.WindowWidth = bootstrapConfig.WindowWidth.Value;
+            }
+
+            if (bootstrapConfig.WindowHeight.HasValue)
+            {
+                mergedConfig.WindowHeight = bootstrapConfig.WindowHeight.Value;
+            }
+
+            if (!string.IsNullOrWhiteSpace(bootstrapConfig.WindowTitle))
+            {
+                mergedConfig.WindowTitle = bootstrapConfig.WindowTitle;
+            }
+
+            if (bootstrapConfig.TargetFps.HasValue)
+            {
+                mergedConfig.TargetFps = bootstrapConfig.TargetFps.Value;
+            }
         }
 
         private static string FindAssetsRootStrict(string startPath)
@@ -107,6 +131,7 @@ namespace Ludots.Core.Hosting
                     throw new DirectoryNotFoundException($"Could not locate 'assets' directory starting from: {startPath}");
                 current = parent.FullName;
             }
+
             return Path.Combine(current, "assets");
         }
     }

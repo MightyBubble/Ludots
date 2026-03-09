@@ -120,7 +120,7 @@ namespace Ludots.Core.Gameplay.AI.Config
 
     public sealed class AiOrderExecConfig
     {
-        public int OrderTagId { get; set; }
+        public int OrderTypeId { get; set; }
         public byte SubmitMode { get; set; }
         public int PlayerId { get; set; }
     }
@@ -131,4 +131,5 @@ namespace Ludots.Core.Gameplay.AI.Config
         public int SourceKey { get; set; }
     }
 }
+
 

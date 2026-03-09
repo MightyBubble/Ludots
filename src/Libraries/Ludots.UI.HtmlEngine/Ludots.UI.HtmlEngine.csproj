@@ -15,6 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Update="ExCSS" ExcludeAssets="compile" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.2" />
   </ItemGroup>

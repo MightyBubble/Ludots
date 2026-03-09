@@ -641,10 +641,10 @@ namespace Ludots.Tests.GAS.Production
         private static void CastAbility(GameEngine engine, Entity actor, Entity target, int slot)
         {
             var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue);
-            int castAbilityTagId = engine.MergedConfig.Constants.OrderTags["castAbility"];
+            int castAbilityOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["castAbility"];
             orderQueue.TryEnqueue(new Order
             {
-                OrderTagId = castAbilityTagId,
+                OrderTypeId = castAbilityOrderTypeId,
                 Actor = actor,
                 Target = target,
                 Args = new OrderArgs { I0 = slot }

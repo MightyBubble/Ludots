@@ -34,8 +34,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ConfigConflictReport report = null,
             string relativePath = "GAS/abilities.json")
         {
+            _registry.Clear();
+            AbilityIdRegistry.Clear();
+
             var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
-            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            var mergedEntries = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            var merged = new List<(string Id, JsonObject Node)>(mergedEntries.Count);
+            for (int i = 0; i < mergedEntries.Count; i++)
+            {
+                merged.Add((mergedEntries[i].Id, mergedEntries[i].Node));
+            }
+
+            merged.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
+            for (int i = 0; i < merged.Count; i++)
+            {
+                AbilityIdRegistry.Register(merged[i].Id);
+            }
 
             var errors = new List<string>();
             for (int i = 0; i < merged.Count; i++)
@@ -43,7 +57,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 try
                 {
                     var def = CompileAbility(merged[i].Node, merged[i].Id, relativePath);
-                    int abilityId = TagRegistry.Register(merged[i].Id);
+                    int abilityId = AbilityIdRegistry.GetId(merged[i].Id);
+                    if (abilityId <= 0)
+                    {
+                        throw new InvalidOperationException($"Failed to resolve ability id '{merged[i].Id}'.");
+                    }
+
                     _registry.Register(abilityId, in def);
                 }
                 catch (Exception ex)
@@ -279,3 +298,4 @@ namespace Ludots.Core.Gameplay.GAS.Config
         }
     }
 }
+

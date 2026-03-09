@@ -55,7 +55,7 @@ Mod 注册 System 工厂，Map Trigger 按需激活：
 
 ```csharp
 // 在 OnLoad 中注册工厂（不立即创建 System）
-context.SystemFactoryRegistry.Register("MobaOrderSource", SystemGroup.AbilityActivation,
+context.SystemFactoryRegistry.Register("MobaOrderSource", SystemGroup.InputCollection,
     ctx => new MobaLocalOrderSourceSystem(ctx.GetWorld()));
 
 context.SystemFactoryRegistry.RegisterPresentation("EntityClickSelect",

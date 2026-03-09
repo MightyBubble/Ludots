@@ -106,7 +106,7 @@ namespace Ludots.Core.Input.Orders
                     {
                         ActionId = "SkillQ",
                         Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTagKey = "castAbility",
+                        OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
                         RequireSelection = false,
                         SelectionType = OrderSelectionType.Entity,
@@ -116,7 +116,7 @@ namespace Ludots.Core.Input.Orders
                     {
                         ActionId = "SkillW",
                         Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTagKey = "castAbility",
+                        OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 1 },
                         RequireSelection = false,
                         SelectionType = OrderSelectionType.None,
@@ -126,7 +126,7 @@ namespace Ludots.Core.Input.Orders
                     {
                         ActionId = "SkillE",
                         Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTagKey = "castAbility",
+                        OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 2 },
                         RequireSelection = false,
                         SelectionType = OrderSelectionType.Entity,
@@ -136,7 +136,7 @@ namespace Ludots.Core.Input.Orders
                     {
                         ActionId = "SkillR",
                         Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTagKey = "castAbility",
+                        OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 3 },
                         RequireSelection = false,
                         SelectionType = OrderSelectionType.Entity,
@@ -146,7 +146,7 @@ namespace Ludots.Core.Input.Orders
                     {
                         ActionId = "Command",
                         Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTagKey = "castAbility",
+                        OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 4 },
                         RequireSelection = true,
                         SelectionType = OrderSelectionType.Ground,
@@ -162,3 +162,4 @@ namespace Ludots.Core.Input.Orders
         }
     }
 }
+

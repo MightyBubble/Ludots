@@ -15,7 +15,7 @@ namespace Ludots.Core.Presentation.Systems
         public Entity TargetContext { get; private set; }
  
         public int AllowedCount { get; private set; }
-        public int[] AllowedOrderTagIds { get; } = new int[OrderRequest.MaxAllowed];
+        public int[] AllowedOrderTypeIds { get; } = new int[OrderRequest.MaxAllowed];
  
         public void ApplyRequest(in OrderRequest request)
         {
@@ -28,9 +28,9 @@ namespace Ludots.Core.Presentation.Systems
             TargetContext = request.TargetContext;
  
             AllowedCount = request.AllowedCount;
-            for (int i = 0; i < AllowedOrderTagIds.Length; i++)
+            for (int i = 0; i < AllowedOrderTypeIds.Length; i++)
             {
-                AllowedOrderTagIds[i] = i < request.AllowedCount ? request.GetAllowed(i) : 0;
+                AllowedOrderTypeIds[i] = i < request.AllowedCount ? request.GetAllowed(i) : 0;
             }
  
             Dirty = true;
@@ -49,3 +49,4 @@ namespace Ludots.Core.Presentation.Systems
         }
     }
 }
+

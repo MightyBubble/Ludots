@@ -1,13 +1,18 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
+using MobaDemoMod.GAS;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.Navigation2D.Components;
 using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -25,18 +30,18 @@ namespace Ludots.Tests.GAS
     public class InputOrderAbilityAuditTests
     {
         // ════════════════════════════════════════════════════════════════════
-        // Region: OrderBuffer — PendingBuffer
+        // Region: OrderBuffer �?PendingBuffer
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
         public void PendingBuffer_SetPending_StoresOrderCorrectly()
         {
             var buffer = OrderBuffer.CreateEmpty();
-            var order = new Order { OrderTagId = 42, PlayerId = 1 };
+            var order = new Order { OrderTypeId = 42, PlayerId = 1 };
             buffer.SetPending(in order, priority: 5, expireStep: 100, insertStep: 10);
 
             That(buffer.HasPending, Is.True);
-            That(buffer.PendingOrder.Order.OrderTagId, Is.EqualTo(42));
+            That(buffer.PendingOrder.Order.OrderTypeId, Is.EqualTo(42));
             That(buffer.PendingOrder.Priority, Is.EqualTo(5));
             That(buffer.PendingOrder.ExpireStep, Is.EqualTo(100));
             That(buffer.PendingOrder.InsertStep, Is.EqualTo(10));
@@ -46,28 +51,28 @@ namespace Ludots.Tests.GAS
         public void PendingBuffer_ClearPending_ResetsSlot()
         {
             var buffer = OrderBuffer.CreateEmpty();
-            var order = new Order { OrderTagId = 42 };
+            var order = new Order { OrderTypeId = 42 };
             buffer.SetPending(in order, 5, 100, 10);
             That(buffer.HasPending, Is.True);
 
             buffer.ClearPending();
             That(buffer.HasPending, Is.False);
-            That(buffer.PendingOrder.Order.OrderTagId, Is.EqualTo(0));
+            That(buffer.PendingOrder.Order.OrderTypeId, Is.EqualTo(0));
         }
 
         [Test]
         public void PendingBuffer_ExpirePending_ExpiresWhenStepReached()
         {
             var buffer = OrderBuffer.CreateEmpty();
-            var order = new Order { OrderTagId = 7 };
+            var order = new Order { OrderTypeId = 7 };
             buffer.SetPending(in order, 5, expireStep: 50, insertStep: 10);
 
-            // Before expiration — should not expire
+            // Before expiration �?should not expire
             bool expired = buffer.ExpirePending(currentStep: 49);
             That(expired, Is.False);
             That(buffer.HasPending, Is.True);
 
-            // At expiration step — should expire
+            // At expiration step �?should expire
             expired = buffer.ExpirePending(currentStep: 50);
             That(expired, Is.True);
             That(buffer.HasPending, Is.False);
@@ -86,7 +91,7 @@ namespace Ludots.Tests.GAS
         public void PendingBuffer_ExpirePending_NoExpirationNegativeOne()
         {
             var buffer = OrderBuffer.CreateEmpty();
-            var order = new Order { OrderTagId = 1 };
+            var order = new Order { OrderTypeId = 1 };
             buffer.SetPending(in order, 5, expireStep: -1, insertStep: 0);
 
             // -1 = no expiration; should never expire
@@ -99,14 +104,14 @@ namespace Ludots.Tests.GAS
         public void PendingBuffer_SetPending_LastWriteWins()
         {
             var buffer = OrderBuffer.CreateEmpty();
-            var order1 = new Order { OrderTagId = 1 };
-            var order2 = new Order { OrderTagId = 2 };
+            var order1 = new Order { OrderTypeId = 1 };
+            var order2 = new Order { OrderTypeId = 2 };
 
             buffer.SetPending(in order1, 5, 100, 10);
             buffer.SetPending(in order2, 3, 200, 20);
 
             That(buffer.HasPending, Is.True);
-            That(buffer.PendingOrder.Order.OrderTagId, Is.EqualTo(2), "Last-write-wins: order2 should overwrite order1");
+            That(buffer.PendingOrder.Order.OrderTypeId, Is.EqualTo(2), "Last-write-wins: order2 should overwrite order1");
             That(buffer.PendingOrder.Priority, Is.EqualTo(3));
         }
 
@@ -114,7 +119,7 @@ namespace Ludots.Tests.GAS
         public void PendingBuffer_Clear_AlsoClearsPending()
         {
             var buffer = OrderBuffer.CreateEmpty();
-            var order = new Order { OrderTagId = 5 };
+            var order = new Order { OrderTypeId = 5 };
             buffer.SetPending(in order, 1, 50, 0);
             buffer.Enqueue(in order, 1, -1, 0);
 
@@ -127,6 +132,16 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
         // Region: GrantedSlotBuffer + AbilitySlotResolver
         // ════════════════════════════════════════════════════════════════════
+
+        [Test]
+        public void OrderTypeRegistry_GetUnknownType_Throws()
+        {
+            var registry = new OrderTypeRegistry();
+
+            var ex = Throws<KeyNotFoundException>(() => registry.Get(999));
+
+            That(ex!.Message, Does.Contain("999"));
+        }
 
         [Test]
         public void GrantedSlotBuffer_Grant_OverridesSlot()
@@ -259,8 +274,7 @@ namespace Ludots.Tests.GAS
             var orderTypes = new OrderTypeRegistry();
             orderTypes.Register(new OrderTypeConfig
             {
-                OrderTagId = 10,
-                OrderStateTagId = OrderStateTags.Active_CastAbility,
+                OrderTypeId = 10,
                 AllowQueuedMode = true,
                 ClearQueueOnActivate = false,
                 SpatialBlackboardKey = -1,
@@ -268,34 +282,31 @@ namespace Ludots.Tests.GAS
                 IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex
             });
 
-            var tagRules = new TagRuleRegistry();
+            var orderRules = new OrderRuleRegistry();
             var clock = new DiscreteClock();
-            var system = new OrderBufferSystem(world, clock, orderTypes, tagRules);
+            var system = new OrderBufferSystem(world, clock, orderTypes, orderRules);
 
             var order = new Order
             {
                 Actor = actor,
                 Target = target,
-                OrderTagId = 10,
+                OrderTypeId = 10,
                 SubmitMode = OrderSubmitMode.Queued,
                 Args = new OrderArgs { I0 = 2 }
             };
 
-            var submit = OrderSubmitter.Submit(world, actor, in order, orderTypes, tagRules, currentStep: 0, stepRateHz: 30);
+            var submit = OrderSubmitter.Submit(world, actor, in order, orderTypes, orderRules, currentStep: 0, stepRateHz: 30);
             That(submit, Is.EqualTo(OrderSubmitResult.Queued));
 
             system.Update(0);
 
             ref var buffer = ref world.Get<OrderBuffer>(actor);
-            ref var tags = ref world.Get<GameplayTagContainer>(actor);
             ref var bbI = ref world.Get<BlackboardIntBuffer>(actor);
             ref var bbE = ref world.Get<BlackboardEntityBuffer>(actor);
 
             That(buffer.HasActive, Is.True);
             That(buffer.HasQueued, Is.False);
-            That(tags.HasTag(OrderStateTags.Active_CastAbility), Is.True);
-            That(tags.HasTag(OrderStateTags.State_HasActive), Is.True);
-            That(tags.HasTag(OrderStateTags.State_HasQueued), Is.False);
+            That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(10));
 
             That(bbI.TryGet(OrderBlackboardKeys.Cast_SlotIndex, out int slotIndex), Is.True);
             That(slotIndex, Is.EqualTo(2));
@@ -305,6 +316,59 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
+        [Test]
+        public void AbilityExecSystem_ActiveCastOrderFromOrderBuffer_DoesNotRequireGameplayTag()
+        {
+            using var world = World.Create();
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new AbilityStateBuffer());
+
+            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
+            abilities.AddAbility(9001);
+
+            ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
+            var order = new Order
+            {
+                OrderId = 7,
+                Actor = actor,
+                OrderTypeId = 100,
+                Args = new OrderArgs { I0 = 0 }
+            };
+            orderBuffer.SetActiveDirect(in order, priority: 100);
+
+            ref var bbI = ref world.Get<BlackboardIntBuffer>(actor);
+            bbI.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+
+            var defs = new AbilityDefinitionRegistry();
+            var def = new AbilityDefinition();
+            defs.Register(9001, in def);
+
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new SelectionRequestQueue(),
+                new SelectionResponseBuffer(),
+                new EffectRequestQueue(),
+                defs,
+                castAbilityOrderTypeId: 100,
+                orderTypeRegistry: new OrderTypeRegistry());
+            system.MaxWorkUnitsPerSlice = 1;
+
+            bool completed = system.UpdateSlice(0f, int.MaxValue);
+
+            That(completed, Is.False, "Budget should stop after Phase 1 so the spawned exec can be inspected.");
+            That(world.Has<AbilityExecInstance>(actor), Is.True, "Cast ability should start from OrderBuffer active order without any gameplay order tag.");
+
+            ref var exec = ref world.Get<AbilityExecInstance>(actor);
+            That(exec.AbilityId, Is.EqualTo(9001));
+            That(exec.OrderId, Is.EqualTo(7));
+            That(exec.AbilitySlot, Is.EqualTo(0));
+        }
         // Region: GraphExecutor.ExecuteValidation
         // ════════════════════════════════════════════════════════════════════
 
@@ -315,7 +379,7 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // Empty program — B[0] starts at 1 (pass), no instructions change it
+            // Empty program �?B[0] starts at 1 (pass), no instructions change it
             ReadOnlySpan<GraphInstruction> program = ReadOnlySpan<GraphInstruction>.Empty;
             bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
             That(result, Is.True, "Empty validation program should pass by default (B[0]=1)");
@@ -348,27 +412,27 @@ namespace Ludots.Tests.GAS
         public void OrderBuffer_Enqueue_RespectsPriorityOrdering()
         {
             var buffer = OrderBuffer.CreateEmpty();
-            buffer.Enqueue(new Order { OrderTagId = 1 }, priority: 1, -1, insertStep: 0);
-            buffer.Enqueue(new Order { OrderTagId = 2 }, priority: 3, -1, insertStep: 1);
-            buffer.Enqueue(new Order { OrderTagId = 3 }, priority: 2, -1, insertStep: 2);
+            buffer.Enqueue(new Order { OrderTypeId = 1 }, priority: 1, -1, insertStep: 0);
+            buffer.Enqueue(new Order { OrderTypeId = 2 }, priority: 3, -1, insertStep: 1);
+            buffer.Enqueue(new Order { OrderTypeId = 3 }, priority: 2, -1, insertStep: 2);
 
             That(buffer.QueuedCount, Is.EqualTo(3));
-            That(buffer.GetQueued(0).Order.OrderTagId, Is.EqualTo(2), "Highest priority first");
-            That(buffer.GetQueued(1).Order.OrderTagId, Is.EqualTo(3), "Second priority");
-            That(buffer.GetQueued(2).Order.OrderTagId, Is.EqualTo(1), "Lowest priority last");
+            That(buffer.GetQueued(0).Order.OrderTypeId, Is.EqualTo(2), "Highest priority first");
+            That(buffer.GetQueued(1).Order.OrderTypeId, Is.EqualTo(3), "Second priority");
+            That(buffer.GetQueued(2).Order.OrderTypeId, Is.EqualTo(1), "Lowest priority last");
         }
 
         [Test]
         public void OrderBuffer_Enqueue_FIFOWithinSamePriority()
         {
             var buffer = OrderBuffer.CreateEmpty();
-            buffer.Enqueue(new Order { OrderTagId = 1 }, priority: 5, -1, insertStep: 10);
-            buffer.Enqueue(new Order { OrderTagId = 2 }, priority: 5, -1, insertStep: 20);
-            buffer.Enqueue(new Order { OrderTagId = 3 }, priority: 5, -1, insertStep: 30);
+            buffer.Enqueue(new Order { OrderTypeId = 1 }, priority: 5, -1, insertStep: 10);
+            buffer.Enqueue(new Order { OrderTypeId = 2 }, priority: 5, -1, insertStep: 20);
+            buffer.Enqueue(new Order { OrderTypeId = 3 }, priority: 5, -1, insertStep: 30);
 
-            That(buffer.GetQueued(0).Order.OrderTagId, Is.EqualTo(1), "FIFO: first inserted comes first");
-            That(buffer.GetQueued(1).Order.OrderTagId, Is.EqualTo(2));
-            That(buffer.GetQueued(2).Order.OrderTagId, Is.EqualTo(3));
+            That(buffer.GetQueued(0).Order.OrderTypeId, Is.EqualTo(1), "FIFO: first inserted comes first");
+            That(buffer.GetQueued(1).Order.OrderTypeId, Is.EqualTo(2));
+            That(buffer.GetQueued(2).Order.OrderTypeId, Is.EqualTo(3));
         }
 
         [Test]
@@ -377,12 +441,12 @@ namespace Ludots.Tests.GAS
             var buffer = OrderBuffer.CreateEmpty();
             for (int i = 0; i < OrderBuffer.MAX_QUEUED_ORDERS; i++)
             {
-                bool ok = buffer.Enqueue(new Order { OrderTagId = i }, 0, -1, i);
+                bool ok = buffer.Enqueue(new Order { OrderTypeId = i }, 0, -1, i);
                 That(ok, Is.True, $"Enqueue {i} should succeed");
             }
 
-            bool overflow = buffer.Enqueue(new Order { OrderTagId = 999 }, 0, -1, 100);
-            That(overflow, Is.False, "Queue full — should reject");
+            bool overflow = buffer.Enqueue(new Order { OrderTypeId = 999 }, 0, -1, 100);
+            That(overflow, Is.False, "Queue full �?should reject");
             That(buffer.QueuedCount, Is.EqualTo(OrderBuffer.MAX_QUEUED_ORDERS));
         }
 
@@ -390,9 +454,9 @@ namespace Ludots.Tests.GAS
         public void OrderBuffer_RemoveExpired_CleansUpCorrectly()
         {
             var buffer = OrderBuffer.CreateEmpty();
-            buffer.Enqueue(new Order { OrderTagId = 1 }, 0, expireStep: 10, insertStep: 0);
-            buffer.Enqueue(new Order { OrderTagId = 2 }, 0, expireStep: 50, insertStep: 1);
-            buffer.Enqueue(new Order { OrderTagId = 3 }, 0, expireStep: -1, insertStep: 2); // no expiration
+            buffer.Enqueue(new Order { OrderTypeId = 1 }, 0, expireStep: 10, insertStep: 0);
+            buffer.Enqueue(new Order { OrderTypeId = 2 }, 0, expireStep: 50, insertStep: 1);
+            buffer.Enqueue(new Order { OrderTypeId = 3 }, 0, expireStep: -1, insertStep: 2); // no expiration
 
             int removed = buffer.RemoveExpired(currentStep: 30);
             That(removed, Is.EqualTo(1), "Only order with expireStep=10 should be expired");
@@ -403,14 +467,73 @@ namespace Ludots.Tests.GAS
         public void OrderBuffer_PromoteNext_MovesFirstQueuedToActive()
         {
             var buffer = OrderBuffer.CreateEmpty();
-            buffer.Enqueue(new Order { OrderTagId = 1 }, priority: 10, -1, 0);
-            buffer.Enqueue(new Order { OrderTagId = 2 }, priority: 5, -1, 1);
+            buffer.Enqueue(new Order { OrderTypeId = 1 }, priority: 10, -1, 0);
+            buffer.Enqueue(new Order { OrderTypeId = 2 }, priority: 5, -1, 1);
 
             bool promoted = buffer.PromoteNext();
             That(promoted, Is.True);
             That(buffer.HasActive, Is.True);
-            That(buffer.ActiveOrder.Order.OrderTagId, Is.EqualTo(1), "Highest priority promoted");
+            That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(1), "Highest priority promoted");
             That(buffer.QueuedCount, Is.EqualTo(1), "One remaining in queue");
         }
+
+        [Test]
+        public void StopOrderSystem_ActiveStopOrder_DoesNotRequireGameplayTagContainer()
+        {
+            TagRegistry.Clear();
+
+            using var world = World.Create();
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new AbilityExecInstance(),
+                new NavGoal2D { Kind = NavGoalKind2D.Point });
+
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            var stopOrder = new Order { Actor = actor, OrderTypeId = 103 };
+            buffer.SetActiveDirect(in stopOrder, priority: 200);
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { OrderTypeId = 103, AllowQueuedMode = false, ClearQueueOnActivate = true });
+
+            var system = new StopOrderSystem(world, orderTypes, 103);
+            system.Update(0f);
+
+            That(world.Has<AbilityExecInstance>(actor), Is.False);
+            That(world.Get<NavGoal2D>(actor).Kind, Is.EqualTo(NavGoalKind2D.None));
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+        }
+
+        [Test]
+        public void StopOrderNavMoveCleanupSystem_ActiveStopOrder_ClearsNavigationTag()
+        {
+            TagRegistry.Clear();
+            int navMoveTagId = TagRegistry.Register("Ability.Nav.Move");
+
+            using var world = World.Create();
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new AbilityExecInstance(),
+                new NavGoal2D { Kind = NavGoalKind2D.Point },
+                new GameplayTagContainer());
+
+            ref var tags = ref world.Get<GameplayTagContainer>(actor);
+            tags.AddTag(navMoveTagId);
+
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            var stopOrder = new Order { Actor = actor, OrderTypeId = 103 };
+            buffer.SetActiveDirect(in stopOrder, priority: 200);
+
+            var system = new StopOrderNavMoveCleanupSystem(world, 103, navMoveTagId);
+            system.Update(0f);
+
+            That(tags.HasTag(navMoveTagId), Is.False);
+            That(world.Has<AbilityExecInstance>(actor), Is.True, "Navigation tag cleanup must stay separate from generic stop processing.");
+            That(world.Get<NavGoal2D>(actor).Kind, Is.EqualTo(NavGoalKind2D.Point));
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.True);
+        }
+
     }
 }
+
+
+

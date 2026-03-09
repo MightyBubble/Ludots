@@ -4,16 +4,17 @@ namespace Ludots.Core.Gameplay.AI.Planning
 {
     public readonly struct ActionOrderSpec
     {
-        public readonly int OrderTagId;
+        public readonly int OrderTypeId;
         public readonly OrderSubmitMode SubmitMode;
         public readonly int PlayerId;
 
-        public ActionOrderSpec(int orderTagId, OrderSubmitMode submitMode, int playerId = 0)
+        public ActionOrderSpec(int orderTypeId, OrderSubmitMode submitMode, int playerId = 0)
         {
-            OrderTagId = orderTagId;
+            OrderTypeId = orderTypeId;
             SubmitMode = submitMode;
             PlayerId = playerId;
         }
     }
 }
+
 

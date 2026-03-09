@@ -48,8 +48,7 @@ namespace Ludots.Adapter.Web.Streaming
             WorldHudBatchBuffer? worldHud,
             DebugDrawCommandBuffer? debugDraw,
             ScreenOverlayBuffer? screenOverlay = null,
-            string? uiHtml = null,
-            string? uiCss = null)
+            string? uiSceneDiffJson = null)
         {
             _pos = 0;
             EnsureCapacity(FrameProtocol.FrameHeaderSize);
@@ -65,7 +64,7 @@ namespace Ludots.Adapter.Web.Streaming
             WriteWorldHudIfChanged(worldHud);
             WriteDebugDrawIfChanged(debugDraw);
             WriteScreenOverlay(screenOverlay);
-            WriteUiHtml(uiHtml, uiCss);
+            WriteUiSceneDiff(uiSceneDiffJson);
 
             EnsureCapacity(1);
             _buffer[_pos++] = FrameProtocol.SectionEnd;
@@ -305,34 +304,25 @@ namespace Ludots.Adapter.Web.Streaming
             BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
         }
 
-        private void WriteUiHtml(string? html, string? css)
+        private void WriteUiSceneDiff(string? sceneDiffJson)
         {
-            if (html == null && css == null) return;
+            if (string.IsNullOrWhiteSpace(sceneDiffJson)) return;
 
             int startPos = _pos;
-            WriteSectionHeader(FrameProtocol.SectionUiHtml, 1, 0);
+            WriteSectionHeader(FrameProtocol.SectionUiSceneDiff, 1, 0);
 
-            byte[] htmlBytes = html != null ? Encoding.UTF8.GetBytes(html) : Array.Empty<byte>();
-            byte[] cssBytes = css != null ? Encoding.UTF8.GetBytes(css) : Array.Empty<byte>();
-
-            EnsureCapacity(4 + htmlBytes.Length + 4 + cssBytes.Length);
-            WriteInt32(htmlBytes.Length);
-            if (htmlBytes.Length > 0)
+            byte[] jsonBytes = Encoding.UTF8.GetBytes(sceneDiffJson);
+            EnsureCapacity(4 + jsonBytes.Length);
+            WriteInt32(jsonBytes.Length);
+            if (jsonBytes.Length > 0)
             {
-                htmlBytes.CopyTo(_buffer.AsSpan(_pos));
-                _pos += htmlBytes.Length;
-            }
-            WriteInt32(cssBytes.Length);
-            if (cssBytes.Length > 0)
-            {
-                cssBytes.CopyTo(_buffer.AsSpan(_pos));
-                _pos += cssBytes.Length;
+                jsonBytes.CopyTo(_buffer.AsSpan(_pos));
+                _pos += jsonBytes.Length;
             }
 
             int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
             BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
         }
-
         private void SnapshotPrimitives(PrimitiveDrawBuffer? buf)
         {
             int count = buf?.Count ?? 0;

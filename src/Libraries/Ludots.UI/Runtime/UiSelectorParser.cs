@@ -22,8 +22,8 @@ public static class UiSelectorParser
             throw new ArgumentException("Selector text is required.", nameof(selectorText));
         }
 
-        string[] selectorParts = selectorText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        List<UiSelector> selectors = new(selectorParts.Length);
+        List<string> selectorParts = SplitTopLevel(selectorText, ',');
+        List<UiSelector> selectors = new(selectorParts.Count);
         foreach (string selectorPart in selectorParts)
         {
             selectors.Add(ParseSingle(selectorPart));
@@ -40,10 +40,16 @@ public static class UiSelectorParser
 
         while (index < selectorText.Length)
         {
+            bool consumedWhitespace = false;
             while (index < selectorText.Length && char.IsWhiteSpace(selectorText[index]))
             {
-                combinator = UiSelectorCombinator.Descendant;
+                consumedWhitespace = true;
                 index++;
+            }
+
+            if (consumedWhitespace && parts.Count > 0 && combinator == UiSelectorCombinator.None)
+            {
+                combinator = UiSelectorCombinator.Descendant;
             }
 
             if (index >= selectorText.Length)
@@ -51,15 +57,23 @@ public static class UiSelectorParser
                 break;
             }
 
-            if (selectorText[index] == '>')
+            combinator = selectorText[index] switch
             {
-                combinator = UiSelectorCombinator.Child;
+                '>' => UiSelectorCombinator.Child,
+                '+' => UiSelectorCombinator.AdjacentSibling,
+                '~' => UiSelectorCombinator.GeneralSibling,
+                _ => combinator
+            };
+
+            if (selectorText[index] is '>' or '+' or '~')
+            {
                 index++;
                 continue;
             }
 
             int start = index;
             int bracketDepth = 0;
+            int parenthesisDepth = 0;
             while (index < selectorText.Length)
             {
                 char current = selectorText[index];
@@ -71,7 +85,15 @@ public static class UiSelectorParser
                 {
                     bracketDepth = Math.Max(0, bracketDepth - 1);
                 }
-                else if (bracketDepth == 0 && (char.IsWhiteSpace(current) || current == '>'))
+                else if (current == '(')
+                {
+                    parenthesisDepth++;
+                }
+                else if (current == ')')
+                {
+                    parenthesisDepth = Math.Max(0, parenthesisDepth - 1);
+                }
+                else if (bracketDepth == 0 && parenthesisDepth == 0 && (char.IsWhiteSpace(current) || current is '>' or '+' or '~'))
                 {
                     break;
                 }
@@ -85,8 +107,11 @@ public static class UiSelectorParser
                 continue;
             }
 
-            parts.Add(ParseToken(token, combinator));
-            combinator = UiSelectorCombinator.Descendant;
+            UiSelectorCombinator resolvedCombinator = parts.Count == 0
+                ? UiSelectorCombinator.None
+                : combinator == UiSelectorCombinator.None ? UiSelectorCombinator.Descendant : combinator;
+            parts.Add(ParseToken(token, resolvedCombinator));
+            combinator = UiSelectorCombinator.None;
         }
 
         return new UiSelector(parts);
@@ -98,6 +123,8 @@ public static class UiSelectorParser
         string? id = null;
         List<string> classes = new();
         List<UiSelectorAttribute> attributes = new();
+        List<UiStructuralPseudo> structuralPseudos = new();
+        List<UiSelectorLogicalPseudo> logicalPseudos = new();
         UiPseudoState pseudoState = UiPseudoState.None;
         int index = 0;
 
@@ -126,7 +153,12 @@ public static class UiSelectorParser
             if (current == ':')
             {
                 index++;
-                pseudoState |= ParsePseudo(ReadIdentifier(token, ref index));
+                if (index < token.Length && token[index] == ':')
+                {
+                    index++;
+                }
+
+                ApplyPseudo(ReadPseudoToken(token, ref index), ref pseudoState, structuralPseudos, logicalPseudos);
                 continue;
             }
 
@@ -134,8 +166,22 @@ public static class UiSelectorParser
             {
                 index++;
                 int start = index;
-                while (index < token.Length && token[index] != ']')
+                int depth = 1;
+                while (index < token.Length && depth > 0)
                 {
+                    if (token[index] == '[')
+                    {
+                        depth++;
+                    }
+                    else if (token[index] == ']')
+                    {
+                        depth--;
+                        if (depth == 0)
+                        {
+                            break;
+                        }
+                    }
+
                     index++;
                 }
 
@@ -165,7 +211,7 @@ public static class UiSelectorParser
         }
 
         tagName ??= "*";
-        return new UiSelectorPart(tagName, id, classes, attributes, pseudoState, combinator);
+        return new UiSelectorPart(tagName, id, classes, attributes, structuralPseudos, logicalPseudos, pseudoState, combinator);
     }
 
     private static string ReadIdentifier(string token, ref int index)
@@ -174,7 +220,7 @@ public static class UiSelectorParser
         while (index < token.Length)
         {
             char current = token[index];
-            if (current is '#' or '.' or ':' or '[' or ']')
+            if (current is '#' or '.' or ':' or '[' or ']' or '(' or ')')
             {
                 break;
             }
@@ -186,31 +232,202 @@ public static class UiSelectorParser
         return builder.ToString().Trim();
     }
 
-    private static UiSelectorAttribute ParseAttribute(string expression)
+    private static string ReadPseudoToken(string token, ref int index)
     {
-        int equalsIndex = expression.IndexOf('=');
-        if (equalsIndex < 0)
+        int start = index;
+        while (index < token.Length)
         {
-            return new UiSelectorAttribute(expression.Trim(), null);
+            char current = token[index];
+            if (current is '#' or '.' or ':' or '[' or ']')
+            {
+                break;
+            }
+
+            if (current == '(')
+            {
+                int depth = 1;
+                index++;
+                while (index < token.Length && depth > 0)
+                {
+                    if (token[index] == '(')
+                    {
+                        depth++;
+                    }
+                    else if (token[index] == ')')
+                    {
+                        depth--;
+                    }
+
+                    index++;
+                }
+
+                break;
+            }
+
+            index++;
         }
 
-        string name = expression[..equalsIndex].Trim();
-        string value = expression[(equalsIndex + 1)..].Trim().Trim('"', '\'');
-        return new UiSelectorAttribute(name, value);
+        return token[start..Math.Min(index, token.Length)].Trim();
     }
 
-    private static UiPseudoState ParsePseudo(string value)
+    private static UiSelectorAttribute ParseAttribute(string expression)
     {
-        return value.ToLowerInvariant() switch
+        string[] operators = ["~=", "|=", "^=", "$=", "*=", "="];
+        foreach (string operatorToken in operators)
         {
-            "hover" => UiPseudoState.Hover,
-            "active" => UiPseudoState.Active,
-            "focus" => UiPseudoState.Focus,
-            "disabled" => UiPseudoState.Disabled,
-            "checked" => UiPseudoState.Checked,
-            "selected" => UiPseudoState.Selected,
-            "root" => UiPseudoState.Root,
-            _ => UiPseudoState.None
+            int operatorIndex = expression.IndexOf(operatorToken, StringComparison.Ordinal);
+            if (operatorIndex < 0)
+            {
+                continue;
+            }
+
+            string name = expression[..operatorIndex].Trim();
+            string value = expression[(operatorIndex + operatorToken.Length)..].Trim().Trim('"', '\'');
+            return new UiSelectorAttribute(name, value, ParseAttributeOperator(operatorToken));
+        }
+
+        return new UiSelectorAttribute(expression.Trim(), null, UiSelectorAttributeOperator.Exists);
+    }
+
+    private static UiSelectorAttributeOperator ParseAttributeOperator(string operatorToken)
+    {
+        return operatorToken switch
+        {
+            "=" => UiSelectorAttributeOperator.Equals,
+            "~=" => UiSelectorAttributeOperator.Includes,
+            "|=" => UiSelectorAttributeOperator.DashMatch,
+            "^=" => UiSelectorAttributeOperator.Prefix,
+            "$=" => UiSelectorAttributeOperator.Suffix,
+            "*=" => UiSelectorAttributeOperator.Substring,
+            _ => UiSelectorAttributeOperator.Exists
         };
+    }
+
+    private static void ApplyPseudo(
+        string value,
+        ref UiPseudoState pseudoState,
+        ICollection<UiStructuralPseudo> structuralPseudos,
+        ICollection<UiSelectorLogicalPseudo> logicalPseudos)
+    {
+        string normalized = value.Trim().ToLowerInvariant();
+        switch (normalized)
+        {
+            case "hover":
+                pseudoState |= UiPseudoState.Hover;
+                return;
+            case "active":
+                pseudoState |= UiPseudoState.Active;
+                return;
+            case "focus":
+                pseudoState |= UiPseudoState.Focus;
+                return;
+            case "disabled":
+                pseudoState |= UiPseudoState.Disabled;
+                return;
+            case "checked":
+                pseudoState |= UiPseudoState.Checked;
+                return;
+            case "selected":
+                pseudoState |= UiPseudoState.Selected;
+                return;
+            case "required":
+                pseudoState |= UiPseudoState.Required;
+                return;
+            case "invalid":
+                pseudoState |= UiPseudoState.Invalid;
+                return;
+            case "root":
+                pseudoState |= UiPseudoState.Root;
+                return;
+            case "first-child":
+                structuralPseudos.Add(new UiStructuralPseudo(UiStructuralPseudoKind.FirstChild));
+                return;
+            case "last-child":
+                structuralPseudos.Add(new UiStructuralPseudo(UiStructuralPseudoKind.LastChild));
+                return;
+        }
+
+        if (normalized.StartsWith("nth-child(", StringComparison.Ordinal) && normalized.EndsWith(')'))
+        {
+            string expression = normalized["nth-child(".Length..^1].Trim();
+            structuralPseudos.Add(new UiStructuralPseudo(UiStructuralPseudoKind.NthChild, expression));
+            return;
+        }
+
+        if (normalized.StartsWith("nth-last-child(", StringComparison.Ordinal) && normalized.EndsWith(')'))
+        {
+            string expression = normalized["nth-last-child(".Length..^1].Trim();
+            structuralPseudos.Add(new UiStructuralPseudo(UiStructuralPseudoKind.NthLastChild, expression));
+            return;
+        }
+
+        if (TryParseLogicalPseudo(normalized, "not", UiSelectorLogicalPseudoKind.Not, out UiSelectorLogicalPseudo? logicalPseudo)
+            || TryParseLogicalPseudo(normalized, "is", UiSelectorLogicalPseudoKind.Is, out logicalPseudo)
+            || TryParseLogicalPseudo(normalized, "where", UiSelectorLogicalPseudoKind.Where, out logicalPseudo))
+        {
+            logicalPseudos.Add(logicalPseudo);
+        }
+    }
+
+    private static bool TryParseLogicalPseudo(string value, string name, UiSelectorLogicalPseudoKind kind, out UiSelectorLogicalPseudo? pseudo)
+    {
+        string prefix = name + '(';
+        if (!value.StartsWith(prefix, StringComparison.Ordinal) || !value.EndsWith(')'))
+        {
+            pseudo = null;
+            return false;
+        }
+
+        string selectorText = value[prefix.Length..^1].Trim();
+        IReadOnlyList<UiSelector> selectors = ParseMany(selectorText);
+        pseudo = new UiSelectorLogicalPseudo(kind, selectors);
+        return true;
+    }
+
+    private static List<string> SplitTopLevel(string text, char separator)
+    {
+        List<string> items = new();
+        int bracketDepth = 0;
+        int parenthesisDepth = 0;
+        int start = 0;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            char current = text[i];
+            if (current == '[')
+            {
+                bracketDepth++;
+            }
+            else if (current == ']')
+            {
+                bracketDepth--;
+            }
+            else if (current == '(')
+            {
+                parenthesisDepth++;
+            }
+            else if (current == ')')
+            {
+                parenthesisDepth--;
+            }
+            else if (current == separator && bracketDepth == 0 && parenthesisDepth == 0)
+            {
+                string value = text[start..i].Trim();
+                if (value.Length > 0)
+                {
+                    items.Add(value);
+                }
+
+                start = i + 1;
+            }
+        }
+
+        string tail = text[start..].Trim();
+        if (tail.Length > 0)
+        {
+            items.Add(tail);
+        }
+
+        return items;
     }
 }

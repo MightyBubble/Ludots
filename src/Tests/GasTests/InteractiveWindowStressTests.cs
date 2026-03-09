@@ -84,9 +84,9 @@ namespace Ludots.Tests.GAS
                 {
                     requests.Publish(new EffectRequest { Source = source, Target = target, TemplateId = tplOpen });
                     processing.Update(1f);
-                    chainOrders.TryEnqueue(new Order { OrderId = 1, OrderTagId = TestGasOrderTags.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } });
-                    chainOrders.TryEnqueue(new Order { OrderId = 2, OrderTagId = TestGasOrderTags.ChainPass, Actor = source });
-                    chainOrders.TryEnqueue(new Order { OrderId = 3, OrderTagId = TestGasOrderTags.ChainPass, Actor = source });
+                    chainOrders.TryEnqueue(new Order { OrderId = 1, OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } });
+                    chainOrders.TryEnqueue(new Order { OrderId = 2, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
+                    chainOrders.TryEnqueue(new Order { OrderId = 3, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
                     processing.Update(1f);
                 }
 
@@ -121,9 +121,9 @@ namespace Ludots.Tests.GAS
                         default: ticksOther += dt; break;
                     }
 
-                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 1, OrderTagId = TestGasOrderTags.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } });
-                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 2, OrderTagId = TestGasOrderTags.ChainPass, Actor = source });
-                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 3, OrderTagId = TestGasOrderTags.ChainPass, Actor = source });
+                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 1, OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, Actor = source, Args = new OrderArgs { I0 = tplDamage } });
+                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 2, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
+                    chainOrders.TryEnqueue(new Order { OrderId = i * 3 + 3, OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, Actor = source });
 
                     t0 = System.Diagnostics.Stopwatch.GetTimestamp();
                     phase0 = processing.DebugProposalWindowPhase;
@@ -166,3 +166,4 @@ namespace Ludots.Tests.GAS
         }
     }
 }
+

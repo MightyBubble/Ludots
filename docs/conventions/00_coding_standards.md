@@ -61,7 +61,7 @@ Core 本身也作为 Mod 挂载。所有 gameplay 内容（技能、效果、地
 
 | 问题 | 位置 | 说明 |
 |------|------|------|
-| InputOrderMappingSystem fallback tag 解析 | `InputOrderMappingSystem.cs:544` | 当带后缀的 tag key 找不到时，fallback 到 base tag key |
+| InputOrderMappingSystem fallback order type key | `InputOrderMappingSystem.cs:544` | Falls back from a suffixed order type key to the base order type key. |
 | ConfigCatalogEntry IdField 隐式 fallback | `ConfigCatalogEntry.cs:14` | `idField` 为空时静默回退为 `"id"`，应显式要求调用方指定 |
 | Editor Bridge MergeMapConfig board fallback | 审计 doc 15 | 找不到 `default` board 时 fallback 到第一个含 DataFile 的 board |
 
@@ -73,7 +73,6 @@ Core 本身也作为 Mod 挂载。所有 gameplay 内容（技能、效果、地
 
 | 问题 | 位置 | 说明 |
 |------|------|------|
-| OrderBufferSystem 保留全局队列"for backwards compatibility" | `OrderBufferSystem.cs:70` | 注释明确写了 backward compatibility，应迁移调用方后删除 |
 | FireMapEvent 兼容全局 trigger | 审计 doc 15 §2.2 | 初始版本为兼容旧 trigger 增加了 fallback 链，Phase 2 测试已验证移除后不影响功能 |
 | PR #13 "生产最优方案"被关闭 | 收束矩阵 doc 18 | 主方向"去 fallback/去旧链路"正确，但整包引入有噪声 |
 
