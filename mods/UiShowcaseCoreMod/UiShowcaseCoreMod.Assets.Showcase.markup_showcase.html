@@ -1,0 +1,241 @@
+﻿<div class="skin-root {{theme_class}} {{density_class}}">
+  <div class="skin-header">Markup + CodeBehind - HTML/CSS Prototype</div>
+  <div class="control-row">
+    <button id="markup-theme-light" ui-click="ThemeLight">Light</button>
+    <button id="markup-theme-dark" class="skin-primary" ui-click="ThemeDark">Dark</button>
+    <button id="markup-theme-hud" ui-click="ThemeHud">GameHUD</button>
+  </div>
+  <div class="page-grid-row">
+    <article id="markup-overview" class="skin-card">
+      <div class="page-card-title">OverviewPage</div>
+      <div class="page-copy">Prototype-first authoring, native DOM, all behavior in pure C#.</div>
+      <div id="markup-count">Counter: {{count}}</div>
+      <div class="control-row">
+        <button id="markup-inc" class="skin-primary" ui-click="Increment">Increment</button>
+        <button id="markup-reset" ui-click="ResetCounter">Reset</button>
+      </div>
+      <div class="muted">Theme: {{theme_label}} / Density: {{density_label}}</div>
+    </article>
+    <article id="markup-controls" class="skin-card">
+      <div class="page-card-title">ControlsPage</div>
+      <div class="control-row">
+        <button id="markup-checkbox" class="control-chip {{checkbox_class}}" ui-click="ToggleCheckbox">Checkbox: {{checkbox_label}}</button>
+        <button id="markup-switch" class="control-chip {{switch_class}}" ui-click="ToggleSwitch">Switch: {{switch_label}}</button>
+        <input id="markup-radio-primary" class="control-chip" type="radio" name="markup-mode" {{radio_primary_checked}} ui-click="SelectModePrimary" value="primary" />
+        <input id="markup-radio-secondary" class="control-chip" type="radio" name="markup-mode" {{radio_secondary_checked}} ui-click="SelectModeSecondary" value="secondary" />
+      </div>
+      <div class="control-row">
+        <div class="control-chip">Select / Dropdown</div>
+        <div class="control-chip">Slider 72%</div>
+      </div>
+      <div class="page-copy">ProgressBar</div>
+      <div class="progress-track"><div class="progress-fill" style="width:72%;"></div></div>
+    </article>
+    <article id="markup-forms" class="skin-card">
+      <div class="page-card-title">FormsPage</div>
+      <input id="markup-email-input" class="control-chip" type="email" required="true" pattern="^[^@\s]+@ludots\.dev$" placeholder="Email / required / @ludots.dev" value="{{email_value}}" />
+      <input id="markup-password-input" class="control-chip" type="password" required="true" minlength="8" placeholder="Password / required / min 8" value="{{password_value}}" />
+      <textarea id="markup-notes-input" class="control-chip" required="true" maxlength="64" placeholder="Validation summary / notes / max 64" value="{{notes_value}}"></textarea>
+      <div id="markup-form-status" class="{{form_status_class}}">{{form_status_text}}</div>
+      <div class="control-row">
+        <button ui-click="SubmitInvalid">Invalid</button>
+        <button class="skin-primary" ui-click="SubmitValid">Valid</button>
+        <button ui-click="ResetForm">Reset</button>
+      </div>
+    </article>
+  </div>
+  <div class="page-grid-row">
+    <article id="markup-collections" class="skin-card">
+      <div class="page-card-title">CollectionsPage</div>
+      <div id="markup-selected" class="page-copy">Selected item: #{{selected_item}}</div>
+      <div class="control-row">
+        <button id="markup-item-1" class="control-chip {{item_1_class}}" ui-click="SelectItemOne">Item 1</button>
+        <button id="markup-item-2" class="control-chip {{item_2_class}}" ui-click="SelectItemTwo">Item 2</button>
+        <button id="markup-item-3" class="control-chip {{item_3_class}}" ui-click="SelectItemThree">Item 3</button>
+      </div>
+      <table id="markup-stats-table">
+        <thead>
+          <tr>
+            <th>Prototype Identifier</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td rowspan="2">Sentinel Vanguard Frame</td>
+            <td>Guardian</td>
+          </tr>
+          <tr>
+            <td>Escort</td>
+          </tr>
+          <tr>
+            <td colspan="2">Status: Active</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="muted">Same semantic page as Compose / Reactive.</div>
+    </article>
+    <article id="markup-overlays" class="skin-card">
+      <div class="page-card-title">OverlaysPage</div>
+      <div class="control-row">
+        <button id="markup-modal-toggle" class="skin-primary" ui-click="ToggleModal">{{modal_toggle_text}}</button>
+        <button id="markup-toast-toggle" ui-click="ToggleToast">{{toast_toggle_text}}</button>
+      </div>
+      {{modal_fragment}}
+      {{toast_fragment}}
+    </article>
+    <article id="markup-styles" class="skin-card">
+      <div class="page-card-title">AppearancePage</div>
+      <div class="page-copy">Backdrop blur / filter blur / flex wrap / structural pseudo / scroll / clip / density tokens.</div>
+      <div id="markup-appearance-lab" class="appearance-lab">
+        <div id="markup-appearance-host" class="appearance-host">
+          <div class="appearance-background">
+            <div class="appearance-pane-left"></div>
+            <div class="appearance-pane-right"></div>
+          </div>
+          <article id="markup-frosted-card" class="skin-card frosted-glass" style="position:absolute; left:18px; top:18px;">
+            <div class="page-card-title">Frosted Glass</div>
+            <div class="muted">Simplified backdrop blur on Skia scene.</div>
+            <div id="markup-blur-chip" class="control-chip appearance-blur-chip">Blur badge</div>
+          </article>
+        </div>
+        <div id="markup-wrap-demo" class="wrap-demo">
+          <div class="control-chip">First</div>
+          <div class="control-chip">Second</div>
+          <div class="control-chip">Third</div>
+          <div class="control-chip">Fourth</div>
+          <div class="control-chip">Fifth</div>
+          <div class="control-chip">Sixth</div>
+        </div>
+        <div id="markup-appearance-row" class="page-grid-row">
+          <button id="markup-transition-probe" class="transition-probe">Focus Transition Probe</button>
+          <div id="markup-rtl-card" class="appearance-mini-card">
+            <div id="markup-rtl-text" class="rtl-sample">שלום Ludots 你好</div>
+            <div class="muted">RTL / text-align / multilingual sample</div>
+          </div>
+          <div class="image-demo-row">
+            <img id="markup-image-cover" class="image-sample-cover" src="{{cover_art_data_uri}}" />
+            <img id="markup-image-nine" class="image-sample-nine" src="{{frame_art_data_uri}}" />
+          </div>
+        </div>
+      </div>
+      <div class="page-grid-row">
+        <div id="markup-selector-panel" class="appearance-mini-card">
+          <div class="page-card-title">Selector Lab</div>
+          <div class="muted">Sibling combinators / :not / :is / :where / nth-last-child / attribute operators.</div>
+          <div id="markup-selector-lab" class="selector-lab">
+            <div id="markup-selector-alpha" class="selector-pill" data-role="hero-main" data-tone="warm-ember" data-flags="featured lead" lang="zh-CN">Alpha</div>
+            <div id="markup-selector-beta" class="selector-pill" data-role="support-core" data-tone="neutral-cold" data-flags="support secondary">Beta</div>
+            <div id="markup-selector-gamma" class="selector-pill" data-role="support-ops" data-tone="cobalt-cold" data-flags="secondary fallback">Gamma</div>
+            <div id="markup-selector-delta" class="selector-pill" data-role="utility" data-tone="warm-gold" data-flags="auxiliary">Delta</div>
+          </div>
+          <div id="markup-selector-note" class="selector-note">Adjacent and general siblings restyle chips after the featured entry.</div>
+        </div>
+        <div id="markup-stack-host" class="stack-host">
+          <div class="page-card-title" style="position:absolute; left:12px; top:10px;">Stack / Transform Lab</div>
+          <div class="selector-note" style="position:absolute; left:12px; top:34px;">z-index and transformed hit area stay aligned.</div>
+          <div id="markup-stack-back" class="stack-card stack-back" style="position:absolute; left:18px; top:56px; z-index:1;">Back</div>
+          <div id="markup-stack-mid" class="stack-card stack-mid" style="position:absolute; left:82px; top:48px; z-index:2;">Mid</div>
+          <div id="markup-stack-front" class="stack-card stack-front" style="position:absolute; left:138px; top:42px; z-index:4; transform:translate(-18px, 10px) rotate(-8deg) scale(1.04);">Front</div>
+        </div>
+      </div>
+      <div id="markup-phase2-panel" class="phase-two-panel">
+        <div id="markup-phase2-surface" class="phase-two-layered-surface">
+          <div class="page-card-title">Phase 2 Visual Lab</div>
+          <div class="muted">Multi-background / multi-shadow / dashed border stay native.</div>
+          <div class="phase-two-badge">Layered Surface</div>
+        </div>
+        <div class="phase-two-lab-row">
+          <div id="markup-phase2-border-chip" class="phase-two-border-chip">Dotted Border Chip</div>
+          <div id="markup-phase2-mask-host" class="phase-two-mask-host">
+            <div id="markup-phase2-mask-label" class="phase-two-badge">Gradient Mask</div>
+            <div class="muted">Alpha mask fades both edges for prototype cards.</div>
+          </div>
+          <div id="markup-phase2-clip-host" class="phase-two-clip-host">
+            <div id="markup-phase2-clip-label" class="phase-two-badge">Circle Clip</div>
+            <div id="markup-phase2-clip-ribbon" class="phase-two-clip-ribbon">clip-path keeps decorative ribbon bounded</div>
+          </div>
+        </div>
+      </div>      <div id="markup-phase3-panel" class="phase-three-panel">
+        <div class="page-card-title">Phase 3 Text Lab</div>
+        <div class="muted">Multilingual / RTL / ellipsis / decoration evidence in one native panel.</div>
+        <div class="phase-three-row">
+          <div id="markup-phase3-multilingual" class="phase-three-card phase-three-multilingual">Hello 文本 שלום 😀 office ffi</div>
+          <div id="markup-phase3-rtl" class="phase-three-card phase-three-rtl">שלום Ludots ממשק RTL</div>
+        </div>
+        <div class="phase-three-row">
+          <div id="markup-phase3-ellipsis" class="phase-three-card phase-three-ellipsis">Prototype export keeps extremely long labels readable inside narrow HUD chips and table headers.</div>
+          <div id="markup-phase3-decoration" class="phase-three-card phase-three-decoration">Underline + strike decoration stays native</div>
+        </div>
+      </div>
+      <div id="markup-phase4-panel" class="phase-four-panel">
+        <div class="page-card-title">Phase 4 Image + Vector Lab</div>
+        <div class="muted">background-image:url / inline SVG / native C# canvas share one Skia renderer.</div>
+        <div class="phase-four-row">
+          <div id="markup-phase4-bg-host" class="phase-four-bg-host">
+            <div id="markup-phase4-bg-badge" class="phase-four-chip">CSS Background</div>
+            <div class="muted">cover / center / no-repeat from CSS file.</div>
+          </div>
+          <svg id="markup-phase4-svg-image" class="phase-four-svg-image" viewBox="0 0 160 120" width="160" height="120">
+            <defs>
+              <linearGradient id="markup-phase4-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#2563eb"></stop>
+                <stop offset="55%" stop-color="#22d3ee"></stop>
+                <stop offset="100%" stop-color="#f59e0b"></stop>
+              </linearGradient>
+            </defs>
+            <rect x="0" y="0" width="160" height="120" rx="22" fill="url(#markup-phase4-bg)"></rect>
+            <rect x="14" y="16" width="132" height="88" rx="18" fill="rgba(255,255,255,0.22)"></rect>
+            <circle cx="122" cy="34" r="14" fill="#fef08a"></circle>
+            <path d="M28 76C40 58 62 48 84 52C101 55 116 68 128 88" stroke="#0f172a" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.35"></path>
+            <rect x="24" y="74" width="74" height="24" rx="12" fill="#111827" opacity="0.72"></rect>
+            <text x="61" y="90" text-anchor="middle" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="12" font-weight="700" fill="#ffffff">Ludots</text>
+          </svg>
+          <canvas id="markup-phase4-canvas" class="phase-four-canvas" width="220" height="120" ui-canvas="BuildPhaseFourCanvas"></canvas>
+        </div>
+      </div>
+      <div id="markup-phase5-panel" class="phase-five-panel">
+        <div class="page-card-title">Phase 5 Keyframe Animation Lab</div>
+        <div class="muted">Pure CSS @keyframes / animation reuse the same UiScene.AdvanceTime clock and Skia renderer.</div>
+        <div class="phase-five-row">
+          <button id="markup-phase5-pulse" class="phase-five-card phase-five-pulse">Pulse Keyframes</button>
+          <button id="markup-phase5-breathe" class="phase-five-card phase-five-breathe">Alternate + Delay</button>
+        </div>
+      </div>
+      <div id="markup-scroll-demo-row" class="scroll-demo-row">
+        <div id="markup-scroll-host" class="scroll-host scroll-stack">
+          <div id="markup-scroll-item-1" class="scroll-item scroll-item-accent">Scroll host · wheel / thumb drag</div>
+          <div id="markup-scroll-item-2" class="scroll-item">Token sync and skin swap stay intact</div>
+          <div id="markup-scroll-item-3" class="scroll-item">Native layout keeps deterministic offsets</div>
+          <div id="markup-scroll-item-4" class="scroll-item">Form section can sit inside one host</div>
+          <div id="markup-scroll-item-5" class="scroll-item">Table rows remain clipped inside bounds</div>
+          <div id="markup-scroll-item-6" class="scroll-item">Skia and Web overlay consume same diff</div>
+          <div id="markup-scroll-item-7" class="scroll-item">No JS bridge required</div>
+          <div id="markup-scroll-item-8" class="scroll-item">Pure C# runtime interaction path</div>
+        </div>
+        <div id="markup-clip-host" class="clip-host">
+          <div class="scroll-helper" style="position:absolute; left:10px; top:10px;">Clip host</div>
+          <div id="markup-clip-ribbon" class="clip-ribbon">Overflow ribbon is clipped by native bounds</div>
+          <div class="scroll-helper" style="position:absolute; left:10px; top:56px;">Prototype export stays visually bounded.</div>
+        </div>
+      </div>
+      <div class="control-row">
+        <button ui-click="DensityCompact">Compact</button>
+        <button class="skin-primary" ui-click="DensityCozy">Cozy</button>
+        <button ui-click="DensityComfortable">Comfortable</button>
+      </div>
+      <div id="markup-density" class="muted">Current density: {{density_label_prefixed}}</div>
+      <div class="control-row">
+        <div class="control-chip state-disabled">Disabled</div>
+        <div class="control-chip active">Loading</div>
+        <div class="control-chip error-text">Error</div>
+      </div>
+    </article>
+  </div>
+  <article id="markup-prototype" class="skin-card">
+    <div class="page-card-title">PrototypeImportPage</div>
+    <div class="page-copy">Prototype HTML/CSS compiles into native DOM, then binds back to C# methods.</div>
+    <div class="muted">Unsupported features are surfaced as diagnostics instead of silently ignored.</div>
+    <div class="control-row">{{diagnostics_fragment}}</div>
+  </article>
+</div>

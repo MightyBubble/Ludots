@@ -1,0 +1,8 @@
+{
+  "name": "UiShowcaseCoreMod",
+  "version": "1.0.0",
+  "description": "Shared UI showcase scenes, themes and mounting helpers.",
+  "main": "bin/net8.0/UiShowcaseCoreMod.dll",
+  "priority": 0,
+  "dependencies": {}
+}

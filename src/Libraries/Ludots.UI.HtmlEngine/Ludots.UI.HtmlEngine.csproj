@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <ItemGroup>
     <ProjectReference Include="..\Ludots.UI\Ludots.UI.csproj" />
+    <ProjectReference Include="..\ExCSS\ExCSS.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
+    <AssemblyName>Ludots.UI.HtmlEngine</AssemblyName>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -12,6 +13,7 @@
     <DefineConstants>NETSTANDARD2_0;NET8_0_OR_GREATER</DefineConstants>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,18 +22,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Exclude AssemblyInfo files to avoid duplication -->
-    <Compile Remove="**\AssemblyInfo.cs" />
-    <Compile Remove="**\GlobalUsings.cs" />
-    <!-- Exclude AngleSharp benchmarks and tests -->
-    <Compile Remove="External\AngleSharp\src\AngleSharp.Benchmarks\**" />
-    <Compile Remove="External\AngleSharp\src\AngleSharp.Core.Tests\**" />
-    <Compile Remove="External\AngleSharp\src\AngleSharp.Core.Docs\**" />
-    <Compile Remove="External\AngleSharp\src\nuke\**" />
-    <!-- Exclude ExCSS tests -->
-    <Compile Remove="External\ExCSS\src\ExCSS.Tests\**" />
-    <!-- Exclude FlexLayoutSharp tests -->
-    <Compile Remove="External\FlexLayoutSharp\src\TestFlexLayoutSharp\**" />
+    <Compile Include="Markup\**\*.cs" />
+    <Compile Include="Properties\**\*.cs" />
+    <Compile Include="External\AngleSharp\src\**\*.cs"
+             Exclude="External\AngleSharp\src\AngleSharp.Benchmarks\**;
+                      External\AngleSharp\src\AngleSharp.Core.Tests\**;
+                      External\AngleSharp\src\AngleSharp.Core.Docs\**;
+                      External\AngleSharp\src\nuke\**" />
   </ItemGroup>
-
 </Project>

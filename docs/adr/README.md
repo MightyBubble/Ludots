@@ -5,7 +5,7 @@
 ## 1 目录
 
 *   [ADR-0001 文档 SSOT 分层结构](ADR-0001-docs-ssot-layout.md)
-*   ADR-0002 统一 UI Runtime 与三前端写法（预留编号，文档尚未落盘）
+*   [ADR-0002 统一 UI Runtime 与三前端写法](ADR-0002-unified-ui-runtime-and-authoring-models.md)
 
 ## 2 编写规则
 

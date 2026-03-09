@@ -1,62 +1,114 @@
-using SkiaSharp;
+using System;
 using Ludots.UI.Input;
-using Ludots.UI.Widgets;
+using Ludots.UI.Runtime;
+using Ludots.UI.Runtime.Events;
+using SkiaSharp;
 
 namespace Ludots.UI;
 
 public class UIRoot
 {
-    public Widget? Content { get; set; }
-    public float Width { get; private set; }
-    public float Height { get; private set; }
-    public bool IsDirty { get; set; } = true;
+	private readonly UiSceneRenderer _sceneRenderer = new UiSceneRenderer();
 
-    public void Resize(float width, float height)
-    {
-        Width = width;
-        Height = height;
-        IsDirty = true;
-    }
+	private UiNodeId? _pressedNodeId;
 
-    public void Render(SKCanvas canvas)
-    {
-        if (Content != null)
-        {
-            // Ensure Root Content fills the screen
-            if (Content.Width != Width || Content.Height != Height)
-            {
-                Content.Width = Width;
-                Content.Height = Height;
-                // If it's a FlexNodeWidget, this change might need to trigger MarkDirty or Layout?
-                // But Render will call CalculateLayout if it's root.
-            }
+	public UiScene? Scene { get; private set; }
 
-            Content.Render(canvas);
-        }
-        IsDirty = false;
-    }
-    
-    public bool HandleInput(InputEvent e)
-    {
-        if (Content != null)
-        {
-            // Propagate dirty state if input handled (assuming interaction might change visual state)
-            // Ideally widgets should set IsDirty themselves, but for now we can be safe
-            // Actually, let's not auto-dirty on input unless widget says so?
-            // But Widget.HandleInput returns bool 'handled'.
-            // Let's assume handled input might change state.
-            bool handled = Content.HandleInput(e, 0, 0);
-            if (handled)
-            {
-                IsDirty = true;
-            }
-            // We can't know if handled input caused visual change without Widget reporting it.
-            // But for this simple demo, let's assume if it returns true, we might need redraw.
-            // Wait, HandleInput in Widget.cs returns false by default.
-            // HtmlWidget currently doesn't override HandleInput except OnPointerEvent.
-            // Let's check HtmlWidget.
-            return handled;
-        }
-        return false;
-    }
+	public float Width { get; private set; }
+
+	public float Height { get; private set; }
+
+	public bool IsDirty { get; set; } = true;
+
+	public void MountScene(UiScene scene)
+	{
+		Scene = scene ?? throw new ArgumentNullException("scene");
+		IsDirty = true;
+	}
+
+	public void ClearScene()
+	{
+		Scene = null;
+		IsDirty = true;
+	}
+
+	public void Resize(float width, float height)
+	{
+		Width = width;
+		Height = height;
+		IsDirty = true;
+	}
+
+	public void Render(SKCanvas canvas)
+	{
+		if (Scene == null)
+		{
+			IsDirty = false;
+			return;
+		}
+		_sceneRenderer.Render(Scene, canvas, Width, Height);
+		IsDirty = false;
+	}
+
+	public bool Update(float deltaSeconds)
+	{
+		if (Scene == null)
+		{
+			return false;
+		}
+		bool flag = Scene.AdvanceTime(deltaSeconds);
+		if (flag)
+		{
+			IsDirty = true;
+		}
+		return flag;
+	}
+
+	public bool HandleInput(InputEvent e)
+	{
+		if (Scene == null)
+		{
+			return false;
+		}
+		Scene.Layout(Width, Height);
+		if (!(e is PointerEvent pointerEvent))
+		{
+			return false;
+		}
+		bool flag = false;
+		UiNodeId? uiNodeId = Scene.HitTest(pointerEvent.X, pointerEvent.Y)?.Id;
+		switch (pointerEvent.Action)
+		{
+		case PointerAction.Move:
+			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Move, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
+			break;
+		case PointerAction.Down:
+			_pressedNodeId = uiNodeId;
+			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Down, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
+			break;
+		case PointerAction.Up:
+		{
+			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Up, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
+			UiNodeId? pressedNodeId = _pressedNodeId;
+			if (pressedNodeId.HasValue)
+			{
+				UiNodeId valueOrDefault = pressedNodeId.GetValueOrDefault();
+				if (valueOrDefault.IsValid && uiNodeId == valueOrDefault)
+				{
+					flag |= Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Click, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, valueOrDefault)).Handled;
+				}
+			}
+			_pressedNodeId = null;
+			break;
+		}
+		case PointerAction.Scroll:
+			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Scroll, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId, pointerEvent.DeltaX, pointerEvent.DeltaY)).Handled;
+			break;
+		}
+		if (flag || Scene.IsDirty)
+		{
+			IsDirty = true;
+		}
+		return flag;
+	}
 }
