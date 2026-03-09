@@ -3,6 +3,9 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Input.Selection;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using RtsDemoMod.Systems;
@@ -41,8 +44,20 @@ namespace RtsDemoMod.Triggers
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var oq) && oq is OrderQueue orders)
             {
                 engine.RegisterSystem(new RtsLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.InputCollection);
+                engine.RegisterSystem(new RtsScenarioSystem(engine, orders), SystemGroup.InputCollection);
                 _ctx.Log("[RtsDemoMod] RtsLocalOrderSourceSystem registered");
             }
+
+            var debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
+            var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
+            if (debugDraw != null && meshes != null)
+            {
+                engine.RegisterPresentationSystem(new RtsPresentationSystem(engine, debugDraw, meshes));
+            }
+
+            var selectionPolicy = new RtsSelectionCandidatePolicy();
+            engine.SetService(CoreServiceKeys.SelectionCandidatePolicy, selectionPolicy);
+            engine.GlobalContext[CoreServiceKeys.SelectionCandidatePolicy.Name] = selectionPolicy;
 
             ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");
 

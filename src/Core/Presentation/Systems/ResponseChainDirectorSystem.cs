@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
@@ -30,6 +31,7 @@ namespace Ludots.Core.Presentation.Systems
  
         public override void Update(in float dt)
         {
+            ConsumeUiStateTransitions();
             if (_telemetry.Count == 0) return;
  
             for (int i = 0; i < _telemetry.Count; i++)
@@ -76,6 +78,29 @@ namespace Ludots.Core.Presentation.Systems
             }
  
             _telemetry.Clear();
+        }
+
+        private void ConsumeUiStateTransitions()
+        {
+            for (int i = 0; i < _telemetry.Count; i++)
+            {
+                var evt = _telemetry[i];
+                if (evt.Kind == ResponseChainTelemetryKind.WindowClosed)
+                {
+                    _ui.Close(evt.RootId);
+                }
+            }
+
+            while (_orderRequests.TryDequeue(out var request))
+            {
+                if (_ui.Visible && _ui.RootId != request.RequestId)
+                {
+                    throw new InvalidOperationException(
+                        $"ResponseChainDirectorSystem: cannot replace active root {_ui.RootId} with queued root {request.RequestId} before the previous prompt is closed.");
+                }
+
+                _ui.ApplyRequest(request);
+            }
         }
     }
 }

@@ -1,0 +1,31 @@
+{
+  "interactionMode": "SmartCast",
+  "mappings": [
+    {
+      "actionId": "Command",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": {
+        "i0": 0
+      },
+      "requireSelection": true,
+      "selectionType": "Position",
+      "isSkillMapping": false,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "Stop",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "stop",
+      "argsTemplate": {},
+      "requireSelection": true,
+      "selectionType": "None",
+      "isSkillMapping": false,
+      "modifierBehavior": "IgnoreModifier"
+    }
+  ],
+  "userOverrides": {
+    "enabled": false,
+    "persistPath": ""
+  }
+}

@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -92,6 +93,51 @@ namespace Ludots.Core.Gameplay.Camera
             float screenY = (1f - ndcY) * 0.5f * resolution.Y;
 
             return new Vector2(screenX, screenY);
+        }
+
+        /// <summary>
+        /// Reconstruct a world-space screen ray from screen pixels.
+        /// </summary>
+        public static ScreenRay ScreenToRay(
+            Vector2 screen,
+            in CameraRenderState3D camera,
+            Vector2 resolution,
+            float aspectRatio)
+        {
+            if (resolution.X <= 0f || resolution.Y <= 0f)
+            {
+                return new ScreenRay(camera.Position, Vector3.Normalize(camera.Target - camera.Position));
+            }
+
+            float ndcX = (screen.X / resolution.X) * 2f - 1f;
+            float ndcY = 1f - (screen.Y / resolution.Y) * 2f;
+
+            var view = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.Up);
+            float fovYRad = camera.FovYDeg * (float)(Math.PI / 180.0);
+            var proj = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, aspectRatio, NearPlane, FarPlane);
+            var viewProj = view * proj;
+
+            if (!Matrix4x4.Invert(viewProj, out var invViewProj))
+            {
+                return new ScreenRay(camera.Position, Vector3.Normalize(camera.Target - camera.Position));
+            }
+
+            var nearClip = new Vector4(ndcX, ndcY, 0f, 1f);
+            var farClip = new Vector4(ndcX, ndcY, 1f, 1f);
+
+            var nearWorld4 = Vector4.Transform(nearClip, invViewProj);
+            var farWorld4 = Vector4.Transform(farClip, invViewProj);
+            if (MathF.Abs(nearWorld4.W) < 1e-6f || MathF.Abs(farWorld4.W) < 1e-6f)
+            {
+                return new ScreenRay(camera.Position, Vector3.Normalize(camera.Target - camera.Position));
+            }
+
+            nearWorld4 /= nearWorld4.W;
+            farWorld4 /= farWorld4.W;
+
+            var nearWorld = new Vector3(nearWorld4.X, nearWorld4.Y, nearWorld4.Z);
+            var farWorld = new Vector3(farWorld4.X, farWorld4.Y, farWorld4.Z);
+            return new ScreenRay(nearWorld, Vector3.Normalize(farWorld - nearWorld));
         }
 
         /// <summary>

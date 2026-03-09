@@ -1,5 +1,6 @@
 using System;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.FlowField;
 using Ludots.Core.Navigation2D.Spatial;
 using Ludots.Core.Spatial;
@@ -8,6 +9,7 @@ namespace Ludots.Core.Navigation2D.Runtime
 {
     public sealed class Navigation2DRuntime : IDisposable
     {
+        public Navigation2DConfig Config { get; }
         public readonly Navigation2DWorld AgentSoA;
         public readonly Nav2DCellMap CellMap;
         public readonly CrowdSurface2D Surface;
@@ -21,10 +23,22 @@ namespace Ludots.Core.Navigation2D.Runtime
         public int FlowIterationsPerTick { get; set; } = 1024;
 
         public Navigation2DRuntime(int maxAgents, int gridCellSizeCm, ILoadedChunks? loadedChunks)
+            : this(
+                new Navigation2DConfig
+                {
+                    MaxAgents = maxAgents,
+                },
+                gridCellSizeCm,
+                loadedChunks)
         {
+        }
+
+        public Navigation2DRuntime(Navigation2DConfig config, int gridCellSizeCm, ILoadedChunks? loadedChunks)
+        {
+            Config = config ?? throw new ArgumentNullException(nameof(config));
             var cellSize = Fix64.FromInt(gridCellSizeCm);
-            AgentSoA = new Navigation2DWorld(new Navigation2DWorldSettings(maxAgents, cellSize));
-            CellMap = new Nav2DCellMap(cellSize, initialAgentCapacity: maxAgents, initialCellCapacity: Math.Max(128, maxAgents / 2));
+            AgentSoA = new Navigation2DWorld(new Navigation2DWorldSettings(Config.MaxAgents, cellSize));
+            CellMap = new Nav2DCellMap(cellSize, initialAgentCapacity: Config.MaxAgents, initialCellCapacity: Math.Max(128, Config.MaxAgents / 2));
 
             Surface = new CrowdSurface2D(cellSize, tileSizeCells: 64, initialTileCapacity: 256);
             Flows = new[]
@@ -37,6 +51,8 @@ namespace Ludots.Core.Navigation2D.Runtime
             {
                 _streaming = new CrowdFlowChunkStreaming(loadedChunks, Flows);
             }
+
+            FlowIterationsPerTick = Config.FlowIterationsPerTick;
         }
 
         public int FlowCount => Flows.Length;

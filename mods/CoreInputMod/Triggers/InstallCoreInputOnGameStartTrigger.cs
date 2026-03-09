@@ -7,6 +7,7 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Systems;
@@ -60,6 +61,44 @@ namespace CoreInputMod.Triggers
                 engine.GlobalContext[CoreServiceKeys.SelectionRuleRegistry.Name] = SelectionRuleRegistry.CreateWithDefaults();
             }
 
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionProfileRegistry.Name, out var selectionProfilesObj)
+                || selectionProfilesObj is not SelectionProfileRegistry)
+            {
+                var profiles = new SelectionProfileRegistry(engine.ConfigPipeline);
+                profiles.Load("Configs/Selection/profiles.json");
+                engine.SetService(CoreServiceKeys.SelectionProfileRegistry, profiles);
+                engine.GlobalContext[CoreServiceKeys.SelectionProfileRegistry.Name] = profiles;
+            }
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionInteractionState.Name, out var selectionStateObj)
+                || selectionStateObj is not SelectionInteractionState)
+            {
+                var selectionState = new SelectionInteractionState();
+                engine.SetService(CoreServiceKeys.SelectionInteractionState, selectionState);
+                engine.GlobalContext[CoreServiceKeys.SelectionInteractionState.Name] = selectionState;
+            }
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionCandidatePolicy.Name, out var selectionPolicyObj)
+                || selectionPolicyObj is not ISelectionCandidatePolicy)
+            {
+                var selectionPolicy = new DefaultSelectionCandidatePolicy();
+                engine.SetService(CoreServiceKeys.SelectionCandidatePolicy, selectionPolicy);
+                engine.GlobalContext[CoreServiceKeys.SelectionCandidatePolicy.Name] = selectionPolicy;
+            }
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionInputHandler.Name, out var selectionInputObj)
+                || selectionInputObj is not ISelectionInputHandler)
+            {
+                var input = engine.GetService(CoreServiceKeys.InputHandler);
+                var interaction = engine.GetService(CoreServiceKeys.SelectionInteractionState);
+                if (input != null && interaction != null)
+                {
+                    var selectionInput = new ScreenSelectionInputHandler(engine.GlobalContext, input, interaction);
+                    engine.SetService(CoreServiceKeys.SelectionInputHandler, selectionInput);
+                    engine.GlobalContext[CoreServiceKeys.SelectionInputHandler.Name] = selectionInput;
+                }
+            }
+
             var selectionRules = (SelectionRuleRegistry)engine.GlobalContext[CoreServiceKeys.SelectionRuleRegistry.Name];
 
             var clickSelect = new EntityClickSelectSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
@@ -77,6 +116,7 @@ namespace CoreInputMod.Triggers
             engine.RegisterSystem(gasSelection, SystemGroup.InputCollection);
 
             engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
+            engine.RegisterSystem(new SelectionCommandSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new SkillBarOverlaySystem(engine.World, engine.GlobalContext));
             engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext, engine.SpatialQueries), SystemGroup.InputCollection);
 
@@ -84,7 +124,7 @@ namespace CoreInputMod.Triggers
             engine.GlobalContext[ViewModeManager.GlobalKey] = vmManager;
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
 
-            _ctx.Log("[CoreInputMod] EntityClickSelect, GasSelectionResponse, GasInputResponse, SkillBar, TabTarget, ViewMode registered");
+            _ctx.Log("[CoreInputMod] EntityClickSelect, GasSelectionResponse, GasInputResponse, SelectionCommand, SkillBar, TabTarget, ViewMode registered");
             return Task.CompletedTask;
         }
     }

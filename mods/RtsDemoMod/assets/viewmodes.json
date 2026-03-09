@@ -1,0 +1,13 @@
+[
+  {
+    "id": "Rts",
+    "DisplayName": "RTS",
+    "CameraPresetId": "Rts",
+    "FollowTargetKind": "None",
+    "InputContextId": "Rts_Gameplay",
+    "InteractionMode": "SmartCast",
+    "SelectionProfileId": "Rts",
+    "SkillBarEnabled": false,
+    "SwitchActionId": ""
+  }
+]
