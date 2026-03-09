@@ -149,6 +149,7 @@ namespace Ludots.Core.Gameplay.Camera
                 {
                     State.TargetCm = followTargetPosition.Value;
                     _pendingFollowSnap = false;
+                    SyncVirtualBaseFollowState(targetCm: followTargetPosition.Value, isFollowing: false);
                 }
             }
             else
@@ -159,6 +160,7 @@ namespace Ludots.Core.Gameplay.Camera
             if (FollowMode == CameraFollowMode.None)
             {
                 State.IsFollowing = false;
+                SyncVirtualBaseFollowState(isFollowing: false);
                 return;
             }
 
@@ -171,11 +173,13 @@ namespace Ludots.Core.Gameplay.Camera
             if (!shouldFollow || !followTargetPosition.HasValue)
             {
                 State.IsFollowing = false;
+                SyncVirtualBaseFollowState(isFollowing: false);
                 return;
             }
 
             State.TargetCm = followTargetPosition.Value;
             State.IsFollowing = true;
+            SyncVirtualBaseFollowState(targetCm: followTargetPosition.Value, isFollowing: true);
         }
 
         private Vector2? ResolveFollowTargetPosition()
@@ -210,6 +214,27 @@ namespace Ludots.Core.Gameplay.Camera
             {
                 CopyState(State, _preVirtualState);
             }
+        }
+
+        private void SyncVirtualBaseFollowState(Vector2 targetCm, bool isFollowing)
+        {
+            if (VirtualCameraBrain == null || !VirtualCameraBrain.HasActiveCamera)
+            {
+                return;
+            }
+
+            _preVirtualState.TargetCm = targetCm;
+            _preVirtualState.IsFollowing = isFollowing;
+        }
+
+        private void SyncVirtualBaseFollowState(bool isFollowing)
+        {
+            if (VirtualCameraBrain == null || !VirtualCameraBrain.HasActiveCamera)
+            {
+                return;
+            }
+
+            _preVirtualState.IsFollowing = isFollowing;
         }
 
         private static void CopyState(CameraState source, CameraState destination)

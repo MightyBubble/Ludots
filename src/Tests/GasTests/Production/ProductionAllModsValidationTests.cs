@@ -71,6 +71,12 @@ namespace Ludots.Tests.GAS.Production
                 .SetName("ProdModSmoke_Universal3CCameraMod");
 
             yield return new TestCaseData(new ModCase(
+                    "VirtualCameraBaselineMod",
+                    new[] { "LudotsCoreMod", "VirtualCameraBaselineMod" },
+                    true))
+                .SetName("ProdModSmoke_VirtualCameraBaselineMod");
+
+            yield return new TestCaseData(new ModCase(
                     "UiTestMod",
                     new[] { "LudotsCoreMod", "UiTestMod" },
                     true))

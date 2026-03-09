@@ -44,6 +44,7 @@
     <ProjectReference Include="..\..\..\mods\ArpgDemoMod\ArpgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIDemoMod\AIDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\VirtualCameraBaselineMod\VirtualCameraBaselineMod.csproj" />
   </ItemGroup>
 
 </Project>

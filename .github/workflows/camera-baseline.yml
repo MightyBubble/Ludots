@@ -1,0 +1,54 @@
+name: camera-baseline
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/camera-baseline.yml'
+      - 'assets/Configs/Camera/**'
+      - 'mods/LudotsCoreMod/assets/Entities/templates.json'
+      - 'mods/VirtualCameraBaselineMod/**'
+      - 'src/Core/Engine/GameEngine.cs'
+      - 'src/Core/Gameplay/Camera/**'
+      - 'src/Tests/GasTests/CameraRuntimeConvergenceTests.cs'
+      - 'src/Tests/GasTests/Production/VirtualCameraBaselineModTests.cs'
+      - 'src/Tests/GasTests/Production/ProductionAllModsValidationTests.cs'
+      - 'src/Tests/GasTests/GasTests.csproj'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/camera-baseline.yml'
+      - 'assets/Configs/Camera/**'
+      - 'mods/LudotsCoreMod/assets/Entities/templates.json'
+      - 'mods/VirtualCameraBaselineMod/**'
+      - 'src/Core/Engine/GameEngine.cs'
+      - 'src/Core/Gameplay/Camera/**'
+      - 'src/Tests/GasTests/CameraRuntimeConvergenceTests.cs'
+      - 'src/Tests/GasTests/Production/VirtualCameraBaselineModTests.cs'
+      - 'src/Tests/GasTests/Production/ProductionAllModsValidationTests.cs'
+      - 'src/Tests/GasTests/GasTests.csproj'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build core
+        shell: pwsh
+        run: dotnet build src/Core/Ludots.Core.csproj -v minimal
+
+      - name: Run camera baseline tests
+        shell: pwsh
+        run: >
+          dotnet test src/Tests/GasTests/GasTests.csproj
+          --filter "FullyQualifiedName~Ludots.Tests.ThreeC.CameraRuntimeConvergenceTests|FullyQualifiedName~Ludots.Tests.GAS.Production.VirtualCameraBaselineModTests"
+          -v minimal

@@ -1,0 +1,23 @@
+{
+  "Id": "virtualcamera_baseline_entry",
+  "Tags": ["camera_baseline", "virtual_camera_baseline"],
+  "DefaultCamera": {
+    "PresetId": "TPS"
+  },
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Overrides": {
+        "Name": { "Value": "BaselineHero" },
+        "WorldPositionCm": { "Value": { "X": 1200, "Y": 800 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "BaselineFocusDummy" },
+        "WorldPositionCm": { "Value": { "X": 6400, "Y": 3200 } }
+      }
+    }
+  ]
+}

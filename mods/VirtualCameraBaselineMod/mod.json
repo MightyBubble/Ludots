@@ -1,0 +1,10 @@
+{
+  "name": "VirtualCameraBaselineMod",
+  "version": "1.0.0",
+  "description": "Minimal baseline mod that validates declarative map camera plus runtime virtual camera activation.",
+  "main": "bin/net8.0/VirtualCameraBaselineMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

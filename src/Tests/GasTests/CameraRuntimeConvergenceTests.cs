@@ -225,6 +225,57 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void CameraManager_VirtualCamera_ClearAfterFollowTargetResolves_RestoresResolvedBaseTarget()
+        {
+            var manager = new CameraManager();
+            var target = new StaticFollowTarget();
+            var registry = new VirtualCameraRegistry();
+            registry.Register(new VirtualCameraDefinition
+            {
+                Id = "IntroFocus",
+                RigKind = CameraRigKind.TopDown,
+                TargetSource = VirtualCameraTargetSource.Fixed,
+                FixedTargetCm = new Vector2(6400f, 3200f),
+                Yaw = 210f,
+                Pitch = 75f,
+                DistanceCm = 18000f,
+                FovYDeg = 42f,
+                BlendCurve = CameraBlendCurve.Cut,
+                AllowUserInput = false
+            });
+
+            manager.SetVirtualCameraRegistry(registry);
+            manager.ApplyPreset(new CameraPreset
+            {
+                Id = "TPSBase",
+                RigKind = CameraRigKind.ThirdPerson,
+                DistanceCm = 400f,
+                Pitch = 15f,
+                Yaw = 180f,
+                FovYDeg = 60f,
+                FollowMode = CameraFollowMode.AlwaysFollow,
+                FollowTargetKind = CameraFollowTargetKind.LocalPlayer
+            }, target, snapToFollowTargetWhenAvailable: true);
+
+            manager.ActivateVirtualCamera("IntroFocus", 0f);
+            manager.Update(0.016f);
+
+            target.PositionCm = new Vector2(1200f, 800f);
+            manager.Update(0.016f);
+
+            Assert.That(manager.State.TargetCm, Is.EqualTo(new Vector2(6400f, 3200f)));
+            Assert.That(manager.State.RigKind, Is.EqualTo(CameraRigKind.TopDown));
+
+            manager.ClearVirtualCamera();
+            manager.Update(0.016f);
+
+            Assert.That(manager.State.TargetCm, Is.EqualTo(target.PositionCm.Value));
+            Assert.That(manager.State.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
+            Assert.That(manager.State.DistanceCm, Is.EqualTo(400f));
+            Assert.That(manager.State.IsFollowing, Is.True);
+        }
+
+        [Test]
         public void CameraViewportUtil_FirstPersonStateToRenderState_DoesNotProduceNaN()
         {
             var state = new CameraState
