@@ -46,7 +46,7 @@ namespace Ludots.Core.Modding
                 return;
             }
 
-            var directories = Directory.GetDirectories(modsRootPath);
+            var directories = ModDiscovery.DiscoverModDirectories(modsRootPath);
             LoadMods(directories);
         }
 

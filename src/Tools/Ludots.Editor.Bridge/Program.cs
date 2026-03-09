@@ -903,7 +903,7 @@ static class EditorRepo
 {
     public sealed record ModInfo(
         string Id, string Name, string Version, int Priority,
-        Dictionary<string, string> Dependencies, string RootPath,
+        Dictionary<string, string> Dependencies, string RootPath, string RelativePath, string LayerPath,
         string Description, string Author, List<string> Tags,
         string ChangelogFile, bool HasThumbnail, bool HasReadme);
 
@@ -920,19 +920,7 @@ static class EditorRepo
     public static List<ModInfo> DiscoverMods(string repoRoot)
     {
         var mods = new Dictionary<string, ModInfo>(StringComparer.OrdinalIgnoreCase);
-
-        void ScanModsRoot(string modsRoot)
-        {
-            if (!Directory.Exists(modsRoot)) return;
-            foreach (var dir in Directory.GetDirectories(modsRoot))
-            {
-                string id = Path.GetFileName(dir);
-                string jsonPath = Path.Combine(dir, "mod.json");
-                if (!File.Exists(jsonPath)) continue;
-                if (mods.ContainsKey(id)) continue;
-                mods[id] = ReadModInfo(id, dir, jsonPath);
-            }
-        }
+        var roots = new List<string>();
 
         var wsPath = Path.Combine(repoRoot, "modworkspace.json");
         if (File.Exists(wsPath))
@@ -940,13 +928,21 @@ static class EditorRepo
             try
             {
                 var ws = Ludots.Core.Modding.Workspace.ModWorkspace.Load(wsPath);
-                foreach (var source in ws.Sources)
-                    ScanModsRoot(source);
+                roots.AddRange(ws.Sources);
             }
             catch { }
         }
 
-        ScanModsRoot(Path.Combine(repoRoot, "mods"));
+        roots.Add(Path.Combine(repoRoot, "mods"));
+
+        var discovered = ModDiscovery.DiscoverMods(roots);
+        for (int i = 0; i < discovered.Count; i++)
+        {
+            var mod = discovered[i];
+            string id = mod.Manifest.Name;
+            if (mods.ContainsKey(id)) continue;
+            mods[id] = ReadModInfo(repoRoot, mod.DirectoryPath, mod.ManifestPath, mod.Manifest);
+        }
 
         return mods.Values.OrderBy(m => m.Priority).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase).ToList();
     }
@@ -1296,27 +1292,54 @@ static class EditorRepo
         }
     }
 
-    private static ModInfo ReadModInfo(string id, string rootPath, string modJsonPath)
+    private static ModInfo ReadModInfo(string repoRoot, string rootPath, string modJsonPath, ModManifest manifest)
     {
-        var manifest = ModManifestJson.ParseStrict(File.ReadAllText(modJsonPath), modJsonPath);
-
         bool hasThumbnail = File.Exists(Path.Combine(rootPath, "assets", "Launcher", "thumbnail.png"))
                          || File.Exists(Path.Combine(rootPath, "assets", "Launcher", "thumbnail.jpg"));
         bool hasReadme = File.Exists(Path.Combine(rootPath, "README.md"));
+        string relativePath = GetRepoRelativePath(repoRoot, rootPath);
+        string layerPath = GetLayerPath(relativePath);
 
         return new ModInfo(
-            id,
+            manifest.Name,
             manifest.Name,
             manifest.Version,
             manifest.Priority,
             new Dictionary<string, string>(manifest.Dependencies, StringComparer.Ordinal),
             rootPath,
+            relativePath,
+            layerPath,
             manifest.Description ?? "",
             manifest.Author ?? "",
             manifest.Tags ?? new List<string>(),
             manifest.Changelog ?? "",
             hasThumbnail,
             hasReadme);
+    }
+
+    private static string GetRepoRelativePath(string repoRoot, string rootPath)
+    {
+        var relative = Path.GetRelativePath(repoRoot, rootPath).Replace('\\', '/');
+        return relative.StartsWith("../", StringComparison.Ordinal) ? rootPath.Replace('\\', '/') : relative;
+    }
+
+    private static string GetLayerPath(string relativePath)
+    {
+        var normalized = relativePath.Replace('\\', '/');
+        const string modsPrefix = "mods/";
+        if (!normalized.StartsWith(modsPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return "external";
+        }
+
+        var modRelative = normalized.Substring(modsPrefix.Length);
+        var lastSlash = modRelative.LastIndexOf('/');
+        if (lastSlash < 0)
+        {
+            return "root";
+        }
+
+        return modRelative.Substring(0, lastSlash);
     }
 
     private static List<string> ResolveLoadOrder(Dictionary<string, ModInfo> mods, string root)

@@ -1,0 +1,40 @@
+[
+  {
+    "id": "Camera.Shot.IntroFocus",
+    "rigKind": "TopDown",
+    "targetSource": "Fixed",
+    "fixedTargetCm": { "x": 6400, "y": 3200 },
+    "yaw": 210,
+    "pitch": 75,
+    "distanceCm": 18000,
+    "fovYDeg": 42,
+    "defaultBlendDuration": 0.0,
+    "blendCurve": "Cut",
+    "allowUserInput": false
+  },
+  {
+    "id": "Camera.Shot.SelectionLock",
+    "rigKind": "ThirdPerson",
+    "targetSource": "FollowTarget",
+    "yaw": 182,
+    "pitch": 12,
+    "distanceCm": 480,
+    "fovYDeg": 58,
+    "defaultBlendDuration": 0.2,
+    "blendCurve": "Linear",
+    "allowUserInput": false
+  },
+  {
+    "id": "Camera.Shot.InspectSweep",
+    "rigKind": "Orbit",
+    "targetSource": "Fixed",
+    "fixedTargetCm": { "x": 3200, "y": 2000 },
+    "yaw": 225,
+    "pitch": 52,
+    "distanceCm": 6800,
+    "fovYDeg": 46,
+    "defaultBlendDuration": 0.6,
+    "blendCurve": "SmoothStep",
+    "allowUserInput": true
+  }
+]

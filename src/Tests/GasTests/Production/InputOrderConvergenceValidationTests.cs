@@ -18,11 +18,10 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            string modsRoot = Path.Combine(repoRoot, "mods");
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                new List<string> { Path.Combine(modsRoot, "LudotsCoreMod") },
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
                 assetsRoot);
 
             var attributeSystems = GetSystems(engine, SystemGroup.AttributeCalculation);
@@ -37,16 +36,10 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            string modsRoot = Path.Combine(repoRoot, "mods");
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                new List<string>
-                {
-                    Path.Combine(modsRoot, "LudotsCoreMod"),
-                    Path.Combine(modsRoot, "CoreInputMod"),
-                    Path.Combine(modsRoot, "MobaDemoMod"),
-                },
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" }),
                 assetsRoot);
             engine.Start();
 
@@ -82,11 +75,10 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            string modsRoot = Path.Combine(repoRoot, "mods");
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                new List<string> { Path.Combine(modsRoot, "LudotsCoreMod") },
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
                 assetsRoot);
 
             var config = engine.GetService(CoreServiceKeys.GameConfig);

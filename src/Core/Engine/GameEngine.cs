@@ -607,6 +607,7 @@ namespace Ludots.Core.Engine
             new CameraPresetLoader(ConfigPipeline, cameraPresetRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.CameraPresetRegistry, cameraPresetRegistry);
             var virtualCameraRegistry = new VirtualCameraRegistry();
+            new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             GameSession.Camera.SetVirtualCameraRegistry(virtualCameraRegistry);
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, cameraPresetRegistry);
@@ -676,8 +677,8 @@ namespace Ludots.Core.Engine
             RegisterSystem(new DisplacementRuntimeSystem(World), SystemGroup.EffectProcessing);
             
             // Phase 4: AttributeCalculation
-            RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
+            RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
             
             // Phase 5: DeferredTriggerCollection
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
@@ -800,7 +801,7 @@ namespace Ludots.Core.Engine
                 ApplyDefaultCamera(mapConfig);
 
                 Diagnostics.Log.Info(in LogChannels.Engine, $"Firing MapLoaded event for {mapId}...");
-                TriggerManager.FireMapEvent(mid, GameEvents.MapLoaded, finalCtx);
+                CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapLoaded, finalCtx));
             }
             else
             {
@@ -829,7 +830,7 @@ namespace Ludots.Core.Engine
             var unloadCtx = CreateContext();
             unloadCtx.Set(CoreServiceKeys.MapId, mid);
             foreach (var kvp in GlobalContext) unloadCtx.Set(kvp.Key, kvp.Value);
-            TriggerManager.FireMapEvent(mid, GameEvents.MapUnloaded, unloadCtx);
+            CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
 
             // Check if this map is at the top of the focus stack
@@ -857,7 +858,7 @@ namespace Ludots.Core.Engine
                 var resumeCtx = CreateContext();
                 resumeCtx.Set(CoreServiceKeys.MapId, restored.MapId);
                 foreach (var kvp in GlobalContext) resumeCtx.Set(kvp.Key, kvp.Value);
-                TriggerManager.FireMapEvent(restored.MapId, GameEvents.MapResumed, resumeCtx);
+                CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(restored.MapId, GameEvents.MapResumed, resumeCtx));
             }
         }
 
@@ -914,7 +915,7 @@ namespace Ludots.Core.Engine
                 var suspendCtx = CreateContext();
                 suspendCtx.Set(CoreServiceKeys.MapId, outerSession.MapId);
                 foreach (var kvp in GlobalContext) suspendCtx.Set(kvp.Key, kvp.Value);
-                TriggerManager.FireMapEvent(outerSession.MapId, GameEvents.MapSuspended, suspendCtx);
+                CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(outerSession.MapId, GameEvents.MapSuspended, suspendCtx));
             }
 
             // Instantiate, decorate, and register inner map triggers
@@ -931,7 +932,7 @@ namespace Ludots.Core.Engine
             ctx.Set(CoreServiceKeys.MapId, inner);
             ctx.Set(CoreServiceKeys.MapTags, mapConfig.Tags);
             foreach (var kvp in GlobalContext) ctx.Set(kvp.Key, kvp.Value);
-            TriggerManager.FireMapEvent(inner, GameEvents.MapLoaded, ctx);
+            CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(inner, GameEvents.MapLoaded, ctx));
         }
 
         /// <summary>
@@ -952,7 +953,7 @@ namespace Ludots.Core.Engine
                 var unloadCtx = CreateContext();
                 unloadCtx.Set(CoreServiceKeys.MapId, innerSession.MapId);
                 foreach (var kvp in GlobalContext) unloadCtx.Set(kvp.Key, kvp.Value);
-                TriggerManager.FireMapEvent(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx);
+                CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx));
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
             }
 
@@ -982,7 +983,7 @@ namespace Ludots.Core.Engine
                 var resumeCtx = CreateContext();
                 resumeCtx.Set(CoreServiceKeys.MapId, outerSession.MapId);
                 foreach (var kvp in GlobalContext) resumeCtx.Set(kvp.Key, kvp.Value);
-                TriggerManager.FireMapEvent(outerSession.MapId, GameEvents.MapResumed, resumeCtx);
+                CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(outerSession.MapId, GameEvents.MapResumed, resumeCtx));
             }
         }
 
@@ -1435,12 +1436,28 @@ namespace Ludots.Core.Engine
             foreach (var kvp in GlobalContext) ctx.Set(kvp.Key, kvp.Value);
 
             Diagnostics.Log.Info(in LogChannels.Engine, "Firing GameStart event...");
-            TriggerManager.FireEvent(GameEvents.GameStart, ctx);
+            CompleteLifecycleEvent(TriggerManager.FireEventAsync(GameEvents.GameStart, ctx));
         }
 
         public void Stop()
         {
             _isRunning = false;
+        }
+
+        private void CompleteLifecycleEvent(System.Threading.Tasks.Task task)
+        {
+            if (task == null)
+            {
+                return;
+            }
+
+            while (!task.IsCompleted)
+            {
+                SyncContext?.ProcessQueue();
+                System.Threading.Thread.Yield();
+            }
+
+            task.GetAwaiter().GetResult();
         }
 
         public void Dispose()

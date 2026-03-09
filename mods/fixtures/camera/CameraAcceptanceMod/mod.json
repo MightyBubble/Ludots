@@ -1,0 +1,14 @@
+{
+  "name": "CameraAcceptanceMod",
+  "version": "1.0.0",
+  "description": "Fixture mod that composes camera profiles, bootstrap, and virtual shots into a minimal acceptance sandbox.",
+  "main": "bin/net8.0/CameraAcceptanceMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "CameraBootstrapMod": "^1.0.0",
+    "VirtualCameraShotsMod": "^1.0.0"
+  }
+}

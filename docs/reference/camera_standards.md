@@ -171,7 +171,7 @@ engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
 | Mod | 当前方式 | 建议 |
 |:--|:--|:--|
 | MobaDemoMod | moba_config.json + trigger | 改为 DefaultCamera + trigger 仅覆盖 target |
-| Universal3CCameraMod | 硬编码 yaw=35, pitch=60 | 改为读取 DefaultCamera |
+| CameraBootstrapMod | 仅负责按地图边界设置 target/distance | Preset 权威保持在 DefaultCamera / CameraProfilesMod |
 | TerrainBenchmarkMod | 硬编码 yaw=35, pitch=60, dist=40000 | 改为 DefaultCamera |
 | Physics2DPlaygroundMod | 硬编码 pitch=60, dist=12000 | 改为 DefaultCamera |
 | Navigation2DPlaygroundMod | 硬编码 pitch=65, dist=18000 | 改为 DefaultCamera |

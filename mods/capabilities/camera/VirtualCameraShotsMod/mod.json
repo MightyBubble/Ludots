@@ -1,0 +1,10 @@
+{
+  "name": "VirtualCameraShotsMod",
+  "version": "1.0.0",
+  "description": "Declarative virtual camera shots plus tag-driven activation on map load.",
+  "main": "bin/net8.0/VirtualCameraShotsMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

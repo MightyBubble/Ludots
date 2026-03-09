@@ -178,25 +178,16 @@ namespace Ludots.ModLauncher.Cli
                 var results = new List<ModInfo>();
                 var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                void TryLoad(string dir)
+                var discovered = ModDiscovery.DiscoverMods(directoriesToScan);
+                for (int i = 0; i < discovered.Count; i++)
                 {
-                    var modJson = Path.Combine(dir, "mod.json");
-                    if (!File.Exists(modJson)) return;
+                    var mod = discovered[i];
+                    if (!seenNames.Add(mod.Manifest.Name))
+                    {
+                        continue;
+                    }
 
-                    var manifest = ModManifestJson.ParseStrict(File.ReadAllText(modJson), modJson);
-                    var name = manifest.Name;
-                    if (seenNames.Contains(name)) return;
-
-                    var full = Path.GetFullPath(dir);
-                    results.Add(new ModInfo(name, full, manifest));
-                    seenNames.Add(name);
-                }
-
-                foreach (var root in directoriesToScan)
-                {
-                    if (!Directory.Exists(root)) continue;
-                    TryLoad(root);
-                    foreach (var d in Directory.GetDirectories(root)) TryLoad(d);
+                    results.Add(new ModInfo(mod.Manifest.Name, mod.DirectoryPath, mod.Manifest));
                 }
 
                 return results;

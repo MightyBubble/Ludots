@@ -56,7 +56,7 @@ dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj
 
 ## 4 服务启动
 
-Ludots 有两个开发时可运行的服务：
+Ludots 当前的 GUI 主路径是 Bridge + React。WPF `ModLauncher` 仍保留 CLI，但不再作为新增能力的主承载面。
 
 ### 4.1 Editor Bridge（ASP.NET Core API，端口 5299）
 
@@ -64,9 +64,21 @@ Ludots 有两个开发时可运行的服务：
 dotnet run --project src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj
 ```
 
-提供 Mod/Map/Terrain 数据的 REST API。
+提供 Mod/Map/Terrain 数据的 REST API，供 launcher 和 editor 共用。
 
-### 4.2 Editor React（Vite 前端，端口 5173）
+### 4.2 Launcher React（Vite 前端，端口 5174）
+
+```bash
+cd src/Tools/Ludots.Launcher.React && npm run dev
+```
+
+或直接使用脚本：
+
+```bash
+.\scripts\run-launcher.cmd
+```
+
+### 4.3 Editor React（Vite 前端，端口 5173）
 
 ```bash
 cd src/Tools/Ludots.Editor.React && npx vite --host 0.0.0.0 --port 5173
@@ -74,7 +86,7 @@ cd src/Tools/Ludots.Editor.React && npx vite --host 0.0.0.0 --port 5173
 
 可视化地图编辑器，连接 Editor Bridge。
 
-### 4.3 Raylib 桌面应用
+### 4.4 Raylib 桌面应用
 
 ```bash
 dotnet run --project src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj -c Release -- game.navigation2d.json

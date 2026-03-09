@@ -100,6 +100,9 @@ function CardItem({ mod, active, selected, missingDeps, onSelect, onToggle }: It
             {mod.tags.slice(0, 3).map(t => <span key={t} className="text-2xs px-1 py-px rounded bg-bg text-gray-500"><Tag size={7} className="inline mr-0.5" />{t}</span>)}
           </div>
         )}
+        {mod.layerPath && mod.layerPath !== "root" && (
+          <div className="mt-1 text-2xs text-accent/80 font-mono">{mod.layerPath}</div>
+        )}
         {missingDeps.length > 0 && active && (
           <div className="flex items-center gap-1 mt-1 text-2xs text-warn">
             <AlertTriangle size={10} />Missing: {missingDeps.join(", ")}
@@ -133,6 +136,7 @@ function ListItem({ mod, active, selected, missingDeps, onSelect, onToggle }: It
           : <span className="text-sm font-bold text-gray-600">{mod.name[0]}</span>}
       </div>
       <span className="text-xs font-medium truncate flex-1">{mod.name}</span>
+      {mod.layerPath && mod.layerPath !== "root" && <span className="text-2xs text-accent/75 font-mono shrink-0">{mod.layerPath}</span>}
       {mod.author && <span className="text-2xs text-gray-500 shrink-0">{mod.author}</span>}
       <span className="text-2xs text-gray-500 font-mono shrink-0">v{mod.version}</span>
       {missingDeps.length > 0 && active && <AlertTriangle size={12} className="text-warn shrink-0" />}

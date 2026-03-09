@@ -606,11 +606,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            string modsRoot = Path.Combine(repoRoot, "mods");
-
-            var modPaths = new List<string>(mods.Length);
-            for (int i = 0; i < mods.Length; i++)
-                modPaths.Add(Path.Combine(modsRoot, mods[i]));
+            var modPaths = RepoModPaths.ResolveExplicit(repoRoot, mods);
 
             var engine = new GameEngine();
             try

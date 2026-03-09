@@ -1,0 +1,29 @@
+[
+  {
+    "Id": "Camera.Mode.Tactical",
+    "DisplayName": "Tactical",
+    "CameraPresetId": "Camera.Profile.Tactical",
+    "FollowTargetKind": "None",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "CameraModeTactical"
+  },
+  {
+    "Id": "Camera.Mode.Follow",
+    "DisplayName": "Follow",
+    "CameraPresetId": "Camera.Profile.Follow",
+    "FollowTargetKind": "LocalPlayer",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "CameraModeFollow"
+  },
+  {
+    "Id": "Camera.Mode.Inspect",
+    "DisplayName": "Inspect",
+    "CameraPresetId": "Camera.Profile.Inspect",
+    "FollowTargetKind": "None",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "CameraModeInspect"
+  }
+]

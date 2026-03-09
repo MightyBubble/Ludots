@@ -7,6 +7,8 @@ export interface ModInfo {
   priority: number;
   dependencies: Record<string, string>;
   rootPath: string;
+  relativePath: string;
+  layerPath: string;
   description: string;
   author: string;
   tags: string[];

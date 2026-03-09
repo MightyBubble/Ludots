@@ -22,11 +22,16 @@ Raylib Host 在 `src/Adapters/Raylib/Ludots.Adapter.Raylib`。
 *   Compose：把引擎、配置、输入、UI 等依赖组装好并注入 `engine.GlobalContext`。
 *   Loop：每帧驱动 `engine.Tick(dt)`，并在启动阶段调用 `engine.Start()` 与 `engine.LoadMap(startupMapId)`。
 
-### 1.3 ModLauncher CLI
+### 1.3 Launcher Toolchain
 
-ModLauncher 既可以以 GUI 方式运行，也可以以 `cli` 模式运行。
+当前 GUI 主路径是 Web launcher：
 
-*   入口：`src/Tools/ModLauncher/App.xaml.cs`（首参为 `cli` 时进入 CLI）
+*   Bridge 入口：`src/Tools/Ludots.Editor.Bridge/Program.cs`
+*   Launcher 前端：`src/Tools/Ludots.Launcher.React`
+
+WPF `ModLauncher` 仅保留 CLI / 兼容工具职责：
+
+*   CLI 入口：`src/Tools/ModLauncher/App.xaml.cs`（首参为 `cli` 时进入 CLI）
 *   命令分发：`src/Tools/ModLauncher/Cli/CliRunner.cs`
 
 常用命令包括 `cli gamejson write`、`cli app build`、`cli mods build`、`cli run`。

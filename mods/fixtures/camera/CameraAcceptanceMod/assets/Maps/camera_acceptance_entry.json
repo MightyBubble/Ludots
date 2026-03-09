@@ -1,0 +1,23 @@
+{
+  "Id": "camera_acceptance_entry",
+  "Tags": ["camera.acceptance", "camera.shot:Camera.Shot.IntroFocus"],
+  "DefaultCamera": {
+    "PresetId": "Camera.Profile.Follow"
+  },
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Overrides": {
+        "Name": { "Value": "CameraAcceptanceHero" },
+        "WorldPositionCm": { "Value": { "X": 1200, "Y": 800 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "CameraAcceptanceDummy" },
+        "WorldPositionCm": { "Value": { "X": 6400, "Y": 3200 } }
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "Id": "camera_bootstrap_center",
+  "Tags": ["camera.acceptance", "camera.bootstrap.center_bounds"],
+  "DefaultCamera": {
+    "PresetId": "Camera.Profile.Tactical"
+  },
+  "Entities": [
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "BootstrapNorthWest" },
+        "WorldPositionCm": { "Value": { "X": 1000, "Y": 500 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "BootstrapSouthEast" },
+        "WorldPositionCm": { "Value": { "X": 5000, "Y": 3500 } }
+      }
+    }
+  ]
+}

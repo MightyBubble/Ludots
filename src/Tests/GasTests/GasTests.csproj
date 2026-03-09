@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\..\mods\MobaDemoMod\MobaDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\DepApiMod\DepApiMod.csproj" />
     <ProjectReference Include="..\..\..\mods\DepConsumerMod\DepConsumerMod.csproj" />
@@ -37,14 +38,16 @@
     <ProjectReference Include="..\..\..\mods\ReactiveTestMod\ReactiveTestMod.csproj" />
     <ProjectReference Include="..\..\..\mods\TerrainBenchmarkMod\TerrainBenchmarkMod.csproj" />
     <ProjectReference Include="..\..\..\mods\UiTestMod\UiTestMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\Universal3CCameraMod\Universal3CCameraMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraBootstrapMod\CameraBootstrapMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraProfilesMod\CameraProfilesMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\camera\VirtualCameraShotsMod\VirtualCameraShotsMod.csproj" />
     <ProjectReference Include="..\..\..\mods\VersionMismatchMod\VersionMismatchMod.csproj" />
     <ProjectReference Include="..\..\..\mods\FourXDemoMod\FourXDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\TcgDemoMod\TcgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\ArpgDemoMod\ArpgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIDemoMod\AIDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\VirtualCameraBaselineMod\VirtualCameraBaselineMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
   </ItemGroup>
 
 </Project>
