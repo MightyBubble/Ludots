@@ -83,4 +83,99 @@ public sealed class UiSceneTests
 
         Assert.That(result, Is.EqualTo(UiEventResult.Unhandled));
     }
+
+    [Test]
+    public void UiScene_ScrollEvent_UpdatesScrollOffset()
+    {
+        (UiScene scene, UiNode host, UiNode[] _) = BuildScrollFixture();
+
+        float centerX = host.LayoutRect.X + (host.LayoutRect.Width / 2f);
+        float centerY = host.LayoutRect.Y + (host.LayoutRect.Height / 2f);
+        UiEventResult result = scene.Dispatch(new UiPointerEvent(UiPointerEventType.Scroll, 0, centerX, centerY, host.Id, 0f, 36f));
+
+        Assert.That(result.Handled, Is.True);
+        Assert.That(host.ScrollOffsetY, Is.GreaterThan(0f));
+    }
+
+    [Test]
+    public void UiScene_HitTest_AccountsForAncestorScrollOffset()
+    {
+        (UiScene scene, UiNode host, UiNode[] items) = BuildScrollFixture();
+        scene.Dispatch(new UiPointerEvent(UiPointerEventType.Scroll, 0, host.LayoutRect.X + 8f, host.LayoutRect.Y + 8f, host.Id, 0f, 30f));
+
+        UiNode target = items[2];
+        float sampleX = host.LayoutRect.X + 12f;
+        float sampleY = target.LayoutRect.Y - host.ScrollOffsetY + 8f;
+        UiNode? hit = scene.HitTest(sampleX, sampleY);
+
+        Assert.That(hit, Is.SameAs(target));
+    }
+
+    [Test]
+    public void UiScene_ScrollThumbDrag_ClearsOnPointerUp()
+    {
+        (UiScene scene, UiNode host, UiNode[] _) = BuildScrollFixture();
+        UiRect thumb = UiScrollGeometry.GetVerticalThumbRect(host);
+        float pointerX = thumb.X + (thumb.Width / 2f);
+        float pointerY = thumb.Y + (thumb.Height / 2f);
+
+        UiEventResult down = scene.Dispatch(new UiPointerEvent(UiPointerEventType.Down, 0, pointerX, pointerY, host.Id));
+        UiEventResult move = scene.Dispatch(new UiPointerEvent(UiPointerEventType.Move, 0, pointerX, pointerY + 14f, host.Id));
+        float offsetAfterDrag = host.ScrollOffsetY;
+        UiEventResult up = scene.Dispatch(new UiPointerEvent(UiPointerEventType.Up, 0, pointerX, pointerY + 14f, host.Id));
+        scene.Dispatch(new UiPointerEvent(UiPointerEventType.Move, 0, pointerX, pointerY + 32f, host.Id));
+
+        Assert.That(down.Handled, Is.True);
+        Assert.That(move.Handled, Is.True);
+        Assert.That(up.Handled, Is.True);
+        Assert.That(offsetAfterDrag, Is.GreaterThan(0f));
+        Assert.That(host.ScrollOffsetY, Is.EqualTo(offsetAfterDrag));
+    }
+
+    private static (UiScene Scene, UiNode Host, UiNode[] Items) BuildScrollFixture()
+    {
+        UiNode[] items = Enumerable.Range(0, 8)
+            .Select(index => new UiNode(
+                new UiNodeId(index + 3),
+                UiNodeKind.Button,
+                style: UiStyle.Default with
+                {
+                    Height = UiLength.Px(28f)
+                },
+                textContent: $"Item {index + 1}"))
+            .ToArray();
+
+        UiNode host = new(
+            new UiNodeId(2),
+            UiNodeKind.Column,
+            style: UiStyle.Default with
+            {
+                Width = UiLength.Px(140f),
+                Height = UiLength.Px(72f),
+                Padding = UiThickness.All(6f),
+                Gap = 6f,
+                RowGap = 6f,
+                ColumnGap = 6f,
+                Overflow = UiOverflow.Scroll,
+                BackgroundColor = SkiaSharp.SKColor.Parse("#283349"),
+                BorderWidth = 1f,
+                BorderColor = SkiaSharp.SKColor.Parse("#4c5976")
+            },
+            children: items);
+
+        UiNode root = new(
+            new UiNodeId(1),
+            UiNodeKind.Container,
+            style: UiStyle.Default with
+            {
+                Width = UiLength.Px(240f),
+                Height = UiLength.Px(180f)
+            },
+            children: new[] { host });
+
+        UiScene scene = new();
+        scene.Mount(root);
+        scene.Layout(240f, 180f);
+        return (scene, host, items);
+    }
 }

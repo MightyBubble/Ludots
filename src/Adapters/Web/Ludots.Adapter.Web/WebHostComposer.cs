@@ -19,8 +19,8 @@ namespace Ludots.Adapter.Web
         WebInputBackend InputBackend,
         WebViewController ViewController,
         WebCameraAdapter CameraAdapter,
-        WebScreenRayProvider ScreenRayProvider,
-        WebTransportLayer Transport
+        WebTransportLayer Transport,
+        WebUiFrameSource UiFrameSource
     );
 
     public static class WebHostComposer
@@ -48,7 +48,6 @@ namespace Ludots.Adapter.Web
 
             var uiRoot = new UIRoot();
             engine.SetService(CoreServiceKeys.UIRoot, (object)uiRoot);
-            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new WebUiSystem());
 
             var inputBackend = new WebInputBackend();
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
@@ -58,29 +57,31 @@ namespace Ludots.Adapter.Web
                 foreach (var contextId in config.StartupInputContexts)
                 {
                     if (!string.IsNullOrWhiteSpace(contextId))
+                    {
                         inputHandler.PushContext(contextId);
+                    }
                 }
             }
+
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)inputBackend);
 
             var viewController = new WebViewController();
+            var uiFrameSource = new WebUiFrameSource(uiRoot, viewController);
             var cameraAdapter = new WebCameraAdapter();
-            var screenRayProvider = new WebScreenRayProvider(cameraAdapter, viewController);
             var transport = new WebTransportLayer(inputBackend, viewController);
 
             ValidateRequiredContextBeforeStart(engine);
 
             return new WebHostSetup(
                 engine, config, uiRoot,
-                inputBackend, viewController, cameraAdapter, screenRayProvider, transport
+                inputBackend, viewController, cameraAdapter, transport, uiFrameSource
             );
         }
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
         {
             ValidateKey<object>(engine, CoreServiceKeys.UIRoot.Name);
-            ValidateKey<Core.UI.IUiSystem>(engine, CoreServiceKeys.UISystem.Name);
             ValidateKey<PlayerInputHandler>(engine, CoreServiceKeys.InputHandler.Name);
             ValidateKey<IInputBackend>(engine, CoreServiceKeys.InputBackend.Name);
         }
@@ -88,7 +89,9 @@ namespace Ludots.Adapter.Web
         private static void ValidateKey<T>(GameEngine engine, string key)
         {
             if (!engine.GlobalContext.TryGetValue(key, out var obj) || obj is not T)
+            {
                 throw new InvalidOperationException($"GlobalContext missing or invalid: {key} expected {typeof(T).FullName}");
+            }
         }
     }
 }

@@ -30,15 +30,15 @@ namespace Ludots.Adapter.Web
 
             var viewController = setup.ViewController;
             var cameraAdapter = setup.CameraAdapter;
-            var screenRayProvider = setup.ScreenRayProvider;
-
             var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
+            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
             engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
             engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
             screenProjector.BindPresenter(cameraPresenter);
+            screenRayProvider.BindPresenter(cameraPresenter);
 
             var cullingSystem = new CameraCullingSystem(
                 engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
@@ -61,13 +61,13 @@ namespace Ludots.Adapter.Web
 
             ValidateRequiredContext(engine);
 
-            var uiSystem = (Services.WebUiSystem)engine.GetService(CoreServiceKeys.UISystem)!;
-            var extractor = new PresentationExtractor(engine, cameraAdapter, uiSystem);
+            var extractor = new PresentationExtractor(engine, cameraAdapter, setup.UiFrameSource);
 
             engine.Start();
             if (string.IsNullOrWhiteSpace(config.StartupMapId))
                 throw new InvalidOperationException("Invalid game.json: 'StartupMapId' cannot be empty.");
             engine.LoadMap(config.StartupMapId);
+            cameraPresenter.Update(engine.GameSession.Camera.State, 0f, renderCameraDebug);
 
             BuildAndSendMeshMap(engine, setup.Transport);
 
@@ -100,6 +100,7 @@ namespace Ludots.Adapter.Web
                     {
                         engine.SetService(CoreServiceKeys.UiCaptured, false);
                         engine.Tick(dt);
+                        setup.UiRoot.Update(dt);
                         cameraPresenter.Update(engine.GameSession!.Camera.State, dt, renderCameraDebug);
                         hudProjection?.Update(dt);
 

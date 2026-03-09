@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -46,6 +46,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Components;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -145,7 +146,7 @@ namespace Ludots.Core.Engine
 
         public GameSynchronizationContext SyncContext { get; private set; }
 
-        // Systems - 闁圭顢梙ase闁告帒妫涚划?
+        // Systems - 闂佸湱顭堥、姊檃se闂佸憡甯掑Λ娑氬垝?
         private Dictionary<SystemGroup, List<ISystem<float>>> _systemGroups = new Dictionary<SystemGroup, List<ISystem<float>>>();
         private List<ISystem<float>> _presentationSystems = new List<ISystem<float>>();
         private Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer _primitiveDrawBuffer;
@@ -337,6 +338,10 @@ namespace Ludots.Core.Engine
                          || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("AI/", StringComparison.OrdinalIgnoreCase));
 
             if (reloadAi) RebuildAiRuntime();
+
+            var selectionProfiles = new SelectionProfileRegistry(ConfigPipeline);
+            selectionProfiles.Load("Selection/profiles.json", ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.SelectionProfileRegistry, selectionProfiles);
 
             SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
             SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
@@ -595,10 +600,13 @@ namespace Ludots.Core.Engine
             var cameraPresetRegistry = new CameraPresetRegistry();
             new CameraPresetLoader(ConfigPipeline, cameraPresetRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.CameraPresetRegistry, cameraPresetRegistry);
+            var selectionProfileRegistry = new SelectionProfileRegistry(ConfigPipeline);
+            selectionProfileRegistry.Load("Selection/profiles.json", ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.SelectionProfileRegistry, selectionProfileRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
             
-            // Phase 0.5: 濞ｅ洦绻傞悺銊︾▔婵犱胶顏遍悽顖嗗倻绉寸紓鍐惧櫙缁辨瑩骞撻幒鎴斿亾閻撳骸顤呯紓鍐惧枟濞碱垱绂掔拋鍦闊洤鎳橀妴蹇涘捶閵婏箑顣查柡鍫濐槺浜涢柛鏂诲妿闁绱掗悢鍓侇吅闁告挸绋勭槐?
+            // Phase 0.5: 婵烇絽娲︾换鍌炴偤閵婏妇鈻斿┑鐘辫兌椤忛亶鎮介鍡楀€荤粔瀵哥磽閸愭儳娅欑紒杈ㄧ懇楠炴捇骞掗幋鏂夸壕闁绘挸楠搁·鍛磽閸愭儳鏋熸繛纰卞灡缁傛帞鎷嬮崷顓狀槷闂婎偄娲ら幊姗€濡磋箛娑樻嵍闁靛绠戦。鏌ユ煛閸繍妲烘禍娑㈡煕閺傝濡块梺顔碱嚟缁辨帡鎮㈤崜渚囧悈闂佸憡鎸哥粙鍕?
             RegisterSystem(new SavePreviousWorldPositionSystem(World), SystemGroup.SchemaUpdate);
             
             // Phase 1: InputCollection
@@ -647,7 +655,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(abilitySystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
             
-            // Phase 3: EffectProcessing (闁告凹鍋勯幖閿嬫償閺冨牊�?
+            // Phase 3: EffectProcessing (闂佸憡鍑归崑鍕箹闁垮鍎熼柡鍐ㄧ墛閹?
             var responseChainOrderTypes = new ResponseChainOrderTypes
             {
                 ChainPass = cfgChainPass,
@@ -741,7 +749,7 @@ namespace Ludots.Core.Engine
                                 // Create new session with boards (additive - old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
                 CreateBoardsForSession(session, mapConfig);
-                MapSessions.PushFocused(mid);   // old focused �?Suspended
+                MapSessions.PushFocused(mid);   // old focused 闂?Suspended
                 if (previousFocused != null)
                 {
                     SetMapEntitiesSuspended(previousFocused.MapId, true);
@@ -846,7 +854,7 @@ namespace Ludots.Core.Engine
         }
 
         /// <summary>
-        /// Push a nested inner map (濞戞挸顦ù妤勭疀?2 mode). Outer map is suspended, inner map becomes active.
+        /// Push a nested inner map (婵炴垶鎸搁ˇ顖毭瑰Δ鍕杸?2 mode). Outer map is suspended, inner map becomes active.
         /// </summary>
         public void PushMap(string innerMapId, Dictionary<string, object> passthrough = null)
         {
@@ -1521,5 +1529,3 @@ namespace Ludots.Core.Engine
         }
     }
 }
-
-

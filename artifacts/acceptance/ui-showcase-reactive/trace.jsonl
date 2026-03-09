@@ -1,4 +1,22 @@
 {"Step":"reactive-initial","Kind":"capture","Message":"Reactive showcase renders official semantic pages with stateful counter.","Artifact":"screens/reactive-initial.png"}
+{"Step":"reactive-forms","Kind":"capture","Message":"Reactive forms block shows required, pattern, password, and textarea validation surfaces.","Artifact":"screens/reactive-forms.png"}
+{"Step":"reactive-appearance","Kind":"capture","Message":"Reactive appearance block shows backdrop blur, filter blur, flex wrap, RTL text, and image skin samples.","Artifact":"screens/reactive-appearance.png"}
+{"Step":"reactive-phase1","Kind":"capture","Message":"Reactive selector and stack labs validate advanced selectors plus transformed z-index hit alignment.","Artifact":"screens/reactive-phase1.png"}
+{"Step":"reactive-phase2","Kind":"capture","Message":"Reactive Phase 2 visual lab shows multi-background, multi-shadow, dashed border, mask, and clip-path in one native card.","Artifact":"screens/reactive-phase2.png"}
+{"Step":"reactive-phase3","Kind":"capture","Message":"Reactive Phase 3 text lab shows multilingual copy, RTL alignment, ellipsis, and text decoration in one native panel.","Artifact":"screens/reactive-phase3.png"}
+{"Step":"reactive-phase4","Kind":"capture","Message":"Reactive Phase 4 image lab shows CSS background-image url, SVG image rendering, and native canvas drawing in one panel.","Artifact":"screens/reactive-phase4.png"}
+{"Step":"reactive-phase5-start","Kind":"capture","Message":"Reactive Phase 5 keyframe lab captures the initial animation state from CSS files.","Artifact":"screens/reactive-phase5-start.png"}
+{"Step":"0.24","Kind":"advance","Message":"Reactive keyframe lab advances to a deterministic mid-frame.","Artifact":""}
+{"Step":"reactive-phase5-mid","Kind":"capture","Message":"Reactive Phase 5 keyframe lab shows mid-animation color, blur, and opacity interpolation.","Artifact":"screens/reactive-phase5-mid.png"}
+{"Step":"0.32","Kind":"advance","Message":"Reactive keyframe lab reaches the deterministic end frame.","Artifact":""}
+{"Step":"reactive-phase5-end","Kind":"capture","Message":"Reactive Phase 5 keyframe lab shows the finite animation end state and alternate fill behavior.","Artifact":"screens/reactive-phase5-end.png"}
+{"Step":"reactive-transition-probe","Kind":"click","Message":"Reactive transition probe enters focus state on the same DOM node.","Artifact":""}
+{"Step":"0.16","Kind":"advance","Message":"Reactive transition runtime advances native tween interpolation.","Artifact":""}
+{"Step":"reactive-transition","Kind":"capture","Message":"Reactive transition probe shows mid-animation color and opacity interpolation.","Artifact":"screens/reactive-transition.png"}
+{"Step":"reactive-scroll-host","Kind":"scroll","Message":"Reactive scroll host consumes native wheel input.","Artifact":""}
+{"Step":"reactive-scroll","Kind":"capture","Message":"Reactive scroll container clips content, updates offsets, and keeps clip host bounded.","Artifact":"screens/reactive-scroll.png"}
+{"Step":"reactive-item-2","Kind":"click","Message":"Reactive keeps collection selection on item 2 for the focused crop.","Artifact":""}
+{"Step":"reactive-table","Kind":"capture","Message":"Reactive table block shows native table semantics, content-aware columns, rowspan, and colspan.","Artifact":"screens/reactive-table.png"}
 {"Step":"reactive-inc","Kind":"click","Message":"Reactive counter increments via state update.","Artifact":""}
 {"Step":"reactive-counter","Kind":"capture","Message":"Reactive counter rerender is visible.","Artifact":"screens/reactive-counter.png"}
 {"Step":"reactive-modal-toggle","Kind":"click","Message":"Reactive opens modal overlay.","Artifact":""}

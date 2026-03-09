@@ -9,94 +9,80 @@ using Ludots.Core.Scripting;
 
 namespace Ludots.Adapter.Web.Streaming
 {
-    /// <summary>
-    /// Extracts presentation data from GameEngine draw buffers after each Tick,
-    /// encodes it into binary frames for WebSocket transmission.
-    /// </summary>
     public sealed class PresentationExtractor
     {
         private readonly GameEngine _engine;
-        private readonly BinaryFrameEncoder _fullEncoder;
-        private readonly DeltaCompressor _deltaCompressor;
         private readonly WebCameraAdapter _cameraAdapter;
-        private readonly WebUiSystem _uiSystem;
+        private readonly WebUiFrameSource _uiFrameSource;
+        private readonly BinaryFrameEncoder _full = new();
+        private readonly DeltaCompressor _delta = new();
         private uint _frameNumber;
-        private int _fullFrameInterval = 30;
-        private int _framesSinceFullFrame;
-        private byte[] _snapshot = new byte[256 * 1024];
 
-        public PresentationExtractor(GameEngine engine, WebCameraAdapter cameraAdapter, WebUiSystem uiSystem)
+        public PresentationExtractor(GameEngine engine, WebCameraAdapter cameraAdapter, WebUiFrameSource uiFrameSource)
         {
             _engine = engine;
             _cameraAdapter = cameraAdapter;
-            _uiSystem = uiSystem;
-            _fullEncoder = new BinaryFrameEncoder();
-            _deltaCompressor = new DeltaCompressor();
+            _uiFrameSource = uiFrameSource;
         }
 
-        public (byte[] Data, int Length) CaptureFrame()
+        public (byte[] Buffer, int Length) CaptureFrame()
         {
-            _frameNumber++;
-            _framesSinceFullFrame++;
-
             PrimitiveDrawBuffer? primitives = _engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             GroundOverlayBuffer? groundOverlays = _engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
             WorldHudBatchBuffer? worldHud = _engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
             ScreenHudBatchBuffer? screenHud = _engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
-            DebugDrawCommandBuffer? debugDraw = _engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
             ScreenOverlayBuffer? screenOverlay = _engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
+            DebugDrawCommandBuffer? debugDraw = _engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
+            _uiFrameSource.TryConsume(out string? uiSceneDiffJson);
 
-            _uiSystem.TryConsume(out string? uiHtml, out string? uiCss);
-
+            _frameNumber++;
+            long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var camera = _cameraAdapter.CurrentState;
-            long timestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             int simTick = _engine.GameSession?.CurrentTick ?? 0;
 
-            bool useDelta = _framesSinceFullFrame < _fullFrameInterval;
-            bool deltaOk = false;
+            bool useDelta = _delta.TryEncodeDelta(
+                _frameNumber,
+                simTick,
+                ts,
+                in camera,
+                primitives,
+                groundOverlays,
+                worldHud,
+                debugDraw,
+                screenOverlay,
+                uiSceneDiffJson);
 
             if (useDelta)
             {
-                deltaOk = _deltaCompressor.TryEncodeDelta(
-                    _frameNumber, simTick, timestampMs, in camera,
-                    primitives, groundOverlays, worldHud, debugDraw,
-                    screenOverlay, uiHtml, uiCss
-                );
+                int len = _delta.EncodedLength;
+                byte[] outBuf = new byte[len];
+                _delta.CopyTo(outBuf);
+                ClearConsumedBuffers(screenOverlay);
+                return (outBuf, len);
             }
 
-            if (deltaOk)
-            {
-                int len = _deltaCompressor.EncodedLength;
-                EnsureSnapshot(len);
-                _deltaCompressor.CopyTo(_snapshot);
-                ClearConsumedBuffers(screenOverlay);
-                return (_snapshot, len);
-            }
-            else
-            {
-                _framesSinceFullFrame = 0;
-                _fullEncoder.Encode(
-                    _frameNumber, simTick, timestampMs, in camera,
-                    primitives, groundOverlays, worldHud, screenHud, debugDraw,
-                    screenOverlay, uiHtml, uiCss
-                );
-                int len = _fullEncoder.EncodedLength;
-                EnsureSnapshot(len);
-                _fullEncoder.CopyTo(_snapshot);
-                ClearConsumedBuffers(screenOverlay);
-                return (_snapshot, len);
-            }
+            _full.Encode(
+                _frameNumber,
+                simTick,
+                ts,
+                in camera,
+                primitives,
+                groundOverlays,
+                worldHud,
+                screenHud,
+                debugDraw,
+                screenOverlay,
+                uiSceneDiffJson);
+            int fullLen = _full.EncodedLength;
+            byte[] fullBuf = new byte[fullLen];
+            _full.CopyTo(fullBuf);
+            ClearConsumedBuffers(screenOverlay);
+            return (fullBuf, fullLen);
         }
 
         private static void ClearConsumedBuffers(ScreenOverlayBuffer? screenOverlay)
         {
             screenOverlay?.Clear();
-        }
-
-        private void EnsureSnapshot(int required)
-        {
-            if (_snapshot.Length < required)
-                _snapshot = new byte[required * 2];
         }
     }
 }

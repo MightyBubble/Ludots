@@ -1,4 +1,4 @@
-using Ludots.UI.Compose;
+ï»¿using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 
@@ -30,7 +30,7 @@ internal static class ReactiveShowcasePageFactory
     {
         ReactiveShowcaseState state = context.State;
         return Ui.Column(
-                Ui.Text("Reactive Fluent ¡ª State Drives UI").Class("skin-header"),
+                Ui.Text("Reactive Fluent - State Drives UI").Class("skin-header"),
                 UiShowcaseScaffolding.BuildThemeToolbar(
                     "reactive",
                     _ => context.SetState(current => current with { ThemeClass = "theme-light" }),
@@ -100,9 +100,29 @@ internal static class ReactiveShowcasePageFactory
         ReactiveShowcaseState state = context.State;
         return Ui.Card(
                 Ui.Text("FormsPage").Class("page-card-title"),
-                new UiElementBuilder(UiNodeKind.Input, "input").Text("Email: state@ludots.dev").Class("control-chip"),
-                new UiElementBuilder(UiNodeKind.Custom, "input").Text("Password: ???????").Class("control-chip"),
-                new UiElementBuilder(UiNodeKind.TextArea, "textarea").Text("Textarea / validation summary").Class("control-chip"),
+                Ui.Input()
+                    .Id("reactive-email-input")
+                    .Class("control-chip")
+                    .Type("email")
+                    .Placeholder("Email / required / @ludots.dev")
+                    .Required()
+                    .Pattern("^[^@\\s]+@ludots\\.dev$")
+                    .Value(state.FormError ? string.Empty : "state@ludots.dev"),
+                Ui.Input()
+                    .Id("reactive-password-input")
+                    .Class("control-chip")
+                    .Type("password")
+                    .Placeholder("Password / required / min 8")
+                    .Required()
+                    .MinLength(8)
+                    .Value(state.FormError ? string.Empty : "hunter22"),
+                new UiElementBuilder(UiNodeKind.TextArea, "textarea")
+                    .Id("reactive-notes-input")
+                    .Class("control-chip")
+                    .Placeholder("Validation summary / notes / max 64")
+                    .Required()
+                    .MaxLength(64)
+                    .Value(state.FormError ? string.Empty : "Textarea / validation summary"),
                 Ui.Text(state.FormStatus).Id("reactive-form-status").Class(state.FormError ? "error-text" : "ok-text"),
                 Ui.Row(
                     Ui.Button("Invalid", _ => context.SetState(current => current with { FormError = true, FormStatus = "Validation failed: email is invalid" })),
@@ -126,14 +146,15 @@ internal static class ReactiveShowcasePageFactory
                     .Class("control-row"),
                 Ui.Table(
                     Ui.TableRow(
-                        Ui.TableHeaderCell("Name"),
+                        Ui.TableHeaderCell("Prototype Identifier"),
                         Ui.TableHeaderCell("Role")),
                     Ui.TableRow(
-                        Ui.TableCell("Sentinel"),
+                        Ui.TableCell("Sentinel Vanguard Frame").RowSpan(2),
                         Ui.TableCell("Guardian")),
                     Ui.TableRow(
-                        Ui.TableCell("Courier"),
-                        Ui.TableCell("Support")))
+                        Ui.TableCell("Escort")),
+                    Ui.TableRow(
+                        Ui.TableCell("Status: Active").ColSpan(2).Class("muted")))
                     .Id("reactive-stats-table"),
                 Ui.Text("ListView / GridView / Tabs share one unified state model.")
                     .Class("muted"))
@@ -151,7 +172,7 @@ internal static class ReactiveShowcasePageFactory
                     Ui.Button(state.ToastVisible ? "Hide Toast" : "Show Toast", _ => context.SetState(current => current with { ToastVisible = !current.ToastVisible })).Id("reactive-toast-toggle"))
                     .Class("control-row"),
                 state.ModalOpen
-                    ? Ui.Card(Ui.Text("Modal opened ¡ª focus and action path stay deterministic.")).Id("reactive-modal").Class("overlay-card")
+                    ? Ui.Card(Ui.Text("Modal opened - focus and action path stay deterministic.")).Id("reactive-modal").Class("overlay-card")
                     : Ui.Text("Tooltip / Dropdown / Drawer live in the same overlay model.").Class("muted"),
                 state.ToastVisible
                     ? Ui.Text("Toast: reactive state committed.").Id("reactive-toast").Class("toast-badge")
@@ -164,8 +185,40 @@ internal static class ReactiveShowcasePageFactory
     {
         ReactiveShowcaseState state = context.State;
         return Ui.Card(
-                Ui.Text("StylesPage").Class("page-card-title"),
-                Ui.Text("Typography / spacing / density / token parity.").Class("page-copy"),
+                Ui.Text("AppearancePage").Class("page-card-title"),
+                Ui.Text("Backdrop blur / filter blur / flex wrap / structural pseudo / scroll / clip / density tokens.").Class("page-copy"),
+                new UiElementBuilder(UiNodeKind.Container, "div")
+                    .Id("reactive-appearance-host")
+                    .Class("appearance-host")
+                    .Children(
+                        Ui.Row(
+                            new UiElementBuilder(UiNodeKind.Container, "div").Class("appearance-pane-left"),
+                            new UiElementBuilder(UiNodeKind.Container, "div").Class("appearance-pane-right"))
+                            .Class("appearance-background"),
+                        Ui.Card(
+                                Ui.Text("Frosted Glass").Class("page-card-title"),
+                                Ui.Text("Simplified backdrop blur on Skia scene.").Class("muted"),
+                                Ui.Text("Blur badge").Id("reactive-blur-chip").Classes("control-chip", "appearance-blur-chip"))
+                            .Id("reactive-frosted-card")
+                            .Class("frosted-glass")
+                            .Absolute(18, 18)),
+                new UiElementBuilder(UiNodeKind.Container, "div")
+                    .Id("reactive-wrap-demo")
+                    .Class("wrap-demo")
+                    .Children(
+                        UiShowcaseScaffolding.BuildChip("First", true),
+                        UiShowcaseScaffolding.BuildChip("Second", false),
+                        UiShowcaseScaffolding.BuildChip("Third", true),
+                        UiShowcaseScaffolding.BuildChip("Fourth", false),
+                        UiShowcaseScaffolding.BuildChip("Fifth", true),
+                        UiShowcaseScaffolding.BuildChip("Sixth", false)),
+                UiShowcaseScaffolding.BuildAdvancedAppearanceRow("reactive"),
+                UiShowcaseScaffolding.BuildPhaseOneRow("reactive"),
+                UiShowcaseScaffolding.BuildPhaseTwoPanel("reactive"),
+                UiShowcaseScaffolding.BuildPhaseThreePanel("reactive"),
+                UiShowcaseScaffolding.BuildPhaseFourPanel("reactive"),
+                UiShowcaseScaffolding.BuildPhaseFivePanel("reactive"),
+                UiShowcaseScaffolding.BuildScrollClipRow("reactive"),
                 Ui.Row(
                     Ui.Button("Compact", _ => context.SetState(current => current with { DensityClass = "density-compact" })),
                     Ui.Button("Cozy", _ => context.SetState(current => current with { DensityClass = "density-cozy" })).Class("skin-primary"),

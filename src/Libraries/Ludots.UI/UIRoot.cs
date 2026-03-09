@@ -46,6 +46,22 @@ public class UIRoot
         IsDirty = false;
     }
 
+    public bool Update(float deltaSeconds)
+    {
+        if (Scene == null)
+        {
+            return false;
+        }
+
+        bool changed = Scene.AdvanceTime(deltaSeconds);
+        if (changed)
+        {
+            IsDirty = true;
+        }
+
+        return changed;
+    }
+
     public bool HandleInput(InputEvent e)
     {
         if (Scene == null)
@@ -80,6 +96,9 @@ public class UIRoot
                 }
 
                 _pressedNodeId = null;
+                break;
+            case PointerAction.Scroll:
+                handled = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Scroll, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, targetNodeId, pointerEvent.DeltaX, pointerEvent.DeltaY)).Handled;
                 break;
         }
 

@@ -1,3 +1,15 @@
 - [x] compose-initial -> screens/compose-initial.png
-- [x] compose-modal -> screens/compose-modal.png
+- [x] compose-forms -> screens/compose-forms.png
+- [x] compose-appearance -> screens/compose-appearance.png
+- [x] compose-phase1 -> screens/compose-phase1.png
+- [x] compose-phase2 -> screens/compose-phase2.png
+- [x] compose-phase3 -> screens/compose-phase3.png
+- [x] compose-phase4 -> screens/compose-phase4.png
+- [x] compose-phase5-start -> screens/compose-phase5-start.png
+- [x] compose-phase5-mid -> screens/compose-phase5-mid.png
+- [x] compose-phase5-end -> screens/compose-phase5-end.png
+- [x] compose-transition -> screens/compose-transition.png
+- [x] compose-scroll -> screens/compose-scroll.png
 - [x] compose-selection -> screens/compose-selection.png
+- [x] compose-table -> screens/compose-table.png
+- [x] compose-modal -> screens/compose-modal.png

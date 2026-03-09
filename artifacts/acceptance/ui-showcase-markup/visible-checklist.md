@@ -1,3 +1,15 @@
 - [x] markup-initial -> screens/markup-initial.png
+- [x] markup-forms -> screens/markup-forms.png
+- [x] markup-appearance -> screens/markup-appearance.png
+- [x] markup-phase1 -> screens/markup-phase1.png
+- [x] markup-phase2 -> screens/markup-phase2.png
+- [x] markup-phase3 -> screens/markup-phase3.png
+- [x] markup-phase4 -> screens/markup-phase4.png
+- [x] markup-phase5-start -> screens/markup-phase5-start.png
+- [x] markup-phase5-mid -> screens/markup-phase5-mid.png
+- [x] markup-phase5-end -> screens/markup-phase5-end.png
+- [x] markup-transition -> screens/markup-transition.png
+- [x] markup-scroll -> screens/markup-scroll.png
+- [x] markup-table -> screens/markup-table.png
 - [x] markup-counter -> screens/markup-counter.png
 - [x] markup-modal -> screens/markup-modal.png

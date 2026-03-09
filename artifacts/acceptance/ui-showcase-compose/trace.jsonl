@@ -1,5 +1,22 @@
 {"Step":"compose-initial","Kind":"capture","Message":"Compose showcase renders Overview / Controls / Forms / Collections / Overlays / Styles.","Artifact":"screens/compose-initial.png"}
+{"Step":"compose-forms","Kind":"capture","Message":"Compose forms block shows required, pattern, password, and textarea validation surfaces.","Artifact":"screens/compose-forms.png"}
+{"Step":"compose-appearance","Kind":"capture","Message":"Compose appearance block shows backdrop blur, filter blur, flex wrap, RTL text, and image skin samples.","Artifact":"screens/compose-appearance.png"}
+{"Step":"compose-phase1","Kind":"capture","Message":"Compose selector and stack labs validate advanced selectors plus transformed z-index hit alignment.","Artifact":"screens/compose-phase1.png"}
+{"Step":"compose-phase2","Kind":"capture","Message":"Compose Phase 2 visual lab shows multi-background, multi-shadow, dashed border, mask, and clip-path in one native card.","Artifact":"screens/compose-phase2.png"}
+{"Step":"compose-phase3","Kind":"capture","Message":"Compose Phase 3 text lab shows multilingual copy, RTL alignment, ellipsis, and text decoration in one native panel.","Artifact":"screens/compose-phase3.png"}
+{"Step":"compose-phase4","Kind":"capture","Message":"Compose Phase 4 image lab shows CSS background-image url, SVG image rendering, and native canvas drawing in one panel.","Artifact":"screens/compose-phase4.png"}
+{"Step":"compose-phase5-start","Kind":"capture","Message":"Compose Phase 5 keyframe lab captures the initial animation state from CSS files.","Artifact":"screens/compose-phase5-start.png"}
+{"Step":"0.24","Kind":"advance","Message":"Compose keyframe lab advances to a deterministic mid-frame.","Artifact":""}
+{"Step":"compose-phase5-mid","Kind":"capture","Message":"Compose Phase 5 keyframe lab shows mid-animation color, blur, and opacity interpolation.","Artifact":"screens/compose-phase5-mid.png"}
+{"Step":"0.32","Kind":"advance","Message":"Compose keyframe lab reaches the deterministic end frame.","Artifact":""}
+{"Step":"compose-phase5-end","Kind":"capture","Message":"Compose Phase 5 keyframe lab shows the finite animation end state and alternate fill behavior.","Artifact":"screens/compose-phase5-end.png"}
+{"Step":"compose-transition-probe","Kind":"click","Message":"Compose transition probe enters focus state on the same DOM node.","Artifact":""}
+{"Step":"0.16","Kind":"advance","Message":"Compose transition runtime advances native tween interpolation.","Artifact":""}
+{"Step":"compose-transition","Kind":"capture","Message":"Compose transition probe shows mid-animation color and opacity interpolation.","Artifact":"screens/compose-transition.png"}
+{"Step":"compose-scroll-host","Kind":"scroll","Message":"Compose scroll host consumes native wheel input.","Artifact":""}
+{"Step":"compose-scroll","Kind":"capture","Message":"Compose scroll container clips content, updates offsets, and keeps clip host bounded.","Artifact":"screens/compose-scroll.png"}
+{"Step":"compose-item-2","Kind":"click","Message":"Compose switches selected collection item.","Artifact":""}
+{"Step":"compose-selection","Kind":"capture","Message":"Compose collection card shows selected state and auto-sized table columns.","Artifact":"screens/compose-selection.png"}
+{"Step":"compose-table","Kind":"capture","Message":"Compose table block shows native table semantics, content-aware columns, rowspan, and colspan.","Artifact":"screens/compose-table.png"}
 {"Step":"compose-modal-toggle","Kind":"click","Message":"Compose opens modal overlay.","Artifact":""}
 {"Step":"compose-modal","Kind":"capture","Message":"Compose overlay state becomes visible.","Artifact":"screens/compose-modal.png"}
-{"Step":"compose-item-2","Kind":"click","Message":"Compose switches selected collection item.","Artifact":""}
-{"Step":"compose-selection","Kind":"capture","Message":"Compose collection selection updates visible state.","Artifact":"screens/compose-selection.png"}

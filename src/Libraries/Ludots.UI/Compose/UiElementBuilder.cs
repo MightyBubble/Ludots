@@ -1,3 +1,4 @@
+using System.Globalization;
 using SkiaSharp;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
@@ -10,6 +11,7 @@ public sealed class UiElementBuilder
     private readonly HashSet<string> _classNames = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _attributes = new(StringComparer.OrdinalIgnoreCase);
     private Action<UiActionContext>? _onClick;
+    private UiCanvasContent? _canvasContent;
     private UiStyle _style;
     private string? _elementId;
     private string? _textContent;
@@ -66,6 +68,128 @@ public sealed class UiElementBuilder
     public UiElementBuilder Type(string value)
     {
         return Attribute("type", value);
+    }
+
+    public UiElementBuilder Src(string value)
+    {
+        return Attribute("src", value);
+    }
+
+    public UiElementBuilder Value(string value)
+    {
+        return Attribute("value", value);
+    }
+
+    public UiElementBuilder Placeholder(string value)
+    {
+        return Attribute("placeholder", value);
+    }
+
+    public UiElementBuilder Required(bool value = true)
+    {
+        if (value)
+        {
+            _attributes["required"] = "true";
+        }
+        else
+        {
+            _attributes.Remove("required");
+        }
+
+        return this;
+    }
+
+    public UiElementBuilder MinLength(int value)
+    {
+        if (value <= 0)
+        {
+            _attributes.Remove("minlength");
+        }
+        else
+        {
+            _attributes["minlength"] = value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return this;
+    }
+
+    public UiElementBuilder MaxLength(int value)
+    {
+        if (value <= 0)
+        {
+            _attributes.Remove("maxlength");
+        }
+        else
+        {
+            _attributes["maxlength"] = value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return this;
+    }
+
+    public UiElementBuilder Pattern(string value)
+    {
+        return Attribute("pattern", value);
+    }
+
+    public UiElementBuilder Min(float value)
+    {
+        _attributes["min"] = value.ToString(CultureInfo.InvariantCulture);
+        return this;
+    }
+
+    public UiElementBuilder Max(float value)
+    {
+        _attributes["max"] = value.ToString(CultureInfo.InvariantCulture);
+        return this;
+    }
+
+    public UiElementBuilder Step(float value)
+    {
+        if (value <= 0f)
+        {
+            _attributes.Remove("step");
+        }
+        else
+        {
+            _attributes["step"] = value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return this;
+    }
+
+    public UiElementBuilder ColSpan(int value)
+    {
+        if (value <= 1)
+        {
+            _attributes.Remove("colspan");
+        }
+        else
+        {
+            _attributes["colspan"] = value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return this;
+    }
+
+    public UiElementBuilder RowSpan(int value)
+    {
+        if (value <= 1)
+        {
+            _attributes.Remove("rowspan");
+        }
+        else
+        {
+            _attributes["rowspan"] = value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return this;
+    }
+
+    public UiElementBuilder AriaInvalid(bool value = true)
+    {
+        _attributes["aria-invalid"] = value ? "true" : "false";
+        return this;
     }
 
     public UiElementBuilder Checked(bool value = true)
@@ -140,7 +264,19 @@ public sealed class UiElementBuilder
 
     public UiElementBuilder Gap(float pixels)
     {
-        _style = _style with { Gap = pixels };
+        _style = _style with { Gap = pixels, RowGap = pixels, ColumnGap = pixels };
+        return this;
+    }
+
+    public UiElementBuilder Wrap(UiFlexWrap value = UiFlexWrap.Wrap)
+    {
+        _style = _style with { FlexWrap = value };
+        return this;
+    }
+
+    public UiElementBuilder AlignContent(UiAlignContent value)
+    {
+        _style = _style with { AlignContent = value };
         return this;
     }
 
@@ -242,6 +378,18 @@ public sealed class UiElementBuilder
         return this;
     }
 
+    public UiElementBuilder Blur(float radius)
+    {
+        _style = _style with { FilterBlurRadius = Math.Max(0f, radius) };
+        return this;
+    }
+
+    public UiElementBuilder BackdropBlur(float radius)
+    {
+        _style = _style with { BackdropBlurRadius = Math.Max(0f, radius) };
+        return this;
+    }
+
     public UiElementBuilder WhiteSpace(UiWhiteSpace value)
     {
         _style = _style with { WhiteSpace = value };
@@ -331,15 +479,105 @@ public sealed class UiElementBuilder
         return this;
     }
 
+    public UiElementBuilder ZIndex(int value)
+    {
+        _style = _style with { ZIndex = value };
+        return this;
+    }
+
     public UiElementBuilder Overflow(UiOverflow value)
     {
         _style = _style with { Overflow = value, ClipContent = value is UiOverflow.Hidden or UiOverflow.Clip };
         return this;
     }
 
+    public UiElementBuilder Direction(UiTextDirection value)
+    {
+        _style = _style with { Direction = value };
+        return this;
+    }
+
+    public UiElementBuilder TextAlign(UiTextAlign value)
+    {
+        _style = _style with { TextAlign = value };
+        return this;
+    }
+
+    public UiElementBuilder ObjectFit(UiObjectFit value)
+    {
+        _style = _style with { ObjectFit = value };
+        return this;
+    }
+
+    public UiElementBuilder ImageSlice(float all)
+    {
+        _style = _style with { ImageSlice = UiThickness.All(all) };
+        return this;
+    }
+
+    public UiElementBuilder ImageSlice(float leftRight, float topBottom)
+    {
+        _style = _style with { ImageSlice = UiThickness.Symmetric(leftRight, topBottom) };
+        return this;
+    }
+
+    public UiElementBuilder ImageSlice(float left, float top, float right, float bottom)
+    {
+        _style = _style with { ImageSlice = new UiThickness(left, top, right, bottom) };
+        return this;
+    }
+
+    public UiElementBuilder Translate(float x, float y = 0f)
+    {
+        _style = _style with { Transform = _style.Transform.Append(UiTransformOperation.Translate(UiLength.Px(x), UiLength.Px(y))) };
+        return this;
+    }
+
+    public UiElementBuilder TranslatePercent(float xPercent, float yPercent = 0f)
+    {
+        _style = _style with { Transform = _style.Transform.Append(UiTransformOperation.Translate(UiLength.Percent(xPercent), UiLength.Percent(yPercent))) };
+        return this;
+    }
+
+    public UiElementBuilder Scale(float uniform)
+    {
+        _style = _style with { Transform = _style.Transform.Append(UiTransformOperation.Scale(uniform, uniform)) };
+        return this;
+    }
+
+    public UiElementBuilder Scale(float x, float y)
+    {
+        _style = _style with { Transform = _style.Transform.Append(UiTransformOperation.Scale(x, y)) };
+        return this;
+    }
+
+    public UiElementBuilder Rotate(float degrees)
+    {
+        _style = _style with { Transform = _style.Transform.Append(UiTransformOperation.Rotate(degrees)) };
+        return this;
+    }
+
+    public UiElementBuilder Transition(params UiTransitionEntry[] entries)
+    {
+        _style = _style with { Transition = entries.Length == 0 ? null : new UiTransitionSpec(entries) };
+        return this;
+    }
+
     public UiElementBuilder OnClick(Action<UiActionContext> handler)
     {
         _onClick = handler;
+        return this;
+    }
+
+    public UiElementBuilder CanvasContent(UiCanvasContent content)
+    {
+        _canvasContent = content ?? throw new ArgumentNullException(nameof(content));
+        return this;
+    }
+
+    public UiElementBuilder CanvasContent(Action<SKCanvas, SKRect> draw)
+    {
+        _canvasContent = new UiCanvasContent(draw);
         return this;
     }
 
@@ -378,7 +616,8 @@ public sealed class UiElementBuilder
             tagName: TagName,
             elementId: _elementId,
             classNames: _classNames,
-            attributes: attributes);
+            attributes: attributes,
+            canvasContent: _canvasContent);
     }
 
     private static UiStyle CreateDefaultStyle(UiNodeKind kind)

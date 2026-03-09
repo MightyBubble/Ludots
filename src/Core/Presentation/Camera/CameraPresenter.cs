@@ -39,6 +39,8 @@ namespace Ludots.Core.Presentation.Camera
         /// </summary>
         public CameraRenderState3D SmoothedRenderState { get; private set; }
 
+        public bool HasSmoothedRenderState { get; private set; }
+
         public CameraPresenter(ISpatialCoordinateConverter coords, ICameraAdapter adapter)
         {
             _coords = coords;
@@ -103,6 +105,7 @@ namespace Ludots.Core.Presentation.Camera
 
             _currentFovYDeg = state.FovYDeg;
             SmoothedRenderState = new CameraRenderState3D(_currentPosition, _currentTarget, _currentUp, _currentFovYDeg);
+            HasSmoothedRenderState = true;
             _adapter.UpdateCamera(SmoothedRenderState);
         }
 

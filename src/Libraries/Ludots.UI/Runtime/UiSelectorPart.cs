@@ -5,5 +5,7 @@ public sealed record UiSelectorPart(
     string? Id,
     IReadOnlyList<string> Classes,
     IReadOnlyList<UiSelectorAttribute> Attributes,
+    IReadOnlyList<UiStructuralPseudo> StructuralPseudos,
+    IReadOnlyList<UiSelectorLogicalPseudo> LogicalPseudos,
     UiPseudoState PseudoState,
     UiSelectorCombinator Combinator);

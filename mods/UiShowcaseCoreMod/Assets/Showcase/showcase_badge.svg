@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" width="160" height="120">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="55%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="160" height="120" rx="22" fill="url(#bg)" />
+  <rect x="14" y="16" width="132" height="88" rx="18" fill="rgba(255,255,255,0.22)" />
+  <circle cx="122" cy="34" r="14" fill="#fef08a" />
+  <path d="M28 76C40 58 62 48 84 52C101 55 116 68 128 88" stroke="#0f172a" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.35" />
+  <rect x="24" y="74" width="74" height="24" rx="12" fill="#111827" opacity="0.72" />
+  <text x="61" y="90" text-anchor="middle" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="12" font-weight="700" fill="#ffffff">Ludots</text>
+</svg>

@@ -17,4 +17,10 @@
       <Private>false</Private>
     </ProjectReference>
   </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\Showcase\*.css" />
+    <EmbeddedResource Include="Assets\Showcase\*.html" />
+    <EmbeddedResource Include="Assets\Showcase\*.svg" />
+  </ItemGroup>
 </Project>

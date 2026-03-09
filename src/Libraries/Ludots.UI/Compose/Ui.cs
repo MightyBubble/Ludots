@@ -1,4 +1,5 @@
 using Ludots.UI.Runtime;
+using SkiaSharp;
 
 namespace Ludots.UI.Compose;
 
@@ -24,9 +25,24 @@ public static class Ui
         return new UiElementBuilder(UiNodeKind.Card, "article").Children(children);
     }
 
+    public static UiElementBuilder ScrollView(params UiElementBuilder[] children)
+    {
+        return new UiElementBuilder(UiNodeKind.Container, "div").Column().Overflow(UiOverflow.Scroll).Children(children);
+    }
+
     public static UiElementBuilder Text(string text)
     {
         return new UiElementBuilder(UiNodeKind.Text, "span").Text(text);
+    }
+
+    public static UiElementBuilder Image(string source)
+    {
+        return new UiElementBuilder(UiNodeKind.Image, "img").Src(source);
+    }
+
+    public static UiElementBuilder Canvas(Action<SKCanvas, SKRect> draw)
+    {
+        return new UiElementBuilder(UiNodeKind.Custom, "canvas").CanvasContent(draw);
     }
 
     public static UiElementBuilder Button(string text, Action<Ludots.UI.Runtime.Actions.UiActionContext>? onClick = null)

@@ -74,13 +74,13 @@ namespace ExCSS
             {
                 if (_confidence != EncodingConfidence.Tentative) return;
 
-                if (_encoding.IsUnicode())
+                if (TextEncoding.IsUnicode(_encoding))
                 {
                     _confidence = EncodingConfidence.Certain;
                     return;
                 }
 
-                if (value.IsUnicode()) value = TextEncoding.Utf8;
+                if (TextEncoding.IsUnicode(value)) value = TextEncoding.Utf8;
 
                 if (value == _encoding)
                 {

@@ -1,3 +1,4 @@
+using System.Text;
 using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
@@ -49,30 +50,88 @@ public static class UiFontRegistry
         }
     }
 
+    public static SKTypeface ResolveTypefaceForTextElement(string? familyList, bool bold, string textElement)
+    {
+        if (string.IsNullOrEmpty(textElement))
+        {
+            return ResolveTypeface(familyList, bold);
+        }
+
+        string cacheKey = $"glyph|{familyList ?? string.Empty}|{bold}|{textElement}";
+        lock (Sync)
+        {
+            if (CachedTypefaces.TryGetValue(cacheKey, out SKTypeface? cached))
+            {
+                return cached;
+            }
+
+            SKTypeface resolved = CreateTypefaceForTextElement(familyList, bold, textElement);
+            CachedTypefaces[cacheKey] = resolved;
+            return resolved;
+        }
+    }
+
+    public static bool SameTypeface(SKTypeface left, SKTypeface right)
+    {
+        ArgumentNullException.ThrowIfNull(left);
+        ArgumentNullException.ThrowIfNull(right);
+
+        return ReferenceEquals(left, right)
+            || string.Equals(left.FamilyName, right.FamilyName, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static SKTypeface CreateTypeface(string? familyList, bool bold)
     {
-        SKFontStyle fontStyle = bold ? SKFontStyle.Bold : SKFontStyle.Normal;
+        foreach (string familyName in ParseFamilyList(familyList))
+        {
+            SKTypeface familyTypeface = ResolveSingleFamilyTypeface(familyName, bold);
+            if (familyTypeface != SKTypeface.Default)
+            {
+                return familyTypeface;
+            }
+        }
+
+        return ResolveDefaultTypeface(bold);
+    }
+
+    private static SKTypeface CreateTypefaceForTextElement(string? familyList, bool bold, string textElement)
+    {
+        SKTypeface baseTypeface = ResolveTypeface(familyList, bold);
+        if (ContainsGlyphs(baseTypeface, textElement))
+        {
+            return baseTypeface;
+        }
 
         foreach (string familyName in ParseFamilyList(familyList))
         {
-            if (RegisteredFiles.TryGetValue(familyName, out string? fontPath))
+            SKTypeface candidate = ResolveSingleFamilyTypeface(familyName, bold);
+            if (ContainsGlyphs(candidate, textElement))
             {
-                try
-                {
-                    return SKTypeface.FromFile(fontPath);
-                }
-                catch
-                {
-                }
+                return candidate;
             }
+        }
 
-            string? mappedFamily = MapGenericFamily(familyName);
+        if (TryGetFirstCodePoint(textElement, out int codePoint))
+        {
             try
             {
-                SKTypeface? familyTypeface = SKTypeface.FromFamilyName(mappedFamily, fontStyle);
-                if (familyTypeface != null)
+                SKTypeface? matched = SKFontManager.Default.MatchCharacter(codePoint);
+                if (matched != null)
                 {
-                    return familyTypeface;
+                    string? familyName = matched.FamilyName;
+                    if (!string.IsNullOrWhiteSpace(familyName))
+                    {
+                        SKTypeface fallbackTypeface = ResolveSingleFamilyTypeface(familyName, bold);
+                        if (ContainsGlyphs(fallbackTypeface, textElement))
+                        {
+                            return fallbackTypeface;
+                        }
+                    }
+
+                    if (ContainsGlyphs(matched, textElement))
+                    {
+                        return matched;
+                    }
                 }
             }
             catch
@@ -80,7 +139,61 @@ public static class UiFontRegistry
             }
         }
 
-        return SKTypeface.FromFamilyName(null, fontStyle) ?? SKTypeface.Default;
+        return baseTypeface;
+    }
+
+    private static SKTypeface ResolveSingleFamilyTypeface(string familyName, bool bold)
+    {
+        string normalizedFamily = familyName.Trim();
+        string cacheKey = $"family|{normalizedFamily}|{bold}";
+        if (CachedTypefaces.TryGetValue(cacheKey, out SKTypeface? cached))
+        {
+            return cached;
+        }
+
+        SKTypeface resolved = CreateSingleFamilyTypeface(normalizedFamily, bold);
+        CachedTypefaces[cacheKey] = resolved;
+        return resolved;
+    }
+
+    private static SKTypeface CreateSingleFamilyTypeface(string familyName, bool bold)
+    {
+        SKFontStyle fontStyle = bold ? SKFontStyle.Bold : SKFontStyle.Normal;
+
+        if (RegisteredFiles.TryGetValue(familyName, out string? fontPath))
+        {
+            try
+            {
+                return SKTypeface.FromFile(fontPath);
+            }
+            catch
+            {
+            }
+        }
+
+        string? mappedFamily = MapGenericFamily(familyName);
+        try
+        {
+            return SKTypeface.FromFamilyName(mappedFamily, fontStyle) ?? SKTypeface.Default;
+        }
+        catch
+        {
+            return SKTypeface.Default;
+        }
+    }
+
+    private static SKTypeface ResolveDefaultTypeface(bool bold)
+    {
+        string cacheKey = $"default|{bold}";
+        if (CachedTypefaces.TryGetValue(cacheKey, out SKTypeface? cached))
+        {
+            return cached;
+        }
+
+        SKFontStyle fontStyle = bold ? SKFontStyle.Bold : SKFontStyle.Normal;
+        SKTypeface resolved = SKTypeface.FromFamilyName(null, fontStyle) ?? SKTypeface.Default;
+        CachedTypefaces[cacheKey] = resolved;
+        return resolved;
     }
 
     private static IEnumerable<string> ParseFamilyList(string? familyList)
@@ -111,5 +224,35 @@ public static class UiFontRegistry
             "monospace" => "Consolas",
             _ => familyName
         };
+    }
+
+    private static bool ContainsGlyphs(SKTypeface typeface, string text)
+    {
+        try
+        {
+            return typeface.ContainsGlyphs(text);
+        }
+        catch
+        {
+            using SKFont font = new(typeface, 12f);
+            return font.ContainsGlyphs(text);
+        }
+    }
+
+    private static bool TryGetFirstCodePoint(string textElement, out int codePoint)
+    {
+        codePoint = 0;
+        if (string.IsNullOrEmpty(textElement))
+        {
+            return false;
+        }
+
+        foreach (Rune rune in textElement.EnumerateRunes())
+        {
+            codePoint = rune.Value;
+            return true;
+        }
+
+        return false;
     }
 }

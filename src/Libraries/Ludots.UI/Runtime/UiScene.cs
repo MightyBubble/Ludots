@@ -1,17 +1,31 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Ludots.UI.Runtime.Actions;
 using Ludots.UI.Runtime.Diff;
 using Ludots.UI.Runtime.Events;
+using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
 
 public sealed class UiScene
 {
+    private static readonly Regex BasicEmailPattern = new(
+        "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(50));
+
     private readonly UiStyleResolver _styleResolver = new();
     private readonly UiLayoutEngine _layoutEngine = new();
     private readonly List<UiStyleSheet> _styleSheets = new();
     private UiNodeId? _hoveredNodeId;
     private UiNodeId? _pressedNodeId;
     private UiNodeId? _focusedNodeId;
+    private UiNodeId? _scrollDragNodeId;
+    private UiScrollAxis _scrollDragAxis;
+    private float _scrollDragPointerX;
+    private float _scrollDragPointerY;
+    private float _scrollDragStartOffsetX;
+    private float _scrollDragStartOffsetY;
     private float _layoutWidth;
     private float _layoutHeight;
     private int _nextNodeId = 1;
@@ -99,6 +113,27 @@ public sealed class UiScene
         IsDirty = false;
     }
 
+    public bool AdvanceTime(float deltaSeconds)
+    {
+        if (Root == null || deltaSeconds <= 0f)
+        {
+            return false;
+        }
+
+        bool changed = false;
+        foreach (UiNode node in EnumerateNodes(Root))
+        {
+            changed |= node.AdvanceTransitions(deltaSeconds);
+        }
+
+        if (changed)
+        {
+            Version++;
+        }
+
+        return changed;
+    }
+
     public UiEventResult Dispatch(UiEvent evt)
     {
         ArgumentNullException.ThrowIfNull(evt);
@@ -113,6 +148,19 @@ public sealed class UiScene
 
         if (evt is UiPointerEvent pointerEvent)
         {
+            (bool consumedByScroll, bool scrollChanged) = HandleScrollInteraction(pointerEvent, targetNode);
+            sceneChanged |= scrollChanged;
+            if (consumedByScroll || pointerEvent.PointerEventType == UiPointerEventType.Scroll)
+            {
+                if (sceneChanged)
+                {
+                    Version++;
+                    IsDirty = true;
+                }
+
+                return consumedByScroll || sceneChanged ? UiEventResult.CreateHandled() : UiEventResult.Unhandled;
+            }
+
             sceneChanged |= UpdatePointerState(pointerEvent, targetNode);
             sceneChanged |= UpdateFocusState(pointerEvent, targetNode);
 
@@ -231,11 +279,13 @@ public sealed class UiScene
         _hoveredNodeId = null;
         _pressedNodeId = null;
         _focusedNodeId = null;
+        ClearScrollDrag();
     }
 
     private void InitializeRuntimeState(UiNode node)
     {
-        node.RemovePseudoState(UiPseudoState.Hover | UiPseudoState.Active | UiPseudoState.Focus | UiPseudoState.Disabled | UiPseudoState.Checked | UiPseudoState.Selected);
+        node.ResetVisualState();
+        node.RemovePseudoState(UiPseudoState.Hover | UiPseudoState.Active | UiPseudoState.Focus | UiPseudoState.Disabled | UiPseudoState.Checked | UiPseudoState.Selected | UiPseudoState.Required | UiPseudoState.Invalid);
 
         if (HasBooleanAttribute(node.Attributes, "disabled"))
         {
@@ -251,6 +301,8 @@ public sealed class UiScene
         {
             node.AddPseudoState(UiPseudoState.Selected);
         }
+
+        RefreshValidationState(node);
 
         foreach (UiNode child in node.Children)
         {
@@ -302,6 +354,149 @@ public sealed class UiScene
         }
 
         return false;
+    }
+
+    private (bool Consumed, bool Changed) HandleScrollInteraction(UiPointerEvent evt, UiNode? targetNode)
+    {
+        if (_scrollDragNodeId is UiNodeId dragNodeId && dragNodeId.IsValid)
+        {
+            UiNode? dragNode = FindNode(dragNodeId);
+            if (dragNode == null)
+            {
+                ClearScrollDrag();
+                return (false, false);
+            }
+
+            return evt.PointerEventType switch
+            {
+                UiPointerEventType.Move => (true, UpdateScrollDrag(dragNode, evt.X, evt.Y)),
+                UiPointerEventType.Up => (true, ClearActiveScrollDrag()),
+                _ => (true, false)
+            };
+        }
+
+        UiNode? scrollNode = ResolveScrollContainer(targetNode);
+        if (scrollNode == null)
+        {
+            return (false, false);
+        }
+
+        if (evt.PointerEventType == UiPointerEventType.Scroll)
+        {
+            bool changed = scrollNode.ScrollBy(evt.DeltaX, evt.DeltaY);
+            return (changed, changed);
+        }
+
+        if (evt.PointerEventType == UiPointerEventType.Down && TryStartScrollDrag(scrollNode, evt.X, evt.Y))
+        {
+            return (true, false);
+        }
+
+        if (evt.PointerEventType == UiPointerEventType.Up)
+        {
+            ClearScrollDrag();
+        }
+
+        return (false, false);
+    }
+
+    private UiNode? ResolveScrollContainer(UiNode? node)
+    {
+        UiNode? current = node;
+        while (current != null)
+        {
+            if (current.Style.Overflow == UiOverflow.Scroll)
+            {
+                return current;
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
+    }
+
+    private bool TryStartScrollDrag(UiNode node, float x, float y)
+    {
+        UiRect verticalThumb = UiScrollGeometry.GetVerticalThumbRect(node);
+        if (verticalThumb.Width > 0f && verticalThumb.Height > 0f && verticalThumb.Contains(x, y))
+        {
+            _scrollDragNodeId = node.Id;
+            _scrollDragAxis = UiScrollAxis.Vertical;
+            _scrollDragPointerX = x;
+            _scrollDragPointerY = y;
+            _scrollDragStartOffsetX = node.ScrollOffsetX;
+            _scrollDragStartOffsetY = node.ScrollOffsetY;
+            return true;
+        }
+
+        UiRect horizontalThumb = UiScrollGeometry.GetHorizontalThumbRect(node);
+        if (horizontalThumb.Width > 0f && horizontalThumb.Height > 0f && horizontalThumb.Contains(x, y))
+        {
+            _scrollDragNodeId = node.Id;
+            _scrollDragAxis = UiScrollAxis.Horizontal;
+            _scrollDragPointerX = x;
+            _scrollDragPointerY = y;
+            _scrollDragStartOffsetX = node.ScrollOffsetX;
+            _scrollDragStartOffsetY = node.ScrollOffsetY;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool UpdateScrollDrag(UiNode node, float pointerX, float pointerY)
+    {
+        switch (_scrollDragAxis)
+        {
+            case UiScrollAxis.Vertical:
+            {
+                UiRect track = UiScrollGeometry.GetVerticalTrackRect(node);
+                UiRect thumb = UiScrollGeometry.GetVerticalThumbRect(node);
+                float travel = Math.Max(0f, track.Height - thumb.Height);
+                if (travel <= 0.01f || node.MaxScrollY <= 0.01f)
+                {
+                    return false;
+                }
+
+                float delta = pointerY - _scrollDragPointerY;
+                float offset = _scrollDragStartOffsetY + ((delta / travel) * node.MaxScrollY);
+                return node.SetScrollOffset(node.ScrollOffsetX, offset);
+            }
+            case UiScrollAxis.Horizontal:
+            {
+                UiRect track = UiScrollGeometry.GetHorizontalTrackRect(node);
+                UiRect thumb = UiScrollGeometry.GetHorizontalThumbRect(node);
+                float travel = Math.Max(0f, track.Width - thumb.Width);
+                if (travel <= 0.01f || node.MaxScrollX <= 0.01f)
+                {
+                    return false;
+                }
+
+                float delta = pointerX - _scrollDragPointerX;
+                float offset = _scrollDragStartOffsetX + ((delta / travel) * node.MaxScrollX);
+                return node.SetScrollOffset(offset, node.ScrollOffsetY);
+            }
+            default:
+                return false;
+        }
+    }
+
+    private void ClearScrollDrag()
+    {
+        _scrollDragNodeId = null;
+        _scrollDragAxis = UiScrollAxis.None;
+        _scrollDragPointerX = 0f;
+        _scrollDragPointerY = 0f;
+        _scrollDragStartOffsetX = 0f;
+        _scrollDragStartOffsetY = 0f;
+    }
+
+    private bool ClearActiveScrollDrag()
+    {
+        bool hadActiveDrag = _scrollDragNodeId is UiNodeId dragNodeId && dragNodeId.IsValid;
+        ClearScrollDrag();
+        return hadActiveDrag;
     }
 
     private bool UpdatePointerState(UiPointerEvent evt, UiNode? targetNode)
@@ -374,11 +569,6 @@ public sealed class UiScene
 
         if (IsRadioNode(semanticNode))
         {
-            if (semanticNode.PseudoState.HasFlag(UiPseudoState.Checked))
-            {
-                return false;
-            }
-
             bool changed = false;
             string? groupName = semanticNode.Attributes["name"];
             if (!string.IsNullOrWhiteSpace(groupName) && Root != null)
@@ -397,13 +587,25 @@ public sealed class UiScene
                 }
             }
 
-            return SetCheckedState(semanticNode, true) || changed;
+            changed |= SetCheckedState(semanticNode, true);
+            if (!string.IsNullOrWhiteSpace(groupName))
+            {
+                changed |= RefreshRadioGroupValidation(groupName);
+            }
+            else
+            {
+                changed |= RefreshValidationState(semanticNode);
+            }
+
+            return changed;
         }
 
         if (IsCheckableNode(semanticNode))
         {
             bool isChecked = semanticNode.PseudoState.HasFlag(UiPseudoState.Checked);
-            return SetCheckedState(semanticNode, !isChecked);
+            bool changed = SetCheckedState(semanticNode, !isChecked);
+            changed |= RefreshValidationState(semanticNode);
+            return changed;
         }
 
         return false;
@@ -461,6 +663,291 @@ public sealed class UiScene
         }
 
         return null;
+    }
+
+    private bool RefreshRadioGroupValidation(string groupName)
+    {
+        if (string.IsNullOrWhiteSpace(groupName) || Root == null)
+        {
+            return false;
+        }
+
+        bool changed = false;
+        foreach (UiNode node in EnumerateNodes(Root))
+        {
+            if (IsRadioNode(node) && string.Equals(node.Attributes["name"], groupName, StringComparison.OrdinalIgnoreCase))
+            {
+                changed |= RefreshValidationState(node);
+            }
+        }
+
+        return changed;
+    }
+
+    private bool RefreshValidationState(UiNode node)
+    {
+        bool changed = false;
+        bool required = IsRequiredNode(node);
+        changed |= SetPseudoFlag(node, UiPseudoState.Required, required);
+
+        bool invalid = EvaluateInvalidState(node, required);
+        changed |= SetPseudoFlag(node, UiPseudoState.Invalid, invalid);
+
+        if (required)
+        {
+            node.Attributes["aria-required"] = "true";
+        }
+
+        if (invalid)
+        {
+            node.Attributes["aria-invalid"] = "true";
+        }
+        else if (IsConstraintValidatedNode(node) || IsCheckableNode(node) || IsRadioNode(node) || node.Attributes.Contains("aria-invalid"))
+        {
+            node.Attributes["aria-invalid"] = "false";
+        }
+
+        return changed;
+    }
+
+    private bool EvaluateInvalidState(UiNode node, bool required)
+    {
+        if (node.PseudoState.HasFlag(UiPseudoState.Disabled))
+        {
+            return false;
+        }
+
+        if (IsRadioNode(node))
+        {
+            if (!required)
+            {
+                return false;
+            }
+
+            string? groupName = node.Attributes["name"];
+            if (!string.IsNullOrWhiteSpace(groupName) && Root != null)
+            {
+                foreach (UiNode candidate in EnumerateNodes(Root))
+                {
+                    if (IsRadioNode(candidate)
+                        && string.Equals(candidate.Attributes["name"], groupName, StringComparison.OrdinalIgnoreCase)
+                        && candidate.PseudoState.HasFlag(UiPseudoState.Checked))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            return !node.PseudoState.HasFlag(UiPseudoState.Checked);
+        }
+
+        if (IsCheckableNode(node))
+        {
+            return required && !node.PseudoState.HasFlag(UiPseudoState.Checked);
+        }
+
+        if (!IsConstraintValidatedNode(node))
+        {
+            return false;
+        }
+
+        string? value = ResolveConstraintValue(node);
+        bool isEmpty = string.IsNullOrWhiteSpace(value);
+        if (required && isEmpty)
+        {
+            return true;
+        }
+
+        if (isEmpty)
+        {
+            return false;
+        }
+
+        return ViolatesInputConstraints(node, value!);
+    }
+
+    private bool IsRequiredNode(UiNode node)
+    {
+        if (node.PseudoState.HasFlag(UiPseudoState.Disabled))
+        {
+            return false;
+        }
+
+        if (node.Attributes.Contains("required") || IsTruthy(node.Attributes["aria-required"]))
+        {
+            return true;
+        }
+
+        if (IsRadioNode(node) && Root != null)
+        {
+            string? groupName = node.Attributes["name"];
+            if (!string.IsNullOrWhiteSpace(groupName))
+            {
+                foreach (UiNode candidate in EnumerateNodes(Root))
+                {
+                    if (IsRadioNode(candidate)
+                        && string.Equals(candidate.Attributes["name"], groupName, StringComparison.OrdinalIgnoreCase)
+                        && (candidate.Attributes.Contains("required") || IsTruthy(candidate.Attributes["aria-required"])))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool SetPseudoFlag(UiNode node, UiPseudoState flag, bool value)
+    {
+        bool hasFlag = node.PseudoState.HasFlag(flag);
+        if (hasFlag == value)
+        {
+            return false;
+        }
+
+        if (value)
+        {
+            node.AddPseudoState(flag);
+        }
+        else
+        {
+            node.RemovePseudoState(flag);
+        }
+
+        return true;
+    }
+
+    private static bool IsConstraintValidatedNode(UiNode node)
+    {
+        return node.Kind is UiNodeKind.Input or UiNodeKind.Select or UiNodeKind.TextArea or UiNodeKind.Slider
+            || (string.Equals(node.TagName, "input", StringComparison.OrdinalIgnoreCase)
+                && !IsCheckableNode(node)
+                && !IsRadioNode(node)
+                && !IsInputType(node, "button")
+                && !IsInputType(node, "submit")
+                && !IsInputType(node, "reset"));
+    }
+
+    private static string? ResolveConstraintValue(UiNode node)
+    {
+        string? value = node.Attributes["value"];
+        if (string.IsNullOrWhiteSpace(value) && node.Kind == UiNodeKind.TextArea)
+        {
+            value = node.TextContent;
+        }
+
+        return value;
+    }
+
+    private static bool ViolatesInputConstraints(UiNode node, string value)
+    {
+        if (ViolatesLengthConstraint(node, value))
+        {
+            return true;
+        }
+
+        if (ViolatesPatternConstraint(node, value))
+        {
+            return true;
+        }
+
+        string inputType = GetNormalizedInputType(node);
+        return inputType switch
+        {
+            "email" => !BasicEmailPattern.IsMatch(value),
+            "number" or "range" => ViolatesNumericConstraint(node, value),
+            "url" => !Uri.TryCreate(value, UriKind.Absolute, out _),
+            _ => false
+        };
+    }
+
+    private static bool ViolatesLengthConstraint(UiNode node, string value)
+    {
+        if (TryParseIntegerAttribute(node, "minlength", out int minLength) && value.Length < minLength)
+        {
+            return true;
+        }
+
+        return TryParseIntegerAttribute(node, "maxlength", out int maxLength) && value.Length > maxLength;
+    }
+
+    private static bool ViolatesPatternConstraint(UiNode node, string value)
+    {
+        string? pattern = node.Attributes["pattern"];
+        if (string.IsNullOrWhiteSpace(pattern))
+        {
+            return false;
+        }
+
+        try
+        {
+            Regex regex = new($"^(?:{pattern})$", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50));
+            return !regex.IsMatch(value);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    private static bool ViolatesNumericConstraint(UiNode node, string value)
+    {
+        if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double numericValue))
+        {
+            return true;
+        }
+
+        if (TryParseFloatAttribute(node, "min", out double minValue) && numericValue < minValue)
+        {
+            return true;
+        }
+
+        if (TryParseFloatAttribute(node, "max", out double maxValue) && numericValue > maxValue)
+        {
+            return true;
+        }
+
+        string? stepText = node.Attributes["step"];
+        if (string.IsNullOrWhiteSpace(stepText) || string.Equals(stepText, "any", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!double.TryParse(stepText, NumberStyles.Float, CultureInfo.InvariantCulture, out double stepValue) || stepValue <= 0d)
+        {
+            return false;
+        }
+
+        double stepBase = TryParseFloatAttribute(node, "min", out double parsedMin) ? parsedMin : 0d;
+        double quotient = (numericValue - stepBase) / stepValue;
+        double distance = Math.Abs(quotient - Math.Round(quotient));
+        double tolerance = Math.Max(1e-6d, Math.Abs(stepValue) * 1e-6d);
+        return distance > tolerance;
+    }
+
+    private static string GetNormalizedInputType(UiNode node)
+    {
+        if (node.Kind == UiNodeKind.Slider)
+        {
+            return "range";
+        }
+
+        return node.Attributes["type"]?.Trim().ToLowerInvariant() ?? string.Empty;
+    }
+
+    private static bool TryParseIntegerAttribute(UiNode node, string attributeName, out int value)
+    {
+        string? raw = node.Attributes[attributeName];
+        return int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static bool TryParseFloatAttribute(UiNode node, string attributeName, out double value)
+    {
+        string? raw = node.Attributes[attributeName];
+        return double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
     }
 
     private static bool IsFocusableNode(UiNode node)
@@ -603,20 +1090,48 @@ public sealed class UiScene
 
     private static UiNode? HitTest(UiNode node, float x, float y)
     {
-        if (!node.Style.Visible || node.Style.Display == UiDisplay.None || !node.LayoutRect.Contains(x, y))
+        return HitTest(node, x, y, SKMatrix.Identity);
+    }
+
+    private static UiNode? HitTest(UiNode node, float x, float y, SKMatrix accumulatedTransform)
+    {
+        UiStyle style = node.RenderStyle;
+        if (!style.Visible || style.Display == UiDisplay.None)
         {
             return null;
         }
 
-        for (int i = node.Children.Count - 1; i >= 0; i--)
+        SKMatrix nodeTransform = style.Transform.HasOperations
+            ? SKMatrix.Concat(accumulatedTransform, UiTransformMath.CreateMatrix(style, node.LayoutRect))
+            : accumulatedTransform;
+
+        SKPoint localPoint = new(x, y);
+        if (!UiTransformMath.TryInvert(nodeTransform, out SKMatrix inverse))
         {
-            UiNode? hitChild = HitTest(node.Children[i], x, y);
+            return null;
+        }
+
+        localPoint = inverse.MapPoint(localPoint);
+        bool containsPoint = node.LayoutRect.Contains(localPoint.X, localPoint.Y);
+        bool clipsChildren = style.ClipContent || style.Overflow == UiOverflow.Scroll;
+        if (!containsPoint && clipsChildren)
+        {
+            return null;
+        }
+
+        SKMatrix childTransform = style.Overflow == UiOverflow.Scroll
+            ? SKMatrix.Concat(nodeTransform, SKMatrix.CreateTranslation(-node.ScrollOffsetX, -node.ScrollOffsetY))
+            : nodeTransform;
+
+        foreach (UiNode child in UiVisualTreeOrdering.FrontToBack(node.Children))
+        {
+            UiNode? hitChild = HitTest(child, x, y, childTransform);
             if (hitChild != null)
             {
                 return hitChild;
             }
         }
 
-        return node;
+        return containsPoint ? node : null;
     }
 }

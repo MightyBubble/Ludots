@@ -5,6 +5,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
@@ -16,6 +17,7 @@ namespace Ludots.Core.Presentation.Systems
     /// <summary>
     /// Generic click-selection system.
     /// Resolves hovered and selected entity state using the shared interaction bindings.
+    /// When rich selection is active, this system keeps hover up to date but does not own selection.
     /// </summary>
     public sealed class EntityClickSelectSystem : ISystem<float>
     {
@@ -39,8 +41,15 @@ namespace Ludots.Core.Presentation.Systems
 
         public void Update(in float dt)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input) return;
-            if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input)
+            {
+                return;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider)
+            {
+                return;
+            }
 
             var bindings = ResolveBindings();
             var mouse = input.ReadAction<System.Numerics.Vector2>(bindings.PointerPositionActionId);
@@ -62,22 +71,44 @@ namespace Ludots.Core.Presentation.Systems
                 _globals.Remove(CoreServiceKeys.HoveredEntity.Name);
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var existingSelObj)
-                || existingSelObj is not Entity existingSel
-                || !_world.IsAlive(existingSel))
+            bool richSelectionActive = IsRichSelectionActive();
+            if (!richSelectionActive
+                && (!_globals.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var existingSelObj)
+                    || existingSelObj is not Entity existingSel
+                    || !_world.IsAlive(existingSel)))
             {
-                if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) && localObj is Entity local && _world.IsAlive(local))
+                if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj)
+                    && localObj is Entity local
+                    && _world.IsAlive(local))
                 {
                     _globals[CoreServiceKeys.SelectedEntity.Name] = local;
                 }
             }
 
-            if (!input.PressedThisFrame(bindings.ConfirmActionId)) return;
-            if (!GroundRaycastUtil.TryGetGroundWorldCm(in ray, out var worldCm)) return;
+            if (!input.PressedThisFrame(bindings.ConfirmActionId) || richSelectionActive)
+            {
+                return;
+            }
+
+            if (!GroundRaycastUtil.TryGetGroundWorldCm(in ray, out var worldCm))
+            {
+                return;
+            }
 
             var selected = FindNearestEntity(worldCm, PickRadiusCm);
             _globals[CoreServiceKeys.SelectedEntity.Name] = selected;
             OnEntitySelected?.Invoke(worldCm, selected);
+        }
+
+        private bool IsRichSelectionActive()
+        {
+            return _globals.TryGetValue(CoreServiceKeys.ActiveSelectionProfileId.Name, out var profileObj)
+                && profileObj is string profileId
+                && !string.IsNullOrWhiteSpace(profileId)
+                && _globals.TryGetValue(CoreServiceKeys.SelectionInputHandler.Name, out var handlerObj)
+                && handlerObj is ISelectionInputHandler
+                && _globals.TryGetValue(CoreServiceKeys.SelectionCandidatePolicy.Name, out var policyObj)
+                && policyObj is ISelectionCandidatePolicy;
         }
 
         private Entity FindNearestEntity(in WorldCmInt2 worldCm, int radiusCm)
@@ -85,7 +116,10 @@ namespace Ludots.Core.Presentation.Systems
             Span<Entity> buffer = stackalloc Entity[256];
             var result = _spatial.QueryRadius(worldCm, radiusCm, buffer);
             int count = result.Count;
-            if (count <= 0) return default;
+            if (count <= 0)
+            {
+                return default;
+            }
 
             Entity best = default;
             long bestD2 = long.MaxValue;
@@ -93,9 +127,16 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < count; i++)
             {
                 var entity = buffer[i];
-                if (!_world.IsAlive(entity)) continue;
+                if (!_world.IsAlive(entity))
+                {
+                    continue;
+                }
+
                 ref var pos = ref _world.TryGetRef<WorldPositionCm>(entity, out bool hasPos);
-                if (!hasPos) continue;
+                if (!hasPos)
+                {
+                    continue;
+                }
 
                 var cmPos = pos.Value.ToWorldCmInt2();
                 long dx = cmPos.X - worldCm.X;

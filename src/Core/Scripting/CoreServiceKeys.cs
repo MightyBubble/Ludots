@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
@@ -18,6 +18,7 @@ using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
@@ -37,7 +38,6 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
-using Ludots.Core.UI;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Scripting
@@ -68,7 +68,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<MapContext> MapContext = new("MapContext");
 
         // --- UI ---
-        public static readonly ServiceKey<IUiSystem> UISystem = new("UISystem");
+        public static readonly ServiceKey<object> UISystem = new("UISystem");
         public static readonly ServiceKey<object> UIRoot = new("UIRoot");
         public static readonly ServiceKey<bool> UiCaptured = new("UiCaptured");
 
@@ -80,6 +80,11 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IViewController> ViewController = new("ViewController");
         public static readonly ServiceKey<IScreenProjector> ScreenProjector = new("ScreenProjector");
         public static readonly ServiceKey<IScreenRayProvider> ScreenRayProvider = new("ScreenRayProvider");
+        public static readonly ServiceKey<SelectionProfileRegistry> SelectionProfileRegistry = new("SelectionProfileRegistry");
+        public static readonly ServiceKey<string> ActiveSelectionProfileId = new("ActiveSelectionProfileId");
+        public static readonly ServiceKey<SelectionInteractionState> SelectionInteractionState = new("SelectionInteractionState");
+        public static readonly ServiceKey<ISelectionInputHandler> SelectionInputHandler = new("SelectionInputHandler");
+        public static readonly ServiceKey<ISelectionCandidatePolicy> SelectionCandidatePolicy = new("SelectionCandidatePolicy");
         public static readonly ServiceKey<CameraControllerRequest> CameraControllerRequest = new("CameraControllerRequest");
         public static readonly ServiceKey<CameraControllerRegistry> CameraControllerRegistry = new("CameraControllerRegistry");
         public static readonly ServiceKey<CameraPresetRegistry> CameraPresetRegistry = new("CameraPresetRegistry");
@@ -176,6 +181,3 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ILogBackend> LogBackend = new("LogBackend");
     }
 }
-
-
-

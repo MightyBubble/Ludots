@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace Ludots.Core.Scripting
 {
@@ -23,6 +23,11 @@ namespace Ludots.Core.Scripting
         public const string ViewController = "ViewController";
         public const string ScreenProjector = "ScreenProjector";
         public const string ScreenRayProvider = "ScreenRayProvider";
+        public const string SelectionProfileRegistry = "SelectionProfileRegistry";
+        public const string ActiveSelectionProfileId = "ActiveSelectionProfileId";
+        public const string SelectionInteractionState = "SelectionInteractionState";
+        public const string SelectionInputHandler = "SelectionInputHandler";
+        public const string SelectionCandidatePolicy = "SelectionCandidatePolicy";
         public const string DebugDrawCommandBuffer = "DebugDrawCommandBuffer";
         public const string ExtensionAttributeRegistry = "ExtensionAttributeRegistry";
         public const string AttributeSchemaUpdateQueue = "AttributeSchemaUpdateQueue";
@@ -89,10 +94,10 @@ namespace Ludots.Core.Scripting
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";
         public const string TransientMarkerBuffer = "TransientMarkerBuffer";
-        // WorldHudConfig removed �?unified into Performer entity-scoped definitions
+        // WorldHudConfig removed 锟?unified into Performer entity-scoped definitions
         public const string GasPresentationEventBuffer = "GasPresentationEventBuffer";
         public const string GroundOverlayBuffer = "GroundOverlayBuffer";
-        // IndicatorRequestBuffer removed �?unified into Performer direct API
+        // IndicatorRequestBuffer removed 锟?unified into Performer direct API
         public const string PerformerDefinitionRegistry = "PerformerDefinitionRegistry";
         public const string PerformerInstanceBuffer = "PerformerInstanceBuffer";
         public const string Navigation2DRuntime = "Navigation2DRuntime";
