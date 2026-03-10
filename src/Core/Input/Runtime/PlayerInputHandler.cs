@@ -14,6 +14,9 @@ namespace Ludots.Core.Input.Runtime
         private readonly Dictionary<string, Vector3> _injections = new(StringComparer.Ordinal);
         private readonly InputActionInstance[] _actionStates;
         private readonly Vector3[] _tempValues;
+        private Vector2 _mousePosition;
+        private Vector2 _mouseDelta;
+        private bool _hasMousePosition;
 
         public bool InputBlocked { get; set; } = false;
 
@@ -110,6 +113,8 @@ namespace Ludots.Core.Input.Runtime
 
         public void Update()
         {
+            RefreshPointerState();
+
             if (InputBlocked)
             {
                 for (int i = 0; i < _actionStates.Length; i++)
@@ -204,6 +209,10 @@ namespace Ludots.Core.Input.Runtime
             {
                 compiled.SourceKind = BindingSourceKind.MousePosition;
             }
+            else if (compiled.Path.StartsWith("<Mouse>/Delta", StringComparison.Ordinal))
+            {
+                compiled.SourceKind = BindingSourceKind.MouseDelta;
+            }
             else if (compiled.Path.StartsWith("<Mouse>/Scroll", StringComparison.Ordinal))
             {
                 compiled.SourceKind = BindingSourceKind.MouseScroll;
@@ -236,6 +245,7 @@ namespace Ludots.Core.Input.Runtime
                     "Normalize" => new CompiledProcessor(ProcessorKind.Normalize, 0f),
                     "Deadzone" => new CompiledProcessor(ProcessorKind.Deadzone, GetParameter(def.Parameters, "Min", 0.1f)),
                     "Scale" => new CompiledProcessor(ProcessorKind.Scale, GetParameter(def.Parameters, "Factor", 1f)),
+                    "Invert" => new CompiledProcessor(ProcessorKind.Invert, 0f, GetAxisMask(def.Parameters)),
                     _ => new CompiledProcessor(ProcessorKind.Unknown, 0f)
                 };
             }
@@ -262,6 +272,39 @@ namespace Ludots.Core.Input.Runtime
             return fallback;
         }
 
+        private static byte GetAxisMask(IReadOnlyList<InputParameterDef> parameters)
+        {
+            if (parameters == null || parameters.Count == 0)
+            {
+                return 0b111;
+            }
+
+            byte mask = 0;
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                var parameter = parameters[i];
+                if (parameter == null || parameter.Value == 0f)
+                {
+                    continue;
+                }
+
+                if (string.Equals(parameter.Name, "X", StringComparison.OrdinalIgnoreCase))
+                {
+                    mask |= 0b001;
+                }
+                else if (string.Equals(parameter.Name, "Y", StringComparison.OrdinalIgnoreCase))
+                {
+                    mask |= 0b010;
+                }
+                else if (string.Equals(parameter.Name, "Z", StringComparison.OrdinalIgnoreCase))
+                {
+                    mask |= 0b100;
+                }
+            }
+
+            return mask == 0 ? (byte)0b111 : mask;
+        }
+
         private Vector3 ResolveBindingValue(in CompiledBinding binding)
         {
             Vector3 rawValue = ReadRawBindingValue(in binding);
@@ -279,10 +322,9 @@ namespace Ludots.Core.Input.Runtime
             switch (binding.SourceKind)
             {
                 case BindingSourceKind.MousePosition:
-                {
-                    var pos = _backend.GetMousePosition();
-                    return new Vector3(pos.X, pos.Y, 0f);
-                }
+                    return new Vector3(_mousePosition.X, _mousePosition.Y, 0f);
+                case BindingSourceKind.MouseDelta:
+                    return new Vector3(_mouseDelta.X, _mouseDelta.Y, 0f);
                 case BindingSourceKind.MouseScroll:
                     return new Vector3(_backend.GetMouseWheel(), 0f, 0f);
                 case BindingSourceKind.Button:
@@ -298,6 +340,16 @@ namespace Ludots.Core.Input.Runtime
                 default:
                     return Vector3.Zero;
             }
+        }
+
+        private void RefreshPointerState()
+        {
+            var currentMousePosition = _backend.GetMousePosition();
+            _mouseDelta = _hasMousePosition
+                ? currentMousePosition - _mousePosition
+                : Vector2.Zero;
+            _mousePosition = currentMousePosition;
+            _hasMousePosition = true;
         }
 
         private float ReadCompositeScalar(CompiledBinding[] parts, int index)
@@ -324,6 +376,20 @@ namespace Ludots.Core.Input.Runtime
                     return value.Length() < processor.Scalar ? Vector3.Zero : value;
                 case ProcessorKind.Scale:
                     return value * processor.Scalar;
+                case ProcessorKind.Invert:
+                    if ((processor.AxisMask & 0b001) != 0)
+                    {
+                        value.X = -value.X;
+                    }
+                    if ((processor.AxisMask & 0b010) != 0)
+                    {
+                        value.Y = -value.Y;
+                    }
+                    if ((processor.AxisMask & 0b100) != 0)
+                    {
+                        value.Z = -value.Z;
+                    }
+                    return value;
                 default:
                     return value;
             }
@@ -345,15 +411,16 @@ namespace Ludots.Core.Input.Runtime
             public CompiledProcessor[] Processors { get; init; } = Array.Empty<CompiledProcessor>();
         }
 
-        private readonly record struct CompiledProcessor(ProcessorKind Kind, float Scalar);
+        private readonly record struct CompiledProcessor(ProcessorKind Kind, float Scalar, byte AxisMask = 0);
 
         private enum BindingSourceKind : byte
         {
             Unsupported = 0,
             MousePosition = 1,
-            MouseScroll = 2,
-            Button = 3,
-            CompositeVector2 = 4,
+            MouseDelta = 2,
+            MouseScroll = 3,
+            Button = 4,
+            CompositeVector2 = 5,
         }
 
         private enum ProcessorKind : byte
@@ -362,6 +429,7 @@ namespace Ludots.Core.Input.Runtime
             Normalize = 1,
             Deadzone = 2,
             Scale = 3,
+            Invert = 4,
         }
     }
 }

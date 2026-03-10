@@ -32,14 +32,14 @@ namespace Ludots.Core.Gameplay.Camera
 
             if (preset.EnableGrabDrag)
             {
-                behaviors.Add(new GrabDragPanBehavior(preset.GrabDragHoldActionId, preset.PointerPosActionId));
+                behaviors.Add(new GrabDragPanBehavior(preset.GrabDragHoldActionId, preset.PointerDeltaActionId));
             }
 
             switch (preset.RotateMode)
             {
                 case CameraRotateMode.DragRotate:
                     behaviors.Add(new DragRotateBehavior(
-                        preset.RotateHoldActionId, preset.PointerPosActionId,
+                        preset.RotateHoldActionId, preset.LookActionId,
                         preset.RotateDegPerPixel, preset.MinPitchDeg, preset.MaxPitchDeg));
                     break;
                 case CameraRotateMode.KeyRotate:
@@ -47,7 +47,7 @@ namespace Ludots.Core.Gameplay.Camera
                     break;
                 case CameraRotateMode.Both:
                     behaviors.Add(new DragRotateBehavior(
-                        preset.RotateHoldActionId, preset.PointerPosActionId,
+                        preset.RotateHoldActionId, preset.LookActionId,
                         preset.RotateDegPerPixel, preset.MinPitchDeg, preset.MaxPitchDeg));
                     behaviors.Add(new KeyRotateBehavior(preset.RotateLeftActionId, preset.RotateRightActionId, preset.RotateDegPerSecond));
                     break;

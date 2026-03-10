@@ -6,19 +6,17 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
     public sealed class DragRotateBehavior : ICameraBehavior
     {
         private readonly string _holdActionId;
-        private readonly string _pointerPosActionId;
+        private readonly string _lookActionId;
         private readonly float _degPerPixel;
         private readonly float _minPitchDeg;
         private readonly float _maxPitchDeg;
-        private bool _isRotating;
-        private Vector2 _lastPointerPos;
 
         public DragRotateBehavior(
-            string holdActionId, string pointerPosActionId,
+            string holdActionId, string lookActionId,
             float degPerPixel, float minPitchDeg, float maxPitchDeg)
         {
             _holdActionId = holdActionId ?? "OrbitRotateHold";
-            _pointerPosActionId = pointerPosActionId ?? "PointerPos";
+            _lookActionId = lookActionId ?? "Look";
             _degPerPixel = degPerPixel;
             _minPitchDeg = minPitchDeg;
             _maxPitchDeg = maxPitchDeg;
@@ -27,30 +25,21 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
         public void Update(CameraState state, CameraBehaviorContext ctx, float dt)
         {
             bool hold = ctx.Input.ReadAction<bool>(_holdActionId);
-            Vector2 pointerPos = ctx.Input.ReadAction<Vector2>(_pointerPosActionId);
-
-            if (hold)
+            if (!hold)
             {
-                if (!_isRotating)
-                {
-                    _isRotating = true;
-                    _lastPointerPos = pointerPos;
-                }
-                else
-                {
-                    Vector2 delta = pointerPos - _lastPointerPos;
-                    _lastPointerPos = pointerPos;
+                return;
+            }
 
-                    state.Yaw += delta.X * _degPerPixel;
-                    state.Pitch += delta.Y * _degPerPixel;
-                    state.Pitch = Math.Clamp(state.Pitch, _minPitchDeg, _maxPitchDeg);
-                    state.Yaw = Wrap360(state.Yaw);
-                }
-            }
-            else
+            Vector2 look = ctx.Input.ReadAction<Vector2>(_lookActionId);
+            if (MathF.Abs(look.X) < 0.01f && MathF.Abs(look.Y) < 0.01f)
             {
-                _isRotating = false;
+                return;
             }
+
+            state.Yaw += look.X * _degPerPixel;
+            state.Pitch += look.Y * _degPerPixel;
+            state.Pitch = Math.Clamp(state.Pitch, _minPitchDeg, _maxPitchDeg);
+            state.Yaw = Wrap360(state.Yaw);
         }
 
         private static float Wrap360(float degrees)

@@ -9,8 +9,6 @@ namespace Ludots.Core.Gameplay.Camera
     {
         private readonly Orbit3CCameraConfig _config;
         private readonly PlayerInputHandler _input;
-        private bool _isRotating;
-        private Vector2 _lastPointerPos;
 
         public Orbit3CCameraController(Orbit3CCameraConfig config, PlayerInputHandler input)
         {
@@ -30,29 +28,16 @@ namespace Ludots.Core.Gameplay.Camera
             }
 
             bool rotateHold = _input.ReadAction<bool>(_config.RotateHoldActionId);
-            Vector2 pointerPos = _input.ReadAction<Vector2>(_config.PointerPosActionId);
-
             if (rotateHold)
             {
-                if (!_isRotating)
+                Vector2 look = _input.ReadAction<Vector2>(_config.LookActionId);
+                if (look.LengthSquared() > 0.0001f)
                 {
-                    _isRotating = true;
-                    _lastPointerPos = pointerPos;
-                }
-                else
-                {
-                    Vector2 delta = pointerPos - _lastPointerPos;
-                    _lastPointerPos = pointerPos;
-
-                    state.Yaw += delta.X * _config.RotateDegPerPixel;
-                    state.Pitch += delta.Y * _config.RotateDegPerPixel;
+                    state.Yaw += look.X * _config.RotateDegPerPixel;
+                    state.Pitch += look.Y * _config.RotateDegPerPixel;
                     state.Pitch = Math.Clamp(state.Pitch, _config.MinPitchDeg, _config.MaxPitchDeg);
                     state.Yaw = Wrap360(state.Yaw);
                 }
-            }
-            else
-            {
-                _isRotating = false;
             }
 
             if (dt > 0f)

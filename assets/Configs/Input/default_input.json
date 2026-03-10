@@ -31,6 +31,11 @@
       "type": "Axis2D"
     },
     {
+      "id": "PointerDelta",
+      "name": "Gameplay_PointerDelta",
+      "type": "Axis2D"
+    },
+    {
       "id": "Zoom",
       "name": "Gameplay_Zoom",
       "type": "Axis1D"
@@ -180,6 +185,25 @@
         {
           "actionId": "PointerPos",
           "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "PointerDelta",
+          "path": "<Mouse>/Delta"
+        },
+        {
+          "actionId": "Look",
+          "path": "<Mouse>/Delta",
+          "processors": [
+            {
+              "type": "Invert",
+              "parameters": [
+                {
+                  "name": "Y",
+                  "value": 1
+                }
+              ]
+            }
+          ]
         },
         {
           "actionId": "OrbitRotateHold",

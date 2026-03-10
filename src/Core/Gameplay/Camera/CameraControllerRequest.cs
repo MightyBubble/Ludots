@@ -19,6 +19,7 @@ namespace Ludots.Core.Gameplay.Camera
         public string MoveActionId { get; set; } = "Move";
         public string ZoomActionId { get; set; } = "Zoom";
         public string PointerPosActionId { get; set; } = "PointerPos";
+        public string LookActionId { get; set; } = "Look";
         public string RotateHoldActionId { get; set; } = "OrbitRotateHold";
         public string RotateLeftActionId { get; set; } = "RotateLeft";
         public string RotateRightActionId { get; set; } = "RotateRight";
