@@ -1,11 +1,10 @@
 [
   {
-    "Id": "Camera.Mode.SelectionFollow",
-    "DisplayName": "Selected Follow",
-    "VirtualCameraId": "Camera.Showcase.Profile.SelectionFollow",
-    "FollowTargetKind": "SelectedEntity",
+    "Id": "Camera.Mode.TrackFocus",
+    "DisplayName": "Track Focus",
+    "VirtualCameraId": "Camera.Showcase.Profile.TrackFocus",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,
-    "SwitchActionId": "CameraModeSelectionFollow"
+    "SwitchActionId": "CameraModeTrackFocus"
   }
 ]

@@ -10,7 +10,8 @@
     { "id": "CameraAcceptanceTpsAimHold", "name": "CameraAcceptanceTpsAimHold", "type": "Button" },
     { "id": "CameraAcceptanceStackReveal", "name": "CameraAcceptanceStackReveal", "type": "Button" },
     { "id": "CameraAcceptanceStackAlert", "name": "CameraAcceptanceStackAlert", "type": "Button" },
-    { "id": "CameraAcceptanceStackClear", "name": "CameraAcceptanceStackClear", "type": "Button" }
+    { "id": "CameraAcceptanceStackClear", "name": "CameraAcceptanceStackClear", "type": "Button" },
+    { "id": "CameraAcceptanceSpawnModifier", "name": "CameraAcceptanceSpawnModifier", "type": "Button" }
   ],
   "contexts": [
     {
@@ -28,7 +29,8 @@
         { "actionId": "CameraAcceptanceTpsAimHold", "path": "<Mouse>/RightButton" },
         { "actionId": "CameraAcceptanceStackReveal", "path": "<Keyboard>/r" },
         { "actionId": "CameraAcceptanceStackAlert", "path": "<Keyboard>/t" },
-        { "actionId": "CameraAcceptanceStackClear", "path": "<Keyboard>/enter" }
+        { "actionId": "CameraAcceptanceStackClear", "path": "<Keyboard>/enter" },
+        { "actionId": "CameraAcceptanceSpawnModifier", "path": "<Keyboard>/q" }
       ]
     }
   ]

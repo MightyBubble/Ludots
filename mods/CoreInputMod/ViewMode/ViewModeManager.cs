@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Arch.Core;
 using CoreInputMod.Systems;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Orders;
@@ -17,7 +16,6 @@ namespace CoreInputMod.ViewMode
         private readonly List<ViewModeConfig> _modes = new();
         private readonly Dictionary<string, ViewModeConfig> _modeMap = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, object> _globals;
-        private readonly World _world;
         private readonly CameraManager _camera;
         private int _activeIndex = -1;
         private string? _ownedVirtualCameraId;
@@ -25,9 +23,8 @@ namespace CoreInputMod.ViewMode
         public ViewModeConfig? ActiveMode => _activeIndex >= 0 && _activeIndex < _modes.Count ? _modes[_activeIndex] : null;
         public IReadOnlyList<ViewModeConfig> Modes => _modes;
 
-        public ViewModeManager(World world, Dictionary<string, object> globals, CameraManager camera)
+        public ViewModeManager(Dictionary<string, object> globals, CameraManager camera)
         {
-            _world = world;
             _globals = globals;
             _camera = camera;
         }
@@ -103,6 +100,7 @@ namespace CoreInputMod.ViewMode
 
             _activeIndex = -1;
             _globals.Remove(ActiveModeIdKey);
+            _globals.Remove(CoreServiceKeys.ActiveSelectionProfileId.Name);
             _globals.Remove(SkillBarOverlaySystem.SkillBarKeyLabelsKey);
             _globals[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
         }
@@ -124,6 +122,7 @@ namespace CoreInputMod.ViewMode
 
             ApplyCamera(previous, next);
             ApplyInteractionMode(next);
+            ApplySelectionProfile(next);
             ApplySkillBar(next);
             _globals[ActiveModeIdKey] = next.Id;
         }
@@ -162,16 +161,9 @@ namespace CoreInputMod.ViewMode
                 return;
             }
 
-            if (!Enum.TryParse<CameraFollowTargetKind>(next.FollowTargetKind, ignoreCase: true, out var followTargetKind))
-            {
-                throw new InvalidOperationException(
-                    $"ViewMode '{next.Id}' declared unsupported FollowTargetKind '{next.FollowTargetKind}'.");
-            }
-
             _camera.ActivateVirtualCamera(
                 next.VirtualCameraId,
                 blendDurationSeconds: null,
-                followTarget: CameraFollowTargetFactory.Build(_world, _globals, followTargetKind),
                 snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
             _ownedVirtualCameraId = next.VirtualCameraId;
         }
@@ -187,6 +179,17 @@ namespace CoreInputMod.ViewMode
             {
                 mapping.SetInteractionMode(interactionMode);
             }
+        }
+
+        private void ApplySelectionProfile(ViewModeConfig mode)
+        {
+            if (string.IsNullOrWhiteSpace(mode.SelectionProfileId))
+            {
+                _globals.Remove(CoreServiceKeys.ActiveSelectionProfileId.Name);
+                return;
+            }
+
+            _globals[CoreServiceKeys.ActiveSelectionProfileId.Name] = mode.SelectionProfileId;
         }
 
         private void ApplySkillBar(ViewModeConfig mode)

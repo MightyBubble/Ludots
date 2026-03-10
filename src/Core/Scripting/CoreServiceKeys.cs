@@ -17,6 +17,7 @@ using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
@@ -110,6 +111,11 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SelectionRequestQueue> SelectionRequestQueue = new("SelectionRequestQueue");
         public static readonly ServiceKey<SelectionResponseBuffer> SelectionResponseBuffer = new("SelectionResponseBuffer");
         public static readonly ServiceKey<SelectionRuleRegistry> SelectionRuleRegistry = new("SelectionRuleRegistry");
+        public static readonly ServiceKey<SelectionProfileRegistry> SelectionProfileRegistry = new("SelectionProfileRegistry");
+        public static readonly ServiceKey<string> ActiveSelectionProfileId = new("ActiveSelectionProfileId");
+        public static readonly ServiceKey<ISelectionInputHandler> SelectionInputHandler = new("SelectionInputHandler");
+        public static readonly ServiceKey<ISelectionCandidatePolicy> SelectionCandidatePolicy = new("SelectionCandidatePolicy");
+        public static readonly ServiceKey<SelectionInteractionState> SelectionInteractionState = new("SelectionInteractionState");
         public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
         public static readonly ServiceKey<OrderQueue> OrderQueue = new("OrderQueue");
         public static readonly ServiceKey<OrderTypeRegistry> OrderTypeRegistry = new("OrderTypeRegistry");
@@ -166,6 +172,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Entity> LocalPlayerEntity = new("LocalPlayerEntity");
         public static readonly ServiceKey<Entity> SelectedEntity = new("SelectedEntity");
         public static readonly ServiceKey<Entity> HoveredEntity = new("HoveredEntity");
+        public static readonly ServiceKey<RuntimeEntityTemplateSpawner> RuntimeEntityTemplateSpawner = new("RuntimeEntityTemplateSpawner");
 
         // --- Config & AI ---
         public static readonly ServiceKey<ConfigCatalog> ConfigCatalog = new("ConfigCatalog");

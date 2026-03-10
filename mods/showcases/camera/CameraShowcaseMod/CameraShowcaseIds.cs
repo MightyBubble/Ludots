@@ -10,18 +10,18 @@ namespace CameraShowcaseMod
         public const string TacticalProfileId = "Camera.Profile.Tactical";
         public const string FollowProfileId = "Camera.Profile.Follow";
         public const string InspectProfileId = "Camera.Profile.Inspect";
-        public const string SelectionProfileId = "Camera.Showcase.Profile.SelectionFollow";
+        public const string TrackProfileId = "Camera.Showcase.Profile.TrackFocus";
 
         public const string TacticalModeId = "Camera.Mode.Tactical";
         public const string FollowModeId = "Camera.Mode.Follow";
         public const string InspectModeId = "Camera.Mode.Inspect";
 
         public const string RevealShotId = "Camera.Showcase.Shot.CommandReveal";
-        public const string SelectionLockShotId = "Camera.Shot.SelectionLock";
+        public const string FocusLockShotId = "Camera.Shot.SelectionLock";
         public const string InspectSweepShotId = "Camera.Shot.InspectSweep";
 
-        public const string SelectionModeId = "Camera.Mode.SelectionFollow";
-        public const string SelectionModeActionId = "CameraModeSelectionFollow";
+        public const string TrackModeId = "Camera.Mode.TrackFocus";
+        public const string TrackModeActionId = "CameraModeTrackFocus";
 
         public const string HeroName = "CameraShowcaseHero";
         public const string ScoutName = "CameraShowcaseScout";
@@ -41,9 +41,9 @@ namespace CameraShowcaseMod
         {
             return mapId switch
             {
-                HubMapId => "Baseline shared profiles plus a local selection-follow profile.",
+                HubMapId => "Baseline shared profiles plus an upper-layer selection-to-follow composition sample.",
                 StackMapId => "Tagged reveal shot wins over map-default follow, then falls back.",
-                SelectionMapId => "Explicit selected-entity follow with no fallback if selection is lost.",
+                SelectionMapId => "Selection chooses the tracked subject; the camera follows through an explicit bridge with no fallback.",
                 BootstrapMapId => "Shared bootstrap centers wide bounds before free camera control.",
                 _ => "Production sample for the unified virtual camera stack."
             };

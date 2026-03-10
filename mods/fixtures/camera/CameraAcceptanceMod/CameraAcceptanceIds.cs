@@ -40,6 +40,10 @@ namespace CameraAcceptanceMod
         public const string StackRevealActionId = "CameraAcceptanceStackReveal";
         public const string StackAlertActionId = "CameraAcceptanceStackAlert";
         public const string StackClearActionId = "CameraAcceptanceStackClear";
+        public const string SpawnModifierActionId = "CameraAcceptanceSpawnModifier";
+        public const string SelectionProfileId = "Selection.Profile.PointerBox";
+        public const string FixtureTemplateId = "moba_dummy";
+        public const string FixtureNamePrefix = "CameraFixture";
 
         public const string HeroName = "CameraAcceptanceHero";
         public const string ScoutName = "CameraAcceptanceScout";
@@ -61,11 +65,11 @@ namespace CameraAcceptanceMod
         {
             return mapId switch
             {
-                ProjectionMapId => "Projection and raycast acceptance. Left click ground to spawn a transient performer marker.",
+                ProjectionMapId => "Projection, raycast, and selection acceptance. Left click blank ground for the cue marker, hold Q + left click to spawn fixtures, then click or drag-box to select them.",
                 RtsMapId => "RTS/MOBA behavior composition. Validate middle-drag, edge scroll, WASD pan, and wheel zoom.",
                 TpsMapId => "TPS behavior composition. Hold right mouse to aim/look, then use wheel zoom.",
                 BlendMapId => "Blend acceptance. Pick a curve, then left click ground to move the camera there smoothly.",
-                FollowMapId => "Follow acceptance. Click an entity to select it; when the target is lost, the camera must stay in place.",
+                FollowMapId => "Follow acceptance. Selection owns the follow target; right click moves the selected entity and blank-ground clicks detach without fallback.",
                 StackMapId => "Virtual camera stack acceptance. Base follow camera, reveal shot, nested alert shot, then clear back down.",
                 _ => "Focused camera acceptance slices."
             };
@@ -75,11 +79,11 @@ namespace CameraAcceptanceMod
         {
             return mapId switch
             {
-                ProjectionMapId => "Use the panel to move between scenarios. On this map, left click ground and verify the cue marker appears then expires. The panel should also reflect viewport-visible entities from core culling.",
+                ProjectionMapId => "Hold Q + left click to spawn a fixture at the ray-hit point with its entity id over its head. Left click selects, drag creates box selection, clicking blank ground clears, and blank-ground clicks also emit the transient cue marker. The panel should still reflect viewport-visible entities from core culling.",
                 RtsMapId => "Keyboard: WASD pan. Mouse: move to screen edge for edge-scroll, hold middle mouse to drag-pan, wheel to zoom.",
                 TpsMapId => "Hold right mouse and drag to rotate. Wheel zooms. This map stays on the follow target while you aim.",
                 BlendMapId => "Pick Cut / Linear / Smooth in the panel, then left click a ground point to trigger the blend.",
-                FollowMapId => "Click Hero or Captain in world to select, click empty ground to clear selection, move Captain deterministically, and switch Follow Close/Wide to verify no fallback.",
+                FollowMapId => "Left click selects, blank-ground left click detaches, right click ground moves the selected entity, and Follow Close/Wide lets you compare follow rig parameters without coupling selection into the camera config.",
                 StackMapId => "Use panel buttons: Reveal -> Alert -> Clear -> Clear, and verify the stack walks back to the base follow camera.",
                 _ => "Use the panel to switch acceptance scenarios."
             };

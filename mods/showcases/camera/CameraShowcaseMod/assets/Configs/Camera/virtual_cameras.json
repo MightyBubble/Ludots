@@ -1,11 +1,11 @@
 [
   {
-    "id": "Camera.Showcase.Profile.SelectionFollow",
-    "displayName": "Selected Follow",
+    "id": "Camera.Showcase.Profile.TrackFocus",
+    "displayName": "Track Focus",
     "priority": 100,
     "rigKind": "Orbit",
     "targetSource": "Fixed",
-    "fixedTargetCm": { "x": 1200, "y": 800 },
+    "fixedTargetCm": { "x": 3200, "y": 2000 },
     "distanceCm": 2800,
     "pitch": 48,
     "fovYDeg": 52,
@@ -20,7 +20,6 @@
     "enableZoom": true,
     "zoomCmPerWheel": 600,
     "followMode": "AlwaysFollow",
-    "followTargetKind": "SelectedEntity",
     "defaultBlendDuration": 0.25,
     "blendCurve": "SmoothStep",
     "allowUserInput": true

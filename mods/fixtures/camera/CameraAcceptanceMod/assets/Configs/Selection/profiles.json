@@ -1,0 +1,14 @@
+[
+  {
+    "id": "Selection.Profile.PointerBox",
+    "dragThresholdPx": 8,
+    "pickRadiusPx": 20,
+    "dragSelectionShape": "Rectangle",
+    "enableAdditiveSelection": true,
+    "enableToggleSelection": true,
+    "pointExpansion": "None",
+    "addModifierActionId": "QueueModifier",
+    "toggleModifierActionId": "PrecisionModifier",
+    "suppressWhenActionIdsDown": [ "CameraAcceptanceSpawnModifier" ]
+  }
+]

@@ -1,25 +1,23 @@
 using System;
 using System.Threading.Tasks;
-using CameraShowcaseMod.Input;
 using CameraShowcaseMod.UI;
+using CameraShowcaseMod.Input;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Scripting;
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using Ludots.UI;
 
 namespace CameraShowcaseMod.Runtime
 {
     internal sealed class CameraShowcaseRuntime
     {
-        private readonly IModContext _context;
         private readonly CameraShowcasePanelController _panelController;
         private bool _inputContextActive;
 
         public CameraShowcaseRuntime(IModContext context)
         {
-            _context = context;
             _panelController = new CameraShowcasePanelController();
         }
 
@@ -39,11 +37,11 @@ namespace CameraShowcaseMod.Runtime
             if (showcaseActive)
             {
                 ActivateInputContext(input);
-                MountPanel(context, engine, activeMapId!, viewModeManager);
+                MountPanel(engine, activeMapId!, viewModeManager);
             }
             else
             {
-                ClearSelectionModeIfOwned(viewModeManager);
+                ClearTrackModeIfOwned(viewModeManager);
                 DeactivateInputContext(input);
                 ClearPanelIfOwned(context);
             }
@@ -65,10 +63,23 @@ namespace CameraShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            ClearSelectionModeIfOwned(ResolveViewModeManager(engine));
+            ClearTrackModeIfOwned(ResolveViewModeManager(engine));
             DeactivateInputContext(context.Get(CoreServiceKeys.InputHandler));
             ClearPanelIfOwned(context);
             return Task.CompletedTask;
+        }
+
+        public void RefreshPanel(GameEngine engine)
+        {
+            string? activeMapId = engine.CurrentMapSession?.MapId.Value;
+            if (CameraShowcaseIds.IsShowcaseMap(activeMapId))
+            {
+                MountPanel(engine, activeMapId!, ResolveViewModeManager(engine));
+            }
+            else
+            {
+                ClearPanelIfOwned(engine);
+            }
         }
 
         private void ActivateInputContext(PlayerInputHandler? input)
@@ -94,9 +105,9 @@ namespace CameraShowcaseMod.Runtime
             _inputContextActive = false;
         }
 
-        private void MountPanel(ScriptContext context, GameEngine engine, string activeMapId, ViewModeManager? viewModeManager)
+        private void MountPanel(GameEngine engine, string activeMapId, ViewModeManager? viewModeManager)
         {
-            if (context.Get(CoreServiceKeys.UIRoot) is not UIRoot root)
+            if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
             {
                 return;
             }
@@ -115,6 +126,16 @@ namespace CameraShowcaseMod.Runtime
             _panelController.ClearIfOwned(root);
         }
 
+        private void ClearPanelIfOwned(GameEngine engine)
+        {
+            if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
+            {
+                return;
+            }
+
+            _panelController.ClearIfOwned(root);
+        }
+
         private static ViewModeManager? ResolveViewModeManager(GameEngine engine)
         {
             if (engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) &&
@@ -126,10 +147,10 @@ namespace CameraShowcaseMod.Runtime
             return null;
         }
 
-        private static void ClearSelectionModeIfOwned(ViewModeManager? viewModeManager)
+        private static void ClearTrackModeIfOwned(ViewModeManager? viewModeManager)
         {
             if (viewModeManager != null &&
-                string.Equals(viewModeManager.ActiveMode?.Id, CameraShowcaseIds.SelectionModeId, StringComparison.OrdinalIgnoreCase))
+                string.Equals(viewModeManager.ActiveMode?.Id, CameraShowcaseIds.TrackModeId, StringComparison.OrdinalIgnoreCase))
             {
                 viewModeManager.ClearActiveMode();
             }
@@ -142,9 +163,9 @@ namespace CameraShowcaseMod.Runtime
                 throw new InvalidOperationException($"Missing input context: {CameraShowcaseInputContexts.Showcase}");
             }
 
-            if (!input.HasAction(CameraShowcaseIds.SelectionModeActionId))
+            if (!input.HasAction(CameraShowcaseIds.TrackModeActionId))
             {
-                throw new InvalidOperationException($"Missing input action: {CameraShowcaseIds.SelectionModeActionId}");
+                throw new InvalidOperationException($"Missing input action: {CameraShowcaseIds.TrackModeActionId}");
             }
         }
     }

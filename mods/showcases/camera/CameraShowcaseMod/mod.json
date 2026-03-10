@@ -1,7 +1,7 @@
 {
   "name": "CameraShowcaseMod",
   "version": "1.0.0",
-  "description": "Production-grade camera showcase that demonstrates shared virtual camera profiles, local showcase profiles, stack shots, selection follow, and bootstrap framing.",
+  "description": "Production-grade camera showcase that demonstrates shared virtual camera profiles, explicit selection-to-follow composition, stack shots, and bootstrap framing.",
   "main": "bin/net8.0/CameraShowcaseMod.dll",
   "priority": 0,
   "dependencies": {

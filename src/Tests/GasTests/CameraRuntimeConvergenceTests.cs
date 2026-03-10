@@ -36,8 +36,7 @@ namespace Ludots.Tests.ThreeC
                 DistanceCm = 400f,
                 Pitch = 15f,
                 Yaw = 180f,
-                FollowMode = CameraFollowMode.AlwaysFollow,
-                FollowTargetKind = CameraFollowTargetKind.LocalPlayer
+                FollowMode = CameraFollowMode.AlwaysFollow
             });
             var target = new StaticFollowTarget();
 
@@ -257,8 +256,7 @@ namespace Ludots.Tests.ThreeC
                     Pitch = 15f,
                     Yaw = 180f,
                     FovYDeg = 60f,
-                    FollowMode = CameraFollowMode.AlwaysFollow,
-                    FollowTargetKind = CameraFollowTargetKind.LocalPlayer
+                    FollowMode = CameraFollowMode.AlwaysFollow
                 },
                 new VirtualCameraDefinition
                 {

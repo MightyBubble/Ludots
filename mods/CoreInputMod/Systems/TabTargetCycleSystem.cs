@@ -4,7 +4,9 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 
@@ -114,7 +116,27 @@ namespace CoreInputMod.Systems
                 : (_lastCycleIndex <= 0 ? count - 1 : _lastCycleIndex - 1);
 
             _lastCycleIndex = nextIndex;
-            _globals[CoreServiceKeys.SelectedEntity.Name] = candidates[nextIndex];
+            SelectionRuntime.EnsureControllerBuffers(_world, local);
+
+            var selection = _world.Get<SelectionBuffer>(local);
+            for (int i = 0; i < selection.Count; i++)
+            {
+                var selected = selection.Get(i);
+                if (_world.IsAlive(selected) && _world.Has<SelectedTag>(selected))
+                {
+                    _world.Remove<SelectedTag>(selected);
+                }
+            }
+
+            selection.Clear();
+            selection.Add(candidates[nextIndex]);
+            _world.Set(local, selection);
+            if (!_world.Has<SelectedTag>(candidates[nextIndex]))
+            {
+                _world.Add(candidates[nextIndex], new SelectedTag());
+            }
+
+            SelectionRuntime.SyncSelectedEntity(_world, _globals, in selection);
         }
 
         public void BeforeUpdate(in float dt) { }

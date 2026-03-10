@@ -9,15 +9,17 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
+using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Input;
-using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
@@ -26,6 +28,7 @@ namespace Ludots.Tests.GAS.Production
     public sealed class CameraAcceptanceModTests
     {
         private const int BlendSettleFrames = 40;
+        private const string TestInputBackendKey = "Tests.CameraAcceptanceMod.InputBackend";
 
         private static readonly string[] AcceptanceMods =
         {
@@ -47,11 +50,75 @@ namespace Ludots.Tests.GAS.Production
 
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             Assert.That(primitives, Is.Not.Null);
-            Assert.That(primitives!.Count, Is.GreaterThan(0), "Ground click should emit a transient performer marker.");
+            Assert.That(primitives!.Count, Is.GreaterThan(0), "Blank-ground click should emit a transient performer marker.");
             Assert.That(primitives.GetSpan()[0].Position, Is.EqualTo(WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(3200, 2000), yMeters: 0.15f)));
 
             Tick(engine, 60);
             Assert.That(primitives.Count, Is.EqualTo(0), "Transient marker should expire after its configured lifetime.");
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_ProjectionMap_QClick_SpawnsFixtureWithWorldHudId()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
+
+            var backend = GetInputBackend(engine);
+            Entity fixture = SpawnFixture(engine, backend, new Vector2(5200f, 3000f), sequence: 1);
+
+            Assert.That(engine.World.IsAlive(fixture), Is.True);
+            Assert.That(engine.World.Get<Name>(fixture).Value, Is.EqualTo($"{CameraAcceptanceIds.FixtureNamePrefix}1"));
+            Assert.That(engine.World.Get<WorldPositionCm>(fixture).Value.ToVector2(), Is.EqualTo(new Vector2(5200f, 3000f)));
+
+            Tick(engine, 1);
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            var strings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
+            Assert.That(worldHud, Is.Not.Null);
+            Assert.That(strings, Is.Not.Null);
+
+            bool foundLabel = false;
+            var span = worldHud!.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (item.Kind == WorldHudItemKind.Text &&
+                    strings!.TryGet(item.Id0) == fixture.Id.ToString())
+                {
+                    foundLabel = true;
+                    break;
+                }
+            }
+
+            Assert.That(foundLabel, Is.True, "Spawned projection fixtures should publish their entity id into world HUD.");
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_ProjectionMap_ClickAndBoxSelection_SelectsFixturesAndBlankGroundClears()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
+
+            var backend = GetInputBackend(engine);
+            Entity first = SpawnFixture(engine, backend, new Vector2(5200f, 3000f), sequence: 1);
+            Entity second = SpawnFixture(engine, backend, new Vector2(5600f, 3300f), sequence: 2);
+
+            ClickGround(engine, backend, new Vector2(5200f, 3000f));
+            Tick(engine, 2);
+            var selection = GetSelection(engine);
+            Assert.That(selection.Count, Is.EqualTo(1));
+            Assert.That(selection.Contains(first), Is.True);
+
+            DragSelection(engine, backend, new Vector2(5000f, 2850f), new Vector2(5800f, 3450f));
+            Tick(engine, 2);
+            selection = GetSelection(engine);
+            Assert.That(selection.Count, Is.EqualTo(2));
+            Assert.That(selection.Contains(first), Is.True);
+            Assert.That(selection.Contains(second), Is.True);
+
+            ClickGround(engine, backend, new Vector2(6500f, 4500f));
+            Tick(engine, 2);
+            selection = GetSelection(engine);
+            Assert.That(selection.Count, Is.EqualTo(0), "Blank-ground click should clear the selection.");
         }
 
         [Test]
@@ -152,6 +219,7 @@ namespace Ludots.Tests.GAS.Production
             var backend = GetInputBackend(engine);
             PressButton(engine, backend, curveKey);
             ClickGround(engine, backend, new Vector2(4800f, 2600f));
+            Tick(engine, 1);
 
             var brain = engine.GameSession.Camera.VirtualCameraBrain;
             Assert.That(brain, Is.Not.Null);
@@ -164,28 +232,32 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void CameraAcceptanceMod_FollowMap_TracksSelectionAndStopsWithoutFallback()
+        public void CameraAcceptanceMod_FollowMap_TracksSelectionMoveAndStopsWithoutFallback()
         {
             using var engine = CreateEngine(AcceptanceMods);
             LoadMap(engine, CameraAcceptanceIds.FollowMapId);
 
             Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraAcceptanceIds.FollowCloseCameraId));
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1600f, 1200f)));
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
 
             Entity captain = FindEntityByName(engine.World, CameraAcceptanceIds.CaptainName);
             Assert.That(captain, Is.Not.EqualTo(Entity.Null));
 
             var backend = GetInputBackend(engine);
             ClickGround(engine, backend, new Vector2(3400f, 2200f));
-            Tick(engine, 3);
+            Tick(engine, 1);
+            var selection = GetSelection(engine);
+            Assert.That(selection.Count, Is.EqualTo(1));
+            Assert.That(selection.Contains(captain), Is.True);
+            Tick(engine, 1);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.True);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3400f, 2200f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
 
-            ref var position = ref engine.World.Get<WorldPositionCm>(captain);
-            position = WorldPositionCm.FromCm(4200, 2800);
+            RightClickGround(engine, backend, new Vector2(4200f, 2800f));
             Tick(engine, 3);
+            Assert.That(engine.World.Get<WorldPositionCm>(captain).Value.ToVector2(), Is.EqualTo(new Vector2(4200f, 2800f)));
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(4200f, 2800f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(4200f, 2800f)));
 
@@ -236,6 +308,7 @@ namespace Ludots.Tests.GAS.Production
             InstallInput(engine);
             var view = new StubViewController(1920, 1080);
             engine.SetService(CoreServiceKeys.ViewController, view);
+            engine.SetService(CoreServiceKeys.ScreenProjector, new WorldMappedScreenProjector());
             engine.SetService(CoreServiceKeys.ScreenRayProvider, new WorldMappedScreenRayProvider());
             var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view);
             engine.RegisterPresentationSystem(culling);
@@ -254,6 +327,7 @@ namespace Ludots.Tests.GAS.Production
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
+            backend.SetMousePosition(new Vector2(960f, 540f));
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
             for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
             {
@@ -262,7 +336,7 @@ namespace Ludots.Tests.GAS.Production
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.UiCaptured, false);
-            engine.GlobalContext["Tests.CameraAcceptanceMod.InputBackend"] = backend;
+            engine.GlobalContext[TestInputBackendKey] = backend;
         }
 
         private static void Tick(GameEngine engine, int frames)
@@ -315,13 +389,19 @@ namespace Ludots.Tests.GAS.Production
         private static void DragMouse(GameEngine engine, TestInputBackend backend, string holdPath, Vector2 from, Vector2 to)
         {
             backend.SetMousePosition(from);
-            Tick(engine, 1);
+            Tick(engine, 2);
             backend.SetButton(holdPath, true);
-            Tick(engine, 1);
+            Tick(engine, 2);
             backend.SetMousePosition(to);
-            Tick(engine, 1);
+            Tick(engine, 2);
+            Tick(engine, 2);
             backend.SetButton(holdPath, false);
-            Tick(engine, 1);
+            Tick(engine, 2);
+        }
+
+        private static void DragSelection(GameEngine engine, TestInputBackend backend, Vector2 from, Vector2 to)
+        {
+            DragMouse(engine, backend, "<Mouse>/LeftButton", from, to);
         }
 
         private static void ClickGround(GameEngine engine, TestInputBackend backend, Vector2 worldPointCm)
@@ -331,7 +411,35 @@ namespace Ludots.Tests.GAS.Production
             backend.SetButton("<Mouse>/LeftButton", true);
             Tick(engine, 1);
             backend.SetButton("<Mouse>/LeftButton", false);
+            Tick(engine, 3);
+        }
+
+        private static void RightClickGround(GameEngine engine, TestInputBackend backend, Vector2 worldPointCm)
+        {
+            backend.SetMousePosition(worldPointCm);
             Tick(engine, 1);
+            backend.SetButton("<Mouse>/RightButton", true);
+            Tick(engine, 1);
+            backend.SetButton("<Mouse>/RightButton", false);
+            Tick(engine, 1);
+        }
+
+        private static Entity SpawnFixture(GameEngine engine, TestInputBackend backend, Vector2 worldPointCm, int sequence)
+        {
+            backend.SetButton("<Keyboard>/q", true);
+            ClickGround(engine, backend, worldPointCm);
+            backend.SetButton("<Keyboard>/q", false);
+            Tick(engine, 2);
+
+            Entity fixture = FindEntityByName(engine.World, $"{CameraAcceptanceIds.FixtureNamePrefix}{sequence}");
+            Assert.That(fixture, Is.Not.EqualTo(Entity.Null), $"Expected projection fixture {sequence} to spawn.");
+            return fixture;
+        }
+
+        private static SelectionBuffer GetSelection(GameEngine engine)
+        {
+            Assert.That(SelectionRuntime.TryGetSelectionBuffer(engine.World, engine.GlobalContext, out var selection), Is.True);
+            return selection;
         }
 
         private static Entity FindEntityByName(World world, string name)
@@ -365,7 +473,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static TestInputBackend GetInputBackend(GameEngine engine)
         {
-            return engine.GlobalContext["Tests.CameraAcceptanceMod.InputBackend"] as TestInputBackend
+            return engine.GlobalContext[TestInputBackendKey] as TestInputBackend
                 ?? throw new InvalidOperationException("Test input backend is missing.");
         }
 
@@ -427,6 +535,14 @@ namespace Ludots.Tests.GAS.Production
             public Vector2 Resolution { get; }
             public float Fov => 60f;
             public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
+        }
+
+        private sealed class WorldMappedScreenProjector : IScreenProjector
+        {
+            public Vector2 WorldToScreen(Vector3 worldPosition)
+            {
+                return new Vector2(worldPosition.X * 100f, worldPosition.Z * 100f);
+            }
         }
 
         private sealed class WorldMappedScreenRayProvider : IScreenRayProvider

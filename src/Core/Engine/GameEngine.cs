@@ -314,6 +314,7 @@ namespace Ludots.Core.Engine
             
             // 7. Post-Mod Load Initialization
             MapLoader.LoadTemplates();
+            SetService(CoreServiceKeys.RuntimeEntityTemplateSpawner, new RuntimeEntityTemplateSpawner(World, MapLoader.TemplateRegistry));
 
             // 8. Print registration conflict summary
             ConflictReport?.PrintSummary();
@@ -1014,7 +1015,6 @@ namespace Ludots.Core.Engine
             GameSession.Camera.ActivateVirtualCamera(
                 virtualCameraId,
                 blendDurationSeconds: 0f,
-                followTarget: CameraFollowTargetFactory.Build(World, GlobalContext, definition.FollowTargetKind),
                 snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
 
             if (cam != null)

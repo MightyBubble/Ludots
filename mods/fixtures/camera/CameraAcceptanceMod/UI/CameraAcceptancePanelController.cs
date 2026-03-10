@@ -1,10 +1,10 @@
 using System;
-using System.Numerics;
+using System.Text;
 using Arch.Core;
 using CoreInputMod.ViewMode;
-using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
@@ -17,9 +17,7 @@ namespace CameraAcceptanceMod.UI
 {
     internal sealed class CameraAcceptancePanelController
     {
-        private const float PanelWidth = 500f;
-        private static readonly Vector2 CaptainOriginCm = new(3400f, 2200f);
-        private static readonly Vector2 CaptainMovedCm = new(4200f, 2800f);
+        private const float PanelWidth = 520f;
 
         private UiScene? _mountedScene;
 
@@ -46,7 +44,7 @@ namespace CameraAcceptanceMod.UI
         {
             string activeModeId = ResolveActiveModeId(engine);
             string activeCameraId = engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId ?? "none";
-            string selectedName = ResolveSelectedEntityName(engine) ?? "none";
+            string selectedIds = ResolveSelectedEntityIds(engine);
             string followTarget = FormatVector(engine.GameSession.Camera.FollowTargetPositionCm);
             string visibleSummary = ResolveVisibleEntitySummary(engine);
 
@@ -56,7 +54,7 @@ namespace CameraAcceptanceMod.UI
                 Ui.Text($"Map: {mapId}").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text($"Camera: {activeCameraId}").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text($"Mode: {activeModeId}").FontSize(13f).Color("#8EA2BD"),
-                Ui.Text($"Selection: {selectedName}").FontSize(13f).Color("#8EA2BD"),
+                Ui.Text($"Selected IDs: {selectedIds}").FontSize(13f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Follow Target: {followTarget}").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text($"Viewport: {visibleSummary}").FontSize(13f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text("Scenarios").FontSize(12f).Bold().Color("#F4C77D"),
@@ -90,15 +88,10 @@ namespace CameraAcceptanceMod.UI
                     BuildActionButton("Linear", ResolveActiveBlendCameraId(engine) == CameraAcceptanceIds.BlendLinearCameraId, ctx => SetBlendCamera(engine, CameraAcceptanceIds.BlendLinearCameraId)),
                     BuildActionButton("Smooth", ResolveActiveBlendCameraId(engine) == CameraAcceptanceIds.BlendSmoothCameraId, ctx => SetBlendCamera(engine, CameraAcceptanceIds.BlendSmoothCameraId))
                 ).Wrap().Gap(8f),
-                CameraAcceptanceIds.FollowMapId => Ui.Column(
-                    Ui.Row(
-                        BuildActionButton("Close", activeModeId == CameraAcceptanceIds.FollowCloseModeId, ctx => SwitchViewMode(engine, CameraAcceptanceIds.FollowCloseModeId)),
-                        BuildActionButton("Wide", activeModeId == CameraAcceptanceIds.FollowWideModeId, ctx => SwitchViewMode(engine, CameraAcceptanceIds.FollowWideModeId))
-                    ).Wrap().Gap(8f),
-                    Ui.Row(
-                        BuildActionButton("Move Captain", false, ctx => ToggleCaptainPosition(engine))
-                    ).Wrap().Gap(8f)
-                ).Gap(8f),
+                CameraAcceptanceIds.FollowMapId => Ui.Row(
+                    BuildActionButton("Close", activeModeId == CameraAcceptanceIds.FollowCloseModeId, ctx => SwitchViewMode(engine, CameraAcceptanceIds.FollowCloseModeId)),
+                    BuildActionButton("Wide", activeModeId == CameraAcceptanceIds.FollowWideModeId, ctx => SwitchViewMode(engine, CameraAcceptanceIds.FollowWideModeId))
+                ).Wrap().Gap(8f),
                 CameraAcceptanceIds.StackMapId => Ui.Row(
                     BuildActionButton("Reveal", false, ctx => RequestVirtualCamera(engine, CameraAcceptanceIds.StackRevealShotId, clear: false)),
                     BuildActionButton("Alert", false, ctx => RequestVirtualCamera(engine, CameraAcceptanceIds.StackAlertShotId, clear: false)),
@@ -110,11 +103,11 @@ namespace CameraAcceptanceMod.UI
                 CameraAcceptanceIds.TpsMapId => Ui.Row(
                     BuildActionButton("TPS Mode", activeModeId == CameraAcceptanceIds.TpsModeId, ctx => SwitchViewMode(engine, CameraAcceptanceIds.TpsModeId))
                 ).Wrap().Gap(8f),
-                _ => Ui.Text("Interact directly in world view for this scenario.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
+                _ => Ui.Text("Interact directly in the world for this slice.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
             };
         }
 
-        private UiElementBuilder BuildMapButton(string label, bool active, Action<UiActionContext> onClick)
+        private static UiElementBuilder BuildMapButton(string label, bool active, Action<UiActionContext> onClick)
         {
             return Ui.Button(label, onClick)
                 .Padding(10f, 8f)
@@ -123,7 +116,7 @@ namespace CameraAcceptanceMod.UI
                 .Color(active ? "#F7FAFF" : "#C7D3E1");
         }
 
-        private UiElementBuilder BuildActionButton(string label, bool active, Action<UiActionContext> onClick)
+        private static UiElementBuilder BuildActionButton(string label, bool active, Action<UiActionContext> onClick)
         {
             return Ui.Button(label, onClick)
                 .Padding(10f, 8f)
@@ -173,21 +166,6 @@ namespace CameraAcceptanceMod.UI
             Refresh(engine);
         }
 
-        private void ToggleCaptainPosition(GameEngine engine)
-        {
-            Entity entity = FindEntityByName(engine.World, CameraAcceptanceIds.CaptainName);
-            if (entity == Entity.Null || !engine.World.Has<WorldPositionCm>(entity))
-            {
-                return;
-            }
-
-            ref var position = ref engine.World.Get<WorldPositionCm>(entity);
-            Vector2 current = ToVector2(position);
-            Vector2 next = Vector2.Distance(current, CaptainOriginCm) < 1f ? CaptainMovedCm : CaptainOriginCm;
-            position = WorldPositionCm.FromCm((int)next.X, (int)next.Y);
-            Refresh(engine);
-        }
-
         private void Refresh(GameEngine engine)
         {
             if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
@@ -232,21 +210,36 @@ namespace CameraAcceptanceMod.UI
                 : CameraAcceptanceIds.BlendSmoothCameraId;
         }
 
-        private static string? ResolveSelectedEntityName(GameEngine engine)
+        private static string ResolveSelectedEntityIds(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var value) ||
-                value is not Entity entity ||
-                entity == Entity.Null ||
-                !engine.World.IsAlive(entity) ||
-                !engine.World.Has<Name>(entity))
+            if (!SelectionRuntime.TryGetSelectionBuffer(engine.World, engine.GlobalContext, out var selection) || selection.Count <= 0)
             {
-                return null;
+                return "none";
             }
 
-            return engine.World.Get<Name>(entity).Value;
+            var builder = new StringBuilder();
+            int written = 0;
+            for (int i = 0; i < selection.Count; i++)
+            {
+                var entity = selection.Get(i);
+                if (!engine.World.IsAlive(entity))
+                {
+                    continue;
+                }
+
+                if (written > 0)
+                {
+                    builder.Append(", ");
+                }
+
+                builder.Append(entity.Id);
+                written++;
+            }
+
+            return written > 0 ? builder.ToString() : "none";
         }
 
-        private static string FormatVector(Vector2? value)
+        private static string FormatVector(System.Numerics.Vector2? value)
         {
             if (!value.HasValue)
             {
@@ -267,8 +260,8 @@ namespace CameraAcceptanceMod.UI
 
             string[] names = new string[6];
             int nameCount = 0;
-            var query = new QueryDescription().WithAll<Name, CullState>();
-            engine.World.Query(in query, (Entity entity, ref Name name, ref CullState cull) =>
+            var query = new QueryDescription().WithAll<Ludots.Core.Components.Name, CullState>();
+            engine.World.Query(in query, (Entity entity, ref Ludots.Core.Components.Name name, ref CullState cull) =>
             {
                 if (!cull.IsVisible || nameCount >= names.Length)
                 {
@@ -285,34 +278,6 @@ namespace CameraAcceptanceMod.UI
 
             string joined = string.Join(", ", names, 0, nameCount);
             return visibleCount > 0 ? $"{visibleCount} visible: {joined}" : joined;
-        }
-
-        private static Vector2 ToVector2(WorldPositionCm position)
-        {
-            var value = position.ToWorldCmInt2();
-            return new Vector2(value.X, value.Y);
-        }
-
-        private static Entity FindEntityByName(World world, string name)
-        {
-            Entity result = Entity.Null;
-            var query = new QueryDescription().WithAll<Name>();
-            world.Query(in query, (Entity entity, ref Name entityName) =>
-            {
-                if (string.Equals(entityName.Value, name, StringComparison.OrdinalIgnoreCase))
-                {
-                    result = entity;
-                }
-            });
-
-            return result;
-        }
-
-        private static SkiaSharp.SKColor ParseColor(string color)
-        {
-            return SkiaSharp.SKColor.TryParse(color, out var parsed)
-                ? parsed
-                : SkiaSharp.SKColors.White;
         }
     }
 }

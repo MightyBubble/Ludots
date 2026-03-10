@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
@@ -23,6 +24,7 @@ namespace CoreInputMod.Systems
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly OrderQueue _orders;
+        private readonly List<Entity> _selectedScratch = new(64);
 
         public int CastAbilityOrderTypeId { get; }
         public int StopOrderTypeId { get; }
@@ -74,13 +76,16 @@ namespace CoreInputMod.Systems
                 worldCm = new Vector3(point.X, 0f, point.Y);
                 return true;
             });
-            mapping.SetSelectedEntityProvider((out Entity entity) => TryGetEntity(CoreServiceKeys.SelectedEntity.Name, out entity));
+            mapping.SetSelectedEntityProvider((out Entity entity) => SelectionRuntime.TryGetPrimarySelected(_world, _globals, out entity));
             mapping.SetSelectedEntitiesProvider((ref OrderEntitySelection entities) =>
             {
                 entities = default;
-                if (!TryGetEntity(CoreServiceKeys.SelectedEntity.Name, out var entity)) return false;
-                entities.Add(entity);
-                return true;
+                if (SelectionRuntime.CollectSelected(_world, _globals, _selectedScratch) <= 0) return false;
+                for (int i = 0; i < _selectedScratch.Count; i++)
+                {
+                    entities.Add(_selectedScratch[i]);
+                }
+                return entities.Count > 0;
             });
             mapping.SetHoveredEntityProvider((out Entity entity) => TryGetEntity(CoreServiceKeys.HoveredEntity.Name, out entity));
             if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var bindingsObj) && bindingsObj is InteractionActionBindings bindings)
@@ -126,9 +131,7 @@ namespace CoreInputMod.Systems
 
         public Entity GetControlledActor(int playerId = 1)
         {
-            if (_globals.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var selectedObj) &&
-                selectedObj is Entity selected &&
-                _world.IsAlive(selected) &&
+            if (SelectionRuntime.TryGetPrimarySelected(_world, _globals, out var selected) &&
                 _world.TryGet(selected, out PlayerOwner owner) &&
                 owner.PlayerId == playerId)
             {
