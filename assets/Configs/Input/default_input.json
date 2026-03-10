@@ -26,6 +26,11 @@
       "type": "Axis2D"
     },
     {
+      "id": "PointerDelta",
+      "name": "Gameplay_PointerDelta",
+      "type": "Axis2D"
+    },
+    {
       "id": "PointerPos",
       "name": "Gameplay_PointerPos",
       "type": "Axis2D"
@@ -165,6 +170,25 @@
         {
           "actionId": "PointerPos",
           "path": "<Mouse>/Pos"
+        },
+        {
+          "actionId": "PointerDelta",
+          "path": "<Mouse>/Delta"
+        },
+        {
+          "actionId": "Look",
+          "path": "<Mouse>/Delta",
+          "processors": [
+            {
+              "type": "Invert",
+              "parameters": [
+                {
+                  "name": "Y",
+                  "value": 1
+                }
+              ]
+            }
+          ]
         },
         {
           "actionId": "OrbitRotateHold",

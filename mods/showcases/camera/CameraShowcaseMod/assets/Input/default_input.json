@@ -1,0 +1,15 @@
+{
+  "actions": [
+    { "id": "CameraModeSelectionFollow", "name": "CameraModeSelectionFollow", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "CameraShowcase.Controls",
+      "name": "Camera Showcase Controls",
+      "priority": 120,
+      "bindings": [
+        { "actionId": "CameraModeSelectionFollow", "path": "<Keyboard>/f4" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "Id": "camera_showcase_hub",
+  "Tags": ["camera.showcase", "camera.showcase.hub"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical"
+  },
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Overrides": {
+        "Name": { "Value": "CameraShowcaseHero" },
+        "WorldPositionCm": { "Value": { "X": 1200, "Y": 800 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "CameraShowcaseScout" },
+        "WorldPositionCm": { "Value": { "X": 2200, "Y": 1200 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "CameraShowcaseCaptain" },
+        "WorldPositionCm": { "Value": { "X": 3200, "Y": 2000 } }
+      }
+    }
+  ]
+}

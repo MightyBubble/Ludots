@@ -69,7 +69,7 @@ namespace MobaDemoMod.Systems
             if (_initialized) return;
             _initialized = true;
             
-            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input)
+            if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input)
                 return;
             
             // Load input-order mappings from mod assets via VFS
@@ -172,8 +172,8 @@ namespace MobaDemoMod.Systems
             InitializeInputOrderMapping();
 
             if (_inputOrderMapping != null &&
-                _globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) &&
-                inputObj is PlayerInputHandler input)
+                _globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) &&
+                inputObj is IInputActionReader input)
             {
                 CheckModeSwitchKeys(input, _inputOrderMapping);
 
@@ -226,7 +226,7 @@ namespace MobaDemoMod.Systems
         {
             worldCm = default;
             if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return false;
-            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input) return false;
+            if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input) return false;
 
             Vector2 mouse = input.ReadAction<Vector2>("PointerPos");
             var ray = rayProvider.GetRay(mouse);
@@ -240,7 +240,7 @@ namespace MobaDemoMod.Systems
             return InputOrderMappingLoader.LoadFromStream(stream);
         }
 
-        private static void CheckModeSwitchKeys(PlayerInputHandler input, InputOrderMappingSystem mapping)
+        private static void CheckModeSwitchKeys(IInputActionReader input, InputOrderMappingSystem mapping)
         {
             if (input.PressedThisFrame("ModeWoW"))
             {

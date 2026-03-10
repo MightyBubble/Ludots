@@ -1,0 +1,11 @@
+[
+  {
+    "Id": "Camera.Mode.SelectionFollow",
+    "DisplayName": "Selection",
+    "VirtualCameraId": "Camera.Showcase.Profile.SelectionFollow",
+    "FollowTargetKind": "SelectedOrLocalPlayer",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "CameraModeSelectionFollow"
+  }
+]

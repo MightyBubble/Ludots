@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>SkiaSharp</RootNamespace>
+    <AssemblyName>SkiaSharp</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>$(NoWarn);CS8826</NoWarn>
+    <DefineConstants>$(DefineConstants);USE_LIBRARY_IMPORT</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Binding.Shared\**\*.cs" Link="Binding.Shared\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

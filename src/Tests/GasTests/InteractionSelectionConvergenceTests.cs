@@ -15,9 +15,9 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -38,6 +38,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = input,
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new AnchoredScreenRayProvider(new Vector3(1.5f, 10f, 2.5f)),
                 [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
                 [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(),
@@ -91,6 +92,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = input,
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
                 [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
                 [CoreServiceKeys.SelectedEntity.Name] = target,
@@ -120,6 +122,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = input,
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new ConstantScreenRayProvider(),
                 [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
                 [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(16),

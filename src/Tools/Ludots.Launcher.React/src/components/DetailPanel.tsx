@@ -120,6 +120,8 @@ export function DetailPanel() {
               ))}
             </Section>
           )}
+          <Section title="Layer"><code className="text-2xs text-accent/80 break-all">{mod.layerPath}</code></Section>
+          <Section title="Relative Path"><code className="text-2xs text-gray-500 break-all">{mod.relativePath}</code></Section>
           <Section title="Location"><code className="text-2xs text-gray-500 break-all">{mod.rootPath}</code></Section>
         </>}
         {detailTab === "readme" && <pre className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">{readme ?? "Loading..."}</pre>}

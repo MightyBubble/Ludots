@@ -1,21 +1,15 @@
 using System.Numerics;
 using System.Threading.Tasks;
-using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Input.Runtime;
-using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
-using TerrainBenchmarkMod.Systems;
 
 namespace TerrainBenchmarkMod.Triggers
 {
     public sealed class TerrainBenchmarkOnEntryMapLoadedTrigger : Trigger
     {
         private readonly IModContext _context;
-        private static bool _registered;
-        private const string ControllerId = "TerrainBenchmark.AutoOrbit";
 
         public TerrainBenchmarkOnEntryMapLoadedTrigger(IModContext context)
         {
@@ -31,11 +25,7 @@ namespace TerrainBenchmarkMod.Triggers
             var mapId = context.Get(CoreServiceKeys.MapId);
             if (mapId.Value != engine.MergedConfig.StartupMapId) return Task.CompletedTask;
 
-            var session = context.Get(CoreServiceKeys.GameSession);
-            var input = context.Get(CoreServiceKeys.InputHandler);
             var vertexMap = context.Get(CoreServiceKeys.VertexMap);
-            if (session == null || input == null) return Task.CompletedTask;
-            if (session.Camera.Controller != null) return Task.CompletedTask;
 
             Vector2 center;
             float autoRadius;
@@ -45,53 +35,29 @@ namespace TerrainBenchmarkMod.Triggers
                 int cellsH = vertexMap.HeightInChunks * VertexChunk.ChunkSize;
                 float mapW = cellsW * HexCoordinates.HexWidth;
                 float mapH = cellsH * HexCoordinates.RowSpacing;
-                center = new Vector2(mapW * 0.5f, mapH * 0.5f);
-                autoRadius = MathF.Max(400f, MathF.Min(mapW, mapH) * 0.35f);
-                autoRadius = MathF.Max(400f, MathF.Min(2500f, autoRadius));
+                center = new Vector2(mapW * 0.5f, mapH * 0.5f) * 100f;
+                autoRadius = MathF.Max(40000f, MathF.Min(MathF.Min(mapW, mapH) * 35f, 250000f));
             }
             else
             {
                 center = Vector2.Zero;
-                autoRadius = 1200f;
+                autoRadius = 120000f;
             }
 
-            session.Camera.State.Yaw = 35f;
-            session.Camera.State.Pitch = 60f;
-            session.Camera.State.DistanceCm = 40000f;
-
-            if (!_registered)
+            engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
             {
-                if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.CameraControllerRegistry.Name, out var obj) || obj is not CameraControllerRegistry registry)
-                {
-                    throw new System.InvalidOperationException("CameraControllerRegistry is missing.");
-                }
-
-                registry.Register(ControllerId, (configObj, services) =>
-                {
-                    TerrainBenchmarkCameraConfig cfg = configObj switch
-                    {
-                        null => new TerrainBenchmarkCameraConfig(),
-                        TerrainBenchmarkCameraConfig c => c,
-                        _ => throw new System.InvalidOperationException($"TerrainBenchmark controller expects config type {nameof(TerrainBenchmarkCameraConfig)}.")
-                    };
-
-                    return new TerrainBenchmarkCameraController(cfg, services.Input);
-                });
-
-                _registered = true;
-            }
-
-            engine.SetService(CoreServiceKeys.CameraControllerRequest, new CameraControllerRequest
+                Id = "TopDown"
+            });
+            engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
             {
-                Id = ControllerId,
-                Config = new TerrainBenchmarkCameraConfig
-                {
-                    CenterCm = center * 100f,
-                    AutoRadiusCm = autoRadius * 100f
-                }
+                VirtualCameraId = "TopDown",
+                TargetCm = center,
+                Yaw = 35f,
+                Pitch = 60f,
+                DistanceCm = MathF.Max(40000f, autoRadius)
             });
 
-            _context.Log("[TerrainBenchmarkMod] Camera controller requested");
+            _context.Log("[TerrainBenchmarkMod] Virtual camera + pose requested");
             return Task.CompletedTask;
         }
     }

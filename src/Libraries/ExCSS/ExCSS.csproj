@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>ExCSS</AssemblyName>
+    <RootNamespace>ExCSS</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Nullable>enable</Nullable>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Ludots.UI.HtmlEngine\External\ExCSS\src\**\*.cs"
+             Exclude="..\Ludots.UI.HtmlEngine\External\ExCSS\src\bin\**;
+                      ..\Ludots.UI.HtmlEngine\External\ExCSS\src\obj\**" />
+  </ItemGroup>
+</Project>

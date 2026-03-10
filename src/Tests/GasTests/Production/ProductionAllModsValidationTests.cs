@@ -65,10 +65,28 @@ namespace Ludots.Tests.GAS.Production
                 .SetName("ProdModSmoke_TerrainBenchmarkMod");
 
             yield return new TestCaseData(new ModCase(
-                    "Universal3CCameraMod",
-                    new[] { "LudotsCoreMod", "Universal3CCameraMod" },
+                    "CameraBootstrapMod",
+                    new[] { "LudotsCoreMod", "CameraBootstrapMod" },
                     true))
-                .SetName("ProdModSmoke_Universal3CCameraMod");
+                .SetName("ProdModSmoke_CameraBootstrapMod");
+
+            yield return new TestCaseData(new ModCase(
+                    "CameraProfilesMod",
+                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod" },
+                    true))
+                .SetName("ProdModSmoke_CameraProfilesMod");
+
+            yield return new TestCaseData(new ModCase(
+                    "VirtualCameraShotsMod",
+                    new[] { "LudotsCoreMod", "VirtualCameraShotsMod" },
+                    true))
+                .SetName("ProdModSmoke_VirtualCameraShotsMod");
+
+            yield return new TestCaseData(new ModCase(
+                    "CameraAcceptanceMod",
+                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "CameraBootstrapMod", "VirtualCameraShotsMod", "CameraAcceptanceMod" },
+                    true))
+                .SetName("ProdModSmoke_CameraAcceptanceMod");
 
             yield return new TestCaseData(new ModCase(
                     "UiTestMod",
@@ -148,13 +166,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            string modsRoot = Path.Combine(repoRoot, "mods");
-
-            var modPaths = new List<string>(modCase.Mods.Length);
-            for (int i = 0; i < modCase.Mods.Length; i++)
-            {
-                modPaths.Add(Path.Combine(modsRoot, modCase.Mods[i]));
-            }
+            var modPaths = RepoModPaths.ResolveExplicit(repoRoot, modCase.Mods);
 
             var engine = new GameEngine();
             try

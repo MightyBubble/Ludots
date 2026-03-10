@@ -4,7 +4,7 @@ namespace CoreInputMod.ViewMode
     {
         public string Id { get; set; } = "";
         public string DisplayName { get; set; } = "";
-        public string CameraPresetId { get; set; } = "Default";
+        public string VirtualCameraId { get; set; } = "Default";
         public string FollowTargetKind { get; set; } = "None";
         public string InputContextId { get; set; } = "";
         public string InteractionMode { get; set; } = "SmartCast";

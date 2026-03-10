@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using CoreInputMod.Systems;
-using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Scripting;
 
 namespace CoreInputMod.ViewMode
@@ -22,6 +20,7 @@ namespace CoreInputMod.ViewMode
         private readonly World _world;
         private readonly CameraManager _camera;
         private int _activeIndex = -1;
+        private string? _ownedVirtualCameraId;
 
         public ViewModeConfig? ActiveMode => _activeIndex >= 0 && _activeIndex < _modes.Count ? _modes[_activeIndex] : null;
         public IReadOnlyList<ViewModeConfig> Modes => _modes;
@@ -85,6 +84,29 @@ namespace CoreInputMod.ViewMode
             return SwitchTo(_modes[prevIndex].Id);
         }
 
+        public void ClearActiveMode()
+        {
+            var previous = ActiveMode;
+            if (_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) && inputObj is PlayerInputHandler input)
+            {
+                if (previous != null && !string.IsNullOrWhiteSpace(previous.InputContextId))
+                {
+                    input.PopContext(previous.InputContextId);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(_ownedVirtualCameraId))
+            {
+                _camera.DeactivateVirtualCamera(_ownedVirtualCameraId);
+                _ownedVirtualCameraId = null;
+            }
+
+            _activeIndex = -1;
+            _globals.Remove(ActiveModeIdKey);
+            _globals.Remove(SkillBarOverlaySystem.SkillBarKeyLabelsKey);
+            _globals[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
+        }
+
         private void ApplyViewMode(ViewModeConfig? previous, ViewModeConfig next)
         {
             if (_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) && inputObj is PlayerInputHandler input)
@@ -100,71 +122,56 @@ namespace CoreInputMod.ViewMode
                 }
             }
 
-            ApplyCamera(next);
+            ApplyCamera(previous, next);
             ApplyInteractionMode(next);
             ApplySkillBar(next);
             _globals[ActiveModeIdKey] = next.Id;
         }
 
-        private void ApplyCamera(ViewModeConfig mode)
+        private void ApplyCamera(ViewModeConfig? previous, ViewModeConfig next)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.CameraPresetRegistry.Name, out var presetObj) || presetObj is not CameraPresetRegistry presetRegistry)
+            if (!string.IsNullOrWhiteSpace(_ownedVirtualCameraId))
+            {
+                _camera.DeactivateVirtualCamera(_ownedVirtualCameraId);
+                _ownedVirtualCameraId = null;
+            }
+            else if (previous != null &&
+                     !string.IsNullOrWhiteSpace(previous.VirtualCameraId) &&
+                     !string.Equals(previous.VirtualCameraId, next.VirtualCameraId, StringComparison.OrdinalIgnoreCase) &&
+                     _camera.IsVirtualCameraActive(previous.VirtualCameraId))
+            {
+                // The previous mode may be the authoritative camera inherited from map default.
+                // In that case we leave it active and only swap the top mode-owned camera.
+            }
+
+            if (string.IsNullOrWhiteSpace(next.VirtualCameraId))
             {
                 return;
             }
 
-            if (!presetRegistry.TryGet(mode.CameraPresetId, out var preset) || preset == null)
+            if (_camera.IsVirtualCameraActive(next.VirtualCameraId))
             {
                 return;
             }
 
-            _camera.State.DistanceCm = preset.DistanceCm;
-            _camera.State.Pitch = preset.Pitch;
-            _camera.State.FovYDeg = preset.FovYDeg;
-            _camera.State.Yaw = preset.Yaw;
-            _camera.FollowMode = preset.FollowMode;
-
-            if (_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) && inputObj is PlayerInputHandler input &&
-                _globals.TryGetValue(CoreServiceKeys.ViewController.Name, out var viewObj) && viewObj is IViewController view)
-            {
-                var ctx = new CameraBehaviorContext(input, view);
-                var controller = CameraControllerFactory.FromPreset(preset, ctx);
-                _camera.SetController(controller);
-            }
-
-            TrySeedFollowTargetPosition(mode.FollowTargetKind);
-        }
-
-        private void TrySeedFollowTargetPosition(string followTargetKind)
-        {
-            string? globalKey = followTargetKind switch
-            {
-                "LocalPlayer" => CoreServiceKeys.LocalPlayerEntity.Name,
-                "SelectedEntity" => CoreServiceKeys.SelectedEntity.Name,
-                "SelectedOrLocalPlayer" => ResolveSelectedOrLocalPlayer(),
-                _ => null
-            };
-
-            if (globalKey == null)
+            if (!_globals.TryGetValue(CoreServiceKeys.VirtualCameraRegistry.Name, out var registryObj) ||
+                registryObj is not VirtualCameraRegistry registry ||
+                !registry.TryGet(next.VirtualCameraId, out var definition) ||
+                definition == null)
             {
                 return;
             }
 
-            if (_globals.TryGetValue(globalKey, out var entityObj) && entityObj is Entity entity && _world.IsAlive(entity) && _world.Has<WorldPositionCm>(entity))
-            {
-                var position = _world.Get<WorldPositionCm>(entity).Value;
-                _camera.FollowTargetPositionCm = new System.Numerics.Vector2(position.X.ToFloat(), position.Y.ToFloat());
-            }
-        }
+            var followTargetKind = Enum.TryParse<CameraFollowTargetKind>(next.FollowTargetKind, ignoreCase: true, out var parsedKind)
+                ? parsedKind
+                : definition.FollowTargetKind;
 
-        private string ResolveSelectedOrLocalPlayer()
-        {
-            if (_globals.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var selectedObj) && selectedObj is Entity selected && _world.IsAlive(selected))
-            {
-                return CoreServiceKeys.SelectedEntity.Name;
-            }
-
-            return CoreServiceKeys.LocalPlayerEntity.Name;
+            _camera.ActivateVirtualCamera(
+                next.VirtualCameraId,
+                blendDurationSeconds: null,
+                followTarget: CameraFollowTargetFactory.Build(_world, _globals, followTargetKind),
+                snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
+            _ownedVirtualCameraId = next.VirtualCameraId;
         }
 
         private void ApplyInteractionMode(ViewModeConfig mode)

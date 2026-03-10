@@ -1,6 +1,6 @@
 namespace Ludots.Core.Gameplay.Camera
 {
-    public interface ICameraBehavior
+    internal interface ICameraBehavior
     {
         void Update(CameraState state, CameraBehaviorContext ctx, float dt);
     }

@@ -41,7 +41,7 @@ namespace CoreInputMod.Systems
 
         public InputOrderMappingSystem? TryCreateMapping(IModContext ctx)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input)
+            if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input)
             {
                 return null;
             }
@@ -115,7 +115,7 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input)
+            if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input)
             {
                 return false;
             }

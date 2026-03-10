@@ -3,53 +3,53 @@ using Ludots.Core.Gameplay.Camera.Behaviors;
 
 namespace Ludots.Core.Gameplay.Camera
 {
-    public static class CameraControllerFactory
+    internal static class CameraControllerFactory
     {
-        public static CompositeCameraController FromPreset(CameraPreset preset, CameraBehaviorContext ctx)
+        public static CompositeCameraController FromDefinition(VirtualCameraDefinition definition, CameraBehaviorContext ctx)
         {
             var behaviors = new List<ICameraBehavior>();
 
-            if (preset.EnableZoom)
+            if (definition.EnableZoom)
             {
                 behaviors.Add(new ZoomBehavior(
-                    preset.ZoomActionId, preset.ZoomCmPerWheel,
-                    preset.MinDistanceCm, preset.MaxDistanceCm));
+                    definition.ZoomActionId, definition.ZoomCmPerWheel,
+                    definition.MinDistanceCm, definition.MaxDistanceCm));
             }
 
-            switch (preset.PanMode)
+            switch (definition.PanMode)
             {
                 case CameraPanMode.Keyboard:
-                    behaviors.Add(new KeyboardPanBehavior(preset.MoveActionId, preset.PanCmPerSecond));
+                    behaviors.Add(new KeyboardPanBehavior(definition.MoveActionId, definition.PanCmPerSecond));
                     break;
                 case CameraPanMode.EdgePan:
-                    behaviors.Add(new EdgePanBehavior(preset.PointerPosActionId, preset.EdgePanMarginPx, preset.EdgePanSpeedCmPerSec));
+                    behaviors.Add(new EdgePanBehavior(definition.PointerPosActionId, definition.EdgePanMarginPx, definition.EdgePanSpeedCmPerSec));
                     break;
                 case CameraPanMode.KeyboardAndEdge:
-                    behaviors.Add(new KeyboardPanBehavior(preset.MoveActionId, preset.PanCmPerSecond));
-                    behaviors.Add(new EdgePanBehavior(preset.PointerPosActionId, preset.EdgePanMarginPx, preset.EdgePanSpeedCmPerSec));
+                    behaviors.Add(new KeyboardPanBehavior(definition.MoveActionId, definition.PanCmPerSecond));
+                    behaviors.Add(new EdgePanBehavior(definition.PointerPosActionId, definition.EdgePanMarginPx, definition.EdgePanSpeedCmPerSec));
                     break;
             }
 
-            if (preset.EnableGrabDrag)
+            if (definition.EnableGrabDrag)
             {
-                behaviors.Add(new GrabDragPanBehavior(preset.GrabDragHoldActionId, preset.PointerPosActionId));
+                behaviors.Add(new GrabDragPanBehavior(definition.GrabDragHoldActionId, definition.PointerDeltaActionId));
             }
 
-            switch (preset.RotateMode)
+            switch (definition.RotateMode)
             {
                 case CameraRotateMode.DragRotate:
                     behaviors.Add(new DragRotateBehavior(
-                        preset.RotateHoldActionId, preset.PointerPosActionId,
-                        preset.RotateDegPerPixel, preset.MinPitchDeg, preset.MaxPitchDeg));
+                        definition.RotateHoldActionId, definition.LookActionId,
+                        definition.RotateDegPerPixel, definition.MinPitchDeg, definition.MaxPitchDeg));
                     break;
                 case CameraRotateMode.KeyRotate:
-                    behaviors.Add(new KeyRotateBehavior(preset.RotateLeftActionId, preset.RotateRightActionId, preset.RotateDegPerSecond));
+                    behaviors.Add(new KeyRotateBehavior(definition.RotateLeftActionId, definition.RotateRightActionId, definition.RotateDegPerSecond));
                     break;
                 case CameraRotateMode.Both:
                     behaviors.Add(new DragRotateBehavior(
-                        preset.RotateHoldActionId, preset.PointerPosActionId,
-                        preset.RotateDegPerPixel, preset.MinPitchDeg, preset.MaxPitchDeg));
-                    behaviors.Add(new KeyRotateBehavior(preset.RotateLeftActionId, preset.RotateRightActionId, preset.RotateDegPerSecond));
+                        definition.RotateHoldActionId, definition.LookActionId,
+                        definition.RotateDegPerPixel, definition.MinPitchDeg, definition.MaxPitchDeg));
+                    behaviors.Add(new KeyRotateBehavior(definition.RotateLeftActionId, definition.RotateRightActionId, definition.RotateDegPerSecond));
                     break;
             }
 

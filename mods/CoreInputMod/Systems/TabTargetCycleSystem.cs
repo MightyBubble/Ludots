@@ -33,7 +33,7 @@ namespace CoreInputMod.Systems
 
         public void Update(in float dt)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input)
+            if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input)
             {
                 return;
             }

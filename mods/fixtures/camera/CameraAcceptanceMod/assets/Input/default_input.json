@@ -1,0 +1,17 @@
+{
+  "actions": [
+    { "id": "CameraAcceptance_ClearShot", "name": "CameraAcceptance_ClearShot", "type": "Button" },
+    { "id": "CameraAcceptance_ReplayShot", "name": "CameraAcceptance_ReplayShot", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "CameraAcceptance.Controls",
+      "name": "Camera Acceptance Controls",
+      "priority": 110,
+      "bindings": [
+        { "actionId": "CameraAcceptance_ClearShot", "path": "<Keyboard>/enter" },
+        { "actionId": "CameraAcceptance_ReplayShot", "path": "<Keyboard>/r" }
+      ]
+    }
+  ]
+}

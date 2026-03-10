@@ -30,6 +30,8 @@ namespace Ludots.Core.Gameplay.Camera
         /// </summary>
         public float DistanceCm { get; set; } = 2000.0f;
 
+        public CameraRigKind RigKind { get; set; } = CameraRigKind.Orbit;
+
         /// <summary>
         /// Current zoom level index (if discrete zooming is used).
         /// </summary>

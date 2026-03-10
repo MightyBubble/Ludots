@@ -1,6 +1,6 @@
 namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
-    public sealed class KeyRotateBehavior : ICameraBehavior
+    internal sealed class KeyRotateBehavior : ICameraBehavior
     {
         private readonly string _rotateLeftActionId;
         private readonly string _rotateRightActionId;

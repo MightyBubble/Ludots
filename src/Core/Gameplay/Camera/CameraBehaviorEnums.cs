@@ -1,5 +1,13 @@
 namespace Ludots.Core.Gameplay.Camera
 {
+    public enum CameraRigKind
+    {
+        Orbit,
+        TopDown,
+        ThirdPerson,
+        FirstPerson
+    }
+
     public enum CameraPanMode
     {
         None,
@@ -21,5 +29,27 @@ namespace Ludots.Core.Gameplay.Camera
         None,
         HoldToLock,
         AlwaysFollow
+    }
+
+    public enum CameraFollowTargetKind
+    {
+        None,
+        LocalPlayer,
+        SelectedEntity,
+        SelectedOrLocalPlayer
+    }
+
+    public enum CameraBlendCurve
+    {
+        Cut,
+        Linear,
+        SmoothStep
+    }
+
+    public enum VirtualCameraTargetSource
+    {
+        CurrentState,
+        Fixed,
+        FollowTarget
     }
 }

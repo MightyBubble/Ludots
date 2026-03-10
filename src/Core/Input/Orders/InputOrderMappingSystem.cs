@@ -103,7 +103,7 @@ namespace Ludots.Core.Input.Orders
     /// </summary>
     public sealed class InputOrderMappingSystem
     {
-        private readonly PlayerInputHandler _inputHandler;
+        private readonly IInputActionReader _input;
         private readonly InputOrderMappingConfig _config;
         private readonly Dictionary<string, InputOrderMapping> _mappingsByActionId;
         private readonly Dictionary<string, InputOrderMapping> _userOverrides;
@@ -170,9 +170,9 @@ namespace Ludots.Core.Input.Orders
         /// <summary>The secondary cancel / command action ID. Default: "Command" (right-click).</summary>
         public string CommandActionId { get; set; } = "Command";
         
-        public InputOrderMappingSystem(PlayerInputHandler inputHandler, InputOrderMappingConfig config)
+        public InputOrderMappingSystem(IInputActionReader input, InputOrderMappingConfig config)
         {
-            _inputHandler = inputHandler ?? throw new ArgumentNullException(nameof(inputHandler));
+            _input = input ?? throw new ArgumentNullException(nameof(input));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             
             _mappingsByActionId = new Dictionary<string, InputOrderMapping>();
@@ -238,14 +238,24 @@ namespace Ludots.Core.Input.Orders
                 // Held+StartEnd is handled separately via press/release detection
                 if (effectiveMapping.Trigger == InputTriggerType.Held && effectiveMapping.HeldPolicy == HeldPolicy.StartEnd)
                 {
-                    if (_inputHandler.PressedThisFrame(actionId) && !_activeHeldStartEndActions.Contains(actionId))
+                    if (_input.PressedThisFrame(actionId) && !_activeHeldStartEndActions.Contains(actionId))
                     {
                         // Emit .Start order
                         if (TryBuildOrderWithOrderTypeSuffix(effectiveMapping, ".Start", out var startOrder))
                         {
                             _orderSubmitHandler(in startOrder);
                         }
-                        _activeHeldStartEndActions.Add(actionId);
+                        if (_input.ReleasedThisFrame(actionId) && !_input.IsDown(actionId))
+                        {
+                            if (TryBuildOrderWithOrderTypeSuffix(effectiveMapping, ".End", out var endOrder))
+                            {
+                                _orderSubmitHandler(in endOrder);
+                            }
+                        }
+                        else
+                        {
+                            _activeHeldStartEndActions.Add(actionId);
+                        }
                     }
                     continue; // Release is handled in ProcessHeldStartEndReleases
                 }
@@ -284,7 +294,7 @@ namespace Ludots.Core.Input.Orders
             List<string>? toRemove = null;
             foreach (var actionId in _activeHeldStartEndActions)
             {
-                if (_inputHandler.ReleasedThisFrame(actionId))
+                if (_input.ReleasedThisFrame(actionId))
                 {
                     var effectiveMapping = _userOverrides.TryGetValue(actionId, out var overrideMapping)
                         ? overrideMapping
@@ -308,9 +318,9 @@ namespace Ludots.Core.Input.Orders
         {
             return trigger switch
             {
-                InputTriggerType.PressedThisFrame => _inputHandler.PressedThisFrame(actionId),
-                InputTriggerType.ReleasedThisFrame => _inputHandler.ReleasedThisFrame(actionId),
-                InputTriggerType.Held => _inputHandler.IsDown(actionId),
+                InputTriggerType.PressedThisFrame => _input.PressedThisFrame(actionId),
+                InputTriggerType.ReleasedThisFrame => _input.ReleasedThisFrame(actionId),
+                InputTriggerType.Held => _input.IsDown(actionId),
                 InputTriggerType.DoubleTap => false, // Obsolete; belongs to selection system
                 _ => false
             };
@@ -425,7 +435,7 @@ namespace Ludots.Core.Input.Orders
             // SmartCastWithIndicator: release of the skill key = confirm cast
             if (_smartCastWithIndicatorActive)
             {
-                if (_inputHandler.ReleasedThisFrame(_aimingActionId))
+                if (_input.ReleasedThisFrame(_aimingActionId))
                 {
                     if (TryBuildOrderSmartCast(_aimingMapping, out var order))
                     {
@@ -436,7 +446,7 @@ namespace Ludots.Core.Input.Orders
                 }
                 
                 // Cancel: right-click or ESC
-                if (_inputHandler.PressedThisFrame(CancelActionId) || _inputHandler.PressedThisFrame(CommandActionId))
+                if (_input.PressedThisFrame(CancelActionId) || _input.PressedThisFrame(CommandActionId))
                 {
                     ExitAimingState();
                     return;
@@ -448,7 +458,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             // AimCast: Confirm by left-click
-            if (_inputHandler.PressedThisFrame(ConfirmActionId))
+            if (_input.PressedThisFrame(ConfirmActionId))
             {
                 // Build order using current cursor/selection
                 if (TryBuildOrderSmartCast(_aimingMapping, out var order))
@@ -460,7 +470,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             // Cancel: right-click or ESC
-            if (_inputHandler.PressedThisFrame(CancelActionId) || _inputHandler.PressedThisFrame(CommandActionId))
+            if (_input.PressedThisFrame(CancelActionId) || _input.PressedThisFrame(CommandActionId))
             {
                 ExitAimingState();
                 return;
@@ -474,7 +484,7 @@ namespace Ludots.Core.Input.Orders
                     ? overrideMapping
                     : mapping;
                 if (!effectiveMapping.IsSkillMapping) continue;
-                if (!_inputHandler.PressedThisFrame(actionId)) continue;
+                if (!_input.PressedThisFrame(actionId)) continue;
 
                 // Switch aim to the new skill
                 EnterAimingState(actionId, effectiveMapping);
@@ -493,7 +503,7 @@ namespace Ludots.Core.Input.Orders
         private void HandleVectorAimingState()
         {
             // Cancel: right-click or ESC at any phase
-            if (_inputHandler.PressedThisFrame(CancelActionId) || _inputHandler.PressedThisFrame(CommandActionId))
+            if (_input.PressedThisFrame(CancelActionId) || _input.PressedThisFrame(CommandActionId))
             {
                 ExitAimingState();
                 return;
@@ -513,7 +523,7 @@ namespace Ludots.Core.Input.Orders
                     }
                     
                     // Confirm origin with left-click
-                    if (_inputHandler.PressedThisFrame(ConfirmActionId) && hasCursor)
+                    if (_input.PressedThisFrame(ConfirmActionId) && hasCursor)
                     {
                         _vectorAimOrigin = cursorPos;
                         _vectorAimPhase = VectorAimPhase.Direction;
@@ -528,7 +538,7 @@ namespace Ludots.Core.Input.Orders
                     }
                     
                     // Confirm direction with left-click -> build and submit vector order
-                    if (_inputHandler.PressedThisFrame(ConfirmActionId) && hasCursor)
+                    if (_input.PressedThisFrame(ConfirmActionId) && hasCursor)
                     {
                         if (TryBuildVectorOrder(_aimingMapping!, _vectorAimOrigin, cursorPos, out var order))
                         {
@@ -780,7 +790,7 @@ namespace Ludots.Core.Input.Orders
         
         private OrderSubmitMode DetermineSubmitMode(ModifierSubmitBehavior behavior)
         {
-            bool queueModifierHeld = _queueModifierProvider?.Invoke() ?? _inputHandler.IsDown("QueueModifier");
+            bool queueModifierHeld = _queueModifierProvider?.Invoke() ?? _input.IsDown("QueueModifier");
             return behavior switch
             {
                 ModifierSubmitBehavior.IgnoreModifier => OrderSubmitMode.Immediate,

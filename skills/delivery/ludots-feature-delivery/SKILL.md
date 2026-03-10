@@ -19,6 +19,7 @@ Use this skill to deliver production-grade features with consistent acceptance e
 1. Reuse infrastructure first.
 - Reuse existing core systems, registries, queues, and config pipelines.
 - Do not create one-off mod-only engines or parallel runtime stacks.
+- For input/order/camera work, keep render-frame sampling (`PlayerInputHandler`) separate from fixed-step authoritative consumption (`CoreServiceKeys.AuthoritativeInput`), and keep camera transitions inside `CameraManager` / `VirtualCameraBrain`, not presenter/adapters.
 
 2. Ship headless end-to-end acceptance evidence.
 - Produce deterministic headless E2E output for the target feature.
@@ -32,6 +33,12 @@ Use this skill to deliver production-grade features with consistent acceptance e
 - If upper-layer implementation reveals lower-layer defects, do not hide or bypass.
 - Trigger technical debt escalation and fuse decision workflow.
 - Use `ludots-tech-debt-fuse`.
+
+5. Verify wrapper-script invocation against implementation.
+- Before publishing or running repository wrapper commands, inspect the wrapper script and its receiving entrypoint.
+- Do not invent separators or shim arguments unless the wrapper explicitly requires them.
+- For Ludots `scripts/run-mod-launcher.cmd`, the canonical form is `.\scripts\run-mod-launcher.cmd cli ...`, not `.\scripts\run-mod-launcher.cmd -- cli ...`.
+- For mod-specific launches, verify the exe-adjacent `game.json` or equivalent runtime artifact after `gamejson write`; process spawn alone is not acceptance evidence.
 
 ## Workflow
 

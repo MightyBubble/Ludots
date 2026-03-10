@@ -13,6 +13,7 @@
 *   [启动顺序与入口点](startup_entrypoints.md)
 *   [Map、Mod 与空间服务可插拔](map_mod_spatial.md)
 *   [Mod 运行时唯一真相与收束准则](mod_runtime_single_source_of_truth.md)
+*   [统一 UI Runtime 与三前端写法](ui_runtime_architecture.md)
 
 ## 2 Gameplay 与 Presentation
 

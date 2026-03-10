@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
-    public sealed class EdgePanBehavior : ICameraBehavior
+    internal sealed class EdgePanBehavior : ICameraBehavior
     {
         private readonly string _pointerPosActionId;
         private readonly float _marginPx;

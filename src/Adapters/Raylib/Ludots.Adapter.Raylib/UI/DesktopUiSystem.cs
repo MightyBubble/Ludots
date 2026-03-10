@@ -1,12 +1,13 @@
 using Ludots.Core.UI;
 using Ludots.UI;
-using Ludots.UI.HtmlEngine;
+using Ludots.UI.HtmlEngine.Markup;
 
 namespace Ludots.Adapter.Raylib.UI
 {
     public sealed class DesktopUiSystem : IUiSystem
     {
         private readonly UIRoot _root;
+        private readonly UiMarkupLoader _markupLoader = new();
 
         public DesktopUiSystem(UIRoot root)
         {
@@ -15,15 +16,8 @@ namespace Ludots.Adapter.Raylib.UI
 
         public void SetHtml(string html, string css)
         {
-            var widget = new HtmlWidget
-            {
-                Html = html,
-                Css = css,
-                Width = _root.Width,
-                Height = _root.Height
-            };
-            _root.Content = widget;
-            _root.IsDirty = true;
+            var scene = _markupLoader.LoadScene(html, css);
+            _root.MountScene(scene);
         }
     }
 }

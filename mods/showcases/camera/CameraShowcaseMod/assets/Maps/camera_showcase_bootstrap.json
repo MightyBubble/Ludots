@@ -1,0 +1,23 @@
+{
+  "Id": "camera_showcase_bootstrap",
+  "Tags": ["camera.showcase", "camera.showcase.bootstrap", "camera.bootstrap.center_bounds"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical"
+  },
+  "Entities": [
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "CameraShowcaseNorthWest" },
+        "WorldPositionCm": { "Value": { "X": 1000, "Y": 500 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "CameraShowcaseSouthEast" },
+        "WorldPositionCm": { "Value": { "X": 7000, "Y": 4500 } }
+      }
+    }
+  ]
+}

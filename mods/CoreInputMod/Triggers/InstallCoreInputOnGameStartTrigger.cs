@@ -7,6 +7,7 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Systems;
@@ -17,7 +18,7 @@ namespace CoreInputMod.Triggers
     /// <summary>
     /// Registers generic input systems on game start: EntityClickSelect, GasSelectionResponse, GasInputResponse.
     /// Does not include order sources (move/attack/etc) — those are game-mode specific (MobaDemoMod, RtsDemoMod, etc).
-    /// For camera, add Universal3CCameraMod.
+    /// For camera, compose CameraProfilesMod / CameraBootstrapMod / VirtualCameraShotsMod as needed.
     /// Mods can add callbacks via GlobalContext["CoreInputMod.EntitySelectionCallbacks"] and
     /// ["CoreInputMod.SelectionTriggeredCallbacks"] to customize visual feedback.
     /// </summary>

@@ -1,62 +1,55 @@
-using SkiaSharp;
 using Ludots.UI.Input;
+using SkiaSharp;
 
 namespace Ludots.UI.Widgets;
 
 public class Widget
 {
-    public float X { get; set; }
-    public float Y { get; set; }
-    public float Width { get; set; }
-    public float Height { get; set; }
-    
-    public SKColor BackgroundColor { get; set; } = SKColors.Transparent;
-    
-    public bool IsDirty { get; set; } = true;
+	public float X { get; set; }
 
-    public virtual void Render(SKCanvas canvas)
-    {
-        canvas.Save();
-        canvas.Translate(X, Y);
-        
-        if (BackgroundColor != SKColors.Transparent)
-        {
-            using var paint = new SKPaint { Color = BackgroundColor };
-            canvas.DrawRect(0, 0, Width, Height, paint);
-        }
-        
-        OnRender(canvas);
-        
-        canvas.Restore();
-    }
+	public float Y { get; set; }
 
-    protected virtual void OnRender(SKCanvas canvas)
-    {
-    }
+	public float Width { get; set; }
 
-    public virtual bool HandleInput(InputEvent e, float parentX, float parentY)
-    {
-        float globalX = parentX + X;
-        float globalY = parentY + Y;
+	public float Height { get; set; }
 
-        if (e is PointerEvent pe)
-        {
-            // Simple Hit Test
-            bool inside = pe.X >= globalX && pe.X <= globalX + Width && 
-                          pe.Y >= globalY && pe.Y <= globalY + Height;
-            
-            if (inside)
-            {
-                // We could transform event to local coords here if needed
-                // For now just pass it through
-                return OnPointerEvent(pe, pe.X - globalX, pe.Y - globalY);
-            }
-        }
-        return false;
-    }
+	public SKColor BackgroundColor { get; set; } = SKColors.Transparent;
 
-    protected virtual bool OnPointerEvent(PointerEvent e, float localX, float localY)
-    {
-        return false;
-    }
+	public bool IsDirty { get; set; } = true;
+
+	public virtual void Render(SKCanvas canvas)
+	{
+		canvas.Save();
+		canvas.Translate(X, Y);
+		if (BackgroundColor != SKColors.Transparent)
+		{
+			using SKPaint paint = new SKPaint
+			{
+				Color = BackgroundColor
+			};
+			canvas.DrawRect(0f, 0f, Width, Height, paint);
+		}
+		OnRender(canvas);
+		canvas.Restore();
+	}
+
+	protected virtual void OnRender(SKCanvas canvas)
+	{
+	}
+
+	public virtual bool HandleInput(InputEvent e, float parentX, float parentY)
+	{
+		float num = parentX + X;
+		float num2 = parentY + Y;
+		if (e is PointerEvent pointerEvent && pointerEvent.X >= num && pointerEvent.X <= num + Width && pointerEvent.Y >= num2 && pointerEvent.Y <= num2 + Height)
+		{
+			return OnPointerEvent(pointerEvent, pointerEvent.X - num, pointerEvent.Y - num2);
+		}
+		return false;
+	}
+
+	protected virtual bool OnPointerEvent(PointerEvent e, float localX, float localY)
+	{
+		return false;
+	}
 }

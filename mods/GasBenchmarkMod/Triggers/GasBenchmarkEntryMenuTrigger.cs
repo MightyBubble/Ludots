@@ -5,14 +5,14 @@ using Ludots.Core.Engine;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using Ludots.UI;
-using Ludots.UI.Reactive.Core;
-using Ludots.UI.Reactive.Widgets;
+using Ludots.UI.Compose;
+using Ludots.UI.Runtime;
+using Ludots.UI.Runtime.Actions;
 using SkiaSharp;
-using FlexLayoutSharp;
 
 namespace GasBenchmarkMod.Triggers
 {
-    public class GasBenchmarkEntryMenuTrigger : Trigger
+    public sealed class GasBenchmarkEntryMenuTrigger : Trigger
     {
         public GasBenchmarkEntryMenuTrigger()
         {
@@ -20,139 +20,62 @@ namespace GasBenchmarkMod.Triggers
             AddCondition(ctx =>
             {
                 var engine = ctx.GetEngine();
-                if (engine?.MergedConfig == null) return false;
-                return ctx.IsMap(new MapId(engine.MergedConfig.StartupMapId));
+                return engine?.MergedConfig != null && ctx.IsMap(new MapId(engine.MergedConfig.StartupMapId));
             });
         }
 
         public override Task ExecuteAsync(ScriptContext context)
         {
             var engine = context.GetEngine();
-            if (engine == null) return Task.CompletedTask;
+            if (engine == null)
+            {
+                return Task.CompletedTask;
+            }
 
-            var uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
-            if (uiRoot == null)
+            if (context.Get(CoreServiceKeys.UIRoot) is not UIRoot uiRoot)
             {
                 Console.WriteLine("[GasBenchmarkMod] UIRoot missing in ScriptContext (entry).");
                 return Task.CompletedTask;
             }
 
-            if (uiRoot.Content == null)
-            {
-                var rootWidget = new FlexNodeWidget();
-                Reconciler.Render(
-                    new Element(
-                        typeof(GasBenchmarkEntryMenu),
-                        new GasBenchmarkEntryMenuProps
-                        {
-                            OpenGasBenchmark = () => engine.LoadMap(GasBenchmarkMapIds.GasBenchmark)
-                        }
-                    ),
-                    rootWidget
-                );
-
-                uiRoot.Content = rootWidget;
-                uiRoot.IsDirty = true;
-                Console.WriteLine("[GasBenchmarkMod] Entry menu mounted.");
-                return Task.CompletedTask;
-            }
-
-            if (uiRoot.Content is not FlexNodeWidget existingRoot) return Task.CompletedTask;
-            if (ContainsGasBenchmarkButton(existingRoot)) return Task.CompletedTask;
-
-            var wrapper = new FlexNodeWidget();
-            wrapper.SetWidthPercent(100f);
-            wrapper.SetHeightPercent(100f);
-
-            existingRoot.SetWidthPercent(100f);
-            existingRoot.SetHeightPercent(100f);
-            existingRoot.FlexGrow = 1f;
-
-            var openButton = new FlexNodeWidget
-            {
-                Text = "GAS Benchmark",
-                FontSize = 18f,
-                TextColor = SKColors.Black,
-                BackgroundColor = SKColors.Gold,
-                Padding = 12f,
-                BorderRadius = 10f,
-                OnClick = () => engine.LoadMap(GasBenchmarkMapIds.GasBenchmark)
-            };
-            openButton.PositionType = PositionType.Absolute;
-            openButton.FlexNode.StyleSetPosition(Edge.Right, 18f);
-            openButton.FlexNode.StyleSetPosition(Edge.Bottom, 18f);
-
-            wrapper.AddChild(existingRoot);
-            wrapper.AddChild(openButton);
-
-            uiRoot.Content = wrapper;
+            uiRoot.MountScene(CreateScene(() => engine.LoadMap(GasBenchmarkMapIds.GasBenchmark)));
             uiRoot.IsDirty = true;
-            Console.WriteLine("[GasBenchmarkMod] Added GAS Benchmark floating button on entry.");
+            Console.WriteLine("[GasBenchmarkMod] Entry menu mounted.");
             return Task.CompletedTask;
         }
 
-        private static bool ContainsGasBenchmarkButton(FlexNodeWidget root)
+        private static UiScene CreateScene(Action openGasBenchmark)
         {
-            if (string.Equals(root.Text, "GAS Benchmark", StringComparison.Ordinal))
-            {
-                return true;
-            }
-
-            foreach (var child in root.Children)
-            {
-                if (ContainsGasBenchmarkButton(child)) return true;
-            }
-
-            return false;
+            var scene = new UiScene();
+            int nextId = 1;
+            scene.Mount(
+                Ui.Column(
+                        Ui.Text("GAS BENCHMARK")
+                            .FontSize(54f)
+                            .Bold()
+                            .Color(SKColors.White),
+                        Ui.Text("Entry menu: open GAS benchmark map from here.")
+                            .FontSize(20f)
+                            .Color(SKColors.LightGray),
+                        BuildButton("Open GAS Benchmark Map", SKColors.Gold, SKColors.Black, _ => openGasBenchmark()))
+                    .WidthPercent(100f)
+                    .HeightPercent(100f)
+                    .Justify(UiJustifyContent.Center)
+                    .Align(UiAlignItems.Center)
+                    .Background(new SKColor(0, 0, 0, 200))
+                    .Gap(18f)
+                    .Build(scene.Dispatcher, ref nextId));
+            return scene;
         }
-    }
 
-    internal sealed class GasBenchmarkEntryMenuProps
-    {
-        public Action OpenGasBenchmark { get; set; }
-    }
-
-    public class GasBenchmarkEntryMenu : Component
-    {
-        public override Element Render()
+        private static UiElementBuilder BuildButton(string text, SKColor background, SKColor foreground, Action<UiActionContext> onClick)
         {
-            var props = Props as GasBenchmarkEntryMenuProps;
-
-            return new Element(typeof(FlexNodeWidget), new
-            {
-                FlexDirection = FlexDirection.Column,
-                JustifyContent = Justify.Center,
-                AlignItems = Align.Center,
-                BackgroundColor = new SKColor(0, 0, 0, 200),
-                WidthPercent = 100f,
-                HeightPercent = 100f
-            }, null,
-                new Element(typeof(FlexNodeWidget), new
-                {
-                    Text = "GAS BENCHMARK",
-                    FontSize = 54f,
-                    TextColor = SKColors.White,
-                    MarginBottom = 20f
-                }),
-                new Element(typeof(FlexNodeWidget), new
-                {
-                    Text = "Entry menu: open GAS benchmark map from here.",
-                    FontSize = 20f,
-                    TextColor = SKColors.LightGray,
-                    MarginBottom = 40f
-                }),
-                new Element(typeof(FlexNodeWidget), new
-                {
-                    Text = "Open GAS Benchmark Map",
-                    FontSize = 28f,
-                    TextColor = SKColors.Black,
-                    BackgroundColor = SKColors.Gold,
-                    Padding = 18f,
-                    BorderRadius = 10f,
-                    MarginBottom = 16f,
-                    OnClick = (Action)(() => props?.OpenGasBenchmark?.Invoke())
-                })
-            );
+            return Ui.Button(text, onClick)
+                .FontSize(28f)
+                .Padding(18f, 14f)
+                .Radius(10f)
+                .Background(background)
+                .Color(foreground);
         }
     }
 }

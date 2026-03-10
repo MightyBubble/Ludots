@@ -55,11 +55,17 @@ Mod 注册 System 工厂，Map Trigger 按需激活：
 
 ```csharp
 // 在 OnLoad 中注册工厂（不立即创建 System）
-context.SystemFactoryRegistry.Register("MobaOrderSource", SystemGroup.InputCollection,
-    ctx => new MobaLocalOrderSourceSystem(ctx.GetWorld()));
+context.SystemFactoryRegistry.Register("TabTargetCycle", SystemGroup.InputCollection, ctx =>
+{
+    var engine = ctx.GetEngine() ?? throw new InvalidOperationException("GameEngine is required.");
+    return new TabTargetCycleSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
+});
 
-context.SystemFactoryRegistry.RegisterPresentation("EntityClickSelect",
-    ctx => new EntityClickSelectSystem(ctx.GetWorld()));
+context.SystemFactoryRegistry.RegisterPresentation("SkillBarOverlay", ctx =>
+{
+    var engine = ctx.GetEngine() ?? throw new InvalidOperationException("GameEngine is required.");
+    return new SkillBarOverlaySystem(engine.World, engine.GlobalContext);
+});
 ```
 
 激活由 Map Trigger 或 EventHandler 完成：
@@ -68,10 +74,16 @@ context.OnEvent(GameEvents.MapLoaded, ctx =>
 {
     var sfr = ctx.Get<SystemFactoryRegistry>(ContextKeys.SystemFactoryRegistry);
     var engine = ctx.GetEngine();
-    sfr.TryActivate("MobaOrderSource", ctx, engine);  // 幂等，重复激活返回 false
+    sfr.TryActivate("TabTargetCycle", ctx, engine);  // 幂等，重复激活返回 false
     return Task.CompletedTask;
 });
 ```
+
+约束：
+
+- 消费玩家**逻辑输入**的 system 必须注册到 `SystemGroup.InputCollection`，并读取 `CoreServiceKeys.AuthoritativeInput`。
+- `EntityClickSelectSystem`、`GasSelectionResponseSystem`、`GasInputResponseSystem` 位于 `src/Core/Input/...`，属于 fixed-step 输入系统，不应作为 presentation system 注册。
+- presentation system 只承载 HUD / overlay / performer 等渲染侧逻辑，不直接消费 live `PlayerInputHandler`。
 
 ### 2.3 TriggerDecoratorRegistry — Mod 修饰 Map Trigger
 

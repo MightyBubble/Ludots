@@ -32,17 +32,16 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            string modsRoot = Path.Combine(repoRoot, "mods");
             string reportPath = Path.Combine(repoRoot, "artifacts", "GasProductionReport.md");
 
             var scenarios = new List<ScenarioResult>();
             try
             {
-                scenarios.Add(RunScenario("MOBA", assetsRoot, modsRoot, new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" }, "entry", RunMobaScenario));
-                scenarios.Add(RunScenario("TCG/Modify", assetsRoot, modsRoot, new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_modify", RunTcgModifyScenario));
-                scenarios.Add(RunScenario("TCG/Hook", assetsRoot, modsRoot, new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_hook", RunTcgHookScenario));
-                scenarios.Add(RunScenario("ARPG", assetsRoot, modsRoot, new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", RunArpgScenario));
-                scenarios.Add(RunScenario("4X", assetsRoot, modsRoot, new[] { "LudotsCoreMod", "FourXDemoMod" }, "fourx_entry", RunFourXScenario));
+                scenarios.Add(RunScenario("MOBA", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" }, "entry", RunMobaScenario));
+                scenarios.Add(RunScenario("TCG/Modify", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_modify", RunTcgModifyScenario));
+                scenarios.Add(RunScenario("TCG/Hook", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "TcgDemoMod" }, "tcg_hook", RunTcgHookScenario));
+                scenarios.Add(RunScenario("ARPG", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "ArpgDemoMod" }, "arpg_entry", RunArpgScenario));
+                scenarios.Add(RunScenario("4X", repoRoot, assetsRoot, new[] { "LudotsCoreMod", "FourXDemoMod" }, "fourx_entry", RunFourXScenario));
             }
             finally
             {
@@ -66,8 +65,8 @@ namespace Ludots.Tests.GAS.Production
 
         private static ScenarioResult RunScenario(
             string name,
+            string repoRoot,
             string assetsRoot,
-            string modsRoot,
             string[] mods,
             string mapId,
             Action<GameEngine, List<StepResult>> scenario)
@@ -76,11 +75,7 @@ namespace Ludots.Tests.GAS.Production
             var engine = new GameEngine();
             try
             {
-                var modPaths = new List<string>(mods.Length);
-                for (int i = 0; i < mods.Length; i++)
-                {
-                    modPaths.Add(Path.Combine(modsRoot, mods[i]));
-                }
+                var modPaths = RepoModPaths.ResolveExplicit(repoRoot, mods);
 
                 engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
                 InstallDummyInput(engine);

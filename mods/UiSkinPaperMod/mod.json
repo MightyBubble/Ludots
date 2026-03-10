@@ -1,0 +1,8 @@
+{
+  "name": "UiSkinPaperMod",
+  "version": "1.0.0",
+  "description": "UI skin pack mod.",
+  "main": "bin/net8.0/UiSkinPaperMod.dll",
+  "priority": 0,
+  "dependencies": {}
+}

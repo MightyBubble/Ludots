@@ -170,7 +170,7 @@
   ],
   "TriggerTypes": [],
   "DefaultCamera": {
-    "PresetId": "Rts",
+    "VirtualCameraId": "Rts",
     "Pitch": 45,
     "DistanceCm": 14142,
     "FovYDeg": 60

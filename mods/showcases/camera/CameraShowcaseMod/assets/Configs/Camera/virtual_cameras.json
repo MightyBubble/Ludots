@@ -1,0 +1,41 @@
+[
+  {
+    "id": "Camera.Showcase.Profile.SelectionFollow",
+    "displayName": "Selection Follow",
+    "priority": 100,
+    "rigKind": "Orbit",
+    "distanceCm": 2800,
+    "pitch": 48,
+    "fovYDeg": 52,
+    "yaw": 190,
+    "minDistanceCm": 1600,
+    "maxDistanceCm": 7000,
+    "minPitchDeg": 35,
+    "maxPitchDeg": 70,
+    "panMode": "None",
+    "rotateMode": "DragRotate",
+    "rotateDegPerPixel": 0.16,
+    "enableZoom": true,
+    "zoomCmPerWheel": 600,
+    "followMode": "AlwaysFollow",
+    "followTargetKind": "SelectedOrLocalPlayer",
+    "defaultBlendDuration": 0.25,
+    "blendCurve": "SmoothStep",
+    "allowUserInput": true
+  },
+  {
+    "id": "Camera.Showcase.Shot.CommandReveal",
+    "displayName": "Command Reveal",
+    "priority": 1200,
+    "rigKind": "TopDown",
+    "targetSource": "Fixed",
+    "fixedTargetCm": { "x": 3200, "y": 2000 },
+    "yaw": 215,
+    "pitch": 74,
+    "distanceCm": 15000,
+    "fovYDeg": 44,
+    "defaultBlendDuration": 0.35,
+    "blendCurve": "SmoothStep",
+    "allowUserInput": false
+  }
+]

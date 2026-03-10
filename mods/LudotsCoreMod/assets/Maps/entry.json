@@ -2,7 +2,7 @@
   "Id": "entry",
   "Tags": ["moba_demo"],
   "DefaultCamera": {
-    "PresetId": "Moba",
+    "VirtualCameraId": "Moba",
     "Pitch": 45,
     "FovYDeg": 60
   },

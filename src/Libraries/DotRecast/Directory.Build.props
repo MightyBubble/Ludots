@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <DotRecastPreviewTargetFrameworkSuffix Condition="'$(IncludeDotRecastNet10)' == 'true'">;net10.0</DotRecastPreviewTargetFrameworkSuffix>
+    <DotRecastPreviewTargetFrameworkSuffix Condition="'$(IncludeDotRecastNet10)' != 'true'"></DotRecastPreviewTargetFrameworkSuffix>
+  </PropertyGroup>
+</Project>

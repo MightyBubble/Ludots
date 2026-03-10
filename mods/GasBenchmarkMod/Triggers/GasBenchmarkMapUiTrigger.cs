@@ -1,16 +1,17 @@
 using System;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
+using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using Ludots.UI;
-using Ludots.UI.Reactive.Core;
-using Ludots.UI.Reactive.Widgets;
+using Ludots.UI.Compose;
+using Ludots.UI.Runtime;
+using Ludots.UI.Runtime.Actions;
 using SkiaSharp;
-using FlexLayoutSharp;
 
 namespace GasBenchmarkMod.Triggers
 {
-    public class GasBenchmarkMapUiTrigger : Trigger
+    public sealed class GasBenchmarkMapUiTrigger : Trigger
     {
         public GasBenchmarkMapUiTrigger()
         {
@@ -23,96 +24,65 @@ namespace GasBenchmarkMod.Triggers
             Console.WriteLine("[GasBenchmarkMod] MapLoaded: gas_benchmark (mounting UI)...");
 
             var engine = context.GetEngine();
-            if (engine == null) return Task.CompletedTask;
+            if (engine == null)
+            {
+                return Task.CompletedTask;
+            }
 
-            var uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
-            if (uiRoot == null)
+            if (context.Get(CoreServiceKeys.UIRoot) is not UIRoot uiRoot)
             {
                 Console.WriteLine("[GasBenchmarkMod] UIRoot missing in ScriptContext.");
                 return Task.CompletedTask;
             }
 
-            var rootWidget = new FlexNodeWidget();
-            Reconciler.Render(
-                new Element(
-                    typeof(GasBenchmarkMenu),
-                    new GasBenchmarkMenuProps
-                    {
-                        RunBenchmark = () =>
-                        {
-                            Console.WriteLine("[GasBenchmarkMod] UI click: Run GAS Benchmark");
-                            engine.TriggerManager.FireEvent(GasBenchmarkEvents.RunGasBenchmark, engine.CreateContext());
-                        },
-                        BackToEntry = () => engine.LoadMap(new Ludots.Core.Map.MapId(engine.MergedConfig.StartupMapId))
-                    }
-                ),
-                rootWidget
-            );
-
-            uiRoot.Content = rootWidget;
+            uiRoot.MountScene(CreateScene(
+                () =>
+                {
+                    Console.WriteLine("[GasBenchmarkMod] UI click: Run GAS Benchmark");
+                    engine.TriggerManager.FireEvent(GasBenchmarkEvents.RunGasBenchmark, engine.CreateContext());
+                },
+                () => engine.LoadMap(new MapId(engine.MergedConfig.StartupMapId))));
             uiRoot.IsDirty = true;
             Console.WriteLine("[GasBenchmarkMod] UI mounted for gas_benchmark.");
             return Task.CompletedTask;
         }
-    }
 
-    internal sealed class GasBenchmarkMenuProps
-    {
-        public Action RunBenchmark { get; set; }
-        public Action BackToEntry { get; set; }
-    }
-
-    public class GasBenchmarkMenu : Component
-    {
-        public override Element Render()
+        private static UiScene CreateScene(Action runBenchmark, Action backToEntry)
         {
-            var props = Props as GasBenchmarkMenuProps;
+            var scene = new UiScene();
+            int nextId = 1;
+            scene.Mount(
+                Ui.Column(
+                        Ui.Text("GAS BENCHMARK")
+                            .FontSize(54f)
+                            .Bold()
+                            .Color(SKColors.White),
+                        Ui.Text("Click to spawn 100000 entities and run GAS benchmark.")
+                            .FontSize(20f)
+                            .Color(SKColors.LightGray),
+                        Ui.Row(
+                                BuildButton("Run GAS Benchmark", SKColors.Gold, SKColors.Black, _ => runBenchmark()),
+                                BuildButton("Back to Entry", SKColors.DimGray, SKColors.White, _ => backToEntry()))
+                            .Gap(12f)
+                            .Wrap())
+                    .WidthPercent(100f)
+                    .HeightPercent(100f)
+                    .Justify(UiJustifyContent.Center)
+                    .Align(UiAlignItems.Center)
+                    .Background(new SKColor(0, 0, 0, 200))
+                    .Gap(18f)
+                    .Build(scene.Dispatcher, ref nextId));
+            return scene;
+        }
 
-            return new Element(typeof(FlexNodeWidget), new
-            {
-                FlexDirection = FlexDirection.Column,
-                JustifyContent = Justify.Center,
-                AlignItems = Align.Center,
-                BackgroundColor = new SKColor(0, 0, 0, 200),
-                WidthPercent = 100f,
-                HeightPercent = 100f
-            }, null,
-                new Element(typeof(FlexNodeWidget), new
-                {
-                    Text = "GAS BENCHMARK",
-                    FontSize = 54f,
-                    TextColor = SKColors.White,
-                    MarginBottom = 20f
-                }),
-                new Element(typeof(FlexNodeWidget), new
-                {
-                    Text = "Click to spawn 100000 entities and run GAS benchmark.",
-                    FontSize = 20f,
-                    TextColor = SKColors.LightGray,
-                    MarginBottom = 40f
-                }),
-                new Element(typeof(FlexNodeWidget), new
-                {
-                    Text = "Run GAS Benchmark",
-                    FontSize = 28f,
-                    TextColor = SKColors.Black,
-                    BackgroundColor = SKColors.Gold,
-                    Padding = 18f,
-                    BorderRadius = 10f,
-                    MarginBottom = 16f,
-                    OnClick = (Action)(() => props?.RunBenchmark?.Invoke())
-                }),
-                new Element(typeof(FlexNodeWidget), new
-                {
-                    Text = "Back to Entry",
-                    FontSize = 22f,
-                    TextColor = SKColors.White,
-                    BackgroundColor = SKColors.DimGray,
-                    Padding = 14f,
-                    BorderRadius = 10f,
-                    OnClick = (Action)(() => props?.BackToEntry?.Invoke())
-                })
-            );
+        private static UiElementBuilder BuildButton(string text, SKColor background, SKColor foreground, Action<UiActionContext> onClick)
+        {
+            return Ui.Button(text, onClick)
+                .FontSize(24f)
+                .Padding(18f, 14f)
+                .Radius(10f)
+                .Background(background)
+                .Color(foreground);
         }
     }
 }

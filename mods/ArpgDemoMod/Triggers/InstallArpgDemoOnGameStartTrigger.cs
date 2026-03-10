@@ -10,7 +10,7 @@ namespace ArpgDemoMod.Triggers
 {
     /// <summary>
     /// Registers ARPG order source on game start.
-    /// Camera is driven by map DefaultCamera PresetId "TPS" (AlwaysFollow).
+    /// Camera is driven by map DefaultCamera.VirtualCameraId "TPS" (AlwaysFollow).
     /// Follow target is wired in <see cref="ArpgSetupOnMapLoadedTrigger"/>.
     /// </summary>
     public sealed class InstallArpgDemoOnGameStartTrigger : Trigger

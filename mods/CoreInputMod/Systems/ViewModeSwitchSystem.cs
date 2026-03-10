@@ -33,7 +33,7 @@ namespace CoreInputMod.Systems
                 return;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) || inputObj is not PlayerInputHandler input)
+            if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input)
             {
                 return;
             }
@@ -78,7 +78,7 @@ namespace CoreInputMod.Systems
             overlay.AddText(16, 14, $"ViewMode: {active.DisplayName}", 18, HudTitle);
             if (manager.Modes.Count > 1)
             {
-                overlay.AddText(16, 36, "V: next | Shift+V: prev", 13, HudHint);
+                overlay.AddText(16, 36, "V: next | B: prev", 13, HudHint);
             }
         }
 

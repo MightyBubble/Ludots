@@ -4,7 +4,7 @@
     "nav_playground"
   ],
   "DefaultCamera": {
-    "PresetId": "Default",
+    "VirtualCameraId": "Default",
     "DistanceCm": 18000
   },
   "Entities": []

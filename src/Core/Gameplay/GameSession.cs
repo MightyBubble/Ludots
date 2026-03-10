@@ -39,7 +39,8 @@ namespace Ludots.Core.Gameplay
 
         public void Update(float dt)
         {
-            Camera.Update(dt);
+            // Reserved for render-frame/session-level hooks.
+            // Camera logic advances in fixed-step via CameraRuntimeSystem.
         }
 
         public PlayerInputFrame GetInput(int playerId)

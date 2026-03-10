@@ -22,23 +22,18 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
-            string modsRoot = Path.Combine(repoRoot, "mods");
 
             var engine = new GameEngine();
             try
             {
                 engine.InitializeWithConfigPipeline(
-                    new()
-                    {
-                        Path.Combine(modsRoot, "LudotsCoreMod"),
-                        Path.Combine(modsRoot, "CoreInputMod"),
-                        Path.Combine(modsRoot, "MobaDemoMod")
-                    },
+                    RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "MobaDemoMod" }),
                     assetsRoot);
 
                 engine.Start();
                 engine.LoadMap(engine.MergedConfig.StartupMapId);
-                engine.GlobalContext.Remove(Ludots.Core.Scripting.CoreServiceKeys.CameraControllerRequest.Name);
+                engine.GlobalContext.Remove(Ludots.Core.Scripting.CoreServiceKeys.CameraPoseRequest.Name);
+                engine.GlobalContext.Remove(Ludots.Core.Scripting.CoreServiceKeys.VirtualCameraRequest.Name);
 
                 for (int i = 0; i < 5; i++)
                 {

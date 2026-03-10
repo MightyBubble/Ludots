@@ -89,6 +89,7 @@ namespace Ludots.Adapter.Raylib
                 engine.GlobalContext[CoreServiceKeys.RenderCameraDebugState.Name] = renderCameraDebug;
 
                 engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
+                var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
 
                 WorldHudToScreenSystem hudProjection = null;
                 if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudBuffer.Name, out var whObj) && whObj is WorldHudBatchBuffer worldHud &&
@@ -139,7 +140,8 @@ namespace Ludots.Adapter.Raylib
                         engine.GlobalContext[CoreServiceKeys.UiCaptured.Name] = uiCaptured;
                         engine.Tick(dt);
 
-                        cameraPresenter.Update(engine.GameSession.Camera.State, dt, renderCameraDebug);
+                        float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
+                        cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
                         hudProjection?.Update(dt);
 
                         Rl.BeginDrawing();

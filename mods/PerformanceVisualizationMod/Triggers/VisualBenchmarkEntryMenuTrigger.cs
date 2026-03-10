@@ -5,14 +5,14 @@ using Ludots.Core.Engine;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using Ludots.UI;
-using Ludots.UI.Reactive.Core;
-using Ludots.UI.Reactive.Widgets;
+using Ludots.UI.Compose;
+using Ludots.UI.Runtime;
+using Ludots.UI.Runtime.Actions;
 using SkiaSharp;
-using FlexLayoutSharp;
 
 namespace PerformanceVisualizationMod.Triggers
 {
-    public class VisualBenchmarkEntryMenuTrigger : Trigger
+    public sealed class VisualBenchmarkEntryMenuTrigger : Trigger
     {
         public VisualBenchmarkEntryMenuTrigger()
         {
@@ -20,70 +20,52 @@ namespace PerformanceVisualizationMod.Triggers
             AddCondition(ctx =>
             {
                 var engine = ctx.GetEngine();
-                if (engine?.MergedConfig == null) return false;
-                return ctx.IsMap(new MapId(engine.MergedConfig.StartupMapId));
+                return engine?.MergedConfig != null && ctx.IsMap(new MapId(engine.MergedConfig.StartupMapId));
             });
         }
 
         public override Task ExecuteAsync(ScriptContext context)
         {
             var engine = context.GetEngine();
-            var uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
-            if (engine == null || uiRoot == null) return Task.CompletedTask;
+            if (engine == null || context.Get(CoreServiceKeys.UIRoot) is not UIRoot uiRoot)
+            {
+                return Task.CompletedTask;
+            }
 
-            var rootWidget = new FlexNodeWidget();
-            Reconciler.Render(
-                new Element(typeof(VisualBenchmarkEntryMenu), new VisualBenchmarkEntryMenuProps
-                {
-                    OpenVisualBenchmark = () => engine.LoadMap(VisualBenchmarkMapIds.VisualBenchmark)
-                }),
-                rootWidget
-            );
-
-            uiRoot.Content = rootWidget;
+            uiRoot.MountScene(CreateScene(() => engine.LoadMap(VisualBenchmarkMapIds.VisualBenchmark)));
             uiRoot.IsDirty = true;
             return Task.CompletedTask;
         }
-    }
 
-    internal class VisualBenchmarkEntryMenuProps
-    {
-        public Action OpenVisualBenchmark { get; set; } = () => { };
-    }
-
-    internal class VisualBenchmarkEntryMenu : Ludots.UI.Reactive.Core.Component
-    {
-        public override Element Render()
+        private static UiScene CreateScene(Action openVisualBenchmark)
         {
-            var props = Props as VisualBenchmarkEntryMenuProps;
-            
-            return new Element(typeof(FlexNodeWidget), new
-            {
-                FlexDirection = FlexDirection.Column,
-                JustifyContent = Justify.Center,
-                AlignItems = Align.Center,
-                WidthPercent = 100f,
-                HeightPercent = 100f,
-                BackgroundColor = SKColors.Black
-            }, null,
-                new Element(typeof(FlexNodeWidget), new
-                {
-                    Text = "Ludots Visual Benchmark",
-                    FontSize = 48f,
-                    TextColor = SKColors.White,
-                    MarginBottom = 40f
-                }),
-                new Element(typeof(FlexNodeWidget), new
-                {
-                    Text = "Start Visual Benchmark",
-                    FontSize = 24f,
-                    TextColor = SKColors.Black,
-                    BackgroundColor = SKColors.White,
-                    Padding = 20f,
-                    BorderRadius = 8f,
-                    OnClick = (Action)(() => props?.OpenVisualBenchmark?.Invoke())
-                })
-            );
+            var scene = new UiScene();
+            int nextId = 1;
+            scene.Mount(
+                Ui.Column(
+                        Ui.Text("Ludots Visual Benchmark")
+                            .FontSize(48f)
+                            .Bold()
+                            .Color(SKColors.White),
+                        BuildButton("Start Visual Benchmark", SKColors.White, SKColors.Black, _ => openVisualBenchmark()))
+                    .WidthPercent(100f)
+                    .HeightPercent(100f)
+                    .Justify(UiJustifyContent.Center)
+                    .Align(UiAlignItems.Center)
+                    .Background(SKColors.Black)
+                    .Gap(24f)
+                    .Build(scene.Dispatcher, ref nextId));
+            return scene;
+        }
+
+        private static UiElementBuilder BuildButton(string text, SKColor background, SKColor foreground, Action<UiActionContext> onClick)
+        {
+            return Ui.Button(text, onClick)
+                .FontSize(24f)
+                .Padding(20f, 16f)
+                .Radius(8f)
+                .Background(background)
+                .Color(foreground);
         }
     }
 }

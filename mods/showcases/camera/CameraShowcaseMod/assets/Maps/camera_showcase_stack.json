@@ -1,0 +1,30 @@
+{
+  "Id": "camera_showcase_stack",
+  "Tags": ["camera.showcase", "camera.showcase.stack", "camera.shot:Camera.Showcase.Shot.CommandReveal"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Follow"
+  },
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Overrides": {
+        "Name": { "Value": "CameraShowcaseHero" },
+        "WorldPositionCm": { "Value": { "X": 1200, "Y": 800 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "CameraShowcaseScout" },
+        "WorldPositionCm": { "Value": { "X": 2400, "Y": 1200 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "CameraShowcaseCaptain" },
+        "WorldPositionCm": { "Value": { "X": 3200, "Y": 2000 } }
+      }
+    }
+  ]
+}

@@ -11,7 +11,7 @@ namespace RtsDemoMod.Triggers
 {
     /// <summary>
     /// Registers RTS abilities, 3-faction teams, and SC2-style order source on game start.
-    /// Camera is driven by map DefaultCamera PresetId "Rts" 鈥?no manual setup needed.
+    /// Camera is driven by map DefaultCamera.VirtualCameraId "Rts" 鈥?no manual setup needed.
     /// </summary>
     public sealed class InstallRtsDemoOnGameStartTrigger : Trigger
     {

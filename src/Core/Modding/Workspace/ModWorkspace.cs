@@ -44,31 +44,12 @@ namespace Ludots.Core.Modding.Workspace
 
         /// <summary>
         /// Discover all mod directories from all workspace sources.
-        /// Each source directory is scanned for sub-folders containing mod.json.
+        /// Each source directory is scanned recursively for mod roots containing mod.json.
         /// Returns absolute paths to each mod folder.
         /// </summary>
         public List<string> DiscoverModDirectories()
         {
-            var results = new List<string>();
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            for (int i = 0; i < Sources.Count; i++)
-            {
-                var source = Sources[i];
-                if (!Directory.Exists(source)) continue;
-
-                foreach (var dir in Directory.GetDirectories(source))
-                {
-                    var modJsonPath = Path.Combine(dir, "mod.json");
-                    if (!File.Exists(modJsonPath)) continue;
-
-                    var fullDir = Path.GetFullPath(dir);
-                    if (seen.Add(fullDir))
-                        results.Add(fullDir);
-                }
-            }
-
-            return results;
+            return ModDiscovery.DiscoverModDirectories(Sources);
         }
 
         /// <summary>
@@ -77,15 +58,15 @@ namespace Ludots.Core.Modding.Workspace
         /// </summary>
         public List<string> ResolveModPaths(IEnumerable<string> modNames)
         {
-            var allDirs = DiscoverModDirectories();
+            var discoveredMods = ModDiscovery.DiscoverMods(Sources);
             var byName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var byManifest = new Dictionary<string, ModManifest>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var dir in allDirs)
+            for (int i = 0; i < discoveredMods.Count; i++)
             {
-                var manifestPath = Path.Combine(dir, "mod.json");
-                if (!File.Exists(manifestPath)) continue;
-                var manifest = ModManifestJson.ParseStrict(File.ReadAllText(manifestPath), manifestPath);
-                byName[manifest.Name] = dir;
+                var discovered = discoveredMods[i];
+                byName[discovered.Manifest.Name] = discovered.DirectoryPath;
+                byManifest[discovered.Manifest.Name] = discovered.Manifest;
             }
 
             var required = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -97,8 +78,7 @@ namespace Ludots.Core.Modding.Workspace
                 if (!byName.TryGetValue(name, out var dir))
                     throw new InvalidOperationException($"Mod not found in workspace: {name}");
 
-                var manifestPath = Path.Combine(dir, "mod.json");
-                var manifest = ModManifestJson.ParseStrict(File.ReadAllText(manifestPath), manifestPath);
+                var manifest = byManifest[name];
                 foreach (var dep in manifest.Dependencies.Keys)
                 {
                     if (!string.IsNullOrWhiteSpace(dep)) Collect(dep);

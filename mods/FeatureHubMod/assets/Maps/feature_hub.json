@@ -2,7 +2,7 @@
   "Id": "feature_hub",
   "Tags": ["hub"],
   "DefaultCamera": {
-    "PresetId": "Default",
+    "VirtualCameraId": "Default",
     "Pitch": 60
   },
   "Entities": []

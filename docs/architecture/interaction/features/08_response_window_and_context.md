@@ -102,7 +102,7 @@ redirect_graph:
   → UI 显示选项 → 玩家选择 → Order 消费
 ```
 
-- **已有**: SelectionGate + GasSelectionResponseSystem
+- **已有**: `SelectionGate` + `src/Core/Input/Selection/GasSelectionResponseSystem.cs`（固定步消费 `CoreServiceKeys.AuthoritativeInput`）
 
 ### O8: 超时自动通过
 
@@ -128,7 +128,7 @@ AbilityExecSpec:
   Item[2]: EffectSignal → redirect_effect (用 SelectionResponse 的 entity)
 ```
 
-- 已有: `SelectionGate` + `GasSelectionResponseSystem`
+- 已有: `SelectionGate` + `src/Core/Input/Selection/GasSelectionResponseSystem.cs`
 
 ### P2: 选择效果变体
 
@@ -167,7 +167,7 @@ AbilityExecSpec:
 ```
 AbilityExecSpec:
   Item[0]: InputGate → 等待确认
-    → GasInputResponseSystem: ConfirmActionId press → confirm
+    → `src/Core/Input/Interaction/GasInputResponseSystem.cs`: ConfirmActionId press → confirm
     → CancelActionId press → cancel (ability interrupted)
   Item[1]: if confirmed → EffectSignal → execute_nuke
 ```
@@ -177,7 +177,7 @@ AbilityExecSpec:
 ```
 AbilityExecSpec:
   Item[0]: SelectionGate → 选第一组目标 (MaxCount=32)
-    → GasSelectionResponseSystem 框选
+    → `src/Core/Input/Selection/GasSelectionResponseSystem.cs`：按 `SelectionRuleRegistry` 解析点选 / 半径选择结果
   Item[1]: EffectSignal → process_group_1
   Item[2]: SelectionGate → 选第二组目标
   Item[3]: EffectSignal → process_group_2

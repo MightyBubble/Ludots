@@ -2,7 +2,7 @@
   "Id": "ra2_shoreline",
   "Tags": ["rts_showcase", "ra2"],
   "DefaultCamera": {
-    "PresetId": "Rts",
+    "VirtualCameraId": "Rts",
     "TargetXCm": 15000,
     "TargetYCm": 15000,
     "Yaw": 200,

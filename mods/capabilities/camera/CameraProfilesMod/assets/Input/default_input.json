@@ -1,0 +1,19 @@
+{
+  "actions": [
+    { "id": "CameraModeTactical", "name": "CameraModeTactical", "type": "Button" },
+    { "id": "CameraModeFollow", "name": "CameraModeFollow", "type": "Button" },
+    { "id": "CameraModeInspect", "name": "CameraModeInspect", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "Default_Gameplay",
+      "name": "Default Gameplay",
+      "priority": 0,
+      "bindings": [
+        { "actionId": "CameraModeTactical", "path": "<Keyboard>/f1" },
+        { "actionId": "CameraModeFollow", "path": "<Keyboard>/f2" },
+        { "actionId": "CameraModeInspect", "path": "<Keyboard>/f3" }
+      ]
+    }
+  ]
+}

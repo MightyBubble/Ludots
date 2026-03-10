@@ -2,7 +2,7 @@ using System;
 
 namespace Ludots.Core.Gameplay.Camera
 {
-    public sealed class CompositeCameraController : ICameraController
+    internal sealed class CompositeCameraController
     {
         private readonly ICameraBehavior[] _behaviors;
         private readonly CameraBehaviorContext _ctx;

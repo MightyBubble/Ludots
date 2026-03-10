@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Core\Ludots.Core.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\..\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.css" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.showcase_badge.svg" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.css" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" LogicalName="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.showcase_badge.svg" LogicalName="UiShowcaseCoreMod.Assets.Showcase.showcase_badge.svg" />
+  </ItemGroup>
+</Project>
