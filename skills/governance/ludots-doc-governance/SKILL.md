@@ -28,6 +28,8 @@ Use this skill to keep Ludots documentation consistent, traceable, and auditable
 - Validate markdown links and backtick code-path references.
 - Prefer repository-relative paths only (`docs/...`, `src/...`, `assets/...`).
 - Flag absolute local paths and missing targets.
+- For CLI or launcher docs, validate command examples against the actual wrapper scripts and receiving entrypoints.
+- Flag synthetic separators, missing prerequisite steps, or examples that do not match the canonical wrapper invocation.
 
 4. Validate doc-type contract.
 - For each document type, verify required sections and expected evidence style.

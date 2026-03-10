@@ -48,27 +48,45 @@
 `ModLauncher` 保留 CLI 能力，用于构建、写入 `game.json` 和运行桌面 App：
 
 ```bash
-.\scripts\run-mod-launcher.cmd -- cli <primary> <secondary> [options]
+.\scripts\run-mod-launcher.cmd cli <primary> <secondary> [options]
+.\scripts\run-mod-launcher.ps1 cli <primary> <secondary> [options]
 ```
+
+注意：
+
+- `run-mod-launcher.cmd` 会原样转发参数，不要额外插入 `--`。
+- 规范写法是 `.\scripts\run-mod-launcher.cmd cli ...`，不是 `.\scripts\run-mod-launcher.cmd -- cli ...`。
 
 ## 2 ModLauncher CLI 常用命令
 
 ```bash
 # 导出 Mod SDK
-dotnet run --project src/Tools/ModLauncher/Ludots.ModLauncher.csproj -c Release -- cli sdk export
+.\scripts\run-mod-launcher.cmd cli sdk export
 
 # 构建 Raylib App
-dotnet run --project src/Tools/ModLauncher/Ludots.ModLauncher.csproj -c Release -- cli app build
+.\scripts\run-mod-launcher.cmd cli app build
 
 # 构建指定 Mod
-dotnet run --project src/Tools/ModLauncher/Ludots.ModLauncher.csproj -c Release -- cli mods build --mods "MyModA;MyModB"
+.\scripts\run-mod-launcher.cmd cli mods build --mods "MyModA;MyModB"
 
 # 写入运行时 game.json
-dotnet run --project src/Tools/ModLauncher/Ludots.ModLauncher.csproj -c Release -- cli gamejson write --mods "MyModA;MyModB"
+.\scripts\run-mod-launcher.cmd cli gamejson write --mods "MyModA;MyModB"
 
 # 运行 Raylib App
-dotnet run --project src/Tools/ModLauncher/Ludots.ModLauncher.csproj -c Release -- cli run
+.\scripts\run-mod-launcher.cmd cli run
+
+# CameraShowcaseMod quick path
+.\scripts\run-mod-launcher.cmd cli mods build --mods "CameraShowcaseMod"
+.\scripts\run-mod-launcher.cmd cli app build
+.\scripts\run-mod-launcher.cmd cli gamejson write --mods "CameraShowcaseMod"
+.\scripts\run-mod-launcher.cmd cli run
 ```
+
+补充约束：
+
+- `cli run` 不接受 `--mods`；它只会读取 Raylib 可执行文件旁边的 `game.json`。
+- 启动指定 Mod 的规范顺序是 `mods build -> app build -> gamejson write -> run`。
+- 真正加载了哪些 Mod，以 exe 旁 `game.json` 的 `ModPaths` 为准，不以“进程起来了”作为证据。
 
 ## 3 CLI Options
 
@@ -87,6 +105,8 @@ dotnet run --project src/Tools/ModLauncher/Ludots.ModLauncher.csproj -c Release 
   用于 declarative virtual camera shots。
 - `CameraAcceptanceMod`
   最小验收夹具；会组合 `CameraProfilesMod`、`CameraBootstrapMod`、`VirtualCameraShotsMod`。
+- `CameraShowcaseMod`
+  生产级 camera 示例；会组合共享 profile、showcase profile、stack shot、selection follow、bootstrap 与 pose override。
 - `MobaDemoMod`
   完整 MOBA 示例；保留通用输入主线。
 

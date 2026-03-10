@@ -24,14 +24,20 @@ SDKs 通过 `dotnet-install.sh` 安装到 `/usr/share/dotnet`，符号链接 `/u
 dotnet build src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj -c Release
 
 # 构建指定 Mod
-dotnet run --project src/Tools/ModLauncher/Ludots.ModLauncher.csproj -c Release -- cli mods build --mods "MobaDemoMod"
+.\scripts\run-mod-launcher.cmd cli mods build --mods "MobaDemoMod"
 
 # 写入 game.json
-dotnet run --project src/Tools/ModLauncher/Ludots.ModLauncher.csproj -c Release -- cli gamejson write --mods "MobaDemoMod"
+.\scripts\run-mod-launcher.cmd cli gamejson write --mods "MobaDemoMod"
 
 # 运行游戏
-dotnet run --project src/Tools/ModLauncher/Ludots.ModLauncher.csproj -c Release -- cli run
+.\scripts\run-mod-launcher.cmd cli run
 ```
+
+约束：
+
+- `run-mod-launcher.cmd` 的规范参数形式是 `cli ...`，不要额外写 `-- cli ...`。
+- 如果要启动一个具体 Mod，必须先执行 `cli gamejson write --mods ...`，因为 `cli run` 只读取 Raylib 输出目录旁边的 `game.json`。
+- 推荐顺序是 `cli mods build -> cli app build -> cli gamejson write -> cli run`。
 
 ## 3 测试命令
 

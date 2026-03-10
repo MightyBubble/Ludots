@@ -34,6 +34,12 @@ Use this skill to deliver production-grade features with consistent acceptance e
 - Trigger technical debt escalation and fuse decision workflow.
 - Use `ludots-tech-debt-fuse`.
 
+5. Verify wrapper-script invocation against implementation.
+- Before publishing or running repository wrapper commands, inspect the wrapper script and its receiving entrypoint.
+- Do not invent separators or shim arguments unless the wrapper explicitly requires them.
+- For Ludots `scripts/run-mod-launcher.cmd`, the canonical form is `.\scripts\run-mod-launcher.cmd cli ...`, not `.\scripts\run-mod-launcher.cmd -- cli ...`.
+- For mod-specific launches, verify the exe-adjacent `game.json` or equivalent runtime artifact after `gamejson write`; process spawn alone is not acceptance evidence.
+
 ## Workflow
 
 1. Define feature scenario card.

@@ -35,6 +35,7 @@ WPF `ModLauncher` 仅保留 CLI / 兼容工具职责：
 *   命令分发：`src/Tools/ModLauncher/Cli/CliRunner.cs`
 
 常用命令包括 `cli gamejson write`、`cli app build`、`cli mods build`、`cli run`。
+仓库包装脚本的规范入口是 `.\scripts\run-mod-launcher.cmd cli ...`；`cli run` 不接收 `--mods`，实际 Mod 集合由 exe 旁 `game.json` 决定。
 
 ## 2 app/game.json 的职责边界
 
