@@ -260,13 +260,13 @@ namespace Ludots.Core.Input.Orders
                         // Emit .Start order
                         if (TryBuildOrderWithOrderTypeSuffix(effectiveMapping, ".Start", out var startOrder))
                         {
-                            _orderSubmitHandler(in startOrder);
+                            SubmitOrder(effectiveMapping, in startOrder);
                         }
                         if (_input.ReleasedThisFrame(actionId) && !_input.IsDown(actionId))
                         {
                             if (TryBuildOrderWithOrderTypeSuffix(effectiveMapping, ".End", out var endOrder))
                             {
-                                _orderSubmitHandler(in endOrder);
+                                SubmitOrder(effectiveMapping, in endOrder);
                             }
                         }
                         else
@@ -294,7 +294,7 @@ namespace Ludots.Core.Input.Orders
                 // TargetFirst or non-skill: immediate build and submit
                 if (TryBuildOrder(effectiveMapping, out var order))
                 {
-                    _orderSubmitHandler(in order);
+                    SubmitOrder(effectiveMapping, in order);
                 }
             }
         }
@@ -319,7 +319,7 @@ namespace Ludots.Core.Input.Orders
                     
                     if (effectiveMapping != null && TryBuildOrderWithOrderTypeSuffix(effectiveMapping, ".End", out var endOrder))
                     {
-                        _orderSubmitHandler!(in endOrder);
+                        SubmitOrder(effectiveMapping, in endOrder);
                     }
                     toRemove ??= new List<string>();
                     toRemove.Add(actionId);
@@ -393,7 +393,7 @@ namespace Ludots.Core.Input.Orders
                 default: // TargetFirst should not reach here due to guard above
                     if (TryBuildOrder(mapping, out var order))
                     {
-                        _orderSubmitHandler!(in order);
+                        SubmitOrder(mapping, in order);
                     }
                     break;
             }
@@ -407,7 +407,7 @@ namespace Ludots.Core.Input.Orders
         {
             if (TryBuildOrderSmartCast(mapping, out var order))
             {
-                _orderSubmitHandler!(in order);
+                SubmitOrder(mapping, in order);
             }
         }
 
@@ -474,7 +474,7 @@ namespace Ludots.Core.Input.Orders
                 {
                     if (TryBuildOrderSmartCast(_aimingMapping, out var order))
                     {
-                        _orderSubmitHandler!(in order);
+                        SubmitOrder(_aimingMapping, in order);
                     }
                     ExitAimingState();
                     return;
@@ -498,7 +498,7 @@ namespace Ludots.Core.Input.Orders
                 // Build order using current cursor/selection
                 if (TryBuildOrderSmartCast(_aimingMapping, out var order))
                 {
-                    _orderSubmitHandler!(in order);
+                    SubmitOrder(_aimingMapping, in order);
                 }
                 ExitAimingState();
                 return;
@@ -577,7 +577,7 @@ namespace Ludots.Core.Input.Orders
                     {
                         if (TryBuildVectorOrder(_aimingMapping!, _vectorAimOrigin, cursorPos, out var order))
                         {
-                            _orderSubmitHandler!(in order);
+                            SubmitOrder(_aimingMapping!, in order);
                         }
                         ExitAimingState();
                     }
@@ -596,7 +596,7 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey + orderTypeSuffix);
             if (orderTypeId <= 0) return false;
 
-            Entity actor = _localPlayer;
+            Entity actor = ResolvePrimaryActor(mapping.SelectionType);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
 
@@ -641,7 +641,7 @@ namespace Ludots.Core.Input.Orders
             _hoveredEntityProvider?.Invoke(out hoveredEntity);
             if (TryBuildContextScoredOrder(mapping, hoveredEntity, out var order))
             {
-                _orderSubmitHandler!(in order);
+                SubmitOrder(mapping, in order);
             }
         }
 
@@ -655,7 +655,8 @@ namespace Ludots.Core.Input.Orders
                 return false;
             }
 
-            if (!_contextScoredProvider!(_localPlayer, mapping, hoveredEntity, out var resolution))
+            Entity actor = ResolvePrimaryActor(mapping.SelectionType);
+            if (!_contextScoredProvider!(actor, mapping, hoveredEntity, out var resolution))
             {
                 return false;
             }
@@ -666,7 +667,7 @@ namespace Ludots.Core.Input.Orders
 
             order.OrderTypeId = orderTypeId;
             order.PlayerId = _playerId;
-            order.Actor = _localPlayer;
+            order.Actor = actor;
             order.Target = resolution.Target;
             order.Args = args;
             order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
@@ -684,7 +685,7 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
 
-            Entity actor = _localPlayer;
+            Entity actor = ResolvePrimaryActor(mapping.SelectionType);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
 
@@ -774,6 +775,7 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
             
+            Entity actor = ResolvePrimaryActor(mapping.SelectionType);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
             
@@ -786,7 +788,7 @@ namespace Ludots.Core.Input.Orders
             
             order.OrderTypeId = orderTypeId;
             order.PlayerId = _playerId;
-            order.Actor = _localPlayer;
+            order.Actor = actor;
             order.Args = args;
             order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
             return true;
@@ -802,11 +804,7 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
             
-            Entity actor = _localPlayer;
-            if (_selectedEntityProvider != null && _selectedEntityProvider(out var selected))
-            {
-                // Use selected entity as actor if available (for RTS-style control)
-            }
+            Entity actor = ResolvePrimaryActor(mapping.SelectionType);
             
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
@@ -859,6 +857,61 @@ namespace Ludots.Core.Input.Orders
             order.Args = args;
             order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
             return true;
+        }
+
+        private Entity ResolvePrimaryActor(OrderSelectionType selectionType)
+        {
+            if (selectionType != OrderSelectionType.Entities)
+            {
+                var selectedActors = default(OrderEntitySelection);
+                if (TryCaptureSelectedActors(ref selectedActors))
+                {
+                    return selectedActors.GetEntity(0);
+                }
+            }
+
+            if (_selectedEntityProvider != null && _selectedEntityProvider(out var selected))
+            {
+                return selected;
+            }
+
+            return _localPlayer;
+        }
+
+        private bool TryCaptureSelectedActors(ref OrderEntitySelection entities)
+        {
+            return _selectedEntitiesProvider != null &&
+                   _selectedEntitiesProvider(ref entities) &&
+                   entities.Count > 0;
+        }
+
+        private void SubmitOrder(InputOrderMapping mapping, in Order order)
+        {
+            if (mapping.SelectionType == OrderSelectionType.Entities)
+            {
+                _orderSubmitHandler!(in order);
+                return;
+            }
+
+            var selectedActors = default(OrderEntitySelection);
+            if (!TryCaptureSelectedActors(ref selectedActors) || selectedActors.Count <= 1)
+            {
+                _orderSubmitHandler!(in order);
+                return;
+            }
+
+            for (int i = 0; i < selectedActors.Count; i++)
+            {
+                var actor = selectedActors.GetEntity(i);
+                if (actor == default)
+                {
+                    continue;
+                }
+
+                var cloned = order;
+                cloned.Actor = actor;
+                _orderSubmitHandler!(in cloned);
+            }
         }
         
         private OrderSubmitMode DetermineSubmitMode(ModifierSubmitBehavior behavior)
