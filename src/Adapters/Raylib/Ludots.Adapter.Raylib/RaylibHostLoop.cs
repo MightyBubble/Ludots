@@ -383,8 +383,11 @@ namespace Ludots.Adapter.Raylib
                     case GroundOverlayShape.Circle:
                         DrawGroundCircle(in item);
                         break;
+                    case GroundOverlayShape.Cone:
+                        DrawGroundCone(in item);
+                        break;
                     case GroundOverlayShape.Ring:
-                        DrawGroundCircle(in item); // ring uses same path for now
+                        DrawGroundRing(in item);
                         break;
                     case GroundOverlayShape.Line:
                         DrawGroundLine(in item);
@@ -433,13 +436,126 @@ namespace Ludots.Adapter.Raylib
             }
         }
 
+        private static void DrawGroundRing(in GroundOverlayItem item)
+        {
+            const int segments = 48;
+            float innerRadius = Math.Clamp(item.InnerRadius, 0f, item.Radius);
+            float outerRadius = MathF.Max(item.Radius, innerRadius);
+            var center = item.Center;
+
+            if (item.FillColor.W > 0.01f && outerRadius > innerRadius)
+            {
+                var fillColor = ToRaylibColor(item.FillColor);
+                const int bands = 6;
+                for (int band = 0; band < bands; band++)
+                {
+                    float radius = innerRadius + (outerRadius - innerRadius) * (band + 0.5f) / bands;
+                    DrawGroundArcLoop(center, radius, 0f, MathF.PI * 2f, segments, fillColor);
+                }
+            }
+
+            if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
+            {
+                var border = ToRaylibColor(item.BorderColor);
+                DrawGroundArcLoop(center, outerRadius, 0f, MathF.PI * 2f, segments, border);
+                if (innerRadius > 0.001f)
+                {
+                    DrawGroundArcLoop(center, innerRadius, 0f, MathF.PI * 2f, segments, border);
+                }
+            }
+        }
+
+        private static void DrawGroundCone(in GroundOverlayItem item)
+        {
+            const int segments = 24;
+            float radius = MathF.Max(item.Radius, 0f);
+            float start = item.Rotation - item.Angle;
+            float end = item.Rotation + item.Angle;
+            var center = item.Center;
+
+            if (radius <= 0f)
+            {
+                return;
+            }
+
+            if (item.FillColor.W > 0.01f)
+            {
+                var fillColor = ToRaylibColor(item.FillColor);
+                const int bands = 6;
+                for (int band = 1; band <= bands; band++)
+                {
+                    float ringRadius = radius * band / bands;
+                    DrawGroundArcLoop(center, ringRadius, start, end, segments, fillColor);
+                }
+            }
+
+            if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
+            {
+                var border = ToRaylibColor(item.BorderColor);
+                DrawGroundArcLoop(center, radius, start, end, segments, border);
+                var left = new Vector3(center.X + MathF.Cos(start) * radius, center.Y, center.Z + MathF.Sin(start) * radius);
+                var right = new Vector3(center.X + MathF.Cos(end) * radius, center.Y, center.Z + MathF.Sin(end) * radius);
+                Rl.DrawLine3D(center, left, border);
+                Rl.DrawLine3D(center, right, border);
+            }
+        }
+
         private static void DrawGroundLine(in GroundOverlayItem item)
         {
-            float dx = MathF.Cos(item.Rotation) * item.Length;
-            float dz = MathF.Sin(item.Rotation) * item.Length;
+            float length = item.Length > 0f ? item.Length : item.Radius;
+            if (length <= 0f)
+            {
+                return;
+            }
+
+            float dx = MathF.Cos(item.Rotation) * length;
+            float dz = MathF.Sin(item.Rotation) * length;
             var a = item.Center;
             var b = new Vector3(a.X + dx, a.Y, a.Z + dz);
-            Rl.DrawLine3D(a, b, ToRaylibColor(item.BorderColor));
+            float halfWidth = MathF.Max(0f, item.Width) * 0.5f;
+            var normal = new Vector3(-MathF.Sin(item.Rotation), 0f, MathF.Cos(item.Rotation));
+
+            if (item.FillColor.W > 0.01f)
+            {
+                var fill = ToRaylibColor(item.FillColor);
+                int stripes = halfWidth > 0.001f ? Math.Clamp((int)MathF.Ceiling(halfWidth / 0.12f), 1, 8) : 1;
+                for (int stripe = -stripes; stripe <= stripes; stripe++)
+                {
+                    float offset = stripes == 0 ? 0f : halfWidth * stripe / Math.Max(stripes, 1);
+                    var delta = normal * offset;
+                    Rl.DrawLine3D(a + delta, b + delta, fill);
+                }
+            }
+
+            if (item.BorderColor.W > 0.01f)
+            {
+                var border = ToRaylibColor(item.BorderColor);
+                Rl.DrawLine3D(a, b, border);
+                if (halfWidth > 0.001f)
+                {
+                    var delta = normal * halfWidth;
+                    Rl.DrawLine3D(a + delta, b + delta, border);
+                    Rl.DrawLine3D(a - delta, b - delta, border);
+                }
+            }
+        }
+
+        private static void DrawGroundArcLoop(Vector3 center, float radius, float startAngle, float endAngle, int segments, Color color)
+        {
+            if (segments <= 0 || radius <= 0f)
+            {
+                return;
+            }
+
+            float step = (endAngle - startAngle) / segments;
+            for (int s = 0; s < segments; s++)
+            {
+                float a0 = startAngle + s * step;
+                float a1 = startAngle + (s + 1) * step;
+                var p0 = new Vector3(center.X + MathF.Cos(a0) * radius, center.Y, center.Z + MathF.Sin(a0) * radius);
+                var p1 = new Vector3(center.X + MathF.Cos(a1) * radius, center.Y, center.Z + MathF.Sin(a1) * radius);
+                Rl.DrawLine3D(p0, p1, color);
+            }
         }
 
         private static Color ToRaylibColor(Vector4 c) => RaylibColorUtil.ToRaylibColor(in c);
