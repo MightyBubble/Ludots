@@ -7,17 +7,17 @@ public static class LauncherWorkspaceSourceResolver
         var sources = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        void Add(string path)
+        foreach (var root in config.ScanRoots ?? Enumerable.Empty<LauncherScanRoot>())
         {
-            if (string.IsNullOrWhiteSpace(path))
+            if (root == null || !root.Enabled || string.IsNullOrWhiteSpace(root.Path))
             {
-                return;
+                continue;
             }
 
-            var fullPath = Path.GetFullPath(path);
+            var fullPath = ResolvePath(repoRoot, root.Path);
             if (!Directory.Exists(fullPath))
             {
-                return;
+                continue;
             }
 
             if (seen.Add(fullPath))
@@ -26,12 +26,16 @@ public static class LauncherWorkspaceSourceResolver
             }
         }
 
-        Add(Path.Combine(repoRoot, "mods"));
-        foreach (var source in config.WorkspaceSources)
+        return sources;
+    }
+
+    public static string ResolvePath(string repoRoot, string path)
+    {
+        if (Path.IsPathRooted(path))
         {
-            Add(source);
+            return Path.GetFullPath(path);
         }
 
-        return sources;
+        return Path.GetFullPath(Path.Combine(repoRoot, path));
     }
 }
