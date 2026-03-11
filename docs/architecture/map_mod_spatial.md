@@ -121,7 +121,45 @@ Board 抽象将空间域与 Map 概念分离：
 *   `SpatialQueryService`：空间查询服务。
 *   如果空间类型为 Hex/Hybrid，还会注入 `HexMetrics` 到查询服务与 GlobalContext。
 
-### 4.3 为什么需要"热切换点"
+### 4.3 单 Board 地图也必须显式声明 `Boards`
+
+当前引擎只会在 `mapConfig.Boards` 非空时创建地图自己的 Board：
+
+*   `src/Core/Engine/GameEngine.cs:1042`
+*   `src/Core/Engine/GameEngine.cs:1044`
+
+随后也只有在 `session.PrimaryBoard != null` 时，才会把该地图的空间配置应用到引擎级空间服务：
+
+*   `src/Core/Engine/GameEngine.cs:771`
+*   `src/Core/Engine/GameEngine.cs:774`
+
+这意味着，如果一张地图没有声明 `Boards`：
+
+*   当前 map session 不会有 primary board
+*   `ApplyBoardSpatialConfig(...)` 不会执行
+*   实体仍会运行在“此前已生效的空间域”上
+
+对启动地图来说，“此前已生效的空间域”通常是启动阶段或全局默认空间；如果地图实体坐标超出那个空间域，`SpatialPartitionUpdateSystem` 会直接抛 `SPATIAL.ERR.WorldPositionOutOfBounds`：
+
+*   `src/Core/Systems/SpatialPartitionUpdateSystem.cs:56`
+*   `src/Core/Systems/SpatialPartitionUpdateSystem.cs:103`
+
+因此，**哪怕只是最简单的单 Board 地图，也必须显式写出 `Boards`**。这不是验收专用约定，而是当前引擎空间域切换的正式合同。
+
+相机验收地图本次补全了 6 张地图的 `Boards` 声明，作为可运行示例：
+
+*   `mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_projection.json:4`
+*   `mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_rts.json:4`
+*   `mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_tps.json:4`
+*   `mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_blend.json:4`
+*   `mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_follow.json:4`
+*   `mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_stack.json:4`
+
+测试也显式校验了地图已经声明 `PrimaryBoard`：
+
+*   `src/Tests/GasTests/Production/CameraAcceptanceModTests.cs:255`
+
+### 4.4 为什么需要"热切换点"
 
 系统如果在构造时缓存了空间服务引用，那么地图切换后会出现"系统仍在使用旧空间"的问题。因此引擎在重建空间服务后，会显式把依赖注入到系统的可替换字段中：
 
@@ -129,6 +167,28 @@ Board 抽象将空间域与 Map 概念分离：
 *   `SpatialPartitionUpdateSystem.SetPartition(...)`
 
 这样系统在后续 Update 中使用的就是"新地图的空间服务"，而不是旧引用。
+
+### 4.5 Grid Board 尺寸坑点
+
+`GridBoard` 的世界尺寸不是简单的 `WidthInTiles * GridCellSizeCm`，而是：
+
+*   `worldWidthCm = WidthInTiles * 256 * GridCellSizeCm`
+*   `worldHeightCm = HeightInTiles * 256 * GridCellSizeCm`
+
+代码位置：
+
+*   `src/Core/Map/Board/GridBoard.cs:26`
+*   `src/Core/Map/Board/GridBoard.cs:27`
+*   `src/Core/Map/Board/GridBoard.cs:28`
+
+因此在默认 `GridCellSizeCm = 100` 时：
+
+*   `WidthInTiles = 1`
+*   `HeightInTiles = 1`
+
+已经对应 `25600cm x 25600cm` 的世界空间，足够覆盖多数 demo / showcase / 小型对战地图。
+
+如果作者误以为这里的 `WidthInTiles` 是“单个逻辑格子数量”，就容易把 board 配置得比预期大很多，或者在未声明 `Boards` 时错误推断世界边界来自地图实体分布。这两个认知都会导致空间问题排查变得困难。
 
 ## 5 LoadedChunks 的 SSOT
 
