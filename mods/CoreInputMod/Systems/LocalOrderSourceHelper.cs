@@ -13,6 +13,7 @@ using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -125,6 +126,37 @@ namespace CoreInputMod.Systems
                 mapping.SetContextScoredProvider(contextResolver.TryResolve);
             }
 
+            if (TryCreateAbilityIndicatorBridge(out var indicatorBridge))
+            {
+                mapping.SetAimingUpdateHandler(currentMapping =>
+                {
+                    Entity actor = GetControlledActor();
+                    if (!_world.IsAlive(actor))
+                    {
+                        return;
+                    }
+
+                    bool hasCursor = TryGetGroundWorldCm(out var groundCm);
+                    TryGetEntity(CoreServiceKeys.HoveredEntity.Name, out var hovered);
+                    indicatorBridge.UpdateAiming(
+                        actor,
+                        currentMapping,
+                        hasCursor,
+                        new Vector3(groundCm.X, 0f, groundCm.Y),
+                        hovered);
+                });
+                mapping.SetVectorAimUpdateHandler((currentMapping, origin, cursor, phase) =>
+                {
+                    Entity actor = GetControlledActor();
+                    if (!_world.IsAlive(actor))
+                    {
+                        return;
+                    }
+
+                    indicatorBridge.UpdateVectorAiming(actor, currentMapping, origin, cursor, phase);
+                });
+            }
+
             _globals[ActiveMappingKey] = mapping;
             return mapping;
         }
@@ -203,6 +235,21 @@ namespace CoreInputMod.Systems
 
             var graphApi = new GasGraphRuntimeApi(_world, spatialQueries, spatialCoords, eventBus: null, effectRequests: null);
             resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi);
+            return true;
+        }
+
+        private bool TryCreateAbilityIndicatorBridge(out AbilityIndicatorOverlayBridge bridge)
+        {
+            bridge = default!;
+            if (!_globals.TryGetValue(CoreServiceKeys.AbilityDefinitionRegistry.Name, out var abilitiesObj) ||
+                abilitiesObj is not AbilityDefinitionRegistry abilities ||
+                !_globals.TryGetValue(CoreServiceKeys.GroundOverlayBuffer.Name, out var overlaysObj) ||
+                overlaysObj is not GroundOverlayBuffer overlays)
+            {
+                return false;
+            }
+
+            bridge = new AbilityIndicatorOverlayBridge(_world, abilities, overlays);
             return true;
         }
     }

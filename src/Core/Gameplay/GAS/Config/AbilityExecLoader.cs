@@ -345,6 +345,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 Shape = ParseTargetShape(shapeValue, id, path),
                 Range = indicatorObj["range"]?.GetValue<float>() ?? 0f,
                 Radius = indicatorObj["radius"]?.GetValue<float>() ?? 0f,
+                InnerRadius = indicatorObj["innerRadius"]?.GetValue<float>() ?? 0f,
                 Angle = indicatorObj["angle"]?.GetValue<float>() ?? 0f,
                 ValidColor = ParseColor(indicatorObj["validColor"], new System.Numerics.Vector4(0.20f, 0.85f, 0.45f, 0.35f)),
                 InvalidColor = ParseColor(indicatorObj["invalidColor"], new System.Numerics.Vector4(0.95f, 0.30f, 0.25f, 0.35f)),

@@ -288,9 +288,10 @@ namespace Ludots.Tests.GAS
                     }
                   },
                   "indicator": {
-                    "shape": "Cone",
+                    "shape": "Ring",
                     "range": 620,
                     "radius": 180,
+                    "innerRadius": 90,
                     "angleDeg": 45,
                     "showRangeCircle": true,
                     "validColor": "#33CC66AA",
@@ -310,9 +311,10 @@ namespace Ludots.Tests.GAS
             }
 
             That(def.HasIndicator, Is.True);
-            That(def.Indicator.Shape, Is.EqualTo(TargetShape.Cone));
+            That(def.Indicator.Shape, Is.EqualTo(TargetShape.Ring));
             That(def.Indicator.Range, Is.EqualTo(620f));
             That(def.Indicator.Radius, Is.EqualTo(180f));
+            That(def.Indicator.InnerRadius, Is.EqualTo(90f));
             That(def.Indicator.Angle, Is.EqualTo(MathF.PI / 4f).Within(0.0001f));
             That(def.Indicator.ShowRangeCircle, Is.True);
         }

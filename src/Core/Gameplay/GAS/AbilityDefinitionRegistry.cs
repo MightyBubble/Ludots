@@ -13,6 +13,7 @@ namespace Ludots.Core.Gameplay.GAS
         public TargetShape Shape;
         public float Range;              // cast range (centimeters)
         public float Radius;             // AOE radius (centimeters)
+        public float InnerRadius;        // ring inner radius (centimeters)
         public float Angle;              // cone half-angle (radians)
         public Vector4 ValidColor;       // color when target is valid
         public Vector4 InvalidColor;     // color when out of range / invalid
@@ -26,7 +27,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public struct AbilityToggleSpec
     {
-        /// <summary>Tag ID used to track toggle state. If present on actor �?ability is ON.</summary>
+        /// <summary>Tag ID used to track toggle state. If present on actor 鈫?ability is ON.</summary>
         public int ToggleTagId;
         
         /// <summary>
@@ -47,7 +48,7 @@ namespace Ludots.Core.Gameplay.GAS
 
     public struct AbilityDefinition
     {
-        // ── Generic execution model ──
+        // 鈹€鈹€ Generic execution model 鈹€鈹€
         public AbilityExecSpec ExecSpec;
         public AbilityExecCallerParamsPool ExecCallerParamsPool;
         public bool HasExecCallerParamsPool;
@@ -57,11 +58,11 @@ namespace Ludots.Core.Gameplay.GAS
         public AbilityActivationBlockTags ActivationBlockTags;
         public bool HasActivationBlockTags;
 
-        // ── Toggle mode ──
+        // 鈹€鈹€ Toggle mode 鈹€鈹€
         public bool HasToggleSpec;
         public AbilityToggleSpec ToggleSpec;
 
-        // ── Presentation metadata ──
+        // 鈹€鈹€ Presentation metadata 鈹€鈹€
         public bool HasIndicator;
         public AbilityIndicatorConfig Indicator;
     }
