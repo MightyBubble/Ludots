@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
@@ -18,6 +18,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -288,6 +289,78 @@ namespace Ludots.Tests.GAS
             That(orders[0].Args.Entities.GetEntity(1), Is.EqualTo(second));
         }
 
+        [Test]
+        public void EntityClickSelectSystem_ClickAndScreenDrag_UpdateSelectionBuffer_SelectedTag_AndPrimaryEntity()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var first = world.Create(WorldPositionCm.FromCm(1600, 1200), new CullState { IsVisible = true });
+            var second = world.Create(WorldPositionCm.FromCm(2600, 1600), new CullState { IsVisible = true });
+            var third = world.Create(WorldPositionCm.FromCm(3400, 2200), new CullState { IsVisible = true });
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+            };
+
+            var system = new EntityClickSelectSystem(world, globals);
+
+            Click(system, input, new Vector2(1600f, 1200f));
+
+            AssertSelection(world, local, first);
+            That(world.Has<SelectedTag>(first), Is.True);
+            That(world.Has<SelectedTag>(second), Is.False);
+            That(globals[CoreServiceKeys.SelectedEntity.Name], Is.EqualTo(first));
+
+            DragSelect(system, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
+
+            ref var selection = ref world.Get<SelectionBuffer>(local);
+            That(selection.Count, Is.EqualTo(3));
+            That(selection.Contains(first), Is.True);
+            That(selection.Contains(second), Is.True);
+            That(selection.Contains(third), Is.True);
+            That(world.Has<SelectedTag>(first), Is.True);
+            That(world.Has<SelectedTag>(second), Is.True);
+            That(world.Has<SelectedTag>(third), Is.True);
+            That(globals[CoreServiceKeys.SelectedEntity.Name], Is.EqualTo(first), "Primary selected entity should stay deterministic after box select.");
+        }
+
+        [Test]
+        public void EntityClickSelectSystem_ClickEmptyGround_ClearsSelection()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create(new SelectionBuffer());
+            var first = world.Create(WorldPositionCm.FromCm(1600, 1200), new CullState { IsVisible = true });
+            world.Add<SelectedTag>(first);
+            ref var selection = ref world.Get<SelectionBuffer>(local);
+            selection.Add(first);
+            world.Set(local, selection);
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.SelectedEntity.Name] = first,
+            };
+
+            var system = new EntityClickSelectSystem(world, globals);
+            Click(system, input, new Vector2(5200f, 4200f));
+
+            ref var cleared = ref world.Get<SelectionBuffer>(local);
+            That(cleared.Count, Is.EqualTo(0));
+            That(world.Has<SelectedTag>(first), Is.False);
+            That(globals.ContainsKey(CoreServiceKeys.SelectedEntity.Name), Is.False);
+        }
+
         private static InputConfigRoot CreateInputConfig()
         {
             return new InputConfigRoot
@@ -304,6 +377,45 @@ namespace Ludots.Tests.GAS
                     new() { Id = "Test", Name = "Test", Priority = 1 },
                 },
             };
+        }
+
+        private static void Click(EntityClickSelectSystem system, PlayerInputHandler input, Vector2 pointer)
+        {
+            input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
+            input.InjectButtonPress("Select");
+            input.Update();
+            system.Update(0f);
+
+            input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
+            input.Update();
+            system.Update(0f);
+        }
+
+        private static void DragSelect(EntityClickSelectSystem system, PlayerInputHandler input, Vector2 from, Vector2 to)
+        {
+            input.InjectAction("PointerPos", new Vector3(from.X, from.Y, 0f));
+            input.InjectButtonPress("Select");
+            input.Update();
+            system.Update(0f);
+
+            input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
+            input.InjectButtonPress("Select");
+            input.Update();
+            system.Update(0f);
+
+            input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
+            input.Update();
+            system.Update(0f);
+        }
+
+        private static void AssertSelection(World world, Entity owner, params Entity[] expected)
+        {
+            ref var selection = ref world.Get<SelectionBuffer>(owner);
+            That(selection.Count, Is.EqualTo(expected.Length));
+            for (int i = 0; i < expected.Length; i++)
+            {
+                That(selection.Get(i), Is.EqualTo(expected[i]));
+            }
         }
 
         private sealed class NullInputBackend : IInputBackend
@@ -340,6 +452,22 @@ namespace Ludots.Tests.GAS
             }
         }
 
+        private sealed class WorldMappedScreenRayProvider : IScreenRayProvider
+        {
+            public ScreenRay GetRay(Vector2 screenPosition)
+            {
+                return new ScreenRay(new Vector3(screenPosition.X / 100f, 10f, screenPosition.Y / 100f), -Vector3.UnitY);
+            }
+        }
+
+        private sealed class WorldMappedScreenProjector : IScreenProjector
+        {
+            public Vector2 WorldToScreen(Vector3 worldPosition)
+            {
+                return new Vector2(worldPosition.X * 100f, worldPosition.Z * 100f);
+            }
+        }
+
         private sealed class StubSpatialQueryService : ISpatialQueryService
         {
             private readonly Entity _priority;
@@ -370,4 +498,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-

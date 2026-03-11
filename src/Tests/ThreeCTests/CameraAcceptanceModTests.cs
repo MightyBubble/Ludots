@@ -9,9 +9,11 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
@@ -76,6 +78,47 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 }
             }
             Assert.That(foundCueMarker, Is.False, "Transient marker should expire after its configured lifetime.");
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_ProjectionMap_ScreenSpaceBoxSelect_UpdatesSelectionBuffer_AndSelectionLabels()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
+
+            Entity hero = FindEntityByName(engine.World, CameraAcceptanceIds.HeroName);
+            Entity scout = FindEntityByName(engine.World, CameraAcceptanceIds.ScoutName);
+            Entity captain = FindEntityByName(engine.World, CameraAcceptanceIds.CaptainName);
+            Assert.That(hero, Is.Not.EqualTo(Entity.Null));
+            Assert.That(scout, Is.Not.EqualTo(Entity.Null));
+            Assert.That(captain, Is.Not.EqualTo(Entity.Null));
+
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector);
+            Assert.That(projector, Is.Not.Null);
+
+            Vector2 heroScreen = ProjectEntity(engine, projector!, hero);
+            Vector2 captainScreen = ProjectEntity(engine, projector!, captain);
+
+            var backend = GetInputBackend(engine);
+            DragMouse(engine, backend, "<Mouse>/LeftButton", heroScreen - new Vector2(24f, 24f), captainScreen + new Vector2(24f, 24f));
+            Tick(engine, 1);
+
+            Entity local = GetLocalPlayer(engine);
+            ref var selection = ref engine.World.Get<SelectionBuffer>(local);
+            Assert.That(selection.Count, Is.EqualTo(3));
+            Assert.That(selection.Contains(hero), Is.True);
+            Assert.That(selection.Contains(scout), Is.True);
+            Assert.That(selection.Contains(captain), Is.True);
+            Assert.That(engine.World.Has<SelectedTag>(hero), Is.True);
+            Assert.That(engine.World.Has<SelectedTag>(scout), Is.True);
+            Assert.That(engine.World.Has<SelectedTag>(captain), Is.True);
+
+            var overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
+            Assert.That(overlay, Is.Not.Null);
+            var overlayText = ExtractOverlayText(overlay!);
+            Assert.That(overlayText, Does.Contain($"#{hero.Id}"));
+            Assert.That(overlayText, Does.Contain($"#{scout.Id}"));
+            Assert.That(overlayText, Does.Contain($"#{captain.Id}"));
         }
 
         [Test]
@@ -275,6 +318,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var view = new StubViewController(1920, 1080);
             engine.SetService(CoreServiceKeys.ViewController, view);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, new WorldMappedScreenRayProvider());
+            engine.SetService(CoreServiceKeys.ScreenProjector, new WorldMappedScreenProjector());
             var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
@@ -338,9 +382,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
         private static void PressButton(GameEngine engine, TestInputBackend backend, string path)
         {
             backend.SetButton(path, true);
-            Tick(engine, 1);
+            Tick(engine, 2);
             backend.SetButton(path, false);
-            Tick(engine, 1);
+            Tick(engine, 2);
         }
 
         private static void ScrollWheel(GameEngine engine, TestInputBackend backend, float delta)
@@ -356,11 +400,11 @@ namespace Ludots.Tests.ThreeC.Acceptance
             backend.SetMousePosition(from);
             Tick(engine, 1);
             backend.SetButton(holdPath, true);
-            Tick(engine, 1);
+            Tick(engine, 2);
             backend.SetMousePosition(to);
-            Tick(engine, 1);
+            Tick(engine, 2);
             backend.SetButton(holdPath, false);
-            Tick(engine, 1);
+            Tick(engine, 2);
         }
 
         private static void ClickGround(GameEngine engine, TestInputBackend backend, Vector2 worldPointCm)
@@ -368,9 +412,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
             backend.SetMousePosition(worldPointCm);
             Tick(engine, 1);
             backend.SetButton("<Mouse>/LeftButton", true);
-            Tick(engine, 1);
+            Tick(engine, 2);
             backend.SetButton("<Mouse>/LeftButton", false);
-            Tick(engine, 1);
+            Tick(engine, 2);
         }
 
         private static Entity FindEntityByName(World world, string name)
@@ -423,6 +467,41 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 found = positionCm.X == targetX && positionCm.Y == targetY;
             });
             return found;
+        }
+
+        private static Entity GetLocalPlayer(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
+                   localObj is Entity local &&
+                   engine.World.IsAlive(local)
+                ? local
+                : throw new InvalidOperationException("LocalPlayerEntity is missing.");
+        }
+
+        private static Vector2 ProjectEntity(GameEngine engine, IScreenProjector projector, Entity entity)
+        {
+            ref var position = ref engine.World.Get<WorldPositionCm>(entity);
+            return projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+        }
+
+        private static List<string> ExtractOverlayText(ScreenOverlayBuffer overlay)
+        {
+            var lines = new List<string>();
+            foreach (var item in overlay.GetSpan())
+            {
+                if (item.Kind != ScreenOverlayItemKind.Text)
+                {
+                    continue;
+                }
+
+                string? text = overlay.GetString(item.StringId);
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    lines.Add(text);
+                }
+            }
+
+            return lines;
         }
 
         private static void AssertProjectionViewportState(GameEngine engine)
@@ -513,6 +592,14 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 return new ScreenRay(
                     new Vector3(screenPosition.X / 100f, 10f, screenPosition.Y / 100f),
                     -Vector3.UnitY);
+            }
+        }
+
+        private sealed class WorldMappedScreenProjector : IScreenProjector
+        {
+            public Vector2 WorldToScreen(Vector3 worldPosition)
+            {
+                return new Vector2(worldPosition.X * 100f, worldPosition.Z * 100f);
             }
         }
     }

@@ -79,13 +79,14 @@ namespace CoreInputMod.Triggers
 
             engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new SkillBarOverlaySystem(engine.World, engine.GlobalContext));
+            engine.RegisterPresentationSystem(new SelectionBoxOverlaySystem(engine.World, engine.GlobalContext));
             engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext, engine.SpatialQueries), SystemGroup.InputCollection);
 
             var vmManager = new ViewModeManager(engine.World, engine.GlobalContext, engine.GameSession.Camera);
             engine.GlobalContext[ViewModeManager.GlobalKey] = vmManager;
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
 
-            _ctx.Log("[CoreInputMod] EntityClickSelect, GasSelectionResponse, GasInputResponse, SkillBar, TabTarget, ViewMode registered");
+            _ctx.Log("[CoreInputMod] EntityClickSelect, GasSelectionResponse, GasInputResponse, SkillBar, SelectionBox, TabTarget, ViewMode registered");
             return Task.CompletedTask;
         }
     }

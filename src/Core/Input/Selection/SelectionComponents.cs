@@ -1,3 +1,4 @@
+using System.Numerics;
 using Arch.Core;
 
 namespace Ludots.Core.Input.Selection
@@ -121,6 +122,47 @@ namespace Ludots.Core.Input.Selection
             EntityIds[0] = entity.Id;
             EntityWorldIds[0] = entity.WorldId;
             EntityVersions[0] = entity.Version;
+        }
+    }
+
+    /// <summary>
+    /// Tag attached to currently selected entities so downstream queries do not
+    /// need to understand who owns the selection buffer.
+    /// </summary>
+    public struct SelectedTag
+    {
+    }
+
+    /// <summary>
+    /// Per-player screen-space drag state for box selection.
+    /// </summary>
+    public struct SelectionDragState
+    {
+        public Vector2 StartScreen;
+        public Vector2 CurrentScreen;
+        public byte IsActive;
+
+        public readonly bool Active => IsActive != 0;
+
+        public void Begin(Vector2 screenPosition)
+        {
+            StartScreen = screenPosition;
+            CurrentScreen = screenPosition;
+            IsActive = 1;
+        }
+
+        public void Clear()
+        {
+            StartScreen = default;
+            CurrentScreen = default;
+            IsActive = 0;
+        }
+
+        public readonly bool ExceedsThreshold(float thresholdPixels)
+        {
+            float dx = CurrentScreen.X - StartScreen.X;
+            float dy = CurrentScreen.Y - StartScreen.Y;
+            return dx * dx + dy * dy >= thresholdPixels * thresholdPixels;
         }
     }
 

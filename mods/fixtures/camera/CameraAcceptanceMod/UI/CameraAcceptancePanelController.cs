@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using CameraAcceptanceMod.Runtime;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
@@ -47,16 +50,19 @@ namespace CameraAcceptanceMod.UI
             string activeModeId = ResolveActiveModeId(engine);
             string activeCameraId = engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId ?? "none";
             string selectedName = ResolveSelectedEntityName(engine) ?? "none";
+            string[] selectedIds = ResolveSelectedEntityIds(engine);
             string followTarget = FormatVector(engine.GameSession.Camera.FollowTargetPositionCm);
             string visibleSummary = ResolveVisibleEntitySummary(engine);
 
-            return Ui.Card(
+            var children = new List<UiElementBuilder>
+            {
                 Ui.Text("Camera Acceptance").FontSize(22f).Bold().Color("#F7FAFF"),
                 Ui.Text(CameraAcceptanceIds.DescribeMap(mapId)).FontSize(14f).Color("#D0D8E6").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Map: {mapId}").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text($"Camera: {activeCameraId}").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text($"Mode: {activeModeId}").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text($"Selection: {selectedName}").FontSize(13f).Color("#8EA2BD"),
+                Ui.Text($"Selected IDs: {(selectedIds.Length == 0 ? "none" : string.Join(", ", selectedIds))}").FontSize(13f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Follow Target: {followTarget}").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text($"Viewport: {visibleSummary}").FontSize(13f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text("Scenarios").FontSize(12f).Bold().Color("#F4C77D"),
@@ -70,15 +76,40 @@ namespace CameraAcceptanceMod.UI
                 ).Wrap().Gap(8f),
                 Ui.Text("Actions").FontSize(12f).Bold().Color("#F4C77D"),
                 BuildScenarioActions(engine, mapId, activeModeId),
+                BuildSelectedIdsSection(selectedIds),
                 Ui.Text("How To Verify").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Text(CameraAcceptanceIds.DescribeControls(mapId)).FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
-            ).Width(PanelWidth)
+            };
+
+            return Ui.Card(children.ToArray()).Width(PanelWidth)
              .Padding(16f)
              .Gap(10f)
              .Radius(18f)
              .Background("#101A29")
              .Absolute(16f, 16f)
              .ZIndex(20);
+        }
+
+        private static UiElementBuilder BuildSelectedIdsSection(string[] selectedIds)
+        {
+            var children = new List<UiElementBuilder>
+            {
+                Ui.Text("Selection Buffer").FontSize(12f).Bold().Color("#F4C77D")
+            };
+
+            if (selectedIds.Length == 0)
+            {
+                children.Add(Ui.Text("none").FontSize(12f).Color("#8EA2BD"));
+            }
+            else
+            {
+                for (int i = 0; i < selectedIds.Length; i++)
+                {
+                    children.Add(Ui.Text(selectedIds[i]).FontSize(12f).Color("#D0D8E6"));
+                }
+            }
+
+            return Ui.Column(children.ToArray()).Gap(4f);
         }
 
         private UiElementBuilder BuildScenarioActions(GameEngine engine, string mapId, string activeModeId)
@@ -244,6 +275,24 @@ namespace CameraAcceptanceMod.UI
             }
 
             return engine.World.Get<Name>(entity).Value;
+        }
+
+        private static string[] ResolveSelectedEntityIds(GameEngine engine)
+        {
+            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
+            int count = CameraAcceptanceSelectionView.CopySelectedEntities(engine.World, engine.GlobalContext, selected);
+            if (count <= 0)
+            {
+                return Array.Empty<string>();
+            }
+
+            string[] lines = new string[count];
+            for (int i = 0; i < count; i++)
+            {
+                lines[i] = CameraAcceptanceSelectionView.FormatEntityId(selected[i]);
+            }
+
+            return lines;
         }
 
         private static string FormatVector(Vector2? value)

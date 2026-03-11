@@ -48,8 +48,4 @@ namespace Ludots.Core.Physics2D.Components
     {
         public Fix64 TotalFieldDamping;
     }
-
-    public struct SelectedTag
-    {
-    }
 }

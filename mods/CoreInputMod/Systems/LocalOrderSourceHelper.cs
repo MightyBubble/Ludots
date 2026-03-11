@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Utils;
@@ -78,9 +79,33 @@ namespace CoreInputMod.Systems
             mapping.SetSelectedEntitiesProvider((ref OrderEntitySelection entities) =>
             {
                 entities = default;
-                if (!TryGetEntity(CoreServiceKeys.SelectedEntity.Name, out var entity)) return false;
-                entities.Add(entity);
-                return true;
+                if (!TryGetSelectionOwner(out var owner) || !_world.Has<SelectionBuffer>(owner))
+                {
+                    if (!TryGetEntity(CoreServiceKeys.SelectedEntity.Name, out var primary)) return false;
+                    entities.Add(primary);
+                    return true;
+                }
+
+                ref var selection = ref _world.Get<SelectionBuffer>(owner);
+                int added = 0;
+                for (int i = 0; i < selection.Count; i++)
+                {
+                    Entity entity = selection.Get(i);
+                    if (!_world.IsAlive(entity))
+                    {
+                        continue;
+                    }
+
+                    if (entities.Count >= OrderEntitySelection.MaxEntities)
+                    {
+                        break;
+                    }
+
+                    entities.Add(entity);
+                    added++;
+                }
+
+                return added > 0;
             });
             mapping.SetHoveredEntityProvider((out Entity entity) => TryGetEntity(CoreServiceKeys.HoveredEntity.Name, out entity));
             if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var bindingsObj) && bindingsObj is InteractionActionBindings bindings)
@@ -105,6 +130,15 @@ namespace CoreInputMod.Systems
 
             entity = candidate;
             return true;
+        }
+
+        private bool TryGetSelectionOwner(out Entity owner)
+        {
+            owner = default;
+            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
+                   localObj is Entity local &&
+                   _world.IsAlive(local) &&
+                   (owner = local) != Entity.Null;
         }
 
         public bool TryGetGroundWorldCm(out WorldCmInt2 worldCm)
