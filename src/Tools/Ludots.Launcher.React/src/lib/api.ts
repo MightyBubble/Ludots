@@ -1,4 +1,10 @@
-const BASE = "http://localhost:5299";
+export type LauncherBuildState =
+  | "NoProject"
+  | "Idle"
+  | "Outdated"
+  | "Building"
+  | "Succeeded"
+  | "Failed";
 
 export interface ModInfo {
   id: string;
@@ -13,32 +19,101 @@ export interface ModInfo {
   changelogFile: string;
   hasThumbnail: boolean;
   hasReadme: boolean;
+  mainAssemblyPath: string;
+  hasProject: boolean;
+  buildState: LauncherBuildState;
+  lastBuildMessage: string;
 }
 
-export interface GamePreset {
+export interface LauncherPreset {
   id: string;
-  filePath: string;
-  windowTitle: string;
-  modPaths: string[];
+  name: string;
+  activeModIds: string[];
+  includeDependencies: boolean;
+}
+
+export interface PlatformProfile {
+  id: string;
+  name: string;
+  appProjectPath: string;
+  outputDirectory: string;
+  clientProjectDirectory: string;
+  clientDistributionDirectory: string;
+  launchUrl: string;
+}
+
+export interface LauncherStateSnapshot {
+  platforms: PlatformProfile[];
+  selectedPlatformId: string;
+  presets: LauncherPreset[];
+  selectedPresetId: string | null;
+  workspaceSources: string[];
+}
+
+export interface LauncherSnapshotResponse {
+  ok: boolean;
+  state: LauncherStateSnapshot;
+  mods: ModInfo[];
+}
+
+export interface BuildResult {
+  id: string;
+  ok: boolean;
+  exitCode: number;
+  output: string;
+}
+
+export interface LaunchResult {
+  ok: boolean;
+  pid?: number;
+  url?: string;
+  error?: string;
+}
+
+export interface AppBuildResult {
+  id: string;
+  ok: boolean;
+  exitCode: number;
+  output: string;
+}
+
+interface OkResponse {
+  ok: boolean;
+  error?: string;
+}
+
+async function readJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, init);
+  const data = (await response.json()) as T;
+  if (!response.ok) {
+    throw new Error(extractErrorMessage(data) ?? `Request failed: ${response.status}`);
+  }
+
+  return data;
+}
+
+function extractErrorMessage(data: unknown): string | null {
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  const record = data as Record<string, unknown>;
+  return typeof record.error === "string" ? record.error : null;
+}
+
+export async function fetchLauncherSnapshot(): Promise<LauncherSnapshotResponse> {
+  return readJson<LauncherSnapshotResponse>("/api/launcher/state");
 }
 
 export async function fetchMods(): Promise<ModInfo[]> {
-  const r = await fetch(`${BASE}/api/mods`);
-  const j = await r.json();
-  return j.ok ? j.mods : [];
-}
-
-export async function fetchPresets(): Promise<GamePreset[]> {
-  const r = await fetch(`${BASE}/api/presets`);
-  const j = await r.json();
-  return j.ok ? j.presets : [];
+  const response = await readJson<{ ok: boolean; mods: ModInfo[] }>("/api/mods");
+  return response.mods;
 }
 
 export async function fetchReadme(modId: string): Promise<string | null> {
   try {
-    const r = await fetch(`${BASE}/api/mods/${modId}/readme`);
-    const j = await r.json();
-    return j.ok ? j.content : null;
+    const response = await readJson<{ ok: boolean; content: string }>(`/api/mods/${modId}/readme`);
+    return response.content;
   } catch {
     return null;
   }
@@ -46,9 +121,8 @@ export async function fetchReadme(modId: string): Promise<string | null> {
 
 export async function fetchChangelog(modId: string): Promise<string | null> {
   try {
-    const r = await fetch(`${BASE}/api/mods/${modId}/changelog`);
-    const j = await r.json();
-    return j.ok ? j.content : null;
+    const response = await readJson<{ ok: boolean; content: string }>(`/api/mods/${modId}/changelog`);
+    return response.content;
   } catch {
     return null;
   }
@@ -56,82 +130,142 @@ export async function fetchChangelog(modId: string): Promise<string | null> {
 
 export async function fetchWorkspaceSources(): Promise<string[]> {
   try {
-    const r = await fetch(`${BASE}/api/workspace`);
-    const j = await r.json();
-    return j.ok ? j.sources : [];
+    const response = await readJson<{ ok: boolean; sources: string[] }>("/api/workspace");
+    return response.sources;
   } catch {
     return [];
   }
 }
 
-export async function addWorkspaceSource(path: string): Promise<boolean> {
-  try {
-    const r = await fetch(`${BASE}/api/workspace/add-source`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path }),
-    });
-    const j = await r.json();
-    return j.ok === true;
-  } catch {
-    return false;
-  }
+export async function addWorkspaceSource(path: string): Promise<{ state: LauncherStateSnapshot }> {
+  return readJson<{ ok: boolean; state: LauncherStateSnapshot }>("/api/workspace/add-source", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path }),
+  });
 }
 
 export function thumbnailUrl(modId: string): string {
-  return `${BASE}/api/mods/${modId}/thumbnail`;
+  return `/api/mods/${modId}/thumbnail`;
 }
 
 export async function checkHealth(): Promise<boolean> {
   try {
-    const r = await fetch(`${BASE}/health`);
-    const j = await r.json();
-    return j.ok === true;
+    const response = await readJson<{ ok: boolean }>("/health");
+    return response.ok === true;
   } catch {
     return false;
   }
 }
 
-export async function createMod(id: string, template: string): Promise<{ ok: boolean; output?: string; error?: string }> {
-  const r = await fetch(`${BASE}/api/mods/create`, {
+export async function createMod(
+  id: string,
+  template: string,
+): Promise<{ ok: boolean; output?: string; error?: string; mods?: ModInfo[] }> {
+  return readJson<{ ok: boolean; output?: string; error?: string; mods?: ModInfo[] }>("/api/mods/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, template }),
   });
-  return r.json();
 }
 
-export async function buildMod(modId: string): Promise<{ ok: boolean; exitCode?: number; output?: string }> {
-  const r = await fetch(`${BASE}/api/mods/${modId}/build`, { method: "POST" });
-  return r.json();
+export async function buildMod(
+  modId: string,
+): Promise<{ ok: boolean; result?: BuildResult; error?: string; mods?: ModInfo[] }> {
+  return readJson<{ ok: boolean; result?: BuildResult; error?: string; mods?: ModInfo[] }>(`/api/mods/${modId}/build`, {
+    method: "POST",
+  });
 }
 
-export async function buildAllMods(modIds: string[]): Promise<{ ok: boolean; results?: Array<{ id: string; ok: boolean; output?: string }> }> {
-  const r = await fetch(`${BASE}/api/mods/build-all`, {
+export async function buildAllMods(
+  modIds: string[],
+): Promise<{ ok: boolean; results?: BuildResult[]; error?: string; mods?: ModInfo[] }> {
+  return readJson<{ ok: boolean; results?: BuildResult[]; error?: string; mods?: ModInfo[] }>("/api/mods/build-all", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ modIds }),
   });
-  return r.json();
 }
 
-export async function launchGame(presetId?: string, modPaths?: string[]): Promise<{ ok: boolean; pid?: number; error?: string }> {
-  const body: Record<string, unknown> = {};
-  if (presetId) body.presetId = presetId;
-  if (modPaths) body.modPaths = modPaths;
-  const r = await fetch(`${BASE}/api/launch`, {
+export async function buildApp(
+  platformId: string,
+): Promise<{ ok: boolean; result?: AppBuildResult; error?: string }> {
+  return readJson<{ ok: boolean; result?: AppBuildResult; error?: string }>("/api/app/build", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ platformId }),
   });
-  return r.json();
 }
 
-export async function generateSln(modId: string): Promise<{ ok: boolean; slnPath?: string; error?: string }> {
-  const r = await fetch(`${BASE}/api/mods/generate-sln`, {
+export async function fixProject(
+  modId: string,
+): Promise<{ ok: boolean; projectPath?: string; error?: string; mods?: ModInfo[] }> {
+  return readJson<{ ok: boolean; projectPath?: string; error?: string; mods?: ModInfo[] }>(
+    `/api/mods/${modId}/fix-project`,
+    { method: "POST" },
+  );
+}
+
+export async function launchGame(platformId: string, modIds: string[]): Promise<LaunchResult> {
+  return readJson<LaunchResult>("/api/launch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ platformId, modIds }),
+  });
+}
+
+export async function generateSln(
+  modId: string,
+): Promise<{ ok: boolean; slnPath?: string; error?: string }> {
+  return readJson<{ ok: boolean; slnPath?: string; error?: string }>("/api/mods/generate-sln", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ modId }),
   });
-  return r.json();
+}
+
+export async function savePreset(payload: {
+  presetId?: string;
+  name: string;
+  activeModIds: string[];
+  includeDependencies?: boolean;
+  selectAfterSave?: boolean;
+}): Promise<{ ok: boolean; preset: LauncherPreset; state: LauncherStateSnapshot }> {
+  return readJson<{ ok: boolean; preset: LauncherPreset; state: LauncherStateSnapshot }>("/api/presets", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function selectPreset(
+  presetId: string,
+): Promise<{ ok: boolean; state: LauncherStateSnapshot }> {
+  return readJson<{ ok: boolean; state: LauncherStateSnapshot }>("/api/presets/select", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ presetId }),
+  });
+}
+
+export async function deletePreset(
+  presetId: string,
+): Promise<{ ok: boolean; state: LauncherStateSnapshot }> {
+  return readJson<{ ok: boolean; state: LauncherStateSnapshot }>(`/api/presets/${presetId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function selectPlatform(
+  platformId: string,
+): Promise<{ ok: boolean; state: LauncherStateSnapshot }> {
+  return readJson<{ ok: boolean; state: LauncherStateSnapshot }>("/api/platforms/select", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ platformId }),
+  });
+}
+
+export function isOkResponse(value: OkResponse): boolean {
+  return value.ok === true;
 }

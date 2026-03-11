@@ -12,12 +12,6 @@
     <ProjectReference Include="..\..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
   </ItemGroup>
 
-  <Target Name="BuildModsRelease" BeforeTargets="Build">
-    <MSBuild Projects="..\..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj;..\..\..\..\mods\CoreInputMod\CoreInputMod.csproj"
-             Targets="Restore;Build"
-             Properties="Configuration=Release" />
-  </Target>
-
   <ItemGroup>
     <None Include="game.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

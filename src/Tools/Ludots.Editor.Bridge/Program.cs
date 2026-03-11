@@ -1,16 +1,22 @@
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
+using Ludots.Launcher.Backend;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.NavBake.Recast;
 using Ludots.Tool;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.FileProviders;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Linq;
+
+var repoRoot = FindAssetsRoot();
+var launcher = new LauncherService(repoRoot);
+var launcherDistPath = Path.Combine(repoRoot, "src", "Tools", "Ludots.Launcher.React", "dist");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,27 +36,133 @@ builder.Services.AddCors(o =>
 var app = builder.Build();
 app.UseCors("dev");
 
+if (Directory.Exists(launcherDistPath))
+{
+    var launcherDistProvider = new PhysicalFileProvider(launcherDistPath);
+    app.MapGet("/launcher", () => Results.Redirect("/launcher/"));
+    app.UseDefaultFiles(new DefaultFilesOptions
+    {
+        FileProvider = launcherDistProvider,
+        RequestPath = "/launcher"
+    });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = launcherDistProvider,
+        RequestPath = "/launcher"
+    });
+}
+
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
+
+app.MapGet("/api/launcher/state", () =>
+{
+    return Results.Ok(new
+    {
+        ok = true,
+        state = launcher.GetState(),
+        mods = launcher.DiscoverMods()
+    });
+});
 
 app.MapGet("/api/presets", () =>
 {
-    string repoRoot = FindAssetsRoot();
-    var presetsDir = Path.Combine(repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib");
-    var presets = Ludots.Core.Modding.Workspace.GamePreset.DiscoverPresets(presetsDir);
-    return Results.Ok(new { ok = true, presets });
+    var state = launcher.GetState();
+    return Results.Ok(new
+    {
+        ok = true,
+        presets = state.Presets,
+        selectedPresetId = state.SelectedPresetId
+    });
+});
+
+app.MapPost("/api/presets", async (HttpRequest req) =>
+{
+    using var sr = new StreamReader(req.Body);
+    var body = await sr.ReadToEndAsync();
+    var payload = JsonSerializer.Deserialize<JsonElement>(body);
+
+    if (!payload.TryGetProperty("name", out var nameElement) || string.IsNullOrWhiteSpace(nameElement.GetString()))
+    {
+        return Results.BadRequest(new { ok = false, error = "Missing 'name'." });
+    }
+
+    var modIds = new List<string>();
+    if (payload.TryGetProperty("activeModIds", out var modIdsElement) && modIdsElement.ValueKind == JsonValueKind.Array)
+    {
+        foreach (var modIdElement in modIdsElement.EnumerateArray())
+        {
+            if (modIdElement.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(modIdElement.GetString()))
+            {
+                modIds.Add(modIdElement.GetString()!);
+            }
+        }
+    }
+
+    var preset = launcher.SavePreset(
+        payload.TryGetProperty("presetId", out var presetIdElement) && presetIdElement.ValueKind == JsonValueKind.String
+            ? presetIdElement.GetString()
+            : null,
+        nameElement.GetString()!,
+        modIds,
+        includeDependencies: !payload.TryGetProperty("includeDependencies", out var includeDependenciesElement) || includeDependenciesElement.ValueKind != JsonValueKind.False,
+        selectAfterSave: !payload.TryGetProperty("selectAfterSave", out var selectAfterSaveElement) || selectAfterSaveElement.ValueKind != JsonValueKind.False);
+
+    return Results.Ok(new { ok = true, preset, state = launcher.GetState() });
+});
+
+app.MapPost("/api/presets/select", async (HttpRequest req) =>
+{
+    using var sr = new StreamReader(req.Body);
+    var body = await sr.ReadToEndAsync();
+    var payload = JsonSerializer.Deserialize<JsonElement>(body);
+    var presetId = payload.TryGetProperty("presetId", out var presetIdElement) && presetIdElement.ValueKind == JsonValueKind.String
+        ? presetIdElement.GetString()
+        : null;
+
+    var state = launcher.SelectPreset(presetId);
+    return Results.Ok(new { ok = true, state });
+});
+
+app.MapDelete("/api/presets/{presetId}", (string presetId) =>
+{
+    launcher.DeletePreset(presetId);
+    return Results.Ok(new { ok = true, state = launcher.GetState() });
+});
+
+app.MapGet("/api/platforms", () =>
+{
+    var state = launcher.GetState();
+    return Results.Ok(new
+    {
+        ok = true,
+        platforms = state.Platforms,
+        selectedPlatformId = state.SelectedPlatformId
+    });
+});
+
+app.MapPost("/api/platforms/select", async (HttpRequest req) =>
+{
+    using var sr = new StreamReader(req.Body);
+    var body = await sr.ReadToEndAsync();
+    var payload = JsonSerializer.Deserialize<JsonElement>(body);
+    if (!payload.TryGetProperty("platformId", out var platformIdElement) || string.IsNullOrWhiteSpace(platformIdElement.GetString()))
+    {
+        return Results.BadRequest(new { ok = false, error = "Missing 'platformId'." });
+    }
+
+    var state = launcher.SelectPlatform(platformIdElement.GetString()!);
+    return Results.Ok(new { ok = true, state });
 });
 
 app.MapGet("/api/mods", () =>
 {
-    string repoRoot = FindAssetsRoot();
-    var mods = EditorRepo.DiscoverMods(repoRoot);
+    var mods = launcher.DiscoverMods();
     return Results.Ok(new { ok = true, mods });
 });
 
 app.MapGet("/api/mods/{modId}/thumbnail", (string modId) =>
 {
-    string repoRoot = FindAssetsRoot();
-    var mods = EditorRepo.DiscoverMods(repoRoot);
+    var mods = launcher.DiscoverMods();
     var mod = mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
     if (mod == null) return Results.NotFound();
 
@@ -68,8 +180,7 @@ app.MapGet("/api/mods/{modId}/thumbnail", (string modId) =>
 
 app.MapGet("/api/mods/{modId}/readme", (string modId) =>
 {
-    string repoRoot = FindAssetsRoot();
-    var mods = EditorRepo.DiscoverMods(repoRoot);
+    var mods = launcher.DiscoverMods();
     var mod = mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
     if (mod == null) return Results.NotFound(new { ok = false });
 
@@ -81,8 +192,7 @@ app.MapGet("/api/mods/{modId}/readme", (string modId) =>
 
 app.MapGet("/api/mods/{modId}/changelog", (string modId) =>
 {
-    string repoRoot = FindAssetsRoot();
-    var mods = EditorRepo.DiscoverMods(repoRoot);
+    var mods = launcher.DiscoverMods();
     var mod = mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
     if (mod == null) return Results.NotFound(new { ok = false });
 
@@ -97,20 +207,12 @@ app.MapGet("/api/mods/{modId}/changelog", (string modId) =>
 
 app.MapGet("/api/workspace", () =>
 {
-    string repoRoot = FindAssetsRoot();
-    var wsPath = Path.Combine(repoRoot, "modworkspace.json");
-    if (!File.Exists(wsPath))
-        return Results.Ok(new { ok = true, sources = new[] { Path.Combine(repoRoot, "mods") } });
-
-    var ws = Ludots.Core.Modding.Workspace.ModWorkspace.Load(wsPath);
-    return Results.Ok(new { ok = true, sources = ws.Sources });
+    var state = launcher.GetState();
+    return Results.Ok(new { ok = true, sources = state.WorkspaceSources });
 });
 
 app.MapPost("/api/workspace/add-source", async (HttpRequest req) =>
 {
-    string repoRoot = FindAssetsRoot();
-    var wsPath = Path.Combine(repoRoot, "modworkspace.json");
-
     using var sr = new StreamReader(req.Body);
     string body = await sr.ReadToEndAsync();
     var payload = JsonSerializer.Deserialize<JsonElement>(body);
@@ -121,21 +223,8 @@ app.MapPost("/api/workspace/add-source", async (HttpRequest req) =>
     if (string.IsNullOrWhiteSpace(newSource) || !Directory.Exists(newSource))
         return Results.BadRequest(new { ok = false, error = $"Directory not found: {newSource}" });
 
-    newSource = Path.GetFullPath(newSource);
-
-    Ludots.Core.Modding.Workspace.ModWorkspace ws;
-    if (File.Exists(wsPath))
-        ws = Ludots.Core.Modding.Workspace.ModWorkspace.Load(wsPath);
-    else
-        ws = new Ludots.Core.Modding.Workspace.ModWorkspace();
-
-    if (!ws.Sources.Contains(newSource, StringComparer.OrdinalIgnoreCase))
-        ws.Sources.Add(newSource);
-
-    var json = JsonSerializer.Serialize(new { sources = ws.Sources.Select(s => Path.GetRelativePath(repoRoot, s).Replace('\\', '/')) }, new JsonSerializerOptions { WriteIndented = true });
-    File.WriteAllText(wsPath, json);
-
-    return Results.Ok(new { ok = true, sources = ws.Sources });
+    var state = launcher.AddWorkspaceSource(newSource);
+    return Results.Ok(new { ok = true, sources = state.WorkspaceSources, state });
 });
 
 app.MapGet("/api/mods/{modId}/load-order", (string modId) =>
@@ -620,36 +709,42 @@ app.MapPost("/api/mods/create", async (HttpRequest req) =>
     string? targetDir = null;
     if (payload.TryGetProperty("dir", out var dirEl) && dirEl.ValueKind == JsonValueKind.String)
         targetDir = dirEl.GetString();
-    
-    string repoRoot = FindAssetsRoot();
-    var toolCsproj = Path.Combine(repoRoot, "src", "Tools", "Ludots.Tool", "Ludots.Tool.csproj");
-    
-    var args = $"run --project \"{toolCsproj}\" -- mod init --id {modId} --template {template}";
-    if (!string.IsNullOrWhiteSpace(targetDir))
-        args += $" --dir \"{targetDir}\"";
-    
-    var (exitCode, output) = await RunProcessAsync("dotnet", args, repoRoot, timeoutMs: 60000);
-    
-    if (exitCode != 0)
-        return Results.BadRequest(new { ok = false, error = $"mod init failed (exit={exitCode})", output });
-    
-    return Results.Ok(new { ok = true, modId, output });
+
+    try
+    {
+        var output = await launcher.CreateModAsync(modId, template, targetDir);
+        return Results.Ok(new { ok = true, modId, output, mods = launcher.DiscoverMods() });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+});
+
+app.MapPost("/api/mods/{modId}/fix-project", (string modId) =>
+{
+    try
+    {
+        var projectPath = launcher.FixModProject(modId);
+        return Results.Ok(new { ok = true, projectPath, mods = launcher.DiscoverMods() });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
 });
 
 app.MapPost("/api/mods/{modId}/build", async (string modId) =>
 {
-    string repoRoot = FindAssetsRoot();
-    var mods = EditorRepo.DiscoverMods(repoRoot);
-    var mod = mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
-    if (mod == null) return Results.NotFound(new { ok = false, error = $"Mod not found: {modId}" });
-    
-    var csprojFiles = Directory.GetFiles(mod.RootPath, "*.csproj", SearchOption.TopDirectoryOnly);
-    if (csprojFiles.Length == 0)
-        return Results.BadRequest(new { ok = false, error = $"No .csproj found in {mod.RootPath}" });
-    
-    var (exitCode, output) = await RunProcessAsync("dotnet", $"build \"{csprojFiles[0]}\" -c Release", repoRoot, timeoutMs: 120000);
-    
-    return Results.Ok(new { ok = exitCode == 0, exitCode, output });
+    try
+    {
+        var result = await launcher.BuildModAsync(modId);
+        return Results.Ok(new { ok = result.Ok, result, mods = launcher.DiscoverMods() });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
 });
 
 app.MapPost("/api/mods/build-all", async (HttpRequest req) =>
@@ -664,23 +759,42 @@ app.MapPost("/api/mods/build-all", async (HttpRequest req) =>
         foreach (var item in arr.EnumerateArray())
             if (item.ValueKind == JsonValueKind.String) modIds.Add(item.GetString()!);
     }
-    
-    string repoRoot = FindAssetsRoot();
-    var allMods = EditorRepo.DiscoverMods(repoRoot);
-    var byId = allMods.ToDictionary(m => m.Id, StringComparer.OrdinalIgnoreCase);
-    
-    var results = new List<object>();
-    foreach (var id in modIds)
+
+    try
     {
-        if (!byId.TryGetValue(id, out var mod)) { results.Add(new { id, ok = false, error = "not found" }); continue; }
-        var csprojFiles = Directory.GetFiles(mod.RootPath, "*.csproj", SearchOption.TopDirectoryOnly);
-        if (csprojFiles.Length == 0) { results.Add(new { id, ok = false, error = "no csproj" }); continue; }
-        
-        var (exitCode, output) = await RunProcessAsync("dotnet", $"build \"{csprojFiles[0]}\" -c Release", repoRoot, timeoutMs: 120000);
-        results.Add(new { id, ok = exitCode == 0, exitCode, output });
+        var results = await launcher.BuildModsAsync(modIds);
+        return Results.Ok(new
+        {
+            ok = results.All(result => result.Ok),
+            results,
+            mods = launcher.DiscoverMods()
+        });
     }
-    
-    return Results.Ok(new { ok = true, results });
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+});
+
+app.MapPost("/api/app/build", async (HttpRequest req) =>
+{
+    using var sr = new StreamReader(req.Body);
+    var body = await sr.ReadToEndAsync();
+    var payload = JsonSerializer.Deserialize<JsonElement>(body);
+    if (!payload.TryGetProperty("platformId", out var platformIdElement) || string.IsNullOrWhiteSpace(platformIdElement.GetString()))
+    {
+        return Results.BadRequest(new { ok = false, error = "Missing 'platformId'." });
+    }
+
+    try
+    {
+        var result = await launcher.BuildAppAsync(platformIdElement.GetString()!);
+        return Results.Ok(new { ok = result.Ok, result });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
 });
 
 app.MapPost("/api/launch", async (HttpRequest req) =>
@@ -688,45 +802,28 @@ app.MapPost("/api/launch", async (HttpRequest req) =>
     using var sr = new StreamReader(req.Body);
     string body = await sr.ReadToEndAsync();
     var payload = JsonSerializer.Deserialize<JsonElement>(body);
-    
-    string repoRoot = FindAssetsRoot();
-    var raylibCsproj = Path.Combine(repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "Ludots.App.Raylib.csproj");
-    
-    string configArg = "";
-    if (payload.TryGetProperty("presetId", out var presetEl) && presetEl.ValueKind == JsonValueKind.String)
+
+    if (!payload.TryGetProperty("platformId", out var platformIdElement) || string.IsNullOrWhiteSpace(platformIdElement.GetString()))
     {
-        string presetId = presetEl.GetString()!;
-        string configFile = presetId == "default" ? "game.json" : $"game.{presetId}.json";
-        configArg = configFile;
+        return Results.BadRequest(new { ok = false, error = "Missing 'platformId'." });
     }
-    
-    if (payload.TryGetProperty("modPaths", out var pathsEl) && pathsEl.ValueKind == JsonValueKind.Array)
+
+    var modIds = new List<string>();
+    if (payload.TryGetProperty("modIds", out var modIdsElement) && modIdsElement.ValueKind == JsonValueKind.Array)
     {
-        var paths = new List<string>();
-        foreach (var p in pathsEl.EnumerateArray())
-            if (p.ValueKind == JsonValueKind.String) paths.Add(p.GetString()!);
-        
-        var buildDir = Path.Combine(repoRoot, "src", "Apps", "Raylib", "Ludots.App.Raylib", "bin", "Release", "net8.0");
-        Directory.CreateDirectory(buildDir);
-        var customJson = JsonSerializer.Serialize(new { ModPaths = paths }, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(Path.Combine(buildDir, "game.json"), customJson);
-        configArg = "game.json";
+        foreach (var modIdElement in modIdsElement.EnumerateArray())
+        {
+            if (modIdElement.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(modIdElement.GetString()))
+            {
+                modIds.Add(modIdElement.GetString()!);
+            }
+        }
     }
-    
-    var args = $"run --project \"{raylibCsproj}\" -c Release";
-    if (!string.IsNullOrWhiteSpace(configArg)) args += $" -- {configArg}";
-    
-    var psi = new System.Diagnostics.ProcessStartInfo("dotnet", args)
-    {
-        WorkingDirectory = repoRoot,
-        UseShellExecute = false,
-        RedirectStandardOutput = false,
-        RedirectStandardError = false,
-    };
+
     try
     {
-        var proc = System.Diagnostics.Process.Start(psi);
-        return Results.Ok(new { ok = true, pid = proc?.Id ?? -1, config = configArg });
+        var result = await launcher.LaunchAsync(platformIdElement.GetString()!, modIds);
+        return Results.Ok(new { ok = result.Ok, pid = result.Pid, url = result.Url, error = result.Error });
     }
     catch (Exception ex)
     {
@@ -744,36 +841,16 @@ app.MapPost("/api/mods/generate-sln", async (HttpRequest req) =>
         return Results.BadRequest(new { ok = false, error = "Missing 'modId'" });
     
     string modId = idEl.GetString()!;
-    string repoRoot = FindAssetsRoot();
-    var allMods = EditorRepo.DiscoverMods(repoRoot);
-    var mod = allMods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.OrdinalIgnoreCase));
-    if (mod == null) return Results.NotFound(new { ok = false, error = $"Mod not found: {modId}" });
-    
-    var slnPath = Path.Combine(mod.RootPath, $"{modId}.sln");
-    
-    var (rc1, out1) = await RunProcessAsync("dotnet", $"new sln -n {modId} --force", mod.RootPath, 30000);
-    if (rc1 != 0) return Results.BadRequest(new { ok = false, error = "sln creation failed", output = out1 });
-    
-    var csprojFiles = Directory.GetFiles(mod.RootPath, "*.csproj", SearchOption.TopDirectoryOnly);
-    if (csprojFiles.Length > 0)
+
+    try
     {
-        await RunProcessAsync("dotnet", $"sln \"{slnPath}\" add \"{csprojFiles[0]}\"", mod.RootPath, 30000);
+        var slnPath = await launcher.GenerateSolutionAsync(modId);
+        return Results.Ok(new { ok = true, slnPath });
     }
-    
-    foreach (var depName in mod.Dependencies.Keys)
+    catch (Exception ex)
     {
-        var depMod = allMods.FirstOrDefault(m => string.Equals(m.Id, depName, StringComparison.OrdinalIgnoreCase));
-        if (depMod == null) continue;
-        var depCsprojs = Directory.GetFiles(depMod.RootPath, "*.csproj", SearchOption.TopDirectoryOnly);
-        if (depCsprojs.Length > 0)
-            await RunProcessAsync("dotnet", $"sln \"{slnPath}\" add \"{depCsprojs[0]}\"", mod.RootPath, 30000);
+        return Results.BadRequest(new { ok = false, error = ex.Message });
     }
-    
-    var coreCsproj = Path.Combine(repoRoot, "src", "Core", "Ludots.Core.csproj");
-    if (File.Exists(coreCsproj))
-        await RunProcessAsync("dotnet", $"sln \"{slnPath}\" add \"{coreCsproj}\"", mod.RootPath, 30000);
-    
-    return Results.Ok(new { ok = true, slnPath });
 });
 
 app.Run("http://localhost:5299");
@@ -934,19 +1011,11 @@ static class EditorRepo
             }
         }
 
-        var wsPath = Path.Combine(repoRoot, "modworkspace.json");
-        if (File.Exists(wsPath))
+        var launcherConfig = new LauncherConfigService().LoadOrDefault();
+        foreach (var source in LauncherWorkspaceSourceResolver.ResolveSources(repoRoot, launcherConfig))
         {
-            try
-            {
-                var ws = Ludots.Core.Modding.Workspace.ModWorkspace.Load(wsPath);
-                foreach (var source in ws.Sources)
-                    ScanModsRoot(source);
-            }
-            catch { }
+            ScanModsRoot(source);
         }
-
-        ScanModsRoot(Path.Combine(repoRoot, "mods"));
 
         return mods.Values.OrderBy(m => m.Priority).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase).ToList();
     }
