@@ -4,7 +4,8 @@
 
 ## 1 目录
 
-*   当前无已登记 RFC 文档；`RFC-0001` 编号预留，正式草案尚未落盘
+*   [RFC-0001 统一 Launcher CLI 与 Workspace 方案](RFC-0001-unified-launcher-cli-and-workspace.md)
+    *   统一 Web Launcher、CLI 与 backend 的启动体验；引入显式 binding、递归扫描、适配层选择、`config/preset/preferences` 分层，以及可选 `game.json` bootstrap
 
 ## 2 使用规则
 
