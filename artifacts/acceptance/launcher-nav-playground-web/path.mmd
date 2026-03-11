@@ -1,0 +1,7 @@
+flowchart TD
+    A[Boot launcher runtime for Navigation2D playground] --> B[Force PassThrough + deterministic agents per team]
+    B --> C[Run timed simulation to timeout]
+    C --> D[Capture multi-frame timeline + trace metrics]
+    D --> E{Median advance strong and timeout center jam low?}
+    E -->|yes| F[Write battle-report + trace + path + PNG timeline]
+    E -->|no| X[Fail acceptance: timeout still looks jammed]

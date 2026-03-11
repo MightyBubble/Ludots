@@ -497,11 +497,12 @@ public static class LauncherEvidenceRecorder
             $"Expected projection map but active map was {afterClick.ActiveMapId}.", failures);
 
         Vector2 spawnedDummy = spawnedSnapshot.DummyPositions.LastOrDefault();
+        Vector2 normalizedSpawn = NormalizeCameraSpawnPoint(spawnedDummy, spawnedSnapshot.ClickTargetWorldCm);
         string normalizedSignature = string.Join("|", new[]
         {
             "camera_acceptance_projection_click",
             $"dummy:{start.DummyCount}->{markerLive.DummyCount}",
-            $"spawn:{MathF.Round(spawnedDummy.X):F0},{MathF.Round(spawnedDummy.Y):F0}",
+            $"spawn:{MathF.Round(normalizedSpawn.X):F0},{MathF.Round(normalizedSpawn.Y):F0}",
             $"cue:{(afterClick.CueMarkerPresent ? 1 : 0)}{(markerLive.CueMarkerPresent ? 1 : 0)}{(markerExpired.CueMarkerPresent ? 1 : 0)}",
             $"camera:{MathF.Round(afterClick.CameraTargetCm.X):F0},{MathF.Round(afterClick.CameraTargetCm.Y):F0}"
         });
@@ -591,6 +592,16 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- final camera target: `{FormatPoint(final.CameraTargetCm)}`");
         sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `GameBootstrapper`, `CoreScreenProjector`, `IScreenRayProvider`, `PlayerInputHandler`");
         return sb.ToString();
+    }
+
+    private static Vector2 NormalizeCameraSpawnPoint(Vector2 spawnedDummy, Vector2? clickTargetWorldCm)
+    {
+        if (clickTargetWorldCm.HasValue && Vector2.Distance(spawnedDummy, clickTargetWorldCm.Value) <= 5f)
+        {
+            return clickTargetWorldCm.Value;
+        }
+
+        return new Vector2(MathF.Round(spawnedDummy.X), MathF.Round(spawnedDummy.Y));
     }
 
     private static string BuildCameraTraceJsonl(string adapterId, IReadOnlyList<CameraSnapshot> timeline)

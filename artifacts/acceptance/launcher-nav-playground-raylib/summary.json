@@ -1,0 +1,22 @@
+{
+  "scenario": "navigation2d_playground_timed_avoidance",
+  "adapter": "raylib",
+  "selectors": [
+    "$nav_playground"
+  ],
+  "root_mods": [
+    "Navigation2DPlaygroundMod"
+  ],
+  "team0_mid_advance_cm": 1478.36,
+  "team1_mid_advance_cm": 1478.35,
+  "team0_final_advance_cm": 5303.32,
+  "team1_final_advance_cm": 5304.68,
+  "final_center_fraction": 0.1094,
+  "final_center_stopped_fraction": 0,
+  "final_center_count": 14,
+  "final_center_stopped_agents": 0,
+  "final_live_agents": 128,
+  "peak_center_count": 14,
+  "peak_center_tick": 720,
+  "normalized_signature": "navigation2d_playground_timed_avoidance|mid:1478/1478|final:5303/5305|center:14/128|stopped:0|peak:14@720"
+}

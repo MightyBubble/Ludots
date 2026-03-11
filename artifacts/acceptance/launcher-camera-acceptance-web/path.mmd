@@ -1,0 +1,10 @@
+flowchart TD
+    A[Boot launcher runtime for CameraAcceptanceMod] --> B[Settle adapter camera + projector]
+    B --> C[Project click world point through selected adapter]
+    C --> D[Inject left-click via PlayerInputHandler]
+    D --> E{Dummy spawned and cue marker visible?}
+    E -->|yes| F[Capture live cue frame]
+    F --> G{Cue marker expires while Dummy persists?}
+    G -->|yes| H[Write battle-report + trace + path + PNG timeline]
+    E -->|no| X[Fail acceptance: projection click diverged]
+    G -->|no| Y[Fail acceptance: cue lifetime diverged]

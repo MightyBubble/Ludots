@@ -1,0 +1,21 @@
+{
+  "scenario": "camera_acceptance_projection_click",
+  "adapter": "raylib",
+  "selectors": [
+    "$camera_acceptance"
+  ],
+  "root_mods": [
+    "CameraAcceptanceMod"
+  ],
+  "dummy_before": 0,
+  "dummy_after_click": 1,
+  "spawned_dummy": {
+    "x": 3203,
+    "y": 2000
+  },
+  "cue_after_click": true,
+  "cue_mid": true,
+  "cue_final": false,
+  "final_tick": 18,
+  "normalized_signature": "camera_acceptance_projection_click|dummy:0-\u003E1|spawn:3200,2000|cue:110|camera:-189,-189"
+}
