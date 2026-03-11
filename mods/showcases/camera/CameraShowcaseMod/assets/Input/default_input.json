@@ -1,6 +1,6 @@
 {
   "actions": [
-    { "id": "CameraModeTrackFocus", "name": "CameraModeTrackFocus", "type": "Button" }
+    { "id": "CameraModeSelectionFollow", "name": "CameraModeSelectionFollow", "type": "Button" }
   ],
   "contexts": [
     {
@@ -8,7 +8,7 @@
       "name": "Camera Showcase Controls",
       "priority": 120,
       "bindings": [
-        { "actionId": "CameraModeTrackFocus", "path": "<Keyboard>/f4" }
+        { "actionId": "CameraModeSelectionFollow", "path": "<Keyboard>/f4" }
       ]
     }
   ]

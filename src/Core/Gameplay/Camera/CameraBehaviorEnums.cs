@@ -31,6 +31,13 @@ namespace Ludots.Core.Gameplay.Camera
         AlwaysFollow
     }
 
+    public enum CameraFollowTargetKind
+    {
+        None,
+        LocalPlayer,
+        SelectedEntity
+    }
+
     public enum CameraBlendCurve
     {
         Cut,

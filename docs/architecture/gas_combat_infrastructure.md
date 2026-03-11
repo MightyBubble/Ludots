@@ -29,6 +29,8 @@ GAS 提供 8 个基建能力，覆盖所有战斗场景：
 *   属性聚合：`src/Core/Gameplay/GAS/Systems/AttributeAggregatorSystem.cs`
 *   Preset 枚举：`src/Core/Gameplay/GAS/EffectTemplateRegistry.cs`
 
+其中 `CreateUnit` 的运行时语义已经收敛到统一的 spawn 基建：builtin handler 只负责生成 `RuntimeEntitySpawnRequest`，真正的实体物化由 `RuntimeEntitySpawnSystem` 完成。完整链路见 [运行时实体生成链路](runtime_entity_spawn_flow.md)。
+
 ## 2 伤害管线（Damage Pipeline）
 
 伤害管线完全由现有基建支撑，无需核心改动。

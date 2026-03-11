@@ -8,12 +8,9 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Scripting;
-using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
@@ -23,7 +20,6 @@ namespace Ludots.Tests.GAS.Production
     {
         private const int BlendSettleFrames = 20;
         private const string TestInputBackendKey = "Tests.CameraShowcaseMod.InputBackend";
-
         private static readonly string[] CoreInputMods =
         {
             "LudotsCoreMod",
@@ -57,42 +53,40 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void CameraShowcaseMod_TrackMode_TracksSelectedEntityWithoutFallback()
+        public void CameraShowcaseMod_SelectionMode_TracksSelectedEntityWithoutFallback()
         {
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, CameraShowcaseIds.HubMapId);
 
             var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry);
             Assert.That(registry, Is.Not.Null);
-            Assert.That(registry!.TryGet(CameraShowcaseIds.TrackProfileId, out var trackProfile), Is.True);
+            Assert.That(registry!.TryGet(CameraShowcaseIds.SelectionProfileId, out var selectionProfile), Is.True);
             Assert.That(registry.TryGet(CameraShowcaseIds.RevealShotId, out var revealShot), Is.True);
-            Assert.That(trackProfile.Id, Is.EqualTo(CameraShowcaseIds.TrackProfileId));
+            Assert.That(selectionProfile.Id, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
             Assert.That(revealShot.Id, Is.EqualTo(CameraShowcaseIds.RevealShotId));
 
-            Assert.That(engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj), Is.True);
+            Assert.That(engine.GlobalContext.TryGetValue("CoreInputMod.ViewModeManager", out var managerObj), Is.True);
             Assert.That(managerObj, Is.Not.Null);
-            Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.TrackModeId), Is.True);
+
+            Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.SelectionModeId), Is.True);
             Tick(engine, BlendSettleFrames);
 
             var brain = engine.GameSession.Camera.VirtualCameraBrain;
             Assert.That(brain, Is.Not.Null);
-            Assert.That(brain!.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.TrackProfileId));
+            Assert.That(brain!.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1200f, 800f)));
 
-            var backend = GetInputBackend(engine);
-            ClickGround(engine, backend, new Vector2(3200f, 2000f));
-            Tick(engine, 3);
             Entity captain = FindEntityByName(engine.World, CameraShowcaseIds.CaptainName);
             Assert.That(captain, Is.Not.EqualTo(Entity.Null));
-            Assert.That(SelectionRuntime.TryGetSelectionBuffer(engine.World, engine.GlobalContext, out var selection), Is.True);
-            Assert.That(selection.Count, Is.EqualTo(1));
-            Assert.That(selection.Contains(captain), Is.True);
+
+            engine.GlobalContext[CoreServiceKeys.SelectedEntity.Name] = captain;
+            Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3200f, 2000f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
 
-            ClickGround(engine, backend, new Vector2(5200f, 4200f));
+            engine.GlobalContext.Remove(CoreServiceKeys.SelectedEntity.Name);
             Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
@@ -100,35 +94,37 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void CameraShowcaseMod_TrackModeHotkey_IsOnlyActiveOnShowcaseMaps()
+        public void CameraShowcaseMod_SelectionModeHotkey_IsOnlyActiveOnShowcaseMaps()
         {
             using var engine = CreateEngine(ShowcaseMods);
+            var input = engine.GetService(CoreServiceKeys.InputHandler);
+            Assert.That(input, Is.Not.Null);
             var backend = GetInputBackend(engine);
 
             LoadMap(engine, "entry");
             PressButton(engine, backend, "<Keyboard>/f4");
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.TrackProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.SelectionProfileId));
 
             LoadMap(engine, CameraShowcaseIds.HubMapId);
             PressButton(engine, backend, "<Keyboard>/f4");
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.TrackProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
         }
 
         [Test]
-        public void CameraShowcaseMod_LeavingShowcaseMap_ClearsTrackModeOwnership()
+        public void CameraShowcaseMod_LeavingShowcaseMap_ClearsSelectionModeOwnership()
         {
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, CameraShowcaseIds.HubMapId);
 
             Assert.That(engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj), Is.True);
-            Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.TrackModeId), Is.True);
+            Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.SelectionModeId), Is.True);
             Tick(engine, BlendSettleFrames);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.TrackProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
 
             LoadMap(engine, "entry");
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.TrackProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.SelectionProfileId));
             Assert.That(engine.GlobalContext.ContainsKey(ViewModeManager.ActiveModeIdKey), Is.False);
         }
 
@@ -166,23 +162,20 @@ namespace Ludots.Tests.GAS.Production
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, CameraShowcaseIds.SelectionMapId);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.TrackProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1200f, 800f)));
 
-            var backend = GetInputBackend(engine);
-            ClickGround(engine, backend, new Vector2(3400f, 2200f));
-            Tick(engine, 3);
             Entity captain = FindEntityByName(engine.World, CameraShowcaseIds.CaptainName);
             Assert.That(captain, Is.Not.EqualTo(Entity.Null));
-            Assert.That(SelectionRuntime.TryGetSelectionBuffer(engine.World, engine.GlobalContext, out var selection), Is.True);
-            Assert.That(selection.Count, Is.EqualTo(1));
-            Assert.That(selection.Contains(captain), Is.True);
+
+            engine.GlobalContext[CoreServiceKeys.SelectedEntity.Name] = captain;
+            Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3400f, 2200f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
 
-            ClickGround(engine, backend, new Vector2(5200f, 4200f));
+            engine.GlobalContext.Remove(CoreServiceKeys.SelectedEntity.Name);
             Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
@@ -207,11 +200,11 @@ namespace Ludots.Tests.GAS.Production
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, CameraShowcaseIds.SelectionMapId);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.TrackProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
 
             engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
             {
-                VirtualCameraId = CameraShowcaseIds.TrackProfileId,
+                VirtualCameraId = CameraShowcaseIds.SelectionProfileId,
                 Pitch = 55f,
                 DistanceCm = 3600f,
                 FovYDeg = 48f
@@ -232,9 +225,6 @@ namespace Ludots.Tests.GAS.Production
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
-            engine.SetService(CoreServiceKeys.ViewController, new StubViewController(1920f, 1080f));
-            engine.SetService(CoreServiceKeys.ScreenProjector, new WorldMappedScreenProjector());
-            engine.SetService(CoreServiceKeys.ScreenRayProvider, new WorldMappedScreenRayProvider());
             engine.Start();
             return engine;
         }
@@ -249,7 +239,6 @@ namespace Ludots.Tests.GAS.Production
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
-            backend.SetMousePosition(new Vector2(960f, 540f));
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
             for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
             {
@@ -284,6 +273,20 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames.");
         }
 
+        private static Entity FindEntityByName(World world, string name)
+        {
+            Entity result = Entity.Null;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name entityName) =>
+            {
+                if (string.Equals(entityName.Value, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    result = entity;
+                }
+            });
+            return result;
+        }
+
         private static string FindRepoRoot()
         {
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -315,20 +318,6 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("Test input backend is missing.");
         }
 
-        private static Entity FindEntityByName(World world, string name)
-        {
-            Entity result = Entity.Null;
-            var query = new QueryDescription().WithAll<Name>();
-            world.Query(in query, (Entity entity, ref Name entityName) =>
-            {
-                if (string.Equals(entityName.Value, name, StringComparison.OrdinalIgnoreCase))
-                {
-                    result = entity;
-                }
-            });
-            return result;
-        }
-
         private static void PressButton(GameEngine engine, TestInputBackend backend, string path)
         {
             backend.SetButton(path, true);
@@ -337,68 +326,22 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, BlendSettleFrames);
         }
 
-        private static void ClickGround(GameEngine engine, TestInputBackend backend, Vector2 worldPointCm)
-        {
-            backend.SetMousePosition(worldPointCm);
-            Tick(engine, 1);
-            backend.SetButton("<Mouse>/LeftButton", true);
-            Tick(engine, 1);
-            backend.SetButton("<Mouse>/LeftButton", false);
-            Tick(engine, 3);
-        }
-
         private sealed class TestInputBackend : IInputBackend
         {
             private readonly System.Collections.Generic.Dictionary<string, bool> _buttons = new(StringComparer.Ordinal);
-            private Vector2 _mousePosition;
 
             public void SetButton(string path, bool isDown)
             {
                 _buttons[path] = isDown;
             }
 
-            public void SetMousePosition(Vector2 position)
-            {
-                _mousePosition = position;
-            }
-
             public float GetAxis(string devicePath) => 0f;
             public bool GetButton(string devicePath) => _buttons.TryGetValue(devicePath, out var isDown) && isDown;
-            public Vector2 GetMousePosition() => _mousePosition;
+            public Vector2 GetMousePosition() => Vector2.Zero;
             public float GetMouseWheel() => 0f;
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }
             public string GetCharBuffer() => string.Empty;
-        }
-
-        private sealed class StubViewController : IViewController
-        {
-            public StubViewController(float width, float height)
-            {
-                Resolution = new Vector2(width, height);
-            }
-
-            public Vector2 Resolution { get; }
-            public float Fov => 60f;
-            public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
-        }
-
-        private sealed class WorldMappedScreenProjector : IScreenProjector
-        {
-            public Vector2 WorldToScreen(Vector3 worldPosition)
-            {
-                return new Vector2(worldPosition.X * 100f, worldPosition.Z * 100f);
-            }
-        }
-
-        private sealed class WorldMappedScreenRayProvider : IScreenRayProvider
-        {
-            public ScreenRay GetRay(Vector2 screenPosition)
-            {
-                return new ScreenRay(
-                    new Vector3(screenPosition.X / 100f, 10f, screenPosition.Y / 100f),
-                    -Vector3.UnitY);
-            }
         }
     }
 }

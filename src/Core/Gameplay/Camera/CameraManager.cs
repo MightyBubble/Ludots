@@ -171,22 +171,6 @@ namespace Ludots.Core.Gameplay.Camera
             return VirtualCameraBrain.SetFollowTarget(virtualCameraId, followTarget, snapToFollowTargetWhenAvailable);
         }
 
-        public bool SyncVirtualCameraFollowState(string virtualCameraId)
-        {
-            if (VirtualCameraBrain == null || VirtualCameraBrain.IsBlending)
-            {
-                return false;
-            }
-
-            bool applied = VirtualCameraBrain.TryApplyFollowState(virtualCameraId, State, _logicInput, out var followTargetPositionCm);
-            if (applied)
-            {
-                FollowTargetPositionCm = followTargetPositionCm;
-            }
-
-            return applied;
-        }
-
         /// <summary>
         /// Captures the latest visual-frame input sample.
         /// This should run once per render-frame after PlayerInputHandler.Update().

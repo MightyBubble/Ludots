@@ -39,7 +39,7 @@
 - `priority`：决定谁拥有权威
 - `rigKind`：`Orbit` / `TopDown` / `ThirdPerson` / `FirstPerson`
 - `targetSource`：`CurrentState` / `Fixed` / `FollowTarget`
-- `followMode` + 上层显式 `ICameraFollowTarget` 绑定：决定跟随策略
+- `followMode` / `followTargetKind`：决定跟随策略
 - `defaultBlendDuration` / `blendCurve`：决定逻辑层镜头过渡
 - `allowUserInput`：决定当前权威相机是否允许输入驱动
 
@@ -137,7 +137,7 @@ engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
 - `mods/fixtures/camera/CameraAcceptanceMod`
   - 提供最小验收地图和基础夹具
 - `mods/showcases/camera/CameraShowcaseMod`
-  - 提供生产级 camera 示例：共享 profile、selection 到 follow 的显式桥接、shot 栈、bootstrap、runtime pose override
+  - 提供生产级 camera 示例：共享 profile、局部 selection-follow profile、shot 栈、bootstrap、runtime pose override
 
 编写要求：
 

@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Components;
 using Ludots.Core.Spatial;
 using Ludots.Core.Mathematics;
@@ -110,7 +111,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
 
-        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null) : base(world) 
+        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null) : base(world)
         {
             _effectRequests = effectRequests;
             _budget = budget;
@@ -124,6 +125,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.FanOutBudget = _onApplyCreateBudget;
             _builtinRuntime.FanOutCommands = _fanOutCommands;
             _builtinRuntime.ResolverBuffer = _resolverBuffer;
+            _builtinRuntime.SpawnRequests = spawnRequests;
         }
 
         public override void Update(in float dt)

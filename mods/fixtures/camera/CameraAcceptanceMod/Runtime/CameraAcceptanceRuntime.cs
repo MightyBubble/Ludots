@@ -4,7 +4,10 @@ using Arch.Core;
 using CameraAcceptanceMod.UI;
 using CoreInputMod.Triggers;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Scripting;
@@ -44,7 +47,6 @@ namespace CameraAcceptanceMod.Runtime
                 return Task.CompletedTask;
             }
 
-            ApplySelectionProfileOwnership(engine, engine.CurrentMapSession?.MapId.Value);
             RefreshPanel(engine);
 
             return Task.CompletedTask;
@@ -56,7 +58,6 @@ namespace CameraAcceptanceMod.Runtime
             if (CameraAcceptanceIds.IsAcceptanceMap(mapId.Value))
             {
                 ClearPanelIfOwned(context);
-                ClearSelectionProfileIfOwned(context.GetEngine());
             }
 
             return Task.CompletedTask;
@@ -65,7 +66,6 @@ namespace CameraAcceptanceMod.Runtime
         public void RefreshPanel(GameEngine engine)
         {
             string? activeMapId = engine.CurrentMapSession?.MapId.Value;
-            ApplySelectionProfileOwnership(engine, activeMapId);
             if (CameraAcceptanceIds.IsAcceptanceMap(activeMapId))
             {
                 MountPanel(engine, activeMapId!);
@@ -108,42 +108,28 @@ namespace CameraAcceptanceMod.Runtime
             _panelController.ClearIfOwned(root);
         }
 
-        private void HandleSelectionConfirmed(GameEngine engine, in WorldCmInt2 worldCm, Entity resolved)
+        private void HandleSelectionConfirmed(GameEngine engine, in WorldCmInt2 worldCm, Entity selectedEntity)
         {
             string? mapId = engine.CurrentMapSession?.MapId.Value;
             if (string.Equals(mapId, CameraAcceptanceIds.ProjectionMapId, System.StringComparison.OrdinalIgnoreCase))
             {
-                if (!engine.World.IsAlive(resolved))
+                if (engine.World.IsAlive(selectedEntity))
                 {
-                    EmitCueMarker(engine, worldCm);
+                    return;
                 }
-            }
-        }
 
-        private static void ApplySelectionProfileOwnership(GameEngine engine, string? mapId)
-        {
-            if (string.Equals(mapId, CameraAcceptanceIds.ProjectionMapId, System.StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(mapId, CameraAcceptanceIds.FollowMapId, System.StringComparison.OrdinalIgnoreCase))
-            {
-                engine.GlobalContext[CoreServiceKeys.ActiveSelectionProfileId.Name] = CameraAcceptanceIds.SelectionProfileId;
+                EnqueueProjectionSpawn(engine, worldCm);
+                EmitCueMarker(engine, worldCm);
                 return;
             }
 
-            ClearSelectionProfileIfOwned(engine);
-        }
-
-        private static void ClearSelectionProfileIfOwned(GameEngine? engine)
-        {
-            if (engine == null)
+            if (string.Equals(mapId, CameraAcceptanceIds.BlendMapId, System.StringComparison.OrdinalIgnoreCase))
             {
-                return;
-            }
-
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.ActiveSelectionProfileId.Name, out var value) &&
-                value is string profileId &&
-                string.Equals(profileId, CameraAcceptanceIds.SelectionProfileId, System.StringComparison.Ordinal))
-            {
-                engine.GlobalContext.Remove(CoreServiceKeys.ActiveSelectionProfileId.Name);
+                engine.GameSession.Camera.ActivateVirtualCamera(
+                    ResolveActiveBlendCameraId(engine),
+                    followTarget: new FixedPointFollowTarget(new Vector2(worldCm.X, worldCm.Y)),
+                    snapToFollowTargetWhenAvailable: true,
+                    resetRuntimeState: true);
             }
         }
 
@@ -163,6 +149,27 @@ namespace CameraAcceptanceMod.Runtime
                 Param0 = new Vector4(0.15f, 0.88f, 1f, 1f),
                 Param1 = 0.45f
             });
+        }
+
+        private static void EnqueueProjectionSpawn(GameEngine engine, in WorldCmInt2 worldCm)
+        {
+            if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue spawnQueue)
+            {
+                throw new System.InvalidOperationException("RuntimeEntitySpawnQueue is required for projection verification.");
+            }
+
+            var request = new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = CameraAcceptanceIds.ProjectionSpawnTemplateId,
+                WorldPositionCm = Fix64Vec2.FromInt(worldCm.X, worldCm.Y),
+                MapId = engine.CurrentMapSession?.MapId ?? default,
+            };
+
+            if (!spawnQueue.TryEnqueue(request))
+            {
+                throw new System.InvalidOperationException("Projection verification spawn queue is full.");
+            }
         }
 
         private int ResolveCueMarkerPrefabId(GameEngine engine)
@@ -186,5 +193,29 @@ namespace CameraAcceptanceMod.Runtime
             return _cueMarkerPrefabId;
         }
 
+        private static string ResolveActiveBlendCameraId(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue(CameraAcceptanceIds.ActiveBlendCameraIdKey, out var value) &&
+                   value is string cameraId &&
+                   !string.IsNullOrWhiteSpace(cameraId)
+                ? cameraId
+                : CameraAcceptanceIds.BlendSmoothCameraId;
+        }
+
+        private sealed class FixedPointFollowTarget : ICameraFollowTarget
+        {
+            private readonly Vector2 _pointCm;
+
+            public FixedPointFollowTarget(Vector2 pointCm)
+            {
+                _pointCm = pointCm;
+            }
+
+            public bool TryGetPosition(out Vector2 positionCm)
+            {
+                positionCm = _pointCm;
+                return true;
+            }
+        }
     }
 }

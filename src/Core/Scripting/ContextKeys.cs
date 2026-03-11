@@ -44,6 +44,7 @@ namespace Ludots.Core.Scripting
         public const string InputResponseBuffer = "InputResponseBuffer";
         public const string SelectionRequestQueue = "SelectionRequestQueue";
         public const string SelectionResponseBuffer = "SelectionResponseBuffer";
+        public const string RuntimeEntitySpawnQueue = "RuntimeEntitySpawnQueue";
         public const string SelectionRuleRegistry = "SelectionRuleRegistry";
         public const string InteractionActionBindings = "InteractionActionBindings";
         public const string OrderQueue = "OrderQueue";

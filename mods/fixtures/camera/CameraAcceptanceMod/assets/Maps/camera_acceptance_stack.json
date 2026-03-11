@@ -1,6 +1,15 @@
 {
   "Id": "camera_acceptance_stack",
   "Tags": ["camera.acceptance", "camera.acceptance.stack"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 1,
+      "HeightInTiles": 1,
+      "GridCellSizeCm": 100
+    }
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Acceptance.Profile.TpsAim"
   },

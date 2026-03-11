@@ -106,7 +106,7 @@
 - `CameraAcceptanceMod`
   最小验收夹具；会组合 `CameraProfilesMod`、`CameraBootstrapMod`、`VirtualCameraShotsMod`。
 - `CameraShowcaseMod`
-  生产级 camera 示例；会组合共享 profile、showcase profile、stack shot、selection 到 follow 的显式桥接、bootstrap 与 pose override。
+  生产级 camera 示例；会组合共享 profile、showcase profile、stack shot、selection follow、bootstrap 与 pose override。
 - `MobaDemoMod`
   完整 MOBA 示例；保留通用输入主线。
 

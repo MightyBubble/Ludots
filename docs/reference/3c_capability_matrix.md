@@ -11,7 +11,7 @@
 - [x] 栈顶 clear 后自动回落到下一台 active virtual camera
 - [x] `Cut` / `Linear` / `SmoothStep` 逻辑层镜头过渡
 - [x] `CameraPresenter` 基于 `PreviousState` / `State` 的表现插值
-- [x] 跟随目标解析：`ICameraFollowTarget` + 上层显式绑定（例如 `GlobalEntityFollowTarget`、`EntityResolverFollowTarget`）
+- [x] 跟随目标解析：`LocalPlayer` / `SelectedEntity` / `SelectedOrLocalPlayer`
 - [x] 轨道相机缩放 / 平移 / 旋转输入
 - [x] 视锥 AABB 裁剪 + 4 级 LOD
 - [x] Screen→World / World→Screen 投影工具

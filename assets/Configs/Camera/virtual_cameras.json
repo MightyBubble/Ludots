@@ -20,6 +20,7 @@
     "enableZoom": true,
     "zoomCmPerWheel": 500,
     "followMode": "HoldToLock",
+    "followTargetKind": "LocalPlayer",
     "followActionId": "CameraLock",
     "allowUserInput": true
   },
@@ -139,6 +140,7 @@
     "enableZoom": true,
     "zoomCmPerWheel": 100,
     "followMode": "AlwaysFollow",
+    "followTargetKind": "LocalPlayer",
     "allowUserInput": true
   },
   {
@@ -159,6 +161,7 @@
     "rotateDegPerPixel": 0.15,
     "enableZoom": false,
     "followMode": "AlwaysFollow",
+    "followTargetKind": "LocalPlayer",
     "allowUserInput": true
   }
 ]

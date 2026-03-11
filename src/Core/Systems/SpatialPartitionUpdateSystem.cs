@@ -53,7 +53,7 @@ namespace Ludots.Core.Systems
                 {
                     var entity = Unsafe.Add(ref entityFirst, index);
                     var worldCm = positions[index].Value.ToWorldCmInt2();
-                    if (!_spec.Contains(worldCm)) throw new InvalidOperationException("SPATIAL.ERR.WorldPositionOutOfBounds");
+                    if (!_spec.Contains(worldCm)) ThrowWorldPositionOutOfBounds(entity, worldCm, _spec);
                     (int cx, int cy) = WorldToCell(worldCm, _spec.GridCellSizeCm);
                     _partition.Add(entity, cx, cy);
                     _commandBuffer.Add(entity, new SpatialCellRef { CellX = cx, CellY = cy, Initialized = 1 });
@@ -74,7 +74,7 @@ namespace Ludots.Core.Systems
             public void Update(Entity entity, ref WorldPositionCm pos, ref SpatialCellRef cellRef)
             {
                 var worldCm = pos.Value.ToWorldCmInt2();
-                if (!Spec.Contains(worldCm)) throw new InvalidOperationException("SPATIAL.ERR.WorldPositionOutOfBounds");
+                if (!Spec.Contains(worldCm)) ThrowWorldPositionOutOfBounds(entity, worldCm, Spec);
                 (int cx, int cy) = WorldToCell(worldCm, Spec.GridCellSizeCm);
 
                 if (cellRef.Initialized == 0)
@@ -98,6 +98,12 @@ namespace Ludots.Core.Systems
         private static (int x, int y) WorldToCell(in WorldCmInt2 world, int cellSizeCm)
         {
             return (MathUtil.FloorDiv(world.X, cellSizeCm), MathUtil.FloorDiv(world.Y, cellSizeCm));
+        }
+
+        private static void ThrowWorldPositionOutOfBounds(Entity entity, in WorldCmInt2 worldCm, in WorldSizeSpec spec)
+        {
+            throw new InvalidOperationException(
+                $"SPATIAL.ERR.WorldPositionOutOfBounds entity={entity.Id}:{entity.WorldId} pos=({worldCm.X},{worldCm.Y}) bounds={spec.Bounds} cell={spec.GridCellSizeCm}");
         }
     }
 }

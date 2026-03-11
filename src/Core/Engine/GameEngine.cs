@@ -18,6 +18,7 @@ using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Schedulers; // Added for JobScheduler
 using Ludots.Core.Systems;
 using Ludots.Core.Engine.Pacemaker;
@@ -314,7 +315,6 @@ namespace Ludots.Core.Engine
             
             // 7. Post-Mod Load Initialization
             MapLoader.LoadTemplates();
-            SetService(CoreServiceKeys.RuntimeEntityTemplateSpawner, new RuntimeEntityTemplateSpawner(World, MapLoader.TemplateRegistry));
 
             // 8. Print registration conflict summary
             ConflictReport?.PrintSummary();
@@ -443,6 +443,7 @@ namespace Ludots.Core.Engine
             var inputResponseBuffer = new InputResponseBuffer();
             var selectionRequestQueue = new SelectionRequestQueue();
             var selectionResponseBuffer = new SelectionResponseBuffer();
+            var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue();
             var orderQueue = new OrderQueue();
             var chainOrderQueue = new OrderQueue();
             var orderRequestQueue = new OrderRequestQueue();
@@ -575,6 +576,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.InputResponseBuffer, inputResponseBuffer);
             SetService(CoreServiceKeys.SelectionRequestQueue, selectionRequestQueue);
             SetService(CoreServiceKeys.SelectionResponseBuffer, selectionResponseBuffer);
+            SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
             SetService(CoreServiceKeys.OrderQueue, orderQueue);
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);
             SetService(CoreServiceKeys.OrderRuleRegistry, orderRuleRegistry);
@@ -670,9 +672,9 @@ namespace Ludots.Core.Engine
                 ChainNegate = cfgChainNegate,
                 ChainActivateEffect = cfgChainActivateEffect
             };
-            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps), SystemGroup.EffectProcessing);
+            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, clock, effectRequestQueue), SystemGroup.EffectProcessing);
-            RegisterSystem(new SpawnedUnitRuntimeSystem(World, effectRequestQueue), SystemGroup.EffectProcessing);
+            RegisterSystem(new RuntimeEntitySpawnSystem(World, runtimeEntitySpawnQueue, MapLoader.TemplateRegistry, effectRequestQueue), SystemGroup.EffectProcessing);
             RegisterSystem(new DisplacementRuntimeSystem(World), SystemGroup.EffectProcessing);
             
             // Phase 4: AttributeCalculation
@@ -1015,6 +1017,7 @@ namespace Ludots.Core.Engine
             GameSession.Camera.ActivateVirtualCamera(
                 virtualCameraId,
                 blendDurationSeconds: 0f,
+                followTarget: CameraFollowTargetFactory.Build(World, GlobalContext, definition.FollowTargetKind),
                 snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
 
             if (cam != null)

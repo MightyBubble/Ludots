@@ -3,6 +3,7 @@
     "Id": "Camera.Acceptance.Mode.Rts",
     "DisplayName": "RTS/MOBA",
     "VirtualCameraId": "Camera.Acceptance.Profile.RtsMoba",
+    "FollowTargetKind": "None",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,
     "SwitchActionId": "CameraAcceptanceModeRts"
@@ -11,6 +12,7 @@
     "Id": "Camera.Acceptance.Mode.Tps",
     "DisplayName": "TPS Aim",
     "VirtualCameraId": "Camera.Acceptance.Profile.TpsAim",
+    "FollowTargetKind": "LocalPlayer",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,
     "SwitchActionId": "CameraAcceptanceModeTps"
@@ -19,6 +21,7 @@
     "Id": "Camera.Acceptance.Mode.FollowClose",
     "DisplayName": "Follow Close",
     "VirtualCameraId": "Camera.Acceptance.Profile.FollowClose",
+    "FollowTargetKind": "SelectedEntity",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,
     "SwitchActionId": "CameraAcceptanceModeFollowClose"
@@ -27,6 +30,7 @@
     "Id": "Camera.Acceptance.Mode.FollowWide",
     "DisplayName": "Follow Wide",
     "VirtualCameraId": "Camera.Acceptance.Profile.FollowWide",
+    "FollowTargetKind": "SelectedEntity",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,
     "SwitchActionId": "CameraAcceptanceModeFollowWide"

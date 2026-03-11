@@ -141,38 +141,6 @@ namespace Ludots.Core.Gameplay.Camera
             return true;
         }
 
-        public bool TryApplyFollowState(string id, CameraState state, IInputActionReader? input, out Vector2? followTargetPositionCm)
-        {
-            followTargetPositionCm = null;
-            if (state == null)
-            {
-                return false;
-            }
-
-            ResolveActiveCamera();
-            if (_resolved == null ||
-                !string.Equals(_resolved.Definition.Id, id, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            ResolveRuntimeStates(input);
-            followTargetPositionCm = _resolved.ResolvedFollowTargetPositionCm;
-
-            bool shouldFollow = ShouldFollow(_resolved, input);
-            if (shouldFollow && followTargetPositionCm.HasValue)
-            {
-                state.TargetCm = _resolved.RuntimeState.TargetCm;
-                state.IsFollowing = true;
-            }
-            else
-            {
-                state.IsFollowing = false;
-            }
-
-            return true;
-        }
-
         public void ApplyToState(CameraState state, IInputActionReader? input, float dt)
         {
             if (state == null)

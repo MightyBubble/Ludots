@@ -28,7 +28,7 @@ namespace Ludots.Core.Gameplay.GAS
         // ── Entity creation ──
         /// <summary>Read ProjectileParams, create projectile entity via EntityBuilder, attach ImpactEffectRef.</summary>
         CreateProjectile = 30,
-        /// <summary>Read UnitCreationParams, create unit entity/entities via EntityBuilder.</summary>
+        /// <summary>Read UnitCreationParams, enqueue runtime entity spawn requests.</summary>
         CreateUnit = 31,
 
         // ── Displacement ──

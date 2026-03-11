@@ -29,6 +29,7 @@ namespace Ludots.Core.Gameplay.Camera
         public bool EnableZoom { get; set; } = true;
         public float ZoomCmPerWheel { get; set; } = 2000f;
         public CameraFollowMode FollowMode { get; set; } = CameraFollowMode.None;
+        public CameraFollowTargetKind FollowTargetKind { get; set; } = CameraFollowTargetKind.None;
         public string FollowActionId { get; set; } = "CameraLock";
         public string MoveActionId { get; set; } = "Move";
         public string ZoomActionId { get; set; } = "Zoom";

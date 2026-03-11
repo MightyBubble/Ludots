@@ -1,8 +1,10 @@
-﻿using Arch.Core;
+using System;
+using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -200,19 +202,34 @@ namespace Ludots.Core.Gameplay.GAS
         {
             if (!world.IsAlive(context.Source)) return;
 
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.SpawnRequests == null)
+            {
+                throw new InvalidOperationException("CreateUnit requires RuntimeEntitySpawnQueue in BuiltinHandlerExecutionContext.");
+            }
+
             ref readonly var unit = ref templateData.UnitCreation;
             if (unit.Count <= 0) return;
 
+            var origin = ResolveCreateUnitOrigin(world, in context);
+
             for (int i = 0; i < unit.Count; i++)
             {
-                EntityCreationHelper.CreateSpawnedUnit(world,
-                    new SpawnedUnitState
-                    {
-                        UnitTypeId = unit.UnitTypeId,
-                        OffsetRadius = unit.OffsetRadius,
-                        OnSpawnEffectTemplateId = unit.OnSpawnEffectTemplateId,
-                        Spawner = context.Source,
-                    });
+                var request = new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.UnitType,
+                    Source = context.Source,
+                    TargetContext = context.TargetContext,
+                    WorldPositionCm = origin + ComputeScatterOffsetCm(context.Source, unit.UnitTypeId, i, unit.OffsetRadius),
+                    UnitTypeId = unit.UnitTypeId,
+                    OnSpawnEffectTemplateId = unit.OnSpawnEffectTemplateId,
+                    CopySourceTeam = 1,
+                };
+
+                if (!runtime.SpawnRequests.TryEnqueue(request))
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnQueue capacity exceeded while handling CreateUnit.");
+                }
             }
         }
 
@@ -264,6 +281,61 @@ namespace Ludots.Core.Gameplay.GAS
                     OverrideNavigation = disp.OverrideNavigation,
                 });
         }
+
+        private static Fix64Vec2 ResolveCreateUnitOrigin(World world, in EffectContext context)
+        {
+            if (world.IsAlive(context.TargetContext) && world.Has<WorldPositionCm>(context.TargetContext))
+            {
+                return world.Get<WorldPositionCm>(context.TargetContext).Value;
+            }
+
+            if (world.IsAlive(context.Source) && world.Has<AbilityExecInstance>(context.Source))
+            {
+                ref readonly var exec = ref world.Get<AbilityExecInstance>(context.Source);
+                if (exec.HasTargetPos != 0)
+                {
+                    return exec.TargetPosCm;
+                }
+            }
+
+            if (world.IsAlive(context.Source) && world.Has<WorldPositionCm>(context.Source))
+            {
+                return world.Get<WorldPositionCm>(context.Source).Value;
+            }
+
+            throw new InvalidOperationException("CreateUnit requires target point or source WorldPositionCm.");
+        }
+
+        private static Fix64Vec2 ComputeScatterOffsetCm(Entity source, int unitTypeId, int index, int radiusCm)
+        {
+            if (radiusCm <= 0)
+            {
+                return Fix64Vec2.Zero;
+            }
+
+            unchecked
+            {
+                uint seed = (uint)(
+                    (source.Id * 73856093) ^
+                    (source.WorldId * 19349663) ^
+                    ((index + 1) * 83492791) ^
+                    (unitTypeId * 265443576));
+
+                seed ^= seed << 13;
+                seed ^= seed >> 17;
+                seed ^= seed << 5;
+
+                Fix64 angleDeg = Fix64.FromInt((int)(seed % 360u));
+                Fix64 angleRad = angleDeg * Fix64.Deg2Rad;
+
+                Fix64 fraction = Fix64.HalfValue + Fix64.FromInt((int)((seed >> 9) & 1023)) / Fix64.FromInt(2047);
+                Fix64 radius = Fix64.FromInt(radiusCm) * fraction;
+
+                return new Fix64Vec2(
+                    radius * Fix64Math.Cos(angleRad),
+                    radius * Fix64Math.Sin(angleRad));
+            }
+        }
     }
 
     public struct ProjectileState
@@ -277,22 +349,9 @@ namespace Ludots.Core.Gameplay.GAS
         public Fix64 TraveledCm;
     }
 
-    public struct SpawnedUnitState
-    {
-        public int UnitTypeId;
-        public int OffsetRadius;
-        public int OnSpawnEffectTemplateId;
-        public Entity Spawner;
-    }
-
     public static class EntityCreationHelper
     {
         public static Entity CreateProjectile(World world, in ProjectileState state)
-        {
-            return world.Create(state);
-        }
-
-        public static Entity CreateSpawnedUnit(World world, in SpawnedUnitState state)
         {
             return world.Create(state);
         }

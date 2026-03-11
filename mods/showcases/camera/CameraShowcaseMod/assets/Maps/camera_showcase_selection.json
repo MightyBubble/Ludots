@@ -2,7 +2,7 @@
   "Id": "camera_showcase_selection",
   "Tags": ["camera.showcase", "camera.showcase.selection"],
   "DefaultCamera": {
-    "VirtualCameraId": "Camera.Showcase.Profile.TrackFocus"
+    "VirtualCameraId": "Camera.Showcase.Profile.SelectionFollow"
   },
   "Entities": [
     {

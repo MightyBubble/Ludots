@@ -1,6 +1,15 @@
 {
   "Id": "camera_acceptance_tps",
   "Tags": ["camera.acceptance", "camera.acceptance.behaviors", "camera.acceptance.behaviors.tps"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 1,
+      "HeightInTiles": 1,
+      "GridCellSizeCm": 100
+    }
+  ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Acceptance.Profile.TpsAim"
   },

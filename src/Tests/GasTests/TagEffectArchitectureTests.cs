@@ -8,9 +8,13 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Components;
+using Ludots.Core.Presentation.Components;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -369,28 +373,98 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void BuiltinHandlers_CreateUnit_CreatesEntities()
+        public void BuiltinHandlers_CreateUnit_EnqueuesRuntimeSpawnRequests()
         {
             using var world = World.Create();
-            var caster = world.Create();
+            var caster = world.Create(WorldPositionCm.FromCm(1200, 3400));
             var effect = world.Create();
+            var queue = new RuntimeEntitySpawnQueue(capacity: 8);
+            var runtime = new BuiltinHandlerExecutionContext
+            {
+                SpawnRequests = queue,
+            };
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
 
             var ctx = new EffectContext { Source = caster, Target = caster };
             var tpl = new EffectTemplateData();
             tpl.UnitCreation = new UnitCreationDescriptor { UnitTypeId = 7, Count = 3, OffsetRadius = 100, OnSpawnEffectTemplateId = 55 };
 
             var mergedParams = new EffectConfigParams();
-            BuiltinHandlers.HandleCreateUnit(world, effect, ref ctx, in mergedParams, in tpl);
+            registry.Invoke(BuiltinHandlerId.CreateUnit, world, effect, ref ctx, in mergedParams, in tpl, runtime);
 
-            var query = new QueryDescription().WithAll<SpawnedUnitState>();
             int count = 0;
-            world.Query(in query, (ref SpawnedUnitState su) =>
+            while (queue.TryDequeue(out var request))
             {
                 count++;
-                That(su.UnitTypeId, Is.EqualTo(7));
-                That(su.OnSpawnEffectTemplateId, Is.EqualTo(55));
-            });
+                That(request.Kind, Is.EqualTo(RuntimeEntitySpawnKind.UnitType));
+                That(request.UnitTypeId, Is.EqualTo(7));
+                That(request.OnSpawnEffectTemplateId, Is.EqualTo(55));
+                That(request.CopySourceTeam, Is.EqualTo(1));
+                That(request.WorldPositionCm, Is.Not.EqualTo(Fix64Vec2.Zero));
+            }
             That(count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_SpawnUnitType_CreatesEntityAndPublishesOnSpawnEffect()
+        {
+            UnitTypeRegistry.Clear();
+            int unitTypeId = UnitTypeRegistry.Register("TestWolf");
+
+            using var world = World.Create();
+            var source = world.Create(
+                new Team { Id = 7 },
+                new MapEntity { MapId = new Ludots.Core.Map.MapId("runtime_spawn_test") });
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var effects = new EffectRequestQueue();
+            var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var system = new RuntimeEntitySpawnSystem(world, requests, templates, effects);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.UnitType,
+                Source = source,
+                WorldPositionCm = Fix64Vec2.FromInt(420, 840),
+                UnitTypeId = unitTypeId,
+                OnSpawnEffectTemplateId = 123,
+                CopySourceTeam = 1,
+            }), Is.True);
+
+            system.Update(0f);
+
+            Entity spawned = Entity.Null;
+            int spawnCount = 0;
+            var query = new QueryDescription().WithAll<Name, WorldPositionCm, PreviousWorldPositionCm, VisualTransform, CullState, AttributeBuffer>();
+            world.Query(in query, (Entity entity, ref Name name, ref WorldPositionCm position, ref PreviousWorldPositionCm previous, ref VisualTransform transform, ref CullState cull, ref AttributeBuffer buffer) =>
+            {
+                if (!string.Equals(name.Value, "Unit:TestWolf", StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                spawnCount++;
+                spawned = entity;
+                That(position.Value, Is.EqualTo(Fix64Vec2.FromInt(420, 840)));
+                That(previous.Value, Is.EqualTo(Fix64Vec2.FromInt(420, 840)));
+                That(transform.Scale, Is.EqualTo(System.Numerics.Vector3.One));
+                That(cull.IsVisible, Is.True);
+                That(cull.LOD, Is.EqualTo(Ludots.Core.Presentation.Components.LODLevel.High));
+            });
+
+            That(spawnCount, Is.EqualTo(1));
+            That(spawned, Is.Not.EqualTo(Entity.Null));
+            That(world.Has<Team>(spawned), Is.True);
+            That(world.Get<Team>(spawned).Id, Is.EqualTo(7));
+            That(world.Has<MapEntity>(spawned), Is.True);
+            That(world.Get<MapEntity>(spawned).MapId.Value, Is.EqualTo("runtime_spawn_test"));
+
+            That(effects.Count, Is.EqualTo(1));
+            That(effects[0].Source, Is.EqualTo(source));
+            That(effects[0].Target, Is.EqualTo(spawned));
+            That(effects[0].TemplateId, Is.EqualTo(123));
+
+            UnitTypeRegistry.Clear();
         }
 
         // ════════════════════════════════════════════════════════════════════

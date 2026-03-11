@@ -16,7 +16,7 @@ using Ludots.Core.Scripting;
 namespace CoreInputMod.Triggers
 {
     /// <summary>
-    /// Registers generic input systems on game start: shared selection runtime, GasSelectionResponse, GasInputResponse.
+    /// Registers generic input systems on game start: EntityClickSelect, GasSelectionResponse, GasInputResponse.
     /// Does not include order sources (move/attack/etc) — those are game-mode specific (MobaDemoMod, RtsDemoMod, etc).
     /// For camera, compose CameraProfilesMod / CameraBootstrapMod / VirtualCameraShotsMod as needed.
     /// Mods can add callbacks via GlobalContext["CoreInputMod.EntitySelectionCallbacks"] and
@@ -61,54 +61,14 @@ namespace CoreInputMod.Triggers
                 engine.GlobalContext[CoreServiceKeys.SelectionRuleRegistry.Name] = SelectionRuleRegistry.CreateWithDefaults();
             }
 
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionProfileRegistry.Name, out var selectionProfilesObj) ||
-                selectionProfilesObj is not SelectionProfileRegistry)
-            {
-                var profiles = new SelectionProfileRegistry(engine.ConfigPipeline);
-                profiles.Load("Configs/Selection/profiles.json");
-                engine.SetService(CoreServiceKeys.SelectionProfileRegistry, profiles);
-                engine.GlobalContext[CoreServiceKeys.SelectionProfileRegistry.Name] = profiles;
-            }
-
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionInteractionState.Name, out var selectionStateObj) ||
-                selectionStateObj is not SelectionInteractionState)
-            {
-                var selectionState = new SelectionInteractionState();
-                engine.SetService(CoreServiceKeys.SelectionInteractionState, selectionState);
-                engine.GlobalContext[CoreServiceKeys.SelectionInteractionState.Name] = selectionState;
-            }
-
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionCandidatePolicy.Name, out var selectionPolicyObj) ||
-                selectionPolicyObj is not ISelectionCandidatePolicy)
-            {
-                var selectionPolicy = new DefaultSelectionCandidatePolicy();
-                engine.SetService(CoreServiceKeys.SelectionCandidatePolicy, selectionPolicy);
-                engine.GlobalContext[CoreServiceKeys.SelectionCandidatePolicy.Name] = selectionPolicy;
-            }
-
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionInputHandler.Name, out var selectionInputObj) ||
-                selectionInputObj is not ISelectionInputHandler)
-            {
-                var input = engine.GetService(CoreServiceKeys.AuthoritativeInput);
-                var interaction = engine.GetService(CoreServiceKeys.SelectionInteractionState);
-                if (input != null && interaction != null)
-                {
-                    var selectionInput = new ScreenSelectionInputHandler(engine.GlobalContext, input, interaction);
-                    engine.SetService(CoreServiceKeys.SelectionInputHandler, selectionInput);
-                    engine.GlobalContext[CoreServiceKeys.SelectionInputHandler.Name] = selectionInput;
-                }
-            }
-
             var selectionRules = (SelectionRuleRegistry)engine.GlobalContext[CoreServiceKeys.SelectionRuleRegistry.Name];
-            var selection = new SelectionCommandSystem(engine.World, engine.GlobalContext);
-            selection.OnPointSelectionApplied = (worldCm, entity) =>
+
+            var clickSelect = new EntityClickSelectSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
+            clickSelect.OnEntitySelected = (worldCm, entity) =>
             {
-                for (int i = 0; i < selectionCallbacks.Count; i++)
-                {
-                    selectionCallbacks[i](worldCm, entity);
-                }
+                foreach (var cb in selectionCallbacks) cb(worldCm, entity);
             };
-            engine.RegisterSystem(selection, SystemGroup.InputCollection);
+            engine.RegisterSystem(clickSelect, SystemGroup.InputCollection);
 
             var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries, selectionRules);
             gasSelection.OnSelectionTriggered = (req, worldCm) =>
@@ -121,11 +81,11 @@ namespace CoreInputMod.Triggers
             engine.RegisterPresentationSystem(new SkillBarOverlaySystem(engine.World, engine.GlobalContext));
             engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext, engine.SpatialQueries), SystemGroup.InputCollection);
 
-            var vmManager = new ViewModeManager(engine.GlobalContext, engine.GameSession.Camera);
+            var vmManager = new ViewModeManager(engine.World, engine.GlobalContext, engine.GameSession.Camera);
             engine.GlobalContext[ViewModeManager.GlobalKey] = vmManager;
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
 
-            _ctx.Log("[CoreInputMod] SelectionCommand, GasSelectionResponse, GasInputResponse, SkillBar, TabTarget, ViewMode registered");
+            _ctx.Log("[CoreInputMod] EntityClickSelect, GasSelectionResponse, GasInputResponse, SkillBar, TabTarget, ViewMode registered");
             return Task.CompletedTask;
         }
     }

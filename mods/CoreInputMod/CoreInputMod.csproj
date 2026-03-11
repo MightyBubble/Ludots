@@ -6,6 +6,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Ludots.Core.csproj" />
-    <ProjectReference Include="..\..\src\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
   </ItemGroup>
 </Project>

@@ -24,6 +24,7 @@
     "pitch": 12,
     "distanceCm": 480,
     "fovYDeg": 58,
+    "followTargetKind": "SelectedEntity",
     "defaultBlendDuration": 0.2,
     "blendCurve": "Linear",
     "allowUserInput": false

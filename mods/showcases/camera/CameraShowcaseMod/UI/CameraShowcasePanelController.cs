@@ -1,10 +1,6 @@
-using System;
-using System.Text;
-using Arch.Core;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -41,16 +37,12 @@ namespace CameraShowcaseMod.UI
             string activeMode = engine.GlobalContext.TryGetValue(ViewModeManager.ActiveModeIdKey, out var modeObj) && modeObj is string modeId
                 ? modeId
                 : "map-default";
-            string activeCamera = engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId ?? "none";
-            string selectedIds = ResolveSelectedEntityIds(engine);
 
             return Ui.Card(
                 Ui.Text("Camera Showcase").FontSize(22f).Bold().Color("#F7FAFF"),
                 Ui.Text(CameraShowcaseIds.DescribeMap(mapId)).FontSize(14f).Color("#D0D8E6").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Map: {mapId}").FontSize(13f).Color("#8EA2BD"),
-                Ui.Text($"Camera: {activeCamera}").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text($"Mode: {activeMode}").FontSize(13f).Color("#8EA2BD"),
-                Ui.Text($"Selected IDs: {selectedIds}").FontSize(13f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text("Maps").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
                     BuildMapButton("Hub", mapId == CameraShowcaseIds.HubMapId, ctx => LoadShowcaseMap(engine, CameraShowcaseIds.HubMapId)),
@@ -63,7 +55,7 @@ namespace CameraShowcaseMod.UI
                     BuildActionButton("Tactical", activeMode == CameraShowcaseIds.TacticalModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.TacticalModeId)),
                     BuildActionButton("Follow", activeMode == CameraShowcaseIds.FollowModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.FollowModeId)),
                     BuildActionButton("Inspect", activeMode == CameraShowcaseIds.InspectModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.InspectModeId)),
-                    BuildActionButton("Track", activeMode == CameraShowcaseIds.TrackModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.TrackModeId))
+                    BuildActionButton("Selection", activeMode == CameraShowcaseIds.SelectionModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.SelectionModeId))
                 ).Wrap().Gap(8f),
                 Ui.Text("Runtime").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
@@ -72,8 +64,8 @@ namespace CameraShowcaseMod.UI
                     BuildActionButton("Tighten", false, ctx => TightenActiveCameraPose(engine)),
                     BuildActionButton("Reset", false, ctx => ResetActiveCameraPose(engine))
                 ).Wrap().Gap(8f),
-                Ui.Text("Keyboard: F1/F2/F3 shared modes, F4 track mode, Tab cycles selection target.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
-            ).Width(460f)
+                Ui.Text("Keyboard: F1/F2/F3 shared modes, F4 selection mode, Tab cycles selection target.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
+            ).Width(440f)
              .Padding(16f)
              .Gap(10f)
              .Radius(18f)
@@ -82,7 +74,7 @@ namespace CameraShowcaseMod.UI
              .ZIndex(20);
         }
 
-        private static UiElementBuilder BuildMapButton(string label, bool active, Action<UiActionContext> onClick)
+        private static UiElementBuilder BuildMapButton(string label, bool active, System.Action<UiActionContext> onClick)
         {
             return Ui.Button(label, onClick)
                 .Padding(10f, 8f)
@@ -91,7 +83,7 @@ namespace CameraShowcaseMod.UI
                 .Color(active ? "#F7FAFF" : "#C7D3E1");
         }
 
-        private static UiElementBuilder BuildActionButton(string label, bool active, Action<UiActionContext> onClick)
+        private static UiElementBuilder BuildActionButton(string label, bool active, System.Action<UiActionContext> onClick)
         {
             return Ui.Button(label, onClick)
                 .Padding(10f, 8f)
@@ -103,7 +95,7 @@ namespace CameraShowcaseMod.UI
         private static void LoadShowcaseMap(GameEngine engine, string mapId)
         {
             string? currentMapId = engine.CurrentMapSession?.MapId.Value;
-            if (string.Equals(currentMapId, mapId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(currentMapId, mapId, System.StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -190,33 +182,11 @@ namespace CameraShowcaseMod.UI
             return registry.TryGet(activeCameraId, out definition!);
         }
 
-        private static string ResolveSelectedEntityIds(GameEngine engine)
+        private static SkiaSharp.SKColor ParseColor(string color)
         {
-            if (!SelectionRuntime.TryGetSelectionBuffer(engine.World, engine.GlobalContext, out var selection) || selection.Count <= 0)
-            {
-                return "none";
-            }
-
-            var builder = new StringBuilder();
-            int written = 0;
-            for (int i = 0; i < selection.Count; i++)
-            {
-                var entity = selection.Get(i);
-                if (!engine.World.IsAlive(entity))
-                {
-                    continue;
-                }
-
-                if (written > 0)
-                {
-                    builder.Append(", ");
-                }
-
-                builder.Append(entity.Id);
-                written++;
-            }
-
-            return written > 0 ? builder.ToString() : "none";
+            return SkiaSharp.SKColor.TryParse(color, out var parsed)
+                ? parsed
+                : SkiaSharp.SKColors.White;
         }
     }
 }

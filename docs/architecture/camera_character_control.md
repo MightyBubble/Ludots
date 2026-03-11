@@ -97,7 +97,7 @@ PlayerInputHandler.Update()
 - 机位：`Yaw` / `Pitch` / `DistanceCm` / `FovYDeg`
 - rig：`RigKind`
 - 输入映射：`MoveActionId` / `ZoomActionId` / `Rotate*ActionId`
-- 跟随：`FollowMode` + 上层显式 `ICameraFollowTarget` 绑定
+- 跟随：`FollowMode` / `FollowTargetKind`
 - 过渡：`DefaultBlendDuration` / `BlendCurve`
 - 权限：`AllowUserInput`
 
