@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Ludots.Launcher.Backend;
+using Ludots.Launcher.Evidence;
 
 var repoRoot = LauncherService.FindRepoRoot(AppDomain.CurrentDomain.BaseDirectory);
 var service = new LauncherService(repoRoot);
@@ -28,6 +29,11 @@ try
         case "launch":
         {
             var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
+            if (!string.IsNullOrWhiteSpace(command.RecordDirectory))
+            {
+                return await RunRecordedLaunchAsync(service, repoRoot, selectors, ResolveRequestedAdapter(service, command), command, args);
+            }
+
             var result = await service.LaunchAsync(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
             if (!result.Ok)
             {
@@ -270,6 +276,46 @@ static int PrintBuildResults(IReadOnlyList<LauncherBuildResult> results)
     return failed ? 1 : 0;
 }
 
+static async Task<int> RunRecordedLaunchAsync(
+    LauncherService service,
+    string repoRoot,
+    IReadOnlyList<string> selectors,
+    string adapterId,
+    CliCommand command,
+    string[] rawArgs)
+{
+    var resolveResult = service.Resolve(selectors, adapterId, command.BuildMode);
+    var buildResults = await service.BuildAsync(selectors, adapterId, command.BuildMode);
+    int buildExitCode = PrintBuildResults(buildResults);
+    if (buildExitCode != 0)
+    {
+        return buildExitCode;
+    }
+
+    var appBuild = await service.BuildAppAsync(resolveResult.Plan.AdapterId);
+    Console.WriteLine(appBuild.Output);
+    if (!appBuild.Ok)
+    {
+        return appBuild.ExitCode;
+    }
+
+    string bootstrapPath = service.WriteBootstrap(selectors, resolveResult.Plan.AdapterId, command.BuildMode);
+    string outputDirectory = ResolveOutputPath(repoRoot, command.RecordDirectory!);
+    var recording = await LauncherEvidenceRecorder.RecordAsync(new LauncherRecordingRequest(
+        repoRoot,
+        resolveResult.Plan,
+        bootstrapPath,
+        outputDirectory,
+        $".\\scripts\\run-mod-launcher.cmd cli {string.Join(' ', rawArgs)}"));
+
+    Console.WriteLine($"adapter={resolveResult.Plan.AdapterId}");
+    Console.WriteLine($"bootstrap={bootstrapPath}");
+    Console.WriteLine($"recording={recording.OutputDirectory}");
+    Console.WriteLine($"summary={recording.SummaryPath}");
+    Console.WriteLine($"signature={recording.NormalizedSignature}");
+    return 0;
+}
+
 static void PrintResolveResult(LauncherResolveResult result, bool asJson)
 {
     if (asJson)
@@ -411,6 +457,16 @@ static string NormalizeBindingName(string? raw)
     return string.IsNullOrWhiteSpace(raw) ? string.Empty : raw.Trim().TrimStart('$');
 }
 
+static string ResolveOutputPath(string repoRoot, string raw)
+{
+    if (Path.IsPathRooted(raw))
+    {
+        return Path.GetFullPath(raw);
+    }
+
+    return Path.GetFullPath(Path.Combine(repoRoot, raw));
+}
+
 static void PrintHelp()
 {
     Console.WriteLine("""
@@ -421,7 +477,7 @@ Commands
   resolve [selectors...] [--adapter raylib|web] [--build auto|always|never] [--json]
   build [selectors...] [--adapter raylib|web] [--build auto|always|never]
   build app [--adapter raylib|web]
-  launch [selectors...] [--adapter raylib|web] [--build auto|always|never]
+  launch [selectors...] [--adapter raylib|web] [--build auto|always|never] [--record <artifactDir>]
   adapter list
   adapter select --adapter raylib|web
   workspace list
@@ -448,6 +504,7 @@ Selectors
 Examples
   .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
   .\scripts\run-mod-launcher.cmd cli launch nav_playground --adapter web
+  .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib --record artifacts/acceptance/launcher-camera-acceptance-raylib
   .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance --path mods/fixtures/camera/CameraAcceptanceMod
   .\scripts\run-mod-launcher.cmd cli preset save --name camera-web camera_acceptance --adapter web
 """);
@@ -463,6 +520,7 @@ internal sealed class CliCommand
     public string? Template { get; private set; }
     public string? DirectoryPath { get; private set; }
     public string? ProjectPath { get; private set; }
+    public string? RecordDirectory { get; private set; }
     public string? BindingTargetType { get; private set; }
     public string? BindingTargetValue { get; private set; }
     public LauncherBuildMode BuildMode { get; private set; } = LauncherBuildMode.Auto;
@@ -474,10 +532,12 @@ internal sealed class CliCommand
 
     public static CliCommand Parse(string[] args)
     {
+        string primary = args.Length > 0 ? args[0].ToLowerInvariant() : string.Empty;
+        string secondary = ResolveSecondary(primary, args);
         var command = new CliCommand
         {
-            Primary = args.Length > 0 ? args[0].ToLowerInvariant() : string.Empty,
-            Secondary = args.Length > 1 && !args[1].StartsWith("--", StringComparison.Ordinal) ? args[1].ToLowerInvariant() : string.Empty
+            Primary = primary,
+            Secondary = secondary
         };
 
         var index = string.IsNullOrWhiteSpace(command.Secondary) ? 1 : 2;
@@ -503,6 +563,9 @@ internal sealed class CliCommand
                     break;
                 case "--project" when index + 1 < args.Length:
                     command.ProjectPath = args[++index].Trim();
+                    break;
+                case "--record" when index + 1 < args.Length:
+                    command.RecordDirectory = args[++index].Trim();
                     break;
                 case "--target-type" when index + 1 < args.Length:
                     command.BindingTargetType = args[++index].Trim();
@@ -532,6 +595,33 @@ internal sealed class CliCommand
         }
 
         return command;
+    }
+
+    private static string ResolveSecondary(string primary, string[] args)
+    {
+        if (args.Length < 2 || args[1].StartsWith("--", StringComparison.Ordinal))
+        {
+            return string.Empty;
+        }
+
+        string candidate = args[1].ToLowerInvariant();
+        return IsKnownSecondary(primary, candidate) ? candidate : string.Empty;
+    }
+
+    private static bool IsKnownSecondary(string primary, string secondary)
+    {
+        return primary switch
+        {
+            "mods" => secondary is "list",
+            "build" => secondary is "app",
+            "adapter" => secondary is "list" or "select",
+            "workspace" => secondary is "list" or "add",
+            "binding" => secondary is "list" or "set" or "delete",
+            "preset" => secondary is "list" or "save" or "select" or "delete",
+            "sdk" => secondary is "export",
+            "mod" => secondary is "create" or "fix-project" or "solution",
+            _ => false
+        };
     }
 
     private static LauncherBuildMode ParseBuildMode(string raw)

@@ -8,5 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
+    <ProjectReference Include="..\Ludots.Launcher.Evidence\Ludots.Launcher.Evidence.csproj" />
   </ItemGroup>
 </Project>

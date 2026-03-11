@@ -7,16 +7,20 @@ namespace Ludots.Adapter.Raylib.Services
     public sealed class RaylibScreenRayProvider : IScreenRayProvider
     {
         private readonly RaylibCameraAdapter _camera;
+        private readonly int? _fixedWidth;
+        private readonly int? _fixedHeight;
 
-        public RaylibScreenRayProvider(RaylibCameraAdapter camera)
+        public RaylibScreenRayProvider(RaylibCameraAdapter camera, int? fixedWidth = null, int? fixedHeight = null)
         {
             _camera = camera;
+            _fixedWidth = fixedWidth;
+            _fixedHeight = fixedHeight;
         }
 
         public ScreenRay GetRay(Vector2 screenPosition)
         {
-            int w = Rl.GetScreenWidth();
-            int h = Rl.GetScreenHeight();
+            int w = _fixedWidth ?? Rl.GetScreenWidth();
+            int h = _fixedHeight ?? Rl.GetScreenHeight();
             if (w <= 0 || h <= 0)
             {
                 return new ScreenRay(Vector3.Zero, Vector3.UnitZ);
