@@ -3,7 +3,7 @@ import { Folder, Plus, X } from "lucide-react";
 import { useLauncherStore } from "@/stores/launcherStore";
 
 export function WorkspacePanel() {
-  const { workspaceSources, toggleWorkspace, addSource } = useLauncherStore();
+  const { workspaceSources, bindings, toggleWorkspace, addSource } = useLauncherStore();
   const [newPath, setNewPath] = useState("");
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
@@ -43,6 +43,22 @@ export function WorkspacePanel() {
             <span className="truncate font-mono">{source}</span>
           </div>
         ))}
+      </div>
+
+      <div className="mb-3">
+        <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">Bindings</h4>
+        <div className="space-y-1">
+          {bindings.map((binding) => (
+            <div key={binding.name} className="rounded-lg border border-bg-border/70 bg-bg px-3 py-2 text-[11px] text-gray-400">
+              <div className="font-mono text-gray-200">${binding.name}</div>
+              <div className="truncate">
+                {binding.targetType}:{binding.targetValue}
+              </div>
+              {binding.projectPath ? <div className="truncate text-gray-500">project: {binding.projectPath}</div> : null}
+            </div>
+          ))}
+          {bindings.length === 0 ? <div className="text-[11px] text-gray-500">No explicit bindings configured.</div> : null}
+        </div>
       </div>
 
       <div className="flex gap-2">

@@ -18,6 +18,7 @@ import {
   selectPlatform,
   selectPreset,
   type BuildResult,
+  type LauncherBindingInfo,
   type LauncherPreset,
   type LauncherStateSnapshot,
   type ModInfo,
@@ -34,6 +35,7 @@ interface LauncherState {
   presets: LauncherPreset[];
   selectedPlatformId: string;
   selectedPresetId: string | null;
+  bindings: LauncherBindingInfo[];
   selectedModId: string | null;
   activeMods: Set<string>;
   presetDirty: boolean;
@@ -245,6 +247,7 @@ export const useLauncherStore = create<LauncherState>((set, get) => {
         presets: state.presets,
         selectedPresetId: state.selectedPresetId,
         workspaceSources: state.workspaceSources,
+        bindings: state.bindings,
         activeMods: nextActiveMods,
         presetDirty,
         selectedModId: pickSelectedModId(current.selectedModId, mods),
@@ -286,6 +289,7 @@ export const useLauncherStore = create<LauncherState>((set, get) => {
     presets: [],
     selectedPlatformId: "raylib",
     selectedPresetId: null,
+    bindings: [],
     selectedModId: null,
     activeMods: new Set<string>(),
     presetDirty: false,

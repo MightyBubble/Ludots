@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "presets": [
+    {
+      "id": "camera_acceptance_raylib",
+      "name": "Camera Acceptance Raylib",
+      "selectors": [
+        "$camera_acceptance"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "camera_acceptance_web",
+      "name": "Camera Acceptance Web",
+      "selectors": [
+        "$camera_acceptance"
+      ],
+      "adapterId": "web",
+      "buildMode": "auto"
+    },
+    {
+      "id": "nav_playground_raylib",
+      "name": "Navigation Playground Raylib",
+      "selectors": [
+        "$nav_playground"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "nav_playground_web",
+      "name": "Navigation Playground Web",
+      "selectors": [
+        "$nav_playground"
+      ],
+      "adapterId": "web",
+      "buildMode": "auto"
+    }
+  ]
+}

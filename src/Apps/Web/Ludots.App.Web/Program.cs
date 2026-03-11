@@ -7,7 +7,7 @@ builder.WebHost.UseUrls("http://0.0.0.0:5200");
 var app = builder.Build();
 
 var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-var configFile = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]) ? args[0] : "game.json";
+var configFile = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]) ? args[0] : "launcher.runtime.json";
 var gameHost = new WebGameHost(baseDir, configFile);
 var setup = gameHost.Setup;
 

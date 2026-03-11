@@ -59,7 +59,7 @@ public sealed class LauncherService
             LauncherWorkspaceSourceResolver.ResolveSources(_repoRoot, config),
             config.Bindings
                 .OrderBy(binding => binding.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(binding => new LauncherBindingInfo(binding.Name, binding.Target.Type, binding.Target.Value))
+                .Select(binding => new LauncherBindingInfo(binding.Name, binding.Target.Type, binding.Target.Value, binding.Target.ProjectPath))
                 .ToList());
     }
 
@@ -162,6 +162,22 @@ public sealed class LauncherService
 
     public LauncherPreset SavePreset(string? presetId, string name, IEnumerable<string> activeModIds, bool includeDependencies, bool selectAfterSave)
     {
+        var selectors = activeModIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
+            .Select(id => $"mod:{id}");
+        return SavePresetSelectors(presetId, name, selectors, adapterId: null, LauncherBuildMode.Auto, selectAfterSave);
+    }
+
+    public LauncherPreset SavePresetSelectors(
+        string? presetId,
+        string name,
+        IEnumerable<string> selectors,
+        string? adapterId,
+        LauncherBuildMode buildMode,
+        bool selectAfterSave)
+    {
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new ArgumentException("Preset name is required.", nameof(name));
@@ -169,18 +185,25 @@ public sealed class LauncherService
 
         var presetDocument = LoadPresets();
         var resolvedPresetId = string.IsNullOrWhiteSpace(presetId) ? CreateStableId("preset", name) : presetId.Trim();
+        var selectorList = selectors
+            .Where(selector => !string.IsNullOrWhiteSpace(selector))
+            .Select(selector => selector.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(selector => selector, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (selectorList.Count == 0)
+        {
+            throw new InvalidOperationException("At least one selector is required to save a preset.");
+        }
+
         presetDocument.Presets.RemoveAll(item => string.Equals(item.Id, resolvedPresetId, StringComparison.OrdinalIgnoreCase));
         presetDocument.Presets.Add(new LauncherPresetDefinition
         {
             Id = resolvedPresetId,
             Name = name.Trim(),
-            Selectors = activeModIds
-                .Where(id => !string.IsNullOrWhiteSpace(id))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
-                .Select(id => $"mod:{id}")
-                .ToList(),
-            BuildMode = LauncherBuildMode.Auto.ToString().ToLowerInvariant()
+            Selectors = selectorList,
+            AdapterId = string.IsNullOrWhiteSpace(adapterId) ? null : adapterId.Trim().ToLowerInvariant(),
+            BuildMode = buildMode.ToString().ToLowerInvariant()
         });
         SavePresets(presetDocument);
 
@@ -237,9 +260,21 @@ public sealed class LauncherService
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => $"mod:{id}")
             .ToList();
+        return await BuildAsync(selectors, null, LauncherBuildMode.Always, CancellationToken.None);
+    }
+
+    public async Task<IReadOnlyList<LauncherBuildResult>> BuildAsync(
+        IEnumerable<string> selectors,
+        string? adapterId = null,
+        LauncherBuildMode buildMode = LauncherBuildMode.Always,
+        CancellationToken ct = default)
+    {
+        var resolvedSelectors = selectors
+            .Where(selector => !string.IsNullOrWhiteSpace(selector))
+            .ToList();
         var config = LoadConfig();
-        var resolveResult = ResolvePlan(selectors, null, LauncherBuildMode.Always, config, BuildCatalog(config), LoadPresets());
-        return await BuildPlannedModsAsync(resolveResult.Plan, config, CancellationToken.None);
+        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
+        return await BuildPlannedModsAsync(resolveResult.Plan, config, ct);
     }
 
     public async Task<LauncherBuildResult> BuildAppAsync(string platformId)
@@ -283,9 +318,7 @@ public sealed class LauncherService
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => $"mod:{id}")
             .ToList();
-        var config = LoadConfig();
-        var resolveResult = ResolvePlan(selectors, platformId, LauncherBuildMode.Never, config, BuildCatalog(config), LoadPresets());
-        return WriteRuntimeBootstrap(resolveResult.Plan);
+        return WriteBootstrap(selectors, platformId);
     }
 
     public async Task<LauncherLaunchResult> LaunchAsync(string platformId, IEnumerable<string> modIds)
@@ -294,8 +327,32 @@ public sealed class LauncherService
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => $"mod:{id}")
             .ToList();
+        return await LaunchAsync(selectors, platformId, LauncherBuildMode.Auto);
+    }
+
+    public string WriteBootstrap(
+        IEnumerable<string> selectors,
+        string? adapterId = null,
+        LauncherBuildMode buildMode = LauncherBuildMode.Never)
+    {
+        var resolvedSelectors = selectors
+            .Where(selector => !string.IsNullOrWhiteSpace(selector))
+            .ToList();
         var config = LoadConfig();
-        var resolveResult = ResolvePlan(selectors, platformId, LauncherBuildMode.Auto, config, BuildCatalog(config), LoadPresets());
+        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
+        return WriteRuntimeBootstrap(resolveResult.Plan);
+    }
+
+    public async Task<LauncherLaunchResult> LaunchAsync(
+        IEnumerable<string> selectors,
+        string? adapterId = null,
+        LauncherBuildMode buildMode = LauncherBuildMode.Auto)
+    {
+        var resolvedSelectors = selectors
+            .Where(selector => !string.IsNullOrWhiteSpace(selector))
+            .ToList();
+        var config = LoadConfig();
+        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
         var buildResults = await BuildPlannedModsAsync(resolveResult.Plan, config, CancellationToken.None);
         var failedModBuild = buildResults.FirstOrDefault(result => !result.Ok);
         if (failedModBuild != null)
@@ -896,10 +953,24 @@ public sealed class LauncherService
         CancellationToken ct)
     {
         var catalog = BuildCatalog(config);
+        var sources = LauncherWorkspaceSourceResolver.ResolveSources(_repoRoot, config);
         var plannedEntries = plan.Mods
-            .Select(mod => catalog.ByRootPath.TryGetValue(mod.RootPath, out var entry)
-                ? entry
-                : throw new InvalidOperationException($"Catalog entry not found for {mod.RootPath}"))
+            .Select(mod =>
+            {
+                if (catalog.ByRootPath.TryGetValue(mod.RootPath, out var entry))
+                {
+                    return entry;
+                }
+
+                var manifestPath = Path.Combine(mod.RootPath, "mod.json");
+                if (!File.Exists(manifestPath))
+                {
+                    throw new InvalidOperationException($"Catalog entry not found for {mod.RootPath}");
+                }
+
+                var manifest = ModManifestJson.ParseStrict(File.ReadAllText(manifestPath), manifestPath);
+                return CreateCatalogEntry(config, sources, mod.RootPath, manifest);
+            })
             .ToList();
 
         if (plannedEntries.Any(entry => entry.Info.Kind == LauncherModKind.BuildableSource))

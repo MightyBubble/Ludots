@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Ludots.Launcher.Backend;
 
 var repoRoot = LauncherService.FindRepoRoot(AppDomain.CurrentDomain.BaseDirectory);
@@ -8,86 +9,35 @@ try
 {
     switch (command.Primary)
     {
-        case "presets" when command.Secondary == "list":
+        case "":
+        case "help":
+        case "--help":
+        case "-h":
+            PrintHelp();
+            return 0;
+        case "catalog":
+        case "mods" when command.Secondary == "list":
+            return PrintCatalog(service.DiscoverMods());
+        case "resolve":
         {
-            var state = service.GetState();
-            Console.WriteLine($"{"Id",-20} {"Name",-28} {"Mods",5}");
-            Console.WriteLine(new string('-', 60));
-            foreach (var preset in state.Presets)
-            {
-                Console.WriteLine($"{preset.Id,-20} {preset.Name,-28} {preset.ActiveModIds.Count,5}");
-            }
-
-            Console.WriteLine();
-            Console.WriteLine($"Selected preset: {state.SelectedPresetId ?? "(none)"}");
+            var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
+            var result = service.Resolve(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
+            PrintResolveResult(result, command.Json);
             return 0;
         }
-        case "presets" when command.Secondary == "save":
+        case "launch":
         {
-            if (string.IsNullOrWhiteSpace(command.Name))
-            {
-                throw new InvalidOperationException("--name is required for 'presets save'.");
-            }
-
-            var preset = service.SavePreset(command.PresetId, command.Name, ResolveRequestedMods(service, command), includeDependencies: true, selectAfterSave: true);
-            Console.WriteLine($"Saved preset {preset.Id} ({preset.Name}).");
-            return 0;
-        }
-        case "presets" when command.Secondary == "delete":
-        {
-            if (string.IsNullOrWhiteSpace(command.PresetId))
-            {
-                throw new InvalidOperationException("--preset is required for 'presets delete'.");
-            }
-
-            service.DeletePreset(command.PresetId);
-            Console.WriteLine($"Deleted preset {command.PresetId}.");
-            return 0;
-        }
-        case "presets" when command.Secondary == "select":
-        {
-            service.SelectPreset(command.PresetId);
-            Console.WriteLine($"Selected preset: {command.PresetId ?? "(custom)"}");
-            return 0;
-        }
-        case "mods" when command.Secondary == "build":
-        {
-            var results = await service.BuildModsAsync(ResolveRequestedMods(service, command));
-            return PrintBuildResults(results);
-        }
-        case "mod" when command.Secondary == "fix-project":
-        {
-            if (string.IsNullOrWhiteSpace(command.ModIds.FirstOrDefault()))
-            {
-                throw new InvalidOperationException("--mod is required for 'mod fix-project'.");
-            }
-
-            var path = service.FixModProject(command.ModIds[0]);
-            Console.WriteLine(path);
-            return 0;
-        }
-        case "app" when command.Secondary == "build":
-        {
-            var result = await service.BuildAppAsync(command.PlatformId);
-            Console.WriteLine(result.Output);
-            return result.Ok ? 0 : result.ExitCode;
-        }
-        case "gamejson" when command.Secondary == "write":
-        {
-            var path = service.WriteGameJson(command.PlatformId, ResolveRequestedMods(service, command));
-            Console.WriteLine(path);
-            return 0;
-        }
-        case "run":
-        {
-            var result = await service.LaunchAsync(command.PlatformId, ResolveRequestedMods(service, command));
+            var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
+            var result = await service.LaunchAsync(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
             if (!result.Ok)
             {
                 Console.Error.WriteLine(result.Error);
                 return 1;
             }
 
-            Console.WriteLine($"Started pid={result.Pid}");
+            Console.WriteLine($"adapter={result.Plan?.AdapterId ?? ResolveRequestedAdapter(service, command)}");
+            Console.WriteLine($"pid={result.Pid}");
+            Console.WriteLine($"bootstrap={result.BootstrapPath}");
             if (!string.IsNullOrWhiteSpace(result.Url))
             {
                 Console.WriteLine(result.Url);
@@ -95,8 +45,190 @@ try
 
             return 0;
         }
+        case "build" when command.Secondary == "app":
+        {
+            var result = await service.BuildAppAsync(ResolveRequestedAdapter(service, command));
+            Console.WriteLine(result.Output);
+            return result.Ok ? 0 : result.ExitCode;
+        }
+        case "build":
+        {
+            var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
+            var results = await service.BuildAsync(selectors, ResolveRequestedAdapter(service, command), command.BuildMode);
+            return PrintBuildResults(results);
+        }
+        case "adapter" when command.Secondary == "list":
+        {
+            var state = service.GetState();
+            foreach (var platform in state.Platforms)
+            {
+                var selected = string.Equals(platform.Id, state.SelectedPlatformId, StringComparison.OrdinalIgnoreCase) ? "*" : " ";
+                Console.WriteLine($"{selected} {platform.Id,-8} {platform.Name}");
+            }
+
+            return 0;
+        }
+        case "adapter" when command.Secondary == "select":
+        {
+            var state = service.SelectPlatform(ResolveRequiredAdapter(command));
+            Console.WriteLine(state.SelectedPlatformId);
+            return 0;
+        }
+        case "workspace" when command.Secondary == "list":
+        {
+            foreach (var source in service.GetWorkspaceSources())
+            {
+                Console.WriteLine(source);
+            }
+
+            return 0;
+        }
+        case "workspace" when command.Secondary == "add":
+        {
+            var path = command.PathValues.FirstOrDefault() ?? command.Operands.FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new InvalidOperationException("workspace add requires a mod root path.");
+            }
+
+            var state = service.AddWorkspaceSource(path);
+            foreach (var source in state.WorkspaceSources)
+            {
+                Console.WriteLine(source);
+            }
+
+            return 0;
+        }
+        case "binding" when command.Secondary == "list":
+        {
+            var state = service.GetState();
+            foreach (var binding in state.Bindings)
+            {
+                var projectSuffix = string.IsNullOrWhiteSpace(binding.ProjectPath) ? string.Empty : $" (project={binding.ProjectPath})";
+                Console.WriteLine($"${binding.Name} -> {binding.TargetType}:{binding.TargetValue}{projectSuffix}");
+            }
+
+            return 0;
+        }
+        case "binding" when command.Secondary == "set":
+        {
+            var bindingName = NormalizeBindingName(command.Name ?? command.Operands.FirstOrDefault());
+            if (string.IsNullOrWhiteSpace(bindingName))
+            {
+                throw new InvalidOperationException("binding set requires a binding name.");
+            }
+
+            var inferredTarget = ResolveBindingTarget(command, bindingName);
+            service.UpsertBinding(bindingName, inferredTarget.TargetType, inferredTarget.TargetValue, inferredTarget.ProjectPath);
+            Console.WriteLine($"${bindingName} -> {inferredTarget.TargetType}:{inferredTarget.TargetValue}");
+            return 0;
+        }
+        case "binding" when command.Secondary == "delete":
+        {
+            var bindingName = NormalizeBindingName(command.Name ?? command.Operands.FirstOrDefault());
+            if (string.IsNullOrWhiteSpace(bindingName))
+            {
+                throw new InvalidOperationException("binding delete requires a binding name.");
+            }
+
+            service.DeleteBinding(bindingName);
+            Console.WriteLine($"deleted ${bindingName}");
+            return 0;
+        }
+        case "preset" when command.Secondary == "list":
+        {
+            var state = service.GetState();
+            Console.WriteLine($"{"Id",-24} {"Adapter",-8} {"Name",-28} Selectors");
+            Console.WriteLine(new string('-', 96));
+            foreach (var preset in state.Presets)
+            {
+                Console.WriteLine($"{preset.Id,-24} {preset.AdapterId,-8} {preset.Name,-28} {string.Join(", ", preset.Selectors)}");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"selected={state.SelectedPresetId ?? "(none)"}");
+            return 0;
+        }
+        case "preset" when command.Secondary == "save":
+        {
+            if (string.IsNullOrWhiteSpace(command.Name))
+            {
+                throw new InvalidOperationException("preset save requires --name.");
+            }
+
+            var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: false);
+            var preset = service.SavePresetSelectors(
+                command.PresetId,
+                command.Name,
+                selectors,
+                command.AdapterId,
+                command.BuildMode,
+                selectAfterSave: true);
+            Console.WriteLine($"{preset.Id} {preset.Name}");
+            return 0;
+        }
+        case "preset" when command.Secondary == "select":
+        {
+            var presetId = command.PresetId ?? command.Operands.FirstOrDefault();
+            var state = service.SelectPreset(presetId);
+            Console.WriteLine(state.SelectedPresetId ?? "(none)");
+            return 0;
+        }
+        case "preset" when command.Secondary == "delete":
+        {
+            var presetId = command.PresetId ?? command.Operands.FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(presetId))
+            {
+                throw new InvalidOperationException("preset delete requires a preset id.");
+            }
+
+            service.DeletePreset(presetId);
+            Console.WriteLine($"deleted {presetId}");
+            return 0;
+        }
+        case "sdk" when command.Secondary == "export":
+        {
+            var path = await service.ExportSdkAsync();
+            Console.WriteLine(path);
+            return 0;
+        }
+        case "mod" when command.Secondary == "create":
+        {
+            var modId = command.Name ?? command.Operands.FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(modId))
+            {
+                throw new InvalidOperationException("mod create requires a mod id.");
+            }
+
+            var output = await service.CreateModAsync(modId, command.Template ?? "empty", command.DirectoryPath);
+            Console.WriteLine(output);
+            return 0;
+        }
+        case "mod" when command.Secondary == "fix-project":
+        {
+            var modId = command.Name ?? command.Operands.FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(modId))
+            {
+                throw new InvalidOperationException("mod fix-project requires a mod id.");
+            }
+
+            Console.WriteLine(service.FixModProject(modId));
+            return 0;
+        }
+        case "mod" when command.Secondary == "solution":
+        {
+            var modId = command.Name ?? command.Operands.FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(modId))
+            {
+                throw new InvalidOperationException("mod solution requires a mod id.");
+            }
+
+            Console.WriteLine(await service.GenerateSolutionAsync(modId));
+            return 0;
+        }
         default:
-            Console.Error.WriteLine("Unsupported command.");
+            Console.Error.WriteLine($"Unsupported command: {string.Join(' ', args)}");
+            PrintHelp();
             return 2;
     }
 }
@@ -104,6 +236,18 @@ catch (Exception ex)
 {
     Console.Error.WriteLine(ex.Message);
     return 1;
+}
+
+static int PrintCatalog(IReadOnlyList<LauncherModInfo> mods)
+{
+    Console.WriteLine($"{"Id",-28} {"Kind",-16} {"Build",-10} Root");
+    Console.WriteLine(new string('-', 120));
+    foreach (var mod in mods.OrderBy(item => item.Id, StringComparer.OrdinalIgnoreCase))
+    {
+        Console.WriteLine($"{mod.Id,-28} {mod.Kind,-16} {mod.BuildState,-10} {mod.RootPath}");
+    }
+
+    return 0;
 }
 
 static int PrintBuildResults(IReadOnlyList<LauncherBuildResult> results)
@@ -126,69 +270,276 @@ static int PrintBuildResults(IReadOnlyList<LauncherBuildResult> results)
     return failed ? 1 : 0;
 }
 
-static IReadOnlyList<string> ResolveRequestedMods(LauncherService service, CliCommand command)
+static void PrintResolveResult(LauncherResolveResult result, bool asJson)
 {
-    if (command.ModIds.Count > 0)
+    if (asJson)
     {
-        return command.ModIds;
+        Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+        return;
+    }
+
+    Console.WriteLine($"adapter={result.Plan.AdapterId}");
+    Console.WriteLine($"buildMode={result.Plan.BuildMode}");
+    Console.WriteLine($"selectors={string.Join(", ", result.Plan.Selectors)}");
+    Console.WriteLine($"rootMods={string.Join(", ", result.Plan.RootModIds)}");
+    Console.WriteLine($"orderedMods={string.Join(", ", result.Plan.OrderedModIds)}");
+    Console.WriteLine($"bootstrap={result.Plan.BootstrapArtifactPath}");
+    Console.WriteLine();
+    foreach (var mod in result.Plan.Mods)
+    {
+        var bindings = mod.BindingNames.Count == 0 ? string.Empty : $" bindings=[{string.Join(", ", mod.BindingNames)}]";
+        Console.WriteLine($"- {mod.Id} | {mod.Kind} | {mod.BuildState} | {mod.RootPath}{bindings}");
+    }
+}
+
+static IReadOnlyList<string> ResolveRequestedSelectors(LauncherService service, CliCommand command, bool allowDefaultPreset)
+{
+    var selectors = new List<string>();
+    if (!string.IsNullOrWhiteSpace(command.PresetId))
+    {
+        selectors.Add($"preset:{command.PresetId}");
+    }
+
+    selectors.AddRange(command.SelectorValues.Select(selector => NormalizeSelector(service, selector)));
+    selectors.AddRange(command.ModIds.Select(modId => $"mod:{modId}"));
+    selectors.AddRange(command.PathValues.Select(path => $"path:{path}"));
+
+    foreach (var operand in command.Operands)
+    {
+        selectors.Add(NormalizeSelector(service, operand));
+    }
+
+    if (selectors.Count > 0)
+    {
+        return selectors;
+    }
+
+    if (!allowDefaultPreset)
+    {
+        throw new InvalidOperationException("At least one selector is required.");
+    }
+
+    var selectedPresetId = service.GetState().SelectedPresetId;
+    if (!string.IsNullOrWhiteSpace(selectedPresetId))
+    {
+        return new[] { $"preset:{selectedPresetId}" };
+    }
+
+    throw new InvalidOperationException("No selectors supplied and no preset is currently selected.");
+}
+
+static string NormalizeSelector(LauncherService service, string raw)
+{
+    if (string.IsNullOrWhiteSpace(raw))
+    {
+        return raw;
+    }
+
+    var trimmed = raw.Trim();
+    if (trimmed.StartsWith('$') || trimmed.Contains(':'))
+    {
+        return trimmed;
+    }
+
+    if (Directory.Exists(trimmed) && File.Exists(Path.Combine(trimmed, "mod.json")))
+    {
+        return $"path:{trimmed}";
     }
 
     var state = service.GetState();
-    var presetId = string.IsNullOrWhiteSpace(command.PresetId) ? state.SelectedPresetId : command.PresetId;
-    if (string.IsNullOrWhiteSpace(presetId))
+    if (state.Bindings.Any(binding => string.Equals(binding.Name, trimmed, StringComparison.OrdinalIgnoreCase)))
     {
-        throw new InvalidOperationException("No preset selected and no --mods supplied.");
+        return $"${trimmed}";
     }
 
-    var preset = state.Presets.FirstOrDefault(item => string.Equals(item.Id, presetId, StringComparison.OrdinalIgnoreCase));
-    if (preset == null)
+    return $"mod:{trimmed}";
+}
+
+static string ResolveRequestedAdapter(LauncherService service, CliCommand command)
+{
+    if (!string.IsNullOrWhiteSpace(command.AdapterId))
     {
-        throw new InvalidOperationException($"Preset not found: {presetId}");
+        return command.AdapterId;
     }
 
-    return preset.ActiveModIds;
+    return service.GetState().SelectedPlatformId;
+}
+
+static string ResolveRequiredAdapter(CliCommand command)
+{
+    if (string.IsNullOrWhiteSpace(command.AdapterId))
+    {
+        throw new InvalidOperationException("An adapter id is required.");
+    }
+
+    return command.AdapterId;
+}
+
+static BindingTarget ResolveBindingTarget(CliCommand command, string bindingName)
+{
+    if (!string.IsNullOrWhiteSpace(command.BindingTargetType) && !string.IsNullOrWhiteSpace(command.BindingTargetValue))
+    {
+        return new BindingTarget(command.BindingTargetType, command.BindingTargetValue, command.ProjectPath);
+    }
+
+    if (command.PathValues.Count > 0)
+    {
+        return new BindingTarget("path", command.PathValues[0], command.ProjectPath);
+    }
+
+    if (command.ModIds.Count > 0)
+    {
+        return new BindingTarget("modid", command.ModIds[0], command.ProjectPath);
+    }
+
+    if (command.Operands.Count >= 2)
+    {
+        var rawTarget = command.Operands[1];
+        if (Directory.Exists(rawTarget) && File.Exists(Path.Combine(rawTarget, "mod.json")))
+        {
+            return new BindingTarget("path", rawTarget, command.ProjectPath);
+        }
+
+        return new BindingTarget("modid", rawTarget, command.ProjectPath);
+    }
+
+    throw new InvalidOperationException($"binding set {bindingName} requires --path, --mod, or an explicit target.");
+}
+
+static string NormalizeBindingName(string? raw)
+{
+    return string.IsNullOrWhiteSpace(raw) ? string.Empty : raw.Trim().TrimStart('$');
+}
+
+static void PrintHelp()
+{
+    Console.WriteLine("""
+Ludots launcher CLI
+
+Commands
+  catalog
+  resolve [selectors...] [--adapter raylib|web] [--build auto|always|never] [--json]
+  build [selectors...] [--adapter raylib|web] [--build auto|always|never]
+  build app [--adapter raylib|web]
+  launch [selectors...] [--adapter raylib|web] [--build auto|always|never]
+  adapter list
+  adapter select --adapter raylib|web
+  workspace list
+  workspace add --path <mod-root-parent>
+  binding list
+  binding set <name> (--path <modRoot> | --mod <modId>) [--project <relativeOrAbsoluteCsproj>]
+  binding delete <name>
+  preset list
+  preset save --name <name> [selectors...] [--adapter raylib|web] [--build auto|always|never]
+  preset select <presetId>
+  preset delete <presetId>
+  sdk export
+  mod create <modId> [--template empty|gameplay] [--dir <targetDir>]
+  mod fix-project <modId>
+  mod solution <modId>
+
+Selectors
+  $camera_acceptance
+  camera_acceptance            (binding shorthand for PowerShell)
+  mod:CameraAcceptanceMod
+  path:D:\mods\MyMod
+  preset:camera
+
+Examples
+  .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
+  .\scripts\run-mod-launcher.cmd cli launch nav_playground --adapter web
+  .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance --path mods/fixtures/camera/CameraAcceptanceMod
+  .\scripts\run-mod-launcher.cmd cli preset save --name camera-web camera_acceptance --adapter web
+""");
 }
 
 internal sealed class CliCommand
 {
     public string Primary { get; private set; } = string.Empty;
     public string Secondary { get; private set; } = string.Empty;
-    public string PlatformId { get; private set; } = LauncherPlatformIds.Raylib;
+    public string? AdapterId { get; private set; }
     public string? PresetId { get; private set; }
     public string? Name { get; private set; }
+    public string? Template { get; private set; }
+    public string? DirectoryPath { get; private set; }
+    public string? ProjectPath { get; private set; }
+    public string? BindingTargetType { get; private set; }
+    public string? BindingTargetValue { get; private set; }
+    public LauncherBuildMode BuildMode { get; private set; } = LauncherBuildMode.Auto;
+    public bool Json { get; private set; }
+    public List<string> SelectorValues { get; } = new();
     public List<string> ModIds { get; } = new();
+    public List<string> PathValues { get; } = new();
+    public List<string> Operands { get; } = new();
 
     public static CliCommand Parse(string[] args)
     {
         var command = new CliCommand
         {
             Primary = args.Length > 0 ? args[0].ToLowerInvariant() : string.Empty,
-            Secondary = args.Length > 1 ? args[1].ToLowerInvariant() : string.Empty
+            Secondary = args.Length > 1 && !args[1].StartsWith("--", StringComparison.Ordinal) ? args[1].ToLowerInvariant() : string.Empty
         };
 
-        for (var index = 2; index < args.Length; index++)
+        var index = string.IsNullOrWhiteSpace(command.Secondary) ? 1 : 2;
+        for (; index < args.Length; index++)
         {
             var token = args[index];
             switch (token)
             {
-                case "--platform" when index + 1 < args.Length:
-                    command.PlatformId = args[++index].ToLowerInvariant();
+                case "--adapter" when index + 1 < args.Length:
+                    command.AdapterId = args[++index].Trim().ToLowerInvariant();
                     break;
                 case "--preset" when index + 1 < args.Length:
-                    command.PresetId = args[++index];
+                    command.PresetId = args[++index].Trim();
                     break;
                 case "--name" when index + 1 < args.Length:
-                    command.Name = args[++index];
+                    command.Name = args[++index].Trim();
+                    break;
+                case "--template" when index + 1 < args.Length:
+                    command.Template = args[++index].Trim();
+                    break;
+                case "--dir" when index + 1 < args.Length:
+                    command.DirectoryPath = args[++index].Trim();
+                    break;
+                case "--project" when index + 1 < args.Length:
+                    command.ProjectPath = args[++index].Trim();
+                    break;
+                case "--target-type" when index + 1 < args.Length:
+                    command.BindingTargetType = args[++index].Trim();
+                    break;
+                case "--target" when index + 1 < args.Length:
+                    command.BindingTargetValue = args[++index].Trim();
+                    break;
+                case "--selector" when index + 1 < args.Length:
+                    command.SelectorValues.Add(args[++index].Trim());
                     break;
                 case "--mod" when index + 1 < args.Length:
-                    command.ModIds.Add(args[++index]);
+                    command.ModIds.Add(args[++index].Trim());
                     break;
-                case "--mods" when index + 1 < args.Length:
-                    command.ModIds.AddRange(args[++index].Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                case "--path" when index + 1 < args.Length:
+                    command.PathValues.Add(args[++index].Trim());
+                    break;
+                case "--build" when index + 1 < args.Length:
+                    command.BuildMode = ParseBuildMode(args[++index]);
+                    break;
+                case "--json":
+                    command.Json = true;
+                    break;
+                default:
+                    command.Operands.Add(token);
                     break;
             }
         }
 
         return command;
     }
+
+    private static LauncherBuildMode ParseBuildMode(string raw)
+    {
+        return Enum.TryParse<LauncherBuildMode>(raw, true, out var parsed)
+            ? parsed
+            : throw new InvalidOperationException($"Unsupported build mode: {raw}");
+    }
 }
+
+internal sealed record BindingTarget(string TargetType, string TargetValue, string? ProjectPath);

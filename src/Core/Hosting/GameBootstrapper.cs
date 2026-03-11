@@ -11,7 +11,7 @@ namespace Ludots.Core.Hosting
     public readonly record struct GameBootstrapResult(GameEngine Engine, GameConfig Config, string AssetsRoot);
 
     /// <summary>
-    /// App-level game.json - only contains ModPaths for bootstrap.
+    /// App-level launcher bootstrap - only contains ModPaths for bootstrap.
     /// All actual game configuration comes from ConfigPipeline merge.
     /// </summary>
     public class AppBootstrapConfig
@@ -23,12 +23,12 @@ namespace Ludots.Core.Hosting
     {
         public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory)
         {
-            return InitializeFromBaseDirectory(baseDirectory, "game.json");
+            return InitializeFromBaseDirectory(baseDirectory, "launcher.runtime.json");
         }
 
         /// <summary>
         /// New initialization flow using ConfigPipeline for game.json merge:
-        /// 1. Read App's game.json for ModPaths only
+        /// 1. Read app bootstrap for ModPaths only
         /// 2. Initialize VFS and ModLoader
         /// 3. Use ConfigPipeline to merge all game.json files (Core -> Mods)
         /// 4. Pass merged config to GameEngine
@@ -41,12 +41,12 @@ namespace Ludots.Core.Hosting
             var baseDir = Path.GetFullPath(baseDirectory);
             var assetsRoot = FindAssetsRootStrict(baseDir);
 
-            // Step 1: Read App's game.json for ModPaths only
+            // Step 1: Read the launcher bootstrap for ModPaths only
             string gameJsonPath = Path.IsPathRooted(gameConfigFile)
                 ? Path.GetFullPath(gameConfigFile)
                 : Path.Combine(baseDir, gameConfigFile);
             if (!File.Exists(gameJsonPath))
-                throw new FileNotFoundException($"Missing game.json next to executable: {gameJsonPath}");
+                throw new FileNotFoundException($"Missing launcher bootstrap next to executable: {gameJsonPath}");
 
             AppBootstrapConfig bootstrapConfig;
             try
@@ -56,11 +56,11 @@ namespace Ludots.Core.Hosting
             }
             catch (Exception ex)
             {
-                throw new Exception($"Failed to parse game.json: {ex.Message}", ex);
+                throw new Exception($"Failed to parse launcher bootstrap: {ex.Message}", ex);
             }
 
             if (bootstrapConfig == null)
-                throw new Exception("Failed to parse game.json: deserialized config is null.");
+                throw new Exception("Failed to parse launcher bootstrap: deserialized config is null.");
 
             if (bootstrapConfig.ModPaths == null)
                 bootstrapConfig.ModPaths = new List<string>();
@@ -71,7 +71,7 @@ namespace Ludots.Core.Hosting
             {
                 var raw = bootstrapConfig.ModPaths[i];
                 if (string.IsNullOrWhiteSpace(raw))
-                    throw new Exception($"Invalid game.json: ModPaths[{i}] is empty.");
+                    throw new Exception($"Invalid launcher bootstrap: ModPaths[{i}] is empty.");
 
                 var resolved = Path.IsPathRooted(raw) ? raw : Path.Combine(baseDir, raw);
                 resolved = Path.GetFullPath(resolved);

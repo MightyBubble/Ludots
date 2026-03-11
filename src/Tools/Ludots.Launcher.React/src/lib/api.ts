@@ -22,16 +22,29 @@ export interface ModInfo {
   hasThumbnail: boolean;
   hasReadme: boolean;
   mainAssemblyPath: string;
+  projectPath: string;
   hasProject: boolean;
   buildState: LauncherBuildState;
   lastBuildMessage: string;
+  kind: "ResourceOnly" | "BinaryOnly" | "BuildableSource";
+  bindingNames: string[];
 }
 
 export interface LauncherPreset {
   id: string;
   name: string;
+  selectors: string[];
+  adapterId: string;
+  buildMode: string;
   activeModIds: string[];
   includeDependencies: boolean;
+}
+
+export interface LauncherBindingInfo {
+  name: string;
+  targetType: string;
+  targetValue: string;
+  projectPath: string | null;
 }
 
 export interface PlatformProfile {
@@ -42,6 +55,7 @@ export interface PlatformProfile {
   clientProjectDirectory: string;
   clientDistributionDirectory: string;
   launchUrl: string;
+  runtimeBootstrapFileName: string;
 }
 
 export interface LauncherStateSnapshot {
@@ -50,6 +64,7 @@ export interface LauncherStateSnapshot {
   presets: LauncherPreset[];
   selectedPresetId: string | null;
   workspaceSources: string[];
+  bindings: LauncherBindingInfo[];
 }
 
 export interface LauncherSnapshotResponse {

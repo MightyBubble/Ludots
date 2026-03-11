@@ -73,7 +73,8 @@ public sealed class LauncherPreset
 public sealed record LauncherBindingInfo(
     string Name,
     string TargetType,
-    string TargetValue);
+    string TargetValue,
+    string? ProjectPath);
 
 public sealed record LauncherStateSnapshot(
     IReadOnlyList<LauncherPlatformProfile> Platforms,

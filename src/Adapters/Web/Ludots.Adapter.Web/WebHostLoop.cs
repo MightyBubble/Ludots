@@ -67,7 +67,7 @@ namespace Ludots.Adapter.Web
 
             engine.Start();
             if (string.IsNullOrWhiteSpace(config.StartupMapId))
-                throw new InvalidOperationException("Invalid game.json: 'StartupMapId' cannot be empty.");
+                throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
             engine.LoadMap(config.StartupMapId);
 
             BuildAndSendMeshMap(engine, setup.Transport);

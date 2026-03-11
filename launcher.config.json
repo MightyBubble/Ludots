@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "scanRoots": [
+    {
+      "id": "repo_mods",
+      "path": "mods",
+      "scanMode": "recursive",
+      "enabled": true
+    }
+  ],
+  "bindings": [
+    {
+      "name": "camera_acceptance",
+      "target": {
+        "type": "path",
+        "value": "mods/fixtures/camera/CameraAcceptanceMod",
+        "projectPath": "CameraAcceptanceMod.csproj"
+      }
+    },
+    {
+      "name": "nav_playground",
+      "target": {
+        "type": "path",
+        "value": "mods/Navigation2DPlaygroundMod",
+        "projectPath": "Navigation2DPlaygroundMod.csproj"
+      }
+    }
+  ],
+  "adapters": {
+    "default": "raylib"
+  },
+  "projectHints": []
+}

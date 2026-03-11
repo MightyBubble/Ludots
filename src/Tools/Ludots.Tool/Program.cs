@@ -57,15 +57,18 @@ namespace Ludots.Tool
 
             var graphCommand = new Command("graph", "Compile graph assets");
             var compileGraphsCommand = new Command("compile", "Compile GAS graphs to binary blob");
-            var graphModOption = new Option<string>("--mod", "The mod ID to compile graphs for") { IsRequired = true };
+            var graphModOption = new Option<string?>("--mod", () => null, "The mod ID to compile graphs for");
+            var graphModPathOption = new Option<string?>("--modPath", () => null, "The full mod root path to compile graphs for");
             var assetsRootOption = new Option<string?>("--assetsRoot", () => null, "Assets root (repo root containing 'assets/')");
             compileGraphsCommand.AddOption(graphModOption);
+            compileGraphsCommand.AddOption(graphModPathOption);
             compileGraphsCommand.AddOption(assetsRootOption);
             compileGraphsCommand.SetHandler((InvocationContext ctx) =>
             {
                 var mod = ctx.ParseResult.GetValueForOption(graphModOption);
+                var modPath = ctx.ParseResult.GetValueForOption(graphModPathOption);
                 var assetsRoot = ctx.ParseResult.GetValueForOption(assetsRootOption);
-                ctx.ExitCode = CompileGraphs(mod, assetsRoot);
+                ctx.ExitCode = CompileGraphs(mod, modPath, assetsRoot);
             });
             graphCommand.AddCommand(compileGraphsCommand);
             rootCommand.AddCommand(graphCommand);
@@ -432,7 +435,7 @@ namespace {modId}
             }
         }
 
-        static int CompileGraphs(string modId, string? assetsRoot)
+        static int CompileGraphs(string? modId, string? modPath, string? assetsRoot)
         {
             assetsRoot ??= FindAssetsRoot();
             if (assetsRoot == null)
@@ -441,7 +444,21 @@ namespace {modId}
                 return 1;
             }
 
-            var modDir = Path.Combine(assetsRoot, "mods", modId);
+            string modDir;
+            if (!string.IsNullOrWhiteSpace(modPath))
+            {
+                modDir = Path.GetFullPath(modPath);
+            }
+            else if (!string.IsNullOrWhiteSpace(modId))
+            {
+                modDir = Path.Combine(assetsRoot, "mods", modId);
+            }
+            else
+            {
+                Console.WriteLine("Error: graph compile requires --modPath or --mod.");
+                return 1;
+            }
+
             if (!Directory.Exists(modDir))
             {
                 Console.WriteLine($"Error: Mod directory not found at {modDir}");
@@ -451,7 +468,7 @@ namespace {modId}
             var graphsJsonPath = Path.Combine(modDir, "assets", "Configs", "GAS", "graphs.json");
             if (!File.Exists(graphsJsonPath))
             {
-                Console.WriteLine($"No graphs.json found for mod '{modId}'.");
+                Console.WriteLine($"No graphs.json found for mod '{modDir}'.");
                 return 0;
             }
 
