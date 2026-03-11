@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Ludots.Core.Modding;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests
 {
     internal static class RepoModPaths
     {

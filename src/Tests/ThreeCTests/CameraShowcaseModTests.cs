@@ -13,7 +13,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS.Production
+namespace Ludots.Tests.ThreeC.Acceptance
 {
     [TestFixture]
     public sealed class CameraShowcaseModTests

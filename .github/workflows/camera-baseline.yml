@@ -8,11 +8,11 @@ on:
       - 'mods/LudotsCoreMod/assets/Entities/templates.json'
       - 'mods/VirtualCameraBaselineMod/**'
       - 'src/Core/Engine/GameEngine.cs'
+      - 'src/Core/Config/ComponentRegistry.cs'
       - 'src/Core/Gameplay/Camera/**'
-      - 'src/Tests/GasTests/CameraRuntimeConvergenceTests.cs'
-      - 'src/Tests/GasTests/Production/VirtualCameraBaselineModTests.cs'
-      - 'src/Tests/GasTests/Production/ProductionAllModsValidationTests.cs'
-      - 'src/Tests/GasTests/GasTests.csproj'
+      - 'src/Core/Presentation/Systems/EntityVisualEmitSystem.cs'
+      - 'src/Tests/ThreeCTests/**'
+      - 'src/Tests/PresentationTests/**'
   push:
     branches:
       - main
@@ -22,11 +22,11 @@ on:
       - 'mods/LudotsCoreMod/assets/Entities/templates.json'
       - 'mods/VirtualCameraBaselineMod/**'
       - 'src/Core/Engine/GameEngine.cs'
+      - 'src/Core/Config/ComponentRegistry.cs'
       - 'src/Core/Gameplay/Camera/**'
-      - 'src/Tests/GasTests/CameraRuntimeConvergenceTests.cs'
-      - 'src/Tests/GasTests/Production/VirtualCameraBaselineModTests.cs'
-      - 'src/Tests/GasTests/Production/ProductionAllModsValidationTests.cs'
-      - 'src/Tests/GasTests/GasTests.csproj'
+      - 'src/Core/Presentation/Systems/EntityVisualEmitSystem.cs'
+      - 'src/Tests/ThreeCTests/**'
+      - 'src/Tests/PresentationTests/**'
   workflow_dispatch:
 
 jobs:
@@ -48,7 +48,6 @@ jobs:
 
       - name: Run camera baseline tests
         shell: pwsh
-        run: >
-          dotnet test src/Tests/GasTests/GasTests.csproj
-          --filter "FullyQualifiedName~Ludots.Tests.ThreeC.CameraRuntimeConvergenceTests|FullyQualifiedName~Ludots.Tests.GAS.Production.VirtualCameraBaselineModTests"
-          -v minimal
+        run: |
+          dotnet test src/Tests/ThreeCTests/ThreeCTests.csproj --filter "FullyQualifiedName~Ludots.Tests.ThreeC.CameraRuntimeConvergenceTests" -v minimal
+          dotnet test src/Tests/PresentationTests/PresentationTests.csproj -v minimal

@@ -40,6 +40,7 @@ namespace Ludots.Core.Config
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("AbilityStateBuffer", SetAbilityStateBuffer);
             Register<ForceInput2D>("ForceInput2D");
+            Register<VisualModel>("VisualModel");
             Register<GameplayTagContainer>("GameplayTagContainer");
             Register("OrderBuffer", SetOrderBuffer);
             Register<BlackboardSpatialBuffer>("BlackboardSpatialBuffer");

@@ -475,7 +475,7 @@ namespace Ludots.Core.Engine
             var performerRuntimeSystem = new PerformerRuntimeSystem(World, presentationPrefabs, presentationCommandBuffer, primitiveDrawBuffer, transientMarkerBuffer, performerInstances);
             var performerEmitSystem = new PerformerEmitSystem(World, performerInstances, performerDefinitions, groundOverlayBuffer, primitiveDrawBuffer, worldHudBuffer, graphProgramRegistry, performerGraphApi, GlobalContext,
                 entityColorResolver: (world, entity) => Ludots.Core.Presentation.Utils.TeamColorResolver.Resolve(world, entity));
-            new PerformerDefinitionConfigLoader(ConfigPipeline, performerDefinitions, Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId, meshAssets.GetId).Load();
+            new PerformerDefinitionConfigLoader(ConfigPipeline, performerDefinitions, Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register, meshAssets.GetId).Load();
 
             System.Diagnostics.Debug.Assert(
                 meshAssets.TryGetDescriptor(meshAssets.GetId(WellKnownMeshKeys.Cube), out var _cubeDbg) && _cubeDbg.Type == MeshAssetType.Primitive,
@@ -708,6 +708,7 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new WorldToVisualSyncSystem(World));
             // TerrainHeightSyncSystem: 采样地形高度写入 VisualTransform.Y，使实体贴附地表
             RegisterPresentationSystem(new TerrainHeightSyncSystem(World, GlobalContext));
+            RegisterPresentationSystem(new EntityVisualEmitSystem(World, primitiveDrawBuffer));
             
             RegisterPresentationSystem(new ResponseChainDirectorSystem(World, orderRequestQueue, responseChainTelemetry, responseChainUiState, presentationCommandBuffer, presentationPrefabs));
             RegisterPresentationSystem(new ResponseChainHumanOrderSourceSystem(GlobalContext, responseChainUiState, chainOrderQueue));
@@ -1090,16 +1091,35 @@ namespace Ludots.Core.Engine
             // Use the board's spatial services as engine-level defaults
             WorldSizeSpec = board.WorldSize;
             SpatialCoords = board.CoordinateConverter;
-            _spatialPartition = board.SpatialPartition as ChunkedGridSpatialPartitionWorld ?? _spatialPartition;
-            SpatialQueries = board.QueryService;
+            _spatialPartition = board.SpatialPartition as ChunkedGridSpatialPartitionWorld
+                ?? throw new InvalidOperationException(
+                    $"Board '{board.Name}' exposed unsupported spatial partition '{board.SpatialPartition?.GetType().FullName}'.");
+
+            if (SpatialQueries is not SpatialQueryService sharedSpatialQueries)
+            {
+                throw new InvalidOperationException(
+                    $"Engine SpatialQueries must remain a stable {nameof(SpatialQueryService)} instance during board swaps.");
+            }
+
+            sharedSpatialQueries.SetBackend(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
+            sharedSpatialQueries.SetCoordinateConverter(SpatialCoords);
+            SpatialQueries = sharedSpatialQueries;
             WireUpPositionProvider();
 
             // Wire up HexMetrics if this is a hex board
             if (board is HexGridBoard hexBoard)
             {
+                sharedSpatialQueries.SetHexMetrics(hexBoard.HexMetrics);
+                sharedSpatialQueries.SetLoadedChunks(hexBoard.HexGridAOI);
                 SetService(CoreServiceKeys.HexMetrics, hexBoard.HexMetrics);
                 SetService(CoreServiceKeys.LoadedChunks, (ILoadedChunks)hexBoard.HexGridAOI);
                 HexGridAOI = hexBoard.HexGridAOI;
+            }
+            else
+            {
+                GlobalContext.Remove(CoreServiceKeys.HexMetrics.Name);
+                SetService(CoreServiceKeys.LoadedChunks, board.LoadedChunks);
+                HexGridAOI = null;
             }
 
             // Update GlobalContext with rebuilt services

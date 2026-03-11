@@ -45,6 +45,12 @@ dotnet build src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj -c Relea
 # GAS 测试（核心 gameplay）
 dotnet test src/Tests/GasTests/GasTests.csproj
 
+# 3C / Camera 测试
+dotnet test src/Tests/ThreeCTests/ThreeCTests.csproj
+
+# Presentation 运行时测试
+dotnet test src/Tests/PresentationTests/PresentationTests.csproj
+
 # GAS 测试（详细输出）
 dotnet test src/Tests/GasTests/GasTests.csproj --logger "console;verbosity=detailed"
 

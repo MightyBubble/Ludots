@@ -22,6 +22,7 @@
       "PlayerOwner": { "PlayerId": 1 },
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualModel": { "MeshId": 2, "MaterialId": 0, "BaseScale": 0.9 },
       "AttributeBuffer": { "base": { "Health": 100 } },
       "AbilityStateBuffer": {
         "abilityIds": []
@@ -39,6 +40,7 @@
       "Name": { "Value": "Dummy" },
       "Team": { "Id": 2 },
       "WorldPositionCm": { "Value": { "X": 600, "Y": 0 } },
+      "VisualModel": { "MeshId": 1, "MaterialId": 0, "BaseScale": 0.8 },
       "AttributeBuffer": { "base": { "Health": 100 } }
     }
   }

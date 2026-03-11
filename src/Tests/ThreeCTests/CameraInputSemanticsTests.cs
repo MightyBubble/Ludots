@@ -6,7 +6,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Camera;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.ThreeC
 {
     [TestFixture]
     public sealed class CameraInputSemanticsTests

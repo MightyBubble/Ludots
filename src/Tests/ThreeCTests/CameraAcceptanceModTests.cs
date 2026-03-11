@@ -20,7 +20,7 @@ using Ludots.UI.Input;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS.Production
+namespace Ludots.Tests.ThreeC.Acceptance
 {
     [TestFixture]
     public sealed class CameraAcceptanceModTests
@@ -53,10 +53,29 @@ namespace Ludots.Tests.GAS.Production
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             Assert.That(primitives, Is.Not.Null);
             Assert.That(primitives!.Count, Is.GreaterThan(0), "Ground click should emit a transient performer marker.");
-            Assert.That(primitives.GetSpan()[0].Position, Is.EqualTo(WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(3200, 2000), yMeters: 0.15f)));
+            var cueMarkerPosition = WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(3200, 2000), yMeters: 0.15f);
+            bool foundCueMarker = false;
+            foreach (ref readonly var primitive in primitives.GetSpan())
+            {
+                if (primitive.Position == cueMarkerPosition)
+                {
+                    foundCueMarker = true;
+                    break;
+                }
+            }
+            Assert.That(foundCueMarker, Is.True, "Ground click should emit a transient cue marker at the raycast point.");
 
             Tick(engine, 60);
-            Assert.That(primitives.Count, Is.EqualTo(0), "Transient marker should expire after its configured lifetime.");
+            foundCueMarker = false;
+            foreach (ref readonly var primitive in primitives.GetSpan())
+            {
+                if (primitive.Position == cueMarkerPosition)
+                {
+                    foundCueMarker = true;
+                    break;
+                }
+            }
+            Assert.That(foundCueMarker, Is.False, "Transient marker should expire after its configured lifetime.");
         }
 
         [Test]
@@ -199,6 +218,20 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(4200f, 2800f)), "Losing the follow target should leave the camera in place.");
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_MapLoad_PreservesSpatialQueryServiceIdentity_ForPreRegisteredSystems()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            var beforeLoad = engine.SpatialQueries;
+
+            LoadMap(engine, CameraAcceptanceIds.FollowMapId);
+
+            Assert.That(ReferenceEquals(beforeLoad, engine.SpatialQueries), Is.True,
+                "Map load must hot-swap the spatial query backend on the shared service instead of replacing the service instance.");
+            Assert.That(ReferenceEquals(beforeLoad, engine.GetService(CoreServiceKeys.SpatialQueryService)), Is.True,
+                "GlobalContext must continue exposing the same shared spatial query service instance after map load.");
         }
 
         [Test]
