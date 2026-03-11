@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
@@ -71,6 +71,15 @@ namespace Ludots.Core.Input.Orders
     public delegate bool AutoTargetProvider(Entity actor, AutoTargetPolicy policy, int rangeCm, out Entity target);
 
     /// <summary>
+    /// Delegate for resolving a context-scored mapping into a concrete cast slot and target.
+    /// </summary>
+    public delegate bool ContextScoredResolutionProvider(
+        Entity actor,
+        InputOrderMapping mapping,
+        Entity hoveredEntity,
+        out ContextScoredOrderResolution resolution);
+
+    /// <summary>
     /// Callback fired each frame during vector aiming so the consumer can show
     /// the origin-to-cursor line indicator. The system has no knowledge of indicators.
     /// </summary>
@@ -120,6 +129,7 @@ namespace Ludots.Core.Input.Orders
         private AimingUpdateHandler? _aimingUpdateHandler;
         private VectorAimUpdateHandler? _vectorAimUpdateHandler;
         private AutoTargetProvider? _autoTargetProvider;
+        private ContextScoredResolutionProvider? _contextScoredProvider;
         
         // Context
         private Entity _localPlayer;
@@ -201,6 +211,7 @@ namespace Ludots.Core.Input.Orders
         public void SetAimingUpdateHandler(AimingUpdateHandler handler) => _aimingUpdateHandler = handler;
         public void SetVectorAimUpdateHandler(VectorAimUpdateHandler handler) => _vectorAimUpdateHandler = handler;
         public void SetAutoTargetProvider(AutoTargetProvider provider) => _autoTargetProvider = provider;
+        public void SetContextScoredProvider(ContextScoredResolutionProvider provider) => _contextScoredProvider = provider;
         
         public void SetLocalPlayer(Entity entity, int playerId)
         {
@@ -353,6 +364,10 @@ namespace Ludots.Core.Input.Orders
                     // Release is handled in the aiming state.
                     EnterAimingState(actionId, mapping);
                     _smartCastWithIndicatorActive = true;
+                    break;
+
+                case InteractionModeType.ContextScored:
+                    HandleContextScored(mapping);
                     break;
 
                 default: // TargetFirst should not reach here due to guard above
@@ -590,6 +605,49 @@ namespace Ludots.Core.Input.Orders
             order.OrderTypeId = orderTypeId;
             order.PlayerId = _playerId;
             order.Actor = actor;
+            order.Args = args;
+            order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
+            return true;
+        }
+
+        private void HandleContextScored(InputOrderMapping mapping)
+        {
+            if (_contextScoredProvider == null)
+            {
+                return;
+            }
+
+            Entity hoveredEntity = default;
+            _hoveredEntityProvider?.Invoke(out hoveredEntity);
+            if (TryBuildContextScoredOrder(mapping, hoveredEntity, out var order))
+            {
+                _orderSubmitHandler!(in order);
+            }
+        }
+
+        private bool TryBuildContextScoredOrder(InputOrderMapping mapping, Entity hoveredEntity, out Order order)
+        {
+            order = default;
+
+            int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
+            if (orderTypeId <= 0)
+            {
+                return false;
+            }
+
+            if (!_contextScoredProvider!(_localPlayer, mapping, hoveredEntity, out var resolution))
+            {
+                return false;
+            }
+
+            var args = new OrderArgs();
+            ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
+            args.I0 = resolution.SlotIndex;
+
+            order.OrderTypeId = orderTypeId;
+            order.PlayerId = _playerId;
+            order.Actor = _localPlayer;
+            order.Target = resolution.Target;
             order.Args = args;
             order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
             return true;
@@ -889,4 +947,5 @@ namespace Ludots.Core.Input.Orders
 
     }
 }
+
 

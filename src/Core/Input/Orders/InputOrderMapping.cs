@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -8,27 +8,32 @@ namespace Ludots.Core.Input.Orders
     /// Interaction mode determines HOW InputActions become Orders.
     /// This is a game-level / player-preference setting, NOT per-ability.
     ///
-    /// TargetFirst (WoW): player selects target first, then presses ability key â†?order submitted immediately.
-    /// SmartCast (LoL): player presses ability key â†?order submitted immediately at cursor/hovered entity.
-    /// AimCast (DotA/WC3): player presses ability key â†?enters aiming phase â†?click to confirm, right-click/ESC to cancel.
+    /// TargetFirst (WoW): player selects target first, then presses ability key éˆ«?order submitted immediately.
+    /// SmartCast (LoL): player presses ability key éˆ«?order submitted immediately at cursor/hovered entity.
+    /// AimCast (DotA/WC3): player presses ability key éˆ«?enters aiming phase éˆ«?click to confirm, right-click/ESC to cancel.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum InteractionModeType
     {
-        /// <summary>WoW style: select target, press key â†?instant cast.</summary>
+        /// <summary>WoW style: select target, press key éˆ«?instant cast.</summary>
         TargetFirst = 0,
 
-        /// <summary>LoL style: press key â†?cast at cursor / hovered entity.</summary>
+        /// <summary>LoL style: press key éˆ«?cast at cursor / hovered entity.</summary>
         SmartCast = 1,
 
-        /// <summary>DotA/WC3 style: press key â†?aiming â†?click confirm.</summary>
+        /// <summary>DotA/WC3 style: press key éˆ«?aiming éˆ«?click confirm.</summary>
         AimCast = 2,
 
         /// <summary>
-        /// LoL "Quick Cast with Indicator" style: hold key â†?show indicator,
-        /// release key â†?cast at cursor position. Right-click/ESC cancels.
+        /// LoL "Quick Cast with Indicator" style: hold key éˆ«?show indicator,
+        /// release key éˆ«?cast at cursor position. Right-click/ESC cancels.
         /// </summary>
         SmartCastWithIndicator = 3,
+
+        /// <summary>
+        /// Action-game style: system scores the current context and chooses the best cast slot + target.
+        /// </summary>
+        ContextScored = 4,
     }
 
     /// <summary>
@@ -52,7 +57,7 @@ namespace Ludots.Core.Input.Orders
         Held = 2,
         
         /// <summary>
-        /// Double-tap trigger. This does not belong in InputTriggerType â€?double-click-select-same-type
+        /// Double-tap trigger. This does not belong in InputTriggerType éˆ¥?double-click-select-same-type
         /// is a selection system concern (see advanced selection system design).
         /// Retained for enum stability; will be removed when selection system is implemented.
         /// </summary>
@@ -318,4 +323,5 @@ namespace Ludots.Core.Input.Orders
         public UserOverrideSettings UserOverrides { get; set; } = new();
     }
 }
+
 

@@ -4,6 +4,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
@@ -11,6 +12,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -118,6 +120,10 @@ namespace CoreInputMod.Systems
                 mapping.CommandActionId = bindings.CommandActionId;
             }
             mapping.SetOrderSubmitHandler((in Order order) => _orders.TryEnqueue(order));
+            if (TryCreateContextScoredResolver(out var contextResolver))
+            {
+                mapping.SetContextScoredProvider(contextResolver.TryResolve);
+            }
 
             _globals[ActiveMappingKey] = mapping;
             return mapping;
@@ -178,6 +184,26 @@ namespace CoreInputMod.Systems
             }
 
             return default;
+        }
+
+        private bool TryCreateContextScoredResolver(out ContextScoredOrderResolver resolver)
+        {
+            resolver = default!;
+            if (!_globals.TryGetValue(CoreServiceKeys.ContextGroupRegistry.Name, out var groupsObj) ||
+                groupsObj is not ContextGroupRegistry contextGroups ||
+                !_globals.TryGetValue(CoreServiceKeys.GraphProgramRegistry.Name, out var graphsObj) ||
+                graphsObj is not Ludots.Core.GraphRuntime.GraphProgramRegistry graphPrograms ||
+                !_globals.TryGetValue(CoreServiceKeys.SpatialQueryService.Name, out var spatialObj) ||
+                spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries ||
+                !_globals.TryGetValue(CoreServiceKeys.SpatialCoordinateConverter.Name, out var coordsObj) ||
+                coordsObj is not Ludots.Core.Spatial.ISpatialCoordinateConverter spatialCoords)
+            {
+                return false;
+            }
+
+            var graphApi = new GasGraphRuntimeApi(_world, spatialQueries, spatialCoords, eventBus: null, effectRequests: null);
+            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi);
+            return true;
         }
     }
 }

@@ -115,6 +115,46 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// Execute a graph program and return F[0] as the score output.
+        /// </summary>
+        public static float ExecuteScore(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPos,
+            ReadOnlySpan<GraphInstruction> program,
+            IGraphRuntimeApi api)
+        {
+            Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+            Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
+            Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
+            Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            var targetList = new GraphTargetList(targets);
+
+            e[0] = caster;
+            e[1] = explicitTarget;
+
+            var state = new GraphExecutionState
+            {
+                World = world,
+                Caster = caster,
+                ExplicitTarget = explicitTarget,
+                TargetPos = targetPos,
+                Api = api,
+                F = f,
+                I = i,
+                B = b,
+                E = e,
+                Targets = targets,
+                TargetList = targetList
+            };
+
+            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            return f[0];
+        }
+
+        /// <summary>
         /// Execute a validation graph from a <see cref="GraphProgramBuffer"/>.
         /// </summary>
         public static bool ExecuteValidation(
