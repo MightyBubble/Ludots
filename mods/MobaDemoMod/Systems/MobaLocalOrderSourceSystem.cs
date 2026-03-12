@@ -15,6 +15,7 @@ using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 using MobaDemoMod.Triggers;
 using MobaDemoMod.Utils;
@@ -227,10 +228,11 @@ namespace MobaDemoMod.Systems
             worldCm = default;
             if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return false;
             if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input) return false;
+            if (!_globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) || worldSizeObj is not WorldSizeSpec worldSize) return false;
 
             Vector2 mouse = input.ReadAction<Vector2>("PointerPos");
             var ray = rayProvider.GetRay(mouse);
-            return GroundRaycast.TryGetGroundWorldCm(in ray, out worldCm);
+            return GroundRaycast.TryGetGroundWorldCm(in ray, worldSize, out worldCm);
         }
 
         private InputOrderMappingConfig LoadInputOrderMappings()

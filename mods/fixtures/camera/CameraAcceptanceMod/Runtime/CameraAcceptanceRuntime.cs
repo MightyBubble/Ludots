@@ -1,5 +1,5 @@
-using System.Threading.Tasks;
 using System.Numerics;
+using System.Threading.Tasks;
 using Arch.Core;
 using CameraAcceptanceMod.UI;
 using CoreInputMod.Triggers;

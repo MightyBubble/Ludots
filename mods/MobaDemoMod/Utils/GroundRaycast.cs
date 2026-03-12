@@ -1,5 +1,6 @@
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 
 namespace MobaDemoMod.Utils
@@ -9,7 +10,7 @@ namespace MobaDemoMod.Utils
     /// </summary>
     internal static class GroundRaycast
     {
-        public static bool TryGetGroundWorldCm(in ScreenRay ray, out WorldCmInt2 worldCm)
-            => GroundRaycastUtil.TryGetGroundWorldCm(in ray, out worldCm);
+        public static bool TryGetGroundWorldCm(in ScreenRay ray, in WorldSizeSpec worldSize, out WorldCmInt2 worldCm)
+            => GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm);
     }
 }

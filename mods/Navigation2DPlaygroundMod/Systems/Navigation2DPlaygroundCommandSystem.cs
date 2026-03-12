@@ -131,7 +131,7 @@ namespace Navigation2DPlaygroundMod.Systems
 
             Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
             var ray = rayProvider.GetRay(pointer);
-            return GroundRaycastUtil.TryGetGroundWorldCm(in ray, out worldCm);
+            return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, _engine.WorldSizeSpec, out worldCm);
         }
 
         private InteractionActionBindings ResolveBindings()

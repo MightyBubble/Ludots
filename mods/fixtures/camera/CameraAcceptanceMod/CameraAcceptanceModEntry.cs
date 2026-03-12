@@ -31,6 +31,7 @@ namespace CameraAcceptanceMod
                     engine.RegisterSystem(new CameraBlendAcceptanceSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraStackAcceptanceSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterPresentationSystem(new CameraAcceptancePanelPresentationSystem(engine, runtime));
+                    engine.RegisterPresentationSystem(new CameraAcceptanceProjectionBoundsOverlaySystem(engine));
                     engine.RegisterPresentationSystem(new CameraAcceptanceSelectionOverlaySystem(engine));
                 }
 

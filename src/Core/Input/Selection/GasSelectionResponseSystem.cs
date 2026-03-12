@@ -53,6 +53,7 @@ namespace Ludots.Core.Input.Selection
             if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return;
             if (!_globals.TryGetValue(CoreServiceKeys.SelectionRequestQueue.Name, out var reqObj) || reqObj is not SelectionRequestQueue requests) return;
             if (!_globals.TryGetValue(CoreServiceKeys.SelectionResponseBuffer.Name, out var respObj) || respObj is not SelectionResponseBuffer responses) return;
+            if (!_globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) || worldSizeObj is not WorldSizeSpec worldSize) return;
             if (!requests.TryPeek(out var request)) return;
 
             var bindings = ResolveBindings();
@@ -60,7 +61,7 @@ namespace Ludots.Core.Input.Selection
 
             var mouse = input.ReadAction<System.Numerics.Vector2>(bindings.PointerPositionActionId);
             var ray = rayProvider.GetRay(mouse);
-            if (!GroundRaycastUtil.TryGetGroundWorldCm(in ray, out var worldCm)) return;
+            if (!GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out var worldCm)) return;
 
             OnSelectionTriggered?.Invoke(request, worldCm);
 

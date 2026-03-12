@@ -83,6 +83,48 @@ namespace Ludots.Tests.ThreeC.Acceptance
         }
 
         [Test]
+        public void CameraAcceptanceMod_ProjectionMap_DrawsBoardBoundsOverlay_AndGuidanceText()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
+
+            var ground = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
+            Assert.That(ground, Is.Not.Null);
+            Assert.That(CountGroundOverlays(ground!, GroundOverlayShape.Line), Is.EqualTo(4),
+                "Projection acceptance should draw the current board boundary explicitly.");
+
+            var overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
+            Assert.That(overlay, Is.Not.Null);
+            var overlayText = ExtractOverlayText(overlay!);
+            Assert.That(overlayText, Has.Some.Contains("Projection bounds"));
+            Assert.That(overlayText, Has.Some.Contains("clamped by Core"));
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_ProjectionMap_OutOfBoundsClick_SnapsToNearestBoundary_ThroughCoreProjectionGuard()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
+
+            var backend = GetInputBackend(engine);
+            int beforeDummyCount = CountEntitiesByName(engine.World, "Dummy");
+            ClickGround(engine, backend, new Vector2(-955886f, -958275f));
+            Tick(engine, 1);
+
+            var bounds = engine.CurrentMapSession?.PrimaryBoard?.WorldSize.Bounds ?? engine.WorldSizeSpec.Bounds;
+            int afterDummyCount = CountEntitiesByName(engine.World, "Dummy");
+            Assert.That(afterDummyCount, Is.EqualTo(beforeDummyCount + 1), "Out-of-bounds projection clicks should still resolve to a bounded spawn.");
+            Assert.That(HasNamedEntityAt(engine.World, "Dummy", new WorldCmInt2(bounds.Left, bounds.Top)), Is.True,
+                "Out-of-bounds projection clicks should snap to the nearest board boundary.");
+
+            var overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
+            Assert.That(overlay, Is.Not.Null);
+            var overlayText = ExtractOverlayText(overlay!);
+            Assert.That(overlayText, Has.Some.Contains("clamped by Core"));
+            Assert.That(string.Join(Environment.NewLine, overlayText), Does.Not.Contain("Fuse explicit-degrade"));
+        }
+
+        [Test]
         public void CameraAcceptanceMod_ProjectionMap_ScreenSpaceBoxSelect_UpdatesSelectionBuffer_AndSelectionLabels()
         {
             using var engine = CreateEngine(AcceptanceMods);
@@ -564,6 +606,20 @@ namespace Ludots.Tests.ThreeC.Acceptance
             }
 
             return lines;
+        }
+
+        private static int CountGroundOverlays(GroundOverlayBuffer overlays, GroundOverlayShape shape)
+        {
+            int count = 0;
+            foreach (ref readonly var item in overlays.GetSpan())
+            {
+                if (item.Shape == shape)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private static string ExtractUiSceneText(UiScene scene)

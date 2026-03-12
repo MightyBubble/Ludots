@@ -9,6 +9,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 
 namespace CoreInputMod.Systems
@@ -60,8 +61,14 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
+            if (!_globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) ||
+                worldSizeObj is not WorldSizeSpec worldSize)
+            {
+                return false;
+            }
+
             var ray = rayProvider.GetRay(input.ReadAction<Vector2>("PointerPos"));
-            return GroundRaycastUtil.TryGetGroundWorldCm(in ray, out worldCm);
+            return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm);
         }
 
         public Entity GetControlledActor(int playerId = 1)

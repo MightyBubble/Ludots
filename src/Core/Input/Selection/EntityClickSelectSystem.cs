@@ -162,8 +162,13 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
+            if (!_globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) || worldSizeObj is not WorldSizeSpec worldSize)
+            {
+                return false;
+            }
+
             var ray = rayProvider.GetRay(pointer);
-            if (!GroundRaycastUtil.TryGetGroundWorldCm(in ray, out groundWorldCm))
+            if (!GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out groundWorldCm))
             {
                 return false;
             }
