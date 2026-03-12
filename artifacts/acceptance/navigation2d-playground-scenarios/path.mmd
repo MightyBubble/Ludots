@@ -1,0 +1,11 @@
+flowchart TD
+    A[Load Navigation2D.Playground catalog] --> B{Scenario index valid?}
+    B -->|yes| C[Spawn scenario topology]
+    B -->|no| X[Clamp to catalog bounds]
+    X --> C
+    C --> D[Run steering + integration ticks]
+    D --> E{Scenario has blockers?}
+    E -->|yes| F[Validate blocker count + movement]
+    E -->|no| G[Validate open-space movement]
+    F --> H[Write battle-report + trace + path]
+    G --> H

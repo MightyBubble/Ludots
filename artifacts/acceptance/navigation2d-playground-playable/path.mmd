@@ -1,0 +1,8 @@
+flowchart TD
+    A[Boot GameEngine with Navigation2DPlaygroundMod] --> B[Warm entry map]
+    B --> C[Validate overlay and runtime services]
+    C --> D[Inject NextScenario]
+    D --> E[Inject IncreaseAgentsPerTeam]
+    E --> F[Inject ToggleFlowDebug + CycleMode]
+    F --> G[Inject ToggleFlowEnabled]
+    G --> H[Write battle-report + trace + path]

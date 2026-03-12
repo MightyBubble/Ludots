@@ -1,0 +1,6 @@
+{"event_id":"nav2d-temporal-001","step":"steering_tick","tick":1,"agents":32,"cache_lookups":32,"cache_hits":0,"cache_stores":32,"cache_hit_rate":0,"status":"done"}
+{"event_id":"nav2d-temporal-002","step":"steering_tick","tick":2,"agents":32,"cache_lookups":32,"cache_hits":32,"cache_stores":0,"cache_hit_rate":1,"status":"done"}
+{"event_id":"nav2d-temporal-003","step":"steering_tick","tick":3,"agents":32,"cache_lookups":32,"cache_hits":32,"cache_stores":0,"cache_hit_rate":1,"status":"done"}
+{"event_id":"nav2d-temporal-004","step":"steering_tick","tick":4,"agents":32,"cache_lookups":32,"cache_hits":32,"cache_stores":0,"cache_hit_rate":1,"status":"done"}
+{"event_id":"nav2d-temporal-005","step":"steering_tick","tick":5,"agents":32,"cache_lookups":32,"cache_hits":32,"cache_stores":0,"cache_hit_rate":1,"status":"done"}
+{"event_id":"nav2d-temporal-006","step":"steering_tick","tick":6,"agents":32,"cache_lookups":32,"cache_hits":32,"cache_stores":0,"cache_hit_rate":1,"status":"done"}

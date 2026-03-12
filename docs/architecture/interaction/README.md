@@ -224,7 +224,7 @@ InputBinding "Attack"
 
 ## 8. 163 条清单的完全覆盖论证
 
-全部 163 条用户体验场景 (见 `01_user_experience_checklist.md`) 可被以下结构表达:
+全部 163 条用户体验场景 (见 `user_experience_checklist.md`) 可被以下结构表达:
 
 ```
 InteractionConfig : ReactsTo (Down | Up | DownAndUp)
@@ -244,7 +244,7 @@ Acquisition       : Explicit | ContextScored
 
 | 文件 | 内容 |
 |------|------|
-| `00_interaction_model_overview.md` | 本文档 (架构总览) |
-| `01_user_experience_checklist.md` | 163 条用户体验清单 |
+| `README.md` | 本文档 (架构总览) |
+| `user_experience_checklist.md` | 163 条用户体验清单 |
 | `features/` | 各 feature 独立实现方案 |
-| `99_gap_analysis.md` | 缺口分析与修改建议 |
+| `gap_analysis.md` | 缺口分析与修改建议 |

@@ -1,0 +1,9 @@
+flowchart TD
+    A[Configure Navigation2D.FlowStreaming] --> B[Load corridor chunks]
+    B --> C[Apply flow goal]
+    C --> D[Collect bound-agent demand]
+    D --> E[Activate bounded tile window]
+    E --> F[Step propagation]
+    F --> G[Sample desired velocity]
+    G --> H[Unload chunk and refresh active tiles]
+    H --> I[Write battle-report + trace + path]

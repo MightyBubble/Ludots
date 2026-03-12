@@ -1,0 +1,17 @@
+flowchart TD
+    A[ConfigPipeline: merge Navigation2D + playground constants] --> B[Navigation2DRuntime.CloneValidated]
+    B --> C[Steady-state SoA sync marks dirty agents]
+    C --> D[Nav2DCellMap.UpdatePositions]
+    D --> E{Cell migrations exceed adaptive threshold?}
+    E -->|yes| F[Clear and rebuild full cell map]
+    E -->|no| G[Incremental detach/attach update]
+    F --> H[Budgeted neighbor queries]
+    G --> H
+    H --> I{Avoidance mode}
+    I -->|ORCA| J[ORCA solve]
+    I -->|Sonar| K[Sonar solve]
+    I -->|Hybrid| L[Hybrid gate then ORCA/Sonar]
+    J --> M[Write desired velocity + HUD counters]
+    K --> M
+    L --> M
+    E -->|no explicit config / wrong mode| X[Failure branch: tombstones accumulate and hitch returns]

@@ -43,15 +43,15 @@ namespace Ludots.Tests.Navigation2D
 
         private const float DeltaTime = 1f / 60f;
         private const int AcceptanceAgentsPerTeam = 64;
-        private const int FinalTick = 720;
+        private const int FinalTick = 2400;
         private const int TraceStrideTicks = 30;
-        private const int CaptureStrideTicks = 120;
+        private const int CaptureStrideTicks = 60;
         private const float MovingSpeedSquaredThreshold = 400f;
-        private const float MidProgressMinimumCm = 1200f;
-        private const float FinalProgressMinimumCm = 4000f;
-        private const float FinalCenterFractionLimit = 0.18f;
-        private const float FinalCenterStoppedFractionLimit = 0.08f;
-        private const float MovingAgentsFractionLimit = 0.35f;
+        private const int MeaningfulEncounterCenterCount = 8;
+        private const float MajorityCrossedFractionTarget = 0.50f;
+        private const float FinalCrossedFractionTarget = 0.85f;
+        private const float FinalCenterFractionLimit = 0.06f;
+        private const float FinalCenterStoppedFractionLimit = 0.02f;
         private const float CenterHalfWidthCm = 1200f;
         private const float CenterHalfHeightCm = 2600f;
         private const float WorldMinX = -14000f;
@@ -62,12 +62,12 @@ namespace Ludots.Tests.Navigation2D
         private const int ImageHeight = 900;
 
         [Test]
-        public void Navigation2DPlayground_TimedAvoidanceAcceptance_WritesScreensAndFailsIfCrowdStaysJammed()
+        public void Navigation2DPlayground_PassThroughAcceptance_WritesScreensAndProvesFullCrossing()
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
             string modsRoot = Path.Combine(repoRoot, "mods");
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "navigation2d-playground-timed-avoidance");
+            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "navigation2d-playground-pass-through-full-run");
             string screensDir = Path.Combine(artifactDir, "screens");
             Directory.CreateDirectory(screensDir);
 
@@ -313,13 +313,13 @@ namespace Ludots.Tests.Navigation2D
 
             const int thumbWidth = 800;
             const int thumbHeight = 450;
-            int columns = 2;
+            int columns = frames.Count >= 24 ? 4 : frames.Count >= 12 ? 3 : 2;
             int rows = (int)Math.Ceiling(frames.Count / (double)columns);
             using var surface = SKSurface.Create(new SKImageInfo(columns * thumbWidth, rows * thumbHeight + 60));
             SKCanvas canvas = surface.Canvas;
             canvas.Clear(new SKColor(8, 10, 16));
             using var titlePaint = new SKPaint { Color = SKColors.White, IsAntialias = true, TextSize = 28f };
-            canvas.DrawText("Navigation2D timed avoidance screenshot timeline", 20, 36, titlePaint);
+            canvas.DrawText("Navigation2D full pass-through screenshot timeline", 20, 36, titlePaint);
 
             for (int i = 0; i < frames.Count; i++)
             {
@@ -384,30 +384,32 @@ namespace Ludots.Tests.Navigation2D
             double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
             string evidenceImages = string.Join(", ", captureFrames.Select(frame => $"`screens/{frame.FileName}`").Append("`screens/timeline.png`"));
 
-            sb.AppendLine("# Scenario Card: navigation2d-playground-timed-avoidance");
+            sb.AppendLine("# Scenario Card: navigation2d-playground-pass-through-full-run");
             sb.AppendLine();
             sb.AppendLine("## Intent");
-            sb.AppendLine("- Player goal: verify over time that two teams in the playable Navigation2D playground actually decongest instead of timing out while still jammed in the center.");
-            sb.AppendLine("- Gameplay domain: real `GameEngine` + `Navigation2DPlaygroundMod` + unified config/input/UI pipeline, with screenshot-sequence evidence.");
+            sb.AppendLine("- Player goal: verify the playable `Pass Through` crowd really completes a full head-on encounter from approach to contact to crossing to separation.");
+            sb.AppendLine("- Gameplay domain: real `GameEngine` + `Navigation2DPlaygroundMod` + unified config/input/UI pipeline, with a long screenshot sequence instead of a pre-contact timeout slice.");
             sb.AppendLine();
             sb.AppendLine("## Determinism Inputs");
             sb.AppendLine("- Seed: none");
             sb.AppendLine("- Map: `mods/Navigation2DPlaygroundMod/assets/Maps/nav2d_playground.json`");
             sb.AppendLine($"- Scenario: `{timeline[0].ScenarioName}`");
             sb.AppendLine($"- Agents per team: `{AcceptanceAgentsPerTeam}`");
-            sb.AppendLine($"- Clock profile: fixed `1/60s`, timeout tick `{FinalTick}`");
+            sb.AppendLine($"- Clock profile: fixed `1/60s`, final tick `{FinalTick}`, trace stride `{TraceStrideTicks}`, capture stride `{CaptureStrideTicks}`");
             sb.AppendLine($"- Evidence images: {evidenceImages}");
             sb.AppendLine();
             sb.AppendLine("## Action Script");
             sb.AppendLine("1. Boot the real playable mod through `ConfigPipeline`.");
             sb.AppendLine("2. Force the `Pass Through` scenario and deterministic agent count through the existing playground state + reset input.");
-            sb.AppendLine("3. Simulate until timeout while sampling crowd progress every 30 ticks and capturing screenshots every 120 ticks.");
-            sb.AppendLine("4. Render screenshot frames and fail if timeout still looks like a dense stationary knot in the center metrics.");
+            sb.AppendLine("3. Simulate long enough to capture approach, collision, crossing, and post-clear separation.");
+            sb.AppendLine("4. Render screenshot frames and fail if the run never forms a real encounter or never finishes the pass-through.");
             sb.AppendLine();
-            sb.AppendLine("## Expected Outcomes");
-            sb.AppendLine("- Primary success condition: both teams measurably advance through the conflict zone over time and the timeout frame no longer looks like a stationary center jam.");
-            sb.AppendLine("- Failure branch condition: timeout arrives with weak median progress, excessive center occupancy, or too many stationary agents trapped in the center box.");
-            sb.AppendLine("- Key metrics: team median X progress, center-box occupancy, center stopped count, moving agent count, crossed fraction for human review.");
+            sb.AppendLine("## Key Events");
+            sb.AppendLine($"- first meaningful contact tick: `{FormatTick(acceptance.FirstContactTick)}`");
+            sb.AppendLine($"- peak center occupancy: `{acceptance.PeakCenterCount}` at tick `{acceptance.PeakCenterTick}`");
+            sb.AppendLine($"- first mutual cross tick: `{FormatTick(acceptance.FirstCrossTick)}`");
+            sb.AppendLine($"- majority crossed tick: `{FormatTick(acceptance.MajorityCrossTick)}`");
+            sb.AppendLine($"- center cleared tick: `{FormatTick(acceptance.ClearTick)}`");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
             foreach (AvoidanceSnapshot snapshot in timeline.Where(t => t.Tick == 0 || t.Tick % CaptureStrideTicks == 0 || t.Tick == FinalTick))
@@ -426,7 +428,7 @@ namespace Ludots.Tests.Navigation2D
                 }
             }
 
-            sb.AppendLine($"- reason: median advance reached `{acceptance.Team0FinalAdvanceCm:F0}` / `{acceptance.Team1FinalAdvanceCm:F0}` cm; timeout center box held `{final.CenterCount}` of `{final.LiveAgents}` agents with `{final.CenterStoppedAgents}` stationary; peak center occupancy was `{acceptance.PeakCenterCount}` at tick `{acceptance.PeakCenterTick}`.");
+            sb.AppendLine($"- tail summary: medianX T0=`{final.Team0MedianPrimary:F0}` T1=`{final.Team1MedianPrimary:F0}`; crossed=`{final.Team0CrossedFraction:P0}`/`{final.Team1CrossedFraction:P0}`; center=`{final.CenterCount}` stopped=`{final.CenterStoppedAgents}`.");
             sb.AppendLine();
             sb.AppendLine("## Summary Stats");
             sb.AppendLine($"- trace samples: `{timeline.Count}`");
@@ -443,22 +445,22 @@ namespace Ludots.Tests.Navigation2D
             {
                 "flowchart TD",
                 "    A[Boot real playable Navigation2D playground] --> B[Force PassThrough + deterministic agents/team]",
-                "    B --> C[Run timed simulation to timeout]",
+                "    B --> C[Run long simulation through full encounter]",
                 "    C --> D[Capture screenshot sequence + trace metrics]",
-                "    D --> E{Median advance strong and timeout center jam low?}",
+                "    D --> E{Meaningful contact, crossing, and clear all observed?}",
                 "    E -->|yes| F[Write battle-report + trace + path + PNG timeline]",
-                "    E -->|no| X[Fail acceptance: timeout still looks jammed]"
+                "    E -->|no| X[Fail acceptance: full pass-through not proven]"
             }) + Environment.NewLine;
         }
 
         private static string BuildVisibleChecklist(IReadOnlyList<CaptureFrame> frames)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("# Visible Checklist: navigation2d-playground-timed-avoidance");
+            sb.AppendLine("# Visible Checklist: navigation2d-playground-pass-through-full-run");
             sb.AppendLine();
-            sb.AppendLine("- Review the PNG sequence in chronological order; each later frame should show stronger approach into the conflict zone without a stationary knot persisting at timeout.");
-            sb.AppendLine("- Timeout is acceptable when the center box is not densely packed and the agents inside it are still moving instead of freezing into a blob.");
-            sb.AppendLine("- `screens/timeline.png`: quick visual strip for human acceptance review.");
+            sb.AppendLine("- Review the PNG sequence in chronological order; it should now show approach, contact, crossing, and post-clear separation from start to finish.");
+            sb.AppendLine("- `screens/timeline.png`: quick visual strip for human acceptance review of the whole encounter.");
+            sb.AppendLine("- Final frames should place most green agents on the right half-space and most red agents on the left half-space, with no stationary knot left in the center box.");
             sb.AppendLine();
             foreach (CaptureFrame frame in frames)
             {
@@ -471,34 +473,42 @@ namespace Ludots.Tests.Navigation2D
         private static AvoidanceAcceptanceResult EvaluateAcceptance(IReadOnlyList<AvoidanceSnapshot> timeline)
         {
             var failures = new List<string>();
-            AvoidanceSnapshot start = timeline.First(s => s.Tick == 0);
-            AvoidanceSnapshot mid = timeline.First(s => s.Tick == FinalTick / 2);
-            AvoidanceSnapshot final = timeline.First(s => s.Tick == FinalTick);
-            AvoidanceSnapshot peak = timeline.OrderByDescending(t => t.CenterCount).First();
+            AvoidanceSnapshot start = timeline.First(snapshot => snapshot.Tick == 0);
+            AvoidanceSnapshot final = timeline.First(snapshot => snapshot.Tick == FinalTick);
+            AvoidanceSnapshot peak = timeline.OrderByDescending(snapshot => snapshot.CenterCount).First();
+            bool hasContact = TryFindSnapshot(timeline, snapshot => snapshot.CenterCount >= MeaningfulEncounterCenterCount, out AvoidanceSnapshot firstContact);
+            bool hasFirstCross = TryFindSnapshot(timeline, snapshot => MathF.Min(snapshot.Team0CrossedFraction, snapshot.Team1CrossedFraction) > 0f, out AvoidanceSnapshot firstCross);
+            bool hasMajorityCross = TryFindSnapshot(timeline, snapshot => MathF.Min(snapshot.Team0CrossedFraction, snapshot.Team1CrossedFraction) >= MajorityCrossedFractionTarget, out AvoidanceSnapshot majorityCross);
+            bool hasClear = TryFindSnapshot(timeline, snapshot =>
+                snapshot.Tick >= peak.Tick
+                && snapshot.Team0MedianPrimary > 0f
+                && snapshot.Team1MedianPrimary < 0f
+                && snapshot.Team0CrossedFraction >= FinalCrossedFractionTarget
+                && snapshot.Team1CrossedFraction >= FinalCrossedFractionTarget
+                && snapshot.CenterCount <= GetCenterCountLimit(snapshot.LiveAgents)
+                && snapshot.CenterStoppedAgents <= GetCenterStoppedCountLimit(snapshot.LiveAgents),
+                out AvoidanceSnapshot clear);
 
-            float team0MidAdvance = mid.Team0MedianPrimary - start.Team0MedianPrimary;
-            float team1MidAdvance = start.Team1MedianPrimary - mid.Team1MedianPrimary;
-            float team0FinalAdvance = final.Team0MedianPrimary - start.Team0MedianPrimary;
-            float team1FinalAdvance = start.Team1MedianPrimary - final.Team1MedianPrimary;
             float finalCenterFraction = final.LiveAgents == 0 ? 0f : final.CenterCount / (float)final.LiveAgents;
             float finalCenterStoppedFraction = final.LiveAgents == 0 ? 0f : final.CenterStoppedAgents / (float)final.LiveAgents;
-            bool densePeakObserved = peak.CenterCount >= Math.Max(16, (int)Math.Ceiling(final.LiveAgents * FinalCenterFractionLimit));
-            bool centerRelieved = !densePeakObserved || final.CenterCount <= Math.Max((int)Math.Ceiling(peak.CenterCount * 0.75f), 8);
 
             AddAcceptanceCheck(start.Team0MedianPrimary < -3000f, $"Team 0 should spawn well left of center, but median X was {start.Team0MedianPrimary:F0}.", failures);
             AddAcceptanceCheck(start.Team1MedianPrimary > 3000f, $"Team 1 should spawn well right of center, but median X was {start.Team1MedianPrimary:F0}.", failures);
-            AddAcceptanceCheck(team0MidAdvance > MidProgressMinimumCm, $"Team 0 median only advanced {team0MidAdvance:F0}cm by midpoint.", failures);
-            AddAcceptanceCheck(team1MidAdvance > MidProgressMinimumCm, $"Team 1 median only advanced {team1MidAdvance:F0}cm by midpoint.", failures);
-            AddAcceptanceCheck(team0FinalAdvance > FinalProgressMinimumCm, $"Team 0 median only advanced {team0FinalAdvance:F0}cm by timeout.", failures);
-            AddAcceptanceCheck(team1FinalAdvance > FinalProgressMinimumCm, $"Team 1 median only advanced {team1FinalAdvance:F0}cm by timeout.", failures);
-            AddAcceptanceCheck(finalCenterFraction < FinalCenterFractionLimit, $"Center box still contains {final.CenterCount}/{final.LiveAgents} agents at timeout ({finalCenterFraction:P0}).", failures);
-            AddAcceptanceCheck(finalCenterStoppedFraction < FinalCenterStoppedFractionLimit, $"Center box still contains {final.CenterStoppedAgents}/{final.LiveAgents} stationary agents at timeout ({finalCenterStoppedFraction:P0}).", failures);
-            AddAcceptanceCheck(final.MovingAgents > (int)Math.Ceiling(final.LiveAgents * MovingAgentsFractionLimit), $"Only {final.MovingAgents}/{final.LiveAgents} agents are still moving at timeout.", failures);
-            AddAcceptanceCheck(centerRelieved, $"Center occupancy peaked at {peak.CenterCount} on tick {peak.Tick} and only fell to {final.CenterCount} by timeout.", failures);
+            AddAcceptanceCheck(hasContact, "The sequence never produced a meaningful center encounter.", failures);
+            AddAcceptanceCheck(peak.CenterCount >= MeaningfulEncounterCenterCount, $"Peak center occupancy only reached {peak.CenterCount}, so the sides never truly collided.", failures);
+            AddAcceptanceCheck(hasFirstCross, "No sampled frame shows both teams beginning to cross.", failures);
+            AddAcceptanceCheck(hasMajorityCross, $"No sampled frame shows both teams reaching {MajorityCrossedFractionTarget:P0} crossed fraction.", failures);
+            AddAcceptanceCheck(hasClear, "No sampled frame shows the center cleared after the crossing.", failures);
+            AddAcceptanceCheck(final.Team0MedianPrimary > 0f, $"Team 0 median is still {final.Team0MedianPrimary:F0} at the tail; it never reached the opposite side.", failures);
+            AddAcceptanceCheck(final.Team1MedianPrimary < 0f, $"Team 1 median is still {final.Team1MedianPrimary:F0} at the tail; it never reached the opposite side.", failures);
+            AddAcceptanceCheck(final.Team0CrossedFraction >= FinalCrossedFractionTarget, $"Team 0 only reached {final.Team0CrossedFraction:P0} crossed fraction by the tail.", failures);
+            AddAcceptanceCheck(final.Team1CrossedFraction >= FinalCrossedFractionTarget, $"Team 1 only reached {final.Team1CrossedFraction:P0} crossed fraction by the tail.", failures);
+            AddAcceptanceCheck(finalCenterFraction < FinalCenterFractionLimit, $"Center box still contains {final.CenterCount}/{final.LiveAgents} agents at the tail ({finalCenterFraction:P0}).", failures);
+            AddAcceptanceCheck(finalCenterStoppedFraction < FinalCenterStoppedFractionLimit, $"Center box still contains {final.CenterStoppedAgents}/{final.LiveAgents} stationary agents at the tail ({finalCenterStoppedFraction:P0}).", failures);
 
             string verdict = failures.Count == 0
-                ? $"Timed avoidance passes: median advance is {team0FinalAdvance:F0}/{team1FinalAdvance:F0}cm and timeout center occupancy is {final.CenterCount}/{final.LiveAgents} with {final.CenterStoppedAgents} stationary."
-                : "Timed avoidance fails: timeout still looks jammed by the configured progress/decongestion checks.";
+                ? $"Full pass-through passes: contact starts at t{firstContact.Tick}, peak center is {peak.CenterCount} at t{peak.Tick}, both sides cross by t{majorityCross.Tick}, center clears by t{clear.Tick}, and the tail at t{final.Tick} remains separated."
+                : "Full pass-through fails: the long screenshot run still does not prove a clean encounter-to-separation sequence.";
             string failureSummary = failures.Count == 0
                 ? verdict
                 : string.Join(Environment.NewLine, failures);
@@ -508,14 +518,44 @@ namespace Ludots.Tests.Navigation2D
                 Verdict: verdict,
                 FailureSummary: failureSummary,
                 FailedChecks: failures.ToArray(),
-                Team0MidAdvanceCm: team0MidAdvance,
-                Team1MidAdvanceCm: team1MidAdvance,
-                Team0FinalAdvanceCm: team0FinalAdvance,
-                Team1FinalAdvanceCm: team1FinalAdvance,
                 FinalCenterFraction: finalCenterFraction,
                 FinalCenterStoppedFraction: finalCenterStoppedFraction,
                 PeakCenterCount: peak.CenterCount,
-                PeakCenterTick: peak.Tick);
+                PeakCenterTick: peak.Tick,
+                FirstContactTick: hasContact ? firstContact.Tick : null,
+                FirstCrossTick: hasFirstCross ? firstCross.Tick : null,
+                MajorityCrossTick: hasMajorityCross ? majorityCross.Tick : null,
+                ClearTick: hasClear ? clear.Tick : null);
+        }
+
+        private static bool TryFindSnapshot(IReadOnlyList<AvoidanceSnapshot> timeline, Func<AvoidanceSnapshot, bool> predicate, out AvoidanceSnapshot snapshot)
+        {
+            for (int i = 0; i < timeline.Count; i++)
+            {
+                if (predicate(timeline[i]))
+                {
+                    snapshot = timeline[i];
+                    return true;
+                }
+            }
+
+            snapshot = default;
+            return false;
+        }
+
+        private static int GetCenterCountLimit(int liveAgents)
+        {
+            return Math.Max(6, (int)Math.Ceiling(liveAgents * FinalCenterFractionLimit));
+        }
+
+        private static int GetCenterStoppedCountLimit(int liveAgents)
+        {
+            return Math.Max(1, (int)Math.Ceiling(liveAgents * FinalCenterStoppedFractionLimit));
+        }
+
+        private static string FormatTick(int? tick)
+        {
+            return tick.HasValue ? tick.Value.ToString() : "n/a";
         }
 
         private static void AddAcceptanceCheck(bool passed, string failure, List<string> failures)
@@ -690,14 +730,14 @@ namespace Ludots.Tests.Navigation2D
             string Verdict,
             string FailureSummary,
             IReadOnlyList<string> FailedChecks,
-            float Team0MidAdvanceCm,
-            float Team1MidAdvanceCm,
-            float Team0FinalAdvanceCm,
-            float Team1FinalAdvanceCm,
             float FinalCenterFraction,
             float FinalCenterStoppedFraction,
             int PeakCenterCount,
-            int PeakCenterTick);
+            int PeakCenterTick,
+            int? FirstContactTick,
+            int? FirstCrossTick,
+            int? MajorityCrossTick,
+            int? ClearTick);
 
         private sealed class NullInputBackend : IInputBackend
         {

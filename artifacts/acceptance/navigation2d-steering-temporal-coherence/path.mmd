@@ -1,0 +1,9 @@
+flowchart TD
+    A[Load explicit Steering.TemporalCoherence config] --> B[Spawn dense opposing crowd]
+    B --> C[Tick 1 cold solve and populate cache]
+    C --> D{Steady-state tick?}
+    D -->|yes| E[Reuse cached desired velocity]
+    D -->|no| F[Run full steering solve]
+    E --> G[Compare final desired velocity with reference run]
+    F --> G
+    G --> H[Write battle-report + trace + path]
