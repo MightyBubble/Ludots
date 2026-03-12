@@ -1,0 +1,23 @@
+[
+  {
+    "id": "interaction_arcweaver_forms_demo",
+    "routes": [
+      {
+        "requiredAll": ["State.Form.Ranged"],
+        "priority": 100,
+        "slotOverrides": [
+          { "slotIndex": 0, "abilityId": "Ability.Interaction.Arcweaver.DuelBolt" },
+          { "slotIndex": 1, "abilityId": "Ability.Interaction.Arcweaver.BlinkStep" }
+        ]
+      },
+      {
+        "requiredAll": ["State.Form.Melee"],
+        "priority": 100,
+        "slotOverrides": [
+          { "slotIndex": 0, "abilityId": "Ability.Interaction.Arcweaver.FireLance" },
+          { "slotIndex": 1, "abilityId": "Ability.Interaction.Arcweaver.ArcDash" }
+        ]
+      }
+    ]
+  }
+]

@@ -153,9 +153,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
 
                     // Resolve effective ability: granted override > base slot
+                    bool hasForm = World.Has<AbilityFormSlotBuffer>(actor);
+                    AbilityFormSlotBuffer formSlots = hasForm ? World.Get<AbilityFormSlotBuffer>(actor) : default;
                     bool hasGranted = World.Has<GrantedSlotBuffer>(actor);
                     GrantedSlotBuffer grantedSlots = hasGranted ? World.Get<GrantedSlotBuffer>(actor) : default;
-                    var slot = AbilitySlotResolver.Resolve(in abilities, in grantedSlots, hasGranted, slotIndex);
+                    var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in grantedSlots, hasGranted, slotIndex);
                     
                     // Read target from Blackboard (Cast_TargetEntity = 111)
                     Entity targetEntity = default;
@@ -399,9 +401,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 // Resolve effective ability: granted override > base slot
+                bool hasFormP2 = World.Has<AbilityFormSlotBuffer>(actor);
+                AbilityFormSlotBuffer formSlotsP2 = hasFormP2 ? World.Get<AbilityFormSlotBuffer>(actor) : default;
                 bool hasGrantedP2 = World.Has<GrantedSlotBuffer>(actor);
                 GrantedSlotBuffer grantedSlotsP2 = hasGrantedP2 ? World.Get<GrantedSlotBuffer>(actor) : default;
-                var slot = AbilitySlotResolver.Resolve(in abilities, in grantedSlotsP2, hasGrantedP2, instance.AbilitySlot);
+                var slot = AbilitySlotResolver.Resolve(in abilities, in formSlotsP2, hasFormP2, in grantedSlotsP2, hasGrantedP2, instance.AbilitySlot);
 
                 AbilityExecSpec spec;
                 AbilityExecCallerParamsPool callerPool = default;

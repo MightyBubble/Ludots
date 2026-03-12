@@ -11,11 +11,17 @@
 - Moved live input sampling ahead of simulation in `GameEngine.Tick()` so authoritative input snapshots are current-frame instead of one-frame late.
 - Added `AbilityAimOverlayPresentationSystem` in `CoreInputMod` so aim/indicator previews are emitted during presentation instead of being lost from simulation-time buffer writes.
 - Hardened production acceptance for interaction showcase, including indicator-mode baseline accounting against the persistent selection ring overlay.
+- Closed the planned GAS form-routing gap with `AbilityFormSetRegistry` + `AbilityFormSetConfigLoader` + `AbilityFormRoutingSystem`, keeping routing tag-driven instead of introducing a parallel condition runtime.
+- Split effective slot resolution into layered `Granted > Form > Base`, so form routing stays isolated from future transient grants while `AbilitySystem`, `AbilityExecSystem`, `ContextScoredOrderResolver`, and indicator bridging all consume the same slot boundary.
 
 ## Green commands
 
 ```powershell
 dotnet test src\Tests\GasTests\GasTests.csproj -c Release /m:1 --filter "FullyQualifiedName~InteractionShowcasePlayableAcceptanceTests.InteractionShowcase_PlayableFlow_WritesAcceptanceArtifacts"
+```
+
+```powershell
+dotnet test src\Tests\GasTests\GasTests.csproj -c Release /m:1 --filter "FullyQualifiedName~InputOrderAbilityAuditTests|FullyQualifiedName~ContextScoredResolverTests|FullyQualifiedName~AbilityFormRoutingSystemTests|FullyQualifiedName~InputOrderConvergenceValidationTests|FullyQualifiedName~InteractionShowcasePlayableAcceptanceTests.InteractionShowcase_PlayableFlow_WritesAcceptanceArtifacts"
 ```
 
 ```powershell
@@ -25,8 +31,11 @@ dotnet test src\Tests\GasTests\GasTests.csproj -c Release /m:1 --filter "FullyQu
 ## Key files for follow-up agents
 
 - `src/Tests/GasTests/Production/InteractionShowcasePlayableAcceptanceTests.cs`
+- `src/Tests/GasTests/AbilityFormRoutingSystemTests.cs`
 - `mods/CoreInputMod/Systems/AbilityAimOverlayPresentationSystem.cs`
 - `src/Core/Engine/GameEngine.cs`
+- `src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs`
+- `src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs`
 - `src/Core/Input/Orders/InputOrderMappingSystem.cs`
 - `artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`
 - `artifacts/acceptance/interaction-showcase/battle-report.md`

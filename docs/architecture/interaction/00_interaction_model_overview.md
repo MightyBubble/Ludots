@@ -11,6 +11,7 @@
 
 - `ContextGroup` 运行时基础设施：`src/Core/Gameplay/GAS/ContextGroupRegistry.cs`、`src/Core/Gameplay/GAS/Config/ContextGroupConfigLoader.cs`
 - `ContextScored` 输入路由：`src/Core/Input/Orders/ContextScoredOrderResolver.cs`、`src/Core/Input/Orders/InputOrderMappingSystem.cs`
+- form-based ability routing：`src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs`、`src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs`、`src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs`
 - ability 激活 tag gate：`src/Core/Gameplay/GAS/Components/AbilityActivationBlockTags.cs`、`src/Core/Gameplay/GAS/Systems/AbilitySystem.cs`、`src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs`
 - 最小 validation graph primitive：`src/Core/NodeLibraries/GASGraph/GraphExecutor.cs`
 - 分支验证边界：`src/Tests/GasTests/ContextScoredResolverTests.cs`、`src/Tests/GasTests/InputOrderAbilityAuditTests.cs`、`src/Tests/GasTests/Production/InteractionShowcasePlayableAcceptanceTests.cs`、`artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`
@@ -159,7 +160,7 @@ ability 激活阶段只读两类 gate：
 |------|--------|--------------|
 | 蓄力积累 | Effect + Attribute | tick 写 `charge_amount` 等属性 |
 | 连击段数 | Tag | `combo_stage` 等 tag |
-| 变身/姿态 | Tag | form tag 决定实际 ability set |
+| 变身/姿态 | Tag + Form Routing | form tag 经 `AbilityFormRoutingSystem` 解析为 form slot override，再由 `AbilitySlotResolver` 统一转成实际 ability |
 | 资源数值 | Attribute | mana / rage / charges / hp 等原始数值 |
 | ability 离散门控 | Tag gate | `RequiredAll` / `BlockedAny` |
 | 数值准入 | validation graph 或 tag bridge | graph 直接判定，或先投影为 ready tag |
@@ -202,7 +203,33 @@ Input mapping root slot (ArgsTemplate.I0)
 
 ---
 
-## 8. Showcase Runtime 与 Design Backlog 的边界
+## 8. Form Routing Runtime Flow
+
+当前分支的 form/stance 路由不占用新的 activation runtime，而是挂在已有 slot 解析链路上：
+
+```text
+entity AbilityFormSetRef
+  -> AbilityFormRoutingSystem (InputCollection)
+  -> match route by effective tags + priority
+  -> write AbilityFormSlotBuffer
+  -> AbilitySlotResolver (Granted > Form > Base)
+  -> AbilitySystem / AbilityExecSystem / ContextScored / Indicator
+```
+
+Template boundary:
+- `AbilityStateBuffer` and `AbilityFormSetRef` belong to the unit template baseline.
+- `PlayerOwner`, `WorldPositionCm`, and other scene ownership facts belong to map entity overrides or runtime spawn requests.
+
+关键实现路径：
+
+- `src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs`
+- `src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs`
+- `src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs`
+- `src/Core/Gameplay/GAS/Components/AbilityStateBuffer.cs`
+
+---
+
+## 9. Showcase Runtime 与 Design Backlog 的边界
 
 已由当前分支证明的切片，以 `artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md` 为准。
 
@@ -220,7 +247,7 @@ Input mapping root slot (ArgsTemplate.I0)
 
 ---
 
-## 9. 相关文档
+## 10. 相关文档
 
 - 交互 backlog 与分支校准差异：`docs/architecture/interaction/99_gap_analysis.md`
 - ContextScored 专项：`docs/architecture/interaction/features/09_context_scored.md`

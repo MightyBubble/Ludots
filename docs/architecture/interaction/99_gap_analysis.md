@@ -14,6 +14,7 @@
 | `ContextScored Acquisition 不存在` | 已关闭。`ContextScored` 已进入 `InteractionModeType` 与 `InputOrderMappingSystem` | `src/Core/Input/Orders/InputOrderMapping.cs`、`src/Core/Input/Orders/InputOrderMappingSystem.cs` |
 | `ContextGroup -> ability dispatch` | 已关闭。真实运行时为 registry + loader + resolver 链路 | `src/Core/Gameplay/GAS/ContextGroupRegistry.cs`、`src/Core/Gameplay/GAS/Config/ContextGroupConfigLoader.cs`、`src/Core/Input/Orders/ContextScoredOrderResolver.cs` |
 | `AbilityActivationRequireTags 不存在` | 已关闭。当前仓库使用 `AbilityActivationBlockTags.RequiredAll` / `BlockedAny` | `src/Core/Gameplay/GAS/Components/AbilityActivationBlockTags.cs`、`src/Core/Gameplay/GAS/Systems/AbilitySystem.cs`、`src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs` |
+| `Form-based ability routing 不存在` | 已关闭。当前分支已有 form-set registry + loader + routing system，并通过分层 effective slot 解析接入输入/执行/indicator/context 路径 | `src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs`、`src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs`、`src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs`、`src/Core/Gameplay/GAS/Components/AbilityStateBuffer.cs` |
 | `CooldownTickSystem 是前置` | 已关闭。当前分支不需要通用 cooldown tick baseline | `src/Tests/GasTests/InputOrderAbilityAuditTests.cs`、`artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md` |
 
 ---
@@ -88,6 +89,21 @@ charges / refill timer 也不应被写成“本分支必须具备的统一底座
 - `src/Core/Gameplay/GAS/GasConditionRegistry.cs`
 - `src/Core/Gameplay/GAS/Systems/EffectLifetimeSystem.cs`
 
+### 2.6 form-based ability routing 已落地，但不复用为平行 condition runtime
+
+当前分支的 form routing 走的是一条单独且松耦合的 slot 覆写链路：
+
+- `AbilityFormSetRegistry` / `AbilityFormSetConfigLoader` 从 `GAS/ability_form_sets.json` 编译 form route
+- `AbilityFormRoutingSystem` 在 `SystemGroup.InputCollection` 早期根据 actor effective tags 解析当前 form
+- `AbilityFormSlotBuffer` 与 `GrantedSlotBuffer` 分层存在，避免 stance/form 路由和未来 item/buff grant 互相踩写
+- `AbilitySlotResolver` 统一按 `Granted > Form > Base` 解析 effective slot
+
+结论：
+
+- form routing 继续只用 tag 条件（`requiredAll` / `blockedAny` + priority）
+- 不为姿态切换引入新的 `AbilityConditionSystem`
+- 下游 `AbilitySystem`、`AbilityExecSystem`、`ContextScoredOrderResolver`、`AbilityIndicatorOverlayBridge` 统一消费同一套 effective slot
+
 ---
 
 ## 3. 当前仍然成立的 backlog
@@ -96,7 +112,6 @@ charges / refill timer 也不应被写成“本分支必须具备的统一底座
 
 | 项目 | 优先级 | 原因 | 应复用的现有基础 |
 |------|--------|------|------------------|
-| Form-based ability routing | P1 | 缺少通用 slot + form 映射闭环 | `AbilityStateBuffer`、现有 tag gate |
 | Response target mutability / richer response-window UI | P1-P2 | 当前 showcase 只证明基础路径 | `ResponseChain`、presentation pipeline |
 | Companion focus / actor routing 细化 | P2 | shared selection fan-out 已有，但 companion 专用工作流未闭环 | `InputOrderMappingSystem`、`EntityClickSelectSystem`、现有 order pipeline |
 | Generic environment scan / displacement collision / nav blocker | P2 | showcase 未证明整族场景 | `ContextGroup`、`RuntimeEntitySpawnQueue`、effect / handler pipeline |
@@ -108,7 +123,7 @@ charges / refill timer 也不应被写成“本分支必须具备的统一底座
 
 以 `artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md` 为 stage boundary，建议按以下顺序继续：
 
-1. 在现有 `ContextGroupRegistry` / `ContextScoredOrderResolver` 上增加候选和 acceptance，不把路由挪进 `AbilityDefinition`
+1. 在现有 `ContextGroupRegistry` / `ContextScoredOrderResolver` / `AbilityFormRoutingSystem` 之上补更多 acceptance，不把路由回写进 `AbilityDefinition`
 2. 在现有 aim / indicator / queued-order 路径上继续补更多交互切片，而不是新建第二套 preview 或 input stack
 3. 仅当某个 feature 确实需要 numeric/context activation gate 时，再在现有 `GraphExecutor.ExecuteValidation(...)` primitive 上增量扩展
 4. 环境结构变更类玩法统一复用 `RuntimeEntitySpawnQueue` / builtin handler，不在 Graph 中写结构变更伪代码

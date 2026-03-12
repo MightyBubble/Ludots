@@ -71,7 +71,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             ref var buffer = ref World.TryGetRef<AbilityStateBuffer>(caster, out bool hasAbilityBuffer);
             if (!hasAbilityBuffer) return false;
-            var slot = buffer.Get(slotIndex);
+            bool hasForm = World.Has<AbilityFormSlotBuffer>(caster);
+            AbilityFormSlotBuffer formSlots = hasForm ? World.Get<AbilityFormSlotBuffer>(caster) : default;
+            bool hasGranted = World.Has<GrantedSlotBuffer>(caster);
+            GrantedSlotBuffer grantedSlots = hasGranted ? World.Get<GrantedSlotBuffer>(caster) : default;
+            var slot = AbilitySlotResolver.Resolve(in buffer, in formSlots, hasForm, in grantedSlots, hasGranted, slotIndex);
 
             if (slot.AbilityId > 0 && _abilityDefinitions != null && _abilityDefinitions.TryGet(slot.AbilityId, out var def))
             {

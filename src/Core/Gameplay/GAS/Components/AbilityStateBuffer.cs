@@ -171,6 +171,74 @@ namespace Ludots.Core.Gameplay.GAS.Components
     }
 
     /// <summary>
+    /// Form-driven slot overrides resolved from actor state tags.
+    /// This is separate from <see cref="GrantedSlotBuffer"/> so stance/form routing
+    /// does not collide with transient grants from items, buffs, or effects.
+    /// </summary>
+    public unsafe struct AbilityFormSlotBuffer
+    {
+        public const int CAPACITY = AbilityStateBuffer.CAPACITY;
+
+        public fixed int AbilityIds[CAPACITY];
+        public fixed int TemplateIds[CAPACITY];
+        public fixed int TemplateWorldIds[CAPACITY];
+        public fixed int TemplateVersions[CAPACITY];
+
+        public void SetOverride(int slotIndex, int abilityId)
+        {
+            if ((uint)slotIndex >= CAPACITY) return;
+            AbilityIds[slotIndex] = abilityId;
+            TemplateIds[slotIndex] = 0;
+            TemplateWorldIds[slotIndex] = 0;
+            TemplateVersions[slotIndex] = 0;
+        }
+
+        public void SetOverride(int slotIndex, Entity templateEntity)
+        {
+            if ((uint)slotIndex >= CAPACITY) return;
+            AbilityIds[slotIndex] = 0;
+            TemplateIds[slotIndex] = templateEntity.Id;
+            TemplateWorldIds[slotIndex] = templateEntity.WorldId;
+            TemplateVersions[slotIndex] = templateEntity.Version;
+        }
+
+        public void Clear(int slotIndex)
+        {
+            if ((uint)slotIndex >= CAPACITY) return;
+            AbilityIds[slotIndex] = 0;
+            TemplateIds[slotIndex] = 0;
+            TemplateWorldIds[slotIndex] = 0;
+            TemplateVersions[slotIndex] = 0;
+        }
+
+        public void ClearAll()
+        {
+            for (int i = 0; i < CAPACITY; i++)
+            {
+                Clear(i);
+            }
+        }
+
+        public bool HasOverride(int slotIndex)
+        {
+            if ((uint)slotIndex >= CAPACITY) return false;
+            return AbilityIds[slotIndex] != 0 || TemplateIds[slotIndex] != 0;
+        }
+
+        public AbilitySlotState GetOverride(int slotIndex)
+        {
+            if ((uint)slotIndex >= CAPACITY) return default;
+            return new AbilitySlotState
+            {
+                AbilityId = AbilityIds[slotIndex],
+                TemplateEntityId = TemplateIds[slotIndex],
+                TemplateEntityWorldId = TemplateWorldIds[slotIndex],
+                TemplateEntityVersion = TemplateVersions[slotIndex]
+            };
+        }
+    }
+
+    /// <summary>
     /// Utility for resolving the effective ability at a slot index
     /// by merging base slots + granted overrides.
     /// </summary>
@@ -191,6 +259,31 @@ namespace Ludots.Core.Gameplay.GAS.Components
             {
                 return grantedSlots.GetOverride(slotIndex);
             }
+            return baseSlots.Get(slotIndex);
+        }
+
+        /// <summary>
+        /// Resolve the effective ability for a slot with layered overrides:
+        /// transient granted override > form override > base slot.
+        /// </summary>
+        public static AbilitySlotState Resolve(
+            in AbilityStateBuffer baseSlots,
+            in AbilityFormSlotBuffer formSlots,
+            bool hasForm,
+            in GrantedSlotBuffer grantedSlots,
+            bool hasGranted,
+            int slotIndex)
+        {
+            if (hasGranted && grantedSlots.HasOverride(slotIndex))
+            {
+                return grantedSlots.GetOverride(slotIndex);
+            }
+
+            if (hasForm && formSlots.HasOverride(slotIndex))
+            {
+                return formSlots.GetOverride(slotIndex);
+            }
+
             return baseSlots.Get(slotIndex);
         }
     }

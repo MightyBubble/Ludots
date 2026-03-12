@@ -140,9 +140,11 @@ namespace Ludots.Core.Input.Orders
                 return false;
             }
 
+            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
+            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
             bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
             GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-            var slot = AbilitySlotResolver.Resolve(in abilities, in granted, hasGranted, rootSlotIndex);
+            var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in granted, hasGranted, rootSlotIndex);
             return slot.AbilityId > 0 && _contextGroups.TryGetByRootAbility(slot.AbilityId, out group);
         }
 
@@ -150,12 +152,14 @@ namespace Ludots.Core.Input.Orders
         {
             slotIndex = -1;
             ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
+            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
+            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
             bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
             GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
 
             for (int i = 0; i < abilities.Count; i++)
             {
-                var slot = AbilitySlotResolver.Resolve(in abilities, in granted, hasGranted, i);
+                var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in granted, hasGranted, i);
                 if (slot.AbilityId == abilityId)
                 {
                     slotIndex = i;

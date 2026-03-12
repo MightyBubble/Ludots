@@ -3,7 +3,6 @@
     "id": "interaction_arcweaver",
     "components": {
       "Name": { "Value": "Arcweaver" },
-      "PlayerOwner": { "PlayerId": 1 },
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
@@ -32,7 +31,6 @@
     "id": "interaction_vanguard",
     "components": {
       "Name": { "Value": "Vanguard" },
-      "PlayerOwner": { "PlayerId": 1 },
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
@@ -58,10 +56,36 @@
     }
   },
   {
+    "id": "interaction_arcweaver_forms_demo",
+    "components": {
+      "Name": { "Value": "ArcweaverFormsDemo" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "VisualModel": { "MeshId": 2, "MaterialId": 0, "BaseScale": 0.92 },
+      "AttributeBuffer": { "base": { "Health": 160, "Shield": 20, "MoveSpeed": 360, "Armor": 4 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Interaction.Arcweaver.DuelBolt",
+          "Ability.Interaction.Arcweaver.BlinkStep",
+          "Ability.Interaction.Arcweaver.FireLance",
+          "Ability.Interaction.Arcweaver.NovaPulse"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "interaction_arcweaver_forms_demo"
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
     "id": "interaction_commander",
     "components": {
       "Name": { "Value": "Commander" },
-      "PlayerOwner": { "PlayerId": 1 },
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },

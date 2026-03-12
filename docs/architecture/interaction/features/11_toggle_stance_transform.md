@@ -41,7 +41,62 @@ Down → Execute:
     读取 form tag → 选择对应 ability
 ```
 
-- **需要**: AbilityStateBuffer 支持 form-based ability mapping (slot → tag → actual ability)
+- **现有基建**: `AbilityFormSetRegistry` + `AbilityFormRoutingSystem` + `AbilityFormSlotBuffer`
+- 配置入口: `GAS/ability_form_sets.json`
+- 路由条件: 继续只用 `requiredAll` / `blockedAny` tag route，不引入平行 condition runtime
+- 生效时序: `AbilityFormRoutingSystem` 在 `SystemGroup.InputCollection` 早期先写 form override，后续 `AbilitySystem` / `AbilityExecSystem` / `ContextScoredOrderResolver` / indicator 都统一走 effective slot
+
+配置示例：
+
+```json
+{
+  "AbilityStateBuffer": {
+    "abilityIds": [
+      "Ability.Interaction.Arcweaver.DuelBolt",
+      "Ability.Interaction.Arcweaver.BlinkStep",
+      "Ability.Interaction.Arcweaver.FireLance",
+      "Ability.Interaction.Arcweaver.NovaPulse"
+    ]
+  },
+  "AbilityFormSetRef": {
+    "formSetId": "interaction_arcweaver_forms_demo"
+  }
+}
+```
+
+```json
+[
+  {
+    "id": "interaction_arcweaver_forms_demo",
+    "routes": [
+      {
+        "requiredAll": ["State.Form.Ranged"],
+        "slotOverrides": [
+          { "slotIndex": 0, "abilityId": "Ability.Interaction.Arcweaver.DuelBolt" },
+          { "slotIndex": 1, "abilityId": "Ability.Interaction.Arcweaver.BlinkStep" }
+        ]
+      },
+      {
+        "requiredAll": ["State.Form.Melee"],
+        "slotOverrides": [
+          { "slotIndex": 0, "abilityId": "Ability.Interaction.Arcweaver.FireLance" },
+          { "slotIndex": 1, "abilityId": "Ability.Interaction.Arcweaver.ArcDash" }
+        ]
+      }
+    ]
+  }
+]
+```
+
+实际样例文件：
+
+- `mods/showcases/interaction/InteractionShowcaseMod/assets/Entities/templates.json`
+- `mods/showcases/interaction/InteractionShowcaseMod/assets/GAS/ability_form_sets.json`
+
+配置边界：
+- `AbilityStateBuffer` 定义单位模板的基础技能组。
+- `AbilityFormSetRef` 把模板接到 form routing。
+- `PlayerOwner` / `WorldPositionCm` 不属于模板，必须由 map instance override 或 runtime spawn 注入。
 
 ### J3: 临时变身 (大招)
 

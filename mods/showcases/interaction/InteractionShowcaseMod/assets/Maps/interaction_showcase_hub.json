@@ -8,18 +8,21 @@
     {
       "Template": "interaction_arcweaver",
       "Overrides": {
+        "PlayerOwner": { "PlayerId": 1 },
         "WorldPositionCm": { "Value": { "X": 1150, "Y": 900 } }
       }
     },
     {
       "Template": "interaction_vanguard",
       "Overrides": {
+        "PlayerOwner": { "PlayerId": 1 },
         "WorldPositionCm": { "Value": { "X": 1500, "Y": 470 } }
       }
     },
     {
       "Template": "interaction_commander",
       "Overrides": {
+        "PlayerOwner": { "PlayerId": 1 },
         "WorldPositionCm": { "Value": { "X": 1600, "Y": 1260 } }
       }
     },

@@ -136,6 +136,70 @@ namespace Ludots.Tests.GAS
             Assert.That(orders[0].Target, Is.EqualTo(targetDowned));
         }
 
+        [Test]
+        public void ContextScoredResolver_UsesFormOverrideForRootAbilityLookup()
+        {
+            using var world = World.Create();
+
+            const int baseRootAbilityId = 1100;
+            const int meleeRootAbilityId = 1101;
+            const int candidateAbilityId = 1102;
+
+            var actor = world.Create();
+            var abilities = new AbilityStateBuffer();
+            abilities.AddAbility(baseRootAbilityId);
+            abilities.AddAbility(candidateAbilityId);
+            world.Add(actor, abilities);
+            world.Add(actor, WorldPositionCm.FromCm(0, 0));
+            world.Add(actor, new FacingDirection { AngleRad = 0f });
+
+            var formSlots = new AbilityFormSlotBuffer();
+            formSlots.SetOverride(0, meleeRootAbilityId);
+            world.Add(actor, formSlots);
+
+            var target = world.Create();
+            world.Add(target, WorldPositionCm.FromCm(120, 0));
+            world.Add(target, new GameplayTagContainer());
+
+            var contextGroups = new ContextGroupRegistry();
+            contextGroups.Register(
+                groupId: 1,
+                rootAbilityId: meleeRootAbilityId,
+                new ContextGroupDefinition(
+                    searchRadiusCm: 300,
+                    new[]
+                    {
+                        new ContextGroupCandidate(
+                            abilityId: candidateAbilityId,
+                            preconditionGraphId: 0,
+                            scoreGraphId: 0,
+                            basePriority: 10f,
+                            maxDistanceCm: 300,
+                            distanceWeight: 0f,
+                            maxAngleDeg: 180,
+                            angleWeight: 0f,
+                            hoveredBiasScore: 0f,
+                            requiresTarget: true)
+                    }));
+
+            var resolver = new ContextScoredOrderResolver(
+                world,
+                contextGroups,
+                new GraphProgramRegistry(),
+                new StubSpatialQueryService(target),
+                new StubGraphApi(world));
+
+            bool resolved = resolver.TryResolve(
+                actor,
+                new InputOrderMapping { ArgsTemplate = new OrderArgsTemplate { I0 = 0 } },
+                target,
+                out var resolution);
+
+            Assert.That(resolved, Is.True);
+            Assert.That(resolution.SlotIndex, Is.EqualTo(1));
+            Assert.That(resolution.Target, Is.EqualTo(target));
+        }
+
         private static InputConfigRoot CreateInputConfig()
         {
             return new InputConfigRoot
