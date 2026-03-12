@@ -30,15 +30,13 @@ namespace Ludots.Adapter.Web.Streaming
             _viewController = viewController;
         }
 
-        /// <summary>
-        /// Sets the mesh asset registry mapping to send to newly connected clients.
-        /// Format: [MsgType(1)] [Count(2)] [Entries: Id(4) + KeyLen(2) + KeyUTF8(...)]
-        /// </summary>
         public void SetMeshMap(Dictionary<int, string> idToKey)
         {
             int totalSize = 1 + 2;
             foreach (var kvp in idToKey)
+            {
                 totalSize += 4 + 2 + Encoding.UTF8.GetByteCount(kvp.Value);
+            }
 
             var buf = new byte[totalSize];
             buf[0] = FrameProtocol.MsgTypeMeshMap;
@@ -71,23 +69,35 @@ namespace Ludots.Adapter.Web.Streaming
                 if (meshMap != null)
                 {
                     await ws.SendAsync(
-                        new ArraySegment<byte>(meshMap), WebSocketMessageType.Binary, true, ct);
+                        new ArraySegment<byte>(meshMap),
+                        WebSocketMessageType.Binary,
+                        true,
+                        ct);
                 }
 
                 var receiveTask = ReceiveLoopAsync(session, ct);
                 var sendTask = SendLoopAsync(session, ct);
                 await Task.WhenAny(receiveTask, sendTask);
             }
-            catch (OperationCanceledException) { }
-            catch (WebSocketException) { }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (WebSocketException)
+            {
+            }
             finally
             {
                 _sessions.TryRemove(id, out _);
                 Log.Info(in LogChannel, $"Client disconnected: {id} (sent={session.FramesSent} bytes={session.BytesSent} dropped={session.FramesDropped})");
                 if (ws.State == WebSocketState.Open)
                 {
-                    try { await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None); }
-                    catch { }
+                    try
+                    {
+                        await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
+                    }
+                    catch
+                    {
+                    }
                 }
             }
         }
@@ -96,7 +106,9 @@ namespace Ludots.Adapter.Web.Streaming
         {
             byte[] copy = frameData.ToArray();
             foreach (var kvp in _sessions)
+            {
                 kvp.Value.EnqueueFrame(copy);
+            }
         }
 
         public List<SessionInfo> GetSessionInfo()
@@ -114,28 +126,71 @@ namespace Ludots.Adapter.Web.Streaming
                     ConnectedAt = s.ConnectedAt,
                 });
             }
+
             return list;
         }
 
         private async Task ReceiveLoopAsync(ClientSession session, CancellationToken ct)
         {
-            var buf = new byte[256];
+            var buf = new byte[512];
             while (!ct.IsCancellationRequested && session.Socket.State == WebSocketState.Open)
             {
                 var result = await session.Socket.ReceiveAsync(new ArraySegment<byte>(buf), ct);
-                if (result.MessageType == WebSocketMessageType.Close) break;
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    break;
+                }
+
                 if (result.MessageType == WebSocketMessageType.Binary && result.Count > 0)
+                {
                     ProcessClientMessage(buf.AsSpan(0, result.Count));
+                }
             }
         }
 
         private void ProcessClientMessage(ReadOnlySpan<byte> msg)
         {
-            if (msg.Length == 0) return;
-            byte msgType = msg[0];
+            if (msg.Length == 0)
+            {
+                return;
+            }
 
-            if (msgType == Protocol.InputProtocol.MsgTypeInput)
-                _inputBackend.ApplyMessage(msg);
+            switch (msg[0])
+            {
+                case InputProtocol.MsgTypeInputState:
+                    if (msg.Length < InputProtocol.InputStateMessageSize)
+                    {
+                        return;
+                    }
+
+                    UpdateResolution(
+                        msg,
+                        InputProtocol.InputStateViewportWidthOffset,
+                        InputProtocol.InputStateViewportHeightOffset);
+                    _inputBackend.ApplyStateMessage(msg);
+                    break;
+
+                case InputProtocol.MsgTypePointerEvent:
+                    if (msg.Length < InputProtocol.PointerEventMessageSize)
+                    {
+                        return;
+                    }
+
+                    UpdateResolution(
+                        msg,
+                        InputProtocol.PointerViewportWidthOffset,
+                        InputProtocol.PointerViewportHeightOffset);
+                    _inputBackend.EnqueuePointerMessage(msg);
+                    break;
+            }
+        }
+
+        private void UpdateResolution(ReadOnlySpan<byte> msg, int widthOffset, int heightOffset)
+        {
+            int width = BinaryPrimitives.ReadInt32LittleEndian(msg.Slice(widthOffset, 4));
+            int height = BinaryPrimitives.ReadInt32LittleEndian(msg.Slice(heightOffset, 4));
+            _viewController.SetResolution(width, height);
+            _inputBackend.SyncNeutralViewport(width, height);
         }
 
         private async Task SendLoopAsync(ClientSession session, CancellationToken ct)
@@ -146,7 +201,10 @@ namespace Ludots.Adapter.Web.Streaming
                 if (frame != null)
                 {
                     await session.Socket.SendAsync(
-                        new ArraySegment<byte>(frame), WebSocketMessageType.Binary, true, ct);
+                        new ArraySegment<byte>(frame),
+                        WebSocketMessageType.Binary,
+                        true,
+                        ct);
                     session.RecordSent(frame.Length);
                 }
                 else
@@ -160,14 +218,27 @@ namespace Ludots.Adapter.Web.Streaming
         {
             foreach (var kvp in _sessions)
             {
-                try { kvp.Value.Socket.Abort(); } catch { }
+                try
+                {
+                    kvp.Value.Socket.Abort();
+                }
+                catch
+                {
+                }
             }
+
             _sessions.Clear();
         }
 
         private sealed class ClientSession
         {
             private volatile byte[]? _pendingFrame;
+
+            public ClientSession(string id, WebSocket socket)
+            {
+                Id = id;
+                Socket = socket;
+            }
 
             public string Id { get; }
             public WebSocket Socket { get; }
@@ -176,17 +247,21 @@ namespace Ludots.Adapter.Web.Streaming
             public long BytesSent { get; private set; }
             public long FramesDropped { get; private set; }
 
-            public ClientSession(string id, WebSocket socket) { Id = id; Socket = socket; }
-
             public void EnqueueFrame(byte[] frame)
             {
                 if (Interlocked.Exchange(ref _pendingFrame, frame) != null)
+                {
                     FramesDropped++;
+                }
             }
 
             public byte[]? DequeueFrame() => Interlocked.Exchange(ref _pendingFrame, null);
 
-            public void RecordSent(int bytes) { FramesSent++; BytesSent += bytes; }
+            public void RecordSent(int bytes)
+            {
+                FramesSent++;
+                BytesSent += bytes;
+            }
         }
     }
 

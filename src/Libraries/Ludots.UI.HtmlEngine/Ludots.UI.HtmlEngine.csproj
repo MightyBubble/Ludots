@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\Ludots.UI\Ludots.UI.csproj" />
     <ProjectReference Include="..\ExCSS\ExCSS.csproj" />
   </ItemGroup>

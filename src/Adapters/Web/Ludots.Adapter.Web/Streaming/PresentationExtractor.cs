@@ -9,27 +9,25 @@ using Ludots.Core.Scripting;
 
 namespace Ludots.Adapter.Web.Streaming
 {
-    /// <summary>
-    /// Extracts presentation data from GameEngine draw buffers after each Tick,
-    /// encodes it into binary frames for WebSocket transmission.
-    /// </summary>
     public sealed class PresentationExtractor
     {
         private readonly GameEngine _engine;
         private readonly BinaryFrameEncoder _fullEncoder;
         private readonly DeltaCompressor _deltaCompressor;
         private readonly WebCameraAdapter _cameraAdapter;
-        private readonly WebUiSystem _uiSystem;
+        private readonly WebUiRuntimeBridge _uiBridge;
         private uint _frameNumber;
         private int _fullFrameInterval = 30;
         private int _framesSinceFullFrame;
         private byte[] _snapshot = new byte[256 * 1024];
+        private string? _lastUiSceneJson;
+        private bool _hasUiSceneSnapshot;
 
-        public PresentationExtractor(GameEngine engine, WebCameraAdapter cameraAdapter, WebUiSystem uiSystem)
+        public PresentationExtractor(GameEngine engine, WebCameraAdapter cameraAdapter, WebUiRuntimeBridge uiBridge)
         {
             _engine = engine;
             _cameraAdapter = cameraAdapter;
-            _uiSystem = uiSystem;
+            _uiBridge = uiBridge;
             _fullEncoder = new BinaryFrameEncoder();
             _deltaCompressor = new DeltaCompressor();
         }
@@ -46,7 +44,13 @@ namespace Ludots.Adapter.Web.Streaming
             DebugDrawCommandBuffer? debugDraw = _engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
             ScreenOverlayBuffer? screenOverlay = _engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
 
-            _uiSystem.TryConsume(out string? uiHtml, out string? uiCss);
+            string? uiSceneJson = null;
+            if (_uiBridge.TryConsumeScene(out string? changedSceneJson))
+            {
+                uiSceneJson = changedSceneJson;
+                _lastUiSceneJson = changedSceneJson;
+                _hasUiSceneSnapshot = true;
+            }
 
             var camera = _cameraAdapter.CurrentState;
             long timestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -58,10 +62,16 @@ namespace Ludots.Adapter.Web.Streaming
             if (useDelta)
             {
                 deltaOk = _deltaCompressor.TryEncodeDelta(
-                    _frameNumber, simTick, timestampMs, in camera,
-                    primitives, groundOverlays, worldHud, debugDraw,
-                    screenOverlay, uiHtml, uiCss
-                );
+                    _frameNumber,
+                    simTick,
+                    timestampMs,
+                    in camera,
+                    primitives,
+                    groundOverlays,
+                    worldHud,
+                    debugDraw,
+                    screenOverlay,
+                    uiSceneJson);
             }
 
             if (deltaOk)
@@ -72,20 +82,31 @@ namespace Ludots.Adapter.Web.Streaming
                 ClearConsumedBuffers(screenOverlay);
                 return (_snapshot, len);
             }
-            else
+
+            _framesSinceFullFrame = 0;
+            string? fullFrameUiScene = uiSceneJson;
+            if (fullFrameUiScene == null && _hasUiSceneSnapshot)
             {
-                _framesSinceFullFrame = 0;
-                _fullEncoder.Encode(
-                    _frameNumber, simTick, timestampMs, in camera,
-                    primitives, groundOverlays, worldHud, screenHud, debugDraw,
-                    screenOverlay, uiHtml, uiCss
-                );
-                int len = _fullEncoder.EncodedLength;
-                EnsureSnapshot(len);
-                _fullEncoder.CopyTo(_snapshot);
-                ClearConsumedBuffers(screenOverlay);
-                return (_snapshot, len);
+                fullFrameUiScene = _lastUiSceneJson;
             }
+
+            _fullEncoder.Encode(
+                _frameNumber,
+                simTick,
+                timestampMs,
+                in camera,
+                primitives,
+                groundOverlays,
+                worldHud,
+                screenHud,
+                debugDraw,
+                screenOverlay,
+                fullFrameUiScene);
+            int fullLength = _fullEncoder.EncodedLength;
+            EnsureSnapshot(fullLength);
+            _fullEncoder.CopyTo(_snapshot);
+            ClearConsumedBuffers(screenOverlay);
+            return (_snapshot, fullLength);
         }
 
         private static void ClearConsumedBuffers(ScreenOverlayBuffer? screenOverlay)
@@ -96,7 +117,9 @@ namespace Ludots.Adapter.Web.Streaming
         private void EnsureSnapshot(int required)
         {
             if (_snapshot.Length < required)
+            {
                 _snapshot = new byte[required * 2];
+            }
         }
     }
 }

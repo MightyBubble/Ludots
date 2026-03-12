@@ -6,7 +6,6 @@ using System.Text.Json;
 using Arch.Core;
 using CameraAcceptanceMod;
 using Ludots.Adapter.Raylib.Services;
-using Ludots.Adapter.Raylib.UI;
 using Ludots.Adapter.Web.Services;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
@@ -28,6 +27,7 @@ using Ludots.Core.Systems;
 using Ludots.Launcher.Backend;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
+using Ludots.UI.HtmlEngine.Markup;
 using Navigation2DPlaygroundMod;
 using Navigation2DPlaygroundMod.Systems;
 using Raylib_cs;
@@ -140,7 +140,7 @@ public static class LauncherEvidenceRecorder
         var uiRoot = new UIRoot();
         uiRoot.Resize(DefaultWidth, DefaultHeight);
         engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new DesktopUiSystem(uiRoot));
+        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiRoot));
 
         var inputBackend = new ScriptedInputBackend();
         var inputHandler = new PlayerInputHandler(inputBackend, new InputConfigPipelineLoader(engine.ConfigPipeline).Load());
@@ -198,7 +198,7 @@ public static class LauncherEvidenceRecorder
         var uiRoot = new UIRoot();
         uiRoot.Resize(DefaultWidth, DefaultHeight);
         engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new WebUiSystem());
+        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiRoot));
 
         var inputBackend = new ScriptedInputBackend();
         var inputHandler = new PlayerInputHandler(inputBackend, new InputConfigPipelineLoader(engine.ConfigPipeline).Load());

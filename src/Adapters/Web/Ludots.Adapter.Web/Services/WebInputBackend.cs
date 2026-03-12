@@ -1,48 +1,123 @@
 using System;
+using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Core.Input.Runtime;
+using Ludots.UI.Input;
 
 namespace Ludots.Adapter.Web.Services
 {
-    /// <summary>
-    /// Thread-safe input state fed by WebSocket binary messages.
-    /// The WebTransportLayer writes from a receive thread; GameEngine reads from the game thread.
-    /// </summary>
     public sealed class WebInputBackend : IInputBackend
     {
         private readonly object _lock = new();
+        private readonly Queue<PointerEvent> _pointerEvents = new();
         private WireInputState _state;
+        private bool _hasPointerSample;
 
-        public void ApplyMessage(ReadOnlySpan<byte> msg)
+        public void ApplyStateMessage(ReadOnlySpan<byte> msg)
         {
-            if (msg.Length < InputProtocol.InputMessageSize || msg[0] != InputProtocol.MsgTypeInput)
-                return;
-
-            var s = new WireInputState
+            if (msg.Length < InputProtocol.InputStateMessageSize || msg[0] != InputProtocol.MsgTypeInputState)
             {
-                ButtonMask = BitConverter.ToInt32(msg.Slice(1, 4)),
-                MouseX = BitConverter.ToSingle(msg.Slice(5, 4)),
-                MouseY = BitConverter.ToSingle(msg.Slice(9, 4)),
-                MouseWheel = BitConverter.ToSingle(msg.Slice(13, 4)),
-                KeyBits = BitConverter.ToUInt64(msg.Slice(17, 8)),
+                return;
+            }
+
+            var state = new WireInputState
+            {
+                ButtonMask = BinaryPrimitives.ReadInt32LittleEndian(msg.Slice(InputProtocol.InputStateButtonMaskOffset, 4)),
+                MouseX = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.InputStateMouseXOffset, 4)),
+                MouseY = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.InputStateMouseYOffset, 4)),
+                MouseWheel = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.InputStateMouseWheelOffset, 4)),
+                KeyBits = BinaryPrimitives.ReadUInt64LittleEndian(msg.Slice(InputProtocol.InputStateKeyBitsOffset, 8)),
             };
 
             lock (_lock)
             {
-                _state = s;
+                _state = state;
+                _hasPointerSample = true;
             }
         }
 
-        private WireInputState SnapshotState()
+        public void EnqueuePointerMessage(ReadOnlySpan<byte> msg)
         {
-            lock (_lock) return _state;
+            if (msg.Length < InputProtocol.PointerEventMessageSize || msg[0] != InputProtocol.MsgTypePointerEvent)
+            {
+                return;
+            }
+
+            byte rawAction = msg[InputProtocol.PointerActionOffset];
+            PointerAction action = Enum.IsDefined(typeof(PointerAction), (int)rawAction)
+                ? (PointerAction)rawAction
+                : PointerAction.Move;
+            float x = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.PointerXOffset, 4));
+            float y = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.PointerYOffset, 4));
+            float deltaX = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.PointerDeltaXOffset, 4));
+            float deltaY = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.PointerDeltaYOffset, 4));
+
+            lock (_lock)
+            {
+                _state.MouseX = x;
+                _state.MouseY = y;
+                _hasPointerSample = true;
+                if (action == PointerAction.Scroll)
+                {
+                    _state.MouseWheel = deltaY;
+                }
+
+                _pointerEvents.Enqueue(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = action,
+                    X = x,
+                    Y = y,
+                    DeltaX = deltaX,
+                    DeltaY = deltaY,
+                });
+            }
+        }
+
+        public void SyncNeutralViewport(int width, int height)
+        {
+            if (width <= 0 || height <= 0)
+            {
+                return;
+            }
+
+            lock (_lock)
+            {
+                if (_hasPointerSample)
+                {
+                    return;
+                }
+
+                _state.MouseX = width * 0.5f;
+                _state.MouseY = height * 0.5f;
+            }
+        }
+
+        public bool TryDequeuePointerEvent(out PointerEvent? pointerEvent)
+        {
+            lock (_lock)
+            {
+                if (_pointerEvents.Count == 0)
+                {
+                    pointerEvent = null;
+                    return false;
+                }
+
+                pointerEvent = _pointerEvents.Dequeue();
+                return true;
+            }
         }
 
         public float GetAxis(string devicePath)
         {
             if (devicePath.StartsWith("<Mouse>/ScrollY", StringComparison.OrdinalIgnoreCase))
-                return SnapshotState().MouseWheel;
+            {
+                return SnapshotState(peekOnly: false).MouseWheel;
+            }
+
             return 0f;
         }
 
@@ -52,14 +127,17 @@ namespace Ludots.Adapter.Web.Services
             {
                 int bitIndex = KeyPathToBitIndex(devicePath.Substring(11));
                 if (bitIndex >= 0)
-                    return (SnapshotState().KeyBits & (1UL << bitIndex)) != 0;
+                {
+                    return (SnapshotState(peekOnly: true).KeyBits & (1UL << bitIndex)) != 0;
+                }
+
                 return false;
             }
 
             if (devicePath.StartsWith("<Mouse>/", StringComparison.OrdinalIgnoreCase))
             {
                 string btnName = devicePath.Substring(8).ToUpperInvariant();
-                var state = SnapshotState();
+                WireInputState state = SnapshotState(peekOnly: true);
                 return btnName switch
                 {
                     "LEFTBUTTON" => (state.ButtonMask & InputProtocol.ButtonMaskLeft) != 0,
@@ -74,23 +152,50 @@ namespace Ludots.Adapter.Web.Services
 
         public Vector2 GetMousePosition()
         {
-            var s = SnapshotState();
-            return new Vector2(s.MouseX, s.MouseY);
+            WireInputState state = SnapshotState(peekOnly: true);
+            return new Vector2(state.MouseX, state.MouseY);
         }
 
-        public float GetMouseWheel() => SnapshotState().MouseWheel;
+        public float GetMouseWheel() => SnapshotState(peekOnly: false).MouseWheel;
 
-        public void EnableIME(bool enable) { }
-        public void SetIMECandidatePosition(int x, int y) { }
+        public void EnableIME(bool enable)
+        {
+        }
+
+        public void SetIMECandidatePosition(int x, int y)
+        {
+        }
+
         public string GetCharBuffer() => string.Empty;
+
+        private WireInputState SnapshotState(bool peekOnly)
+        {
+            lock (_lock)
+            {
+                WireInputState snapshot = _state;
+                if (!peekOnly)
+                {
+                    _state.MouseWheel = 0f;
+                }
+
+                return snapshot;
+            }
+        }
 
         private static int KeyPathToBitIndex(string keyName)
         {
             if (keyName.Length == 1)
             {
                 char c = char.ToUpperInvariant(keyName[0]);
-                if (c >= 'A' && c <= 'Z') return c - 'A';       // bits 0-25
-                if (c >= '0' && c <= '9') return 26 + (c - '0'); // bits 26-35
+                if (c >= 'A' && c <= 'Z')
+                {
+                    return c - 'A';
+                }
+
+                if (c >= '0' && c <= '9')
+                {
+                    return 26 + (c - '0');
+                }
             }
 
             return keyName.ToUpperInvariant() switch

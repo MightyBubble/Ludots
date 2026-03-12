@@ -5,7 +5,8 @@ import { EntityManager } from './rendering/EntityManager';
 import { HudRenderer } from './rendering/HudRenderer';
 import { GroundOverlayRenderer } from './rendering/GroundOverlayRenderer';
 import { PositionInterpolator } from './rendering/PositionInterpolator';
-import { UiOverlay } from './rendering/UiOverlay';
+import { ReferenceWorldRenderer } from './rendering/ReferenceWorldRenderer';
+import { UiSceneOverlay } from './rendering/UiSceneOverlay';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -25,10 +26,8 @@ const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
 dirLight.position.set(50, 100, 50);
 scene.add(dirLight);
 
-const gridHelper = new THREE.GridHelper(200, 200, 0x555555, 0x333333);
-scene.add(gridHelper);
-
 const hudCanvas = document.getElementById('hud-canvas') as HTMLCanvasElement;
+const uiCanvas = document.getElementById('ui-canvas') as HTMLCanvasElement;
 const statsEl = document.getElementById('stats')!;
 
 const decoder = new FrameDecoder();
@@ -37,8 +36,10 @@ const entityManager = new EntityManager(scene);
 const hudRenderer = new HudRenderer(hudCanvas);
 const groundOverlayRenderer = new GroundOverlayRenderer(scene);
 const interpolator = new PositionInterpolator();
-const uiOverlay = new UiOverlay();
+const referenceWorldRenderer = new ReferenceWorldRenderer(scene);
+const uiOverlay = new UiSceneOverlay(uiCanvas);
 
+let _socket: WebSocket | null = null;
 let _lastFrame: DecodedFrame | null = null;
 let _frameCount = 0;
 let _bytesReceived = 0;
@@ -53,24 +54,22 @@ function connectWebSocket(): void {
   const ws = new WebSocket(wsUrl);
   ws.binaryType = 'arraybuffer';
 
-  let inputInterval: ReturnType<typeof setInterval> | null = null;
-
   ws.addEventListener('open', () => {
     console.log('[WS] Connected');
-    inputInterval = setInterval(() => {
-      if (ws.readyState !== WebSocket.OPEN) {
-        if (inputInterval) { clearInterval(inputInterval); inputInterval = null; }
-        return;
-      }
-      ws.send(inputCapture.encoder.encode());
-    }, 50);
+    _socket = ws;
   });
+
   ws.addEventListener('close', () => {
     console.log('[WS] Disconnected, reconnecting in 2s...');
-    if (inputInterval) { clearInterval(inputInterval); inputInterval = null; }
+    if (_socket === ws) {
+      _socket = null;
+    }
     _meshMapApplied = false;
+    _lastFrame = null;
+    uiOverlay.clear();
     setTimeout(connectWebSocket, 2000);
   });
+
   ws.addEventListener('error', () => ws.close());
 
   ws.addEventListener('message', (ev) => {
@@ -89,6 +88,18 @@ function connectWebSocket(): void {
 
     interpolator.pushFrame(frame.primitives, frame.timestampMs);
   });
+}
+
+function flushOutgoingInput(): void {
+  const socket = _socket;
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    return;
+  }
+
+  socket.send(inputCapture.encoder.encodeState(window.innerWidth, window.innerHeight));
+  for (const message of inputCapture.encoder.drainPointerMessages()) {
+    socket.send(message);
+  }
 }
 
 function worldToScreen2D(worldX: number, worldY: number): [number, number] | null {
@@ -125,6 +136,8 @@ function worldToScreen2D(worldX: number, worldY: number): [number, number] | nul
 function animate(): void {
   requestAnimationFrame(animate);
 
+  flushOutgoingInput();
+
   const dt = 1 / 60;
   interpolator.tick(dt);
 
@@ -136,6 +149,7 @@ function animate(): void {
     camera.fov = cam.fov;
     camera.updateProjectionMatrix();
 
+    referenceWorldRenderer.update(cam.tgtX, cam.tgtY, cam.tgtZ);
     entityManager.update(interpolator.getInterpolated());
     groundOverlayRenderer.update(_lastFrame.groundOverlays);
 
@@ -147,7 +161,7 @@ function animate(): void {
     hudRenderer.drawScreenHud(_lastFrame.screenHud);
     hudRenderer.drawScreenOverlays(_lastFrame.screenOverlays);
 
-    uiOverlay.update(_lastFrame.uiHtml);
+    uiOverlay.update(_lastFrame.uiScene);
   }
 
   renderer.render(scene, camera);
@@ -172,10 +186,12 @@ function onResize(): void {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   hudRenderer.resize(window.innerWidth, window.innerHeight);
+  uiOverlay.resize(window.innerWidth, window.innerHeight);
 }
 
 window.addEventListener('resize', onResize);
 hudRenderer.resize(window.innerWidth, window.innerHeight);
+uiOverlay.resize(window.innerWidth, window.innerHeight);
 
 connectWebSocket();
 animate();

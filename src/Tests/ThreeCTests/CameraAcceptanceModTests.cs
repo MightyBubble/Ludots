@@ -345,6 +345,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.UiCaptured, false);
+            backend.SetMousePosition(new Vector2(960f, 540f));
             engine.GlobalContext["Tests.CameraAcceptanceMod.InputBackend"] = backend;
         }
 
@@ -508,6 +509,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
         {
             var culling = engine.GetService(CoreServiceKeys.CameraCullingDebugState);
             Assert.That(culling, Is.Not.Null, "Projection acceptance should surface core culling debug state.");
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(2500f, 1700f)),
+                "Projection acceptance should start from the map-defined target so launcher adapters share the same initial framing.");
 
             bool hasCullTrackedNamedEntity = false;
             var query = new QueryDescription().WithAll<Name, CullState>();

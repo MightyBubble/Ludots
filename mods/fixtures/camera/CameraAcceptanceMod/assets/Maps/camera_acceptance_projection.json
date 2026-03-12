@@ -11,7 +11,9 @@
     }
   ],
   "DefaultCamera": {
-    "VirtualCameraId": "Camera.Acceptance.Profile.RtsMoba"
+    "VirtualCameraId": "Camera.Acceptance.Profile.RtsMoba",
+    "TargetXCm": 2500,
+    "TargetYCm": 1700
   },
   "Entities": [
     {

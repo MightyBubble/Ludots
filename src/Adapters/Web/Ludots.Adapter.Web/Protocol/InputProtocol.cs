@@ -1,13 +1,28 @@
 namespace Ludots.Adapter.Web.Protocol
 {
-    /// <summary>
-    /// Wire constants for client → server binary input messages.
-    /// Input: [MsgType(1)] [ButtonMask(4)] [MouseX(4)] [MouseY(4)] [MouseWheel(4)] [KeyBitfield(8)]
-    /// </summary>
     public static class InputProtocol
     {
-        public const byte MsgTypeInput = 0x81;
-        public const int InputMessageSize = 1 + 4 + 4 + 4 + 4 + 8; // 25 bytes
+        public const byte MsgTypeInputState = 0x81;
+        public const byte MsgTypePointerEvent = 0x82;
+
+        public const int InputStateMessageSize = 33;
+        public const int PointerEventMessageSize = 26;
+
+        public const int InputStateButtonMaskOffset = 1;
+        public const int InputStateMouseXOffset = 5;
+        public const int InputStateMouseYOffset = 9;
+        public const int InputStateMouseWheelOffset = 13;
+        public const int InputStateKeyBitsOffset = 17;
+        public const int InputStateViewportWidthOffset = 25;
+        public const int InputStateViewportHeightOffset = 29;
+
+        public const int PointerActionOffset = 1;
+        public const int PointerXOffset = 2;
+        public const int PointerYOffset = 6;
+        public const int PointerDeltaXOffset = 10;
+        public const int PointerDeltaYOffset = 14;
+        public const int PointerViewportWidthOffset = 18;
+        public const int PointerViewportHeightOffset = 22;
 
         public const int ButtonMaskLeft = 1 << 0;
         public const int ButtonMaskRight = 1 << 1;

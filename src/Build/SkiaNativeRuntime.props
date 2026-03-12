@@ -1,0 +1,30 @@
+<Project>
+  <PropertyGroup>
+    <SkiaNativeAssetsRoot>$(MSBuildThisFileDirectory)..\Libraries\SkiaSharp\runtimes</SkiaNativeAssetsRoot>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(OS)' == 'Windows_NT'">win-x64</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`Linux`))' == 'true'">linux-x64</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`OSX`))' == 'true'">osx</SkiaNativeRid>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(SkiaNativeAssetsRoot)\**\*.*"
+          Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(SkiaNativeRid)' != ''">
+    <None Include="$(SkiaNativeAssetsRoot)\$(SkiaNativeRid)\native\libSkiaSharp.dll"
+          Link="libSkiaSharp.dll"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('$(SkiaNativeAssetsRoot)\$(SkiaNativeRid)\native\libSkiaSharp.dll')" />
+    <None Include="$(SkiaNativeAssetsRoot)\$(SkiaNativeRid)\native\libSkiaSharp.so"
+          Link="libSkiaSharp.so"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('$(SkiaNativeAssetsRoot)\$(SkiaNativeRid)\native\libSkiaSharp.so')" />
+    <None Include="$(SkiaNativeAssetsRoot)\$(SkiaNativeRid)\native\libSkiaSharp.dylib"
+          Link="libSkiaSharp.dylib"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('$(SkiaNativeAssetsRoot)\$(SkiaNativeRid)\native\libSkiaSharp.dylib')" />
+  </ItemGroup>
+</Project>

@@ -9,6 +9,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.UI;
+using Ludots.UI.HtmlEngine.Markup;
 
 namespace Ludots.Adapter.Web
 {
@@ -20,6 +21,7 @@ namespace Ludots.Adapter.Web
         WebViewController ViewController,
         WebCameraAdapter CameraAdapter,
         WebScreenRayProvider ScreenRayProvider,
+        WebUiRuntimeBridge UiBridge,
         WebTransportLayer Transport
     );
 
@@ -48,7 +50,7 @@ namespace Ludots.Adapter.Web
 
             var uiRoot = new UIRoot();
             engine.SetService(CoreServiceKeys.UIRoot, (object)uiRoot);
-            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new WebUiSystem());
+            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiRoot));
 
             var inputBackend = new WebInputBackend();
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
@@ -58,23 +60,34 @@ namespace Ludots.Adapter.Web
                 foreach (var contextId in config.StartupInputContexts)
                 {
                     if (!string.IsNullOrWhiteSpace(contextId))
+                    {
                         inputHandler.PushContext(contextId);
+                    }
                 }
             }
+
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)inputBackend);
 
             var viewController = new WebViewController();
             var cameraAdapter = new WebCameraAdapter();
             var screenRayProvider = new WebScreenRayProvider(cameraAdapter, viewController);
+            inputBackend.SyncNeutralViewport((int)viewController.Resolution.X, (int)viewController.Resolution.Y);
+            var uiBridge = new WebUiRuntimeBridge(uiRoot, inputBackend, viewController);
             var transport = new WebTransportLayer(inputBackend, viewController);
 
             ValidateRequiredContextBeforeStart(engine);
 
             return new WebHostSetup(
-                engine, config, uiRoot,
-                inputBackend, viewController, cameraAdapter, screenRayProvider, transport
-            );
+                engine,
+                config,
+                uiRoot,
+                inputBackend,
+                viewController,
+                cameraAdapter,
+                screenRayProvider,
+                uiBridge,
+                transport);
         }
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
@@ -88,7 +101,9 @@ namespace Ludots.Adapter.Web
         private static void ValidateKey<T>(GameEngine engine, string key)
         {
             if (!engine.GlobalContext.TryGetValue(key, out var obj) || obj is not T)
+            {
                 throw new InvalidOperationException($"GlobalContext missing or invalid: {key} expected {typeof(T).FullName}");
+            }
         }
     }
 }

@@ -47,8 +47,7 @@ namespace Ludots.Adapter.Web.Streaming
             ScreenHudBatchBuffer? screenHud,
             DebugDrawCommandBuffer? debugDraw,
             ScreenOverlayBuffer? screenOverlay = null,
-            string? uiHtml = null,
-            string? uiCss = null)
+            string? uiSceneJson = null)
         {
             _pos = 0;
             EnsureCapacity(FrameProtocol.FrameHeaderSize);
@@ -65,7 +64,7 @@ namespace Ludots.Adapter.Web.Streaming
             WriteScreenHud(screenHud);
             WriteDebugDraw(debugDraw);
             WriteScreenOverlay(screenOverlay);
-            WriteUiHtml(uiHtml, uiCss);
+            WriteUiScene(uiSceneJson);
 
             EnsureCapacity(1);
             _buffer[_pos++] = FrameProtocol.SectionEnd;
@@ -308,28 +307,21 @@ namespace Ludots.Adapter.Web.Streaming
             BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
         }
 
-        private void WriteUiHtml(string? html, string? css)
+        private void WriteUiScene(string? sceneJson)
         {
-            if (html == null && css == null) return;
+            if (sceneJson == null) return;
 
             int startPos = _pos;
-            WriteSectionHeader(FrameProtocol.SectionUiHtml, 1, 0);
+            WriteSectionHeader(FrameProtocol.SectionUiScene, 1, 0);
 
-            byte[] htmlBytes = html != null ? Encoding.UTF8.GetBytes(html) : Array.Empty<byte>();
-            byte[] cssBytes = css != null ? Encoding.UTF8.GetBytes(css) : Array.Empty<byte>();
+            byte[] sceneBytes = Encoding.UTF8.GetBytes(sceneJson);
 
-            EnsureCapacity(4 + htmlBytes.Length + 4 + cssBytes.Length);
-            WriteInt32(htmlBytes.Length);
-            if (htmlBytes.Length > 0)
+            EnsureCapacity(4 + sceneBytes.Length);
+            WriteInt32(sceneBytes.Length);
+            if (sceneBytes.Length > 0)
             {
-                htmlBytes.CopyTo(_buffer.AsSpan(_pos));
-                _pos += htmlBytes.Length;
-            }
-            WriteInt32(cssBytes.Length);
-            if (cssBytes.Length > 0)
-            {
-                cssBytes.CopyTo(_buffer.AsSpan(_pos));
-                _pos += cssBytes.Length;
+                sceneBytes.CopyTo(_buffer.AsSpan(_pos));
+                _pos += sceneBytes.Length;
             }
 
             int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;

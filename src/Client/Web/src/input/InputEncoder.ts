@@ -1,4 +1,11 @@
-const MSG_TYPE_INPUT = 0x81;
+const MSG_TYPE_INPUT_STATE = 0x81;
+const MSG_TYPE_POINTER_EVENT = 0x82;
+
+const POINTER_ACTION_DOWN = 0;
+const POINTER_ACTION_MOVE = 1;
+const POINTER_ACTION_UP = 2;
+const POINTER_ACTION_CANCEL = 3;
+const POINTER_ACTION_SCROLL = 4;
 
 const KEY_MAP: Record<string, number> = {
   KeyA: 0, KeyB: 1, KeyC: 2, KeyD: 3, KeyE: 4, KeyF: 5, KeyG: 6, KeyH: 7,
@@ -18,48 +25,117 @@ export class InputEncoder {
   private _mouseX = 0;
   private _mouseY = 0;
   private _mouseWheel = 0;
-  private _keyBits = 0n; // BigInt for 64-bit bitfield
-  private _buf = new ArrayBuffer(25);
-  private _view = new DataView(this._buf);
+  private _keyBits = 0n;
+  private _hasPointerSample = false;
+  private readonly _stateBuffer = new ArrayBuffer(33);
+  private readonly _stateView = new DataView(this._stateBuffer);
+  private readonly _pointerMessages: ArrayBuffer[] = [];
 
-  onMouseMove(x: number, y: number): void {
-    this._mouseX = x;
-    this._mouseY = y;
+  onPointerMove(x: number, y: number, viewportWidth: number, viewportHeight: number): void {
+    this.setPointerPosition(x, y);
+    this.enqueuePointer(POINTER_ACTION_MOVE, x, y, 0, 0, viewportWidth, viewportHeight);
   }
 
-  onMouseButton(button: number, down: boolean): void {
-    // Browser: 0=left, 1=middle, 2=right → Server: bit0=left, bit1=right, bit2=middle
-    let bit: number;
-    if (button === 0) bit = 1;       // left
-    else if (button === 2) bit = 2;  // right
-    else if (button === 1) bit = 4;  // middle
+  onPointerButton(button: number, down: boolean, x: number, y: number, viewportWidth: number, viewportHeight: number): void {
+    this.setPointerPosition(x, y);
+
+    let bit = 0;
+    if (button === 0) bit = 1;
+    else if (button === 2) bit = 2;
+    else if (button === 1) bit = 4;
     else return;
 
     if (down) this._buttonMask |= bit;
     else this._buttonMask &= ~bit;
+
+    this.enqueuePointer(down ? POINTER_ACTION_DOWN : POINTER_ACTION_UP, x, y, 0, 0, viewportWidth, viewportHeight);
   }
 
-  onWheel(deltaY: number): void {
-    this._mouseWheel = -deltaY / 100;
+  onPointerCancel(x: number, y: number, viewportWidth: number, viewportHeight: number): void {
+    this.setPointerPosition(x, y);
+    this._buttonMask = 0;
+    this.enqueuePointer(POINTER_ACTION_CANCEL, x, y, 0, 0, viewportWidth, viewportHeight);
+  }
+
+  onWheel(x: number, y: number, deltaX: number, deltaY: number, viewportWidth: number, viewportHeight: number): void {
+    const normalizedX = -deltaX / 100;
+    const normalizedY = -deltaY / 100;
+    this.setPointerPosition(x, y);
+    this._mouseWheel += normalizedY;
+    this.enqueuePointer(POINTER_ACTION_SCROLL, x, y, normalizedX, normalizedY, viewportWidth, viewportHeight);
   }
 
   onKey(code: string, down: boolean): void {
     const bit = KEY_MAP[code];
-    if (bit === undefined) return;
+    if (bit === undefined) {
+      return;
+    }
+
     const mask = 1n << BigInt(bit);
     if (down) this._keyBits |= mask;
     else this._keyBits &= ~mask;
   }
 
-  encode(): ArrayBuffer {
-    this._view.setUint8(0, MSG_TYPE_INPUT);
-    this._view.setInt32(1, this._buttonMask, true);
-    this._view.setFloat32(5, this._mouseX, true);
-    this._view.setFloat32(9, this._mouseY, true);
-    this._view.setFloat32(13, this._mouseWheel, true);
-    this._view.setBigUint64(17, BigInt.asUintN(64, this._keyBits), true);
+  clearPointerSample(): void {
+    this._hasPointerSample = false;
+    this._buttonMask = 0;
+  }
 
-    this._mouseWheel = 0; // consumed
-    return this._buf;
+  clearKeyboardState(): void {
+    this._keyBits = 0n;
+  }
+
+  encodeState(viewportWidth: number, viewportHeight: number): ArrayBuffer {
+    if (!this._hasPointerSample) {
+      this._mouseX = viewportWidth * 0.5;
+      this._mouseY = viewportHeight * 0.5;
+    }
+
+    this._stateView.setUint8(0, MSG_TYPE_INPUT_STATE);
+    this._stateView.setInt32(1, this._buttonMask, true);
+    this._stateView.setFloat32(5, this._mouseX, true);
+    this._stateView.setFloat32(9, this._mouseY, true);
+    this._stateView.setFloat32(13, this._mouseWheel, true);
+    this._stateView.setBigUint64(17, BigInt.asUintN(64, this._keyBits), true);
+    this._stateView.setInt32(25, viewportWidth, true);
+    this._stateView.setInt32(29, viewportHeight, true);
+    this._mouseWheel = 0;
+    return this._stateBuffer;
+  }
+
+  drainPointerMessages(): ArrayBuffer[] {
+    if (this._pointerMessages.length === 0) {
+      return [];
+    }
+
+    return this._pointerMessages.splice(0, this._pointerMessages.length);
+  }
+
+  private enqueuePointer(
+    action: number,
+    x: number,
+    y: number,
+    deltaX: number,
+    deltaY: number,
+    viewportWidth: number,
+    viewportHeight: number,
+  ): void {
+    const buffer = new ArrayBuffer(26);
+    const view = new DataView(buffer);
+    view.setUint8(0, MSG_TYPE_POINTER_EVENT);
+    view.setUint8(1, action);
+    view.setFloat32(2, x, true);
+    view.setFloat32(6, y, true);
+    view.setFloat32(10, deltaX, true);
+    view.setFloat32(14, deltaY, true);
+    view.setInt32(18, viewportWidth, true);
+    view.setInt32(22, viewportHeight, true);
+    this._pointerMessages.push(buffer);
+  }
+
+  private setPointerPosition(x: number, y: number): void {
+    this._mouseX = x;
+    this._mouseY = y;
+    this._hasPointerSample = true;
   }
 }

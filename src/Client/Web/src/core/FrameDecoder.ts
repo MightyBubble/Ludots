@@ -1,3 +1,5 @@
+import type { UiScenePayload } from './UiSceneTypes';
+
 const MSG_FULL = 0x01;
 const MSG_MESH_MAP = 0x03;
 const MSG_DELTA = 0x05;
@@ -8,7 +10,7 @@ const SEC_PRIMITIVES = 0x02;
 const SEC_GROUND_OVERLAYS = 0x03;
 const SEC_WORLD_HUD = 0x04;
 const SEC_SCREEN_HUD = 0x05;
-const SEC_UI_HTML = 0x09;
+const SEC_UI_SCENE = 0x09;
 const SEC_SCREEN_OVERLAY = 0x0a;
 const SEC_DEBUG_LINES = 0x10;
 const SEC_DEBUG_CIRCLES = 0x11;
@@ -79,11 +81,6 @@ export interface ScreenOverlayItem {
   text: string;
 }
 
-export interface UiHtml {
-  html: string;
-  css: string;
-}
-
 export interface MeshMapEntry {
   id: number;
   key: string;
@@ -101,7 +98,7 @@ export interface DecodedFrame {
   groundOverlays: GroundOverlayItem[];
   screenHud: ScreenHudItem[];
   screenOverlays: ScreenOverlayItem[];
-  uiHtml?: UiHtml;
+  uiScene?: UiScenePayload;
 }
 
 export class FrameDecoder {
@@ -161,7 +158,7 @@ export class FrameDecoder {
         case SEC_GROUND_OVERLAYS: p = this.readGroundOverlays(frame, v, p, itemCount); break;
         case SEC_WORLD_HUD: p += byteLen; break;
         case SEC_SCREEN_HUD: p = this.readScreenHud(frame, v, p, itemCount); break;
-        case SEC_UI_HTML: p = this.readUiHtml(frame, v, p); break;
+        case SEC_UI_SCENE: p = this.readUiScene(frame, v, p); break;
         case SEC_SCREEN_OVERLAY: p = this.readScreenOverlays(frame, v, p, itemCount); break;
         case SEC_DEBUG_LINES: p = this.readDebugLines(frame, v, p, itemCount); break;
         case SEC_DEBUG_CIRCLES: p = this.readDebugCircles(frame, v, p, itemCount); break;
@@ -195,7 +192,7 @@ export class FrameDecoder {
         case SEC_GROUND_OVERLAYS: p = this.readGroundOverlays(frame, v, p, itemCount); break;
         case SEC_WORLD_HUD: p += byteLen; break;
         case SEC_SCREEN_HUD: p = this.readScreenHud(frame, v, p, itemCount); break;
-        case SEC_UI_HTML: p = this.readUiHtml(frame, v, p); break;
+        case SEC_UI_SCENE: p = this.readUiScene(frame, v, p); break;
         case SEC_SCREEN_OVERLAY: p = this.readScreenOverlays(frame, v, p, itemCount); break;
         case SEC_DEBUG_LINES: p = this.readDebugLines(frame, v, p, itemCount); break;
         case SEC_DEBUG_CIRCLES: p = this.readDebugCircles(frame, v, p, itemCount); break;
@@ -330,22 +327,16 @@ export class FrameDecoder {
     return p;
   }
 
-  private readUiHtml(frame: DecodedFrame, v: DataView, p: number): number {
-    const htmlLen = v.getInt32(p, true); p += 4;
-    let html = '';
-    if (htmlLen > 0) {
-      const bytes = new Uint8Array(v.buffer, v.byteOffset + p, htmlLen);
-      html = this._textDecoder.decode(bytes);
-      p += htmlLen;
+  private readUiScene(frame: DecodedFrame, v: DataView, p: number): number {
+    const jsonLen = v.getInt32(p, true); p += 4;
+    if (jsonLen <= 0) {
+      frame.uiScene = undefined;
+      return p;
     }
-    const cssLen = v.getInt32(p, true); p += 4;
-    let css = '';
-    if (cssLen > 0) {
-      const bytes = new Uint8Array(v.buffer, v.byteOffset + p, cssLen);
-      css = this._textDecoder.decode(bytes);
-      p += cssLen;
-    }
-    frame.uiHtml = { html, css };
+
+    const bytes = new Uint8Array(v.buffer, v.byteOffset + p, jsonLen);
+    frame.uiScene = JSON.parse(this._textDecoder.decode(bytes)) as UiScenePayload;
+    p += jsonLen;
     return p;
   }
 
@@ -410,7 +401,7 @@ export class FrameDecoder {
       groundOverlays: [...f.groundOverlays],
       screenHud: [...f.screenHud],
       screenOverlays: [],
-      uiHtml: undefined,
+      uiScene: f.uiScene,
     };
   }
 }

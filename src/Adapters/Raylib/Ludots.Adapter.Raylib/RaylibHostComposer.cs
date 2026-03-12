@@ -1,5 +1,4 @@
 using System;
-using Ludots.Adapter.Raylib.UI;
 using Ludots.Client.Raylib.Diagnostics;
 using Ludots.Client.Raylib.Input;
 using Ludots.Core.Config;
@@ -11,6 +10,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
+using Ludots.UI.HtmlEngine.Markup;
 
 namespace Ludots.Adapter.Raylib
 {
@@ -45,7 +45,7 @@ namespace Ludots.Adapter.Raylib
 
             var uiRoot = new UIRoot();
             engine.SetService(CoreServiceKeys.UIRoot, (object)uiRoot);
-            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new DesktopUiSystem(uiRoot));
+            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiRoot));
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             IInputBackend inputBackend = new RaylibInputBackend();
