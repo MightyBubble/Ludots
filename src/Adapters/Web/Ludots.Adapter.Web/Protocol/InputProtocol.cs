@@ -6,7 +6,7 @@ namespace Ludots.Adapter.Web.Protocol
         public const byte MsgTypePointerEvent = 0x82;
 
         public const int InputStateMessageSize = 33;
-        public const int PointerEventMessageSize = 26;
+        public const int PointerEventMessageSize = 30;
 
         public const int InputStateButtonMaskOffset = 1;
         public const int InputStateMouseXOffset = 5;
@@ -17,12 +17,13 @@ namespace Ludots.Adapter.Web.Protocol
         public const int InputStateViewportHeightOffset = 29;
 
         public const int PointerActionOffset = 1;
-        public const int PointerXOffset = 2;
-        public const int PointerYOffset = 6;
-        public const int PointerDeltaXOffset = 10;
-        public const int PointerDeltaYOffset = 14;
-        public const int PointerViewportWidthOffset = 18;
-        public const int PointerViewportHeightOffset = 22;
+        public const int PointerButtonMaskOffset = 2;
+        public const int PointerXOffset = 6;
+        public const int PointerYOffset = 10;
+        public const int PointerDeltaXOffset = 14;
+        public const int PointerDeltaYOffset = 18;
+        public const int PointerViewportWidthOffset = 22;
+        public const int PointerViewportHeightOffset = 26;
 
         public const int ButtonMaskLeft = 1 << 0;
         public const int ButtonMaskRight = 1 << 1;

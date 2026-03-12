@@ -27,6 +27,12 @@ namespace Ludots.Core.Input.Systems
             {
                 return;
             }
+
+            if (_globals.TryGetValue(CoreServiceKeys.InputBackend.Name, out var backendObj) &&
+                backendObj is IFrameSynchronizedInputBackend synchronizedBackend)
+            {
+                synchronizedBackend.AdvanceFrameInput();
+            }
  
             bool uiCaptured = _globals.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var capturedObj) && capturedObj is bool b && b;
             input.InputBlocked = uiCaptured;

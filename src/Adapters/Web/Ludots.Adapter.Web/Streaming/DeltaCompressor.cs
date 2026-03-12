@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Text;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
@@ -21,7 +22,6 @@ namespace Ludots.Adapter.Web.Streaming
         private int _prevDebugCircleHash;
         private int _prevDebugBoxHash;
         private int _prevGroundOverlayHash;
-        private int _prevWorldHudHash;
 
         private byte[] _buffer = new byte[128 * 1024];
         private int _pos;
@@ -44,7 +44,8 @@ namespace Ludots.Adapter.Web.Streaming
             in CameraRenderState3D camera,
             PrimitiveDrawBuffer? primitives,
             GroundOverlayBuffer? groundOverlays,
-            WorldHudBatchBuffer? worldHud,
+            ScreenHudBatchBuffer? screenHud,
+            WorldHudStringTable? worldHudStrings,
             DebugDrawCommandBuffer? debugDraw,
             ScreenOverlayBuffer? screenOverlay = null,
             string? uiSceneJson = null)
@@ -60,7 +61,7 @@ namespace Ludots.Adapter.Web.Streaming
             WriteCameraSection(in camera);
             WritePrimitiveDelta(primitives);
             WriteGroundOverlayIfChanged(groundOverlays);
-            WriteWorldHudIfChanged(worldHud);
+            WriteScreenHud(screenHud, worldHudStrings);
             WriteDebugDrawIfChanged(debugDraw);
             WriteScreenOverlay(screenOverlay);
             WriteUiScene(uiSceneJson);
@@ -153,30 +154,56 @@ namespace Ludots.Adapter.Web.Streaming
             }
         }
 
-        private void WriteWorldHudIfChanged(WorldHudBatchBuffer? buf)
+        private void WriteScreenHud(ScreenHudBatchBuffer? buf, WorldHudStringTable? strings)
         {
-            int hash = buf?.Count ?? 0;
-            if (hash == _prevWorldHudHash && hash == 0) return;
-            _prevWorldHudHash = hash;
-
-            if (buf == null || buf.Count == 0) return;
-            var span = buf.GetSpan();
+            ReadOnlySpan<ScreenHudItem> span = buf != null
+                ? buf.GetSpan()
+                : ReadOnlySpan<ScreenHudItem>.Empty;
             int count = span.Length;
-            int itemBytes = count * WireWorldHudItem.SizeInBytes;
-            WriteSectionHeader(FrameProtocol.SectionWorldHud, (ushort)count, itemBytes);
-            EnsureCapacity(itemBytes);
+            int startPos = _pos;
+            WriteSectionHeader(FrameProtocol.SectionScreenHud, (ushort)count, 0);
+
+            int maxStringId = 0;
             for (int i = 0; i < count; i++)
             {
                 ref readonly var item = ref span[i];
+                EnsureCapacity(WireWorldHudItem.SizeInBytes);
                 _buffer[_pos++] = (byte)item.Kind;
-                WriteFloat(item.WorldPosition.X); WriteFloat(item.WorldPosition.Y); WriteFloat(item.WorldPosition.Z);
+                WriteFloat(item.ScreenX); WriteFloat(item.ScreenY); WriteFloat(0f);
                 WriteFloat(item.Color0.X); WriteFloat(item.Color0.Y); WriteFloat(item.Color0.Z); WriteFloat(item.Color0.W);
                 WriteFloat(item.Color1.X); WriteFloat(item.Color1.Y); WriteFloat(item.Color1.Z); WriteFloat(item.Color1.W);
-                WriteFloat(item.Width); WriteFloat(item.Height);
-                WriteFloat(item.Value0); WriteFloat(item.Value1);
-                WriteInt32(item.Id0); WriteInt32(item.Id1);
+                WriteFloat(item.Width);
+                WriteFloat(item.Height);
+                WriteFloat(item.Value0);
+                WriteFloat(item.Value1);
+                WriteInt32(item.Id0);
+                WriteInt32(item.Id1);
                 WriteInt32(item.FontSize);
+                if (item.Id0 > maxStringId)
+                {
+                    maxStringId = item.Id0;
+                }
             }
+
+            int stringCount = maxStringId > 0 ? maxStringId + 1 : 0;
+            EnsureCapacity(2);
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)stringCount);
+            _pos += 2;
+
+            for (int i = 0; i < stringCount; i++)
+            {
+                string? text = strings?.TryGet(i);
+                if (text == null) text = string.Empty;
+                int byteCount = Encoding.UTF8.GetByteCount(text);
+                EnsureCapacity(2 + byteCount);
+                BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)byteCount);
+                _pos += 2;
+                Encoding.UTF8.GetBytes(text, _buffer.AsSpan(_pos));
+                _pos += byteCount;
+            }
+
+            int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
+            BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
         }
 
         private void WriteDebugDrawIfChanged(DebugDrawCommandBuffer? buf)

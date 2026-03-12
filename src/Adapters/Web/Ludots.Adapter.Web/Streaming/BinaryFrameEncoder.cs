@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Text;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
@@ -45,6 +46,7 @@ namespace Ludots.Adapter.Web.Streaming
             GroundOverlayBuffer? groundOverlays,
             WorldHudBatchBuffer? worldHud,
             ScreenHudBatchBuffer? screenHud,
+            WorldHudStringTable? worldHudStrings,
             DebugDrawCommandBuffer? debugDraw,
             ScreenOverlayBuffer? screenOverlay = null,
             string? uiSceneJson = null)
@@ -61,7 +63,7 @@ namespace Ludots.Adapter.Web.Streaming
             WritePrimitives(primitives);
             WriteGroundOverlays(groundOverlays);
             WriteWorldHud(worldHud);
-            WriteScreenHud(screenHud);
+            WriteScreenHud(screenHud, worldHudStrings);
             WriteDebugDraw(debugDraw);
             WriteScreenOverlay(screenOverlay);
             WriteUiScene(uiSceneJson);
@@ -158,19 +160,20 @@ namespace Ludots.Adapter.Web.Streaming
             }
         }
 
-        private void WriteScreenHud(ScreenHudBatchBuffer? buf)
+        private void WriteScreenHud(ScreenHudBatchBuffer? buf, WorldHudStringTable? strings)
         {
             if (buf == null || buf.Count == 0) return;
 
             var span = buf.GetSpan();
             int count = span.Length;
-            int itemBytes = count * WireWorldHudItem.SizeInBytes;
-            WriteSectionHeader(FrameProtocol.SectionScreenHud, (ushort)count, itemBytes);
-            EnsureCapacity(itemBytes);
+            int startPos = _pos;
+            WriteSectionHeader(FrameProtocol.SectionScreenHud, (ushort)count, 0);
 
+            int maxStringId = 0;
             for (int i = 0; i < count; i++)
             {
                 ref readonly var item = ref span[i];
+                EnsureCapacity(WireWorldHudItem.SizeInBytes);
                 _buffer[_pos++] = (byte)item.Kind;
                 WriteFloat(item.ScreenX); WriteFloat(item.ScreenY); WriteFloat(0f);
                 WriteFloat(item.Color0.X); WriteFloat(item.Color0.Y); WriteFloat(item.Color0.Z); WriteFloat(item.Color0.W);
@@ -182,7 +185,31 @@ namespace Ludots.Adapter.Web.Streaming
                 WriteInt32(item.Id0);
                 WriteInt32(item.Id1);
                 WriteInt32(item.FontSize);
+                if (item.Id0 > maxStringId)
+                {
+                    maxStringId = item.Id0;
+                }
             }
+
+            int stringCount = maxStringId > 0 ? maxStringId + 1 : 0;
+            EnsureCapacity(2);
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)stringCount);
+            _pos += 2;
+
+            for (int i = 0; i < stringCount; i++)
+            {
+                string? text = strings?.TryGet(i);
+                if (text == null) text = string.Empty;
+                int byteCount = Encoding.UTF8.GetByteCount(text);
+                EnsureCapacity(2 + byteCount);
+                BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)byteCount);
+                _pos += 2;
+                Encoding.UTF8.GetBytes(text, _buffer.AsSpan(_pos));
+                _pos += byteCount;
+            }
+
+            int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
+            BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
         }
 
         private void WriteDebugDraw(DebugDrawCommandBuffer? buf)

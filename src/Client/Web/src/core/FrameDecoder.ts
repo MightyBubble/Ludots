@@ -69,6 +69,7 @@ export interface ScreenHudItem {
   v0: number; v1: number;
   id0: number; id1: number;
   fontSize: number;
+  text?: string;
 }
 
 export interface ScreenOverlayItem {
@@ -269,9 +270,9 @@ export class FrameDecoder {
   }
 
   private readScreenHud(frame: DecodedFrame, v: DataView, p: number, count: number): number {
-    frame.screenHud = [];
+    const items: ScreenHudItem[] = [];
     for (let i = 0; i < count; i++) {
-      frame.screenHud.push({
+      items.push({
         kind: v.getUint8(p),
         sx: v.getFloat32(p + 1, true), sy: v.getFloat32(p + 5, true),
         c0r: v.getFloat32(p + 13, true), c0g: v.getFloat32(p + 17, true), c0b: v.getFloat32(p + 21, true), c0a: v.getFloat32(p + 25, true),
@@ -283,6 +284,23 @@ export class FrameDecoder {
       });
       p += 73;
     }
+
+    const stringCount = v.getUint16(p, true); p += 2;
+    const strings: string[] = [];
+    for (let i = 0; i < stringCount; i++) {
+      const len = v.getUint16(p, true); p += 2;
+      const bytes = new Uint8Array(v.buffer, v.byteOffset + p, len);
+      strings.push(this._textDecoder.decode(bytes));
+      p += len;
+    }
+
+    for (const item of items) {
+      if (item.id0 > 0 && item.id0 < strings.length) {
+        item.text = strings[item.id0];
+      }
+    }
+
+    frame.screenHud = items;
     return p;
   }
 
@@ -399,7 +417,7 @@ export class FrameDecoder {
       debugCircles: [...f.debugCircles],
       debugBoxes: [...f.debugBoxes],
       groundOverlays: [...f.groundOverlays],
-      screenHud: [...f.screenHud],
+      screenHud: f.screenHud.map(item => ({ ...item })),
       screenOverlays: [],
       uiScene: f.uiScene,
     };

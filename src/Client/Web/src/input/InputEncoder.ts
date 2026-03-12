@@ -120,16 +120,17 @@ export class InputEncoder {
     viewportWidth: number,
     viewportHeight: number,
   ): void {
-    const buffer = new ArrayBuffer(26);
+    const buffer = new ArrayBuffer(30);
     const view = new DataView(buffer);
     view.setUint8(0, MSG_TYPE_POINTER_EVENT);
     view.setUint8(1, action);
-    view.setFloat32(2, x, true);
-    view.setFloat32(6, y, true);
-    view.setFloat32(10, deltaX, true);
-    view.setFloat32(14, deltaY, true);
-    view.setInt32(18, viewportWidth, true);
-    view.setInt32(22, viewportHeight, true);
+    view.setInt32(2, this._buttonMask, true);
+    view.setFloat32(6, x, true);
+    view.setFloat32(10, y, true);
+    view.setFloat32(14, deltaX, true);
+    view.setFloat32(18, deltaY, true);
+    view.setInt32(22, viewportWidth, true);
+    view.setInt32(26, viewportHeight, true);
     this._pointerMessages.push(buffer);
   }
 

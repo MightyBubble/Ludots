@@ -21,8 +21,8 @@ export class HudRenderer {
   drawScreenHud(items: ScreenHudItem[]): void {
     const ctx = this._ctx;
     for (const item of items) {
-      const HUD_BAR = 0;
-      const HUD_TEXT = 1;
+      const HUD_BAR = 1;
+      const HUD_TEXT = 2;
 
       if (item.kind === HUD_BAR) {
         const x = Math.round(item.sx);
@@ -40,10 +40,7 @@ export class HudRenderer {
         const fontSize = item.fontSize <= 0 ? 16 : item.fontSize;
         ctx.font = `${fontSize}px monospace`;
         ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
-        let text = '';
-        if (item.id1 === 1) text = `${Math.round(item.v0)}/${Math.round(item.v1)}`;
-        else if (item.id1 === 2) text = `${Math.round(item.v0)}`;
-        else text = `${item.v0.toFixed(1)}`;
+        const text = this.resolveHudText(item);
         ctx.fillText(text, item.sx, item.sy + fontSize);
       }
     }
@@ -124,5 +121,22 @@ export class HudRenderer {
 
   private rgbaBytes(r: number, g: number, b: number, a: number): string {
     return `rgba(${r},${g},${b},${(a / 255).toFixed(2)})`;
+  }
+
+  private resolveHudText(item: ScreenHudItem): string {
+    if (item.id0 !== 0 && item.text) {
+      return item.text;
+    }
+
+    switch (item.id1) {
+      case 1:
+        return `${Math.round(item.v0)}/${Math.round(item.v1)}`;
+      case 2:
+        return `${Math.round(item.v0)}`;
+      case 3:
+        return `${item.v0}`;
+      default:
+        return `${item.v0.toFixed(1)}`;
+    }
   }
 }

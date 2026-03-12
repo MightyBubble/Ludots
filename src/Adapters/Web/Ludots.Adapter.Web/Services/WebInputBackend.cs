@@ -8,12 +8,18 @@ using Ludots.UI.Input;
 
 namespace Ludots.Adapter.Web.Services
 {
-    public sealed class WebInputBackend : IInputBackend
+    public sealed class WebInputBackend : IInputBackend, IFrameSynchronizedInputBackend
     {
         private readonly object _lock = new();
         private readonly Queue<PointerEvent> _pointerEvents = new();
+        private readonly Queue<QueuedFrameState> _frameTransitions = new();
         private WireInputState _state;
+        private WireInputState _frameState;
         private bool _hasPointerSample;
+        private bool _frameStateInitialized;
+        private bool _hasQueuedTransition;
+        private QueuedFrameState _lastQueuedTransition;
+        private float _pendingMouseWheel;
 
         public void ApplyStateMessage(ReadOnlySpan<byte> msg)
         {
@@ -33,8 +39,16 @@ namespace Ludots.Adapter.Web.Services
 
             lock (_lock)
             {
+                bool keyBitsChanged = _state.KeyBits != state.KeyBits;
                 _state = state;
+                _state.MouseWheel = 0f;
+                _pendingMouseWheel += state.MouseWheel;
                 _hasPointerSample = true;
+
+                if (keyBitsChanged)
+                {
+                    EnqueueFrameTransition();
+                }
             }
         }
 
@@ -49,6 +63,7 @@ namespace Ludots.Adapter.Web.Services
             PointerAction action = Enum.IsDefined(typeof(PointerAction), (int)rawAction)
                 ? (PointerAction)rawAction
                 : PointerAction.Move;
+            int buttonMask = BinaryPrimitives.ReadInt32LittleEndian(msg.Slice(InputProtocol.PointerButtonMaskOffset, 4));
             float x = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.PointerXOffset, 4));
             float y = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.PointerYOffset, 4));
             float deltaX = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.PointerDeltaXOffset, 4));
@@ -56,12 +71,14 @@ namespace Ludots.Adapter.Web.Services
 
             lock (_lock)
             {
+                _state.ButtonMask = buttonMask;
                 _state.MouseX = x;
                 _state.MouseY = y;
                 _hasPointerSample = true;
-                if (action == PointerAction.Scroll)
+
+                if (action is PointerAction.Down or PointerAction.Up or PointerAction.Cancel)
                 {
-                    _state.MouseWheel = deltaY;
+                    EnqueueFrameTransition();
                 }
 
                 _pointerEvents.Enqueue(new PointerEvent
@@ -74,6 +91,36 @@ namespace Ludots.Adapter.Web.Services
                     DeltaX = deltaX,
                     DeltaY = deltaY,
                 });
+            }
+        }
+
+        public void AdvanceFrameInput()
+        {
+            lock (_lock)
+            {
+                if (_frameTransitions.Count > 0)
+                {
+                    var transition = _frameTransitions.Dequeue();
+                    _frameState.ButtonMask = transition.ButtonMask;
+                    _frameState.KeyBits = transition.KeyBits;
+                    _frameState.MouseX = transition.MouseX;
+                    _frameState.MouseY = transition.MouseY;
+                    if (_frameTransitions.Count == 0)
+                    {
+                        _hasQueuedTransition = false;
+                    }
+                }
+                else
+                {
+                    _frameState.ButtonMask = _state.ButtonMask;
+                    _frameState.KeyBits = _state.KeyBits;
+                    _frameState.MouseX = _state.MouseX;
+                    _frameState.MouseY = _state.MouseY;
+                }
+
+                _frameState.MouseWheel = _pendingMouseWheel;
+                _pendingMouseWheel = 0f;
+                _frameStateInitialized = true;
             }
         }
 
@@ -93,6 +140,11 @@ namespace Ludots.Adapter.Web.Services
 
                 _state.MouseX = width * 0.5f;
                 _state.MouseY = height * 0.5f;
+                if (!_frameStateInitialized)
+                {
+                    _frameState.MouseX = _state.MouseX;
+                    _frameState.MouseY = _state.MouseY;
+                }
             }
         }
 
@@ -115,7 +167,7 @@ namespace Ludots.Adapter.Web.Services
         {
             if (devicePath.StartsWith("<Mouse>/ScrollY", StringComparison.OrdinalIgnoreCase))
             {
-                return SnapshotState(peekOnly: false).MouseWheel;
+                return SnapshotState().MouseWheel;
             }
 
             return 0f;
@@ -128,7 +180,7 @@ namespace Ludots.Adapter.Web.Services
                 int bitIndex = KeyPathToBitIndex(devicePath.Substring(11));
                 if (bitIndex >= 0)
                 {
-                    return (SnapshotState(peekOnly: true).KeyBits & (1UL << bitIndex)) != 0;
+                    return (SnapshotState().KeyBits & (1UL << bitIndex)) != 0;
                 }
 
                 return false;
@@ -137,7 +189,7 @@ namespace Ludots.Adapter.Web.Services
             if (devicePath.StartsWith("<Mouse>/", StringComparison.OrdinalIgnoreCase))
             {
                 string btnName = devicePath.Substring(8).ToUpperInvariant();
-                WireInputState state = SnapshotState(peekOnly: true);
+                WireInputState state = SnapshotState();
                 return btnName switch
                 {
                     "LEFTBUTTON" => (state.ButtonMask & InputProtocol.ButtonMaskLeft) != 0,
@@ -152,11 +204,11 @@ namespace Ludots.Adapter.Web.Services
 
         public Vector2 GetMousePosition()
         {
-            WireInputState state = SnapshotState(peekOnly: true);
+            WireInputState state = SnapshotState();
             return new Vector2(state.MouseX, state.MouseY);
         }
 
-        public float GetMouseWheel() => SnapshotState(peekOnly: false).MouseWheel;
+        public float GetMouseWheel() => SnapshotState().MouseWheel;
 
         public void EnableIME(bool enable)
         {
@@ -168,17 +220,47 @@ namespace Ludots.Adapter.Web.Services
 
         public string GetCharBuffer() => string.Empty;
 
-        private WireInputState SnapshotState(bool peekOnly)
+        private void EnqueueFrameTransition()
+        {
+            var transition = new QueuedFrameState
+            {
+                ButtonMask = _state.ButtonMask,
+                KeyBits = _state.KeyBits,
+                MouseX = _state.MouseX,
+                MouseY = _state.MouseY,
+            };
+
+            if (_hasQueuedTransition &&
+                _lastQueuedTransition.ButtonMask == transition.ButtonMask &&
+                _lastQueuedTransition.KeyBits == transition.KeyBits &&
+                Math.Abs(_lastQueuedTransition.MouseX - transition.MouseX) < 0.001f &&
+                Math.Abs(_lastQueuedTransition.MouseY - transition.MouseY) < 0.001f)
+            {
+                return;
+            }
+
+            _frameTransitions.Enqueue(transition);
+            _lastQueuedTransition = transition;
+            _hasQueuedTransition = true;
+        }
+
+        private WireInputState SnapshotState()
         {
             lock (_lock)
             {
-                WireInputState snapshot = _state;
-                if (!peekOnly)
+                if (!_frameStateInitialized)
                 {
-                    _state.MouseWheel = 0f;
+                    return new WireInputState
+                    {
+                        ButtonMask = _state.ButtonMask,
+                        MouseX = _state.MouseX,
+                        MouseY = _state.MouseY,
+                        MouseWheel = _pendingMouseWheel,
+                        KeyBits = _state.KeyBits,
+                    };
                 }
 
-                return snapshot;
+                return _frameState;
             }
         }
 
@@ -229,6 +311,14 @@ namespace Ludots.Adapter.Web.Services
             public float MouseY;
             public float MouseWheel;
             public ulong KeyBits;
+        }
+
+        private struct QueuedFrameState
+        {
+            public int ButtonMask;
+            public ulong KeyBits;
+            public float MouseX;
+            public float MouseY;
         }
     }
 }
