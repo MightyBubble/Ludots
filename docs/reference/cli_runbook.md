@@ -12,6 +12,38 @@ Both entrypoints reuse the same backend:
 - `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
 - `src/Tools/Ludots.Editor.Bridge/Program.cs`
 
+## 0. Quick Start
+
+If you only need to run mods, use these product commands:
+
+```powershell
+# Single mod on raylib
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
+
+# Single mod on web
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
+
+# Multi-mod on raylib
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter raylib
+
+# Multi-mod on web
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter web
+```
+
+If you want a reusable launch target:
+
+```powershell
+.\scripts\run-mod-launcher.cmd cli preset save --name camera-nav-web camera_acceptance nav_playground --adapter web
+.\scripts\run-mod-launcher.cmd cli preset select preset_camera-nav-web
+.\scripts\run-mod-launcher.cmd cli launch --adapter web
+```
+
+Rules:
+
+- `launch` is the product command. It resolves dependencies, DLLs, SDK refs, and runtime bootstrap automatically.
+- `launch` with no selectors uses the currently selected preset.
+- Pass `--adapter` explicitly in scripts and reproducible runs.
+
 ## 1. State Files
 
 Launcher state is split into separate files with non-overlapping responsibilities.
@@ -141,9 +173,15 @@ Notes:
 .\scripts\run-mod-launcher.cmd cli preset save --name camera-web camera_acceptance --adapter web
 .\scripts\run-mod-launcher.cmd cli preset save --name camera-nav-raylib camera_acceptance nav_playground --adapter raylib
 .\scripts\run-mod-launcher.cmd cli preset select preset_camera-nav-raylib
+.\scripts\run-mod-launcher.cmd cli launch --adapter raylib
 ```
 
 Presets store selector sets, not expanded final mod lists. Dependency closure is recalculated on every `resolve` or `launch`.
+
+Notes:
+
+- `preset select` changes the default selector set for later `resolve`, `build`, and `launch`.
+- Use `launch --adapter ...` after selecting a preset when you need a deterministic adapter choice.
 
 ### 3.6 Build and SDK
 

@@ -36,6 +36,9 @@ dotnet build src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj -c Relea
 # Launch multiple root mods on web
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter web
 
+# Launch the currently selected preset
+.\scripts\run-mod-launcher.cmd cli launch --adapter web
+
 # Export SDK ref DLLs
 .\scripts\run-mod-launcher.cmd cli sdk export
 ```
