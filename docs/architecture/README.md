@@ -20,6 +20,7 @@
 
 *   [GAS 分层架构与 Sink 最佳实践](gas_layered_architecture.md)
 *   [GAS 战斗体系基建与 MOBA 实践指南](gas_combat_infrastructure.md)
+*   [交互模型与技能系统](interaction/README.md)
 *   [表现管线与 Performer 体系](presentation_performer.md)
 *   [3C 系统：相机、角色与控制](camera_character_control.md)
 
