@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod.Triggers;
+using InteractionShowcaseMod.Runtime;
 using InteractionShowcaseMod.Systems;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
@@ -17,14 +19,21 @@ using Ludots.Core.Scripting;
 
 namespace InteractionShowcaseMod.Triggers
 {
-    public sealed class InstallInteractionShowcaseOnGameStartTrigger : Trigger
+    internal sealed class InstallInteractionShowcaseOnGameStartTrigger : Trigger
     {
         private const string InstalledKey = "InteractionShowcaseMod.Installed";
         private readonly IModContext _ctx;
+        private readonly InteractionShowcaseRuntime _runtime;
+        private readonly InteractionShowcaseStressTelemetry _stressTelemetry;
 
-        public InstallInteractionShowcaseOnGameStartTrigger(IModContext ctx)
+        internal InstallInteractionShowcaseOnGameStartTrigger(
+            IModContext ctx,
+            InteractionShowcaseRuntime runtime,
+            InteractionShowcaseStressTelemetry stressTelemetry)
         {
             _ctx = ctx;
+            _runtime = runtime;
+            _stressTelemetry = stressTelemetry;
             EventKey = GameEvents.GameStart;
         }
 
@@ -44,6 +53,7 @@ namespace InteractionShowcaseMod.Triggers
             }
 
             engine.GlobalContext[InstalledKey] = true;
+            engine.GlobalContext[InteractionShowcaseStressTelemetry.GlobalKey] = _stressTelemetry;
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
 
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var ordersObj) &&
@@ -53,6 +63,21 @@ namespace InteractionShowcaseMod.Triggers
                     new InteractionShowcaseLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx),
                     SystemGroup.InputCollection);
             }
+
+            if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue spawnQueue)
+            {
+                throw new InvalidOperationException("InteractionShowcaseMod requires RuntimeEntitySpawnQueue for stress validation.");
+            }
+
+            if (engine.GetService(CoreServiceKeys.OrderQueue) is not OrderQueue stressOrders)
+            {
+                throw new InvalidOperationException("InteractionShowcaseMod requires OrderQueue for stress validation.");
+            }
+
+            engine.RegisterSystem(
+                new InteractionShowcaseStressSystem(engine, spawnQueue, stressOrders, _stressTelemetry),
+                SystemGroup.InputCollection);
+            engine.RegisterPresentationSystem(new InteractionShowcasePanelPresentationSystem(engine, _runtime));
 
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var orderTypesObj) &&
                 orderTypesObj is OrderTypeRegistry orderTypes)

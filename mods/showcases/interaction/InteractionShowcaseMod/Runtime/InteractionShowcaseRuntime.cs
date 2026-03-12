@@ -37,7 +37,7 @@ namespace InteractionShowcaseMod.Runtime
             {
                 ActivateInputContext(input);
                 EnsureDefaultShowcaseMode(viewModeManager);
-                MountPanel(context, engine, activeMapId!, viewModeManager);
+                RefreshPanel(engine);
             }
             else
             {
@@ -69,6 +69,23 @@ namespace InteractionShowcaseMod.Runtime
             return Task.CompletedTask;
         }
 
+        public void RefreshPanel(GameEngine engine)
+        {
+            string? activeMapId = engine.CurrentMapSession?.MapId.Value;
+            if (!InteractionShowcaseIds.IsShowcaseMap(activeMapId))
+            {
+                ClearPanelIfOwned(engine);
+                return;
+            }
+
+            if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
+            {
+                return;
+            }
+
+            _panelController.MountOrRefresh(root, engine, activeMapId!, ResolveViewModeManager(engine));
+        }
+
         private void ActivateInputContext(PlayerInputHandler? input)
         {
             if (input == null || _inputContextActive)
@@ -92,20 +109,19 @@ namespace InteractionShowcaseMod.Runtime
             _inputContextActive = false;
         }
 
-        private void MountPanel(ScriptContext context, GameEngine engine, string activeMapId, ViewModeManager? viewModeManager)
+        private void ClearPanelIfOwned(ScriptContext context)
         {
             if (context.Get(CoreServiceKeys.UIRoot) is not UIRoot root)
             {
                 return;
             }
 
-            root.MountScene(_panelController.BuildScene(engine, activeMapId, viewModeManager));
-            root.IsDirty = true;
+            _panelController.ClearIfOwned(root);
         }
 
-        private void ClearPanelIfOwned(ScriptContext context)
+        private void ClearPanelIfOwned(GameEngine engine)
         {
-            if (context.Get(CoreServiceKeys.UIRoot) is not UIRoot root)
+            if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
             {
                 return;
             }

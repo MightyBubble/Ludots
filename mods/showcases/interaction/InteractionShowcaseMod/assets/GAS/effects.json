@@ -129,8 +129,9 @@
     "participatesInResponse": true,
     "targetQuery": {
       "kind": "BuiltinSpatial",
-      "shape": "Circle",
-      "radius": 260
+      "shape": "Line",
+      "length": 780,
+      "halfWidth": 95
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -213,8 +214,9 @@
     "participatesInResponse": true,
     "targetQuery": {
       "kind": "BuiltinSpatial",
-      "shape": "Circle",
-      "radius": 260
+      "shape": "Ring",
+      "radius": 320,
+      "innerRadius": 140
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -271,8 +273,9 @@
     "participatesInResponse": true,
     "targetQuery": {
       "kind": "BuiltinSpatial",
-      "shape": "Circle",
-      "radius": 220
+      "shape": "Rectangle",
+      "halfWidth": 130,
+      "halfHeight": 260
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -400,8 +403,9 @@
     },
     "targetQuery": {
       "kind": "BuiltinSpatial",
-      "shape": "Circle",
-      "radius": 280
+      "shape": "Line",
+      "length": 820,
+      "halfWidth": 120
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -430,7 +434,7 @@
     "participatesInResponse": true,
     "projectile": {
       "speed": 1400,
-      "range": 2600,
+      "range": 5200,
       "arcHeight": 0,
       "impactEffect": "Effect.Interaction.Stress.FireballHit"
     }

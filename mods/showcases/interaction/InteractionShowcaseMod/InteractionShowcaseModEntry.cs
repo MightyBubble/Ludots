@@ -14,7 +14,8 @@ namespace InteractionShowcaseMod
             context.Log("[InteractionShowcaseMod] Loaded");
 
             var runtime = new InteractionShowcaseRuntime();
-            context.OnEvent(GameEvents.GameStart, new InstallInteractionShowcaseOnGameStartTrigger(context).ExecuteAsync);
+            var stressTelemetry = new InteractionShowcaseStressTelemetry();
+            context.OnEvent(GameEvents.GameStart, new InstallInteractionShowcaseOnGameStartTrigger(context, runtime, stressTelemetry).ExecuteAsync);
             context.OnEvent(GameEvents.GameStart, ctx =>
             {
                 var engine = ctx.GetEngine();

@@ -46,8 +46,8 @@ namespace InteractionShowcaseMod
         {
             return mapId switch
             {
-                HubMapId => "Three controllable heroes on one arena: target-first, smart-cast, aim-cast, indicator cast, context-scored action combat, chords, double-tap, queue, and toggle flows.",
-                StressMapId => "Reserved battlefield for large-scale fireball volleys and order/GAS pressure validation.",
+                HubMapId => "Three controllable heroes on one arena: target-first, smart-cast, aim-cast, indicator release, context-scored action combat, vector casts, ring AoE, chords, double-tap, queue, and toggle flows.",
+                StressMapId => "3200 fireball casters deploy in mirrored formations and auto-saturate the battlefield to validate order, GAS, projectile, and ECS throughput.",
                 _ => "Interaction showcase for Ludots input, GAS, order, graph, and ECS data pipelines."
             };
         }

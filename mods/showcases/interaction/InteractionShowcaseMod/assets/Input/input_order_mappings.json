@@ -78,7 +78,7 @@
       "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 7 },
       "requireSelection": false,
-      "selectionType": "Position",
+      "selectionType": "Vector",
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
