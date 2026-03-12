@@ -58,6 +58,16 @@ Scope: Cross-layer
 - Immediate containment:
   - keep the default demo density low enough to validate control flow, not final-scale performance
   - keep benchmark and acceptance evidence separated so 10k stress does not masquerade as a product-ready scene
+- Status update:
+  - landed steering-cell auto sizing so local-avoidance buckets are no longer pinned to the world-grid cell size:
+    - `src/Core/Navigation2D/Spatial/Nav2DCellMap.cs`
+    - `src/Core/Navigation2D/Runtime/Navigation2DRuntime.cs`
+    - `src/Core/Ludots.Physics2D/Systems/Navigation2DSteeringSystem2D.cs`
+    - `src/Tests/Navigation2DTests/Navigation2DSteeringSoATests.cs`
+  - this narrows one concrete gap against `projectdawn`: neighbor queries now scale to agent neighbor distance instead of a fixed map cell.
+  - this does not close the main remaining gaps:
+    - neighbor gather is still per-agent ring traversal instead of partition-once bucket-window traversal
+    - steering still writes physics-facing outputs directly instead of a fully decoupled desired-velocity-only contract
 - Permanent fix direction:
   - add a formal 10k launcher-driven acceptance path instead of relying only on synthetic benchmark harnesses
   - turn steering cache / temporal coherence into a product-configured path with measured hit-rate targets, not a dormant config branch

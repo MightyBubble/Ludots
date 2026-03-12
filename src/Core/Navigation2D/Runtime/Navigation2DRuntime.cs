@@ -16,6 +16,7 @@ namespace Ludots.Core.Navigation2D.Runtime
         private CrowdFlowChunkStreaming? _streaming;
 
         public Navigation2DConfig Config { get; }
+        public Fix64 WorldGridCellSizeCm { get; }
 
         public bool FlowEnabled { get; set; } = false;
         public bool FlowDebugEnabled { get; set; } = false;
@@ -25,16 +26,19 @@ namespace Ludots.Core.Navigation2D.Runtime
         public Navigation2DRuntime(Navigation2DConfig config, int gridCellSizeCm, ILoadedChunks? loadedChunks)
         {
             Config = (config ?? new Navigation2DConfig()).CloneValidated();
+            WorldGridCellSizeCm = Fix64.FromInt(gridCellSizeCm);
 
-            var cellSize = Fix64.FromInt(gridCellSizeCm);
-            AgentSoA = new Navigation2DWorld(new Navigation2DWorldSettings(Config.MaxAgents, cellSize));
+            var steeringCellSize = Config.Spatial.CellSizeCm > 0
+                ? Fix64.FromInt(Config.Spatial.CellSizeCm)
+                : WorldGridCellSizeCm;
+            AgentSoA = new Navigation2DWorld(new Navigation2DWorldSettings(Config.MaxAgents, steeringCellSize));
             CellMap = new Nav2DCellMap(
-                cellSize,
+                steeringCellSize,
                 initialAgentCapacity: Config.MaxAgents,
                 initialCellCapacity: Math.Max(128, Config.MaxAgents / 2),
                 settings: Nav2DCellMapSettings.FromConfig(Config.Spatial));
 
-            Surface = new CrowdSurface2D(cellSize, tileSizeCells: 64, initialTileCapacity: 256);
+            Surface = new CrowdSurface2D(WorldGridCellSizeCm, tileSizeCells: 64, initialTileCapacity: 256);
             Flows = new[]
             {
                 new CrowdFlow2D(Surface, Config.FlowStreaming, Config.FlowCrowd, hasLoadedTileSource: false, initialTileCapacity: 256, initialGoalCapacity: Math.Max(64, Config.MaxAgents)),

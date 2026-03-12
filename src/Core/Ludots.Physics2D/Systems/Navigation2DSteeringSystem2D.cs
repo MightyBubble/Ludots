@@ -64,7 +64,12 @@ namespace Ludots.Core.Physics2D.Systems
                 return;
             }
 
-            if (syncResult.SpatialDirty)
+            bool steeringCellSizeChanged = EnsureSteeringCellSize(agentSoA);
+            if (steeringCellSizeChanged)
+            {
+                _runtime.CellMap.Build(agentSoA.Positions.AsSpan());
+            }
+            else if (syncResult.SpatialDirty)
             {
                 if (usedSteadyStateSync)
                 {
@@ -87,12 +92,57 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             var temporalCoherence = _runtime.Config.Steering.TemporalCoherence;
-            bool stableSteeringWorld = !syncResult.SpatialDirty && !syncResult.SmartStopDirty;
+            bool stableSteeringWorld = !syncResult.SpatialDirty && !syncResult.SmartStopDirty && !steeringCellSizeChanged;
             bool cacheFrameEnabled = temporalCoherence.Enabled &&
                 (!temporalCoherence.RequireSteadyStateWorld || stableSteeringWorld);
             agentSoA.BeginSteeringFrame(unchecked(++_steeringFrameTick), cacheFrameEnabled, stableSteeringWorld);
 
             ApplySteering(deltaTime);
+        }
+
+        private bool EnsureSteeringCellSize(Navigation2DWorld agentSoA)
+        {
+            int configuredCellSizeCm = _runtime.Config.Spatial.CellSizeCm;
+            Fix64 desiredCellSizeCm = configuredCellSizeCm > 0
+                ? Fix64.FromInt(configuredCellSizeCm)
+                : ResolveAutoSteeringCellSize(agentSoA);
+
+            return _runtime.CellMap.TrySetCellSize(desiredCellSizeCm);
+        }
+
+        private Fix64 ResolveAutoSteeringCellSize(Navigation2DWorld agentSoA)
+        {
+            float baseCellSizeCm = _runtime.WorldGridCellSizeCm.ToFloat();
+            float desiredCellSizeCm = baseCellSizeCm > 1e-6f ? baseCellSizeCm : 100f;
+
+            var neighborDistances = agentSoA.NeighborDistances.AsSpan();
+            for (int i = 0; i < neighborDistances.Length; i++)
+            {
+                float neighborDistanceCm = neighborDistances[i];
+                if (neighborDistanceCm > desiredCellSizeCm)
+                {
+                    desiredCellSizeCm = neighborDistanceCm;
+                }
+            }
+
+            desiredCellSizeCm = QuantizeUp(desiredCellSizeCm, baseCellSizeCm);
+            return Fix64.FromFloat(desiredCellSizeCm);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float QuantizeUp(float value, float quantum)
+        {
+            if (!(value > 1e-6f))
+            {
+                return 100f;
+            }
+
+            if (!(quantum > 1e-6f))
+            {
+                return value;
+            }
+
+            return MathF.Ceiling(value / quantum) * quantum;
         }
 
         private void ApplySteering(float deltaTime)

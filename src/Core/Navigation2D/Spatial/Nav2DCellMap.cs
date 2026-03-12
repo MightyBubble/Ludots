@@ -34,7 +34,8 @@ namespace Ludots.Core.Navigation2D.Spatial
 
     public sealed class Nav2DCellMap : IDisposable
     {
-        private readonly float _invCellSizeCm;
+        private float _cellSizeCm;
+        private float _invCellSizeCm;
         private readonly Nav2DCellMapSettings _settings;
 
         private UnsafeArray<long> _agentCellKeys;
@@ -58,6 +59,7 @@ namespace Ludots.Core.Navigation2D.Spatial
         public long InstrumentedIncrementalUpdates;
 
         public Navigation2DSpatialUpdateMode UpdateMode => _settings.UpdateMode;
+        public float CellSizeCm => _cellSizeCm;
 
         public Nav2DCellMap(Fix64 cellSizeCm, int initialAgentCapacity, int initialCellCapacity)
             : this(cellSizeCm, initialAgentCapacity, initialCellCapacity, Nav2DCellMapSettings.Default)
@@ -66,9 +68,8 @@ namespace Ludots.Core.Navigation2D.Spatial
 
         public Nav2DCellMap(Fix64 cellSizeCm, int initialAgentCapacity, int initialCellCapacity, Nav2DCellMapSettings settings)
         {
-            float cellSize = cellSizeCm.ToFloat();
-            _invCellSizeCm = cellSize > 1e-6f ? 1f / cellSize : 0f;
             _settings = settings;
+            SetCellSize(cellSizeCm);
 
             _agentCapacity = Math.Max(8, initialAgentCapacity);
             _cellCapacity = Math.Max(8, initialCellCapacity);
@@ -83,6 +84,26 @@ namespace Ludots.Core.Navigation2D.Spatial
             _agentCount = 0;
             _cellCount = 0;
             _migrationsSinceBuild = 0;
+        }
+
+        public bool TrySetCellSize(Fix64 cellSizeCm)
+        {
+            float cellSize = cellSizeCm.ToFloat();
+            if (cellSize <= 1e-6f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(cellSizeCm), "Navigation2D steering cell size must be positive.");
+            }
+
+            if (MathF.Abs(cellSize - _cellSizeCm) <= 1e-4f)
+            {
+                return false;
+            }
+
+            SetCellSize(cellSizeCm);
+            _agentCount = 0;
+            _cellCount = 0;
+            _migrationsSinceBuild = 0;
+            return true;
         }
 
         public void Build(ReadOnlySpan<Vector2> positions)
@@ -689,6 +710,13 @@ namespace Ludots.Core.Navigation2D.Spatial
         private int CeilToCells(float value)
         {
             return Math.Max(0, (int)MathF.Ceiling(value * _invCellSizeCm));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetCellSize(Fix64 cellSizeCm)
+        {
+            _cellSizeCm = cellSizeCm.ToFloat();
+            _invCellSizeCm = _cellSizeCm > 1e-6f ? 1f / _cellSizeCm : 0f;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

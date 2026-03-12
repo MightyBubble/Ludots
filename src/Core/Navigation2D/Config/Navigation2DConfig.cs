@@ -90,6 +90,7 @@ namespace Ludots.Core.Navigation2D.Config
 
     public sealed class Navigation2DSpatialPartitionConfig
     {
+        public int CellSizeCm { get; set; } = 0;
         public Navigation2DSpatialUpdateMode UpdateMode { get; set; } = Navigation2DSpatialUpdateMode.Adaptive;
         public int RebuildCellMigrationsThreshold { get; set; } = 128;
         public int RebuildAccumulatedCellMigrationsThreshold { get; set; } = 1024;
@@ -278,6 +279,7 @@ namespace Ludots.Core.Navigation2D.Config
                 },
                 Spatial = new Navigation2DSpatialPartitionConfig
                 {
+                    CellSizeCm = ClampAtLeast(spatial?.CellSizeCm ?? 0, 0),
                     UpdateMode = spatial?.UpdateMode ?? Navigation2DSpatialUpdateMode.Adaptive,
                     RebuildCellMigrationsThreshold = ClampAtLeast(spatial?.RebuildCellMigrationsThreshold ?? 128, 0),
                     RebuildAccumulatedCellMigrationsThreshold = ClampAtLeast(spatial?.RebuildAccumulatedCellMigrationsThreshold ?? 1024, 0),

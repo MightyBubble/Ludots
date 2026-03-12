@@ -51,6 +51,37 @@ namespace Ludots.Tests.Navigation2D
         }
 
         [Test]
+        public void SteeringUpdate_AutoSizesCellBuckets_ToNeighborDistanceScale()
+        {
+            using var world = World.Create();
+            using var runtime = CreateRuntime(Navigation2DAvoidanceMode.Hybrid, smartStopEnabled: false);
+            var system = new Navigation2DSteeringSystem2D(world, runtime);
+
+            world.Create(
+                new NavAgent2D(),
+                new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = Fix64Vec2.FromInt(1000, 0), RadiusCm = Fix64.Zero },
+                new NavKinematics2D
+                {
+                    MaxSpeedCmPerSec = Fix64.FromInt(250),
+                    MaxAccelCmPerSec2 = Fix64.FromInt(1200),
+                    RadiusCm = Fix64.FromInt(35),
+                    NeighborDistCm = Fix64.FromInt(400),
+                    TimeHorizonSec = Fix64.FromInt(3),
+                    MaxNeighbors = 7
+                },
+                new Position2D { Value = Fix64Vec2.Zero },
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new ForceInput2D { Force = Fix64Vec2.Zero },
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero }
+            );
+
+            system.Update(1f / 60f);
+
+            Assert.That(runtime.CellMap.CellSizeCm, Is.EqualTo(400f).Within(0.01f));
+        }
+
+        [Test]
         public void SteeringUpdate_HandlesHighEntityIdAgentMapping()
         {
             using var world = World.Create();
