@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -40,7 +40,6 @@ namespace Ludots.Core.Config
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("AbilityStateBuffer", SetAbilityStateBuffer);
             Register<ForceInput2D>("ForceInput2D");
-            Register<VisualModel>("VisualModel");
             Register<GameplayTagContainer>("GameplayTagContainer");
             Register("OrderBuffer", SetOrderBuffer);
             Register<BlackboardSpatialBuffer>("BlackboardSpatialBuffer");
@@ -97,7 +96,7 @@ namespace Ludots.Core.Config
 
         private static void SetOrderBuffer(Entity entity, JsonNode data)
         {
-            // OrderBuffer always starts empty �?JSON data is ignored (no serializable state)
+            // OrderBuffer always starts empty 鈥?JSON data is ignored (no serializable state)
             entity.Add(OrderBuffer.CreateEmpty());
         }
 
@@ -159,7 +158,7 @@ namespace Ludots.Core.Config
             }
             var fix64Pos = Fix64Vec2.FromInt(x, y);
             entity.Add(new WorldPositionCm { Value = fix64Pos });
-            // 自动添加插值、渲染、剔除所需的伴生组�?
+            // 鑷姩娣诲姞鎻掑€笺€佹覆鏌撱€佸墧闄ゆ墍闇€鐨勪即鐢熺粍浠?
             entity.Add(new PreviousWorldPositionCm { Value = fix64Pos });
             entity.Add(VisualTransform.Default);
             entity.Add(new CullState { IsVisible = true, LOD = LODLevel.High });
@@ -224,4 +223,5 @@ namespace Ludots.Core.Config
         }
     }
 }
+
 

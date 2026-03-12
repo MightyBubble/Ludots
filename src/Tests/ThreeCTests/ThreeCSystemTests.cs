@@ -463,7 +463,11 @@ namespace Ludots.Tests.ThreeC
             var e = world.Create(
                 WorldPositionCm.FromCm(xCm, yCm),
                 new CullState(),
-                new VisualModel { MeshId = 1, MaterialId = 1, BaseScale = 1f }
+                VisualRuntimeState.Create(
+                    meshAssetId: 1,
+                    materialId: 1,
+                    baseScale: 1f,
+                    renderPath: VisualRenderPath.StaticMesh)
             );
             return e;
         }

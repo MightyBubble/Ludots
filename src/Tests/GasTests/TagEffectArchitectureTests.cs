@@ -419,7 +419,16 @@ namespace Ludots.Tests.GAS
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
             var effects = new EffectRequestQueue();
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
-            var system = new RuntimeEntitySpawnSystem(world, requests, templates, effects);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
+                    new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
+                    new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
+                    new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
+                    new Ludots.Core.Presentation.PresentationStableIdAllocator()),
+                effects);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
             {

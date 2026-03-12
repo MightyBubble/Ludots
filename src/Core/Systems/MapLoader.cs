@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation.Config;
 
 namespace Ludots.Core.Systems
 {
@@ -16,6 +17,7 @@ namespace Ludots.Core.Systems
         
         // New Registry
         public DataRegistry<EntityTemplate> TemplateRegistry { get; private set; }
+        public PresentationAuthoringContext? PresentationAuthoringContext { get; set; }
 
         public MapLoader(World world, WorldMap worldMap, ConfigPipeline pipeline)
         {
@@ -48,7 +50,7 @@ namespace Ludots.Core.Systems
                 templates[t.Id] = t;
             }
 
-            var builder = new EntityBuilder(_world, templates);
+            var builder = new EntityBuilder(_world, templates, PresentationAuthoringContext);
             var mapEntityTag = new MapEntity { MapId = new MapId(mapConfig.Id) };
             
             foreach (var entityData in mapConfig.Entities)

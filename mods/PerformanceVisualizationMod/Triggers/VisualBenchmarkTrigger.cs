@@ -82,7 +82,7 @@ namespace PerformanceVisualizationMod.Triggers
                 typeof(Position),
                 typeof(WorldPositionCm),
                 typeof(VisualTransform), // Core will sync this
-                typeof(VisualModel),     // Core will use this for culling/rendering
+                typeof(VisualRuntimeState), // Core will use this for culling/rendering
                 typeof(CullState),       // Core updates this
                 typeof(AttributeBuffer),
                 typeof(ActiveEffectContainer),
@@ -102,7 +102,12 @@ namespace PerformanceVisualizationMod.Triggers
                 world.Set(e, new Position { GridPos = new IntVector2(xCm / 100, yCm / 100) });
                 
                 // Visual Model (Primitive ID 1 = Cube/Sphere)
-                world.Set(e, new VisualModel { MeshId = 1, MaterialId = 1, BaseScale = 1.0f });
+                world.Set(e, VisualRuntimeState.Create(
+                    meshAssetId: 1,
+                    materialId: 1,
+                    baseScale: 1.0f,
+                    renderPath: VisualRenderPath.HierarchicalInstancedStaticMesh,
+                    mobility: VisualMobility.Static));
                 world.Set(e, VisualTransform.Default); // Init
 
                 // GAS State

@@ -12,7 +12,10 @@
     "components": {
       "Health": { "Current": 50, "Max": 50 },
       "Name": { "Value": "Pine Tree" },
-      "Position": { "Value": { "X": 0, "Y": 0 } }
+      "Position": { "Value": { "X": 0, "Y": 0 } },
+      "Presentation": {
+        "visualTemplateId": "core.foliage.tree_pine_hism"
+      }
     }
   },
   {
@@ -22,7 +25,9 @@
       "PlayerOwner": { "PlayerId": 1 },
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualModel": { "MeshId": 2, "MaterialId": 0, "BaseScale": 0.9 },
+      "Presentation": {
+        "visualTemplateId": "core.character.hero_skinned"
+      },
       "AttributeBuffer": { "base": { "Health": 100 } },
       "AbilityStateBuffer": {
         "abilityIds": []
@@ -40,7 +45,9 @@
       "Name": { "Value": "Dummy" },
       "Team": { "Id": 2 },
       "WorldPositionCm": { "Value": { "X": 600, "Y": 0 } },
-      "VisualModel": { "MeshId": 1, "MaterialId": 0, "BaseScale": 0.8 },
+      "Presentation": {
+        "visualTemplateId": "core.prop.dummy_static"
+      },
       "AttributeBuffer": { "base": { "Health": 100 } }
     }
   }

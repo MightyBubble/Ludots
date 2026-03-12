@@ -97,7 +97,16 @@ namespace Ludots.Core.Systems
             {
                 var e = _buffer[idx];
                 if (!World.IsAlive(e)) continue;
-                if (!World.Has<WorldPositionCm>(e) || !World.Has<CullState>(e) || !World.Has<VisualModel>(e)) continue;
+                if (!World.Has<WorldPositionCm>(e) || !World.Has<CullState>(e) || !World.Has<VisualRuntimeState>(e)) continue;
+
+                var visual = World.Get<VisualRuntimeState>(e);
+                if (!visual.ShouldEmit)
+                {
+                    ref var hiddenCull = ref World.Get<CullState>(e);
+                    hiddenCull.LOD = LODLevel.Culled;
+                    hiddenCull.IsVisible = false;
+                    continue;
+                }
 
                 var wp = World.Get<WorldPositionCm>(e).Value;
                 float px = wp.X.ToFloat();

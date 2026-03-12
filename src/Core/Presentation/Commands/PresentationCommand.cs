@@ -7,6 +7,7 @@ namespace Ludots.Core.Presentation.Commands
     {
         public int LogicTickStamp;
         public PresentationCommandKind Kind;
+        public PresentationAnchorKind AnchorKind;
 
         public int IdA;
         public int IdB;

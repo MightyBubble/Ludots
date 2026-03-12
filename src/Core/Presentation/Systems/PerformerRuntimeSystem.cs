@@ -7,6 +7,7 @@ using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -24,6 +25,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PrimitiveDrawBuffer _draw;
         private readonly TransientMarkerBuffer _markers;
         private readonly PerformerInstanceBuffer _instances;
+        private readonly PresentationStableIdAllocator _stableIds;
 
         public PerformerRuntimeSystem(
             World world,
@@ -31,7 +33,8 @@ namespace Ludots.Core.Presentation.Systems
             PresentationCommandBuffer commands,
             PrimitiveDrawBuffer draw,
             TransientMarkerBuffer markers,
-            PerformerInstanceBuffer instances)
+            PerformerInstanceBuffer instances,
+            PresentationStableIdAllocator stableIds)
             : base(world)
         {
             _prefabs = prefabs ?? throw new ArgumentNullException(nameof(prefabs));
@@ -39,6 +42,7 @@ namespace Ludots.Core.Presentation.Systems
             _draw = draw ?? throw new ArgumentNullException(nameof(draw));
             _markers = markers ?? throw new ArgumentNullException(nameof(markers));
             _instances = instances ?? throw new ArgumentNullException(nameof(instances));
+            _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
         }
 
         public override void Update(in float dt)
@@ -102,7 +106,17 @@ namespace Ludots.Core.Presentation.Systems
         private void HandleCreatePerformer(in PresentationCommand cmd)
         {
             // IdA = PerformerDefinitionId, IdB = ScopeId, Source = Owner
-            _instances.TryAllocate(cmd.IdA, cmd.Source, cmd.IdB, out _);
+            if (!_instances.TryAllocate(
+                    cmd.IdA,
+                    cmd.Source,
+                    cmd.IdB,
+                    cmd.AnchorKind,
+                    cmd.Position,
+                    _stableIds.Allocate(),
+                    out _))
+            {
+                throw new InvalidOperationException("PerformerInstanceBuffer is full while creating a performer instance.");
+            }
         }
     }
 }

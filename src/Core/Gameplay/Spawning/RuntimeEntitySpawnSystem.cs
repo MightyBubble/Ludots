@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Config;
 
 namespace Ludots.Core.Gameplay.Spawning
 {
@@ -26,13 +27,14 @@ namespace Ludots.Core.Gameplay.Spawning
             World world,
             RuntimeEntitySpawnQueue requests,
             DataRegistry<EntityTemplate> templateRegistry,
+            PresentationAuthoringContext presentationAuthoring,
             EffectRequestQueue effectRequests = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
             _effectRequests = effectRequests;
-            _builder = new EntityBuilder(world, _cachedTemplates);
+            _builder = new EntityBuilder(world, _cachedTemplates, presentationAuthoring ?? throw new ArgumentNullException(nameof(presentationAuthoring)));
         }
 
         public override void Update(in float dt)
