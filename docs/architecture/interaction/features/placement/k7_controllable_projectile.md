@@ -67,6 +67,7 @@ On detonate (Space / collision):
 | CreateUnit handler | ✅ 已有 |
 | UnitCreationDescriptor | ✅ 已有 |
 | TransferInputFocus | ❌ 需新增 |
+| DetonateProjectile handler | ❌ 需新增 — 引爆投射物 + RuntimeEntitySpawnQueue 销毁 |
 | Camera focus switch | ❌ 需新增 |
 | Projectile physics | ✅ 已有 |
 | Input profile system | ⚠️ 需扩展 |

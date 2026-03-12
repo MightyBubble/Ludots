@@ -37,6 +37,7 @@ OnProjectileHit → BuiltinHandler:
 ## 新增需求
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
+| PickupAndThrow handler | P1 | 拾取 + 投掷 BuiltinHandler（AttachToActor → LaunchProjectile → RuntimeEntitySpawnQueue 销毁） |
 | Environment tag scanning | P1 | 扫描附近可投掷物体 |
 | AttachToActor | P2 | 物体附着到玩家身上 |
 

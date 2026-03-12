@@ -126,14 +126,14 @@ projectile_on_hit_fallback:
 //   - 反转 Projectile 速度方向（使用反射者 facingVector 或直接 180° 反转）
 //   - 保留原弹道的 impactEffect 和伤害参数
 //
-// 该 Handler 在 Effect.Deflect.Redirect 的 OnApply phase 中调用：
+// 该 Handler 通过 C# 代码注册到 BuiltinHandlerRegistry（非 JSON 配置）：
+//   PresetTypeDefinition.Register(BuiltinHandlerId.RedirectProjectile, ...)
+//
+// Effect 配置仅引用该 Handler 关联的 presetType：
 {
   "id": "Effect.Deflect.Redirect",
-  "presetType": "None",
+  "presetType": "None",               // P1: 注册 RedirectProjectile 后替换为对应 presetType
   "lifetime": "Instant",
-  "builtinHandlers": {
-    "OnApply": "RedirectProjectile"    // P1: 需在 BuiltinHandlerRegistry 注册
-  },
   "configParams": {
     "directionMode": { "type": "int", "value": 0 }
     // 0 = 使用反射者朝向, 1 = 直接反转 180°

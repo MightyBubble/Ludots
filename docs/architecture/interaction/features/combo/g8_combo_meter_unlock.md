@@ -33,7 +33,7 @@ special_combo ability:
 PeriodicCheck Effect (runs every tick):
   Graph:
     LoadSelfAttribute(combo_meter)
-    CompareFloat(>= threshold)
+    CompareGtFloat(combo_meter, threshold - 1)  // >9 等价于 >=10（整数属性）
     JumpIfFalse              B[0], @no_combo
     // true → already has tag or will get it via GrantedTags on this effect
     WriteBlackboardInt       E[0], "combo_status", 1
@@ -76,7 +76,7 @@ This bridges the attribute (numeric value) to the tag precondition system.
     "check_combo_threshold": {
       "ops": [
         { "op": "LoadSelfAttribute", "attribute": "combo_meter" },
-        { "op": "CompareFloat", "gte": 10 },
+        { "op": "CompareGtFloat", "a": "combo_meter", "b": 9 },  // >9 等价于 >=10
         { "op": "JumpIfFalse", "target": "@no_combo" },
         { "op": "WriteBlackboardInt", "entity": "self", "key": "combo_status", "value": 1 },
         { "op": "Jump", "target": "@end" },
