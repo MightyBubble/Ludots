@@ -48,3 +48,7 @@
 - total dynamic agents exercised across catalog: `1056`
 - total blockers exercised across catalog: `38`
 - reusable wiring: config via `Navigation2D.Playground`, input via `default_input.json`, view modes via `viewmodes.json`, camera via virtual camera registry, telemetry via `ScreenOverlayBuffer`
+
+## Open Tech Debt
+- `nav-playground-selection-boundaries` -> `artifacts/techdebt/2026-03-12-nav-playground-selection-boundaries.md`
+- `nav-playground-steering-60hz-gap` -> `artifacts/techdebt/2026-03-12-nav-playground-steering-60hz-gap.md`

@@ -50,3 +50,7 @@
 - final active camera: `Navigation2D.Playground.Camera.Command`
 - final selected ids sample: `#5, #7, #9, #11`
 - reusable wiring: `ConfigPipeline`, `CoreInputMod`, `UIRoot`, `ReactivePage`, `ViewModeManager`, `Navigation2DRuntime`
+
+## Open Tech Debt
+- `nav-playground-selection-boundaries` -> `artifacts/techdebt/2026-03-12-nav-playground-selection-boundaries.md`
+- `nav-playground-steering-60hz-gap` -> `artifacts/techdebt/2026-03-12-nav-playground-steering-60hz-gap.md`
