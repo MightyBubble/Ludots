@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Presentation.Config;
 
 namespace Ludots.Core.Config
 {
@@ -9,15 +10,20 @@ namespace Ludots.Core.Config
     {
         private readonly World _world;
         private readonly Dictionary<string, EntityTemplate> _templates;
+        private readonly PresentationAuthoringContext? _presentationAuthoring;
         
         // Temporary storage for components to apply
         private EntityTemplate _activeTemplate;
         private Dictionary<string, JsonNode> _overrides = new Dictionary<string, JsonNode>();
 
-        public EntityBuilder(World world, Dictionary<string, EntityTemplate> templates)
+        public EntityBuilder(
+            World world,
+            Dictionary<string, EntityTemplate> templates,
+            PresentationAuthoringContext? presentationAuthoring = null)
         {
             _world = world;
             _templates = templates;
+            _presentationAuthoring = presentationAuthoring;
         }
 
         public EntityBuilder UseTemplate(string templateId)
@@ -59,7 +65,7 @@ namespace Ludots.Core.Config
                     // Check if overridden
                     if (!_overrides.ContainsKey(kvp.Key))
                     {
-                        ComponentRegistry.Apply(entity, kvp.Key, kvp.Value);
+                        ApplyComponent(entity, kvp.Key, kvp.Value);
                     }
                 }
             }
@@ -67,7 +73,7 @@ namespace Ludots.Core.Config
             // 2. Apply Overrides
             foreach (var kvp in _overrides)
             {
-                ComponentRegistry.Apply(entity, kvp.Key, kvp.Value);
+                ApplyComponent(entity, kvp.Key, kvp.Value);
             }
 
             // Reset for next use
@@ -75,6 +81,20 @@ namespace Ludots.Core.Config
             _overrides.Clear();
 
             return entity;
+        }
+
+        private void ApplyComponent(Entity entity, string componentName, JsonNode data)
+        {
+            if (string.Equals(componentName, "Presentation", System.StringComparison.OrdinalIgnoreCase))
+            {
+                if (_presentationAuthoring == null)
+                    throw new System.InvalidOperationException("Presentation authoring requires PresentationAuthoringContext.");
+
+                _presentationAuthoring.Apply(entity, data);
+                return;
+            }
+
+            ComponentRegistry.Apply(entity, componentName, data);
         }
     }
 }

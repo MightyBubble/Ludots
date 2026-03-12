@@ -1,5 +1,7 @@
 using System;
+using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Presentation.Commands;
 
 namespace Ludots.Core.Presentation.Performers
 {
@@ -54,13 +56,20 @@ namespace Ludots.Core.Presentation.Performers
         /// Allocate a new performer instance. Returns false if the buffer is full.
         /// The returned handle is the slot index.
         /// </summary>
-        public bool TryAllocate(int defId, Entity owner, int scopeId, out int handle)
+        public bool TryAllocate(
+            int defId,
+            Entity owner,
+            int scopeId,
+            PresentationAnchorKind anchorKind,
+            in Vector3 worldPosition,
+            int stableId,
+            out int handle)
         {
             // 1. Try free-list first — O(1)
             if (_freeCount > 0)
             {
                 int idx = _freeStack[--_freeCount];
-                InitSlot(idx, defId, owner, scopeId);
+                InitSlot(idx, defId, owner, scopeId, anchorKind, worldPosition, stableId);
                 handle = idx;
                 return true;
             }
@@ -69,13 +78,18 @@ namespace Ludots.Core.Presentation.Performers
             if (_highWaterMark < _slots.Length)
             {
                 int idx = _highWaterMark++;
-                InitSlot(idx, defId, owner, scopeId);
+                InitSlot(idx, defId, owner, scopeId, anchorKind, worldPosition, stableId);
                 handle = idx;
                 return true;
             }
 
             handle = -1;
             return false;
+        }
+
+        public bool TryAllocate(int defId, Entity owner, int scopeId, out int handle)
+        {
+            return TryAllocate(defId, owner, scopeId, PresentationAnchorKind.Entity, Vector3.Zero, 0, out handle);
         }
 
         /// <summary>
@@ -228,13 +242,23 @@ namespace Ludots.Core.Presentation.Performers
             _freeCount = 0;
         }
 
-        private void InitSlot(int idx, int defId, Entity owner, int scopeId)
+        private void InitSlot(
+            int idx,
+            int defId,
+            Entity owner,
+            int scopeId,
+            PresentationAnchorKind anchorKind,
+            in Vector3 worldPosition,
+            int stableId)
         {
             _slots[idx] = new PerformerInstance
             {
                 DefId = defId,
                 Owner = owner,
                 ScopeId = scopeId,
+                StableId = stableId,
+                AnchorKind = anchorKind,
+                WorldPosition = worldPosition,
                 Elapsed = 0f,
                 Active = true
             };

@@ -1,4 +1,6 @@
+using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Presentation.Commands;
 
 namespace Ludots.Core.Presentation.Performers
 {
@@ -24,6 +26,21 @@ namespace Ludots.Core.Presentation.Performers
         /// via DestroyPerformerScope. -1 = no scope (standalone).
         /// </summary>
         public int ScopeId;
+
+        /// <summary>
+        /// Stable presentation id used by adapter-side instance maps.
+        /// </summary>
+        public int StableId;
+
+        /// <summary>
+        /// Entity anchor vs world anchor mapping.
+        /// </summary>
+        public PresentationAnchorKind AnchorKind;
+
+        /// <summary>
+        /// World-space anchor for instances that do not bind to an ECS entity.
+        /// </summary>
+        public Vector3 WorldPosition;
 
         /// <summary>
         /// Time elapsed since creation (seconds). Always advances regardless of

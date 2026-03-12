@@ -264,7 +264,7 @@ namespace Ludots.Tests.Presentation
             var prefabs = new Ludots.Core.Presentation.Assets.PrefabRegistry();
             var draw = new PrimitiveDrawBuffer();
             var markers = new TransientMarkerBuffer();
-            _system = new PerformerRuntimeSystem(_world, prefabs, _commands, draw, markers, _instances);
+            _system = new PerformerRuntimeSystem(_world, prefabs, _commands, draw, markers, _instances, new Ludots.Core.Presentation.PresentationStableIdAllocator());
         }
 
         [TearDown]
@@ -370,6 +370,29 @@ namespace Ludots.Tests.Presentation
             Assert.That(span.Length, Is.EqualTo(1));
             Assert.That(span[0].MeshAssetId, Is.EqualTo(2));
             Assert.That(span[0].Scale.X, Is.EqualTo(0.5f).Within(0.01f));
+        }
+
+        [Test]
+        public void WorldAnchored_InstanceScoped_Marker3D_EmitsAtWorldAnchor()
+        {
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Marker3D,
+                MeshOrShapeId = 2,
+                DefaultColor = new Vector4(0f, 1f, 0f, 1f),
+                DefaultScale = 1f,
+            };
+
+            int defId = _defs.Register("test_world_anchor", def);
+            _instances.TryAllocate(defId, default, 0, PresentationAnchorKind.WorldPosition, new Vector3(7f, 0.5f, 9f), 123, out _);
+
+            _system.Update(0.016f);
+
+            var span = _primitives.GetSpan();
+            Assert.That(span.Length, Is.EqualTo(1));
+            Assert.That(span[0].StableId, Is.EqualTo(123));
+            Assert.That(span[0].Position.X, Is.EqualTo(7f).Within(0.01f));
+            Assert.That(span[0].Position.Z, Is.EqualTo(9f).Within(0.01f));
         }
 
         [Test]

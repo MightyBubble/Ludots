@@ -8,6 +8,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
@@ -97,6 +98,12 @@ namespace Ludots.Core.Presentation.Systems
                 if (!_definitions.TryGet(inst.DefId, out var def)) return;
                 if (def.EntityScope != EntityScopeFilter.None) return; // skip entity-scoped
 
+                if (inst.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(inst.Owner))
+                {
+                    _instances.Release(handle);
+                    return;
+                }
+
                 // Auto-expire duration-based performers
                 if (def.DefaultLifetime > 0f && inst.Elapsed >= def.DefaultLifetime)
                 {
@@ -108,7 +115,7 @@ namespace Ludots.Core.Presentation.Systems
                 if (!EvaluateVisibility(def, inst.Owner)) return;
 
                 // Compute position with offset and Y-drift
-                Vector3 pos = ResolveOwnerPosition(inst.Owner) + def.PositionOffset;
+                Vector3 pos = ResolveAnchorPosition(in inst) + def.PositionOffset;
                 pos.Y += def.PositionYDriftPerSecond * inst.Elapsed;
 
                 // Compute alpha modulation
@@ -362,6 +369,9 @@ namespace Ludots.Core.Presentation.Systems
             float sz = ResolveParam(handle, def, owner, 3, scaleUniform);
             var color = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
             color.W *= alphaMod;
+            int stableId = 0;
+            if (handle >= 0 && _instances.IsActive(handle))
+                stableId = _instances.Get(handle).StableId;
 
             _primitives.TryAdd(new PrimitiveDrawItem
             {
@@ -369,6 +379,10 @@ namespace Ludots.Core.Presentation.Systems
                 Position = pos,
                 Scale = new Vector3(sx, sy, sz),
                 Color = color,
+                StableId = stableId,
+                RenderPath = VisualRenderPath.StaticMesh,
+                Mobility = VisualMobility.Movable,
+                Flags = VisualRuntimeFlags.Visible,
             });
         }
 
@@ -425,6 +439,13 @@ namespace Ludots.Core.Presentation.Systems
             if (World.IsAlive(owner) && World.Has<VisualTransform>(owner))
                 return World.Get<VisualTransform>(owner).Position;
             return Vector3.Zero;
+        }
+
+        private Vector3 ResolveAnchorPosition(in PerformerInstance instance)
+        {
+            return instance.AnchorKind == PresentationAnchorKind.WorldPosition
+                ? instance.WorldPosition
+                : ResolveOwnerPosition(instance.Owner);
         }
 
         private bool IsLocalPlayer(Entity entity)

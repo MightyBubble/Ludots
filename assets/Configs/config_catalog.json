@@ -23,6 +23,7 @@
 
   { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/visual_templates.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/mesh_assets.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/prefabs.json", "Policy": "ArrayById", "IdField": "id" },
 

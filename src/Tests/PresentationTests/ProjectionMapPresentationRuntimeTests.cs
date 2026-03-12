@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Arch.Core;
@@ -25,19 +26,56 @@ namespace Ludots.Tests.Presentation
         };
 
         [Test]
-        public void ProjectionMap_PopulatesVisualModels_AndEmitsWorldPrimitives()
+        public void ProjectionMap_PopulatesVisualRuntimeStates_AndEmitsWorldPrimitives()
         {
             using var engine = CreateEngine(ProjectionMods);
             LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
 
-            int entitiesWithVisualModel = 0;
-            var visualQuery = new QueryDescription().WithAll<Name, VisualModel>();
-            engine.World.Query(in visualQuery, (ref Name _, ref VisualModel __) => entitiesWithVisualModel++);
-            Assert.That(entitiesWithVisualModel, Is.EqualTo(3), "Projection fixture entities must all carry VisualModel.");
+            int entitiesWithVisualRuntime = 0;
+            int skinnedCount = 0;
+            int staticCount = 0;
+            var visualQuery = new QueryDescription().WithAll<Name, VisualRuntimeState>();
+            engine.World.Query(in visualQuery, (ref Name _, ref VisualRuntimeState visual) =>
+            {
+                entitiesWithVisualRuntime++;
+                if (visual.RenderPath == VisualRenderPath.SkinnedMesh) skinnedCount++;
+                if (visual.RenderPath == VisualRenderPath.StaticMesh) staticCount++;
+            });
+
+            Assert.That(entitiesWithVisualRuntime, Is.EqualTo(3), "Projection fixture entities must all carry VisualRuntimeState.");
+            Assert.That(skinnedCount, Is.EqualTo(1), "Hero fixture must be marked as SkinnedMesh.");
+            Assert.That(staticCount, Is.EqualTo(2), "Dummy fixtures must be marked as StaticMesh.");
 
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             Assert.That(primitives, Is.Not.Null);
             Assert.That(primitives!.Count, Is.EqualTo(3), "Entity visuals must emit one primitive draw item per visible fixture entity.");
+
+            int skinnedWithAnimator = 0;
+            int staticWithoutAnimator = 0;
+            var stableIds = new HashSet<int>();
+            foreach (ref readonly var item in primitives.GetSpan())
+            {
+                Assert.That(item.StableId, Is.GreaterThan(0), "Visible entity visuals must expose stable ids for adapter instance mapping.");
+                Assert.That(item.TemplateId, Is.GreaterThan(0), "Visible entity visuals must expose their visual template id.");
+                stableIds.Add(item.StableId);
+
+                if (item.RenderPath == VisualRenderPath.SkinnedMesh)
+                {
+                    skinnedWithAnimator++;
+                    Assert.That(item.Animator.GetControllerId(), Is.GreaterThan(0), "Skinned visuals must carry packed animator controller ids.");
+                    Assert.That((item.Flags & VisualRuntimeFlags.HasAnimator) != 0, Is.True, "Skinned visuals must mark animator presence.");
+                }
+
+                if (item.RenderPath == VisualRenderPath.StaticMesh)
+                {
+                    staticWithoutAnimator++;
+                    Assert.That(item.Animator.GetControllerId(), Is.EqualTo(0), "Static visuals should not carry animator controllers in the projection fixture.");
+                }
+            }
+
+            Assert.That(stableIds.Count, Is.EqualTo(3), "Each visible fixture entity must keep a unique stable id.");
+            Assert.That(skinnedWithAnimator, Is.EqualTo(1), "Exactly one hero fixture should emit the skinned animator payload.");
+            Assert.That(staticWithoutAnimator, Is.EqualTo(2), "Projection fixture dummies should stay on the static mesh path.");
         }
 
         [Test]

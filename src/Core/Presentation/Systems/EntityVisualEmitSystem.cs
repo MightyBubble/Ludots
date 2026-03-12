@@ -11,10 +11,10 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PrimitiveDrawBuffer _drawBuffer;
 
         private readonly QueryDescription _visibleQuery = new QueryDescription()
-            .WithAll<VisualTransform, VisualModel, CullState>();
+            .WithAll<VisualTransform, VisualRuntimeState, CullState>();
 
         private readonly QueryDescription _unculledQuery = new QueryDescription()
-            .WithAll<VisualTransform, VisualModel>()
+            .WithAll<VisualTransform, VisualRuntimeState>()
             .WithNone<CullState>();
 
         public EntityVisualEmitSystem(World world, PrimitiveDrawBuffer drawBuffer)
@@ -35,7 +35,7 @@ namespace Ludots.Core.Presentation.Systems
             foreach (var chunk in query)
             {
                 var transforms = chunk.GetArray<VisualTransform>();
-                var visuals = chunk.GetArray<VisualModel>();
+                var visuals = chunk.GetArray<VisualRuntimeState>();
                 var culls = chunk.GetArray<CullState>();
                 for (int i = 0; i < chunk.Count; i++)
                 {
@@ -55,7 +55,7 @@ namespace Ludots.Core.Presentation.Systems
             foreach (var chunk in query)
             {
                 var transforms = chunk.GetArray<VisualTransform>();
-                var visuals = chunk.GetArray<VisualModel>();
+                var visuals = chunk.GetArray<VisualRuntimeState>();
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     Emit(chunk.Entity(i), visuals[i], transforms[i]);
@@ -63,22 +63,32 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private void Emit(Entity entity, in VisualModel visual, in VisualTransform transform)
+        private void Emit(Entity entity, in VisualRuntimeState visual, in VisualTransform transform)
         {
-            if (visual.MeshId <= 0)
+            if (!visual.ShouldEmit)
             {
                 return;
             }
 
             float baseScale = visual.BaseScale <= 0f ? 1f : visual.BaseScale;
             var scale = transform.Scale * baseScale;
+            int stableId = World.Has<PresentationStableId>(entity) ? World.Get<PresentationStableId>(entity).Value : 0;
+            int templateId = World.Has<VisualTemplateRef>(entity) ? World.Get<VisualTemplateRef>(entity).TemplateId : 0;
+            AnimatorPackedState animator = World.Has<AnimatorPackedState>(entity) ? World.Get<AnimatorPackedState>(entity) : default;
 
             _drawBuffer.TryAdd(new PrimitiveDrawItem
             {
-                MeshAssetId = visual.MeshId,
+                MeshAssetId = visual.MeshAssetId,
                 Position = transform.Position,
                 Scale = scale,
-                Color = TeamColorResolver.Resolve(World, entity)
+                Color = TeamColorResolver.Resolve(World, entity),
+                StableId = stableId,
+                MaterialId = visual.MaterialId,
+                TemplateId = templateId,
+                RenderPath = visual.RenderPath,
+                Mobility = visual.Mobility,
+                Flags = visual.Flags,
+                Animator = animator,
             });
         }
     }
