@@ -801,7 +801,7 @@ app.MapPost("/api/launch", async (HttpRequest req) =>
     {
         var selectors = ResolveSelectorsFromPayload(launcher, payload, allowDefaultPreset: true);
         var result = await launcher.LaunchAsync(selectors, ResolveAdapterFromPayload(launcher, payload), ResolveBuildModeFromPayload(payload));
-        return Results.Ok(new { ok = result.Ok, pid = result.Pid, url = result.Url, error = result.Error });
+        return Results.Ok(new { ok = result.Ok, pid = result.Pid, url = result.Url, error = result.Error, plan = result.Plan });
     }
     catch (Exception ex)
     {

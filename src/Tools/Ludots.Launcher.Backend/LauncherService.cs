@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Ludots.Core.Modding;
 
 namespace Ludots.Launcher.Backend;
@@ -504,6 +505,7 @@ public sealed class LauncherService
                 entry.Info.BuildState,
                 entry.Info.BindingNames))
             .ToList();
+        var diagnostics = BuildPlanDiagnostics(roots, ordered);
 
         var plan = new LauncherLaunchPlan(
             profile.Id,
@@ -516,7 +518,8 @@ public sealed class LauncherService
             Path.Combine(profile.OutputDirectory, profile.RuntimeBootstrapFileName),
             profile.OutputDirectory,
             ResolveAppAssemblyPath(profile),
-            profile.LaunchUrl);
+            profile.LaunchUrl,
+            diagnostics);
 
         return new LauncherResolveResult(plan, catalog.Entries.Select(entry => entry.Info).ToList());
     }
@@ -690,6 +693,141 @@ public sealed class LauncherService
         }
 
         return order;
+    }
+
+    private LauncherPlanDiagnostics BuildPlanDiagnostics(
+        IReadOnlyList<CatalogEntry> roots,
+        IReadOnlyList<CatalogEntry> ordered)
+    {
+        var fragments = CollectGameConfigFragments(roots, ordered);
+        var settings = new List<LauncherResolvedSetting>
+        {
+            ResolveGameJsonSetting("defaultCoreMod", fragments),
+            ResolveGameJsonSetting("startupMapId", fragments),
+            ResolveGameJsonSetting("startupInputContexts", fragments)
+        };
+        var warnings = BuildPlanWarnings(roots, settings);
+        return new LauncherPlanDiagnostics(settings, warnings);
+    }
+
+    private List<GameConfigFragment> CollectGameConfigFragments(
+        IReadOnlyList<CatalogEntry> roots,
+        IReadOnlyList<CatalogEntry> ordered)
+    {
+        var fragments = new List<GameConfigFragment>();
+        AppendGameConfigFragment(fragments, Path.Combine(_repoRoot, "assets", "Configs", "game.json"), ownerModId: null, isRootSelection: false);
+        AppendGameConfigFragment(fragments, Path.Combine(_repoRoot, "assets", "game.json"), ownerModId: null, isRootSelection: false);
+
+        var rootPaths = new HashSet<string>(
+            roots.Select(entry => entry.Info.RootPath),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var entry in ordered)
+        {
+            bool isRootSelection = rootPaths.Contains(entry.Info.RootPath);
+            AppendGameConfigFragment(
+                fragments,
+                Path.Combine(entry.Info.RootPath, "assets", "game.json"),
+                entry.Info.Id,
+                isRootSelection);
+            AppendGameConfigFragment(
+                fragments,
+                Path.Combine(entry.Info.RootPath, "assets", "Configs", "game.json"),
+                entry.Info.Id,
+                isRootSelection);
+        }
+
+        return fragments;
+    }
+
+    private void AppendGameConfigFragment(
+        List<GameConfigFragment> fragments,
+        string fullPath,
+        string? ownerModId,
+        bool isRootSelection)
+    {
+        if (!File.Exists(fullPath))
+        {
+            return;
+        }
+
+        JsonNode? parsed;
+        try
+        {
+            parsed = JsonNode.Parse(File.ReadAllText(fullPath));
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to parse launcher startup config fragment '{fullPath}': {ex.Message}", ex);
+        }
+
+        if (parsed is not JsonObject obj)
+        {
+            throw new InvalidOperationException($"Launcher startup config fragment must be a JSON object: {fullPath}");
+        }
+
+        fragments.Add(new GameConfigFragment(GetPortablePath(fullPath), ownerModId, isRootSelection, obj));
+    }
+
+    private static LauncherResolvedSetting ResolveGameJsonSetting(
+        string key,
+        IReadOnlyList<GameConfigFragment> fragments)
+    {
+        var contributions = new List<LauncherSettingContribution>();
+        JsonNode? effectiveValue = null;
+        string? effectiveSource = null;
+
+        foreach (var fragment in fragments)
+        {
+            if (!fragment.Content.TryGetPropertyValue(key, out var value))
+            {
+                continue;
+            }
+
+            var clonedValue = value?.DeepClone();
+            contributions.Add(new LauncherSettingContribution(
+                fragment.Source,
+                fragment.OwnerModId,
+                fragment.IsRootSelection,
+                clonedValue));
+            effectiveValue = clonedValue?.DeepClone();
+            effectiveSource = fragment.Source;
+        }
+
+        return new LauncherResolvedSetting(key, effectiveValue, effectiveSource, contributions);
+    }
+
+    private static IReadOnlyList<string> BuildPlanWarnings(
+        IReadOnlyList<CatalogEntry> roots,
+        IReadOnlyList<LauncherResolvedSetting> settings)
+    {
+        var warnings = new List<string>();
+        var distinctRoots = roots
+            .GroupBy(entry => entry.Info.RootPath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First().Info.Id)
+            .ToList();
+        if (distinctRoots.Count > 1)
+        {
+            warnings.Add(
+                $"Selected {distinctRoots.Count} root mods ({string.Join(", ", distinctRoots)}). Runtime still boots a single startupMapId; inspect the effective startup settings below.");
+        }
+
+        foreach (var setting in settings)
+        {
+            int rootContributionCount = setting.Contributions.Count(contribution => contribution.IsRootSelection);
+            if (rootContributionCount > 1)
+            {
+                warnings.Add(
+                    $"'{setting.Key}' is written by multiple selected mods; final winner is {setting.EffectiveSource}.");
+            }
+        }
+
+        if (settings.FirstOrDefault(setting => string.Equals(setting.Key, "startupMapId", StringComparison.OrdinalIgnoreCase))?.EffectiveValue == null)
+        {
+            warnings.Add("No startupMapId was found in merged game.json fragments.");
+        }
+
+        return warnings;
     }
 
     private string ResolveSelectedAdapterId(LauncherConfig config, LauncherPreferences preferences)
@@ -1424,6 +1562,7 @@ public sealed class LauncherService
     }
 
     private sealed record CatalogEntry(LauncherModInfo Info, ModManifest Manifest);
+    private sealed record GameConfigFragment(string Source, string? OwnerModId, bool IsRootSelection, JsonObject Content);
     private sealed record CatalogIndex(
         IReadOnlyList<CatalogEntry> Entries,
         IReadOnlyDictionary<string, CatalogEntry> ByRootPath,

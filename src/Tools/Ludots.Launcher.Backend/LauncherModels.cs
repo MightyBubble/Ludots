@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+
 namespace Ludots.Launcher.Backend;
 
 public static class LauncherPlatformIds
@@ -99,6 +101,22 @@ public sealed record LauncherPlannedMod(
     LauncherBuildState BuildState,
     IReadOnlyList<string> BindingNames);
 
+public sealed record LauncherSettingContribution(
+    string Source,
+    string? OwnerModId,
+    bool IsRootSelection,
+    JsonNode? Value);
+
+public sealed record LauncherResolvedSetting(
+    string Key,
+    JsonNode? EffectiveValue,
+    string? EffectiveSource,
+    IReadOnlyList<LauncherSettingContribution> Contributions);
+
+public sealed record LauncherPlanDiagnostics(
+    IReadOnlyList<LauncherResolvedSetting> Settings,
+    IReadOnlyList<string> Warnings);
+
 public sealed record LauncherLaunchPlan(
     string AdapterId,
     string BuildMode,
@@ -110,7 +128,8 @@ public sealed record LauncherLaunchPlan(
     string BootstrapArtifactPath,
     string AppOutputDirectory,
     string AppAssemblyPath,
-    string LaunchUrl);
+    string LaunchUrl,
+    LauncherPlanDiagnostics Diagnostics);
 
 public sealed record LauncherResolveResult(
     LauncherLaunchPlan Plan,

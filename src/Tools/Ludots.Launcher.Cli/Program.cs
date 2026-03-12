@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Ludots.Launcher.Backend;
 using Ludots.Launcher.Evidence;
 
@@ -44,6 +45,13 @@ try
             Console.WriteLine($"adapter={result.Plan?.AdapterId ?? ResolveRequestedAdapter(service, command)}");
             Console.WriteLine($"pid={result.Pid}");
             Console.WriteLine($"bootstrap={result.BootstrapPath}");
+            if (result.Plan != null)
+            {
+                Console.WriteLine($"rootMods={string.Join(", ", result.Plan.RootModIds)}");
+                Console.WriteLine($"orderedMods={string.Join(", ", result.Plan.OrderedModIds)}");
+                PrintPlanDiagnostics(result.Plan.Diagnostics);
+            }
+
             if (!string.IsNullOrWhiteSpace(result.Url))
             {
                 Console.WriteLine(result.Url);
@@ -310,6 +318,9 @@ static async Task<int> RunRecordedLaunchAsync(
 
     Console.WriteLine($"adapter={resolveResult.Plan.AdapterId}");
     Console.WriteLine($"bootstrap={bootstrapPath}");
+    Console.WriteLine($"rootMods={string.Join(", ", resolveResult.Plan.RootModIds)}");
+    Console.WriteLine($"orderedMods={string.Join(", ", resolveResult.Plan.OrderedModIds)}");
+    PrintPlanDiagnostics(resolveResult.Plan.Diagnostics);
     Console.WriteLine($"recording={recording.OutputDirectory}");
     Console.WriteLine($"summary={recording.SummaryPath}");
     Console.WriteLine($"signature={recording.NormalizedSignature}");
@@ -330,12 +341,59 @@ static void PrintResolveResult(LauncherResolveResult result, bool asJson)
     Console.WriteLine($"rootMods={string.Join(", ", result.Plan.RootModIds)}");
     Console.WriteLine($"orderedMods={string.Join(", ", result.Plan.OrderedModIds)}");
     Console.WriteLine($"bootstrap={result.Plan.BootstrapArtifactPath}");
+    PrintPlanDiagnostics(result.Plan.Diagnostics);
     Console.WriteLine();
     foreach (var mod in result.Plan.Mods)
     {
         var bindings = mod.BindingNames.Count == 0 ? string.Empty : $" bindings=[{string.Join(", ", mod.BindingNames)}]";
         Console.WriteLine($"- {mod.Id} | {mod.Kind} | {mod.BuildState} | {mod.RootPath}{bindings}");
     }
+}
+
+static void PrintPlanDiagnostics(LauncherPlanDiagnostics diagnostics)
+{
+    if (diagnostics.Settings.Count > 0)
+    {
+        Console.WriteLine("startup:");
+        foreach (var setting in diagnostics.Settings)
+        {
+            var effectiveValue = FormatJsonNode(setting.EffectiveValue);
+            var effectiveSource = setting.EffectiveSource ?? "(unset)";
+            Console.WriteLine($"  {setting.Key}={effectiveValue} @ {effectiveSource}");
+            if (setting.Contributions.Count > 1)
+            {
+                foreach (var contribution in setting.Contributions)
+                {
+                    var marker = contribution.IsRootSelection ? "*" : "-";
+                    Console.WriteLine($"    {marker} {contribution.Source} -> {FormatJsonNode(contribution.Value)}");
+                }
+            }
+        }
+    }
+
+    if (diagnostics.Warnings.Count > 0)
+    {
+        Console.WriteLine("warnings:");
+        foreach (var warning in diagnostics.Warnings)
+        {
+            Console.WriteLine($"  - {warning}");
+        }
+    }
+}
+
+static string FormatJsonNode(JsonNode? node)
+{
+    if (node == null)
+    {
+        return "(unset)";
+    }
+
+    return node switch
+    {
+        JsonArray array => $"[{string.Join(", ", array.Select(FormatJsonNode))}]",
+        JsonValue value when value.TryGetValue<string>(out var textValue) => textValue,
+        _ => node.ToJsonString()
+    };
 }
 
 static IReadOnlyList<string> ResolveRequestedSelectors(LauncherService service, CliCommand command, bool allowDefaultPreset)
@@ -503,6 +561,7 @@ Selectors
 
 Examples
   .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
+  .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance nav_playground --adapter web
   .\scripts\run-mod-launcher.cmd cli launch nav_playground --adapter web
   .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib --record artifacts/acceptance/launcher-camera-acceptance-raylib
   .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance --path mods/fixtures/camera/CameraAcceptanceMod

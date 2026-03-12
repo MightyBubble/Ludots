@@ -80,11 +80,56 @@ export interface BuildResult {
   output: string;
 }
 
+export interface LauncherSettingContribution {
+  source: string;
+  ownerModId: string | null;
+  isRootSelection: boolean;
+  value: unknown;
+}
+
+export interface LauncherResolvedSetting {
+  key: string;
+  effectiveValue: unknown;
+  effectiveSource: string | null;
+  contributions: LauncherSettingContribution[];
+}
+
+export interface LauncherPlanDiagnostics {
+  settings: LauncherResolvedSetting[];
+  warnings: string[];
+}
+
+export interface LauncherPlannedMod {
+  id: string;
+  rootPath: string;
+  projectPath: string;
+  mainAssemblyPath: string;
+  kind: "ResourceOnly" | "BinaryOnly" | "BuildableSource";
+  buildState: LauncherBuildState;
+  bindingNames: string[];
+}
+
+export interface LauncherLaunchPlan {
+  adapterId: string;
+  buildMode: string;
+  selectors: string[];
+  rootModIds: string[];
+  orderedModIds: string[];
+  mods: LauncherPlannedMod[];
+  bootstrapArtifactStrategy: string;
+  bootstrapArtifactPath: string;
+  appOutputDirectory: string;
+  appAssemblyPath: string;
+  launchUrl: string;
+  diagnostics: LauncherPlanDiagnostics;
+}
+
 export interface LaunchResult {
   ok: boolean;
   pid?: number;
   url?: string;
   error?: string;
+  plan?: LauncherLaunchPlan;
 }
 
 export interface AppBuildResult {
