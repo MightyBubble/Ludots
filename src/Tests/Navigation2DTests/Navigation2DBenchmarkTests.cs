@@ -423,11 +423,11 @@ namespace Ludots.Tests.Navigation2D
                         Enabled = true,
                         RequireSteadyStateWorld = false,
                         MaxReuseTicks = 12,
-                        PositionToleranceCm = 2,
-                        VelocityToleranceCmPerSec = 4,
-                        PreferredVelocityToleranceCmPerSec = 4,
-                        NeighborPositionQuantizationCm = 8,
-                        NeighborVelocityQuantizationCmPerSec = 8,
+                        PositionToleranceCm = 40,
+                        VelocityToleranceCmPerSec = 320,
+                        PreferredVelocityToleranceCmPerSec = 80,
+                        NeighborPositionQuantizationCm = 40,
+                        NeighborVelocityQuantizationCmPerSec = 320,
                     }
                 }
             };

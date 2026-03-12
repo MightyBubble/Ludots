@@ -1,7 +1,9 @@
+using System;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Runtime;
@@ -11,22 +13,24 @@ using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using Navigation2DPlaygroundMod.Runtime;
 
 namespace Navigation2DPlaygroundMod.Systems
 {
     public sealed class Navigation2DPlaygroundPresentationSystem : ISystem<float>
     {
+        private const int DesiredVelocityDrawStride = 8;
+
+        private static readonly QueryDescription AgentQuery = new QueryDescription()
+            .WithAll<NavAgent2D, VisualTransform, NavPlaygroundTeam>();
+
+        private static readonly QueryDescription DesiredVelocityQuery = new QueryDescription()
+            .WithAll<NavAgent2D, VisualTransform, NavDesiredVelocity2D, NavPlaygroundTeam>();
+
         private readonly GameEngine _engine;
         private readonly World _world;
         private readonly DebugDrawCommandBuffer _debugDraw;
         private int _sphereMeshId;
-        private const int DesiredVelocityDrawStride = 8;
-
-        private static readonly QueryDescription _query = new QueryDescription()
-            .WithAll<NavAgent2D, VisualTransform, NavPlaygroundTeam>();
-
-        private static readonly QueryDescription _desiredVelQuery = new QueryDescription()
-            .WithAll<NavAgent2D, VisualTransform, NavDesiredVelocity2D, NavPlaygroundTeam>();
 
         public Navigation2DPlaygroundPresentationSystem(GameEngine engine, DebugDrawCommandBuffer debugDraw, MeshAssetRegistry meshes)
         {
@@ -38,39 +42,36 @@ namespace Navigation2DPlaygroundMod.Systems
 
         public void Initialize()
         {
-            var meshReg = _engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
-            _sphereMeshId = meshReg?.GetId(WellKnownMeshKeys.Sphere) ?? 2;
+            var meshRegistry = _engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
+            _sphereMeshId = meshRegistry?.GetId(WellKnownMeshKeys.Sphere) ?? 2;
         }
 
-        public void BeforeUpdate(in float t)
-        {
-        }
+        public void BeforeUpdate(in float t) { }
+        public void AfterUpdate(in float t) { }
+        public void Dispose() { }
 
         public void Update(in float deltaTime)
         {
-            if (!Navigation2DPlaygroundState.Enabled) return;
+            if (!Navigation2DPlaygroundState.Enabled)
+            {
+                return;
+            }
 
             _debugDraw.Clear();
             AppendSolidPrimitives();
             AppendDesiredVelocity();
             AppendFlowFieldDebug();
-            AppendControlOverlay();
-        }
-
-        public void AfterUpdate(in float t)
-        {
-        }
-
-        public void Dispose()
-        {
+            AppendTelemetryOverlay();
         }
 
         private void AppendSolidPrimitives()
         {
-            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationPrimitiveDrawBuffer.Name, out var drawObj)) return;
-            if (drawObj is not PrimitiveDrawBuffer draw) return;
+            if (_engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer) is not PrimitiveDrawBuffer draw)
+            {
+                return;
+            }
 
-            foreach (ref var chunk in _world.Query(in _query))
+            foreach (ref var chunk in _world.Query(in AgentQuery))
             {
                 var visuals = chunk.GetSpan<VisualTransform>();
                 var teams = chunk.GetSpan<NavPlaygroundTeam>();
@@ -78,18 +79,21 @@ namespace Navigation2DPlaygroundMod.Systems
 
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    ref var vt = ref visuals[i];
-                    var color = isBlockerChunk
+                    bool isSelected = !isBlockerChunk && _world.Has<SelectedTag>(chunk.Entity(i));
+                    Vector4 color = isBlockerChunk
                         ? new Vector4(0.35f, 0.55f, 1f, 1f)
                         : teams[i].Id == 0
-                            ? new Vector4(0.1f, 0.9f, 0.2f, 1f)
-                            : new Vector4(0.95f, 0.15f, 0.2f, 1f);
-                    var scale = isBlockerChunk ? new Vector3(0.8f, 0.8f, 0.8f) : new Vector3(0.6f, 0.6f, 0.6f);
+                            ? (isSelected ? new Vector4(0.9f, 1f, 0.35f, 1f) : new Vector4(0.1f, 0.9f, 0.2f, 1f))
+                            : (isSelected ? new Vector4(1f, 0.82f, 0.32f, 1f) : new Vector4(0.95f, 0.15f, 0.2f, 1f));
+                    Vector3 scale = isBlockerChunk
+                        ? new Vector3(0.8f, 0.8f, 0.8f)
+                        : (isSelected ? new Vector3(0.8f, 0.8f, 0.8f) : new Vector3(0.6f, 0.6f, 0.6f));
 
+                    ref var transform = ref visuals[i];
                     draw.TryAdd(new PrimitiveDrawItem
                     {
                         MeshAssetId = _sphereMeshId,
-                        Position = new Vector3(vt.Position.X, 0.25f, vt.Position.Z),
+                        Position = new Vector3(transform.Position.X, 0.25f, transform.Position.Z),
                         Scale = scale,
                         Color = color
                     });
@@ -99,7 +103,7 @@ namespace Navigation2DPlaygroundMod.Systems
 
         private void AppendDesiredVelocity()
         {
-            foreach (ref var chunk in _world.Query(in _desiredVelQuery))
+            foreach (ref var chunk in _world.Query(in DesiredVelocityQuery))
             {
                 if (chunk.Has<NavPlaygroundBlocker>())
                 {
@@ -112,12 +116,15 @@ namespace Navigation2DPlaygroundMod.Systems
 
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    if (DesiredVelocityDrawStride > 1 && (chunk.Entity(i).Id % DesiredVelocityDrawStride) != 0) continue;
+                    if (DesiredVelocityDrawStride > 1 && (chunk.Entity(i).Id % DesiredVelocityDrawStride) != 0)
+                    {
+                        continue;
+                    }
 
-                    ref var vt = ref visuals[i];
-                    Vector2 from = new Vector2(vt.Position.X, vt.Position.Z);
-                    Vector2 dv = desired[i].ValueCmPerSec.ToVector2() * 0.005f;
-                    Vector2 to = from + dv;
+                    ref var transform = ref visuals[i];
+                    Vector2 from = new(transform.Position.X, transform.Position.Z);
+                    Vector2 delta = desired[i].ValueCmPerSec.ToVector2() * 0.005f;
+                    Vector2 to = from + delta;
 
                     _debugDraw.Lines.Add(new DebugDrawLine2D
                     {
@@ -132,20 +139,16 @@ namespace Navigation2DPlaygroundMod.Systems
 
         private void AppendFlowFieldDebug()
         {
-            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.Navigation2DRuntime.Name, out var navObj)) return;
-            if (navObj is not Navigation2DRuntime nav) return;
-            if (!nav.FlowDebugEnabled) return;
+            if (_engine.GetService(CoreServiceKeys.Navigation2DRuntime) is not Navigation2DRuntime runtime || !runtime.FlowDebugEnabled)
+            {
+                return;
+            }
 
             int beforeLines = _debugDraw.Lines.Count;
-
-            int mode = nav.FlowDebugMode;
+            int mode = runtime.FlowDebugMode;
             int startFlow = mode == 1 ? 0 : (mode == 2 ? 1 : 0);
-            int endFlowExclusive = mode == 1 ? 1 : (mode == 2 ? 2 : nav.FlowCount);
+            int endFlowExclusive = mode == 1 ? 1 : (mode == 2 ? 2 : runtime.FlowCount);
 
-            // Fix4: 表现层只做只读采样，不调�?SetGoalPoint/Step
-            // 模拟�?(Navigation2DSteeringSystem2D) 已负责驱�?flowfield 计算
-
-            // Fix6: 缩小箭头间距(12�?m)和箭头长�?4�?.5m)，更好匹配agent尺寸
             float halfM = 90f;
             float stepM = 4f;
             float arrowLenM = 1.5f;
@@ -157,21 +160,29 @@ namespace Navigation2DPlaygroundMod.Systems
                 {
                     for (int flowId = startFlow; flowId < endFlowExclusive; flowId++)
                     {
-                        var flow = nav.TryGetFlow(flowId);
-                        if (flow == null) continue;
+                        var flow = runtime.TryGetFlow(flowId);
+                        if (flow == null)
+                        {
+                            continue;
+                        }
 
-                        Fix64Vec2 posCm = Fix64Vec2.FromFloat(x * 100f, y * 100f);
-                        if (!flow.TrySampleDesiredVelocityCm(posCm, maxSpeedCmPerSec, out Fix64Vec2 desiredCmPerSec)) continue;
+                        Fix64Vec2 positionCm = Fix64Vec2.FromFloat(x * 100f, y * 100f);
+                        if (!flow.TrySampleDesiredVelocityCm(positionCm, maxSpeedCmPerSec, out Fix64Vec2 desiredCmPerSec))
+                        {
+                            continue;
+                        }
 
-                        Vector2 dir = desiredCmPerSec.ToVector2();
-                        float len = dir.Length();
-                        if (len <= 1e-4f) continue;
-                        dir /= len;
+                        Vector2 direction = desiredCmPerSec.ToVector2();
+                        float length = direction.Length();
+                        if (length <= 1e-4f)
+                        {
+                            continue;
+                        }
 
+                        direction /= length;
                         float offsetX = flowId == 1 ? 0.6f : -0.6f;
-                        Vector2 from = new Vector2(x + offsetX, y);
-                        Vector2 to = from + dir * arrowLenM;
-
+                        Vector2 from = new(x + offsetX, y);
+                        Vector2 to = from + direction * arrowLenM;
                         AddArrow(from, to, flowId == 0 ? DebugDrawColor.Cyan : DebugDrawColor.Yellow);
                     }
                 }
@@ -184,27 +195,29 @@ namespace Navigation2DPlaygroundMod.Systems
         {
             _debugDraw.Lines.Add(new DebugDrawLine2D { A = from, B = to, Thickness = 1f, Color = color });
 
-            Vector2 dir = to - from;
-            float len = dir.Length();
-            if (len <= 1e-6f) return;
-            dir /= len;
+            Vector2 direction = to - from;
+            float length = direction.Length();
+            if (length <= 1e-6f)
+            {
+                return;
+            }
 
-            float headLen = 1.0f;
-            float a = 0.43633232f;
-            float c = MathF.Cos(a);
-            float s = MathF.Sin(a);
+            direction /= length;
+            float headLength = 1f;
+            float angle = 0.43633232f;
+            float c = MathF.Cos(angle);
+            float s = MathF.Sin(angle);
 
-            Vector2 left = new Vector2(dir.X * c - dir.Y * s, dir.X * s + dir.Y * c);
-            Vector2 right = new Vector2(dir.X * c + dir.Y * s, -dir.X * s + dir.Y * c);
+            Vector2 left = new(direction.X * c - direction.Y * s, direction.X * s + direction.Y * c);
+            Vector2 right = new(direction.X * c + direction.Y * s, -direction.X * s + direction.Y * c);
 
-            _debugDraw.Lines.Add(new DebugDrawLine2D { A = to, B = to - left * headLen, Thickness = 1f, Color = color });
-            _debugDraw.Lines.Add(new DebugDrawLine2D { A = to, B = to - right * headLen, Thickness = 1f, Color = color });
+            _debugDraw.Lines.Add(new DebugDrawLine2D { A = to, B = to - left * headLength, Thickness = 1f, Color = color });
+            _debugDraw.Lines.Add(new DebugDrawLine2D { A = to, B = to - right * headLength, Thickness = 1f, Color = color });
         }
 
-        private void AppendControlOverlay()
+        private void AppendTelemetryOverlay()
         {
-            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var overlayObj) ||
-                overlayObj is not ScreenOverlayBuffer overlay)
+            if (_engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is not ScreenOverlayBuffer overlay)
             {
                 return;
             }
@@ -212,28 +225,15 @@ namespace Navigation2DPlaygroundMod.Systems
             bool flowEnabled = false;
             bool flowDebug = false;
             int flowMode = 0;
-            int flowIters = 0;
+            int flowIterations = 0;
             int flowActiveTiles = 0;
             int flowLoadedTiles = 0;
-            int flowActivationRadius = 0;
-            int flowMaxActiveTiles = 0;
             int flowWindowWidth = 0;
             int flowWindowHeight = 0;
-            int flowWindowChecks = 0;
             int flowSelectedTiles = 0;
             int flowRetainedTiles = 0;
             int flowNewTiles = 0;
             int flowEvictedTiles = 0;
-            int flowIncrementalTiles = 0;
-            int flowGoalSeedCells = 0;
-            int flowFrontierEnqueues = 0;
-            int flowFrontierProcessed = 0;
-            int flowFullRebuilds = 0;
-            int flowMaxWindowWidth = 0;
-            int flowMaxWindowHeight = 0;
-            bool flowWorldBoundsEnabled = false;
-            bool flowBudgetClamped = false;
-            bool flowWorldClamped = false;
             string steeringMode = "Unavailable";
             bool temporalCoherenceEnabled = false;
             bool temporalRequireSteadyState = false;
@@ -249,56 +249,43 @@ namespace Navigation2DPlaygroundMod.Systems
             long spatialIncrementalUpdates = 0;
             long spatialDirtyAgents = 0;
             long spatialCellMigrations = 0;
-            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.Navigation2DRuntime.Name, out var navObj) &&
-                navObj is Navigation2DRuntime navRuntime)
+
+            if (_engine.GetService(CoreServiceKeys.Navigation2DRuntime) is Navigation2DRuntime runtime)
             {
-                flowEnabled = navRuntime.FlowEnabled;
-                flowDebug = navRuntime.FlowDebugEnabled;
-                flowMode = navRuntime.FlowDebugMode;
-                flowIters = navRuntime.FlowIterationsPerTick;
-                flowActivationRadius = navRuntime.Config.FlowStreaming.ActivationRadiusTiles;
-                flowMaxActiveTiles = navRuntime.Config.FlowStreaming.MaxActiveTilesPerFlow;
-                flowMaxWindowWidth = navRuntime.Config.FlowStreaming.MaxActivationWindowWidthTiles;
-                flowMaxWindowHeight = navRuntime.Config.FlowStreaming.MaxActivationWindowHeightTiles;
-                flowWorldBoundsEnabled = navRuntime.Config.FlowStreaming.WorldBoundsEnabled;
-                for (int flowIndex = 0; flowIndex < navRuntime.FlowCount; flowIndex++)
+                flowEnabled = runtime.FlowEnabled;
+                flowDebug = runtime.FlowDebugEnabled;
+                flowMode = runtime.FlowDebugMode;
+                flowIterations = runtime.FlowIterationsPerTick;
+                for (int i = 0; i < runtime.FlowCount; i++)
                 {
-                    var flow = navRuntime.Flows[flowIndex];
+                    var flow = runtime.Flows[i];
                     flowActiveTiles += flow.ActiveTileCount;
                     flowLoadedTiles = Math.Max(flowLoadedTiles, flow.LoadedTileCount);
                     flowWindowWidth = Math.Max(flowWindowWidth, flow.InstrumentedWindowWidthTiles);
                     flowWindowHeight = Math.Max(flowWindowHeight, flow.InstrumentedWindowHeightTiles);
-                    flowWindowChecks += flow.InstrumentedWindowTileChecksFrame;
                     flowSelectedTiles += flow.InstrumentedSelectedTilesFrame;
                     flowRetainedTiles += flow.InstrumentedRetainedTilesFrame;
                     flowNewTiles += flow.InstrumentedNewTilesActivatedFrame;
                     flowEvictedTiles += flow.InstrumentedEvictedTilesFrame;
-                    flowIncrementalTiles += flow.InstrumentedIncrementalSeededTilesFrame;
-                    flowGoalSeedCells += flow.InstrumentedGoalSeedCellsFrame;
-                    flowFrontierEnqueues += flow.InstrumentedFrontierEnqueuesFrame;
-                    flowFrontierProcessed += flow.InstrumentedFrontierProcessedFrame;
-                    flowFullRebuilds += flow.InstrumentedFullRebuilds;
-                    flowBudgetClamped |= flow.InstrumentedWindowBudgetClampedFrame;
-                    flowWorldClamped |= flow.InstrumentedWindowWorldClampedFrame;
                 }
 
-                steeringMode = navRuntime.Config.Steering.Mode.ToString();
-                temporalCoherenceEnabled = navRuntime.Config.Steering.TemporalCoherence.Enabled;
-                temporalRequireSteadyState = navRuntime.Config.Steering.TemporalCoherence.RequireSteadyStateWorld;
-                temporalMaxReuseTicks = navRuntime.Config.Steering.TemporalCoherence.MaxReuseTicks;
-                steeringCacheFrameEnabled = navRuntime.AgentSoA.SteeringCacheFrameEnabled;
-                steeringCacheLookupsFrame = navRuntime.AgentSoA.SteeringCacheLookupsFrame;
-                steeringCacheHitsFrame = navRuntime.AgentSoA.SteeringCacheHitsFrame;
-                steeringCacheStoresFrame = navRuntime.AgentSoA.SteeringCacheStoresFrame;
+                steeringMode = runtime.Config.Steering.Mode.ToString();
+                temporalCoherenceEnabled = runtime.Config.Steering.TemporalCoherence.Enabled;
+                temporalRequireSteadyState = runtime.Config.Steering.TemporalCoherence.RequireSteadyStateWorld;
+                temporalMaxReuseTicks = runtime.Config.Steering.TemporalCoherence.MaxReuseTicks;
+                steeringCacheFrameEnabled = runtime.AgentSoA.SteeringCacheFrameEnabled;
+                steeringCacheLookupsFrame = runtime.AgentSoA.SteeringCacheLookupsFrame;
+                steeringCacheHitsFrame = runtime.AgentSoA.SteeringCacheHitsFrame;
+                steeringCacheStoresFrame = runtime.AgentSoA.SteeringCacheStoresFrame;
                 steeringCacheHitRate = steeringCacheLookupsFrame > 0 ? (float)steeringCacheHitsFrame / steeringCacheLookupsFrame : 0f;
                 steeringCacheState = !temporalCoherenceEnabled
                     ? "ConfigOff"
                     : (steeringCacheFrameEnabled ? "Active" : (temporalRequireSteadyState ? "WaitingSteadyState" : "Ready"));
-                spatialMode = navRuntime.Config.Spatial.UpdateMode.ToString();
-                spatialRebuilds = navRuntime.CellMap.InstrumentedFullRebuilds;
-                spatialIncrementalUpdates = navRuntime.CellMap.InstrumentedIncrementalUpdates;
-                spatialDirtyAgents = navRuntime.CellMap.InstrumentedDirtyAgents;
-                spatialCellMigrations = navRuntime.CellMap.InstrumentedCellMigrations;
+                spatialMode = runtime.Config.Spatial.UpdateMode.ToString();
+                spatialRebuilds = runtime.CellMap.InstrumentedFullRebuilds;
+                spatialIncrementalUpdates = runtime.CellMap.InstrumentedIncrementalUpdates;
+                spatialDirtyAgents = runtime.CellMap.InstrumentedDirtyAgents;
+                spatialCellMigrations = runtime.CellMap.InstrumentedCellMigrations;
             }
 
             int agentsPerTeam = _engine.GetService(Navigation2DPlaygroundKeys.AgentsPerTeam);
@@ -307,39 +294,34 @@ namespace Navigation2DPlaygroundMod.Systems
             int scenarioIndex = _engine.GetService(Navigation2DPlaygroundKeys.ScenarioIndex);
             int scenarioCount = _engine.GetService(Navigation2DPlaygroundKeys.ScenarioCount);
             int scenarioTeamCount = _engine.GetService(Navigation2DPlaygroundKeys.ScenarioTeamCount);
-            int flowDbgLines = _engine.GetService(Navigation2DPlaygroundKeys.FlowDebugLines);
+            int spawnBatch = _engine.GetService(Navigation2DPlaygroundKeys.SpawnBatch);
+            int flowDebugLines = _engine.GetService(Navigation2DPlaygroundKeys.FlowDebugLines);
             string scenarioId = _engine.GetService(Navigation2DPlaygroundKeys.ScenarioId) ?? "unknown";
             string scenarioName = _engine.GetService(Navigation2DPlaygroundKeys.ScenarioName) ?? "Unknown";
-            int x = 16;
-            int y = 180;
-            int w = 860;
-            int h = 286;
-            var bg = new Vector4(0.04f, 0.05f, 0.08f, 0.68f);
-            var border = new Vector4(0.35f, 0.75f, 1f, 0.5f);
-            var title = new Vector4(0.9f, 0.95f, 1f, 1f);
-            var textColor = new Vector4(0.85f, 0.9f, 0.95f, 1f);
-            var hint = new Vector4(0.68f, 0.78f, 0.9f, 0.95f);
 
-            overlay.AddRect(x, y, w, h, bg, border);
-            overlay.AddText(x + 10, y + 8, "Navigation2D Playground", 16, title);
-            overlay.AddText(x + 10, y + 30, $"Scenario={scenarioIndex + 1}/{scenarioCount}  {scenarioName} [{scenarioId}]", 14, textColor);
-            overlay.AddText(x + 10, y + 50, $"Agents/team={agentsPerTeam}  Teams={scenarioTeamCount}  Live={liveTotal}  Blockers={blockerCount}", 14, textColor);
-            overlay.AddText(x + 10, y + 70, $"Steering={steeringMode}  CacheCfg={temporalCoherenceEnabled}  CacheFrame={steeringCacheFrameEnabled}  MaxReuse={temporalMaxReuseTicks}  RequireSteady={temporalRequireSteadyState}", 14, textColor);
-            overlay.AddText(x + 10, y + 90, $"CacheLookups={steeringCacheLookupsFrame}  Hits={steeringCacheHitsFrame}  Stores={steeringCacheStoresFrame}  HitRate={steeringCacheHitRate:P1}  State={steeringCacheState}", 14, textColor);
-            overlay.AddText(x + 10, y + 110, $"FlowEnabled={flowEnabled}  FlowDebug={flowDebug}  Mode={flowMode}  Iter={flowIters}  ActiveTiles={flowActiveTiles}  LoadedTiles={flowLoadedTiles}", 14, textColor);
-            overlay.AddText(x + 10, y + 130, $"FlowRadius={flowActivationRadius}  FlowMaxActive={flowMaxActiveTiles}  WindowCap={flowMaxWindowWidth}x{flowMaxWindowHeight}  WorldBounds={flowWorldBoundsEnabled}", 14, textColor);
-            overlay.AddText(x + 10, y + 150, $"FlowWindow={flowWindowWidth}x{flowWindowHeight}  Selected={flowSelectedTiles}  Retained={flowRetainedTiles}  Checks={flowWindowChecks}", 14, textColor);
-            overlay.AddText(x + 10, y + 170, $"FlowDelta New={flowNewTiles}  Evict={flowEvictedTiles}  GoalSeeds={flowGoalSeedCells}  Incremental={flowIncrementalTiles}", 14, textColor);
-            overlay.AddText(x + 10, y + 190, $"FlowFrontier Proc={flowFrontierProcessed}  Enq={flowFrontierEnqueues}  Rebuilds={flowFullRebuilds}  BudgetClamp={flowBudgetClamped}  WorldClamp={flowWorldClamped}  DbgLines={flowDbgLines}", 14, textColor);
-            overlay.AddText(x + 10, y + 210, $"Spatial={spatialMode}  Rebuilds={spatialRebuilds}  Incremental={spatialIncrementalUpdates}  DirtyTotal={spatialDirtyAgents}  CellMigrations={spatialCellMigrations}", 14, textColor);
-            overlay.AddText(x + 10, y + 236, "G ToggleFlow | H ToggleDebug | J CycleMode | N Prev | M Next", 13, hint);
-            overlay.AddText(x + 10, y + 254, "U +Iter | Y -Iter | K +Agents/team | L -Agents/team", 13, hint);
-            overlay.AddText(x + 10, y + 272, "R ResetScenario", 13, hint);
+            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
+            int selectedCount = Navigation2DPlaygroundSelectionView.CopySelectedEntities(_engine.World, _engine.GlobalContext, selected);
+
+            int x = 16;
+            int y = 540;
+            int w = 860;
+            int h = 172;
+            Vector4 background = new(0.04f, 0.05f, 0.08f, 0.68f);
+            Vector4 border = new(0.35f, 0.75f, 1f, 0.5f);
+            Vector4 title = new(0.9f, 0.95f, 1f, 1f);
+            Vector4 text = new(0.85f, 0.9f, 0.95f, 1f);
+            Vector4 hint = new(0.68f, 0.78f, 0.9f, 0.95f);
+
+            overlay.AddRect(x, y, w, h, background, border);
+            overlay.AddText(x + 10, y + 8, "Navigation2D Playground Telemetry", 16, title);
+            overlay.AddText(x + 10, y + 30, $"Scenario={scenarioIndex + 1}/{scenarioCount}  {scenarioName} [{scenarioId}]  Tool={Navigation2DPlaygroundState.ToolMode}  Selected={selectedCount}", 14, text);
+            overlay.AddText(x + 10, y + 50, $"Agents/team={agentsPerTeam}  Teams={scenarioTeamCount}  Live={liveTotal}  Blockers={blockerCount}  SpawnBatch={spawnBatch}", 14, text);
+            overlay.AddText(x + 10, y + 70, $"Steering={steeringMode}  CacheCfg={temporalCoherenceEnabled}  CacheFrame={steeringCacheFrameEnabled}  MaxReuse={temporalMaxReuseTicks}  RequireSteady={temporalRequireSteadyState}", 14, text);
+            overlay.AddText(x + 10, y + 90, $"CacheLookups={steeringCacheLookupsFrame}  Hits={steeringCacheHitsFrame}  Stores={steeringCacheStoresFrame}  HitRate={steeringCacheHitRate:P1}  State={steeringCacheState}", 14, text);
+            overlay.AddText(x + 10, y + 110, $"FlowEnabled={flowEnabled}  FlowDebug={flowDebug}  Mode={flowMode}  Iter={flowIterations}  ActiveTiles={flowActiveTiles}  LoadedTiles={flowLoadedTiles}  DbgLines={flowDebugLines}", 14, text);
+            overlay.AddText(x + 10, y + 130, $"FlowWindow={flowWindowWidth}x{flowWindowHeight}  Selected={flowSelectedTiles}  Retained={flowRetainedTiles}  New={flowNewTiles}  Evict={flowEvictedTiles}", 14, text);
+            overlay.AddText(x + 10, y + 150, $"Spatial={spatialMode}  Rebuilds={spatialRebuilds}  Incremental={spatialIncrementalUpdates}  Dirty={spatialDirtyAgents}  CellMigrations={spatialCellMigrations}", 14, text);
+            overlay.AddText(x + 10, y + 168, "Panel is primary UI. Overlay remains telemetry-only for headless evidence and perf reads.", 13, hint);
         }
     }
 }
-
-
-
-
-

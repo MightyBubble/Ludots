@@ -30,8 +30,8 @@ namespace Ludots.Core.Physics2D.Systems
         private static readonly QueryDescription _flowGoalQuery = new QueryDescription()
             .WithAll<NavFlowGoal2D>();
 
-        private static readonly QueryDescription _flowDemandQuery = new QueryDescription()
-            .WithAll<NavAgent2D, Position2D, NavFlowBinding2D>();
+        private static readonly QueryDescription _flowBoundPointGoalQuery = new QueryDescription()
+            .WithAll<NavAgent2D, NavFlowBinding2D, NavGoal2D>();
 
         private static readonly QueryDescription _flowObstacleQuery = new QueryDescription()
             .WithAll<NavObstacle2D, Position2D, NavKinematics2D>();
@@ -51,7 +51,6 @@ namespace Ludots.Core.Physics2D.Systems
         public override void Update(in float deltaTime)
         {
             EnsureSteeringOutputs();
-            TryApplyFlowGoal();
 
             bool usedSteadyStateSync = TrySteadyStateSyncAgentSoA(out Navigation2DWorldSyncResult syncResult);
             if (!usedSteadyStateSync)
@@ -209,6 +208,13 @@ namespace Ludots.Core.Physics2D.Systems
                     goals = chunk.GetSpan<NavGoal2D>();
                 }
 
+                bool hasFlowBinding = Runtime.FlowEnabled && chunk.Has<NavFlowBinding2D>();
+                Span<NavFlowBinding2D> flowBindings = default;
+                if (hasFlowBinding)
+                {
+                    flowBindings = chunk.GetSpan<NavFlowBinding2D>();
+                }
+
                 var agentSoA = Runtime.AgentSoA;
                 var entityToAgentIndex = agentSoA.EntityToAgentIndex.AsSpan();
                 var positions = agentSoA.Positions.AsSpan();
@@ -268,6 +274,7 @@ namespace Ludots.Core.Physics2D.Systems
                         kin.NeighborDistCm.ToFloat(),
                         kin.TimeHorizonSec.ToFloat(),
                         ClampMaxNeighbors(kin.MaxNeighbors),
+                        hasFlowBinding ? flowBindings[entityIndex].FlowId : -1,
                         hasPointGoal,
                         goalPosition,
                         goalRadius,
@@ -319,6 +326,208 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             return Vector2.DistanceSquared(a, b) <= tolerance * tolerance;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector2 ComputePointGoalPreferredVelocity(bool hasPointGoal, in Vector2 goalPosition, in Vector2 position, float maxSpeed)
+        {
+            if (!hasPointGoal || maxSpeed <= 0f)
+            {
+                return Vector2.Zero;
+            }
+
+            Vector2 toGoal = goalPosition - position;
+            float goalDistanceSq = toGoal.LengthSquared();
+            if (goalDistanceSq <= 1e-8f)
+            {
+                return Vector2.Zero;
+            }
+
+            return toGoal * (maxSpeed / MathF.Sqrt(goalDistanceSq));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector2 ApplyPreferredVelocityBias(
+            in Vector2 preferredVelocity,
+            in Vector2 position,
+            in NavPreferredVelocityBias2D bias,
+            float maxSpeed)
+        {
+            Vector2 biasVelocity = bias.ValueCmPerSec.ToVector2();
+            if (biasVelocity.LengthSquared() <= 1e-6f)
+            {
+                return ClampToMaxSpeed(preferredVelocity, maxSpeed);
+            }
+
+            float scale = ComputePreferredVelocityBiasScale(
+                position,
+                bias.CenterCm.ToVector2(),
+                bias.InnerRadiusCm.ToFloat(),
+                bias.OuterRadiusCm.ToFloat(),
+                bias.FadeDirectionCm.ToVector2(),
+                bias.FadeStartCm.ToFloat(),
+                bias.FadeEndCm.ToFloat());
+            if (scale <= 1e-4f)
+            {
+                return ClampToMaxSpeed(preferredVelocity, maxSpeed);
+            }
+
+            return ClampToMaxSpeed(preferredVelocity + biasVelocity * scale, maxSpeed);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector2 ApplySeparationToPreferredVelocity(
+            in Vector2 preferredVelocity,
+            in Vector2 position,
+            float radius,
+            float maxSpeed,
+            ReadOnlySpan<int> neighborIndices,
+            ReadOnlySpan<float> neighborDistanceSq,
+            ReadOnlySpan<Vector2> positions,
+            ReadOnlySpan<float> radii,
+            Navigation2DSeparationConfig config)
+        {
+            if (!config.Enabled || maxSpeed <= 0f || neighborIndices.Length <= 0 || preferredVelocity.LengthSquared() <= 1e-6f)
+            {
+                return ClampToMaxSpeed(preferredVelocity, maxSpeed);
+            }
+
+            float separationRadius = MathF.Max(radius, config.RadiusCm);
+            Vector2 separation = Vector2.Zero;
+            for (int n = 0; n < neighborIndices.Length; n++)
+            {
+                int neighborIndex = neighborIndices[n];
+                Vector2 offset = position - positions[neighborIndex];
+                float distanceSq = neighborDistanceSq.Length > n ? neighborDistanceSq[n] : offset.LengthSquared();
+                float maxDistance = separationRadius + radii[neighborIndex];
+                if (distanceSq > maxDistance * maxDistance)
+                {
+                    continue;
+                }
+
+                float distance = distanceSq > 1e-8f ? MathF.Sqrt(distanceSq) : 0f;
+                Vector2 away = distance > 1e-4f
+                    ? offset * (1f / distance)
+                    : ComputeFallbackSeparationDirection(preferredVelocity);
+                separation += away * ((maxDistance - distance) / MathF.Max(maxDistance, 1f));
+            }
+
+            if (separation.LengthSquared() <= 1e-6f)
+            {
+                return ClampToMaxSpeed(preferredVelocity, maxSpeed);
+            }
+
+            Vector2 preferredDirection = Vector2.Normalize(preferredVelocity);
+            float forwardComponent = Vector2.Dot(separation, preferredDirection);
+            Vector2 projectedSeparation = separation - preferredDirection * MathF.Min(forwardComponent, 0f);
+            if (projectedSeparation.LengthSquared() <= 1e-6f)
+            {
+                return ClampToMaxSpeed(preferredVelocity, maxSpeed);
+            }
+
+            Vector2 steeringDirection = preferredVelocity * (1f / maxSpeed);
+            steeringDirection += projectedSeparation * config.Weight;
+
+            float directionLengthSq = steeringDirection.LengthSquared();
+            if (directionLengthSq <= 1e-8f)
+            {
+                return Vector2.Zero;
+            }
+
+            if (directionLengthSq > 1f)
+            {
+                steeringDirection *= 1f / MathF.Sqrt(directionLengthSq);
+            }
+
+            return steeringDirection * maxSpeed;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector2 ComputeFallbackSeparationDirection(in Vector2 preferredVelocity)
+        {
+            if (preferredVelocity.LengthSquared() <= 1e-6f)
+            {
+                return Vector2.UnitX;
+            }
+
+            Vector2 normalizedPreferred = Vector2.Normalize(preferredVelocity);
+            return new Vector2(-normalizedPreferred.Y, normalizedPreferred.X);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float ComputePreferredVelocityBiasScale(
+            in Vector2 position,
+            in Vector2 center,
+            float innerRadius,
+            float outerRadius,
+            in Vector2 fadeDirection,
+            float fadeStart,
+            float fadeEnd)
+        {
+            float radialScale = ComputeBiasFalloffByRadius(position, center, innerRadius, outerRadius);
+            float forwardScale = ComputeBiasFalloffByForwardProgress(position, center, fadeDirection, fadeStart, fadeEnd);
+            return radialScale * forwardScale;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float ComputeBiasFalloffByRadius(
+            in Vector2 position,
+            in Vector2 center,
+            float innerRadius,
+            float outerRadius)
+        {
+            if (outerRadius <= 0f)
+            {
+                return 1f;
+            }
+
+            float distance = Vector2.Distance(position, center);
+            if (innerRadius > 0f && distance <= innerRadius)
+            {
+                return 1f;
+            }
+
+            if (distance >= outerRadius)
+            {
+                return 0f;
+            }
+
+            float start = MathF.Max(0f, innerRadius);
+            float width = MathF.Max(outerRadius - start, 1f);
+            float t = Math.Clamp((distance - start) / width, 0f, 1f);
+            float eased = t * t * (3f - 2f * t);
+            return 1f - eased;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float ComputeBiasFalloffByForwardProgress(
+            in Vector2 position,
+            in Vector2 center,
+            in Vector2 fadeDirection,
+            float fadeStart,
+            float fadeEnd)
+        {
+            float directionLengthSq = fadeDirection.LengthSquared();
+            if (directionLengthSq <= 1e-6f || fadeEnd <= fadeStart)
+            {
+                return 1f;
+            }
+
+            Vector2 normalizedDirection = fadeDirection * (1f / MathF.Sqrt(directionLengthSq));
+            float forwardDistance = Vector2.Dot(position - center, normalizedDirection);
+            if (forwardDistance <= fadeStart)
+            {
+                return 1f;
+            }
+
+            if (forwardDistance >= fadeEnd)
+            {
+                return 0f;
+            }
+
+            float t = Math.Clamp((forwardDistance - fadeStart) / MathF.Max(fadeEnd - fadeStart, 1f), 0f, 1f);
+            float eased = t * t * (3f - 2f * t);
+            return 1f - eased;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -466,6 +675,8 @@ namespace Ludots.Core.Physics2D.Systems
                 bool hasFlowBinding = Runtime.FlowEnabled && chunk.Has<NavFlowBinding2D>();
                 Span<NavFlowBinding2D> flowBindings = hasFlowBinding ? chunk.GetSpan<NavFlowBinding2D>() : default;
                 Span<Position2D> positionsCm = hasFlowBinding ? chunk.GetSpan<Position2D>() : default;
+                bool hasPreferredVelocityBias = chunk.Has<NavPreferredVelocityBias2D>();
+                Span<NavPreferredVelocityBias2D> preferredVelocityBiases = hasPreferredVelocityBias ? chunk.GetSpan<NavPreferredVelocityBias2D>() : default;
 
                 var agentSoA = Runtime.AgentSoA;
                 var config = Runtime.Config.Steering;
@@ -486,6 +697,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var goalPositions = agentSoA.GoalPositions.AsSpan();
                 var hasPointGoals = agentSoA.HasPointGoals.AsSpan();
                 var smartStopFlags = agentSoA.SmartStopFlags.AsSpan();
+                var separationConfig = config.Separation;
 
                 Span<int> neighborIdxScratch = stackalloc int[MaxNeighborsHard];
                 Span<float> neighborDistanceScratch = stackalloc float[MaxNeighborsHard];
@@ -519,17 +731,7 @@ namespace Ludots.Core.Physics2D.Systems
                     float neighborDistance = neighborDistances[i];
                     float timeHorizon = timeHorizons[i];
                     int neighborLimit = GetEffectiveNeighborLimit(maxNeighborCounts[i], globalMaxNeighbors);
-                    Vector2 preferred = Vector2.Zero;
-
-                    if (hasPointGoals[i] != 0)
-                    {
-                        Vector2 toGoal = goalPositions[i] - pos;
-                        float goalDistanceSq = toGoal.LengthSquared();
-                        if (goalDistanceSq > 1e-8f && maxSpeed > 0f)
-                        {
-                            preferred = toGoal * (maxSpeed / MathF.Sqrt(goalDistanceSq));
-                        }
-                    }
+                    Vector2 preferred = ComputePointGoalPreferredVelocity(hasPointGoals[i] != 0, goalPositions[i], pos, maxSpeed);
 
                     if (hasFlowBinding)
                     {
@@ -538,6 +740,11 @@ namespace Ludots.Core.Physics2D.Systems
                         {
                             preferred = desiredCm.ToVector2();
                         }
+                    }
+
+                    if (hasPreferredVelocityBias)
+                    {
+                        preferred = ApplyPreferredVelocityBias(preferred, pos, preferredVelocityBiases[entityIndex], maxSpeed);
                     }
 
                     if (smartStopFlags[i] != 0)
@@ -576,6 +783,17 @@ namespace Ludots.Core.Physics2D.Systems
                                 temporalCoherence.NeighborPositionQuantizationCm,
                                 temporalCoherence.NeighborVelocityQuantizationCmPerSec);
                         }
+
+                        preferred = ApplySeparationToPreferredVelocity(
+                            preferred,
+                            pos,
+                            radius,
+                            maxSpeed,
+                            neighborIdxScratch.Slice(0, neighborCount),
+                            neighborDistanceScratch.Slice(0, neighborCount),
+                            positions,
+                            radii,
+                            separationConfig);
                     }
 
                     if (!reused)
@@ -635,6 +853,8 @@ namespace Ludots.Core.Physics2D.Systems
                 bool hasFlowBinding = Runtime.FlowEnabled && chunk.Has<NavFlowBinding2D>();
                 Span<NavFlowBinding2D> flowBindings = hasFlowBinding ? chunk.GetSpan<NavFlowBinding2D>() : default;
                 Span<Position2D> positionsCm = hasFlowBinding ? chunk.GetSpan<Position2D>() : default;
+                bool hasPreferredVelocityBias = chunk.Has<NavPreferredVelocityBias2D>();
+                Span<NavPreferredVelocityBias2D> preferredVelocityBiases = hasPreferredVelocityBias ? chunk.GetSpan<NavPreferredVelocityBias2D>() : default;
 
                 var agentSoA = Runtime.AgentSoA;
                 var config = Runtime.Config.Steering;
@@ -655,6 +875,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var goalPositions = agentSoA.GoalPositions.AsSpan();
                 var hasPointGoals = agentSoA.HasPointGoals.AsSpan();
                 var smartStopFlags = agentSoA.SmartStopFlags.AsSpan();
+                var separationConfig = config.Separation;
                 var sonarSolveConfig = SonarSolver2D.SolveConfig.FromConfig(config.Sonar, config.Orca.FallbackToPreferredVelocity);
 
                 Span<int> neighborIdxScratch = stackalloc int[MaxNeighborsHard];
@@ -688,17 +909,7 @@ namespace Ludots.Core.Physics2D.Systems
                     float neighborDistance = neighborDistances[i];
                     float timeHorizon = timeHorizons[i];
                     int neighborLimit = GetEffectiveNeighborLimit(maxNeighborCounts[i], globalMaxNeighbors);
-                    Vector2 preferred = Vector2.Zero;
-
-                    if (hasPointGoals[i] != 0)
-                    {
-                        Vector2 toGoal = goalPositions[i] - pos;
-                        float goalDistanceSq = toGoal.LengthSquared();
-                        if (goalDistanceSq > 1e-8f && maxSpeed > 0f)
-                        {
-                            preferred = toGoal * (maxSpeed / MathF.Sqrt(goalDistanceSq));
-                        }
-                    }
+                    Vector2 preferred = ComputePointGoalPreferredVelocity(hasPointGoals[i] != 0, goalPositions[i], pos, maxSpeed);
 
                     if (hasFlowBinding)
                     {
@@ -707,6 +918,11 @@ namespace Ludots.Core.Physics2D.Systems
                         {
                             preferred = desiredCm.ToVector2();
                         }
+                    }
+
+                    if (hasPreferredVelocityBias)
+                    {
+                        preferred = ApplyPreferredVelocityBias(preferred, pos, preferredVelocityBiases[entityIndex], maxSpeed);
                     }
 
                     if (smartStopFlags[i] != 0)
@@ -745,6 +961,17 @@ namespace Ludots.Core.Physics2D.Systems
                                 temporalCoherence.NeighborPositionQuantizationCm,
                                 temporalCoherence.NeighborVelocityQuantizationCmPerSec);
                         }
+
+                        preferred = ApplySeparationToPreferredVelocity(
+                            preferred,
+                            pos,
+                            radius,
+                            maxSpeed,
+                            neighborIdxScratch.Slice(0, neighborCount),
+                            neighborDistanceScratch.Slice(0, neighborCount),
+                            positions,
+                            radii,
+                            separationConfig);
                     }
 
                     if (!reused)
@@ -804,6 +1031,8 @@ namespace Ludots.Core.Physics2D.Systems
                 bool hasFlowBinding = Runtime.FlowEnabled && chunk.Has<NavFlowBinding2D>();
                 Span<NavFlowBinding2D> flowBindings = hasFlowBinding ? chunk.GetSpan<NavFlowBinding2D>() : default;
                 Span<Position2D> positionsCm = hasFlowBinding ? chunk.GetSpan<Position2D>() : default;
+                bool hasPreferredVelocityBias = chunk.Has<NavPreferredVelocityBias2D>();
+                Span<NavPreferredVelocityBias2D> preferredVelocityBiases = hasPreferredVelocityBias ? chunk.GetSpan<NavPreferredVelocityBias2D>() : default;
 
                 var agentSoA = Runtime.AgentSoA;
                 var config = Runtime.Config.Steering;
@@ -825,6 +1054,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var goalPositions = agentSoA.GoalPositions.AsSpan();
                 var hasPointGoals = agentSoA.HasPointGoals.AsSpan();
                 var smartStopFlags = agentSoA.SmartStopFlags.AsSpan();
+                var separationConfig = config.Separation;
                 var sonarSolveConfig = SonarSolver2D.SolveConfig.FromConfig(config.Sonar, config.Orca.FallbackToPreferredVelocity);
 
                 Span<int> neighborIdxScratch = stackalloc int[MaxNeighborsHard];
@@ -860,17 +1090,7 @@ namespace Ludots.Core.Physics2D.Systems
                     float neighborDistance = neighborDistances[i];
                     float timeHorizon = timeHorizons[i];
                     int neighborLimit = GetEffectiveNeighborLimit(maxNeighborCounts[i], globalMaxNeighbors);
-                    Vector2 preferred = Vector2.Zero;
-
-                    if (hasPointGoals[i] != 0)
-                    {
-                        Vector2 toGoal = goalPositions[i] - pos;
-                        float goalDistanceSq = toGoal.LengthSquared();
-                        if (goalDistanceSq > 1e-8f && maxSpeed > 0f)
-                        {
-                            preferred = toGoal * (maxSpeed / MathF.Sqrt(goalDistanceSq));
-                        }
-                    }
+                    Vector2 preferred = ComputePointGoalPreferredVelocity(hasPointGoals[i] != 0, goalPositions[i], pos, maxSpeed);
 
                     if (hasFlowBinding)
                     {
@@ -879,6 +1099,11 @@ namespace Ludots.Core.Physics2D.Systems
                         {
                             preferred = desiredCm.ToVector2();
                         }
+                    }
+
+                    if (hasPreferredVelocityBias)
+                    {
+                        preferred = ApplyPreferredVelocityBias(preferred, pos, preferredVelocityBiases[entityIndex], maxSpeed);
                     }
 
                     if (smartStopFlags[i] != 0)
@@ -917,6 +1142,17 @@ namespace Ludots.Core.Physics2D.Systems
                                 temporalCoherence.NeighborPositionQuantizationCm,
                                 temporalCoherence.NeighborVelocityQuantizationCmPerSec);
                         }
+
+                        preferred = ApplySeparationToPreferredVelocity(
+                            preferred,
+                            pos,
+                            radius,
+                            maxSpeed,
+                            neighborIdxScratch.Slice(0, neighborCount),
+                            neighborDistanceScratch.Slice(0, neighborCount),
+                            positions,
+                            radii,
+                            separationConfig);
                     }
 
                     if (!reused)
@@ -1211,6 +1447,7 @@ namespace Ludots.Core.Physics2D.Systems
                         kin.NeighborDistCm.ToFloat(),
                         kin.TimeHorizonSec.ToFloat(),
                         ClampMaxNeighbors(kin.MaxNeighbors),
+                        hasFlowBinding ? flowBindings[index].FlowId : -1,
                         hasPointGoal,
                         goalPosition,
                         goalRadius,
@@ -1230,23 +1467,82 @@ namespace Ludots.Core.Physics2D.Systems
             for (int f = 0; f < _runtime.FlowCount; f++)
             {
                 _runtime.Flows[f].BeginDemandFrame(tick);
+                _runtime.Flows[f].BeginGoalFrame();
             }
 
-            foreach (ref var chunk in World.Query(in _flowDemandQuery))
+            var agentSoA = _runtime.AgentSoA;
+            var positions = agentSoA.Positions.AsSpan();
+            var velocities = agentSoA.Velocities.AsSpan();
+            var flowIds = agentSoA.FlowIds.AsSpan();
+            Span<byte> flowHasAgentGoals = stackalloc byte[_runtime.FlowCount];
+            for (int i = 0; i < agentSoA.Count; i++)
             {
-                var positions = chunk.GetSpan<Position2D>();
-                var bindings = chunk.GetSpan<NavFlowBinding2D>();
-                foreach (var index in chunk)
+                int flowId = flowIds[i];
+                if (flowId >= 0)
                 {
-                    var flow = _runtime.TryGetFlow(bindings[index].FlowId);
-                    flow?.AddDemandPoint(positions[index].Value);
+                    var flow = _runtime.TryGetFlow(flowId);
+                    if (flow == null)
+                    {
+                        continue;
+                    }
+
+                    flow.AddDemandPoint(Fix64Vec2.FromVector2(positions[i]));
                 }
             }
 
-            StampFlowObstacles();
+            foreach (ref var chunk in World.Query(in _flowBoundPointGoalQuery))
+            {
+                var flowBindings = chunk.GetSpan<NavFlowBinding2D>();
+                var goals = chunk.GetSpan<NavGoal2D>();
+                foreach (var index in chunk)
+                {
+                    var goal = goals[index];
+                    if (goal.Kind != NavGoalKind2D.Point)
+                    {
+                        continue;
+                    }
+
+                    int flowId = flowBindings[index].FlowId;
+                    var flow = _runtime.TryGetFlow(flowId);
+                    if (flow == null)
+                    {
+                        continue;
+                    }
+
+                    flow.AddFrameGoalPoint(goal.TargetCm, goal.RadiusCm);
+                    flowHasAgentGoals[flowId] = 1;
+                }
+            }
+
+            foreach (ref var chunk in World.Query(in _flowGoalQuery))
+            {
+                var goals = chunk.GetSpan<NavFlowGoal2D>();
+                foreach (var index in chunk)
+                {
+                    var goal = goals[index];
+                    if ((uint)goal.FlowId >= (uint)_runtime.FlowCount || flowHasAgentGoals[goal.FlowId] != 0)
+                    {
+                        continue;
+                    }
+
+                    _runtime.Flows[goal.FlowId].AddFrameGoalPoint(goal.GoalCm, goal.RadiusCm);
+                }
+            }
 
             for (int f = 0; f < _runtime.FlowCount; f++)
             {
+                _runtime.Flows[f].PrepareFrame();
+            }
+
+            _runtime.Surface.ClearObstacleField();
+            _runtime.Surface.ClearCrowdFields();
+            StampFlowObstacles();
+            StampFlowCrowdDensity(positions, velocities);
+            _runtime.Surface.NormalizeAverageVelocityField();
+
+            for (int f = 0; f < _runtime.FlowCount; f++)
+            {
+                _runtime.Flows[f].MarkCrowdFieldsDirty();
                 _runtime.Flows[f].Step(_runtime.FlowIterationsPerTick);
             }
         }
@@ -1263,8 +1559,38 @@ namespace Ludots.Core.Physics2D.Systems
                 {
                     _runtime.Surface.SplatObstacleCircle(
                         positions[index].Value.ToVector2(),
-                        kinematics[index].RadiusCm.ToFloat());
+                        kinematics[index].RadiusCm.ToFloat(),
+                        createTilesIfMissing: false);
+
+                    var discomfort = _runtime.Config.FlowCrowd.Discomfort;
+                    if (discomfort.Enabled && discomfort.ObstacleHaloRadiusCm > 0 && discomfort.ObstacleHaloValue > 0f)
+                    {
+                        _runtime.Surface.SplatDiscomfortCircle(
+                            positions[index].Value.ToVector2(),
+                            kinematics[index].RadiusCm.ToFloat() + discomfort.ObstacleHaloRadiusCm,
+                            discomfort.ObstacleHaloValue,
+                            discomfort.ObstacleHaloEdgeValue,
+                            createTilesIfMissing: false);
+                    }
                 }
+            }
+        }
+
+        private void StampFlowCrowdDensity(ReadOnlySpan<Vector2> positions, ReadOnlySpan<Vector2> velocities)
+        {
+            var density = _runtime.Config.FlowCrowd.Density;
+            if (!_runtime.Config.FlowCrowd.Enabled)
+            {
+                return;
+            }
+
+            for (int i = 0; i < positions.Length; i++)
+            {
+                _runtime.Surface.SplatDensity(
+                    positions[i],
+                    velocities[i],
+                    density.Exponent,
+                    createTilesIfMissing: false);
             }
         }
         private void ComputeSmartStopFlags()
@@ -1294,30 +1620,6 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             World.InlineParallelChunkQuery(in _agentQuery, in job);
-        }
-
-        private void TryApplyFlowGoal()
-        {
-            if (_runtime.FlowCount <= 0) return;
-
-            bool has = false;
-            foreach (ref var chunk in World.Query(in _flowGoalQuery))
-            {
-                var goals = chunk.GetSpan<NavFlowGoal2D>();
-                foreach (var index in chunk)
-                {
-                    var goal = goals[index];
-                    var flow = _runtime.TryGetFlow(goal.FlowId);
-                    if (flow == null) continue;
-                    flow.SetGoalPoint(goal.GoalCm, goal.RadiusCm);
-                    has = true;
-                }
-            }
-
-            if (!has)
-            {
-                return;
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

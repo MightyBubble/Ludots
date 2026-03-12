@@ -3,6 +3,17 @@
     "Enabled": false,
     "MaxAgents": 50000,
     "FlowIterationsPerTick": 4096,
+    "Playground": {
+      "DefaultAgentsPerTeam": 5000,
+      "AgentsPerTeamStep": 500,
+      "DefaultScenarioIndex": 0,
+      "DefaultSpawnBatch": 128,
+      "SpawnBatchStep": 64,
+      "CommandGoalRadiusCm": 120,
+      "CommandFormationSpacingCm": 140,
+      "DynamicSpawnSpacingCm": 120,
+      "DynamicBlockerRadiusCm": 140
+    },
     "FlowStreaming": {
       "Enabled": true,
       "ActivationRadiusTiles": 2,
@@ -50,6 +61,11 @@
         "GoalToleranceCm": 80,
         "ArrivedSlackCm": 20,
         "StoppedSpeedThresholdCmPerSec": 5
+      },
+      "Separation": {
+        "Enabled": true,
+        "RadiusCm": 120,
+        "Weight": 0.75
       },
       "TemporalCoherence": {
         "Enabled": false,

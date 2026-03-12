@@ -38,6 +38,7 @@ namespace Ludots.Core.Navigation2D.Runtime
         public UnsafeList<float> NeighborDistances;
         public UnsafeList<float> TimeHorizons;
         public UnsafeList<int> MaxNeighborCounts;
+        public UnsafeList<int> FlowIds;
         public UnsafeList<Vector2> CachedSteeringDesiredVelocities;
         public UnsafeList<Vector2> CachedSteeringPreferredVelocities;
         public UnsafeList<Vector2> CachedSteeringVelocities;
@@ -100,6 +101,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             NeighborDistances = new UnsafeList<float>(settings.MaxAgents);
             TimeHorizons = new UnsafeList<float>(settings.MaxAgents);
             MaxNeighborCounts = new UnsafeList<int>(settings.MaxAgents);
+            FlowIds = new UnsafeList<int>(settings.MaxAgents);
             CachedSteeringDesiredVelocities = new UnsafeList<Vector2>(settings.MaxAgents);
             CachedSteeringPreferredVelocities = new UnsafeList<Vector2>(settings.MaxAgents);
             CachedSteeringVelocities = new UnsafeList<Vector2>(settings.MaxAgents);
@@ -230,6 +232,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             float neighborDistance,
             float timeHorizon,
             int maxNeighbors,
+            int flowId,
             bool hasPointGoal,
             in Vector2 goalPosition,
             float goalRadius,
@@ -256,6 +259,7 @@ namespace Ludots.Core.Navigation2D.Runtime
                 NeighborDistances[agentIndex] != neighborDistance ||
                 TimeHorizons[agentIndex] != timeHorizon ||
                 MaxNeighborCounts[agentIndex] != maxNeighbors ||
+                FlowIds[agentIndex] != flowId ||
                 GoalPositions[agentIndex] != goalPosition ||
                 GoalRadii[agentIndex] != goalRadius ||
                 GoalDistances[agentIndex] != goalDistance ||
@@ -271,6 +275,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             NeighborDistances[agentIndex] = neighborDistance;
             TimeHorizons[agentIndex] = timeHorizon;
             MaxNeighborCounts[agentIndex] = maxNeighbors;
+            FlowIds[agentIndex] = flowId;
             GoalPositions[agentIndex] = goalPosition;
             GoalRadii[agentIndex] = goalRadius;
             GoalDistances[agentIndex] = goalDistance;
@@ -287,6 +292,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             float neighborDistance,
             float timeHorizon,
             int maxNeighbors,
+            int flowId,
             bool hasPointGoal,
             in Vector2 goalPosition,
             float goalRadius,
@@ -320,6 +326,7 @@ namespace Ludots.Core.Navigation2D.Runtime
                 NeighborDistances.Add(neighborDistance);
                 TimeHorizons.Add(timeHorizon);
                 MaxNeighborCounts.Add(maxNeighbors);
+                FlowIds.Add(flowId);
                 GoalPositions.Add(goalPosition);
                 GoalRadii.Add(goalRadius);
                 GoalDistances.Add(goalDistance);
@@ -361,6 +368,7 @@ namespace Ludots.Core.Navigation2D.Runtime
                 NeighborDistances[agentIndex] != neighborDistance ||
                 TimeHorizons[agentIndex] != timeHorizon ||
                 MaxNeighborCounts[agentIndex] != maxNeighbors ||
+                FlowIds[agentIndex] != flowId ||
                 GoalPositions[agentIndex] != goalPosition ||
                 GoalRadii[agentIndex] != goalRadius ||
                 GoalDistances[agentIndex] != goalDistance ||
@@ -376,6 +384,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             NeighborDistances[agentIndex] = neighborDistance;
             TimeHorizons[agentIndex] = timeHorizon;
             MaxNeighborCounts[agentIndex] = maxNeighbors;
+            FlowIds[agentIndex] = flowId;
             GoalPositions[agentIndex] = goalPosition;
             GoalRadii[agentIndex] = goalRadius;
             GoalDistances[agentIndex] = goalDistance;
@@ -430,6 +439,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             NeighborDistances.Clear();
             TimeHorizons.Clear();
             MaxNeighborCounts.Clear();
+            FlowIds.Clear();
             GoalPositions.Clear();
             GoalRadii.Clear();
             GoalDistances.Clear();
@@ -475,6 +485,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             NeighborDistances.Dispose();
             TimeHorizons.Dispose();
             MaxNeighborCounts.Dispose();
+            FlowIds.Dispose();
             GoalPositions.Dispose();
             GoalRadii.Dispose();
             GoalDistances.Dispose();
@@ -532,6 +543,7 @@ namespace Ludots.Core.Navigation2D.Runtime
                 NeighborDistances[index] = NeighborDistances[lastIndex];
                 TimeHorizons[index] = TimeHorizons[lastIndex];
                 MaxNeighborCounts[index] = MaxNeighborCounts[lastIndex];
+                FlowIds[index] = FlowIds[lastIndex];
                 GoalPositions[index] = GoalPositions[lastIndex];
                 GoalRadii[index] = GoalRadii[lastIndex];
                 GoalDistances[index] = GoalDistances[lastIndex];
@@ -562,6 +574,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             NeighborDistances.RemoveAt(lastIndex);
             TimeHorizons.RemoveAt(lastIndex);
             MaxNeighborCounts.RemoveAt(lastIndex);
+            FlowIds.RemoveAt(lastIndex);
             GoalPositions.RemoveAt(lastIndex);
             GoalRadii.RemoveAt(lastIndex);
             GoalDistances.RemoveAt(lastIndex);

@@ -56,6 +56,116 @@ namespace Ludots.Tests.Navigation2D
         }
 
         [Test]
+        public void FlowStreaming_ChunklessRuntime_ActivatesDemandWindowWithoutLoadedTiles()
+        {
+            using var world = World.Create();
+            using var runtime = CreateRuntime(loaded: null, activationRadiusTiles: 1, maxActiveTiles: 24, unloadGraceTicks: 1, maxPotentialCells: 512f);
+            runtime.FlowEnabled = true;
+
+            world.Create(new NavFlowGoal2D { FlowId = 0, GoalCm = TileCenterCm(0, 0), RadiusCm = Fix64.Zero });
+            world.Create(
+                new NavAgent2D(),
+                new NavFlowBinding2D { FlowId = 0 },
+                new Position2D { Value = TileCenterCm(3, 0) },
+                new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
+                CreateKinematics(),
+                new ForceInput2D { Force = Fix64Vec2.Zero },
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero });
+
+            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            system.Update(DeltaTime);
+
+            var flow = runtime.Flows[0];
+            Assert.That(flow.ActiveTileCount, Is.GreaterThan(0));
+            Assert.That(flow.TrySampleDesiredVelocityCm(TileCenterCm(3, 0), Fix64.FromInt(800), out Fix64Vec2 sampledVelocity), Is.True);
+            Assert.That(sampledVelocity.ToVector2().LengthSquared(), Is.GreaterThan(1f));
+        }
+
+        [Test]
+        public void FlowStreaming_AgentPointGoalsPerFlow_BuildSharedMultiGoalField()
+        {
+            using var world = World.Create();
+            using var runtime = CreateRuntime(loaded: null, activationRadiusTiles: 1, maxActiveTiles: 32, unloadGraceTicks: 1, maxPotentialCells: 512f);
+            runtime.FlowEnabled = true;
+            var pointGoalQuery = new QueryDescription().WithAll<NavAgent2D, NavFlowBinding2D, NavGoal2D>();
+
+            Fix64Vec2 lowerStart = CellCenterCm(5, 1);
+            Fix64Vec2 lowerGoal = CellCenterCm(1, 3);
+            Fix64Vec2 upperStart = CellCenterCm(5, 9);
+            Fix64Vec2 upperGoal = CellCenterCm(1, 7);
+
+            world.Create(
+                new NavAgent2D(),
+                new NavFlowBinding2D { FlowId = 0 },
+                new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = lowerGoal, RadiusCm = Fix64.Zero },
+                new Position2D { Value = lowerStart },
+                new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
+                CreateKinematics(),
+                new ForceInput2D { Force = Fix64Vec2.Zero },
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero });
+
+            world.Create(
+                new NavAgent2D(),
+                new NavFlowBinding2D { FlowId = 0 },
+                new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = upperGoal, RadiusCm = Fix64.Zero },
+                new Position2D { Value = upperStart },
+                new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
+                CreateKinematics(),
+                new ForceInput2D { Force = Fix64Vec2.Zero },
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero });
+
+            Assert.That(world.CountEntities(in pointGoalQuery), Is.EqualTo(2));
+
+            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            system.Update(DeltaTime);
+
+            var flow = runtime.Flows[0];
+            Assert.That(flow.ActiveTileCount, Is.GreaterThan(0));
+            Assert.That(flow.HasAnyGoals, Is.True);
+            Assert.That(flow.InstrumentedGoalSeedCellsFrame, Is.GreaterThan(0));
+            Assert.That(flow.TryGetPotentialAtCell(5, 1, out float lowerStartPotential), Is.True);
+            Assert.That(flow.TryGetPotentialAtCell(5, 9, out float upperStartPotential), Is.True);
+            Assert.That(float.IsPositiveInfinity(lowerStartPotential), Is.False);
+            Assert.That(float.IsPositiveInfinity(upperStartPotential), Is.False);
+            Assert.That(lowerStartPotential, Is.GreaterThan(0f));
+            Assert.That(upperStartPotential, Is.GreaterThan(0f));
+            Assert.That(HasZeroPotentialInNeighborhood(flow, 1, 3, radiusCells: 1), Is.True, "lower destination band should contribute a zero-potential seed");
+            Assert.That(HasZeroPotentialInNeighborhood(flow, 1, 7, radiusCells: 1), Is.True, "upper destination band should contribute a zero-potential seed");
+        }
+
+        [Test]
+        public void FlowStreaming_RuntimeRebindToNullLoadedChunks_RestoresChunklessActivation()
+        {
+            using var world = World.Create();
+            var bootstrapLoaded = new TestLoadedChunks();
+            using var runtime = CreateRuntime(bootstrapLoaded, activationRadiusTiles: 1, maxActiveTiles: 24, unloadGraceTicks: 1, maxPotentialCells: 512f);
+            runtime.FlowEnabled = true;
+
+            world.Create(new NavFlowGoal2D { FlowId = 0, GoalCm = TileCenterCm(0, 0), RadiusCm = Fix64.Zero });
+            world.Create(
+                new NavAgent2D(),
+                new NavFlowBinding2D { FlowId = 0 },
+                new Position2D { Value = TileCenterCm(3, 0) },
+                new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
+                CreateKinematics(),
+                new ForceInput2D { Force = Fix64Vec2.Zero },
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero });
+
+            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            system.Update(DeltaTime);
+
+            var flow = runtime.Flows[0];
+            Assert.That(flow.ActiveTileCount, Is.EqualTo(0), "empty bootstrap loaded-chunk source should gate activation");
+
+            runtime.BindLoadedChunks(null);
+            system.Update(DeltaTime);
+
+            Assert.That(flow.ActiveTileCount, Is.GreaterThan(0), "rebinding to chunkless mode should restore demand-window activation");
+            Assert.That(flow.TrySampleDesiredVelocityCm(TileCenterCm(3, 0), Fix64.FromInt(800), out Fix64Vec2 sampledVelocity), Is.True);
+            Assert.That(sampledVelocity.ToVector2().LengthSquared(), Is.GreaterThan(1f));
+        }
+
+        [Test]
         public void FlowStreaming_ChunkUnload_RemovesDeactivatedTiles()
         {
             using var world = World.Create();
@@ -147,7 +257,7 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(traceJsonl, Does.Contain("\"tick\":1"));
         }
 
-        private static Navigation2DRuntime CreateRuntime(TestLoadedChunks loaded, int activationRadiusTiles, int maxActiveTiles, int unloadGraceTicks, float maxPotentialCells)
+        private static Navigation2DRuntime CreateRuntime(TestLoadedChunks? loaded, int activationRadiusTiles, int maxActiveTiles, int unloadGraceTicks, float maxPotentialCells)
         {
             var config = new Navigation2DConfig
             {
@@ -207,6 +317,11 @@ namespace Ludots.Tests.Navigation2D
             return Fix64Vec2.FromInt(cellX * CellSizeCm, cellY * CellSizeCm);
         }
 
+        private static Fix64Vec2 CellCenterCm(int cellX, int cellY)
+        {
+            return Fix64Vec2.FromInt(cellX * CellSizeCm + (CellSizeCm / 2), cellY * CellSizeCm + (CellSizeCm / 2));
+        }
+
         private static void AppendTrace(StringBuilder trace, int tick, int activeTiles, float desiredSpeed, long observedTile, bool observedTileActive)
         {
             trace.Append('{');
@@ -216,6 +331,27 @@ namespace Ludots.Tests.Navigation2D
             trace.Append("\"observedTile\":").Append(observedTile).Append(',');
             trace.Append("\"observedTileActive\":").Append(observedTileActive ? "true" : "false");
             trace.AppendLine("}");
+        }
+
+        private static bool HasZeroPotentialInNeighborhood(CrowdFlow2D flow, int centerCellX, int centerCellY, int radiusCells)
+        {
+            for (int cellY = centerCellY - radiusCells; cellY <= centerCellY + radiusCells; cellY++)
+            {
+                for (int cellX = centerCellX - radiusCells; cellX <= centerCellX + radiusCells; cellX++)
+                {
+                    if (!flow.TryGetPotentialAtCell(cellX, cellY, out float potential))
+                    {
+                        continue;
+                    }
+
+                    if (potential <= 0.001f)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private static string BuildBattleReport(StringBuilder timeline)

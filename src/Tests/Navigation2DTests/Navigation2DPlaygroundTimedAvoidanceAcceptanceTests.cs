@@ -81,6 +81,7 @@ namespace Ludots.Tests.Navigation2D
                     new List<string>
                     {
                         Path.Combine(modsRoot, "LudotsCoreMod"),
+                        Path.Combine(modsRoot, "CoreInputMod"),
                         Path.Combine(modsRoot, "Navigation2DPlaygroundMod")
                     },
                     assetsRoot);
@@ -435,7 +436,7 @@ namespace Ludots.Tests.Navigation2D
             sb.AppendLine($"- screenshot captures: `{captureFrames.Count}`");
             sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
             sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
-            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `Navigation2DPlaygroundState`, `ScreenOverlayBuffer`, `Navigation2DRuntime`");
+            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `CoreInputMod`, `Navigation2DPlaygroundState`, `ScreenOverlayBuffer`, `Navigation2DRuntime`");
             return sb.ToString();
         }
 

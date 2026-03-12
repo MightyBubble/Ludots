@@ -632,7 +632,7 @@ namespace Ludots.Core.Engine
 
             if (config.Navigation2D.Enabled)
             {
-                var navigation2dRuntime = new Navigation2DRuntime(config.Navigation2D, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: HexGridAOI);
+                var navigation2dRuntime = new Navigation2DRuntime(config.Navigation2D, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: null);
                 SetService(CoreServiceKeys.Navigation2DRuntime, navigation2dRuntime);
 
                 const string nav2dSystemTypeName = "Ludots.Core.Physics2D.Systems.Navigation2DSimulationSystem2D";
@@ -1105,6 +1105,7 @@ namespace Ludots.Core.Engine
             SpatialQueries = sharedSpatialQueries;
             WireUpPositionProvider();
 
+            ILoadedChunks? loadedChunks;
             // Wire up HexMetrics if this is a hex board
             if (board is HexGridBoard hexBoard)
             {
@@ -1113,12 +1114,20 @@ namespace Ludots.Core.Engine
                 SetService(CoreServiceKeys.HexMetrics, hexBoard.HexMetrics);
                 SetService(CoreServiceKeys.LoadedChunks, (ILoadedChunks)hexBoard.HexGridAOI);
                 HexGridAOI = hexBoard.HexGridAOI;
+                loadedChunks = hexBoard.HexGridAOI;
             }
             else
             {
                 GlobalContext.Remove(CoreServiceKeys.HexMetrics.Name);
                 SetService(CoreServiceKeys.LoadedChunks, board.LoadedChunks);
                 HexGridAOI = null;
+                loadedChunks = board.LoadedChunks;
+            }
+
+            if (GlobalContext.TryGetValue(CoreServiceKeys.Navigation2DRuntime.Name, out var navigationObj) &&
+                navigationObj is Navigation2DRuntime navigation2dRuntime)
+            {
+                navigation2dRuntime.BindLoadedChunks(loadedChunks);
             }
 
             // Update GlobalContext with rebuilt services

@@ -13,7 +13,7 @@ namespace Ludots.Core.Navigation2D.Runtime
         public readonly Nav2DCellMap CellMap;
         public readonly CrowdSurface2D Surface;
         public readonly CrowdFlow2D[] Flows;
-        private readonly CrowdFlowChunkStreaming? _streaming;
+        private CrowdFlowChunkStreaming? _streaming;
 
         public Navigation2DConfig Config { get; }
 
@@ -37,15 +37,12 @@ namespace Ludots.Core.Navigation2D.Runtime
             Surface = new CrowdSurface2D(cellSize, tileSizeCells: 64, initialTileCapacity: 256);
             Flows = new[]
             {
-                new CrowdFlow2D(Surface, Config.FlowStreaming, initialTileCapacity: 256),
-                new CrowdFlow2D(Surface, Config.FlowStreaming, initialTileCapacity: 256),
+                new CrowdFlow2D(Surface, Config.FlowStreaming, Config.FlowCrowd, hasLoadedTileSource: false, initialTileCapacity: 256, initialGoalCapacity: Math.Max(64, Config.MaxAgents)),
+                new CrowdFlow2D(Surface, Config.FlowStreaming, Config.FlowCrowd, hasLoadedTileSource: false, initialTileCapacity: 256, initialGoalCapacity: Math.Max(64, Config.MaxAgents)),
             };
 
             FlowIterationsPerTick = Config.FlowIterationsPerTick;
-            if (loadedChunks != null)
-            {
-                _streaming = new CrowdFlowChunkStreaming(loadedChunks, Flows);
-            }
+            BindLoadedChunks(loadedChunks);
         }
 
         public Navigation2DRuntime(int maxAgents, int gridCellSizeCm, ILoadedChunks? loadedChunks)
@@ -63,6 +60,23 @@ namespace Ludots.Core.Navigation2D.Runtime
             }
 
             return Flows[flowId];
+        }
+
+        public void BindLoadedChunks(ILoadedChunks? loadedChunks)
+        {
+            _streaming?.Dispose();
+            _streaming = null;
+
+            bool hasLoadedTileSource = loadedChunks != null;
+            for (int i = 0; i < Flows.Length; i++)
+            {
+                Flows[i].SetLoadedTileSourceEnabled(hasLoadedTileSource);
+            }
+
+            if (loadedChunks != null)
+            {
+                _streaming = new CrowdFlowChunkStreaming(loadedChunks, Flows);
+            }
         }
 
         public void Dispose()

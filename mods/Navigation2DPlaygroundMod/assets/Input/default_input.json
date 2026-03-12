@@ -1,4 +1,4 @@
-﻿{
+{
   "actions": [
     { "id": "Nav2D_ToggleFlowEnabled", "name": "Nav2D_ToggleFlowEnabled", "type": "Button" },
     { "id": "Nav2D_ToggleFlowDebug", "name": "Nav2D_ToggleFlowDebug", "type": "Button" },
@@ -9,7 +9,15 @@
     { "id": "Nav2D_DecreaseAgentsPerTeam", "name": "Nav2D_DecreaseAgentsPerTeam", "type": "Button" },
     { "id": "Nav2D_PreviousScenario", "name": "Nav2D_PreviousScenario", "type": "Button" },
     { "id": "Nav2D_NextScenario", "name": "Nav2D_NextScenario", "type": "Button" },
-    { "id": "Nav2D_ResetScenario", "name": "Nav2D_ResetScenario", "type": "Button" }
+    { "id": "Nav2D_ResetScenario", "name": "Nav2D_ResetScenario", "type": "Button" },
+    { "id": "Nav2D_ToolMove", "name": "Nav2D_ToolMove", "type": "Button" },
+    { "id": "Nav2D_ToolSpawnTeam0", "name": "Nav2D_ToolSpawnTeam0", "type": "Button" },
+    { "id": "Nav2D_ToolSpawnTeam1", "name": "Nav2D_ToolSpawnTeam1", "type": "Button" },
+    { "id": "Nav2D_ToolSpawnBlocker", "name": "Nav2D_ToolSpawnBlocker", "type": "Button" },
+    { "id": "Nav2D_IncreaseSpawnBatch", "name": "Nav2D_IncreaseSpawnBatch", "type": "Button" },
+    { "id": "Nav2D_DecreaseSpawnBatch", "name": "Nav2D_DecreaseSpawnBatch", "type": "Button" },
+    { "id": "Nav2D_ViewModeCommand", "name": "Nav2D_ViewModeCommand", "type": "Button" },
+    { "id": "Nav2D_ViewModeFollow", "name": "Nav2D_ViewModeFollow", "type": "Button" }
   ],
   "contexts": [
     {
@@ -26,7 +34,15 @@
         { "actionId": "Nav2D_DecreaseAgentsPerTeam", "path": "<Keyboard>/l" },
         { "actionId": "Nav2D_PreviousScenario", "path": "<Keyboard>/n" },
         { "actionId": "Nav2D_NextScenario", "path": "<Keyboard>/m" },
-        { "actionId": "Nav2D_ResetScenario", "path": "<Keyboard>/r" }
+        { "actionId": "Nav2D_ResetScenario", "path": "<Keyboard>/r" },
+        { "actionId": "Nav2D_ToolMove", "path": "<Keyboard>/1" },
+        { "actionId": "Nav2D_ToolSpawnTeam0", "path": "<Keyboard>/2" },
+        { "actionId": "Nav2D_ToolSpawnTeam1", "path": "<Keyboard>/3" },
+        { "actionId": "Nav2D_ToolSpawnBlocker", "path": "<Keyboard>/4" },
+        { "actionId": "Nav2D_IncreaseSpawnBatch", "path": "<Keyboard>/i" },
+        { "actionId": "Nav2D_DecreaseSpawnBatch", "path": "<Keyboard>/o" },
+        { "actionId": "Nav2D_ViewModeCommand", "path": "<Keyboard>/f1" },
+        { "actionId": "Nav2D_ViewModeFollow", "path": "<Keyboard>/f2" }
       ]
     }
   ]

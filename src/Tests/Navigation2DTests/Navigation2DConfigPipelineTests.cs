@@ -42,6 +42,31 @@ namespace Ludots.Tests.Navigation2D
       ""WorldMaxTileX"": 399,
       ""WorldMaxTileY"": 299
     },
+    ""FlowCrowd"": {
+      ""Enabled"": true,
+      ""Density"": {
+        ""Min"": 0.4,
+        ""Max"": 2.1,
+        ""Exponent"": 0.45
+      },
+      ""Speed"": {
+        ""MinFactor"": 0.25,
+        ""MaxFactor"": 1.1,
+        ""FlowVelocityScaleCmPerSec"": 720
+      },
+      ""Cost"": {
+        ""DistanceWeight"": 0.35,
+        ""TimeWeight"": 0.65,
+        ""DiscomfortWeight"": 1.75,
+        ""NormalizeDistanceAndTimeWeights"": true
+      },
+      ""Discomfort"": {
+        ""Enabled"": true,
+        ""ObstacleHaloRadiusCm"": 280,
+        ""ObstacleHaloValue"": 1.6,
+        ""ObstacleHaloEdgeValue"": 0.25
+      }
+    },
     ""Spatial"": {
       ""UpdateMode"": ""Adaptive"",
       ""RebuildCellMigrationsThreshold"": 64,
@@ -51,6 +76,12 @@ namespace Ludots.Tests.Navigation2D
       ""DefaultAgentsPerTeam"": 3200,
       ""AgentsPerTeamStep"": 250,
       ""DefaultScenarioIndex"": 1,
+      ""DefaultSpawnBatch"": 96,
+      ""SpawnBatchStep"": 24,
+      ""CommandGoalRadiusCm"": 140,
+      ""CommandFormationSpacingCm"": 180,
+      ""DynamicSpawnSpacingCm"": 160,
+      ""DynamicBlockerRadiusCm"": 150,
       ""Scenarios"": [
         {
           ""Id"": ""queue"",
@@ -96,6 +127,11 @@ namespace Ludots.Tests.Navigation2D
         ""MaxNeighbors"": 6,
         ""GoalToleranceCm"": 90
       },
+      ""Separation"": {
+        ""Enabled"": true,
+        ""RadiusCm"": 180,
+        ""Weight"": 0.75
+      },
       ""TemporalCoherence"": {
         ""Enabled"": true,
         ""RequireSteadyStateWorld"": false,
@@ -128,6 +164,12 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(gameConfig.Navigation2D.Playground.DefaultAgentsPerTeam, Is.EqualTo(3200));
             Assert.That(gameConfig.Navigation2D.Playground.AgentsPerTeamStep, Is.EqualTo(250));
             Assert.That(gameConfig.Navigation2D.Playground.DefaultScenarioIndex, Is.EqualTo(1));
+            Assert.That(gameConfig.Navigation2D.Playground.DefaultSpawnBatch, Is.EqualTo(96));
+            Assert.That(gameConfig.Navigation2D.Playground.SpawnBatchStep, Is.EqualTo(24));
+            Assert.That(gameConfig.Navigation2D.Playground.CommandGoalRadiusCm, Is.EqualTo(140));
+            Assert.That(gameConfig.Navigation2D.Playground.CommandFormationSpacingCm, Is.EqualTo(180));
+            Assert.That(gameConfig.Navigation2D.Playground.DynamicSpawnSpacingCm, Is.EqualTo(160));
+            Assert.That(gameConfig.Navigation2D.Playground.DynamicBlockerRadiusCm, Is.EqualTo(150));
             Assert.That(gameConfig.Navigation2D.Playground.Scenarios.Count, Is.EqualTo(2));
             Assert.That(gameConfig.Navigation2D.Playground.Scenarios[0].Kind, Is.EqualTo(Navigation2DPlaygroundScenarioKind.GoalQueue));
             Assert.That(gameConfig.Navigation2D.Playground.Scenarios[0].TeamCount, Is.EqualTo(1));
@@ -141,6 +183,9 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(gameConfig.Navigation2D.Steering.Hybrid.DenseNeighborThreshold, Is.EqualTo(5));
             Assert.That(gameConfig.Navigation2D.Steering.Hybrid.MinOpposingNeighborsForOrca, Is.EqualTo(2));
             Assert.That(gameConfig.Navigation2D.Steering.SmartStop.MaxNeighbors, Is.EqualTo(6));
+            Assert.That(gameConfig.Navigation2D.Steering.Separation.Enabled, Is.True);
+            Assert.That(gameConfig.Navigation2D.Steering.Separation.RadiusCm, Is.EqualTo(180));
+            Assert.That(gameConfig.Navigation2D.Steering.Separation.Weight, Is.EqualTo(0.75f).Within(0.001f));
             Assert.That(gameConfig.Navigation2D.Steering.TemporalCoherence.Enabled, Is.True);
             Assert.That(gameConfig.Navigation2D.Steering.TemporalCoherence.RequireSteadyStateWorld, Is.False);
             Assert.That(gameConfig.Navigation2D.Steering.TemporalCoherence.MaxReuseTicks, Is.EqualTo(9));
@@ -161,7 +206,26 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(gameConfig.Navigation2D.FlowStreaming.WorldMinTileY, Is.EqualTo(-300));
             Assert.That(gameConfig.Navigation2D.FlowStreaming.WorldMaxTileX, Is.EqualTo(399));
             Assert.That(gameConfig.Navigation2D.FlowStreaming.WorldMaxTileY, Is.EqualTo(299));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Enabled, Is.True);
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Density.Min, Is.EqualTo(0.4f).Within(0.001f));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Density.Max, Is.EqualTo(2.1f).Within(0.001f));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Density.Exponent, Is.EqualTo(0.45f).Within(0.001f));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Speed.MinFactor, Is.EqualTo(0.25f).Within(0.001f));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Speed.MaxFactor, Is.EqualTo(1.1f).Within(0.001f));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Speed.FlowVelocityScaleCmPerSec, Is.EqualTo(720f).Within(0.001f));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Cost.DistanceWeight, Is.EqualTo(0.35f).Within(0.001f));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Cost.TimeWeight, Is.EqualTo(0.65f).Within(0.001f));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Cost.DiscomfortWeight, Is.EqualTo(1.75f).Within(0.001f));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Discomfort.ObstacleHaloRadiusCm, Is.EqualTo(280));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Discomfort.ObstacleHaloValue, Is.EqualTo(1.6f).Within(0.001f));
+            Assert.That(gameConfig.Navigation2D.FlowCrowd.Discomfort.ObstacleHaloEdgeValue, Is.EqualTo(0.25f).Within(0.001f));
             Assert.That(runtime.Config.Playground.DefaultAgentsPerTeam, Is.EqualTo(3200));
+            Assert.That(runtime.Config.Playground.DefaultSpawnBatch, Is.EqualTo(96));
+            Assert.That(runtime.Config.Playground.SpawnBatchStep, Is.EqualTo(24));
+            Assert.That(runtime.Config.Playground.CommandGoalRadiusCm, Is.EqualTo(140));
+            Assert.That(runtime.Config.Playground.CommandFormationSpacingCm, Is.EqualTo(180));
+            Assert.That(runtime.Config.Playground.DynamicSpawnSpacingCm, Is.EqualTo(160));
+            Assert.That(runtime.Config.Playground.DynamicBlockerRadiusCm, Is.EqualTo(150));
             Assert.That(runtime.Config.Playground.Scenarios[0].Kind, Is.EqualTo(Navigation2DPlaygroundScenarioKind.GoalQueue));
             Assert.That(runtime.Config.Spatial.UpdateMode, Is.EqualTo(Navigation2DSpatialUpdateMode.Adaptive));
             Assert.That(runtime.Config.FlowStreaming.MaxActiveTilesPerFlow, Is.EqualTo(320));
@@ -169,7 +233,12 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(runtime.Config.FlowStreaming.MaxActivationWindowHeightTiles, Is.EqualTo(14));
             Assert.That(runtime.Config.FlowStreaming.WorldBoundsEnabled, Is.True);
             Assert.That(runtime.Config.FlowStreaming.WorldMaxTileX, Is.EqualTo(399));
+            Assert.That(runtime.Config.FlowCrowd.Density.Max, Is.EqualTo(2.1f).Within(0.001f));
+            Assert.That(runtime.Config.FlowCrowd.Speed.FlowVelocityScaleCmPerSec, Is.EqualTo(720f).Within(0.001f));
+            Assert.That(runtime.Config.FlowCrowd.Cost.DiscomfortWeight, Is.EqualTo(1.75f).Within(0.001f));
             Assert.That(runtime.Config.Steering.Mode, Is.EqualTo(Navigation2DAvoidanceMode.Hybrid));
+            Assert.That(runtime.Config.Steering.Separation.RadiusCm, Is.EqualTo(180));
+            Assert.That(runtime.Config.Steering.Separation.Weight, Is.EqualTo(0.75f).Within(0.001f));
             Assert.That(runtime.Config.Steering.TemporalCoherence.Enabled, Is.True);
             Assert.That(runtime.Config.Steering.TemporalCoherence.MaxReuseTicks, Is.EqualTo(9));
             Assert.That(runtime.Config.Steering.TemporalCoherence.NeighborVelocityQuantizationCmPerSec, Is.EqualTo(12));
@@ -189,6 +258,7 @@ namespace Ludots.Tests.Navigation2D
                     new List<string>
                     {
                         Path.Combine(modsRoot, "LudotsCoreMod"),
+                        Path.Combine(modsRoot, "CoreInputMod"),
                         Path.Combine(modsRoot, "Navigation2DPlaygroundMod")
                     },
                     assetsRoot);
@@ -201,6 +271,8 @@ namespace Ludots.Tests.Navigation2D
                 Assert.That(runtime.Config.Spatial.UpdateMode, Is.EqualTo(engine.MergedConfig.Navigation2D.Spatial.UpdateMode));
                 Assert.That(runtime.Config.FlowStreaming.MaxActiveTilesPerFlow, Is.EqualTo(engine.MergedConfig.Navigation2D.FlowStreaming.MaxActiveTilesPerFlow));
                 Assert.That(runtime.Config.Playground.DefaultAgentsPerTeam, Is.EqualTo(engine.MergedConfig.Navigation2D.Playground.DefaultAgentsPerTeam));
+                Assert.That(runtime.Config.Playground.DefaultSpawnBatch, Is.EqualTo(engine.MergedConfig.Navigation2D.Playground.DefaultSpawnBatch));
+                Assert.That(runtime.Config.Playground.CommandFormationSpacingCm, Is.EqualTo(engine.MergedConfig.Navigation2D.Playground.CommandFormationSpacingCm));
             }
             finally
             {

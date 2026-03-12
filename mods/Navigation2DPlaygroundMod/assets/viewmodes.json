@@ -1,0 +1,20 @@
+[
+  {
+    "Id": "Navigation2D.Playground.Mode.Command",
+    "DisplayName": "Playground RTS",
+    "VirtualCameraId": "Navigation2D.Playground.Camera.Command",
+    "FollowTargetKind": "None",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "Nav2D_ViewModeCommand"
+  },
+  {
+    "Id": "Navigation2D.Playground.Mode.Follow",
+    "DisplayName": "Selected Follow",
+    "VirtualCameraId": "Navigation2D.Playground.Camera.Follow",
+    "FollowTargetKind": "SelectedEntity",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "Nav2D_ViewModeFollow"
+  }
+]

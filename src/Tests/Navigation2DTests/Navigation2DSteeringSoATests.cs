@@ -155,6 +155,19 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(desired.Y.ToFloat(), Is.EqualTo(0f).Within(0.01f));
         }
 
+        [Test]
+        public void SteeringUpdate_SeparationBias_AddsLateralClearanceWithoutReversingProgress()
+        {
+            Fix64Vec2 desiredWithoutSeparation = RunParallelDesiredVelocity(separationEnabled: false);
+            Fix64Vec2 desiredWithSeparation = RunParallelDesiredVelocity(separationEnabled: true);
+
+            Assert.That(desiredWithoutSeparation.X.ToFloat(), Is.GreaterThan(0f));
+            Assert.That(System.MathF.Abs(desiredWithoutSeparation.Y.ToFloat()), Is.LessThan(0.5f));
+
+            Assert.That(desiredWithSeparation.X.ToFloat(), Is.GreaterThan(0f), "clearance bias must preserve forward progress");
+            Assert.That(desiredWithSeparation.Y.ToFloat(), Is.LessThan(-5f), "neighbor above should cause a downward lateral bias");
+        }
+
 
         [Test]
         public void Navigation2DWorldSync_ReusesStableSlot_WhenAgentDataIsUnchanged()
@@ -172,6 +185,7 @@ namespace Ludots.Tests.Navigation2D
                 neighborDistance: 120f,
                 timeHorizon: 2f,
                 maxNeighbors: 4,
+                flowId: -1,
                 hasPointGoal: true,
                 goalPosition: Fix64Vec2.FromInt(100, 20).ToVector2(),
                 goalRadius: 10f,
@@ -194,6 +208,7 @@ namespace Ludots.Tests.Navigation2D
                 neighborDistance: 120f,
                 timeHorizon: 2f,
                 maxNeighbors: 4,
+                flowId: -1,
                 hasPointGoal: true,
                 goalPosition: Fix64Vec2.FromInt(100, 20).ToVector2(),
                 goalRadius: 10f,
@@ -213,12 +228,12 @@ namespace Ludots.Tests.Navigation2D
             using var agentSoA = new Navigation2DWorld(new Navigation2DWorldSettings(8, Fix64.FromInt(100)));
 
             agentSoA.BeginSync();
-            Assert.That(agentSoA.SyncAgent(1, Fix64Vec2.FromInt(0, 0).ToVector2(), Fix64Vec2.Zero.ToVector2(), 30f, 100f, 1000f, 120f, 2f, 4, false, Vector2.Zero, 0f, 0f), Is.True);
-            Assert.That(agentSoA.SyncAgent(2, Fix64Vec2.FromInt(10, 0).ToVector2(), Fix64Vec2.Zero.ToVector2(), 30f, 100f, 1000f, 120f, 2f, 4, false, Vector2.Zero, 0f, 0f), Is.True);
+            Assert.That(agentSoA.SyncAgent(1, Fix64Vec2.FromInt(0, 0).ToVector2(), Fix64Vec2.Zero.ToVector2(), 30f, 100f, 1000f, 120f, 2f, 4, -1, false, Vector2.Zero, 0f, 0f), Is.True);
+            Assert.That(agentSoA.SyncAgent(2, Fix64Vec2.FromInt(10, 0).ToVector2(), Fix64Vec2.Zero.ToVector2(), 30f, 100f, 1000f, 120f, 2f, 4, -1, false, Vector2.Zero, 0f, 0f), Is.True);
             agentSoA.EndSync();
 
             agentSoA.BeginSync();
-            Assert.That(agentSoA.SyncAgent(2, Fix64Vec2.FromInt(10, 0).ToVector2(), Fix64Vec2.Zero.ToVector2(), 30f, 100f, 1000f, 120f, 2f, 4, false, Vector2.Zero, 0f, 0f), Is.True);
+            Assert.That(agentSoA.SyncAgent(2, Fix64Vec2.FromInt(10, 0).ToVector2(), Fix64Vec2.Zero.ToVector2(), 30f, 100f, 1000f, 120f, 2f, 4, -1, false, Vector2.Zero, 0f, 0f), Is.True);
             var sync = agentSoA.EndSync();
 
             Assert.That(sync.SpatialDirty, Is.True);
@@ -269,6 +284,51 @@ namespace Ludots.Tests.Navigation2D
                 new NavAgent2D(),
                 obstacleKin,
                 new Position2D { Value = Fix64Vec2.FromInt(50, 0) },
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new ForceInput2D { Force = Fix64Vec2.Zero },
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero }
+            );
+
+            system.Update(1f / 60f);
+            return world.Get<NavDesiredVelocity2D>(actor).ValueCmPerSec;
+        }
+
+        private static Fix64Vec2 RunParallelDesiredVelocity(bool separationEnabled)
+        {
+            using var world = World.Create();
+            using var runtime = CreateRuntime(Navigation2DAvoidanceMode.Hybrid, smartStopEnabled: false);
+            runtime.Config.Steering.Separation.Enabled = separationEnabled;
+            runtime.Config.Steering.Separation.RadiusCm = 120;
+            runtime.Config.Steering.Separation.Weight = 0.75f;
+
+            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var kin = new NavKinematics2D
+            {
+                MaxSpeedCmPerSec = Fix64.FromInt(100),
+                MaxAccelCmPerSec2 = Fix64.FromInt(5000),
+                RadiusCm = Fix64.FromInt(30),
+                NeighborDistCm = Fix64.FromInt(200),
+                TimeHorizonSec = Fix64.FromInt(2),
+                MaxNeighbors = 2
+            };
+
+            var actor = world.Create(
+                new NavAgent2D(),
+                new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = Fix64Vec2.FromInt(1000, 0), RadiusCm = Fix64.Zero },
+                kin,
+                new Position2D { Value = Fix64Vec2.Zero },
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new ForceInput2D { Force = Fix64Vec2.Zero },
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero }
+            );
+
+            world.Create(
+                new NavAgent2D(),
+                new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = Fix64Vec2.FromInt(1000, 0), RadiusCm = Fix64.Zero },
+                kin,
+                new Position2D { Value = Fix64Vec2.FromInt(0, 70) },
                 Velocity2D.Zero,
                 Mass2D.FromFloat(1f, 1f),
                 new ForceInput2D { Force = Fix64Vec2.Zero },

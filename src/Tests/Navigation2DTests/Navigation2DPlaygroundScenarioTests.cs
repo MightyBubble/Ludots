@@ -53,11 +53,20 @@ namespace Ludots.Tests.Navigation2D
             string inputJson = File.ReadAllText(Path.Combine(repoRoot, "mods", "Navigation2DPlaygroundMod", "assets", "Input", "default_input.json"));
             string mapJson = File.ReadAllText(Path.Combine(repoRoot, "mods", "Navigation2DPlaygroundMod", "assets", "Maps", "nav2d_playground.json"));
             string gameJson = File.ReadAllText(Path.Combine(repoRoot, "mods", "Navigation2DPlaygroundMod", "assets", "game.json"));
+            string viewModesJson = File.ReadAllText(Path.Combine(repoRoot, "mods", "Navigation2DPlaygroundMod", "assets", "viewmodes.json"));
+            string virtualCameraJson = File.ReadAllText(Path.Combine(repoRoot, "mods", "Navigation2DPlaygroundMod", "assets", "Configs", "Camera", "virtual_cameras.json"));
             Assert.That(inputJson, Does.Contain("Nav2D_PreviousScenario"));
             Assert.That(inputJson, Does.Contain("Nav2D_NextScenario"));
-            Assert.That(mapJson, Does.Contain("\"Pitch\": 65"));
+            Assert.That(inputJson, Does.Contain("Nav2D_ToolSpawnTeam0"));
+            Assert.That(inputJson, Does.Contain("Nav2D_ViewModeFollow"));
+            Assert.That(mapJson, Does.Contain("\"VirtualCameraId\": \"Navigation2D.Playground.Camera.Command\""));
+            Assert.That(mapJson, Does.Contain("\"Boards\""));
             Assert.That(gameJson, Does.Contain("\"Playground\""));
             Assert.That(gameJson, Does.Contain("\"TemporalCoherence\""));
+            Assert.That(gameJson, Does.Contain("\"DefaultSpawnBatch\""));
+            Assert.That(gameJson, Does.Contain("\"CommandFormationSpacingCm\""));
+            Assert.That(viewModesJson, Does.Contain("\"Navigation2D.Playground.Mode.Follow\""));
+            Assert.That(virtualCameraJson, Does.Contain("\"Navigation2D.Playground.Camera.Follow\""));
 
             var config = new Navigation2DConfig
             {
@@ -246,7 +255,7 @@ namespace Ludots.Tests.Navigation2D
             sb.AppendLine($"- Initial entities: `96` agents per team, `{scenarioCount}` configured scenarios");
             sb.AppendLine("- Config source: `game.json -> ConfigPipeline.MergeGameConfig() -> GameConfig.Navigation2D.Playground`");
             sb.AppendLine("- Input source: `mods/Navigation2DPlaygroundMod/assets/Input/default_input.json`");
-            sb.AppendLine("- UI source: `ScreenOverlayBuffer` + `MapConfig.DefaultCamera`");
+            sb.AppendLine("- UI source: `UIRoot` + `ReactivePage`, with `ScreenOverlayBuffer` retained for telemetry evidence.");
             sb.AppendLine();
             sb.AppendLine("## Action Script");
             sb.AppendLine("1. Validate `Navigation2D.Playground` catalog and input/map assets.");
@@ -277,7 +286,7 @@ namespace Ludots.Tests.Navigation2D
             sb.AppendLine($"- agents per team in acceptance run: `{agentsPerTeam}`");
             sb.AppendLine($"- total dynamic agents exercised across catalog: `{totalDynamicAgents}`");
             sb.AppendLine($"- total blockers exercised across catalog: `{totalBlockers}`");
-            sb.AppendLine("- reusable wiring: config via `Navigation2D.Playground`, input via `default_input.json`, camera via `DefaultCamera`, HUD via `ScreenOverlayBuffer`");
+            sb.AppendLine("- reusable wiring: config via `Navigation2D.Playground`, input via `default_input.json`, view modes via `viewmodes.json`, camera via virtual camera registry, telemetry via `ScreenOverlayBuffer`");
             return sb.ToString();
         }
 

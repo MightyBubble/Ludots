@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using Arch.LowLevel;
+using Ludots.Core.Collections;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.Spatial;
@@ -13,24 +13,44 @@ namespace Ludots.Core.Navigation2D.FlowField
     {
         private readonly CrowdSurface2D _surface;
         private readonly Dictionary<long, CrowdFlowTile2D> _tiles;
+        private readonly Stack<CrowdFlowTile2D> _tilePool;
         private readonly HashSet<long> _loadedTiles;
         private readonly Dictionary<long, int> _activeTileExpiryTicks;
         private readonly List<TileCandidate> _candidateTiles;
         private readonly HashSet<long> _selectedTileSet;
         private readonly List<long> _selectedTiles;
         private readonly List<long> _removalScratch;
-        private UnsafeQueue<long> _frontier;
+        private readonly HashSet<long> _manualGoalCellsSet;
+        private readonly List<long> _manualGoalCells;
+        private readonly HashSet<long> _frameGoalCellsSet;
+        private readonly List<long> _frameGoalCells;
+        private readonly PriorityQueue<long> _frontier;
+        private bool _hasLoadedTileSource;
 
         private readonly int _tileShift;
         private readonly int _tileMask;
         private readonly int _tileSizeCells;
 
-        private Fix64Vec2 _goalCm;
-        private Fix64 _goalRadiusCm;
-        private bool _hasGoal;
+        private bool _hasManualGoalBounds;
+        private int _manualGoalMinTileX;
+        private int _manualGoalMinTileY;
+        private int _manualGoalMaxTileX;
+        private int _manualGoalMaxTileY;
+        private bool _hasFrameGoalBounds;
+        private int _frameGoalMinTileX;
+        private int _frameGoalMinTileY;
+        private int _frameGoalMaxTileX;
+        private int _frameGoalMaxTileY;
         private bool _needsRebuild;
+        private bool _traversalCostDirty;
+        private bool _framePrepared;
+        private bool _forceFullSolve;
 
         private Navigation2DFlowStreamingConfig _streamingConfig;
+        private Navigation2DFlowCrowdConfig _crowdConfig;
+        private float _normalizedDistanceWeight;
+        private float _normalizedTimeWeight;
+        private float _discomfortWeight;
 
         private int _currentTick;
         private bool _hasDemandBounds;
@@ -61,53 +81,110 @@ namespace Ludots.Core.Navigation2D.FlowField
         public CrowdFlow2D(
             CrowdSurface2D surface,
             Navigation2DFlowStreamingConfig? streamingConfig = null,
+            Navigation2DFlowCrowdConfig? crowdConfig = null,
+            bool hasLoadedTileSource = false,
             int initialTileCapacity = 256,
+            int initialGoalCapacity = 1024,
             int initialFrontierCapacity = 1024)
         {
             _surface = surface ?? throw new ArgumentNullException(nameof(surface));
             _tiles = new Dictionary<long, CrowdFlowTile2D>(Math.Max(8, initialTileCapacity));
+            _tilePool = new Stack<CrowdFlowTile2D>(Math.Max(8, initialTileCapacity));
             _loadedTiles = new HashSet<long>();
             _activeTileExpiryTicks = new Dictionary<long, int>(Math.Max(8, initialTileCapacity));
             _candidateTiles = new List<TileCandidate>(Math.Max(8, initialTileCapacity));
             _selectedTileSet = new HashSet<long>(Math.Max(8, initialTileCapacity));
             _selectedTiles = new List<long>(Math.Max(8, initialTileCapacity));
             _removalScratch = new List<long>(Math.Max(8, initialTileCapacity));
-            _frontier = new UnsafeQueue<long>(Math.Max(16, initialFrontierCapacity));
+            _manualGoalCellsSet = new HashSet<long>(16);
+            _manualGoalCells = new List<long>(16);
+            _frameGoalCellsSet = new HashSet<long>(Math.Max(16, initialGoalCapacity));
+            _frameGoalCells = new List<long>(Math.Max(16, initialGoalCapacity));
+            _hasLoadedTileSource = hasLoadedTileSource;
 
             _tileSizeCells = surface.TileSizeCells;
             _tileMask = _tileSizeCells - 1;
             _tileShift = BitOperations.TrailingZeroCount((uint)_tileSizeCells);
-            _goalCm = default;
-            _goalRadiusCm = Fix64.Zero;
-            _hasGoal = false;
+            _hasManualGoalBounds = false;
+            _hasFrameGoalBounds = false;
             _needsRebuild = true;
+            _traversalCostDirty = true;
+            _framePrepared = false;
+            _forceFullSolve = false;
+
             _streamingConfig = streamingConfig ?? new Navigation2DFlowStreamingConfig();
+            _crowdConfig = crowdConfig ?? new Navigation2DFlowCrowdConfig();
             MaxPotential = _streamingConfig.MaxPotentialCells;
+            _frontier = new PriorityQueue<long>(EstimateFrontierCapacity(initialFrontierCapacity, _streamingConfig.MaxActiveTilesPerFlow));
+            NormalizeCostWeights();
         }
 
         public void ConfigureStreaming(Navigation2DFlowStreamingConfig config)
         {
             _streamingConfig = config ?? new Navigation2DFlowStreamingConfig();
             MaxPotential = _streamingConfig.MaxPotentialCells;
+            _frontier.EnsureCapacity(EstimateFrontierCapacity(_frontier.Capacity, _streamingConfig.MaxActiveTilesPerFlow));
             _needsRebuild = true;
+            _traversalCostDirty = true;
+        }
+
+        public void ConfigureCrowd(Navigation2DFlowCrowdConfig config)
+        {
+            _crowdConfig = config ?? new Navigation2DFlowCrowdConfig();
+            NormalizeCostWeights();
+            _needsRebuild = true;
+            _traversalCostDirty = true;
         }
 
         public void SetGoalPoint(in Fix64Vec2 goalCm, Fix64 radiusCm)
         {
-            bool changed = !_hasGoal || _goalCm.X != goalCm.X || _goalCm.Y != goalCm.Y || _goalRadiusCm != radiusCm;
-            _goalCm = goalCm;
-            _goalRadiusCm = radiusCm;
-            _hasGoal = true;
-            if (changed)
+            ClearManualGoalsInternal();
+            AddGoalPointInternal(
+                _manualGoalCellsSet,
+                _manualGoalCells,
+                ref _hasManualGoalBounds,
+                ref _manualGoalMinTileX,
+                ref _manualGoalMinTileY,
+                ref _manualGoalMaxTileX,
+                ref _manualGoalMaxTileY,
+                goalCm,
+                radiusCm);
+            _needsRebuild = true;
+        }
+
+        public void BeginGoalFrame()
+        {
+            if (_frameGoalCells.Count > 0 || _hasFrameGoalBounds)
             {
                 _needsRebuild = true;
             }
+
+            _frameGoalCellsSet.Clear();
+            _frameGoalCells.Clear();
+            _hasFrameGoalBounds = false;
+        }
+
+        public void AddFrameGoalPoint(in Fix64Vec2 goalCm, Fix64 radiusCm)
+        {
+            AddGoalPointInternal(
+                _frameGoalCellsSet,
+                _frameGoalCells,
+                ref _hasFrameGoalBounds,
+                ref _frameGoalMinTileX,
+                ref _frameGoalMinTileY,
+                ref _frameGoalMaxTileX,
+                ref _frameGoalMaxTileY,
+                goalCm,
+                radiusCm);
+            _needsRebuild = true;
         }
 
         public void BeginDemandFrame(int tick)
         {
             _currentTick = tick;
             _hasDemandBounds = false;
+            _framePrepared = false;
+            _forceFullSolve = false;
         }
 
         public void AddDemandPoint(in Fix64Vec2 positionCm)
@@ -129,31 +206,87 @@ namespace Ludots.Core.Navigation2D.FlowField
             if (tileY > _demandMaxTileY) _demandMaxTileY = tileY;
         }
 
+        public void PrepareFrame()
+        {
+            if (_framePrepared)
+            {
+                return;
+            }
+
+            ResetFrameInstrumentation();
+            RefreshActiveTiles();
+            _framePrepared = true;
+        }
+
+        public void MarkCrowdFieldsDirty()
+        {
+            _needsRebuild = true;
+            _forceFullSolve = true;
+            _traversalCostDirty = true;
+        }
+
+        public bool HasAnyGoals => _frameGoalCells.Count > 0 || _manualGoalCells.Count > 0;
+
         public bool IsTileActive(long tileKey) => _tiles.ContainsKey(tileKey);
+
+        public bool TryGetPotentialAtCell(int cellX, int cellY, out float potential)
+        {
+            if (!TryResolvePotentialSlot(cellX, cellY, out var values, out int index))
+            {
+                potential = float.PositiveInfinity;
+                return false;
+            }
+
+            potential = values![index];
+            return true;
+        }
 
         public void OnTileLoaded(long tileKey)
         {
             _loadedTiles.Add(tileKey);
         }
 
+        public void SetLoadedTileSourceEnabled(bool enabled)
+        {
+            if (_hasLoadedTileSource == enabled)
+            {
+                return;
+            }
+
+            _hasLoadedTileSource = enabled;
+            _loadedTiles.Clear();
+            _framePrepared = false;
+            _needsRebuild = true;
+            _traversalCostDirty = true;
+        }
+
         public void OnTileUnloaded(long tileKey)
         {
             _loadedTiles.Remove(tileKey);
             _activeTileExpiryTicks.Remove(tileKey);
-            if (_tiles.Remove(tileKey))
+            if (_tiles.Remove(tileKey, out var tile))
             {
                 _surface.ReleaseTile(tileKey);
+                tile.Reset();
+                _tilePool.Push(tile);
                 _needsRebuild = true;
+                _traversalCostDirty = true;
             }
         }
 
         public void Step(int iterations)
         {
-            ResetFrameInstrumentation();
-            RefreshActiveTiles();
-            if (iterations <= 0)
+            PrepareFrame();
+
+            if (iterations <= 0 && !_forceFullSolve)
             {
                 return;
+            }
+
+            if (_traversalCostDirty)
+            {
+                RecalculateTraversalCostField();
+                _traversalCostDirty = false;
             }
 
             if (_needsRebuild)
@@ -161,32 +294,10 @@ namespace Ludots.Core.Navigation2D.FlowField
                 Rebuild();
             }
 
+            DrainFrontier(_forceFullSolve ? int.MaxValue : iterations);
             if (_frontier.Count == 0)
             {
-                return;
-            }
-
-            const float DiagCost = 1.41421356f;
-            int remaining = iterations;
-            while (remaining-- > 0 && _frontier.Count > 0)
-            {
-                long cellKey = _frontier.Dequeue();
-                InstrumentedFrontierProcessedFrame++;
-                Nav2DKeyPacking.UnpackInt2(cellKey, out int cx, out int cy);
-                float current = GetPotential(cx, cy);
-                if (float.IsPositiveInfinity(current))
-                {
-                    continue;
-                }
-
-                TryRelaxNeighbor(cx + 1, cy, current, 1f);
-                TryRelaxNeighbor(cx - 1, cy, current, 1f);
-                TryRelaxNeighbor(cx, cy + 1, current, 1f);
-                TryRelaxNeighbor(cx, cy - 1, current, 1f);
-                TryRelaxNeighbor(cx + 1, cy + 1, current, DiagCost);
-                TryRelaxNeighbor(cx + 1, cy - 1, current, DiagCost);
-                TryRelaxNeighbor(cx - 1, cy + 1, current, DiagCost);
-                TryRelaxNeighbor(cx - 1, cy - 1, current, DiagCost);
+                _forceFullSolve = false;
             }
         }
 
@@ -194,9 +305,20 @@ namespace Ludots.Core.Navigation2D.FlowField
         {
             desiredVelocityCmPerSec = default;
 
-            if (_needsRebuild)
+            if (_needsRebuild || _traversalCostDirty || _frontier.Count > 0)
             {
-                Rebuild();
+                PrepareFrame();
+                if (_traversalCostDirty)
+                {
+                    RecalculateTraversalCostField();
+                    _traversalCostDirty = false;
+                }
+                if (_needsRebuild)
+                {
+                    Rebuild();
+                }
+
+                DrainFrontier(int.MaxValue);
             }
 
             _surface.WorldToCell(positionCm, out int cx, out int cy);
@@ -247,7 +369,7 @@ namespace Ludots.Core.Navigation2D.FlowField
 
         private void RefreshActiveTiles()
         {
-            if (!_streamingConfig.Enabled)
+            if (!_streamingConfig.Enabled && _hasLoadedTileSource)
             {
                 MirrorLoadedTiles();
                 return;
@@ -272,17 +394,12 @@ namespace Ludots.Core.Navigation2D.FlowField
 
             foreach (long tileKey in _tiles.Keys)
             {
-                if (!_loadedTiles.Contains(tileKey))
+                if (!IsTileSelectable(tileKey, minTileX, minTileY, maxTileX, maxTileY))
                 {
                     continue;
                 }
 
                 Nav2DKeyPacking.UnpackInt2(tileKey, out int tileX, out int tileY);
-                if (tileX < minTileX || tileX > maxTileX || tileY < minTileY || tileY > maxTileY)
-                {
-                    continue;
-                }
-
                 int distance = Math.Abs(tileX - priorityTileX) + Math.Abs(tileY - priorityTileY);
                 _candidateTiles.Add(new TileCandidate(tileKey, distance));
             }
@@ -293,7 +410,9 @@ namespace Ludots.Core.Navigation2D.FlowField
                 return priorityCompare != 0 ? priorityCompare : a.TileKey.CompareTo(b.TileKey);
             });
 
-            int maxActive = Math.Max(1, _streamingConfig.MaxActiveTilesPerFlow);
+            int maxActive = _streamingConfig.Enabled
+                ? Math.Max(1, _streamingConfig.MaxActiveTilesPerFlow)
+                : Math.Max(1, (maxTileX - minTileX + 1) * (maxTileY - minTileY + 1));
             int retainedCount = Math.Min(maxActive, _candidateTiles.Count);
             for (int i = 0; i < retainedCount; i++)
             {
@@ -305,11 +424,16 @@ namespace Ludots.Core.Navigation2D.FlowField
             InstrumentedRetainedTilesFrame = retainedCount;
             if (_selectedTiles.Count < maxActive)
             {
+                SelectGoalDemandCorridor(minTileX, minTileY, maxTileX, maxTileY, priorityTileX, priorityTileY, maxActive - _selectedTiles.Count);
+            }
+
+            if (_selectedTiles.Count < maxActive)
+            {
                 FillSelectionByPriority(minTileX, minTileY, maxTileX, maxTileY, priorityTileX, priorityTileY, maxActive - _selectedTiles.Count);
             }
 
             InstrumentedSelectedTilesFrame = _selectedTiles.Count;
-            int expiryTick = _currentTick + _streamingConfig.UnloadGraceTicks;
+            int expiryTick = _streamingConfig.Enabled ? _currentTick + _streamingConfig.UnloadGraceTicks : int.MaxValue;
             for (int i = 0; i < _selectedTiles.Count; i++)
             {
                 long tileKey = _selectedTiles[i];
@@ -334,13 +458,13 @@ namespace Ludots.Core.Navigation2D.FlowField
                 for (int dx = -radius; dx <= radius && remainingSlots > 0; dx++)
                 {
                     int dy = radius - Math.Abs(dx);
-                    if (TrySelectLoadedTile(priorityTileX + dx, priorityTileY + dy, minTileX, minTileY, maxTileX, maxTileY))
+                    if (TrySelectTile(priorityTileX + dx, priorityTileY + dy, minTileX, minTileY, maxTileX, maxTileY))
                     {
                         remainingSlots--;
                     }
 
                     if (dy != 0 && remainingSlots > 0 &&
-                        TrySelectLoadedTile(priorityTileX + dx, priorityTileY - dy, minTileX, minTileY, maxTileX, maxTileY))
+                        TrySelectTile(priorityTileX + dx, priorityTileY - dy, minTileX, minTileY, maxTileX, maxTileY))
                     {
                         remainingSlots--;
                     }
@@ -348,7 +472,37 @@ namespace Ludots.Core.Navigation2D.FlowField
             }
         }
 
-        private bool TrySelectLoadedTile(int tileX, int tileY, int minTileX, int minTileY, int maxTileX, int maxTileY)
+        private void SelectGoalDemandCorridor(int minTileX, int minTileY, int maxTileX, int maxTileY, int goalTileX, int goalTileY, int remainingSlots)
+        {
+            if (!_hasDemandBounds || remainingSlots <= 0)
+            {
+                return;
+            }
+
+            int demandTileX = (_demandMinTileX + _demandMaxTileX) >> 1;
+            int demandTileY = (_demandMinTileY + _demandMaxTileY) >> 1;
+            int dx = demandTileX - goalTileX;
+            int dy = demandTileY - goalTileY;
+            int steps = Math.Max(Math.Abs(dx), Math.Abs(dy));
+            if (steps <= 0)
+            {
+                TrySelectTile(goalTileX, goalTileY, minTileX, minTileY, maxTileX, maxTileY);
+                return;
+            }
+
+            for (int step = 0; step <= steps && remainingSlots > 0; step++)
+            {
+                float t = step / (float)steps;
+                int tileX = (int)MathF.Round(goalTileX + dx * t);
+                int tileY = (int)MathF.Round(goalTileY + dy * t);
+                if (TrySelectTile(tileX, tileY, minTileX, minTileY, maxTileX, maxTileY))
+                {
+                    remainingSlots--;
+                }
+            }
+        }
+
+        private bool TrySelectTile(int tileX, int tileY, int minTileX, int minTileY, int maxTileX, int maxTileY)
         {
             if (tileX < minTileX || tileX > maxTileX || tileY < minTileY || tileY > maxTileY)
             {
@@ -357,7 +511,12 @@ namespace Ludots.Core.Navigation2D.FlowField
 
             InstrumentedWindowTileChecksFrame++;
             long tileKey = Nav2DKeyPacking.PackInt2(tileX, tileY);
-            if (_selectedTileSet.Contains(tileKey) || _tiles.ContainsKey(tileKey) || !_loadedTiles.Contains(tileKey))
+            if (_selectedTileSet.Contains(tileKey) || _tiles.ContainsKey(tileKey))
+            {
+                return false;
+            }
+
+            if (_hasLoadedTileSource && !_loadedTiles.Contains(tileKey))
             {
                 return false;
             }
@@ -372,7 +531,13 @@ namespace Ludots.Core.Navigation2D.FlowField
             _removalScratch.Clear();
             foreach (var kvp in _activeTileExpiryTicks)
             {
-                if (_loadedTiles.Contains(kvp.Key) && kvp.Value >= _currentTick)
+                bool keep = kvp.Value >= _currentTick;
+                if (_hasLoadedTileSource && !_loadedTiles.Contains(kvp.Key))
+                {
+                    keep = false;
+                }
+
+                if (keep)
                 {
                     continue;
                 }
@@ -384,11 +549,14 @@ namespace Ludots.Core.Navigation2D.FlowField
             {
                 long tileKey = _removalScratch[i];
                 _activeTileExpiryTicks.Remove(tileKey);
-                if (_tiles.Remove(tileKey))
+                if (_tiles.Remove(tileKey, out var tile))
                 {
                     _surface.ReleaseTile(tileKey);
+                    tile.Reset();
+                    _tilePool.Push(tile);
                     InstrumentedEvictedTilesFrame++;
                     _needsRebuild = true;
+                    _traversalCostDirty = true;
                 }
             }
         }
@@ -396,25 +564,24 @@ namespace Ludots.Core.Navigation2D.FlowField
         private bool TryBuildActivationWindow(out int minTileX, out int minTileY, out int maxTileX, out int maxTileY, out int priorityTileX, out int priorityTileY)
         {
             int radius = Math.Max(0, _streamingConfig.ActivationRadiusTiles);
-            if (_hasGoal)
+            if (TryGetActiveGoalBounds(out int goalMinTileX, out int goalMinTileY, out int goalMaxTileX, out int goalMaxTileY))
             {
-                WorldToTile(_goalCm, out int goalTileX, out int goalTileY);
-                priorityTileX = goalTileX;
-                priorityTileY = goalTileY;
+                priorityTileX = (goalMinTileX + goalMaxTileX) >> 1;
+                priorityTileY = (goalMinTileY + goalMaxTileY) >> 1;
 
                 if (_hasDemandBounds)
                 {
-                    minTileX = Math.Min(_demandMinTileX, goalTileX) - radius;
-                    minTileY = Math.Min(_demandMinTileY, goalTileY) - radius;
-                    maxTileX = Math.Max(_demandMaxTileX, goalTileX) + radius;
-                    maxTileY = Math.Max(_demandMaxTileY, goalTileY) + radius;
+                    minTileX = Math.Min(_demandMinTileX, goalMinTileX) - radius;
+                    minTileY = Math.Min(_demandMinTileY, goalMinTileY) - radius;
+                    maxTileX = Math.Max(_demandMaxTileX, goalMaxTileX) + radius;
+                    maxTileY = Math.Max(_demandMaxTileY, goalMaxTileY) + radius;
                     return true;
                 }
 
-                minTileX = goalTileX - radius;
-                minTileY = goalTileY - radius;
-                maxTileX = goalTileX + radius;
-                maxTileY = goalTileY + radius;
+                minTileX = goalMinTileX - radius;
+                minTileY = goalMinTileY - radius;
+                maxTileX = goalMaxTileX + radius;
+                maxTileY = goalMaxTileY + radius;
                 return true;
             }
 
@@ -460,8 +627,11 @@ namespace Ludots.Core.Navigation2D.FlowField
 
             priorityTileX = Math.Clamp(priorityTileX, minTileX, maxTileX);
             priorityTileY = Math.Clamp(priorityTileY, minTileY, maxTileY);
-            budgetClamped |= ClampAxisAroundPivot(ref minTileX, ref maxTileX, _streamingConfig.MaxActivationWindowWidthTiles, priorityTileX);
-            budgetClamped |= ClampAxisAroundPivot(ref minTileY, ref maxTileY, _streamingConfig.MaxActivationWindowHeightTiles, priorityTileY);
+            if (_streamingConfig.Enabled)
+            {
+                budgetClamped |= ClampAxisAroundPivot(ref minTileX, ref maxTileX, _streamingConfig.MaxActivationWindowWidthTiles, priorityTileX);
+                budgetClamped |= ClampAxisAroundPivot(ref minTileY, ref maxTileY, _streamingConfig.MaxActivationWindowHeightTiles, priorityTileY);
+            }
 
             InstrumentedWindowWorldClampedFrame = worldClamped;
             InstrumentedWindowBudgetClampedFrame = budgetClamped;
@@ -538,15 +708,18 @@ namespace Ludots.Core.Navigation2D.FlowField
             {
                 long tileKey = _removalScratch[i];
                 _activeTileExpiryTicks.Remove(tileKey);
-                if (_tiles.Remove(tileKey))
+                if (_tiles.Remove(tileKey, out var tile))
                 {
                     _surface.ReleaseTile(tileKey);
+                    tile.Reset();
+                    _tilePool.Push(tile);
                     InstrumentedEvictedTilesFrame++;
                     _needsRebuild = true;
+                    _traversalCostDirty = true;
                 }
             }
 
-            if (addedTile && _hasGoal)
+            if (addedTile && HasAnyGoals)
             {
                 _needsRebuild = true;
             }
@@ -561,8 +734,11 @@ namespace Ludots.Core.Navigation2D.FlowField
             }
 
             _surface.RetainTile(tileKey);
-            _tiles[tileKey] = new CrowdFlowTile2D(_tileSizeCells);
-            if (allowIncrementalSeeding && _hasGoal && !_needsRebuild)
+            var tile = _tilePool.Count > 0 ? _tilePool.Pop() : new CrowdFlowTile2D(_tileSizeCells);
+            tile.Reset();
+            _tiles[tileKey] = tile;
+            _traversalCostDirty = true;
+            if (allowIncrementalSeeding && HasAnyGoals && !_needsRebuild && !_forceFullSolve)
             {
                 SeedTileIncrementally(tileKey);
             }
@@ -583,24 +759,18 @@ namespace Ludots.Core.Navigation2D.FlowField
 
             for (int y = minCellY; y <= maxCellY; y++)
             {
-                TrySeedCellFromNeighbor(minCellX, y, minCellX - 1, y, 1f);
-                TrySeedCellFromNeighbor(maxCellX, y, maxCellX + 1, y, 1f);
+                TrySeedCellFromNeighbor(minCellX, y, minCellX - 1, y, FlowDirection.PosX);
+                TrySeedCellFromNeighbor(maxCellX, y, maxCellX + 1, y, FlowDirection.NegX);
             }
 
             for (int x = minCellX; x <= maxCellX; x++)
             {
-                TrySeedCellFromNeighbor(x, minCellY, x, minCellY - 1, 1f);
-                TrySeedCellFromNeighbor(x, maxCellY, x, maxCellY + 1, 1f);
+                TrySeedCellFromNeighbor(x, minCellY, x, minCellY - 1, FlowDirection.PosY);
+                TrySeedCellFromNeighbor(x, maxCellY, x, maxCellY + 1, FlowDirection.NegY);
             }
-
-            const float DiagCost = 1.41421356f;
-            TrySeedCellFromNeighbor(minCellX, minCellY, minCellX - 1, minCellY - 1, DiagCost);
-            TrySeedCellFromNeighbor(minCellX, maxCellY, minCellX - 1, maxCellY + 1, DiagCost);
-            TrySeedCellFromNeighbor(maxCellX, minCellY, maxCellX + 1, minCellY - 1, DiagCost);
-            TrySeedCellFromNeighbor(maxCellX, maxCellY, maxCellX + 1, maxCellY + 1, DiagCost);
         }
 
-        private void TrySeedCellFromNeighbor(int targetCellX, int targetCellY, int sourceCellX, int sourceCellY, float cost)
+        private void TrySeedCellFromNeighbor(int targetCellX, int targetCellY, int sourceCellX, int sourceCellY, FlowDirection reverseDirection)
         {
             if (_surface.IsBlockedCell(targetCellX, targetCellY))
             {
@@ -613,26 +783,66 @@ namespace Ludots.Core.Navigation2D.FlowField
                 return;
             }
 
+            float cost = GetDirectionalTraversalCost(targetCellX, targetCellY, reverseDirection);
+            if (float.IsPositiveInfinity(cost))
+            {
+                return;
+            }
+
             float next = source + cost;
             if (next > MaxPotential || !TrySetPotentialMin(targetCellX, targetCellY, next))
             {
                 return;
             }
 
-            EnqueueCell(targetCellX, targetCellY);
+            EnqueueCell(targetCellX, targetCellY, next);
+        }
+
+        private void RecalculateTraversalCostField()
+        {
+            foreach (var kvp in _tiles)
+            {
+                Nav2DKeyPacking.UnpackInt2(kvp.Key, out int tileX, out int tileY);
+                int baseCellX = tileX << _tileShift;
+                int baseCellY = tileY << _tileShift;
+                var tile = kvp.Value;
+                int index = 0;
+
+                for (int localY = 0; localY < _tileSizeCells; localY++)
+                {
+                    int cellY = baseCellY + localY;
+                    for (int localX = 0; localX < _tileSizeCells; localX++, index++)
+                    {
+                        int cellX = baseCellX + localX;
+                        if (_surface.IsBlockedCell(cellX, cellY))
+                        {
+                            tile.CostPosX[index] = float.PositiveInfinity;
+                            tile.CostNegX[index] = float.PositiveInfinity;
+                            tile.CostPosY[index] = float.PositiveInfinity;
+                            tile.CostNegY[index] = float.PositiveInfinity;
+                            continue;
+                        }
+
+                        tile.CostPosX[index] = ComputeDirectionalTraversalCost(cellX, cellY, FlowDirection.PosX);
+                        tile.CostNegX[index] = ComputeDirectionalTraversalCost(cellX, cellY, FlowDirection.NegX);
+                        tile.CostPosY[index] = ComputeDirectionalTraversalCost(cellX, cellY, FlowDirection.PosY);
+                        tile.CostNegY[index] = ComputeDirectionalTraversalCost(cellX, cellY, FlowDirection.NegY);
+                    }
+                }
+            }
         }
 
         private void Rebuild()
         {
             foreach (var tile in _tiles.Values)
             {
-                tile.Reset();
+                Array.Fill(tile.Potential, float.PositiveInfinity);
             }
 
             ClearFrontier();
             InstrumentedFullRebuilds++;
 
-            if (!_hasGoal)
+            if (!HasAnyGoals)
             {
                 _needsRebuild = false;
                 return;
@@ -644,75 +854,83 @@ namespace Ludots.Core.Navigation2D.FlowField
 
         private void SeedGoalCells(int minCellX, int minCellY, int maxCellX, int maxCellY)
         {
-            _surface.WorldToCell(_goalCm, out int gx, out int gy);
-            if (_goalRadiusCm > Fix64.Zero)
+            List<long> goalCells = GetActiveGoalCells();
+            for (int i = 0; i < goalCells.Count; i++)
             {
-                int radius = (_goalRadiusCm / _surface.CellSizeCm).CeilToInt();
-                int seedMinX = Math.Max(gx - radius, minCellX);
-                int seedMinY = Math.Max(gy - radius, minCellY);
-                int seedMaxX = Math.Min(gx + radius, maxCellX);
-                int seedMaxY = Math.Min(gy + radius, maxCellY);
-                for (int y = seedMinY; y <= seedMaxY; y++)
+                Nav2DKeyPacking.UnpackInt2(goalCells[i], out int goalCellX, out int goalCellY);
+                if (goalCellX < minCellX || goalCellX > maxCellX || goalCellY < minCellY || goalCellY > maxCellY)
                 {
-                    for (int x = seedMinX; x <= seedMaxX; x++)
-                    {
-                        if (_surface.IsBlockedCell(x, y) || !TrySetPotentialMin(x, y, 0f))
-                        {
-                            continue;
-                        }
-
-                        InstrumentedGoalSeedCellsFrame++;
-                        EnqueueCell(x, y);
-                    }
+                    continue;
                 }
 
-                return;
-            }
+                if (_surface.IsBlockedCell(goalCellX, goalCellY) || !TrySetPotentialMin(goalCellX, goalCellY, 0f))
+                {
+                    continue;
+                }
 
-            if (_surface.IsBlockedCell(gx, gy) || gx < minCellX || gx > maxCellX || gy < minCellY || gy > maxCellY || !TrySetPotentialMin(gx, gy, 0f))
+                InstrumentedGoalSeedCellsFrame++;
+                EnqueueCell(goalCellX, goalCellY, 0f);
+            }
+        }
+
+        private void DrainFrontier(int iterations)
+        {
+            int remaining = iterations;
+            while (_frontier.TryDequeue(out long cellKey, out float queuedPotential))
             {
-                return;
-            }
+                if (iterations != int.MaxValue && remaining-- <= 0)
+                {
+                    _frontier.Enqueue(cellKey, queuedPotential);
+                    break;
+                }
 
-            InstrumentedGoalSeedCellsFrame++;
-            EnqueueCell(gx, gy);
+                InstrumentedFrontierProcessedFrame++;
+                Nav2DKeyPacking.UnpackInt2(cellKey, out int cx, out int cy);
+                float current = GetPotential(cx, cy);
+                if (float.IsPositiveInfinity(current) || queuedPotential > current + 1e-4f)
+                {
+                    continue;
+                }
+
+                TryRelaxNeighbor(cx + 1, cy, current, FlowDirection.NegX);
+                TryRelaxNeighbor(cx - 1, cy, current, FlowDirection.PosX);
+                TryRelaxNeighbor(cx, cy + 1, current, FlowDirection.NegY);
+                TryRelaxNeighbor(cx, cy - 1, current, FlowDirection.PosY);
+            }
         }
 
         private void ClearFrontier()
         {
-            while (_frontier.Count > 0)
-            {
-                _frontier.Dequeue();
-            }
+            _frontier.Clear();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void EnqueueCell(int cellX, int cellY)
+        private void EnqueueCell(int cellX, int cellY, float priority)
         {
-            _frontier.Enqueue(Nav2DKeyPacking.PackInt2(cellX, cellY));
+            _frontier.Enqueue(Nav2DKeyPacking.PackInt2(cellX, cellY), priority);
             InstrumentedFrontierEnqueuesFrame++;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private float GetPotential(int cellX, int cellY)
         {
-            if (!TryResolvePotentialSlot(cellX, cellY, out float[]? potential, out int index))
+            if (!TryResolvePotentialSlot(cellX, cellY, out var potential, out int index))
             {
                 return float.PositiveInfinity;
             }
 
-            return potential[index];
+            return potential![index];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TrySetPotentialMin(int cellX, int cellY, float value)
         {
-            if (!TryResolvePotentialSlot(cellX, cellY, out float[]? potential, out int index))
+            if (!TryResolvePotentialSlot(cellX, cellY, out var potential, out int index))
             {
                 return false;
             }
 
-            if (value >= potential[index])
+            if (value >= potential![index])
             {
                 return false;
             }
@@ -740,15 +958,111 @@ namespace Ludots.Core.Navigation2D.FlowField
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void TryRelaxNeighbor(int nx, int ny, float current, float cost)
+        private bool TryResolveFlowTile(int cellX, int cellY, out CrowdFlowTile2D? tile, out int index)
         {
-            float next = current + cost;
-            if (next > MaxPotential || _surface.IsBlockedCell(nx, ny) || !TrySetPotentialMin(nx, ny, next))
+            long tileKey = Nav2DKeyPacking.PackInt2(cellX >> _tileShift, cellY >> _tileShift);
+            if (!_tiles.TryGetValue(tileKey, out tile))
+            {
+                index = 0;
+                return false;
+            }
+
+            int lx = cellX & _tileMask;
+            int ly = cellY & _tileMask;
+            index = ly * _tileSizeCells + lx;
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TryRelaxNeighbor(int nx, int ny, float current, FlowDirection reverseDirection)
+        {
+            if (_surface.IsBlockedCell(nx, ny))
             {
                 return;
             }
 
-            EnqueueCell(nx, ny);
+            float cost = GetDirectionalTraversalCost(nx, ny, reverseDirection);
+            if (float.IsPositiveInfinity(cost))
+            {
+                return;
+            }
+
+            float next = current + cost;
+            if (next > MaxPotential || !TrySetPotentialMin(nx, ny, next))
+            {
+                return;
+            }
+
+            EnqueueCell(nx, ny, next);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private float GetDirectionalTraversalCost(int cellX, int cellY, FlowDirection direction)
+        {
+            if (!TryResolveFlowTile(cellX, cellY, out var tile, out int index))
+            {
+                return float.PositiveInfinity;
+            }
+
+            return direction switch
+            {
+                FlowDirection.PosX => tile!.CostPosX[index],
+                FlowDirection.NegX => tile!.CostNegX[index],
+                FlowDirection.PosY => tile!.CostPosY[index],
+                _ => tile!.CostNegY[index],
+            };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private float ComputeDirectionalTraversalCost(int cellX, int cellY, FlowDirection direction)
+        {
+            GetDirectionOffset(direction, out int dx, out int dy, out Vector2 directionVector);
+            int targetCellX = cellX + dx;
+            int targetCellY = cellY + dy;
+
+            if (_surface.IsBlockedCell(targetCellX, targetCellY) || !TryResolveFlowTile(targetCellX, targetCellY, out _, out _))
+            {
+                return float.PositiveInfinity;
+            }
+
+            float density = 0f;
+            _surface.TryGetDensityCell(targetCellX, targetCellY, out density);
+
+            float discomfort = 0f;
+            _surface.TryGetDiscomfortCell(targetCellX, targetCellY, out discomfort);
+
+            Vector2 averageVelocity = Vector2.Zero;
+            _surface.TryGetAverageVelocityCell(targetCellX, targetCellY, out averageVelocity);
+
+            float speedFactor = ComputeDirectionalSpeedFactor(averageVelocity, directionVector, density);
+            return (_normalizedDistanceWeight + (_normalizedTimeWeight / MathF.Max(speedFactor, 0.01f))) + (_discomfortWeight * discomfort);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private float ComputeDirectionalSpeedFactor(in Vector2 averageVelocity, in Vector2 direction, float density)
+        {
+            if (!_crowdConfig.Enabled)
+            {
+                return 1f;
+            }
+
+            float densityRange = Math.Max(_crowdConfig.Density.Max - _crowdConfig.Density.Min, 1e-5f);
+            float densityLerp = Math.Clamp((density - _crowdConfig.Density.Min) / densityRange, 0f, 1f);
+            float projectedFlow = Vector2.Dot(averageVelocity, direction) / Math.Max(_crowdConfig.Speed.FlowVelocityScaleCmPerSec, 1f);
+            float flowSpeed = Math.Clamp(projectedFlow, _crowdConfig.Speed.MinFactor, _crowdConfig.Speed.MaxFactor);
+            return Math.Clamp(Lerp(_crowdConfig.Speed.MaxFactor, flowSpeed, densityLerp), _crowdConfig.Speed.MinFactor, _crowdConfig.Speed.MaxFactor);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsTileSelectable(long tileKey, int minTileX, int minTileY, int maxTileX, int maxTileY)
+        {
+            if (_hasLoadedTileSource && !_loadedTiles.Contains(tileKey))
+            {
+                return false;
+            }
+
+            Nav2DKeyPacking.UnpackInt2(tileKey, out int tileX, out int tileY);
+            return tileX >= minTileX && tileX <= maxTileX && tileY >= minTileY && tileY <= maxTileY;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -757,6 +1071,147 @@ namespace Ludots.Core.Navigation2D.FlowField
             _surface.WorldToCell(worldCm, out int cellX, out int cellY);
             tileX = cellX >> _tileShift;
             tileY = cellY >> _tileShift;
+        }
+
+        private void NormalizeCostWeights()
+        {
+            float distanceWeight = Math.Max(0f, _crowdConfig.Cost.DistanceWeight);
+            float timeWeight = Math.Max(0f, _crowdConfig.Cost.TimeWeight);
+            if (_crowdConfig.Cost.NormalizeDistanceAndTimeWeights)
+            {
+                float sum = distanceWeight + timeWeight;
+                if (sum > 1e-6f)
+                {
+                    float inv = 1f / sum;
+                    distanceWeight *= inv;
+                    timeWeight *= inv;
+                }
+                else
+                {
+                    distanceWeight = 1f;
+                    timeWeight = 0f;
+                }
+            }
+            else if (distanceWeight <= 1e-6f && timeWeight <= 1e-6f)
+            {
+                distanceWeight = 1f;
+            }
+
+            _normalizedDistanceWeight = distanceWeight;
+            _normalizedTimeWeight = timeWeight;
+            _discomfortWeight = Math.Max(0f, _crowdConfig.Cost.DiscomfortWeight);
+        }
+
+        private void ClearManualGoalsInternal()
+        {
+            _manualGoalCellsSet.Clear();
+            _manualGoalCells.Clear();
+            _hasManualGoalBounds = false;
+        }
+
+        private void AddGoalPointInternal(
+            HashSet<long> goalSet,
+            List<long> goalCells,
+            ref bool hasBounds,
+            ref int minTileX,
+            ref int minTileY,
+            ref int maxTileX,
+            ref int maxTileY,
+            in Fix64Vec2 goalCm,
+            Fix64 radiusCm)
+        {
+            _surface.WorldToCell(goalCm, out int goalCellX, out int goalCellY);
+            int radiusCells = radiusCm > Fix64.Zero
+                ? (radiusCm / _surface.CellSizeCm).CeilToInt()
+                : 0;
+
+            for (int cellY = goalCellY - radiusCells; cellY <= goalCellY + radiusCells; cellY++)
+            {
+                for (int cellX = goalCellX - radiusCells; cellX <= goalCellX + radiusCells; cellX++)
+                {
+                    TryAddGoalCell(
+                        goalSet,
+                        goalCells,
+                        ref hasBounds,
+                        ref minTileX,
+                        ref minTileY,
+                        ref maxTileX,
+                        ref maxTileY,
+                        cellX,
+                        cellY);
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TryAddGoalCell(
+            HashSet<long> goalSet,
+            List<long> goalCells,
+            ref bool hasBounds,
+            ref int minTileX,
+            ref int minTileY,
+            ref int maxTileX,
+            ref int maxTileY,
+            int cellX,
+            int cellY)
+        {
+            if (_surface.IsBlockedCell(cellX, cellY))
+            {
+                return;
+            }
+
+            long goalKey = Nav2DKeyPacking.PackInt2(cellX, cellY);
+            if (!goalSet.Add(goalKey))
+            {
+                return;
+            }
+
+            goalCells.Add(goalKey);
+            int tileX = cellX >> _tileShift;
+            int tileY = cellY >> _tileShift;
+            if (!hasBounds)
+            {
+                minTileX = maxTileX = tileX;
+                minTileY = maxTileY = tileY;
+                hasBounds = true;
+                return;
+            }
+
+            if (tileX < minTileX) minTileX = tileX;
+            if (tileY < minTileY) minTileY = tileY;
+            if (tileX > maxTileX) maxTileX = tileX;
+            if (tileY > maxTileY) maxTileY = tileY;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private List<long> GetActiveGoalCells()
+        {
+            return _frameGoalCells.Count > 0 ? _frameGoalCells : _manualGoalCells;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TryGetActiveGoalBounds(out int minTileX, out int minTileY, out int maxTileX, out int maxTileY)
+        {
+            if (_frameGoalCells.Count > 0 && _hasFrameGoalBounds)
+            {
+                minTileX = _frameGoalMinTileX;
+                minTileY = _frameGoalMinTileY;
+                maxTileX = _frameGoalMaxTileX;
+                maxTileY = _frameGoalMaxTileY;
+                return true;
+            }
+
+            if (_manualGoalCells.Count > 0 && _hasManualGoalBounds)
+            {
+                minTileX = _manualGoalMinTileX;
+                minTileY = _manualGoalMinTileY;
+                maxTileX = _manualGoalMaxTileX;
+                maxTileY = _manualGoalMaxTileY;
+                return true;
+            }
+
+            minTileX = minTileY = maxTileX = maxTileY = 0;
+            return false;
         }
 
         private void ResetFrameInstrumentation()
@@ -778,9 +1233,58 @@ namespace Ludots.Core.Navigation2D.FlowField
 
         public void Dispose()
         {
-            _frontier.Dispose();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void GetDirectionOffset(FlowDirection direction, out int dx, out int dy, out Vector2 vector)
+        {
+            switch (direction)
+            {
+                case FlowDirection.PosX:
+                    dx = 1;
+                    dy = 0;
+                    vector = Vector2.UnitX;
+                    break;
+                case FlowDirection.NegX:
+                    dx = -1;
+                    dy = 0;
+                    vector = -Vector2.UnitX;
+                    break;
+                case FlowDirection.PosY:
+                    dx = 0;
+                    dy = 1;
+                    vector = Vector2.UnitY;
+                    break;
+                default:
+                    dx = 0;
+                    dy = -1;
+                    vector = -Vector2.UnitY;
+                    break;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int EstimateFrontierCapacity(int minimumCapacity, int maxActiveTiles)
+        {
+            int activeTiles = Math.Max(1, maxActiveTiles);
+            int activeCells = activeTiles * _tileSizeCells * _tileSizeCells;
+            return Math.Max(minimumCapacity, activeCells);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float Lerp(float a, float b, float t)
+        {
+            return a + (b - a) * t;
         }
 
         private readonly record struct TileCandidate(long TileKey, int Priority);
+
+        private enum FlowDirection : byte
+        {
+            PosX = 0,
+            NegX = 1,
+            PosY = 2,
+            NegY = 3,
+        }
     }
 }

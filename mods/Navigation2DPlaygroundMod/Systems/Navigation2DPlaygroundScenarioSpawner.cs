@@ -94,6 +94,78 @@ namespace Navigation2DPlaygroundMod.Systems
                 blockerCount);
         }
 
+        public static int SpawnDynamicBatch(
+            World world,
+            int teamId,
+            Vector2 centerCm,
+            int count,
+            int spacingCm,
+            int goalRadiusCm)
+        {
+            GetGridLayout(count, out int cols, out int rows);
+            int spawned = 0;
+            for (int index = 0; index < count; index++)
+            {
+                GetGridCell(index, cols, out int row, out int col);
+                Vector2 offset = new(
+                    GetCenteredOffset(col, cols, spacingCm),
+                    GetCenteredOffset(row, rows, spacingCm));
+                Vector2 position = centerCm + offset;
+                SpawnDynamicAgent(world, teamId, position, position, goalRadiusCm, flowId: null);
+                spawned++;
+            }
+
+            return spawned;
+        }
+
+        public static int SpawnBlockerBatch(World world, Vector2 centerCm, int count, int spacingCm, int radiusCm)
+        {
+            GetGridLayout(count, out int cols, out int rows);
+            int spawned = 0;
+            for (int index = 0; index < count; index++)
+            {
+                GetGridCell(index, cols, out int row, out int col);
+                int x = (int)MathF.Round(centerCm.X) + GetCenteredOffset(col, cols, spacingCm);
+                int y = (int)MathF.Round(centerCm.Y) + GetCenteredOffset(row, rows, spacingCm);
+                SpawnBlocker(world, x, y, radiusCm);
+                spawned++;
+            }
+
+            return spawned;
+        }
+
+        public static void ApplyMoveFormation(
+            World world,
+            ReadOnlySpan<Entity> agents,
+            Vector2 targetCm,
+            int spacingCm,
+            int goalRadiusCm)
+        {
+            GetGridLayout(agents.Length, out int cols, out int rows);
+            int assigned = 0;
+            for (int i = 0; i < agents.Length; i++)
+            {
+                Entity entity = agents[i];
+                if (entity == Entity.Null || !world.IsAlive(entity) || !world.Has<NavGoal2D>(entity) || world.Has<NavPlaygroundBlocker>(entity))
+                {
+                    continue;
+                }
+
+                GetGridCell(assigned, cols, out int row, out int col);
+                Vector2 offset = new(
+                    GetCenteredOffset(col, cols, spacingCm),
+                    GetCenteredOffset(row, rows, spacingCm));
+
+                ref var goal = ref world.Get<NavGoal2D>(entity);
+                goal.Kind = NavGoalKind2D.Point;
+                goal.TargetCm = Fix64Vec2.FromInt(
+                    (int)MathF.Round(targetCm.X + offset.X),
+                    (int)MathF.Round(targetCm.Y + offset.Y));
+                goal.RadiusCm = Fix64.FromInt(goalRadiusCm);
+                assigned++;
+            }
+        }
+
         private static int SpawnPassThrough(World world, Navigation2DPlaygroundScenarioConfig scenario, int agentsPerTeam)
         {
             CreateFlowGoal(world, 0, scenario.GoalOffsetCm, 0, scenario.GoalRadiusCm);
@@ -219,11 +291,49 @@ namespace Navigation2DPlaygroundMod.Systems
 
             var position = Fix64Vec2.FromVector2(start);
             var goalPosition = Fix64Vec2.FromVector2(goal);
+            bool controllable = teamId == 0;
             if (flowId.HasValue)
+            {
+                if (controllable)
+                {
+                    world.Create(
+                        new NavAgent2D(),
+                        new NavFlowBinding2D { SurfaceId = 0, FlowId = flowId.Value },
+                        new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = goalPosition, RadiusCm = Fix64.FromInt(goalRadiusCm) },
+                        kinematics,
+                        new Position2D { Value = position },
+                        Velocity2D.Zero,
+                        Mass2D.FromFloat(1f, 1f),
+                        new WorldPositionCm { Value = position },
+                        new PreviousWorldPositionCm { Value = position },
+                        VisualTransform.Default,
+                        new CullState { IsVisible = true, LOD = LODLevel.High },
+                        new NavPlaygroundTeam { Id = (byte)teamId },
+                        new NavPlaygroundControllable());
+                }
+                else
+                {
+                    world.Create(
+                        new NavAgent2D(),
+                        new NavFlowBinding2D { SurfaceId = 0, FlowId = flowId.Value },
+                        new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = goalPosition, RadiusCm = Fix64.FromInt(goalRadiusCm) },
+                        kinematics,
+                        new Position2D { Value = position },
+                        Velocity2D.Zero,
+                        Mass2D.FromFloat(1f, 1f),
+                        new WorldPositionCm { Value = position },
+                        new PreviousWorldPositionCm { Value = position },
+                        VisualTransform.Default,
+                        new CullState { IsVisible = true, LOD = LODLevel.High },
+                        new NavPlaygroundTeam { Id = (byte)teamId });
+                }
+                return;
+            }
+
+            if (controllable)
             {
                 world.Create(
                     new NavAgent2D(),
-                    new NavFlowBinding2D { SurfaceId = 0, FlowId = flowId.Value },
                     new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = goalPosition, RadiusCm = Fix64.FromInt(goalRadiusCm) },
                     kinematics,
                     new Position2D { Value = position },
@@ -232,21 +342,25 @@ namespace Navigation2DPlaygroundMod.Systems
                     new WorldPositionCm { Value = position },
                     new PreviousWorldPositionCm { Value = position },
                     VisualTransform.Default,
-                    new NavPlaygroundTeam { Id = (byte)teamId });
-                return;
+                    new CullState { IsVisible = true, LOD = LODLevel.High },
+                    new NavPlaygroundTeam { Id = (byte)teamId },
+                    new NavPlaygroundControllable());
             }
-
-            world.Create(
-                new NavAgent2D(),
-                new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = goalPosition, RadiusCm = Fix64.FromInt(goalRadiusCm) },
-                kinematics,
-                new Position2D { Value = position },
-                Velocity2D.Zero,
-                Mass2D.FromFloat(1f, 1f),
-                new WorldPositionCm { Value = position },
-                new PreviousWorldPositionCm { Value = position },
-                VisualTransform.Default,
-                new NavPlaygroundTeam { Id = (byte)teamId });
+            else
+            {
+                world.Create(
+                    new NavAgent2D(),
+                    new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = goalPosition, RadiusCm = Fix64.FromInt(goalRadiusCm) },
+                    kinematics,
+                    new Position2D { Value = position },
+                    Velocity2D.Zero,
+                    Mass2D.FromFloat(1f, 1f),
+                    new WorldPositionCm { Value = position },
+                    new PreviousWorldPositionCm { Value = position },
+                    VisualTransform.Default,
+                    new CullState { IsVisible = true, LOD = LODLevel.High },
+                    new NavPlaygroundTeam { Id = (byte)teamId });
+            }
         }
 
         private static int SpawnVerticalGate(World world, int corridorHalfWidthCm, int blockerRadiusCm, int blockerCount, int blockerSpacingCm)
@@ -313,6 +427,7 @@ namespace Navigation2DPlaygroundMod.Systems
                 new WorldPositionCm { Value = position },
                 new PreviousWorldPositionCm { Value = position },
                 VisualTransform.Default,
+                new CullState { IsVisible = true, LOD = LODLevel.High },
                 new NavPlaygroundTeam { Id = byte.MaxValue },
                 new NavPlaygroundBlocker());
         }
@@ -332,7 +447,7 @@ namespace Navigation2DPlaygroundMod.Systems
             return new Vector2(MathF.Cos(angleRad) * radius, MathF.Sin(angleRad) * radius);
         }
 
-        private static void GetGridLayout(int count, out int cols, out int rows)
+        public static void GetGridLayout(int count, out int cols, out int rows)
         {
             if (count <= 0)
             {
@@ -345,13 +460,13 @@ namespace Navigation2DPlaygroundMod.Systems
             rows = (int)Math.Ceiling(count / (double)cols);
         }
 
-        private static void GetGridCell(int index, int cols, out int row, out int col)
+        public static void GetGridCell(int index, int cols, out int row, out int col)
         {
             row = cols <= 0 ? 0 : index / cols;
             col = cols <= 0 ? 0 : index % cols;
         }
 
-        private static int GetCenteredOffset(int index, int count, int spacingCm)
+        public static int GetCenteredOffset(int index, int count, int spacingCm)
         {
             return count <= 0 ? 0 : -((count - 1) * spacingCm / 2) + index * spacingCm;
         }

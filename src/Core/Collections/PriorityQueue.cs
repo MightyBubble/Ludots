@@ -28,6 +28,7 @@ namespace Ludots.Core.Collections
         // For now, let's keep it simple: Binary Min-Heap.
 
         public int Count => _count;
+        public int Capacity => _nodes.Length;
 
         public PriorityQueue(int capacity = 64)
         {
@@ -98,6 +99,16 @@ namespace Ludots.Core.Collections
         {
             Array.Clear(_nodes, 0, _count);
             _count = 0;
+        }
+
+        public void EnsureCapacity(int capacity)
+        {
+            if (capacity <= _nodes.Length)
+            {
+                return;
+            }
+
+            Resize(capacity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

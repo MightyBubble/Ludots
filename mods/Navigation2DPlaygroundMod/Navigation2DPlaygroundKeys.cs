@@ -13,5 +13,6 @@ namespace Navigation2DPlaygroundMod
         public static readonly ServiceKey<int> ScenarioTeamCount = new("Navigation2DPlayground_ScenarioTeamCount");
         public static readonly ServiceKey<string> ScenarioId = new("Navigation2DPlayground_ScenarioId");
         public static readonly ServiceKey<string> ScenarioName = new("Navigation2DPlayground_ScenarioName");
+        public static readonly ServiceKey<int> SpawnBatch = new("Navigation2DPlayground_SpawnBatch");
     }
 }
