@@ -54,49 +54,119 @@ on_incoming_damage:
 
 ## Configuration Example
 
-```json
-{
-  "abilities": [
-    {
-      "id": "directional_counter",
-      "inputBinding": "Circle",
-      "inputMode": "Press",
-      "directionalInput": true,
-      "onActivate": {
-        "conditionalBranch": {
-          "condition": {
-            "type": "And",
-            "conditions": [
-              { "type": "IncomingAttackWithinTicks", "ticks": 6 },
-              { "type": "DirectionTowardAttacker", "tolerance": 30 }
-            ]
-          },
-          "ifTrue": {
-            "effects": [
-              { "type": "PlayAnimation", "id": "mikiri_counter", "duration": 25 },
-              { "type": "AddTag", "tag": "countering", "duration": 25 },
-              { "type": "AddTag", "tag": "invulnerable", "duration": 15 },
-              { "type": "ApplyEffect", "target": "attacker", "effect": "posture_damage", "amount": 50 },
-              { "type": "ApplyTag", "target": "attacker", "tag": "staggered", "duration": 40 },
-              { "type": "FireEvent", "event": "directional_counter_success" }
-            ]
-          },
-          "ifFalse": {
-            "effects": [
-              { "type": "PlayAnimation", "id": "roll", "duration": 20 },
-              { "type": "AddTag", "tag": "dodging", "duration": 20 },
-              { "type": "Delay", "ticks": 4, "then": [
-                  { "type": "AddTag", "tag": "invulnerable", "duration": 8 }
-                ]
-              }
-            ]
-          }
-        }
+> ⚠️ 以下配置使用 Ludots 标准 EffectTemplate + Graph Phase 格式，替换了原虚构 DSL。
+
+```json5
+// === Effect Templates (mods/<yourMod>/Effects/directional_counter_effects.json) ===
+[
+  {
+    // 定向反击动画锁 + 无敌
+    "id": "Effect.DirCounter.AnimLock",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "duration": { "durationTicks": 25 },
+    "grantedTags": [
+      { "tag": "Status.Countering", "formula": "Fixed", "amount": 1 },
+      { "tag": "Status.Invulnerable", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    // 对攻击者施加架势伤害
+    "id": "Effect.DirCounter.PostureDamage",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "configParams": {
+      "PostureDamageAmount": { "type": "float", "value": 50.0 }
+    },
+    "phaseListeners": [
+      {
+        "phase": "OnApply",
+        "graphProgramId": "Graph.DirCounter.ApplyPostureDamage"
+        // Graph.DirCounter.ApplyPostureDamage:
+        //   LoadContextTarget        E[1]
+        //   LoadConfigFloat          "PostureDamageAmount" → F[0]
+        //   ModifyAttributeAdd       E[effect], E[1], Posture, F[0]
       }
-    }
-  ],
-  "attackTypeFilter": {
-    "allowedTypes": ["thrust", "sweep"]
+    ]
+  },
+  {
+    // 对攻击者施加硬直
+    "id": "Effect.DirCounter.AttackerStagger",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "duration": { "durationTicks": 40 },
+    "grantedTags": [
+      { "tag": "Status.Staggered", "formula": "Fixed", "amount": 1 }
+    ]
+  }
+]
+
+// === 两个独立 Ability 替代 conditionalBranch ===
+// 通过 ContextGroup 评分（P1）验证方向 + 攻击类型
+
+// ── Ability 1: 定向反击（Mikiri Counter）──
+// ContextGroup 评分器验证：
+//   1. 最近敌人 HasTag("Status.Thrusting") 或 HasTag("Status.Sweeping")
+//   2. 输入方向与敌人方位角度差 < 30°
+//   3. 距离 < 200cm
+{
+  "id": "Ability.DirCounter.Mikiri",
+  "activationRequireTags": ["Status.DirCounterEligible"],  // P1: 需 AbilityActivationRequireTags
+  "priority": 100,
+  "blockTags": ["Status.Countering", "Status.Dodging"],
+  "exec": {
+    "totalTicks": 25,
+    "items": [
+      // tick 0: 施加反击动画锁 + 无敌
+      { "kind": "EffectSignal", "tick": 0, "effectId": "Effect.DirCounter.AnimLock" },
+      // tick 0: 对目标施加架势伤害
+      { "kind": "EffectSignal", "tick": 0, "effectId": "Effect.DirCounter.PostureDamage" },
+      // tick 0: 对目标施加硬直
+      { "kind": "EffectSignal", "tick": 0, "effectId": "Effect.DirCounter.AttackerStagger" },
+      // tick 0: 发送成功事件
+      { "kind": "EventSignal", "tick": 0, "eventId": "directional_counter_success" }
+    ]
   }
 }
+
+// ── Ability 2: 普通闪避（fallback，复用 H4）──
+{
+  "id": "Ability.Dodge.Roll",
+  "priority": 50,
+  "blockTags": ["Status.Dodging"],
+  "exec": {
+    "totalTicks": 20,
+    "items": [
+      { "kind": "EffectSignal", "tick": 0, "effectId": "Effect.Dodge.AnimLock" },
+      { "kind": "EffectSignal", "tick": 0, "effectId": "Effect.Dodge.Displacement" },
+      { "kind": "EffectSignal", "tick": 4, "effectId": "Effect.Dodge.IframeBuff" }
+    ]
+  }
+}
+
+// === ResponseChainListener：反击期间伤害拦截 ===
+{
+  "response_chain_listeners": [
+    {
+      "eventTagId": "incoming_damage",
+      "responseType": "Hook",
+      "priority": 300,
+      "responseGraphId": "Graph.DirCounter.InvulCheck"
+      // Graph.DirCounter.InvulCheck:
+      //   HasTag          E[0], Status.Invulnerable → B[0]
+      //   JumpIfFalse     B[0], END
+      //   (Hook 生效 → 取消伤害)
+    }
+  ]
+}
+
+// === 方向验证 ===
+// 方向验证通过 ContextGroup 评分机制（P1）实现：
+//   - 评分器读取输入方向向量和目标方位向量
+//   - 计算角度差，超出 tolerance（30°）则评分为 0（不匹配）
+//   - 匹配成功时授予 Status.DirCounterEligible Tag
+//
+// 攻击类型过滤（可选）：
+//   ContextGroup 评分器额外检查目标是否持有
+//   Status.Thrusting 或 Status.Sweeping Tag
 ```

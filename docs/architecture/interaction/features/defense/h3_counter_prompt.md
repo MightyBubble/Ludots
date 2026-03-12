@@ -52,42 +52,86 @@ player_counter_ability:
 
 ## Configuration Example
 
-```json
-{
-  "enemyAbility": {
-    "id": "enemy_melee_attack",
-    "onWindupStart": {
-      "effects": [
-        {
-          "type": "FireEvent",
-          "event": "CounterWindowOpen",
-          "params": { "sourceId": "self", "windowTicks": 24 }
-        }
-      ]
-    }
-  },
-  "playerPassive": {
-    "id": "counter_opportunity_listener",
-    "trigger": "OnEvent:CounterWindowOpen",
-    "effects": [
-      { "type": "AddTag", "tag": "counter_opportunity:{sourceId}", "duration": 24 },
-      { "type": "SpawnVFX", "vfx": "exclamation_mark", "attachTo": "{sourceId}" }
+> ⚠️ 以下配置使用 Ludots 标准 EffectTemplate + Graph Phase 格式，替换了原虚构 DSL。
+
+```json5
+// === Effect Templates (mods/<yourMod>/Effects/counter_prompt_effects.json) ===
+[
+  {
+    // 敌人风筝阶段施加给玩家的反击机会 Buff
+    // Tag 过期时 VFX 也随之销毁（VFX 绑定 Tag 生命周期）
+    "id": "Effect.CounterPrompt.Opportunity",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "duration": { "durationTicks": 24 },
+    "grantedTags": [
+      { "tag": "Status.CounterOpportunity", "formula": "Fixed", "amount": 1 }
     ]
   },
-  "playerAbility": {
-    "id": "counter_strike",
-    "inputBinding": "Triangle",
-    "inputMode": "Press",
-    "precondition": { "anyTagPrefix": "counter_opportunity" },
-    "onActivate": {
-      "effects": [
-        { "type": "RemoveMatchedTag", "prefix": "counter_opportunity" },
-        { "type": "CancelAbility", "target": "matchedSource" },
-        { "type": "PlayAnimation", "id": "counter_strike" },
-        { "type": "Damage", "target": "matchedSource", "amount": 80 },
-        { "type": "ApplyTag", "target": "matchedSource", "tag": "stunned", "duration": 20 }
-      ]
+  {
+    // 反击成功后施加给敌人的眩晕
+    "id": "Effect.CounterPrompt.EnemyStun",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "duration": { "durationTicks": 20 },
+    "grantedTags": [
+      { "tag": "Status.Stunned", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    // 反击伤害（瞬时）
+    "id": "Effect.CounterPrompt.StrikeDamage",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "configParams": {
+      "DamageCoeff": { "type": "float", "value": 80.0 }
     }
   }
+]
+
+// === 敌人 AbilityExecSpec：攻击风筝阶段广播事件 ===
+{
+  "id": "Ability.Enemy.MeleeAttack",
+  "exec": {
+    "totalTicks": 40,
+    "items": [
+      // tick 0 (wind-up 开始): 发送 CounterWindowOpen 事件
+      { "kind": "EventSignal", "tick": 0, "eventId": "CounterWindowOpen" }
+    ]
+  }
 }
+
+// === 玩家 ResponseChainListener：监听 CounterWindowOpen ===
+// 当收到事件时，Chain 创建 CounterOpportunity Buff（授予 Tag + VFX）
+{
+  "response_chain_listeners": [
+    {
+      "eventTagId": "CounterWindowOpen",
+      "responseType": "Chain",
+      "priority": 100,
+      "effectTemplateId": "Effect.CounterPrompt.Opportunity"
+    }
+  ]
+}
+
+// === 玩家反击 AbilityExecSpec ===
+{
+  "id": "Ability.Counter.Strike",
+  "activationRequireTags": ["Status.CounterOpportunity"],  // P1: 需要 AbilityActivationRequireTags
+  "exec": {
+    "totalTicks": 25,
+    "items": [
+      // tick 0: 对匹配目标施加伤害
+      { "kind": "EffectSignal", "tick": 0, "effectId": "Effect.CounterPrompt.StrikeDamage" },
+      // tick 0: 对匹配目标施加眩晕
+      { "kind": "EffectSignal", "tick": 0, "effectId": "Effect.CounterPrompt.EnemyStun" },
+      // tick 0: 发送 counter_success 事件（触发 VFX/音效）
+      { "kind": "EventSignal", "tick": 0, "eventId": "counter_success" }
+    ]
+  }
+}
+
+// 注: 多个同时存在的 CounterOpportunity 由 ContextGroup 评分机制（P1）
+// 选择最紧急（过期最早）的目标。
+// Wildcard tag precondition（P1）或 ContextGroup 评分替代 "counter_opportunity:*" 匹配。
 ```

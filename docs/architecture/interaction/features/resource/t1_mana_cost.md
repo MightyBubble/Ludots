@@ -93,7 +93,7 @@ Effect 模板示例：
 | GraphOps.CompareGtFloat (30) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
 | GraphOps.JumpIfFalse (7) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
 | GraphOps.ModifyAttributeAdd (210) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
-| AbilityActivationRequireTags | `src/Core/Gameplay/GAS/AbilitySpec.cs` | ❌ P1 — 需支持 Attribute Precondition 门控 |
+| AbilityActivationBlockTags.RequiredAll | `src/Core/Gameplay/GAS/AbilitySpec.cs` | ✅ 已有 — 对应 RequiredAll 字段；Attribute Precondition 仍为 P1 |
 
 ---
 

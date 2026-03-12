@@ -23,7 +23,7 @@ ContextGroup:
 ## 新增需求
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| AbilityActivationRequireTags | P0 | 复用 G 需求，支持 Tag 门控 |
+| AbilityActivationBlockTags.RequiredAll | ✅ 已有 | 对应现有 RequiredAll 字段，支持 Tag 门控 |
 
 ## 参考案例
 - **Sekiro**: Posture 条满后可以执行忍杀

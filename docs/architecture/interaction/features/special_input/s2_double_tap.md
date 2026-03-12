@@ -36,6 +36,8 @@
 
 **当前状态**：`InputTriggerType.DoubleTap` 已废弃，需要在 `SelectionSystem` 层实现双击检测。
 
+**替代方案（Tag 模拟）**: 首次按键 → AddTag("first_press_{action}", duration=15 ticks)；第二次按键时检查 HasTag("first_press_{action}") → 若有则触发双击技能并移除 Tag。此方案无需修改 SelectionSystem，完全在现有 Tag + RequiredAll 框架内实现。
+
 ---
 
 ## Graph 实现

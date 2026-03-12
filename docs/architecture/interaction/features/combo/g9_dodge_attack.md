@@ -38,7 +38,7 @@ Normal Attack ability:
 |-----------|--------|---------|
 | Tag duration (auto-expire) | ✅ Existing | Limit the dodge-attack window to 15 ticks |
 | AbilityExecSpec onComplete event | ✅ Existing | Trigger post_dodge tag at dodge completion |
-| AbilityActivationRequireTags | ⚠️ **Required** | Gate dodge_attack on "post_dodge" tag |
+| AbilityActivationBlockTags.RequiredAll | ✅ Existing | Gate dodge_attack on "post_dodge" tag (对应现有 RequiredAll 字段) |
 
 ## Configuration Example
 

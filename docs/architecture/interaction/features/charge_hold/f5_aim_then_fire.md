@@ -65,7 +65,7 @@ Fire:
 | AbilityActivationRequireTags | ✅ 已有 | Fire 技能门控在 "aiming" tag |
 | GameplayTagContainer | ✅ 已有 | 标签授予/移除 |
 | CameraBlendSystem | ✅ 已有 | 相机切换（参见 CameraAcceptanceMod） |
-| Cursor direction → Blackboard | ✅ 已有（参见 F1 需求） | 实时更新瞄准方向 |
+| Cursor direction → Blackboard | ❌ P1 新增（参见 F1 需求） | 实时更新瞄准方向; CursorDirectionBlackboardWriter 尚未实现 |
 
 ## 新增需求
 

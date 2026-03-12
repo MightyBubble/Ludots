@@ -130,7 +130,7 @@
 |------|--------|------|
 | `QueryRing`（环形，排除内圆） | P2 | 需求来自 D2 ring_aoe |
 | Displacement 碰撞回调 | P2 | 需求来自 U2 wall_slam；DisplacementRuntimeSystem 需发出碰撞信号 |
-| `AbilityActivationRequireTags` | P1 | 需求来自 G 系列 combo；目前只有 BlockTags，缺 RequireTags |
+| ~~`AbilityActivationRequireTags`~~ | ~~P1~~ | ✅ **已有** — 对应 `AbilityActivationBlockTags.RequiredAll`；详见 gap_analysis.md §1.1 |
 | ContextGroup 评分机制 | P1 | N 系列 context_scored 全部依赖；评分器注册/调用接口待定 |
 | 双击输入（DoubleTap） | P2 | `InputTriggerType.DoubleTap` 已废弃，需 SelectionSystem 实现 |
 

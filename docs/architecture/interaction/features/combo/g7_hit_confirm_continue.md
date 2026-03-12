@@ -40,7 +40,7 @@ Hit2 precondition: HasTag("hit_confirmed")          // requires both conditions
 |-----------|--------|---------|
 | ResponseChainListener (OnHit) | ✅ Existing | Detect successful hits and trigger tag addition |
 | Tag duration (auto-expire) | ✅ Existing | Auto-reset hit-confirm tag if no follow-up |
-| AbilityActivationRequireTags | ⚠️ **Required** | Gate Hit2 on "hit_confirmed" tag |
+| AbilityActivationBlockTags.RequiredAll | ✅ Existing | Gate Hit2 on "hit_confirmed" tag (对应现有 RequiredAll 字段) |
 
 ## Configuration Example
 

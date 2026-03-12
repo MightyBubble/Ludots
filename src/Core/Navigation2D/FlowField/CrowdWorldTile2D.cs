@@ -1,3 +1,5 @@
+using System;
+
 namespace Ludots.Core.Navigation2D.FlowField
 {
     public sealed class CrowdWorldTile2D
@@ -9,6 +11,11 @@ namespace Ludots.Core.Navigation2D.FlowField
         {
             Size = size;
             Obstacles = new byte[size * size];
+        }
+
+        public void ClearObstacles()
+        {
+            Array.Clear(Obstacles, 0, Obstacles.Length);
         }
     }
 }

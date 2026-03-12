@@ -83,7 +83,7 @@ Effect 模板示例：
 |------|------|------|
 | EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
 | GraphOps.ModifyAttributeAdd (210) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
-| AbilityActivationRequireTags | `src/Core/Gameplay/GAS/AbilitySpec.cs` | ❌ P1 — 需支持 Attribute Precondition |
+| AbilityActivationBlockTags.RequiredAll | `src/Core/Gameplay/GAS/AbilitySpec.cs` | ✅ 已有 — 对应 RequiredAll 字段；Attribute Precondition 仍为 P1 |
 
 ---
 

@@ -24,6 +24,9 @@ InputOrderMapping:
 ### E10: 贯穿后分裂/扩散
 
 **变体 A: 主弹分裂**
+
+> ⚠️ Architecture note: Graph VM cannot perform structural changes (creating/deleting entities, mounting components). Projectile spawning must go through a BuiltinHandler → RuntimeEntitySpawnQueue, not as a Phase Graph op.
+
 ```
 AbilityExecSpec:
   Item[0]: EffectSignal @ tick 0 → spawn_splitting_projectile
@@ -32,8 +35,10 @@ AbilityExecSpec:
       - Speed: 1200 cm/s
       - DestroyOnHit: false  // 穿透
       - OnHit:
-          Phase Graph:
-            1. SpawnSplitProjectiles(count=2, spreadAngle=30)
+          → BuiltinHandler: SpawnSplitProjectiles
+            - count: 2
+            - spreadAngle: 30
+            // Handler runs outside Graph Phase, queues spawns via RuntimeEntitySpawnQueue
 ```
 
 **变体 B: 贯穿后扩散 (LoL Lux R)**
@@ -59,14 +64,15 @@ OnHit:
   3. FanOutApplyEffect → 扩散伤害 (衰减)
 ```
 
-**分裂子弹实现**:
+**分裂子弹实现** (BuiltinHandler, runs outside Graph Phase):
 ```
-SpawnSplitProjectiles(count, spreadAngle):
+BuiltinHandler: SpawnSplitProjectiles(count, spreadAngle):
   baseDir = current velocity direction
   for i in 0..count:
     angle = -spreadAngle/2 + i * (spreadAngle / (count-1))
     dir = Rotate(baseDir, angle)
-    CreateUnit(projectile_prefab, position=current, velocity=dir*speed)
+    RuntimeEntitySpawnQueue.Enqueue(projectile_prefab, position=current, velocity=dir*speed)
+  // Entities are created after Graph Phase completes
 ```
 
 ## 依赖组件
@@ -76,12 +82,12 @@ SpawnSplitProjectiles(count, spreadAngle):
 | ProjectileRuntimeSystem | ✅ 已有 | 弹道推进 |
 | CreateUnit handler | ✅ 已有 | 生成子弹 |
 | SpatialQuery handler | ✅ 已有 | 即时搜索 |
-| SpawnSplit op | ❌ 需新增 | Phase Graph 分裂操作 |
+| SpawnSplitProjectiles handler | ❌ 需新增 | BuiltinHandler: 命中时通过 RuntimeEntitySpawnQueue 生成子弹 |
 
 ## 新增需求
 
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| SpawnSplitProjectiles op | P2 | Graph op: 命中时生成多枚子弹 |
+| SpawnSplitProjectiles handler | P2 | BuiltinHandler: 命中时通过 RuntimeEntitySpawnQueue 生成多枚子弹 |
 | SpreadAngle | P2 | 扩散角度配置 |
 | 即时扫射模式 | P1 | Lux R 用 Rectangle search 代替弹道 |

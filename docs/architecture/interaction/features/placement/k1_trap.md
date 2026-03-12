@@ -35,13 +35,16 @@ AbilityExecSpec:
 ```
 
 **触发逻辑** (在 trap entity 上):
+
+> ⚠️ Architecture note: Graph VM cannot perform structural changes (creating/deleting entities, mounting components). Entity destruction must go through an OnApply handler → RuntimeEntitySpawnQueue, not directly in response chain execution.
+
 ```
 ResponseChainListener:
   eventTagId: on_enemy_enter_radius
   precondition: distance < 100cm
   responseType: Chain
     → ApplyEffect(explosion_damage)
-    → DestroyEntity(self)
+    → QueueDestroy(self)  // via OnApply handler → RuntimeEntitySpawnQueue
 ```
 
 ## 依赖组件

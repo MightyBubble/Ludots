@@ -297,6 +297,7 @@ namespace Navigation2DPlaygroundMod.Systems
             var position = Fix64Vec2.FromInt(x, y);
             world.Create(
                 new NavAgent2D(),
+                new NavObstacle2D(),
                 new NavKinematics2D
                 {
                     MaxSpeedCmPerSec = Fix64.Zero,

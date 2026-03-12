@@ -33,6 +33,9 @@ namespace Ludots.Core.Physics2D.Systems
         private static readonly QueryDescription _flowDemandQuery = new QueryDescription()
             .WithAll<NavAgent2D, Position2D, NavFlowBinding2D>();
 
+        private static readonly QueryDescription _flowObstacleQuery = new QueryDescription()
+            .WithAll<NavObstacle2D, Position2D, NavKinematics2D>();
+
         private readonly Navigation2DRuntime _runtime;
         private readonly CommandBuffer _commandBuffer = new();
         private int _flowStreamingTick;
@@ -1240,9 +1243,28 @@ namespace Ludots.Core.Physics2D.Systems
                 }
             }
 
+            StampFlowObstacles();
+
             for (int f = 0; f < _runtime.FlowCount; f++)
             {
                 _runtime.Flows[f].Step(_runtime.FlowIterationsPerTick);
+            }
+        }
+
+        private void StampFlowObstacles()
+        {
+            _runtime.Surface.ClearObstacleField();
+
+            foreach (ref var chunk in World.Query(in _flowObstacleQuery))
+            {
+                var positions = chunk.GetSpan<Position2D>();
+                var kinematics = chunk.GetSpan<NavKinematics2D>();
+                foreach (var index in chunk)
+                {
+                    _runtime.Surface.SplatObstacleCircle(
+                        positions[index].Value.ToVector2(),
+                        kinematics[index].RadiusCm.ToFloat());
+                }
             }
         }
         private void ComputeSmartStopFlags()

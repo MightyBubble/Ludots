@@ -633,7 +633,6 @@ namespace Ludots.Core.Engine
             if (config.Navigation2D.Enabled)
             {
                 var navigation2dRuntime = new Navigation2DRuntime(config.Navigation2D, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: HexGridAOI);
-                navigation2dRuntime.FlowIterationsPerTick = config.Navigation2D.FlowIterationsPerTick;
                 SetService(CoreServiceKeys.Navigation2DRuntime, navigation2dRuntime);
 
                 const string nav2dSystemTypeName = "Ludots.Core.Physics2D.Systems.Navigation2DSimulationSystem2D";

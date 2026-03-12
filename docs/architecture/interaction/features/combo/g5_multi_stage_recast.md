@@ -49,7 +49,7 @@ Q press 3:
 |-----------|--------|---------|
 | ResponseChainListener (OnHit) | ✅ Existing | Trigger stage advancement when projectile hits |
 | Blackboard write from Effect | ✅ Existing | Store entity reference across stages |
-| AbilityActivationRequireTags | ⚠️ **Required** | Gate each stage on preceding stage tag |
+| AbilityActivationBlockTags.RequiredAll | ✅ Existing | Gate each stage on preceding stage tag (对应现有 RequiredAll 字段) |
 | Tag duration (auto-expire) | ✅ Existing | Timeout each stage window independently |
 
 ## Configuration Example

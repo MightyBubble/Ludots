@@ -36,7 +36,7 @@ Q press 2:
 |-----------|--------|---------|
 | ResponseChainListener (OnHit) | ✅ Existing | Trigger caster-side tag update when projectile hits |
 | Blackboard write from Effect | ✅ Existing | Store hit target entity reference |
-| AbilityActivationRequireTags | ⚠️ **Required** | Gate second press on "q1_available" tag |
+| AbilityActivationBlockTags.RequiredAll | ✅ Existing | Gate second press on "q1_available" tag (对应现有 RequiredAll 字段) |
 | Tag duration (auto-expire) | ✅ Existing | Time-limit the second press window |
 
 ## Configuration Example

@@ -36,7 +36,7 @@ AbilityExecSpec:
 ### Q 新增需求
 | 需求 | 优先级 |
 |------|--------|
-| AbilityActivationRequireTags + Attribute precondition | P0 (复用 G 需求) |
+| ~~AbilityActivationBlockTags.RequiredAll~~ + Attribute precondition | ~~P0~~ (RequiredAll ✅ 已有；Attribute precondition 仍为 P0) | 复用 G 需求 |
 | Angle/Height precondition (Graph ops 或 builtin) | P2 |
 
 ---

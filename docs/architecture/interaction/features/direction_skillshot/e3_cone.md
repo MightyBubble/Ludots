@@ -46,12 +46,12 @@ AbilityExecSpec:
 | 组件 | 状态 | 说明 |
 |------|------|------|
 | SpatialQuery handler | ✅ 已有 | 已支持 radius |
-| Cone shape | ⚠️ 需扩展 | 需添加 Angle 参数 |
+| Cone shape (QueryCone op 104) | ✅ 已有 | GraphOps.cs 已支持 QueryCone |
 | Direction input | ✅ 已有 | selectionType: Direction |
 
 ## 新增需求
 
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| Cone shape support | P1 | SpatialQuery 添加 ShapeType.Cone |
-| Angle parameter | P1 | 锥形角度配置 |
+| ~~Cone shape~~ | ~~P1~~ | ✅ 已有 — QueryCone (op 104) |
+| ~~Angle parameter~~ | ~~P1~~ | ✅ 已有 — QueryCone 含 Angle 立即数 |

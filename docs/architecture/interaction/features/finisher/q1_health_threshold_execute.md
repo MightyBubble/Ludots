@@ -82,7 +82,7 @@ Effect 模板示例：
 }
 ```
 
-> **说明**：阈值门控当前由 Graph 内 `JumpIfFalse` 实现；待 `AbilityActivationRequireTags + AttributePrecondition`（P1 需求）落地后，可将门控提前到激活阶段，避免 Effect 进入 OnApply 才被丢弃。
+> **说明**：阈值门控当前由 Graph 内 `JumpIfFalse` 实现；`AbilityActivationBlockTags.RequiredAll` 已支持正向 Tag 门控。待 Attribute Precondition（P1 需求）落地后，可将数值门控也提前到激活阶段，避免 Effect 进入 OnApply 才被丢弃。
 
 ---
 

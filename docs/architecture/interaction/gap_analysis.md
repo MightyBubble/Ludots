@@ -249,7 +249,7 @@ PeriodicSearch (period=3 ticks):
 
 ### 3.4 Cooldown System
 
-**选项 A** (推荐): 在 `AttributeAggregatorSystem` 后新增 `CooldownTickSystem`:
+**选项 A** (不推荐): 在 `AttributeAggregatorSystem` 后新增 `CooldownTickSystem`:
 ```csharp
 public class CooldownTickSystem : BaseSystem
 {
@@ -259,6 +259,10 @@ public class CooldownTickSystem : BaseSystem
 ```
 
 **选项 B**: 用现有 Periodic effect tick (但每个技能需一个 effect, 开销大)
+
+**选项 C** (推荐): Tag Duration + BlockedAny — OnCast → AddTag("cd_Q", duration=N) → BlockedAny 含 "cd_Q"。无需新 System，T2 文档已验证此方案完备性。
+
+> **注**: T2 验证确认无需新增 System；Tag Duration + BlockedAny 方案已覆盖所有冷却需求。
 
 ### 3.5 Form-Based Ability Routing
 

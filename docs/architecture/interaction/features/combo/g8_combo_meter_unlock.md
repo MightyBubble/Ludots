@@ -34,9 +34,14 @@ PeriodicCheck Effect (runs every tick):
   Graph:
     LoadSelfAttribute(combo_meter)
     CompareFloat(>= threshold)
-    Branch:
-      true  → AddTag("combo_ready")
-      false → RemoveTag("combo_ready")
+    JumpIfFalse              B[0], @no_combo
+    // true → already has tag or will get it via GrantedTags on this effect
+    WriteBlackboardInt       E[0], "combo_status", 1
+    Jump                     @end
+  @no_combo:
+    WriteBlackboardInt       E[0], "combo_status", 0
+  @end:
+    // combo_status → 驱动 Tag 授予/移除（通过 GrantedTags + Lifetime）
 ```
 
 This bridges the attribute (numeric value) to the tag precondition system.
@@ -50,7 +55,7 @@ This bridges the attribute (numeric value) to the tag precondition system.
 | Attribute system (combo_meter) | ✅ Existing | Persistent numeric combo counter |
 | Graph attribute comparison ops | ✅ Existing | Evaluate threshold condition |
 | Ability precondition based on Attribute threshold | P1 | Direct attribute-threshold gate (alternative to Tag bridge) |
-| AbilityActivationRequireTags | ⚠️ **Required** | Gate finisher on "combo_ready" tag |
+| AbilityActivationBlockTags.RequiredAll | ✅ Existing | Gate finisher on "combo_ready" tag (对应现有 RequiredAll 字段) |
 
 ## Configuration Example
 
@@ -72,10 +77,11 @@ This bridges the attribute (numeric value) to the tag precondition system.
       "ops": [
         { "op": "LoadSelfAttribute", "attribute": "combo_meter" },
         { "op": "CompareFloat", "gte": 10 },
-        { "op": "Branch",
-          "onTrue": [{ "op": "AddTag", "tag": "combo_ready" }],
-          "onFalse": [{ "op": "RemoveTag", "tag": "combo_ready" }]
-        }
+        { "op": "JumpIfFalse", "target": "@no_combo" },
+        { "op": "WriteBlackboardInt", "entity": "self", "key": "combo_status", "value": 1 },
+        { "op": "Jump", "target": "@end" },
+        { "label": "@no_combo", "op": "WriteBlackboardInt", "entity": "self", "key": "combo_status", "value": 0 },
+        { "label": "@end" }
       ]
     }
   },

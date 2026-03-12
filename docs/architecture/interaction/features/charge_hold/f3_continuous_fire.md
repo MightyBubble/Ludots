@@ -53,7 +53,7 @@ Up → 停止 fire_loop（RemoveEffect）
 | HeldPolicy.EveryFrame | ✅ 已有 | 按住期间每帧提交 order |
 | AbilityExecSpec 周期触发 | ✅ 已有 | PeriodicSearch + LaunchProjectile |
 | ProjectileRuntimeSystem | ✅ 已有 | 弹道推进+碰撞 |
-| Cursor direction → Blackboard | ✅ 已有（参见 F1 需求） | 实时更新瞄准方向 |
+| Cursor direction → Blackboard | ❌ P1 新增（参见 F1 需求） | 实时更新瞄准方向; CursorDirectionBlackboardWriter 尚未实现 |
 
 ## 新增需求
 

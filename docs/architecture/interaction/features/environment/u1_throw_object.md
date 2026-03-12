@@ -9,20 +9,27 @@
 - **Resolution**: ContextScored（自动检测附近可投掷物）
 
 ## 实现要点
+
+> ⚠️ **Architecture note**: Graph VM 不能执行结构变更。DestroyEntity 必须通过 BuiltinHandler → RuntimeEntitySpawnQueue 实现。
+
 ```
 ContextGroup:
   candidate: "ThrowObject"
     precondition: env entity HasTag("throwable") in radius 200cm
     score: 100
 
-Phase Graph:
+Phase Graph (OnCalculate):
   1. SelectTarget: nearest throwable entity
-  2. AttachToActor(throwable, caster)  // 拾取
-  3. InputGate: 等待玩家选择投掷方向
-  4. LaunchProjectile(throwable, direction, speed=1000cm/s)
-  5. OnProjectileHit:
-       ApplyEffect(target, damage)
-       DestroyEntity(throwable)
+  2. WriteBlackboardEntity(E[effect], "throw_target", E[selected])
+
+OnApply → BuiltinHandler: PickupAndThrow:
+  1. AttachToActor(throwable, caster)  // 拾取
+  2. InputGate: 等待玩家选择投掷方向
+  3. LaunchProjectile(throwable, direction, speed=1000cm/s)
+
+OnProjectileHit → BuiltinHandler:
+  1. ApplyEffect(target, damage)
+  2. RuntimeEntitySpawnQueue.Enqueue(destroy: throwable)
 ```
 - 可投掷物 entity 有 Tag("throwable") + Projectile 组件
 - 拾取后物体跟随玩家，等待投掷输入

@@ -58,49 +58,109 @@ player_finisher_ability:
 
 ## Configuration Example
 
-```json
-{
-  "parryAbility": {
-    "id": "parry_press",
-    "onParrySuccess": {
-      "effects": [
-        { "type": "ApplyEffect", "target": "attacker", "effect": "posture_damage", "amount": 30 }
-      ]
-    }
-  },
-  "enemyPosture": {
-    "max": 150,
-    "decayPerTick": 0.5,
-    "decayDelayTicks": 60,
-    "onPostureBreak": {
-      "effects": [
-        { "type": "AddTag", "tag": "posture_broken", "duration": 90 },
-        { "type": "PlayAnimation", "id": "stagger_heavy" },
-        { "type": "FireEvent", "event": "PostureBroken", "source": "self" }
-      ]
-    }
-  },
-  "playerPassive": {
-    "id": "finisher_opportunity_listener",
-    "trigger": "OnEvent:PostureBroken",
-    "effects": [
-      { "type": "AddTag", "tag": "finisher_opportunity:{sourceId}", "duration": 90 },
-      { "type": "SpawnVFX", "vfx": "finisher_prompt", "attachTo": "{sourceId}" }
+> ⚠️ 以下配置使用 Ludots 标准 EffectTemplate + Graph Phase 格式，替换了原虚构 DSL。
+
+```json5
+// === Effect Templates (mods/<yourMod>/Effects/parry_execution_effects.json) ===
+[
+  {
+    // 弹反成功时施加给敌人的架势伤害（瞬时 Attribute 修改）
+    "id": "Effect.ParryExec.PostureDamage",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "configParams": {
+      "PostureDamageAmount": { "type": "float", "value": 30.0 }
+    },
+    "phaseListeners": [
+      {
+        "phase": "OnApply",
+        "graphProgramId": "Graph.ParryExec.ApplyPostureDamage"
+        // Graph.ParryExec.ApplyPostureDamage:
+        //   LoadContextTarget        E[1]
+        //   LoadConfigFloat          "PostureDamageAmount" → F[0]
+        //   ModifyAttributeAdd       E[effect], E[1], Posture, F[0]
+      }
     ]
   },
-  "playerAbility": {
-    "id": "deathblow",
-    "inputBinding": "R1",
-    "inputMode": "Press",
-    "precondition": { "anyTagPrefix": "finisher_opportunity" },
-    "onActivate": {
-      "effects": [
-        { "type": "RemoveMatchedTag", "prefix": "finisher_opportunity" },
-        { "type": "PlayAnimation", "id": "deathblow" },
-        { "type": "Damage", "target": "matchedSource", "amount": 9999, "ignoreArmor": true },
-        { "type": "FireEvent", "event": "finisher_executed" }
-      ]
+  {
+    // 架势击破后施加给敌人的击破状态
+    "id": "Effect.ParryExec.PostureBroken",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "duration": { "durationTicks": 90 },
+    "grantedTags": [
+      { "tag": "Status.PostureBroken", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    // 处决伤害（瞬时，忽略护甲）
+    "id": "Effect.ParryExec.DeathblowDamage",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "configParams": {
+      "DamageAmount": { "type": "float", "value": 9999.0 },
+      "IsTrueDamage": { "type": "int", "value": 1 }
     }
   }
+]
+
+// === Attribute 定义 ===
+// 在 AttributeSet 中注册 Posture 属性（P1 需求）：
+//   { "id": "Posture", "defaultValue": 0, "min": 0, "max": 150 }
+//   { "id": "PostureMax", "defaultValue": 150 }
+//   { "id": "PostureDecayPerTick", "defaultValue": 0.5 }
+
+// === Attribute-to-Tag Bridge（同 G8 combo_meter 模式）===
+// Periodic Buff 每 tick 检查 Posture >= PostureMax，满足时授予 Status.PostureBroken
+{
+  "id": "Effect.ParryExec.PostureWatcher",
+  "presetType": "Buff",
+  "lifetime": "UntilRemoved",
+  "configParams": {
+    "periodTicks": { "type": "int", "value": 1 }
+  },
+  "phaseListeners": [
+    {
+      "phase": "OnPeriod",
+      "graphProgramId": "Graph.ParryExec.PostureThresholdCheck"
+    }
+  ]
 }
+
+// === Graph Program: Graph.ParryExec.PostureThresholdCheck ===
+//   LoadContextSource       E[0]             // 敌人自身
+//   LoadAttribute           E[0], Posture    → F[0]
+//   LoadAttribute           E[0], PostureMax → F[1]
+//   CompareGtFloat          F[0], F[1]       → B[0]  // Posture > PostureMax?
+//   JumpIfFalse             B[0], END
+//   ApplyEffectTemplate     E[0], "Effect.ParryExec.PostureBroken"
+//   SendEvent               "PostureBroken"
+
+// === 玩家处决 AbilityExecSpec ===
+{
+  "id": "Ability.Deathblow",
+  "activationRequireTags": ["Status.PostureBroken"],  // P1: 需 AbilityActivationRequireTags
+  // 需要目标持有 Status.PostureBroken + 距离 < 100cm（ContextGroup 评分）
+  "exec": {
+    "totalTicks": 40,
+    "items": [
+      // tick 0: 施加处决伤害
+      { "kind": "EffectSignal", "tick": 0, "effectId": "Effect.ParryExec.DeathblowDamage" },
+      // tick 0: 发送处决事件（触发动画/VFX）
+      { "kind": "EventSignal", "tick": 0, "eventId": "finisher_executed" }
+    ]
+  }
+}
+
+// === 弹反成功时的连锁 ===
+// H2 弹反 ResponseChainListener 中增加一条 Chain：
+//   eventTagId: "incoming_damage"
+//   responseType: Chain
+//   effectTemplateId: "Effect.ParryExec.PostureDamage"  // 对攻击者累积架势
+//   responseGraphId: "Graph.Parry.CheckWindow"          // 同 H2 前置条件
+
+// === 架势衰减 ===
+// Posture 属性自然衰减通过 Attribute Regen 系统配置：
+//   { "attribute": "Posture", "regenPerTick": -0.5, "regenDelayTicks": 60 }
+// 敌人处于攻击动画时，regenDelayTicks 重置（衰减暂停）。
 ```

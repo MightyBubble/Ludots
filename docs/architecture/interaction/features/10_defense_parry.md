@@ -116,6 +116,6 @@ ResponseChainListener:
 
 | 需求 | 优先级 | 清单项 |
 |------|--------|--------|
-| AbilityActivationRequireTags | P0 | H6 (处决需 posture_broken) |
+| ~~AbilityActivationBlockTags.RequiredAll~~ | ~~P0~~ | ✅ 已有 — RequiredAll 字段已支持 Tag 门控 (H6 posture_broken 等) |
 | ContextGroup | P0 | H3, H8 |
 | Projectile Hook + Redirect | P2 | H7 |

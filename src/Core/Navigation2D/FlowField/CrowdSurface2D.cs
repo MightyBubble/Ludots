@@ -75,6 +75,14 @@ namespace Ludots.Core.Navigation2D.FlowField
             _tiles.Remove(tileKey);
         }
 
+        public void ClearObstacleField()
+        {
+            foreach (var tile in _tiles.Values)
+            {
+                tile.ClearObstacles();
+            }
+        }
+
         public void SetObstacleCell(int cellX, int cellY, bool blocked)
         {
             long tileKey = Nav2DKeyPacking.PackInt2(cellX >> _tileShift, cellY >> _tileShift);
@@ -95,6 +103,42 @@ namespace Ludots.Core.Navigation2D.FlowField
             return tile.Obstacles[idx] != 0;
         }
 
+        public void SplatObstacleCircle(in Vector2 positionCm, float radiusCm)
+        {
+            if (!(radiusCm > 0f))
+            {
+                return;
+            }
+
+            float cellSize = CellSizeCm.ToFloat();
+            if (!(cellSize > 1e-6f))
+            {
+                return;
+            }
+
+            float paddedRadius = radiusCm + cellSize * 0.5f;
+            float paddedRadiusSq = paddedRadius * paddedRadius;
+            int minCellX = FloorToCell(positionCm.X - paddedRadius);
+            int maxCellX = FloorToCell(positionCm.X + paddedRadius);
+            int minCellY = FloorToCell(positionCm.Y - paddedRadius);
+            int maxCellY = FloorToCell(positionCm.Y + paddedRadius);
+
+            for (int cellY = minCellY; cellY <= maxCellY; cellY++)
+            {
+                for (int cellX = minCellX; cellX <= maxCellX; cellX++)
+                {
+                    var center = CellCenterToWorldCm(cellX, cellY).ToVector2();
+                    Vector2 delta = center - positionCm;
+                    if (delta.LengthSquared() > paddedRadiusSq)
+                    {
+                        continue;
+                    }
+
+                    SetObstacleCell(cellX, cellY, blocked: true);
+                }
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WorldToCell(in Fix64Vec2 worldCm, out int cellX, out int cellY)
         {
@@ -107,6 +151,12 @@ namespace Ludots.Core.Navigation2D.FlowField
         {
             Fix64 half = CellSizeCm / (Fix64)2;
             return new Fix64Vec2(Fix64.FromInt(cellX) * CellSizeCm + half, Fix64.FromInt(cellY) * CellSizeCm + half);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int FloorToCell(float worldCm)
+        {
+            return (Fix64.FromFloat(worldCm) / CellSizeCm).FloorToInt();
         }
     }
 }

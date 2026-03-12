@@ -121,7 +121,7 @@ Phase OnApply Main:
 | OnDamageDealt Listener | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有（Phase Listener 机制） |
 | GraphOps.ReadBlackboardFloat (300) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
 | GraphOps.HasTag (33) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
-| AbilityActivationRequireTags | `src/Core/Gameplay/GAS/AbilitySpec.cs` | ❌ P1 — 需支持 Attribute Precondition |
+| AbilityActivationBlockTags.RequiredAll | `src/Core/Gameplay/GAS/AbilitySpec.cs` | ✅ 已有 — 对应 RequiredAll 字段；Attribute Precondition 仍为 P1 |
 
 ---
 

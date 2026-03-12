@@ -45,13 +45,17 @@ AbilityExecSpec:
 ```
 
 **操控状态**:
+
+> ⚠️ **Architecture note**: 实体销毁不能在 Graph 内执行，必须通过 BuiltinHandler → RuntimeEntitySpawnQueue。
+
 ```
 Player input → remapped to projectile_entity movement
 Camera follows projectile_entity (camera focus switch)
 
 On detonate (Space / collision):
   → AoE explosion at projectile position
-  → DestroyEntity(projectile)
+  → BuiltinHandler: DetonateProjectile
+    → RuntimeEntitySpawnQueue.Enqueue(destroy: projectile)
   → RestoreInputFocus(caster)
   → RestoreCameraFocus(caster)
 ```

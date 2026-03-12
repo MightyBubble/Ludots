@@ -31,7 +31,7 @@ R2 (heavy) with combo_stage:2 → heavy_finisher_B (reset combo)
 | Component | Status | Purpose |
 |-----------|--------|---------|
 | Tag duration (auto-expire) | ✅ Existing | Automatic combo reset on timeout |
-| AbilityActivationRequireTags | ⚠️ **Required** | Enable positive tag preconditions |
+| AbilityActivationBlockTags.RequiredAll | ✅ Existing | Enable positive tag preconditions (对应现有 RequiredAll 字段) |
 | Multiple InputBindings per combo | ✅ Existing | Different buttons query same combo state |
 
 ## Configuration Example

@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using Ludots.Core.Config;
+using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.Runtime;
@@ -171,6 +173,63 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(runtime.Config.Steering.TemporalCoherence.Enabled, Is.True);
             Assert.That(runtime.Config.Steering.TemporalCoherence.MaxReuseTicks, Is.EqualTo(9));
             Assert.That(runtime.Config.Steering.TemporalCoherence.NeighborVelocityQuantizationCmPerSec, Is.EqualTo(12));
+        }
+
+        [Test]
+        public void GameEngine_UsesMergedNavigation2DConfigWhenCreatingRuntime()
+        {
+            string repoRoot = FindRepoRoot();
+            string assetsRoot = Path.Combine(repoRoot, "assets");
+            string modsRoot = Path.Combine(repoRoot, "mods");
+
+            var engine = new GameEngine();
+            try
+            {
+                engine.InitializeWithConfigPipeline(
+                    new List<string>
+                    {
+                        Path.Combine(modsRoot, "LudotsCoreMod"),
+                        Path.Combine(modsRoot, "Navigation2DPlaygroundMod")
+                    },
+                    assetsRoot);
+
+                var runtime = engine.GetService(CoreServiceKeys.Navigation2DRuntime);
+                Assert.That(runtime, Is.Not.Null);
+                Assert.That(runtime.Config.Steering.Mode, Is.EqualTo(engine.MergedConfig.Navigation2D.Steering.Mode));
+                Assert.That(runtime.Config.Steering.TemporalCoherence.Enabled, Is.EqualTo(engine.MergedConfig.Navigation2D.Steering.TemporalCoherence.Enabled));
+                Assert.That(runtime.Config.Steering.TemporalCoherence.RequireSteadyStateWorld, Is.EqualTo(engine.MergedConfig.Navigation2D.Steering.TemporalCoherence.RequireSteadyStateWorld));
+                Assert.That(runtime.Config.Spatial.UpdateMode, Is.EqualTo(engine.MergedConfig.Navigation2D.Spatial.UpdateMode));
+                Assert.That(runtime.Config.FlowStreaming.MaxActiveTilesPerFlow, Is.EqualTo(engine.MergedConfig.Navigation2D.FlowStreaming.MaxActiveTilesPerFlow));
+                Assert.That(runtime.Config.Playground.DefaultAgentsPerTeam, Is.EqualTo(engine.MergedConfig.Navigation2D.Playground.DefaultAgentsPerTeam));
+            }
+            finally
+            {
+                engine.Dispose();
+            }
+        }
+
+        private static string FindRepoRoot()
+        {
+            string current = TestContext.CurrentContext.TestDirectory;
+            while (!string.IsNullOrEmpty(current))
+            {
+                if (Directory.Exists(Path.Combine(current, "src")) &&
+                    Directory.Exists(Path.Combine(current, "mods")) &&
+                    File.Exists(Path.Combine(current, "AGENTS.md")))
+                {
+                    return current;
+                }
+
+                string? parent = Directory.GetParent(current)?.FullName;
+                if (string.Equals(parent, current, StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+
+                current = parent ?? string.Empty;
+            }
+
+            throw new DirectoryNotFoundException("Unable to locate repository root from test directory.");
         }
     }
 }

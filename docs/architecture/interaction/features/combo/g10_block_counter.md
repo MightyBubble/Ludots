@@ -41,7 +41,7 @@ Normal Attack ability:
 |-----------|--------|---------|
 | Tag duration (auto-expire) | ✅ Existing | Limit the counter window to 15-30 ticks |
 | ResponseChainListener (OnReceiveHit) | ✅ Existing | Detect successful block and trigger post_block tag |
-| AbilityActivationRequireTags | ⚠️ **Required** | Gate counter_attack on "post_block" tag |
+| AbilityActivationBlockTags.RequiredAll | ✅ Existing | Gate counter_attack on "post_block" tag (对应现有 RequiredAll 字段) |
 | Conditional ResponseChain (only if blocking) | ✅ Existing | Graph precondition in ResponseChain |
 
 ## Configuration Example

@@ -48,41 +48,81 @@ on_incoming_damage:
 
 ## Configuration Example
 
-```json
+> ⚠️ 以下配置使用 Ludots 标准 EffectTemplate + Graph Phase 格式，替换了原虚构 DSL。
+
+```json5
+// === Effect Templates (mods/<yourMod>/Effects/dodge_effects.json) ===
+[
+  {
+    // 闪避动画锁 Buff：阻止其他能力激活
+    "id": "Effect.Dodge.AnimLock",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "duration": { "durationTicks": 20 },
+    "grantedTags": [
+      { "tag": "Status.Dodging", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    // 无敌帧 Buff：在闪避动画中段生效
+    "id": "Effect.Dodge.IframeBuff",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "duration": { "durationTicks": 8 },
+    "grantedTags": [
+      { "tag": "Status.Invulnerable", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    // 闪避位移（Displacement preset）
+    "id": "Effect.Dodge.Displacement",
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "configParams": {
+      "distanceCm": { "type": "float", "value": 600.0 },
+      "durationTicks": { "type": "int", "value": 8 }
+    }
+  }
+]
+
+// === AbilityExecSpec: 闪避翻滚 ===
+// 使用 timeline items 在不同 tick 偏移触发效果，替代虚构 Delay 机制
 {
-  "abilities": [
-    {
-      "id": "dodge_roll",
-      "inputBinding": "Circle",
-      "inputMode": "Press",
-      "directionalInput": true,
-      "cost": { "stamina": 30 },
-      "onActivate": {
-        "effects": [
-          { "type": "PlayAnimation", "id": "roll", "duration": 20 },
-          { "type": "AddTag", "tag": "dodging", "duration": 20 },
-          { "type": "Delay", "ticks": 4, "then": [
-              { "type": "AddTag", "tag": "invulnerable", "duration": 8 }
-            ]
-          },
-          { "type": "ApplyVelocity", "direction": "inputVector", "magnitude": 600 }
-        ]
-      }
-    }
-  ],
-  "passives": [
-    {
-      "id": "iframe_protection",
-      "trigger": "OnIncomingDamage",
-      "precondition": { "all": ["invulnerable"] },
-      "effects": [
-        { "type": "DamageMultiplier", "value": 0.0 }
-      ]
-    }
-  ],
-  "stamina": {
-    "max": 100,
-    "regenPerTick": 2
+  "id": "Ability.Dodge.Roll",
+  "blockTags": ["Status.Dodging"],           // 闪避期间不可再闪避
+  "exec": {
+    "totalTicks": 20,
+    "items": [
+      // tick 0: 施加闪避动画锁 Tag（持续 20 ticks）
+      { "kind": "EffectSignal", "tick": 0, "effectId": "Effect.Dodge.AnimLock" },
+      // tick 0: 向输入方向位移
+      { "kind": "EffectSignal", "tick": 0, "effectId": "Effect.Dodge.Displacement" },
+      // tick 4: 施加无敌帧 Buff（持续 8 ticks → tick 4~12 为无敌窗口）
+      { "kind": "EffectSignal", "tick": 4, "effectId": "Effect.Dodge.IframeBuff" }
+    ]
   }
 }
+
+// === ResponseChainListener：无敌帧伤害拦截 ===
+// 挂载在拥有闪避能力的 Entity 上
+{
+  "response_chain_listeners": [
+    {
+      "eventTagId": "incoming_damage",
+      "responseType": "Hook",
+      "priority": 300,
+      "responseGraphId": "Graph.Dodge.IframeCheck"
+      // Graph.Dodge.IframeCheck:
+      //   HasTag          E[0], Status.Invulnerable → B[0]
+      //   JumpIfFalse     B[0], END    // 无无敌帧 → 不拦截
+      //   (Hook 生效 → 取消伤害)
+    }
+  ]
+}
+
+// === 体力消耗 ===
+// 闪避能力的体力消耗通过 AbilityExecSpec 的 cost 字段配置：
+//   "cost": { "attribute": "Stamina", "amount": 30 }
+// 体力不足时能力激活失败。
+// 体力回复通过 Attribute Regen 系统配置（已有基建）。
 ```

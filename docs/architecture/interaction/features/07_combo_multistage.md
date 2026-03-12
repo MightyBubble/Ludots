@@ -43,7 +43,7 @@ Hit3: Press → Precondition: HasTag(combo_stage:2) → Execute → 移除所有
 路由: 同一 InputBinding → OrderSubmitter 检查 precondition → 激活匹配的 ability
 ```
 
-- **需要**: Ability 级别的 Tag precondition 检查 (目前 `AbilityActivationBlockTags` 只做 block, 需要 `AbilityActivationRequireTags`)
+- **已有**: Ability 级别的 Tag precondition 检查 (`AbilityActivationBlockTags.RequiredAll` 已支持正向 Tag 门控)
 
 ### G2: 轻重混合连段
 
@@ -155,7 +155,7 @@ Jhin R:
 
 | 需求 | 优先级 | 清单项 |
 |------|--------|--------|
-| **AbilityActivationRequireTags** (require tag for activation, not just block) | **P0** | G1-G10 (核心连击基础) |
+| ~~**AbilityActivationBlockTags.RequiredAll**~~ (正向 Tag 门控) | ~~**P0**~~ | ✅ 已有 — RequiredAll 字段已支持 (G1-G10) |
 | Ability precondition 基于 Attribute 阈值 (combo_meter >= N) | P1 | G8 |
 | ContextGroup 路由 (同一 binding → 多候选 ability) | P1 | G1, G3 (动作游戏) |
 | Input direction dot product 评分 | P2 | G3 |

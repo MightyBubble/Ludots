@@ -101,7 +101,7 @@ Phase OnApply Main:
 | GraphOps.CompareGtFloat (30) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
 | GraphOps.ModifyAttributeAdd (210) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
 | GraphOps.ApplyEffectTemplate (200) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
-| AbilityActivationRequireTags | `src/Core/Gameplay/GAS/AbilitySpec.cs` | ❌ P1 — 需支持 Attribute Precondition |
+| AbilityActivationBlockTags.RequiredAll | `src/Core/Gameplay/GAS/AbilitySpec.cs` | ✅ 已有 — 对应 RequiredAll 字段；Attribute Precondition 仍为 P1 |
 
 ---
 

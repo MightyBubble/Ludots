@@ -42,7 +42,7 @@ light_attack_3:
 | Component | Status | Purpose |
 |-----------|--------|---------|
 | Tag duration (auto-expire) | ✅ Existing | Automatic combo reset on timeout |
-| AbilityActivationRequireTags | ⚠️ **Required** | Enable positive tag preconditions (currently only BlockTags exist) |
+| AbilityActivationBlockTags.RequiredAll | ✅ Existing | Enable positive tag preconditions (对应现有 RequiredAll 字段) |
 | ContextGroup routing | Optional | Alternative routing for same binding → multiple abilities |
 
 ## Configuration Example
