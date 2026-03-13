@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Arch.Core;
 
 namespace Ludots.Core.Gameplay.GAS.Presentation
@@ -8,14 +8,14 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
     /// </summary>
     public enum GasPresentationEventKind : byte
     {
-        // ── Ability lifecycle ──
+        // 鈹€鈹€ Ability lifecycle 鈹€鈹€
         CastStarted     = 1,
         CastFailed      = 2,
         CastCommitted   = 3,
         CastFinished    = 4,
         CastInterrupted = 5,
 
-        // ── Effect lifecycle ──
+        // 鈹€鈹€ Effect lifecycle 鈹€鈹€
         EffectApplied   = 10,
         EffectActivated = 11,
         EffectExpired   = 12,
@@ -33,6 +33,7 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
         NoTarget    = 3,
         InvalidSlot = 4,
         NotAlive    = 5,
+        InsufficientResource = 6,
     }
 
     /// <summary>
@@ -53,7 +54,7 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
     }
 
     /// <summary>
-    /// Fixed-capacity ring buffer for GAS → Presentation events.
+    /// Fixed-capacity ring buffer for GAS 鈫?Presentation events.
     /// Written by GAS systems during logic tick, consumed by presentation systems each render frame.
     /// Zero-allocation after construction.
     /// </summary>
@@ -65,6 +66,7 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
         public int Count => _count;
         public int Capacity => _events.Length;
         public int DroppedSinceClear { get; private set; }
+        public int ClearVersion { get; private set; }
 
         public GasPresentationEventBuffer(int capacity = 1024)
         {
@@ -89,6 +91,8 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
         {
             _count = 0;
             DroppedSinceClear = 0;
+            ClearVersion++;
         }
     }
 }
+

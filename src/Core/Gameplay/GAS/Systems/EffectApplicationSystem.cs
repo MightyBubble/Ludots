@@ -105,19 +105,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly GasPresentationEventBuffer _presentationEvents;
         private readonly EffectTemplateRegistry _templates;
         private readonly ISpatialQueryService _spatialQueries;
+        private readonly TagOps _tagOps;
 
         // ── Phase Graph execution (optional) ──
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
 
-        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null) : base(world)
+        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null) : base(world)
         {
             _effectRequests = effectRequests;
             _budget = budget;
             _presentationEvents = presentationEvents;
             _templates = templates;
             _spatialQueries = spatialQueries;
+            _tagOps = tagOps ?? new TagOps();
             _phaseExecutor = phaseExecutor;
             _graphApiHost = graphApi;
             _graphApi = graphApi;
@@ -395,11 +397,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             if (World.Has<EffectGrantedTags>(e) && World.IsAlive(context.Target))
                             {
                                 ref readonly var grantedTags = ref World.Get<EffectGrantedTags>(e);
+                                if (!World.Has<GameplayTagContainer>(context.Target))
+                                    World.Add(context.Target, new GameplayTagContainer());
                                 if (!World.Has<TagCountContainer>(context.Target))
                                     World.Add(context.Target, new TagCountContainer());
+                                if (!World.Has<DirtyFlags>(context.Target))
+                                    World.Add(context.Target, new DirtyFlags());
+                                ref var tags = ref World.Get<GameplayTagContainer>(context.Target);
                                 ref var tagCounts = ref World.Get<TagCountContainer>(context.Target);
+                                ref var dirtyFlags = ref World.Get<DirtyFlags>(context.Target);
                                 int stackCount = World.Has<EffectStack>(e) ? World.Get<EffectStack>(e).Count : 1;
-                                EffectTagContributionHelper.Grant(in grantedTags, ref tagCounts, stackCount, _budget);
+                                EffectTagContributionHelper.Grant(in grantedTags, _tagOps, ref tags, ref tagCounts, ref dirtyFlags, stackCount, _budget);
                             }
                         }
                         workUnits++;

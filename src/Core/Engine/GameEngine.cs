@@ -236,6 +236,7 @@ namespace Ludots.Core.Engine
             // Setup conflict report for mod registration tracing
             ConflictReport = new RegistrationConflictReport();
             Ludots.Core.Config.ComponentRegistry.SetConflictReport(ConflictReport);
+            GasComponentRegistryBootstrap.EnsureRegistered();
 
             // 1. Setup Infrastructure (VFS, ModLoader)
             VFS = new VirtualFileSystem();
@@ -422,6 +423,13 @@ namespace Ludots.Core.Engine
             presetTypeLoader.Load(ConfigCatalog, ConfigConflictReport);
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
+            foreach (string attributeName in config.Constants.Attributes.Values)
+            {
+                if (!string.IsNullOrWhiteSpace(attributeName) && AttributeRegistry.GetId(attributeName) == AttributeRegistry.InvalidId)
+                {
+                    AttributeRegistry.Register(attributeName);
+                }
+            }
             var effectRequestQueue = new EffectRequestQueue();
             var clock = new DiscreteClock();
             var gasClocks = new GasClocks(clock);

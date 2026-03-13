@@ -1,0 +1,375 @@
+[
+  {
+    "id": "interaction_b1_hero",
+    "components": {
+      "Name": {
+        "Value": "ArpgHero"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100,
+          "AttackDamage": 100,
+          "Mana": 100
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Interaction.B1SelfBuff"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DirtyFlags": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "interaction_b1_enemy",
+    "components": {
+      "Name": {
+        "Value": "ArpgEnemy"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 900,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        }
+      }
+    }
+  },
+  {
+    "id": "interaction_c1_hero",
+    "components": {
+      "Name": {
+        "Value": "ArpgHero"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "BaseDamage": 200,
+          "Mana": 100
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Interaction.C1HostileUnitDamage"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DirtyFlags": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "interaction_c1_target_primary",
+    "components": {
+      "Name": {
+        "Value": "C1EnemyPrimary"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 450,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Armor": 50
+        }
+      },
+      "BlackboardFloatBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "interaction_c1_target_invalid",
+    "components": {
+      "Name": {
+        "Value": "C1EnemyInvalid"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 520,
+          "Y": 160
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 0,
+          "Armor": 30
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DirtyFlags": {},
+      "BlackboardFloatBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "interaction_c1_target_far",
+    "components": {
+      "Name": {
+        "Value": "C1EnemyFar"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 1400,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "Armor": 10
+        }
+      },
+      "BlackboardFloatBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "interaction_c2_hero",
+    "components": {
+      "Name": {
+        "Value": "ArpgHero"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Mana": 100
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Interaction.C2FriendlyUnitHeal"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DirtyFlags": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "interaction_c2_target_ally",
+    "components": {
+      "Name": {
+        "Value": "C2AllyPrimary"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 420,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DirtyFlags": {}
+    }
+  },
+  {
+    "id": "interaction_c2_target_hostile",
+    "components": {
+      "Name": {
+        "Value": "C2EnemyInvalid"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 780,
+          "Y": 220
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DirtyFlags": {}
+    }
+  },
+  {
+    "id": "interaction_c2_target_dead_ally",
+    "components": {
+      "Name": {
+        "Value": "C2AllyDead"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 640,
+          "Y": -120
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DirtyFlags": {}
+    }
+  },
+  {
+    "id": "interaction_c3_hero",
+    "components": {
+      "Name": {
+        "Value": "ArpgHero"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000,
+          "Mana": 100,
+          "MoveSpeed": 220
+        }
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Interaction.C3AnyUnitConditional"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DirtyFlags": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "interaction_c3_target_hostile",
+    "components": {
+      "Name": {
+        "Value": "C3EnemyPrimary"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 420,
+          "Y": -80
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DirtyFlags": {}
+    }
+  },
+  {
+    "id": "interaction_c3_target_friendly",
+    "components": {
+      "Name": {
+        "Value": "C3AllyPrimary"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 460,
+          "Y": 220
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 180
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DirtyFlags": {}
+    }
+  }
+]

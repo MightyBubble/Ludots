@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 
@@ -86,7 +87,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var def = new AbilityDefinition();
 
-            // ── exec block ──
+            // 鈹€鈹€ exec block 鈹€鈹€
             if (obj["exec"] is JsonObject execObj)
             {
                 def.ExecSpec = CompileExecSpec(execObj, id, path);
@@ -95,7 +96,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.HasExecCallerParamsPool = hasPool;
             }
 
-            // ── onActivateEffects ──
+            // 鈹€鈹€ onActivateEffects 鈹€鈹€
             if (obj["onActivateEffects"] is JsonArray effectArr)
             {
                 var onActivate = default(AbilityOnActivateEffects);
@@ -110,7 +111,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.OnActivateEffects = onActivate;
             }
 
-            // ── blockTags ──
+            // 鈹€鈹€ blockTags 鈹€鈹€
             if (obj["blockTags"] is JsonObject blockObj)
             {
                 var blockTags = default(AbilityActivationBlockTags);
@@ -134,10 +135,44 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.ActivationBlockTags = blockTags;
             }
 
+            if (obj["attributePreconditions"] is JsonArray attributePreconditions)
+            {
+                var preconditions = default(AbilityAttributePreconditions);
+                foreach (JsonNode item in attributePreconditions)
+                {
+                    if (item is not JsonObject condition)
+                    {
+                        continue;
+                    }
+
+                    string attributeName = condition["attribute"]?.GetValue<string>();
+                    if (string.IsNullOrWhiteSpace(attributeName))
+                    {
+                        continue;
+                    }
+
+                    if (!preconditions.TryAdd(
+                        AttributeRegistry.Register(attributeName),
+                        ReadFloat(condition, "value"),
+                        ParseAttributeComparison(condition["comparison"]?.GetValue<string>() ?? "GreaterOrEqual"),
+                        ParseFailReason(condition["failReason"]?.GetValue<string>() ?? "InsufficientResource")))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' exceeded max {AbilityAttributePreconditions.MAX_ENTRIES} attribute preconditions.");
+                    }
+                }
+
+                if (preconditions.Count > 0)
+                {
+                    def.HasAttributePreconditions = true;
+                    def.AttributePreconditions = preconditions;
+                }
+            }
+
             return def;
         }
 
-        // ──────────────── ExecSpec ────────────────
+        // 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ ExecSpec 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
         private static AbilityExecSpec CompileExecSpec(JsonObject execObj, string id, string path)
         {
@@ -221,7 +256,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             spec.SetItem(idx, kind, tick, durationTicks, clockId, tagId, templateId, callerParamsIdx, payloadA);
         }
 
-        // ──────────────── CallerParamsPool ────────────────
+        // 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ CallerParamsPool 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
         private static void CompileCallerParamsPool(JsonObject execObj, string id, string path,
             out AbilityExecCallerParamsPool pool, out bool hasPool)
@@ -264,7 +299,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
         }
 
-        // ──────────────── Parsing helpers ────────────────
+        // 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Parsing helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
         private static GasClockId ParseClockId(string str)
         {
@@ -296,6 +331,48 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 _ => throw new InvalidOperationException($"Unknown ExecItemKind '{str}'. Valid values: EffectClip, TagClip, TagClipTarget, EffectSignal, EventSignal, GraphSignal, TagSignal, TagSignalTarget, InputGate, EventGate, SelectionGate, End."),
             };
         }
+
+        private static AbilityAttributeComparison ParseAttributeComparison(string str)
+        {
+            return str switch
+            {
+                "GreaterOrEqual" => AbilityAttributeComparison.GreaterOrEqual,
+                "GreaterThan" => AbilityAttributeComparison.GreaterThan,
+                "LessOrEqual" => AbilityAttributeComparison.LessOrEqual,
+                "LessThan" => AbilityAttributeComparison.LessThan,
+                _ => throw new InvalidOperationException(
+                    $"Unknown AbilityAttributeComparison '{str}'. Valid values: GreaterOrEqual, GreaterThan, LessOrEqual, LessThan."),
+            };
+        }
+
+        private static AbilityCastFailReason ParseFailReason(string str)
+        {
+            return str switch
+            {
+                "InsufficientResource" => AbilityCastFailReason.InsufficientResource,
+                "BlockedByTag" => AbilityCastFailReason.BlockedByTag,
+                "OnCooldown" => AbilityCastFailReason.OnCooldown,
+                "NoTarget" => AbilityCastFailReason.NoTarget,
+                "InvalidSlot" => AbilityCastFailReason.InvalidSlot,
+                "NotAlive" => AbilityCastFailReason.NotAlive,
+                _ => throw new InvalidOperationException(
+                    $"Unknown AbilityCastFailReason '{str}'. Valid values: InsufficientResource, BlockedByTag, OnCooldown, NoTarget, InvalidSlot, NotAlive."),
+            };
+        }
+
+        private static float ReadFloat(JsonObject obj, string key)
+        {
+            if (obj[key] is not JsonNode valueNode)
+            {
+                return 0f;
+            }
+
+            JsonElement element = valueNode.GetValue<JsonElement>();
+            return element.ValueKind == JsonValueKind.Number
+                ? valueNode.GetValue<float>()
+                : float.Parse(valueNode.GetValue<string>(), CultureInfo.InvariantCulture);
+        }
     }
 }
+
 

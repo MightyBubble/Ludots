@@ -276,9 +276,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (World.Has<EffectGrantedTags>(entity) && World.IsAlive(context.Target) && World.Has<TagCountContainer>(context.Target))
                 {
                     ref readonly var grantedTags = ref World.Get<EffectGrantedTags>(entity);
+                    if (!World.Has<GameplayTagContainer>(context.Target))
+                    {
+                        World.Add(context.Target, new GameplayTagContainer());
+                    }
+                    if (!World.Has<DirtyFlags>(context.Target))
+                    {
+                        World.Add(context.Target, new DirtyFlags());
+                    }
+                    ref var tags = ref World.Get<GameplayTagContainer>(context.Target);
                     ref var tagCounts = ref World.Get<TagCountContainer>(context.Target);
+                    ref var dirtyFlags = ref World.Get<DirtyFlags>(context.Target);
                     int stackCount = World.Has<EffectStack>(entity) ? World.Get<EffectStack>(entity).Count : 1;
-                    EffectTagContributionHelper.Revoke(in grantedTags, ref tagCounts, stackCount, GasBudget);
+                    EffectTagContributionHelper.Revoke(in grantedTags, TagOps, ref tags, ref tagCounts, ref dirtyFlags, stackCount, GasBudget);
                 }
 
                 if (World.IsAlive(context.Target) && World.Has<ActiveEffectContainer>(context.Target))

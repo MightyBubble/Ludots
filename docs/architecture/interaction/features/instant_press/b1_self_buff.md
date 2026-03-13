@@ -55,7 +55,9 @@ Effect 模板示例：
   "modifiers": [
     { "attribute": "AttackDamage", "op": "Multiply", "value": 1.5 }
   ],
-  "grantedTags": ["Status.Empowered"],
+  "grantedTags": [
+    { "tag": "Status.Empowered", "formula": "Fixed", "amount": 1 }
+  ],
   "configParams": {}
 }
 ```
@@ -101,7 +103,7 @@ Effect 模板示例：
 |----|------|
 | **输入** | 玩家按 Q 键（`PressedThisFrame`），自身 AttackDamage=100，当前无同名 Buff |
 | **预期输出** | AttackDamage 变为 150（×1.5 Modifier 生效）；`Status.Empowered` 标签挂载；Buff 持续 300 ticks 后自动移除，AttackDamage 恢复 100 |
-| **Log 关键字** | `[GAS] ApplyEffect Effect.Ability.B1.Buff -> source=<sid> target=<sid>`；`[GAS] TagGranted Status.Empowered entity=<sid>` |
+| **Log 关键字** | `[GAS] ApplyEffect Effect.Interaction.B1SelfBuffBuff -> source=<sid> target=<sid>`；`[GAS] TagGranted Status.Empowered entity=<sid>` |
 | **截图要求** | 角色头顶出现 Buff 图标，属性面板数值变化与计算结果一致 |
 | **多帧录屏** | F0: 按键 → F1: Order 入队 → F2: EffectSignal Propose → F3: OnApply → F4: Modifier 聚合 → F5: UI 更新 |
 
@@ -111,7 +113,7 @@ Effect 模板示例：
 |----|------|
 | **输入** | 自身持有 `Status.Silenced` 或 `Status.Stunned` Tag |
 | **预期输出** | 技能激活被 BlockTags 拦截；无 Effect Apply；冷却不消耗 |
-| **Log 关键字** | `[GAS] AbilityActivationBlocked reason=BlockTag tag=Status.Silenced abilityId=ability_self_buff` |
+| **Log 关键字** | `[GAS] AbilityActivationBlocked reason=BlockedByTag tag=Status.Silenced abilityId=Ability.Interaction.B1SelfBuff` |
 | **截图要求** | 技能图标显示禁用状态，无 Buff 图标出现 |
 | **多帧录屏** | 仅按键帧，后续帧角色无变化 |
 
@@ -121,7 +123,13 @@ Effect 模板示例：
 |----|------|
 | **输入** | 当前 Mana = 0，技能消耗 Cost = 50 |
 | **预期输出** | 激活失败；UI 显示法力不足提示；冷却不消耗 |
-| **Log 关键字** | `[GAS] AbilityActivationFailed reason=InsufficientMana abilityId=ability_self_buff required=50 current=0` |
+| **Log 关键字** | `[GAS] AbilityActivationFailed reason=InsufficientResource abilityId=Ability.Interaction.B1SelfBuff attribute=Mana delta=50` |
+
+> 当前 `InteractionShowcaseMod` 的 B1 交付以世界空间 aura + 调试 overlay 作为可视验收面，不接入正式技能栏禁用图标或 Buff HUD 图标；同时该 showcase 验证的是 Mana 前置门槛，不包含成功施放后的 Mana 扣减。
+>
+> 当前可视证据覆盖 `Status.Silenced` 分支；`Status.Stunned` 作为同一 BlockTags 路径的第二个标签，由 `src/Tests/GasTests/SelfBuffTests.cs` 中的 `B1_Stunned_ActivationBlocked` 单独覆盖，避免后续模板只验证一个阻断标签。
+>
+> 采样口径说明：headless acceptance 记录的是“固定步运行时里首个同时满足 `stage=buff_active` 且 `EffectiveTag=true` 的样本”；launcher visual 记录的是“首个 presentation checkpoint”。两条证据链的语义仍然不同，但当前提交产物里二者都落在 tick `7`：`visual/summary.json` 的 `active_tick=7`，`002_buff_active.png` 也显示 `ScriptTick=7 / Tick=7`。如果后续 recorder 或采样边界调整导致 visual checkpoint 与 headless strict sample 再次错开，应继续按观测语义分别命名，而不要把不同口径压成同一个“active tick”。
 
 ---
 
@@ -138,7 +146,7 @@ public void B1_BasicBuff_AttributeModifierApplied()
     var source = SpawnUnit(world, attackDamage: 100, mana: 100);
 
     // Act
-    world.SubmitOrder(source, OrderType.CastAbility, abilityId: "ability_self_buff");
+    world.SubmitOrder(source, OrderType.CastAbility, abilityId: "Ability.Interaction.B1SelfBuff");
     world.Tick(3);  // Order → EffectRequest → Apply
 
     // Assert
@@ -151,7 +159,7 @@ public void B1_BuffExpiry_ModifierRemoved()
 {
     var world = CreateTestWorld();
     var source = SpawnUnit(world, attackDamage: 100, mana: 100);
-    world.SubmitOrder(source, OrderType.CastAbility, abilityId: "ability_self_buff");
+    world.SubmitOrder(source, OrderType.CastAbility, abilityId: "Ability.Interaction.B1SelfBuff");
     world.Tick(3);
 
     // Buff 持续 300 ticks，到期后 Modifier 移除
@@ -166,10 +174,23 @@ public void B1_Silenced_ActivationBlocked()
     var source = SpawnUnit(world, attackDamage: 100, mana: 100);
     GrantTag(world, source, "Status.Silenced");
 
-    world.SubmitOrder(source, OrderType.CastAbility, abilityId: "ability_self_buff");
+    world.SubmitOrder(source, OrderType.CastAbility, abilityId: "Ability.Interaction.B1SelfBuff");
     world.Tick(3);
 
     // 沉默状态下 Buff 不应生效
+    Assert.AreEqual(Fix64.FromInt(100), GetAttribute(world, source, "AttackDamage"));
+}
+
+[Test]
+public void B1_Stunned_ActivationBlocked()
+{
+    var world = CreateTestWorld();
+    var source = SpawnUnit(world, attackDamage: 100, mana: 100);
+    GrantTag(world, source, "Status.Stunned");
+
+    world.SubmitOrder(source, OrderType.CastAbility, abilityId: "Ability.Interaction.B1SelfBuff");
+    world.Tick(3);
+
     Assert.AreEqual(Fix64.FromInt(100), GetAttribute(world, source, "AttackDamage"));
 }
 
@@ -179,7 +200,7 @@ public void B1_InsufficientMana_ActivationFailed()
     var world = CreateTestWorld();
     var source = SpawnUnit(world, attackDamage: 100, mana: 0);
 
-    world.SubmitOrder(source, OrderType.CastAbility, abilityId: "ability_self_buff");
+    world.SubmitOrder(source, OrderType.CastAbility, abilityId: "Ability.Interaction.B1SelfBuff");
     world.Tick(3);
 
     Assert.AreEqual(Fix64.FromInt(100), GetAttribute(world, source, "AttackDamage"));
@@ -189,13 +210,15 @@ public void B1_InsufficientMana_ActivationFailed()
 ### 集成验收
 1. 运行 `dotnet test --filter "B1"` — 全绿。
 2. 在 Playground 中录制 60 帧日志，存档：
-   - `artifacts/acceptance/instant_press/b1_self_buff_trace.jsonl`
+  - `artifacts/acceptance/interaction-b1-self-buff/trace.jsonl`
 3. 截图存档：
-   - `artifacts/acceptance/instant_press/b1_self_buff_normal.png`
-   - `artifacts/acceptance/instant_press/b1_self_buff_edge.png`（沉默状态下施放）
+  - `artifacts/acceptance/interaction-b1-self-buff/visual/screens/002_buff_active.png`
+  - `artifacts/acceptance/interaction-b1-self-buff/visual/screens/004_silenced_blocked.png`
+  - `artifacts/acceptance/interaction-b1-self-buff/visual/screens/005_insufficient_mana.png`
 4. 多帧录屏：
-   - `artifacts/acceptance/instant_press/b1_self_buff_60frames.gif`
-   - 标注关键帧：按键帧、Effect Apply 帧、属性面板更新帧、Buff 到期恢复帧
+  - `artifacts/acceptance/interaction-b1-self-buff/visual/interaction-b1-self-buff.gif`
+  - `artifacts/acceptance/interaction-b1-self-buff/visual/interaction-b1-self-buff.mp4`
+  - 标注关键帧：`000_start`、`001_order_submitted`、`002_buff_active`、`003_buff_expired`、`004_silenced_blocked`、`005_insufficient_mana`
 
 ---
 

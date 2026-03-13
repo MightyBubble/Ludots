@@ -1,4 +1,4 @@
-using Arch.Core;
+﻿using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -12,7 +12,7 @@ using Ludots.Core.Spatial;
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
     /// <summary>
-    /// Main processing loop stage: ProposalAndApply → Lifetime → PostLifetimeProposalAndApply → Done.
+    /// Main processing loop stage: ProposalAndApply 鈫?Lifetime 鈫?PostLifetimeProposalAndApply 鈫?Done.
     /// </summary>
     public enum EffectLoopStage : byte
     {
@@ -63,8 +63,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _chainOrders = chainOrders;
             _orderRequests = orderRequests;
 
-            _proposal = new EffectProposalProcessingSystem(world, effectRequests, budget, templates, inputRequests, chainOrders, telemetry, orderRequests, responseChainOrderTypes, presentationEvents, phaseExecutor, graphApi);
-            _application = new EffectApplicationSystem(world, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, phaseExecutor, graphApi);
+            _proposal = new EffectProposalProcessingSystem(world, effectRequests, budget, templates, inputRequests, chainOrders, telemetry, orderRequests, responseChainOrderTypes, presentationEvents, phaseExecutor, graphApi, tagOps);
+            _application = new EffectApplicationSystem(world, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, phaseExecutor, graphApi, tagOps);
             _lifetime = new EffectLifetimeSystem(world, clock, conditions, effectRequests, budget, templates, spatialQueries, spawnRequests, phaseExecutor, graphApi, tagOps);
             _runtimeStateEntity = world.Create(new GasRuntimeState());
         }
@@ -216,3 +216,4 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
     }
 }
+

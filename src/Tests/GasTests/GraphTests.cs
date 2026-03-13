@@ -81,6 +81,59 @@ namespace Ludots.Tests.GAS
             That(readProgram[0].Op, Is.EqualTo((ushort)GraphNodeOp.ConstFloat));
             That(readProgram[1].Op, Is.EqualTo((ushort)GraphNodeOp.QueryFilterTagAll));
         }
+
+        [Test]
+        public void Compile_C1StyleGraph_EncodesContextConfigAndBlackboardOps()
+        {
+            var cfg = new GraphConfig
+            {
+                Id = "Test.Graph.C1Style",
+                Kind = "Effect",
+                Entry = "src",
+                Nodes = new List<GraphNodeConfig>
+                {
+                    new() { Id = "src", Op = "LoadContextSource", Next = "tgt" },
+                    new() { Id = "tgt", Op = "LoadContextTarget", Next = "base" },
+                    new() { Id = "base", Op = "LoadAttribute", Attribute = "BaseDamage", Inputs = { "src" }, Next = "coeff" },
+                    new() { Id = "coeff", Op = "LoadConfigFloat", Key = "DamageCoeff", Next = "mul" },
+                    new() { Id = "mul", Op = "MulFloat", Inputs = { "base", "coeff" }, Next = "write" },
+                    new() { Id = "write", Op = "WriteBlackboardFloat", Key = "DamageAmount", Inputs = { "tgt", "mul" }, Next = "read" },
+                    new() { Id = "read", Op = "ReadBlackboardFloat", Key = "DamageAmount", Inputs = { "tgt" }, Next = "armor" },
+                    new() { Id = "armor", Op = "LoadAttribute", Attribute = "Armor", Inputs = { "tgt" }, Next = "hundred" },
+                    new() { Id = "hundred", Op = "ConstFloat", FloatValue = 100f, Next = "sum" },
+                    new() { Id = "sum", Op = "AddFloat", Inputs = { "hundred", "armor" }, Next = "mit" },
+                    new() { Id = "mit", Op = "DivFloat", Inputs = { "hundred", "sum" }, Next = "final" },
+                    new() { Id = "final", Op = "MulFloat", Inputs = { "read", "mit" }, Next = "neg" },
+                    new() { Id = "neg", Op = "NegFloat", Inputs = { "final" }, Next = "apply" },
+                    new() { Id = "apply", Op = "ModifyAttributeAdd", Attribute = "Health", Inputs = { "tgt", "neg" } },
+                }
+            };
+
+            var (pkg, diags) = GraphCompiler.Compile(cfg);
+            That(pkg.HasValue, Is.True);
+            for (int i = 0; i < diags.Count; i++)
+            {
+                That(diags[i].Severity, Is.Not.EqualTo(GraphDiagnosticSeverity.Error), diags[i].Message);
+            }
+
+            var program = pkg!.Value.Program;
+            That((GraphNodeOp)program[0].Op, Is.EqualTo(GraphNodeOp.LoadContextSource));
+            That(program[0].Dst, Is.EqualTo(0));
+            That((GraphNodeOp)program[1].Op, Is.EqualTo(GraphNodeOp.LoadContextTarget));
+            That(program[1].Dst, Is.EqualTo(1));
+            That((GraphNodeOp)program[3].Op, Is.EqualTo(GraphNodeOp.LoadConfigFloat));
+            That((GraphNodeOp)program[5].Op, Is.EqualTo(GraphNodeOp.WriteBlackboardFloat));
+            That((GraphNodeOp)program[6].Op, Is.EqualTo(GraphNodeOp.ReadBlackboardFloat));
+            That((GraphNodeOp)program[10].Op, Is.EqualTo(GraphNodeOp.DivFloat));
+            That((GraphNodeOp)program[12].Op, Is.EqualTo(GraphNodeOp.NegFloat));
+            That((GraphNodeOp)program[13].Op, Is.EqualTo(GraphNodeOp.ModifyAttributeAdd));
+
+            That(pkg.Value.Symbols, Does.Contain("BaseDamage"));
+            That(pkg.Value.Symbols, Does.Contain("Armor"));
+            That(pkg.Value.Symbols, Does.Contain("Health"));
+            That(pkg.Value.Symbols, Does.Contain("DamageCoeff"));
+            That(pkg.Value.Symbols, Does.Contain("DamageAmount"));
+        }
     }
 
     [TestFixture]

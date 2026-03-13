@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -26,7 +26,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public struct AbilityToggleSpec
     {
-        /// <summary>Tag ID used to track toggle state. If present on actor �?ability is ON.</summary>
+        /// <summary>Tag ID used to track toggle state. If present on actor 鈫?ability is ON.</summary>
         public int ToggleTagId;
         
         /// <summary>
@@ -47,7 +47,7 @@ namespace Ludots.Core.Gameplay.GAS
 
     public struct AbilityDefinition
     {
-        // ── Generic execution model ──
+        // 鈹€鈹€ Generic execution model 鈹€鈹€
         public AbilityExecSpec ExecSpec;
         public AbilityExecCallerParamsPool ExecCallerParamsPool;
         public bool HasExecCallerParamsPool;
@@ -56,12 +56,14 @@ namespace Ludots.Core.Gameplay.GAS
         public bool HasOnActivateEffects;
         public AbilityActivationBlockTags ActivationBlockTags;
         public bool HasActivationBlockTags;
+        public AbilityAttributePreconditions AttributePreconditions;
+        public bool HasAttributePreconditions;
 
-        // ── Toggle mode ──
+        // 鈹€鈹€ Toggle mode 鈹€鈹€
         public bool HasToggleSpec;
         public AbilityToggleSpec ToggleSpec;
 
-        // ── Presentation metadata ──
+        // 鈹€鈹€ Presentation metadata 鈹€鈹€
         public bool HasIndicator;
         public AbilityIndicatorConfig Indicator;
     }
@@ -124,6 +126,7 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 HasOnActivateEffects = world.Has<AbilityOnActivateEffects>(templateEntity),
                 HasActivationBlockTags = world.Has<AbilityActivationBlockTags>(templateEntity),
+                HasAttributePreconditions = world.Has<AbilityAttributePreconditions>(templateEntity),
                 ExecSpec = world.Get<AbilityExecSpec>(templateEntity)
             };
 
@@ -140,6 +143,10 @@ namespace Ludots.Core.Gameplay.GAS
             if (def.HasActivationBlockTags)
             {
                 def.ActivationBlockTags = world.Get<AbilityActivationBlockTags>(templateEntity);
+            }
+            if (def.HasAttributePreconditions)
+            {
+                def.AttributePreconditions = world.Get<AbilityAttributePreconditions>(templateEntity);
             }
             Register(abilityId, in def);
         }
@@ -159,4 +166,5 @@ namespace Ludots.Core.Gameplay.GAS
         }
     }
 }
+
 

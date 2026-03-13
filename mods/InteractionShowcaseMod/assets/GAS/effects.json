@@ -1,0 +1,166 @@
+[
+  {
+    "id": "Effect.Interaction.B1SelfBuffBuff",
+    "tags": [
+      "Effect.Interaction.B1SelfBuffBuff"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "stackPolicy": {
+      "policy": "Replace"
+    },
+    "duration": {
+      "durationTicks": 300
+    },
+    "modifiers": [
+      {
+        "attribute": "AttackDamage",
+        "op": "Multiply",
+        "value": 1.5
+      }
+    ],
+    "grantedTags": [
+      {
+        "tag": "Status.Empowered",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.C1HostileUnitDamage",
+    "tags": [
+      "Effect.Interaction.C1HostileUnitDamage"
+    ],
+    "presetType": "None",
+    "lifetime": "Instant",
+    "configParams": {
+      "Interaction.C1.DamageCoeff": {
+        "type": "float",
+        "value": 1.5
+      }
+    },
+    "phaseGraphs": {
+      "OnCalculate": {
+        "pre": "Graph.Interaction.C1.CalculateDamage"
+      },
+      "OnApply": {
+        "pre": "Graph.Interaction.C1.ApplyMitigatedDamage"
+      }
+    }
+  },
+  {
+    "id": "Effect.Interaction.C2FriendlyUnitHeal",
+    "tags": [
+      "Effect.Interaction.C2FriendlyUnitHeal"
+    ],
+    "presetType": "Heal",
+    "lifetime": "Instant",
+    "targetFilter": {
+      "relationFilter": "Friendly"
+    },
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 150.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.C3HostileConditionalSearch",
+    "tags": [
+      "Effect.Interaction.C3HostileConditionalSearch"
+    ],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 80
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Interaction.C3HostilePolymorph"
+    }
+  },
+  {
+    "id": "Effect.Interaction.C3FriendlyConditionalSearch",
+    "tags": [
+      "Effect.Interaction.C3FriendlyConditionalSearch"
+    ],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 80
+    },
+    "targetFilter": {
+      "relationFilter": "Friendly",
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Interaction.C3FriendlyHaste"
+    }
+  },
+  {
+    "id": "Effect.Interaction.C3HostilePolymorph",
+    "tags": [
+      "Effect.Interaction.C3HostilePolymorph"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "duration": {
+      "durationTicks": 300
+    },
+    "stackPolicy": {
+      "policy": "Replace"
+    },
+    "modifiers": [
+      {
+        "attribute": "MoveSpeed",
+        "op": "Add",
+        "value": -120.0
+      }
+    ],
+    "grantedTags": [
+      {
+        "tag": "Status.Polymorphed",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Interaction.C3FriendlyHaste",
+    "tags": [
+      "Effect.Interaction.C3FriendlyHaste"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "duration": {
+      "durationTicks": 300
+    },
+    "stackPolicy": {
+      "policy": "Replace"
+    },
+    "modifiers": [
+      {
+        "attribute": "MoveSpeed",
+        "op": "Add",
+        "value": 80.0
+      }
+    ],
+    "grantedTags": [
+      {
+        "tag": "Status.Hasted",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  }
+]

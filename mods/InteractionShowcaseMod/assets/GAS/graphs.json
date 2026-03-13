@@ -1,0 +1,32 @@
+[
+  {
+    "id": "Graph.Interaction.C1.CalculateDamage",
+    "kind": "Effect",
+    "entry": "src",
+    "nodes": [
+      { "id": "src", "op": "LoadContextSource", "next": "tgt" },
+      { "id": "tgt", "op": "LoadContextTarget", "next": "base" },
+      { "id": "base", "op": "LoadAttribute", "attribute": "BaseDamage", "inputs": [ "src" ], "next": "coeff" },
+      { "id": "coeff", "op": "LoadConfigFloat", "key": "Interaction.C1.DamageCoeff", "next": "mul" },
+      { "id": "mul", "op": "MulFloat", "inputs": [ "base", "coeff" ], "next": "write" },
+      { "id": "write", "op": "WriteBlackboardFloat", "key": "Interaction.C1.DamageAmount", "inputs": [ "tgt", "mul" ] }
+    ]
+  },
+  {
+    "id": "Graph.Interaction.C1.ApplyMitigatedDamage",
+    "kind": "Effect",
+    "entry": "tgt",
+    "nodes": [
+      { "id": "tgt", "op": "LoadContextTarget", "next": "amount" },
+      { "id": "amount", "op": "ReadBlackboardFloat", "key": "Interaction.C1.DamageAmount", "inputs": [ "tgt" ], "next": "armor" },
+      { "id": "armor", "op": "LoadAttribute", "attribute": "Armor", "inputs": [ "tgt" ], "next": "hundred" },
+      { "id": "hundred", "op": "ConstFloat", "floatValue": 100.0, "next": "sum" },
+      { "id": "sum", "op": "AddFloat", "inputs": [ "hundred", "armor" ], "next": "mitigation" },
+      { "id": "mitigation", "op": "DivFloat", "inputs": [ "hundred", "sum" ], "next": "final" },
+      { "id": "final", "op": "MulFloat", "inputs": [ "amount", "mitigation" ], "next": "store" },
+      { "id": "store", "op": "WriteBlackboardFloat", "key": "Interaction.C1.FinalDamage", "inputs": [ "tgt", "final" ], "next": "neg" },
+      { "id": "neg", "op": "NegFloat", "inputs": [ "final" ], "next": "apply" },
+      { "id": "apply", "op": "ModifyAttributeAdd", "attribute": "Health", "inputs": [ "tgt", "neg" ] }
+    ]
+  }
+]

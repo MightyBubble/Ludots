@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
@@ -42,8 +42,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderRequestQueue _orderRequests;
         private readonly ResponseChainOrderTypes _responseChainOrderTypes;
         private readonly GasPresentationEventBuffer _presentationEvents;
+        private readonly TagOps _tagOps;
 
-        // ── Phase Graph execution (optional) ──
+        // 鈹€鈹€ Phase Graph execution (optional) 鈹€鈹€
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
@@ -233,7 +234,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null)
+        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null)
             : base(world)
         {
             _queue = queue;
@@ -245,6 +246,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _orderRequests = orderRequests;
             _responseChainOrderTypes = responseChainOrderTypes ?? ResponseChainOrderTypes.Default;
             _presentationEvents = presentationEvents;
+            _tagOps = tagOps ?? new TagOps();
             _phaseExecutor = phaseExecutor;
             _graphApiHost = graphApi;
             _graphApi = graphApi;
@@ -370,7 +372,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         });
                     }
 
-                    // ── Execute OnPropose Phase Graphs (before ResponseChain) ──
+                    // 鈹€鈹€ Execute OnPropose Phase Graphs (before ResponseChain) 鈹€鈹€
                     ExecuteOnProposePhase(in root, in rootTpl);
 
                     if (rootTpl.ParticipatesInResponse)
@@ -794,7 +796,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                         ref readonly var tpl = ref _templates.GetRef(tplIdx);
 
-                        // ── Execute OnCalculate Phase Graphs (after ResponseChain resolves) ──
+                        // 鈹€鈹€ Execute OnCalculate Phase Graphs (after ResponseChain resolves) 鈹€鈹€
                         ExecuteOnCalculatePhase(in e, in tpl);
 
                         if (IsPureInstantTemplate(in tpl))
@@ -825,7 +827,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                             // Dispatch OnApply Phase Listeners even for pure-instant effects.
                             // Modifiers are applied inline above (equivalent to Main handler),
-                            // but Listeners must still fire for observability �?e.g. "whenever
+                            // but Listeners must still fire for observability 鈥?e.g. "whenever
                             // damage is dealt, draw a card" or "thorns: reflect damage on hit".
                             if (_phaseExecutor != null && _graphApi != null)
                             {
@@ -917,7 +919,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int consumed = _rootCursor;
             if (_phase == WindowPhase.Collect || _phase == WindowPhase.WaitInput)
             {
-                // Current root hasn't been resolved yet �?safe to re-process it.
+                // Current root hasn't been resolved yet 鈥?safe to re-process it.
                 consumed = _rootCursor > 0 ? _rootCursor - 1 : 0;
             }
             if (consumed > 0 && _queue != null)
@@ -1031,7 +1033,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void CreateEntityEffect(in EffectProposal proposal, in EffectTemplateData tpl)
         {
-            // ── Stack merge: if template has stack policy and an existing effect exists on target, merge ──
+            // 鈹€鈹€ Stack merge: if template has stack policy and an existing effect exists on target, merge 鈹€鈹€
             if (tpl.HasStackPolicy && tpl.LifetimeKind != EffectLifetimeKind.Instant
                 && World.IsAlive(proposal.Target) && World.Has<ActiveEffectContainer>(proposal.Target))
             {
@@ -1058,12 +1060,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             // KeepDuration: do nothing
                         }
 
-                        // Update tag contributions (delta from oldCount �?newCount)
+                        // Update tag contributions (delta from oldCount 鈫?newCount)
                         if (World.Has<EffectGrantedTags>(existing) && World.Has<TagCountContainer>(proposal.Target))
                         {
                             ref readonly var grantedTags = ref World.Get<EffectGrantedTags>(existing);
+                            if (!World.Has<GameplayTagContainer>(proposal.Target))
+                            {
+                                World.Add(proposal.Target, new GameplayTagContainer());
+                            }
+                            if (!World.Has<DirtyFlags>(proposal.Target))
+                            {
+                                World.Add(proposal.Target, new DirtyFlags());
+                            }
+                            ref var tags = ref World.Get<GameplayTagContainer>(proposal.Target);
                             ref var tagCounts = ref World.Get<TagCountContainer>(proposal.Target);
-                            EffectTagContributionHelper.Update(in grantedTags, ref tagCounts, oldCount, stack.Count, _budget);
+                            ref var dirtyFlags = ref World.Get<DirtyFlags>(proposal.Target);
+                            EffectTagContributionHelper.Update(in grantedTags, _tagOps, ref tags, ref tagCounts, ref dirtyFlags, oldCount, stack.Count, _budget);
                         }
                         return; // Merged into existing stack, no new entity
                     }
@@ -1230,4 +1242,5 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
     }
 }
+
 

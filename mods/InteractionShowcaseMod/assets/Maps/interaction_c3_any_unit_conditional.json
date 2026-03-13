@@ -1,0 +1,29 @@
+{
+  "Id": "interaction_c3_any_unit_conditional",
+  "Tags": [
+    "interaction.showcase",
+    "interaction.showcase.unit_target",
+    "interaction.showcase.c3_any_unit_conditional",
+    "arpg"
+  ],
+  "Entities": [
+    {
+      "Template": "interaction_c3_hero",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+      }
+    },
+    {
+      "Template": "interaction_c3_target_hostile",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 420, "Y": -80 } }
+      }
+    },
+    {
+      "Template": "interaction_c3_target_friendly",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 460, "Y": 220 } }
+      }
+    }
+  ]
+}

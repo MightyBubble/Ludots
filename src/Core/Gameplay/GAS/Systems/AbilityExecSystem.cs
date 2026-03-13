@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -194,6 +195,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 Actor = actor,
                                 AbilitySlot = slotIndex,
                                 AbilityId = slot.AbilityId,
+                                AttributeId = AttributeRegistry.InvalidId,
                                 FailReason = AbilityCastFailReason.BlockedByTag
                             });
                             continue;
@@ -210,10 +212,41 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 Actor = actor,
                                 AbilitySlot = slotIndex,
                                 AbilityId = slot.AbilityId,
-                                FailReason = AbilityCastFailReason.OnCooldown
+                                AttributeId = AttributeRegistry.InvalidId,
+                                FailReason = AbilityCastFailReason.BlockedByTag
                             });
                             continue;
                         }
+                    }
+
+                    if (slot.AbilityId > 0 &&
+                        _abilityDefinitions != null &&
+                        _abilityDefinitions.TryGet(slot.AbilityId, out var guardedDef) &&
+                        guardedDef.HasAttributePreconditions &&
+                        !AbilityActivationPreconditionEvaluator.TryPass(
+                            World,
+                            actor,
+                            in guardedDef.AttributePreconditions,
+                            out var failReason,
+                            out var failedAttributeId,
+                            out var requiredValue,
+                            out var currentValue))
+                    {
+                        if (_orderTypeRegistry != null)
+                        {
+                            OrderSubmitter.CancelCurrent(World, actor, _orderTypeRegistry);
+                        }
+                        _presentationEvents?.Publish(new GasPresentationEvent
+                        {
+                            Kind = GasPresentationEventKind.CastFailed,
+                            Actor = actor,
+                            AbilitySlot = slotIndex,
+                            AbilityId = slot.AbilityId,
+                            AttributeId = failedAttributeId,
+                            Delta = requiredValue - currentValue,
+                            FailReason = failReason
+                        });
+                        continue;
                     }
 
                     // 鈹€鈹€ Toggle check: if ability has toggle spec and toggle tag is ON, deactivate instead 鈹€鈹€

@@ -1,0 +1,35 @@
+{
+  "Id": "interaction_c2_friendly_unit_heal",
+  "Tags": [
+    "interaction.showcase",
+    "interaction.showcase.unit_target",
+    "interaction.showcase.c2_friendly_unit_heal",
+    "arpg"
+  ],
+  "Entities": [
+    {
+      "Template": "interaction_c2_hero",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+      }
+    },
+    {
+      "Template": "interaction_c2_target_ally",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 420, "Y": 0 } }
+      }
+    },
+    {
+      "Template": "interaction_c2_target_hostile",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 780, "Y": 220 } }
+      }
+    },
+    {
+      "Template": "interaction_c2_target_dead_ally",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 640, "Y": -120 } }
+      }
+    }
+  ]
+}

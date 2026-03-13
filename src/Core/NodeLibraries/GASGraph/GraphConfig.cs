@@ -25,6 +25,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public string? Tag { get; set; }
         public string? Attribute { get; set; }
         public string? EffectTemplate { get; set; }
+        public string? Key { get; set; }
 
         public float Radius { get; set; }
         public int Limit { get; set; }

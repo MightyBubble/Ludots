@@ -1,0 +1,11 @@
+{
+  "name": "InteractionShowcaseMod",
+  "version": "1.0.0",
+  "description": "Doc-driven interaction showcase scenarios and evidence capture.",
+  "main": "bin/net8.0/InteractionShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "ArpgDemoMod": "^1.0.0"
+  }
+}

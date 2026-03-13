@@ -110,13 +110,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 {
                     case GraphNodeOp.QueryFilterTagAll:
                     case GraphNodeOp.SendEvent:
+                    case GraphNodeOp.HasTag:
                         ins.Imm = _symbolResolver.ResolveTag(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.LoadAttribute:
                     case GraphNodeOp.ModifyAttributeAdd:
+                    case GraphNodeOp.LoadSelfAttribute:
+                    case GraphNodeOp.WriteSelfAttribute:
                         ins.Imm = _symbolResolver.ResolveAttribute(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.ApplyEffectTemplate:
+                    case GraphNodeOp.FanOutApplyEffect:
                         ins.Imm = _symbolResolver.ResolveEffectTemplate(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.ReadBlackboardFloat:

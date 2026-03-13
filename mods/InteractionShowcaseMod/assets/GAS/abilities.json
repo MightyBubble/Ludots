@@ -1,0 +1,89 @@
+[
+  {
+    "id": "Ability.Interaction.B1SelfBuff",
+    "blockTags": {
+      "blockedAny": [
+        "Status.Silenced",
+        "Status.Stunned"
+      ]
+    },
+    "attributePreconditions": [
+      {
+        "attribute": "Mana",
+        "comparison": "GreaterOrEqual",
+        "value": 50.0,
+        "failReason": "InsufficientResource"
+      }
+    ],
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.B1SelfBuffBuff"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Interaction.C1HostileUnitDamage",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.C1HostileUnitDamage"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Interaction.C2FriendlyUnitHeal",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.C2FriendlyUnitHeal"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    }
+  },
+  {
+    "id": "Ability.Interaction.C3AnyUnitConditional",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.C3HostileConditionalSearch"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.C3FriendlyConditionalSearch"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    }
+  }
+]

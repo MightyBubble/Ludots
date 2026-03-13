@@ -1,4 +1,4 @@
-using Arch.Core;
+﻿using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Gameplay.GAS.Components;
 using System.Runtime.CompilerServices;
@@ -78,6 +78,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
 
+                if (def.HasAttributePreconditions &&
+                    !AbilityActivationPreconditionEvaluator.TryPass(
+                        World,
+                        caster,
+                        in def.AttributePreconditions,
+                        out _,
+                        out _,
+                        out _,
+                        out _))
+                {
+                    return false;
+                }
+
                 if (_effectRequests == null) return true;
                 if (!def.HasOnActivateEffects || def.OnActivateEffects.Count <= 0) return true;
 
@@ -122,6 +135,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     if (_tagOps.Intersects(ref casterTags, in blockTagsEntity.BlockedAny, TagSense.Effective)) return false;
                     if (!_tagOps.ContainsAll(ref casterTags, in blockTagsEntity.RequiredAll, TagSense.Effective)) return false;
+                }
+            }
+
+            if (World.Has<AbilityAttributePreconditions>(templateEntity))
+            {
+                ref readonly var preconditions = ref World.Get<AbilityAttributePreconditions>(templateEntity);
+                if (!AbilityActivationPreconditionEvaluator.TryPass(World, caster, in preconditions, out _, out _, out _, out _))
+                {
+                    return false;
                 }
             }
 
@@ -177,3 +199,4 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             => EntityUtil.Reconstruct(id, worldId, version);
     }
 }
+

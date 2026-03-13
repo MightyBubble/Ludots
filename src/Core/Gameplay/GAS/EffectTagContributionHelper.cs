@@ -1,4 +1,4 @@
-using Ludots.Core.Gameplay.GAS.Components;
+﻿using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -33,6 +33,26 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
+        public static void Grant(
+            in EffectGrantedTags grantedTags,
+            TagOps tagOps,
+            ref GameplayTagContainer tags,
+            ref TagCountContainer tagCounts,
+            ref DirtyFlags dirtyFlags,
+            int stackCount,
+            GasBudget budget = null)
+        {
+            for (int i = 0; i < grantedTags.Count; i++)
+            {
+                var contribution = grantedTags.Get(i);
+                int amount = contribution.Compute(stackCount);
+                for (int step = 0; step < amount; step++)
+                {
+                    tagOps.AddTag(ref tags, ref tagCounts, contribution.TagId, ref dirtyFlags);
+                }
+            }
+        }
+
         /// <summary>
         /// Revoke tags from the target's <see cref="TagCountContainer"/> when an effect expires or is removed.
         /// </summary>
@@ -52,8 +72,28 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
+        public static void Revoke(
+            in EffectGrantedTags grantedTags,
+            TagOps tagOps,
+            ref GameplayTagContainer tags,
+            ref TagCountContainer tagCounts,
+            ref DirtyFlags dirtyFlags,
+            int stackCount,
+            GasBudget budget = null)
+        {
+            for (int i = 0; i < grantedTags.Count; i++)
+            {
+                var contribution = grantedTags.Get(i);
+                int amount = contribution.Compute(stackCount);
+                for (int step = 0; step < amount; step++)
+                {
+                    tagOps.RemoveTag(ref tags, ref tagCounts, contribution.TagId, ref dirtyFlags);
+                }
+            }
+        }
+
         /// <summary>
-        /// Update tag counts when a stack count changes (e.g. 3 → 5).
+        /// Update tag counts when a stack count changes (e.g. 3 鈫?5).
         /// Computes delta = newAmount - oldAmount for each tag and adjusts accordingly.
         /// </summary>
         /// <param name="grantedTags">The effect's granted tag declarations.</param>
@@ -83,5 +123,40 @@ namespace Ludots.Core.Gameplay.GAS
                 }
             }
         }
+
+        public static void Update(
+            in EffectGrantedTags grantedTags,
+            TagOps tagOps,
+            ref GameplayTagContainer tags,
+            ref TagCountContainer tagCounts,
+            ref DirtyFlags dirtyFlags,
+            int oldStackCount,
+            int newStackCount,
+            GasBudget budget = null)
+        {
+            for (int i = 0; i < grantedTags.Count; i++)
+            {
+                var contribution = grantedTags.Get(i);
+                int oldAmount = contribution.Compute(oldStackCount);
+                int newAmount = contribution.Compute(newStackCount);
+                int delta = newAmount - oldAmount;
+
+                if (delta > 0)
+                {
+                    for (int step = 0; step < delta; step++)
+                    {
+                        tagOps.AddTag(ref tags, ref tagCounts, contribution.TagId, ref dirtyFlags);
+                    }
+                }
+                else if (delta < 0)
+                {
+                    for (int step = 0; step < -delta; step++)
+                    {
+                        tagOps.RemoveTag(ref tags, ref tagCounts, contribution.TagId, ref dirtyFlags);
+                    }
+                }
+            }
+        }
     }
 }
+

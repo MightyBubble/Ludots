@@ -17,6 +17,7 @@
     <ProjectReference Include="..\..\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj" />
     <ProjectReference Include="..\..\Adapters\Web\Ludots.Adapter.Web\Ludots.Adapter.Web.csproj" />
     <ProjectReference Include="..\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
+    <ProjectReference Include="..\..\..\mods\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
   </ItemGroup>

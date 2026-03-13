@@ -1,0 +1,33 @@
+﻿{
+  "startupMapId": "interaction_b1_self_buff",
+  "constants": {
+    "attributes": {
+      "attackDamage": "AttackDamage",
+      "mana": "Mana",
+      "baseDamage": "BaseDamage",
+      "armor": "Armor"
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

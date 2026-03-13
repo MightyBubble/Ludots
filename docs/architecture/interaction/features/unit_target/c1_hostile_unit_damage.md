@@ -1,92 +1,164 @@
 # C1: 敌方单位伤害
 
-> 对选中的敌方单位造成即时伤害，通过完整伤害管线（OnCalculate 写 Blackboard → OnApply 读取扣血）执行。典型案例：LoL 暗影刺客 Q（单体物理伤害）、Dota 巫妖 Frostbite（冰冻+伤害）。
+> 对单一敌方单位造成即时伤害。当前 `InteractionShowcaseMod` 的演示实现复用了标准 GAS 执行链：`OnCalculate` 计算理论伤害并写入目标 blackboard，`OnApply.pre` 读取目标护甲做减伤并直接扣减 `Health`。  
+> 对齐代码：`mods/InteractionShowcaseMod/assets/GAS/abilities.json`、`mods/InteractionShowcaseMod/assets/GAS/effects.json`、`mods/InteractionShowcaseMod/assets/GAS/graphs.json`、`mods/InteractionShowcaseMod/Systems/InteractionShowcaseAutoplaySystem.cs`。
 
 ---
 
 ## 机制描述
 
-玩家按下技能键（PressedThisFrame），系统取光标下或预选的敌方单位作为目标，立即发出 CastAbility 订单。订单验证通过后，GAS 在当前 Tick 生成 Effect，OnCalculate 阶段将施法者的 BaseDamage 属性乘以配置系数写入 Blackboard（DamageAmount），OnApply Listener 读取 Armor 做减伤计算并写入 FinalDamage，OnApply Main 将 FinalDamage 以负数 delta 应用到目标的 Health 属性。
+玩家意图是“把一个即时单体伤害技能打到敌方单位身上”。在生产交互合同里，这类技能仍然属于：
 
-与 AoE 伤害的区别：目标是单一 Entity（由 InputOrderMapping.selectionType=Entity 保证），不涉及范围查询。
+- `trigger = PressedThisFrame`
+- `selectionType = Entity`
+- `orderTypeKey = castAbility`
+
+但当前验收演示为了保证确定性，不走实时鼠标选取和通用自动寻敌，而是由 `mods/InteractionShowcaseMod/Systems/InteractionShowcaseAutoplaySystem.cs` 直接向 `OrderQueue` 提交固定目标：
+
+- 首次施放命中 `C1EnemyPrimary`
+- 第二次尝试命中死亡目标 `C1EnemyInvalid`，预期 `InvalidTarget`
+- 第三次尝试命中超射程目标 `C1EnemyFar`，预期 `OutOfRange`
+
+当前 C1 的两个负向分支都由 showcase autoplay 在提交前做本地校验：死亡目标不会进入 `OrderQueue`，超射程目标也不会入队。它们证明的是“showcase 交互合同的负向保护”，不是 GAS 原生 `CastFailed` fence。
+
+这意味着本页描述的是“该交互能力的标准 GAS 表达方式 + 当前 showcase 的确定性验收落地”，不是一个额外的平行运行时。
 
 ---
 
-## 交互层设计
+## Showcase 场景卡
 
-- **Trigger**: `PressedThisFrame`
-- **SelectionType**: `Entity`
-- **InteractionMode**: `SmartCast`（推荐）/ `TargetFirst`
+- 地图：`mods/InteractionShowcaseMod/assets/Maps/interaction_c1_hostile_unit_damage.json`
+- 角色模板：`mods/InteractionShowcaseMod/assets/Entities/templates.json`
+- 技能：`Ability.Interaction.C1HostileUnitDamage`
+- Effect：`Effect.Interaction.C1HostileUnitDamage`
+- Graph：
+  - `Graph.Interaction.C1.CalculateDamage`
+  - `Graph.Interaction.C1.ApplyMitigatedDamage`
+- 演示实体：
+  - `ArpgHero`
+  - `C1EnemyPrimary`
+  - `C1EnemyInvalid`
+  - `C1EnemyFar`
+
+初始数值：
+
+- Hero: `BaseDamage = 200`, `Mana = 100`
+- Primary target: `Health = 500`, `Armor = 50`
+- Invalid target: `Health = 0`
+- Far target: `Health = 500`
+
+---
+
+## 实现链路
+
+### Ability
+
+当前能力配置位于 `mods/InteractionShowcaseMod/assets/GAS/abilities.json`：
 
 ```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/ability_q.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
 {
-  "actionId": "ability_Q",
-  "trigger": "PressedThisFrame",
-  "orderTypeKey": "castAbility",
-  "selectionType": "Entity",
-  "isSkillMapping": true,
-  "castModeOverride": null,              // null = 跟随全局 InteractionMode
-  "autoTargetPolicy": "NearestEnemyInRange",
-  "autoTargetRangeCm": 600
+  "id": "Ability.Interaction.C1HostileUnitDamage",
+  "exec": {
+    "clockId": "FixedFrame",
+    "items": [
+      {
+        "kind": "EffectSignal",
+        "tick": 0,
+        "template": "Effect.Interaction.C1HostileUnitDamage"
+      },
+      {
+        "kind": "End",
+        "tick": 0
+      }
+    ]
+  }
 }
 ```
 
-SmartCast 模式下：按键瞬间取光标下最近敌方单位；若光标下无有效目标则按 `autoTargetPolicy` 回退到射程内最近敌方单位。TargetFirst 模式下：先点选目标，再按键确认。
+### Effect
 
----
+当前 effect 配置位于 `mods/InteractionShowcaseMod/assets/GAS/effects.json`：
 
-## Graph 实现
-
-```
-// Graph op 参考: src/Core/NodeLibraries/GASGraph/GraphOps.cs
-// Effect 模板:   mods/<yourMod>/Effects/Effect.Ability.C1.Main.json
-// 注册中心:      src/Core/Gameplay/GAS/EffectTemplateRegistry.cs
-
-Phase OnCalculate:
-  LoadContextSource         E[0]                          // 施法者
-  LoadContextTarget         E[1]                          // 目标（敌方单位）
-  LoadAttribute             E[0], BaseDamage    → F[0]   // 施法者基础攻击力
-  LoadConfigFloat           "DamageCoeff"       → F[1]   // 配置系数，如 1.5
-  MulFloat                  F[0], F[1]          → F[2]   // 理论伤害
-  WriteBlackboardFloat      E[effect], DamageAmount, F[2]
-
-Phase OnApply Listener (priority=200, scope=Target):      // 护甲减伤
-  ReadBlackboardFloat       E[effect], DamageAmount → F[0]
-  LoadAttribute             E[1], Armor               → F[1]
-  ConstFloat                100.0                     → F[2]
-  AddFloat                  F[2], F[1]                → F[3]   // 100 + Armor
-  DivFloat                  F[2], F[3]                → F[4]   // 100 / (100+Armor)
-  MulFloat                  F[0], F[4]                → F[5]   // FinalDamage
-  WriteBlackboardFloat      E[effect], FinalDamage, F[5]
-
-Phase OnApply Main:
-  ReadBlackboardFloat       E[effect], FinalDamage → F[0]
-  NegFloat                  F[0]                   → F[1]
-  ModifyAttributeAdd        E[effect], E[1], Health, F[1]
-```
-
-Effect 模板示例：
 ```json5
 {
-  "id": "Effect.Ability.C1.Main",
-  "presetType": "InstantDamage",
+  "id": "Effect.Interaction.C1HostileUnitDamage",
+  "presetType": "None",
   "lifetime": "Instant",
   "configParams": {
-    "DamageCoeff": 1.5
-  },
-  "grantedTags": [],
-  "phaseListeners": [
-    {
-      "phase": "OnApply",
-      "priority": 200,
-      "scope": "Target",
-      "graphProgramId": "Graph.Ability.C1.ArmorMitigation"
+    "Interaction.C1.DamageCoeff": {
+      "type": "float",
+      "value": 1.5
     }
-  ]
+  },
+  "phaseGraphs": {
+    "OnCalculate": {
+      "pre": "Graph.Interaction.C1.CalculateDamage"
+    },
+    "OnApply": {
+      "pre": "Graph.Interaction.C1.ApplyMitigatedDamage"
+    }
+  }
 }
 ```
+
+这里没有 `phaseListeners`，也没有额外的 Effect entity blackboard。当前实现直接在 phase graph 中完成：
+
+1. `OnCalculate.pre` 写入目标 blackboard `Interaction.C1.DamageAmount`
+2. `OnApply.pre` 读取目标 blackboard 与 `Armor`
+3. 同一 graph 写回 `Interaction.C1.FinalDamage`
+4. 直接调用 `ModifyAttributeAdd` 扣减目标 `Health`
+
+当前 effect/graph 本身没有 `targetFilter.relationFilter`、alive fence 或 range fence。也就是说，如果绕过 showcase-local `TrySubmitC1Cast(...)`，死亡目标和超射程目标不会由同层配置自动拒绝；当前负向证据口径依旧是“本地 guard 生效”，不是“Core/GAS 已原生覆盖这两个 reject case”。
+
+### Graph
+
+当前 graph 配置位于 `mods/InteractionShowcaseMod/assets/GAS/graphs.json`：
+
+```text
+Graph.Interaction.C1.CalculateDamage
+  LoadContextSource
+  LoadContextTarget
+  LoadAttribute(BaseDamage)
+  LoadConfigFloat(Interaction.C1.DamageCoeff)
+  MulFloat
+  WriteBlackboardFloat(target, Interaction.C1.DamageAmount)
+
+Graph.Interaction.C1.ApplyMitigatedDamage
+  LoadContextTarget
+  ReadBlackboardFloat(target, Interaction.C1.DamageAmount)
+  LoadAttribute(Armor)
+  ConstFloat(100)
+  AddFloat
+  DivFloat
+  MulFloat
+  WriteBlackboardFloat(target, Interaction.C1.FinalDamage)
+  NegFloat
+  ModifyAttributeAdd(target, Health)
+```
+
+关键对齐点：
+
+- 这里的 blackboard owner 是 **target entity**，不是 effect entity。
+- 原因是当前 graph runtime 通过 `src/Core/NodeLibraries/GASGraph/Host/GraphProgramLoader.cs` 和 `src/Core/NodeLibraries/GASGraph/Host/GraphProgramConfigLoader.cs` 暴露的是 source / target 上下文寄存器，showcase 没有再扩一层 effect-entity register。
+- 因此验收与 battle-report 中出现的 `DamageAmount` / `FinalDamage` 都应该解释为“目标 blackboard 上的中间值”。
+
+---
+
+## 数学口径
+
+当前演示数值固定为：
+
+- `DamageAmount = BaseDamage * DamageCoeff = 200 * 1.5 = 300`
+- `FinalDamage = DamageAmount * 100 / (100 + Armor) = 300 * 100 / 150 = 200`
+- `PrimaryTarget.Health = 500 -> 300`
+
+这些值由以下代码面共同约束：
+
+- `mods/InteractionShowcaseMod/assets/Entities/templates.json`
+- `mods/InteractionShowcaseMod/assets/GAS/effects.json`
+- `mods/InteractionShowcaseMod/assets/GAS/graphs.json`
+- `mods/InteractionShowcaseMod/Systems/InteractionShowcaseAutoplaySystem.cs`
+- `src/Tests/GasTests/C1HostileUnitDamageTests.cs`
 
 ---
 
@@ -94,156 +166,91 @@ Effect 模板示例：
 
 | 组件 | 路径 | 状态 |
 |------|------|------|
-| EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
-| BlackboardFloatBuffer | `src/Core/Gameplay/GAS/Components/BlackboardFloatBuffer.cs` | ✅ 已有 |
-| GraphOps | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
-| InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
-| SelectionRuleRegistry | `src/Core/Input/Selection/SelectionRuleRegistry.cs` | ✅ 已有 |
-| TargetFilter.Hostile | `src/Core/Gameplay/GAS/TargetFilter.cs` | ✅ 已有 |
-| ModifyAttributeAdd (op 210) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
-| AutoTargetPolicy.NearestEnemyInRange | `src/Core/Input/Orders/AutoTargetPolicy.cs` | ✅ 已有 |
-
----
-
-## 新增需求
-
-无。现有基建可完整表达。
-
----
-
-## 最佳实践
-
-- **DO**: 伤害公式走 `OnCalculate` Graph + Blackboard，不在 `OnApply` 里硬编码数值。
-- **DO**: 护甲减伤实现为 `OnApply Listener`（priority=200），使护盾等其他 Listener 可在更低优先级介入。
-- **DO**: SmartCast 配合 `autoTargetPolicy` 保证光标离目标稍远时仍可命中，提升操作容错。
-- **DON'T**: 不允许在 Graph 内直接修改 HP 字段（绕过 Modifier 聚合），必须走 `ModifyAttributeAdd`。
-- **DON'T**: 不允许在 Graph 阶段做结构变更（如创建伤害数字实体），伤害浮字由表现层 Observer 响应 HP 变化事件驱动。
-- **DON'T**: CC Tag（Status.Stunned 等）不能由 Graph 直接写位，必须通过 `GrantedTags` + Effect 生命周期管理。
+| AbilityDefinitionRegistry | `src/Core/Gameplay/GAS/AbilityDefinitionRegistry.cs` | 已复用 |
+| EffectTemplateRegistry | `src/Core/Gameplay/GAS/EffectTemplateRegistry.cs` | 已复用 |
+| EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | 已复用 |
+| AbilityExecSystem | `src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs` | 已复用 |
+| EffectProcessingLoopSystem | `src/Core/Gameplay/GAS/Systems/EffectProcessingLoopSystem.cs` | 已复用 |
+| BlackboardFloatBuffer | `src/Core/Gameplay/GAS/Components/BlackboardFloatBuffer.cs` | 已复用 |
+| ConfigKeyRegistry | `src/Core/Gameplay/GAS/Registry/ConfigKeyRegistry.cs` | 已复用 |
+| GraphOps | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | 已复用 |
+| Input order contract | `src/Core/Input/Orders/InputOrderMapping.cs` | 交互合同仍适用 |
+| Showcase autoplay | `mods/InteractionShowcaseMod/Systems/InteractionShowcaseAutoplaySystem.cs` | 演示专用确定性驱动 |
+| Overlay / visual debug | `mods/InteractionShowcaseMod/Systems/InteractionShowcaseOverlaySystem.cs` | 演示专用 |
+| Launcher recorder | `src/Tools/Ludots.Launcher.Evidence/LauncherEvidenceRecorder.cs` | 视觉证据导出 |
 
 ---
 
 ## 验收口径
 
-### 场景 1: 正常施放路径
+### 场景 1：命中有效敌方目标
 
 | 项 | 内容 |
 |----|------|
-| **输入** | 玩家按 Q 键（`PressedThisFrame`），SmartCast，光标悬停敌方单位，目标 HP=500, Armor=50, 施法者 BaseDamage=200 |
-| **预期输出** | `DamageAmount = 200 × 1.5 = 300`；`FinalDamage = 300 × 100/(100+50) = 200`；目标 HP 降至 300 |
-| **Log 关键字** | `[GAS] ApplyEffect Effect.Ability.C1.Main -> source=<sid> target=<tid> FinalDamage=200` |
-| **截图要求** | 伤害浮字"200"出现在目标头顶，目标血条对应减少 |
-| **多帧录屏** | F0: 按键 → F1: Order 入队 → F2: Effect Propose → F4: OnApply → F5: HP 变化(-200) → F6: 浮字出现 |
+| 输入 | Hero 对 `C1EnemyPrimary` 发起 slot `0` 的 `castAbility` |
+| 预期输出 | `DamageAmount = 300`，`FinalDamage = 200`，`PrimaryTarget.Health = 300` |
+| 代码证据 | `mods/InteractionShowcaseMod/assets/GAS/graphs.json`、`src/Tests/GasTests/C1HostileUnitDamageTests.cs` |
+| 视觉证据 | `artifacts/acceptance/interaction-c1-hostile-unit-damage/visual/screens/002_damage_applied.png` |
 
-### 场景 2: 目标无效（死亡/不可选中）
-
-| 项 | 内容 |
-|----|------|
-| **输入** | 目标 HP ≤ 0 或持有 `Status.Untargetable` Tag；玩家按 Q 键 |
-| **预期输出** | 订单被丢弃；无 Effect 生成；无 HP 变化 |
-| **Log 关键字** | `[Input] OrderDiscarded reason=InvalidTarget` |
-| **截图要求** | 无浮字，无命中视觉效果 |
-| **多帧录屏** | 仅 F0 按键帧，后续帧画面静止，无血条变化 |
-
-### 场景 3: 超出射程
+### 场景 2：目标无效
 
 | 项 | 内容 |
 |----|------|
-| **输入** | 目标距施法者 > `autoTargetRangeCm`（600cm），光标未悬停任何单位 |
-| **预期输出** | SmartCast 回退无有效目标，订单不生成；TargetFirst 模式下显示"目标超出射程"提示 |
-| **Log 关键字** | `[Input] OrderDiscarded reason=OutOfRange` |
-| **截图要求** | UI 提示文字出现，角色无动作 |
-| **多帧录屏** | 按键帧 + 静止帧 |
+| 输入 | Hero 对 `C1EnemyInvalid` 发起同一技能 |
+| 预期输出 | 不入队实际伤害结算；失败原因 `InvalidTarget`；`InvalidTarget.Health` 维持 `0` |
+| 代码证据 | `mods/InteractionShowcaseMod/Systems/InteractionShowcaseAutoplaySystem.cs`、`src/Tests/GasTests/C1HostileUnitDamageTests.cs` |
+| 视觉证据 | `artifacts/acceptance/interaction-c1-hostile-unit-damage/visual/screens/003_invalid_target_blocked.png` |
+
+### 场景 3：超出射程
+
+| 项 | 内容 |
+|----|------|
+| 输入 | Hero 对 `C1EnemyFar` 发起同一技能 |
+| 预期输出 | 不入队实际伤害结算；失败原因 `OutOfRange`；`FarTarget.Health` 维持 `500` |
+| 代码证据 | `mods/InteractionShowcaseMod/Systems/InteractionShowcaseAutoplaySystem.cs`、`src/Tests/GasTests/C1HostileUnitDamageTests.cs` |
+| 视觉证据 | `artifacts/acceptance/interaction-c1-hostile-unit-damage/visual/screens/004_out_of_range_blocked.png` |
 
 ---
 
-## 测试用例设计
+## 测试与证据
 
-### 单元测试
-```csharp
-// 路径: src/Tests/GasTests/UnitTargetTests/C1HostileUnitDamageTests.cs
-[Test]
-public void C1_BasicCase_CorrectDamageApplied()
-{
-    // Arrange
-    var world = CreateTestWorld();
-    var source = SpawnUnit(world, baseDamage: 200);
-    var target = SpawnUnit(world, hp: 500, armor: 50, team: Team.Enemy);
+### Headless 测试
 
-    // Act
-    world.SubmitOrder(source, OrderType.CastAbility, target, abilityId: "Ability.C1");
-    world.Tick(3);  // Order → EffectRequest → Apply
+- 断言测试：`src/Tests/GasTests/C1HostileUnitDamageTests.cs`
+- 产物测试：`src/Tests/GasTests/Production/C1HostileUnitDamageAcceptanceTests.cs`
 
-    // Assert
-    // FinalDamage = 200 * 1.5 * 100/(100+50) = 200
-    Assert.AreEqual(300, GetAttribute(world, target, "Health"));
-}
+建议命令：
 
-[Test]
-public void C1_TargetDead_EffectNotApplied()
-{
-    // Arrange
-    var world = CreateTestWorld();
-    var source = SpawnUnit(world, baseDamage: 200);
-    var target = SpawnUnit(world, hp: 0, team: Team.Enemy);  // 已死亡
-
-    // Act
-    world.SubmitOrder(source, OrderType.CastAbility, target, abilityId: "Ability.C1");
-    world.Tick(3);
-
-    // Assert
-    Assert.AreEqual(0, GetAttribute(world, target, "Health"));  // HP 不变
-    Assert.AreEqual(0, GetEffectApplyCount(world, "Effect.Ability.C1.Main"));
-}
-
-[Test]
-public void C1_FriendlyTarget_OrderDiscarded()
-{
-    // Arrange
-    var world = CreateTestWorld();
-    var source = SpawnUnit(world, team: Team.Player);
-    var ally = SpawnUnit(world, hp: 300, team: Team.Player);  // 友方
-
-    // Act
-    world.SubmitOrder(source, OrderType.CastAbility, ally, abilityId: "Ability.C1");
-    world.Tick(3);
-
-    // Assert
-    // TargetFilter.Hostile 应拦截
-    Assert.AreEqual(300, GetAttribute(world, ally, "Health"));
-}
-
-[Test]
-public void C1_ArmorMitigation_CorrectFormula()
-{
-    // Arrange: BaseDamage=100, Coeff=1.5, Armor=100 → FinalDamage = 150 * 100/200 = 75
-    var world = CreateTestWorld();
-    var source = SpawnUnit(world, baseDamage: 100);
-    var target = SpawnUnit(world, hp: 500, armor: 100, team: Team.Enemy);
-
-    // Act
-    world.SubmitOrder(source, OrderType.CastAbility, target, abilityId: "Ability.C1");
-    world.Tick(3);
-
-    // Assert
-    Assert.AreEqual(425, GetAttribute(world, target, "Health"));
-}
+```powershell
+dotnet test .\src\Tests\GasTests\GasTests.csproj -c Release --filter C1HostileUnitDamage
 ```
 
-### 集成验收
-1. 运行 `dotnet test --filter "C1"` — 全绿。
-2. 在 Playground 中录制 60 帧日志，存档：
-   - `artifacts/acceptance/unit_target/c1_trace.jsonl`
-3. 截图存档：
-   - `artifacts/acceptance/unit_target/c1_normal.png`
-   - `artifacts/acceptance/unit_target/c1_edge.png`
-4. 多帧录屏：
-   - `artifacts/acceptance/unit_target/c1_60frames.gif`
-   - 标注关键帧：按键帧、Effect Apply 帧、HP 变化帧
+### 视觉录制
+
+- 录制脚本：`scripts/record-interaction-c1-hostile-unit-damage.ps1`
+- 二审脚本：`scripts/review-interaction-c1-hostile-unit-damage.ps1`
+- Launcher 启动脚本：`scripts/run-mod-launcher.cmd`
+- 当前演示 startup map 配置：`mods/InteractionShowcaseMod/assets/game.json`
+
+录制产物：
+
+- `artifacts/acceptance/interaction-c1-hostile-unit-damage/battle-report.md`
+- `artifacts/acceptance/interaction-c1-hostile-unit-damage/trace.jsonl`
+- `artifacts/acceptance/interaction-c1-hostile-unit-damage/path.mmd`
+- `artifacts/acceptance/interaction-c1-hostile-unit-damage/visual/battle-report.md`
+- `artifacts/acceptance/interaction-c1-hostile-unit-damage/visual/summary.json`
+- `artifacts/acceptance/interaction-c1-hostile-unit-damage/visual/visible-checklist.md`
+- `artifacts/acceptance/interaction-c1-hostile-unit-damage/visual/screens/*.png`
+- `artifacts/acceptance/interaction-c1-hostile-unit-damage/visual/interaction-c1-hostile-unit-damage.mp4`
+- `artifacts/acceptance/interaction-c1-hostile-unit-damage/visual/interaction-c1-hostile-unit-damage.gif`
 
 ---
 
-## 参考案例
+## 最佳实践
 
-- **LoL 暗影刺客（Zed） Q — 死亡标记**: 发射技能飞镖对敌方单位造成物理伤害，伤害值基于 AD 系数计算，命中敌方英雄触发额外效果；与 C1 的区别在于增加了飞行物阶段，但伤害管线设计一致。
-- **Dota 巫妖（Lich） Frost Blast**: 对单一敌方单位造成魔法伤害并减速，configParams 中存储 DamageCoeff 和 SlowDuration；C1 可通过增加 GrantedTags 模拟此类附加 CC 效果。
-- **LoL 赏金猎人（Miss Fortune） Q — 双重射击**: 第一发对目标造成物理伤害，第二发弹射到另一敌方单位；C1 的伤害管线是其单目标阶段的直接原型。
+- **DO**: 让伤害公式进入 graph，而不是把 `300` / `200` 这种数字写死在系统逻辑里。
+- **DO**: 明确 blackboard owner；当前实现的 owner 是目标实体，不是 effect 实体。
+- **DO**: 用真实 `OrderQueue`、`AbilityExecSystem`、`EffectProcessingLoopSystem` 跑验收，不造第二套 show-only 伤害管线。
+- **DON'T**: 不要在 mod 层重复发明一个“简化伤害系统”来跑演示。
+- **DON'T**: 不要在文档里把当前 `phaseGraphs.OnApply.pre` 写成 `phaseListeners`；那不是现在的实现。
+- **DON'T**: 不要在文档、测试或 battle-report 中把 `DamageAmount` / `FinalDamage` 解释为 effect entity state；当前实现不是那样。

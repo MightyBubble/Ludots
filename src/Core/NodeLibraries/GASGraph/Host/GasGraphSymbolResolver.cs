@@ -23,7 +23,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public int ResolveAttribute(string name)
         {
             int id = AttributeRegistry.GetId(name);
-            if (id <= 0)
+            if (id < 0)
             {
                 throw new InvalidOperationException(
                     $"Graph references unknown attribute '{name}'. Register attributes before loading graph programs.");

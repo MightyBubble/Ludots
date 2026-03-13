@@ -1,0 +1,35 @@
+{
+  "Id": "interaction_c1_hostile_unit_damage",
+  "Tags": [
+    "interaction.showcase",
+    "interaction.showcase.unit_target",
+    "interaction.showcase.c1_hostile_unit_damage",
+    "arpg"
+  ],
+  "Entities": [
+    {
+      "Template": "interaction_c1_hero",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+      }
+    },
+    {
+      "Template": "interaction_c1_target_primary",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 450, "Y": 0 } }
+      }
+    },
+    {
+      "Template": "interaction_c1_target_invalid",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 520, "Y": 160 } }
+      }
+    },
+    {
+      "Template": "interaction_c1_target_far",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 1400, "Y": 0 } }
+      }
+    }
+  ]
+}

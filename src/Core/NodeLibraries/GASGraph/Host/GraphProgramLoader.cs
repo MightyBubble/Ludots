@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 
@@ -90,14 +91,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 {
                     case GraphNodeOp.QueryFilterTagAll:
                     case GraphNodeOp.SendEvent:
+                    case GraphNodeOp.HasTag:
                         ins.Imm = ResolveTag(symbols, ins.Imm);
                         break;
                     case GraphNodeOp.LoadAttribute:
                     case GraphNodeOp.ModifyAttributeAdd:
+                    case GraphNodeOp.LoadSelfAttribute:
+                    case GraphNodeOp.WriteSelfAttribute:
                         ins.Imm = ResolveAttribute(symbols, ins.Imm);
                         break;
                     case GraphNodeOp.ApplyEffectTemplate:
+                    case GraphNodeOp.FanOutApplyEffect:
                         ins.Imm = ResolveEffectTemplate(symbols, ins.Imm);
+                        break;
+                    case GraphNodeOp.ReadBlackboardFloat:
+                    case GraphNodeOp.ReadBlackboardInt:
+                    case GraphNodeOp.ReadBlackboardEntity:
+                    case GraphNodeOp.WriteBlackboardFloat:
+                    case GraphNodeOp.WriteBlackboardInt:
+                    case GraphNodeOp.WriteBlackboardEntity:
+                    case GraphNodeOp.LoadConfigFloat:
+                    case GraphNodeOp.LoadConfigInt:
+                    case GraphNodeOp.LoadConfigEffectId:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
                 }
             }
