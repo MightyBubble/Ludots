@@ -127,6 +127,7 @@ namespace Ludots.Adapter.Raylib
 
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS);
+                using var textRenderLane = new RaylibHudTextRenderLane();
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
@@ -176,6 +177,8 @@ namespace Ludots.Adapter.Raylib
                         {
                             overlaySceneBuilder.Build(overlayScene);
                         }
+                        int activeLocaleId = engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection)?.ActiveLocaleId ?? 0;
+                        textRenderLane.BeginFrame(activeLocaleId);
 
                         Rl.BeginDrawing();
                         Rl.ClearBackground(new Raylib_cs.Color(0, 0, 0, 255));
@@ -263,6 +266,7 @@ namespace Ludots.Adapter.Raylib
                         {
                             underlayRenderer.Draw();
                         }
+                        DrawScreenHud(engine, textRenderLane, presentationTiming);
 
                         if (drawSkiaUi && uiRoot.IsDirty)
                         {
@@ -411,6 +415,62 @@ namespace Ludots.Adapter.Raylib
                 Rl.DrawLine3D(new Vector3(x, y, startZ), new Vector3(x, y, endZ), xCol);
                 Rl.DrawLine3D(new Vector3(startX, y, z), new Vector3(endX, y, z), zCol);
             }
+        }
+
+        private static void DrawScreenHud(GameEngine engine, RaylibHudTextRenderLane textRenderLane, PresentationTimingDiagnostics? presentationTiming)
+        {
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationScreenHudBuffer.Name, out var hudObj)) return;
+            engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudStrings.Name, out var strObj);
+            if (hudObj is not ScreenHudBatchBuffer hud) return;
+            var strings = strObj as Ludots.Core.Presentation.Config.WorldHudStringTable;
+
+            var span = hud.GetSpan();
+            long textTicks = 0;
+            int textDrawCount = 0;
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                int ix = (int)item.ScreenX;
+                int iy = (int)item.ScreenY;
+                int iw = (int)item.Width;
+                int ih = (int)item.Height;
+
+                if (item.Kind == WorldHudItemKind.Bar)
+                {
+                    var bg = ToRaylibColor(item.Color0);
+                    var fg = ToRaylibColor(item.Color1);
+
+                    Rl.DrawRectangle(ix, iy, iw, ih, bg);
+                    int fw = (int)(iw * item.Value0);
+                    Rl.DrawRectangle(ix, iy, fw, ih, fg);
+                    Rl.DrawRectangleLines(ix, iy, iw, ih, new Color(0, 0, 0, 255));
+                    continue;
+                }
+
+                if (item.Kind == WorldHudItemKind.Text)
+                {
+                    long itemStart = Stopwatch.GetTimestamp();
+                    if (textRenderLane.TryDrawHudText(engine, strings, in item))
+                    {
+                        textTicks += Stopwatch.GetTimestamp() - itemStart;
+                        textDrawCount++;
+                        continue;
+                    }
+
+                    int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
+                    var col = ToRaylibColor(item.Color0);
+                    string? text = ResolveScreenHudText(engine, strings, in item);
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        Rl.DrawText(text, ix, iy, fontSize, col);
+                        textDrawCount++;
+                    }
+
+                    textTicks += Stopwatch.GetTimestamp() - itemStart;
+                }
+            }
+
+            presentationTiming?.ObserveHudTextDraw(textTicks * 1000.0 / Stopwatch.Frequency, textDrawCount);
         }
 
         private static void DrawGroundOverlays(GroundOverlayBuffer overlays)
@@ -600,5 +660,60 @@ namespace Ludots.Adapter.Raylib
         }
 
         private static Color ToRaylibColor(Vector4 c) => RaylibColorUtil.ToRaylibColor(in c);
+
+        private static string? ResolveScreenHudText(GameEngine engine, WorldHudStringTable? strings, in ScreenHudItem item)
+        {
+            if (TryFormatTextPacket(engine, in item.Text, out string? packetText))
+            {
+                return packetText;
+            }
+
+            if (item.Id0 != 0 && strings != null)
+            {
+                return strings.TryGet(item.Id0);
+            }
+
+            var mode = (WorldHudValueMode)item.Id1;
+            if (mode == WorldHudValueMode.AttributeCurrentOverBase)
+            {
+                return $"{(int)item.Value0}/{(int)item.Value1}";
+            }
+
+            if (mode == WorldHudValueMode.AttributeCurrent)
+            {
+                return $"{(int)item.Value0}";
+            }
+
+            if (mode == WorldHudValueMode.Constant)
+            {
+                return $"{item.Value0}";
+            }
+
+            return null;
+        }
+
+        private static bool TryFormatTextPacket(GameEngine engine, in PresentationTextPacket packet, out string? text)
+        {
+            text = null;
+            if (!packet.HasValue)
+            {
+                return false;
+            }
+
+            PresentationTextCatalog? catalog = engine.GetService(CoreServiceKeys.PresentationTextCatalog);
+            PresentationTextLocaleSelection? localeSelection = engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection);
+            if (catalog == null || localeSelection == null)
+            {
+                return false;
+            }
+
+            if (!PresentationTextFormatter.TryFormat(catalog, localeSelection.ActiveLocaleId, in packet, out string formatted))
+            {
+                return false;
+            }
+
+            text = formatted;
+            return true;
+        }
     }
 }

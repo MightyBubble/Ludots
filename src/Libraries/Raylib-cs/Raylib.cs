@@ -492,6 +492,12 @@ namespace Raylib_cs
         public static extern unsafe Image GenImageColor(int width, int height, Color color);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int MeasureText(string text, int fontSize);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void ImageDrawText(Image* dst, string text, int posX, int posY, int fontSize, Color color);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe Texture2D LoadTextureFromImage(Image image);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
