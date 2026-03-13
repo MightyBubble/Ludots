@@ -1,4 +1,9 @@
+using System.Collections.Generic;
+using Ludots.UI;
+using Ludots.UI.Compose;
+using Ludots.UI.Input;
 using SkiaSharp;
+using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Events;
 using NUnit.Framework;
@@ -33,6 +38,7 @@ public sealed class UiShowcaseAcceptanceTests
         page.Scene.Layout(1280, 720);
         UiNode button = page.Scene.FindByElementId("reactive-inc")!;
         UiNode counterBefore = page.Scene.FindByElementId("reactive-count")!;
+        string beforeText = counterBefore.TextContent ?? string.Empty;
         Assert.That(page.Scene.FindByElementId("reactive-radio-primary"), Is.Not.Null);
         Assert.That(page.Scene.FindByElementId("reactive-stats-table"), Is.Not.Null);
 
@@ -41,8 +47,62 @@ public sealed class UiShowcaseAcceptanceTests
         UiNode counterAfter = page.Scene.FindByElementId("reactive-count")!;
 
         Assert.That(result.Handled, Is.True);
-        Assert.That(counterBefore.TextContent, Is.Not.EqualTo(counterAfter.TextContent));
+        Assert.That(beforeText, Is.Not.EqualTo(counterAfter.TextContent));
         Assert.That(counterAfter.TextContent, Does.Contain("4"));
+    }
+
+    [Test]
+    public void ReactiveScene_ClickIncrement_ReconcilesExistingNodesIncrementally()
+    {
+        var page = UiShowcaseFactory.CreateReactivePage();
+        page.Scene.Layout(1280, 720);
+        UiNode button = page.Scene.FindByElementId("reactive-inc")!;
+        UiNode counterBefore = page.Scene.FindByElementId("reactive-count")!;
+        long fullBefore = page.FullRecomposeCount;
+        long incrementalBefore = page.IncrementalPatchCount;
+
+        UiEventResult result = page.Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Click, 0, button.LayoutRect.X + 2, button.LayoutRect.Y + 2, button.Id));
+        page.Scene.Layout(1280, 720);
+        UiNode counterAfter = page.Scene.FindByElementId("reactive-count")!;
+
+        Assert.That(result.Handled, Is.True);
+        Assert.That(ReferenceEquals(counterBefore, counterAfter), Is.True,
+            "Incremental reactive updates should preserve existing UiNode instances when the scene shape is unchanged.");
+        Assert.That(page.LastUpdateStats.Mode, Is.EqualTo(ReactiveApplyMode.IncrementalPatch));
+        Assert.That(page.LastUpdateStats.PatchedNodes, Is.GreaterThan(0));
+        Assert.That(page.FullRecomposeCount, Is.EqualTo(fullBefore));
+        Assert.That(page.IncrementalPatchCount, Is.EqualTo(incrementalBefore + 1));
+        Assert.That(counterAfter.TextContent, Does.Contain("4"));
+    }
+
+    [Test]
+    public void ReactiveScene_ScrollVirtualWindow_RefreshesThroughUIRootLifecycle()
+    {
+        var page = new ReactivePage<int>(0, BuildVirtualizedList);
+        var root = new UIRoot();
+        root.Resize(1280f, 720f);
+        root.MountScene(page.Scene);
+        page.Scene.Layout(1280f, 720f);
+
+        Assert.That(page.Scene.TryGetVirtualWindow("ui-showcase-virtual-window", out UiVirtualWindow initialWindow), Is.True);
+        Assert.That(initialWindow.VisibleCount, Is.GreaterThan(0));
+
+        UiNode scrollHost = page.Scene.FindByElementId("ui-showcase-virtual-window")!;
+        bool handled = root.HandleInput(new PointerEvent
+        {
+            DeviceType = InputDeviceType.Mouse,
+            PointerId = 0,
+            Action = PointerAction.Scroll,
+            X = scrollHost.LayoutRect.X + 12f,
+            Y = scrollHost.LayoutRect.Y + 12f,
+            DeltaY = 120f
+        });
+
+        Assert.That(handled, Is.True);
+        Assert.That(page.LastUpdateMetrics.Reason, Is.EqualTo(UiReactiveUpdateReason.RuntimeWindowChange));
+        Assert.That(page.LastUpdateStats.Mode, Is.EqualTo(ReactiveApplyMode.IncrementalPatch));
+        Assert.That(page.Scene.TryGetVirtualWindow("ui-showcase-virtual-window", out UiVirtualWindow scrolledWindow), Is.True);
+        Assert.That(scrolledWindow.StartIndex, Is.GreaterThan(0));
     }
 
     [Test]
@@ -157,6 +217,42 @@ public sealed class UiShowcaseAcceptanceTests
         double lighter = Math.Max(fg, bg);
         double darker = Math.Min(fg, bg);
         return (lighter + 0.05d) / (darker + 0.05d);
+    }
+
+    private static UiElementBuilder BuildVirtualizedList(ReactiveContext<int> context)
+    {
+        const string hostId = "ui-showcase-virtual-window";
+        const int totalCount = 64;
+        const float rowHeight = 22f;
+        const float viewportHeight = 180f;
+
+        UiVirtualWindow window = context.GetVerticalVirtualWindow(hostId, totalCount, rowHeight, viewportHeight, overscan: 2);
+        var rows = new List<UiElementBuilder>();
+        if (window.LeadingSpacerExtent > 0.01f)
+        {
+            rows.Add(Ui.Spacer(window.LeadingSpacerExtent));
+        }
+
+        for (int i = window.StartIndex; i < window.EndIndexExclusive; i++)
+        {
+            rows.Add(Ui.Text($"Row {i + 1:00}").Id($"ui-showcase-row-{i:00}").FontSize(12f));
+        }
+
+        if (window.TrailingSpacerExtent > 0.01f)
+        {
+            rows.Add(Ui.Spacer(window.TrailingSpacerExtent));
+        }
+
+        return Ui.Card(
+                Ui.Text("Virtual Window").FontSize(18f).Bold(),
+                Ui.ScrollView(rows.ToArray())
+                    .Id(hostId)
+                    .Height(viewportHeight)
+                    .Padding(8f)
+                    .Gap(4f))
+            .Width(360f)
+            .Padding(16f)
+            .Gap(10f);
     }
 
     private static double RelativeLuminance(SKColor color)

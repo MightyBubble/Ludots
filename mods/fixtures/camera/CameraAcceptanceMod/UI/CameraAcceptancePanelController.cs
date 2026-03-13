@@ -20,12 +20,17 @@ namespace CameraAcceptanceMod.UI
     internal sealed class CameraAcceptancePanelController
     {
         private const float PanelWidth = 500f;
+        private const float SelectionBufferHeight = 180f;
+        private const float SelectionRowHeight = 22f;
+        private const int SelectionRowPoolSize = SelectionBuffer.CAPACITY;
+        private const string SelectionBufferHostId = "camera-selection-buffer-list";
         private static readonly Vector2 CaptainOriginCm = new(3400f, 2200f);
         private static readonly Vector2 CaptainMovedCm = new(4200f, 2800f);
 
         private readonly ReactivePage<CameraAcceptancePanelState> _page;
         private CameraAcceptancePanelState _lastState = CameraAcceptancePanelState.Empty;
         private GameEngine? _engine;
+        private int _lastSelectionRowsTouched;
 
         public CameraAcceptancePanelController()
         {
@@ -33,6 +38,12 @@ namespace CameraAcceptanceMod.UI
         }
 
         public UiScene Scene => _page.Scene;
+        public ReactiveUpdateStats LastUpdateStats => _page.LastUpdateStats;
+        public UiReactiveUpdateMetrics LastUpdateMetrics => _page.LastUpdateMetrics;
+        public long FullRecomposeCount => _page.FullRecomposeCount;
+        public long IncrementalPatchCount => _page.IncrementalPatchCount;
+        public int LastSelectionRowsTouched => _lastSelectionRowsTouched;
+        public int RowPoolSize => SelectionRowPoolSize;
 
         public bool MountOrSync(UIRoot root, GameEngine engine)
         {
@@ -68,6 +79,7 @@ namespace CameraAcceptanceMod.UI
             }
 
             _lastState = CameraAcceptancePanelState.Empty;
+            _lastSelectionRowsTouched = 0;
             _page.SetState(_ => CameraAcceptancePanelState.Empty);
             _engine = null;
         }
@@ -93,14 +105,15 @@ namespace CameraAcceptanceMod.UI
             var children = new List<UiElementBuilder>
             {
                 Ui.Text("Camera Acceptance").FontSize(22f).Bold().Color("#F7FAFF"),
-                Ui.Text(state.MapDescription).FontSize(14f).Color("#D0D8E6").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Map: {state.MapId}").FontSize(13f).Color("#8EA2BD"),
-                Ui.Text($"Camera: {state.ActiveCameraId}").FontSize(13f).Color("#8EA2BD"),
-                Ui.Text($"Mode: {state.ActiveModeId}").FontSize(13f).Color("#8EA2BD"),
-                Ui.Text($"Selection: {state.SelectedName}").FontSize(13f).Color("#8EA2BD"),
-                Ui.Text($"Selected IDs: {state.SelectedIdsSummary}").FontSize(13f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Follow Target: {state.FollowTarget}").FontSize(13f).Color("#8EA2BD"),
+                Ui.Text(state.MapDescription).Id("camera-panel-map-description").FontSize(14f).Color("#D0D8E6").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Map: {state.MapId}").Id("camera-panel-map-id").FontSize(13f).Color("#8EA2BD"),
+                Ui.Text($"Camera: {state.ActiveCameraId}").Id("camera-panel-camera-id").FontSize(13f).Color("#8EA2BD"),
+                Ui.Text($"Mode: {state.ActiveModeId}").Id("camera-panel-mode-id").FontSize(13f).Color("#8EA2BD"),
+                Ui.Text($"Selection: {state.SelectedName}").Id("camera-panel-selection-name").FontSize(13f).Color("#8EA2BD"),
+                Ui.Text($"Selected IDs: {state.SelectedIdsSummary}").Id("camera-panel-selected-summary").FontSize(13f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Follow Target: {state.FollowTarget}").Id("camera-panel-follow-target").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text("Viewport telemetry: top-right HUD").FontSize(13f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Projection Spawn Batch: {state.ProjectionSpawnCount}").Id("camera-panel-projection-spawn").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text("Scenarios").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
                         BuildMapButton("Proj", state.MapId == CameraAcceptanceIds.ProjectionMapId, CameraAcceptanceIds.ProjectionMapId),
@@ -113,22 +126,16 @@ namespace CameraAcceptanceMod.UI
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("Actions").FontSize(12f).Bold().Color("#F4C77D"),
-                BuildScenarioActions(state)
+                BuildScenarioActions(state),
+                BuildSelectedIdsSection(context, state.SelectedIds),
+                Ui.Text("How To Verify").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text(state.ControlsDescription).FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
             };
-
-            if (string.Equals(state.MapId, CameraAcceptanceIds.ProjectionMapId, StringComparison.OrdinalIgnoreCase))
-            {
-                children.Add(Ui.Text($"Projection Spawn Batch: {state.ProjectionSpawnCount}").FontSize(13f).Color("#8EA2BD"));
-            }
 
             if (string.Equals(state.MapId, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase))
             {
                 children.Add(BuildHotpathControls(state));
             }
-
-            children.Add(BuildSelectedIdsSection(state.SelectedIds));
-            children.Add(Ui.Text("How To Verify").FontSize(12f).Bold().Color("#F4C77D"));
-            children.Add(Ui.Text(state.ControlsDescription).FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal));
 
             return Ui.Card(children.ToArray()).Width(PanelWidth)
                 .Padding(16f)
@@ -139,26 +146,72 @@ namespace CameraAcceptanceMod.UI
                 .ZIndex(20);
         }
 
-        private static UiElementBuilder BuildSelectedIdsSection(IReadOnlyList<string> selectedIds)
+        private static UiElementBuilder BuildSelectedIdsSection(ReactiveContext<CameraAcceptancePanelState> context, IReadOnlyList<string> selectedIds)
         {
-            var children = new List<UiElementBuilder>
-            {
-                Ui.Text("Selection Buffer").FontSize(12f).Bold().Color("#F4C77D")
-            };
+            UiVirtualWindow window = context.GetVerticalVirtualWindow(
+                SelectionBufferHostId,
+                SelectionRowPoolSize,
+                SelectionRowHeight,
+                SelectionBufferHeight,
+                overscan: 2);
 
-            if (selectedIds.Count == 0)
+            var rows = new List<UiElementBuilder>();
+            if (window.LeadingSpacerExtent > 0.01f)
             {
-                children.Add(Ui.Text("none").FontSize(12f).Color("#8EA2BD"));
-            }
-            else
-            {
-                for (int i = 0; i < selectedIds.Count; i++)
-                {
-                    children.Add(Ui.Text(selectedIds[i]).FontSize(12f).Color("#D0D8E6"));
-                }
+                rows.Add(BuildSelectionSpacer(window.LeadingSpacerExtent));
             }
 
-            return Ui.Column(children.ToArray()).Gap(4f);
+            for (int i = window.StartIndex; i < window.EndIndexExclusive; i++)
+            {
+                string? selectedId = i < selectedIds.Count ? selectedIds[i] : null;
+                rows.Add(BuildSelectionRow(i, selectedId));
+            }
+
+            if (window.TrailingSpacerExtent > 0.01f)
+            {
+                rows.Add(BuildSelectionSpacer(window.TrailingSpacerExtent));
+            }
+
+            return Ui.Column(
+                    Ui.Text("Selection Buffer").FontSize(12f).Bold().Color("#F4C77D"),
+                    Ui.Text($"Selected Slots: {selectedIds.Count}/{SelectionRowPoolSize} | Visible: {FormatVisibleRange(window)}").Id("camera-selection-buffer-summary").FontSize(11f).Color("#8EA2BD"),
+                    Ui.ScrollView(rows.ToArray())
+                        .Id(SelectionBufferHostId)
+                        .Height(SelectionBufferHeight)
+                        .Padding(8f)
+                        .Gap(4f)
+                        .Radius(12f)
+                        .Background("#0C1420"))
+                .Gap(6f);
+        }
+
+        private static UiElementBuilder BuildSelectionRow(int index, string? selectedId)
+        {
+            bool occupied = !string.IsNullOrWhiteSpace(selectedId);
+            return Ui.Row(
+                    Ui.Text($"{index + 1:00}").FontSize(11f).Color("#587189"),
+                    Ui.Text(occupied ? selectedId! : "empty")
+                        .Id(GetSelectionRowId(index))
+                        .FontSize(12f)
+                        .Color(occupied ? "#D0D8E6" : "#62758C"))
+                .Gap(8f);
+        }
+
+        private static UiElementBuilder BuildSelectionSpacer(float height)
+        {
+            return Ui.Spacer(height);
+        }
+
+        private static string GetSelectionRowId(int index)
+        {
+            return $"camera-selection-row-{index:00}";
+        }
+
+        private static string FormatVisibleRange(UiVirtualWindow window)
+        {
+            return window.VisibleCount <= 0
+                ? "empty"
+                : $"{window.StartIndex + 1}-{window.EndIndexExclusive}";
         }
 
         private UiElementBuilder BuildScenarioActions(CameraAcceptancePanelState state)
@@ -261,9 +314,11 @@ namespace CameraAcceptanceMod.UI
             CameraAcceptancePanelState next = CaptureState(engine);
             if (StateEquals(_lastState, next))
             {
+                _lastSelectionRowsTouched = 0;
                 return false;
             }
 
+            _lastSelectionRowsTouched = CountSelectionRowChanges(_lastState.SelectedIds, next.SelectedIds);
             _lastState = next;
             _page.SetState(_ => next);
             return true;
@@ -287,7 +342,7 @@ namespace CameraAcceptanceMod.UI
                 engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId ?? "none",
                 ResolveActiveModeId(engine),
                 ResolveSelectedEntityName(engine) ?? "none",
-                selectedIds.Length == 0 ? "none" : string.Join(", ", selectedIds),
+                SummarizeSelectedIds(selectedIds),
                 selectedIds,
                 FormatVector(engine.GameSession.Camera.FollowTargetPositionCm),
                 ResolveActiveBlendCameraId(engine),
@@ -567,6 +622,43 @@ namespace CameraAcceptanceMod.UI
             }
 
             return lines;
+        }
+
+        private static int CountSelectionRowChanges(IReadOnlyList<string> previous, IReadOnlyList<string> next)
+        {
+            int count = 0;
+            int length = Math.Max(previous.Count, next.Count);
+            for (int i = 0; i < length; i++)
+            {
+                string? left = i < previous.Count ? previous[i] : null;
+                string? right = i < next.Count ? next[i] : null;
+                if (!string.Equals(left, right, StringComparison.Ordinal))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static string SummarizeSelectedIds(IReadOnlyList<string> selectedIds)
+        {
+            if (selectedIds.Count == 0)
+            {
+                return "none";
+            }
+
+            int previewCount = Math.Min(4, selectedIds.Count);
+            string[] previewItems = new string[previewCount];
+            for (int i = 0; i < previewCount; i++)
+            {
+                previewItems[i] = selectedIds[i];
+            }
+
+            string preview = string.Join(", ", previewItems);
+            return selectedIds.Count > previewCount
+                ? $"{preview}, +{selectedIds.Count - previewCount} more"
+                : preview;
         }
 
         private static bool TryGetDiagnosticsState(GameEngine engine, out CameraAcceptanceDiagnosticsState diagnostics)

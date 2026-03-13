@@ -46,6 +46,7 @@ public class UIRoot
 			IsDirty = false;
 			return;
 		}
+		RefreshReactiveSceneRuntime();
 		_sceneRenderer.Render(Scene, canvas, Width, Height);
 		IsDirty = false;
 	}
@@ -105,10 +106,31 @@ public class UIRoot
 			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Scroll, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId, pointerEvent.DeltaX, pointerEvent.DeltaY)).Handled;
 			break;
 		}
+		bool runtimeChanged = false;
+		if (flag || Scene.IsDirty)
+		{
+			runtimeChanged = RefreshReactiveSceneRuntime();
+		}
 		if (flag || Scene.IsDirty)
 		{
 			IsDirty = true;
 		}
-		return flag;
+		return flag || runtimeChanged;
+	}
+
+	private bool RefreshReactiveSceneRuntime()
+	{
+		if (Scene == null || Width <= 0f || Height <= 0f)
+		{
+			return false;
+		}
+		Scene.Layout(Width, Height);
+		if (!Scene.TryRefreshReactiveRuntimeDependencies())
+		{
+			return false;
+		}
+		Scene.Layout(Width, Height);
+		IsDirty = true;
+		return true;
 	}
 }

@@ -1,3 +1,6 @@
+using Ludots.UI.Reactive;
+using Ludots.UI.Runtime;
+
 namespace CameraAcceptanceMod.Runtime
 {
     internal sealed class CameraAcceptanceDiagnosticsState
@@ -23,6 +26,15 @@ namespace CameraAcceptanceMod.Runtime
         public int HotpathHudTextItemCount { get; private set; }
         public int HotpathPrimitiveItemCount { get; private set; }
         public int HotpathSelectionLabelCount { get; private set; }
+        public ReactiveApplyMode PanelLastApplyMode { get; private set; }
+        public int PanelLastPatchedNodes { get; private set; }
+        public int PanelLastSelectionRowsTouched { get; private set; }
+        public int PanelRowPoolSize { get; private set; }
+        public long PanelFullRecomposeCount { get; private set; }
+        public long PanelIncrementalPatchCount { get; private set; }
+        public int PanelVirtualizedWindowCount { get; private set; }
+        public int PanelVirtualizedTotalItems { get; private set; }
+        public int PanelVirtualizedComposedItems { get; private set; }
 
         public void ObservePanelSync(double sampleMs) => PanelSyncMs = Smooth(PanelSyncMs, (float)sampleMs);
         public void ObserveHudBuild(double sampleMs) => HudBuildMs = Smooth(HudBuildMs, (float)sampleMs);
@@ -53,6 +65,19 @@ namespace CameraAcceptanceMod.Runtime
             HotpathHudTextItemCount = 0;
             HotpathPrimitiveItemCount = 0;
             HotpathSelectionLabelCount = 0;
+        }
+
+        public void ObservePanelUpdate(ReactiveUpdateStats stats, UiReactiveUpdateMetrics metrics, int selectionRowsTouched, int rowPoolSize, long fullRecomposeCount, long incrementalPatchCount)
+        {
+            PanelLastApplyMode = stats.Mode;
+            PanelLastPatchedNodes = stats.PatchedNodes;
+            PanelLastSelectionRowsTouched = selectionRowsTouched;
+            PanelRowPoolSize = rowPoolSize;
+            PanelFullRecomposeCount = fullRecomposeCount;
+            PanelIncrementalPatchCount = incrementalPatchCount;
+            PanelVirtualizedWindowCount = metrics.VirtualizedWindowCount;
+            PanelVirtualizedTotalItems = metrics.VirtualizedTotalItems;
+            PanelVirtualizedComposedItems = metrics.VirtualizedComposedItems;
         }
 
         private static float Smooth(float current, float sampleMs)

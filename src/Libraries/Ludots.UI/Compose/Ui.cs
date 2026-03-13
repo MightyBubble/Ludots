@@ -32,6 +32,11 @@ public static class Ui
 		return new UiElementBuilder(UiNodeKind.Container, "div").Column().Overflow(UiOverflow.Scroll).Children(children);
 	}
 
+	public static UiElementBuilder Spacer(float height)
+	{
+		return new UiElementBuilder(UiNodeKind.Container, "div").Height(height).FlexShrink(0f);
+	}
+
 	public static UiElementBuilder Text(string text)
 	{
 		return new UiElementBuilder(UiNodeKind.Text, "span").Text(text);

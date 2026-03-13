@@ -65,21 +65,19 @@ namespace CameraAcceptanceMod.Systems
 
             float fps = _smoothedFrameMs > 0.001f ? 1000f / _smoothedFrameMs : 0f;
             string fpsLine = $"Camera Acceptance | FPS={fps:F1} | Frame={_smoothedFrameMs:F2}ms";
-            var lines = new List<string>(8)
+            var lines = new List<string>(10)
             {
                 fpsLine,
-                $"F6 Panel[{OnOff(renderDebug.DrawSkiaUi)}]  F7 HUD[{OnOff(diagnostics.HudEnabled)}]  F8 Select[{OnOff(diagnostics.TextEnabled)}]"
+                $"F6 Panel[{OnOff(renderDebug.DrawSkiaUi)}]  F7 HUD[{OnOff(diagnostics.HudEnabled)}]  F8 Select[{OnOff(diagnostics.TextEnabled)}]",
+                $"Build panel={diagnostics.PanelSyncMs:F2}ms  hud={diagnostics.HudBuildMs:F2}ms  text={diagnostics.TextBuildMs:F2}ms",
+                $"Panel diff={diagnostics.PanelLastApplyMode}  nodes={diagnostics.PanelLastPatchedNodes}  rows={diagnostics.PanelLastSelectionRowsTouched}/{diagnostics.PanelRowPoolSize}  virt={diagnostics.PanelVirtualizedComposedItems}/{diagnostics.PanelVirtualizedTotalItems}  full={diagnostics.PanelFullRecomposeCount}  incr={diagnostics.PanelIncrementalPatchCount}"
             };
 
             if (string.Equals(mapId, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase))
             {
-                lines.Add($"Build panel={diagnostics.PanelSyncMs:F2}ms  diagHud={diagnostics.HudBuildMs:F2}ms  select={diagnostics.TextBuildMs:F2}ms  bars={diagnostics.HotpathBarBuildMs:F2}ms  hudText={diagnostics.HotpathHudTextBuildMs:F2}ms  prims={diagnostics.HotpathPrimitiveBuildMs:F2}ms");
+                lines.Add($"Hotpath build bars={diagnostics.HotpathBarBuildMs:F2}ms  hudText={diagnostics.HotpathHudTextBuildMs:F2}ms  prims={diagnostics.HotpathPrimitiveBuildMs:F2}ms");
                 lines.Add($"F9 Bars[{OnOff(diagnostics.HotpathBarsEnabled)}]  F10 HudText[{OnOff(diagnostics.HotpathHudTextEnabled)}]  F11 Terrain[{OnOff(renderDebug.DrawTerrain)}]  F12 Prim[{OnOff(renderDebug.DrawPrimitives)}]  C Crowd[{OnOff(diagnostics.HotpathCullCrowdEnabled)}]");
                 lines.Add($"Hotpath crowd={diagnostics.HotpathCrowdCount}  visible={diagnostics.HotpathVisibleCrowdCount}  bars={diagnostics.HotpathBarItemCount}  hudText={diagnostics.HotpathHudTextItemCount}  prims={diagnostics.HotpathPrimitiveItemCount}  select={diagnostics.HotpathSelectionLabelCount}");
-            }
-            else
-            {
-                lines.Add($"Build panel={diagnostics.PanelSyncMs:F2}ms  hud={diagnostics.HudBuildMs:F2}ms  text={diagnostics.TextBuildMs:F2}ms");
             }
 
             if (_engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics) is PresentationTimingDiagnostics timings)
