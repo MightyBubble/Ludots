@@ -7,6 +7,9 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  test: {
+    environment: 'node',
+  },
   build: {
     outDir: 'dist',
   },

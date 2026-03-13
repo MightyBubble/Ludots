@@ -30,7 +30,7 @@ namespace Ludots.Adapter.Web.Protocol
 
     public static class WirePrimitiveDrawItem
     {
-        public const int SizeInBytes = 44;
+        public const int SizeInBytes = 48;
     }
 
     public static class WireGroundOverlayItem

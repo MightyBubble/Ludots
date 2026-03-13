@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.Text;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Core.Presentation.Camera;
@@ -18,6 +19,9 @@ namespace Ludots.Adapter.Web.Streaming
     {
         private PrimitiveDrawItem[] _prevPrimitives = Array.Empty<PrimitiveDrawItem>();
         private int _prevPrimitiveCount;
+        private readonly Dictionary<int, int> _prevPrimitiveIndices = new();
+        private readonly Dictionary<int, int> _currentPrimitiveIndices = new();
+        private bool _prevPrimitivesHaveStableIdentity = true;
         private int _prevDebugLineHash;
         private int _prevDebugCircleHash;
         private int _prevDebugBoxHash;
@@ -90,43 +94,78 @@ namespace Ludots.Adapter.Web.Streaming
             int curCount = buf?.Count ?? 0;
             ReadOnlySpan<PrimitiveDrawItem> curSpan = buf != null ? buf.GetSpan() : ReadOnlySpan<PrimitiveDrawItem>.Empty;
 
-            int changedCount = 0;
-            int maxItems = Math.Max(curCount, _prevPrimitiveCount);
+            if (!TryIndexPrimitivesByStableId(curSpan, curCount, _currentPrimitiveIndices) ||
+                (_prevPrimitiveCount > 0 && !_prevPrimitivesHaveStableIdentity))
+            {
+                WritePrimitives(buf);
+                return curCount;
+            }
 
             int startPos = _pos;
             WriteSectionHeader(FrameProtocol.SectionPrimitivesDelta, 0, 0);
             EnsureCapacity(4);
             BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)curCount);
             _pos += 2;
-            _pos += 2; // reserved
+            int removedCountOffset = _pos;
+            _pos += 2;
 
-            for (int i = 0; i < maxItems; i++)
+            int removedCount = 0;
+            foreach (var kvp in _prevPrimitiveIndices)
             {
-                bool changed;
-                if (i >= curCount || i >= _prevPrimitiveCount)
-                    changed = true;
-                else
-                    changed = !curSpan[i].Equals(_prevPrimitives[i]);
-
-                if (changed && i < curCount)
+                if (_currentPrimitiveIndices.ContainsKey(kvp.Key))
                 {
-                    EnsureCapacity(2 + WirePrimitiveDrawItem.SizeInBytes);
-                    BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)i);
-                    _pos += 2;
-                    ref readonly var item = ref curSpan[i];
-                    WriteInt32(item.MeshAssetId);
-                    WriteFloat(item.Position.X); WriteFloat(item.Position.Y); WriteFloat(item.Position.Z);
-                    WriteFloat(item.Scale.X); WriteFloat(item.Scale.Y); WriteFloat(item.Scale.Z);
-                    WriteFloat(item.Color.X); WriteFloat(item.Color.Y); WriteFloat(item.Color.Z); WriteFloat(item.Color.W);
+                    continue;
+                }
+
+                EnsureCapacity(4);
+                WriteInt32(kvp.Key);
+                removedCount++;
+            }
+
+            int changedCount = 0;
+            for (int i = 0; i < curCount; i++)
+            {
+                ref readonly var item = ref curSpan[i];
+                bool changed = !_prevPrimitiveIndices.TryGetValue(item.StableId, out int prevIndex) ||
+                    !WireEquals(in item, in _prevPrimitives[prevIndex]);
+
+                if (changed)
+                {
+                    EnsureCapacity(WirePrimitiveDrawItem.SizeInBytes);
+                    WritePrimitiveItem(in item);
                     changedCount++;
                 }
             }
 
+            EnsureCapacity(curCount * sizeof(int));
+            for (int i = 0; i < curCount; i++)
+            {
+                WriteInt32(curSpan[i].StableId);
+            }
+
             int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(removedCountOffset), (ushort)removedCount);
             _buffer[startPos] = FrameProtocol.SectionPrimitivesDelta;
             BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(startPos + 1), (ushort)changedCount);
             BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
             return changedCount;
+        }
+
+        private void WritePrimitives(PrimitiveDrawBuffer? buf)
+        {
+            ReadOnlySpan<PrimitiveDrawItem> span = buf != null
+                ? buf.GetSpan()
+                : ReadOnlySpan<PrimitiveDrawItem>.Empty;
+            int count = span.Length;
+            int itemBytes = count * WirePrimitiveDrawItem.SizeInBytes;
+            WriteSectionHeader(FrameProtocol.SectionPrimitives, (ushort)count, itemBytes);
+            EnsureCapacity(itemBytes);
+
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly var item = ref span[i];
+                WritePrimitiveItem(in item);
+            }
         }
 
         private void WriteGroundOverlayIfChanged(GroundOverlayBuffer? buf)
@@ -357,7 +396,16 @@ namespace Ludots.Adapter.Web.Streaming
             if (_prevPrimitives.Length < count)
                 _prevPrimitives = new PrimitiveDrawItem[count * 2];
             if (count > 0)
-                buf!.GetSpan().CopyTo(_prevPrimitives.AsSpan());
+            {
+                ReadOnlySpan<PrimitiveDrawItem> span = buf!.GetSpan();
+                span.CopyTo(_prevPrimitives.AsSpan());
+                _prevPrimitivesHaveStableIdentity = TryIndexPrimitivesByStableId(span, count, _prevPrimitiveIndices);
+            }
+            else
+            {
+                _prevPrimitiveIndices.Clear();
+                _prevPrimitivesHaveStableIdentity = true;
+            }
             _prevPrimitiveCount = count;
         }
 
@@ -380,6 +428,43 @@ namespace Ludots.Adapter.Web.Streaming
         private void WriteInt32(int value) { BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(_pos), value); _pos += 4; }
         private void WriteUInt32(uint value) { BinaryPrimitives.WriteUInt32LittleEndian(_buffer.AsSpan(_pos), value); _pos += 4; }
         private void WriteInt64(long value) { BinaryPrimitives.WriteInt64LittleEndian(_buffer.AsSpan(_pos), value); _pos += 8; }
+
+        private void WritePrimitiveItem(in PrimitiveDrawItem item)
+        {
+            WriteInt32(item.MeshAssetId);
+            WriteInt32(item.StableId);
+            WriteFloat(item.Position.X); WriteFloat(item.Position.Y); WriteFloat(item.Position.Z);
+            WriteFloat(item.Scale.X); WriteFloat(item.Scale.Y); WriteFloat(item.Scale.Z);
+            WriteFloat(item.Color.X); WriteFloat(item.Color.Y); WriteFloat(item.Color.Z); WriteFloat(item.Color.W);
+        }
+
+        private static bool TryIndexPrimitivesByStableId(
+            ReadOnlySpan<PrimitiveDrawItem> span,
+            int count,
+            Dictionary<int, int> indexMap)
+        {
+            indexMap.Clear();
+            for (int i = 0; i < count; i++)
+            {
+                int stableId = span[i].StableId;
+                if (stableId <= 0 || !indexMap.TryAdd(stableId, i))
+                {
+                    indexMap.Clear();
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool WireEquals(in PrimitiveDrawItem a, in PrimitiveDrawItem b)
+        {
+            return a.MeshAssetId == b.MeshAssetId
+                && a.StableId == b.StableId
+                && a.Position.Equals(b.Position)
+                && a.Scale.Equals(b.Scale)
+                && a.Color.Equals(b.Color);
+        }
 
         private void EnsureCapacity(int additionalBytes)
         {

@@ -19,6 +19,7 @@ export interface FrameHeader {
 
 export interface PrimitiveItem {
   meshAssetId: number;
+  stableId: number;
   posX: number; posY: number; posZ: number;
   scaleX: number; scaleY: number; scaleZ: number;
   colorR: number; colorG: number; colorB: number; colorA: number;

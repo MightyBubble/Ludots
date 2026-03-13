@@ -16,6 +16,7 @@ const SEC_DEBUG_LINES = 0x10;
 const SEC_DEBUG_CIRCLES = 0x11;
 const SEC_DEBUG_BOXES = 0x12;
 const SEC_PRIMITIVES_DELTA = 0x18;
+const PRIMITIVE_ITEM_BYTES = 48;
 
 export interface CameraState {
   posX: number; posY: number; posZ: number;
@@ -26,6 +27,7 @@ export interface CameraState {
 
 export interface PrimitiveItem {
   meshAssetId: number;
+  stableId: number;
   posX: number; posY: number; posZ: number;
   scaleX: number; scaleY: number; scaleZ: number;
   r: number; g: number; b: number; a: number;
@@ -219,37 +221,60 @@ export class FrameDecoder {
   private readPrimitives(frame: DecodedFrame, v: DataView, p: number, count: number): number {
     frame.primitives = [];
     for (let i = 0; i < count; i++) {
-      frame.primitives.push({
-        meshAssetId: v.getInt32(p, true),
-        posX: v.getFloat32(p + 4, true), posY: v.getFloat32(p + 8, true), posZ: v.getFloat32(p + 12, true),
-        scaleX: v.getFloat32(p + 16, true), scaleY: v.getFloat32(p + 20, true), scaleZ: v.getFloat32(p + 24, true),
-        r: v.getFloat32(p + 28, true), g: v.getFloat32(p + 32, true), b: v.getFloat32(p + 36, true), a: v.getFloat32(p + 40, true),
-      });
-      p += 44;
+      frame.primitives.push(this.readPrimitiveItem(v, p));
+      p += PRIMITIVE_ITEM_BYTES;
     }
     return p;
   }
 
   private applyPrimitiveDelta(frame: DecodedFrame, v: DataView, p: number, changedCount: number): number {
     const totalCount = v.getUint16(p, true);
-    p += 4; // totalCount(2) + reserved(2)
+    const removedCount = v.getUint16(p + 2, true);
+    p += 4;
 
-    if (frame.primitives.length > totalCount) frame.primitives.length = totalCount;
-    while (frame.primitives.length < totalCount) {
-      frame.primitives.push({ meshAssetId: 1, posX: 0, posY: 0, posZ: 0, scaleX: 1, scaleY: 1, scaleZ: 1, r: 1, g: 1, b: 1, a: 1 });
+    const primitivesByStableId = new Map<number, PrimitiveItem>();
+    for (const item of frame.primitives) {
+      if (item.stableId > 0 && !primitivesByStableId.has(item.stableId)) {
+        primitivesByStableId.set(item.stableId, { ...item });
+      }
+    }
+
+    for (let i = 0; i < removedCount; i++) {
+      const stableId = v.getInt32(p, true);
+      p += 4;
+      primitivesByStableId.delete(stableId);
     }
 
     for (let i = 0; i < changedCount; i++) {
-      const idx = v.getUint16(p, true); p += 2;
-      frame.primitives[idx] = {
-        meshAssetId: v.getInt32(p, true),
-        posX: v.getFloat32(p + 4, true), posY: v.getFloat32(p + 8, true), posZ: v.getFloat32(p + 12, true),
-        scaleX: v.getFloat32(p + 16, true), scaleY: v.getFloat32(p + 20, true), scaleZ: v.getFloat32(p + 24, true),
-        r: v.getFloat32(p + 28, true), g: v.getFloat32(p + 32, true), b: v.getFloat32(p + 36, true), a: v.getFloat32(p + 40, true),
-      };
-      p += 44;
+      const item = this.readPrimitiveItem(v, p);
+      p += PRIMITIVE_ITEM_BYTES;
+      if (item.stableId > 0) {
+        primitivesByStableId.set(item.stableId, item);
+      }
     }
+
+    const ordered: PrimitiveItem[] = [];
+    for (let i = 0; i < totalCount; i++) {
+      const stableId = v.getInt32(p, true);
+      p += 4;
+      const item = primitivesByStableId.get(stableId);
+      if (item) {
+        ordered.push(item);
+      }
+    }
+
+    frame.primitives = ordered;
     return p;
+  }
+
+  private readPrimitiveItem(v: DataView, p: number): PrimitiveItem {
+    return {
+      meshAssetId: v.getInt32(p, true),
+      stableId: v.getInt32(p + 4, true),
+      posX: v.getFloat32(p + 8, true), posY: v.getFloat32(p + 12, true), posZ: v.getFloat32(p + 16, true),
+      scaleX: v.getFloat32(p + 20, true), scaleY: v.getFloat32(p + 24, true), scaleZ: v.getFloat32(p + 28, true),
+      r: v.getFloat32(p + 32, true), g: v.getFloat32(p + 36, true), b: v.getFloat32(p + 40, true), a: v.getFloat32(p + 44, true),
+    };
   }
 
   private readGroundOverlays(frame: DecodedFrame, v: DataView, p: number, count: number): number {

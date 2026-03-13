@@ -99,11 +99,17 @@ namespace Ludots.Adapter.Web.Streaming
             for (int i = 0; i < count; i++)
             {
                 ref readonly var item = ref span[i];
-                WriteInt32(item.MeshAssetId);
-                WriteFloat(item.Position.X); WriteFloat(item.Position.Y); WriteFloat(item.Position.Z);
-                WriteFloat(item.Scale.X); WriteFloat(item.Scale.Y); WriteFloat(item.Scale.Z);
-                WriteFloat(item.Color.X); WriteFloat(item.Color.Y); WriteFloat(item.Color.Z); WriteFloat(item.Color.W);
+                WritePrimitiveItem(in item);
             }
+        }
+
+        private void WritePrimitiveItem(in PrimitiveDrawItem item)
+        {
+            WriteInt32(item.MeshAssetId);
+            WriteInt32(item.StableId);
+            WriteFloat(item.Position.X); WriteFloat(item.Position.Y); WriteFloat(item.Position.Z);
+            WriteFloat(item.Scale.X); WriteFloat(item.Scale.Y); WriteFloat(item.Scale.Z);
+            WriteFloat(item.Color.X); WriteFloat(item.Color.Y); WriteFloat(item.Color.Z); WriteFloat(item.Color.W);
         }
 
         private void WriteGroundOverlays(GroundOverlayBuffer? buf)

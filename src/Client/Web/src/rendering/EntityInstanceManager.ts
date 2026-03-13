@@ -31,6 +31,24 @@ export class EntityInstanceManager {
       list.push(p);
     }
 
+    for (const [, items] of groups) {
+      items.sort((a, b) => {
+        if (a.stableId <= 0 && b.stableId <= 0) {
+          return 0;
+        }
+
+        if (a.stableId <= 0) {
+          return 1;
+        }
+
+        if (b.stableId <= 0) {
+          return -1;
+        }
+
+        return a.stableId - b.stableId;
+      });
+    }
+
     // Hide meshes not present this frame
     for (const [id, mesh] of this._meshes) {
       if (!groups.has(id)) {
