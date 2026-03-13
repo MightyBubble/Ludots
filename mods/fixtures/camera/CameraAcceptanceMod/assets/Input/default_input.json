@@ -15,7 +15,12 @@
     { "id": "CameraAcceptanceProjectionSpawnCountIncrease", "name": "CameraAcceptanceProjectionSpawnCountIncrease", "type": "Button" },
     { "id": "CameraAcceptanceTogglePanel", "name": "CameraAcceptanceTogglePanel", "type": "Button" },
     { "id": "CameraAcceptanceToggleHud", "name": "CameraAcceptanceToggleHud", "type": "Button" },
-    { "id": "CameraAcceptanceToggleText", "name": "CameraAcceptanceToggleText", "type": "Button" }
+    { "id": "CameraAcceptanceToggleText", "name": "CameraAcceptanceToggleText", "type": "Button" },
+    { "id": "CameraAcceptanceToggleHotpathBars", "name": "CameraAcceptanceToggleHotpathBars", "type": "Button" },
+    { "id": "CameraAcceptanceToggleHotpathHudText", "name": "CameraAcceptanceToggleHotpathHudText", "type": "Button" },
+    { "id": "CameraAcceptanceToggleTerrain", "name": "CameraAcceptanceToggleTerrain", "type": "Button" },
+    { "id": "CameraAcceptanceTogglePrimitives", "name": "CameraAcceptanceTogglePrimitives", "type": "Button" },
+    { "id": "CameraAcceptanceToggleHotpathCullCrowd", "name": "CameraAcceptanceToggleHotpathCullCrowd", "type": "Button" }
   ],
   "contexts": [
     {
@@ -38,7 +43,12 @@
         { "actionId": "CameraAcceptanceProjectionSpawnCountIncrease", "path": "<Keyboard>/e" },
         { "actionId": "CameraAcceptanceTogglePanel", "path": "<Keyboard>/f6" },
         { "actionId": "CameraAcceptanceToggleHud", "path": "<Keyboard>/f7" },
-        { "actionId": "CameraAcceptanceToggleText", "path": "<Keyboard>/f8" }
+        { "actionId": "CameraAcceptanceToggleText", "path": "<Keyboard>/f8" },
+        { "actionId": "CameraAcceptanceToggleHotpathBars", "path": "<Keyboard>/f9" },
+        { "actionId": "CameraAcceptanceToggleHotpathHudText", "path": "<Keyboard>/f10" },
+        { "actionId": "CameraAcceptanceToggleTerrain", "path": "<Keyboard>/f11" },
+        { "actionId": "CameraAcceptanceTogglePrimitives", "path": "<Keyboard>/f12" },
+        { "actionId": "CameraAcceptanceToggleHotpathCullCrowd", "path": "<Keyboard>/c" }
       ]
     }
   ]

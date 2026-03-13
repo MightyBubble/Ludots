@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using System.Text;
+using System.Text.Json;
 using Arch.Core;
 using CameraAcceptanceMod;
 using Ludots.Core.Components;
@@ -12,6 +14,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Map;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
@@ -29,6 +32,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.ThreeC.Acceptance
 {
     [TestFixture]
+    [NonParallelizable]
     public sealed class CameraAcceptanceModTests
     {
         private const int BlendSettleFrames = 40;
@@ -124,7 +128,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Tick(engine, 1);
 
             int afterDummyCount = CountEntitiesByName(engine.World, "Dummy");
-            Assert.That(afterDummyCount, Is.EqualTo(beforeDummyCount + 1), "Out-of-bounds projection clicks should still resolve to a bounded spawn.");
+            Assert.That(afterDummyCount, Is.EqualTo(beforeDummyCount + GetProjectionSpawnCount(engine)),
+                "Out-of-bounds projection clicks should still resolve to the configured bounded spawn batch.");
             Assert.That(HasNamedEntityAt(engine.World, "Dummy", expectedWorldCm), Is.True,
                 "Out-of-bounds projection clicks should snap to the nearest board boundary.");
 
@@ -270,6 +275,118 @@ namespace Ludots.Tests.ThreeC.Acceptance
         }
 
         [Test]
+        [NonParallelizable]
+        public void CameraAcceptanceMod_HotpathHarness_TogglesPresentationLanes_AndWritesAcceptanceArtifacts()
+        {
+            string repoRoot = FindRepoRoot();
+            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "presentation-hotpath-harness");
+            Directory.CreateDirectory(artifactDir);
+
+            using var engine = CreateEngine(AcceptanceMods);
+            var uiRoot = new UIRoot();
+            uiRoot.Resize(1920f, 1080f);
+            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+
+            using var hudProjection = CreateHeadlessHudProjection(engine);
+
+            LoadMap(engine, CameraAcceptanceIds.HotpathMapId);
+            TickWithHudProjection(engine, hudProjection, 12);
+
+            var backend = GetInputBackend(engine);
+            var snapshots = new List<HotpathHarnessSnapshot>();
+
+            HotpathHarnessSnapshot baseline = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "baseline_all_on");
+            snapshots.Add(baseline);
+
+            Assert.That(uiRoot.Scene, Is.Not.Null, "Hotpath harness should keep the reactive panel mounted while panel rendering is enabled.");
+            Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Presentation Hotpath"));
+            Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Crowd/Culling ON"));
+            Assert.That(baseline.CrowdCount, Is.EqualTo(CameraAcceptanceIds.HotpathCrowdTargetCount));
+            Assert.That(baseline.VisibleCrowdCount, Is.GreaterThan(0));
+            Assert.That(baseline.WorldBarCount, Is.EqualTo(baseline.VisibleCrowdCount));
+            Assert.That(baseline.WorldTextCount, Is.EqualTo(baseline.VisibleCrowdCount));
+            Assert.That(baseline.ScreenBarCount, Is.EqualTo(baseline.WorldBarCount));
+            Assert.That(baseline.ScreenTextCount, Is.EqualTo(baseline.WorldTextCount));
+            Assert.That(baseline.SelectionLabelCount, Is.EqualTo(CameraAcceptanceIds.HotpathSelectionLabelLimit));
+            Assert.That(baseline.DiagnosticsHudVisible, Is.True);
+
+            PressButton(engine, backend, "<Keyboard>/f7");
+            HotpathHarnessSnapshot hudOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "diag_hud_off");
+            snapshots.Add(hudOff);
+            Assert.That(hudOff.DiagnosticsHudVisible, Is.False, "F7 should disable the diagnostics HUD while leaving the hotpath scene alive.");
+            Assert.That(hudOff.WorldBarCount, Is.EqualTo(baseline.WorldBarCount));
+            Assert.That(hudOff.WorldTextCount, Is.EqualTo(baseline.WorldTextCount));
+
+            PressButton(engine, backend, "<Keyboard>/f7");
+            TickWithHudProjection(engine, hudProjection, 1);
+
+            PressButton(engine, backend, "<Keyboard>/f8");
+            HotpathHarnessSnapshot selectionOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "selection_labels_off");
+            snapshots.Add(selectionOff);
+            Assert.That(selectionOff.SelectionLabelCount, Is.EqualTo(0), "F8 should isolate selection-label overlay cost.");
+
+            PressButton(engine, backend, "<Keyboard>/f9");
+            HotpathHarnessSnapshot barsOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "bars_off");
+            snapshots.Add(barsOff);
+            Assert.That(barsOff.WorldBarCount, Is.EqualTo(0), "F9 should disable the hotpath HUD bar lane.");
+            Assert.That(barsOff.WorldTextCount, Is.GreaterThan(0), "Disabling bars must not implicitly disable HUD text.");
+
+            PressButton(engine, backend, "<Keyboard>/f10");
+            HotpathHarnessSnapshot hudTextOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "hud_text_off");
+            snapshots.Add(hudTextOff);
+            Assert.That(hudTextOff.WorldTextCount, Is.EqualTo(0), "F10 should disable the hotpath HUD text lane.");
+            Assert.That(hudTextOff.ScreenTextCount, Is.EqualTo(0));
+
+            PressButton(engine, backend, "<Keyboard>/f11");
+            HotpathHarnessSnapshot terrainOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "terrain_off");
+            snapshots.Add(terrainOff);
+            Assert.That(terrainOff.TerrainEnabled, Is.False, "F11 should disable terrain rendering for manual adapter-side isolation.");
+
+            PressButton(engine, backend, "<Keyboard>/f12");
+            HotpathHarnessSnapshot primitivesOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "primitives_off");
+            snapshots.Add(primitivesOff);
+            Assert.That(primitivesOff.PrimitivesEnabled, Is.False, "F12 should disable primitive rendering for manual adapter-side isolation.");
+
+            PressButton(engine, backend, "<Keyboard>/c");
+            TickWithHudProjection(engine, hudProjection, 6);
+            HotpathHarnessSnapshot crowdOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "cull_crowd_off");
+            snapshots.Add(crowdOff);
+            Assert.That(crowdOff.CrowdCount, Is.EqualTo(0), "C should remove the deterministic crowd so culling cost can be isolated.");
+            Assert.That(crowdOff.VisibleCrowdCount, Is.EqualTo(0));
+            Assert.That(crowdOff.SelectionLabelCount, Is.EqualTo(0));
+
+            PressButton(engine, backend, "<Keyboard>/f6");
+            HotpathHarnessSnapshot panelOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "panel_off");
+            snapshots.Add(panelOff);
+            Assert.That(panelOff.PanelMounted, Is.False, "F6 should unmount the reactive panel in the hotpath harness as well.");
+
+            PressButton(engine, backend, "<Keyboard>/f6");
+            PressButton(engine, backend, "<Keyboard>/f8");
+            PressButton(engine, backend, "<Keyboard>/f9");
+            PressButton(engine, backend, "<Keyboard>/f10");
+            PressButton(engine, backend, "<Keyboard>/f11");
+            PressButton(engine, backend, "<Keyboard>/f12");
+            PressButton(engine, backend, "<Keyboard>/c");
+            TickWithHudProjection(engine, hudProjection, 12);
+
+            HotpathHarnessSnapshot restored = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "restored_all_on");
+            snapshots.Add(restored);
+
+            Assert.That(restored.PanelMounted, Is.True);
+            Assert.That(restored.DiagnosticsHudVisible, Is.True);
+            Assert.That(restored.CrowdCount, Is.EqualTo(CameraAcceptanceIds.HotpathCrowdTargetCount));
+            Assert.That(restored.WorldBarCount, Is.EqualTo(restored.VisibleCrowdCount));
+            Assert.That(restored.WorldTextCount, Is.EqualTo(restored.VisibleCrowdCount));
+            Assert.That(restored.SelectionLabelCount, Is.EqualTo(CameraAcceptanceIds.HotpathSelectionLabelLimit));
+            Assert.That(restored.TerrainEnabled, Is.True);
+            Assert.That(restored.PrimitivesEnabled, Is.True);
+
+            File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildHotpathTraceJsonl(snapshots));
+            File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildHotpathBattleReport(snapshots));
+            File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildHotpathPathMermaid());
+        }
+
+        [Test]
         public void CameraAcceptanceMod_ProjectionMap_ScreenSpaceBoxSelect_UpdatesSelectionBuffer_AndSelectionLabels()
         {
             using var engine = CreateEngine(AcceptanceMods);
@@ -304,7 +421,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             var overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
             Assert.That(overlay, Is.Not.Null);
-            var overlayText = ExtractOverlayText(overlay!);
+            overlay!.Clear();
+            Tick(engine, 2);
+            var overlayText = ExtractOverlayText(overlay);
             Assert.That(overlayText, Does.Contain($"#{hero.Id}"));
             Assert.That(overlayText, Does.Contain($"#{scout.Id}"));
             Assert.That(overlayText, Does.Contain($"#{captain.Id}"));
@@ -640,14 +759,15 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var view = new StubViewController(1920, 1080);
             engine.SetService(CoreServiceKeys.ViewController, view);
             var cameraAdapter = new StubCameraAdapter();
-            var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
+            var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+            var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
             var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
             var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view);
+            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, timingDiagnostics);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext["Tests.CameraAcceptanceMod.HeadlessCamera"] = new HeadlessCameraRuntime(
@@ -701,6 +821,59 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 }
 
                 Tick(engine, 1, beforeFrame);
+            }
+
+            Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames.");
+        }
+
+        private static WorldHudToScreenSystem CreateHeadlessHudProjection(GameEngine engine)
+        {
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
+            var strings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector);
+            var view = engine.GetService(CoreServiceKeys.ViewController);
+            var timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+
+            Assert.That(worldHud, Is.Not.Null, "Headless hotpath acceptance requires WorldHudBatchBuffer.");
+            Assert.That(screenHud, Is.Not.Null, "Headless hotpath acceptance requires ScreenHudBatchBuffer.");
+            Assert.That(projector, Is.Not.Null, "Headless hotpath acceptance requires a screen projector.");
+            Assert.That(view, Is.Not.Null, "Headless hotpath acceptance requires a view controller.");
+
+            return new WorldHudToScreenSystem(engine.World, worldHud!, strings, projector!, view!, screenHud!, timings);
+        }
+
+        private static void TickWithHudProjection(
+            GameEngine engine,
+            WorldHudToScreenSystem hudProjection,
+            int frames,
+            Action<GameEngine>? beforeFrame = null)
+        {
+            for (int i = 0; i < frames; i++)
+            {
+                beforeFrame?.Invoke(engine);
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
+                engine.Tick(1f / 60f);
+                UpdateHeadlessCamera(engine);
+                hudProjection.Update(1f / 60f);
+            }
+        }
+
+        private static void TickUntilWithHudProjection(
+            GameEngine engine,
+            WorldHudToScreenSystem hudProjection,
+            Func<bool> predicate,
+            int maxFrames = 60,
+            Action<GameEngine>? beforeFrame = null)
+        {
+            for (int i = 0; i < maxFrames; i++)
+            {
+                if (predicate())
+                {
+                    return;
+                }
+
+                TickWithHudProjection(engine, hudProjection, 1, beforeFrame);
             }
 
             Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames.");
@@ -974,6 +1147,347 @@ namespace Ludots.Tests.ThreeC.Acceptance
             runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
         }
 
+        private static HotpathHarnessSnapshot CaptureHotpathSnapshot(
+            GameEngine engine,
+            WorldHudToScreenSystem hudProjection,
+            UIRoot uiRoot,
+            string step)
+        {
+            TickWithHudProjection(engine, hudProjection, 1);
+
+            if (engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is ScreenOverlayBuffer overlayBuffer)
+            {
+                overlayBuffer.Clear();
+            }
+
+            if (engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHudBuffer)
+            {
+                worldHudBuffer.Clear();
+            }
+
+            if (engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer) is ScreenHudBatchBuffer screenHudBuffer)
+            {
+                screenHudBuffer.Clear();
+            }
+
+            TickWithHudProjection(engine, hudProjection, 1);
+
+            var overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
+            var renderDebug = engine.GetService(CoreServiceKeys.RenderDebugState);
+            var timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+
+            Assert.That(overlay, Is.Not.Null);
+            Assert.That(worldHud, Is.Not.Null);
+            Assert.That(screenHud, Is.Not.Null);
+            Assert.That(renderDebug, Is.Not.Null);
+            Assert.That(timings, Is.Not.Null);
+
+            var overlayText = ExtractOverlayText(overlay!);
+            string panelText = uiRoot.Scene != null ? ExtractUiSceneText(uiRoot.Scene) : string.Empty;
+            MapId currentMapId = engine.CurrentMapSession?.MapId ?? default;
+
+            return new HotpathHarnessSnapshot(
+                Step: step,
+                Tick: engine.GameSession?.CurrentTick ?? 0,
+                CrowdCount: CountEntitiesByNameOnMap(engine.World, currentMapId, "Dummy"),
+                VisibleCrowdCount: CountVisibleEntitiesByNameOnMap(engine.World, currentMapId, "Dummy"),
+                WorldBarCount: CountWorldHudItems(worldHud!, WorldHudItemKind.Bar),
+                WorldTextCount: CountWorldHudItems(worldHud, WorldHudItemKind.Text),
+                ScreenBarCount: CountScreenHudItems(screenHud!, WorldHudItemKind.Bar),
+                ScreenTextCount: CountScreenHudItems(screenHud, WorldHudItemKind.Text),
+                SelectionLabelCount: CountOverlayEntityLabelLines(overlay!),
+                PanelMounted: uiRoot.Scene != null,
+                DiagnosticsHudVisible: ContainsOverlayText(overlayText, "FPS="),
+                PanelEnabled: renderDebug!.DrawSkiaUi,
+                TerrainEnabled: renderDebug.DrawTerrain,
+                PrimitivesEnabled: renderDebug.DrawPrimitives,
+                CameraCullingMs: timings!.CameraCullingMs,
+                HudProjectionMs: timings.WorldHudProjectionMs,
+                DiagnosticsSummary: FindLineContaining(overlayText, "Build panel=") ?? FindLineContaining(panelText, "Build panel=") ?? "Build panel=unavailable",
+                HotpathSummary: FindLineContaining(overlayText, "Hotpath crowd=") ?? FindLineContaining(panelText, "Crowd=") ?? "Hotpath summary unavailable");
+        }
+
+        private static int CountVisibleEntitiesByName(World world, string name)
+        {
+            int count = 0;
+            var query = new QueryDescription().WithAll<Name, CullState>();
+            world.Query(in query, (ref Name entityName, ref CullState cull) =>
+            {
+                if (cull.IsVisible && string.Equals(entityName.Value, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    count++;
+                }
+            });
+
+            return count;
+        }
+
+        private static int CountEntitiesByNameOnMap(World world, MapId mapId, string name)
+        {
+            int count = 0;
+            var query = new QueryDescription().WithAll<Name, MapEntity>();
+            world.Query(in query, (ref Name entityName, ref MapEntity mapEntity) =>
+            {
+                if (string.Equals(mapEntity.MapId.Value, mapId.Value, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(entityName.Value, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    count++;
+                }
+            });
+
+            return count;
+        }
+
+        private static int CountVisibleEntitiesByNameOnMap(World world, MapId mapId, string name)
+        {
+            int count = 0;
+            var query = new QueryDescription().WithAll<Name, CullState, MapEntity>();
+            world.Query(in query, (ref Name entityName, ref CullState cull, ref MapEntity mapEntity) =>
+            {
+                if (string.Equals(mapEntity.MapId.Value, mapId.Value, StringComparison.OrdinalIgnoreCase) &&
+                    cull.IsVisible &&
+                    string.Equals(entityName.Value, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    count++;
+                }
+            });
+
+            return count;
+        }
+
+        private static int CountWorldHudItems(WorldHudBatchBuffer worldHud, WorldHudItemKind kind)
+        {
+            int count = 0;
+            foreach (ref readonly var item in worldHud.GetSpan())
+            {
+                if (item.Kind == kind)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int CountScreenHudItems(ScreenHudBatchBuffer screenHud, WorldHudItemKind kind)
+        {
+            int count = 0;
+            foreach (ref readonly var item in screenHud.GetSpan())
+            {
+                if (item.Kind == kind)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int CountOverlayEntityLabelLines(ScreenOverlayBuffer overlay)
+        {
+            var unique = new HashSet<string>(StringComparer.Ordinal);
+            List<string> lines = ExtractOverlayText(overlay);
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (lines[i].StartsWith("#", StringComparison.Ordinal))
+                {
+                    unique.Add(lines[i]);
+                }
+            }
+
+            return unique.Count;
+        }
+
+        private static bool ContainsOverlayText(IReadOnlyList<string> overlayLines, string token)
+        {
+            for (int i = 0; i < overlayLines.Count; i++)
+            {
+                if (overlayLines[i].Contains(token, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string? FindLineContaining(IReadOnlyList<string> lines, string token)
+        {
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (lines[i].Contains(token, StringComparison.Ordinal))
+                {
+                    return lines[i];
+                }
+            }
+
+            return null;
+        }
+
+        private static string? FindLineContaining(string text, string token)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return null;
+            }
+
+            string[] lines = text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].Contains(token, StringComparison.Ordinal))
+                {
+                    return lines[i];
+                }
+            }
+
+            return null;
+        }
+
+        private static string BuildHotpathTraceJsonl(IReadOnlyList<HotpathHarnessSnapshot> snapshots)
+        {
+            var lines = new List<string>(snapshots.Count);
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                HotpathHarnessSnapshot snapshot = snapshots[i];
+                lines.Add(JsonSerializer.Serialize(new
+                {
+                    event_id = $"camera-hotpath-{i + 1:000}",
+                    step = snapshot.Step,
+                    tick = snapshot.Tick,
+                    crowd = snapshot.CrowdCount,
+                    visible_crowd = snapshot.VisibleCrowdCount,
+                    world_bars = snapshot.WorldBarCount,
+                    world_text = snapshot.WorldTextCount,
+                    screen_bars = snapshot.ScreenBarCount,
+                    screen_text = snapshot.ScreenTextCount,
+                    selection_labels = snapshot.SelectionLabelCount,
+                    panel_mounted = snapshot.PanelMounted,
+                    diagnostics_hud = snapshot.DiagnosticsHudVisible,
+                    panel_enabled = snapshot.PanelEnabled,
+                    terrain_enabled = snapshot.TerrainEnabled,
+                    primitives_enabled = snapshot.PrimitivesEnabled,
+                    camera_culling_ms = Math.Round(snapshot.CameraCullingMs, 4),
+                    hud_projection_ms = Math.Round(snapshot.HudProjectionMs, 4),
+                    diagnostics = snapshot.DiagnosticsSummary,
+                    hotpath = snapshot.HotpathSummary,
+                    status = "done"
+                }));
+            }
+
+            return string.Join(Environment.NewLine, lines) + Environment.NewLine;
+        }
+
+        private static string BuildHotpathBattleReport(IReadOnlyList<HotpathHarnessSnapshot> snapshots)
+        {
+            HotpathHarnessSnapshot baseline = snapshots[0];
+            HotpathHarnessSnapshot restored = snapshots[^1];
+
+            var timeline = new StringBuilder();
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                HotpathHarnessSnapshot snapshot = snapshots[i];
+                timeline.AppendLine(
+                    $"- [T+{snapshot.Tick:000}] {snapshot.Step} | Crowd={snapshot.CrowdCount}/{snapshot.VisibleCrowdCount} | Bars={snapshot.WorldBarCount}->{snapshot.ScreenBarCount} | Text={snapshot.WorldTextCount}->{snapshot.ScreenTextCount} | Labels={snapshot.SelectionLabelCount} | Panel={(snapshot.PanelMounted ? "ON" : "OFF")} | HUD={(snapshot.DiagnosticsHudVisible ? "ON" : "OFF")} | Terrain={(snapshot.TerrainEnabled ? "ON" : "OFF")} | Prims={(snapshot.PrimitivesEnabled ? "ON" : "OFF")} | Cull={snapshot.CameraCullingMs:F2}ms | HudProj={snapshot.HudProjectionMs:F2}ms");
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("# Scenario Card: presentation-hotpath-harness");
+            sb.AppendLine();
+            sb.AppendLine("## Intent");
+            sb.AppendLine("- Player goal: isolate presentation hotpath lanes inside the shared camera acceptance scene and verify live controls affect the expected runtime buffers immediately.");
+            sb.AppendLine("- Gameplay domain: CameraAcceptanceMod diagnostics / panel / HUD bar / HUD text / selection label / terrain / primitive / culling crowd lanes.");
+            sb.AppendLine();
+            sb.AppendLine("## Determinism Inputs");
+            sb.AppendLine("- Seed: none");
+            sb.AppendLine("- Map: `mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_hotpath.json`");
+            sb.AppendLine($"- Crowd: `{CameraAcceptanceIds.HotpathCrowdTargetCount}` deterministic Dummy entities from the runtime spawn queue.");
+            sb.AppendLine("- Clock profile: fixed `1/60s` headless acceptance ticks with explicit `WorldHudToScreenSystem` projection.");
+            sb.AppendLine("- Controls: `F6 panel`, `F7 diagnostics HUD`, `F8 selection labels`, `F9 bars`, `F10 HUD text`, `F11 terrain`, `F12 primitives`, `C crowd`.");
+            sb.AppendLine();
+            sb.AppendLine("## Action Script");
+            sb.AppendLine("1. Load the shared hotpath map and wait for the deterministic crowd to spawn.");
+            sb.AppendLine("2. Capture the baseline with all presentation lanes enabled.");
+            sb.AppendLine("3. Toggle diagnostics HUD, selection labels, bars, HUD text, terrain, primitives, crowd, and panel one by one.");
+            sb.AppendLine("4. Restore all lanes and verify the same scene returns to the baseline shape.");
+            sb.AppendLine();
+            sb.AppendLine("## Expected Outcomes");
+            sb.AppendLine("- Primary success condition: each live toggle changes only its target lane or render gate while the rest of the scene remains stable.");
+            sb.AppendLine("- Failure branch condition: bars/text/selection survive after their toggle, panel fails to unmount/remount, or crowd removal does not collapse the culling workload inputs.");
+            sb.AppendLine("- Key metrics: crowd count, visible crowd count, world/screen HUD item counts, selection-label count, culling timing, HUD projection timing.");
+            sb.AppendLine();
+            sb.AppendLine("## Evidence Artifacts");
+            sb.AppendLine("- `artifacts/acceptance/presentation-hotpath-harness/trace.jsonl`");
+            sb.AppendLine("- `artifacts/acceptance/presentation-hotpath-harness/battle-report.md`");
+            sb.AppendLine("- `artifacts/acceptance/presentation-hotpath-harness/path.mmd`");
+            sb.AppendLine();
+            sb.AppendLine("## Timeline");
+            sb.Append(timeline.ToString());
+            sb.AppendLine();
+            sb.AppendLine("## Outcome");
+            sb.AppendLine("- success: yes");
+            sb.AppendLine("- verdict: shared presentation hotpath harness toggles panel, diagnostics, bars, HUD text, terrain/primitives gates, and culling crowd load without changing the underlying acceptance scene.");
+            sb.AppendLine($"- reason: baseline crowd `{baseline.CrowdCount}` and restored crowd `{restored.CrowdCount}` match, while toggle snapshots show bars/text/labels/crowd collapsing to zero exactly when their lane is disabled.");
+            sb.AppendLine();
+            sb.AppendLine("## Summary Stats");
+            sb.AppendLine($"- snapshot count: `{snapshots.Count}`");
+            sb.AppendLine($"- baseline visible crowd: `{baseline.VisibleCrowdCount}`");
+            sb.AppendLine($"- baseline world bars/text: `{baseline.WorldBarCount}` / `{baseline.WorldTextCount}`");
+            sb.AppendLine($"- restored world bars/text: `{restored.WorldBarCount}` / `{restored.WorldTextCount}`");
+            sb.AppendLine($"- max culling sample: `{MaxCameraCullingMs(snapshots):F2}` ms");
+            sb.AppendLine($"- max HUD projection sample: `{MaxHudProjectionMs(snapshots):F2}` ms");
+            sb.AppendLine("- reusable wiring: `CameraAcceptanceHotpathLaneSystem`, `CameraAcceptanceSelectionOverlaySystem`, `WorldHudToScreenSystem`, `PresentationTimingDiagnostics`");
+            return sb.ToString();
+        }
+
+        private static string BuildHotpathPathMermaid()
+        {
+            return string.Join(Environment.NewLine, new[]
+            {
+                "flowchart TD",
+                "    A[Load camera_acceptance_hotpath] --> B[Spawn deterministic crowd through RuntimeEntitySpawnQueue]",
+                "    B --> C[Capture baseline panel + diagnostics + HUD lanes]",
+                "    C --> D{Toggle diagnostics HUD / selection / bars / HUD text}",
+                "    D -->|lane disabled| E[Expected lane count drops to zero]",
+                "    D -->|lane left on| F[Other lane counts stay stable]",
+                "    E --> G{Toggle terrain / primitives render gates}",
+                "    G -->|off| H[RenderDebugState gates flip immediately]",
+                "    H --> I{Toggle crowd off}",
+                "    I -->|crowd=0| J[Visible crowd and label counts collapse]",
+                "    J --> K{Toggle panel off then restore all lanes}",
+                "    K -->|restored| L[Write battle-report + trace + path]"
+            }) + Environment.NewLine;
+        }
+
+        private static float MaxCameraCullingMs(IReadOnlyList<HotpathHarnessSnapshot> snapshots)
+        {
+            float max = 0f;
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                if (snapshots[i].CameraCullingMs > max)
+                {
+                    max = snapshots[i].CameraCullingMs;
+                }
+            }
+
+            return max;
+        }
+
+        private static float MaxHudProjectionMs(IReadOnlyList<HotpathHarnessSnapshot> snapshots)
+        {
+            float max = 0f;
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                if (snapshots[i].HudProjectionMs > max)
+                {
+                    max = snapshots[i].HudProjectionMs;
+                }
+            }
+
+            return max;
+        }
+
         private static List<string> ExtractOverlayText(ScreenOverlayBuffer overlay)
         {
             var lines = new List<string>();
@@ -1115,6 +1629,26 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             throw new DirectoryNotFoundException("Failed to locate repository root from test output directory.");
         }
+
+        private readonly record struct HotpathHarnessSnapshot(
+            string Step,
+            long Tick,
+            int CrowdCount,
+            int VisibleCrowdCount,
+            int WorldBarCount,
+            int WorldTextCount,
+            int ScreenBarCount,
+            int ScreenTextCount,
+            int SelectionLabelCount,
+            bool PanelMounted,
+            bool DiagnosticsHudVisible,
+            bool PanelEnabled,
+            bool TerrainEnabled,
+            bool PrimitivesEnabled,
+            float CameraCullingMs,
+            float HudProjectionMs,
+            string DiagnosticsSummary,
+            string HotpathSummary);
 
         private sealed class TestInputBackend : IInputBackend
         {

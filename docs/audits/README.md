@@ -7,6 +7,7 @@
 * [Projection Marker 恢复审计](camera_acceptance_projection_marker_recovery.md)
 * [端到端验收测试记录](e2e_acceptance_tests.md)
 * [Phase 1 / Phase 2A 审计报告](phase1_phase2a_audit_report.md)
+* [Presentation Hotpath Harness 优化验证](presentation_hotpath_harness_optimization_validation.md)
 * [PR 集成审计](pr_integration_audit.md)
 * [最近提交审计与端到端交互验收](recent_commit_audit_and_e2e_showcase.md)
 * [版本收敛处置矩阵](convergence_disposition_matrix.md)

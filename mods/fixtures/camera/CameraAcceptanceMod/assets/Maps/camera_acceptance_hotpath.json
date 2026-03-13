@@ -1,0 +1,45 @@
+{
+  "Id": "camera_acceptance_hotpath",
+  "Tags": ["camera.acceptance", "camera.acceptance.hotpath"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInTiles": 12,
+      "HeightInTiles": 10,
+      "GridCellSizeCm": 100,
+      "HexEdgeLengthCm": 400,
+      "ChunkSizeCells": 64,
+      "DataFile": "camera_acceptance_hotpath.vtxm",
+      "NavigationEnabled": false
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Acceptance.Profile.RtsMoba",
+    "TargetXCm": 3200,
+    "TargetYCm": 2000
+  },
+  "Entities": [
+    {
+      "Template": "moba_hero",
+      "Overrides": {
+        "Name": { "Value": "CameraAcceptanceHero" },
+        "WorldPositionCm": { "Value": { "X": 2400, "Y": 1600 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "CameraAcceptanceScout" },
+        "WorldPositionCm": { "Value": { "X": 3200, "Y": 2000 } }
+      }
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "CameraAcceptanceCaptain" },
+        "WorldPositionCm": { "Value": { "X": 3920, "Y": 2440 } }
+      }
+    }
+  ]
+}

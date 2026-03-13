@@ -26,7 +26,8 @@ namespace CameraAcceptanceMod.Systems
 
         public void Update(in float dt)
         {
-            if (!CameraAcceptanceIds.IsAcceptanceMap(_engine.CurrentMapSession?.MapId.Value))
+            string? mapId = _engine.CurrentMapSession?.MapId.Value;
+            if (!CameraAcceptanceIds.IsAcceptanceMap(mapId))
             {
                 return;
             }
@@ -38,6 +39,7 @@ namespace CameraAcceptanceMod.Systems
                 return;
             }
 
+            bool isHotpathMap = string.Equals(mapId, CameraAcceptanceIds.HotpathMapId, System.StringComparison.OrdinalIgnoreCase);
             bool changed = false;
             if (input.PressedThisFrame(CameraAcceptanceIds.TogglePanelActionId))
             {
@@ -57,10 +59,48 @@ namespace CameraAcceptanceMod.Systems
                 changed = true;
             }
 
+            if (isHotpathMap && input.PressedThisFrame(CameraAcceptanceIds.ToggleHotpathBarsActionId))
+            {
+                diagnostics.HotpathBarsEnabled = !diagnostics.HotpathBarsEnabled;
+                changed = true;
+            }
+
+            if (isHotpathMap && input.PressedThisFrame(CameraAcceptanceIds.ToggleHotpathHudTextActionId))
+            {
+                diagnostics.HotpathHudTextEnabled = !diagnostics.HotpathHudTextEnabled;
+                changed = true;
+            }
+
+            if (isHotpathMap && input.PressedThisFrame(CameraAcceptanceIds.ToggleTerrainActionId))
+            {
+                renderDebug.DrawTerrain = !renderDebug.DrawTerrain;
+                changed = true;
+            }
+
+            if (isHotpathMap && input.PressedThisFrame(CameraAcceptanceIds.TogglePrimitiveActionId))
+            {
+                renderDebug.DrawPrimitives = !renderDebug.DrawPrimitives;
+                changed = true;
+            }
+
+            if (isHotpathMap && input.PressedThisFrame(CameraAcceptanceIds.ToggleHotpathCullCrowdActionId))
+            {
+                diagnostics.HotpathCullCrowdEnabled = !diagnostics.HotpathCullCrowdEnabled;
+                changed = true;
+            }
+
             if (changed)
             {
-                Log.Info(in LogChannel,
-                    $"CameraAcceptance diagnostics toggles: panel={(renderDebug.DrawSkiaUi ? "ON" : "OFF")} hud={(diagnostics.HudEnabled ? "ON" : "OFF")} text={(diagnostics.TextEnabled ? "ON" : "OFF")}");
+                if (isHotpathMap)
+                {
+                    Log.Info(in LogChannel,
+                        $"CameraAcceptance diagnostics toggles: panel={(renderDebug.DrawSkiaUi ? "ON" : "OFF")} hud={(diagnostics.HudEnabled ? "ON" : "OFF")} select={(diagnostics.TextEnabled ? "ON" : "OFF")} bars={(diagnostics.HotpathBarsEnabled ? "ON" : "OFF")} hudText={(diagnostics.HotpathHudTextEnabled ? "ON" : "OFF")} terrain={(renderDebug.DrawTerrain ? "ON" : "OFF")} primitives={(renderDebug.DrawPrimitives ? "ON" : "OFF")} crowd={(diagnostics.HotpathCullCrowdEnabled ? "ON" : "OFF")}");
+                }
+                else
+                {
+                    Log.Info(in LogChannel,
+                        $"CameraAcceptance diagnostics toggles: panel={(renderDebug.DrawSkiaUi ? "ON" : "OFF")} hud={(diagnostics.HudEnabled ? "ON" : "OFF")} text={(diagnostics.TextEnabled ? "ON" : "OFF")}");
+                }
             }
         }
     }

@@ -13,6 +13,8 @@ namespace CameraAcceptanceMod.Systems
 {
     internal sealed class CameraAcceptanceHudOverlaySystem : ISystem<float>
     {
+        private const float AverageGlyphWidthPx = 6.25f;
+
         private readonly GameEngine _engine;
         private float _smoothedFrameMs = 16.67f;
 
@@ -66,9 +68,19 @@ namespace CameraAcceptanceMod.Systems
             var lines = new List<string>(8)
             {
                 fpsLine,
-                $"F6 Panel[{OnOff(renderDebug.DrawSkiaUi)}]  F7 HUD[{OnOff(diagnostics.HudEnabled)}]  F8 Text[{OnOff(diagnostics.TextEnabled)}]",
-                $"Build panel={diagnostics.PanelSyncMs:F2}ms  hud={diagnostics.HudBuildMs:F2}ms  text={diagnostics.TextBuildMs:F2}ms"
+                $"F6 Panel[{OnOff(renderDebug.DrawSkiaUi)}]  F7 HUD[{OnOff(diagnostics.HudEnabled)}]  F8 Select[{OnOff(diagnostics.TextEnabled)}]"
             };
+
+            if (string.Equals(mapId, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase))
+            {
+                lines.Add($"Build panel={diagnostics.PanelSyncMs:F2}ms  diagHud={diagnostics.HudBuildMs:F2}ms  select={diagnostics.TextBuildMs:F2}ms  bars={diagnostics.HotpathBarBuildMs:F2}ms  hudText={diagnostics.HotpathHudTextBuildMs:F2}ms  prims={diagnostics.HotpathPrimitiveBuildMs:F2}ms");
+                lines.Add($"F9 Bars[{OnOff(diagnostics.HotpathBarsEnabled)}]  F10 HudText[{OnOff(diagnostics.HotpathHudTextEnabled)}]  F11 Terrain[{OnOff(renderDebug.DrawTerrain)}]  F12 Prim[{OnOff(renderDebug.DrawPrimitives)}]  C Crowd[{OnOff(diagnostics.HotpathCullCrowdEnabled)}]");
+                lines.Add($"Hotpath crowd={diagnostics.HotpathCrowdCount}  visible={diagnostics.HotpathVisibleCrowdCount}  bars={diagnostics.HotpathBarItemCount}  hudText={diagnostics.HotpathHudTextItemCount}  prims={diagnostics.HotpathPrimitiveItemCount}  select={diagnostics.HotpathSelectionLabelCount}");
+            }
+            else
+            {
+                lines.Add($"Build panel={diagnostics.PanelSyncMs:F2}ms  hud={diagnostics.HudBuildMs:F2}ms  text={diagnostics.TextBuildMs:F2}ms");
+            }
 
             if (_engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics) is PresentationTimingDiagnostics timings)
             {
@@ -92,7 +104,7 @@ namespace CameraAcceptanceMod.Systems
                     }
                 }
 
-                int estimatedWidth = (maxLength * 9) + 16;
+                int estimatedWidth = (int)MathF.Ceiling((maxLength * AverageGlyphWidthPx) + 24f);
                 x = Math.Max(16, (int)view.Resolution.X - estimatedWidth);
             }
 
@@ -108,7 +120,7 @@ namespace CameraAcceptanceMod.Systems
                 int batchX = x;
                 if (_engine.GetService(CoreServiceKeys.ViewController) is IViewController batchView)
                 {
-                    int estimatedWidth = (batchLine.Length * 9) + 16;
+                    int estimatedWidth = (int)MathF.Ceiling((batchLine.Length * AverageGlyphWidthPx) + 24f);
                     batchX = Math.Max(16, (int)batchView.Resolution.X - estimatedWidth);
                 }
 

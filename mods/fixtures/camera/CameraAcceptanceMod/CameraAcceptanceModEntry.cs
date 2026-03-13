@@ -14,6 +14,7 @@ namespace CameraAcceptanceMod
         public void OnLoad(IModContext context)
         {
             context.Log("[CameraAcceptanceMod] Loaded");
+            CameraAcceptanceHotpathTerrainGenerator.EnsureGenerated(context);
             var runtime = new CameraAcceptanceRuntime();
             context.OnEvent(GameEvents.GameStart, ctx =>
             {
@@ -36,8 +37,9 @@ namespace CameraAcceptanceMod
                     engine.RegisterSystem(new CameraStackAcceptanceSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterPresentationSystem(new CameraAcceptancePanelPresentationSystem(engine, runtime));
                     engine.RegisterPresentationSystem(new CameraAcceptanceProjectionBoundsOverlaySystem(engine));
-                    engine.RegisterPresentationSystem(new CameraAcceptanceHudOverlaySystem(engine));
+                    engine.RegisterPresentationSystem(new CameraAcceptanceHotpathLaneSystem(engine));
                     engine.RegisterPresentationSystem(new CameraAcceptanceSelectionOverlaySystem(engine));
+                    engine.RegisterPresentationSystem(new CameraAcceptanceHudOverlaySystem(engine));
                 }
 
                 return Task.CompletedTask;

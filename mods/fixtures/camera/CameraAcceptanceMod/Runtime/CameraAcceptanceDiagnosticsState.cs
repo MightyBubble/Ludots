@@ -6,14 +6,54 @@ namespace CameraAcceptanceMod.Runtime
 
         public bool HudEnabled { get; set; } = true;
         public bool TextEnabled { get; set; } = true;
+        public bool HotpathBarsEnabled { get; set; } = true;
+        public bool HotpathHudTextEnabled { get; set; } = true;
+        public bool HotpathCullCrowdEnabled { get; set; } = true;
 
         public float PanelSyncMs { get; private set; }
         public float HudBuildMs { get; private set; }
         public float TextBuildMs { get; private set; }
+        public float HotpathBarBuildMs { get; private set; }
+        public float HotpathHudTextBuildMs { get; private set; }
+        public float HotpathPrimitiveBuildMs { get; private set; }
+
+        public int HotpathCrowdCount { get; private set; }
+        public int HotpathVisibleCrowdCount { get; private set; }
+        public int HotpathBarItemCount { get; private set; }
+        public int HotpathHudTextItemCount { get; private set; }
+        public int HotpathPrimitiveItemCount { get; private set; }
+        public int HotpathSelectionLabelCount { get; private set; }
 
         public void ObservePanelSync(double sampleMs) => PanelSyncMs = Smooth(PanelSyncMs, (float)sampleMs);
         public void ObserveHudBuild(double sampleMs) => HudBuildMs = Smooth(HudBuildMs, (float)sampleMs);
         public void ObserveTextBuild(double sampleMs) => TextBuildMs = Smooth(TextBuildMs, (float)sampleMs);
+        public void ObserveHotpathBars(double sampleMs) => HotpathBarBuildMs = Smooth(HotpathBarBuildMs, (float)sampleMs);
+        public void ObserveHotpathHudText(double sampleMs) => HotpathHudTextBuildMs = Smooth(HotpathHudTextBuildMs, (float)sampleMs);
+        public void ObserveHotpathPrimitives(double sampleMs) => HotpathPrimitiveBuildMs = Smooth(HotpathPrimitiveBuildMs, (float)sampleMs);
+
+        public void PublishHotpathLaneCounts(int crowdCount, int visibleCrowdCount, int barItemCount, int hudTextItemCount, int primitiveItemCount)
+        {
+            HotpathCrowdCount = crowdCount < 0 ? 0 : crowdCount;
+            HotpathVisibleCrowdCount = visibleCrowdCount < 0 ? 0 : visibleCrowdCount;
+            HotpathBarItemCount = barItemCount < 0 ? 0 : barItemCount;
+            HotpathHudTextItemCount = hudTextItemCount < 0 ? 0 : hudTextItemCount;
+            HotpathPrimitiveItemCount = primitiveItemCount < 0 ? 0 : primitiveItemCount;
+        }
+
+        public void PublishHotpathSelectionLabelCount(int selectionLabelCount)
+        {
+            HotpathSelectionLabelCount = selectionLabelCount < 0 ? 0 : selectionLabelCount;
+        }
+
+        public void ResetHotpathLaneCounts()
+        {
+            HotpathCrowdCount = 0;
+            HotpathVisibleCrowdCount = 0;
+            HotpathBarItemCount = 0;
+            HotpathHudTextItemCount = 0;
+            HotpathPrimitiveItemCount = 0;
+            HotpathSelectionLabelCount = 0;
+        }
 
         private static float Smooth(float current, float sampleMs)
         {

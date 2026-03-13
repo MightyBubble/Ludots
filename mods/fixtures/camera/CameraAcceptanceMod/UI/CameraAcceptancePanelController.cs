@@ -8,6 +8,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -100,23 +101,34 @@ namespace CameraAcceptanceMod.UI
                 Ui.Text($"Selected IDs: {state.SelectedIdsSummary}").FontSize(13f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Follow Target: {state.FollowTarget}").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text("Viewport telemetry: top-right HUD").FontSize(13f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Projection Spawn Batch: {state.ProjectionSpawnCount}").FontSize(13f).Color("#8EA2BD"),
                 Ui.Text("Scenarios").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
-                    BuildMapButton("Proj", state.MapId == CameraAcceptanceIds.ProjectionMapId, CameraAcceptanceIds.ProjectionMapId),
-                    BuildMapButton("RTS", state.MapId == CameraAcceptanceIds.RtsMapId, CameraAcceptanceIds.RtsMapId),
-                    BuildMapButton("TPS", state.MapId == CameraAcceptanceIds.TpsMapId, CameraAcceptanceIds.TpsMapId),
-                    BuildMapButton("Blend", state.MapId == CameraAcceptanceIds.BlendMapId, CameraAcceptanceIds.BlendMapId),
-                    BuildMapButton("Follow", state.MapId == CameraAcceptanceIds.FollowMapId, CameraAcceptanceIds.FollowMapId),
-                    BuildMapButton("Stack", state.MapId == CameraAcceptanceIds.StackMapId, CameraAcceptanceIds.StackMapId))
+                        BuildMapButton("Proj", state.MapId == CameraAcceptanceIds.ProjectionMapId, CameraAcceptanceIds.ProjectionMapId),
+                        BuildMapButton("Hotpath", state.MapId == CameraAcceptanceIds.HotpathMapId, CameraAcceptanceIds.HotpathMapId),
+                        BuildMapButton("RTS", state.MapId == CameraAcceptanceIds.RtsMapId, CameraAcceptanceIds.RtsMapId),
+                        BuildMapButton("TPS", state.MapId == CameraAcceptanceIds.TpsMapId, CameraAcceptanceIds.TpsMapId),
+                        BuildMapButton("Blend", state.MapId == CameraAcceptanceIds.BlendMapId, CameraAcceptanceIds.BlendMapId),
+                        BuildMapButton("Follow", state.MapId == CameraAcceptanceIds.FollowMapId, CameraAcceptanceIds.FollowMapId),
+                        BuildMapButton("Stack", state.MapId == CameraAcceptanceIds.StackMapId, CameraAcceptanceIds.StackMapId))
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("Actions").FontSize(12f).Bold().Color("#F4C77D"),
-                BuildScenarioActions(state),
-                BuildSelectedIdsSection(state.SelectedIds),
-                Ui.Text("How To Verify").FontSize(12f).Bold().Color("#F4C77D"),
-                Ui.Text(state.ControlsDescription).FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
+                BuildScenarioActions(state)
             };
+
+            if (string.Equals(state.MapId, CameraAcceptanceIds.ProjectionMapId, StringComparison.OrdinalIgnoreCase))
+            {
+                children.Add(Ui.Text($"Projection Spawn Batch: {state.ProjectionSpawnCount}").FontSize(13f).Color("#8EA2BD"));
+            }
+
+            if (string.Equals(state.MapId, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase))
+            {
+                children.Add(BuildHotpathControls(state));
+            }
+
+            children.Add(BuildSelectedIdsSection(state.SelectedIds));
+            children.Add(Ui.Text("How To Verify").FontSize(12f).Bold().Color("#F4C77D"));
+            children.Add(Ui.Text(state.ControlsDescription).FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal));
 
             return Ui.Card(children.ToArray()).Width(PanelWidth)
                 .Padding(16f)
@@ -158,39 +170,72 @@ namespace CameraAcceptanceMod.UI
                     .FontSize(12f)
                     .Color("#8EA2BD")
                     .WhiteSpace(UiWhiteSpace.Normal),
+                CameraAcceptanceIds.HotpathMapId => Ui.Text(
+                        $"This scene auto-builds a crowd up to {CameraAcceptanceIds.HotpathCrowdTargetCount} dummies. Toggle lanes live to isolate panel, HUD, text, terrain, primitive, and culling costs.")
+                    .FontSize(12f)
+                    .Color("#8EA2BD")
+                    .WhiteSpace(UiWhiteSpace.Normal),
                 CameraAcceptanceIds.BlendMapId => Ui.Row(
-                    BuildActionButton("Cut", state.ActiveBlendCameraId == CameraAcceptanceIds.BlendCutCameraId, () => SetBlendCamera(CameraAcceptanceIds.BlendCutCameraId)),
-                    BuildActionButton("Linear", state.ActiveBlendCameraId == CameraAcceptanceIds.BlendLinearCameraId, () => SetBlendCamera(CameraAcceptanceIds.BlendLinearCameraId)),
-                    BuildActionButton("Smooth", state.ActiveBlendCameraId == CameraAcceptanceIds.BlendSmoothCameraId, () => SetBlendCamera(CameraAcceptanceIds.BlendSmoothCameraId)))
+                        BuildActionButton("Cut", state.ActiveBlendCameraId == CameraAcceptanceIds.BlendCutCameraId, () => SetBlendCamera(CameraAcceptanceIds.BlendCutCameraId)),
+                        BuildActionButton("Linear", state.ActiveBlendCameraId == CameraAcceptanceIds.BlendLinearCameraId, () => SetBlendCamera(CameraAcceptanceIds.BlendLinearCameraId)),
+                        BuildActionButton("Smooth", state.ActiveBlendCameraId == CameraAcceptanceIds.BlendSmoothCameraId, () => SetBlendCamera(CameraAcceptanceIds.BlendSmoothCameraId)))
                     .Wrap()
                     .Gap(8f),
                 CameraAcceptanceIds.FollowMapId => Ui.Column(
-                    Ui.Row(
-                        BuildActionButton("Close", state.ActiveModeId == CameraAcceptanceIds.FollowCloseModeId, () => SwitchViewMode(CameraAcceptanceIds.FollowCloseModeId)),
-                        BuildActionButton("Wide", state.ActiveModeId == CameraAcceptanceIds.FollowWideModeId, () => SwitchViewMode(CameraAcceptanceIds.FollowWideModeId)))
-                        .Wrap()
-                        .Gap(8f),
-                    Ui.Row(
-                        BuildActionButton("Move Captain", false, ToggleCaptainPosition))
-                        .Wrap()
-                        .Gap(8f))
+                        Ui.Row(
+                                BuildActionButton("Close", state.ActiveModeId == CameraAcceptanceIds.FollowCloseModeId, () => SwitchViewMode(CameraAcceptanceIds.FollowCloseModeId)),
+                                BuildActionButton("Wide", state.ActiveModeId == CameraAcceptanceIds.FollowWideModeId, () => SwitchViewMode(CameraAcceptanceIds.FollowWideModeId)))
+                            .Wrap()
+                            .Gap(8f),
+                        Ui.Row(BuildActionButton("Move Captain", false, ToggleCaptainPosition))
+                            .Wrap()
+                            .Gap(8f))
                     .Gap(8f),
                 CameraAcceptanceIds.StackMapId => Ui.Row(
-                    BuildActionButton("Reveal", false, () => RequestVirtualCamera(CameraAcceptanceIds.StackRevealShotId, clear: false)),
-                    BuildActionButton("Alert", false, () => RequestVirtualCamera(CameraAcceptanceIds.StackAlertShotId, clear: false)),
-                    BuildActionButton("Clear", false, () => RequestVirtualCamera(id: null, clear: true)))
+                        BuildActionButton("Reveal", false, () => RequestVirtualCamera(CameraAcceptanceIds.StackRevealShotId, clear: false)),
+                        BuildActionButton("Alert", false, () => RequestVirtualCamera(CameraAcceptanceIds.StackAlertShotId, clear: false)),
+                        BuildActionButton("Clear", false, () => RequestVirtualCamera(id: null, clear: true)))
                     .Wrap()
                     .Gap(8f),
-                CameraAcceptanceIds.RtsMapId => Ui.Row(
-                    BuildActionButton("RTS Mode", state.ActiveModeId == CameraAcceptanceIds.RtsModeId, () => SwitchViewMode(CameraAcceptanceIds.RtsModeId)))
+                CameraAcceptanceIds.RtsMapId => Ui.Row(BuildActionButton("RTS Mode", state.ActiveModeId == CameraAcceptanceIds.RtsModeId, () => SwitchViewMode(CameraAcceptanceIds.RtsModeId)))
                     .Wrap()
                     .Gap(8f),
-                CameraAcceptanceIds.TpsMapId => Ui.Row(
-                    BuildActionButton("TPS Mode", state.ActiveModeId == CameraAcceptanceIds.TpsModeId, () => SwitchViewMode(CameraAcceptanceIds.TpsModeId)))
+                CameraAcceptanceIds.TpsMapId => Ui.Row(BuildActionButton("TPS Mode", state.ActiveModeId == CameraAcceptanceIds.TpsModeId, () => SwitchViewMode(CameraAcceptanceIds.TpsModeId)))
                     .Wrap()
                     .Gap(8f),
                 _ => Ui.Text("Interact directly in world view for this scenario.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
             };
+        }
+
+        private UiElementBuilder BuildHotpathControls(CameraAcceptancePanelState state)
+        {
+            return Ui.Column(
+                    Ui.Text("Presentation Hotpath").FontSize(12f).Bold().Color("#F4C77D"),
+                    Ui.Text(
+                            $"HUD {OnOff(state.DiagnosticsHudEnabled)} | Selection {OnOff(state.SelectionTextEnabled)} | Bars {OnOff(state.HotpathBarsEnabled)} | HUD Text {OnOff(state.HotpathHudTextEnabled)}")
+                        .FontSize(12f)
+                        .Color("#8EA2BD")
+                        .WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text(
+                            $"Terrain {OnOff(state.TerrainEnabled)} | Primitives {OnOff(state.PrimitivesEnabled)} | Crowd/Culling {OnOff(state.HotpathCullCrowdEnabled)}")
+                        .FontSize(12f)
+                        .Color("#8EA2BD")
+                        .WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Row(
+                            BuildActionButton("Panel", state.PanelEnabled, TogglePanel),
+                            BuildActionButton("HUD", state.DiagnosticsHudEnabled, ToggleDiagnosticsHud),
+                            BuildActionButton("Select", state.SelectionTextEnabled, ToggleSelectionText),
+                            BuildActionButton("Bars", state.HotpathBarsEnabled, ToggleHotpathBars))
+                        .Wrap()
+                        .Gap(8f),
+                    Ui.Row(
+                            BuildActionButton("Text", state.HotpathHudTextEnabled, ToggleHotpathHudText),
+                            BuildActionButton("Terrain", state.TerrainEnabled, ToggleTerrain),
+                            BuildActionButton("Prims", state.PrimitivesEnabled, TogglePrimitives),
+                            BuildActionButton("Crowd", state.HotpathCullCrowdEnabled, ToggleHotpathCullCrowd))
+                        .Wrap()
+                        .Gap(8f))
+                .Gap(8f);
         }
 
         private static UiElementBuilder BuildActionButton(string label, bool active, Action onClick)
@@ -233,6 +278,8 @@ namespace CameraAcceptanceMod.UI
             }
 
             string[] selectedIds = ResolveSelectedEntityIds(engine);
+            CameraAcceptanceDiagnosticsState? diagnostics = engine.GetService(CameraAcceptanceServiceKeys.DiagnosticsState);
+            RenderDebugState? renderDebug = engine.GetService(CoreServiceKeys.RenderDebugState);
             return new CameraAcceptancePanelState(
                 mapId,
                 CameraAcceptanceIds.DescribeMap(mapId),
@@ -244,7 +291,15 @@ namespace CameraAcceptanceMod.UI
                 selectedIds,
                 FormatVector(engine.GameSession.Camera.FollowTargetPositionCm),
                 ResolveActiveBlendCameraId(engine),
-                CameraAcceptanceRuntime.ResolveProjectionSpawnCount(engine));
+                CameraAcceptanceRuntime.ResolveProjectionSpawnCount(engine),
+                renderDebug?.DrawSkiaUi ?? true,
+                diagnostics?.HudEnabled ?? true,
+                diagnostics?.TextEnabled ?? true,
+                diagnostics?.HotpathBarsEnabled ?? true,
+                diagnostics?.HotpathHudTextEnabled ?? true,
+                renderDebug?.DrawTerrain ?? true,
+                renderDebug?.DrawPrimitives ?? true,
+                diagnostics?.HotpathCullCrowdEnabled ?? true);
         }
 
         private void LoadAcceptanceMap(string mapId)
@@ -290,6 +345,89 @@ namespace CameraAcceptanceMod.UI
                 Id = id ?? string.Empty,
                 Clear = clear
             });
+        }
+
+        private void TogglePanel()
+        {
+            GameEngine engine = RequireEngine();
+            if (engine.GetService(CoreServiceKeys.RenderDebugState) is not RenderDebugState renderDebug)
+            {
+                return;
+            }
+
+            renderDebug.DrawSkiaUi = !renderDebug.DrawSkiaUi;
+            if (!renderDebug.DrawSkiaUi && engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+            {
+                ClearIfOwned(root);
+                return;
+            }
+
+            SyncMountedRoot();
+        }
+
+        private void ToggleDiagnosticsHud()
+        {
+            if (TryGetDiagnosticsState(RequireEngine(), out var diagnostics))
+            {
+                diagnostics.HudEnabled = !diagnostics.HudEnabled;
+                SyncMountedRoot();
+            }
+        }
+
+        private void ToggleSelectionText()
+        {
+            if (TryGetDiagnosticsState(RequireEngine(), out var diagnostics))
+            {
+                diagnostics.TextEnabled = !diagnostics.TextEnabled;
+                SyncMountedRoot();
+            }
+        }
+
+        private void ToggleHotpathBars()
+        {
+            if (TryGetDiagnosticsState(RequireEngine(), out var diagnostics))
+            {
+                diagnostics.HotpathBarsEnabled = !diagnostics.HotpathBarsEnabled;
+                SyncMountedRoot();
+            }
+        }
+
+        private void ToggleHotpathHudText()
+        {
+            if (TryGetDiagnosticsState(RequireEngine(), out var diagnostics))
+            {
+                diagnostics.HotpathHudTextEnabled = !diagnostics.HotpathHudTextEnabled;
+                SyncMountedRoot();
+            }
+        }
+
+        private void ToggleTerrain()
+        {
+            GameEngine engine = RequireEngine();
+            if (engine.GetService(CoreServiceKeys.RenderDebugState) is RenderDebugState renderDebug)
+            {
+                renderDebug.DrawTerrain = !renderDebug.DrawTerrain;
+                SyncMountedRoot();
+            }
+        }
+
+        private void TogglePrimitives()
+        {
+            GameEngine engine = RequireEngine();
+            if (engine.GetService(CoreServiceKeys.RenderDebugState) is RenderDebugState renderDebug)
+            {
+                renderDebug.DrawPrimitives = !renderDebug.DrawPrimitives;
+                SyncMountedRoot();
+            }
+        }
+
+        private void ToggleHotpathCullCrowd()
+        {
+            if (TryGetDiagnosticsState(RequireEngine(), out var diagnostics))
+            {
+                diagnostics.HotpathCullCrowdEnabled = !diagnostics.HotpathCullCrowdEnabled;
+                SyncMountedRoot();
+            }
         }
 
         private void ToggleCaptainPosition()
@@ -343,7 +481,15 @@ namespace CameraAcceptanceMod.UI
                 !string.Equals(left.SelectedIdsSummary, right.SelectedIdsSummary, StringComparison.Ordinal) ||
                 !string.Equals(left.FollowTarget, right.FollowTarget, StringComparison.Ordinal) ||
                 !string.Equals(left.ActiveBlendCameraId, right.ActiveBlendCameraId, StringComparison.Ordinal) ||
-                left.ProjectionSpawnCount != right.ProjectionSpawnCount)
+                left.ProjectionSpawnCount != right.ProjectionSpawnCount ||
+                left.PanelEnabled != right.PanelEnabled ||
+                left.DiagnosticsHudEnabled != right.DiagnosticsHudEnabled ||
+                left.SelectionTextEnabled != right.SelectionTextEnabled ||
+                left.HotpathBarsEnabled != right.HotpathBarsEnabled ||
+                left.HotpathHudTextEnabled != right.HotpathHudTextEnabled ||
+                left.TerrainEnabled != right.TerrainEnabled ||
+                left.PrimitivesEnabled != right.PrimitivesEnabled ||
+                left.HotpathCullCrowdEnabled != right.HotpathCullCrowdEnabled)
             {
                 return false;
             }
@@ -423,6 +569,18 @@ namespace CameraAcceptanceMod.UI
             return lines;
         }
 
+        private static bool TryGetDiagnosticsState(GameEngine engine, out CameraAcceptanceDiagnosticsState diagnostics)
+        {
+            if (engine.GetService(CameraAcceptanceServiceKeys.DiagnosticsState) is CameraAcceptanceDiagnosticsState state)
+            {
+                diagnostics = state;
+                return true;
+            }
+
+            diagnostics = null!;
+            return false;
+        }
+
         private static string FormatVector(Vector2? value)
         {
             if (!value.HasValue)
@@ -454,6 +612,8 @@ namespace CameraAcceptanceMod.UI
             return result;
         }
 
+        private static string OnOff(bool value) => value ? "ON" : "OFF";
+
         private sealed record CameraAcceptancePanelState(
             string MapId,
             string MapDescription,
@@ -465,7 +625,15 @@ namespace CameraAcceptanceMod.UI
             string[] SelectedIds,
             string FollowTarget,
             string ActiveBlendCameraId,
-            int ProjectionSpawnCount)
+            int ProjectionSpawnCount,
+            bool PanelEnabled,
+            bool DiagnosticsHudEnabled,
+            bool SelectionTextEnabled,
+            bool HotpathBarsEnabled,
+            bool HotpathHudTextEnabled,
+            bool TerrainEnabled,
+            bool PrimitivesEnabled,
+            bool HotpathCullCrowdEnabled)
         {
             public static CameraAcceptancePanelState Empty { get; } = new(
                 string.Empty,
@@ -478,7 +646,15 @@ namespace CameraAcceptanceMod.UI
                 Array.Empty<string>(),
                 "none",
                 CameraAcceptanceIds.BlendSmoothCameraId,
-                CameraAcceptanceIds.ProjectionSpawnCountDefault);
+                CameraAcceptanceIds.ProjectionSpawnCountDefault,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true);
         }
     }
 }
