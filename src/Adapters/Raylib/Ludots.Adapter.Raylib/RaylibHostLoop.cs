@@ -116,6 +116,7 @@ namespace Ludots.Adapter.Raylib
 
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS);
+                using var textRenderLane = new RaylibHudTextRenderLane();
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
@@ -157,6 +158,8 @@ namespace Ludots.Adapter.Raylib
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
                         cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
                         hudProjection?.Update(dt);
+                        int activeLocaleId = engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection)?.ActiveLocaleId ?? 0;
+                        textRenderLane.BeginFrame(activeLocaleId);
 
                         Rl.BeginDrawing();
                         Rl.ClearBackground(new Raylib_cs.Color(0, 0, 0, 255));
@@ -226,7 +229,7 @@ namespace Ludots.Adapter.Raylib
 
                         Rl.EndMode3D();
 
-                        DrawScreenHud(engine);
+                        DrawScreenHud(engine, textRenderLane, presentationTiming);
 
                         if (drawSkiaUi && uiRoot.IsDirty)
                         {
@@ -251,7 +254,7 @@ namespace Ludots.Adapter.Raylib
 
                         var res = viewController.Resolution;
                         long overlayStart = Stopwatch.GetTimestamp();
-                        DrawScreenOverlays(engine, (int)res.X, (int)res.Y);
+                        DrawScreenOverlays(engine, textRenderLane, (int)res.X, (int)res.Y);
                         presentationTiming?.ObserveScreenOverlayDraw(ElapsedMs(overlayStart));
 
                         Rl.EndDrawing();
@@ -359,7 +362,7 @@ namespace Ludots.Adapter.Raylib
             }
         }
 
-        private static void DrawScreenHud(GameEngine engine)
+        private static void DrawScreenHud(GameEngine engine, RaylibHudTextRenderLane textRenderLane, PresentationTimingDiagnostics? presentationTiming)
         {
             if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationScreenHudBuffer.Name, out var hudObj)) return;
             engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudStrings.Name, out var strObj);
@@ -367,6 +370,8 @@ namespace Ludots.Adapter.Raylib
             var strings = strObj as Ludots.Core.Presentation.Config.WorldHudStringTable;
 
             var span = hud.GetSpan();
+            long textTicks = 0;
+            int textDrawCount = 0;
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
@@ -389,16 +394,28 @@ namespace Ludots.Adapter.Raylib
 
                 if (item.Kind == WorldHudItemKind.Text)
                 {
+                    long itemStart = Stopwatch.GetTimestamp();
+                    if (textRenderLane.TryDrawHudText(engine, strings, in item))
+                    {
+                        textTicks += Stopwatch.GetTimestamp() - itemStart;
+                        textDrawCount++;
+                        continue;
+                    }
+
                     int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
                     var col = ToRaylibColor(item.Color0);
                     string? text = ResolveScreenHudText(engine, strings, in item);
-
                     if (!string.IsNullOrEmpty(text))
                     {
                         Rl.DrawText(text, ix, iy, fontSize, col);
+                        textDrawCount++;
                     }
+
+                    textTicks += Stopwatch.GetTimestamp() - itemStart;
                 }
             }
+
+            presentationTiming?.ObserveHudTextDraw(textTicks * 1000.0 / Stopwatch.Frequency, textDrawCount);
         }
 
         private static void DrawGroundOverlays(GroundOverlayBuffer overlays)
@@ -589,7 +606,11 @@ namespace Ludots.Adapter.Raylib
 
         private static Color ToRaylibColor(Vector4 c) => RaylibColorUtil.ToRaylibColor(in c);
 
-        private static void DrawScreenOverlays(GameEngine engine, int screenWidth, int screenHeight)
+        private static void DrawScreenOverlays(
+            GameEngine engine,
+            RaylibHudTextRenderLane textRenderLane,
+            int screenWidth,
+            int screenHeight)
         {
             if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var bufferObj)) return;
             if (bufferObj is not ScreenOverlayBuffer buffer) return;
@@ -604,6 +625,11 @@ namespace Ludots.Adapter.Raylib
                 {
                     case ScreenOverlayItemKind.Text:
                     {
+                        if (textRenderLane.TryDrawOverlayPacketText(engine, in item))
+                        {
+                            break;
+                        }
+
                         string? text = ResolveScreenOverlayText(engine, buffer, in item);
                         if (!string.IsNullOrEmpty(text))
                         {

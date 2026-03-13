@@ -12,6 +12,7 @@ namespace Ludots.Core.Presentation.Hud
         public float UiRenderMs { get; private set; }
         public float UiUploadMs { get; private set; }
         public float ScreenOverlayDrawMs { get; private set; }
+        public float HudTextDrawMs { get; private set; }
         public float CameraCullingMs { get; private set; }
         public float CameraPresenterMs { get; private set; }
         public float WorldHudProjectionMs { get; private set; }
@@ -19,6 +20,7 @@ namespace Ludots.Core.Presentation.Hud
         public float TerrainChunkBuildMs { get; private set; }
         public float PrimitiveRenderMs { get; private set; }
 
+        public int HudTextItemsLastFrame { get; private set; }
         public int VisibleEntitiesLastFrame { get; private set; }
         public int TerrainChunksDrawnLastFrame { get; private set; }
         public int TerrainChunksBuiltLastFrame { get; private set; }
@@ -29,6 +31,12 @@ namespace Ludots.Core.Presentation.Hud
         public void ObserveUiRender(double sampleMs) => UiRenderMs = Smooth(UiRenderMs, (float)sampleMs);
         public void ObserveUiUpload(double sampleMs) => UiUploadMs = Smooth(UiUploadMs, (float)sampleMs);
         public void ObserveScreenOverlayDraw(double sampleMs) => ScreenOverlayDrawMs = Smooth(ScreenOverlayDrawMs, (float)sampleMs);
+        public void ObserveHudTextDraw(double sampleMs, int itemCount)
+        {
+            HudTextDrawMs = Smooth(HudTextDrawMs, (float)sampleMs);
+            HudTextItemsLastFrame = itemCount < 0 ? 0 : itemCount;
+        }
+
         public void ObserveCameraCulling(double sampleMs, int visibleEntities)
         {
             CameraCullingMs = Smooth(CameraCullingMs, (float)sampleMs);
