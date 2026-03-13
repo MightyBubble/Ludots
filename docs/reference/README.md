@@ -12,6 +12,8 @@
     *   Editor / Runtime 相机对齐约定和配置标准。
 *   [3C 系统能力清单](3c_capability_matrix.md)
     *   3C 系统现状、能力边界和接入点总览。
+*   [Reactive UI runtime window 契约](reactive_ui_runtime_window_contract.md)
+    *   `ReactivePage` virtual window 的当前 caller-owned 刷新契约、观测点与已验证路径。
 *   [Arch ECS 外部依赖入口](arch_ecs_libraries.md)
     *   外部 Arch / Arch.Extended 源码入口与职责说明。
 

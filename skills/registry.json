@@ -195,11 +195,11 @@
 
                                           ]
                    },
-                   {
-                       "name":  "ludots-feature-delivery",
-                       "description":  "Deliver features with infrastructure reuse, headless evidence, and linked acceptance artifacts.",
-                       "layer":  "delivery",
-                       "path":  "skills/delivery/ludots-feature-delivery",
+                    {
+                        "name":  "ludots-feature-delivery",
+                        "description":  "Deliver features with infrastructure reuse, headless evidence, and linked acceptance artifacts.",
+                        "layer":  "delivery",
+                        "path":  "skills/delivery/ludots-feature-delivery",
                        "install_name":  "ludots-feature-delivery",
                        "agents":  {
                                       "openai":  "skills/delivery/ludots-feature-delivery/agents/openai.yaml",
@@ -215,15 +215,36 @@
                                               "visual.review.completed",
                                               "visual.review.blocked"
                                           ],
-                       "produces_hooks":  [
-                                              "visual.capture.requested"
-                                          ]
-                   },
-                   {
-                       "name":  "ludots-tech-debt-fuse",
-                       "description":  "Escalate and fuse cross-layer technical debt instead of silently bypassing it.",
-                       "layer":  "audit",
-                       "path":  "skills/audit/ludots-tech-debt-fuse",
+                        "produces_hooks":  [
+                                               "visual.capture.requested"
+                                           ]
+                    },
+                    {
+                        "name":  "ludots-reactive-ui-delivery",
+                        "description":  "Deliver ReactivePage incremental diff and virtualization work with explicit lifecycle ownership and playable mod design packets.",
+                        "layer":  "delivery",
+                        "path":  "skills/delivery/ludots-reactive-ui-delivery",
+                        "install_name":  "ludots-reactive-ui-delivery",
+                        "agents":  {
+                                       "openai":  "skills/delivery/ludots-reactive-ui-delivery/agents/openai.yaml",
+                                       "claude":  "skills/delivery/ludots-reactive-ui-delivery/agents/claude.md"
+                                   },
+                        "references":  [
+                                           "skills/delivery/ludots-reactive-ui-delivery/references/runtime_window_closure_checklist.md",
+                                           "skills/delivery/ludots-reactive-ui-delivery/references/playable_mod_design_template.md"
+                                       ],
+                        "consumes_hooks":  [
+
+                                           ],
+                        "produces_hooks":  [
+
+                                           ]
+                    },
+                    {
+                        "name":  "ludots-tech-debt-fuse",
+                        "description":  "Escalate and fuse cross-layer technical debt instead of silently bypassing it.",
+                        "layer":  "audit",
+                        "path":  "skills/audit/ludots-tech-debt-fuse",
                        "install_name":  "ludots-tech-debt-fuse",
                        "agents":  {
                                       "openai":  "skills/audit/ludots-tech-debt-fuse/agents/openai.yaml",

@@ -51,6 +51,14 @@ Reactive 是基于状态重建 UI 的写法，入口由下列路径覆盖：
 
 Reactive 不引入独立 reconciler 运行时；状态变化最终仍然落到同一套 `UiScene`。
 
+当前 `ReactivePage<TState>` 通过 `UiScene.ApplyReactiveRoot(...)` 与 `UiRetainedTreeReconciler` 走 retained diff，并把 patch / virtualization 观测写入 `UiScene.LastReactiveUpdateMetrics`。这条链路覆盖：
+
+- `src/Libraries/Ludots.UI/Reactive/ReactivePage.cs`
+- `src/Libraries/Ludots.UI/Runtime/UiScene.cs`
+- `src/Libraries/Ludots.UI/Runtime/UiRetainedTreeReconciler.cs`
+
+对滚动位置、宿主视口高度这类 runtime 依赖的 virtual window，当前正式契约仍是 caller-owned：声明入口是 `ReactiveContext.GetVerticalVirtualWindow(...)`，刷新入口是 `ReactivePage.RefreshRuntimeDependencies()`。`UIRoot` 自身不负责驱动这一步，正式契约见 `docs/reference/reactive_ui_runtime_window_contract.md`。
+
 ### 3.3 Markup
 
 Markup 是 HTML/CSS 到原生 UI DOM 的 authoring 入口，入口位于：
@@ -110,6 +118,7 @@ Skia 原生库必须与可执行文件位于同级输出根目录，而不是仅
 统一 UI 体系的正式验收入口如下：
 
 - 自动化验收：`src/Tests/UiShowcaseTests/UiShowcaseAcceptanceTests.cs`
+- Reactive retained diff / virtualization 验收：`src/Tests/ThreeCTests/CameraAcceptanceModTests.cs`
 - 截图工具：`src/Tools/Ludots.UI.ShowcaseCapture/Program.cs`
 - Showcase 工厂：`mods/UiShowcaseCoreMod/Showcase/UiShowcaseFactory.cs`
 
@@ -128,3 +137,4 @@ Skia 原生库必须与可执行文件位于同级输出根目录，而不是仅
 - 架构决策：`docs/adr/ADR-0002-unified-ui-runtime-and-authoring-models.md`
 - 表现层与渲染分层：`docs/architecture/presentation_performer.md`
 - Mod 运行时单一真相：`docs/architecture/mod_runtime_single_source_of_truth.md`
+- Reactive runtime window 契约：`docs/reference/reactive_ui_runtime_window_contract.md`

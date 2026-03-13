@@ -29,6 +29,7 @@
 |------|------|------|
 | `ludots-doc-governance` | governance | 文档 SSOT、链接与证据治理 |
 | `ludots-feature-delivery` | delivery | 基建优先的功能交付与验收 |
+| `ludots-reactive-ui-delivery` | delivery | ReactivePage 增量 diff / virtualization 收口与 playable mod 设计 |
 | `ludots-tech-debt-fuse` | audit | 跨层技术债升级与熔断 |
 | `ludots-cloud-handoff` | collaboration | 云端开发接力与上下文交接 |
 | `ludots-pr-issue-orchestration` | collaboration | Issue / PR 证据包编排 |

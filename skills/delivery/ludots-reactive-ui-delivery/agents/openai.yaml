@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ludots Reactive UI Delivery"
+  short_description: "Close reactive UI diff and virtualization work"
+  default_prompt: "Use $ludots-reactive-ui-delivery to formalize ReactivePage lifecycle ownership, preserve virtualization observability, and write playable mod design packets."
