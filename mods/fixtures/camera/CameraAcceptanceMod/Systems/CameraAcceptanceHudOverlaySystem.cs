@@ -67,7 +67,8 @@ namespace CameraAcceptanceMod.Systems
             {
                 fpsLine,
                 $"F6 Panel[{OnOff(renderDebug.DrawSkiaUi)}]  F7 HUD[{OnOff(diagnostics.HudEnabled)}]  F8 Text[{OnOff(diagnostics.TextEnabled)}]",
-                $"Build panel={diagnostics.PanelSyncMs:F2}ms  hud={diagnostics.HudBuildMs:F2}ms  text={diagnostics.TextBuildMs:F2}ms"
+                $"Build panel={diagnostics.PanelSyncMs:F2}ms  hud={diagnostics.HudBuildMs:F2}ms  text={diagnostics.TextBuildMs:F2}ms",
+                $"Panel diff={diagnostics.PanelLastApplyMode}  nodes={diagnostics.PanelLastPatchedNodes}  rows={diagnostics.PanelLastSelectionRowsTouched}/{diagnostics.PanelRowPoolSize}  virt={diagnostics.PanelVirtualizedComposedItems}/{diagnostics.PanelVirtualizedTotalItems}  full={diagnostics.PanelFullRecomposeCount}  incr={diagnostics.PanelIncrementalPatchCount}"
             };
 
             if (_engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics) is PresentationTimingDiagnostics timings)

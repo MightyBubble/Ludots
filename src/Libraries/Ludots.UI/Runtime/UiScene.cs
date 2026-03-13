@@ -20,6 +20,8 @@ public sealed class UiScene
 
 	private readonly List<UiStyleSheet> _styleSheets = new List<UiStyleSheet>();
 
+	private readonly Dictionary<string, UiVirtualWindow> _virtualWindows = new Dictionary<string, UiVirtualWindow>(StringComparer.Ordinal);
+
 	private UiNodeId? _hoveredNodeId;
 
 	private UiNodeId? _pressedNodeId;
@@ -58,6 +60,8 @@ public sealed class UiScene
 
 	public bool IsDirty { get; private set; }
 
+	public UiReactiveUpdateMetrics LastReactiveUpdateMetrics { get; internal set; } = UiReactiveUpdateMetrics.None;
+
 	public UiScene(UiDispatcher? dispatcher = null)
 	{
 		Dispatcher = dispatcher ?? new UiDispatcher();
@@ -67,6 +71,7 @@ public sealed class UiScene
 	{
 		Root = root ?? throw new ArgumentNullException("root");
 		Document = null;
+		TrackNextNodeId(root);
 		ResetInteractionState();
 		InitializeRuntimeState(root);
 		Version++;
@@ -82,6 +87,7 @@ public sealed class UiScene
 		_styleSheets.AddRange(document.StyleSheets);
 		_nextNodeId = 1;
 		Root = BuildNode(document.Root);
+		TrackNextNodeId(Root);
 		ResetInteractionState();
 		InitializeRuntimeState(Root);
 		Version++;
@@ -197,6 +203,11 @@ public sealed class UiScene
 		return new UiSceneDiff(UiSceneDiffKind.FullSnapshot, snapshot);
 	}
 
+	public bool TryGetVirtualWindow(string hostElementId, out UiVirtualWindow window)
+	{
+		return _virtualWindows.TryGetValue(hostElementId, out window);
+	}
+
 	public UiNode? FindNode(UiNodeId id)
 	{
 		return (Root == null) ? null : FindNode(Root, id);
@@ -242,6 +253,60 @@ public sealed class UiScene
 		return new UiNode(new UiNodeId(_nextNodeId++), element.Kind, null, element.TextContent, children, null, element.TagName, elementId, classList, uiAttributeBag, element.InlineStyle);
 	}
 
+	internal int GetNextReactiveNodeIdSeed()
+	{
+		if (Root == null)
+		{
+			return Math.Max(1, _nextNodeId);
+		}
+
+		int nextSeed = GetMaxNodeId(Root) + 1;
+		if (nextSeed > _nextNodeId)
+		{
+			_nextNodeId = nextSeed;
+		}
+
+		return _nextNodeId;
+	}
+
+	internal UiRetainedPatchStats ApplyReactiveRoot(UiNode root)
+	{
+		ArgumentNullException.ThrowIfNull(root, "root");
+		if (Root == null)
+		{
+			Mount(root);
+			return new UiRetainedPatchStats(0, 0, UiRetainedTreeReconciler.CountSubtree(root), 0, 1, true);
+		}
+
+		if (!UiRetainedTreeReconciler.CanReuseNode(Root, root))
+		{
+			int removedNodes = UiRetainedTreeReconciler.CountSubtree(Root);
+			Mount(root);
+			return new UiRetainedPatchStats(0, 0, UiRetainedTreeReconciler.CountSubtree(root), removedNodes, 1, true);
+		}
+
+		UiRetainedPatchStats stats = UiRetainedTreeReconciler.Reconcile(Root, root);
+		TrackNextNodeId(Root);
+		if (stats.HasChanges)
+		{
+			RefreshRetainedRuntimeState(Root);
+			ClearStaleInteractionState();
+			Version++;
+			IsDirty = true;
+		}
+
+		return stats;
+	}
+
+	internal void SetVirtualWindows(IReadOnlyDictionary<string, UiVirtualWindow> windows)
+	{
+		_virtualWindows.Clear();
+		foreach (KeyValuePair<string, UiVirtualWindow> item in windows)
+		{
+			_virtualWindows[item.Key] = item.Value;
+		}
+	}
+
 	private static bool IsTruthy(string? value)
 	{
 		return !string.IsNullOrWhiteSpace(value) && (value.Equals("true", StringComparison.OrdinalIgnoreCase) || value.Equals("checked", StringComparison.OrdinalIgnoreCase) || value.Equals("selected", StringComparison.OrdinalIgnoreCase) || value.Equals("1", StringComparison.OrdinalIgnoreCase));
@@ -278,9 +343,94 @@ public sealed class UiScene
 		}
 	}
 
+	private void RefreshRetainedRuntimeState(UiNode node)
+	{
+		node.RemovePseudoState(UiPseudoState.Disabled | UiPseudoState.Checked | UiPseudoState.Selected | UiPseudoState.Required | UiPseudoState.Invalid);
+		if (HasBooleanAttribute(node.Attributes, "disabled"))
+		{
+			node.AddPseudoState(UiPseudoState.Disabled);
+		}
+		if (HasBooleanAttribute(node.Attributes, "checked"))
+		{
+			node.AddPseudoState(UiPseudoState.Checked);
+		}
+		if (HasBooleanAttribute(node.Attributes, "selected") || HasBooleanAttribute(node.Attributes, "aria-selected"))
+		{
+			node.AddPseudoState(UiPseudoState.Selected);
+		}
+		RefreshValidationState(node);
+		foreach (UiNode child in node.Children)
+		{
+			RefreshRetainedRuntimeState(child);
+		}
+	}
+
 	private static bool HasBooleanAttribute(UiAttributeBag attributes, string name)
 	{
 		return attributes.Contains(name) || IsTruthy(attributes[name]);
+	}
+
+	private void ClearStaleInteractionState()
+	{
+		if (!HasLiveNode(_hoveredNodeId))
+		{
+			_hoveredNodeId = null;
+		}
+
+		if (!HasLiveNode(_pressedNodeId))
+		{
+			_pressedNodeId = null;
+		}
+
+		if (!HasLiveNode(_focusedNodeId))
+		{
+			_focusedNodeId = null;
+		}
+
+		if (!HasLiveNode(_scrollDragNodeId))
+		{
+			ClearScrollDrag();
+		}
+	}
+
+	private bool HasLiveNode(UiNodeId? nodeId)
+	{
+		if (!nodeId.HasValue)
+		{
+			return false;
+		}
+
+		UiNodeId valueOrDefault = nodeId.GetValueOrDefault();
+		return valueOrDefault.IsValid && FindNode(valueOrDefault) != null;
+	}
+
+	private void TrackNextNodeId(UiNode? node)
+	{
+		if (node == null)
+		{
+			return;
+		}
+
+		int nextSeed = GetMaxNodeId(node) + 1;
+		if (nextSeed > _nextNodeId)
+		{
+			_nextNodeId = nextSeed;
+		}
+	}
+
+	private static int GetMaxNodeId(UiNode node)
+	{
+		int max = node.Id.Value;
+		for (int i = 0; i < node.Children.Count; i++)
+		{
+			int childMax = GetMaxNodeId(node.Children[i]);
+			if (childMax > max)
+			{
+				max = childMax;
+			}
+		}
+
+		return max;
 	}
 
 	private IReadOnlyList<UiStyleSheet> GetEffectiveStyleSheets()

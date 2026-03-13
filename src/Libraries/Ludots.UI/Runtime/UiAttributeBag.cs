@@ -35,6 +35,21 @@ public sealed class UiAttributeBag : IEnumerable<KeyValuePair<string, string>>, 
 
 	public int Count => _values.Count;
 
+	public void Clear()
+	{
+		_values.Clear();
+	}
+
+	public void CopyFrom(UiAttributeBag other)
+	{
+		ArgumentNullException.ThrowIfNull(other, "other");
+		_values.Clear();
+		foreach (KeyValuePair<string, string> item in other._values)
+		{
+			_values[item.Key] = item.Value;
+		}
+	}
+
 	public void Set(string name, string value)
 	{
 		this[name] = value;

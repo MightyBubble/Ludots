@@ -120,6 +120,16 @@ namespace CameraAcceptanceMod.Runtime
             }
 
             _panelController.MountOrSync(root, engine);
+            if (engine.GetService(CameraAcceptanceServiceKeys.DiagnosticsState) is CameraAcceptanceDiagnosticsState diagnostics)
+            {
+                diagnostics.ObservePanelUpdate(
+                    _panelController.LastUpdateStats,
+                    _panelController.LastUpdateMetrics,
+                    _panelController.LastSelectionRowsTouched,
+                    _panelController.RowPoolSize,
+                    _panelController.FullRecomposeCount,
+                    _panelController.IncrementalPatchCount);
+            }
         }
 
         private void ClearPanelIfOwned(ScriptContext context)

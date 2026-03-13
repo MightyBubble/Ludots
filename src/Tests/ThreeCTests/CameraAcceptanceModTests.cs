@@ -22,6 +22,7 @@ using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.UI;
 using Ludots.UI.Input;
+using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -451,14 +452,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Entity hero = FindEntityByName(engine.World, CameraAcceptanceIds.HeroName);
             Entity scout = FindEntityByName(engine.World, CameraAcceptanceIds.ScoutName);
             Entity captain = FindEntityByName(engine.World, CameraAcceptanceIds.CaptainName);
-            var projector = engine.GetService(CoreServiceKeys.ScreenProjector);
-            Assert.That(projector, Is.Not.Null);
-
-            Vector2 heroScreen = ProjectEntity(engine, projector!, hero);
-            Vector2 captainScreen = ProjectEntity(engine, projector!, captain);
-
-            var backend = GetInputBackend(engine);
-            DragMouse(engine, backend, "<Mouse>/LeftButton", heroScreen - new Vector2(24f, 24f), captainScreen + new Vector2(24f, 24f));
+            SetSelectionBuffer(engine, hero, scout, captain);
             Tick(engine, 1);
 
             Assert.That(ReferenceEquals(scene, uiRoot.Scene), Is.True,
@@ -471,6 +465,46 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(sceneText, Does.Contain($"#{hero.Id}"));
             Assert.That(sceneText, Does.Contain($"#{scout.Id}"));
             Assert.That(sceneText, Does.Contain($"#{captain.Id}"));
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_Panel_VirtualizesLargeSelectionList_AndReportsIncrementalDiffMetrics()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
+
+            var backend = GetInputBackend(engine);
+            ClickGround(engine, backend, new Vector2(3200f, 2000f));
+
+            var uiRoot = new UIRoot();
+            uiRoot.Resize(1920f, 1080f);
+            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+            Tick(engine, 1);
+
+            UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Acceptance panel should mount when a UIRoot service is present.");
+            Assert.That(scene.FindByElementId("camera-selection-buffer-list"), Is.Not.Null);
+
+            UiReactiveUpdateMetrics before = scene.LastReactiveUpdateMetrics;
+            Entity[] selection = CreateAliveEntities(engine.World, SelectionBuffer.CAPACITY);
+            SetSelectionBuffer(engine, selection);
+
+            Tick(engine, 1);
+
+            UiReactiveUpdateMetrics after = scene.LastReactiveUpdateMetrics;
+            Assert.That(after.SceneVersion, Is.GreaterThan(before.SceneVersion));
+            Assert.That(after.FullRemount, Is.False,
+                "Large selection updates should stay on the retained incremental patch path instead of remounting the whole scene.");
+            Assert.That(after.PatchedNodes, Is.GreaterThan(0));
+            Assert.That(after.ReusedNodes, Is.GreaterThan(after.PatchedNodes));
+            Assert.That(after.VirtualizedWindowCount, Is.EqualTo(1));
+            Assert.That(after.VirtualizedTotalItems, Is.EqualTo(SelectionBuffer.CAPACITY));
+            Assert.That(after.VirtualizedComposedItems, Is.GreaterThan(0));
+            Assert.That(after.VirtualizedComposedItems, Is.LessThan(SelectionBuffer.CAPACITY),
+                "The reactive panel should compose only the visible slice of a large selection list.");
+
+            string sceneText = ExtractUiSceneText(scene);
+            Assert.That(sceneText, Does.Contain("Visible:"));
+            Assert.That(sceneText, Does.Contain($"#{selection[0].Id}"));
         }
 
         [Test]
@@ -788,6 +822,16 @@ namespace Ludots.Tests.ThreeC.Acceptance
             return count;
         }
 
+        private static Entity[] CreateAliveEntities(World world, int count)
+        {
+            var entities = new Entity[count];
+            for (int i = 0; i < count; i++)
+            {
+                entities[i] = world.Create();
+            }
+            return entities;
+        }
+
         private static bool HasNamedEntityAt(World world, string name, in WorldCmInt2 worldCm)
         {
             bool found = false;
@@ -863,6 +907,20 @@ namespace Ludots.Tests.ThreeC.Acceptance
                    engine.World.IsAlive(local)
                 ? local
                 : throw new InvalidOperationException("LocalPlayerEntity is missing.");
+        }
+
+        private static void SetSelectionBuffer(GameEngine engine, params Entity[] entities)
+        {
+            Entity local = GetLocalPlayer(engine);
+            ref var selection = ref engine.World.Get<SelectionBuffer>(local);
+            selection.Clear();
+            for (int i = 0; i < entities.Length && i < SelectionBuffer.CAPACITY; i++)
+            {
+                if (entities[i] != Entity.Null)
+                {
+                    selection.Add(entities[i]);
+                }
+            }
         }
 
         private static Vector2 ProjectEntity(GameEngine engine, IScreenProjector projector, Entity entity)

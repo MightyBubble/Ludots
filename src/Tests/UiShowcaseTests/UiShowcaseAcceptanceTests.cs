@@ -1,4 +1,5 @@
 using SkiaSharp;
+using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Events;
 using NUnit.Framework;
@@ -33,6 +34,7 @@ public sealed class UiShowcaseAcceptanceTests
         page.Scene.Layout(1280, 720);
         UiNode button = page.Scene.FindByElementId("reactive-inc")!;
         UiNode counterBefore = page.Scene.FindByElementId("reactive-count")!;
+        string beforeText = counterBefore.TextContent ?? string.Empty;
         Assert.That(page.Scene.FindByElementId("reactive-radio-primary"), Is.Not.Null);
         Assert.That(page.Scene.FindByElementId("reactive-stats-table"), Is.Not.Null);
 
@@ -41,7 +43,31 @@ public sealed class UiShowcaseAcceptanceTests
         UiNode counterAfter = page.Scene.FindByElementId("reactive-count")!;
 
         Assert.That(result.Handled, Is.True);
-        Assert.That(counterBefore.TextContent, Is.Not.EqualTo(counterAfter.TextContent));
+        Assert.That(beforeText, Is.Not.EqualTo(counterAfter.TextContent));
+        Assert.That(counterAfter.TextContent, Does.Contain("4"));
+    }
+
+    [Test]
+    public void ReactiveScene_ClickIncrement_ReconcilesExistingNodesIncrementally()
+    {
+        var page = UiShowcaseFactory.CreateReactivePage();
+        page.Scene.Layout(1280, 720);
+        UiNode button = page.Scene.FindByElementId("reactive-inc")!;
+        UiNode counterBefore = page.Scene.FindByElementId("reactive-count")!;
+        long fullBefore = page.FullRecomposeCount;
+        long incrementalBefore = page.IncrementalPatchCount;
+
+        UiEventResult result = page.Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Click, 0, button.LayoutRect.X + 2, button.LayoutRect.Y + 2, button.Id));
+        page.Scene.Layout(1280, 720);
+        UiNode counterAfter = page.Scene.FindByElementId("reactive-count")!;
+
+        Assert.That(result.Handled, Is.True);
+        Assert.That(ReferenceEquals(counterBefore, counterAfter), Is.True,
+            "Incremental reactive updates should preserve existing UiNode instances when the scene shape is unchanged.");
+        Assert.That(page.LastUpdateStats.Mode, Is.EqualTo(ReactiveApplyMode.IncrementalPatch));
+        Assert.That(page.LastUpdateStats.PatchedNodes, Is.GreaterThan(0));
+        Assert.That(page.FullRecomposeCount, Is.EqualTo(fullBefore));
+        Assert.That(page.IncrementalPatchCount, Is.EqualTo(incrementalBefore + 1));
         Assert.That(counterAfter.TextContent, Does.Contain("4"));
     }
 

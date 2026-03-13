@@ -39,6 +39,21 @@ public sealed class UiStyleDeclaration : IEnumerable<KeyValuePair<string, string
 		this[name] = value;
 	}
 
+	public void Clear()
+	{
+		_values.Clear();
+	}
+
+	public void CopyFrom(UiStyleDeclaration other)
+	{
+		ArgumentNullException.ThrowIfNull(other, "other");
+		_values.Clear();
+		foreach (KeyValuePair<string, string> item in other._values)
+		{
+			_values[item.Key] = item.Value;
+		}
+	}
+
 	public void Merge(UiStyleDeclaration? other)
 	{
 		if (other == null)

@@ -8,11 +8,11 @@ namespace Ludots.UI.Runtime;
 
 public sealed class UiNode
 {
-	private readonly UiNode[] _children;
+	private UiNode[] _children;
 
-	private readonly List<UiActionHandle> _actionHandles;
+	private List<UiActionHandle> _actionHandles;
 
-	private readonly string[] _classNames;
+	private string[] _classNames;
 
 	private readonly List<UiTransitionChannelState> _transitionChannels = new List<UiTransitionChannelState>();
 
@@ -26,15 +26,15 @@ public sealed class UiNode
 
 	public UiNode? Parent { get; private set; }
 
-	public string TagName { get; }
+	public string TagName { get; private set; }
 
-	public string? ElementId { get; }
+	public string? ElementId { get; private set; }
 
-	public UiAttributeBag Attributes { get; }
+	public UiAttributeBag Attributes { get; private set; }
 
-	public UiStyleDeclaration InlineStyle { get; }
+	public UiStyleDeclaration InlineStyle { get; private set; }
 
-	public UiStyle LocalStyle { get; }
+	public UiStyle LocalStyle { get; private set; }
 
 	public UiStyle Style { get; private set; }
 
@@ -52,7 +52,7 @@ public sealed class UiNode
 
 	public float ScrollContentHeight { get; private set; }
 
-	public string? TextContent { get; }
+	public string? TextContent { get; private set; }
 
 	public UiCanvasContent? CanvasContent { get; private set; }
 
@@ -101,6 +101,32 @@ public sealed class UiNode
 		for (int num = 0; num < _children.Length; num++)
 		{
 			_children[num].Parent = this;
+		}
+	}
+
+	internal bool ApplyDefinitionFrom(UiNode template)
+	{
+		ArgumentNullException.ThrowIfNull(template, "template");
+		bool changed = !HasEquivalentDefinition(template);
+		TagName = template.TagName;
+		ElementId = template.ElementId;
+		Attributes = template.Attributes;
+		InlineStyle = template.InlineStyle;
+		LocalStyle = template.LocalStyle;
+		TextContent = template.TextContent;
+		CanvasContent = template.CanvasContent;
+		_classNames = template._classNames;
+		_actionHandles = template._actionHandles;
+		return changed;
+	}
+
+	internal void ReplaceChildren(UiNode[] children)
+	{
+		ArgumentNullException.ThrowIfNull(children, "children");
+		_children = children;
+		for (int i = 0; i < _children.Length; i++)
+		{
+			_children[i].Parent = this;
 		}
 	}
 
@@ -227,6 +253,72 @@ public sealed class UiNode
 	public void SetCanvasContent(UiCanvasContent? canvasContent)
 	{
 		CanvasContent = canvasContent;
+	}
+
+	private bool HasEquivalentDefinition(UiNode other)
+	{
+		return string.Equals(TagName, other.TagName, StringComparison.Ordinal) &&
+			string.Equals(ElementId, other.ElementId, StringComparison.Ordinal) &&
+			object.Equals(LocalStyle, other.LocalStyle) &&
+			string.Equals(TextContent, other.TextContent, StringComparison.Ordinal) &&
+			object.ReferenceEquals(CanvasContent, other.CanvasContent) &&
+			SequenceEqual(_classNames, other._classNames) &&
+			BagsEqual(Attributes, other.Attributes) &&
+			DeclarationsEqual(InlineStyle, other.InlineStyle);
+	}
+
+	private static bool SequenceEqual(IReadOnlyList<string> left, IReadOnlyList<string> right)
+	{
+		if (left.Count != right.Count)
+		{
+			return false;
+		}
+
+		for (int i = 0; i < left.Count; i++)
+		{
+			if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static bool BagsEqual(UiAttributeBag left, UiAttributeBag right)
+	{
+		if (left.Count != right.Count)
+		{
+			return false;
+		}
+
+		foreach (KeyValuePair<string, string> item in left)
+		{
+			if (!right.TryGetValue(item.Key, out string? value) || !string.Equals(value, item.Value, StringComparison.Ordinal))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static bool DeclarationsEqual(UiStyleDeclaration left, UiStyleDeclaration right)
+	{
+		if (left.Count != right.Count)
+		{
+			return false;
+		}
+
+		foreach (KeyValuePair<string, string> item in left)
+		{
+			if (!string.Equals(right[item.Key], item.Value, StringComparison.Ordinal))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	private static string GetDefaultTagName(UiNodeKind kind)
