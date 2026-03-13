@@ -32,6 +32,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.ThreeC.Acceptance
 {
     [TestFixture]
+    [NonParallelizable]
     public sealed class CameraAcceptanceModTests
     {
         private const int BlendSettleFrames = 40;
