@@ -77,9 +77,11 @@ namespace Ludots.Adapter.Raylib
                 engine.GlobalContext[CoreServiceKeys.ViewController.Name] = viewController;
 
                 var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
+                var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
                 screenProjector.BindPresenter(cameraPresenter);
+                screenRayProvider.BindPresenter(cameraPresenter);
                 engine.GlobalContext[CoreServiceKeys.ScreenProjector.Name] = screenProjector;
-                engine.GlobalContext[CoreServiceKeys.ScreenRayProvider.Name] = new RaylibScreenRayProvider(cameraAdapter);
+                engine.GlobalContext[CoreServiceKeys.ScreenRayProvider.Name] = screenRayProvider;
 
                 var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
                 engine.RegisterPresentationSystem(cullingSystem);

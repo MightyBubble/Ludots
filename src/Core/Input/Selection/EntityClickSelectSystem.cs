@@ -25,7 +25,7 @@ namespace Ludots.Core.Input.Selection
     {
         private static readonly InteractionActionBindings DefaultBindings = new();
         private static readonly QueryDescription ClickSelectableQuery = new QueryDescription().WithAll<WorldPositionCm>();
-        private static readonly QueryDescription BoxSelectableQuery = new QueryDescription().WithAll<WorldPositionCm, CullState>();
+        private static readonly QueryDescription BoxSelectableQuery = new QueryDescription().WithAll<VisualTransform, CullState>();
 
         public const float DragThresholdPixels = 8f;
 
@@ -265,14 +265,14 @@ namespace Ludots.Core.Input.Selection
             var max = Vector2.Max(drag.StartScreen, drag.CurrentScreen);
 
             int nextCount = 0;
-            _world.Query(in BoxSelectableQuery, (Entity entity, ref WorldPositionCm position, ref CullState cull) =>
+            _world.Query(in BoxSelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull) =>
             {
                 if (nextCount >= _boxSelectionScratch.Length || !cull.IsVisible || !_world.IsAlive(entity))
                 {
                     return;
                 }
 
-                Vector2 screen = projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+                Vector2 screen = projector.WorldToScreen(transform.Position);
                 if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) || float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
                 {
                     return;

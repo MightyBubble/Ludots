@@ -30,15 +30,16 @@ namespace Ludots.Adapter.Web
 
             var viewController = setup.ViewController;
             var cameraAdapter = setup.CameraAdapter;
-            var screenRayProvider = setup.ScreenRayProvider;
 
             var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
+            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
             engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
             engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
             screenProjector.BindPresenter(cameraPresenter);
+            screenRayProvider.BindPresenter(cameraPresenter);
 
             var cullingSystem = new CameraCullingSystem(
                 engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);

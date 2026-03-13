@@ -1621,7 +1621,7 @@ namespace Ludots.Core.Engine
 
             if (!GameSession.Camera.IsRuntimeConfigured)
             {
-                GameSession.Camera.ConfigureRuntime(input, viewport);
+                GameSession.Camera.ConfigureRuntime(input, viewport, () => WorldSizeSpec.Bounds);
             }
         }
     }

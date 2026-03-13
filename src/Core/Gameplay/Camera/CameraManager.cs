@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -18,6 +19,7 @@ namespace Ludots.Core.Gameplay.Camera
         private CompositeCameraController? _controller;
         private string _controllerCameraId = string.Empty;
         private long _lastCapturedInputRevision = -1;
+        private Func<WorldAabbCm>? _targetBoundsProvider;
         private bool _userInputSuppressed;
 
         /// <summary>
@@ -46,10 +48,14 @@ namespace Ludots.Core.Gameplay.Camera
             CopyState(State, PreviousState);
         }
 
-        public void ConfigureRuntime(PlayerInputHandler input, Presentation.Camera.IViewController view)
+        public void ConfigureRuntime(
+            PlayerInputHandler input,
+            Presentation.Camera.IViewController view,
+            Func<WorldAabbCm>? targetBoundsProvider = null)
         {
             _liveInput = input ?? throw new ArgumentNullException(nameof(input));
             _runtimeContext = new CameraBehaviorContext(_logicInput, view ?? throw new ArgumentNullException(nameof(view)));
+            _targetBoundsProvider = targetBoundsProvider;
             InvalidateController();
             ResetInputTracking();
             CaptureVisualInput(force: true);
@@ -196,11 +202,23 @@ namespace Ludots.Core.Gameplay.Camera
             }
 
             VirtualCameraBrain.ApplyToState(State, _logicInput, dt);
+            var activeDefinition = VirtualCameraBrain.ActiveDefinition;
             EnsureController();
 
+            bool runtimeStateNeedsCapture = false;
             if (_controller != null && VirtualCameraBrain.AllowsInput && !_userInputSuppressed)
             {
                 _controller.Update(State, dt);
+                runtimeStateNeedsCapture = true;
+            }
+
+            if (ApplyWorldBoundsConfine(activeDefinition))
+            {
+                runtimeStateNeedsCapture = true;
+            }
+
+            if (runtimeStateNeedsCapture)
+            {
                 VirtualCameraBrain.CapturePostControllerState(State);
             }
 
@@ -294,6 +312,39 @@ namespace Ludots.Core.Gameplay.Camera
             _pendingInput.Clear();
             _logicInput.Clear();
             _lastCapturedInputRevision = -1;
+        }
+
+        private bool ApplyWorldBoundsConfine(VirtualCameraDefinition? definition)
+        {
+            if (definition == null ||
+                !definition.ConfineTargetToWorldBounds ||
+                _targetBoundsProvider == null)
+            {
+                return false;
+            }
+
+            WorldAabbCm bounds = ExpandBounds(_targetBoundsProvider(), definition.ConfinePaddingCm);
+            var clamped = new Vector2(
+                Math.Clamp(State.TargetCm.X, bounds.Left, bounds.Right),
+                Math.Clamp(State.TargetCm.Y, bounds.Top, bounds.Bottom));
+
+            if (Vector2.DistanceSquared(clamped, State.TargetCm) <= 0.0001f)
+            {
+                return false;
+            }
+
+            State.TargetCm = clamped;
+            return true;
+        }
+
+        private static WorldAabbCm ExpandBounds(WorldAabbCm bounds, float paddingCm)
+        {
+            int padding = (int)MathF.Ceiling(MathF.Max(0f, paddingCm));
+            return new WorldAabbCm(
+                bounds.X - padding,
+                bounds.Y - padding,
+                bounds.Width + (padding * 2),
+                bounds.Height + (padding * 2));
         }
 
         private static void ApplyPoseToState(CameraState state, CameraPoseRequest request)

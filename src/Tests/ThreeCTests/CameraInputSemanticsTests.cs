@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using NUnit.Framework;
 
@@ -149,6 +151,104 @@ namespace Ludots.Tests.ThreeC
             Assert.That(manager.State.TargetCm.Length(), Is.GreaterThan(0.01f));
         }
 
+        [Test]
+        public void VirtualCameraRuntime_EdgePan_PointerOutsideViewport_DoesNotMove_WhenRequireInsideViewportEnabled()
+        {
+            var (backend, handler) = BuildCameraInputHandler();
+            var manager = CreateCameraManager(handler, new VirtualCameraDefinition
+            {
+                Id = "EdgePanRequiresInsideViewport",
+                Priority = 0,
+                RigKind = CameraRigKind.Orbit,
+                PanMode = CameraPanMode.EdgePan,
+                EdgePanMarginPx = 10f,
+                EdgePanSpeedCmPerSec = 8000f,
+                EdgePanRequiresPointerInsideViewport = true,
+                RotateMode = CameraRotateMode.None,
+                DistanceCm = 5000f,
+                Pitch = 60f,
+                FovYDeg = 60f,
+                Yaw = 180f,
+                EnableZoom = false,
+                AllowUserInput = true
+            }, new StubViewController(1920f, 1080f));
+
+            backend.MousePosition = new Vector2(-40f, 100f);
+            handler.Update();
+            manager.CaptureVisualInput();
+            manager.Update(1f);
+
+            Assert.That(manager.State.TargetCm.X, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(manager.State.TargetCm.Y, Is.EqualTo(0f).Within(0.01f));
+        }
+
+        [Test]
+        public void VirtualCameraRuntime_EdgePan_PointerOutsideViewport_CanMove_WhenRequireInsideViewportDisabled()
+        {
+            var (backend, handler) = BuildCameraInputHandler();
+            var manager = CreateCameraManager(handler, new VirtualCameraDefinition
+            {
+                Id = "EdgePanAllowsOutsideViewport",
+                Priority = 0,
+                RigKind = CameraRigKind.Orbit,
+                PanMode = CameraPanMode.EdgePan,
+                EdgePanMarginPx = 10f,
+                EdgePanSpeedCmPerSec = 8000f,
+                EdgePanRequiresPointerInsideViewport = false,
+                RotateMode = CameraRotateMode.None,
+                DistanceCm = 5000f,
+                Pitch = 60f,
+                FovYDeg = 60f,
+                Yaw = 180f,
+                EnableZoom = false,
+                AllowUserInput = true
+            }, new StubViewController(1920f, 1080f));
+
+            backend.MousePosition = new Vector2(-40f, 100f);
+            handler.Update();
+            manager.CaptureVisualInput();
+            manager.Update(1f);
+
+            Assert.That(manager.State.TargetCm.Length(), Is.GreaterThan(0.01f));
+        }
+
+        [Test]
+        public void VirtualCameraRuntime_TargetConfine_ClampsToWorldBoundsPlusPadding()
+        {
+            var (_, handler) = BuildCameraInputHandler();
+            var manager = CreateCameraManager(
+                handler,
+                new VirtualCameraDefinition
+                {
+                    Id = "WorldConfined",
+                    Priority = 0,
+                    RigKind = CameraRigKind.Orbit,
+                    PanMode = CameraPanMode.None,
+                    RotateMode = CameraRotateMode.None,
+                    DistanceCm = 5000f,
+                    Pitch = 60f,
+                    FovYDeg = 60f,
+                    Yaw = 180f,
+                    EnableZoom = false,
+                    AllowUserInput = true,
+                    ConfineTargetToWorldBounds = true,
+                    ConfinePaddingCm = 250f
+                },
+                new StubViewController(1920f, 1080f),
+                () => new WorldAabbCm(-1000, -500, 2000, 1000));
+
+            manager.ApplyPose(new CameraPoseRequest
+            {
+                VirtualCameraId = "WorldConfined",
+                TargetCm = new Vector2(1600f, -900f)
+            });
+
+            manager.Update(0.016f);
+
+            Assert.That(manager.State.TargetCm.X, Is.EqualTo(1250f).Within(0.01f));
+            Assert.That(manager.State.TargetCm.Y, Is.EqualTo(-750f).Within(0.01f));
+        }
+
         private static (StubInputBackend backend, PlayerInputHandler handler) BuildCameraInputHandler()
         {
             var backend = new StubInputBackend();
@@ -198,13 +298,14 @@ namespace Ludots.Tests.ThreeC
         private static CameraManager CreateCameraManager(
             PlayerInputHandler handler,
             VirtualCameraDefinition definition,
-            IViewController? viewController = null)
+            IViewController? viewController = null,
+            Func<WorldAabbCm>? targetBoundsProvider = null)
         {
             var manager = new CameraManager();
             var registry = new VirtualCameraRegistry();
             registry.Register(definition);
             manager.SetVirtualCameraRegistry(registry);
-            manager.ConfigureRuntime(handler, viewController ?? new StubViewController());
+            manager.ConfigureRuntime(handler, viewController ?? new StubViewController(), targetBoundsProvider);
             manager.ActivateVirtualCamera(definition.Id, blendDurationSeconds: 0f);
             return manager;
         }

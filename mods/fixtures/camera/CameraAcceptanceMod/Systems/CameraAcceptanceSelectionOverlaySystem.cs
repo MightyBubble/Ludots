@@ -3,10 +3,9 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using CameraAcceptanceMod.Runtime;
-using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Selection;
-using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -49,12 +48,12 @@ namespace CameraAcceptanceMod.Systems
             for (int i = 0; i < count; i++)
             {
                 Entity entity = selected[i];
-                if (!_engine.World.TryGet(entity, out WorldPositionCm position))
+                if (!_engine.World.TryGet(entity, out VisualTransform transform))
                 {
                     continue;
                 }
 
-                Vector2 screen = projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 1.35f));
+                Vector2 screen = projector.WorldToScreen(transform.Position + new Vector3(0f, 1.35f, 0f));
                 if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) || float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
                 {
                     continue;

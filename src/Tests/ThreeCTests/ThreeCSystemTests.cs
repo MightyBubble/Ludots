@@ -14,6 +14,7 @@ using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -470,6 +471,48 @@ namespace Ludots.Tests.ThreeC
                     renderPath: VisualRenderPath.StaticMesh)
             );
             return e;
+        }
+
+        [Test]
+        public void CoreScreenRayProvider_RoundTripsProjectedGroundPointThroughGroundRaycast()
+        {
+            var manager = new CameraManager();
+            manager.PreviousState.Yaw = 45f;
+            manager.PreviousState.Pitch = 55f;
+            manager.PreviousState.DistanceCm = 2800f;
+            manager.PreviousState.FovYDeg = 60f;
+            manager.PreviousState.TargetCm = new Vector2(2500f, 1700f);
+            manager.State.Yaw = 45f;
+            manager.State.Pitch = 55f;
+            manager.State.DistanceCm = 2800f;
+            manager.State.FovYDeg = 60f;
+            manager.State.TargetCm = new Vector2(2500f, 1700f);
+
+            var view = new StubViewController
+            {
+                Resolution = new Vector2(1920f, 1080f),
+                AspectRatio = 1920f / 1080f,
+                Fov = 60f
+            };
+            var adapter = new StubCameraAdapter();
+            var presenter = new CameraPresenter(new StubSpatialCoordinateConverter(), adapter);
+            presenter.Update(manager, 1f);
+
+            var projector = new CoreScreenProjector(manager, view);
+            var rayProvider = new CoreScreenRayProvider(manager, view);
+            projector.BindPresenter(presenter);
+            rayProvider.BindPresenter(presenter);
+
+            var targetWorldCm = new WorldCmInt2(3200, 2000);
+            Vector2 screen = projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(targetWorldCm, yMeters: 0f));
+            That(float.IsFinite(screen.X) && float.IsFinite(screen.Y), Is.True, "Projected screen coordinate must stay finite.");
+
+            var ray = rayProvider.GetRay(screen);
+            bool hit = GroundRaycastUtil.TryGetGroundWorldCm(in ray, out var hitWorldCm);
+
+            That(hit, Is.True);
+            That(hitWorldCm.X, Is.EqualTo(targetWorldCm.X).Within(1));
+            That(hitWorldCm.Y, Is.EqualTo(targetWorldCm.Y).Within(1));
         }
 
         [Test]

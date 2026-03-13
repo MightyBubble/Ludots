@@ -3,6 +3,7 @@ using System.Numerics;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -93,6 +94,53 @@ namespace Ludots.Core.Gameplay.Camera
             float screenY = (1f - ndcY) * 0.5f * resolution.Y;
 
             return new Vector2(screenX, screenY);
+        }
+
+        /// <summary>
+        /// Convert a screen-space pixel position into a world-space ray using the
+        /// same camera math as <see cref="WorldToScreen"/>.
+        /// </summary>
+        public static ScreenRay ScreenToRay(
+            Vector2 screenPosition,
+            in CameraRenderState3D camera,
+            Vector2 resolution,
+            float aspectRatio)
+        {
+            if (resolution.X <= 0f || resolution.Y <= 0f)
+            {
+                return new ScreenRay(Vector3.Zero, Vector3.UnitZ);
+            }
+
+            float ndcX = (screenPosition.X / resolution.X) * 2f - 1f;
+            float ndcY = 1f - (screenPosition.Y / resolution.Y) * 2f;
+
+            var view = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.Up);
+            float fovYRad = camera.FovYDeg * (float)(Math.PI / 180.0);
+            var projection = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, aspectRatio, NearPlane, FarPlane);
+            var viewProj = view * projection;
+            if (!Matrix4x4.Invert(viewProj, out var invViewProj))
+            {
+                Vector3 fallbackDir = Vector3.Normalize(camera.Target - camera.Position);
+                return new ScreenRay(camera.Position, fallbackDir);
+            }
+
+            var nearClip = new Vector4(ndcX, ndcY, 0f, 1f);
+            var farClip = new Vector4(ndcX, ndcY, 1f, 1f);
+            var nearWorld4 = Vector4.Transform(nearClip, invViewProj);
+            var farWorld4 = Vector4.Transform(farClip, invViewProj);
+            if (MathF.Abs(nearWorld4.W) < 1e-6f || MathF.Abs(farWorld4.W) < 1e-6f)
+            {
+                Vector3 fallbackDir = Vector3.Normalize(camera.Target - camera.Position);
+                return new ScreenRay(camera.Position, fallbackDir);
+            }
+
+            nearWorld4 /= nearWorld4.W;
+            farWorld4 /= farWorld4.W;
+
+            var nearWorld = new Vector3(nearWorld4.X, nearWorld4.Y, nearWorld4.Z);
+            var farWorld = new Vector3(farWorld4.X, farWorld4.Y, farWorld4.Z);
+            var direction = Vector3.Normalize(farWorld - nearWorld);
+            return new ScreenRay(nearWorld, direction);
         }
 
         /// <summary>

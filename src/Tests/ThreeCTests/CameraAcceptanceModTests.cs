@@ -16,6 +16,8 @@ using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.UI;
@@ -108,13 +110,14 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             var backend = GetInputBackend(engine);
             int beforeDummyCount = CountEntitiesByName(engine.World, "Dummy");
-            ClickGround(engine, backend, new Vector2(-955886f, -958275f));
+            var (outsideScreen, expectedWorldCm) = FindClampedGroundClick(engine);
+
+            ClickScreen(engine, backend, outsideScreen);
             Tick(engine, 1);
 
-            var bounds = engine.CurrentMapSession?.PrimaryBoard?.WorldSize.Bounds ?? engine.WorldSizeSpec.Bounds;
             int afterDummyCount = CountEntitiesByName(engine.World, "Dummy");
             Assert.That(afterDummyCount, Is.EqualTo(beforeDummyCount + 1), "Out-of-bounds projection clicks should still resolve to a bounded spawn.");
-            Assert.That(HasNamedEntityAt(engine.World, "Dummy", new WorldCmInt2(bounds.Left, bounds.Top)), Is.True,
+            Assert.That(HasNamedEntityAt(engine.World, "Dummy", expectedWorldCm), Is.True,
                 "Out-of-bounds projection clicks should snap to the nearest board boundary.");
 
             var overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
@@ -163,6 +166,53 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(overlayText, Does.Contain($"#{hero.Id}"));
             Assert.That(overlayText, Does.Contain($"#{scout.Id}"));
             Assert.That(overlayText, Does.Contain($"#{captain.Id}"));
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_ProjectionMap_BoxSelect_UsesVisualTransformHeightForScreenSpaceHitTesting()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
+
+            Entity hero = FindEntityByName(engine.World, CameraAcceptanceIds.HeroName);
+            Entity scout = FindEntityByName(engine.World, CameraAcceptanceIds.ScoutName);
+            Assert.That(hero, Is.Not.EqualTo(Entity.Null));
+            Assert.That(scout, Is.Not.EqualTo(Entity.Null));
+
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector);
+            Assert.That(projector, Is.Not.Null);
+
+            var sharedWorldCm = new WorldCmInt2(2600, 1600);
+            ApplyEntityProjectionOverride(engine, hero, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 0f));
+            ApplyEntityProjectionOverride(engine, scout, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 4.5f));
+
+            Vector2 heroScreen = ProjectEntity(engine, projector!, hero);
+            Vector2 scoutScreen = ProjectEntity(engine, projector!, scout);
+            Assert.That(Vector2.Distance(heroScreen, scoutScreen), Is.GreaterThan(40f),
+                "Regression setup must create a visible screen-space separation from VisualTransform height alone.");
+
+            var backend = GetInputBackend(engine);
+            Action<GameEngine> reapplyVisualOverrides = runtime =>
+            {
+                ApplyEntityProjectionOverride(runtime, hero, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 0f));
+                ApplyEntityProjectionOverride(runtime, scout, sharedWorldCm, WorldUnits.WorldCmToVisualMeters(sharedWorldCm, yMeters: 4.5f));
+            };
+
+            DragMouse(
+                engine,
+                backend,
+                "<Mouse>/LeftButton",
+                scoutScreen - new Vector2(18f, 18f),
+                scoutScreen + new Vector2(18f, 18f),
+                reapplyVisualOverrides);
+
+            Entity local = GetLocalPlayer(engine);
+            ref var selection = ref engine.World.Get<SelectionBuffer>(local);
+            Assert.That(selection.Count, Is.EqualTo(1));
+            Assert.That(selection.Contains(scout), Is.True);
+            Assert.That(selection.Contains(hero), Is.False);
+            Assert.That(engine.World.Has<SelectedTag>(scout), Is.True);
+            Assert.That(engine.World.Has<SelectedTag>(hero), Is.False);
         }
 
         [Test]
@@ -343,27 +393,31 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1600f, 1200f)));
 
-            Entity captain = FindEntityByName(engine.World, CameraAcceptanceIds.CaptainName);
-            Assert.That(captain, Is.Not.EqualTo(Entity.Null));
+            Entity hero = FindEntityByName(engine.World, CameraAcceptanceIds.HeroName);
+            Assert.That(hero, Is.Not.EqualTo(Entity.Null));
+
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector);
+            Assert.That(projector, Is.Not.Null);
+            Vector2 heroScreen = ProjectEntity(engine, projector!, hero);
 
             var backend = GetInputBackend(engine);
-            ClickGround(engine, backend, new Vector2(3400f, 2200f));
+            ClickScreen(engine, backend, heroScreen);
             Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.True);
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3400f, 2200f)));
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
+            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(1600f, 1200f)));
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1600f, 1200f)));
 
-            ref var position = ref engine.World.Get<WorldPositionCm>(captain);
-            position = WorldPositionCm.FromCm(4200, 2800);
+            ref var position = ref engine.World.Get<WorldPositionCm>(hero);
+            position = WorldPositionCm.FromCm(2200, 1800);
             Tick(engine, 3);
-            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(4200f, 2800f)));
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(4200f, 2800f)));
+            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(2200f, 1800f)));
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(2200f, 1800f)));
 
-            ClickGround(engine, backend, new Vector2(5200f, 4200f));
+            ClickGround(engine, backend, new Vector2(1800f, 1300f));
             Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(4200f, 2800f)), "Losing the follow target should leave the camera in place.");
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(2200f, 1800f)), "Losing the follow target should leave the camera in place.");
         }
 
         [Test]
@@ -420,11 +474,20 @@ namespace Ludots.Tests.ThreeC.Acceptance
             InstallInput(engine);
             var view = new StubViewController(1920, 1080);
             engine.SetService(CoreServiceKeys.ViewController, view);
-            engine.SetService(CoreServiceKeys.ScreenRayProvider, new WorldMappedScreenRayProvider());
-            engine.SetService(CoreServiceKeys.ScreenProjector, new WorldMappedScreenProjector());
+            var cameraAdapter = new StubCameraAdapter();
+            var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
+            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            screenProjector.BindPresenter(cameraPresenter);
+            screenRayProvider.BindPresenter(cameraPresenter);
+            engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
+            engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
             var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
+            engine.GlobalContext["Tests.CameraAcceptanceMod.HeadlessCamera"] = new HeadlessCameraRuntime(
+                cameraPresenter,
+                engine.GetService(CoreServiceKeys.PresentationFrameSetup));
             engine.Start();
             return engine;
         }
@@ -452,15 +515,18 @@ namespace Ludots.Tests.ThreeC.Acceptance
             engine.GlobalContext["Tests.CameraAcceptanceMod.InputBackend"] = backend;
         }
 
-        private static void Tick(GameEngine engine, int frames)
+        private static void Tick(GameEngine engine, int frames, Action<GameEngine>? beforeFrame = null)
         {
             for (int i = 0; i < frames; i++)
             {
+                beforeFrame?.Invoke(engine);
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
                 engine.Tick(1f / 60f);
+                UpdateHeadlessCamera(engine);
             }
         }
 
-        private static void TickUntil(GameEngine engine, Func<bool> predicate, int maxFrames = 60)
+        private static void TickUntil(GameEngine engine, Func<bool> predicate, int maxFrames = 60, Action<GameEngine>? beforeFrame = null)
         {
             for (int i = 0; i < maxFrames; i++)
             {
@@ -469,7 +535,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                     return;
                 }
 
-                engine.Tick(1f / 60f);
+                Tick(engine, 1, beforeFrame);
             }
 
             Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames.");
@@ -499,21 +565,29 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Tick(engine, 2);
         }
 
-        private static void DragMouse(GameEngine engine, TestInputBackend backend, string holdPath, Vector2 from, Vector2 to)
+        private static void DragMouse(GameEngine engine, TestInputBackend backend, string holdPath, Vector2 from, Vector2 to, Action<GameEngine>? beforeFrame = null)
         {
             backend.SetMousePosition(from);
-            Tick(engine, 1);
+            Tick(engine, 1, beforeFrame);
             backend.SetButton(holdPath, true);
-            Tick(engine, 2);
+            Tick(engine, 2, beforeFrame);
             backend.SetMousePosition(to);
-            Tick(engine, 2);
+            Tick(engine, 2, beforeFrame);
             backend.SetButton(holdPath, false);
-            Tick(engine, 2);
+            Tick(engine, 2, beforeFrame);
         }
 
         private static void ClickGround(GameEngine engine, TestInputBackend backend, Vector2 worldPointCm)
         {
-            backend.SetMousePosition(worldPointCm);
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector);
+            Assert.That(projector, Is.Not.Null, "Headless acceptance runtime must expose a screen projector.");
+            Vector2 screenPosition = ProjectWorldPoint(engine, projector!, worldPointCm);
+            ClickScreen(engine, backend, screenPosition);
+        }
+
+        private static void ClickScreen(GameEngine engine, TestInputBackend backend, Vector2 screenPoint)
+        {
+            backend.SetMousePosition(screenPoint);
             Tick(engine, 1);
             backend.SetButton("<Mouse>/LeftButton", true);
             Tick(engine, 2);
@@ -584,8 +658,111 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
         private static Vector2 ProjectEntity(GameEngine engine, IScreenProjector projector, Entity entity)
         {
+            if (engine.World.TryGet(entity, out VisualTransform transform))
+            {
+                Vector2 visualScreen = projector.WorldToScreen(transform.Position);
+                Assert.That(float.IsFinite(visualScreen.X) && float.IsFinite(visualScreen.Y), Is.True,
+                    $"Projected screen position for entity #{entity.Id} must stay finite.");
+                return visualScreen;
+            }
+
             ref var position = ref engine.World.Get<WorldPositionCm>(entity);
-            return projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
+            return ProjectWorldPoint(engine, projector, position.Value.ToVector2());
+        }
+
+        private static Vector2 ProjectWorldPoint(GameEngine engine, IScreenProjector projector, Vector2 worldPointCm)
+        {
+            var worldCm = new WorldCmInt2((int)MathF.Round(worldPointCm.X), (int)MathF.Round(worldPointCm.Y));
+            Vector2 screen = projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0f));
+            Assert.That(float.IsFinite(screen.X) && float.IsFinite(screen.Y), Is.True,
+                $"World point {worldPointCm} must project to a finite screen coordinate in the acceptance camera frustum.");
+            return screen;
+        }
+
+        private static WorldCmInt2 ResolveGroundPoint(GameEngine engine, Vector2 screenPoint, out bool wasClamped)
+        {
+            var rayProvider = engine.GetService(CoreServiceKeys.ScreenRayProvider);
+            Assert.That(rayProvider, Is.Not.Null, "Headless acceptance runtime must expose a screen ray provider.");
+
+            var bounds = engine.CurrentMapSession?.PrimaryBoard?.WorldSize.Bounds ?? engine.WorldSizeSpec.Bounds;
+            bool hit = GroundRaycastUtil.TryGetGroundWorldCmBounded(
+                rayProvider!.GetRay(screenPoint),
+                bounds,
+                out var worldCm,
+                out wasClamped);
+            Assert.That(hit, Is.True, $"Screen point {screenPoint} must intersect the ground plane for acceptance input.");
+            return worldCm;
+        }
+
+        private static (Vector2 screenPoint, WorldCmInt2 worldCm) FindClampedGroundClick(GameEngine engine)
+        {
+            var rayProvider = engine.GetService(CoreServiceKeys.ScreenRayProvider);
+            Assert.That(rayProvider, Is.Not.Null, "Headless acceptance runtime must expose a screen ray provider.");
+
+            var bounds = engine.CurrentMapSession?.PrimaryBoard?.WorldSize.Bounds ?? engine.WorldSizeSpec.Bounds;
+            var candidateXs = new[]
+            {
+                -50000f,
+                -20000f,
+                -10000f,
+                -5000f,
+                -2000f,
+                -1000f,
+                -400f,
+                0f,
+                960f,
+                1920f,
+                2320f,
+                5000f,
+                10000f,
+                20000f,
+                50000f
+            };
+            var candidateYs = new[] { 540f, 900f, 1200f, 1600f, 2400f, 5000f, 10000f, 20000f };
+
+            for (int yIndex = 0; yIndex < candidateYs.Length; yIndex++)
+            {
+                for (int xIndex = 0; xIndex < candidateXs.Length; xIndex++)
+                {
+                    Vector2 candidate = new(candidateXs[xIndex], candidateYs[yIndex]);
+                    bool hit = GroundRaycastUtil.TryGetGroundWorldCmBounded(
+                        rayProvider!.GetRay(candidate),
+                        bounds,
+                        out var worldCm,
+                        out bool wasClamped);
+                    if (hit && wasClamped)
+                    {
+                        return (candidate, worldCm);
+                    }
+                }
+            }
+
+            throw new InvalidOperationException("Failed to find a deterministic screen-space click that exercises the core boundary clamp path.");
+        }
+
+        private static void ApplyEntityProjectionOverride(GameEngine engine, Entity entity, in WorldCmInt2 worldCm, Vector3 visualPosition)
+        {
+            var sharedWorldPosition = WorldPositionCm.FromCm(worldCm.X, worldCm.Y);
+            ref var current = ref engine.World.Get<WorldPositionCm>(entity);
+            current = sharedWorldPosition;
+
+            ref var previous = ref engine.World.Get<PreviousWorldPositionCm>(entity);
+            previous.Value = sharedWorldPosition.Value;
+
+            ref var visual = ref engine.World.Get<VisualTransform>(entity);
+            visual.Position = visualPosition;
+        }
+
+        private static void UpdateHeadlessCamera(GameEngine engine)
+        {
+            if (!engine.GlobalContext.TryGetValue("Tests.CameraAcceptanceMod.HeadlessCamera", out var runtimeObj) ||
+                runtimeObj is not HeadlessCameraRuntime runtime)
+            {
+                return;
+            }
+
+            float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
+            runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
         }
 
         private static List<string> ExtractOverlayText(ScreenOverlayBuffer overlay)
@@ -723,6 +900,28 @@ namespace Ludots.Tests.ThreeC.Acceptance
             public string GetCharBuffer() => string.Empty;
         }
 
+        private sealed class HeadlessCameraRuntime
+        {
+            public HeadlessCameraRuntime(CameraPresenter cameraPresenter, PresentationFrameSetupSystem? presentationFrameSetup)
+            {
+                CameraPresenter = cameraPresenter;
+                PresentationFrameSetup = presentationFrameSetup;
+            }
+
+            public CameraPresenter CameraPresenter { get; }
+            public PresentationFrameSetupSystem? PresentationFrameSetup { get; }
+        }
+
+        private sealed class StubCameraAdapter : ICameraAdapter
+        {
+            public CameraRenderState3D LastState { get; private set; }
+
+            public void UpdateCamera(in CameraRenderState3D state)
+            {
+                LastState = state;
+            }
+        }
+
         private sealed class StubViewController : IViewController
         {
             public StubViewController(float width, float height)
@@ -733,24 +932,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             public Vector2 Resolution { get; }
             public float Fov => 60f;
             public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
-        }
-
-        private sealed class WorldMappedScreenRayProvider : IScreenRayProvider
-        {
-            public ScreenRay GetRay(Vector2 screenPosition)
-            {
-                return new ScreenRay(
-                    new Vector3(screenPosition.X / 100f, 10f, screenPosition.Y / 100f),
-                    -Vector3.UnitY);
-            }
-        }
-
-        private sealed class WorldMappedScreenProjector : IScreenProjector
-        {
-            public Vector2 WorldToScreen(Vector3 worldPosition)
-            {
-                return new Vector2(worldPosition.X * 100f, worldPosition.Z * 100f);
-            }
         }
     }
 }

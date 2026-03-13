@@ -71,8 +71,11 @@ namespace Ludots.Core.Gameplay.Camera
                         PanMode = config.PanMode,
                         EdgePanMarginPx = config.EdgePanMarginPx,
                         EdgePanSpeedCmPerSec = config.EdgePanSpeedCmPerSec,
+                        EdgePanRequiresPointerInsideViewport = config.EdgePanRequiresPointerInsideViewport,
                         PanCmPerSecond = config.PanCmPerSecond,
                         EnableGrabDrag = config.EnableGrabDrag,
+                        ConfineTargetToWorldBounds = config.ConfineTargetToWorldBounds,
+                        ConfinePaddingCm = config.ConfinePaddingCm,
                         RotateMode = config.RotateMode,
                         RotateDegPerPixel = config.RotateDegPerPixel,
                         RotateDegPerSecond = config.RotateDegPerSecond,
@@ -122,8 +125,11 @@ namespace Ludots.Core.Gameplay.Camera
             public CameraPanMode PanMode { get; set; } = CameraPanMode.Keyboard;
             public float EdgePanMarginPx { get; set; } = 15f;
             public float EdgePanSpeedCmPerSec { get; set; } = 6000f;
+            public bool EdgePanRequiresPointerInsideViewport { get; set; } = true;
             public float PanCmPerSecond { get; set; } = 6000f;
             public bool EnableGrabDrag { get; set; }
+            public bool ConfineTargetToWorldBounds { get; set; }
+            public float ConfinePaddingCm { get; set; }
             public CameraRotateMode RotateMode { get; set; } = CameraRotateMode.Both;
             public float RotateDegPerPixel { get; set; } = 0.28f;
             public float RotateDegPerSecond { get; set; } = 90f;

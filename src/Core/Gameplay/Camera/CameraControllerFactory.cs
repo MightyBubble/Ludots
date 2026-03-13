@@ -22,11 +22,19 @@ namespace Ludots.Core.Gameplay.Camera
                     behaviors.Add(new KeyboardPanBehavior(definition.MoveActionId, definition.PanCmPerSecond));
                     break;
                 case CameraPanMode.EdgePan:
-                    behaviors.Add(new EdgePanBehavior(definition.PointerPosActionId, definition.EdgePanMarginPx, definition.EdgePanSpeedCmPerSec));
+                    behaviors.Add(new EdgePanBehavior(
+                        definition.PointerPosActionId,
+                        definition.EdgePanMarginPx,
+                        definition.EdgePanSpeedCmPerSec,
+                        definition.EdgePanRequiresPointerInsideViewport));
                     break;
                 case CameraPanMode.KeyboardAndEdge:
                     behaviors.Add(new KeyboardPanBehavior(definition.MoveActionId, definition.PanCmPerSecond));
-                    behaviors.Add(new EdgePanBehavior(definition.PointerPosActionId, definition.EdgePanMarginPx, definition.EdgePanSpeedCmPerSec));
+                    behaviors.Add(new EdgePanBehavior(
+                        definition.PointerPosActionId,
+                        definition.EdgePanMarginPx,
+                        definition.EdgePanSpeedCmPerSec,
+                        definition.EdgePanRequiresPointerInsideViewport));
                     break;
             }
 

@@ -162,11 +162,13 @@ public static class LauncherEvidenceRecorder
         var viewController = new RaylibViewController(cameraAdapter, DefaultWidth, DefaultHeight);
         var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
         var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
+        var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
         screenProjector.BindPresenter(cameraPresenter);
+        screenRayProvider.BindPresenter(cameraPresenter);
 
         engine.SetService(CoreServiceKeys.ViewController, viewController);
         engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
-        engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)new RaylibScreenRayProvider(cameraAdapter, DefaultWidth, DefaultHeight));
+        engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
         var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
         engine.RegisterPresentationSystem(cullingSystem);
@@ -210,10 +212,11 @@ public static class LauncherEvidenceRecorder
         var viewController = new WebViewController();
         viewController.SetResolution(DefaultWidth, DefaultHeight);
         var cameraAdapter = new WebCameraAdapter();
-        var screenRayProvider = new WebScreenRayProvider(cameraAdapter, viewController);
         var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
+        var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
         var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
         screenProjector.BindPresenter(cameraPresenter);
+        screenRayProvider.BindPresenter(cameraPresenter);
 
         engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
         engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);

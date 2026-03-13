@@ -20,7 +20,6 @@ namespace Ludots.Adapter.Web
         WebInputBackend InputBackend,
         WebViewController ViewController,
         WebCameraAdapter CameraAdapter,
-        WebScreenRayProvider ScreenRayProvider,
         WebUiRuntimeBridge UiBridge,
         WebTransportLayer Transport
     );
@@ -71,7 +70,6 @@ namespace Ludots.Adapter.Web
 
             var viewController = new WebViewController();
             var cameraAdapter = new WebCameraAdapter();
-            var screenRayProvider = new WebScreenRayProvider(cameraAdapter, viewController);
             inputBackend.SyncNeutralViewport((int)viewController.Resolution.X, (int)viewController.Resolution.Y);
             var uiBridge = new WebUiRuntimeBridge(uiRoot, inputBackend, viewController);
             var transport = new WebTransportLayer(inputBackend, viewController);
@@ -85,7 +83,6 @@ namespace Ludots.Adapter.Web
                 inputBackend,
                 viewController,
                 cameraAdapter,
-                screenRayProvider,
                 uiBridge,
                 transport);
         }
