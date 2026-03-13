@@ -22,6 +22,7 @@ namespace CameraAcceptanceMod.UI
         private const float SelectionBufferHeight = 180f;
         private const float SelectionRowHeight = 22f;
         private const int SelectionRowPoolSize = SelectionBuffer.CAPACITY;
+        private const string SelectionBufferHostId = "camera-selection-buffer-list";
         private static readonly Vector2 CaptainOriginCm = new(3400f, 2200f);
         private static readonly Vector2 CaptainMovedCm = new(4200f, 2800f);
 
@@ -66,6 +67,7 @@ namespace CameraAcceptanceMod.UI
 
             if (_page.RefreshRuntimeDependencies())
             {
+                _lastSelectionRowsTouched = 0;
                 root.IsDirty = true;
                 changed = true;
             }
@@ -147,8 +149,8 @@ namespace CameraAcceptanceMod.UI
         private static UiElementBuilder BuildSelectedIdsSection(ReactiveContext<CameraAcceptancePanelState> context, IReadOnlyList<string> selectedIds)
         {
             UiVirtualWindow window = context.GetVerticalVirtualWindow(
-                "camera-selection-buffer-list",
-                selectedIds.Count,
+                SelectionBufferHostId,
+                SelectionRowPoolSize,
                 SelectionRowHeight,
                 SelectionBufferHeight,
                 overscan: 2);
@@ -161,7 +163,8 @@ namespace CameraAcceptanceMod.UI
 
             for (int i = window.StartIndex; i < window.EndIndexExclusive; i++)
             {
-                rows.Add(BuildSelectionRow(i, selectedIds[i]));
+                string? selectedId = i < selectedIds.Count ? selectedIds[i] : null;
+                rows.Add(BuildSelectionRow(i, selectedId));
             }
 
             if (window.TrailingSpacerExtent > 0.01f)
@@ -169,16 +172,11 @@ namespace CameraAcceptanceMod.UI
                 rows.Add(BuildSelectionSpacer(window.TrailingSpacerExtent));
             }
 
-            if (rows.Count == 0)
-            {
-                rows.Add(Ui.Text("none").Id("camera-selection-empty").FontSize(12f).Color("#62758C"));
-            }
-
             return Ui.Column(
                     Ui.Text("Selection Buffer").FontSize(12f).Bold().Color("#F4C77D"),
-                    Ui.Text($"Selected Slots: {selectedIds.Count}/{SelectionRowPoolSize} | Visible: {window.VisibleCount}").Id("camera-selection-buffer-summary").FontSize(11f).Color("#8EA2BD"),
+                    Ui.Text($"Selected Slots: {selectedIds.Count}/{SelectionRowPoolSize} | Visible: {FormatVisibleRange(window)}").Id("camera-selection-buffer-summary").FontSize(11f).Color("#8EA2BD"),
                     Ui.ScrollView(rows.ToArray())
-                        .Id("camera-selection-buffer-list")
+                        .Id(SelectionBufferHostId)
                         .Height(SelectionBufferHeight)
                         .Padding(8f)
                         .Gap(4f)
@@ -187,14 +185,15 @@ namespace CameraAcceptanceMod.UI
                 .Gap(6f);
         }
 
-        private static UiElementBuilder BuildSelectionRow(int index, string selectedId)
+        private static UiElementBuilder BuildSelectionRow(int index, string? selectedId)
         {
+            bool occupied = !string.IsNullOrWhiteSpace(selectedId);
             return Ui.Row(
                     Ui.Text($"{index + 1:00}").FontSize(11f).Color("#587189"),
-                    Ui.Text(selectedId)
+                    Ui.Text(occupied ? selectedId! : "empty")
                         .Id(GetSelectionRowId(index))
                         .FontSize(12f)
-                        .Color("#D0D8E6"))
+                        .Color(occupied ? "#D0D8E6" : "#62758C"))
                 .Gap(8f);
         }
 
@@ -208,6 +207,13 @@ namespace CameraAcceptanceMod.UI
         private static string GetSelectionRowId(int index)
         {
             return $"camera-selection-row-{index:00}";
+        }
+
+        private static string FormatVisibleRange(UiVirtualWindow window)
+        {
+            return window.VisibleCount <= 0
+                ? "empty"
+                : $"{window.StartIndex + 1}-{window.EndIndexExclusive}";
         }
 
         private UiElementBuilder BuildScenarioActions(CameraAcceptancePanelState state)

@@ -147,18 +147,40 @@ namespace Ludots.Tests.ThreeC.Acceptance
             LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
 
             UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Acceptance panel should mount when a UIRoot service is present.");
+            UiNode projectionNode = scene.FindByElementId("camera-panel-projection-spawn") ?? throw new InvalidOperationException("Projection counter node should exist.");
+            var diagnostics = engine.GetService(CameraAcceptanceServiceKeys.DiagnosticsState);
+            Assert.That(diagnostics, Is.Not.Null);
             Assert.That(GetProjectionSpawnCount(engine), Is.EqualTo(CameraAcceptanceIds.ProjectionSpawnCountDefault));
+            long fullBefore = diagnostics!.PanelFullRecomposeCount;
+            long incrementalBefore = diagnostics.PanelIncrementalPatchCount;
 
             var backend = GetInputBackend(engine);
             PressButton(engine, backend, "<Keyboard>/q");
             Assert.That(GetProjectionSpawnCount(engine), Is.EqualTo(0), "Spawn batch should clamp to zero when decreased below the floor.");
+            Assert.That(ReferenceEquals(projectionNode, scene.FindByElementId("camera-panel-projection-spawn")), Is.True,
+                "Stable projection counter updates should stay on the retained-node path.");
+            Assert.That(projectionNode.TextContent, Is.EqualTo("Projection Spawn Batch: 0"));
+            Assert.That(diagnostics.PanelLastApplyMode, Is.EqualTo(ReactiveApplyMode.IncrementalPatch));
+            Assert.That(diagnostics.PanelFullRecomposeCount, Is.EqualTo(fullBefore));
+            Assert.That(diagnostics.PanelIncrementalPatchCount, Is.EqualTo(incrementalBefore + 1));
+            Assert.That(diagnostics.PanelLastPatchedNodes, Is.LessThanOrEqualTo(6));
+            long versionAfterFirstDecrease = scene.Version;
 
             PressButton(engine, backend, "<Keyboard>/q");
             Assert.That(GetProjectionSpawnCount(engine), Is.EqualTo(0), "Spawn batch should remain at zero when already clamped.");
+            Assert.That(scene.Version, Is.EqualTo(versionAfterFirstDecrease));
+            Assert.That(diagnostics.PanelIncrementalPatchCount, Is.EqualTo(incrementalBefore + 1));
+            Assert.That(diagnostics.PanelFullRecomposeCount, Is.EqualTo(fullBefore));
 
             PressButton(engine, backend, "<Keyboard>/e");
             PressButton(engine, backend, "<Keyboard>/e");
             Assert.That(GetProjectionSpawnCount(engine), Is.EqualTo(200), "Each E press should increase the spawn batch by 100.");
+            Assert.That(ReferenceEquals(projectionNode, scene.FindByElementId("camera-panel-projection-spawn")), Is.True);
+            Assert.That(projectionNode.TextContent, Is.EqualTo("Projection Spawn Batch: 200"));
+            Assert.That(diagnostics.PanelLastApplyMode, Is.EqualTo(ReactiveApplyMode.IncrementalPatch));
+            Assert.That(diagnostics.PanelIncrementalPatchCount, Is.EqualTo(incrementalBefore + 3));
+            Assert.That(diagnostics.PanelFullRecomposeCount, Is.EqualTo(fullBefore));
+            Assert.That(diagnostics.PanelLastPatchedNodes, Is.LessThanOrEqualTo(6));
 
             string sceneText = ExtractUiSceneText(scene);
             Assert.That(sceneText, Does.Contain("Projection Spawn Batch: 200"));
@@ -426,13 +448,19 @@ namespace Ludots.Tests.ThreeC.Acceptance
             UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Acceptance panel should mount when a UIRoot service is present.");
             long initialVersion = scene.Version;
             var culling = engine.GetService(CoreServiceKeys.CameraCullingDebugState);
+            var diagnostics = engine.GetService(CameraAcceptanceServiceKeys.DiagnosticsState);
             Assert.That(culling, Is.Not.Null);
+            Assert.That(diagnostics, Is.Not.Null);
+            long fullBefore = diagnostics!.PanelFullRecomposeCount;
+            long incrementalBefore = diagnostics.PanelIncrementalPatchCount;
 
             culling!.VisibleEntityCount += 17;
             Tick(engine, 1);
 
             Assert.That(scene.Version, Is.EqualTo(initialVersion),
                 "Volatile viewport telemetry must stay out of the reactive acceptance panel so camera movement does not force panel recomposition.");
+            Assert.That(diagnostics.PanelIncrementalPatchCount, Is.EqualTo(incrementalBefore));
+            Assert.That(diagnostics.PanelFullRecomposeCount, Is.EqualTo(fullBefore));
             Assert.That(ExtractUiSceneText(scene), Does.Contain("Viewport telemetry: top-right HUD"));
         }
 
@@ -448,6 +476,13 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Acceptance panel should mount when a UIRoot service is present.");
             long initialVersion = scene.Version;
+            UiNode row0Before = scene.FindByElementId("camera-selection-row-00") ?? throw new InvalidOperationException("Selection row 00 should exist.");
+            UiNode row1Before = scene.FindByElementId("camera-selection-row-01") ?? throw new InvalidOperationException("Selection row 01 should exist.");
+            UiNode row2Before = scene.FindByElementId("camera-selection-row-02") ?? throw new InvalidOperationException("Selection row 02 should exist.");
+            var diagnostics = engine.GetService(CameraAcceptanceServiceKeys.DiagnosticsState);
+            Assert.That(diagnostics, Is.Not.Null);
+            long fullBefore = diagnostics!.PanelFullRecomposeCount;
+            long incrementalBefore = diagnostics.PanelIncrementalPatchCount;
 
             Entity hero = FindEntityByName(engine.World, CameraAcceptanceIds.HeroName);
             Entity scout = FindEntityByName(engine.World, CameraAcceptanceIds.ScoutName);
@@ -459,6 +494,16 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 "Reactive panel updates must preserve the mounted scene instance so pointer capture and focus are not reset.");
             Assert.That(scene.Version, Is.GreaterThan(initialVersion),
                 "Selection changes should advance the reactive panel scene version.");
+            Assert.That(ReferenceEquals(row0Before, scene.FindByElementId("camera-selection-row-00")), Is.True);
+            Assert.That(ReferenceEquals(row1Before, scene.FindByElementId("camera-selection-row-01")), Is.True);
+            Assert.That(ReferenceEquals(row2Before, scene.FindByElementId("camera-selection-row-02")), Is.True);
+            Assert.That(row0Before.TextContent, Is.EqualTo($"#{hero.Id}"));
+            Assert.That(row1Before.TextContent, Is.EqualTo($"#{scout.Id}"));
+            Assert.That(row2Before.TextContent, Is.EqualTo($"#{captain.Id}"));
+            Assert.That(diagnostics.PanelLastApplyMode, Is.EqualTo(ReactiveApplyMode.IncrementalPatch));
+            Assert.That(diagnostics.PanelLastSelectionRowsTouched, Is.EqualTo(3));
+            Assert.That(diagnostics.PanelFullRecomposeCount, Is.EqualTo(fullBefore));
+            Assert.That(diagnostics.PanelIncrementalPatchCount, Is.EqualTo(incrementalBefore + 1));
 
             string sceneText = ExtractUiSceneText(scene);
             Assert.That(sceneText, Does.Contain("Selection Buffer"));
@@ -482,7 +527,15 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Tick(engine, 1);
 
             UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Acceptance panel should mount when a UIRoot service is present.");
-            Assert.That(scene.FindByElementId("camera-selection-buffer-list"), Is.Not.Null);
+            var diagnostics = engine.GetService(CameraAcceptanceServiceKeys.DiagnosticsState);
+            Assert.That(diagnostics, Is.Not.Null);
+            Assert.That(scene.TryGetVirtualWindow("camera-selection-buffer-list", out UiVirtualWindow initialWindow), Is.True);
+            Assert.That(initialWindow.TotalCount, Is.EqualTo(SelectionBuffer.CAPACITY));
+            Assert.That(initialWindow.VisibleCount, Is.GreaterThan(0));
+            Assert.That(initialWindow.VisibleCount, Is.LessThan(initialWindow.TotalCount));
+            Assert.That(scene.LastReactiveUpdateMetrics.VirtualizedWindowCount, Is.EqualTo(1));
+            Assert.That(scene.LastReactiveUpdateMetrics.VirtualizedTotalItems, Is.EqualTo(SelectionBuffer.CAPACITY));
+            Assert.That(scene.LastReactiveUpdateMetrics.VirtualizedComposedItems, Is.EqualTo(initialWindow.VisibleCount));
 
             UiReactiveUpdateMetrics before = scene.LastReactiveUpdateMetrics;
             Entity[] selection = CreateAliveEntities(engine.World, SelectionBuffer.CAPACITY);
@@ -491,6 +544,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Tick(engine, 1);
 
             UiReactiveUpdateMetrics after = scene.LastReactiveUpdateMetrics;
+            Assert.That(scene.TryGetVirtualWindow("camera-selection-buffer-list", out UiVirtualWindow selectionWindow), Is.True);
             Assert.That(after.SceneVersion, Is.GreaterThan(before.SceneVersion));
             Assert.That(after.FullRemount, Is.False,
                 "Large selection updates should stay on the retained incremental patch path instead of remounting the whole scene.");
@@ -498,13 +552,36 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(after.ReusedNodes, Is.GreaterThan(after.PatchedNodes));
             Assert.That(after.VirtualizedWindowCount, Is.EqualTo(1));
             Assert.That(after.VirtualizedTotalItems, Is.EqualTo(SelectionBuffer.CAPACITY));
-            Assert.That(after.VirtualizedComposedItems, Is.GreaterThan(0));
+            Assert.That(after.VirtualizedComposedItems, Is.EqualTo(selectionWindow.VisibleCount));
             Assert.That(after.VirtualizedComposedItems, Is.LessThan(SelectionBuffer.CAPACITY),
                 "The reactive panel should compose only the visible slice of a large selection list.");
 
             string sceneText = ExtractUiSceneText(scene);
             Assert.That(sceneText, Does.Contain("Visible:"));
             Assert.That(sceneText, Does.Contain($"#{selection[0].Id}"));
+
+            scene.Layout(1920f, 1080f);
+            UiNode scrollHost = scene.FindByElementId("camera-selection-buffer-list") ?? throw new InvalidOperationException("Selection buffer host should exist.");
+            long incrementalBeforeScroll = diagnostics!.PanelIncrementalPatchCount;
+            bool handledScroll = uiRoot.HandleInput(new PointerEvent
+            {
+                DeviceType = InputDeviceType.Mouse,
+                PointerId = 0,
+                Action = PointerAction.Scroll,
+                X = scrollHost.LayoutRect.X + 12f,
+                Y = scrollHost.LayoutRect.Y + 12f,
+                DeltaY = 120f
+            });
+
+            Assert.That(handledScroll, Is.True, "The selection buffer should consume scroll input while the pointer is inside the list viewport.");
+
+            Tick(engine, 1);
+
+            Assert.That(scene.LastReactiveUpdateMetrics.Reason, Is.EqualTo(UiReactiveUpdateReason.RuntimeWindowChange));
+            Assert.That(diagnostics.PanelLastSelectionRowsTouched, Is.EqualTo(0));
+            Assert.That(diagnostics.PanelIncrementalPatchCount, Is.EqualTo(incrementalBeforeScroll + 1));
+            Assert.That(scene.TryGetVirtualWindow("camera-selection-buffer-list", out UiVirtualWindow scrolledWindow), Is.True);
+            Assert.That(scrolledWindow.StartIndex, Is.GreaterThan(0));
         }
 
         [Test]
