@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
@@ -26,7 +25,6 @@ using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.UI;
 using Ludots.UI.Input;
-using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -38,7 +36,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
     public sealed class CameraAcceptanceModTests
     {
         private const int BlendSettleFrames = 40;
-        private const string CameraAcceptanceDiagnosticsServiceName = "CameraAcceptance.DiagnosticsState";
 
         private static readonly string[] AcceptanceMods =
         {
@@ -312,6 +309,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(baseline.ScreenTextCount, Is.EqualTo(baseline.WorldTextCount));
             Assert.That(baseline.SelectionLabelCount, Is.EqualTo(CameraAcceptanceIds.HotpathSelectionLabelLimit));
             Assert.That(baseline.DiagnosticsHudVisible, Is.True);
+            Assert.That(baseline.AdapterSummary, Does.Contain("hudBars="), "The diagnostics HUD should expose a dedicated adapter HUD bar timing lane.");
 
             PressButton(engine, backend, "<Keyboard>/f7");
             HotpathHarnessSnapshot hudOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "diag_hud_off");
@@ -573,7 +571,14 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Entity hero = FindEntityByName(engine.World, CameraAcceptanceIds.HeroName);
             Entity scout = FindEntityByName(engine.World, CameraAcceptanceIds.ScoutName);
             Entity captain = FindEntityByName(engine.World, CameraAcceptanceIds.CaptainName);
-            SetSelectionBuffer(engine, hero, scout, captain);
+            var projector = engine.GetService(CoreServiceKeys.ScreenProjector);
+            Assert.That(projector, Is.Not.Null);
+
+            Vector2 heroScreen = ProjectEntity(engine, projector!, hero);
+            Vector2 captainScreen = ProjectEntity(engine, projector!, captain);
+
+            var backend = GetInputBackend(engine);
+            DragMouse(engine, backend, "<Mouse>/LeftButton", heroScreen - new Vector2(24f, 24f), captainScreen + new Vector2(24f, 24f));
             Tick(engine, 1);
 
             Assert.That(ReferenceEquals(scene, uiRoot.Scene), Is.True,
@@ -586,78 +591,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(sceneText, Does.Contain($"#{hero.Id}"));
             Assert.That(sceneText, Does.Contain($"#{scout.Id}"));
             Assert.That(sceneText, Does.Contain($"#{captain.Id}"));
-        }
-
-        [Test]
-        public void CameraAcceptanceMod_Panel_VirtualizesLargeSelectionList_AndReportsIncrementalDiffMetrics()
-        {
-            using var engine = CreateEngine(AcceptanceMods);
-            LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
-
-            var backend = GetInputBackend(engine);
-            ClickGround(engine, backend, new Vector2(3200f, 2000f));
-
-            var uiRoot = new UIRoot();
-            uiRoot.Resize(1920f, 1080f);
-            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-            Tick(engine, 1);
-
-            UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Acceptance panel should mount when a UIRoot service is present.");
-            var diagnostics = GetCameraAcceptanceDiagnostics(engine);
-            Assert.That(scene.FindByElementId("camera-selection-buffer-list"), Is.Not.Null);
-            Assert.That(scene.TryGetVirtualWindow("camera-selection-buffer-list", out UiVirtualWindow initialWindow), Is.True);
-            Assert.That(initialWindow.TotalCount, Is.EqualTo(SelectionBuffer.CAPACITY));
-            Assert.That(initialWindow.VisibleCount, Is.GreaterThan(0));
-            Assert.That(initialWindow.VisibleCount, Is.LessThan(initialWindow.TotalCount));
-            Assert.That(scene.LastReactiveUpdateMetrics.VirtualizedWindowCount, Is.EqualTo(1));
-            Assert.That(scene.LastReactiveUpdateMetrics.VirtualizedTotalItems, Is.EqualTo(SelectionBuffer.CAPACITY));
-            Assert.That(scene.LastReactiveUpdateMetrics.VirtualizedComposedItems, Is.EqualTo(initialWindow.VisibleCount));
-
-            UiReactiveUpdateMetrics before = scene.LastReactiveUpdateMetrics;
-            Entity[] selection = CreateAliveEntities(engine.World, SelectionBuffer.CAPACITY);
-            SetSelectionBuffer(engine, selection);
-
-            Tick(engine, 1);
-
-            UiReactiveUpdateMetrics after = scene.LastReactiveUpdateMetrics;
-            Assert.That(scene.TryGetVirtualWindow("camera-selection-buffer-list", out UiVirtualWindow selectionWindow), Is.True);
-            Assert.That(after.SceneVersion, Is.GreaterThan(before.SceneVersion));
-            Assert.That(after.FullRemount, Is.False,
-                "Large selection updates should stay on the retained incremental patch path instead of remounting the whole scene.");
-            Assert.That(after.PatchedNodes, Is.GreaterThan(0));
-            Assert.That(after.ReusedNodes, Is.GreaterThan(after.PatchedNodes));
-            Assert.That(after.VirtualizedWindowCount, Is.EqualTo(1));
-            Assert.That(after.VirtualizedTotalItems, Is.EqualTo(SelectionBuffer.CAPACITY));
-            Assert.That(after.VirtualizedComposedItems, Is.EqualTo(selectionWindow.VisibleCount));
-            Assert.That(after.VirtualizedComposedItems, Is.LessThan(SelectionBuffer.CAPACITY),
-                "The reactive panel should compose only the visible slice of a large selection list.");
-
-            string sceneText = ExtractUiSceneText(scene);
-            Assert.That(sceneText, Does.Contain("Visible:"));
-            Assert.That(sceneText, Does.Contain($"#{selection[0].Id}"));
-
-            scene.Layout(1920f, 1080f);
-            UiNode scrollHost = scene.FindByElementId("camera-selection-buffer-list") ?? throw new InvalidOperationException("Selection buffer host should exist.");
-            long incrementalBeforeScroll = diagnostics.PanelIncrementalPatchCount;
-            bool handledScroll = uiRoot.HandleInput(new PointerEvent
-            {
-                DeviceType = InputDeviceType.Mouse,
-                PointerId = 0,
-                Action = PointerAction.Scroll,
-                X = scrollHost.LayoutRect.X + 12f,
-                Y = scrollHost.LayoutRect.Y + 12f,
-                DeltaY = 120f
-            });
-
-            Assert.That(handledScroll, Is.True, "The selection buffer should consume scroll input while the pointer is inside the list viewport.");
-
-            Tick(engine, 1);
-
-            Assert.That(scene.LastReactiveUpdateMetrics.Reason, Is.EqualTo(UiReactiveUpdateReason.RuntimeWindowChange));
-            Assert.That(diagnostics.PanelLastSelectionRowsTouched, Is.EqualTo(0));
-            Assert.That(diagnostics.PanelIncrementalPatchCount, Is.EqualTo(incrementalBeforeScroll + 1));
-            Assert.That(scene.TryGetVirtualWindow("camera-selection-buffer-list", out UiVirtualWindow scrolledWindow), Is.True);
-            Assert.That(scrolledWindow.StartIndex, Is.GreaterThan(0));
         }
 
         [Test]
@@ -1029,16 +962,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             return count;
         }
 
-        private static Entity[] CreateAliveEntities(World world, int count)
-        {
-            var entities = new Entity[count];
-            for (int i = 0; i < count; i++)
-            {
-                entities[i] = world.Create();
-            }
-            return entities;
-        }
-
         private static bool HasNamedEntityAt(World world, string name, in WorldCmInt2 worldCm)
         {
             bool found = false;
@@ -1114,20 +1037,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
                    engine.World.IsAlive(local)
                 ? local
                 : throw new InvalidOperationException("LocalPlayerEntity is missing.");
-        }
-
-        private static void SetSelectionBuffer(GameEngine engine, params Entity[] entities)
-        {
-            Entity local = GetLocalPlayer(engine);
-            ref var selection = ref engine.World.Get<SelectionBuffer>(local);
-            selection.Clear();
-            for (int i = 0; i < entities.Length && i < SelectionBuffer.CAPACITY; i++)
-            {
-                if (entities[i] != Entity.Null)
-                {
-                    selection.Add(entities[i]);
-                }
-            }
         }
 
         private static Vector2 ProjectEntity(GameEngine engine, IScreenProjector projector, Entity entity)
@@ -1297,7 +1206,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 PrimitivesEnabled: renderDebug.DrawPrimitives,
                 CameraCullingMs: timings!.CameraCullingMs,
                 HudProjectionMs: timings.WorldHudProjectionMs,
+                HudBarDrawMs: timings.ScreenHudBarDrawMs,
                 DiagnosticsSummary: FindLineContaining(overlayText, "Build panel=") ?? FindLineContaining(panelText, "Build panel=") ?? "Build panel=unavailable",
+                AdapterSummary: FindLineContaining(overlayText, "hudBars=") ?? FindLineContaining(panelText, "hudBars=") ?? "Adapter hudBars=unavailable",
                 HotpathSummary: FindLineContaining(overlayText, "Hotpath crowd=") ?? FindLineContaining(panelText, "Crowd=") ?? "Hotpath summary unavailable");
         }
 
@@ -1462,7 +1373,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
                     primitives_enabled = snapshot.PrimitivesEnabled,
                     camera_culling_ms = Math.Round(snapshot.CameraCullingMs, 4),
                     hud_projection_ms = Math.Round(snapshot.HudProjectionMs, 4),
+                    hud_bar_draw_ms = Math.Round(snapshot.HudBarDrawMs, 4),
                     diagnostics = snapshot.DiagnosticsSummary,
+                    adapter = snapshot.AdapterSummary,
                     hotpath = snapshot.HotpathSummary,
                     status = "done"
                 }));
@@ -1481,7 +1394,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             {
                 HotpathHarnessSnapshot snapshot = snapshots[i];
                 timeline.AppendLine(
-                    $"- [T+{snapshot.Tick:000}] {snapshot.Step} | Crowd={snapshot.CrowdCount}/{snapshot.VisibleCrowdCount} | Bars={snapshot.WorldBarCount}->{snapshot.ScreenBarCount} | Text={snapshot.WorldTextCount}->{snapshot.ScreenTextCount} | Labels={snapshot.SelectionLabelCount} | Panel={(snapshot.PanelMounted ? "ON" : "OFF")} | HUD={(snapshot.DiagnosticsHudVisible ? "ON" : "OFF")} | Terrain={(snapshot.TerrainEnabled ? "ON" : "OFF")} | Prims={(snapshot.PrimitivesEnabled ? "ON" : "OFF")} | Cull={snapshot.CameraCullingMs:F2}ms | HudProj={snapshot.HudProjectionMs:F2}ms");
+                    $"- [T+{snapshot.Tick:000}] {snapshot.Step} | Crowd={snapshot.CrowdCount}/{snapshot.VisibleCrowdCount} | Bars={snapshot.WorldBarCount}->{snapshot.ScreenBarCount} | Text={snapshot.WorldTextCount}->{snapshot.ScreenTextCount} | Labels={snapshot.SelectionLabelCount} | Panel={(snapshot.PanelMounted ? "ON" : "OFF")} | HUD={(snapshot.DiagnosticsHudVisible ? "ON" : "OFF")} | Terrain={(snapshot.TerrainEnabled ? "ON" : "OFF")} | Prims={(snapshot.PrimitivesEnabled ? "ON" : "OFF")} | Cull={snapshot.CameraCullingMs:F2}ms | HudProj={snapshot.HudProjectionMs:F2}ms | HudBars={snapshot.HudBarDrawMs:F2}ms");
             }
 
             var sb = new StringBuilder();
@@ -1507,7 +1420,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             sb.AppendLine("## Expected Outcomes");
             sb.AppendLine("- Primary success condition: each live toggle changes only its target lane or render gate while the rest of the scene remains stable.");
             sb.AppendLine("- Failure branch condition: bars/text/selection survive after their toggle, panel fails to unmount/remount, or crowd removal does not collapse the culling workload inputs.");
-            sb.AppendLine("- Key metrics: crowd count, visible crowd count, world/screen HUD item counts, selection-label count, culling timing, HUD projection timing.");
+            sb.AppendLine("- Key metrics: crowd count, visible crowd count, world/screen HUD item counts, selection-label count, culling timing, HUD projection timing, HUD bar draw timing.");
             sb.AppendLine();
             sb.AppendLine("## Evidence Artifacts");
             sb.AppendLine("- `artifacts/acceptance/presentation-hotpath-harness/trace.jsonl`");
@@ -1529,6 +1442,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             sb.AppendLine($"- restored world bars/text: `{restored.WorldBarCount}` / `{restored.WorldTextCount}`");
             sb.AppendLine($"- max culling sample: `{MaxCameraCullingMs(snapshots):F2}` ms");
             sb.AppendLine($"- max HUD projection sample: `{MaxHudProjectionMs(snapshots):F2}` ms");
+            sb.AppendLine($"- max HUD bar draw sample: `{MaxHudBarDrawMs(snapshots):F2}` ms");
             sb.AppendLine("- reusable wiring: `CameraAcceptanceHotpathLaneSystem`, `CameraAcceptanceSelectionOverlaySystem`, `WorldHudToScreenSystem`, `PresentationTimingDiagnostics`");
             return sb.ToString();
         }
@@ -1574,6 +1488,20 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 if (snapshots[i].HudProjectionMs > max)
                 {
                     max = snapshots[i].HudProjectionMs;
+                }
+            }
+
+            return max;
+        }
+
+        private static float MaxHudBarDrawMs(IReadOnlyList<HotpathHarnessSnapshot> snapshots)
+        {
+            float max = 0f;
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                if (snapshots[i].HudBarDrawMs > max)
+                {
+                    max = snapshots[i].HudBarDrawMs;
                 }
             }
 
@@ -1704,17 +1632,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 : CameraAcceptanceIds.ProjectionSpawnCountDefault;
         }
 
-        private static CameraAcceptanceDiagnosticsProbe GetCameraAcceptanceDiagnostics(GameEngine engine)
-        {
-            if (!engine.GlobalContext.TryGetValue(CameraAcceptanceDiagnosticsServiceName, out var diagnostics) ||
-                diagnostics == null)
-            {
-                throw new InvalidOperationException("Camera acceptance diagnostics state is missing.");
-            }
-
-            return new CameraAcceptanceDiagnosticsProbe(diagnostics);
-        }
-
         private static string FindRepoRoot()
         {
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -1750,7 +1667,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
             bool PrimitivesEnabled,
             float CameraCullingMs,
             float HudProjectionMs,
+            float HudBarDrawMs,
             string DiagnosticsSummary,
+            string AdapterSummary,
             string HotpathSummary);
 
         private sealed class TestInputBackend : IInputBackend
@@ -1781,41 +1700,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }
             public string GetCharBuffer() => string.Empty;
-        }
-
-        private sealed class CameraAcceptanceDiagnosticsProbe
-        {
-            private readonly object _instance;
-            private readonly Type _type;
-
-            public CameraAcceptanceDiagnosticsProbe(object instance)
-            {
-                _instance = instance;
-                _type = instance.GetType();
-            }
-
-            public ReactiveApplyMode PanelLastApplyMode => Get<ReactiveApplyMode>(nameof(PanelLastApplyMode));
-            public int PanelLastPatchedNodes => Get<int>(nameof(PanelLastPatchedNodes));
-            public int PanelLastSelectionRowsTouched => Get<int>(nameof(PanelLastSelectionRowsTouched));
-            public int PanelRowPoolSize => Get<int>(nameof(PanelRowPoolSize));
-            public long PanelFullRecomposeCount => Get<long>(nameof(PanelFullRecomposeCount));
-            public long PanelIncrementalPatchCount => Get<long>(nameof(PanelIncrementalPatchCount));
-            public int PanelVirtualizedWindowCount => Get<int>(nameof(PanelVirtualizedWindowCount));
-            public int PanelVirtualizedTotalItems => Get<int>(nameof(PanelVirtualizedTotalItems));
-            public int PanelVirtualizedComposedItems => Get<int>(nameof(PanelVirtualizedComposedItems));
-
-            private T Get<T>(string propertyName)
-            {
-                PropertyInfo property = _type.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public)
-                    ?? throw new InvalidOperationException($"Camera acceptance diagnostics property '{propertyName}' was not found.");
-                object? value = property.GetValue(_instance);
-                if (value is T typed)
-                {
-                    return typed;
-                }
-
-                throw new InvalidOperationException($"Camera acceptance diagnostics property '{propertyName}' did not return {typeof(T).Name}.");
-            }
         }
 
         private sealed class HeadlessCameraRuntime

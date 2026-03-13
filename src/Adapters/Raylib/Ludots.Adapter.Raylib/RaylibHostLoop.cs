@@ -116,6 +116,7 @@ namespace Ludots.Adapter.Raylib
 
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS);
+                using var hudBarRenderer = new RaylibHudBarBatchRenderer();
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
@@ -226,7 +227,7 @@ namespace Ludots.Adapter.Raylib
 
                         Rl.EndMode3D();
 
-                        DrawScreenHud(engine);
+                        DrawScreenHud(engine, hudBarRenderer, presentationTiming);
 
                         if (drawSkiaUi && uiRoot.IsDirty)
                         {
@@ -359,33 +360,32 @@ namespace Ludots.Adapter.Raylib
             }
         }
 
-        private static void DrawScreenHud(GameEngine engine)
+        private static void DrawScreenHud(GameEngine engine, RaylibHudBarBatchRenderer hudBarRenderer, PresentationTimingDiagnostics? presentationTiming)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationScreenHudBuffer.Name, out var hudObj)) return;
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationScreenHudBuffer.Name, out var hudObj))
+            {
+                presentationTiming?.ObserveScreenHudBarDraw(0d);
+                return;
+            }
+
             engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudStrings.Name, out var strObj);
-            if (hudObj is not ScreenHudBatchBuffer hud) return;
+            if (hudObj is not ScreenHudBatchBuffer hud)
+            {
+                presentationTiming?.ObserveScreenHudBarDraw(0d);
+                return;
+            }
+
             var strings = strObj as Ludots.Core.Presentation.Config.WorldHudStringTable;
 
             var span = hud.GetSpan();
+            long barStart = Stopwatch.GetTimestamp();
+            hudBarRenderer.Draw(span, Rl.GetScreenWidth(), Rl.GetScreenHeight());
+            presentationTiming?.ObserveScreenHudBarDraw(ElapsedMs(barStart));
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
                 int ix = (int)item.ScreenX;
                 int iy = (int)item.ScreenY;
-                int iw = (int)item.Width;
-                int ih = (int)item.Height;
-
-                if (item.Kind == WorldHudItemKind.Bar)
-                {
-                    var bg = ToRaylibColor(item.Color0);
-                    var fg = ToRaylibColor(item.Color1);
-
-                    Rl.DrawRectangle(ix, iy, iw, ih, bg);
-                    int fw = (int)(iw * item.Value0);
-                    Rl.DrawRectangle(ix, iy, fw, ih, fg);
-                    Rl.DrawRectangleLines(ix, iy, iw, ih, new Color(0, 0, 0, 255));
-                    continue;
-                }
 
                 if (item.Kind == WorldHudItemKind.Text)
                 {

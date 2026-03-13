@@ -20,30 +20,47 @@ export class HudRenderer {
   }
 
   drawScreenHud(items: ScreenHudItem[]): void {
+    this.drawScreenHudBarsCompat(items);
+    this.drawScreenHudText(items);
+  }
+
+  private drawScreenHudBarsCompat(items: ScreenHudItem[]): void {
     const ctx = this._ctx;
+    const HUD_BAR = 1;
+
     for (const item of items) {
-      const HUD_BAR = 1;
-      const HUD_TEXT = 2;
-
-      if (item.kind === HUD_BAR) {
-        const x = Math.round(item.sx);
-        const y = Math.round(item.sy);
-        const w = Math.round(item.width);
-        const h = Math.round(item.height);
-
-        ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
-        ctx.fillRect(x, y, w, h);
-        ctx.fillStyle = this.rgba(item.c1r, item.c1g, item.c1b, item.c1a);
-        ctx.fillRect(x, y, Math.round(w * item.v0), h);
-        ctx.strokeStyle = 'black';
-        ctx.strokeRect(x, y, w, h);
-      } else if (item.kind === HUD_TEXT) {
-        const fontSize = item.fontSize <= 0 ? 16 : item.fontSize;
-        ctx.font = `${fontSize}px monospace`;
-        ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
-        const text = this.resolveHudText(item);
-        ctx.fillText(text, item.sx, item.sy + fontSize);
+      if (item.kind !== HUD_BAR) {
+        continue;
       }
+
+      const x = Math.round(item.sx);
+      const y = Math.round(item.sy);
+      const w = Math.round(item.width);
+      const h = Math.round(item.height);
+
+      ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = this.rgba(item.c1r, item.c1g, item.c1b, item.c1a);
+      ctx.fillRect(x, y, Math.round(w * item.v0), h);
+      ctx.strokeStyle = 'black';
+      ctx.strokeRect(x, y, w, h);
+    }
+  }
+
+  private drawScreenHudText(items: ScreenHudItem[]): void {
+    const ctx = this._ctx;
+    const HUD_TEXT = 2;
+
+    for (const item of items) {
+      if (item.kind !== HUD_TEXT) {
+        continue;
+      }
+
+      const fontSize = item.fontSize <= 0 ? 16 : item.fontSize;
+      ctx.font = `${fontSize}px monospace`;
+      ctx.fillStyle = this.rgba(item.c0r, item.c0g, item.c0b, item.c0a);
+      const text = this.resolveHudText(item);
+      ctx.fillText(text, item.sx, item.sy + fontSize);
     }
   }
 

@@ -11,6 +11,7 @@ namespace Ludots.Core.Presentation.Hud
         public float UiInputMs { get; private set; }
         public float UiRenderMs { get; private set; }
         public float UiUploadMs { get; private set; }
+        public float ScreenHudBarDrawMs { get; private set; }
         public float ScreenOverlayDrawMs { get; private set; }
         public float CameraCullingMs { get; private set; }
         public float CameraPresenterMs { get; private set; }
@@ -28,6 +29,7 @@ namespace Ludots.Core.Presentation.Hud
         public void ObserveUiInput(double sampleMs) => UiInputMs = Smooth(UiInputMs, (float)sampleMs);
         public void ObserveUiRender(double sampleMs) => UiRenderMs = Smooth(UiRenderMs, (float)sampleMs);
         public void ObserveUiUpload(double sampleMs) => UiUploadMs = Smooth(UiUploadMs, (float)sampleMs);
+        public void ObserveScreenHudBarDraw(double sampleMs) => ScreenHudBarDrawMs = Smooth(ScreenHudBarDrawMs, (float)sampleMs);
         public void ObserveScreenOverlayDraw(double sampleMs) => ScreenOverlayDrawMs = Smooth(ScreenOverlayDrawMs, (float)sampleMs);
         public void ObserveCameraCulling(double sampleMs, int visibleEntities)
         {
