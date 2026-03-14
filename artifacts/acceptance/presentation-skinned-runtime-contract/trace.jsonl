@@ -1,0 +1,3 @@
+{"event_id":"projection_map_1","tick":5,"lane":"StaticMesh","stable_id":3,"template_id":2,"mesh_asset_id":1,"animator_controller_id":0,"animator_lane":"static"}
+{"event_id":"projection_map_2","tick":5,"lane":"StaticMesh","stable_id":2,"template_id":2,"mesh_asset_id":1,"animator_controller_id":0,"animator_lane":"static"}
+{"event_id":"projection_map_3","tick":5,"lane":"SkinnedMesh","stable_id":1,"template_id":1,"mesh_asset_id":2,"animator_controller_id":1,"animator_lane":"skinned"}

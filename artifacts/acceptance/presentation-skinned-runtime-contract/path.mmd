@@ -1,0 +1,9 @@
+flowchart TD
+    A[start: load projection fixture] --> B[presentation: resolve visual templates]
+    B --> C{render path}
+    C -->|SkinnedMesh or GpuSkinnedInstance| D[animator contract: require controller + packed state]
+    C -->|StaticMesh or instance lane| E[static lane: forbid animator payload]
+    D --> F[outcome: emit skinned runtime snapshot]
+    E --> G[outcome: emit static runtime snapshot]
+    D -->|if controller missing| H[fail: fuse invalid skinned contract]
+    E -->|if animator payload present| I[fail: reject static/skinned lane mixing]

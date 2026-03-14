@@ -24,6 +24,8 @@ namespace Ludots.Core.Presentation.Components
             bool visible = true,
             int animatorControllerId = 0)
         {
+            PresentationRenderContract.ValidateTemplate(nameof(VisualRuntimeState), renderPath, animatorControllerId);
+
             var flags = visible ? VisualRuntimeFlags.Visible : VisualRuntimeFlags.None;
             if (animatorControllerId > 0)
                 flags |= VisualRuntimeFlags.HasAnimator;

@@ -65,3 +65,54 @@
 *   Host 与平台服务：`src/Adapters/Raylib/Ludots.Adapter.Raylib`
 *   输入与渲染器：`src/Client/Ludots.Client.Raylib`
 
+## 6 Render Path Contract
+
+`VisualRenderPath` 不是“怎么画得更快”的提示字段，而是 Core 对 adapter runtime ownership 的显式分 lane：
+
+*   `StaticMesh` / `InstancedStaticMesh` / `HierarchicalInstancedStaticMesh`
+    *   属于 **static instance lane**
+    *   adapter 可以做 stableId 驱动的 create/update/destroy 或 batch slot 管理
+    *   **不得**携带 `AnimatorPackedState`
+*   `SkinnedMesh`
+    *   属于 **per-entity skinned lane**
+    *   一个 stable visual 对应一个 adapter 侧 skeletal component / Animator / AnimBP runtime
+*   `GpuSkinnedInstance`
+    *   属于 **GPU skinned lane**
+    *   adapter 负责 crowd slot、palette/buffer 上传或等价 GPU skin runtime
+    *   **不属于** static instance dirty sync
+
+这条边界的目的，是避免把以下职责揉进同一条“static dirty sync”管线：
+
+*   static instance lifetime / batch slot
+*   skeletal component lifetime
+*   GPU skinned crowd ownership
+*   animator packed bits 同步
+
+## 7 Animator Packed Contract
+
+`AnimatorPackedState` 是一个 **128-bit compact runtime payload**：
+
+*   `Word0`
+    *   controller id: 12 bits，最大 `4095`
+    *   primary state id: 10 bits，最大 `1023`
+    *   secondary state id: 10 bits，最大 `1023`
+    *   normalized time: 12 bits，量化到 `[0,1]`
+    *   transition progress: 10 bits，量化到 `[0,1]`
+    *   flags: 10 bits
+*   `Word1`
+    *   parameter / trigger bits: 64 bits
+
+这个 contract 只表达“adapter 应该把哪个 controller/state/time/flag 映射到自己的 animator runtime”。
+
+**不包含**：
+
+*   pose / bone matrices
+*   bone palette streaming
+*   GPU skin vertex buffer 数据
+
+因此：
+
+*   skinned lane 必须显式声明 `animatorControllerId`
+*   static lane 如果带 animator payload，Core 应直接 fail-fast
+*   adapter 如果只实现了 static lane dirty sync，却收到 `SkinnedMesh` / `GpuSkinnedInstance`，必须显式 fail / fuse，而不是偷偷降级为 static lane
+

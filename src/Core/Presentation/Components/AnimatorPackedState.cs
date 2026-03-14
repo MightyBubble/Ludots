@@ -3,11 +3,14 @@ using System;
 namespace Ludots.Core.Presentation.Components
 {
     /// <summary>
-    /// 128-bit compact animator payload for adapters.
+    /// 128-bit compact animator payload for skinned adapters.
     /// Word0 stores controller/state/timing/flags; Word1 stores up to 64 bool/trigger bits.
+    /// This contract does not contain pose matrices, bone palettes, or GPU skin streams.
     /// </summary>
     public struct AnimatorPackedState
     {
+        public const int PackedWordCount = 2;
+        public const int PackedByteSize = 16;
         public const int MaxControllerId = 4095;
         public const int MaxStateIndex = 1023;
         public const int MaxNormalizedTimeQuantized = 4095;

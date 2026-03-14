@@ -8,6 +8,7 @@ using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
 
@@ -45,6 +46,43 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 () => packed.SetParameterBit(AnimatorPackedState.MaxParameterBits, true),
                 Throws.TypeOf<ArgumentOutOfRangeException>());
+        }
+
+        [Test]
+        public void VisualRenderPathSemantics_KeepStaticAndSkinnedLanesSeparated()
+        {
+            Assert.That(VisualRenderPath.StaticMesh.IsStaticInstanceLane(), Is.True);
+            Assert.That(VisualRenderPath.InstancedStaticMesh.IsStaticInstanceLane(), Is.True);
+            Assert.That(VisualRenderPath.HierarchicalInstancedStaticMesh.IsStaticInstanceLane(), Is.True);
+            Assert.That(VisualRenderPath.SkinnedMesh.IsStaticInstanceLane(), Is.False);
+            Assert.That(VisualRenderPath.GpuSkinnedInstance.IsStaticInstanceLane(), Is.False);
+
+            Assert.That(VisualRenderPath.SkinnedMesh.IsSkinnedLane(), Is.True);
+            Assert.That(VisualRenderPath.GpuSkinnedInstance.IsSkinnedLane(), Is.True);
+            Assert.That(VisualRenderPath.StaticMesh.IsSkinnedLane(), Is.False);
+            Assert.That(VisualRenderPath.GpuSkinnedInstance.SupportsAnimatorPackedState(), Is.True);
+        }
+
+        [Test]
+        public void VisualRuntimeState_Create_RejectsSkinnedPathWithoutAnimatorController()
+        {
+            Assert.That(
+                () => VisualRuntimeState.Create(
+                    meshAssetId: 7,
+                    materialId: 3,
+                    baseScale: 1f,
+                    renderPath: VisualRenderPath.SkinnedMesh),
+                Throws.TypeOf<InvalidOperationException>()
+                    .With.Message.Contains("animatorControllerId"));
+
+            Assert.That(
+                () => VisualRuntimeState.Create(
+                    meshAssetId: 7,
+                    materialId: 3,
+                    baseScale: 1f,
+                    renderPath: VisualRenderPath.GpuSkinnedInstance),
+                Throws.TypeOf<InvalidOperationException>()
+                    .With.Message.Contains("animatorControllerId"));
         }
 
         [Test]
@@ -148,6 +186,69 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(entity.Get<PresentationStableId>().Value, Is.EqualTo(stableId), "Reapplying presentation authoring must preserve stable ids.");
             Assert.That(entity.Get<AnimatorPackedState>().GetPrimaryStateIndex(), Is.EqualTo(7));
+        }
+
+        [Test]
+        public void PresentationAuthoringContext_ApplyAnimator_RejectsStaticRenderPath()
+        {
+            using var world = World.Create();
+            var entity = world.Create();
+
+            var visualTemplates = new VisualTemplateRegistry();
+            var performers = new PerformerDefinitionRegistry();
+            var animators = new AnimatorControllerRegistry();
+            var stableIds = new PresentationStableIdAllocator();
+
+            visualTemplates.Register(
+                "static.template",
+                new VisualTemplateDefinition
+                {
+                    MeshAssetId = 101,
+                    MaterialId = 202,
+                    BaseScale = 1f,
+                    RenderPath = VisualRenderPath.StaticMesh,
+                    Mobility = VisualMobility.Movable,
+                    VisibleByDefault = true,
+                });
+
+            var context = new PresentationAuthoringContext(visualTemplates, performers, animators, stableIds);
+            JsonNode authoring = JsonNode.Parse(
+                """
+                {
+                  "visualTemplateId": "static.template",
+                  "animator": {
+                    "controllerId": "hero.controller",
+                    "primaryStateIndex": 12
+                  }
+                }
+                """)!;
+
+            Assert.That(
+                () => context.Apply(entity, authoring),
+                Throws.TypeOf<InvalidOperationException>()
+                    .With.Message.Contains("reserved for skinned lanes"));
+        }
+
+        [Test]
+        public void EntityVisualEmitSystem_RejectsAnimatorPayloadOnStaticLane()
+        {
+            using var world = World.Create();
+            var entity = world.Create();
+            entity.Add(VisualTransform.Default);
+            entity.Add(VisualRuntimeState.Create(
+                meshAssetId: 11,
+                materialId: 12,
+                baseScale: 1f,
+                renderPath: VisualRenderPath.StaticMesh));
+            entity.Add(AnimatorPackedState.Create(3));
+
+            var drawBuffer = new PrimitiveDrawBuffer();
+            using var system = new EntityVisualEmitSystem(world, drawBuffer);
+
+            Assert.That(
+                () => system.Update(0.016f),
+                Throws.TypeOf<InvalidOperationException>()
+                    .With.Message.Contains("stay separate from skinned runtime sync"));
         }
 
         [Test]
