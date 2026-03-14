@@ -7,6 +7,8 @@ namespace Ludots.Core.Presentation.Hud
     /// </summary>
     public struct ScreenHudItem
     {
+        public int StableId;
+        public int DirtySerial;
         public WorldHudItemKind Kind;
         public float ScreenX;
         public float ScreenY;

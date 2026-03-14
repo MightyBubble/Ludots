@@ -139,6 +139,11 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 "Out-of-bounds projection clicks should still resolve to the configured bounded spawn batch.");
             Assert.That(HasNamedEntityAt(engine.World, "Dummy", expectedWorldCm), Is.True,
                 "Out-of-bounds projection clicks should snap to the nearest board boundary.");
+            WorldAabbCm bounds = engine.CurrentMapSession?.PrimaryBoard?.WorldSize.Bounds ?? engine.WorldSizeSpec.Bounds;
+            Assert.That(
+                AllPositionsWithinBounds(GetNamedEntityPositions(engine.World, "Dummy"), bounds),
+                Is.True,
+                "Projection scatter must stay inside the active board boundary after Core clamps an out-of-bounds click.");
 
             var overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
             Assert.That(overlay, Is.Not.Null);
@@ -322,6 +327,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Crowd/Culling ON"));
             Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Visible Entities"));
             Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Visible on screen:"));
+            Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Cam Crowd"));
+            Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Cam Empty"));
+            Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Respawn 10k"));
             Assert.That(uiRoot.Scene!.FindByElementId("camera-visible-entity-list"), Is.Not.Null);
             Assert.That(uiRoot.Scene.TryGetVirtualWindow("camera-visible-entity-list", out UiVirtualWindow visibleWindow), Is.True);
             Assert.That(visibleWindow.TotalCount, Is.GreaterThan(0));
@@ -335,6 +343,10 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(baseline.ScreenBarCount, Is.LessThanOrEqualTo(baseline.WorldBarCount));
             Assert.That(baseline.ScreenTextCount, Is.GreaterThan(0));
             Assert.That(baseline.ScreenTextCount, Is.LessThanOrEqualTo(baseline.WorldTextCount));
+            Assert.That(CountWorldHudItemsWithoutStableIdentity(engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)!), Is.EqualTo(0),
+                "Hotpath HUD world items must carry stable ids and dirty serials.");
+            Assert.That(CountScreenHudItemsWithoutStableIdentity(engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!), Is.EqualTo(0),
+                "Projected hotpath HUD items must preserve stable ids and dirty serials.");
             Assert.That(baseline.SelectionLabelCount, Is.EqualTo(CameraAcceptanceIds.HotpathSelectionLabelLimit));
             Assert.That(baseline.DiagnosticsHudVisible, Is.True);
             Assert.That(baseline.OverlayDirtyLanes, Is.GreaterThan(0));
@@ -416,6 +428,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(restored.ScreenBarCount, Is.LessThanOrEqualTo(restored.WorldBarCount));
             Assert.That(restored.ScreenTextCount, Is.GreaterThan(0));
             Assert.That(restored.ScreenTextCount, Is.LessThanOrEqualTo(restored.WorldTextCount));
+            Assert.That(CountWorldHudItemsWithoutStableIdentity(engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)!), Is.EqualTo(0));
+            Assert.That(CountScreenHudItemsWithoutStableIdentity(engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)!), Is.EqualTo(0));
             Assert.That(restored.SelectionLabelCount, Is.EqualTo(CameraAcceptanceIds.HotpathSelectionLabelLimit));
             Assert.That(restored.PrimitivesEnabled, Is.True);
 
@@ -1230,6 +1244,20 @@ namespace Ludots.Tests.ThreeC.Acceptance
             return true;
         }
 
+        private static bool AllPositionsWithinBounds(List<WorldCmInt2> positions, in WorldAabbCm bounds)
+        {
+            for (int i = 0; i < positions.Count; i++)
+            {
+                WorldCmInt2 position = positions[i];
+                if (position.X < bounds.Left || position.X > bounds.Right || position.Y < bounds.Top || position.Y > bounds.Bottom)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private static Entity GetLocalPlayer(GameEngine engine)
         {
             return engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
@@ -1520,6 +1548,34 @@ namespace Ludots.Tests.ThreeC.Acceptance
             foreach (ref readonly var item in screenHud.GetSpan())
             {
                 if (item.Kind == kind)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int CountWorldHudItemsWithoutStableIdentity(WorldHudBatchBuffer worldHud)
+        {
+            int count = 0;
+            foreach (ref readonly var item in worldHud.GetSpan())
+            {
+                if (item.StableId <= 0 || item.DirtySerial <= 0)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int CountScreenHudItemsWithoutStableIdentity(ScreenHudBatchBuffer screenHud)
+        {
+            int count = 0;
+            foreach (ref readonly var item in screenHud.GetSpan())
+            {
+                if (item.StableId <= 0 || item.DirtySerial <= 0)
                 {
                     count++;
                 }

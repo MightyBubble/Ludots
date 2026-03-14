@@ -99,6 +99,15 @@ namespace Ludots.Core.Presentation.Config
             if (animatorNode is not JsonObject obj)
                 throw new InvalidOperationException("Presentation animator block must be a JSON object.");
 
+            if (!entity.Has<VisualRuntimeState>())
+            {
+                throw new InvalidOperationException(
+                    "Presentation animator block requires a skinned visualTemplateId because AnimatorPackedState is only valid for skinned render paths.");
+            }
+
+            var visual = entity.Get<VisualRuntimeState>();
+            PresentationRenderContract.ValidateAnimatorAuthoring("Presentation animator block", visual.RenderPath);
+
             AnimatorPackedState packed = entity.Has<AnimatorPackedState>()
                 ? entity.Get<AnimatorPackedState>()
                 : default;
@@ -153,13 +162,10 @@ namespace Ludots.Core.Presentation.Config
 
             Upsert(entity, packed);
 
-            if (entity.Has<VisualRuntimeState>())
-            {
-                var visual = entity.Get<VisualRuntimeState>();
-                visual.AnimatorControllerId = packed.GetControllerId();
-                visual.Flags |= VisualRuntimeFlags.HasAnimator;
-                entity.Set(visual);
-            }
+            visual.AnimatorControllerId = packed.GetControllerId();
+            visual.Flags |= VisualRuntimeFlags.HasAnimator;
+            PresentationRenderContract.ValidateRuntimeState("Presentation animator block", visual, hasAnimatorComponent: true, packed);
+            entity.Set(visual);
         }
 
         private int EnsureStableId(Entity entity)

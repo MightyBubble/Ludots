@@ -60,6 +60,12 @@ namespace CameraAcceptanceMod.Systems
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }
 
+        internal static void ResetCrowdRequested(GameEngine engine)
+        {
+            ArgumentNullException.ThrowIfNull(engine);
+            engine.GlobalContext[CrowdRequestedKey] = false;
+        }
+
         public void Update(in float dt)
         {
             MapId currentMapId = _engine.CurrentMapSession?.MapId ?? default;
@@ -314,6 +320,8 @@ namespace CameraAcceptanceMod.Systems
 
                         if (worldHud.TryAdd(new WorldHudItem
                         {
+                            StableId = HudItemIdentity.ComposeStableId(entity.Id, WorldHudItemKind.Bar, discriminator: 1),
+                            DirtySerial = HudItemIdentity.ComposeBarDirtySerial(56f, 7f, fill, BarBackground, BarForeground),
                             Kind = WorldHudItemKind.Bar,
                             WorldPosition = transform.Position + new Vector3(0f, 1.65f, 0f),
                             Width = 56f,
@@ -330,6 +338,15 @@ namespace CameraAcceptanceMod.Systems
                     if (emitText &&
                         worldHud.TryAdd(new WorldHudItem
                     {
+                        StableId = HudItemIdentity.ComposeStableId(entity.Id, WorldHudItemKind.Text, discriminator: 2),
+                        DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
+                            fontSize: 14,
+                            legacyStringId: 0,
+                            legacyModeId: (int)WorldHudValueMode.Constant,
+                            value0: 100 + (entity.Id % 900),
+                            value1: 0f,
+                            color: TextColor,
+                            packet: default),
                         Kind = WorldHudItemKind.Text,
                         WorldPosition = transform.Position + new Vector3(0f, 2.15f, 0f),
                         FontSize = 14,

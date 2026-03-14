@@ -57,6 +57,7 @@ namespace Ludots.Core.Presentation.Config
 
             string animatorKey = node["animatorControllerId"]?.GetValue<string>() ?? string.Empty;
             int animatorControllerId = string.IsNullOrWhiteSpace(animatorKey) ? 0 : _animators.Register(animatorKey);
+            PresentationRenderContract.ValidateTemplate($"Visual template '{key}'", renderPath, animatorControllerId);
 
             return new VisualTemplateDefinition
             {

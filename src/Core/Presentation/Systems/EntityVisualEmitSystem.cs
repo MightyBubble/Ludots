@@ -102,7 +102,9 @@ namespace Ludots.Core.Presentation.Systems
             float baseScale = visual.BaseScale <= 0f ? 1f : visual.BaseScale;
             var scale = transform.Scale * baseScale;
             int templateId = World.Has<VisualTemplateRef>(entity) ? World.Get<VisualTemplateRef>(entity).TemplateId : 0;
-            AnimatorPackedState animator = World.Has<AnimatorPackedState>(entity) ? World.Get<AnimatorPackedState>(entity) : default;
+            bool hasAnimatorComponent = World.Has<AnimatorPackedState>(entity);
+            AnimatorPackedState animator = hasAnimatorComponent ? World.Get<AnimatorPackedState>(entity) : default;
+            PresentationRenderContract.ValidateRuntimeState("EntityVisualEmitSystem", visual, hasAnimatorComponent, animator);
             VisualVisibility visibility = visual.ResolveVisibility(cullVisible);
 
             var item = new PrimitiveDrawItem

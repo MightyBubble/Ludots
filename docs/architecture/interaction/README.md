@@ -97,7 +97,102 @@ enum Acquisition
 
 ### OrderSelectionType → TargetMode
 
+<<<<<<< Updated upstream
 | Ludots | TargetMode |
+=======
+### InteractionModeType → 本模型的 Acquisition
+
+| Ludots InteractionModeType | Acquisition | 说明 |
+|---------------------------|-------------|------|
+| TargetFirst (WoW) | Explicit | 先选单位, 再按键 |
+| SmartCast (LoL) | Explicit | 按键时自动取光标下目标 |
+| AimCast (DotA/SC2) | Explicit | 按键→进入瞄准→确认 |
+| SmartCastWithIndicator | Explicit | 按住→显示指示器→松开 |
+| ContextScored | **ContextScored** | 已落地：系统评分选目标+技能 |
+
+### OrderSelectionType → 本模型的 TargetMode
+
+| Ludots OrderSelectionType | TargetMode |
+|--------------------------|-----------|
+| None | None |
+| Entity | Unit |
+| Position | Point |
+| Direction | Direction |
+| Vector | Vector |
+| Entities | Unit (multi, via SelectionGate) |
+
+### AbilityExecSpec Gates → Response Window / Insertable Context
+
+| Gate | 用途 |
+|------|------|
+| InputGate | P5 确认窗口, P2 效果变体选择 |
+| SelectionGate | P1 选额外目标, P6 多目标选取 |
+| EventGate | O1-O8 响应窗口(等待事件) |
+
+### Response Chain → 响应窗口
+
+| ResponseType | 清单映射 |
+|-------------|---------|
+| Hook | O5 取消/无效化 |
+| Modify | O6 修改数值 |
+| Chain | O7 追加效果, O2 连锁 |
+| PromptInput | O1/O3/O4 交互式响应 |
+
+---
+
+## 6. Tag/Effect/Attribute 职责分界
+
+**铁律: 以下概念不允许进入交互层枚举:**
+
+| 概念 | 归属层 | 实现方式 |
+|------|--------|---------|
+| 蓄力积累 | Effect | BeginCharge Effect tick → charge_amount Attribute |
+| 连击段数 | Tag | combo_stage Tag 递增 |
+| 连击计时 | Attribute | last_hit_time Attribute, 下段读 delta |
+| 命中确认 | Tag | OnHit Effect → hit_confirmed Tag |
+| Toggle | Tag | HasTag(active) ? Remove : Add |
+| Channel中断 | Tag | channeling Tag + CC Effect 移除 |
+| Recast门控 | Tag | stage_complete Tag 做 precondition |
+| 变身/形态 | Tag | form Tag 切换 ability set |
+| 标记引爆 | Tag | marked Tag + 引爆技能 precondition |
+| Posture/架势 | Attribute | posture Attribute 累积, 满值加 Tag |
+| 连击仪表 | Attribute | combo_meter Attribute, 阈值加 Tag |
+| 资源门控 | Attribute + Tag | Attribute 持有 mana/energy/HP/charges 等数值；激活层仅消费 ready/blocked tags |
+| 冷却 | Tag | OnCast → AddTag("cd_Q", duration=N) → BlockedAny |
+| 充能 | Attribute + Tag | charge_count Attribute 持有层数；是否可施放通过 has_charge / blocked tags 门控 |
+| 上下文选取 | ContextGroup | ScorePipeline (读 Tag + Attribute + 距离 + 角度) |
+| 响应窗口 | ResponseChain | WindowPhase + PromptInput + OrderRequest |
+| 插入上下文 | Gate | InputGate / SelectionGate / EventGate |
+
+> **activation condition 边界**: Ability 激活阶段只读取 `RequiredAll` / `BlockedAny` 两类 tag gate。数值型条件（mana、charges、rage、HP 阈值、cooldown）归属于 Attribute/Effect/Tag 层，先被投影为 ready / blocked tags 再参与激活；不单列 `AbilityConditionSystem`，也不把 `GasConditionRegistry` 扩成 ability activation 运行时。
+
+---
+
+## 7. ContextScored 扩展: ContextGroup 机制（已落地）
+
+`feat/mod-interaction-showcase` 已将 ContextScored 落地为独立的 **ContextGroup + ScorePipeline** 链路，并经分支内 focused tests 与 showcase acceptance 验证。当前实现不扩展 `AbilityDefinition`，而是采用 root ability → ContextGroup → concrete cast order 的松耦合路由:
+
+```
+InputBinding "Attack"
+  → ContextGroup: [飞扑攻击, 普通拳击, 地面终结, 撞墙击, 空中连击, ...]
+    → ScorePipeline 对每个候选评分
+      → 选出最高分的候选
+        → 该候选自带 TargetMode + 效果定义
+          → 系统自动获取目标
+            → 执行
+```
+
+当前实现边界:
+
+- `InputOrderMappingSystem` 在 `InteractionModeType.ContextScored` 下发起解析
+- `ContextGroupRegistry` / `ContextGroupConfigLoader` 维护 root ability 到候选组的配置关系
+- `ContextScoredOrderResolver` 负责空间查询、precondition graph、score graph 与最高分选择
+- `AbilityExecSystem` 收到的仍是已确定的 `(ability, target)`，不承担 ContextGroup 评分职责
+
+### 评分因子 (全部可用 Tag + Attribute + Spatial 查询):
+
+| Factor | Data Source |
+>>>>>>> Stashed changes
 |--------|------------|
 | `None` | `None` |
 | `Entity` | `Unit` |

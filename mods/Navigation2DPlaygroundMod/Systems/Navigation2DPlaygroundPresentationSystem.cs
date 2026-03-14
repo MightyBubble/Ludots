@@ -13,6 +13,7 @@ using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using Ludots.UI;
 using Navigation2DPlaygroundMod.Runtime;
 
 namespace Navigation2DPlaygroundMod.Systems
@@ -31,6 +32,7 @@ namespace Navigation2DPlaygroundMod.Systems
         private readonly World _world;
         private readonly DebugDrawCommandBuffer _debugDraw;
         private int _sphereMeshId;
+        private float _smoothedFrameMs;
 
         public Navigation2DPlaygroundPresentationSystem(GameEngine engine, DebugDrawCommandBuffer debugDraw, MeshAssetRegistry meshes)
         {
@@ -61,7 +63,7 @@ namespace Navigation2DPlaygroundMod.Systems
             AppendSolidPrimitives();
             AppendDesiredVelocity();
             AppendFlowFieldDebug();
-            AppendTelemetryOverlay();
+            AppendTelemetryOverlay(deltaTime);
         }
 
         private void AppendSolidPrimitives()
@@ -215,7 +217,7 @@ namespace Navigation2DPlaygroundMod.Systems
             _debugDraw.Lines.Add(new DebugDrawLine2D { A = to, B = to - right * headLength, Thickness = 1f, Color = color });
         }
 
-        private void AppendTelemetryOverlay()
+        private void AppendTelemetryOverlay(float deltaTime)
         {
             if (_engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is not ScreenOverlayBuffer overlay)
             {
@@ -249,6 +251,19 @@ namespace Navigation2DPlaygroundMod.Systems
             long spatialIncrementalUpdates = 0;
             long spatialDirtyAgents = 0;
             long spatialCellMigrations = 0;
+            bool uiDirty = _engine.GetService(CoreServiceKeys.UIRoot) is UIRoot uiRoot && uiRoot.IsDirty;
+
+            float frameMs = deltaTime > 1e-6f ? deltaTime * 1000f : 0f;
+            if (_smoothedFrameMs <= 0f)
+            {
+                _smoothedFrameMs = frameMs;
+            }
+            else
+            {
+                _smoothedFrameMs += (frameMs - _smoothedFrameMs) * 0.1f;
+            }
+
+            float fps = _smoothedFrameMs > 1e-4f ? 1000f / _smoothedFrameMs : 0f;
 
             if (_engine.GetService(CoreServiceKeys.Navigation2DRuntime) is Navigation2DRuntime runtime)
             {
@@ -305,7 +320,7 @@ namespace Navigation2DPlaygroundMod.Systems
             int x = 16;
             int y = 540;
             int w = 860;
-            int h = 172;
+            int h = 192;
             Vector4 background = new(0.04f, 0.05f, 0.08f, 0.68f);
             Vector4 border = new(0.35f, 0.75f, 1f, 0.5f);
             Vector4 title = new(0.9f, 0.95f, 1f, 1f);
@@ -314,14 +329,15 @@ namespace Navigation2DPlaygroundMod.Systems
 
             overlay.AddRect(x, y, w, h, background, border);
             overlay.AddText(x + 10, y + 8, "Navigation2D Playground Telemetry", 16, title);
-            overlay.AddText(x + 10, y + 30, $"Scenario={scenarioIndex + 1}/{scenarioCount}  {scenarioName} [{scenarioId}]  Tool={Navigation2DPlaygroundState.ToolMode}  Selected={selectedCount}", 14, text);
-            overlay.AddText(x + 10, y + 50, $"Agents/team={agentsPerTeam}  Teams={scenarioTeamCount}  Live={liveTotal}  Blockers={blockerCount}  SpawnBatch={spawnBatch}", 14, text);
-            overlay.AddText(x + 10, y + 70, $"Steering={steeringMode}  CacheCfg={temporalCoherenceEnabled}  CacheFrame={steeringCacheFrameEnabled}  MaxReuse={temporalMaxReuseTicks}  RequireSteady={temporalRequireSteadyState}", 14, text);
-            overlay.AddText(x + 10, y + 90, $"CacheLookups={steeringCacheLookupsFrame}  Hits={steeringCacheHitsFrame}  Stores={steeringCacheStoresFrame}  HitRate={steeringCacheHitRate:P1}  State={steeringCacheState}", 14, text);
-            overlay.AddText(x + 10, y + 110, $"FlowEnabled={flowEnabled}  FlowDebug={flowDebug}  Mode={flowMode}  Iter={flowIterations}  ActiveTiles={flowActiveTiles}  LoadedTiles={flowLoadedTiles}  DbgLines={flowDebugLines}", 14, text);
-            overlay.AddText(x + 10, y + 130, $"FlowWindow={flowWindowWidth}x{flowWindowHeight}  Selected={flowSelectedTiles}  Retained={flowRetainedTiles}  New={flowNewTiles}  Evict={flowEvictedTiles}", 14, text);
-            overlay.AddText(x + 10, y + 150, $"Spatial={spatialMode}  Rebuilds={spatialRebuilds}  Incremental={spatialIncrementalUpdates}  Dirty={spatialDirtyAgents}  CellMigrations={spatialCellMigrations}", 14, text);
-            overlay.AddText(x + 10, y + 168, "Panel is primary UI. Overlay remains telemetry-only for headless evidence and perf reads.", 13, hint);
+            overlay.AddText(x + 10, y + 30, $"Frame={_smoothedFrameMs:F2}ms  FPS={fps:F1}  UiDirty={uiDirty}", 14, hint);
+            overlay.AddText(x + 10, y + 50, $"Scenario={scenarioIndex + 1}/{scenarioCount}  {scenarioName} [{scenarioId}]  Tool={Navigation2DPlaygroundState.ToolMode}  Selected={selectedCount}", 14, text);
+            overlay.AddText(x + 10, y + 70, $"Agents/team={agentsPerTeam}  Teams={scenarioTeamCount}  Live={liveTotal}  Blockers={blockerCount}  SpawnBatch={spawnBatch}", 14, text);
+            overlay.AddText(x + 10, y + 90, $"Steering={steeringMode}  CacheCfg={temporalCoherenceEnabled}  CacheFrame={steeringCacheFrameEnabled}  MaxReuse={temporalMaxReuseTicks}  RequireSteady={temporalRequireSteadyState}", 14, text);
+            overlay.AddText(x + 10, y + 110, $"CacheLookups={steeringCacheLookupsFrame}  Hits={steeringCacheHitsFrame}  Stores={steeringCacheStoresFrame}  HitRate={steeringCacheHitRate:P1}  State={steeringCacheState}", 14, text);
+            overlay.AddText(x + 10, y + 130, $"FlowEnabled={flowEnabled}  FlowDebug={flowDebug}  Mode={flowMode}  Iter={flowIterations}  ActiveTiles={flowActiveTiles}  LoadedTiles={flowLoadedTiles}  DbgLines={flowDebugLines}", 14, text);
+            overlay.AddText(x + 10, y + 150, $"FlowWindow={flowWindowWidth}x{flowWindowHeight}  Selected={flowSelectedTiles}  Retained={flowRetainedTiles}  New={flowNewTiles}  Evict={flowEvictedTiles}", 14, text);
+            overlay.AddText(x + 10, y + 170, $"Spatial={spatialMode}  Rebuilds={spatialRebuilds}  Incremental={spatialIncrementalUpdates}  Dirty={spatialDirtyAgents}  CellMigrations={spatialCellMigrations}", 14, text);
+            overlay.AddText(x + 10, y + 186, "Panel is primary UI. Overlay remains telemetry-only for headless evidence and perf reads.", 13, hint);
         }
     }
 }

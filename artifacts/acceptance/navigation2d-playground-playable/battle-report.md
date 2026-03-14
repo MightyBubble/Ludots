@@ -30,27 +30,23 @@
 - `artifacts/acceptance/navigation2d-playground-playable/path.mmd`
 
 ## Timeline
-- [T+001] warmup | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=Move | Selected=0 | Live=128 | Blockers=0 | Goal=(n/a,n/a) | Tick=4.908ms
-- [T+002] select_team0 | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=Move | Selected=64 | Live=128 | Blockers=0 | Goal=(9000,-420) | Tick=4.195ms
-- [T+003] move_selected | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=Move | Selected=64 | Live=128 | Blockers=0 | Goal=(-2890,-490) | Tick=185.239ms
-- [T+004] spawn_team0 | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=SpawnTeam0 | Selected=64 | Live=144 | Blockers=0 | Goal=(-2890,-490) | Tick=0.021ms
-- [T+005] spawn_blocker | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=SpawnBlocker | Selected=64 | Live=144 | Blockers=16 | Goal=(-2890,-490) | Tick=0.102ms
-- [T+006] follow_mode | Mode=Navigation2D.Playground.Mode.Follow | Camera=Navigation2D.Playground.Camera.Follow | Tool=SpawnBlocker | Selected=64 | Live=144 | Blockers=16 | Goal=(-2890,-490) | Tick=0.091ms
-- [T+007] command_mode | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=SpawnBlocker | Selected=64 | Live=144 | Blockers=16 | Goal=(-2890,-490) | Tick=181.419ms
+- [T+001] warmup | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=Move | Selected=0 | Live=128 | Blockers=0 | Goal=(n/a,n/a) | Tick=2.945ms
+- [T+002] select_team0 | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=Move | Selected=64 | Live=128 | Blockers=0 | Goal=(9000,-420) | Tick=5.737ms
+- [T+003] move_selected | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=Move | Selected=64 | Live=128 | Blockers=0 | Goal=(-2890,-490) | Tick=446.971ms
+- [T+004] spawn_team0 | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=SpawnTeam0 | Selected=64 | Live=144 | Blockers=0 | Goal=(-2890,-490) | Tick=0.041ms
+- [T+005] spawn_blocker | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=SpawnBlocker | Selected=64 | Live=144 | Blockers=16 | Goal=(-2890,-490) | Tick=0.156ms
+- [T+006] follow_mode | Mode=Navigation2D.Playground.Mode.Follow | Camera=Navigation2D.Playground.Camera.Follow | Tool=SpawnBlocker | Selected=64 | Live=144 | Blockers=16 | Goal=(-2890,-490) | Tick=0.147ms
+- [T+007] command_mode | Mode=Navigation2D.Playground.Mode.Command | Camera=Navigation2D.Playground.Camera.Command | Tool=SpawnBlocker | Selected=64 | Live=144 | Blockers=16 | Goal=(-2890,-490) | Tick=448.265ms
 
 ## Outcome
 - success: yes
 - verdict: the playground now exposes a formal playable path with mounted reactive UI, CoreInput box selection, right-click move/spawn tools, and view-mode driven camera switching.
-- reason: final state returned to `Navigation2D.Playground.Mode.Command` with `64` selected entities preserved, `144` live agents, `16` blockers, and median tick `0.545ms`.
+- reason: final state returned to `Navigation2D.Playground.Mode.Command` with `64` selected entities preserved, `144` live agents, `16` blockers, and median tick `0.756ms`.
 
 ## Summary Stats
 - snapshots captured: `7`
-- median headless tick: `0.545ms`
-- max headless tick: `416.060ms`
+- median headless tick: `0.756ms`
+- max headless tick: `674.347ms`
 - final active camera: `Navigation2D.Playground.Camera.Command`
 - final selected ids sample: `#5, #7, #9, #11`
 - reusable wiring: `ConfigPipeline`, `CoreInputMod`, `UIRoot`, `ReactivePage`, `ViewModeManager`, `Navigation2DRuntime`
-
-## Open Tech Debt
-- `nav-playground-selection-boundaries` -> `artifacts/techdebt/2026-03-12-nav-playground-selection-boundaries.md`
-- `nav-playground-steering-60hz-gap` -> `artifacts/techdebt/2026-03-12-nav-playground-steering-60hz-gap.md`

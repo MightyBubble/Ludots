@@ -26,6 +26,8 @@ public sealed class NativeSkiaOverlayTests
 
         screenHud.TryAdd(new ScreenHudItem
         {
+            StableId = 101,
+            DirtySerial = 1001,
             Kind = WorldHudItemKind.Bar,
             ScreenX = 10f,
             ScreenY = 12f,
@@ -38,6 +40,8 @@ public sealed class NativeSkiaOverlayTests
 
         screenHud.TryAdd(new ScreenHudItem
         {
+            StableId = 202,
+            DirtySerial = 2002,
             Kind = WorldHudItemKind.Text,
             ScreenX = 16f,
             ScreenY = 28f,
@@ -66,7 +70,11 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(topRects.Length, Is.EqualTo(1));
         Assert.That(topText.Length, Is.EqualTo(1));
         Assert.That(underUiBars[0].Kind, Is.EqualTo(PresentationOverlayItemKind.Bar));
+        Assert.That(underUiBars[0].StableId, Is.EqualTo(101));
+        Assert.That(underUiBars[0].DirtySerial, Is.EqualTo(1001));
         Assert.That(underUiText[0].Text, Is.EqualTo("HP 42"));
+        Assert.That(underUiText[0].StableId, Is.EqualTo(202));
+        Assert.That(underUiText[0].DirtySerial, Is.EqualTo(2002));
         Assert.That(topRects[0].Kind, Is.EqualTo(PresentationOverlayItemKind.Rect));
         Assert.That(topText[0].Text, Is.EqualTo("Telemetry"));
     }
@@ -86,6 +94,8 @@ public sealed class NativeSkiaOverlayTests
         int underUiTextVersion = scene.GetLaneVersion(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text);
         int topRectVersion = scene.GetLaneVersion(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Rect);
         int topTextVersion = scene.GetLaneVersion(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text);
+        int underUiLayerVersion = scene.GetLayerVersion(PresentationOverlayLayer.UnderUi);
+        int topLayerVersion = scene.GetLayerVersion(PresentationOverlayLayer.TopMost);
 
         screenHud.Clear();
         overlayBuffer.Clear();
@@ -97,6 +107,8 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(scene.GetLaneVersion(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text), Is.EqualTo(underUiTextVersion));
         Assert.That(scene.GetLaneVersion(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Rect), Is.EqualTo(topRectVersion));
         Assert.That(scene.GetLaneVersion(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text), Is.EqualTo(topTextVersion));
+        Assert.That(scene.GetLayerVersion(PresentationOverlayLayer.UnderUi), Is.EqualTo(underUiLayerVersion));
+        Assert.That(scene.GetLayerVersion(PresentationOverlayLayer.TopMost), Is.EqualTo(topLayerVersion));
 
         screenHud.Clear();
         overlayBuffer.Clear();
@@ -108,6 +120,8 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(scene.GetLaneVersion(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text), Is.EqualTo(underUiTextVersion));
         Assert.That(scene.GetLaneVersion(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Rect), Is.EqualTo(topRectVersion));
         Assert.That(scene.GetLaneVersion(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text), Is.GreaterThan(topTextVersion));
+        Assert.That(scene.GetLayerVersion(PresentationOverlayLayer.UnderUi), Is.EqualTo(underUiLayerVersion));
+        Assert.That(scene.GetLayerVersion(PresentationOverlayLayer.TopMost), Is.GreaterThan(topLayerVersion));
     }
 
     [Test]
@@ -199,7 +213,7 @@ public sealed class NativeSkiaOverlayTests
     }
 
     [Test]
-    public void SkiaOverlayRenderer_UsesImmediatePath_ForLargeUnderUiHudLanes()
+    public void SkiaOverlayRenderer_DrawsLargeUnderUiHudLanesImmediately_WhenDirty()
     {
         var scene = new PresentationOverlayScene(256);
         scene.BeginBuild();
@@ -242,8 +256,7 @@ public sealed class NativeSkiaOverlayTests
         renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.TopMost);
 
         Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(1),
-            "Large dynamic HUD lanes should draw immediately without rebuilding retained lane pictures.");
-        Assert.That(renderer.CachedTextLayoutCount, Is.GreaterThan(0));
+            "Large HUD lanes should bypass SKPicture rebuild on dirty frames while unrelated retained lanes still cache normally.");
 
         renderer.ResetFrameStats();
         renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi);
@@ -251,10 +264,38 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0));
     }
 
+    [Test]
+    public void PresentationOverlayLanePacer_AlternatesLargeDirtyUnderUiLanes()
+    {
+        var scene = new PresentationOverlayScene(256);
+        BuildLargeUnderUiScene(scene, xOffset: 0f);
+
+        var pacer = new PresentationOverlayLanePacer(PresentationOverlayLayer.UnderUi);
+        PresentationOverlayLanePacer.LaneRefreshPlan coldStartPlan = pacer.BuildPlan(scene);
+        Assert.That(coldStartPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.True);
+        Assert.That(coldStartPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.True);
+
+        pacer.MarkPresented(scene, coldStartPlan);
+
+        BuildLargeUnderUiScene(scene, xOffset: 1f);
+        PresentationOverlayLanePacer.LaneRefreshPlan firstDeferredPlan = pacer.BuildPlan(scene);
+        Assert.That(firstDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.True);
+        Assert.That(firstDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.False);
+
+        pacer.MarkPresented(scene, firstDeferredPlan);
+
+        BuildLargeUnderUiScene(scene, xOffset: 2f);
+        PresentationOverlayLanePacer.LaneRefreshPlan secondDeferredPlan = pacer.BuildPlan(scene);
+        Assert.That(secondDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.False);
+        Assert.That(secondDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.True);
+    }
+
     private static void SeedLegacyOverlay(ScreenHudBatchBuffer screenHud, ScreenOverlayBuffer overlayBuffer, string topText)
     {
         screenHud.TryAdd(new ScreenHudItem
         {
+            StableId = 11,
+            DirtySerial = 111,
             Kind = WorldHudItemKind.Bar,
             ScreenX = 10f,
             ScreenY = 12f,
@@ -266,6 +307,8 @@ public sealed class NativeSkiaOverlayTests
         });
         screenHud.TryAdd(new ScreenHudItem
         {
+            StableId = 22,
+            DirtySerial = 222,
             Kind = WorldHudItemKind.Text,
             ScreenX = 16f,
             ScreenY = 28f,
@@ -277,6 +320,36 @@ public sealed class NativeSkiaOverlayTests
 
         overlayBuffer.AddRect(100, 110, 64, 24, new Vector4(0f, 0f, 0f, 0.85f), new Vector4(1f, 1f, 1f, 1f));
         overlayBuffer.AddText(108, 116, topText, 14, new Vector4(0.9f, 0.9f, 0.2f, 1f));
+    }
+
+    private static void BuildLargeUnderUiScene(PresentationOverlayScene scene, float xOffset)
+    {
+        scene.BeginBuild();
+        for (int i = 0; i < 64; i++)
+        {
+            scene.TryAddBar(
+                PresentationOverlayLayer.UnderUi,
+                x: 8f + xOffset,
+                y: 8f + (i * 3f),
+                width: 80f,
+                height: 2f,
+                value: 0.5f,
+                background: new Vector4(0.15f, 0.15f, 0.15f, 1f),
+                foreground: new Vector4(0.2f, 0.8f, 0.2f, 1f),
+                stableId: 1000 + i,
+                dirtySerial: 2000 + i);
+            scene.TryAddText(
+                PresentationOverlayLayer.UnderUi,
+                x: 96f + xOffset,
+                y: 4f + (i * 3f),
+                text: $"{100 + i}",
+                fontSize: 12,
+                color: new Vector4(1f, 1f, 1f, 1f),
+                stableId: 3000 + i,
+                dirtySerial: 4000 + i);
+        }
+
+        scene.EndBuild();
     }
 
     private static int CountOpaquePixels(SKBitmap bitmap, int left, int top, int right, int bottom)

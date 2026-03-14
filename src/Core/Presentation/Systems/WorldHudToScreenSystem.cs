@@ -87,6 +87,8 @@ namespace Ludots.Core.Presentation.Systems
 
                 _screenHud.TryAdd(new ScreenHudItem
                 {
+                    StableId = item.StableId,
+                    DirtySerial = item.DirtySerial,
                     Kind = item.Kind,
                     ScreenX = x,
                     ScreenY = y,

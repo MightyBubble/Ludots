@@ -55,6 +55,12 @@ namespace Ludots.Client.Raylib.Rendering
             LastInstancedBatches = 0;
 
             var span = draw.GetSpan();
+            if (_mode == RaylibPrimitiveRenderMode.Instanced)
+            {
+                DrawHybridInstanced(span, meshes, scaleMul);
+                return;
+            }
+
             DrawImmediateWithDescriptors(span, meshes, scaleMul);
         }
 
@@ -68,6 +74,80 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Scale * scaleMul, item.Color,
                     meshes, 0);
             }
+        }
+
+        private void DrawHybridInstanced(ReadOnlySpan<PrimitiveDrawItem> span, MeshAssetRegistry meshes, float scaleMul)
+        {
+            EnsureInitialized();
+
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                SubmitAssetRecursive(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Scale * scaleMul,
+                    item.Color,
+                    meshes,
+                    depth: 0);
+            }
+
+            FlushInstancedBatches();
+        }
+
+        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color, MeshAssetRegistry meshes, int depth)
+        {
+            if (depth > MaxPrefabDepth) return;
+            if (!meshes.TryGetDescriptor(meshAssetId, out var desc)) return;
+
+            switch (desc.Type)
+            {
+                case MeshAssetType.Primitive:
+                    SubmitPrimitive(desc.PrimitiveKind, position, scale, color);
+                    break;
+
+                case MeshAssetType.Model:
+                    DrawModel(meshAssetId, desc, position, scale, color);
+                    break;
+
+                case MeshAssetType.Prefab:
+                    if (desc.PrefabParts != null)
+                    {
+                        for (int p = 0; p < desc.PrefabParts.Length; p++)
+                        {
+                            ref var part = ref desc.PrefabParts[p];
+                            var childPos = position + part.LocalPosition * scale;
+                            var childScale = scale * part.LocalScale;
+                            var childColor = new Vector4(
+                                color.X * part.ColorTint.X,
+                                color.Y * part.ColorTint.Y,
+                                color.Z * part.ColorTint.Z,
+                                color.W * part.ColorTint.W);
+                            SubmitAssetRecursive(part.MeshAssetId, childPos, childScale, childColor, meshes, depth + 1);
+                        }
+                    }
+                    break;
+            }
+        }
+
+        private void SubmitPrimitive(PrimitiveMeshKind kind, Vector3 position, Vector3 scale, Vector4 color)
+        {
+            uint key = PackRgba(color);
+            var matrix = RaylibMatrix.FromScaleTranslation(position.X, position.Y, position.Z, scale.X, scale.Y, scale.Z);
+
+            if (kind == PrimitiveMeshKind.Cube)
+            {
+                AddInstance(_cubeBatches, key, matrix);
+                return;
+            }
+
+            if (kind == PrimitiveMeshKind.Sphere)
+            {
+                AddInstance(_sphereBatches, key, matrix);
+                return;
+            }
+
+            DrawPrimitive(kind, position, scale, color);
         }
 
         private void DrawAssetRecursive(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color, MeshAssetRegistry meshes, int depth)
@@ -193,20 +273,7 @@ namespace Ludots.Client.Raylib.Rendering
                 ref readonly var item = ref span[i];
                 if (!meshes.TryGetPrimitiveKind(item.MeshAssetId, out var kind)) continue;
 
-                if (kind == PrimitiveMeshKind.Cube)
-                {
-                    uint key = PackRgba(item.Color);
-                    var matrix = RaylibMatrix.FromScaleTranslation(item.Position.X, item.Position.Y, item.Position.Z, item.Scale.X, item.Scale.Y, item.Scale.Z);
-                    AddInstance(_cubeBatches, key, matrix);
-                    continue;
-                }
-
-                if (kind == PrimitiveMeshKind.Sphere)
-                {
-                    uint key = PackRgba(item.Color);
-                    var matrix = RaylibMatrix.FromScaleTranslation(item.Position.X, item.Position.Y, item.Position.Z, item.Scale.X, item.Scale.Y, item.Scale.Z);
-                    AddInstance(_sphereBatches, key, matrix);
-                }
+                SubmitPrimitive(kind, item.Position, item.Scale, item.Color);
             }
 
             FlushInstancedBatches();

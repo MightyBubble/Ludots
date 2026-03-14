@@ -62,10 +62,14 @@ namespace Ludots.Adapter.Raylib
                 Rl.SetExitKey(0);
                 Rl.SetTargetFPS(targetFps);
 
-                using var underlayRenderer = new RaylibSkiaRenderer(screenWidth, screenHeight);
-                using var uiRenderer = new RaylibSkiaRenderer(screenWidth, screenHeight);
-                using var overlayRenderer = new RaylibSkiaRenderer(screenWidth, screenHeight);
+                using var compositeRenderer = new RaylibSkiaRenderer(screenWidth, screenHeight);
+                using var underlayLayer = new SkiaRasterLayer();
+                using var uiLayer = new SkiaRasterLayer();
+                using var overlayLayer = new SkiaRasterLayer();
                 using var overlaySkiaRenderer = new SkiaOverlayRenderer();
+                underlayLayer.Resize(screenWidth, screenHeight);
+                uiLayer.Resize(screenWidth, screenHeight);
+                overlayLayer.Resize(screenWidth, screenHeight);
                 uiRoot.Resize(screenWidth, screenHeight);
 
                 var initialCamera = new Camera3D
@@ -132,6 +136,10 @@ namespace Ludots.Adapter.Raylib
                 int lastH = screenHeight;
                 bool underlayHadContent = false;
                 bool overlayHadContent = false;
+                bool uiHadContent = false;
+                bool compositeHadContent = false;
+                int underlayLayerVersion = -1;
+                int topOverlayLayerVersion = -1;
 
                 while (!Rl.WindowShouldClose())
                 {
@@ -143,9 +151,10 @@ namespace Ludots.Adapter.Raylib
                         {
                             lastW = w;
                             lastH = h;
-                            underlayRenderer.Resize(w, h);
-                            uiRenderer.Resize(w, h);
-                            overlayRenderer.Resize(w, h);
+                            compositeRenderer.Resize(w, h);
+                            underlayLayer.Resize(w, h);
+                            uiLayer.Resize(w, h);
+                            overlayLayer.Resize(w, h);
                             uiRoot.Resize(w, h);
                         }
 
@@ -256,63 +265,93 @@ namespace Ludots.Adapter.Raylib
 
                         long overlayStart = Stopwatch.GetTimestamp();
                         overlaySkiaRenderer.ResetFrameStats();
+
                         bool hasUnderlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.UnderUi);
-                        bool refreshUnderlay = hasUnderlay || underlayHadContent;
-                        if (overlayScene != null && refreshUnderlay)
-                        {
-                            underlayRenderer.Canvas.Clear(SKColors.Transparent);
-                            if (hasUnderlay)
-                            {
-                                overlaySkiaRenderer.Render(overlayScene, underlayRenderer.Canvas, PresentationOverlayLayer.UnderUi);
-                            }
+                        bool hasTopOverlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.TopMost);
+                        bool hasUiLayer = drawSkiaUi && uiRoot.Scene != null;
 
-                            underlayRenderer.UpdateTexture();
-                            underlayHadContent = hasUnderlay;
-                        }
-
+                        int currentUnderlayVersion = overlayScene?.GetLayerVersion(PresentationOverlayLayer.UnderUi) ?? 0;
+                        int currentTopOverlayVersion = overlayScene?.GetLayerVersion(PresentationOverlayLayer.TopMost) ?? 0;
+                        bool refreshUnderlay = overlayScene != null && (hasUnderlay || underlayHadContent) &&
+                            (currentUnderlayVersion != underlayLayerVersion || hasUnderlay != underlayHadContent);
                         if (refreshUnderlay)
                         {
-                            underlayRenderer.Draw();
+                            underlayLayer.Clear();
+                            if (hasUnderlay)
+                            {
+                                overlaySkiaRenderer.Render(overlayScene!, underlayLayer.Canvas, PresentationOverlayLayer.UnderUi);
+                                underlayLayer.SetHasContent(true);
+                            }
+
+                            underlayHadContent = hasUnderlay;
+                            underlayLayerVersion = currentUnderlayVersion;
                         }
 
-                        if (drawSkiaUi && uiRoot.IsDirty)
+                        bool refreshUiLayer = hasUiLayer != uiHadContent || (drawSkiaUi && uiRoot.IsDirty);
+                        if (refreshUiLayer)
                         {
                             long uiRenderStart = Stopwatch.GetTimestamp();
-                            uiRenderer.Canvas.Clear(SKColors.Transparent);
-                            uiRoot.Render(uiRenderer.Canvas);
+                            uiLayer.Clear();
+                            if (hasUiLayer)
+                            {
+                                uiRoot.Render(uiLayer.Canvas);
+                                uiLayer.SetHasContent(true);
+                            }
                             presentationTiming?.ObserveUiRender(ElapsedMs(uiRenderStart));
-
-                            long uiUploadStart = Stopwatch.GetTimestamp();
-                            uiRenderer.UpdateTexture();
-                            presentationTiming?.ObserveUiUpload(ElapsedMs(uiUploadStart));
+                            uiHadContent = hasUiLayer;
                         }
                         else
                         {
                             presentationTiming?.ObserveUiRender(0d);
-                            presentationTiming?.ObserveUiUpload(0d);
-                        }
-                        if (drawSkiaUi)
-                        {
-                            uiRenderer.Draw();
                         }
 
-                        bool hasTopOverlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.TopMost);
-                        bool refreshTopOverlay = hasTopOverlay || overlayHadContent;
-                        if (overlayScene != null && refreshTopOverlay)
-                        {
-                            overlayRenderer.Canvas.Clear(SKColors.Transparent);
-                            if (hasTopOverlay)
-                            {
-                                overlaySkiaRenderer.Render(overlayScene, overlayRenderer.Canvas, PresentationOverlayLayer.TopMost);
-                            }
-
-                            overlayRenderer.UpdateTexture();
-                            overlayHadContent = hasTopOverlay;
-                        }
-
+                        bool refreshTopOverlay = overlayScene != null && (hasTopOverlay || overlayHadContent) &&
+                            (currentTopOverlayVersion != topOverlayLayerVersion || hasTopOverlay != overlayHadContent);
                         if (refreshTopOverlay)
                         {
-                            overlayRenderer.Draw();
+                            overlayLayer.Clear();
+                            if (hasTopOverlay)
+                            {
+                                overlaySkiaRenderer.Render(overlayScene!, overlayLayer.Canvas, PresentationOverlayLayer.TopMost);
+                                overlayLayer.SetHasContent(true);
+                            }
+                            overlayHadContent = hasTopOverlay;
+                            topOverlayLayerVersion = currentTopOverlayVersion;
+                        }
+
+                        bool hasCompositeContent = hasUnderlay || hasUiLayer || hasTopOverlay;
+                        bool refreshComposite = refreshUnderlay || refreshUiLayer || refreshTopOverlay || hasCompositeContent != compositeHadContent;
+                        if (refreshComposite)
+                        {
+                            compositeRenderer.Canvas.Clear(SKColors.Transparent);
+                            if (hasUnderlay)
+                            {
+                                underlayLayer.DrawTo(compositeRenderer.Canvas);
+                            }
+
+                            if (hasUiLayer)
+                            {
+                                uiLayer.DrawTo(compositeRenderer.Canvas);
+                            }
+
+                            if (hasTopOverlay)
+                            {
+                                overlayLayer.DrawTo(compositeRenderer.Canvas);
+                            }
+
+                            long uiUploadStart = Stopwatch.GetTimestamp();
+                            compositeRenderer.UpdateTexture();
+                            presentationTiming?.ObserveUiUpload(hasCompositeContent ? ElapsedMs(uiUploadStart) : 0d);
+                            compositeHadContent = hasCompositeContent;
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveUiUpload(0d);
+                        }
+
+                        if (hasCompositeContent || compositeHadContent)
+                        {
+                            compositeRenderer.Draw();
                         }
 
                         screenOverlayBuffer?.Clear();

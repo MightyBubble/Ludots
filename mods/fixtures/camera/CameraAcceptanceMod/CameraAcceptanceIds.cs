@@ -56,6 +56,12 @@ namespace CameraAcceptanceMod
         public const int HotpathCrowdTargetCount = 10240;
         public const int HotpathSelectionLabelLimit = 16;
         public const string HotpathCrowdTemplateId = "moba_dummy";
+        public const int HotpathSweepTravelFrames = 180;
+        public const int HotpathSweepHoldFrames = 30;
+        public const int HotpathSweepLeftX = 7200;
+        public const int HotpathSweepRightX = 30000;
+        public const int HotpathSweepCenterY = 7200;
+        public const int HotpathSweepAmplitudeY = 2200;
 
         public const string HeroName = "CameraAcceptanceHero";
         public const string ScoutName = "CameraAcceptanceScout";

@@ -671,6 +671,7 @@ namespace Ludots.Tests.Navigation2D
 
             string dump = string.Join(" || ", lines);
             Assert.That(dump.Contains("Navigation2D Playground", StringComparison.Ordinal), Is.True, dump);
+            Assert.That(dump.Contains("FPS=", StringComparison.Ordinal), Is.True, dump);
             Assert.That(dump.Contains("FlowEnabled=", StringComparison.Ordinal), Is.True, dump);
             Assert.That(dump.Contains("CacheLookups=", StringComparison.Ordinal), Is.True, dump);
         }

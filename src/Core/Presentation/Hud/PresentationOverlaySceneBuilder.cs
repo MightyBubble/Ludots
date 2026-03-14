@@ -61,7 +61,9 @@ namespace Ludots.Core.Presentation.Hud
                             item.Height,
                             item.Value0,
                             item.Color0,
-                            item.Color1);
+                            item.Color1,
+                            item.StableId,
+                            item.DirtySerial);
                         break;
 
                     case WorldHudItemKind.Text:
@@ -75,7 +77,9 @@ namespace Ludots.Core.Presentation.Hud
                                 item.ScreenY,
                                 text,
                                 item.FontSize <= 0 ? 16 : item.FontSize,
-                                item.Color0);
+                                item.Color0,
+                                item.StableId,
+                                item.DirtySerial);
                         }
 
                         break;

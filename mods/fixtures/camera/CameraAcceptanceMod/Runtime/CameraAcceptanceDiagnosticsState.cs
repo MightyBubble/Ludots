@@ -1,3 +1,4 @@
+using System;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 
@@ -36,6 +37,9 @@ namespace CameraAcceptanceMod.Runtime
         public int PanelVirtualizedWindowCount { get; private set; }
         public int PanelVirtualizedTotalItems { get; private set; }
         public int PanelVirtualizedComposedItems { get; private set; }
+        public int HotpathSweepCycle { get; private set; }
+        public string HotpathSweepPhase { get; private set; } = "inactive";
+        public string HotpathSweepTarget { get; private set; } = "none";
 
         public float SmoothedFps => SmoothedFrameMs > 0.001f ? 1000f / SmoothedFrameMs : 0f;
 
@@ -69,6 +73,13 @@ namespace CameraAcceptanceMod.Runtime
             HotpathHudTextItemCount = 0;
             HotpathPrimitiveItemCount = 0;
             HotpathSelectionLabelCount = 0;
+        }
+
+        public void PublishHotpathSweep(string phase, int cycle, string target)
+        {
+            HotpathSweepPhase = string.IsNullOrWhiteSpace(phase) ? "inactive" : phase;
+            HotpathSweepCycle = cycle < 0 ? 0 : cycle;
+            HotpathSweepTarget = string.IsNullOrWhiteSpace(target) ? "none" : target;
         }
 
         public void ObservePanelUpdate(ReactiveUpdateStats stats, UiReactiveUpdateMetrics metrics, int selectionRowsTouched, int rowPoolSize, long fullRecomposeCount, long incrementalPatchCount)

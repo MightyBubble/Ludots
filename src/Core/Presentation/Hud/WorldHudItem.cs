@@ -4,6 +4,8 @@ namespace Ludots.Core.Presentation.Hud
 {
     public struct WorldHudItem
     {
+        public int StableId;
+        public int DirtySerial;
         public WorldHudItemKind Kind;
         public Vector3 WorldPosition;
         public Vector4 Color0;

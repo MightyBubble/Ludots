@@ -4,6 +4,8 @@ namespace Ludots.Core.Presentation.Hud
 {
     public struct PresentationOverlayItem
     {
+        public int StableId;
+        public int DirtySerial;
         public PresentationOverlayItemKind Kind;
         public PresentationOverlayLayer Layer;
         public float X;

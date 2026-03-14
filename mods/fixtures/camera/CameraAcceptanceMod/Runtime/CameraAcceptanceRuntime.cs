@@ -11,6 +11,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 
@@ -203,10 +204,12 @@ namespace CameraAcceptanceMod.Runtime
                 throw new System.InvalidOperationException("RuntimeEntitySpawnQueue is required for projection verification.");
             }
 
+            var bounds = engine.CurrentMapSession?.PrimaryBoard?.WorldSize.Bounds ?? engine.WorldSizeSpec.Bounds;
             int spawnCount = ResolveProjectionSpawnCount(engine);
             for (int i = 0; i < spawnCount; i++)
             {
                 WorldCmInt2 spawnWorldCm = ResolveProjectionSpawnPosition(worldCm, i);
+                spawnWorldCm = GroundRaycastUtil.ClampWorldCmToBounds(spawnWorldCm, bounds, out _);
                 var request = new RuntimeEntitySpawnRequest
                 {
                     Kind = RuntimeEntitySpawnKind.Template,

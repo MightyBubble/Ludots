@@ -4,10 +4,12 @@ using System.Diagnostics;
 using System.Numerics;
 using Arch.Core;
 using CameraAcceptanceMod.Runtime;
+using CameraAcceptanceMod.Systems;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
@@ -386,6 +388,7 @@ namespace CameraAcceptanceMod.UI
 
         private UiElementBuilder BuildHotpathControls(CameraAcceptancePanelState state)
         {
+            const string hotpathCameraGuide = "Camera probes: Crowd = dense view, Center = traversal midpoint, Empty = empty-frustum verification.";
             return Ui.Column(
                     Ui.Text("Presentation Hotpath").FontSize(12f).Bold().Color("#F4C77D"),
                     Ui.Text(state.VisibleEntitySummary)
@@ -402,6 +405,10 @@ namespace CameraAcceptanceMod.UI
                         .FontSize(12f)
                         .Color("#8EA2BD")
                         .WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text(hotpathCameraGuide)
+                        .FontSize(12f)
+                        .Color("#8EA2BD")
+                        .WhiteSpace(UiWhiteSpace.Normal),
                     Ui.Row(
                             BuildActionButton("Panel", state.PanelEnabled, TogglePanel),
                             BuildActionButton("HUD", state.DiagnosticsHudEnabled, ToggleDiagnosticsHud),
@@ -413,6 +420,17 @@ namespace CameraAcceptanceMod.UI
                             BuildActionButton("Text", state.HotpathHudTextEnabled, ToggleHotpathHudText),
                             BuildActionButton("Prims", state.PrimitivesEnabled, TogglePrimitives),
                             BuildActionButton("Crowd", state.HotpathCullCrowdEnabled, ToggleHotpathCullCrowd))
+                        .Wrap()
+                        .Gap(8f),
+                    Ui.Row(
+                            BuildActionButton("Cam Crowd", false, MoveHotpathCameraCrowd),
+                            BuildActionButton("Cam Center", false, MoveHotpathCameraCenter),
+                            BuildActionButton("Cam Empty", false, MoveHotpathCameraEmpty))
+                        .Wrap()
+                        .Gap(8f),
+                    Ui.Row(
+                            BuildActionButton("Respawn 10k", false, RespawnHotpathCrowd),
+                            BuildActionButton("Clear Crowd", false, ClearHotpathCrowd))
                         .Wrap()
                         .Gap(8f))
                 .Gap(8f);
@@ -775,6 +793,70 @@ namespace CameraAcceptanceMod.UI
                 diagnostics.HotpathCullCrowdEnabled = !diagnostics.HotpathCullCrowdEnabled;
                 SyncMountedRoot();
             }
+        }
+
+        private void MoveHotpathCameraCrowd()
+        {
+            ApplyHotpathCameraTarget(new Vector2(CameraAcceptanceIds.HotpathSweepLeftX, CameraAcceptanceIds.HotpathSweepCenterY));
+        }
+
+        private void MoveHotpathCameraCenter()
+        {
+            float centerX = (CameraAcceptanceIds.HotpathSweepLeftX + CameraAcceptanceIds.HotpathSweepRightX) * 0.5f;
+            ApplyHotpathCameraTarget(new Vector2(centerX, CameraAcceptanceIds.HotpathSweepCenterY));
+        }
+
+        private void MoveHotpathCameraEmpty()
+        {
+            ApplyHotpathCameraTarget(new Vector2(CameraAcceptanceIds.HotpathSweepRightX, CameraAcceptanceIds.HotpathSweepCenterY));
+        }
+
+        private void ApplyHotpathCameraTarget(Vector2 targetCm)
+        {
+            GameEngine engine = RequireEngine();
+            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            {
+                TargetCm = targetCm
+            });
+            SyncMountedRoot();
+        }
+
+        private void RespawnHotpathCrowd()
+        {
+            GameEngine engine = RequireEngine();
+            if (TryGetDiagnosticsState(engine, out var diagnostics))
+            {
+                diagnostics.HotpathCullCrowdEnabled = true;
+            }
+
+            var crowdQuery = new QueryDescription().WithAll<CameraAcceptanceHotpathCrowdTag>();
+            engine.World.Destroy(in crowdQuery);
+            if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is RuntimeEntitySpawnQueue spawnQueue)
+            {
+                spawnQueue.Clear();
+            }
+
+            CameraAcceptanceHotpathLaneSystem.ResetCrowdRequested(engine);
+            SyncMountedRoot();
+        }
+
+        private void ClearHotpathCrowd()
+        {
+            GameEngine engine = RequireEngine();
+            if (TryGetDiagnosticsState(engine, out var diagnostics))
+            {
+                diagnostics.HotpathCullCrowdEnabled = false;
+            }
+
+            var crowdQuery = new QueryDescription().WithAll<CameraAcceptanceHotpathCrowdTag>();
+            engine.World.Destroy(in crowdQuery);
+            if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is RuntimeEntitySpawnQueue spawnQueue)
+            {
+                spawnQueue.Clear();
+            }
+
+            CameraAcceptanceHotpathLaneSystem.ResetCrowdRequested(engine);
+            SyncMountedRoot();
         }
 
         private void ToggleCaptainPosition()

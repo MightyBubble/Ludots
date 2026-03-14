@@ -21,6 +21,8 @@ namespace Navigation2DPlaygroundMod.UI
 
         private readonly ReactivePage<Navigation2DPlaygroundPanelState> _page;
         private Navigation2DPlaygroundPanelState _lastState = Navigation2DPlaygroundPanelState.Empty;
+        private int[] _lastSelectedEntityIds = Array.Empty<int>();
+        private string[] _lastSelectedIds = Array.Empty<string>();
         private GameEngine? _engine;
 
         public Navigation2DPlaygroundPanelController()
@@ -65,6 +67,8 @@ namespace Navigation2DPlaygroundMod.UI
 
             _engine = null;
             _lastState = Navigation2DPlaygroundPanelState.Empty;
+            _lastSelectedEntityIds = Array.Empty<int>();
+            _lastSelectedIds = Array.Empty<string>();
             _page.SetState(_ => Navigation2DPlaygroundPanelState.Empty);
         }
 
@@ -92,9 +96,8 @@ namespace Navigation2DPlaygroundMod.UI
                     Ui.Text($"Mode: {state.ActiveModeId}  Tool: {state.ToolModeLabel}").FontSize(13f).Color("#8EA2BD"),
                     Ui.Text($"Selected: {state.SelectedCount}  Spawn Batch: {state.SpawnBatch}").FontSize(13f).Color("#8EA2BD"),
                     Ui.Text($"Agents/team: {state.AgentsPerTeam}  Live: {state.LiveAgents}  Blockers: {state.Blockers}").FontSize(13f).Color("#8EA2BD"),
-                    Ui.Text($"Steering: {state.SteeringMode}  Cache: {state.CacheState} ({state.CacheHitRate})").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
-                    Ui.Text($"Flow: enabled={state.FlowEnabled} debug={state.FlowDebugEnabled} mode={state.FlowDebugMode} iter={state.FlowIterations} activeTiles={state.FlowActiveTiles}").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
-                    Ui.Text($"Spatial: {state.SpatialMode}  CellMigrations: {state.SpatialCellMigrations}").FontSize(12f).Color("#8EA2BD"),
+                    Ui.Text($"Nav: Steering={state.SteeringMode}  Spatial={state.SpatialMode}").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text($"Flow: enabled={state.FlowEnabled} debug={state.FlowDebugEnabled} mode={state.FlowDebugMode} iter={state.FlowIterations}").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                     Ui.Text("Scenario").FontSize(12f).Bold().Color("#F4C77D"),
                     Ui.Row(
                         BuildActionButton("Prev", false, PreviousScenario),
@@ -210,14 +213,13 @@ namespace Navigation2DPlaygroundMod.UI
             string mapId = engine.CurrentMapSession?.MapId.Value ?? string.Empty;
             if (!Navigation2DPlaygroundIds.IsPlaygroundMap(mapId))
             {
+                _lastSelectedEntityIds = Array.Empty<int>();
+                _lastSelectedIds = Array.Empty<string>();
                 return Navigation2DPlaygroundPanelState.Empty;
             }
 
             string[] selectedIds = ResolveSelectedIds(engine);
             var navRuntime = engine.GetService(CoreServiceKeys.Navigation2DRuntime);
-            float cacheHitRate = navRuntime?.AgentSoA.SteeringCacheLookupsFrame > 0
-                ? (float)navRuntime.AgentSoA.SteeringCacheHitsFrame / navRuntime.AgentSoA.SteeringCacheLookupsFrame
-                : 0f;
 
             return new Navigation2DPlaygroundPanelState(
                 MapId: mapId,
@@ -236,12 +238,8 @@ namespace Navigation2DPlaygroundMod.UI
                 FlowDebugEnabled: navRuntime?.FlowDebugEnabled ?? false,
                 FlowDebugMode: navRuntime?.FlowDebugMode ?? 0,
                 FlowIterations: navRuntime?.FlowIterationsPerTick ?? 0,
-                FlowActiveTiles: navRuntime == null ? 0 : CountActiveFlowTiles(navRuntime),
                 SteeringMode: navRuntime?.Config.Steering.Mode.ToString() ?? "Unavailable",
-                CacheState: ResolveCacheState(navRuntime),
-                CacheHitRate: $"{cacheHitRate:P1}",
-                SpatialMode: navRuntime?.Config.Spatial.UpdateMode.ToString() ?? "Unavailable",
-                SpatialCellMigrations: navRuntime?.CellMap.InstrumentedCellMigrations ?? 0L);
+                SpatialMode: navRuntime?.Config.Spatial.UpdateMode.ToString() ?? "Unavailable");
         }
 
         private void PreviousScenario()
@@ -362,12 +360,8 @@ namespace Navigation2DPlaygroundMod.UI
                 left.FlowDebugEnabled != right.FlowDebugEnabled ||
                 left.FlowDebugMode != right.FlowDebugMode ||
                 left.FlowIterations != right.FlowIterations ||
-                left.FlowActiveTiles != right.FlowActiveTiles ||
                 !string.Equals(left.SteeringMode, right.SteeringMode, StringComparison.Ordinal) ||
-                !string.Equals(left.CacheState, right.CacheState, StringComparison.Ordinal) ||
-                !string.Equals(left.CacheHitRate, right.CacheHitRate, StringComparison.Ordinal) ||
-                !string.Equals(left.SpatialMode, right.SpatialMode, StringComparison.Ordinal) ||
-                left.SpatialCellMigrations != right.SpatialCellMigrations)
+                !string.Equals(left.SpatialMode, right.SpatialMode, StringComparison.Ordinal))
             {
                 return false;
             }
@@ -395,50 +389,46 @@ namespace Navigation2DPlaygroundMod.UI
                 : "map-default";
         }
 
-        private static string[] ResolveSelectedIds(GameEngine engine)
+        private string[] ResolveSelectedIds(GameEngine engine)
         {
             Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
             int count = Navigation2DPlaygroundSelectionView.CopySelectedEntities(engine.World, engine.GlobalContext, selected);
             if (count <= 0)
             {
+                _lastSelectedEntityIds = Array.Empty<int>();
+                _lastSelectedIds = Array.Empty<string>();
                 return Array.Empty<string>();
             }
 
+            bool unchanged = _lastSelectedEntityIds.Length == count;
+            if (unchanged)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    if (_lastSelectedEntityIds[i] != selected[i].Id)
+                    {
+                        unchanged = false;
+                        break;
+                    }
+                }
+            }
+
+            if (unchanged)
+            {
+                return _lastSelectedIds;
+            }
+
+            int[] entityIds = new int[count];
             string[] lines = new string[count];
             for (int i = 0; i < count; i++)
             {
+                entityIds[i] = selected[i].Id;
                 lines[i] = Navigation2DPlaygroundSelectionView.FormatEntityId(selected[i]);
             }
 
+            _lastSelectedEntityIds = entityIds;
+            _lastSelectedIds = lines;
             return lines;
-        }
-
-        private static int CountActiveFlowTiles(Navigation2DRuntime runtime)
-        {
-            int activeTiles = 0;
-            for (int i = 0; i < runtime.FlowCount; i++)
-            {
-                activeTiles += runtime.Flows[i].ActiveTileCount;
-            }
-
-            return activeTiles;
-        }
-
-        private static string ResolveCacheState(Navigation2DRuntime? runtime)
-        {
-            if (runtime == null)
-            {
-                return "Unavailable";
-            }
-
-            if (!runtime.Config.Steering.TemporalCoherence.Enabled)
-            {
-                return "ConfigOff";
-            }
-
-            return runtime.AgentSoA.SteeringCacheFrameEnabled
-                ? "Active"
-                : (runtime.Config.Steering.TemporalCoherence.RequireSteadyStateWorld ? "WaitingSteadyState" : "Ready");
         }
 
         private sealed record Navigation2DPlaygroundPanelState(
@@ -458,12 +448,8 @@ namespace Navigation2DPlaygroundMod.UI
             bool FlowDebugEnabled,
             int FlowDebugMode,
             int FlowIterations,
-            int FlowActiveTiles,
             string SteeringMode,
-            string CacheState,
-            string CacheHitRate,
-            string SpatialMode,
-            long SpatialCellMigrations)
+            string SpatialMode)
         {
             public static Navigation2DPlaygroundPanelState Empty { get; } = new(
                 MapId: string.Empty,
@@ -482,12 +468,8 @@ namespace Navigation2DPlaygroundMod.UI
                 FlowDebugEnabled: false,
                 FlowDebugMode: 0,
                 FlowIterations: 0,
-                FlowActiveTiles: 0,
                 SteeringMode: "Unavailable",
-                CacheState: "Unavailable",
-                CacheHitRate: "0.0 %",
-                SpatialMode: "Unavailable",
-                SpatialCellMigrations: 0L);
+                SpatialMode: "Unavailable");
         }
     }
 }

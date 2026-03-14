@@ -9,11 +9,10 @@ namespace Ludots.Core.Presentation.Hud
 
         private readonly LaneState[] _lanes;
         private readonly PresentationOverlayItem[] _flattenedItems;
-        private readonly LaneReference[] _orderedItems;
+        private readonly int[] _layerVersions;
         private readonly int _capacity;
 
         private int _count;
-        private int _orderedCount;
         private int _buildCount;
         private bool _building;
         private bool _flattenedDirty;
@@ -33,7 +32,7 @@ namespace Ludots.Core.Presentation.Hud
             }
 
             _flattenedItems = new PresentationOverlayItem[capacity];
-            _orderedItems = new LaneReference[capacity];
+            _layerVersions = new int[Enum.GetValues<PresentationOverlayLayer>().Length];
         }
 
         public int Count => _count;
@@ -75,9 +74,15 @@ namespace Ludots.Core.Presentation.Hud
             return _lanes[GetLaneIndex(layer, kind)].Version;
         }
 
+        public int GetLayerVersion(PresentationOverlayLayer layer)
+        {
+            return _layerVersions[(int)layer];
+        }
+
         public void Clear()
         {
             bool hadContent = _count > 0;
+            Span<bool> layerDirty = stackalloc bool[_layerVersions.Length];
             for (int laneIndex = 0; laneIndex < _lanes.Length; laneIndex++)
             {
                 LaneState lane = _lanes[laneIndex];
@@ -87,13 +92,13 @@ namespace Ludots.Core.Presentation.Hud
                     lane.Count = 0;
                     lane.PendingCount = 0;
                     lane.Version++;
+                    layerDirty[(int)GetLayer(laneIndex)] = true;
                 }
 
                 lane.Dirty = false;
             }
 
             _count = 0;
-            _orderedCount = 0;
             _buildCount = 0;
             _building = false;
             _flattenedDirty = false;
@@ -105,6 +110,7 @@ namespace Ludots.Core.Presentation.Hud
             if (hadContent)
             {
                 Version++;
+                IncrementDirtyLayers(layerDirty);
             }
         }
 
@@ -133,7 +139,9 @@ namespace Ludots.Core.Presentation.Hud
                 return;
             }
 
-            bool sceneDirty = _orderedCount != _buildCount || _flattenedDirty;
+            bool sceneDirty = _count != _buildCount;
+            Span<bool> layerDirty = stackalloc bool[_layerVersions.Length];
+            int totalCount = 0;
             for (int laneIndex = 0; laneIndex < _lanes.Length; laneIndex++)
             {
                 LaneState lane = _lanes[laneIndex];
@@ -148,22 +156,25 @@ namespace Ludots.Core.Presentation.Hud
                     lane.Dirty = true;
                 }
 
+                totalCount += lane.Count;
                 if (lane.Dirty)
                 {
                     lane.Version++;
                     DirtyLaneCount++;
                     sceneDirty = true;
+                    layerDirty[(int)GetLayer(laneIndex)] = true;
                 }
             }
 
             _building = false;
-            _orderedCount = _buildCount;
-            _count = _buildCount;
+            _count = totalCount;
+            _buildCount = 0;
 
             if (sceneDirty)
             {
                 Version++;
                 _flattenedDirty = true;
+                IncrementDirtyLayers(layerDirty);
             }
         }
 
@@ -186,7 +197,9 @@ namespace Ludots.Core.Presentation.Hud
             float y,
             string text,
             int fontSize,
-            in Vector4 color)
+            in Vector4 color,
+            int stableId = 0,
+            int dirtySerial = 0)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -195,6 +208,8 @@ namespace Ludots.Core.Presentation.Hud
 
             var item = new PresentationOverlayItem
             {
+                StableId = stableId,
+                DirtySerial = dirtySerial,
                 Kind = PresentationOverlayItemKind.Text,
                 Layer = layer,
                 X = x,
@@ -213,7 +228,9 @@ namespace Ludots.Core.Presentation.Hud
             float width,
             float height,
             in Vector4 fill,
-            in Vector4 border)
+            in Vector4 border,
+            int stableId = 0,
+            int dirtySerial = 0)
         {
             if (width <= 0f || height <= 0f)
             {
@@ -222,6 +239,8 @@ namespace Ludots.Core.Presentation.Hud
 
             var item = new PresentationOverlayItem
             {
+                StableId = stableId,
+                DirtySerial = dirtySerial,
                 Kind = PresentationOverlayItemKind.Rect,
                 Layer = layer,
                 X = x,
@@ -242,7 +261,9 @@ namespace Ludots.Core.Presentation.Hud
             float height,
             float value,
             in Vector4 background,
-            in Vector4 foreground)
+            in Vector4 foreground,
+            int stableId = 0,
+            int dirtySerial = 0)
         {
             if (width <= 0f || height <= 0f)
             {
@@ -251,6 +272,8 @@ namespace Ludots.Core.Presentation.Hud
 
             var item = new PresentationOverlayItem
             {
+                StableId = stableId,
+                DirtySerial = dirtySerial,
                 Kind = PresentationOverlayItemKind.Bar,
                 Layer = layer,
                 X = x,
@@ -284,12 +307,11 @@ namespace Ludots.Core.Presentation.Hud
             LaneState lane = _lanes[laneIndex];
             EnsureLaneCapacity(lane, lane.Count + 1);
             lane.Items[lane.Count] = item;
-            _orderedItems[_count] = new LaneReference(laneIndex, lane.Count);
-            _flattenedItems[_count] = item;
             lane.Count++;
             lane.Version++;
             _count++;
-            _orderedCount = _count;
+            _flattenedDirty = true;
+            _layerVersions[(int)item.Layer]++;
             Version++;
             return true;
         }
@@ -319,13 +341,6 @@ namespace Ludots.Core.Presentation.Hud
                 RetainedItemCountLastBuild++;
             }
 
-            var laneReference = new LaneReference(laneIndex, slotIndex);
-            if (_buildCount >= _orderedCount || !_orderedItems[_buildCount].Equals(laneReference))
-            {
-                _flattenedDirty = true;
-            }
-
-            _orderedItems[_buildCount] = laneReference;
             lane.PendingCount++;
             _buildCount++;
             return true;
@@ -333,29 +348,63 @@ namespace Ludots.Core.Presentation.Hud
 
         private void RebuildFlattenedItems()
         {
-            for (int i = 0; i < _orderedCount; i++)
+            int offset = 0;
+            for (int laneIndex = 0; laneIndex < _lanes.Length; laneIndex++)
             {
-                LaneReference laneReference = _orderedItems[i];
-                _flattenedItems[i] = _lanes[laneReference.LaneIndex].Items[laneReference.SlotIndex];
+                LaneState lane = _lanes[laneIndex];
+                if (lane.Count <= 0)
+                {
+                    continue;
+                }
+
+                Array.Copy(lane.Items, 0, _flattenedItems, offset, lane.Count);
+                offset += lane.Count;
             }
 
-            _count = _orderedCount;
+            _count = offset;
             _flattenedDirty = false;
         }
 
         private static bool ItemsEqual(in PresentationOverlayItem left, in PresentationOverlayItem right)
         {
-            return left.Kind == right.Kind
-                && left.Layer == right.Layer
-                && left.X == right.X
-                && left.Y == right.Y
-                && left.Width == right.Width
-                && left.Height == right.Height
-                && left.FontSize == right.FontSize
-                && string.Equals(left.Text, right.Text, StringComparison.Ordinal)
+            if (left.Kind != right.Kind ||
+                left.Layer != right.Layer ||
+                left.StableId != right.StableId ||
+                left.DirtySerial != right.DirtySerial ||
+                left.X != right.X ||
+                left.Y != right.Y ||
+                left.Width != right.Width ||
+                left.Height != right.Height ||
+                left.FontSize != right.FontSize ||
+                left.Value0 != right.Value0)
+            {
+                return false;
+            }
+
+            if (left.StableId != 0 && left.DirtySerial != 0)
+            {
+                return true;
+            }
+
+            return string.Equals(left.Text, right.Text, StringComparison.Ordinal)
                 && left.Color0.Equals(right.Color0)
-                && left.Color1.Equals(right.Color1)
-                && left.Value0 == right.Value0;
+                && left.Color1.Equals(right.Color1);
+        }
+
+        private static PresentationOverlayLayer GetLayer(int laneIndex)
+        {
+            return (PresentationOverlayLayer)(laneIndex / 3);
+        }
+
+        private void IncrementDirtyLayers(ReadOnlySpan<bool> layerDirty)
+        {
+            for (int i = 0; i < layerDirty.Length; i++)
+            {
+                if (layerDirty[i])
+                {
+                    _layerVersions[i]++;
+                }
+            }
         }
 
         private static int GetLaneIndex(PresentationOverlayLayer layer, PresentationOverlayItemKind kind)
@@ -392,7 +441,5 @@ namespace Ludots.Core.Presentation.Hud
             public int Version;
             public bool Dirty;
         }
-
-        private readonly record struct LaneReference(int LaneIndex, int SlotIndex);
     }
 }
