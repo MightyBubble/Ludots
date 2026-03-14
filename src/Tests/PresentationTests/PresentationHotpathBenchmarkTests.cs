@@ -358,8 +358,8 @@ namespace Ludots.Tests.Presentation
 
         private sealed class UnderUiHostHarness
         {
-            private int _lastLayerVersion = -1;
             private bool _hadContent;
+            private int _lastLayerVersion = -1;
 
             public double Render(
                 PresentationOverlayScene scene,

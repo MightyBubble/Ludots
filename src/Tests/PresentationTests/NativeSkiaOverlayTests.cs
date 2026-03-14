@@ -290,6 +290,41 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(secondDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.True);
     }
 
+    [Test]
+    public void SkiaOverlayRenderer_ReusesSkippedLargeLanePicture_WhenPacerDefersRefresh()
+    {
+        var scene = new PresentationOverlayScene(256);
+        BuildLargeUnderUiScene(scene, xOffset: 0f);
+
+        using var renderer = new SkiaOverlayRenderer();
+        using var surface = SKSurface.Create(new SKImageInfo(256, 256));
+        var pacer = new PresentationOverlayLanePacer(PresentationOverlayLayer.UnderUi);
+
+        PresentationOverlayLanePacer.LaneRefreshPlan coldStartPlan = pacer.BuildPlan(scene);
+        surface.Canvas.Clear(SKColors.Transparent);
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi, coldStartPlan);
+        pacer.MarkPresented(scene, coldStartPlan);
+        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0));
+
+        BuildLargeUnderUiScene(scene, xOffset: 1f);
+        PresentationOverlayLanePacer.LaneRefreshPlan deferredPlan = pacer.BuildPlan(scene);
+        Assert.That(deferredPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.True);
+        Assert.That(deferredPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.False);
+
+        surface.Canvas.Clear(SKColors.Transparent);
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi, deferredPlan);
+        pacer.MarkPresented(scene, deferredPlan);
+
+        using var image = surface.Snapshot();
+        using var bitmap = SKBitmap.FromImage(image);
+
+        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0));
+        Assert.That(CountOpaquePixels(bitmap, 96, 4, 132, 28), Is.GreaterThan(0),
+            "Deferred text lane should still draw from the retained picture while bar lane refreshes.");
+    }
+
     private static void SeedLegacyOverlay(ScreenHudBatchBuffer screenHud, ScreenOverlayBuffer overlayBuffer, string topText)
     {
         screenHud.TryAdd(new ScreenHudItem

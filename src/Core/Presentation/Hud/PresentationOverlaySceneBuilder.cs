@@ -130,7 +130,9 @@ namespace Ludots.Core.Presentation.Hud
 
         private string? ResolveScreenHudText(in ScreenHudTextItem item)
         {
-            if (item.StableId != 0 &&
+            bool allowResolvedCache = item.Text.HasValue || item.Id0 != 0;
+            if (allowResolvedCache &&
+                item.StableId != 0 &&
                 _screenHudResolvedTextCache.TryGetValue(item.StableId, out ScreenHudResolvedTextCacheEntry cached) &&
                 cached.DirtySerial == item.DirtySerial)
             {
@@ -139,19 +141,18 @@ namespace Ludots.Core.Presentation.Hud
 
             if (TryFormatTextPacket(in item.Text, out string? packetText))
             {
-                CacheResolvedScreenHudText(in item, packetText);
+                CacheResolvedScreenHudText(item, packetText, allowResolvedCache: true);
                 return packetText;
             }
 
             if (item.Id0 != 0 && _worldHudStrings != null)
             {
                 string? legacyText = _worldHudStrings.TryGet(item.Id0);
-                CacheResolvedScreenHudText(in item, legacyText);
+                CacheResolvedScreenHudText(item, legacyText, allowResolvedCache: true);
                 return legacyText;
             }
 
             string? numericText = ResolveCachedNumericHudText(item.Id1, item.Value0, item.Value1);
-            CacheResolvedScreenHudText(in item, numericText);
             return numericText;
         }
 
@@ -230,9 +231,9 @@ namespace Ludots.Core.Presentation.Hud
             };
         }
 
-        private void CacheResolvedScreenHudText(in ScreenHudTextItem item, string? text)
+        private void CacheResolvedScreenHudText(in ScreenHudTextItem item, string? text, bool allowResolvedCache)
         {
-            if (item.StableId == 0 || text == null)
+            if (!allowResolvedCache || item.StableId == 0 || text == null)
             {
                 return;
             }
