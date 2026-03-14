@@ -1,6 +1,7 @@
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Skia;
 
 namespace UiShowcaseCoreMod.Showcase;
 
@@ -28,7 +29,7 @@ internal sealed class ComposeShowcaseController
 
 	internal UiScene BuildScene()
 	{
-		UiScene uiScene = new UiScene();
+		UiScene uiScene = new UiScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider());
 		RebuildScene(uiScene);
 		return uiScene;
 	}

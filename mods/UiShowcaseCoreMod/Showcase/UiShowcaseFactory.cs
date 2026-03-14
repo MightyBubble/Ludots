@@ -1,6 +1,7 @@
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Skia;
 
 namespace UiShowcaseCoreMod.Showcase;
 
@@ -42,7 +43,7 @@ public static class UiShowcaseFactory
             .Height(720)
             .Gap(12);
 
-        return UiSceneComposer.Compose(root, null, UiShowcaseScaffolding.AuthoringStyleSheet);
+        return UiSceneComposer.Compose(new SkiaTextMeasurer(), new SkiaImageSizeProvider(), root, null, UiShowcaseScaffolding.AuthoringStyleSheet);
     }
 
     public static UiScene CreateComposeScene()

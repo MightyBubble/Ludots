@@ -2,6 +2,7 @@ using System;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Skia;
 using SkiaSharp;
 
 namespace UiShowcaseCoreMod.Showcase;
@@ -298,7 +299,7 @@ internal static class UiShowcaseScaffolding
                                 new UiElementBuilder(UiNodeKind.Custom, "div").Id(prefix + "-phase4-bg-badge").Text("CSS Background").Class("phase-four-chip"),
                                 Ui.Text("cover / center / no-repeat from CSS file.").Class("muted")),
                         Ui.Image(UiShowcaseImageAssets.BadgeSvgDataUri).Id(prefix + "-phase4-svg-image").Class("phase-four-svg-image"),
-                        Ui.Canvas(DrawPhaseFourCanvas).Id(prefix + "-phase4-canvas").Class("phase-four-canvas")
+                        Ui.Canvas(new UiCanvasContent(DrawPhaseFourCanvas)).Id(prefix + "-phase4-canvas").Class("phase-four-canvas")
                             .Attribute("width", "220")
                             .Attribute("height", "120"))
                     .Class("phase-four-row"));

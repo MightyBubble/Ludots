@@ -4,6 +4,7 @@ using System.Linq;
 using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Skia;
 
 namespace UiShowcaseCoreMod.Showcase;
 
@@ -37,7 +38,7 @@ internal sealed class MarkupShowcaseCodeBehind
 	{
 		UiDocument document = _loader.LoadDocument(BuildHtml(), BuildCss());
 		ValidatePrototype(document);
-		UiScene uiScene = new UiScene();
+		UiScene uiScene = new UiScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider());
 		uiScene.MountDocument(document);
 		MarkupBinder.Bind(uiScene, this);
 		return uiScene;

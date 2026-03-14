@@ -1,6 +1,7 @@
-﻿using Ludots.UI.Compose;
+using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Skia;
 
 namespace UiShowcaseCoreMod.Showcase;
 
@@ -37,9 +38,11 @@ internal static class UiSkinShowcaseSceneFactory
                 style.Set("border-radius", "8px");
             });
 
-        UiScene initial = UiSceneComposer.Compose(BuildFixture(string.Empty, includeSwitcher), theme, baseSheet);
+        SkiaTextMeasurer textMeasurer = new();
+        SkiaImageSizeProvider imageSizeProvider = new();
+        UiScene initial = UiSceneComposer.Compose(textMeasurer, imageSizeProvider, BuildFixture(string.Empty, includeSwitcher), theme, baseSheet);
         string domHash = UiDomHasher.Hash(initial);
-        return UiSceneComposer.Compose(BuildFixture(domHash, includeSwitcher), theme, baseSheet);
+        return UiSceneComposer.Compose(textMeasurer, imageSizeProvider, BuildFixture(domHash, includeSwitcher), theme, baseSheet);
     }
 
     private static UiElementBuilder BuildFixture(string domHash, bool includeSwitcher)

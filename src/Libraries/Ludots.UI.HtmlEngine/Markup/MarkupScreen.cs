@@ -14,10 +14,10 @@ public sealed class MarkupScreen<TCodeBehind> where TCodeBehind : class
 		CodeBehind = codeBehind;
 	}
 
-	public static MarkupScreen<TCodeBehind> Create(string html, string css, TCodeBehind codeBehind, UiThemePack? theme = null)
+	public static MarkupScreen<TCodeBehind> Create(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, string html, string css, TCodeBehind codeBehind, UiThemePack? theme = null)
 	{
 		UiMarkupLoader uiMarkupLoader = new UiMarkupLoader();
-		UiScene scene = uiMarkupLoader.LoadScene(html, css, codeBehind, theme);
+		UiScene scene = uiMarkupLoader.LoadScene(textMeasurer, imageSizeProvider, html, css, codeBehind, theme);
 		return new MarkupScreen<TCodeBehind>(scene, codeBehind);
 	}
 }
