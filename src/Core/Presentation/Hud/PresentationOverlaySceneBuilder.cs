@@ -7,6 +7,7 @@ namespace Ludots.Core.Presentation.Hud
     public sealed class PresentationOverlaySceneBuilder
     {
         private const int MaxTextPacketCacheEntries = 8192;
+        private const int MaxNumericTextCacheEntries = 4096;
 
         private readonly ScreenHudBatchBuffer _screenHud;
         private readonly WorldHudStringTable? _worldHudStrings;
@@ -14,6 +15,7 @@ namespace Ludots.Core.Presentation.Hud
         private readonly PresentationTextLocaleSelection? _localeSelection;
         private readonly ScreenOverlayBuffer? _screenOverlay;
         private readonly Dictionary<TextPacketCacheKey, string> _textPacketCache = new();
+        private readonly Dictionary<NumericTextCacheKey, string> _numericTextCache = new();
 
         public PresentationOverlaySceneBuilder(
             ScreenHudBatchBuffer screenHud,
@@ -138,7 +140,7 @@ namespace Ludots.Core.Presentation.Hud
                 return _worldHudStrings.TryGet(item.Id0);
             }
 
-            return ResolveLegacyHudText(item.Id1, item.Value0, item.Value1);
+            return ResolveCachedNumericHudText(item.Id1, item.Value0, item.Value1);
         }
 
         private string? ResolveScreenOverlayText(in ScreenOverlayItem item)
@@ -181,6 +183,29 @@ namespace Ludots.Core.Presentation.Hud
             return true;
         }
 
+        private string? ResolveCachedNumericHudText(int modeId, float value0, float value1)
+        {
+            var cacheKey = new NumericTextCacheKey(modeId, BitConverter.SingleToInt32Bits(value0), BitConverter.SingleToInt32Bits(value1));
+            if (_numericTextCache.TryGetValue(cacheKey, out string? cached))
+            {
+                return cached;
+            }
+
+            string? formatted = ResolveLegacyHudText(modeId, value0, value1);
+            if (formatted == null)
+            {
+                return null;
+            }
+
+            if (_numericTextCache.Count >= MaxNumericTextCacheEntries)
+            {
+                _numericTextCache.Clear();
+            }
+
+            _numericTextCache[cacheKey] = formatted;
+            return formatted;
+        }
+
         private static string? ResolveLegacyHudText(int modeId, float value0, float value1)
         {
             WorldHudValueMode mode = (WorldHudValueMode)modeId;
@@ -207,5 +232,10 @@ namespace Ludots.Core.Presentation.Hud
             {
             }
         }
+
+        private readonly record struct NumericTextCacheKey(
+            int ModeId,
+            int Value0Bits,
+            int Value1Bits);
     }
 }

@@ -198,6 +198,59 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(1));
     }
 
+    [Test]
+    public void SkiaOverlayRenderer_UsesImmediatePath_ForLargeUnderUiHudLanes()
+    {
+        var scene = new PresentationOverlayScene(256);
+        scene.BeginBuild();
+        for (int i = 0; i < 64; i++)
+        {
+            scene.TryAddBar(
+                PresentationOverlayLayer.UnderUi,
+                x: 8f,
+                y: 8f + (i * 3f),
+                width: 80f,
+                height: 2f,
+                value: 0.5f,
+                background: new Vector4(0.15f, 0.15f, 0.15f, 1f),
+                foreground: new Vector4(0.2f, 0.8f, 0.2f, 1f));
+            scene.TryAddText(
+                PresentationOverlayLayer.UnderUi,
+                x: 96f,
+                y: 4f + (i * 3f),
+                text: $"{100 + i}",
+                fontSize: 12,
+                color: new Vector4(1f, 1f, 1f, 1f));
+        }
+
+        scene.TryAddRect(
+            PresentationOverlayLayer.TopMost,
+            x: 64f,
+            y: 64f,
+            width: 40f,
+            height: 24f,
+            fill: new Vector4(0f, 0f, 0f, 0.85f),
+            border: new Vector4(1f, 0.8f, 0.2f, 1f));
+        scene.EndBuild();
+
+        using var renderer = new SkiaOverlayRenderer();
+        using var surface = SKSurface.Create(new SKImageInfo(256, 256));
+        surface.Canvas.Clear(SKColors.Transparent);
+
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi);
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.TopMost);
+
+        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(1),
+            "Large dynamic HUD lanes should draw immediately without rebuilding retained lane pictures.");
+        Assert.That(renderer.CachedTextLayoutCount, Is.GreaterThan(0));
+
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi);
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.TopMost);
+        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0));
+    }
+
     private static void SeedLegacyOverlay(ScreenHudBatchBuffer screenHud, ScreenOverlayBuffer overlayBuffer, string topText)
     {
         screenHud.TryAdd(new ScreenHudItem

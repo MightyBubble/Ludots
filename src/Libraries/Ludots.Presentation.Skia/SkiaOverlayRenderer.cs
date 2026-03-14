@@ -12,6 +12,8 @@ namespace Ludots.Presentation.Skia
     {
         private const int LaneCount = 6;
         private const int MaxTextLayoutCacheEntries = 8192;
+        private const int ImmediateUnderUiBarThreshold = 48;
+        private const int ImmediateUnderUiTextThreshold = 48;
 
         private static readonly PresentationOverlayItemKind[] RenderOrder =
         {
@@ -59,6 +61,14 @@ namespace Ludots.Presentation.Skia
             {
                 PresentationOverlayItemKind kind = RenderOrder[i];
                 int laneIndex = GetLaneIndex(layer, kind);
+                ReadOnlySpan<PresentationOverlayItem> span = scene.GetLaneSpan(layer, kind);
+                if (ShouldRenderImmediate(layer, kind, span.Length))
+                {
+                    InvalidateLanePicture(laneIndex);
+                    DrawLaneImmediate(canvas, kind, span);
+                    continue;
+                }
+
                 int laneVersion = scene.GetLaneVersion(layer, kind);
                 if (_laneVersions[laneIndex] != laneVersion)
                 {
@@ -140,6 +150,28 @@ namespace Ludots.Presentation.Skia
                 if (run.Blob != null)
                 {
                     canvas.DrawText(run.Blob, item.X + run.XOffset, baselineY, _textPaint);
+                }
+            }
+        }
+
+        private void DrawLaneImmediate(SKCanvas canvas, PresentationOverlayItemKind kind, ReadOnlySpan<PresentationOverlayItem> span)
+        {
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly PresentationOverlayItem item = ref span[i];
+                switch (kind)
+                {
+                    case PresentationOverlayItemKind.Text:
+                        DrawText(canvas, item);
+                        break;
+
+                    case PresentationOverlayItemKind.Rect:
+                        DrawRect(canvas, item);
+                        break;
+
+                    case PresentationOverlayItemKind.Bar:
+                        DrawBar(canvas, item);
+                        break;
                 }
             }
         }
@@ -237,6 +269,28 @@ namespace Ludots.Presentation.Skia
 
             _lanePictures[laneIndex] = recorder.EndRecording();
             RebuiltLaneCountLastFrame++;
+        }
+
+        private void InvalidateLanePicture(int laneIndex)
+        {
+            _lanePictures[laneIndex]?.Dispose();
+            _lanePictures[laneIndex] = null;
+            _laneVersions[laneIndex] = -1;
+        }
+
+        private static bool ShouldRenderImmediate(PresentationOverlayLayer layer, PresentationOverlayItemKind kind, int itemCount)
+        {
+            if (layer != PresentationOverlayLayer.UnderUi || itemCount <= 0)
+            {
+                return false;
+            }
+
+            return kind switch
+            {
+                PresentationOverlayItemKind.Bar => itemCount >= ImmediateUnderUiBarThreshold,
+                PresentationOverlayItemKind.Text => itemCount >= ImmediateUnderUiTextThreshold,
+                _ => false,
+            };
         }
 
         private void ClearTextLayoutCache()

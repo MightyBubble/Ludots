@@ -75,6 +75,15 @@ namespace Ludots.Core.Presentation.Systems
                         ix > screenWidth + Margin || iy > screenHeight + Margin)
                         continue;
                 }
+                else if (item.Kind == WorldHudItemKind.Text)
+                {
+                    int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
+                    if (ix + fontSize < -Margin || iy + fontSize < -Margin ||
+                        ix > screenWidth + Margin || iy > screenHeight + Margin)
+                    {
+                        continue;
+                    }
+                }
 
                 _screenHud.TryAdd(new ScreenHudItem
                 {

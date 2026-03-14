@@ -116,8 +116,7 @@ namespace CameraAcceptanceMod.Systems
                 SetCrowdRequested(requestedCount + enqueued >= CameraAcceptanceIds.HotpathCrowdTargetCount);
             }
 
-            int barCount = EmitBars(diagnostics, currentMapId);
-            int textCount = EmitHudText(diagnostics, currentMapId);
+            (int barCount, int textCount) = EmitHudLanes(diagnostics, currentMapId);
             int primitiveCount = EmitPrimitives(diagnostics, currentMapId);
             diagnostics.PublishHotpathLaneCounts(crowdCount, visibleCrowdCount, barCount, textCount, primitiveCount);
         }
@@ -288,11 +287,14 @@ namespace CameraAcceptanceMod.Systems
             _engine.GlobalContext[CrowdRequestedKey] = requested;
         }
 
-        private int EmitBars(CameraAcceptanceDiagnosticsState diagnostics, MapId currentMapId)
+        private (int BarCount, int TextCount) EmitHudLanes(CameraAcceptanceDiagnosticsState diagnostics, MapId currentMapId)
         {
             long start = Stopwatch.GetTimestamp();
-            int emitted = 0;
-            if (diagnostics.HotpathBarsEnabled &&
+            int barCount = 0;
+            int textCount = 0;
+            bool emitBars = diagnostics.HotpathBarsEnabled;
+            bool emitText = diagnostics.HotpathHudTextEnabled;
+            if ((emitBars || emitText) &&
                 _engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHud)
             {
                 _engine.World.Query(in TaggedCrowdVisualQuery, (Entity entity, ref MapEntity mapEntity, ref VisualTransform transform, ref CullState cull) =>
@@ -302,47 +304,31 @@ namespace CameraAcceptanceMod.Systems
                         return;
                     }
 
-                    float fill = 0.28f + ((entity.Id % 9) * 0.07f);
-                    if (fill > 0.98f)
+                    if (emitBars)
                     {
-                        fill = 0.98f;
+                        float fill = 0.28f + ((entity.Id % 9) * 0.07f);
+                        if (fill > 0.98f)
+                        {
+                            fill = 0.98f;
+                        }
+
+                        if (worldHud.TryAdd(new WorldHudItem
+                        {
+                            Kind = WorldHudItemKind.Bar,
+                            WorldPosition = transform.Position + new Vector3(0f, 1.65f, 0f),
+                            Width = 56f,
+                            Height = 7f,
+                            Value0 = fill,
+                            Color0 = BarBackground,
+                            Color1 = BarForeground,
+                        }))
+                        {
+                            barCount++;
+                        }
                     }
 
-                    if (worldHud.TryAdd(new WorldHudItem
-                    {
-                        Kind = WorldHudItemKind.Bar,
-                        WorldPosition = transform.Position + new Vector3(0f, 1.65f, 0f),
-                        Width = 56f,
-                        Height = 7f,
-                        Value0 = fill,
-                        Color0 = BarBackground,
-                        Color1 = BarForeground,
-                    }))
-                    {
-                        emitted++;
-                    }
-                });
-            }
-
-            diagnostics.ObserveHotpathBars((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
-            return emitted;
-        }
-
-        private int EmitHudText(CameraAcceptanceDiagnosticsState diagnostics, MapId currentMapId)
-        {
-            long start = Stopwatch.GetTimestamp();
-            int emitted = 0;
-            if (diagnostics.HotpathHudTextEnabled &&
-                _engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHud)
-            {
-                _engine.World.Query(in TaggedCrowdVisualQuery, (Entity entity, ref MapEntity mapEntity, ref VisualTransform transform, ref CullState cull) =>
-                {
-                    if (!MatchesMap(mapEntity, currentMapId) || !cull.IsVisible)
-                    {
-                        return;
-                    }
-
-                    if (worldHud.TryAdd(new WorldHudItem
+                    if (emitText &&
+                        worldHud.TryAdd(new WorldHudItem
                     {
                         Kind = WorldHudItemKind.Text,
                         WorldPosition = transform.Position + new Vector3(0f, 2.15f, 0f),
@@ -352,13 +338,15 @@ namespace CameraAcceptanceMod.Systems
                         Id1 = (int)WorldHudValueMode.Constant,
                     }))
                     {
-                        emitted++;
+                        textCount++;
                     }
                 });
             }
 
-            diagnostics.ObserveHotpathHudText((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
-            return emitted;
+            double elapsedMs = (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
+            diagnostics.ObserveHotpathBars(emitBars ? elapsedMs : 0d);
+            diagnostics.ObserveHotpathHudText(emitText ? elapsedMs : 0d);
+            return (barCount, textCount);
         }
 
         private int EmitPrimitives(CameraAcceptanceDiagnosticsState diagnostics, MapId currentMapId)
