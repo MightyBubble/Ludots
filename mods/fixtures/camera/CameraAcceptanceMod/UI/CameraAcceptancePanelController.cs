@@ -20,14 +20,15 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using SkiaSharp;
 
 namespace CameraAcceptanceMod.UI
 {
     internal sealed class CameraAcceptancePanelController
     {
-        private const float DiagnosticsAverageGlyphWidthPx = 6.25f;
         private const float DiagnosticsCardTop = 16f;
         private const float DiagnosticsCardMargin = 16f;
+        private const float DiagnosticsCardWidth = 460f;
         private const string DiagnosticsCardId = "camera-diagnostics-card";
         private const int DiagnosticsRefreshIntervalTicks = 6;
         private const float PanelWidth = 500f;
@@ -200,26 +201,167 @@ namespace CameraAcceptanceMod.UI
         {
             var children = new List<UiElementBuilder>
             {
-                Ui.Text("Native Diagnostics").FontSize(14f).Bold().Color("#F7FAFF")
+                Ui.Row(
+                        Ui.Column(
+                                Ui.Text("Native Diagnostics").FontSize(15f).Bold().Color("#F7FAFF"),
+                                Ui.Text("Retained Skia HUD / text telemetry").FontSize(11f).Color("#95A7BE"))
+                            .Gap(2f)
+                            .FlexGrow(1f),
+                        Ui.Text("LIVE")
+                            .FontSize(10f)
+                            .Bold()
+                            .Color("#F4C77D")
+                            .Padding(8f, 4f)
+                            .Radius(999f)
+                            .Background(new SKColor(59, 74, 96, 200)))
+                    .Align(UiAlignItems.Center)
+                    .Justify(UiJustifyContent.SpaceBetween)
             };
 
             for (int i = 0; i < state.DiagnosticsLines.Length; i++)
             {
                 children.Add(
-                    Ui.Text(state.DiagnosticsLines[i])
-                        .Id($"camera-diagnostics-line-{i:00}")
-                        .FontSize(i == 0 ? 14f : 12f)
-                        .Color(i == 0 ? "#F7FAFF" : "#C7D3E1")
-                        .WhiteSpace(UiWhiteSpace.Normal));
+                    BuildDiagnosticsLineGroup(i, state.DiagnosticsLines[i]));
             }
 
             return Ui.Card(children.ToArray())
                 .Id(DiagnosticsCardId)
-                .Padding(14f)
-                .Gap(6f)
-                .Radius(16f)
-                .Background("#08111BE8")
+                .Width(DiagnosticsCardWidth)
+                .Padding(16f)
+                .Gap(10f)
+                .Radius(18f)
+                .Background(new SKColor(5, 12, 20, 244))
+                .Border(1f, new SKColor(126, 153, 182, 84))
+                .BoxShadow(0f, 14f, 32f, new SKColor(0, 0, 0, 136))
+                .BackdropBlur(9f)
                 .ZIndex(30);
+        }
+
+        private static UiElementBuilder BuildDiagnosticsLineGroup(int lineIndex, string line)
+        {
+            string title = ResolveDiagnosticsLineTitle(lineIndex, line);
+            string[] chips = SplitDiagnosticsSegments(line);
+            var chipBuilders = new List<UiElementBuilder>(chips.Length);
+            for (int i = 0; i < chips.Length; i++)
+            {
+                chipBuilders.Add(BuildDiagnosticsChip(chips[i], lineIndex == 0));
+            }
+
+            return Ui.Column(
+                    Ui.Text(title).FontSize(11f).Bold().Color("#F4C77D"),
+                    Ui.Row(chipBuilders.ToArray())
+                        .Gap(6f)
+                        .Wrap())
+                .Gap(6f)
+                .Padding(10f)
+                .Radius(14f)
+                .Background(lineIndex == 0 ? new SKColor(16, 26, 39, 230) : new SKColor(10, 18, 29, 218))
+                .Border(1f, lineIndex == 0 ? new SKColor(97, 134, 170, 86) : new SKColor(62, 86, 112, 64));
+        }
+
+        private static UiElementBuilder BuildDiagnosticsChip(string text, bool accent)
+        {
+            return Ui.Text(text)
+                .FontSize(accent ? 12.5f : 11.5f)
+                .Bold()
+                .Color(accent ? "#F7FAFF" : "#D4DEEA")
+                .WhiteSpace(UiWhiteSpace.Normal)
+                .Padding(8f, 5f)
+                .Radius(10f)
+                .Background(accent ? new SKColor(33, 48, 68, 210) : new SKColor(23, 34, 48, 192))
+                .Border(1f, accent ? new SKColor(112, 146, 180, 74) : new SKColor(78, 104, 131, 56));
+        }
+
+        private static string ResolveDiagnosticsLineTitle(int lineIndex, string line)
+        {
+            if (lineIndex == 0)
+            {
+                return "Frame";
+            }
+
+            if (line.StartsWith("F6 ", StringComparison.Ordinal))
+            {
+                return "Toggles";
+            }
+
+            if (line.StartsWith("Build ", StringComparison.Ordinal))
+            {
+                return "Build";
+            }
+
+            if (line.StartsWith("Panel diff=", StringComparison.Ordinal))
+            {
+                return "Reactive Panel";
+            }
+
+            if (line.StartsWith("Hotpath build ", StringComparison.Ordinal))
+            {
+                return "Hotpath Build";
+            }
+
+            if (line.StartsWith("F9 ", StringComparison.Ordinal))
+            {
+                return "Hotpath Toggles";
+            }
+
+            if (line.StartsWith("Hotpath crowd=", StringComparison.Ordinal))
+            {
+                return "Hotpath Counts";
+            }
+
+            if (line.StartsWith("HUD buffers ", StringComparison.Ordinal))
+            {
+                return "HUD Buffers";
+            }
+
+            if (line.StartsWith("Adapter uiIn=", StringComparison.Ordinal))
+            {
+                return "Adapter";
+            }
+
+            if (line.StartsWith("Adapter overlayBuild=", StringComparison.Ordinal))
+            {
+                return "Overlay";
+            }
+
+            if (line.StartsWith("Core cull=", StringComparison.Ordinal))
+            {
+                return "Core";
+            }
+
+            if (line.StartsWith("Terrain render=", StringComparison.Ordinal))
+            {
+                return "Terrain";
+            }
+
+            if (line.StartsWith("Primitive draw=", StringComparison.Ordinal))
+            {
+                return "Primitives";
+            }
+
+            if (line.StartsWith("Spawn Batch=", StringComparison.Ordinal))
+            {
+                return "Projection";
+            }
+
+            return "Diagnostics";
+        }
+
+        private static string[] SplitDiagnosticsSegments(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return Array.Empty<string>();
+            }
+
+            string normalized = line.Replace(" | ", "  ", StringComparison.Ordinal);
+            string[] rawSegments = normalized.Split(new[] { "  " }, StringSplitOptions.RemoveEmptyEntries);
+            if (rawSegments.Length != 0)
+            {
+                return rawSegments;
+            }
+
+            return new[] { line };
         }
 
         private static UiElementBuilder BuildSelectedIdsSection(ReactiveContext<CameraAcceptancePanelState> context, IReadOnlyList<string> selectedIds)
@@ -1129,19 +1271,7 @@ namespace CameraAcceptanceMod.UI
                 return PanelWidth + DiagnosticsCardMargin;
             }
 
-            int maxLength = 0;
-            for (int i = 0; i < diagnosticsLines.Count; i++)
-            {
-                if (diagnosticsLines[i].Length > maxLength)
-                {
-                    maxLength = diagnosticsLines[i].Length;
-                }
-            }
-
-            float estimatedWidth = diagnosticsLines.Count == 0
-                ? 280f
-                : MathF.Ceiling((maxLength * DiagnosticsAverageGlyphWidthPx) + 28f);
-            return Math.Max(DiagnosticsCardMargin, viewportWidth - estimatedWidth - DiagnosticsCardMargin);
+            return Math.Max(DiagnosticsCardMargin, viewportWidth - DiagnosticsCardWidth - DiagnosticsCardMargin);
         }
 
         private static string SummarizeSelectedIds(IReadOnlyList<string> selectedIds)

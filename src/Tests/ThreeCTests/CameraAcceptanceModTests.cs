@@ -202,12 +202,16 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 ?? throw new InvalidOperationException("Acceptance diagnostics card should be mounted inside the retained UI scene.");
             string sceneText = ExtractUiSceneText(scene);
 
-            Assert.That(sceneText, Does.Contain("Camera Acceptance | FPS="),
+            Assert.That(sceneText, Does.Contain("FPS="),
                 "Acceptance diagnostics should expose FPS telemetry through the retained UI path.");
             Assert.That(sceneText, Does.Contain("Core cull="),
                 "Acceptance diagnostics should expose core camera/culling timing diagnostics.");
             Assert.That(sceneText, Does.Contain("Terrain render="),
                 "Acceptance diagnostics should expose terrain render/build timing diagnostics.");
+            Assert.That(diagnosticsCard.Style.BackgroundColor.Alpha, Is.GreaterThan((byte)200),
+                "Diagnostics telemetry should render on an opaque retained card instead of floating directly on the world.");
+            Assert.That(diagnosticsCard.LayoutRect.Width, Is.GreaterThanOrEqualTo(440f),
+                "Diagnostics telemetry should reserve a stable right-side card width so dense stats remain readable.");
             Assert.That(diagnosticsCard.LayoutRect.X, Is.GreaterThanOrEqualTo(1400f),
                 "Diagnostics telemetry should render in the right-side HUD region.");
             Assert.That(diagnosticsCard.LayoutRect.Y, Is.LessThanOrEqualTo(24f),
