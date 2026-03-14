@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Linq;
 using System.Text.Json;
 using Ludots.UI.Runtime.Diff;
-using SkiaSharp;
 
 namespace Ludots.UI.Runtime.Serialization;
 
@@ -44,7 +43,7 @@ public sealed class UiSceneDiffJsonSerializer
 		return new NodePayload(node.Id.Value, node.Kind.ToString(), node.TagName, node.ElementId, node.ClassNames.ToArray(), node.TextContent, node.ImageSource, new StylePayload(node.Style.Display.ToString(), node.Style.Overflow.ToString(), node.Style.FlexDirection.ToString(), node.Style.JustifyContent.ToString(), node.Style.AlignItems.ToString(), node.Style.AlignContent.ToString(), node.Style.FlexWrap.ToString(), node.Style.Direction.ToString(), node.Style.TextAlign.ToString(), node.Style.ObjectFit.ToString(), node.Style.Width.ToString(), node.Style.Height.ToString(), node.Style.MinWidth.ToString(), node.Style.MinHeight.ToString(), node.Style.MaxWidth.ToString(), node.Style.MaxHeight.ToString(), node.Style.Gap, node.Style.RowGap, node.Style.ColumnGap, node.Style.Margin, node.Style.Padding, node.Style.ImageSlice, node.Style.BorderWidth, node.Style.BorderRadius, node.Style.OutlineWidth, node.Style.ZIndex, ToCss(node.Style.BackgroundColor), (node.Style.BackgroundGradient != null) ? MapGradient(node.Style.BackgroundGradient) : null, ToCss(node.Style.BorderColor), ToCss(node.Style.OutlineColor), node.Style.BoxShadow.HasValue ? MapShadow(node.Style.BoxShadow.Value) : null, node.Style.FilterBlurRadius, node.Style.BackdropBlurRadius, ToCss(node.Style.Color), node.Style.TextShadow.HasValue ? MapShadow(node.Style.TextShadow.Value) : null, node.Style.FontSize, node.Style.FontFamily, node.Style.Bold, node.Style.WhiteSpace.ToString(), node.Style.Transform.ToString(), node.Style.Opacity, node.Style.Visible, node.Style.ClipContent), new RectPayload(node.LayoutRect.X, node.LayoutRect.Y, node.LayoutRect.Width, node.LayoutRect.Height), node.ScrollOffsetX, node.ScrollOffsetY, node.ScrollContentWidth, node.ScrollContentHeight, node.Children.Select(MapNode).ToArray());
 	}
 
-	private static string ToCss(SKColor color)
+	private static string ToCss(UiColor color)
 	{
 		return $"rgba({color.Red},{color.Green},{color.Blue},{((float)(int)color.Alpha / 255f).ToString("0.###", CultureInfo.InvariantCulture)})";
 	}

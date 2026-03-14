@@ -1,44 +1,50 @@
-using SkiaSharp;
+using System;
+using System.Numerics;
 
 namespace Ludots.UI.Runtime;
 
 internal static class UiTransformMath
 {
-	public static SKMatrix CreateMatrix(UiStyle style, UiRect rect)
+	public static Matrix3x2 CreateMatrix(UiStyle style, UiRect rect)
 	{
-		SKMatrix sKMatrix = SKMatrix.Identity;
+		Matrix3x2 result = Matrix3x2.Identity;
 		if (style.Transform == null || !style.Transform.HasOperations)
 		{
-			return sKMatrix;
+			return result;
 		}
 		float pivotX = rect.X + rect.Width * 0.5f;
 		float pivotY = rect.Y + rect.Height * 0.5f;
 		for (int i = 0; i < style.Transform.Operations.Count; i++)
 		{
-			UiTransformOperation uiTransformOperation = style.Transform.Operations[i];
-			UiTransformOperationKind kind = uiTransformOperation.Kind;
-			if (1 == 0)
+			UiTransformOperation op = style.Transform.Operations[i];
+			Matrix3x2 opMatrix = op.Kind switch
 			{
-			}
-			SKMatrix sKMatrix2 = kind switch
-			{
-				UiTransformOperationKind.Translate => SKMatrix.CreateTranslation(ResolveLength(uiTransformOperation.XLength, rect.Width), ResolveLength(uiTransformOperation.YLength, rect.Height)), 
-				UiTransformOperationKind.Scale => SKMatrix.CreateScale(uiTransformOperation.ScaleX, uiTransformOperation.ScaleY, pivotX, pivotY), 
-				UiTransformOperationKind.Rotate => SKMatrix.CreateRotationDegrees(uiTransformOperation.AngleDegrees, pivotX, pivotY), 
-				_ => SKMatrix.Identity, 
+				UiTransformOperationKind.Translate => Matrix3x2.CreateTranslation(
+					ResolveLength(op.XLength, rect.Width),
+					ResolveLength(op.YLength, rect.Height)),
+				UiTransformOperationKind.Scale => CreateScaleAroundPivot(
+					op.ScaleX, op.ScaleY, pivotX, pivotY),
+				UiTransformOperationKind.Rotate => CreateRotationAroundPivot(
+					op.AngleDegrees * (MathF.PI / 180f), pivotX, pivotY),
+				_ => Matrix3x2.Identity,
 			};
-			if (1 == 0)
-			{
-			}
-			SKMatrix second = sKMatrix2;
-			sKMatrix = SKMatrix.Concat(sKMatrix, second);
+			result = result * opMatrix;
 		}
-		return sKMatrix;
+		return result;
 	}
 
-	public static bool TryInvert(SKMatrix matrix, out SKMatrix inverse)
+	private static Matrix3x2 CreateScaleAroundPivot(float sx, float sy, float px, float py)
 	{
-		return matrix.TryInvert(out inverse);
+		return Matrix3x2.CreateTranslation(-px, -py) *
+		       Matrix3x2.CreateScale(sx, sy) *
+		       Matrix3x2.CreateTranslation(px, py);
+	}
+
+	private static Matrix3x2 CreateRotationAroundPivot(float radians, float px, float py)
+	{
+		return Matrix3x2.CreateTranslation(-px, -py) *
+		       Matrix3x2.CreateRotation(radians) *
+		       Matrix3x2.CreateTranslation(px, py);
 	}
 
 	private static float ResolveLength(UiLength length, float available)

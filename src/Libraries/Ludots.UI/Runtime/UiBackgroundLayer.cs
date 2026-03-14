@@ -1,19 +1,18 @@
 using System;
-using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
 
 public sealed record UiBackgroundLayer
 {
-	public SKColor Color { get; init; } = SKColors.Transparent;
+	public UiColor Color { get; init; } = UiColor.Transparent;
 
 	public UiLinearGradient? Gradient { get; init; }
 
 	public string? ImageSource { get; init; }
 
-	public bool IsVisible => Color != SKColors.Transparent || Gradient != null || !string.IsNullOrWhiteSpace(ImageSource);
+	public bool IsVisible => Color != UiColor.Transparent || Gradient != null || !string.IsNullOrWhiteSpace(ImageSource);
 
-	public static UiBackgroundLayer FromColor(SKColor color)
+	public static UiBackgroundLayer FromColor(UiColor color)
 	{
 		return new UiBackgroundLayer
 		{

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Ludots.UI.Skia;
 using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
@@ -71,7 +72,7 @@ public sealed class UiSceneRenderer
 		int num4 = -1;
 		if (renderStyle.Transform.HasOperations)
 		{
-			canvas.Concat(UiTransformMath.CreateMatrix(renderStyle, node.LayoutRect));
+			canvas.Concat(UiTransformMath.CreateMatrix(renderStyle, node.LayoutRect).ToSKMatrix());
 		}
 		if (renderStyle.Opacity < 1f)
 		{
@@ -92,16 +93,16 @@ public sealed class UiSceneRenderer
 		DrawBackdropBlur(canvas, surface, sKRect, renderStyle);
 		DrawBoxShadows(canvas, sKRect, renderStyle);
 		DrawBackgrounds(canvas, sKRect, renderStyle);
-		if (renderStyle.BorderWidth > 0f && renderStyle.BorderColor != SKColors.Transparent)
+		if (renderStyle.BorderWidth > 0f && renderStyle.BorderColor != UiColor.Transparent)
 		{
 			using SKPaint paint = CreateBorderPaint(renderStyle);
 			DrawRect(canvas, sKRect, renderStyle.BorderRadius, paint);
 		}
-		if (renderStyle.OutlineWidth > 0f && renderStyle.OutlineColor != SKColors.Transparent)
+		if (renderStyle.OutlineWidth > 0f && renderStyle.OutlineColor != UiColor.Transparent)
 		{
 			using SKPaint paint2 = new SKPaint
 			{
-				Color = renderStyle.OutlineColor,
+				Color = renderStyle.OutlineColor.ToSKColor(),
 				IsAntialias = true,
 				Style = SKPaintStyle.Stroke,
 				StrokeWidth = renderStyle.OutlineWidth
@@ -197,11 +198,11 @@ public sealed class UiSceneRenderer
 
 	private static void DrawBackgrounds(SKCanvas canvas, SKRect rect, UiStyle style)
 	{
-		if (style.BackgroundColor != SKColors.Transparent)
+		if (style.BackgroundColor != UiColor.Transparent)
 		{
 			using SKPaint paint = new SKPaint
 			{
-				Color = style.BackgroundColor,
+				Color = style.BackgroundColor.ToSKColor(),
 				IsAntialias = true,
 				Style = SKPaintStyle.Fill
 			};
@@ -214,11 +215,11 @@ public sealed class UiSceneRenderer
 				UiBackgroundLayer uiBackgroundLayer = style.BackgroundLayers[num];
 				if (uiBackgroundLayer.IsVisible)
 				{
-					if (uiBackgroundLayer.Color != SKColors.Transparent)
+					if (uiBackgroundLayer.Color != UiColor.Transparent)
 					{
 						using SKPaint paint2 = new SKPaint
 						{
-							Color = uiBackgroundLayer.Color,
+							Color = uiBackgroundLayer.Color.ToSKColor(),
 							IsAntialias = true,
 							Style = SKPaintStyle.Fill
 						};
@@ -259,7 +260,7 @@ public sealed class UiSceneRenderer
 	{
 		SKPaint sKPaint = new SKPaint
 		{
-			Color = style.BorderColor,
+			Color = style.BorderColor.ToSKColor(),
 			IsAntialias = true,
 			Style = SKPaintStyle.Stroke,
 			StrokeWidth = style.BorderWidth
@@ -309,7 +310,7 @@ public sealed class UiSceneRenderer
 			{
 				using SKPaint paint = new SKPaint
 				{
-					Color = uiShadow.Color,
+					Color = uiShadow.Color.ToSKColor(),
 					IsAntialias = true,
 					Style = SKPaintStyle.Fill,
 					ImageFilter = ((uiShadow.BlurRadius > 0.01f) ? SKImageFilter.CreateBlur(ToSigma(uiShadow.BlurRadius), ToSigma(uiShadow.BlurRadius)) : null)
@@ -383,8 +384,8 @@ public sealed class UiSceneRenderer
 			return;
 		}
 		UiStyle renderStyle = node.RenderStyle;
-		SKColor color = ((renderStyle.BorderColor.Alpha > 0) ? renderStyle.BorderColor.WithAlpha((byte)Math.Max((int)renderStyle.BorderColor.Alpha, 72)) : new SKColor(byte.MaxValue, byte.MaxValue, byte.MaxValue, 56));
-		SKColor color2 = ((renderStyle.OutlineColor.Alpha > 0) ? renderStyle.OutlineColor.WithAlpha((byte)Math.Max((int)renderStyle.OutlineColor.Alpha, 172)) : ((renderStyle.Color.Alpha > 0) ? renderStyle.Color.WithAlpha(180) : new SKColor(byte.MaxValue, byte.MaxValue, byte.MaxValue, 180)));
+		SKColor color = ((renderStyle.BorderColor.Alpha > 0) ? renderStyle.BorderColor.WithAlpha((byte)Math.Max((int)renderStyle.BorderColor.Alpha, 72)).ToSKColor() : new SKColor(byte.MaxValue, byte.MaxValue, byte.MaxValue, 56));
+		SKColor color2 = ((renderStyle.OutlineColor.Alpha > 0) ? renderStyle.OutlineColor.WithAlpha((byte)Math.Max((int)renderStyle.OutlineColor.Alpha, 172)).ToSKColor() : ((renderStyle.Color.Alpha > 0) ? renderStyle.Color.WithAlpha(180).ToSKColor() : new SKColor(byte.MaxValue, byte.MaxValue, byte.MaxValue, 180)));
 		using SKPaint paint = new SKPaint
 		{
 			IsAntialias = true,
@@ -926,7 +927,7 @@ public sealed class UiSceneRenderer
 			IsAntialias = true,
 			Style = SKPaintStyle.Stroke,
 			StrokeWidth = strokeWidth,
-			Color = style.Color
+			Color = style.Color.ToSKColor()
 		};
 		if ((style.TextDecorationLine & UiTextDecorationLine.Underline) != UiTextDecorationLine.None)
 		{
@@ -949,7 +950,7 @@ public sealed class UiSceneRenderer
 			{
 				return new SKPaint
 				{
-					Color = valueOrDefault.Color,
+					Color = valueOrDefault.Color.ToSKColor(),
 					IsAntialias = true,
 					ImageFilter = ((valueOrDefault.BlurRadius > 0.01f) ? SKImageFilter.CreateBlur(ToSigma(valueOrDefault.BlurRadius), ToSigma(valueOrDefault.BlurRadius)) : null)
 				};
@@ -966,7 +967,7 @@ public sealed class UiSceneRenderer
 		float num = MathF.Max(rect.Width, rect.Height);
 		SKPoint start = new SKPoint(sKPoint.X - sKPoint2.X * num, sKPoint.Y - sKPoint2.Y * num);
 		SKPoint end = new SKPoint(sKPoint.X + sKPoint2.X * num, sKPoint.Y + sKPoint2.Y * num);
-		return SKShader.CreateLinearGradient(start, end, gradient.Stops.Select((UiGradientStop stop) => stop.Color).ToArray(), gradient.Stops.Select((UiGradientStop stop) => stop.Position).ToArray(), SKShaderTileMode.Clamp);
+		return SKShader.CreateLinearGradient(start, end, gradient.Stops.Select((UiGradientStop stop) => stop.Color.ToSKColor()).ToArray(), gradient.Stops.Select((UiGradientStop stop) => stop.Position).ToArray(), SKShaderTileMode.Clamp);
 	}
 
 	private static float ToSigma(float blurRadius)

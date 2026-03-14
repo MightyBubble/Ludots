@@ -338,7 +338,7 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
-	public UiElementBuilder Background(SKColor color)
+	public UiElementBuilder Background(UiColor color)
 	{
 		_style = _style with
 		{
@@ -349,14 +349,14 @@ public sealed class UiElementBuilder
 
 	public UiElementBuilder Background(string color)
 	{
-		if (!SKColor.TryParse(color, out var color2))
+		if (!UiColor.TryParse(color, out var color2))
 		{
-			throw new InvalidOperationException("Unsupported color literal '" + color + "'. Use hex or SKColor.");
+			throw new InvalidOperationException("Unsupported color literal '" + color + "'. Use hex or UiColor.");
 		}
 		return Background(color2);
 	}
 
-	public UiElementBuilder Color(SKColor color)
+	public UiElementBuilder Color(UiColor color)
 	{
 		_style = _style with
 		{
@@ -367,9 +367,9 @@ public sealed class UiElementBuilder
 
 	public UiElementBuilder Color(string color)
 	{
-		if (!SKColor.TryParse(color, out var color2))
+		if (!UiColor.TryParse(color, out var color2))
 		{
-			throw new InvalidOperationException("Unsupported color literal '" + color + "'. Use hex or SKColor.");
+			throw new InvalidOperationException("Unsupported color literal '" + color + "'. Use hex or UiColor.");
 		}
 		return Color(color2);
 	}
@@ -410,7 +410,7 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
-	public UiElementBuilder Outline(float width, SKColor color)
+	public UiElementBuilder Outline(float width, UiColor color)
 	{
 		_style = _style with
 		{
@@ -420,7 +420,7 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
-	public UiElementBuilder BoxShadow(float offsetX, float offsetY, float blurRadius, SKColor color, float spreadRadius = 0f)
+	public UiElementBuilder BoxShadow(float offsetX, float offsetY, float blurRadius, UiColor color, float spreadRadius = 0f)
 	{
 		_style = _style with
 		{
@@ -429,7 +429,7 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
-	public UiElementBuilder TextShadow(float offsetX, float offsetY, float blurRadius, SKColor color, float spreadRadius = 0f)
+	public UiElementBuilder TextShadow(float offsetX, float offsetY, float blurRadius, UiColor color, float spreadRadius = 0f)
 	{
 		_style = _style with
 		{
@@ -465,7 +465,7 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
-	public UiElementBuilder BackgroundGradient(float angleDegrees, params SKColor[] colors)
+	public UiElementBuilder BackgroundGradient(float angleDegrees, params UiColor[] colors)
 	{
 		if (colors == null || colors.Length < 2)
 		{
@@ -484,7 +484,7 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
-	public UiElementBuilder Border(float width, SKColor color)
+	public UiElementBuilder Border(float width, UiColor color)
 	{
 		_style = _style with
 		{
@@ -782,7 +782,7 @@ public sealed class UiElementBuilder
 			result = UiStyle.Default with
 			{
 				Display = UiDisplay.Text,
-				Color = SKColors.White
+				Color = UiColor.White
 			};
 			break;
 		case UiNodeKind.Button:
@@ -793,9 +793,9 @@ public sealed class UiElementBuilder
 				AlignItems = UiAlignItems.Center,
 				JustifyContent = UiJustifyContent.Center,
 				Padding = UiThickness.Symmetric(16f, 10f),
-				BackgroundColor = new SKColor(58, 121, 220),
+				BackgroundColor = new UiColor(58, 121, 220),
 				BorderRadius = 10f,
-				Color = SKColors.White
+				Color = UiColor.White
 			};
 			break;
 		case UiNodeKind.Checkbox:
@@ -854,7 +854,7 @@ public sealed class UiElementBuilder
 				Display = UiDisplay.Flex,
 				FlexDirection = UiFlexDirection.Column,
 				Padding = UiThickness.All(16f),
-				BackgroundColor = new SKColor(25, 31, 48),
+				BackgroundColor = new UiColor(25, 31, 48),
 				BorderRadius = 12f
 			};
 			break;

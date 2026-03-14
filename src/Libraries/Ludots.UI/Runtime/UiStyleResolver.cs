@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
 
@@ -221,7 +220,7 @@ public sealed class UiStyleResolver
 			result = UiStyle.Default with
 			{
 				Display = UiDisplay.Text,
-				Color = SKColors.White
+				Color = UiColor.White
 			};
 			break;
 		case UiNodeKind.Button:
@@ -232,9 +231,9 @@ public sealed class UiStyleResolver
 				AlignItems = UiAlignItems.Center,
 				JustifyContent = UiJustifyContent.Center,
 				Padding = UiThickness.Symmetric(16f, 10f),
-				BackgroundColor = new SKColor(58, 121, 220),
+				BackgroundColor = new UiColor(58, 121, 220),
 				BorderRadius = 10f,
-				Color = SKColors.White
+				Color = UiColor.White
 			};
 			break;
 		case UiNodeKind.Checkbox:
@@ -293,7 +292,7 @@ public sealed class UiStyleResolver
 				Display = UiDisplay.Flex,
 				FlexDirection = UiFlexDirection.Column,
 				Padding = UiThickness.All(16f),
-				BackgroundColor = new SKColor(25, 31, 48),
+				BackgroundColor = new UiColor(25, 31, 48),
 				BorderRadius = 12f
 			};
 			break;
@@ -643,7 +642,7 @@ public sealed class UiStyleResolver
 					BackgroundColor = ((layers.Count == 1 && layers[0].Gradient == null) ? layers[0].Color : style.BackgroundColor)
 				};
 			}
-			SKColor color3;
+			UiColor color3;
 			return TryParseColor(text, out color3) ? style with
 			{
 				BackgroundColor = color3,
@@ -653,7 +652,7 @@ public sealed class UiStyleResolver
 		}
 		case "background-color":
 		{
-			SKColor color;
+			UiColor color;
 			return TryParseColor(text, out color) ? style with
 			{
 				BackgroundColor = color
@@ -694,7 +693,7 @@ public sealed class UiStyleResolver
 		}
 		case "border-color":
 		{
-			SKColor color4;
+			UiColor color4;
 			return TryParseColor(text, out color4) ? style with
 			{
 				BorderColor = color4
@@ -703,7 +702,7 @@ public sealed class UiStyleResolver
 		case "outline":
 		{
 			float outlineWidth;
-			SKColor outlineColor;
+			UiColor outlineColor;
 			return TryParseOutline(text, style.Color, out outlineWidth, out outlineColor) ? style with
 			{
 				OutlineWidth = outlineWidth,
@@ -720,7 +719,7 @@ public sealed class UiStyleResolver
 		}
 		case "outline-color":
 		{
-			SKColor color2;
+			UiColor color2;
 			return TryParseColor(text, out color2) ? style with
 			{
 				OutlineColor = color2
@@ -778,7 +777,7 @@ public sealed class UiStyleResolver
 		}
 		case "color":
 		{
-			SKColor color5;
+			UiColor color5;
 			return TryParseColor(text, out color5) ? style with
 			{
 				Color = color5
@@ -1256,9 +1255,9 @@ public sealed class UiStyleResolver
 		return true;
 	}
 
-	private static bool TryParseColor(string value, out SKColor color)
+	private static bool TryParseColor(string value, out UiColor color)
 	{
-		color = SKColors.Transparent;
+		color = UiColor.Transparent;
 		if (string.IsNullOrWhiteSpace(value))
 		{
 			return false;
@@ -1267,7 +1266,7 @@ public sealed class UiStyleResolver
 		{
 			return true;
 		}
-		if (SKColor.TryParse(value, out color))
+		if (UiColor.TryParse(value, out color))
 		{
 			return true;
 		}
@@ -1277,7 +1276,7 @@ public sealed class UiStyleResolver
 			if (array.Length == 4 && byte.TryParse(array[0].Trim(), out var result) && byte.TryParse(array[1].Trim(), out var result2) && byte.TryParse(array[2].Trim(), out var result3) && float.TryParse(array[3].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var result4))
 			{
 				byte alpha = ((result4 > 1f) ? ((byte)Math.Clamp(result4, 0f, 255f)) : ((byte)Math.Clamp(result4 * 255f, 0f, 255f)));
-				color = new SKColor(result, result2, result3, alpha);
+				color = new UiColor(result, result2, result3, alpha);
 				return true;
 			}
 		}
@@ -1286,7 +1285,7 @@ public sealed class UiStyleResolver
 			string[] array2 = value.Replace("rgb(", string.Empty, StringComparison.OrdinalIgnoreCase).Replace(")", string.Empty, StringComparison.Ordinal).Split(',');
 			if (array2.Length == 3 && byte.TryParse(array2[0].Trim(), out var result5) && byte.TryParse(array2[1].Trim(), out var result6) && byte.TryParse(array2[2].Trim(), out var result7))
 			{
-				color = new SKColor(result5, result6, result7, byte.MaxValue);
+				color = new UiColor(result5, result6, result7, byte.MaxValue);
 				return true;
 			}
 		}
@@ -1336,13 +1335,13 @@ public sealed class UiStyleResolver
 		return value.Trim();
 	}
 
-	private static bool TryParseOutline(string value, SKColor defaultColor, out float outlineWidth, out SKColor outlineColor)
+	private static bool TryParseOutline(string value, UiColor defaultColor, out float outlineWidth, out UiColor outlineColor)
 	{
 		outlineWidth = 0f;
 		outlineColor = defaultColor;
 		foreach (string item in SplitWhitespacePreservingFunctions(value))
 		{
-			SKColor color;
+			UiColor color;
 			if (TryParseFloat(item, out var parsed))
 			{
 				outlineWidth = parsed;
@@ -1365,7 +1364,7 @@ public sealed class UiStyleResolver
 		}
 		float[] array = new float[4];
 		int num = 0;
-		SKColor color = new SKColor(0, 0, 0, 160);
+		UiColor color = new UiColor(0, 0, 0, 160);
 		foreach (string item in SplitWhitespacePreservingFunctions(value2))
 		{
 			if (!item.Equals("inset", StringComparison.OrdinalIgnoreCase))

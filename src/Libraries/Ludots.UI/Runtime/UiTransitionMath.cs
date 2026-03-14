@@ -1,5 +1,4 @@
 using System;
-using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
 
@@ -30,13 +29,13 @@ internal static class UiTransitionMath
 		return start + (end - start) * progress;
 	}
 
-	public static SKColor Lerp(SKColor start, SKColor end, float progress)
+	public static UiColor Lerp(UiColor start, UiColor end, float progress)
 	{
 		byte red = (byte)Math.Clamp(MathF.Round(Lerp((int)start.Red, (int)end.Red, progress)), 0f, 255f);
 		byte green = (byte)Math.Clamp(MathF.Round(Lerp((int)start.Green, (int)end.Green, progress)), 0f, 255f);
 		byte blue = (byte)Math.Clamp(MathF.Round(Lerp((int)start.Blue, (int)end.Blue, progress)), 0f, 255f);
 		byte alpha = (byte)Math.Clamp(MathF.Round(Lerp((int)start.Alpha, (int)end.Alpha, progress)), 0f, 255f);
-		return new SKColor(red, green, blue, alpha);
+		return new UiColor(red, green, blue, alpha);
 	}
 
 	public static UiStyle Apply(UiStyle style, UiTransitionChannelState channel)
@@ -79,7 +78,7 @@ internal static class UiTransitionMath
 		return result;
 	}
 
-	public static UiStyle ApplyColor(UiStyle style, string propertyName, SKColor value)
+	public static UiStyle ApplyColor(UiStyle style, string propertyName, UiColor value)
 	{
 		if (1 == 0)
 		{

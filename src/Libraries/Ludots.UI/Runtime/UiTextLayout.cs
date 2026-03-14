@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using Ludots.UI.Skia;
 using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
@@ -43,7 +44,7 @@ public static class UiTextLayout
 	{
 		return new SKPaint
 		{
-			Color = style.Color,
+			Color = style.Color.ToSKColor(),
 			IsAntialias = true
 		};
 	}

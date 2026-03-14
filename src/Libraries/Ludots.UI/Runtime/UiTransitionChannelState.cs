@@ -1,5 +1,4 @@
 using System;
-using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
 
@@ -21,9 +20,9 @@ internal sealed class UiTransitionChannelState
 
 	public float EndFloat { get; }
 
-	public SKColor StartColor { get; }
+	public UiColor StartColor { get; }
 
-	public SKColor EndColor { get; }
+	public UiColor EndColor { get; }
 
 	public bool IsCompleted => ElapsedSeconds >= DelaySeconds + DurationSeconds;
 
@@ -40,7 +39,7 @@ internal sealed class UiTransitionChannelState
 		}
 	}
 
-	public SKColor CurrentColor
+	public UiColor CurrentColor
 	{
 		get
 		{
@@ -64,7 +63,7 @@ internal sealed class UiTransitionChannelState
 		EndFloat = endFloat;
 	}
 
-	public UiTransitionChannelState(string propertyName, float durationSeconds, float delaySeconds, UiTransitionEasing easing, SKColor startColor, SKColor endColor)
+	public UiTransitionChannelState(string propertyName, float durationSeconds, float delaySeconds, UiTransitionEasing easing, UiColor startColor, UiColor endColor)
 	{
 		PropertyName = propertyName;
 		DurationSeconds = Math.Max(0.0001f, durationSeconds);

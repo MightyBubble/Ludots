@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
 
@@ -77,11 +76,11 @@ internal sealed class UiAnimationPropertyTrack
 		return stops[stops.Count - 1].Value;
 	}
 
-	private static SKColor Evaluate(IReadOnlyList<UiAnimationColorStop> stops, float progress)
+	private static UiColor Evaluate(IReadOnlyList<UiAnimationColorStop> stops, float progress)
 	{
 		if (stops.Count == 0)
 		{
-			return SKColors.Transparent;
+			return UiColor.Transparent;
 		}
 		if (progress <= stops[0].Offset)
 		{

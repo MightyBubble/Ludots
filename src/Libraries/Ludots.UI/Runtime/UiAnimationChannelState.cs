@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
 
@@ -150,7 +149,7 @@ internal sealed class UiAnimationChannelState
 		{
 			return list;
 		}
-		Dictionary<string, Dictionary<float, SKColor>> dictionary = new Dictionary<string, Dictionary<float, SKColor>>(StringComparer.OrdinalIgnoreCase);
+		Dictionary<string, Dictionary<float, UiColor>> dictionary = new Dictionary<string, Dictionary<float, UiColor>>(StringComparer.OrdinalIgnoreCase);
 		Dictionary<string, Dictionary<float, float>> dictionary2 = new Dictionary<string, Dictionary<float, float>>(StringComparer.OrdinalIgnoreCase);
 		for (int i = 0; i < keyframes.Stops.Count; i++)
 		{
@@ -204,9 +203,9 @@ internal sealed class UiAnimationChannelState
 		return list;
 	}
 
-	private static void AddColorTrack(ICollection<UiAnimationPropertyTrack> tracks, string propertyName, SKColor baseValue, IReadOnlyDictionary<string, Dictionary<float, SKColor>> values)
+	private static void AddColorTrack(ICollection<UiAnimationPropertyTrack> tracks, string propertyName, UiColor baseValue, IReadOnlyDictionary<string, Dictionary<float, UiColor>> values)
 	{
-		if (values.TryGetValue(propertyName, out Dictionary<float, SKColor> value) && value.Count != 0)
+		if (values.TryGetValue(propertyName, out Dictionary<float, UiColor> value) && value.Count != 0)
 		{
 			value.TryAdd(0f, baseValue);
 			value.TryAdd(1f, baseValue);
@@ -236,11 +235,11 @@ internal sealed class UiAnimationChannelState
 		}
 	}
 
-	private static Dictionary<float, SKColor> GetOrCreateColorTrack(IDictionary<string, Dictionary<float, SKColor>> tracks, string propertyName)
+	private static Dictionary<float, UiColor> GetOrCreateColorTrack(IDictionary<string, Dictionary<float, UiColor>> tracks, string propertyName)
 	{
-		if (!tracks.TryGetValue(propertyName, out Dictionary<float, SKColor> value))
+		if (!tracks.TryGetValue(propertyName, out Dictionary<float, UiColor> value))
 		{
-			value = (tracks[propertyName] = new Dictionary<float, SKColor>());
+			value = (tracks[propertyName] = new Dictionary<float, UiColor>());
 		}
 		return value;
 	}

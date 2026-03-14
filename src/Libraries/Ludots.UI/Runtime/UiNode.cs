@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Ludots.UI.Runtime.Actions;
-using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
 
@@ -438,7 +437,7 @@ public sealed class UiNode
 		}
 	}
 
-	private static void QueueColorTransition(UiTransitionSpec transition, string propertyName, SKColor startValue, SKColor endValue, ref UiStyle renderStyle, ICollection<UiTransitionChannelState> channels)
+	private static void QueueColorTransition(UiTransitionSpec transition, string propertyName, UiColor startValue, UiColor endValue, ref UiStyle renderStyle, ICollection<UiTransitionChannelState> channels)
 	{
 		if (!(startValue == endValue) && transition.TryGet(propertyName, out UiTransitionEntry entry) && !(entry == null) && !(entry.DurationSeconds <= 0f))
 		{

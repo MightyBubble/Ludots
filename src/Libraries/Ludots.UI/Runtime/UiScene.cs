@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Text.RegularExpressions;
 using Ludots.UI.Runtime.Actions;
 using Ludots.UI.Runtime.Diff;
 using Ludots.UI.Runtime.Events;
-using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
 
@@ -1175,33 +1175,36 @@ public sealed class UiScene
 
 	private static UiNode? HitTest(UiNode node, float x, float y)
 	{
-		return HitTest(node, x, y, SKMatrix.Identity);
+		return HitTest(node, x, y, Matrix3x2.Identity);
 	}
 
-	private static UiNode? HitTest(UiNode node, float x, float y, SKMatrix accumulatedTransform)
+	private static UiNode? HitTest(UiNode node, float x, float y, Matrix3x2 accumulatedTransform)
 	{
 		UiStyle renderStyle = node.RenderStyle;
 		if (!renderStyle.Visible || renderStyle.Display == UiDisplay.None)
 		{
 			return null;
 		}
-		SKMatrix sKMatrix = (renderStyle.Transform.HasOperations ? SKMatrix.Concat(accumulatedTransform, UiTransformMath.CreateMatrix(renderStyle, node.LayoutRect)) : accumulatedTransform);
-		SKPoint point = new SKPoint(x, y);
-		if (!UiTransformMath.TryInvert(sKMatrix, out var inverse))
+		Matrix3x2 current = renderStyle.Transform.HasOperations
+			? accumulatedTransform * UiTransformMath.CreateMatrix(renderStyle, node.LayoutRect)
+			: accumulatedTransform;
+		if (!Matrix3x2.Invert(current, out var inverse))
 		{
 			return null;
 		}
-		point = inverse.MapPoint(point);
-		bool flag = node.LayoutRect.Contains(point.X, point.Y);
+		Vector2 localPoint = Vector2.Transform(new Vector2(x, y), inverse);
+		bool flag = node.LayoutRect.Contains(localPoint.X, localPoint.Y);
 		bool flag2 = renderStyle.ClipContent || renderStyle.Overflow == UiOverflow.Scroll;
 		if (!flag && flag2)
 		{
 			return null;
 		}
-		SKMatrix accumulatedTransform2 = ((renderStyle.Overflow == UiOverflow.Scroll) ? SKMatrix.Concat(sKMatrix, SKMatrix.CreateTranslation(0f - node.ScrollOffsetX, 0f - node.ScrollOffsetY)) : sKMatrix);
+		Matrix3x2 childTransform = renderStyle.Overflow == UiOverflow.Scroll
+			? current * Matrix3x2.CreateTranslation(-node.ScrollOffsetX, -node.ScrollOffsetY)
+			: current;
 		foreach (UiNode item in UiVisualTreeOrdering.FrontToBack(node.Children))
 		{
-			UiNode uiNode = HitTest(item, x, y, accumulatedTransform2);
+			UiNode uiNode = HitTest(item, x, y, childTransform);
 			if (uiNode != null)
 			{
 				return uiNode;

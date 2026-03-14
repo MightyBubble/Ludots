@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using SkiaSharp;
 
 namespace Ludots.UI.Runtime;
 
@@ -73,7 +72,7 @@ public sealed record UiStyle
 
 	public int ZIndex { get; init; }
 
-	public SKColor BackgroundColor { get; init; } = SKColors.Transparent;
+	public UiColor BackgroundColor { get; init; } = UiColor.Transparent;
 
 	public UiLinearGradient? BackgroundGradient { get; init; }
 
@@ -85,11 +84,11 @@ public sealed record UiStyle
 
 	public IReadOnlyList<UiBackgroundRepeat> BackgroundRepeats { get; init; } = Array.Empty<UiBackgroundRepeat>();
 
-	public SKColor BorderColor { get; init; } = SKColors.Transparent;
+	public UiColor BorderColor { get; init; } = UiColor.Transparent;
 
 	public UiBorderStyle BorderStyle { get; init; } = UiBorderStyle.Solid;
 
-	public SKColor OutlineColor { get; init; } = SKColors.Transparent;
+	public UiColor OutlineColor { get; init; } = UiColor.Transparent;
 
 	public UiShadow? BoxShadow { get; init; }
 
@@ -99,7 +98,7 @@ public sealed record UiStyle
 
 	public float BackdropBlurRadius { get; init; }
 
-	public SKColor Color { get; init; } = SKColors.White;
+	public UiColor Color { get; init; } = UiColor.White;
 
 	public UiShadow? TextShadow { get; init; }
 
