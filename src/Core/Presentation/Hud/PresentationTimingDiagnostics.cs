@@ -11,6 +11,7 @@ namespace Ludots.Core.Presentation.Hud
         public float UiInputMs { get; private set; }
         public float UiRenderMs { get; private set; }
         public float UiUploadMs { get; private set; }
+        public float ScreenOverlayBuildMs { get; private set; }
         public float ScreenOverlayDrawMs { get; private set; }
         public float CameraCullingMs { get; private set; }
         public float CameraPresenterMs { get; private set; }
@@ -20,6 +21,10 @@ namespace Ludots.Core.Presentation.Hud
         public float PrimitiveRenderMs { get; private set; }
 
         public int VisibleEntitiesLastFrame { get; private set; }
+        public int ScreenOverlayDirtyLanesLastFrame { get; private set; }
+        public int ScreenOverlayItemsLastFrame { get; private set; }
+        public int ScreenOverlayRebuiltLanesLastFrame { get; private set; }
+        public int ScreenOverlayTextLayoutCacheCount { get; private set; }
         public int TerrainChunksDrawnLastFrame { get; private set; }
         public int TerrainChunksBuiltLastFrame { get; private set; }
         public int PrimitiveInstancesLastFrame { get; private set; }
@@ -28,7 +33,20 @@ namespace Ludots.Core.Presentation.Hud
         public void ObserveUiInput(double sampleMs) => UiInputMs = Smooth(UiInputMs, (float)sampleMs);
         public void ObserveUiRender(double sampleMs) => UiRenderMs = Smooth(UiRenderMs, (float)sampleMs);
         public void ObserveUiUpload(double sampleMs) => UiUploadMs = Smooth(UiUploadMs, (float)sampleMs);
-        public void ObserveScreenOverlayDraw(double sampleMs) => ScreenOverlayDrawMs = Smooth(ScreenOverlayDrawMs, (float)sampleMs);
+        public void ObserveScreenOverlayBuild(double sampleMs, int dirtyLanes, int totalItems)
+        {
+            ScreenOverlayBuildMs = Smooth(ScreenOverlayBuildMs, (float)sampleMs);
+            ScreenOverlayDirtyLanesLastFrame = dirtyLanes;
+            ScreenOverlayItemsLastFrame = totalItems;
+        }
+
+        public void ObserveScreenOverlayDraw(double sampleMs, int rebuiltLanes, int textLayoutCacheCount)
+        {
+            ScreenOverlayDrawMs = Smooth(ScreenOverlayDrawMs, (float)sampleMs);
+            ScreenOverlayRebuiltLanesLastFrame = rebuiltLanes;
+            ScreenOverlayTextLayoutCacheCount = textLayoutCacheCount;
+        }
+
         public void ObserveCameraCulling(double sampleMs, int visibleEntities)
         {
             CameraCullingMs = Smooth(CameraCullingMs, (float)sampleMs);

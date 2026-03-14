@@ -88,7 +88,7 @@ namespace CameraAcceptanceMod.Systems
             if (_engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics) is PresentationTimingDiagnostics timings)
             {
                 lines.Add($"Adapter uiIn={timings.UiInputMs:F2}ms  uiRender={timings.UiRenderMs:F2}ms  uiUpload={timings.UiUploadMs:F2}ms");
-                lines.Add($"Adapter overlayDraw={timings.ScreenOverlayDrawMs:F2}ms");
+                lines.Add($"Adapter overlayBuild={timings.ScreenOverlayBuildMs:F2}ms  draw={timings.ScreenOverlayDrawMs:F2}ms  dirty={timings.ScreenOverlayDirtyLanesLastFrame}  rebuilt={timings.ScreenOverlayRebuiltLanesLastFrame}  cache={timings.ScreenOverlayTextLayoutCacheCount}");
                 lines.Add($"Core cull={timings.CameraCullingMs:F2}ms  vis={timings.VisibleEntitiesLastFrame}  cam={timings.CameraPresenterMs:F2}ms  hudProj={timings.WorldHudProjectionMs:F2}ms");
                 lines.Add($"Terrain render={timings.TerrainRenderMs:F2}ms  build={timings.TerrainChunkBuildMs:F2}ms  chunks={timings.TerrainChunksDrawnLastFrame}  built={timings.TerrainChunksBuiltLastFrame}");
                 lines.Add($"Primitive draw={timings.PrimitiveRenderMs:F2}ms  instances={timings.PrimitiveInstancesLastFrame}  batches={timings.PrimitiveBatchesLastFrame}");

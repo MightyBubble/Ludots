@@ -18,6 +18,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
@@ -25,12 +26,14 @@ using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Launcher.Backend;
+using Ludots.Presentation.Skia;
 using Ludots.UI;
 using Ludots.UI.Input;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
+using SkiaSharp;
 
 namespace Ludots.Tests.ThreeC.Acceptance
 {
@@ -292,6 +295,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
 
             using var hudProjection = CreateHeadlessHudProjection(engine);
+            using var nativeOverlay = CreateHeadlessNativeOverlayHarness(engine);
 
             LoadMap(engine, CameraAcceptanceIds.HotpathMapId);
             TickWithHudProjection(engine, hudProjection, 12);
@@ -299,7 +303,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var backend = GetInputBackend(engine);
             var snapshots = new List<HotpathHarnessSnapshot>();
 
-            HotpathHarnessSnapshot baseline = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "baseline_all_on");
+            HotpathHarnessSnapshot baseline = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, nativeOverlay, "baseline_all_on");
             snapshots.Add(baseline);
 
             Assert.That(uiRoot.Scene, Is.Not.Null, "Hotpath harness should keep the reactive panel mounted while panel rendering is enabled.");
@@ -322,11 +326,22 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(baseline.ScreenTextCount, Is.LessThanOrEqualTo(baseline.WorldTextCount));
             Assert.That(baseline.SelectionLabelCount, Is.EqualTo(CameraAcceptanceIds.HotpathSelectionLabelLimit));
             Assert.That(baseline.DiagnosticsHudVisible, Is.True);
+            Assert.That(baseline.OverlayDirtyLanes, Is.GreaterThan(0));
+            Assert.That(baseline.OverlayRebuiltLanes, Is.GreaterThan(0));
+            Assert.That(baseline.OverlayTextLayoutCacheCount, Is.GreaterThan(0));
             Assert.That(engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)?.DroppedSinceClear, Is.EqualTo(0));
             Assert.That(engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)?.DroppedSinceClear, Is.EqualTo(0));
 
+            TickWithHudProjection(engine, hudProjection, 1);
+            HotpathHarnessSnapshot steadyState = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, nativeOverlay, "steady_state_same_view");
+            snapshots.Add(steadyState);
+            Assert.That(steadyState.OverlayDirtyLanes, Is.LessThan(baseline.OverlayDirtyLanes),
+                "The retained overlay scene should shrink invalidation after the first full build on a stable camera view.");
+            Assert.That(steadyState.OverlayRebuiltLanes, Is.LessThan(baseline.OverlayRebuiltLanes),
+                "The Skia overlay renderer should reuse cached lane pictures once the stable baseline has been built.");
+
             PressButton(engine, backend, "<Keyboard>/f7");
-            HotpathHarnessSnapshot hudOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "diag_hud_off");
+            HotpathHarnessSnapshot hudOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, nativeOverlay, "diag_hud_off");
             snapshots.Add(hudOff);
             Assert.That(hudOff.DiagnosticsHudVisible, Is.False, "F7 should disable the diagnostics HUD while leaving the hotpath scene alive.");
             Assert.That(hudOff.WorldBarCount, Is.EqualTo(baseline.WorldBarCount));
@@ -336,37 +351,37 @@ namespace Ludots.Tests.ThreeC.Acceptance
             TickWithHudProjection(engine, hudProjection, 1);
 
             PressButton(engine, backend, "<Keyboard>/f8");
-            HotpathHarnessSnapshot selectionOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "selection_labels_off");
+            HotpathHarnessSnapshot selectionOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, nativeOverlay, "selection_labels_off");
             snapshots.Add(selectionOff);
             Assert.That(selectionOff.SelectionLabelCount, Is.EqualTo(0), "F8 should isolate selection-label overlay cost.");
 
             PressButton(engine, backend, "<Keyboard>/f9");
-            HotpathHarnessSnapshot barsOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "bars_off");
+            HotpathHarnessSnapshot barsOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, nativeOverlay, "bars_off");
             snapshots.Add(barsOff);
             Assert.That(barsOff.WorldBarCount, Is.EqualTo(0), "F9 should disable the hotpath HUD bar lane.");
             Assert.That(barsOff.WorldTextCount, Is.GreaterThan(0), "Disabling bars must not implicitly disable HUD text.");
 
             PressButton(engine, backend, "<Keyboard>/f10");
-            HotpathHarnessSnapshot hudTextOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "hud_text_off");
+            HotpathHarnessSnapshot hudTextOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, nativeOverlay, "hud_text_off");
             snapshots.Add(hudTextOff);
             Assert.That(hudTextOff.WorldTextCount, Is.EqualTo(0), "F10 should disable the hotpath HUD text lane.");
             Assert.That(hudTextOff.ScreenTextCount, Is.EqualTo(0));
 
             PressButton(engine, backend, "<Keyboard>/f12");
-            HotpathHarnessSnapshot primitivesOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "primitives_off");
+            HotpathHarnessSnapshot primitivesOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, nativeOverlay, "primitives_off");
             snapshots.Add(primitivesOff);
             Assert.That(primitivesOff.PrimitivesEnabled, Is.False, "F12 should disable primitive rendering for manual adapter-side isolation.");
 
             PressButton(engine, backend, "<Keyboard>/c");
             TickWithHudProjection(engine, hudProjection, 6);
-            HotpathHarnessSnapshot crowdOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "cull_crowd_off");
+            HotpathHarnessSnapshot crowdOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, nativeOverlay, "cull_crowd_off");
             snapshots.Add(crowdOff);
             Assert.That(crowdOff.CrowdCount, Is.EqualTo(0), "C should remove the deterministic crowd so culling cost can be isolated.");
             Assert.That(crowdOff.VisibleCrowdCount, Is.EqualTo(0));
             Assert.That(crowdOff.SelectionLabelCount, Is.EqualTo(0));
 
             PressButton(engine, backend, "<Keyboard>/f6");
-            HotpathHarnessSnapshot panelOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "panel_off");
+            HotpathHarnessSnapshot panelOff = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, nativeOverlay, "panel_off");
             snapshots.Add(panelOff);
             Assert.That(panelOff.PanelMounted, Is.False, "F6 should unmount the reactive panel in the hotpath harness as well.");
 
@@ -378,7 +393,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             PressButton(engine, backend, "<Keyboard>/c");
             TickWithHudProjection(engine, hudProjection, 12);
 
-            HotpathHarnessSnapshot restored = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, "restored_all_on");
+            HotpathHarnessSnapshot restored = CaptureHotpathSnapshot(engine, hudProjection, uiRoot, nativeOverlay, "restored_all_on");
             snapshots.Add(restored);
 
             Assert.That(restored.PanelMounted, Is.True);
@@ -1334,6 +1349,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             GameEngine engine,
             WorldHudToScreenSystem hudProjection,
             UIRoot uiRoot,
+            HeadlessNativeOverlayHarness nativeOverlay,
             string step)
         {
             TickWithHudProjection(engine, hudProjection, 1);
@@ -1354,6 +1370,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             }
 
             TickWithHudProjection(engine, hudProjection, 1);
+            nativeOverlay.Capture();
 
             var overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
             var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
@@ -1387,8 +1404,34 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 PrimitivesEnabled: renderDebug.DrawPrimitives,
                 CameraCullingMs: timings!.CameraCullingMs,
                 HudProjectionMs: timings.WorldHudProjectionMs,
+                OverlayBuildMs: timings.ScreenOverlayBuildMs,
+                OverlayDrawMs: timings.ScreenOverlayDrawMs,
+                OverlayDirtyLanes: timings.ScreenOverlayDirtyLanesLastFrame,
+                OverlayRebuiltLanes: timings.ScreenOverlayRebuiltLanesLastFrame,
+                OverlayTextLayoutCacheCount: timings.ScreenOverlayTextLayoutCacheCount,
                 DiagnosticsSummary: FindLineContaining(overlayText, "Build panel=") ?? FindLineContaining(panelText, "Build panel=") ?? "Build panel=unavailable",
                 HotpathSummary: FindLineContaining(overlayText, "Hotpath crowd=") ?? FindLineContaining(panelText, "Crowd=") ?? "Hotpath summary unavailable");
+        }
+
+        private static HeadlessNativeOverlayHarness CreateHeadlessNativeOverlayHarness(GameEngine engine)
+        {
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
+            var worldHudStrings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
+            var textCatalog = engine.GetService(CoreServiceKeys.PresentationTextCatalog);
+            var localeSelection = engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection);
+            var screenOverlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
+            var timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+
+            Assert.That(screenHud, Is.Not.Null, "Headless native overlay capture requires ScreenHudBatchBuffer.");
+            Assert.That(screenOverlay, Is.Not.Null, "Headless native overlay capture requires ScreenOverlayBuffer.");
+            Assert.That(timings, Is.Not.Null, "Headless native overlay capture requires PresentationTimingDiagnostics.");
+
+            return new HeadlessNativeOverlayHarness(
+                new PresentationOverlaySceneBuilder(screenHud!, worldHudStrings, textCatalog, localeSelection, screenOverlay),
+                new PresentationOverlayScene(screenHud!.Capacity + ScreenOverlayBuffer.MaxItems),
+                new SkiaOverlayRenderer(),
+                SKSurface.Create(new SKImageInfo(1920, 1080))!,
+                timings!);
         }
 
         private static int CountVisibleEntitiesByName(World world, string name)
@@ -1551,6 +1594,11 @@ namespace Ludots.Tests.ThreeC.Acceptance
                     primitives_enabled = snapshot.PrimitivesEnabled,
                     camera_culling_ms = Math.Round(snapshot.CameraCullingMs, 4),
                     hud_projection_ms = Math.Round(snapshot.HudProjectionMs, 4),
+                    overlay_build_ms = Math.Round(snapshot.OverlayBuildMs, 4),
+                    overlay_draw_ms = Math.Round(snapshot.OverlayDrawMs, 4),
+                    overlay_dirty_lanes = snapshot.OverlayDirtyLanes,
+                    overlay_rebuilt_lanes = snapshot.OverlayRebuiltLanes,
+                    overlay_text_layout_cache = snapshot.OverlayTextLayoutCacheCount,
                     diagnostics = snapshot.DiagnosticsSummary,
                     hotpath = snapshot.HotpathSummary,
                     status = "done"
@@ -1570,7 +1618,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             {
                 HotpathHarnessSnapshot snapshot = snapshots[i];
                 timeline.AppendLine(
-                    $"- [T+{snapshot.Tick:000}] {snapshot.Step} | Crowd={snapshot.CrowdCount}/{snapshot.VisibleCrowdCount} | Bars={snapshot.WorldBarCount}->{snapshot.ScreenBarCount} | Text={snapshot.WorldTextCount}->{snapshot.ScreenTextCount} | Labels={snapshot.SelectionLabelCount} | Panel={(snapshot.PanelMounted ? "ON" : "OFF")} | HUD={(snapshot.DiagnosticsHudVisible ? "ON" : "OFF")} | Prims={(snapshot.PrimitivesEnabled ? "ON" : "OFF")} | Cull={snapshot.CameraCullingMs:F2}ms | HudProj={snapshot.HudProjectionMs:F2}ms");
+                    $"- [T+{snapshot.Tick:000}] {snapshot.Step} | Crowd={snapshot.CrowdCount}/{snapshot.VisibleCrowdCount} | Bars={snapshot.WorldBarCount}->{snapshot.ScreenBarCount} | Text={snapshot.WorldTextCount}->{snapshot.ScreenTextCount} | Labels={snapshot.SelectionLabelCount} | Panel={(snapshot.PanelMounted ? "ON" : "OFF")} | HUD={(snapshot.DiagnosticsHudVisible ? "ON" : "OFF")} | Prims={(snapshot.PrimitivesEnabled ? "ON" : "OFF")} | Cull={snapshot.CameraCullingMs:F2}ms | HudProj={snapshot.HudProjectionMs:F2}ms | OverlayBuild={snapshot.OverlayBuildMs:F2}ms | OverlayDraw={snapshot.OverlayDrawMs:F2}ms | Dirty={snapshot.OverlayDirtyLanes} | Rebuilt={snapshot.OverlayRebuiltLanes}");
             }
 
             var sb = new StringBuilder();
@@ -1597,7 +1645,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             sb.AppendLine("## Expected Outcomes");
             sb.AppendLine("- Primary success condition: the panel prints the visible entities for the current camera view, and each live toggle changes only its target lane or render gate while the rest of the scene remains stable.");
             sb.AppendLine("- Failure branch condition: visible-entity panel stays stale after view changes, bars/text/selection survive after their toggle, panel fails to unmount/remount, or crowd removal does not collapse the culling workload inputs.");
-            sb.AppendLine("- Key metrics: crowd count, visible crowd count, world/screen HUD item counts, selection-label count, HUD buffer drops, culling timing, HUD projection timing.");
+            sb.AppendLine("- Key metrics: crowd count, visible crowd count, world/screen HUD item counts, selection-label count, HUD buffer drops, culling timing, HUD projection timing, native overlay build/draw timing, dirty-lane count, and rebuilt-lane count.");
             sb.AppendLine();
             sb.AppendLine("## Evidence Artifacts");
             sb.AppendLine("- `artifacts/acceptance/presentation-hotpath-harness/trace.jsonl`");
@@ -1619,6 +1667,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
             sb.AppendLine($"- restored world bars/text: `{restored.WorldBarCount}` / `{restored.WorldTextCount}`");
             sb.AppendLine($"- max culling sample: `{MaxCameraCullingMs(snapshots):F2}` ms");
             sb.AppendLine($"- max HUD projection sample: `{MaxHudProjectionMs(snapshots):F2}` ms");
+            sb.AppendLine($"- max native overlay build sample: `{MaxOverlayBuildMs(snapshots):F2}` ms");
+            sb.AppendLine($"- max native overlay draw sample: `{MaxOverlayDrawMs(snapshots):F2}` ms");
+            sb.AppendLine($"- baseline/reused dirty lanes: `{baseline.OverlayDirtyLanes}` -> `{snapshots[1].OverlayDirtyLanes}`");
             sb.AppendLine("- reusable wiring: `CameraAcceptanceHotpathLaneSystem`, `CameraAcceptancePanelController`, `CameraAcceptanceSelectionOverlaySystem`, `WorldHudToScreenSystem`, `PresentationTimingDiagnostics`");
             return sb.ToString();
         }
@@ -1665,6 +1716,34 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 if (snapshots[i].HudProjectionMs > max)
                 {
                     max = snapshots[i].HudProjectionMs;
+                }
+            }
+
+            return max;
+        }
+
+        private static float MaxOverlayBuildMs(IReadOnlyList<HotpathHarnessSnapshot> snapshots)
+        {
+            float max = 0f;
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                if (snapshots[i].OverlayBuildMs > max)
+                {
+                    max = snapshots[i].OverlayBuildMs;
+                }
+            }
+
+            return max;
+        }
+
+        private static float MaxOverlayDrawMs(IReadOnlyList<HotpathHarnessSnapshot> snapshots)
+        {
+            float max = 0f;
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                if (snapshots[i].OverlayDrawMs > max)
+                {
+                    max = snapshots[i].OverlayDrawMs;
                 }
             }
 
@@ -1840,8 +1919,67 @@ namespace Ludots.Tests.ThreeC.Acceptance
             bool PrimitivesEnabled,
             float CameraCullingMs,
             float HudProjectionMs,
+            float OverlayBuildMs,
+            float OverlayDrawMs,
+            int OverlayDirtyLanes,
+            int OverlayRebuiltLanes,
+            int OverlayTextLayoutCacheCount,
             string DiagnosticsSummary,
             string HotpathSummary);
+
+        private sealed class HeadlessNativeOverlayHarness : IDisposable
+        {
+            private readonly PresentationOverlaySceneBuilder _builder;
+            private readonly PresentationOverlayScene _scene;
+            private readonly SkiaOverlayRenderer _renderer;
+            private readonly SKSurface _surface;
+            private readonly PresentationTimingDiagnostics _timings;
+
+            public HeadlessNativeOverlayHarness(
+                PresentationOverlaySceneBuilder builder,
+                PresentationOverlayScene scene,
+                SkiaOverlayRenderer renderer,
+                SKSurface surface,
+                PresentationTimingDiagnostics timings)
+            {
+                _builder = builder;
+                _scene = scene;
+                _renderer = renderer;
+                _surface = surface;
+                _timings = timings;
+            }
+
+            public void Capture()
+            {
+                long buildStart = Stopwatch.GetTimestamp();
+                _builder.Build(_scene);
+                _timings.ObserveScreenOverlayBuild(
+                    ToElapsedMs(buildStart),
+                    _scene.DirtyLaneCount,
+                    _scene.Count);
+
+                _renderer.ResetFrameStats();
+                long drawStart = Stopwatch.GetTimestamp();
+                _surface.Canvas.Clear(SKColors.Transparent);
+                _renderer.Render(_scene, _surface.Canvas, PresentationOverlayLayer.UnderUi);
+                _renderer.Render(_scene, _surface.Canvas, PresentationOverlayLayer.TopMost);
+                _timings.ObserveScreenOverlayDraw(
+                    ToElapsedMs(drawStart),
+                    _renderer.RebuiltLaneCountLastFrame,
+                    _renderer.CachedTextLayoutCount);
+            }
+
+            public void Dispose()
+            {
+                _surface.Dispose();
+                _renderer.Dispose();
+            }
+
+            private static double ToElapsedMs(long startTicks)
+            {
+                return (Stopwatch.GetTimestamp() - startTicks) * 1000.0 / Stopwatch.Frequency;
+            }
+        }
 
         private sealed class TestInputBackend : IInputBackend
         {

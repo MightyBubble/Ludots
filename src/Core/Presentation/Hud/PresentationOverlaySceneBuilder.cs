@@ -36,9 +36,10 @@ namespace Ludots.Core.Presentation.Hud
                 throw new ArgumentNullException(nameof(scene));
             }
 
-            scene.Clear();
+            scene.BeginBuild();
             AppendScreenHud(scene);
             AppendScreenOverlay(scene);
+            scene.EndBuild();
         }
 
         private void AppendScreenHud(PresentationOverlayScene scene)
