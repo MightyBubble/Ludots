@@ -174,7 +174,16 @@ namespace Ludots.Adapter.Raylib
                         hudProjection?.Update(dt);
                         if (overlaySceneBuilder != null && overlayScene != null)
                         {
+                            long overlayBuildStart = Stopwatch.GetTimestamp();
                             overlaySceneBuilder.Build(overlayScene);
+                            presentationTiming?.ObserveScreenOverlayBuild(
+                                ElapsedMs(overlayBuildStart),
+                                overlayScene.DirtyLaneCount,
+                                overlayScene.Count);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveScreenOverlayBuild(0d, 0, 0);
                         }
 
                         Rl.BeginDrawing();
@@ -245,6 +254,8 @@ namespace Ludots.Adapter.Raylib
 
                         Rl.EndMode3D();
 
+                        long overlayStart = Stopwatch.GetTimestamp();
+                        overlaySkiaRenderer.ResetFrameStats();
                         bool hasUnderlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.UnderUi);
                         bool refreshUnderlay = hasUnderlay || underlayHadContent;
                         if (overlayScene != null && refreshUnderlay)
@@ -285,7 +296,6 @@ namespace Ludots.Adapter.Raylib
                             uiRenderer.Draw();
                         }
 
-                        long overlayStart = Stopwatch.GetTimestamp();
                         bool hasTopOverlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.TopMost);
                         bool refreshTopOverlay = hasTopOverlay || overlayHadContent;
                         if (overlayScene != null && refreshTopOverlay)
@@ -306,7 +316,10 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         screenOverlayBuffer?.Clear();
-                        presentationTiming?.ObserveScreenOverlayDraw(ElapsedMs(overlayStart));
+                        presentationTiming?.ObserveScreenOverlayDraw(
+                            ElapsedMs(overlayStart),
+                            overlaySkiaRenderer.RebuiltLaneCountLastFrame,
+                            overlaySkiaRenderer.CachedTextLayoutCount);
 
                         Rl.EndDrawing();
                     }
