@@ -1,8 +1,8 @@
 # Documentation Governance Report
 
-Date: 2026-03-12
-Scope: `docs/reference/cli_runbook.md`, `docs/conventions/03_environment_setup.md`, `docs/architecture/startup_entrypoints.md`
-Ruleset: wrapper command contract, launcher CLI command parity, repository-relative path integrity, current product entrypoint alignment
+Date: 2026-03-14
+Scope: `docs/architecture/README.md`, `docs/architecture/persistent_static_adapter_sync.md`
+Ruleset: `ludots-doc-governance` checklist, link-validation, report-template
 
 ## Summary
 - Total findings: 0
@@ -13,19 +13,10 @@ Ruleset: wrapper command contract, launcher CLI command parity, repository-relat
 
 ## Findings
 
-No open P0-P3 findings remain in the reviewed scope after the CLI doc rewrite and command-parity pass.
-
-Validated evidence:
-- `scripts/run-mod-launcher.cmd`
-- `scripts/run-mod-launcher.ps1`
-- `src/Tools/Ludots.Launcher.Cli/Program.cs`
-- `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
+No governance findings in the reviewed scope.
 
 ## Fix Order
-1. Keep `docs/reference/cli_runbook.md` as the SSOT for launcher CLI usage.
-2. Re-run wrapper and command-parity checks when launcher commands or adapter options change.
-3. Re-check related docs when preset, binding, or bootstrap semantics change.
+1. No follow-up doc fixes required for this scope.
 
 ## Residual Risks
-- Web launcher correctness is documented, but browser performance still depends on the current snapshot transport; see `artifacts/techdebt/2026-03-12-web-ui-snapshot-pipeline.md`.
-- Preset metadata persists adapter intent, but reproducible CLI runs should still pass `--adapter` explicitly.
+- The broader architecture doc set contains legacy encoding inconsistencies; this change kept the reviewed paths internally consistent but did not normalize the rest of the directory.
