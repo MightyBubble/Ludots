@@ -198,7 +198,8 @@ namespace Ludots.Adapter.Raylib
                                 _emptyBufferWarned = true;
                             }
                             long primitiveStart = Stopwatch.GetTimestamp();
-                            primitiveRenderer.Draw(draw, meshes, renderDebug.AcceptanceScaleMultiplier);
+                            PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
+                            primitiveRenderer.Draw(draw, snapshot, meshes, renderDebug.AcceptanceScaleMultiplier);
                             presentationTiming?.ObservePrimitiveRender(
                                 ElapsedMs(primitiveStart),
                                 primitiveRenderer.LastInstancedInstances,

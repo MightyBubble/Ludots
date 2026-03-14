@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
@@ -19,7 +21,7 @@ namespace Ludots.Client.Raylib.Rendering
     public sealed unsafe class RaylibPrimitiveRenderer : IDisposable
     {
         private readonly RaylibPrimitiveRenderMode _mode;
-        private readonly IVirtualFileSystem _vfs;
+        private readonly IVirtualFileSystem? _vfs;
         private const int MaxPrefabDepth = 6;
 
         private bool _initialized;
@@ -32,15 +34,19 @@ namespace Ludots.Client.Raylib.Rendering
 
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
+        private readonly StaticMeshAdapterSyncPlanner _persistentStaticLaneSync = new StaticMeshAdapterSyncPlanner();
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
 
         public int LastInstancedInstances { get; private set; }
         public int LastInstancedBatches { get; private set; }
+        public int LastPersistentCreates { get; private set; }
+        public int LastPersistentUpdates { get; private set; }
+        public int LastPersistentRemoves { get; private set; }
 
         public RaylibPrimitiveRenderer(
             RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
-            IVirtualFileSystem vfs = null)
+            IVirtualFileSystem? vfs = null)
         {
             _mode = mode;
             _vfs = vfs;
@@ -48,21 +54,67 @@ namespace Ludots.Client.Raylib.Rendering
 
         public void Draw(PrimitiveDrawBuffer draw, MeshAssetRegistry meshes, float scaleMul = 1f)
         {
+            Draw(draw, snapshot: null, meshes, scaleMul);
+        }
+
+        public void Draw(PrimitiveDrawBuffer draw, PrimitiveDrawBuffer? snapshot, MeshAssetRegistry meshes, float scaleMul = 1f)
+        {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
             LastInstancedInstances = 0;
             LastInstancedBatches = 0;
+            LastPersistentCreates = 0;
+            LastPersistentUpdates = 0;
+            LastPersistentRemoves = 0;
 
             var span = draw.GetSpan();
-            DrawImmediateWithDescriptors(span, meshes, scaleMul);
+            bool usePersistentStaticLanes = snapshot != null;
+            if (usePersistentStaticLanes)
+            {
+                _persistentStaticLaneSync.Sync(snapshot);
+                LastPersistentCreates = _persistentStaticLaneSync.LastCreateCount;
+                LastPersistentUpdates = _persistentStaticLaneSync.LastUpdateCount;
+                LastPersistentRemoves = _persistentStaticLaneSync.LastRemoveCount;
+                DrawPersistentStaticLanes(meshes, scaleMul);
+            }
+
+            DrawImmediateWithDescriptors(span, meshes, scaleMul, usePersistentStaticLanes);
         }
 
-        private void DrawImmediateWithDescriptors(ReadOnlySpan<PrimitiveDrawItem> span, MeshAssetRegistry meshes, float scaleMul)
+        private void DrawPersistentStaticLanes(MeshAssetRegistry meshes, float scaleMul)
+        {
+            foreach (var pair in _persistentStaticLaneSync.ActiveBindings)
+            {
+                var binding = pair.Value;
+                var item = binding.Item;
+                if (!binding.IsVisible)
+                {
+                    continue;
+                }
+
+                DrawAssetRecursive(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Scale * scaleMul,
+                    item.Color,
+                    meshes,
+                    0);
+            }
+        }
+
+        private void DrawImmediateWithDescriptors(ReadOnlySpan<PrimitiveDrawItem> span, MeshAssetRegistry meshes, float scaleMul, bool persistentStaticLanesActive)
         {
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (persistentStaticLanesActive &&
+                    item.StableId > 0 &&
+                    StaticMeshLaneKey.Supports(item.RenderPath))
+                {
+                    continue;
+                }
+
                 DrawAssetRecursive(
                     item.MeshAssetId, item.Position,
                     item.Scale * scaleMul, item.Color,
