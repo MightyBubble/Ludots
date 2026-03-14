@@ -73,9 +73,9 @@ public static class MarkupBinder
 		{
 			throw new InvalidOperationException("Canvas factory method '" + methodName + "' must not declare parameters.");
 		}
-		if (method.ReturnType != typeof(UiCanvasContent))
+		if (!typeof(IUiCanvasContent).IsAssignableFrom(method.ReturnType))
 		{
-			throw new InvalidOperationException("Canvas factory method '" + methodName + "' must return UiCanvasContent.");
+			throw new InvalidOperationException("Canvas factory method '" + methodName + "' must return an IUiCanvasContent implementation.");
 		}
 		return method;
 	}
@@ -89,12 +89,12 @@ public static class MarkupBinder
 		}
 	}
 
-	private static UiCanvasContent InvokeCanvasFactory(object target, MethodInfo method)
+	private static IUiCanvasContent InvokeCanvasFactory(object target, MethodInfo method)
 	{
 		object obj = method.Invoke(target, null);
-		if (!(obj is UiCanvasContent result))
+		if (!(obj is IUiCanvasContent result))
 		{
-			throw new InvalidOperationException("Canvas factory method '" + method.Name + "' did not return a UiCanvasContent instance.");
+			throw new InvalidOperationException("Canvas factory method '" + method.Name + "' did not return an IUiCanvasContent instance.");
 		}
 		return result;
 	}

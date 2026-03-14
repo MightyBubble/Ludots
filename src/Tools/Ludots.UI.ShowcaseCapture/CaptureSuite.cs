@@ -17,7 +17,7 @@ internal sealed class CaptureSuite
 
 	private readonly string _screens;
 
-	private readonly UiSceneRenderer _renderer;
+	private readonly SkiaUiRenderer _renderer;
 
 	private readonly List<TraceEntry> _traces = new List<TraceEntry>();
 
@@ -25,7 +25,7 @@ internal sealed class CaptureSuite
 
 	private readonly List<string> _checklistLines = new List<string>();
 
-	public CaptureSuite(string title, string root, UiSceneRenderer renderer)
+	public CaptureSuite(string title, string root, SkiaUiRenderer renderer)
 	{
 		_title = title;
 		_root = root;
@@ -56,9 +56,9 @@ internal sealed class CaptureSuite
 		using (SKCanvas sKCanvas = new SKCanvas(sKBitmap))
 		{
 			sKCanvas.Clear(ResolveSceneBackdrop(scene));
-			_renderer.Render(scene, sKCanvas, 1280f, num);
-		}
-		SKRectI sKRectI = BuildFocusRect(uiNode2.LayoutRect, padding, minWidth, minHeight, sKBitmap.Width, sKBitmap.Height);
+		_renderer.RenderToCanvas(scene, sKCanvas, 1280f, num);
+	}
+	SKRectI sKRectI = BuildFocusRect(uiNode2.LayoutRect, padding, minWidth, minHeight, sKBitmap.Width, sKBitmap.Height);
 		using SKBitmap bitmap = new SKBitmap(sKRectI.Width, sKRectI.Height);
 		using (SKCanvas sKCanvas2 = new SKCanvas(bitmap))
 		{
@@ -135,7 +135,7 @@ internal sealed class CaptureSuite
 		SKBitmap sKBitmap = new SKBitmap(width, height);
 		using SKCanvas sKCanvas = new SKCanvas(sKBitmap);
 		sKCanvas.Clear(ResolveSceneBackdrop(scene));
-		_renderer.Render(scene, sKCanvas, width, height);
+		_renderer.RenderToCanvas(scene, sKCanvas, width, height);
 		return sKBitmap;
 	}
 

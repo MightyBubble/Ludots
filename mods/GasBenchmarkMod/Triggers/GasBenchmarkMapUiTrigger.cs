@@ -57,26 +57,26 @@ namespace GasBenchmarkMod.Triggers
                         Ui.Text("GAS BENCHMARK")
                             .FontSize(54f)
                             .Bold()
-                            .Color(SKColors.White),
+                            .Color(SKColors.White.ToUiColor()),
                         Ui.Text("Click to spawn 100000 entities and run GAS benchmark.")
                             .FontSize(20f)
-                            .Color(SKColors.LightGray),
+                            .Color(SKColors.LightGray.ToUiColor()),
                         Ui.Row(
-                                BuildButton("Run GAS Benchmark", SKColors.Gold, SKColors.Black, _ => runBenchmark()),
-                                BuildButton("Back to Entry", SKColors.DimGray, SKColors.White, _ => backToEntry()))
+                                BuildButton("Run GAS Benchmark", SKColors.Gold.ToUiColor(), SKColors.Black.ToUiColor(), _ => runBenchmark()),
+                                BuildButton("Back to Entry", SKColors.DimGray.ToUiColor(), SKColors.White.ToUiColor(), _ => backToEntry()))
                             .Gap(12f)
                             .Wrap())
                     .WidthPercent(100f)
                     .HeightPercent(100f)
                     .Justify(UiJustifyContent.Center)
                     .Align(UiAlignItems.Center)
-                    .Background(new SKColor(0, 0, 0, 200))
+                    .Background(new SKColor(0, 0, 0, 200).ToUiColor())
                     .Gap(18f)
                     .Build(scene.Dispatcher, ref nextId));
             return scene;
         }
 
-        private static UiElementBuilder BuildButton(string text, SKColor background, SKColor foreground, Action<UiActionContext> onClick)
+        private static UiElementBuilder BuildButton(string text, UiColor background, UiColor foreground, Action<UiActionContext> onClick)
         {
             return Ui.Button(text, onClick)
                 .FontSize(24f)

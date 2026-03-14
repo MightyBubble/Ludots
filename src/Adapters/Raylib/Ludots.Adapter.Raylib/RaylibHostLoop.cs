@@ -20,6 +20,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.Presentation.Skia;
 using Ludots.UI;
 using Ludots.UI.Input;
+using Ludots.UI.Skia;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
 using SkiaSharp;
@@ -36,6 +37,7 @@ namespace Ludots.Adapter.Raylib
             var engine = setup.Engine;
             var config = setup.Config;
             var uiRoot = setup.UiRoot;
+            var skiaRenderer = setup.Renderer;
             var presentationTiming = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
 
             int screenWidth = config.WindowWidth <= 0 ? 1280 : config.WindowWidth;
@@ -305,7 +307,8 @@ namespace Ludots.Adapter.Raylib
                             uiLayer.Clear();
                             if (hasUiLayer)
                             {
-                                uiRoot.Render(uiLayer.Canvas);
+                                skiaRenderer.SetCanvas(uiLayer.Canvas);
+                                uiRoot.Render();
                                 uiLayer.SetHasContent(true);
                             }
                             presentationTiming?.ObserveUiRender(ElapsedMs(uiRenderStart));

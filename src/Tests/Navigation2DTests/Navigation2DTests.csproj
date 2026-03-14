@@ -16,7 +16,6 @@
     <PackageReference Include="NUnit" Version="4.2.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.3.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
-    <PackageReference Include="SkiaSharp" Version="3.119.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,7 +23,9 @@
     <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
     <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI\Ludots.UI.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
+    <ProjectReference Include="..\..\Libraries\SkiaSharp\SkiaSharp\SkiaSharp.csproj" />
   </ItemGroup>
 
 </Project>

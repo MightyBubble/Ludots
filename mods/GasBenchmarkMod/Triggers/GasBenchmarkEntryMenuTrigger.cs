@@ -54,22 +54,22 @@ namespace GasBenchmarkMod.Triggers
                         Ui.Text("GAS BENCHMARK")
                             .FontSize(54f)
                             .Bold()
-                            .Color(SKColors.White),
+                            .Color(SKColors.White.ToUiColor()),
                         Ui.Text("Entry menu: open GAS benchmark map from here.")
                             .FontSize(20f)
-                            .Color(SKColors.LightGray),
-                        BuildButton("Open GAS Benchmark Map", SKColors.Gold, SKColors.Black, _ => openGasBenchmark()))
+                            .Color(SKColors.LightGray.ToUiColor()),
+                        BuildButton("Open GAS Benchmark Map", SKColors.Gold.ToUiColor(), SKColors.Black.ToUiColor(), _ => openGasBenchmark()))
                     .WidthPercent(100f)
                     .HeightPercent(100f)
                     .Justify(UiJustifyContent.Center)
                     .Align(UiAlignItems.Center)
-                    .Background(new SKColor(0, 0, 0, 200))
+                    .Background(new SKColor(0, 0, 0, 200).ToUiColor())
                     .Gap(18f)
                     .Build(scene.Dispatcher, ref nextId));
             return scene;
         }
 
-        private static UiElementBuilder BuildButton(string text, SKColor background, SKColor foreground, Action<UiActionContext> onClick)
+        private static UiElementBuilder BuildButton(string text, UiColor background, UiColor foreground, Action<UiActionContext> onClick)
         {
             return Ui.Button(text, onClick)
                 .FontSize(28f)

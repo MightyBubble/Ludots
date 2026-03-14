@@ -58,7 +58,7 @@ namespace ReactiveTestMod
                     Ui.Text($"Count: {context.State.Count}")
                         .FontSize(60f)
                         .Bold()
-                        .Color(SKColors.White)
+                        .Color(SKColors.White.ToUiColor())
                         .Margin(0f, 24f),
                     Ui.Button("Increment", _ => context.SetState(state => state with
                     {
@@ -67,13 +67,13 @@ namespace ReactiveTestMod
                         .FontSize(30f)
                         .Padding(24f, 18f)
                         .Radius(12f)
-                        .Background(SKColors.Cyan)
-                        .Color(SKColors.Black))
+                        .Background(SKColors.Cyan.ToUiColor())
+                        .Color(SKColors.Black.ToUiColor()))
                 .WidthPercent(100f)
                 .HeightPercent(100f)
                 .Justify(UiJustifyContent.Center)
                 .Align(UiAlignItems.Center)
-                .Background(SKColors.DarkSlateGray)
+                .Background(SKColors.DarkSlateGray.ToUiColor())
                 .Gap(12f);
         }
 

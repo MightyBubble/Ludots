@@ -10,6 +10,8 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.HtmlEngine.Markup;
+using Ludots.UI.Runtime;
+using Ludots.UI.Skia;
 
 namespace Ludots.Adapter.Web
 {
@@ -47,9 +49,12 @@ namespace Ludots.Adapter.Web
 
             engine.SetService(CoreServiceKeys.LogBackend, effectiveBackend);
 
-            var uiRoot = new UIRoot();
+            var renderer = new SkiaUiRenderer();
+            IUiTextMeasurer textMeasurer = new SkiaTextMeasurer();
+            IUiImageSizeProvider imageSizeProvider = new SkiaImageSizeProvider();
+            var uiRoot = new UIRoot(renderer);
             engine.SetService(CoreServiceKeys.UIRoot, (object)uiRoot);
-            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiRoot));
+            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
 
             var inputBackend = new WebInputBackend();
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();

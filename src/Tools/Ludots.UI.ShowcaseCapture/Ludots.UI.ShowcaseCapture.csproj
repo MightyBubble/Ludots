@@ -16,6 +16,7 @@
     <ProjectReference Include="..\..\..\mods\UiSkinSciFiHudMod\UiSkinSciFiHudMod.csproj" />
     <ProjectReference Include="..\..\..\mods\UiSkinPaperMod\UiSkinPaperMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI\Ludots.UI.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
   </ItemGroup>
 
   <ItemGroup>

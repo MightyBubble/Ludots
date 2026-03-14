@@ -124,31 +124,31 @@ namespace PerformanceVisualizationMod.Triggers
                             Ui.Text("Visual Benchmark Mode")
                                 .FontSize(32f)
                                 .Bold()
-                                .Color(SKColors.White),
+                                .Color(SKColors.White.ToUiColor()),
                             Ui.Text("100k entity simulation with unified UI canvas overlay.")
                                 .FontSize(16f)
-                                .Color(SKColors.LightGray),
+                                .Color(SKColors.LightGray.ToUiColor()),
                             Ui.Row(
-                                    BuildButton("Run Simulation", SKColors.Green, SKColors.Black, _ =>
+                                    BuildButton("Run Simulation", SKColors.Green.ToUiColor(), SKColors.Black.ToUiColor(), _ =>
                                         engine.TriggerManager.FireEvent(VisualBenchmarkEvents.RunVisualBenchmark, engine.CreateContext())),
-                                    BuildButton("Back", SKColors.Red, SKColors.White, _ =>
+                                    BuildButton("Back", SKColors.Red.ToUiColor(), SKColors.White.ToUiColor(), _ =>
                                         engine.LoadMap(new MapId(engine.MergedConfig.StartupMapId))))
                                 .Gap(10f)
                                 .Wrap(),
                             Ui.Text("Canvas draws health bars and live counters without reintroducing a second widget runtime.")
                                 .FontSize(12f)
-                                .Color(new SKColor(210, 220, 230)))
+                                .Color(new SKColor(210, 220, 230).ToUiColor()))
                         .Width(420f)
                         .Padding(16f)
                         .Gap(10f)
                         .Radius(14f)
-                        .Background(new SKColor(12, 18, 24, 220))
-                        .Border(1f, new SKColor(56, 72, 88))
+                        .Background(new SKColor(12, 18, 24, 220).ToUiColor())
+                        .Border(1f, new SKColor(56, 72, 88).ToUiColor())
                         .Absolute(20f, 20f)
                         .ZIndex(10));
         }
 
-        private static UiElementBuilder BuildButton(string text, SKColor background, SKColor foreground, Action<UiActionContext> onClick)
+        private static UiElementBuilder BuildButton(string text, UiColor background, UiColor foreground, Action<UiActionContext> onClick)
         {
             return Ui.Button(text, onClick)
                 .FontSize(20f)

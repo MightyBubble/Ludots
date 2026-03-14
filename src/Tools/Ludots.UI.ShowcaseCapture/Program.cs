@@ -1,11 +1,12 @@
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Skia;
 using UiShowcaseCoreMod.Showcase;
 
 const int Width = 1280;
 const int Height = 720;
 string acceptanceRoot = args.Length > 0 ? args[0] : Path.Combine("artifacts", "acceptance");
-UiSceneRenderer renderer = new();
+SkiaUiRenderer renderer = new();
 
 RunComposeSuite();
 RunReactiveSuite();

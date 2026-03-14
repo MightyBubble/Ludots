@@ -47,19 +47,19 @@ namespace PerformanceVisualizationMod.Triggers
                         Ui.Text("Ludots Visual Benchmark")
                             .FontSize(48f)
                             .Bold()
-                            .Color(SKColors.White),
-                        BuildButton("Start Visual Benchmark", SKColors.White, SKColors.Black, _ => openVisualBenchmark()))
+                            .Color(SKColors.White.ToUiColor()),
+                        BuildButton("Start Visual Benchmark", SKColors.White.ToUiColor(), SKColors.Black.ToUiColor(), _ => openVisualBenchmark()))
                     .WidthPercent(100f)
                     .HeightPercent(100f)
                     .Justify(UiJustifyContent.Center)
                     .Align(UiAlignItems.Center)
-                    .Background(SKColors.Black)
+                    .Background(SKColors.Black.ToUiColor())
                     .Gap(24f)
                     .Build(scene.Dispatcher, ref nextId));
             return scene;
         }
 
-        private static UiElementBuilder BuildButton(string text, SKColor background, SKColor foreground, Action<UiActionContext> onClick)
+        private static UiElementBuilder BuildButton(string text, UiColor background, UiColor foreground, Action<UiActionContext> onClick)
         {
             return Ui.Button(text, onClick)
                 .FontSize(24f)

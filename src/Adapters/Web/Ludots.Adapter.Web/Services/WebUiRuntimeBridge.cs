@@ -3,6 +3,7 @@ using Ludots.UI;
 using Ludots.UI.Input;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Serialization;
+using Ludots.UI.Skia;
 
 namespace Ludots.Adapter.Web.Services
 {
@@ -12,7 +13,7 @@ namespace Ludots.Adapter.Web.Services
         private readonly WebInputBackend _inputBackend;
         private readonly WebViewController _viewController;
         private readonly UiSceneDiffJsonSerializer _serializer = new();
-        private readonly UiScene _emptyScene = new();
+        private readonly UiScene _emptyScene = new(new SkiaTextMeasurer(), new SkiaImageSizeProvider());
         private bool _pointerCaptured;
         private bool _hadMountedScene;
 

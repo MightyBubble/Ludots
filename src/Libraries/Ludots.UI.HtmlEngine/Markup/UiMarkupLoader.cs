@@ -31,10 +31,10 @@ public sealed class UiMarkupLoader
 		return uiDocument;
 	}
 
-	public UiScene LoadScene(string html, string css = "", object? codeBehind = null, UiThemePack? theme = null)
+	public UiScene LoadScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, string html, string css = "", object? codeBehind = null, UiThemePack? theme = null)
 	{
 		UiDocument document = LoadDocument(html, css);
-		UiScene uiScene = new UiScene();
+		UiScene uiScene = new UiScene(textMeasurer, imageSizeProvider);
 		uiScene.MountDocument(document, theme);
 		if (codeBehind != null)
 		{
