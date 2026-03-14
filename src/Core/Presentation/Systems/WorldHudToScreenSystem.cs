@@ -74,8 +74,23 @@ namespace Ludots.Core.Presentation.Systems
                     if (ix + iw < -Margin || iy + ih < -Margin ||
                         ix > screenWidth + Margin || iy > screenHeight + Margin)
                         continue;
+
+                    _screenHud.TryAddBar(new ScreenHudBarItem
+                    {
+                        StableId = item.StableId,
+                        DirtySerial = item.DirtySerial,
+                        ScreenX = x,
+                        ScreenY = y,
+                        Color0 = item.Color0,
+                        Color1 = item.Color1,
+                        Width = item.Width,
+                        Height = item.Height,
+                        Value0 = item.Value0,
+                    });
+                    continue;
                 }
-                else if (item.Kind == WorldHudItemKind.Text)
+
+                if (item.Kind == WorldHudItemKind.Text)
                 {
                     int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
                     if (ix + fontSize < -Margin || iy + fontSize < -Margin ||
@@ -83,26 +98,22 @@ namespace Ludots.Core.Presentation.Systems
                     {
                         continue;
                     }
-                }
 
-                _screenHud.TryAdd(new ScreenHudItem
-                {
-                    StableId = item.StableId,
-                    DirtySerial = item.DirtySerial,
-                    Kind = item.Kind,
-                    ScreenX = x,
-                    ScreenY = y,
-                    Color0 = item.Color0,
-                    Color1 = item.Color1,
-                    Width = item.Width,
-                    Height = item.Height,
-                    Value0 = item.Value0,
-                    Value1 = item.Value1,
-                    Id0 = item.Id0,
-                    Id1 = item.Id1,
-                    FontSize = item.FontSize,
-                    Text = item.Text,
-                });
+                    _screenHud.TryAddText(new ScreenHudTextItem
+                    {
+                        StableId = item.StableId,
+                        DirtySerial = item.DirtySerial,
+                        ScreenX = x,
+                        ScreenY = y,
+                        Color0 = item.Color0,
+                        Value0 = item.Value0,
+                        Value1 = item.Value1,
+                        Id0 = item.Id0,
+                        Id1 = item.Id1,
+                        FontSize = item.FontSize,
+                        Text = item.Text,
+                    });
+                }
             }
 
             _timingDiagnostics?.ObserveWorldHudProjection((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);

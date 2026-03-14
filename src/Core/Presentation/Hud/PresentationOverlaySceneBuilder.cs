@@ -16,6 +16,7 @@ namespace Ludots.Core.Presentation.Hud
         private readonly ScreenOverlayBuffer? _screenOverlay;
         private readonly Dictionary<TextPacketCacheKey, string> _textPacketCache = new();
         private readonly Dictionary<NumericTextCacheKey, string> _numericTextCache = new();
+        private readonly Dictionary<int, ScreenHudResolvedTextCacheEntry> _screenHudResolvedTextCache = new();
 
         public PresentationOverlaySceneBuilder(
             ScreenHudBatchBuffer screenHud,
@@ -46,44 +47,39 @@ namespace Ludots.Core.Presentation.Hud
 
         private void AppendScreenHud(PresentationOverlayScene scene)
         {
-            ReadOnlySpan<ScreenHudItem> span = _screenHud.GetSpan();
-            for (int i = 0; i < span.Length; i++)
+            ReadOnlySpan<ScreenHudBarItem> bars = _screenHud.GetBarSpan();
+            for (int i = 0; i < bars.Length; i++)
             {
-                ref readonly ScreenHudItem item = ref span[i];
-                switch (item.Kind)
+                ref readonly ScreenHudBarItem item = ref bars[i];
+                scene.TryAddBar(
+                    PresentationOverlayLayer.UnderUi,
+                    item.ScreenX,
+                    item.ScreenY,
+                    item.Width,
+                    item.Height,
+                    item.Value0,
+                    item.Color0,
+                    item.Color1,
+                    item.StableId,
+                    item.DirtySerial);
+            }
+
+            ReadOnlySpan<ScreenHudTextItem> texts = _screenHud.GetTextSpan();
+            for (int i = 0; i < texts.Length; i++)
+            {
+                ref readonly ScreenHudTextItem item = ref texts[i];
+                string? text = ResolveScreenHudText(in item);
+                if (!string.IsNullOrEmpty(text))
                 {
-                    case WorldHudItemKind.Bar:
-                        scene.TryAddBar(
-                            PresentationOverlayLayer.UnderUi,
-                            item.ScreenX,
-                            item.ScreenY,
-                            item.Width,
-                            item.Height,
-                            item.Value0,
-                            item.Color0,
-                            item.Color1,
-                            item.StableId,
-                            item.DirtySerial);
-                        break;
-
-                    case WorldHudItemKind.Text:
-                    {
-                        string? text = ResolveScreenHudText(in item);
-                        if (!string.IsNullOrEmpty(text))
-                        {
-                            scene.TryAddText(
-                                PresentationOverlayLayer.UnderUi,
-                                item.ScreenX,
-                                item.ScreenY,
-                                text,
-                                item.FontSize <= 0 ? 16 : item.FontSize,
-                                item.Color0,
-                                item.StableId,
-                                item.DirtySerial);
-                        }
-
-                        break;
-                    }
+                    scene.TryAddText(
+                        PresentationOverlayLayer.UnderUi,
+                        item.ScreenX,
+                        item.ScreenY,
+                        text,
+                        item.FontSize <= 0 ? 16 : item.FontSize,
+                        item.Color0,
+                        item.StableId,
+                        item.DirtySerial);
                 }
             }
         }
@@ -132,19 +128,31 @@ namespace Ludots.Core.Presentation.Hud
             }
         }
 
-        private string? ResolveScreenHudText(in ScreenHudItem item)
+        private string? ResolveScreenHudText(in ScreenHudTextItem item)
         {
+            if (item.StableId != 0 &&
+                _screenHudResolvedTextCache.TryGetValue(item.StableId, out ScreenHudResolvedTextCacheEntry cached) &&
+                cached.DirtySerial == item.DirtySerial)
+            {
+                return cached.Text;
+            }
+
             if (TryFormatTextPacket(in item.Text, out string? packetText))
             {
+                CacheResolvedScreenHudText(in item, packetText);
                 return packetText;
             }
 
             if (item.Id0 != 0 && _worldHudStrings != null)
             {
-                return _worldHudStrings.TryGet(item.Id0);
+                string? legacyText = _worldHudStrings.TryGet(item.Id0);
+                CacheResolvedScreenHudText(in item, legacyText);
+                return legacyText;
             }
 
-            return ResolveCachedNumericHudText(item.Id1, item.Value0, item.Value1);
+            string? numericText = ResolveCachedNumericHudText(item.Id1, item.Value0, item.Value1);
+            CacheResolvedScreenHudText(in item, numericText);
+            return numericText;
         }
 
         private string? ResolveScreenOverlayText(in ScreenOverlayItem item)
@@ -222,6 +230,16 @@ namespace Ludots.Core.Presentation.Hud
             };
         }
 
+        private void CacheResolvedScreenHudText(in ScreenHudTextItem item, string? text)
+        {
+            if (item.StableId == 0 || text == null)
+            {
+                return;
+            }
+
+            _screenHudResolvedTextCache[item.StableId] = new ScreenHudResolvedTextCacheEntry(item.DirtySerial, text);
+        }
+
         private readonly record struct TextPacketCacheKey(
             int LocaleId,
             int TokenId,
@@ -241,5 +259,9 @@ namespace Ludots.Core.Presentation.Hud
             int ModeId,
             int Value0Bits,
             int Value1Bits);
+
+        private readonly record struct ScreenHudResolvedTextCacheEntry(
+            int DirtySerial,
+            string Text);
     }
 }

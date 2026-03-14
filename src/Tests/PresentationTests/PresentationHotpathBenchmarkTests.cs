@@ -203,11 +203,10 @@ namespace Ludots.Tests.Presentation
 
                 if (config.EmitBars)
                 {
-                    screenHud.TryAdd(new ScreenHudItem
+                    screenHud.TryAddBar(new ScreenHudBarItem
                     {
                         StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Bar, discriminator: 1),
                         DirtySerial = HudItemIdentity.ComposeBarDirtySerial(barWidth, barHeight, fill, barBackground, barForeground),
-                        Kind = WorldHudItemKind.Bar,
                         ScreenX = x,
                         ScreenY = y,
                         Width = barWidth,
@@ -220,7 +219,7 @@ namespace Ludots.Tests.Presentation
 
                 if (config.EmitText)
                 {
-                    screenHud.TryAdd(new ScreenHudItem
+                    screenHud.TryAddText(new ScreenHudTextItem
                     {
                         StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Text, discriminator: 2),
                         DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
@@ -231,7 +230,6 @@ namespace Ludots.Tests.Presentation
                             value1: 0f,
                             color: textColor,
                             packet: default),
-                        Kind = WorldHudItemKind.Text,
                         ScreenX = x + 1f,
                         ScreenY = y - 9f,
                         FontSize = fontSize,
