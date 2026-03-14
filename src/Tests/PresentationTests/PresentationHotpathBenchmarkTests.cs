@@ -56,6 +56,24 @@ namespace Ludots.Tests.Presentation
                 surface,
                 frameIndex => CreateFrameConfig(positionOffsetX: 0f, positionOffsetY: 0f, valueOffset: frameIndex, pulseFill: true));
 
+            BenchmarkScenarioResult valueChurnBarsOnly = RunScenario(
+                "value_churn_bars_only",
+                screenHud,
+                builder,
+                scene,
+                renderer,
+                surface,
+                frameIndex => CreateFrameConfig(positionOffsetX: 0f, positionOffsetY: 0f, valueOffset: frameIndex, pulseFill: true, emitBars: true, emitText: false));
+
+            BenchmarkScenarioResult valueChurnTextOnly = RunScenario(
+                "value_churn_text_only",
+                screenHud,
+                builder,
+                scene,
+                renderer,
+                surface,
+                frameIndex => CreateFrameConfig(positionOffsetX: 0f, positionOffsetY: 0f, valueOffset: frameIndex, pulseFill: true, emitBars: false, emitText: true));
+
             BenchmarkScenarioResult cameraPanBarsOnly = RunScenario(
                 "camera_pan_bars_only",
                 screenHud,
@@ -80,8 +98,8 @@ namespace Ludots.Tests.Presentation
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
             string tracePath = Path.Combine(artifactDir, "trace.jsonl");
 
-            File.WriteAllText(reportPath, BuildBenchmarkReport(steadyState, cameraPan, valueChurn, cameraPanBarsOnly, cameraPanTextOnly));
-            File.WriteAllText(tracePath, BuildTraceJsonl(steadyState, cameraPan, valueChurn, cameraPanBarsOnly, cameraPanTextOnly));
+            File.WriteAllText(reportPath, BuildBenchmarkReport(steadyState, cameraPan, valueChurn, valueChurnBarsOnly, valueChurnTextOnly, cameraPanBarsOnly, cameraPanTextOnly));
+            File.WriteAllText(tracePath, BuildTraceJsonl(steadyState, cameraPan, valueChurn, valueChurnBarsOnly, valueChurnTextOnly, cameraPanBarsOnly, cameraPanTextOnly));
 
             TestContext.Out.WriteLine(File.ReadAllText(reportPath));
 
@@ -250,6 +268,8 @@ namespace Ludots.Tests.Presentation
             BenchmarkScenarioResult steadyState,
             BenchmarkScenarioResult cameraPan,
             BenchmarkScenarioResult valueChurn,
+            BenchmarkScenarioResult valueChurnBarsOnly,
+            BenchmarkScenarioResult valueChurnTextOnly,
             BenchmarkScenarioResult cameraPanBarsOnly,
             BenchmarkScenarioResult cameraPanTextOnly)
         {
@@ -265,6 +285,8 @@ namespace Ludots.Tests.Presentation
             AppendScenario(sb, steadyState);
             AppendScenario(sb, cameraPan);
             AppendScenario(sb, valueChurn);
+            AppendScenario(sb, valueChurnBarsOnly);
+            AppendScenario(sb, valueChurnTextOnly);
             AppendScenario(sb, cameraPanBarsOnly);
             AppendScenario(sb, cameraPanTextOnly);
             return sb.ToString();
@@ -291,6 +313,8 @@ namespace Ludots.Tests.Presentation
             BenchmarkScenarioResult steadyState,
             BenchmarkScenarioResult cameraPan,
             BenchmarkScenarioResult valueChurn,
+            BenchmarkScenarioResult valueChurnBarsOnly,
+            BenchmarkScenarioResult valueChurnTextOnly,
             BenchmarkScenarioResult cameraPanBarsOnly,
             BenchmarkScenarioResult cameraPanTextOnly)
         {
@@ -298,6 +322,8 @@ namespace Ludots.Tests.Presentation
             AppendTrace(sb, steadyState);
             AppendTrace(sb, cameraPan);
             AppendTrace(sb, valueChurn);
+            AppendTrace(sb, valueChurnBarsOnly);
+            AppendTrace(sb, valueChurnTextOnly);
             AppendTrace(sb, cameraPanBarsOnly);
             AppendTrace(sb, cameraPanTextOnly);
             return sb.ToString();
@@ -360,6 +386,7 @@ namespace Ludots.Tests.Presentation
         {
             private bool _hadContent;
             private int _lastLayerVersion = -1;
+            private readonly PresentationOverlayLanePacer _pacer = new(PresentationOverlayLayer.UnderUi);
 
             public double Render(
                 PresentationOverlayScene scene,
@@ -384,7 +411,13 @@ namespace Ludots.Tests.Presentation
                 canvas.Clear(SKColors.Transparent);
                 if (hasUnderlay)
                 {
-                    renderer.Render(scene, canvas, PresentationOverlayLayer.UnderUi);
+                    PresentationOverlayLanePacer.LaneRefreshPlan plan = _pacer.BuildPlan(scene);
+                    renderer.Render(scene, canvas, PresentationOverlayLayer.UnderUi, plan);
+                    _pacer.MarkPresented(scene, plan);
+                }
+                else
+                {
+                    _pacer.Reset();
                 }
 
                 _hadContent = hasUnderlay;

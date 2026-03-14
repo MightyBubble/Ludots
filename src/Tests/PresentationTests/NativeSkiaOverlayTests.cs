@@ -279,15 +279,114 @@ public sealed class NativeSkiaOverlayTests
 
         BuildLargeUnderUiScene(scene, xOffset: 1f);
         PresentationOverlayLanePacer.LaneRefreshPlan firstDeferredPlan = pacer.BuildPlan(scene);
-        Assert.That(firstDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.True);
-        Assert.That(firstDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.False);
+        Assert.That(firstDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.False);
+        Assert.That(firstDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.True);
 
         pacer.MarkPresented(scene, firstDeferredPlan);
 
         BuildLargeUnderUiScene(scene, xOffset: 2f);
         PresentationOverlayLanePacer.LaneRefreshPlan secondDeferredPlan = pacer.BuildPlan(scene);
-        Assert.That(secondDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.False);
-        Assert.That(secondDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.True);
+        Assert.That(secondDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.True);
+        Assert.That(secondDeferredPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.False);
+    }
+
+    [Test]
+    public void PresentationOverlayScene_ClassifiesPositionOnlyLaneMutation_AndAverageTranslation()
+    {
+        var scene = new PresentationOverlayScene(256);
+        BuildLargeUnderUiScene(scene, xOffset: 0f);
+        BuildLargeUnderUiScene(scene, xOffset: 6f);
+
+        Assert.That(scene.GetLaneMutationKind(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar),
+            Is.EqualTo(PresentationOverlayLaneMutationKind.PositionOnly));
+        Assert.That(scene.GetLaneMutationKind(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text),
+            Is.EqualTo(PresentationOverlayLaneMutationKind.PositionOnly));
+        Assert.That(scene.GetLaneAverageTranslation(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar).X,
+            Is.EqualTo(6f).Within(0.001f));
+        Assert.That(scene.GetLaneAverageTranslation(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text).X,
+            Is.EqualTo(6f).Within(0.001f));
+        Assert.That(scene.TryGetLaneUniformTranslation(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar, out Vector2 barTranslation), Is.True);
+        Assert.That(barTranslation.X, Is.EqualTo(6f).Within(0.001f));
+        Assert.That(scene.TryGetLaneUniformTranslation(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text, out Vector2 textTranslation), Is.True);
+        Assert.That(textTranslation.X, Is.EqualTo(6f).Within(0.001f));
+    }
+
+    [Test]
+    public void PresentationOverlayScene_RejectsNonUniformLaneTranslation()
+    {
+        var scene = new PresentationOverlayScene(32);
+        scene.BeginBuild();
+        scene.TryAddBar(
+            PresentationOverlayLayer.UnderUi,
+            x: 8f,
+            y: 8f,
+            width: 12f,
+            height: 2f,
+            value: 0.5f,
+            background: new Vector4(0.15f, 0.15f, 0.15f, 1f),
+            foreground: new Vector4(0.2f, 0.8f, 0.2f, 1f),
+            stableId: 1,
+            dirtySerial: 11);
+        scene.TryAddBar(
+            PresentationOverlayLayer.UnderUi,
+            x: 8f,
+            y: 14f,
+            width: 12f,
+            height: 2f,
+            value: 0.5f,
+            background: new Vector4(0.15f, 0.15f, 0.15f, 1f),
+            foreground: new Vector4(0.2f, 0.8f, 0.2f, 1f),
+            stableId: 2,
+            dirtySerial: 22);
+        scene.EndBuild();
+
+        scene.BeginBuild();
+        scene.TryAddBar(
+            PresentationOverlayLayer.UnderUi,
+            x: 10f,
+            y: 8f,
+            width: 12f,
+            height: 2f,
+            value: 0.5f,
+            background: new Vector4(0.15f, 0.15f, 0.15f, 1f),
+            foreground: new Vector4(0.2f, 0.8f, 0.2f, 1f),
+            stableId: 1,
+            dirtySerial: 11);
+        scene.TryAddBar(
+            PresentationOverlayLayer.UnderUi,
+            x: 11f,
+            y: 14f,
+            width: 12f,
+            height: 2f,
+            value: 0.5f,
+            background: new Vector4(0.15f, 0.15f, 0.15f, 1f),
+            foreground: new Vector4(0.2f, 0.8f, 0.2f, 1f),
+            stableId: 2,
+            dirtySerial: 22);
+        scene.EndBuild();
+
+        Assert.That(scene.GetLaneMutationKind(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar),
+            Is.EqualTo(PresentationOverlayLaneMutationKind.PositionOnly));
+        Assert.That(scene.TryGetLaneUniformTranslation(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Bar, out _), Is.False);
+    }
+
+    [Test]
+    public void PresentationOverlayLanePacer_DoesNotDeferLargeLane_WhenContentChanges()
+    {
+        var scene = new PresentationOverlayScene(256);
+        BuildLargeUnderUiScene(scene, xOffset: 0f);
+
+        var pacer = new PresentationOverlayLanePacer(PresentationOverlayLayer.UnderUi);
+        PresentationOverlayLanePacer.LaneRefreshPlan coldStartPlan = pacer.BuildPlan(scene);
+        pacer.MarkPresented(scene, coldStartPlan);
+
+        BuildLargeUnderUiSceneWithTextValueOffset(scene, xOffset: 0f, valueOffset: 1);
+        PresentationOverlayLanePacer.LaneRefreshPlan contentPlan = pacer.BuildPlan(scene);
+
+        Assert.That(scene.GetLaneMutationKind(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text),
+            Is.EqualTo(PresentationOverlayLaneMutationKind.Content));
+        Assert.That(contentPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.False);
+        Assert.That(contentPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.True);
     }
 
     [Test]
@@ -305,24 +404,96 @@ public sealed class NativeSkiaOverlayTests
         renderer.ResetFrameStats();
         renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi, coldStartPlan);
         pacer.MarkPresented(scene, coldStartPlan);
-        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0));
+        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(2));
 
         BuildLargeUnderUiScene(scene, xOffset: 1f);
-        PresentationOverlayLanePacer.LaneRefreshPlan deferredPlan = pacer.BuildPlan(scene);
-        Assert.That(deferredPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.True);
-        Assert.That(deferredPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.False);
+        PresentationOverlayLanePacer.LaneRefreshPlan refreshPlan = pacer.BuildPlan(scene);
+        Assert.That(refreshPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.False);
+        Assert.That(refreshPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.True);
 
         surface.Canvas.Clear(SKColors.Transparent);
         renderer.ResetFrameStats();
-        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi, deferredPlan);
-        pacer.MarkPresented(scene, deferredPlan);
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi, refreshPlan);
+        pacer.MarkPresented(scene, refreshPlan);
 
         using var image = surface.Snapshot();
         using var bitmap = SKBitmap.FromImage(image);
 
         Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0));
         Assert.That(CountOpaquePixels(bitmap, 96, 4, 132, 28), Is.GreaterThan(0),
-            "Deferred text lane should still draw from the retained picture while bar lane refreshes.");
+            "Large text lane should stay current-frame while the skipped bar lane reuses translated retained content.");
+    }
+
+    [Test]
+    public void SkiaOverlayRenderer_ReusesSkippedLargeBarLanePicture_WhenPacerDefersTextRefresh()
+    {
+        var scene = new PresentationOverlayScene(256);
+        BuildLargeUnderUiScene(scene, xOffset: 0f);
+
+        using var renderer = new SkiaOverlayRenderer();
+        using var surface = SKSurface.Create(new SKImageInfo(256, 256));
+        var pacer = new PresentationOverlayLanePacer(PresentationOverlayLayer.UnderUi);
+
+        PresentationOverlayLanePacer.LaneRefreshPlan coldStartPlan = pacer.BuildPlan(scene);
+        surface.Canvas.Clear(SKColors.Transparent);
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi, coldStartPlan);
+        pacer.MarkPresented(scene, coldStartPlan);
+
+        BuildLargeUnderUiScene(scene, xOffset: 1f);
+        PresentationOverlayLanePacer.LaneRefreshPlan firstPlan = pacer.BuildPlan(scene);
+        Assert.That(firstPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.False);
+        Assert.That(firstPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.True);
+
+        surface.Canvas.Clear(SKColors.Transparent);
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi, firstPlan);
+        pacer.MarkPresented(scene, firstPlan);
+
+        BuildLargeUnderUiScene(scene, xOffset: 2f);
+        PresentationOverlayLanePacer.LaneRefreshPlan deferredBarPlan = pacer.BuildPlan(scene);
+        Assert.That(deferredBarPlan.ShouldRefresh(PresentationOverlayItemKind.Bar), Is.True);
+        Assert.That(deferredBarPlan.ShouldRefresh(PresentationOverlayItemKind.Text), Is.False);
+
+        surface.Canvas.Clear(SKColors.Transparent);
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi, deferredBarPlan);
+        pacer.MarkPresented(scene, deferredBarPlan);
+
+        using var image = surface.Snapshot();
+        using var bitmap = SKBitmap.FromImage(image);
+
+        Assert.That(CountOpaquePixels(bitmap, 8, 8, 88, 18), Is.GreaterThan(0),
+            "Deferred bar lane should still draw from the retained picture while text lane refreshes.");
+    }
+
+    [Test]
+    public void SkiaOverlayRenderer_ReusesLargeLanePicture_ForUniformPanWithoutPacer()
+    {
+        var scene = new PresentationOverlayScene(256);
+        using var renderer = new SkiaOverlayRenderer();
+        using var surface = SKSurface.Create(new SKImageInfo(256, 256));
+
+        BuildLargeUnderUiScene(scene, xOffset: 0f);
+        surface.Canvas.Clear(SKColors.Transparent);
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi);
+        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0),
+            "Initial large-lane frame should stay on direct current-frame rendering.");
+
+        BuildLargeUnderUiScene(scene, xOffset: 2f);
+        surface.Canvas.Clear(SKColors.Transparent);
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi);
+        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(2),
+            "First uniform-pan frame should materialize reusable lane pictures.");
+
+        BuildLargeUnderUiScene(scene, xOffset: 4f);
+        surface.Canvas.Clear(SKColors.Transparent);
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi);
+        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0),
+            "Subsequent uniform-pan frames should reuse the retained pictures with translation only.");
     }
 
     private static void SeedLegacyOverlay(ScreenHudBatchBuffer screenHud, ScreenOverlayBuffer overlayBuffer, string topText)
@@ -382,6 +553,36 @@ public sealed class NativeSkiaOverlayTests
                 color: new Vector4(1f, 1f, 1f, 1f),
                 stableId: 3000 + i,
                 dirtySerial: 4000 + i);
+        }
+
+        scene.EndBuild();
+    }
+
+    private static void BuildLargeUnderUiSceneWithTextValueOffset(PresentationOverlayScene scene, float xOffset, int valueOffset)
+    {
+        scene.BeginBuild();
+        for (int i = 0; i < 64; i++)
+        {
+            scene.TryAddBar(
+                PresentationOverlayLayer.UnderUi,
+                x: 8f + xOffset,
+                y: 8f + (i * 3f),
+                width: 80f,
+                height: 2f,
+                value: 0.5f,
+                background: new Vector4(0.15f, 0.15f, 0.15f, 1f),
+                foreground: new Vector4(0.2f, 0.8f, 0.2f, 1f),
+                stableId: 1000 + i,
+                dirtySerial: 2000 + i);
+            scene.TryAddText(
+                PresentationOverlayLayer.UnderUi,
+                x: 96f + xOffset,
+                y: 4f + (i * 3f),
+                text: $"{100 + i + valueOffset}",
+                fontSize: 12,
+                color: new Vector4(1f, 1f, 1f, 1f),
+                stableId: 3000 + i,
+                dirtySerial: 4000 + i + valueOffset);
         }
 
         scene.EndBuild();

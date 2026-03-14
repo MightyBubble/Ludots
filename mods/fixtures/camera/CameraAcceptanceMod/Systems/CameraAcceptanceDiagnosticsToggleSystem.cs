@@ -71,6 +71,18 @@ namespace CameraAcceptanceMod.Systems
                 changed = true;
             }
 
+            if (isHotpathMap && input.PressedThisFrame(CameraAcceptanceIds.ToggleTerrainActionId))
+            {
+                renderDebug.DrawTerrain = !renderDebug.DrawTerrain;
+                changed = true;
+            }
+
+            if (isHotpathMap && input.PressedThisFrame(CameraAcceptanceIds.ToggleGuidesActionId))
+            {
+                renderDebug.DrawDebugDraw = !renderDebug.DrawDebugDraw;
+                changed = true;
+            }
+
             if (isHotpathMap && input.PressedThisFrame(CameraAcceptanceIds.TogglePrimitiveActionId))
             {
                 renderDebug.DrawPrimitives = !renderDebug.DrawPrimitives;
@@ -88,7 +100,7 @@ namespace CameraAcceptanceMod.Systems
                 if (isHotpathMap)
                 {
                     Log.Info(in LogChannel,
-                        $"CameraAcceptance diagnostics toggles: panel={(renderDebug.DrawSkiaUi ? "ON" : "OFF")} hud={(diagnostics.HudEnabled ? "ON" : "OFF")} select={(diagnostics.TextEnabled ? "ON" : "OFF")} bars={(diagnostics.HotpathBarsEnabled ? "ON" : "OFF")} hudText={(diagnostics.HotpathHudTextEnabled ? "ON" : "OFF")} primitives={(renderDebug.DrawPrimitives ? "ON" : "OFF")} crowd={(diagnostics.HotpathCullCrowdEnabled ? "ON" : "OFF")}");
+                        $"CameraAcceptance diagnostics toggles: panel={(renderDebug.DrawSkiaUi ? "ON" : "OFF")} hud={(diagnostics.HudEnabled ? "ON" : "OFF")} select={(diagnostics.TextEnabled ? "ON" : "OFF")} bars={(diagnostics.HotpathBarsEnabled ? "ON" : "OFF")} hudText={(diagnostics.HotpathHudTextEnabled ? "ON" : "OFF")} terrain={(renderDebug.DrawTerrain ? "ON" : "OFF")} guides={(renderDebug.DrawDebugDraw ? "ON" : "OFF")} primitives={(renderDebug.DrawPrimitives ? "ON" : "OFF")} crowd={(diagnostics.HotpathCullCrowdEnabled ? "ON" : "OFF")}");
                 }
                 else
                 {

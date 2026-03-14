@@ -79,6 +79,37 @@ namespace Ludots.Core.Presentation.Hud
             return _layerVersions[(int)layer];
         }
 
+        public PresentationOverlayLaneMutationKind GetLaneMutationKind(
+            PresentationOverlayLayer layer,
+            PresentationOverlayItemKind kind)
+        {
+            return _lanes[GetLaneIndex(layer, kind)].MutationKind;
+        }
+
+        public Vector2 GetLaneAverageTranslation(
+            PresentationOverlayLayer layer,
+            PresentationOverlayItemKind kind)
+        {
+            LaneState lane = _lanes[GetLaneIndex(layer, kind)];
+            return new Vector2(lane.AverageTranslationX, lane.AverageTranslationY);
+        }
+
+        public bool TryGetLaneUniformTranslation(
+            PresentationOverlayLayer layer,
+            PresentationOverlayItemKind kind,
+            out Vector2 translation)
+        {
+            LaneState lane = _lanes[GetLaneIndex(layer, kind)];
+            if (lane.HasUniformTranslation)
+            {
+                translation = new Vector2(lane.UniformTranslationX, lane.UniformTranslationY);
+                return true;
+            }
+
+            translation = default;
+            return false;
+        }
+
         public void Clear()
         {
             bool hadContent = _count > 0;
@@ -96,6 +127,12 @@ namespace Ludots.Core.Presentation.Hud
                 }
 
                 lane.Dirty = false;
+                lane.MutationKind = PresentationOverlayLaneMutationKind.None;
+                lane.AverageTranslationX = 0f;
+                lane.AverageTranslationY = 0f;
+                lane.HasUniformTranslation = false;
+                lane.UniformTranslationX = 0f;
+                lane.UniformTranslationY = 0f;
             }
 
             _count = 0;
@@ -129,6 +166,14 @@ namespace Ludots.Core.Presentation.Hud
                 LaneState lane = _lanes[laneIndex];
                 lane.PendingCount = 0;
                 lane.Dirty = false;
+                lane.WorkingMutationKind = PresentationOverlayLaneMutationKind.None;
+                lane.WorkingTranslationX = 0f;
+                lane.WorkingTranslationY = 0f;
+                lane.WorkingTranslationCount = 0;
+                lane.WorkingHasUniformTranslation = true;
+                lane.WorkingUniformTranslationSet = false;
+                lane.WorkingUniformTranslationX = 0f;
+                lane.WorkingUniformTranslationY = 0f;
             }
         }
 
@@ -154,15 +199,44 @@ namespace Ludots.Core.Presentation.Hud
 
                     lane.Count = lane.PendingCount;
                     lane.Dirty = true;
+                    lane.WorkingMutationKind = PresentationOverlayLaneMutationKind.Content;
                 }
 
                 totalCount += lane.Count;
                 if (lane.Dirty)
                 {
+                    lane.MutationKind = lane.WorkingMutationKind;
+                    if (lane.WorkingMutationKind == PresentationOverlayLaneMutationKind.PositionOnly &&
+                        lane.WorkingTranslationCount > 0)
+                    {
+                        lane.AverageTranslationX = lane.WorkingTranslationX / lane.WorkingTranslationCount;
+                        lane.AverageTranslationY = lane.WorkingTranslationY / lane.WorkingTranslationCount;
+                        lane.HasUniformTranslation = lane.WorkingHasUniformTranslation && lane.WorkingUniformTranslationSet;
+                        lane.UniformTranslationX = lane.WorkingUniformTranslationX;
+                        lane.UniformTranslationY = lane.WorkingUniformTranslationY;
+                    }
+                    else
+                    {
+                        lane.AverageTranslationX = 0f;
+                        lane.AverageTranslationY = 0f;
+                        lane.HasUniformTranslation = false;
+                        lane.UniformTranslationX = 0f;
+                        lane.UniformTranslationY = 0f;
+                    }
+
                     lane.Version++;
                     DirtyLaneCount++;
                     sceneDirty = true;
                     layerDirty[(int)GetLayer(laneIndex)] = true;
+                }
+                else
+                {
+                    lane.MutationKind = PresentationOverlayLaneMutationKind.None;
+                    lane.AverageTranslationX = 0f;
+                    lane.AverageTranslationY = 0f;
+                    lane.HasUniformTranslation = false;
+                    lane.UniformTranslationX = 0f;
+                    lane.UniformTranslationY = 0f;
                 }
             }
 
@@ -330,15 +404,59 @@ namespace Ludots.Core.Presentation.Hud
             int slotIndex = lane.PendingCount;
             EnsureLaneCapacity(lane, slotIndex + 1);
 
-            if (slotIndex >= lane.Count || !ItemsEqual(in lane.Items[slotIndex], in item))
+            if (slotIndex >= lane.Count)
             {
                 lane.Items[slotIndex] = item;
                 lane.Dirty = true;
+                lane.WorkingMutationKind = PresentationOverlayLaneMutationKind.Content;
                 MutatedItemCountLastBuild++;
             }
             else
             {
-                RetainedItemCountLastBuild++;
+                ref readonly PresentationOverlayItem previousItem = ref lane.Items[slotIndex];
+                PresentationOverlayItemCompareResult compareResult = CompareItems(in previousItem, in item, out float deltaX, out float deltaY);
+                if (compareResult == PresentationOverlayItemCompareResult.Equal)
+                {
+                    RetainedItemCountLastBuild++;
+                }
+                else
+                {
+                    if (lane.WorkingMutationKind != PresentationOverlayLaneMutationKind.Content)
+                    {
+                        if (compareResult == PresentationOverlayItemCompareResult.PositionOnly)
+                        {
+                            lane.WorkingMutationKind = PresentationOverlayLaneMutationKind.PositionOnly;
+                            lane.WorkingTranslationX += deltaX;
+                            lane.WorkingTranslationY += deltaY;
+                            lane.WorkingTranslationCount++;
+                            if (!lane.WorkingUniformTranslationSet)
+                            {
+                                lane.WorkingUniformTranslationSet = true;
+                                lane.WorkingUniformTranslationX = deltaX;
+                                lane.WorkingUniformTranslationY = deltaY;
+                            }
+                            else if (lane.WorkingUniformTranslationX != deltaX || lane.WorkingUniformTranslationY != deltaY)
+                            {
+                                lane.WorkingHasUniformTranslation = false;
+                            }
+                        }
+                        else
+                        {
+                            lane.WorkingMutationKind = PresentationOverlayLaneMutationKind.Content;
+                            lane.WorkingTranslationX = 0f;
+                            lane.WorkingTranslationY = 0f;
+                            lane.WorkingTranslationCount = 0;
+                            lane.WorkingHasUniformTranslation = false;
+                            lane.WorkingUniformTranslationSet = false;
+                            lane.WorkingUniformTranslationX = 0f;
+                            lane.WorkingUniformTranslationY = 0f;
+                        }
+                    }
+
+                    lane.Items[slotIndex] = item;
+                    lane.Dirty = true;
+                    MutatedItemCountLastBuild++;
+                }
             }
 
             lane.PendingCount++;
@@ -365,30 +483,54 @@ namespace Ludots.Core.Presentation.Hud
             _flattenedDirty = false;
         }
 
-        private static bool ItemsEqual(in PresentationOverlayItem left, in PresentationOverlayItem right)
+        private static PresentationOverlayItemCompareResult CompareItems(
+            in PresentationOverlayItem left,
+            in PresentationOverlayItem right,
+            out float deltaX,
+            out float deltaY)
         {
+            deltaX = right.X - left.X;
+            deltaY = right.Y - left.Y;
+
             if (left.Kind != right.Kind ||
                 left.Layer != right.Layer ||
-                left.StableId != right.StableId ||
-                left.DirtySerial != right.DirtySerial ||
-                left.X != right.X ||
-                left.Y != right.Y ||
+                left.StableId != right.StableId)
+            {
+                return PresentationOverlayItemCompareResult.Content;
+            }
+
+            if (left.StableId != 0 && left.DirtySerial != 0)
+            {
+                if (left.DirtySerial != right.DirtySerial)
+                {
+                    return PresentationOverlayItemCompareResult.Content;
+                }
+
+                return (deltaX == 0f && deltaY == 0f)
+                    ? PresentationOverlayItemCompareResult.Equal
+                    : PresentationOverlayItemCompareResult.PositionOnly;
+            }
+
+            if (left.DirtySerial != right.DirtySerial ||
                 left.Width != right.Width ||
                 left.Height != right.Height ||
                 left.FontSize != right.FontSize ||
                 left.Value0 != right.Value0)
             {
-                return false;
+                return PresentationOverlayItemCompareResult.Content;
             }
 
-            if (left.StableId != 0 && left.DirtySerial != 0)
-            {
-                return true;
-            }
-
-            return string.Equals(left.Text, right.Text, StringComparison.Ordinal)
+            bool sameContent = string.Equals(left.Text, right.Text, StringComparison.Ordinal)
                 && left.Color0.Equals(right.Color0)
                 && left.Color1.Equals(right.Color1);
+            if (!sameContent)
+            {
+                return PresentationOverlayItemCompareResult.Content;
+            }
+
+            return (deltaX == 0f && deltaY == 0f)
+                ? PresentationOverlayItemCompareResult.Equal
+                : PresentationOverlayItemCompareResult.PositionOnly;
         }
 
         private static PresentationOverlayLayer GetLayer(int laneIndex)
@@ -440,6 +582,27 @@ namespace Ludots.Core.Presentation.Hud
             public int PendingCount;
             public int Version;
             public bool Dirty;
+            public PresentationOverlayLaneMutationKind MutationKind;
+            public PresentationOverlayLaneMutationKind WorkingMutationKind;
+            public float AverageTranslationX;
+            public float AverageTranslationY;
+            public bool HasUniformTranslation;
+            public float UniformTranslationX;
+            public float UniformTranslationY;
+            public float WorkingTranslationX;
+            public float WorkingTranslationY;
+            public int WorkingTranslationCount;
+            public bool WorkingHasUniformTranslation;
+            public bool WorkingUniformTranslationSet;
+            public float WorkingUniformTranslationX;
+            public float WorkingUniformTranslationY;
+        }
+
+        private enum PresentationOverlayItemCompareResult : byte
+        {
+            Equal = 0,
+            PositionOnly = 1,
+            Content = 2,
         }
     }
 }

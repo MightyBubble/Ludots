@@ -20,6 +20,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.Platform.Abstractions;
 using SkiaSharp;
 
 namespace CameraAcceptanceMod.UI
@@ -61,8 +62,11 @@ namespace CameraAcceptanceMod.UI
         private bool _cachedSelectionTextEnabled = true;
         private bool _cachedHotpathBarsEnabled = true;
         private bool _cachedHotpathHudTextEnabled = true;
+        private bool _cachedTerrainEnabled = true;
+        private bool _cachedGuidesEnabled = true;
         private bool _cachedPrimitivesEnabled = true;
         private bool _cachedHotpathCullCrowdEnabled = true;
+        private readonly Dictionary<int, string> _visibleEntityRowTextCache = new();
 
         public CameraAcceptancePanelController()
         {
@@ -543,7 +547,7 @@ namespace CameraAcceptanceMod.UI
                         .Color("#8EA2BD")
                         .WhiteSpace(UiWhiteSpace.Normal),
                     Ui.Text(
-                            $"Primitives {OnOff(state.PrimitivesEnabled)} | Crowd/Culling {OnOff(state.HotpathCullCrowdEnabled)}")
+                            $"Terrain {OnOff(state.TerrainEnabled)} | Guides {OnOff(state.GuidesEnabled)} | Primitives {OnOff(state.PrimitivesEnabled)} | Crowd/Culling {OnOff(state.HotpathCullCrowdEnabled)}")
                         .FontSize(12f)
                         .Color("#8EA2BD")
                         .WhiteSpace(UiWhiteSpace.Normal),
@@ -560,6 +564,8 @@ namespace CameraAcceptanceMod.UI
                         .Gap(8f),
                     Ui.Row(
                             BuildActionButton("Text", state.HotpathHudTextEnabled, ToggleHotpathHudText),
+                            BuildActionButton("Terrain", state.TerrainEnabled, ToggleTerrain),
+                            BuildActionButton("Guides", state.GuidesEnabled, ToggleGuides),
                             BuildActionButton("Prims", state.PrimitivesEnabled, TogglePrimitives),
                             BuildActionButton("Crowd", state.HotpathCullCrowdEnabled, ToggleHotpathCullCrowd))
                         .Wrap()
@@ -651,6 +657,8 @@ namespace CameraAcceptanceMod.UI
                 diagnostics?.TextEnabled ?? true,
                 diagnostics?.HotpathBarsEnabled ?? true,
                 diagnostics?.HotpathHudTextEnabled ?? true,
+                renderDebug?.DrawTerrain ?? true,
+                renderDebug?.DrawDebugDraw ?? true,
                 renderDebug?.DrawPrimitives ?? true,
                 diagnostics?.HotpathCullCrowdEnabled ?? true);
         }
@@ -695,7 +703,8 @@ namespace CameraAcceptanceMod.UI
             if (string.Equals(mapId, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase))
             {
                 lines.Add($"Hotpath build bars={diagnostics.HotpathBarBuildMs:F2}ms  hudText={diagnostics.HotpathHudTextBuildMs:F2}ms  prims={diagnostics.HotpathPrimitiveBuildMs:F2}ms");
-                lines.Add($"F9 Bars[{OnOff(diagnostics.HotpathBarsEnabled)}]  F10 HudText[{OnOff(diagnostics.HotpathHudTextEnabled)}]  F12 Prim[{OnOff(renderDebug.DrawPrimitives)}]  C Crowd[{OnOff(diagnostics.HotpathCullCrowdEnabled)}]");
+                lines.Add($"F9 Bars[{OnOff(diagnostics.HotpathBarsEnabled)}]  F10 HudText[{OnOff(diagnostics.HotpathHudTextEnabled)}]  F11 Terrain[{OnOff(renderDebug.DrawTerrain)}]");
+                lines.Add($"G Guides[{OnOff(renderDebug.DrawDebugDraw)}]  F12 Prim[{OnOff(renderDebug.DrawPrimitives)}]  C Crowd[{OnOff(diagnostics.HotpathCullCrowdEnabled)}]");
                 lines.Add($"Hotpath crowd={diagnostics.HotpathCrowdCount}  visible={diagnostics.HotpathVisibleCrowdCount}  bars={diagnostics.HotpathBarItemCount}  hudText={diagnostics.HotpathHudTextItemCount}  prims={diagnostics.HotpathPrimitiveItemCount}  select={diagnostics.HotpathSelectionLabelCount}");
                 if (engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHud &&
                     engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer) is ScreenHudBatchBuffer screenHud)
@@ -748,6 +757,8 @@ namespace CameraAcceptanceMod.UI
                 _cachedSelectionTextEnabled != diagnostics.TextEnabled ||
                 _cachedHotpathBarsEnabled != diagnostics.HotpathBarsEnabled ||
                 _cachedHotpathHudTextEnabled != diagnostics.HotpathHudTextEnabled ||
+                _cachedTerrainEnabled != renderDebug.DrawTerrain ||
+                _cachedGuidesEnabled != renderDebug.DrawDebugDraw ||
                 _cachedPrimitivesEnabled != renderDebug.DrawPrimitives ||
                 _cachedHotpathCullCrowdEnabled != diagnostics.HotpathCullCrowdEnabled)
             {
@@ -795,6 +806,8 @@ namespace CameraAcceptanceMod.UI
             _cachedSelectionTextEnabled = diagnostics.TextEnabled;
             _cachedHotpathBarsEnabled = diagnostics.HotpathBarsEnabled;
             _cachedHotpathHudTextEnabled = diagnostics.HotpathHudTextEnabled;
+            _cachedTerrainEnabled = renderDebug.DrawTerrain;
+            _cachedGuidesEnabled = renderDebug.DrawDebugDraw;
             _cachedPrimitivesEnabled = renderDebug.DrawPrimitives;
             _cachedHotpathCullCrowdEnabled = diagnostics.HotpathCullCrowdEnabled;
             _cachedDiagnosticsLines = lines.ToArray();
@@ -815,6 +828,8 @@ namespace CameraAcceptanceMod.UI
             _cachedSelectionTextEnabled = true;
             _cachedHotpathBarsEnabled = true;
             _cachedHotpathHudTextEnabled = true;
+            _cachedTerrainEnabled = true;
+            _cachedGuidesEnabled = true;
             _cachedPrimitivesEnabled = true;
             _cachedHotpathCullCrowdEnabled = true;
         }
@@ -924,6 +939,26 @@ namespace CameraAcceptanceMod.UI
             if (engine.GetService(CoreServiceKeys.RenderDebugState) is RenderDebugState renderDebug)
             {
                 renderDebug.DrawPrimitives = !renderDebug.DrawPrimitives;
+                SyncMountedRoot();
+            }
+        }
+
+        private void ToggleTerrain()
+        {
+            GameEngine engine = RequireEngine();
+            if (engine.GetService(CoreServiceKeys.RenderDebugState) is RenderDebugState renderDebug)
+            {
+                renderDebug.DrawTerrain = !renderDebug.DrawTerrain;
+                SyncMountedRoot();
+            }
+        }
+
+        private void ToggleGuides()
+        {
+            GameEngine engine = RequireEngine();
+            if (engine.GetService(CoreServiceKeys.RenderDebugState) is RenderDebugState renderDebug)
+            {
+                renderDebug.DrawDebugDraw = !renderDebug.DrawDebugDraw;
                 SyncMountedRoot();
             }
         }
@@ -1062,6 +1097,8 @@ namespace CameraAcceptanceMod.UI
                 left.SelectionTextEnabled != right.SelectionTextEnabled ||
                 left.HotpathBarsEnabled != right.HotpathBarsEnabled ||
                 left.HotpathHudTextEnabled != right.HotpathHudTextEnabled ||
+                left.TerrainEnabled != right.TerrainEnabled ||
+                left.GuidesEnabled != right.GuidesEnabled ||
                 left.PrimitivesEnabled != right.PrimitivesEnabled ||
                 left.DiagnosticsLines.Length != right.DiagnosticsLines.Length ||
                 left.HotpathCullCrowdEnabled != right.HotpathCullCrowdEnabled)
@@ -1165,7 +1202,7 @@ namespace CameraAcceptanceMod.UI
             return lines;
         }
 
-        private static string[] ResolveVisibleEntityRows(GameEngine engine, string mapId)
+        private string[] ResolveVisibleEntityRows(GameEngine engine, string mapId)
         {
             if (engine.GetService(CoreServiceKeys.ViewController) is not IViewController view)
             {
@@ -1173,7 +1210,8 @@ namespace CameraAcceptanceMod.UI
             }
 
             var camera = CameraViewportUtil.StateToRenderState(engine.GameSession.Camera.State);
-            if (camera.FovYDeg <= 0f || view.Fov <= 0f || view.Resolution.X <= 0f || view.Resolution.Y <= 0f)
+            Vector2 resolution = view.Resolution;
+            if (camera.FovYDeg <= 0f || view.Fov <= 0f || resolution.X <= 0f || resolution.Y <= 0f)
             {
                 return Array.Empty<string>();
             }
@@ -1187,13 +1225,13 @@ namespace CameraAcceptanceMod.UI
                     return;
                 }
 
-                Vector2 screen = CameraViewportUtil.WorldToScreen(transform.Position, camera, view.Resolution, view.AspectRatio);
-                if (!IsInsideViewport(screen, view.Resolution))
+                Vector2 screen = CameraViewportUtil.WorldToScreen(transform.Position, camera, resolution, view.AspectRatio);
+                if (!IsInsideViewport(screen, resolution))
                 {
                     return;
                 }
 
-                visibleRows.Add(new VisibleEntityRow(entity.Id, $"{name.Value} {CameraAcceptanceSelectionView.FormatEntityId(entity)}"));
+                visibleRows.Add(new VisibleEntityRow(entity.Id, ResolveVisibleEntityRowText(entity.Id, name.Value)));
             });
 
             visibleRows.Sort(static (left, right) => left.EntityId.CompareTo(right.EntityId));
@@ -1205,6 +1243,18 @@ namespace CameraAcceptanceMod.UI
             }
 
             return rows;
+        }
+
+        private string ResolveVisibleEntityRowText(int entityId, string entityName)
+        {
+            if (_visibleEntityRowTextCache.TryGetValue(entityId, out string? cached))
+            {
+                return cached;
+            }
+
+            string text = $"{entityName} #{entityId}";
+            _visibleEntityRowTextCache[entityId] = text;
+            return text;
         }
 
         private static int CountSelectionRowChanges(IReadOnlyList<string> previous, IReadOnlyList<string> next)
@@ -1379,6 +1429,8 @@ namespace CameraAcceptanceMod.UI
             bool SelectionTextEnabled,
             bool HotpathBarsEnabled,
             bool HotpathHudTextEnabled,
+            bool TerrainEnabled,
+            bool GuidesEnabled,
             bool PrimitivesEnabled,
             bool HotpathCullCrowdEnabled)
         {
@@ -1400,6 +1452,8 @@ namespace CameraAcceptanceMod.UI
                 1080f,
                 16f,
                 Array.Empty<string>(),
+                true,
+                true,
                 true,
                 true,
                 true,

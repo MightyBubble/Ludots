@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Numerics;
 using System.Text;
 using Ludots.Core.Presentation.Hud;
 using Ludots.UI.Runtime;
@@ -13,11 +14,12 @@ namespace Ludots.Presentation.Skia
         private const int LaneCount = 6;
         private const int MaxBarSpriteCacheEntries = 2048;
         private const int MaxTextLayoutCacheEntries = 8192;
+        private const int MaxTextSpriteCacheEntries = 8192;
         private const int ImmediateUnderUiBarThreshold = 48;
         private const int ImmediateUnderUiTextThreshold = 48;
-        private const int DeferredLargeTextChunkSize = 1024;
+        private const int DeferredLargeTextChunkSize = 128;
         private const int DeferredLargeTextChunksPerFrame = 1;
-        private const int TextBatchBucketsPerBlob = 32;
+        private const int TextBatchBucketsPerBlob = 256;
 
         private static readonly PresentationOverlayItemKind[] RenderOrder =
         {
@@ -36,8 +38,13 @@ namespace Ludots.Presentation.Skia
         private readonly Dictionary<TextLayoutCacheKey, CachedTextLayout> _textLayoutCache = new();
         private readonly Dictionary<TextBatchKey, int> _textBatchMap = new();
         private readonly List<TextBatchBucket> _textBatchBuckets = new();
+        private readonly Dictionary<TextSpriteCacheKey, CachedTextSprite> _textSpriteCache = new();
+        private readonly Dictionary<TextBatchKey, int> _textSpriteBatchMap = new();
+        private readonly List<TextSpriteBatchBucket> _textSpriteBatchBuckets = new();
         private readonly SKPicture?[] _lanePictures = new SKPicture?[LaneCount];
         private readonly int[] _laneVersions = new int[LaneCount];
+        private readonly float[] _lanePictureOffsetsX = new float[LaneCount];
+        private readonly float[] _lanePictureOffsetsY = new float[LaneCount];
         private readonly LargeTextLaneState[] _largeTextLaneStates = new LargeTextLaneState[LaneCount];
         private readonly StringBuilder _runText = new();
 
@@ -147,9 +154,25 @@ namespace Ludots.Presentation.Skia
             }
 
             bool isLargeUnderUiLane = ShouldRenderImmediate(layer, kind, span.Length);
-            if (kind == PresentationOverlayItemKind.Text && isLargeUnderUiLane)
+            if (!hasRefreshPlan && isLargeUnderUiLane)
             {
-                RenderDeferredLargeTextLane(canvas, laneIndex, laneVersion, span, allowRefresh: !hasRefreshPlan || refreshDirtyLane);
+                if (kind == PresentationOverlayItemKind.Text)
+                {
+                    ClearLargeTextLaneState(laneIndex);
+                }
+
+                RenderLargeImmediateLane(scene, canvas, layer, kind, laneIndex, laneVersion, span);
+                return;
+            }
+
+            if (hasRefreshPlan && isLargeUnderUiLane && kind is PresentationOverlayItemKind.Text or PresentationOverlayItemKind.Bar)
+            {
+                if (kind == PresentationOverlayItemKind.Text)
+                {
+                    ClearLargeTextLaneState(laneIndex);
+                }
+
+                RenderPacedLargeLane(scene, canvas, layer, kind, laneIndex, laneVersion, span, refreshDirtyLane);
                 return;
             }
 
@@ -182,9 +205,47 @@ namespace Ludots.Presentation.Skia
             }
         }
 
+        private void RenderLargeImmediateLane(
+            PresentationOverlayScene scene,
+            SKCanvas canvas,
+            PresentationOverlayLayer layer,
+            PresentationOverlayItemKind kind,
+            int laneIndex,
+            int laneVersion,
+            ReadOnlySpan<PresentationOverlayItem> span)
+        {
+            if (_laneVersions[laneIndex] == laneVersion)
+            {
+                DrawLanePictureOrHotpath(canvas, kind, laneIndex, span);
+                return;
+            }
+
+            if (scene.GetLaneMutationKind(layer, kind) == PresentationOverlayLaneMutationKind.PositionOnly &&
+                scene.TryGetLaneUniformTranslation(layer, kind, out Vector2 translation))
+            {
+                if (_lanePictures[laneIndex] != null)
+                {
+                    _lanePictureOffsetsX[laneIndex] += translation.X;
+                    _lanePictureOffsetsY[laneIndex] += translation.Y;
+                    _laneVersions[laneIndex] = laneVersion;
+                    DrawLanePictureOrHotpath(canvas, kind, laneIndex, span);
+                    return;
+                }
+
+                RebuildLanePicture(scene, layer, kind, laneIndex, laneVersion);
+                DrawLanePictureOrHotpath(canvas, kind, laneIndex, span);
+                return;
+            }
+
+            InvalidateLanePicture(laneIndex);
+            _laneVersions[laneIndex] = laneVersion;
+            DrawLargeLaneHotpath(canvas, kind, span);
+        }
+
         public void Dispose()
         {
             ClearTextLayoutCache();
+            ClearTextSpriteCache();
             ClearBarSpriteCache();
             foreach ((_, SKFont font) in _fontCache)
             {
@@ -268,6 +329,63 @@ namespace Ludots.Presentation.Skia
                         break;
                 }
             }
+        }
+
+        private void DrawLargeLaneHotpath(SKCanvas canvas, PresentationOverlayItemKind kind, ReadOnlySpan<PresentationOverlayItem> span)
+        {
+            switch (kind)
+            {
+                case PresentationOverlayItemKind.Bar:
+                    for (int i = 0; i < span.Length; i++)
+                    {
+                        DrawBar(canvas, span[i]);
+                    }
+
+                    break;
+
+                case PresentationOverlayItemKind.Text:
+                    DrawTextDirect(canvas, span);
+                    break;
+
+                default:
+                    DrawLaneImmediate(canvas, kind, span);
+                    break;
+            }
+        }
+
+        private void RenderPacedLargeLane(
+            PresentationOverlayScene scene,
+            SKCanvas canvas,
+            PresentationOverlayLayer layer,
+            PresentationOverlayItemKind kind,
+            int laneIndex,
+            int laneVersion,
+            ReadOnlySpan<PresentationOverlayItem> span,
+            bool refreshDirtyLane)
+        {
+            if (_laneVersions[laneIndex] == laneVersion)
+            {
+                DrawLanePictureOrHotpath(canvas, kind, laneIndex, span);
+                return;
+            }
+
+            if (scene.GetLaneMutationKind(layer, kind) == PresentationOverlayLaneMutationKind.PositionOnly &&
+                scene.TryGetLaneUniformTranslation(layer, kind, out Vector2 translation) &&
+                _lanePictures[laneIndex] != null)
+            {
+                _lanePictureOffsetsX[laneIndex] += translation.X;
+                _lanePictureOffsetsY[laneIndex] += translation.Y;
+                _laneVersions[laneIndex] = laneVersion;
+                DrawLanePictureOrHotpath(canvas, kind, laneIndex, span);
+                return;
+            }
+
+            if (refreshDirtyLane || _lanePictures[laneIndex] == null)
+            {
+                RebuildLanePicture(scene, layer, kind, laneIndex, laneVersion);
+            }
+
+            DrawLanePictureOrHotpath(canvas, kind, laneIndex, span);
         }
 
         private void DrawBarBatched(SKCanvas canvas, ReadOnlySpan<PresentationOverlayItem> span)
@@ -460,6 +578,8 @@ namespace Ludots.Presentation.Skia
             _lanePictures[laneIndex]?.Dispose();
             _lanePictures[laneIndex] = null;
             _laneVersions[laneIndex] = laneVersion;
+            _lanePictureOffsetsX[laneIndex] = 0f;
+            _lanePictureOffsetsY[laneIndex] = 0f;
 
             ReadOnlySpan<PresentationOverlayItem> span = scene.GetLaneSpan(layer, kind);
             if (span.Length == 0)
@@ -534,10 +654,93 @@ namespace Ludots.Presentation.Skia
             for (int chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++)
             {
                 SKPicture? picture = state.GetPicture(chunkIndex);
-                if (picture != null)
+                if (picture == null)
                 {
-                    canvas.DrawPicture(picture);
+                    continue;
                 }
+
+                canvas.DrawPicture(picture);
+            }
+        }
+
+        private void DrawTextDirect(SKCanvas canvas, ReadOnlySpan<PresentationOverlayItem> span)
+        {
+            uint currentColorKey = uint.MaxValue;
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly PresentationOverlayItem item = ref span[i];
+                if (string.IsNullOrEmpty(item.Text))
+                {
+                    continue;
+                }
+
+                SKColor color = ToSkColor(item.Color0);
+                uint colorKey = ToColorKey(color);
+                if (colorKey != currentColorKey)
+                {
+                    _textPaint.Color = color;
+                    currentColorKey = colorKey;
+                }
+
+                int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
+                CachedTextLayout layout = GetTextLayout(item.Text, fontSize);
+                float baselineY = item.Y + fontSize;
+                for (int runIndex = 0; runIndex < layout.Runs.Length; runIndex++)
+                {
+                    CachedTextRun run = layout.Runs[runIndex];
+                    if (run.Blob != null)
+                    {
+                        canvas.DrawText(run.Blob, item.X + run.XOffset, baselineY, _textPaint);
+                    }
+                }
+            }
+        }
+
+        private void DrawTextSpriteBatched(SKCanvas canvas, ReadOnlySpan<PresentationOverlayItem> span)
+        {
+            _textSpriteBatchMap.Clear();
+            int bucketCount = 0;
+
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly PresentationOverlayItem item = ref span[i];
+                if (string.IsNullOrEmpty(item.Text))
+                {
+                    continue;
+                }
+
+                int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
+                SKColor color = ToSkColor(item.Color0);
+                var key = new TextBatchKey(item.Text, fontSize, ToColorKey(color));
+                if (!_textSpriteBatchMap.TryGetValue(key, out int bucketIndex))
+                {
+                    if (bucketCount >= _textSpriteBatchBuckets.Count)
+                    {
+                        _textSpriteBatchBuckets.Add(new TextSpriteBatchBucket());
+                    }
+
+                    bucketIndex = bucketCount++;
+                    _textSpriteBatchMap[key] = bucketIndex;
+                    CachedTextSprite sprite = GetTextSprite(item.Text, fontSize, color);
+                    _textSpriteBatchBuckets[bucketIndex].Reset(sprite);
+                }
+
+                CachedTextSprite cachedSprite = _textSpriteBatchBuckets[bucketIndex].Sprite;
+                float drawY = (item.Y + fontSize) - cachedSprite.BaselineY;
+                _textSpriteBatchBuckets[bucketIndex].Add(item.X, drawY);
+            }
+
+            for (int bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++)
+            {
+                TextSpriteBatchBucket bucket = _textSpriteBatchBuckets[bucketIndex];
+                if (bucket.Count == 1)
+                {
+                    canvas.DrawImage(bucket.Sprite.Image, bucket.X[0], bucket.Y[0]);
+                    continue;
+                }
+
+                bucket.PrepareAtlas();
+                canvas.DrawAtlas(bucket.Sprite.Image, bucket.Sprites, bucket.Transforms, SKSamplingOptions.Default);
             }
         }
 
@@ -571,10 +774,66 @@ namespace Ludots.Presentation.Skia
             _textLayoutCache.Clear();
         }
 
+        private void ClearTextSpriteCache()
+        {
+            foreach ((_, CachedTextSprite sprite) in _textSpriteCache)
+            {
+                sprite.Dispose();
+            }
+
+            _textSpriteCache.Clear();
+        }
+
         private CachedBarSprite GetBarSprite(in PresentationOverlayItem item)
         {
             BarSpriteCacheKey key = CreateBarSpriteCacheKey(item);
             return GetBarSprite(key, item);
+        }
+
+        private CachedTextSprite GetTextSprite(string text, int fontSize, SKColor color)
+        {
+            var key = new TextSpriteCacheKey(text, fontSize, ToColorKey(color));
+            if (_textSpriteCache.TryGetValue(key, out CachedTextSprite? sprite))
+            {
+                return sprite;
+            }
+
+            if (_textSpriteCache.Count >= MaxTextSpriteCacheEntries)
+            {
+                ClearTextSpriteCache();
+            }
+
+            CachedTextLayout layout = GetTextLayout(text, fontSize);
+            float ascent = fontSize;
+            float descent = Math.Max(1f, fontSize * 0.25f);
+            for (int i = 0; i < layout.Runs.Length; i++)
+            {
+                SKFontMetrics metrics = layout.Runs[i].Font.Metrics;
+                ascent = Math.Max(ascent, -metrics.Ascent);
+                descent = Math.Max(descent, metrics.Descent);
+            }
+
+            float baselineY = MathF.Ceiling(ascent) + 1f;
+            int widthPx = Math.Max(1, (int)MathF.Ceiling(layout.Width) + 2);
+            int heightPx = Math.Max(1, (int)MathF.Ceiling(ascent + descent) + 2);
+
+            using var surface = SKSurface.Create(new SKImageInfo(widthPx, heightPx));
+            SKCanvas spriteCanvas = surface.Canvas;
+            spriteCanvas.Clear(SKColors.Transparent);
+
+            _textPaint.Color = color;
+            for (int runIndex = 0; runIndex < layout.Runs.Length; runIndex++)
+            {
+                CachedTextRun run = layout.Runs[runIndex];
+                if (run.Blob != null)
+                {
+                    spriteCanvas.DrawText(run.Blob, 1f + run.XOffset, baselineY, _textPaint);
+                }
+            }
+
+            sprite = new CachedTextSprite(surface.Snapshot(), baselineY);
+            _textSpriteCache[key] = sprite;
+            return sprite;
         }
 
         private CachedBarSprite GetBarSprite(in BarSpriteCacheKey key, in PresentationOverlayItem item)
@@ -670,6 +929,35 @@ namespace Ludots.Presentation.Skia
             _lanePictures[laneIndex]?.Dispose();
             _lanePictures[laneIndex] = null;
             _laneVersions[laneIndex] = -1;
+            _lanePictureOffsetsX[laneIndex] = 0f;
+            _lanePictureOffsetsY[laneIndex] = 0f;
+        }
+
+        private void DrawLanePictureOrHotpath(
+            SKCanvas canvas,
+            PresentationOverlayItemKind kind,
+            int laneIndex,
+            ReadOnlySpan<PresentationOverlayItem> span)
+        {
+            SKPicture? picture = _lanePictures[laneIndex];
+            if (picture == null)
+            {
+                DrawLargeLaneHotpath(canvas, kind, span);
+                return;
+            }
+
+            float offsetX = _lanePictureOffsetsX[laneIndex];
+            float offsetY = _lanePictureOffsetsY[laneIndex];
+            if (offsetX == 0f && offsetY == 0f)
+            {
+                canvas.DrawPicture(picture);
+                return;
+            }
+
+            int restoreCount = canvas.Save();
+            canvas.Translate(offsetX, offsetY);
+            canvas.DrawPicture(picture);
+            canvas.RestoreToCount(restoreCount);
         }
 
         private static bool ShouldRenderImmediate(PresentationOverlayLayer layer, PresentationOverlayItemKind kind, int itemCount)
@@ -715,6 +1003,8 @@ namespace Ludots.Presentation.Skia
 
         private readonly record struct TextBatchKey(string Text, int FontSize, uint ColorKey);
 
+        private readonly record struct TextSpriteCacheKey(string Text, int FontSize, uint ColorKey);
+
         private readonly record struct CachedTextRun(
             SKTextBlob? Blob,
             float XOffset,
@@ -723,6 +1013,24 @@ namespace Ludots.Presentation.Skia
             SKPoint[] GlyphPositions);
 
         private readonly record struct CachedBarSprite(SKImage Image);
+
+        private sealed class CachedTextSprite : IDisposable
+        {
+            public CachedTextSprite(SKImage image, float baselineY)
+            {
+                Image = image;
+                BaselineY = baselineY;
+            }
+
+            public SKImage Image { get; }
+
+            public float BaselineY { get; }
+
+            public void Dispose()
+            {
+                Image.Dispose();
+            }
+        }
 
         private sealed class TextBatchBucket
         {
@@ -818,6 +1126,77 @@ namespace Ludots.Presentation.Skia
                 }
 
                 SKRect spriteRect = new(0f, 0f, Image.Width, Image.Height);
+                for (int i = 0; i < Count; i++)
+                {
+                    _sprites[i] = spriteRect;
+                    _transforms[i] = SKRotationScaleMatrix.CreateTranslation(_x[i], _y[i]);
+                }
+            }
+
+            private void EnsureCapacity(int required)
+            {
+                if (_x.Length >= required && _y.Length >= required)
+                {
+                    return;
+                }
+
+                int next = _x.Length == 0 ? 4 : _x.Length;
+                while (next < required)
+                {
+                    next *= 2;
+                }
+
+                Array.Resize(ref _x, next);
+                Array.Resize(ref _y, next);
+            }
+        }
+
+        private sealed class TextSpriteBatchBucket
+        {
+            private float[] _x = Array.Empty<float>();
+            private float[] _y = Array.Empty<float>();
+            private SKRect[] _sprites = Array.Empty<SKRect>();
+            private SKRotationScaleMatrix[] _transforms = Array.Empty<SKRotationScaleMatrix>();
+
+            public CachedTextSprite Sprite { get; private set; } = null!;
+
+            public int Count { get; private set; }
+
+            public float[] X => _x;
+
+            public float[] Y => _y;
+
+            public SKRect[] Sprites => _sprites;
+
+            public SKRotationScaleMatrix[] Transforms => _transforms;
+
+            public void Reset(CachedTextSprite sprite)
+            {
+                Sprite = sprite;
+                Count = 0;
+            }
+
+            public void Add(float x, float y)
+            {
+                EnsureCapacity(Count + 1);
+                _x[Count] = x;
+                _y[Count] = y;
+                Count++;
+            }
+
+            public void PrepareAtlas()
+            {
+                if (_sprites.Length != Count)
+                {
+                    Array.Resize(ref _sprites, Count);
+                }
+
+                if (_transforms.Length != Count)
+                {
+                    Array.Resize(ref _transforms, Count);
+                }
+
+                SKRect spriteRect = new(0f, 0f, Sprite.Image.Width, Sprite.Image.Height);
                 for (int i = 0; i < Count; i++)
                 {
                     _sprites[i] = spriteRect;

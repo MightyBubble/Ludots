@@ -48,6 +48,8 @@ namespace CameraAcceptanceMod
         public const string ToggleTextActionId = "CameraAcceptanceToggleText";
         public const string ToggleHotpathBarsActionId = "CameraAcceptanceToggleHotpathBars";
         public const string ToggleHotpathHudTextActionId = "CameraAcceptanceToggleHotpathHudText";
+        public const string ToggleTerrainActionId = "CameraAcceptanceToggleTerrain";
+        public const string ToggleGuidesActionId = "CameraAcceptanceToggleGuides";
         public const string TogglePrimitiveActionId = "CameraAcceptanceTogglePrimitives";
         public const string ToggleHotpathCullCrowdActionId = "CameraAcceptanceToggleHotpathCullCrowd";
         public const string ProjectionSpawnCountKey = "CameraAcceptance.ProjectionSpawnCount";
@@ -86,7 +88,7 @@ namespace CameraAcceptanceMod
             return mapId switch
             {
                 ProjectionMapId => "Projection and raycast acceptance. Left click empty ground to spawn a random-scatter batch and a transient performer marker.",
-                HotpathMapId => "Presentation hotpath harness. Drive a 10k+ deterministic crowd with manual camera movement, inspect the live visible-entity panel, and toggle panel/diagnostic HUD/selection/HUD bars/HUD text/primitives/culling load in one reproducible scene.",
+                HotpathMapId => "Presentation hotpath harness. Drive a 10k+ deterministic crowd with manual camera movement, inspect the live visible-entity panel, and toggle panel/diagnostic HUD/selection/HUD bars/HUD text/terrain/reference guides/primitives/culling load in one reproducible scene.",
                 RtsMapId => "RTS/MOBA behavior composition. Validate middle-drag, edge scroll, WASD pan, and wheel zoom.",
                 TpsMapId => "TPS behavior composition. Hold right mouse to aim/look, then use wheel zoom.",
                 BlendMapId => "Blend acceptance. Pick a curve, then left click ground to move the camera there smoothly.",
@@ -101,7 +103,7 @@ namespace CameraAcceptanceMod
             return mapId switch
             {
                 ProjectionMapId => "Use the panel to move between scenarios. On this map, press Q/E to decrease/increase the left-click spawn batch by 100 with a floor of 0, then left click empty ground and verify a random-scatter batch appears around the raycast point while the cue marker still appears then expires.",
-                HotpathMapId => "Move the camera manually in RTS mode across the 10k+ crowd and watch the panel print the currently visible entities. Use F6 panel, F7 diagnostics HUD, F8 selection labels, F9 HUD bars, F10 HUD text, F12 primitives, and C to isolate culling load.",
+                HotpathMapId => "Move the camera manually in RTS mode across the 10k+ crowd and watch the panel print the currently visible entities. Use F6 panel, F7 diagnostics HUD, F8 selection labels, F9 HUD bars, F10 HUD text, F11 terrain, G guides, F12 primitives, and C to isolate culling load.",
                 RtsMapId => "Keyboard: WASD pan. Mouse: move to screen edge for edge-scroll, hold middle mouse to drag-pan, wheel to zoom.",
                 TpsMapId => "Hold right mouse and drag to rotate. Wheel zooms. This map stays on the follow target while you aim.",
                 BlendMapId => "Pick Cut / Linear / Smooth in the panel, then left click a ground point to trigger the blend.",

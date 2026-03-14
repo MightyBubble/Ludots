@@ -27,6 +27,7 @@ namespace CameraAcceptanceMod.Runtime
         private readonly CameraAcceptancePanelController _panelController = new();
         private bool _selectionCallbacksInstalled;
         private int _cueMarkerPrefabId;
+        private string _lastConfiguredMapId = string.Empty;
 
         internal static void InitializeProjectionSpawnCount(GameEngine engine)
         {
@@ -83,6 +84,7 @@ namespace CameraAcceptanceMod.Runtime
                 return Task.CompletedTask;
             }
 
+            ConfigureRenderDefaultsForMap(engine);
             RefreshPanel(engine);
 
             return Task.CompletedTask;
@@ -93,6 +95,11 @@ namespace CameraAcceptanceMod.Runtime
             var mapId = context.Get(CoreServiceKeys.MapId);
             if (CameraAcceptanceIds.IsAcceptanceMap(mapId.Value))
             {
+                if (string.Equals(_lastConfiguredMapId, mapId.Value, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    _lastConfiguredMapId = string.Empty;
+                }
+
                 ClearPanelIfOwned(context);
             }
 
@@ -152,6 +159,29 @@ namespace CameraAcceptanceMod.Runtime
             }
 
             _panelController.ClearIfOwned(root);
+        }
+
+        private void ConfigureRenderDefaultsForMap(GameEngine engine)
+        {
+            string? mapId = engine.CurrentMapSession?.MapId.Value;
+            if (string.IsNullOrWhiteSpace(mapId) ||
+                !CameraAcceptanceIds.IsAcceptanceMap(mapId) ||
+                string.Equals(_lastConfiguredMapId, mapId, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (engine.GetService(CoreServiceKeys.RenderDebugState) is not RenderDebugState renderDebug)
+            {
+                return;
+            }
+
+            bool isHotpathMap = string.Equals(mapId, CameraAcceptanceIds.HotpathMapId, System.StringComparison.OrdinalIgnoreCase);
+            renderDebug.DrawSkiaUi = true;
+            renderDebug.DrawPrimitives = true;
+            renderDebug.DrawTerrain = !isHotpathMap;
+            renderDebug.DrawDebugDraw = !isHotpathMap;
+            _lastConfiguredMapId = mapId;
         }
 
         private void HandleSelectionConfirmed(GameEngine engine, in WorldCmInt2 worldCm, Entity selectedEntity)

@@ -140,6 +140,7 @@ namespace Ludots.Adapter.Raylib
                 bool compositeHadContent = false;
                 int underlayLayerVersion = -1;
                 int topOverlayLayerVersion = -1;
+                var underlayPacer = new PresentationOverlayLanePacer(PresentationOverlayLayer.UnderUi);
 
                 while (!Rl.WindowShouldClose())
                 {
@@ -201,12 +202,15 @@ namespace Ludots.Adapter.Raylib
                         var activeCamera = cameraAdapter.Camera;
                         Rl.BeginMode3D(activeCamera);
 
-                        DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
+                        if (drawDebugDraw)
+                        {
+                            DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
 
-                        var target = activeCamera.target;
-                        Rl.DrawLine3D(target, target + new Vector3(2.0f, 0, 0), Color.RED);
-                        Rl.DrawLine3D(target, target + new Vector3(0, 0, 2.0f), Color.BLUE);
-                        Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
+                            var target = activeCamera.target;
+                            Rl.DrawLine3D(target, target + new Vector3(2.0f, 0, 0), Color.RED);
+                            Rl.DrawLine3D(target, target + new Vector3(0, 0, 2.0f), Color.BLUE);
+                            Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
+                        }
 
                         // 锚定到 target，网格以观察点为中心；halfCount 越大边界越远
                         if (drawTerrain)
@@ -280,8 +284,14 @@ namespace Ludots.Adapter.Raylib
                             underlayLayer.Clear();
                             if (hasUnderlay)
                             {
-                                overlaySkiaRenderer.Render(overlayScene!, underlayLayer.Canvas, PresentationOverlayLayer.UnderUi);
+                                PresentationOverlayLanePacer.LaneRefreshPlan underlayPlan = underlayPacer.BuildPlan(overlayScene!);
+                                overlaySkiaRenderer.Render(overlayScene!, underlayLayer.Canvas, PresentationOverlayLayer.UnderUi, underlayPlan);
+                                underlayPacer.MarkPresented(overlayScene!, underlayPlan);
                                 underlayLayer.SetHasContent(true);
+                            }
+                            else
+                            {
+                                underlayPacer.Reset();
                             }
 
                             underlayHadContent = hasUnderlay;
