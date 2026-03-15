@@ -18,14 +18,29 @@ namespace Ludots.Core.Input.Orders
     public delegate bool GroundPositionProvider(out Vector3 worldCm);
     
     /// <summary>
-    /// Delegate for getting the selected entity.
+    /// Delegate for resolving the acting entity for an order.
     /// </summary>
-    public delegate bool SelectedEntityProvider(out Entity entity);
+    public delegate bool ActorProvider(out Entity entity);
 
     /// <summary>
-    /// Delegate for getting the current selected entity collection (for RTS-style multi-select orders).
+    /// Legacy ambient-selection provider kept for tests and transitional callers.
     /// </summary>
-    public delegate bool SelectedEntitiesProvider(ref OrderEntitySelection entities);
+    public delegate bool AmbientSelectedEntityProvider(out Entity entity);
+
+    /// <summary>
+    /// Delegate for getting the selected entity from a named selection set.
+    /// </summary>
+    public delegate bool SelectedEntityProvider(string selectionSetKey, out Entity entity);
+
+    /// <summary>
+    /// Delegate for getting the current selected entity collection from a named selection set.
+    /// </summary>
+    public delegate bool SelectedEntitiesProvider(string selectionSetKey, ref OrderEntitySelection entities);
+
+    /// <summary>
+    /// Legacy ambient-selection collection provider kept for tests and transitional callers.
+    /// </summary>
+    public delegate bool AmbientSelectedEntitiesProvider(ref OrderEntitySelection entities);
 
     /// <summary>
     /// Delegate for getting the entity currently under the cursor (for SmartCast).
@@ -121,6 +136,7 @@ namespace Ludots.Core.Input.Orders
         // Callbacks
         private OrderTypeKeyResolver? _orderTypeKeyResolver;
         private GroundPositionProvider? _groundPositionProvider;
+        private ActorProvider? _actorProvider;
         private SelectedEntityProvider? _selectedEntityProvider;
         private SelectedEntitiesProvider? _selectedEntitiesProvider;
         private HoveredEntityProvider? _hoveredEntityProvider;
@@ -216,7 +232,12 @@ namespace Ludots.Core.Input.Orders
 
         public void SetOrderTypeKeyResolver(OrderTypeKeyResolver resolver) => _orderTypeKeyResolver = resolver;
         public void SetGroundPositionProvider(GroundPositionProvider provider) => _groundPositionProvider = provider;
+        public void SetActorProvider(ActorProvider provider) => _actorProvider = provider;
+        public void SetSelectedEntityProvider(AmbientSelectedEntityProvider provider)
+            => _selectedEntityProvider = (string _, out Entity entity) => provider(out entity);
         public void SetSelectedEntityProvider(SelectedEntityProvider provider) => _selectedEntityProvider = provider;
+        public void SetSelectedEntitiesProvider(AmbientSelectedEntitiesProvider provider)
+            => _selectedEntitiesProvider = (string _, ref OrderEntitySelection entities) => provider(ref entities);
         public void SetSelectedEntitiesProvider(SelectedEntitiesProvider provider) => _selectedEntitiesProvider = provider;
         public void SetHoveredEntityProvider(HoveredEntityProvider provider) => _hoveredEntityProvider = provider;
         public void SetOrderSubmitHandler(OrderSubmitHandler handler) => _orderSubmitHandler = handler;
@@ -625,7 +646,7 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey + orderTypeSuffix);
             if (orderTypeId <= 0) return false;
 
-            Entity actor = ResolvePrimaryActor(mapping.SelectionType);
+            Entity actor = ResolvePrimaryActor(mapping);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
 
@@ -641,14 +662,14 @@ namespace Ludots.Core.Input.Orders
             }
             else if (mapping.SelectionType == OrderSelectionType.Entity)
             {
-                if (_selectedEntityProvider != null && _selectedEntityProvider(out var target))
+                if (_selectedEntityProvider != null && _selectedEntityProvider(mapping.SelectionSetKey, out var target))
                 {
                     order.Target = target;
                 }
             }
             else if (mapping.SelectionType == OrderSelectionType.Entities)
             {
-                _selectedEntitiesProvider?.Invoke(ref args.Entities);
+                _selectedEntitiesProvider?.Invoke(mapping.SelectionSetKey, ref args.Entities);
             }
 
             order.OrderTypeId = orderTypeId;
@@ -684,7 +705,7 @@ namespace Ludots.Core.Input.Orders
                 return false;
             }
 
-            Entity actor = ResolvePrimaryActor(mapping.SelectionType);
+            Entity actor = ResolvePrimaryActor(mapping);
             if (!_contextScoredProvider!(actor, mapping, hoveredEntity, out var resolution))
             {
                 return false;
@@ -714,7 +735,7 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
 
-            Entity actor = ResolvePrimaryActor(mapping.SelectionType);
+            Entity actor = ResolvePrimaryActor(mapping);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
 
@@ -736,7 +757,7 @@ namespace Ludots.Core.Input.Orders
                     {
                         order.Target = autoTarget;
                     }
-                    else if (_selectedEntityProvider != null && _selectedEntityProvider(out var selected))
+                    else if (_selectedEntityProvider != null && _selectedEntityProvider(mapping.SelectionSetKey, out var selected))
                     {
                         order.Target = selected;
                     }
@@ -772,7 +793,7 @@ namespace Ludots.Core.Input.Orders
                 case OrderSelectionType.Entities:
                     if (_selectedEntitiesProvider != null)
                     {
-                        _selectedEntitiesProvider(ref args.Entities);
+                        _selectedEntitiesProvider(mapping.SelectionSetKey, ref args.Entities);
                     }
                     else if (mapping.RequireSelection)
                     {
@@ -804,7 +825,7 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
             
-            Entity actor = ResolvePrimaryActor(mapping.SelectionType);
+            Entity actor = ResolvePrimaryActor(mapping);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
             
@@ -833,7 +854,7 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
             
-            Entity actor = ResolvePrimaryActor(mapping.SelectionType);
+            Entity actor = ResolvePrimaryActor(mapping);
             
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
@@ -853,7 +874,7 @@ namespace Ludots.Core.Input.Orders
                         break;
                         
                     case OrderSelectionType.Entity:
-                        if (_selectedEntityProvider == null || !_selectedEntityProvider(out var target))
+                        if (_selectedEntityProvider == null || !_selectedEntityProvider(mapping.SelectionSetKey, out var target))
                         {
                             return false;
                         }
@@ -861,7 +882,7 @@ namespace Ludots.Core.Input.Orders
                         break;
                         
                     case OrderSelectionType.Entities:
-                        if (_selectedEntitiesProvider == null || !_selectedEntitiesProvider(ref args.Entities) || args.Entities.Count <= 0)
+                        if (_selectedEntitiesProvider == null || !_selectedEntitiesProvider(mapping.SelectionSetKey, ref args.Entities) || args.Entities.Count <= 0)
                         {
                             return false;
                         }
@@ -870,14 +891,14 @@ namespace Ludots.Core.Input.Orders
             }
             else if (mapping.SelectionType == OrderSelectionType.Entity)
             {
-                if (_selectedEntityProvider != null && _selectedEntityProvider(out var target))
+                if (_selectedEntityProvider != null && _selectedEntityProvider(mapping.SelectionSetKey, out var target))
                 {
                     order.Target = target;
                 }
             }
             else if (mapping.SelectionType == OrderSelectionType.Entities)
             {
-                _selectedEntitiesProvider?.Invoke(ref args.Entities);
+                _selectedEntitiesProvider?.Invoke(mapping.SelectionSetKey, ref args.Entities);
             }
             
             order.OrderTypeId = orderTypeId;
@@ -888,18 +909,23 @@ namespace Ludots.Core.Input.Orders
             return true;
         }
 
-        private Entity ResolvePrimaryActor(OrderSelectionType selectionType)
+        private Entity ResolvePrimaryActor(InputOrderMapping mapping)
         {
-            if (selectionType != OrderSelectionType.Entities)
+            if (_actorProvider != null && _actorProvider(out var actor) && actor != default)
+            {
+                return actor;
+            }
+
+            if (mapping.SelectionType != OrderSelectionType.Entities)
             {
                 var selectedActors = default(OrderEntitySelection);
-                if (TryCaptureSelectedActors(ref selectedActors))
+                if (TryCaptureSelectedActors(mapping.SelectionSetKey, ref selectedActors))
                 {
                     return selectedActors.GetEntity(0);
                 }
             }
 
-            if (_selectedEntityProvider != null && _selectedEntityProvider(out var selected))
+            if (_selectedEntityProvider != null && _selectedEntityProvider(mapping.SelectionSetKey, out var selected))
             {
                 return selected;
             }
@@ -907,10 +933,10 @@ namespace Ludots.Core.Input.Orders
             return _localPlayer;
         }
 
-        private bool TryCaptureSelectedActors(ref OrderEntitySelection entities)
+        private bool TryCaptureSelectedActors(string selectionSetKey, ref OrderEntitySelection entities)
         {
             return _selectedEntitiesProvider != null &&
-                   _selectedEntitiesProvider(ref entities) &&
+                   _selectedEntitiesProvider(selectionSetKey, ref entities) &&
                    entities.Count > 0;
         }
 
@@ -923,7 +949,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             var selectedActors = default(OrderEntitySelection);
-            if (!TryCaptureSelectedActors(ref selectedActors) || selectedActors.Count <= 1)
+            if (!TryCaptureSelectedActors(mapping.SelectionSetKey, ref selectedActors) || selectedActors.Count <= 1)
             {
                 _orderSubmitHandler!(in order);
                 return;
@@ -984,6 +1010,7 @@ namespace Ludots.Core.Input.Orders
                 OrderTypeKey = orderTypeKey,
                 ArgsTemplate = argsTemplate ?? original.ArgsTemplate,
                 RequireSelection = original.RequireSelection,
+                SelectionSetKey = original.SelectionSetKey,
                 SelectionType = original.SelectionType,
                 IsSkillMapping = original.IsSkillMapping
             };

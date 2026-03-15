@@ -4,6 +4,7 @@
     "components": {
       "Name": { "Value": "ArpgHero" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 100, "Armor": 0 } },
       "AbilityStateBuffer": {
@@ -28,6 +29,7 @@
     "components": {
       "Name": { "Value": "ArpgEnemy" },
       "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 800, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 100, "Armor": 0 } }
     }

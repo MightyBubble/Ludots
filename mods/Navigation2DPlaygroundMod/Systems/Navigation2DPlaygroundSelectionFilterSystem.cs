@@ -37,7 +37,6 @@ namespace Navigation2DPlaygroundMod.Systems
             ref var selection = ref _world.Get<SelectionBuffer>(local);
             if (selection.Count <= 0)
             {
-                _engine.GlobalContext.Remove(CoreServiceKeys.SelectedEntity.Name);
                 return;
             }
 
@@ -55,10 +54,6 @@ namespace Navigation2DPlaygroundMod.Systems
                 }
 
                 changed = true;
-                if (_world.IsAlive(entity) && _world.Has<SelectedTag>(entity))
-                {
-                    _world.Remove<SelectedTag>(entity);
-                }
             }
 
             if (changed)
@@ -71,24 +66,9 @@ namespace Navigation2DPlaygroundMod.Systems
                     {
                         break;
                     }
-
-                    if (!_world.Has<SelectedTag>(entity))
-                    {
-                        _world.Add<SelectedTag>(entity);
-                    }
                 }
 
                 _world.Set(local, selection);
-            }
-
-            Entity primary = selection.Primary;
-            if (_world.IsAlive(primary))
-            {
-                _engine.GlobalContext[CoreServiceKeys.SelectedEntity.Name] = primary;
-            }
-            else
-            {
-                _engine.GlobalContext.Remove(CoreServiceKeys.SelectedEntity.Name);
             }
         }
 

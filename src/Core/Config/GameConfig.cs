@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation2D.Config;
 
 namespace Ludots.Core.Config
@@ -43,6 +44,8 @@ namespace Ludots.Core.Config
         public int WorldHeightInTiles { get; set; } = 64;
 
         public Navigation2DConfig Navigation2D { get; set; } = new Navigation2DConfig();
+
+        public SelectionRuntimeConfig Selection { get; set; } = new SelectionRuntimeConfig();
 
         public LogConfig Logging { get; set; } = new LogConfig();
 

@@ -926,25 +926,22 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Entity hero = FindEntityByName(engine.World, CameraAcceptanceIds.HeroName);
             Assert.That(hero, Is.Not.EqualTo(Entity.Null));
 
-            var projector = engine.GetService(CoreServiceKeys.ScreenProjector);
-            Assert.That(projector, Is.Not.Null);
-            Vector2 heroScreen = ProjectEntity(engine, projector!, hero);
-
-            var backend = GetInputBackend(engine);
-            ClickScreen(engine, backend, heroScreen);
-            Tick(engine, 3);
+            SetSelectionBuffer(engine, hero);
+            engine.GlobalContext[CoreServiceKeys.SelectedEntity.Name] = hero;
+            TickCamera(engine, 3);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.True);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(1600f, 1200f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1600f, 1200f)));
 
             ref var position = ref engine.World.Get<WorldPositionCm>(hero);
             position = WorldPositionCm.FromCm(2200, 1800);
-            Tick(engine, 3);
+            TickCamera(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(2200f, 1800f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(2200f, 1800f)));
 
-            ClickGround(engine, backend, new Vector2(1800f, 1300f));
-            Tick(engine, 3);
+            SetSelectionBuffer(engine);
+            engine.GlobalContext.Remove(CoreServiceKeys.SelectedEntity.Name);
+            TickCamera(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(2200f, 1800f)), "Losing the follow target should leave the camera in place.");
@@ -1053,6 +1050,15 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 beforeFrame?.Invoke(engine);
                 engine.SetService(CoreServiceKeys.UiCaptured, false);
                 engine.Tick(1f / 60f);
+                UpdateHeadlessCamera(engine);
+            }
+        }
+
+        private static void TickCamera(GameEngine engine, int frames)
+        {
+            for (int i = 0; i < frames; i++)
+            {
+                engine.GameSession.Camera.Update(1f / 60f);
                 UpdateHeadlessCamera(engine);
             }
         }

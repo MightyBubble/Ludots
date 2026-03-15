@@ -10,6 +10,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -81,12 +82,12 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Entity captain = FindEntityByName(engine.World, CameraShowcaseIds.CaptainName);
             Assert.That(captain, Is.Not.EqualTo(Entity.Null));
 
-            engine.GlobalContext[CoreServiceKeys.SelectedEntity.Name] = captain;
+            SetAmbientSelection(engine, captain);
             Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3200f, 2000f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
 
-            engine.GlobalContext.Remove(CoreServiceKeys.SelectedEntity.Name);
+            ClearAmbientSelection(engine);
             Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
@@ -170,13 +171,13 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Entity captain = FindEntityByName(engine.World, CameraShowcaseIds.CaptainName);
             Assert.That(captain, Is.Not.EqualTo(Entity.Null));
 
-            engine.GlobalContext[CoreServiceKeys.SelectedEntity.Name] = captain;
-            Tick(engine, 3);
+            SetCompatSelectedEntity(engine, captain);
+            TickCamera(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3400f, 2200f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
 
-            engine.GlobalContext.Remove(CoreServiceKeys.SelectedEntity.Name);
-            Tick(engine, 3);
+            ClearCompatSelectedEntity(engine);
+            TickCamera(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
@@ -258,6 +259,14 @@ namespace Ludots.Tests.ThreeC.Acceptance
             }
         }
 
+        private static void TickCamera(GameEngine engine, int frames)
+        {
+            for (int i = 0; i < frames; i++)
+            {
+                engine.GameSession.Camera.Update(1f / 60f);
+            }
+        }
+
         private static void TickUntil(GameEngine engine, Func<bool> predicate, int maxFrames = 30)
         {
             for (int i = 0; i < maxFrames; i++)
@@ -285,6 +294,48 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 }
             });
             return result;
+        }
+
+        private static Entity GetLocalPlayer(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
+                   localObj is Entity local &&
+                   engine.World.IsAlive(local)
+                ? local
+                : throw new InvalidOperationException("LocalPlayerEntity is missing.");
+        }
+
+        private static void SetAmbientSelection(GameEngine engine, params Entity[] entities)
+        {
+            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
+                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
+            Entity local = GetLocalPlayer(engine);
+            Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.Ambient, entities), Is.True);
+            engine.GlobalContext[CoreServiceKeys.SelectionViewOwnerEntity.Name] = local;
+            engine.GlobalContext[CoreServiceKeys.SelectionViewSetKey.Name] = SelectionSetKeys.Ambient;
+            if (entities.Length > 0 && entities[0] != Entity.Null)
+            {
+                engine.GlobalContext[CoreServiceKeys.SelectedEntity.Name] = entities[0];
+            }
+            else
+            {
+                engine.GlobalContext.Remove(CoreServiceKeys.SelectedEntity.Name);
+            }
+        }
+
+        private static void ClearAmbientSelection(GameEngine engine)
+        {
+            SetAmbientSelection(engine);
+        }
+
+        private static void SetCompatSelectedEntity(GameEngine engine, Entity entity)
+        {
+            engine.GlobalContext[CoreServiceKeys.SelectedEntity.Name] = entity;
+        }
+
+        private static void ClearCompatSelectedEntity(GameEngine engine)
+        {
+            engine.GlobalContext.Remove(CoreServiceKeys.SelectedEntity.Name);
         }
 
         private static string FindRepoRoot()

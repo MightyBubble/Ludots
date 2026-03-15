@@ -137,8 +137,7 @@ namespace Ludots.Core.Input.Selection
                     for (int i = 0; i < result.Count && written < maxCount; i++)
                     {
                         var entity = buffer[i];
-                        if (!_world.IsAlive(entity)) continue;
-                        if (!PassesRelationship(entity, rule.RelationshipFilter, originTeamId)) continue;
+                        if (!CanAcquireEntity(entity, rule.RelationshipFilter, originTeamId)) continue;
 
                         response.SetEntity(written, entity);
                         written++;
@@ -171,8 +170,7 @@ namespace Ludots.Core.Input.Selection
             for (int i = 0; i < count; i++)
             {
                 var entity = buffer[i];
-                if (!_world.IsAlive(entity)) continue;
-                if (!PassesRelationship(entity, filter, originTeamId)) continue;
+                if (!CanAcquireEntity(entity, filter, originTeamId)) continue;
 
                 ref var pos = ref _world.TryGetRef<WorldPositionCm>(entity, out bool hasPos);
                 if (!hasPos) continue;
@@ -189,6 +187,16 @@ namespace Ludots.Core.Input.Selection
             }
 
             return best;
+        }
+
+        private bool CanAcquireEntity(Entity entity, RelationshipFilter filter, int originTeamId)
+        {
+            if (!_world.IsAlive(entity) || !SelectionEligibility.IsSelectableNow(_world, entity))
+            {
+                return false;
+            }
+
+            return PassesRelationship(entity, filter, originTeamId);
         }
 
         private bool PassesRelationship(Entity entity, RelationshipFilter filter, int originTeamId)

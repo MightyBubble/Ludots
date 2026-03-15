@@ -14,6 +14,7 @@ using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.UI;
+using Ludots.UI.Runtime;
 
 namespace CameraAcceptanceMod.Runtime
 {
@@ -24,7 +25,7 @@ namespace CameraAcceptanceMod.Runtime
         private const float ProjectionScatterSpacingCm = 120f;
         private const float ProjectionScatterJitterCm = 42f;
 
-        private readonly CameraAcceptancePanelController _panelController = new();
+        private CameraAcceptancePanelController? _panelController;
         private bool _selectionCallbacksInstalled;
         private int _cueMarkerPrefabId;
         private string _lastConfiguredMapId = string.Empty;
@@ -106,6 +107,19 @@ namespace CameraAcceptanceMod.Runtime
             return Task.CompletedTask;
         }
 
+        private CameraAcceptancePanelController EnsurePanelController(GameEngine engine)
+        {
+            if (_panelController != null)
+            {
+                return _panelController;
+            }
+
+            var textMeasurer = (IUiTextMeasurer)engine.GetService(CoreServiceKeys.UiTextMeasurer);
+            var imageSizeProvider = (IUiImageSizeProvider)engine.GetService(CoreServiceKeys.UiImageSizeProvider);
+            _panelController = new CameraAcceptancePanelController(textMeasurer, imageSizeProvider);
+            return _panelController;
+        }
+
         public void RefreshPanel(GameEngine engine)
         {
             if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
@@ -127,16 +141,17 @@ namespace CameraAcceptanceMod.Runtime
                 return;
             }
 
-            _panelController.MountOrSync(root, engine);
+            var panelController = EnsurePanelController(engine);
+            panelController.MountOrSync(root, engine);
             if (engine.GetService(CameraAcceptanceServiceKeys.DiagnosticsState) is CameraAcceptanceDiagnosticsState diagnostics)
             {
                 diagnostics.ObservePanelUpdate(
-                    _panelController.LastUpdateStats,
-                    _panelController.LastUpdateMetrics,
-                    _panelController.LastSelectionRowsTouched,
-                    _panelController.RowPoolSize,
-                    _panelController.FullRecomposeCount,
-                    _panelController.IncrementalPatchCount);
+                    panelController.LastUpdateStats,
+                    panelController.LastUpdateMetrics,
+                    panelController.LastSelectionRowsTouched,
+                    panelController.RowPoolSize,
+                    panelController.FullRecomposeCount,
+                    panelController.IncrementalPatchCount);
             }
         }
 
@@ -158,7 +173,7 @@ namespace CameraAcceptanceMod.Runtime
                 return;
             }
 
-            _panelController.ClearIfOwned(root);
+            _panelController?.ClearIfOwned(root);
         }
 
         private void ConfigureRenderDefaultsForMap(GameEngine engine)

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
@@ -12,6 +13,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -121,13 +123,20 @@ namespace Ludots.Tests.GAS
             authoritativeInput.SetActionState("Confirm", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
 
             var target = world.Create();
+            var local = world.Create();
+            var selection = new SelectionRuntime(
+                world,
+                new SelectionRuntimeConfig(),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.Ambient, new[] { target }), Is.True);
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = liveInput,
                 [CoreServiceKeys.AuthoritativeInput.Name] = authoritativeInput,
                 [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
                 [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
-                [CoreServiceKeys.SelectedEntity.Name] = target,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.SelectionRuntime.Name] = selection,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
 

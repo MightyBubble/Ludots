@@ -14,6 +14,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Layers;
 using Ludots.Core.Modding;
 using Ludots.Core.Physics;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Config
@@ -45,6 +46,8 @@ namespace Ludots.Core.Config
             Register<ForceInput2D>("ForceInput2D");
             Register<GameplayTagContainer>("GameplayTagContainer");
             Register("OrderBuffer", SetOrderBuffer);
+            Register<SelectionSelectableTag>("SelectionSelectableTag");
+            Register("SelectionSelectableState", SetSelectionSelectableState);
             Register<BlackboardSpatialBuffer>("BlackboardSpatialBuffer");
             Register<BlackboardEntityBuffer>("BlackboardEntityBuffer");
             Register<BlackboardIntBuffer>("BlackboardIntBuffer");
@@ -103,6 +106,26 @@ namespace Ludots.Core.Config
             entity.Add(OrderBuffer.CreateEmpty());
         }
 
+        private static void SetSelectionSelectableState(Entity entity, JsonNode data)
+        {
+            var state = SelectionSelectableState.EnabledByDefault;
+            if (data is JsonObject obj)
+            {
+                if ((obj.TryGetPropertyValue("IsEnabled", out var isEnabledNode) ||
+                     obj.TryGetPropertyValue("isEnabled", out isEnabledNode)) &&
+                    isEnabledNode != null)
+                {
+                    state.IsEnabled = ParseSelectionEnabled(isEnabledNode);
+                }
+            }
+            else if (data != null)
+            {
+                state.IsEnabled = ParseSelectionEnabled(data);
+            }
+
+            entity.Add(state);
+        }
+
         private static void SetAbilityStateBuffer(Entity entity, JsonNode data)
         {
             var buffer = default(AbilityStateBuffer);
@@ -139,6 +162,17 @@ namespace Ludots.Core.Config
                 }
             }
             entity.Add(buffer);
+        }
+
+        private static byte ParseSelectionEnabled(JsonNode node)
+        {
+            return node.GetValueKind() switch
+            {
+                JsonValueKind.True => 1,
+                JsonValueKind.False => 0,
+                JsonValueKind.Number => node.GetValue<int>() != 0 ? (byte)1 : (byte)0,
+                _ => 0,
+            };
         }
 
         private static void SetWorldPositionCm(Entity entity, JsonNode data)

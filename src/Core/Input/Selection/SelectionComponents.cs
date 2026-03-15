@@ -4,8 +4,9 @@ using Arch.Core;
 namespace Ludots.Core.Input.Selection
 {
     /// <summary>
-    /// Per-player selection buffer. Stores which entities are currently selected.
-    /// This component lives on the player/controller entity, not on selected entities.
+    /// Selector-owned selection buffer.
+    /// Ambient/default selection lives directly on the selector entity.
+    /// Additional named selection sets reuse this same payload on dedicated set entities.
     /// 
     /// Architecture:
     ///   - SelectionBuffer (this): which entities are selected (persistent ECS component)
@@ -126,15 +127,55 @@ namespace Ludots.Core.Input.Selection
     }
 
     /// <summary>
-    /// Tag attached to currently selected entities so downstream queries do not
-    /// need to understand who owns the selection buffer.
+    /// Tag attached to entities projected from the currently viewed selection set.
+    /// This is a derived compatibility bridge only. It is not the selection SSOT.
     /// </summary>
     public struct SelectedTag
     {
     }
 
     /// <summary>
-    /// Per-player screen-space drag state for box selection.
+    /// Explicit system-level opt-in marker for formal selection infrastructure.
+    /// This is the stable capability label seeded by config/runtime composition.
+    /// </summary>
+    public struct SelectionSelectableTag
+    {
+    }
+
+    /// <summary>
+    /// Runtime availability gate for formal selection acquisition.
+    /// Use this for gameplay-driven temporary states such as stasis, untargetable,
+    /// or other mechanics that should block fresh selection without changing the
+    /// system-level capability label.
+    /// </summary>
+    public struct SelectionSelectableState
+    {
+        public byte IsEnabled;
+
+        public readonly bool Enabled => IsEnabled != 0;
+
+        public static SelectionSelectableState EnabledByDefault => new() { IsEnabled = 1 };
+        public static SelectionSelectableState Disabled => new() { IsEnabled = 0 };
+    }
+
+    /// <summary>
+    /// Owner selector for a non-ambient named selection set entity.
+    /// </summary>
+    public struct SelectionSetOwner
+    {
+        public Entity Value;
+    }
+
+    /// <summary>
+    /// Registered set id for a non-ambient named selection set entity.
+    /// </summary>
+    public struct SelectionSetId
+    {
+        public int Value;
+    }
+
+    /// <summary>
+    /// Per-selector screen-space drag state for box selection.
     /// </summary>
     public struct SelectionDragState
     {

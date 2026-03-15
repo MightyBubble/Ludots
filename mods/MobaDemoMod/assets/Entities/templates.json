@@ -2,6 +2,7 @@
   {
     "id": "moba_hero",
     "components": {
+      "SelectionSelectableTag": {},
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Moba.SkillQ",

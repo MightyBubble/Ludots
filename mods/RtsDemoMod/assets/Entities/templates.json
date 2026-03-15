@@ -4,6 +4,7 @@
     "components": {
       "Name": { "Value": "SCV" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 60, "Minerals": 500 } },
       "AbilityStateBuffer": {
@@ -23,6 +24,7 @@
     "components": {
       "Name": { "Value": "Barracks" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 400, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 1000 } },
       "AbilityStateBuffer": {
@@ -43,6 +45,7 @@
     "components": {
       "Name": { "Value": "Marine" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 40, "Shield": 0, "AttackSpeed": 100 } },
       "AbilityStateBuffer": {
@@ -62,6 +65,7 @@
     "components": {
       "Name": { "Value": "SiegeTank" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 150, "Shield": 0 } },
       "AbilityStateBuffer": {
@@ -81,6 +85,7 @@
     "components": {
       "Name": { "Value": "ScienceVessel" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 200, "Energy": 200 } },
       "AbilityStateBuffer": {
@@ -101,6 +106,7 @@
     "components": {
       "Name": { "Value": "Zergling" },
       "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 2000, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 35 } }
     }
@@ -110,6 +116,7 @@
     "components": {
       "Name": { "Value": "Zealot" },
       "Team": { "Id": 3 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": -2000, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 100, "Shield": 60 } }
     }

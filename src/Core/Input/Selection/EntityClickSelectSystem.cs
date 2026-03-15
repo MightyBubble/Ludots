@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
-using Ludots.Core.Components;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -17,35 +17,33 @@ namespace Ludots.Core.Input.Selection
 {
     /// <summary>
     /// Shared selection runtime for single-click and screen-space box selection.
-    /// Uses the authoritative input snapshot and keeps selection state on the
-    /// local player entity, while preserving SelectedEntity / HoveredEntity
-    /// globals as compatibility bridges for downstream systems.
+    /// Formal selection writes only to the selector's ambient selection set.
     /// </summary>
     public sealed class EntityClickSelectSystem : ISystem<float>
     {
         private static readonly InteractionActionBindings DefaultBindings = new();
-        private static readonly QueryDescription ClickSelectableQuery = new QueryDescription().WithAll<WorldPositionCm>();
-        private static readonly QueryDescription BoxSelectableQuery = new QueryDescription().WithAll<VisualTransform, CullState>();
-
-        public const float DragThresholdPixels = 8f;
+        private static readonly QueryDescription SelectableQuery = new QueryDescription().WithAll<VisualTransform, CullState, SelectionSelectableTag>();
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
+        private readonly SelectionRuntime _selection;
         private readonly Entity[] _boxSelectionScratch = new Entity[SelectionBuffer.CAPACITY];
         private bool _suppressConfirmRelease;
 
-        public int PickRadiusCm { get; set; } = 120;
         public Action<WorldCmInt2, Entity>? OnEntitySelected { get; set; }
+
+        public EntityClickSelectSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
+        {
+            _world = world;
+            _globals = globals;
+            _selection = selection;
+        }
 
         public EntityClickSelectSystem(World world, Dictionary<string, object> globals)
         {
             _world = world;
             _globals = globals;
-        }
-
-        public EntityClickSelectSystem(World world, Dictionary<string, object> globals, ISpatialQueryService spatial)
-            : this(world, globals)
-        {
+            _selection = ResolveSelectionRuntime(world, globals);
         }
 
         public void Initialize() { }
@@ -69,7 +67,8 @@ namespace Ludots.Core.Input.Selection
                 _suppressConfirmRelease = true;
             }
 
-            bool hasGroundPoint = TryResolveGroundPointer(pointer, out var groundWorldCm, out var hovered);
+            bool hasGroundPoint = TryResolveGroundPointer(pointer, out var groundWorldCm);
+            Entity hovered = FindNearestEntity(pointer, _selection.Config.ClickPickRadiusPixels);
             UpdateHoveredEntity(hovered);
 
             bool hasOwner = TryGetSelectionOwner(out var owner);
@@ -81,19 +80,11 @@ namespace Ludots.Core.Input.Selection
                     return;
                 }
 
-                if (!selectionSuppressed)
-                {
-                    HandleLegacyClickWithoutSelectionOwner(confirmReleased, hasGroundPoint, groundWorldCm, hovered);
-                }
                 return;
             }
 
             EnsureSelectionComponents(owner);
-
             ref var drag = ref _world.Get<SelectionDragState>(owner);
-            ref var selection = ref _world.Get<SelectionBuffer>(owner);
-
-            PruneInvalidSelection(owner, ref selection);
 
             if (selectionSuppressed || _suppressConfirmRelease)
             {
@@ -106,8 +97,6 @@ namespace Ludots.Core.Input.Selection
                 {
                     _suppressConfirmRelease = false;
                 }
-
-                SyncPrimarySelectedEntity(in selection);
                 return;
             }
 
@@ -124,13 +113,13 @@ namespace Ludots.Core.Input.Selection
             {
                 drag.CurrentScreen = pointer;
 
-                if (drag.ExceedsThreshold(DragThresholdPixels))
+                if (drag.ExceedsThreshold(_selection.Config.DragThresholdPixels))
                 {
-                    ApplyBoxSelection(owner, ref selection, in drag);
+                    ApplyBoxSelection(owner, in drag);
                 }
                 else if (hasGroundPoint)
                 {
-                    ApplyClickSelection(owner, ref selection, hovered);
+                    ApplyClickSelection(owner, hovered);
                     OnEntitySelected?.Invoke(groundWorldCm, hovered);
                 }
 
@@ -140,8 +129,6 @@ namespace Ludots.Core.Input.Selection
             {
                 drag.Clear();
             }
-
-            SyncPrimarySelectedEntity(in selection);
         }
 
         private bool TryGetInput(out IInputActionReader input)
@@ -152,10 +139,9 @@ namespace Ludots.Core.Input.Selection
                    (input = reader) != null;
         }
 
-        private bool TryResolveGroundPointer(Vector2 pointer, out WorldCmInt2 groundWorldCm, out Entity hovered)
+        private bool TryResolveGroundPointer(Vector2 pointer, out WorldCmInt2 groundWorldCm)
         {
             groundWorldCm = default;
-            hovered = default;
 
             if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider)
             {
@@ -173,7 +159,6 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            hovered = FindNearestEntity(groundWorldCm, PickRadiusCm);
             return true;
         }
 
@@ -195,20 +180,12 @@ namespace Ludots.Core.Input.Selection
 
         private void EnsureSelectionComponents(Entity owner)
         {
-            if (!_world.Has<SelectionBuffer>(owner))
-            {
-                _world.Add(owner, default(SelectionBuffer));
-            }
-
-            if (!_world.Has<SelectionGroupBuffer>(owner))
-            {
-                _world.Add(owner, default(SelectionGroupBuffer));
-            }
-
             if (!_world.Has<SelectionDragState>(owner))
             {
                 _world.Add(owner, default(SelectionDragState));
             }
+
+            _selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.Ambient, out _);
         }
 
         private void UpdateHoveredEntity(Entity hovered)
@@ -223,26 +200,7 @@ namespace Ludots.Core.Input.Selection
             }
         }
 
-        private void HandleLegacyClickWithoutSelectionOwner(bool confirmReleased, bool hasGroundPoint, in WorldCmInt2 groundWorldCm, Entity hovered)
-        {
-            if (!confirmReleased || !hasGroundPoint)
-            {
-                return;
-            }
-
-            if (_world.IsAlive(hovered))
-            {
-                _globals[CoreServiceKeys.SelectedEntity.Name] = hovered;
-            }
-            else
-            {
-                _globals.Remove(CoreServiceKeys.SelectedEntity.Name);
-            }
-
-            OnEntitySelected?.Invoke(groundWorldCm, hovered);
-        }
-
-        private void ApplyClickSelection(Entity owner, ref SelectionBuffer selection, Entity clicked)
+        private void ApplyClickSelection(Entity owner, Entity clicked)
         {
             Span<Entity> next = stackalloc Entity[SelectionBuffer.CAPACITY];
             int nextCount = 0;
@@ -251,10 +209,10 @@ namespace Ludots.Core.Input.Selection
                 next[nextCount++] = clicked;
             }
 
-            ApplySelection(owner, ref selection, next.Slice(0, nextCount));
+            _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next.Slice(0, nextCount));
         }
 
-        private void ApplyBoxSelection(Entity owner, ref SelectionBuffer selection, in SelectionDragState drag)
+        private void ApplyBoxSelection(Entity owner, in SelectionDragState drag)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) || projectorObj is not IScreenProjector projector)
             {
@@ -265,9 +223,11 @@ namespace Ludots.Core.Input.Selection
             var max = Vector2.Max(drag.StartScreen, drag.CurrentScreen);
 
             int nextCount = 0;
-            _world.Query(in BoxSelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull) =>
+            _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
             {
-                if (nextCount >= _boxSelectionScratch.Length || !cull.IsVisible || !_world.IsAlive(entity))
+                if (nextCount >= _boxSelectionScratch.Length ||
+                    !cull.IsVisible ||
+                    !SelectionEligibility.IsSelectableNow(_world, entity))
                 {
                     return;
                 }
@@ -287,115 +247,36 @@ namespace Ludots.Core.Input.Selection
             });
 
             SortByEntityId(_boxSelectionScratch, nextCount);
-            ApplySelection(owner, ref selection, _boxSelectionScratch.AsSpan(0, nextCount));
+            _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, _boxSelectionScratch.AsSpan(0, nextCount));
         }
 
-        private void ApplySelection(Entity owner, ref SelectionBuffer selection, ReadOnlySpan<Entity> next)
+        private Entity FindNearestEntity(Vector2 pointer, float radiusPixels)
         {
-            Span<Entity> previous = stackalloc Entity[SelectionBuffer.CAPACITY];
-            int previousCount = CopySelection(selection, previous);
-
-            for (int i = 0; i < previousCount; i++)
+            if (!_globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) || projectorObj is not IScreenProjector projector)
             {
-                Entity entity = previous[i];
-                if (!_world.IsAlive(entity) || Contains(next, entity))
-                {
-                    continue;
-                }
-
-                if (_world.Has<SelectedTag>(entity))
-                {
-                    _world.Remove<SelectedTag>(entity);
-                }
+                return default;
             }
 
-            selection.Clear();
-            for (int i = 0; i < next.Length; i++)
-            {
-                Entity entity = next[i];
-                if (!_world.IsAlive(entity))
-                {
-                    continue;
-                }
-
-                if (!selection.Add(entity))
-                {
-                    break;
-                }
-
-                if (!_world.Has<SelectedTag>(entity))
-                {
-                    _world.Add<SelectedTag>(entity);
-                }
-            }
-
-            _world.Set(owner, selection);
-        }
-
-        private void PruneInvalidSelection(Entity owner, ref SelectionBuffer selection)
-        {
-            if (selection.Count <= 0)
-            {
-                return;
-            }
-
-            Span<Entity> alive = stackalloc Entity[SelectionBuffer.CAPACITY];
-            int aliveCount = 0;
-            bool changed = false;
-
-            for (int i = 0; i < selection.Count; i++)
-            {
-                Entity entity = selection.Get(i);
-                if (_world.IsAlive(entity))
-                {
-                    alive[aliveCount++] = entity;
-                }
-                else
-                {
-                    changed = true;
-                }
-            }
-
-            if (!changed)
-            {
-                return;
-            }
-
-            ApplySelection(owner, ref selection, alive.Slice(0, aliveCount));
-        }
-
-        private void SyncPrimarySelectedEntity(in SelectionBuffer selection)
-        {
-            Entity primary = selection.Primary;
-            if (_world.IsAlive(primary))
-            {
-                _globals[CoreServiceKeys.SelectedEntity.Name] = primary;
-            }
-            else
-            {
-                _globals.Remove(CoreServiceKeys.SelectedEntity.Name);
-            }
-        }
-
-        private Entity FindNearestEntity(in WorldCmInt2 worldCm, int radiusCm)
-        {
-            int targetX = worldCm.X;
-            int targetY = worldCm.Y;
             Entity best = default;
-            long bestD2 = long.MaxValue;
-            long maxD2 = (long)radiusCm * radiusCm;
+            float bestD2 = float.MaxValue;
+            float maxD2 = radiusPixels * radiusPixels;
 
-            _world.Query(in ClickSelectableQuery, (Entity entity, ref WorldPositionCm pos) =>
+            _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
             {
-                if (!_world.IsAlive(entity))
+                if (!cull.IsVisible || !SelectionEligibility.IsSelectableNow(_world, entity))
                 {
                     return;
                 }
 
-                WorldCmInt2 cmPos = pos.Value.ToWorldCmInt2();
-                long dx = cmPos.X - targetX;
-                long dy = cmPos.Y - targetY;
-                long d2 = dx * dx + dy * dy;
+                Vector2 screen = projector.WorldToScreen(transform.Position);
+                if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) || float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
+                {
+                    return;
+                }
+
+                float dx = screen.X - pointer.X;
+                float dy = screen.Y - pointer.Y;
+                float d2 = dx * dx + dy * dy;
                 if (d2 > maxD2)
                 {
                     return;
@@ -409,35 +290,6 @@ namespace Ludots.Core.Input.Selection
             });
 
             return best;
-        }
-
-        private static int CopySelection(in SelectionBuffer selection, Span<Entity> destination)
-        {
-            int count = selection.Count;
-            if (count > destination.Length)
-            {
-                count = destination.Length;
-            }
-
-            for (int i = 0; i < count; i++)
-            {
-                destination[i] = selection.Get(i);
-            }
-
-            return count;
-        }
-
-        private static bool Contains(ReadOnlySpan<Entity> entities, Entity candidate)
-        {
-            for (int i = 0; i < entities.Length; i++)
-            {
-                if (entities[i] == candidate)
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private static void SortByEntityId(Span<Entity> entities, int count)
@@ -475,5 +327,29 @@ namespace Ludots.Core.Input.Selection
         public void BeforeUpdate(in float dt) { }
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }
+
+        private static SelectionRuntime ResolveSelectionRuntime(World world, Dictionary<string, object> globals)
+        {
+            if (globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var runtimeObj) &&
+                runtimeObj is SelectionRuntime runtime)
+            {
+                return runtime;
+            }
+
+            var config = globals.TryGetValue(CoreServiceKeys.SelectionConfig.Name, out var configObj) &&
+                         configObj is SelectionRuntimeConfig selectionConfig
+                ? selectionConfig
+                : new SelectionRuntimeConfig();
+            var setKeys = globals.TryGetValue(CoreServiceKeys.SelectionSetKeyRegistry.Name, out var registryObj) &&
+                          registryObj is StringIntRegistry existingRegistry
+                ? existingRegistry
+                : new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+
+            runtime = new SelectionRuntime(world, config, setKeys);
+            globals[CoreServiceKeys.SelectionRuntime.Name] = runtime;
+            globals[CoreServiceKeys.SelectionConfig.Name] = config;
+            globals[CoreServiceKeys.SelectionSetKeyRegistry.Name] = setKeys;
+            return runtime;
+        }
     }
 }

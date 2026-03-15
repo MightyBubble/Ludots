@@ -10,7 +10,6 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
-using Ludots.UI.Skia;
 using Navigation2DPlaygroundMod.Runtime;
 using Navigation2DPlaygroundMod.Systems;
 
@@ -20,18 +19,13 @@ namespace Navigation2DPlaygroundMod.UI
     {
         private const float PanelWidth = 470f;
 
-        private readonly ReactivePage<Navigation2DPlaygroundPanelState> _page;
+        private ReactivePage<Navigation2DPlaygroundPanelState>? _page;
         private Navigation2DPlaygroundPanelState _lastState = Navigation2DPlaygroundPanelState.Empty;
         private int[] _lastSelectedEntityIds = Array.Empty<int>();
         private string[] _lastSelectedIds = Array.Empty<string>();
         private GameEngine? _engine;
 
-        public Navigation2DPlaygroundPanelController()
-        {
-            _page = new ReactivePage<Navigation2DPlaygroundPanelState>(new SkiaTextMeasurer(), new SkiaImageSizeProvider(), Navigation2DPlaygroundPanelState.Empty, BuildRoot);
-        }
-
-        public UiScene Scene => _page.Scene;
+        public UiScene Scene => EnsurePage().Scene;
 
         public bool MountOrSync(UIRoot root, GameEngine engine)
         {
@@ -39,11 +33,12 @@ namespace Navigation2DPlaygroundMod.UI
             ArgumentNullException.ThrowIfNull(engine);
 
             _engine = engine;
+            var page = EnsurePage();
 
             bool changed = false;
-            if (!ReferenceEquals(root.Scene, _page.Scene))
+            if (!ReferenceEquals(root.Scene, page.Scene))
             {
-                root.MountScene(_page.Scene);
+                root.MountScene(page.Scene);
                 root.IsDirty = true;
                 changed = true;
             }
@@ -61,7 +56,7 @@ namespace Navigation2DPlaygroundMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
 
-            if (ReferenceEquals(root.Scene, _page.Scene))
+            if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
             {
                 root.ClearScene();
             }
@@ -70,7 +65,21 @@ namespace Navigation2DPlaygroundMod.UI
             _lastState = Navigation2DPlaygroundPanelState.Empty;
             _lastSelectedEntityIds = Array.Empty<int>();
             _lastSelectedIds = Array.Empty<string>();
-            _page.SetState(_ => Navigation2DPlaygroundPanelState.Empty);
+            _page?.SetState(_ => Navigation2DPlaygroundPanelState.Empty);
+        }
+
+        private ReactivePage<Navigation2DPlaygroundPanelState> EnsurePage()
+        {
+            if (_page != null)
+            {
+                return _page;
+            }
+
+            var engine = RequireEngine();
+            var textMeasurer = (IUiTextMeasurer)engine.GetService(CoreServiceKeys.UiTextMeasurer);
+            var imageSizeProvider = (IUiImageSizeProvider)engine.GetService(CoreServiceKeys.UiImageSizeProvider);
+            _page = new ReactivePage<Navigation2DPlaygroundPanelState>(textMeasurer, imageSizeProvider, Navigation2DPlaygroundPanelState.Empty, BuildRoot);
+            return _page;
         }
 
         private UiElementBuilder BuildRoot(ReactiveContext<Navigation2DPlaygroundPanelState> context)
@@ -205,7 +214,7 @@ namespace Navigation2DPlaygroundMod.UI
             }
 
             _lastState = next;
-            _page.SetState(_ => next);
+            EnsurePage().SetState(_ => next);
             return true;
         }
 
@@ -328,7 +337,7 @@ namespace Navigation2DPlaygroundMod.UI
                 return;
             }
 
-            if (!ReferenceEquals(root.Scene, _page.Scene))
+            if (_page == null || !ReferenceEquals(root.Scene, _page.Scene))
             {
                 return;
             }

@@ -62,13 +62,18 @@ namespace CoreInputMod.Triggers
             }
 
             var selectionRules = (SelectionRuleRegistry)engine.GlobalContext[CoreServiceKeys.SelectionRuleRegistry.Name];
+            var selectionRuntime = engine.GetService(CoreServiceKeys.SelectionRuntime)
+                ?? throw new InvalidOperationException("SelectionRuntime must be registered before CoreInputMod installs.");
 
-            var clickSelect = new EntityClickSelectSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
+            engine.RegisterSystem(new SelectionMaintenanceSystem(engine.World, selectionRuntime), SystemGroup.InputCollection);
+
+            var clickSelect = new EntityClickSelectSystem(engine.World, engine.GlobalContext, selectionRuntime);
             clickSelect.OnEntitySelected = (worldCm, entity) =>
             {
                 foreach (var cb in selectionCallbacks) cb(worldCm, entity);
             };
             engine.RegisterSystem(clickSelect, SystemGroup.InputCollection);
+            engine.RegisterSystem(new SelectionBridgeProjectionSystem(engine.World, engine.GlobalContext, selectionRuntime), SystemGroup.InputCollection);
 
             var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries, selectionRules);
             gasSelection.OnSelectionTriggered = (req, worldCm) =>
@@ -81,7 +86,7 @@ namespace CoreInputMod.Triggers
             engine.RegisterPresentationSystem(new SkillBarOverlaySystem(engine.World, engine.GlobalContext));
             engine.RegisterPresentationSystem(new SelectionBoxOverlaySystem(engine.World, engine.GlobalContext));
             engine.RegisterPresentationSystem(new AbilityAimOverlayPresentationSystem(engine.World, engine.GlobalContext));
-            engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext, engine.SpatialQueries), SystemGroup.InputCollection);
+            engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
 
             var vmManager = new ViewModeManager(engine.World, engine.GlobalContext, engine.GameSession.Camera);
             engine.GlobalContext[ViewModeManager.GlobalKey] = vmManager;

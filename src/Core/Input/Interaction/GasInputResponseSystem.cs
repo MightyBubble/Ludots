@@ -4,6 +4,7 @@ using Arch.System;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Interaction
@@ -11,7 +12,7 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// Generic GAS input-response system.
     /// Resolves InputRequest to InputResponse using the current interaction bindings
-    /// and the current selected entity from globals.
+    /// and the ambient selection of the active local selector.
     /// </summary>
     public sealed class GasInputResponseSystem : ISystem<float>
     {
@@ -19,6 +20,7 @@ namespace Ludots.Core.Input.Interaction
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
+        private readonly SelectionRuntime? _selection;
         private InputRequest _active;
         private bool _hasActive;
 
@@ -26,6 +28,10 @@ namespace Ludots.Core.Input.Interaction
         {
             _world = world;
             _globals = globals;
+            _selection = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
+                         selectionObj is SelectionRuntime selection
+                ? selection
+                : null;
         }
 
         public void Initialize() { }
@@ -48,9 +54,13 @@ namespace Ludots.Core.Input.Interaction
             if (!input.PressedThisFrame(bindings.ConfirmActionId)) return;
 
             Entity target = default;
-            if (_globals.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var selObj) && selObj is Entity e && _world.IsAlive(e))
+            if (_selection != null &&
+                _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
+                localObj is Entity local &&
+                _world.IsAlive(local) &&
+                _selection.TryGetPrimary(local, SelectionSetKeys.Ambient, out var selected))
             {
-                target = e;
+                target = selected;
             }
 
             responses.TryAdd(new InputResponse

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
@@ -41,6 +42,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new AnchoredScreenRayProvider(new Vector3(1.5f, 10f, 2.5f)),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
                 [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(),
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
@@ -48,7 +50,7 @@ namespace Ludots.Tests.GAS
 
             var origin = world.Create(new Team { Id = 1 });
             var targetContext = world.Create();
-            var enemy = world.Create(WorldPositionCm.FromCm(50, 0), new Team { Id = 2 });
+            var enemy = world.Create(WorldPositionCm.FromCm(50, 0), new Team { Id = 2 }, new SelectionSelectableTag());
             _ = world.Create(WorldPositionCm.FromCm(40, 0), new Team { Id = 1 });
 
             var rules = new SelectionRuleRegistry();
@@ -90,15 +92,18 @@ namespace Ludots.Tests.GAS
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var target = world.Create();
+            var local = world.Create(new SelectionBuffer());
+            SeedAmbientSelection(world, local, target);
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
                 [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
-                [CoreServiceKeys.SelectedEntity.Name] = target,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
+            CreateSelectionRuntime(world, globals);
 
             var system = new GasInputResponseSystem(world, globals);
             var requests = (InputRequestQueue)globals[CoreServiceKeys.AbilityInputRequestQueue.Name];
@@ -125,6 +130,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new ConstantScreenRayProvider(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
                 [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(16),
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
@@ -162,6 +168,121 @@ namespace Ludots.Tests.GAS
             var ex = NUnit.Framework.Assert.Throws<InvalidOperationException>(() => system.Update(0f));
             That(ex?.Message, Does.Contain("buffer overflow"));
             That(requests.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GasSelectionResponseSystem_SingleNearest_SkipsRuntimeDisabledCandidates()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.InputHandler.Name] = input,
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.ScreenRayProvider.Name] = new ConstantScreenRayProvider(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
+                [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
+            };
+
+            var origin = world.Create(new Team { Id = 1 });
+            var disabledEnemy = world.Create(
+                WorldPositionCm.FromCm(50, 0),
+                new Team { Id = 2 },
+                new SelectionSelectableTag(),
+                SelectionSelectableState.Disabled);
+            var enabledEnemy = world.Create(
+                WorldPositionCm.FromCm(120, 0),
+                new Team { Id = 2 },
+                new SelectionSelectableTag());
+
+            var rules = new SelectionRuleRegistry();
+            rules.Register(77, new SelectionRule
+            {
+                Mode = SelectionRuleMode.SingleNearest,
+                RelationshipFilter = RelationshipFilter.All,
+                RadiusCm = 300,
+                MaxCount = 1,
+            });
+
+            var system = new GasSelectionResponseSystem(world, globals, new StubSpatialQueryService(disabledEnemy, enabledEnemy), rules);
+            var requests = (SelectionRequestQueue)globals[CoreServiceKeys.SelectionRequestQueue.Name];
+            var responses = (SelectionResponseBuffer)globals[CoreServiceKeys.SelectionResponseBuffer.Name];
+            requests.TryEnqueue(new SelectionRequest
+            {
+                RequestId = 42,
+                RequestTagId = 77,
+                Origin = origin,
+            });
+
+            input.InjectButtonPress("Confirm");
+            input.Update();
+            system.Update(0f);
+
+            That(responses.TryConsume(42, out var response), Is.True);
+            That(response.Count, Is.EqualTo(1));
+            That(response.GetEntity(0), Is.EqualTo(enabledEnemy));
+        }
+
+        [Test]
+        public void GasSelectionResponseSystem_Radius_SkipsRuntimeDisabledCandidates()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.InputHandler.Name] = input,
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.ScreenRayProvider.Name] = new ConstantScreenRayProvider(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
+                [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
+            };
+
+            var origin = world.Create(new Team { Id = 1 });
+            var disabledEnemy = world.Create(
+                WorldPositionCm.FromCm(50, 0),
+                new Team { Id = 2 },
+                new SelectionSelectableTag(),
+                SelectionSelectableState.Disabled);
+            var enabledEnemy = world.Create(
+                WorldPositionCm.FromCm(120, 0),
+                new Team { Id = 2 },
+                new SelectionSelectableTag());
+            _ = world.Create(
+                WorldPositionCm.FromCm(150, 0),
+                new Team { Id = 2 });
+
+            var rules = new SelectionRuleRegistry();
+            rules.Register(77, new SelectionRule
+            {
+                Mode = SelectionRuleMode.Radius,
+                RelationshipFilter = RelationshipFilter.All,
+                RadiusCm = 300,
+                MaxCount = 8,
+            });
+
+            var system = new GasSelectionResponseSystem(world, globals, new StubSpatialQueryService(disabledEnemy, enabledEnemy), rules);
+            var requests = (SelectionRequestQueue)globals[CoreServiceKeys.SelectionRequestQueue.Name];
+            var responses = (SelectionResponseBuffer)globals[CoreServiceKeys.SelectionResponseBuffer.Name];
+            requests.TryEnqueue(new SelectionRequest
+            {
+                RequestId = 42,
+                RequestTagId = 77,
+                Origin = origin,
+            });
+
+            input.InjectButtonPress("Confirm");
+            input.Update();
+            system.Update(0f);
+
+            That(responses.TryConsume(42, out var response), Is.True);
+            That(response.Count, Is.EqualTo(1));
+            That(response.GetEntity(0), Is.EqualTo(enabledEnemy));
         }
 
         [Test]
@@ -401,28 +522,31 @@ namespace Ludots.Tests.GAS
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var local = world.Create();
-            var first = world.Create(WorldPositionCm.FromCm(1600, 1200), new CullState { IsVisible = true });
-            var second = world.Create(WorldPositionCm.FromCm(2600, 1600), new CullState { IsVisible = true });
-            var third = world.Create(WorldPositionCm.FromCm(3400, 2200), new CullState { IsVisible = true });
+            var first = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            var second = world.Create(WorldPositionCm.FromCm(2600, 1600), new VisualTransform { Position = new Vector3(26f, 0f, 16f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            var third = world.Create(WorldPositionCm.FromCm(3400, 2200), new VisualTransform { Position = new Vector3(34f, 0f, 22f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
 
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
             };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            var bridge = new SelectionBridgeProjectionSystem(world, globals, selectionRuntime);
 
             var system = new EntityClickSelectSystem(world, globals);
 
-            Click(system, input, new Vector2(1600f, 1200f));
+            Click(system, bridge, input, new Vector2(1600f, 1200f));
 
             AssertSelection(world, local, first);
             That(world.Has<SelectedTag>(first), Is.True);
             That(world.Has<SelectedTag>(second), Is.False);
             That(globals[CoreServiceKeys.SelectedEntity.Name], Is.EqualTo(first));
 
-            DragSelect(system, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
+            DragSelect(system, bridge, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
 
             ref var selection = ref world.Get<SelectionBuffer>(local);
             That(selection.Count, Is.EqualTo(3));
@@ -442,27 +566,60 @@ namespace Ludots.Tests.GAS
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var local = world.Create(new SelectionBuffer());
-            var first = world.Create(WorldPositionCm.FromCm(1600, 1200), new CullState { IsVisible = true });
-            world.Add<SelectedTag>(first);
-            ref var selection = ref world.Get<SelectionBuffer>(local);
-            selection.Add(first);
-            world.Set(local, selection);
+            var first = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            SeedAmbientSelection(world, local, first);
 
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
-                [CoreServiceKeys.SelectedEntity.Name] = first,
             };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            var bridge = new SelectionBridgeProjectionSystem(world, globals, selectionRuntime);
+            bridge.Update(0f);
 
             var system = new EntityClickSelectSystem(world, globals);
-            Click(system, input, new Vector2(5200f, 4200f));
+            Click(system, bridge, input, new Vector2(5200f, 4200f));
 
             ref var cleared = ref world.Get<SelectionBuffer>(local);
             That(cleared.Count, Is.EqualTo(0));
             That(world.Has<SelectedTag>(first), Is.False);
+            That(globals.ContainsKey(CoreServiceKeys.SelectedEntity.Name), Is.False);
+        }
+
+        [Test]
+        public void EntityClickSelectSystem_RuntimeDisabledEntity_IsNotSelectable()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create(new SelectionBuffer());
+            _ = world.Create(
+                WorldPositionCm.FromCm(1600, 1200),
+                new VisualTransform { Position = new Vector3(16f, 0f, 12f) },
+                new CullState { IsVisible = true },
+                new SelectionSelectableTag(),
+                SelectionSelectableState.Disabled);
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            var bridge = new SelectionBridgeProjectionSystem(world, globals, selectionRuntime);
+            var system = new EntityClickSelectSystem(world, globals);
+
+            Click(system, bridge, input, new Vector2(1600f, 1200f));
+
+            ref var selection = ref world.Get<SelectionBuffer>(local);
+            That(selection.Count, Is.EqualTo(0));
             That(globals.ContainsKey(CoreServiceKeys.SelectedEntity.Name), Is.False);
         }
 
@@ -473,22 +630,21 @@ namespace Ludots.Tests.GAS
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var local = world.Create(new SelectionBuffer());
-            var actor = world.Create(WorldPositionCm.FromCm(1600, 1200), new CullState { IsVisible = true });
-            var enemy = world.Create(WorldPositionCm.FromCm(2600, 1600), new CullState { IsVisible = true });
-
-            world.Add<SelectedTag>(actor);
-            ref var seededSelection = ref world.Get<SelectionBuffer>(local);
-            seededSelection.Add(actor);
-            world.Set(local, seededSelection);
+            var actor = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            var enemy = world.Create(WorldPositionCm.FromCm(2600, 1600), new VisualTransform { Position = new Vector3(26f, 0f, 16f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            SeedAmbientSelection(world, local, actor);
 
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
-                [CoreServiceKeys.SelectedEntity.Name] = actor,
             };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            var bridge = new SelectionBridgeProjectionSystem(world, globals, selectionRuntime);
+            bridge.Update(0f);
 
             var selectionSystem = new EntityClickSelectSystem(world, globals);
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
@@ -528,6 +684,7 @@ namespace Ludots.Tests.GAS
             input.InjectButtonPress("SkillQ");
             input.Update();
             selectionSystem.Update(0f);
+            bridge.Update(0f);
             mapping.Update(0f);
             That(mapping.IsAiming, Is.True);
 
@@ -535,11 +692,13 @@ namespace Ludots.Tests.GAS
             input.InjectButtonPress("Select");
             input.Update();
             selectionSystem.Update(0f);
+            bridge.Update(0f);
             mapping.Update(0f);
 
             input.InjectAction("PointerPos", new Vector3(2600f, 1600f, 0f));
             input.Update();
             selectionSystem.Update(0f);
+            bridge.Update(0f);
             mapping.Update(0f);
 
             AssertSelection(world, local, actor);
@@ -549,6 +708,41 @@ namespace Ludots.Tests.GAS
             That(orders.Count, Is.EqualTo(1));
             That(orders[0].Actor, Is.EqualTo(actor));
             That(orders[0].Target, Is.EqualTo(enemy));
+        }
+
+        [Test]
+        public void TabTargetCycleSystem_SkipsRuntimeDisabledCandidates()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create(
+                new Team { Id = 1 },
+                new VisualTransform { Position = Vector3.Zero });
+            _ = world.Create(
+                new Team { Id = 2 },
+                new VisualTransform { Position = new Vector3(5f, 0f, 0f) },
+                new SelectionSelectableTag(),
+                SelectionSelectableState.Disabled);
+            var enabledEnemy = world.Create(
+                new Team { Id = 2 },
+                new VisualTransform { Position = new Vector3(10f, 0f, 0f) },
+                new SelectionSelectableTag());
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+            };
+
+            var system = new TabTargetCycleSystem(world, globals, searchRadiusCm: 3000);
+
+            input.InjectButtonPress(TabTargetCycleSystem.TabTargetActionId);
+            input.Update();
+            system.Update(0f);
+
+            That(globals.TryGetValue(CoreServiceKeys.TabTargetEntity.Name, out var targetObj), Is.True);
+            That(targetObj, Is.EqualTo(enabledEnemy));
         }
 
         private static InputConfigRoot CreateInputConfig()
@@ -562,6 +756,8 @@ namespace Ludots.Tests.GAS
                     new() { Id = "Stop", Name = "Stop", Type = InputActionType.Button },
                     new() { Id = "Confirm", Name = "Confirm", Type = InputActionType.Button },
                     new() { Id = "Select", Name = "Select", Type = InputActionType.Button },
+                    new() { Id = "TabTarget", Name = "TabTarget", Type = InputActionType.Button },
+                    new() { Id = "TabTargetReverse", Name = "TabTargetReverse", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Name = "PointerPos", Type = InputActionType.Axis2D },
                 },
                 Contexts = new List<InputContextDef>
@@ -571,33 +767,38 @@ namespace Ludots.Tests.GAS
             };
         }
 
-        private static void Click(EntityClickSelectSystem system, PlayerInputHandler input, Vector2 pointer)
+        private static void Click(EntityClickSelectSystem system, SelectionBridgeProjectionSystem bridge, PlayerInputHandler input, Vector2 pointer)
         {
             input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
             input.InjectButtonPress("Select");
             input.Update();
             system.Update(0f);
+            bridge.Update(0f);
 
             input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
             input.Update();
             system.Update(0f);
+            bridge.Update(0f);
         }
 
-        private static void DragSelect(EntityClickSelectSystem system, PlayerInputHandler input, Vector2 from, Vector2 to)
+        private static void DragSelect(EntityClickSelectSystem system, SelectionBridgeProjectionSystem bridge, PlayerInputHandler input, Vector2 from, Vector2 to)
         {
             input.InjectAction("PointerPos", new Vector3(from.X, from.Y, 0f));
             input.InjectButtonPress("Select");
             input.Update();
             system.Update(0f);
+            bridge.Update(0f);
 
             input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
             input.InjectButtonPress("Select");
             input.Update();
             system.Update(0f);
+            bridge.Update(0f);
 
             input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
             input.Update();
             system.Update(0f);
+            bridge.Update(0f);
         }
 
         private static void AssertSelection(World world, Entity owner, params Entity[] expected)
@@ -608,6 +809,35 @@ namespace Ludots.Tests.GAS
             {
                 That(selection.Get(i), Is.EqualTo(expected[i]));
             }
+        }
+
+        private static SelectionRuntime CreateSelectionRuntime(World world, Dictionary<string, object> globals)
+        {
+            var config = new SelectionRuntimeConfig();
+            var registry = new Ludots.Core.Registry.StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var runtime = new SelectionRuntime(world, config, registry);
+            globals[CoreServiceKeys.SelectionRuntime.Name] = runtime;
+            globals[CoreServiceKeys.SelectionConfig.Name] = config;
+            globals[CoreServiceKeys.SelectionSetKeyRegistry.Name] = registry;
+            return runtime;
+        }
+
+        private static void SeedAmbientSelection(World world, Entity owner, Entity target)
+        {
+            if (!world.Has<SelectionBuffer>(owner))
+            {
+                world.Add(owner, default(SelectionBuffer));
+            }
+
+            ref var selection = ref world.Get<SelectionBuffer>(owner);
+            selection.Clear();
+            selection.Add(target);
+            world.Set(owner, selection);
+        }
+
+        private static WorldSizeSpec CreateWorldSizeSpec()
+        {
+            return new WorldSizeSpec(new WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100);
         }
 
         private sealed class NullInputBackend : IInputBackend
@@ -662,11 +892,11 @@ namespace Ludots.Tests.GAS
 
         private sealed class StubSpatialQueryService : ISpatialQueryService
         {
-            private readonly Entity _priority;
+            private readonly Entity[] _results;
 
-            public StubSpatialQueryService(Entity priority)
+            public StubSpatialQueryService(params Entity[] results)
             {
-                _priority = priority;
+                _results = results ?? Array.Empty<Entity>();
             }
 
             public SpatialQueryResult QueryAabb(in WorldAabbCm bounds, Span<Entity> buffer) => Write(buffer);
@@ -679,13 +909,18 @@ namespace Ludots.Tests.GAS
 
             private SpatialQueryResult Write(Span<Entity> buffer)
             {
-                if (buffer.Length == 0)
+                if (buffer.Length == 0 || _results.Length == 0)
                 {
-                    return new SpatialQueryResult(0, 1);
+                    return new SpatialQueryResult(0, _results.Length);
                 }
 
-                buffer[0] = _priority;
-                return new SpatialQueryResult(1, 0);
+                int count = Math.Min(buffer.Length, _results.Length);
+                for (int i = 0; i < count; i++)
+                {
+                    buffer[i] = _results[i];
+                }
+
+                return new SpatialQueryResult(count, Math.Max(0, _results.Length - count));
             }
         }
     }

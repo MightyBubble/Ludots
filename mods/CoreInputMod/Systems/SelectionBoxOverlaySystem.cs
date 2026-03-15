@@ -18,11 +18,16 @@ namespace CoreInputMod.Systems
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
+        private readonly SelectionRuntime? _selection;
 
         public SelectionBoxOverlaySystem(World world, Dictionary<string, object> globals)
         {
             _world = world;
             _globals = globals;
+            _selection = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
+                         selectionObj is SelectionRuntime selection
+                ? selection
+                : null;
         }
 
         public void Initialize() { }
@@ -45,7 +50,8 @@ namespace CoreInputMod.Systems
             }
 
             ref var drag = ref _world.Get<SelectionDragState>(local);
-            if (!drag.Active || !drag.ExceedsThreshold(EntityClickSelectSystem.DragThresholdPixels))
+            float threshold = _selection?.Config.DragThresholdPixels ?? 8f;
+            if (!drag.Active || !drag.ExceedsThreshold(threshold))
             {
                 return;
             }

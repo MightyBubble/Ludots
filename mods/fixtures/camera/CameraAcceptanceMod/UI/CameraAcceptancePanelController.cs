@@ -20,9 +20,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
-using Ludots.UI.Skia;
 using Ludots.Platform.Abstractions;
-using SkiaSharp;
 
 namespace CameraAcceptanceMod.UI
 {
@@ -69,9 +67,9 @@ namespace CameraAcceptanceMod.UI
         private bool _cachedHotpathCullCrowdEnabled = true;
         private readonly Dictionary<int, string> _visibleEntityRowTextCache = new();
 
-        public CameraAcceptancePanelController()
+        public CameraAcceptancePanelController(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
         {
-            _page = new ReactivePage<CameraAcceptancePanelState>(new SkiaTextMeasurer(), new SkiaImageSizeProvider(), CameraAcceptancePanelState.Empty, BuildRoot);
+            _page = new ReactivePage<CameraAcceptancePanelState>(textMeasurer, imageSizeProvider, CameraAcceptancePanelState.Empty, BuildRoot);
         }
 
         public UiScene Scene => _page.Scene;
@@ -218,7 +216,7 @@ namespace CameraAcceptanceMod.UI
                             .Color("#F4C77D")
                             .Padding(8f, 4f)
                             .Radius(999f)
-                            .Background(new SKColor(59, 74, 96, 200).ToUiColor()))
+                            .Background(new UiColor(59, 74, 96, 200)))
                     .Align(UiAlignItems.Center)
                     .Justify(UiJustifyContent.SpaceBetween)
             };
@@ -235,9 +233,9 @@ namespace CameraAcceptanceMod.UI
                 .Padding(16f)
                 .Gap(10f)
                 .Radius(18f)
-                .Background(new SKColor(5, 12, 20, 244).ToUiColor())
-                .Border(1f, new SKColor(126, 153, 182, 84).ToUiColor())
-                .BoxShadow(0f, 14f, 32f, new SKColor(0, 0, 0, 136).ToUiColor())
+                .Background(new UiColor(5, 12, 20, 244))
+                .Border(1f, new UiColor(126, 153, 182, 84))
+                .BoxShadow(0f, 14f, 32f, new UiColor(0, 0, 0, 136))
                 .BackdropBlur(9f)
                 .ZIndex(30);
         }
@@ -260,8 +258,8 @@ namespace CameraAcceptanceMod.UI
                 .Gap(6f)
                 .Padding(10f)
                 .Radius(14f)
-                .Background(lineIndex == 0 ? new SKColor(16, 26, 39, 230).ToUiColor() : new SKColor(10, 18, 29, 218).ToUiColor())
-                .Border(1f, lineIndex == 0 ? new SKColor(97, 134, 170, 86).ToUiColor() : new SKColor(62, 86, 112, 64).ToUiColor());
+                .Background(lineIndex == 0 ? new UiColor(16, 26, 39, 230) : new UiColor(10, 18, 29, 218))
+                .Border(1f, lineIndex == 0 ? new UiColor(97, 134, 170, 86) : new UiColor(62, 86, 112, 64));
         }
 
         private static UiElementBuilder BuildDiagnosticsChip(string text, bool accent)
@@ -273,8 +271,8 @@ namespace CameraAcceptanceMod.UI
                 .WhiteSpace(UiWhiteSpace.Normal)
                 .Padding(8f, 5f)
                 .Radius(10f)
-                .Background(accent ? new SKColor(33, 48, 68, 210).ToUiColor() : new SKColor(23, 34, 48, 192).ToUiColor())
-                .Border(1f, accent ? new SKColor(112, 146, 180, 74).ToUiColor() : new SKColor(78, 104, 131, 56).ToUiColor());
+                .Background(accent ? new UiColor(33, 48, 68, 210) : new UiColor(23, 34, 48, 192))
+                .Border(1f, accent ? new UiColor(112, 146, 180, 74) : new UiColor(78, 104, 131, 56));
         }
 
         private static string ResolveDiagnosticsLineTitle(int lineIndex, string line)

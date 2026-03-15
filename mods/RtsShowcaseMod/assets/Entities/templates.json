@@ -5,6 +5,7 @@
       "Name": {
         "Value": "Base"
       },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -24,6 +25,7 @@
       "Name": {
         "Value": "Barracks"
       },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -43,6 +45,7 @@
       "Name": {
         "Value": "Infantry"
       },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -65,6 +68,7 @@
       "Name": {
         "Value": "Tank"
       },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,
@@ -87,6 +91,7 @@
       "Name": {
         "Value": "Mineral"
       },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,

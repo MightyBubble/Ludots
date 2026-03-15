@@ -2,6 +2,7 @@
   {
     "id": "orc_grunt",
     "components": {
+      "SelectionSelectableTag": {},
       "Health": { "Current": 100, "Max": 100 },
       "Name": { "Value": "Orc Grunt" },
       "Velocity": { "Value": { "X": 0, "Y": 0 } }
@@ -24,6 +25,7 @@
       "Name": { "Value": "Hero" },
       "PlayerOwner": { "PlayerId": 1 },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "Presentation": {
         "visualTemplateId": "core.character.hero_skinned"
@@ -44,6 +46,7 @@
     "components": {
       "Name": { "Value": "Dummy" },
       "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 600, "Y": 0 } },
       "Presentation": {
         "visualTemplateId": "core.prop.dummy_static"

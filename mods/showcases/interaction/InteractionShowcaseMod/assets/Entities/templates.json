@@ -4,6 +4,7 @@
     "components": {
       "Name": { "Value": "Arcweaver" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
@@ -32,6 +33,7 @@
     "components": {
       "Name": { "Value": "Vanguard" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
@@ -60,6 +62,7 @@
     "components": {
       "Name": { "Value": "ArcweaverFormsDemo" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
@@ -87,6 +90,7 @@
     "components": {
       "Name": { "Value": "Commander" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
@@ -115,6 +119,7 @@
     "components": {
       "Name": { "Value": "EnemyRaider" },
       "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
       "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
@@ -127,6 +132,7 @@
     "components": {
       "Name": { "Value": "EnemyBruiser" },
       "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
       "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
@@ -139,6 +145,7 @@
     "components": {
       "Name": { "Value": "StressRedMage" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
@@ -160,6 +167,7 @@
     "components": {
       "Name": { "Value": "StressBlueMage" },
       "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
       "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
@@ -181,6 +189,7 @@
     "components": {
       "Name": { "Value": "StressRedAnchor" },
       "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
       "AttributeBuffer": { "base": { "Health": 500000, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
@@ -192,6 +201,7 @@
     "components": {
       "Name": { "Value": "StressBlueAnchor" },
       "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
       "AttributeBuffer": { "base": { "Health": 500000, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },

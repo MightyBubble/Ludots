@@ -81,38 +81,13 @@ namespace CoreInputMod.Systems
                 worldCm = new Vector3(point.X, 0f, point.Y);
                 return true;
             });
-            mapping.SetSelectedEntityProvider((out Entity entity) => _context.TryGetEntity(CoreServiceKeys.SelectedEntity.Name, out entity));
-            mapping.SetSelectedEntitiesProvider((ref OrderEntitySelection entities) =>
+            mapping.SetActorProvider((out Entity entity) =>
             {
-                entities = default;
-                if (!_context.TryGetSelectionOwner(out var owner) || !_world.Has<SelectionBuffer>(owner))
-                {
-                    if (!_context.TryGetEntity(CoreServiceKeys.SelectedEntity.Name, out var primary)) return false;
-                    entities.Add(primary);
-                    return true;
-                }
-
-                ref var selection = ref _world.Get<SelectionBuffer>(owner);
-                int added = 0;
-                for (int i = 0; i < selection.Count; i++)
-                {
-                    Entity entity = selection.Get(i);
-                    if (!_world.IsAlive(entity))
-                    {
-                        continue;
-                    }
-
-                    if (entities.Count >= OrderEntitySelection.MaxEntities)
-                    {
-                        break;
-                    }
-
-                    entities.Add(entity);
-                    added++;
-                }
-
-                return added > 0;
+                entity = _context.GetControlledActor();
+                return _world.IsAlive(entity);
             });
+            mapping.SetSelectedEntityProvider((string setKey, out Entity entity) => _context.TryGetSelectedEntity(setKey, out entity));
+            mapping.SetSelectedEntitiesProvider((string setKey, ref OrderEntitySelection entities) => _context.TryGetSelectedEntities(setKey, ref entities));
             mapping.SetHoveredEntityProvider((out Entity entity) => _context.TryGetEntity(CoreServiceKeys.HoveredEntity.Name, out entity));
             if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var bindingsObj) && bindingsObj is InteractionActionBindings bindings)
             {

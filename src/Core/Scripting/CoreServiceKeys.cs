@@ -20,6 +20,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
@@ -38,6 +39,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Registry;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Core.UI;
@@ -122,6 +124,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SelectionResponseBuffer> SelectionResponseBuffer = new("SelectionResponseBuffer");
         public static readonly ServiceKey<RuntimeEntitySpawnQueue> RuntimeEntitySpawnQueue = new("RuntimeEntitySpawnQueue");
         public static readonly ServiceKey<SelectionRuleRegistry> SelectionRuleRegistry = new("SelectionRuleRegistry");
+        public static readonly ServiceKey<SelectionRuntime> SelectionRuntime = new("SelectionRuntime");
+        public static readonly ServiceKey<SelectionRuntimeConfig> SelectionConfig = new("SelectionConfig");
+        public static readonly ServiceKey<StringIntRegistry> SelectionSetKeyRegistry = new("SelectionSetKeyRegistry");
         public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
         public static readonly ServiceKey<InputOrderMappingSystem> ActiveInputOrderMapping = new("ActiveInputOrderMapping");
         public static readonly ServiceKey<OrderQueue> OrderQueue = new("OrderQueue");
@@ -186,6 +191,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Entity> LocalPlayerEntity = new("LocalPlayerEntity");
         public static readonly ServiceKey<Entity> SelectedEntity = new("SelectedEntity");
         public static readonly ServiceKey<Entity> HoveredEntity = new("HoveredEntity");
+        public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
+        public static readonly ServiceKey<Entity> SelectionViewOwnerEntity = new("SelectionViewOwnerEntity");
+        public static readonly ServiceKey<string> SelectionViewSetKey = new("SelectionViewSetKey");
 
         // --- Config & AI ---
         public static readonly ServiceKey<ConfigCatalog> ConfigCatalog = new("ConfigCatalog");

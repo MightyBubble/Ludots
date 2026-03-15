@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Ludots.Core.Input.Selection;
 
 namespace Ludots.Core.Input.Orders
 {
@@ -228,6 +229,11 @@ namespace Ludots.Core.Input.Orders
         /// Whether selection data is required.
         /// </summary>
         public bool RequireSelection { get; set; } = false;
+
+        /// <summary>
+        /// Named selection set supplying entity targets for this mapping.
+        /// </summary>
+        public string SelectionSetKey { get; set; } = SelectionSetKeys.Ambient;
         
         /// <summary>
         /// The type of selection required.

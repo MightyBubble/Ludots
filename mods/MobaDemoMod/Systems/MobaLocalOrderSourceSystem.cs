@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Commands;
@@ -36,6 +37,7 @@ namespace MobaDemoMod.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly OrderQueue _orders;
         private readonly IModContext _ctx;
+        private readonly SelectionRuntime? _selection;
         private readonly int _castAbilityOrderTypeId;
         private readonly int _stopOrderTypeId;
         
@@ -61,6 +63,11 @@ namespace MobaDemoMod.Systems
                     "MobaLocalOrderSourceSystem requires GameConfig in globals with order type ids (castAbility, stop). " +
                     "Ensure game.json constants.orderTypeIds is properly configured.");
             }
+
+            _selection = _globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
+                         selectionObj is SelectionRuntime selection
+                ? selection
+                : null;
         }
 
         public void Initialize() { }
@@ -100,16 +107,18 @@ namespace MobaDemoMod.Systems
             });
             
             // Selected entity provider
-            _inputOrderMapping.SetSelectedEntityProvider((out Entity entity) =>
+            _inputOrderMapping.SetActorProvider((out Entity entity) =>
             {
-                return TryGetSelected(out entity);
+                entity = GetControlledActor();
+                return _world.IsAlive(entity);
             });
-            _inputOrderMapping.SetSelectedEntitiesProvider((ref OrderEntitySelection entities) =>
+            _inputOrderMapping.SetSelectedEntityProvider((string setKey, out Entity entity) =>
             {
-                entities = default;
-                if (!TryGetSelected(out var entity)) return false;
-                entities.Add(entity);
-                return true;
+                return TryGetSelected(setKey, out entity);
+            });
+            _inputOrderMapping.SetSelectedEntitiesProvider((string setKey, ref OrderEntitySelection entities) =>
+            {
+                return TryGetSelectedEntities(setKey, ref entities);
             });
 
             _inputOrderMapping.SetHoveredEntityProvider((out Entity entity) =>
@@ -197,7 +206,7 @@ namespace MobaDemoMod.Systems
                 return default;
             if (!_world.IsAlive(localPlayer)) return default;
 
-            if (_globals.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var obj) && obj is Entity selected && _world.IsAlive(selected))
+            if (TryGetSelected(SelectionSetKeys.Ambient, out var selected))
             {
                 if (_world.TryGet(selected, out Ludots.Core.Gameplay.Components.PlayerOwner owner) && owner.PlayerId == 1)
                     return selected;
@@ -205,13 +214,39 @@ namespace MobaDemoMod.Systems
             return localPlayer;
         }
 
-        private bool TryGetSelected(out Entity target)
+        private bool TryGetSelected(string setKey, out Entity target)
         {
             target = default;
-            if (!_globals.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var obj) || obj is not Entity e) return false;
-            if (!_world.IsAlive(e)) return false;
-            target = e;
-            return true;
+            if (_selection == null ||
+                !_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
+                actorObj is not Entity owner ||
+                !_world.IsAlive(owner))
+            {
+                return false;
+            }
+
+            return _selection.TryGetPrimary(owner, setKey, out target);
+        }
+
+        private bool TryGetSelectedEntities(string setKey, ref OrderEntitySelection entities)
+        {
+            entities = default;
+            if (_selection == null ||
+                !_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
+                actorObj is not Entity owner ||
+                !_world.IsAlive(owner))
+            {
+                return false;
+            }
+
+            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
+            int count = _selection.CopySelection(owner, setKey, selected);
+            for (int i = 0; i < count && entities.Count < OrderEntitySelection.MaxEntities; i++)
+            {
+                entities.Add(selected[i]);
+            }
+
+            return entities.Count > 0;
         }
 
         private bool TryGetHovered(out Entity target)
