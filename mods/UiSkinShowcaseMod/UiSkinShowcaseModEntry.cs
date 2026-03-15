@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using Ludots.UI.Runtime;
 using UiShowcaseCoreMod.Showcase;
 
 namespace UiSkinShowcaseMod;
@@ -12,7 +13,9 @@ public sealed class UiSkinShowcaseModEntry : IMod
         context.Log("[UiSkinShowcaseMod] Loaded.");
         context.OnEvent(GameEvents.GameStart, scriptContext =>
         {
-            UiShowcaseMounting.MountScene(scriptContext, UiShowcaseFactory.CreateSkinShowcaseScene());
+            var textMeasurer = (IUiTextMeasurer)scriptContext.Get(CoreServiceKeys.UiTextMeasurer);
+            var imageSizeProvider = (IUiImageSizeProvider)scriptContext.Get(CoreServiceKeys.UiImageSizeProvider);
+            UiShowcaseMounting.MountScene(scriptContext, UiShowcaseFactory.CreateSkinShowcaseScene(textMeasurer, imageSizeProvider));
             return Task.CompletedTask;
         });
     }

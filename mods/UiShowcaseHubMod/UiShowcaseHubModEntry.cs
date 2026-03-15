@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using Ludots.UI.Runtime;
 using UiShowcaseCoreMod.Showcase;
 
 namespace UiShowcaseHubMod;
@@ -12,7 +13,9 @@ public sealed class UiShowcaseHubModEntry : IMod
         context.Log("[UiShowcaseHubMod] Loaded.");
         context.OnEvent(GameEvents.GameStart, scriptContext =>
         {
-            UiShowcaseMounting.MountScene(scriptContext, UiShowcaseFactory.CreateHubScene());
+            var textMeasurer = (IUiTextMeasurer)scriptContext.Get(CoreServiceKeys.UiTextMeasurer);
+            var imageSizeProvider = (IUiImageSizeProvider)scriptContext.Get(CoreServiceKeys.UiImageSizeProvider);
+            UiShowcaseMounting.MountScene(scriptContext, UiShowcaseFactory.CreateHubScene(textMeasurer, imageSizeProvider));
             return Task.CompletedTask;
         });
     }

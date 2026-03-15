@@ -11,6 +11,8 @@ namespace UiShowcaseCoreMod.Showcase;
 internal sealed class MarkupShowcaseCodeBehind
 {
 	private readonly UiMarkupLoader _loader = new UiMarkupLoader();
+	private readonly IUiTextMeasurer _textMeasurer;
+	private readonly IUiImageSizeProvider _imageSizeProvider;
 
 	private int _count = 5;
 
@@ -34,11 +36,17 @@ internal sealed class MarkupShowcaseCodeBehind
 
 	private bool _toastVisible;
 
+	internal MarkupShowcaseCodeBehind(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+	{
+		_textMeasurer = textMeasurer;
+		_imageSizeProvider = imageSizeProvider;
+	}
+
 	internal UiScene BuildScene()
 	{
 		UiDocument document = _loader.LoadDocument(BuildHtml(), BuildCss());
 		ValidatePrototype(document);
-		UiScene uiScene = new UiScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider());
+		UiScene uiScene = new UiScene(_textMeasurer, _imageSizeProvider);
 		uiScene.MountDocument(document);
 		MarkupBinder.Bind(uiScene, this);
 		return uiScene;

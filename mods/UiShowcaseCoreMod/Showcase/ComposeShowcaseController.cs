@@ -1,12 +1,14 @@
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
-using Ludots.UI.Skia;
 
 namespace UiShowcaseCoreMod.Showcase;
 
 internal sealed class ComposeShowcaseController
 {
+	private readonly IUiTextMeasurer _textMeasurer;
+	private readonly IUiImageSizeProvider _imageSizeProvider;
+
 	private string _themeClass = "theme-dark";
 
 	private string _densityClass = "density-cozy";
@@ -27,9 +29,15 @@ internal sealed class ComposeShowcaseController
 
 	private bool _toastVisible;
 
+	internal ComposeShowcaseController(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+	{
+		_textMeasurer = textMeasurer;
+		_imageSizeProvider = imageSizeProvider;
+	}
+
 	internal UiScene BuildScene()
 	{
-		UiScene uiScene = new UiScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider());
+		UiScene uiScene = new UiScene(_textMeasurer, _imageSizeProvider);
 		RebuildScene(uiScene);
 		return uiScene;
 	}

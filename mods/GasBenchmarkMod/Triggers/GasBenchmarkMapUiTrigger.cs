@@ -7,8 +7,6 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
-using Ludots.UI.Skia;
-using SkiaSharp;
 
 namespace GasBenchmarkMod.Triggers
 {
@@ -36,7 +34,11 @@ namespace GasBenchmarkMod.Triggers
                 return Task.CompletedTask;
             }
 
+            var textMeasurer = (IUiTextMeasurer)context.Get(CoreServiceKeys.UiTextMeasurer);
+            var imageSizeProvider = (IUiImageSizeProvider)context.Get(CoreServiceKeys.UiImageSizeProvider);
             uiRoot.MountScene(CreateScene(
+                textMeasurer,
+                imageSizeProvider,
                 () =>
                 {
                     Console.WriteLine("[GasBenchmarkMod] UI click: Run GAS Benchmark");
@@ -48,29 +50,29 @@ namespace GasBenchmarkMod.Triggers
             return Task.CompletedTask;
         }
 
-        private static UiScene CreateScene(Action runBenchmark, Action backToEntry)
+        private static UiScene CreateScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, Action runBenchmark, Action backToEntry)
         {
-            var scene = new UiScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider());
+            var scene = new UiScene(textMeasurer, imageSizeProvider);
             int nextId = 1;
             scene.Mount(
                 Ui.Column(
                         Ui.Text("GAS BENCHMARK")
                             .FontSize(54f)
                             .Bold()
-                            .Color(SKColors.White.ToUiColor()),
+                            .Color(UiColor.White),
                         Ui.Text("Click to spawn 100000 entities and run GAS benchmark.")
                             .FontSize(20f)
-                            .Color(SKColors.LightGray.ToUiColor()),
+                            .Color(UiColor.LightGray),
                         Ui.Row(
-                                BuildButton("Run GAS Benchmark", SKColors.Gold.ToUiColor(), SKColors.Black.ToUiColor(), _ => runBenchmark()),
-                                BuildButton("Back to Entry", SKColors.DimGray.ToUiColor(), SKColors.White.ToUiColor(), _ => backToEntry()))
+                                BuildButton("Run GAS Benchmark", UiColor.Gold, UiColor.Black, _ => runBenchmark()),
+                                BuildButton("Back to Entry", UiColor.DimGray, UiColor.White, _ => backToEntry()))
                             .Gap(12f)
                             .Wrap())
                     .WidthPercent(100f)
                     .HeightPercent(100f)
                     .Justify(UiJustifyContent.Center)
                     .Align(UiAlignItems.Center)
-                    .Background(new SKColor(0, 0, 0, 200).ToUiColor())
+                    .Background(new UiColor(0, 0, 0, 200))
                     .Gap(18f)
                     .Build(scene.Dispatcher, ref nextId));
             return scene;

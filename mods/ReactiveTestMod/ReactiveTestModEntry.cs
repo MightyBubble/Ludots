@@ -5,8 +5,6 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
-using Ludots.UI.Skia;
-using SkiaSharp;
 
 namespace ReactiveTestMod
 {
@@ -43,8 +41,11 @@ namespace ReactiveTestMod
                 return Task.CompletedTask;
             }
 
+            var textMeasurer = (IUiTextMeasurer)context.Get(CoreServiceKeys.UiTextMeasurer);
+            var imageSizeProvider = (IUiImageSizeProvider)context.Get(CoreServiceKeys.UiImageSizeProvider);
             var page = new ReactivePage<CounterState>(
-                new SkiaTextMeasurer(), new SkiaImageSizeProvider(),
+                textMeasurer,
+                imageSizeProvider,
                 new CounterState(0),
                 BuildCounterScene);
             uiRoot.MountScene(page.Scene);
@@ -58,7 +59,7 @@ namespace ReactiveTestMod
                     Ui.Text($"Count: {context.State.Count}")
                         .FontSize(60f)
                         .Bold()
-                        .Color(SKColors.White.ToUiColor())
+                        .Color(UiColor.White)
                         .Margin(0f, 24f),
                     Ui.Button("Increment", _ => context.SetState(state => state with
                     {
@@ -67,13 +68,13 @@ namespace ReactiveTestMod
                         .FontSize(30f)
                         .Padding(24f, 18f)
                         .Radius(12f)
-                        .Background(SKColors.Cyan.ToUiColor())
-                        .Color(SKColors.Black.ToUiColor()))
+                        .Background(UiColor.Cyan)
+                        .Color(UiColor.Black))
                 .WidthPercent(100f)
                 .HeightPercent(100f)
                 .Justify(UiJustifyContent.Center)
                 .Align(UiAlignItems.Center)
-                .Background(SKColors.DarkSlateGray.ToUiColor())
+                .Background(UiColor.DarkSlateGray)
                 .Gap(12f);
         }
 

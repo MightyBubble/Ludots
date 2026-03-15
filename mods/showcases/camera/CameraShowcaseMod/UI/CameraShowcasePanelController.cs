@@ -6,7 +6,6 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
-using Ludots.UI.Skia;
 
 namespace CameraShowcaseMod.UI
 {
@@ -16,7 +15,9 @@ namespace CameraShowcaseMod.UI
 
         public UiScene BuildScene(GameEngine engine, string mapId, ViewModeManager? viewModeManager)
         {
-            var scene = new UiScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider());
+            var textMeasurer = (IUiTextMeasurer)engine.GetService(CoreServiceKeys.UiTextMeasurer);
+            var imageSizeProvider = (IUiImageSizeProvider)engine.GetService(CoreServiceKeys.UiImageSizeProvider);
+            var scene = new UiScene(textMeasurer, imageSizeProvider);
             int nextId = 1;
             scene.Mount(BuildRoot(engine, mapId, viewModeManager).Build(scene.Dispatcher, ref nextId));
             _mountedScene = scene;
@@ -181,13 +182,6 @@ namespace CameraShowcaseMod.UI
 
             activeCameraId = brain.ActiveCameraId;
             return registry.TryGet(activeCameraId, out definition!);
-        }
-
-        private static SkiaSharp.SKColor ParseColor(string color)
-        {
-            return SkiaSharp.SKColor.TryParse(color, out var parsed)
-                ? parsed
-                : SkiaSharp.SKColors.White;
         }
     }
 }

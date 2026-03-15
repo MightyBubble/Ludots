@@ -17,10 +17,13 @@ namespace Ludots.Tests.UiShowcase;
 [TestFixture]
 public sealed class UiShowcaseAcceptanceTests
 {
+    private static readonly IUiTextMeasurer TextMeasurer = new SkiaTextMeasurer();
+    private static readonly IUiImageSizeProvider ImageSizeProvider = new SkiaImageSizeProvider();
+
     [Test]
     public void ComposeScene_RendersOfficialSections_AndResolvesIds()
     {
-        UiScene scene = UiShowcaseFactory.CreateComposeScene();
+        UiScene scene = UiShowcaseFactory.CreateComposeScene(TextMeasurer, ImageSizeProvider);
         scene.Layout(1280, 720);
 
         Assert.That(scene.FindByElementId("compose-primary"), Is.Not.Null);
@@ -34,7 +37,7 @@ public sealed class UiShowcaseAcceptanceTests
     [Test]
     public void ReactiveScene_ClickIncrement_UpdatesCounterNodeText()
     {
-        var page = UiShowcaseFactory.CreateReactivePage();
+        var page = UiShowcaseFactory.CreateReactivePage(TextMeasurer, ImageSizeProvider);
         page.Scene.Layout(1280, 720);
         UiNode button = page.Scene.FindByElementId("reactive-inc")!;
         UiNode counterBefore = page.Scene.FindByElementId("reactive-count")!;
@@ -54,7 +57,7 @@ public sealed class UiShowcaseAcceptanceTests
     [Test]
     public void ReactiveScene_ClickIncrement_ReconcilesExistingNodesIncrementally()
     {
-        var page = UiShowcaseFactory.CreateReactivePage();
+        var page = UiShowcaseFactory.CreateReactivePage(TextMeasurer, ImageSizeProvider);
         page.Scene.Layout(1280, 720);
         UiNode button = page.Scene.FindByElementId("reactive-inc")!;
         UiNode counterBefore = page.Scene.FindByElementId("reactive-count")!;
@@ -108,7 +111,7 @@ public sealed class UiShowcaseAcceptanceTests
     [Test]
     public void ReactiveScene_ThemeSwitch_ChangesRootComputedStyle()
     {
-        var page = UiShowcaseFactory.CreateReactivePage();
+        var page = UiShowcaseFactory.CreateReactivePage(TextMeasurer, ImageSizeProvider);
         page.Scene.Layout(1280, 720);
         UiColor before = page.Scene.Root!.Style.BackgroundColor;
         UiNode button = page.Scene.FindByElementId("reactive-theme-light")!;
@@ -124,7 +127,7 @@ public sealed class UiShowcaseAcceptanceTests
     [Test]
     public void MarkupScene_ClickIncrement_RebindsCodeBehindAndUpdatesText()
     {
-        UiScene scene = UiShowcaseFactory.CreateMarkupScene();
+        UiScene scene = UiShowcaseFactory.CreateMarkupScene(TextMeasurer, ImageSizeProvider);
         scene.Layout(1280, 720);
         UiNode before = scene.FindByElementId("markup-count")!;
         UiNode button = scene.FindByElementId("markup-inc")!;
@@ -141,7 +144,7 @@ public sealed class UiShowcaseAcceptanceTests
     [Test]
     public void MarkupScene_PrototypeImportPage_ExposesDiagnostics()
     {
-        UiScene scene = UiShowcaseFactory.CreateMarkupScene();
+        UiScene scene = UiShowcaseFactory.CreateMarkupScene(TextMeasurer, ImageSizeProvider);
         scene.Layout(1280, 720);
 
         Assert.That(scene.FindByElementId("markup-prototype"), Is.Not.Null);
@@ -153,9 +156,9 @@ public sealed class UiShowcaseAcceptanceTests
     [Test]
     public void SkinFixture_SameDomDifferentThemes_ProducesDifferentResolvedColors()
     {
-        UiScene classic = UiShowcaseFactory.CreateSkinFixtureScene(UiSkinClassicModEntry.Theme);
-        UiScene scifi = UiShowcaseFactory.CreateSkinFixtureScene(UiSkinSciFiHudModEntry.Theme);
-        UiScene paper = UiShowcaseFactory.CreateSkinFixtureScene(UiSkinPaperModEntry.Theme);
+        UiScene classic = UiShowcaseFactory.CreateSkinFixtureScene(TextMeasurer, ImageSizeProvider, UiSkinClassicModEntry.Theme);
+        UiScene scifi = UiShowcaseFactory.CreateSkinFixtureScene(TextMeasurer, ImageSizeProvider, UiSkinSciFiHudModEntry.Theme);
+        UiScene paper = UiShowcaseFactory.CreateSkinFixtureScene(TextMeasurer, ImageSizeProvider, UiSkinPaperModEntry.Theme);
         classic.Layout(1280, 720);
         scifi.Layout(1280, 720);
         paper.Layout(1280, 720);
@@ -182,7 +185,7 @@ public sealed class UiShowcaseAcceptanceTests
     [Test]
     public void SkinFixture_PaperTheme_BodyText_HasReadableContrast()
     {
-        UiScene paper = UiShowcaseFactory.CreateSkinFixtureScene(UiSkinPaperModEntry.Theme);
+        UiScene paper = UiShowcaseFactory.CreateSkinFixtureScene(TextMeasurer, ImageSizeProvider, UiSkinPaperModEntry.Theme);
         paper.Layout(1280, 720);
 
         UiNode description = paper.FindByElementId("skin-description")!;
@@ -194,7 +197,7 @@ public sealed class UiShowcaseAcceptanceTests
     [Test]
     public void SkinShowcase_RuntimeThemeSwitch_PreservesDomHashAndChangesStyle()
     {
-        UiScene scene = UiShowcaseFactory.CreateSkinShowcaseScene();
+        UiScene scene = UiShowcaseFactory.CreateSkinShowcaseScene(TextMeasurer, ImageSizeProvider);
         scene.Layout(1280, 720);
         string beforeHash = UiDomHasher.Hash(scene);
         var beforeColor = scene.Root!.Style.BackgroundColor;

@@ -32,6 +32,14 @@ public readonly struct UiColor : IEquatable<UiColor>
     public static readonly UiColor Transparent = new(0, 0, 0, 0);
     public static readonly UiColor White = new(255, 255, 255, 255);
     public static readonly UiColor Black = new(0, 0, 0, 255);
+    public static readonly UiColor PresetRed = new(255, 0, 0);
+    public static readonly UiColor PresetGreen = new(0, 128, 0);
+    public static readonly UiColor PresetBlue = new(0, 0, 255);
+    public static readonly UiColor Cyan = new(0, 255, 255);
+    public static readonly UiColor Gold = new(255, 215, 0);
+    public static readonly UiColor LightGray = new(211, 211, 211);
+    public static readonly UiColor DimGray = new(105, 105, 105);
+    public static readonly UiColor DarkSlateGray = new(47, 79, 79);
 
     public UiColor WithAlpha(byte alpha) => new(R, G, B, alpha);
 

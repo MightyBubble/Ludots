@@ -10,7 +10,6 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
-using Ludots.UI.Skia;
 
 namespace EntityCommandPanelMod.UI
 {
@@ -26,9 +25,13 @@ namespace EntityCommandPanelMod.UI
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            var textMeasurer = engine.GetService(CoreServiceKeys.UiTextMeasurer) as IUiTextMeasurer
+                ?? throw new InvalidOperationException("UiTextMeasurer service not registered.");
+            var imageSizeProvider = engine.GetService(CoreServiceKeys.UiImageSizeProvider) as IUiImageSizeProvider
+                ?? throw new InvalidOperationException("UiImageSizeProvider service not registered.");
             _page = new ReactivePage<HostState>(
-                new SkiaTextMeasurer(),
-                new SkiaImageSizeProvider(),
+                textMeasurer,
+                imageSizeProvider,
                 new HostState(0),
                 BuildRoot);
         }

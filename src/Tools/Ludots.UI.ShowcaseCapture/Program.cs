@@ -7,6 +7,8 @@ const int Width = 1280;
 const int Height = 720;
 string acceptanceRoot = args.Length > 0 ? args[0] : Path.Combine("artifacts", "acceptance");
 SkiaUiRenderer renderer = new();
+IUiTextMeasurer textMeasurer = new SkiaTextMeasurer();
+IUiImageSizeProvider imageSizeProvider = new SkiaImageSizeProvider();
 
 RunComposeSuite();
 RunReactiveSuite();
@@ -19,7 +21,7 @@ Console.WriteLine($"UI showcase artifacts written to {acceptanceRoot}");
 void RunComposeSuite()
 {
     CaptureSuite suite = new("UI Showcase Compose", Path.Combine(acceptanceRoot, "ui-showcase-compose"), renderer);
-    UiScene scene = UiShowcaseFactory.CreateComposeScene();
+    UiScene scene = UiShowcaseFactory.CreateComposeScene(textMeasurer, imageSizeProvider);
     suite.Capture("compose-initial", scene, "Compose showcase renders Overview / Controls / Forms / Collections / Overlays / Styles.");
     suite.CaptureFocus("compose-forms", scene, "compose-email-input", "Compose forms block shows required, pattern, password, and textarea validation surfaces.", 56f, 420, 320);
     suite.CaptureFocus("compose-appearance", scene, "compose-appearance-lab", "Compose appearance block shows backdrop blur, filter blur, flex wrap, RTL text, and image skin samples.", 24f, 760, 360);
@@ -65,7 +67,7 @@ void RunComposeSuite()
 void RunReactiveSuite()
 {
     CaptureSuite suite = new("UI Showcase Reactive", Path.Combine(acceptanceRoot, "ui-showcase-reactive"), renderer);
-    ReactivePage<ReactiveShowcaseState> page = UiShowcaseFactory.CreateReactivePage();
+    ReactivePage<ReactiveShowcaseState> page = UiShowcaseFactory.CreateReactivePage(textMeasurer, imageSizeProvider);
     UiScene scene = page.Scene;
     suite.Capture("reactive-initial", scene, "Reactive showcase renders official semantic pages with stateful counter.");
     suite.CaptureFocus("reactive-forms", scene, "reactive-email-input", "Reactive forms block shows required, pattern, password, and textarea validation surfaces.", 56f, 420, 320);
@@ -113,7 +115,7 @@ void RunReactiveSuite()
 void RunMarkupSuite()
 {
     CaptureSuite suite = new("UI Showcase Markup", Path.Combine(acceptanceRoot, "ui-showcase-markup"), renderer);
-    UiScene scene = UiShowcaseFactory.CreateMarkupScene();
+    UiScene scene = UiShowcaseFactory.CreateMarkupScene(textMeasurer, imageSizeProvider);
     suite.Capture("markup-initial", scene, "Markup showcase compiles HTML/CSS into native DOM and binds C# code-behind.");
     suite.CaptureFocus("markup-forms", scene, "markup-email-input", "Markup forms block shows required, pattern, password, and textarea validation surfaces from external HTML/CSS assets.", 56f, 420, 320);
     suite.CaptureFocus("markup-appearance", scene, "markup-appearance-lab", "Markup appearance block shows backdrop blur, filter blur, flex wrap, RTL text, and image skin samples.", 24f, 760, 360);
@@ -160,9 +162,9 @@ void RunMarkupSuite()
 void RunStyleParitySuite()
 {
     CaptureSuite suite = new("UI Showcase Style Parity", Path.Combine(acceptanceRoot, "ui-showcase-style-parity"), renderer);
-    UiScene compose = UiShowcaseFactory.CreateComposeScene();
-    ReactivePage<ReactiveShowcaseState> reactive = UiShowcaseFactory.CreateReactivePage();
-    UiScene markup = UiShowcaseFactory.CreateMarkupScene();
+    UiScene compose = UiShowcaseFactory.CreateComposeScene(textMeasurer, imageSizeProvider);
+    ReactivePage<ReactiveShowcaseState> reactive = UiShowcaseFactory.CreateReactivePage(textMeasurer, imageSizeProvider);
+    UiScene markup = UiShowcaseFactory.CreateMarkupScene(textMeasurer, imageSizeProvider);
 
     compose.Layout(Width, Height);
     reactive.Scene.Layout(Width, Height);
@@ -190,7 +192,7 @@ void RunStyleParitySuite()
 void RunSkinSwapSuite()
 {
     CaptureSuite suite = new("UI Showcase Skin Swap", Path.Combine(acceptanceRoot, "ui-showcase-skin-swap"), renderer);
-    UiScene scene = UiShowcaseFactory.CreateSkinShowcaseScene();
+    UiScene scene = UiShowcaseFactory.CreateSkinShowcaseScene(textMeasurer, imageSizeProvider);
     suite.Capture("skin-classic", scene, $"Skin showcase initial theme hash={UiDomHasher.Hash(scene)}.");
     suite.Click(scene, "skin-theme-scifi", "Switch to Sci-Fi HUD skin pack.");
     suite.Capture("skin-scifi", scene, $"Skin showcase Sci-Fi hash={UiDomHasher.Hash(scene)}.");

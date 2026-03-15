@@ -1,15 +1,14 @@
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
-using Ludots.UI.Skia;
 
 namespace UiShowcaseCoreMod.Showcase;
 
 internal static class ReactiveShowcasePageFactory
 {
-	internal static ReactivePage<ReactiveShowcaseState> CreatePage()
+	internal static ReactivePage<ReactiveShowcaseState> CreatePage(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
 	{
-		return new ReactivePage<ReactiveShowcaseState>(new SkiaTextMeasurer(), new SkiaImageSizeProvider(), new ReactiveShowcaseState(3, "theme-hud", "density-cozy", CheckboxChecked: true, SwitchEnabled: true, FormError: true, "Waiting validation", 2, 1, ModalOpen: false, ToastVisible: false), BuildRoot, null, UiShowcaseScaffolding.AuthoringStyleSheet);
+		return new ReactivePage<ReactiveShowcaseState>(textMeasurer, imageSizeProvider, new ReactiveShowcaseState(3, "theme-hud", "density-cozy", CheckboxChecked: true, SwitchEnabled: true, FormError: true, "Waiting validation", 2, 1, ModalOpen: false, ToastVisible: false), BuildRoot, null, UiShowcaseScaffolding.AuthoringStyleSheet);
 	}
 
 	private static UiElementBuilder BuildRoot(ReactiveContext<ReactiveShowcaseState> context)

@@ -14,9 +14,6 @@
     <ProjectReference Include="..\..\src\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj">
         <Private>false</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\src\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj">
-        <Private>false</Private>
-    </ProjectReference>
   </ItemGroup>
   
 </Project>

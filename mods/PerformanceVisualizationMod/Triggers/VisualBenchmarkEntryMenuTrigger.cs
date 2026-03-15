@@ -8,8 +8,6 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
-using Ludots.UI.Skia;
-using SkiaSharp;
 
 namespace PerformanceVisualizationMod.Triggers
 {
@@ -33,27 +31,29 @@ namespace PerformanceVisualizationMod.Triggers
                 return Task.CompletedTask;
             }
 
-            uiRoot.MountScene(CreateScene(() => engine.LoadMap(VisualBenchmarkMapIds.VisualBenchmark)));
+            var textMeasurer = (IUiTextMeasurer)context.Get(CoreServiceKeys.UiTextMeasurer);
+            var imageSizeProvider = (IUiImageSizeProvider)context.Get(CoreServiceKeys.UiImageSizeProvider);
+            uiRoot.MountScene(CreateScene(textMeasurer, imageSizeProvider, () => engine.LoadMap(VisualBenchmarkMapIds.VisualBenchmark)));
             uiRoot.IsDirty = true;
             return Task.CompletedTask;
         }
 
-        private static UiScene CreateScene(Action openVisualBenchmark)
+        private static UiScene CreateScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, Action openVisualBenchmark)
         {
-            var scene = new UiScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider());
+            var scene = new UiScene(textMeasurer, imageSizeProvider);
             int nextId = 1;
             scene.Mount(
                 Ui.Column(
                         Ui.Text("Ludots Visual Benchmark")
                             .FontSize(48f)
                             .Bold()
-                            .Color(SKColors.White.ToUiColor()),
-                        BuildButton("Start Visual Benchmark", SKColors.White.ToUiColor(), SKColors.Black.ToUiColor(), _ => openVisualBenchmark()))
+                            .Color(UiColor.White),
+                        BuildButton("Start Visual Benchmark", UiColor.White, UiColor.Black, _ => openVisualBenchmark()))
                     .WidthPercent(100f)
                     .HeightPercent(100f)
                     .Justify(UiJustifyContent.Center)
                     .Align(UiAlignItems.Center)
-                    .Background(SKColors.Black.ToUiColor())
+                    .Background(UiColor.Black)
                     .Gap(24f)
                     .Build(scene.Dispatcher, ref nextId));
             return scene;

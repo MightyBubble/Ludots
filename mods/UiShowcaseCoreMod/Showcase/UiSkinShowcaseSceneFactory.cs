@@ -1,23 +1,22 @@
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
-using Ludots.UI.Skia;
 
 namespace UiShowcaseCoreMod.Showcase;
 
 internal static class UiSkinShowcaseSceneFactory
 {
-    internal static UiScene CreateScene()
+    internal static UiScene CreateScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
     {
-        return BuildSkinScene(UiSkinThemes.Classic, includeSwitcher: true);
+        return BuildSkinScene(textMeasurer, imageSizeProvider, UiSkinThemes.Classic, includeSwitcher: true);
     }
 
-    internal static UiScene CreateFixtureScene(UiThemePack theme)
+    internal static UiScene CreateFixtureScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, UiThemePack theme)
     {
-        return BuildSkinScene(theme, includeSwitcher: false);
+        return BuildSkinScene(textMeasurer, imageSizeProvider, theme, includeSwitcher: false);
     }
 
-    private static UiScene BuildSkinScene(UiThemePack theme, bool includeSwitcher)
+    private static UiScene BuildSkinScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, UiThemePack theme, bool includeSwitcher)
     {
         UiStyleSheet baseSheet = new UiStyleSheet()
             .AddRule(".skin-toolbar", style =>
@@ -38,8 +37,6 @@ internal static class UiSkinShowcaseSceneFactory
                 style.Set("border-radius", "8px");
             });
 
-        SkiaTextMeasurer textMeasurer = new();
-        SkiaImageSizeProvider imageSizeProvider = new();
         UiScene initial = UiSceneComposer.Compose(textMeasurer, imageSizeProvider, BuildFixture(string.Empty, includeSwitcher), theme, baseSheet);
         string domHash = UiDomHasher.Hash(initial);
         return UiSceneComposer.Compose(textMeasurer, imageSizeProvider, BuildFixture(domHash, includeSwitcher), theme, baseSheet);

@@ -7,8 +7,6 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
-using Ludots.UI.Skia;
-using SkiaSharp;
 
 namespace PerformanceMod.Triggers
 {
@@ -32,7 +30,11 @@ namespace PerformanceMod.Triggers
                 return Task.CompletedTask;
             }
 
+            var textMeasurer = (IUiTextMeasurer)context.Get(CoreServiceKeys.UiTextMeasurer);
+            var imageSizeProvider = (IUiImageSizeProvider)context.Get(CoreServiceKeys.UiImageSizeProvider);
             UiScene scene = CreateScene(
+                textMeasurer,
+                imageSizeProvider,
                 () => engine.LoadMap(PerformanceMapIds.Benchmark),
                 () => engine.LoadMap(new MapId(engine.MergedConfig.StartupMapId)));
             uiRoot.MountScene(scene);
@@ -40,27 +42,27 @@ namespace PerformanceMod.Triggers
             return Task.CompletedTask;
         }
 
-        private static UiScene CreateScene(System.Action goBenchmark, System.Action goEntry)
+        private static UiScene CreateScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, System.Action goBenchmark, System.Action goEntry)
         {
-            var scene = new UiScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider());
+            var scene = new UiScene(textMeasurer, imageSizeProvider);
             int nextId = 1;
             scene.Mount(
                 Ui.Column(
                         Ui.Text("PERFORMANCE")
                             .FontSize(54f)
                             .Bold()
-                            .Color(SKColors.White.ToUiColor()),
+                            .Color(UiColor.White),
                         Ui.Text("Entry menu: open benchmark map from here.")
                             .FontSize(20f)
-                            .Color(SKColors.LightGray.ToUiColor())
+                            .Color(UiColor.LightGray)
                             .Margin(0f, 12f),
-                        BuildButton("Open Benchmark Map", SKColors.Gold.ToUiColor(), SKColors.Black.ToUiColor(), _ => goBenchmark()),
-                        BuildButton("Back to Entry", SKColors.DimGray.ToUiColor(), SKColors.White.ToUiColor(), _ => goEntry()))
+                        BuildButton("Open Benchmark Map", UiColor.Gold, UiColor.Black, _ => goBenchmark()),
+                        BuildButton("Back to Entry", UiColor.DimGray, UiColor.White, _ => goEntry()))
                     .WidthPercent(100f)
                     .HeightPercent(100f)
                     .Justify(UiJustifyContent.Center)
                     .Align(UiAlignItems.Center)
-                    .Background(new SKColor(0, 0, 0, 200).ToUiColor())
+                    .Background(new UiColor(0, 0, 0, 200))
                     .Gap(16f)
                     .Build(scene.Dispatcher, ref nextId));
             return scene;
