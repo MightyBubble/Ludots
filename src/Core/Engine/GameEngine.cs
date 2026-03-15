@@ -498,7 +498,8 @@ namespace Ludots.Core.Engine
                 performerDefinitions,
                 Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register,
                 meshAssets.GetId,
-                presentationTextCatalog.GetTokenId).Load();
+                presentationTextCatalog.GetTokenId,
+                visualTemplates.GetId).Load();
             var presentationAuthoring = new PresentationAuthoringContext(visualTemplates, performerDefinitions, animatorControllers, presentationStableIds);
             MapLoader.PresentationAuthoringContext = presentationAuthoring;
 

@@ -2,7 +2,12 @@
   "Id": "interaction_showcase_hub",
   "Tags": ["interaction.showcase", "interaction.showcase.hub"],
   "DefaultCamera": {
-    "VirtualCameraId": "Camera.Profile.Tactical"
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 1630,
+    "TargetYCm": 955,
+    "DistanceCm": 3600,
+    "Pitch": 54,
+    "FovYDeg": 42
   },
   "Entities": [
     {
@@ -24,6 +29,14 @@
       "Overrides": {
         "PlayerOwner": { "PlayerId": 1 },
         "WorldPositionCm": { "Value": { "X": 1600, "Y": 1260 } }
+      }
+    },
+    {
+      "Template": "interaction_arcweaver_forms_demo",
+      "Overrides": {
+        "Name": { "Value": "ArcweaverForms" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 1180, "Y": 1330 } }
       }
     },
     {

@@ -680,4 +680,277 @@ namespace Ludots.Tests.Presentation
             Assert.That(def.VisualKind, Is.EqualTo(PerformerVisualKind.WorldBar));
         }
     }
+
+    [TestFixture]
+    public class PerformerDistanceFilterTests
+    {
+        private World _world;
+        private PerformerInstanceBuffer _instances;
+        private PerformerDefinitionRegistry _defs;
+        private WorldHudBatchBuffer _hud;
+        private PerformerEmitSystem _system;
+
+        [SetUp]
+        public void Setup()
+        {
+            _world = World.Create();
+            _instances = new PerformerInstanceBuffer();
+            _defs = new PerformerDefinitionRegistry();
+            _hud = new WorldHudBatchBuffer();
+            var programs = new GraphProgramRegistry();
+            var api = new GasGraphRuntimeApi(_world, null, null, null);
+            var globals = new System.Collections.Generic.Dictionary<string, object>();
+            _system = new PerformerEmitSystem(
+                _world, _instances, _defs,
+                new GroundOverlayBuffer(), new PrimitiveDrawBuffer(), _hud,
+                programs, api, globals);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _system?.Dispose();
+            _world?.Dispose();
+        }
+
+        [Test]
+        public void EntityScopedPerformer_WithMaxVisibilityDistance_SkipsFarEntities()
+        {
+            // Entity with distance^2 = 10000 (distance = 100cm)
+            _world.Create(
+                new VisualTransform { Position = Vector3.Zero },
+                new AttributeBuffer(),
+                new CullState { IsVisible = true, DistanceToCameraSq = 10000f });
+
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.WorldBar,
+                EntityScope = EntityScopeFilter.AllWithAttributes,
+                MaxVisibilityDistanceCm = 50f, // 50^2 = 2500, far less than 10000
+            };
+            _defs.Register("test_dist_far", def);
+
+            _system.Update(0.016f);
+
+            Assert.That(_hud.GetSpan().Length, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void EntityScopedPerformer_WithMaxVisibilityDistance_IncludesNearEntities()
+        {
+            // Entity with distance^2 = 400 (distance = 20cm)
+            _world.Create(
+                new VisualTransform { Position = Vector3.Zero },
+                new AttributeBuffer(),
+                new CullState { IsVisible = true, DistanceToCameraSq = 400f });
+
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.WorldBar,
+                EntityScope = EntityScopeFilter.AllWithAttributes,
+                MaxVisibilityDistanceCm = 50f, // 50^2 = 2500, greater than 400
+            };
+            _defs.Register("test_dist_near", def);
+
+            _system.Update(0.016f);
+
+            Assert.That(_hud.GetSpan().Length, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void EntityScopedPerformer_ZeroMaxDistance_DoesNotFilter()
+        {
+            // Default (0) means no distance filter
+            _world.Create(
+                new VisualTransform { Position = Vector3.Zero },
+                new AttributeBuffer(),
+                new CullState { IsVisible = true, DistanceToCameraSq = 999999f });
+
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.WorldBar,
+                EntityScope = EntityScopeFilter.AllWithAttributes,
+                MaxVisibilityDistanceCm = 0f,
+            };
+            _defs.Register("test_dist_zero", def);
+
+            _system.Update(0.016f);
+
+            Assert.That(_hud.GetSpan().Length, Is.EqualTo(1));
+        }
+    }
+
+    [TestFixture]
+    public class PerformerTemplateFilterTests
+    {
+        private World _world;
+        private PerformerInstanceBuffer _instances;
+        private PerformerDefinitionRegistry _defs;
+        private WorldHudBatchBuffer _hud;
+        private PerformerEmitSystem _system;
+
+        [SetUp]
+        public void Setup()
+        {
+            _world = World.Create();
+            _instances = new PerformerInstanceBuffer();
+            _defs = new PerformerDefinitionRegistry();
+            _hud = new WorldHudBatchBuffer();
+            var programs = new GraphProgramRegistry();
+            var api = new GasGraphRuntimeApi(_world, null, null, null);
+            var globals = new System.Collections.Generic.Dictionary<string, object>();
+            _system = new PerformerEmitSystem(
+                _world, _instances, _defs,
+                new GroundOverlayBuffer(), new PrimitiveDrawBuffer(), _hud,
+                programs, api, globals);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _system?.Dispose();
+            _world?.Dispose();
+        }
+
+        [Test]
+        public void EntityScopedPerformer_WithRequiredTemplateId_SkipsMismatch()
+        {
+            _world.Create(
+                new VisualTransform { Position = Vector3.Zero },
+                new AttributeBuffer(),
+                new VisualTemplateRef { TemplateId = 5 });
+
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.WorldBar,
+                EntityScope = EntityScopeFilter.AllWithAttributes,
+                RequiredTemplateId = 10,
+            };
+            _defs.Register("test_tmpl_mismatch", def);
+
+            _system.Update(0.016f);
+
+            Assert.That(_hud.GetSpan().Length, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void EntityScopedPerformer_WithRequiredTemplateId_IncludesMatch()
+        {
+            _world.Create(
+                new VisualTransform { Position = Vector3.Zero },
+                new AttributeBuffer(),
+                new VisualTemplateRef { TemplateId = 10 });
+
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.WorldBar,
+                EntityScope = EntityScopeFilter.AllWithAttributes,
+                RequiredTemplateId = 10,
+            };
+            _defs.Register("test_tmpl_match", def);
+
+            _system.Update(0.016f);
+
+            Assert.That(_hud.GetSpan().Length, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void EntityScopedPerformer_WithRequiredTemplateId_SkipsEntitiesWithoutComponent()
+        {
+            // Entity without VisualTemplateRef should be skipped
+            _world.Create(
+                new VisualTransform { Position = Vector3.Zero },
+                new AttributeBuffer());
+
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.WorldBar,
+                EntityScope = EntityScopeFilter.AllWithAttributes,
+                RequiredTemplateId = 10,
+            };
+            _defs.Register("test_tmpl_missing", def);
+
+            _system.Update(0.016f);
+
+            Assert.That(_hud.GetSpan().Length, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void EntityScopedPerformer_ZeroRequiredTemplateId_DoesNotFilter()
+        {
+            _world.Create(
+                new VisualTransform { Position = Vector3.Zero },
+                new AttributeBuffer(),
+                new VisualTemplateRef { TemplateId = 5 });
+
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.WorldBar,
+                EntityScope = EntityScopeFilter.AllWithAttributes,
+                RequiredTemplateId = 0,
+            };
+            _defs.Register("test_tmpl_zero", def);
+
+            _system.Update(0.016f);
+
+            Assert.That(_hud.GetSpan().Length, Is.EqualTo(1));
+        }
+    }
+
+    [TestFixture]
+    public class WellKnownPerformerParamKeysTests
+    {
+        [Test]
+        public void BarConstants_MatchEmitSystemConventions()
+        {
+            // These values must match the hardcoded keys in PerformerEmitSystem.EmitWorldBar
+            Assert.That(WellKnownPerformerParamKeys.BarFillRatio, Is.EqualTo(0));
+            Assert.That(WellKnownPerformerParamKeys.BarWidth, Is.EqualTo(1));
+            Assert.That(WellKnownPerformerParamKeys.BarHeight, Is.EqualTo(2));
+            Assert.That(WellKnownPerformerParamKeys.BarForegroundR, Is.EqualTo(4));
+            Assert.That(WellKnownPerformerParamKeys.BarForegroundG, Is.EqualTo(5));
+            Assert.That(WellKnownPerformerParamKeys.BarForegroundB, Is.EqualTo(6));
+            Assert.That(WellKnownPerformerParamKeys.BarForegroundA, Is.EqualTo(7));
+            Assert.That(WellKnownPerformerParamKeys.BarBackgroundR, Is.EqualTo(8));
+            Assert.That(WellKnownPerformerParamKeys.BarBackgroundG, Is.EqualTo(9));
+            Assert.That(WellKnownPerformerParamKeys.BarBackgroundB, Is.EqualTo(10));
+            Assert.That(WellKnownPerformerParamKeys.BarBackgroundA, Is.EqualTo(11));
+        }
+
+        [Test]
+        public void TextConstants_MatchEmitSystemConventions()
+        {
+            Assert.That(WellKnownPerformerParamKeys.TextValue0, Is.EqualTo(0));
+            Assert.That(WellKnownPerformerParamKeys.TextValue1, Is.EqualTo(1));
+            Assert.That(WellKnownPerformerParamKeys.TextFontSize, Is.EqualTo(3));
+            Assert.That(WellKnownPerformerParamKeys.TextColorR, Is.EqualTo(4));
+            Assert.That(WellKnownPerformerParamKeys.TextTokenId, Is.EqualTo(15));
+            Assert.That(WellKnownPerformerParamKeys.TextValueMode, Is.EqualTo(16));
+        }
+
+        [Test]
+        public void OverlayConstants_MatchEmitSystemConventions()
+        {
+            Assert.That(WellKnownPerformerParamKeys.OverlayRadius, Is.EqualTo(0));
+            Assert.That(WellKnownPerformerParamKeys.OverlayInnerRadius, Is.EqualTo(1));
+            Assert.That(WellKnownPerformerParamKeys.OverlayAngle, Is.EqualTo(2));
+            Assert.That(WellKnownPerformerParamKeys.OverlayRotation, Is.EqualTo(3));
+            Assert.That(WellKnownPerformerParamKeys.OverlayBorderWidth, Is.EqualTo(12));
+            Assert.That(WellKnownPerformerParamKeys.OverlayLength, Is.EqualTo(13));
+            Assert.That(WellKnownPerformerParamKeys.OverlayWidth, Is.EqualTo(14));
+        }
+
+        [Test]
+        public void MarkerConstants_MatchEmitSystemConventions()
+        {
+            Assert.That(WellKnownPerformerParamKeys.MarkerScale, Is.EqualTo(0));
+            Assert.That(WellKnownPerformerParamKeys.MarkerScaleX, Is.EqualTo(1));
+            Assert.That(WellKnownPerformerParamKeys.MarkerScaleY, Is.EqualTo(2));
+            Assert.That(WellKnownPerformerParamKeys.MarkerScaleZ, Is.EqualTo(3));
+            Assert.That(WellKnownPerformerParamKeys.MarkerColorR, Is.EqualTo(4));
+            Assert.That(WellKnownPerformerParamKeys.MarkerColorG, Is.EqualTo(5));
+            Assert.That(WellKnownPerformerParamKeys.MarkerColorB, Is.EqualTo(6));
+            Assert.That(WellKnownPerformerParamKeys.MarkerColorA, Is.EqualTo(7));
+        }
+    }
 }

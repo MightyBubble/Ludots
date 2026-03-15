@@ -46,6 +46,20 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public EntityScopeFilter EntityScope;
 
+        /// <summary>
+        /// Maximum visibility distance in centimeters for entity-scoped performers.
+        /// When &gt; 0, entities with <see cref="Components.CullState.DistanceToCameraSq"/>
+        /// exceeding this threshold squared are skipped.
+        /// Zero or negative = no distance limit (default).
+        /// </summary>
+        public float MaxVisibilityDistanceCm;
+
+        /// <summary>
+        /// When &gt; 0, only emit for entities whose <see cref="Components.VisualTemplateRef.TemplateId"/>
+        /// matches this value. Zero = no template filter (emit for all matching entities, the default).
+        /// </summary>
+        public int RequiredTemplateId;
+
         // ── Time-based modulation (instance-scoped only) ──
 
         /// <summary>

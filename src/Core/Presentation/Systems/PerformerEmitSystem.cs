@@ -163,6 +163,12 @@ namespace Ludots.Core.Presentation.Systems
             bool skipVisibilityEval = requireCullCheck
                 && def.VisibilityCondition.Inline == InlineConditionKind.OwnerCullVisible;
 
+            float maxDistSq = def.MaxVisibilityDistanceCm > 0f
+                ? def.MaxVisibilityDistanceCm * def.MaxVisibilityDistanceCm
+                : 0f;
+            bool hasDistanceFilter = maxDistSq > 0f;
+            bool hasTemplateFilter = def.RequiredTemplateId > 0;
+
             var q = World.Query(in query);
             foreach (var chunk in q)
             {
@@ -171,6 +177,19 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     if (requireCullCheck && culls != null && !culls[i].IsVisible) continue;
+
+                    // Distance filter — only when culls are available
+                    if (hasDistanceFilter && culls != null && culls[i].DistanceToCameraSq > maxDistSq)
+                        continue;
+
+                    // Template filter — runtime check via World.Has/Get
+                    if (hasTemplateFilter)
+                    {
+                        var entity = chunk.Entity(i);
+                        if (!World.Has<VisualTemplateRef>(entity) ||
+                            World.Get<VisualTemplateRef>(entity).TemplateId != def.RequiredTemplateId)
+                            continue;
+                    }
 
                     if (!skipVisibilityEval)
                     {
@@ -189,6 +208,12 @@ namespace Ludots.Core.Presentation.Systems
             bool skipVisibilityEval = requireCullCheck
                 && def.VisibilityCondition.Inline == InlineConditionKind.OwnerCullVisible;
 
+            float maxDistSq = def.MaxVisibilityDistanceCm > 0f
+                ? def.MaxVisibilityDistanceCm * def.MaxVisibilityDistanceCm
+                : 0f;
+            bool hasDistanceFilter = maxDistSq > 0f;
+            bool hasTemplateFilter = def.RequiredTemplateId > 0;
+
             var q = World.Query(in query);
             foreach (var chunk in q)
             {
@@ -197,6 +222,19 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     if (requireCullCheck && culls != null && !culls[i].IsVisible) continue;
+
+                    // Distance filter
+                    if (hasDistanceFilter && culls != null && culls[i].DistanceToCameraSq > maxDistSq)
+                        continue;
+
+                    // Template filter
+                    if (hasTemplateFilter)
+                    {
+                        var entity = chunk.Entity(i);
+                        if (!World.Has<VisualTemplateRef>(entity) ||
+                            World.Get<VisualTemplateRef>(entity).TemplateId != def.RequiredTemplateId)
+                            continue;
+                    }
 
                     if (!skipVisibilityEval)
                     {

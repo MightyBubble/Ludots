@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using CoreInputMod.ViewMode;
+using EntityInfoPanelsMod;
+using EntityInfoPanelsMod.UI;
 using InteractionShowcaseMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -12,7 +14,6 @@ using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
-using Ludots.UI.Skia;
 
 namespace InteractionShowcaseMod.UI
 {
@@ -31,7 +32,9 @@ namespace InteractionShowcaseMod.UI
             var nextState = BuildState(engine, mapId, viewModeManager);
             if (_page == null)
             {
-                _page = new ReactivePage<InteractionShowcasePanelState>(new SkiaTextMeasurer(), new SkiaImageSizeProvider(), nextState, BuildRoot);
+                var textMeasurer = (IUiTextMeasurer)engine.GetService(CoreServiceKeys.UiTextMeasurer);
+                var imageSizeProvider = (IUiImageSizeProvider)engine.GetService(CoreServiceKeys.UiImageSizeProvider);
+                _page = new ReactivePage<InteractionShowcasePanelState>(textMeasurer, imageSizeProvider, nextState, BuildRoot);
             }
             else if (!_page.State.Equals(nextState))
             {
@@ -61,18 +64,39 @@ namespace InteractionShowcaseMod.UI
         {
             var state = context.State;
             return Ui.Column(
+                    BuildMainPanel(state),
+                    BuildEntityInfoLayer())
+                .WidthPercent(100f)
+                .HeightPercent(100f)
+                .Absolute(0f, 0f)
+                .ZIndex(30);
+        }
+
+        private UiElementBuilder BuildMainPanel(InteractionShowcasePanelState state)
+        {
+            return Ui.Column(
                     BuildHeroStrip(state),
                     BuildModeCard(state),
                     BuildSelectionCard(state),
                     BuildCoverageCard(state),
                     state.IsStressMap ? BuildStressCard(state) : BuildSkillCard(state))
-                .Width(560f)
-                .Padding(18f)
-                .Gap(12f)
+                .Width(472f)
+                .Padding(16f)
+                .Gap(10f)
                 .Radius(24f)
                 .Background("#08111A")
                 .Absolute(16f, 16f)
                 .ZIndex(30);
+        }
+
+        private UiElementBuilder BuildEntityInfoLayer()
+        {
+            if (_engine?.GetService(EntityInfoPanelServiceKeys.Service) is not EntityInfoPanelService service)
+            {
+                return Ui.Column();
+            }
+
+            return EntityInfoPanelUiComposer.BuildLayer(service);
         }
 
         private UiElementBuilder BuildHeroStrip(InteractionShowcasePanelState state)
@@ -135,6 +159,10 @@ namespace InteractionShowcaseMod.UI
                     Ui.Text(state.SelectionSummary)
                         .FontSize(12f)
                         .Color("#C7D0DD")
+                        .WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text("Select a hero to open the inspector stack on the right and a compact GAS HUD card at the top.")
+                        .FontSize(12f)
+                        .Color("#E2C27A")
                         .WhiteSpace(UiWhiteSpace.Normal),
                     Ui.Text("LMB select | drag box-select | Tab cycle hover target | RMB move / confirm | Shift queue | S stop | F1-F5 switch reference feel.")
                         .FontSize(12f)
@@ -284,7 +312,8 @@ namespace InteractionShowcaseMod.UI
                 WavesDispatched: telemetry?.WavesDispatched ?? 0,
                 QueueDepth: telemetry?.QueueDepth ?? 0,
                 RedAnchorHealth: telemetry?.RedAnchorHealth ?? 0f,
-                BlueAnchorHealth: telemetry?.BlueAnchorHealth ?? 0f);
+                BlueAnchorHealth: telemetry?.BlueAnchorHealth ?? 0f,
+                EntityInfoUiRevision: engine.GetService(EntityInfoPanelServiceKeys.Service)?.UiRevision ?? 0);
         }
 
         private static InteractionShowcaseStressTelemetry? ResolveStressTelemetry(GameEngine engine)
@@ -442,6 +471,7 @@ namespace InteractionShowcaseMod.UI
             int WavesDispatched,
             int QueueDepth,
             float RedAnchorHealth,
-            float BlueAnchorHealth);
+            float BlueAnchorHealth,
+            int EntityInfoUiRevision);
     }
 }

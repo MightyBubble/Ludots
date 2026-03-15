@@ -4,6 +4,7 @@
     "visualKind": "WorldBar",
     "entityScope": "AllWithAttributes",
     "visibility": { "inline": "OwnerCullVisible" },
+    "maxVisibilityDistanceCm": 5000,
     "positionOffset": [0, 0.65, 0],
     "defaultColor": [0.1, 0.85, 0.15, 1.0],
     "bindings": [
@@ -49,6 +50,7 @@
     "visualKind": "WorldText",
     "entityScope": "AllWithAttributes",
     "visibility": { "inline": "OwnerCullVisible" },
+    "maxVisibilityDistanceCm": 3000,
     "positionOffset": [0, 0.80, 0],
     "defaultColor": [1, 1, 1, 1],
     "defaultFontSize": 12,

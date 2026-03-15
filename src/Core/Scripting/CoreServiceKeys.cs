@@ -41,6 +41,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Core.UI;
+using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Scripting
@@ -74,6 +75,11 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IUiSystem> UISystem = new("UISystem");
         public static readonly ServiceKey<object> UIRoot = new("UIRoot");
         public static readonly ServiceKey<bool> UiCaptured = new("UiCaptured");
+        public static readonly ServiceKey<IEntityCommandPanelService> EntityCommandPanelService = new("EntityCommandPanelService");
+        public static readonly ServiceKey<IEntityCommandPanelHandleStore> EntityCommandPanelHandleStore = new("EntityCommandPanelHandleStore");
+        public static readonly ServiceKey<IEntityCommandPanelSourceRegistry> EntityCommandPanelSourceRegistry = new("EntityCommandPanelSourceRegistry");
+        public static readonly ServiceKey<object> UiTextMeasurer = new("UiTextMeasurer");
+        public static readonly ServiceKey<object> UiImageSizeProvider = new("UiImageSizeProvider");
 
         // --- Input ---
         public static readonly ServiceKey<PlayerInputHandler> InputHandler = new("InputHandler");

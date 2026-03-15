@@ -1,0 +1,21 @@
+[
+  {
+    "id": "interaction.character.hero_showcase",
+    "renderPath": "SkinnedMesh",
+    "meshAssetId": "sphere",
+    "materialId": 0,
+    "baseScale": 2.2,
+    "mobility": "Movable",
+    "visibleByDefault": true,
+    "animatorControllerId": "core.hero.locomotion"
+  },
+  {
+    "id": "interaction.prop.dummy_showcase",
+    "renderPath": "StaticMesh",
+    "meshAssetId": "cube",
+    "materialId": 0,
+    "baseScale": 1.8,
+    "mobility": "Movable",
+    "visibleByDefault": true
+  }
+]

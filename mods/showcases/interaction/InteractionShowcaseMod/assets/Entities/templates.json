@@ -6,7 +6,7 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "VisualModel": { "MeshId": 2, "MaterialId": 0, "BaseScale": 0.92 },
+      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 160, "Shield": 20, "MoveSpeed": 360, "Armor": 4 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -34,7 +34,7 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "VisualModel": { "MeshId": 1, "MaterialId": 0, "BaseScale": 1.00 },
+      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 220, "Shield": 35, "MoveSpeed": 300, "Armor": 16 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -62,7 +62,7 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "VisualModel": { "MeshId": 2, "MaterialId": 0, "BaseScale": 0.92 },
+      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 160, "Shield": 20, "MoveSpeed": 360, "Armor": 4 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -89,7 +89,7 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "VisualModel": { "MeshId": 2, "MaterialId": 0, "BaseScale": 0.82 },
+      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 170, "Shield": 40, "MoveSpeed": 320, "Armor": 8 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -117,7 +117,7 @@
       "Team": { "Id": 2 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "VisualModel": { "MeshId": 1, "MaterialId": 0, "BaseScale": 0.88 },
+      "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
       "AttributeBuffer": { "base": { "Health": 140, "Shield": 0, "MoveSpeed": 290, "Armor": 4 } },
       "GameplayTagContainer": {}
     }
@@ -129,7 +129,7 @@
       "Team": { "Id": 2 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "VisualModel": { "MeshId": 1, "MaterialId": 0, "BaseScale": 1.08 },
+      "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
       "AttributeBuffer": { "base": { "Health": 220, "Shield": 0, "MoveSpeed": 260, "Armor": 10 } },
       "GameplayTagContainer": {}
     }
@@ -141,7 +141,7 @@
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "VisualModel": { "MeshId": 2, "MaterialId": 0, "BaseScale": 0.55 },
+      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 9999, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -162,7 +162,7 @@
       "Team": { "Id": 2 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "VisualModel": { "MeshId": 1, "MaterialId": 0, "BaseScale": 0.55 },
+      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 9999, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -182,7 +182,7 @@
       "Name": { "Value": "StressRedAnchor" },
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualModel": { "MeshId": 2, "MaterialId": 0, "BaseScale": 1.20 },
+      "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
       "AttributeBuffer": { "base": { "Health": 500000, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
       "GameplayTagContainer": {}
     }
@@ -193,7 +193,7 @@
       "Name": { "Value": "StressBlueAnchor" },
       "Team": { "Id": 2 },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "VisualModel": { "MeshId": 1, "MaterialId": 0, "BaseScale": 1.20 },
+      "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
       "AttributeBuffer": { "base": { "Health": 500000, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
       "GameplayTagContainer": {}
     }

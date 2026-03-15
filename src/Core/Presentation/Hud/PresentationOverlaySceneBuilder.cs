@@ -108,7 +108,9 @@ namespace Ludots.Core.Presentation.Hud
                                 item.Y,
                                 text,
                                 item.FontSize <= 0 ? 16 : item.FontSize,
-                                item.Color);
+                                item.Color,
+                                item.StableId,
+                                item.DirtySerial);
                         }
 
                         break;
@@ -122,7 +124,9 @@ namespace Ludots.Core.Presentation.Hud
                             item.Width,
                             item.Height,
                             item.BackgroundColor,
-                            item.Color);
+                            item.Color,
+                            item.StableId,
+                            item.DirtySerial);
                         break;
                 }
             }
