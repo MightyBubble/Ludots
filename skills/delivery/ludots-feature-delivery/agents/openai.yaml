@@ -1,5 +1,5 @@
 interface:
   display_name: "Ludots Feature Delivery"
-  short_description: "Deliver reusable features with E2E evidence"
-  default_prompt: "Use $ludots-feature-delivery to implement a minimal scenario, run headless E2E, and produce battle-report plus path artifacts."
+  short_description: "Deliver reusable features with E2E and showcase acceptance evidence"
+  default_prompt: "Use $ludots-feature-delivery to implement a minimal scenario, run headless E2E, produce battle-report plus path artifacts, and verify showcase/UI acceptance when presentation behavior changes."
 

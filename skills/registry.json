@@ -197,7 +197,7 @@
                    },
                    {
                        "name":  "ludots-feature-delivery",
-                       "description":  "Deliver features with infrastructure reuse, headless evidence, and linked acceptance artifacts.",
+                       "description":  "Deliver features with infrastructure reuse, headless evidence, showcase UI acceptance, and linked artifacts.",
                        "layer":  "delivery",
                        "path":  "skills/delivery/ludots-feature-delivery",
                        "install_name":  "ludots-feature-delivery",
@@ -209,7 +209,8 @@
                                           "skills/delivery/ludots-feature-delivery/references/reuse-first-policy.md",
                                           "skills/delivery/ludots-feature-delivery/references/minimal-scenario-template.md",
                                           "skills/delivery/ludots-feature-delivery/references/mud-battle-log-spec.md",
-                                          "skills/delivery/ludots-feature-delivery/references/test-path-visualization-spec.md"
+                                          "skills/delivery/ludots-feature-delivery/references/test-path-visualization-spec.md",
+                                          "skills/delivery/ludots-feature-delivery/references/showcase-ui-acceptance-checklist.md"
                                       ],
                        "consumes_hooks":  [
                                               "visual.review.completed",

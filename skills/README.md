@@ -28,7 +28,7 @@
 | Skill | 层级 | 用途 |
 |------|------|------|
 | `ludots-doc-governance` | governance | 文档 SSOT、链接与证据治理 |
-| `ludots-feature-delivery` | delivery | 基建优先的功能交付与验收 |
+| `ludots-feature-delivery` | delivery | 基建优先的功能交付、showcase/UI 验收与证据 |
 | `ludots-tech-debt-fuse` | audit | 跨层技术债升级与熔断 |
 | `ludots-cloud-handoff` | collaboration | 云端开发接力与上下文交接 |
 | `ludots-pr-issue-orchestration` | collaboration | Issue / PR 证据包编排 |
