@@ -84,8 +84,6 @@ namespace Ludots.Core.Presentation.Config
             def.Bindings = ParseBindings(node["bindings"]);
 
             // ── Entity-scoped filters ──
-            def.MaxVisibilityDistanceCm = node["maxVisibilityDistanceCm"]?.GetValue<float>() ?? 0f;
-
             string requiredTemplate = node["requiredTemplate"]?.GetValue<string>();
             if (!string.IsNullOrWhiteSpace(requiredTemplate))
                 def.RequiredTemplateId = _resolveTemplateId(requiredTemplate);

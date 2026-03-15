@@ -316,7 +316,6 @@ namespace Ludots.Tests.Presentation
     ""id"": ""filtered_bar"",
     ""visualKind"": ""WorldBar"",
     ""entityScope"": ""AllWithAttributes"",
-    ""maxVisibilityDistanceCm"": 5000.0,
     ""requiredTemplate"": ""moba_hero""
   }
 ]");
@@ -333,7 +332,6 @@ namespace Ludots.Tests.Presentation
             int defId = registry.GetId("filtered_bar");
             Assert.That(defId, Is.GreaterThan(0));
             Assert.That(registry.TryGet(defId, out var def), Is.True);
-            Assert.That(def.MaxVisibilityDistanceCm, Is.EqualTo(5000f));
             Assert.That(def.RequiredTemplateId, Is.EqualTo(42));
         }
 

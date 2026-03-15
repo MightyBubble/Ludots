@@ -59,6 +59,7 @@ using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
+using Ludots.Core.Registry;
 
 namespace Ludots.Core.Engine
 {
@@ -454,6 +455,9 @@ namespace Ludots.Core.Engine
             var inputResponseBuffer = new InputResponseBuffer();
             var selectionRequestQueue = new SelectionRequestQueue();
             var selectionResponseBuffer = new SelectionResponseBuffer();
+            var selectionSetKeyRegistry = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var selectionConfig = config.Selection ?? new SelectionRuntimeConfig();
+            var selectionRuntime = new SelectionRuntime(World, selectionConfig, selectionSetKeyRegistry);
             var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue();
             var orderQueue = new OrderQueue();
             var chainOrderQueue = new OrderQueue();
@@ -610,6 +614,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.InputResponseBuffer, inputResponseBuffer);
             SetService(CoreServiceKeys.SelectionRequestQueue, selectionRequestQueue);
             SetService(CoreServiceKeys.SelectionResponseBuffer, selectionResponseBuffer);
+            SetService(CoreServiceKeys.SelectionRuntime, selectionRuntime);
+            SetService(CoreServiceKeys.SelectionConfig, selectionConfig);
+            SetService(CoreServiceKeys.SelectionSetKeyRegistry, selectionSetKeyRegistry);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
             SetService(CoreServiceKeys.OrderQueue, orderQueue);
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);

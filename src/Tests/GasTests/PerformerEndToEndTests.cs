@@ -479,62 +479,7 @@ namespace Ludots.Tests.Presentation
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // E2E-8  Entity-scoped distance filter — far entities produce no output
-        // ═══════════════════════════════════════════════════════════════
-
-        [Test]
-        public void EntityScoped_DistanceFilter_SkipsFarEntities()
-        {
-            // Arrange — register a distance-limited health bar
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
-                VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
-                MaxVisibilityDistanceCm = 100f, // 100cm max distance
-                DefaultColor = new Vector4(0f, 1f, 0f, 1f),
-                PositionOffset = new Vector3(0f, 1.5f, 0f),
-            };
-            _defs.Register("test_e2e_dist_bar", def);
-
-            // Near entity (distance=50cm, 50^2=2500)
-            var nearAttr = new AttributeBuffer();
-            nearAttr.SetBase(_healthAttrId, 100f);
-            nearAttr.SetCurrent(_healthAttrId, 80f);
-            _world.Create(
-                new VisualTransform { Position = new Vector3(1, 0, 1) },
-                nearAttr,
-                new CullState { IsVisible = true, DistanceToCameraSq = 2500f });
-
-            // Far entity (distance=200cm, 200^2=40000)
-            var farAttr = new AttributeBuffer();
-            farAttr.SetBase(_healthAttrId, 100f);
-            farAttr.SetCurrent(_healthAttrId, 60f);
-            _world.Create(
-                new VisualTransform { Position = new Vector3(10, 0, 10) },
-                farAttr,
-                new CullState { IsVisible = true, DistanceToCameraSq = 40000f });
-
-            // Act
-            TickPipeline(0.016f);
-
-            // Assert — only 1 bar from near entity (builtin health bar has no distance limit,
-            // so we also get bars from that; count bars from our test definition)
-            var hudSpan = _hud.GetSpan();
-            // At minimum: builtin EntityHealthBar emits for both (no distance filter),
-            // plus our test_e2e_dist_bar emits for near only.
-            // Total bars: 2 (builtin) + 1 (distance-filtered) = 3
-            int totalBars = 0;
-            for (int i = 0; i < hudSpan.Length; i++)
-                if (hudSpan[i].Kind == WorldHudItemKind.Bar) totalBars++;
-
-            // Builtin health bar produces 2 bars (no filter), our def produces 1 (near only)
-            Assert.That(totalBars, Is.EqualTo(3),
-                "Should have 2 builtin bars (unfiltered) + 1 distance-filtered bar (near only)");
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // E2E-9  Entity-scoped template filter — only matching template emits
+        // E2E-8  Entity-scoped template filter — only matching template emits
         // ═══════════════════════════════════════════════════════════════
 
         [Test]
@@ -582,67 +527,6 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(totalBars, Is.EqualTo(3),
                 "Should have 2 builtin bars (unfiltered) + 1 template-filtered bar (hero only)");
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        // E2E-10 Combined distance + template filter
-        // ═══════════════════════════════════════════════════════════════
-
-        [Test]
-        public void EntityScoped_CombinedDistanceAndTemplate_FiltersCorrectly()
-        {
-            // Arrange — register a definition requiring both filters
-            int heroTemplateId = 77;
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
-                RequiredTemplateId = heroTemplateId,
-                MaxVisibilityDistanceCm = 80f, // 80^2 = 6400
-                DefaultColor = new Vector4(1f, 1f, 0f, 1f),
-                PositionOffset = new Vector3(0f, 2.5f, 0f),
-            };
-            _defs.Register("test_e2e_combo", def);
-
-            // Entity A: right template, near — SHOULD emit
-            var attrA = new AttributeBuffer();
-            attrA.SetBase(_healthAttrId, 100f);
-            _world.Create(
-                new VisualTransform { Position = Vector3.Zero },
-                attrA,
-                new VisualTemplateRef { TemplateId = heroTemplateId },
-                new CullState { IsVisible = true, DistanceToCameraSq = 1600f }); // 40cm
-
-            // Entity B: right template, far — should NOT emit for combo def
-            var attrB = new AttributeBuffer();
-            attrB.SetBase(_healthAttrId, 100f);
-            _world.Create(
-                new VisualTransform { Position = new Vector3(20, 0, 0) },
-                attrB,
-                new VisualTemplateRef { TemplateId = heroTemplateId },
-                new CullState { IsVisible = true, DistanceToCameraSq = 40000f }); // 200cm
-
-            // Entity C: wrong template, near — should NOT emit for combo def
-            var attrC = new AttributeBuffer();
-            attrC.SetBase(_healthAttrId, 100f);
-            _world.Create(
-                new VisualTransform { Position = new Vector3(0, 0, 1) },
-                attrC,
-                new VisualTemplateRef { TemplateId = 999 },
-                new CullState { IsVisible = true, DistanceToCameraSq = 100f }); // 10cm
-
-            // Act
-            TickPipeline(0.016f);
-
-            // Assert — builtin EntityHealthBar emits 3 bars (all visible+culled),
-            // combo def emits 1 bar (entity A only). Total = 4.
-            var hudSpan = _hud.GetSpan();
-            int totalBars = 0;
-            for (int i = 0; i < hudSpan.Length; i++)
-                if (hudSpan[i].Kind == WorldHudItemKind.Bar) totalBars++;
-
-            Assert.That(totalBars, Is.EqualTo(4),
-                "Should have 3 builtin bars + 1 combo-filtered bar (near hero only)");
         }
 
         // ═══════════════════════════════════════════════════════════════
