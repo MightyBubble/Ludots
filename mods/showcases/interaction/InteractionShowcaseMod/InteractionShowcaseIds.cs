@@ -22,10 +22,17 @@ namespace InteractionShowcaseMod
         public const string ActionModeActionId = "InteractionModeAction";
 
         public const string ArcweaverName = "Arcweaver";
+        public const string ArcweaverFormsDemoName = "ArcweaverForms";
         public const string VanguardName = "Vanguard";
         public const string CommanderName = "Commander";
         public const string StressRedAnchorName = "StressRedAnchor";
         public const string StressBlueAnchorName = "StressBlueAnchor";
+        public const string SuppressUiPanelKey = "InteractionShowcase.SuppressUiPanel";
+        public const string SelectedComponentUiHandleKey = "InteractionShowcaseMod.EntityInfo.SelectedComponentUi";
+        public const string SelectedGasUiHandleKey = "InteractionShowcaseMod.EntityInfo.SelectedGasUi";
+        public const string SelectedGasOverlayHandleKey = "InteractionShowcaseMod.EntityInfo.SelectedGasOverlay";
+        public const string ArcweaverOverlayHandleKey = "InteractionShowcaseMod.EntityInfo.ArcweaverOverlay";
+        public const string VanguardOverlayHandleKey = "InteractionShowcaseMod.EntityInfo.VanguardOverlay";
 
         public static bool IsShowcaseMap(string? mapId)
         {

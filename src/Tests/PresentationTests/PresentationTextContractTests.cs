@@ -306,6 +306,38 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PerformerDefinitionConfigLoader_ParsesNewFilterFields()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""filtered_bar"",
+    ""visualKind"": ""WorldBar"",
+    ""entityScope"": ""AllWithAttributes"",
+    ""maxVisibilityDistanceCm"": 5000.0,
+    ""requiredTemplate"": ""moba_hero""
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTemplateId: key => string.Equals(key, "moba_hero", StringComparison.Ordinal) ? 42 : 0);
+
+            loader.Load(catalog);
+
+            int defId = registry.GetId("filtered_bar");
+            Assert.That(defId, Is.GreaterThan(0));
+            Assert.That(registry.TryGet(defId, out var def), Is.True);
+            Assert.That(def.MaxVisibilityDistanceCm, Is.EqualTo(5000f));
+            Assert.That(def.RequiredTemplateId, Is.EqualTo(42));
+        }
+
+        [Test]
         public void WorldHudStringTable_BridgesStaticTokens_WithoutCollidingWithLegacyRegistrations()
         {
             WriteFile("Core", "config_catalog.json",

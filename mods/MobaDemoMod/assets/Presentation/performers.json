@@ -6,6 +6,7 @@
     "entityScope": "AllWithVisualTransform",
     "meshOrShapeId": "cube",
     "defaultScale": 0.35,
+    "maxVisibilityDistanceCm": 8000,
     "positionOffset": [0, 0.25, 0],
     "visibility": { "inline": "OwnerCullVisible" },
     "bindings": [

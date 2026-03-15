@@ -11,6 +11,8 @@ namespace Ludots.Core.Presentation.Hud
 
     public struct ScreenOverlayItem
     {
+        public int StableId;
+        public int DirtySerial;
         public ScreenOverlayItemKind Kind;
         public int X;
         public int Y;
@@ -29,8 +31,8 @@ namespace Ludots.Core.Presentation.Hud
     /// </summary>
     public sealed class ScreenOverlayBuffer
     {
-        public const int MaxItems = 128;
-        public const int MaxStrings = 128;
+        public const int MaxItems = 4096;
+        public const int MaxStrings = 8192;
 
         private readonly ScreenOverlayItem[] _items = new ScreenOverlayItem[MaxItems];
         private readonly string[] _strings = new string[MaxStrings];
@@ -55,12 +57,19 @@ namespace Ludots.Core.Presentation.Hud
 
         public bool AddText(int x, int y, string text, int fontSize, Vector4 color)
         {
+            return AddText(x, y, text, fontSize, color, stableId: 0, dirtySerial: 0);
+        }
+
+        public bool AddText(int x, int y, string text, int fontSize, Vector4 color, int stableId, int dirtySerial)
+        {
             if (_count >= MaxItems) return false;
             int stringId = RegisterString(text);
             if (stringId < 0) return false;
 
             _items[_count++] = new ScreenOverlayItem
             {
+                StableId = stableId,
+                DirtySerial = dirtySerial,
                 Kind = ScreenOverlayItemKind.Text,
                 X = x,
                 Y = y,
@@ -73,10 +82,17 @@ namespace Ludots.Core.Presentation.Hud
 
         public bool AddText(int x, int y, in PresentationTextPacket text, int fontSize, Vector4 color)
         {
+            return AddText(x, y, in text, fontSize, color, stableId: 0, dirtySerial: 0);
+        }
+
+        public bool AddText(int x, int y, in PresentationTextPacket text, int fontSize, Vector4 color, int stableId, int dirtySerial)
+        {
             if (_count >= MaxItems) return false;
 
             _items[_count++] = new ScreenOverlayItem
             {
+                StableId = stableId,
+                DirtySerial = dirtySerial,
                 Kind = ScreenOverlayItemKind.Text,
                 X = x,
                 Y = y,
@@ -89,10 +105,17 @@ namespace Ludots.Core.Presentation.Hud
 
         public bool AddRect(int x, int y, int width, int height, Vector4 fill, Vector4 border)
         {
+            return AddRect(x, y, width, height, fill, border, stableId: 0, dirtySerial: 0);
+        }
+
+        public bool AddRect(int x, int y, int width, int height, Vector4 fill, Vector4 border, int stableId, int dirtySerial)
+        {
             if (_count >= MaxItems) return false;
 
             _items[_count++] = new ScreenOverlayItem
             {
+                StableId = stableId,
+                DirtySerial = dirtySerial,
                 Kind = ScreenOverlayItemKind.Rect,
                 X = x,
                 Y = y,

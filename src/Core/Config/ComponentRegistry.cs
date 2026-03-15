@@ -32,6 +32,7 @@ namespace Ludots.Core.Config
             Register<Velocity>("Velocity");
             Register<Health>("Health");
             Register<Name>("Name");
+            Register<FacingDirection>("FacingDirection");
             Register("WorldPositionCm", SetWorldPositionCm);
             Register<Ludots.Core.Gameplay.Components.Team>("Team");
             Register<Ludots.Core.Gameplay.Components.PlayerOwner>("PlayerOwner");

@@ -1,0 +1,12 @@
+{
+  "name": "EntityCommandPanelMod",
+  "version": "1.0.0",
+  "description": "Reusable multi-instance entity command panel host with trigger-driven handles and GAS slot groups.",
+  "main": "bin/net8.0/EntityCommandPanelMod.dll",
+  "priority": 130,
+  "dependencies": {
+    "LudotsCoreMod": ">=1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["ui", "gas", "entity-command-panel"]
+}

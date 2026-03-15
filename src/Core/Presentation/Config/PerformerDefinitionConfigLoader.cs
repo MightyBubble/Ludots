@@ -21,23 +21,30 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<string, int> _resolveAttributeName;
         private readonly Func<string, int> _resolveMeshId;
         private readonly Func<string, int> _resolveTextTokenId;
+        private readonly Func<string, int> _resolveTemplateId;
 
         /// <param name="resolveMeshId">
         /// Resolves a mesh asset key (e.g. "cube") to its int ID.
         /// Injected from <c>MeshAssetRegistry.GetId</c>.
+        /// </param>
+        /// <param name="resolveTemplateId">
+        /// Resolves a visual template key (e.g. "moba_hero") to its int ID.
+        /// Injected from <c>VisualTemplateRegistry.GetId</c>.
         /// </param>
         public PerformerDefinitionConfigLoader(
             ConfigPipeline configs,
             PerformerDefinitionRegistry registry,
             Func<string, int> resolveAttributeName = null,
             Func<string, int> resolveMeshId = null,
-            Func<string, int> resolveTextTokenId = null)
+            Func<string, int> resolveTextTokenId = null,
+            Func<string, int> resolveTemplateId = null)
         {
             _configs = configs;
             _registry = registry;
             _resolveAttributeName = resolveAttributeName ?? (_ => 0);
             _resolveMeshId = resolveMeshId ?? (_ => 0);
             _resolveTextTokenId = resolveTextTokenId ?? (_ => 0);
+            _resolveTemplateId = resolveTemplateId ?? (_ => 0);
         }
 
         public void Load(
@@ -75,6 +82,13 @@ namespace Ludots.Core.Presentation.Config
             def.VisibilityCondition = ParseConditionRef(node["visibility"]);
             def.Rules = ParseRules(node["rules"]);
             def.Bindings = ParseBindings(node["bindings"]);
+
+            // ── Entity-scoped filters ──
+            def.MaxVisibilityDistanceCm = node["maxVisibilityDistanceCm"]?.GetValue<float>() ?? 0f;
+
+            string requiredTemplate = node["requiredTemplate"]?.GetValue<string>();
+            if (!string.IsNullOrWhiteSpace(requiredTemplate))
+                def.RequiredTemplateId = _resolveTemplateId(requiredTemplate);
 
             return (key, def);
         }

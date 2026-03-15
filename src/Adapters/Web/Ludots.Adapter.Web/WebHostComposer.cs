@@ -54,6 +54,8 @@ namespace Ludots.Adapter.Web
             IUiImageSizeProvider imageSizeProvider = new SkiaImageSizeProvider();
             var uiRoot = new UIRoot(renderer);
             engine.SetService(CoreServiceKeys.UIRoot, (object)uiRoot);
+            engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
+            engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
             engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
 
             var inputBackend = new WebInputBackend();

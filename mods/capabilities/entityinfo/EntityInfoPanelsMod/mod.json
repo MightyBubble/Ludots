@@ -1,0 +1,9 @@
+{
+  "name": "EntityInfoPanelsMod",
+  "version": "1.0.0",
+  "description": "Reusable entity info panel capability for UI and overlay surfaces.",
+  "main": "bin/net8.0/EntityInfoPanelsMod.dll",
+  "priority": -100,
+  "author": "OpenAI Codex",
+  "tags": ["entity-info", "ui", "overlay", "gas", "capability"]
+}

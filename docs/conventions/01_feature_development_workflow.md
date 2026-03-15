@@ -101,11 +101,23 @@ AI Agent 专项规则见 [02_ai_assisted_development.md](02_ai_assisted_developm
 | Core 新增 Registry | 注册/查询/冲突/容量边界测试 |
 | GAS 相关变更 | GasTests 全量通过 |
 | Mod 新增/修改 | Launcher CLI `resolve`/`launch` 冒烟通过 + 功能冒烟测试 |
+| UI / Showcase / Presentation 变更 | 编译与相关测试通过 + adapter 可见冒烟 + 首帧可读性与接管/恢复验证 |
 | 架构边界变更 | ArchitectureTests 通过 |
 | 导航相关变更 | Navigation2DTests 全量通过 |
 
 测试风格遵循 `src/Tests/GasTests/TESTING_STYLE.md`。
 测试命令见 [03_environment_setup.md](03_environment_setup.md)。
+
+### 4.3 UI、Showcase 与表现层附加验收
+
+当变更涉及 `UiScene`、`ReactivePage`、HUD、overlay、showcase takeover 或玩家可见表现层时，除 4.1 与 4.2 外，还必须补齐以下验收：
+
+*   **Surface ownership 明确**：说明当前改动占用的是哪一类 surface（如 retained UI、`ScreenOverlayBuffer`、world HUD），谁是 owner，是否存在 takeover。
+*   **接管/恢复链路完整**：如果 showcase 或 mod 会临时接管已有 UI，必须验证 `MapLoaded`、`MapResumed`、`MapUnloaded` 上的 acquire / restore / release 行为，而不是只验证“能显示出来”。
+*   **首帧可读**：首个可见帧不得出现闪烁标题、反复 remount、占位文本或明显越界布局。
+*   **交互安全**：面板显示时，实体选择、世界点击、相机等无关交互仍然正常；若设计上需要屏蔽，必须显式记录边界。
+*   **双证据闭环**：不仅要有 engine-side 正确性的日志或测试，还要有 adapter 可见证据，证明玩家实际看到的内容正确。
+*   **性能边界可解释**：多实例或多实体显示必须说明 SoA、dirty-refresh、零分配边界，避免把展示成本扩散到 ECS 热路径。
 
 ## 5 分支与 PR 工作流
 
@@ -135,6 +147,7 @@ Review 时优先检查以下项目：
 *   是否引用了不存在的 API（幻觉代码）
 *   是否遵循 ECS blittable/zero-GC 约束
 *   是否正确归属 SystemGroup phase
+*   UI / showcase 改动是否明确 surface owner，并覆盖 takeover / restore / first-frame readability
 *   命名是否耦合了具体业务
 
 ## 6 相关文档
@@ -142,8 +155,8 @@ Review 时优先检查以下项目：
 *   编码标准：见 [00_coding_standards.md](00_coding_standards.md)
 *   AI 辅助开发规范：见 [02_ai_assisted_development.md](02_ai_assisted_development.md)
 *   开发环境与构建：见 [03_environment_setup.md](03_environment_setup.md)
-*   文档编写规范：见 `docs/conventions/04_documentation_governance.md`
-*   ECS 开发实践：见 `docs/architecture/ecs_soa.md`
-*   Mod 架构与配置系统：见 `docs/architecture/mod_architecture.md`
-*   GAS 分层架构：见 `docs/architecture/gas_layered_architecture.md`
+*   文档编写规范：见 [04_documentation_governance.md](04_documentation_governance.md)
+*   ECS 开发实践：见 [../architecture/ecs_soa.md](../architecture/ecs_soa.md)
+*   Mod 架构与配置系统：见 [../architecture/mod_architecture.md](../architecture/mod_architecture.md)
+*   GAS 分层架构：见 [../architecture/gas_layered_architecture.md](../architecture/gas_layered_architecture.md)
 

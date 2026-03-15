@@ -13,6 +13,7 @@ Use this skill to deliver production-grade features with consistent acceptance e
 2. Read `references/minimal-scenario-template.md`.
 3. Read `references/mud-battle-log-spec.md`.
 4. Read `references/test-path-visualization-spec.md`.
+5. If the feature changes UI, HUD, overlay, or showcase presentation, read `references/showcase-ui-acceptance-checklist.md`.
 
 ## Mandatory Delivery Rules
 
@@ -40,6 +41,11 @@ Use this skill to deliver production-grade features with consistent acceptance e
 - For Ludots `scripts/run-mod-launcher.cmd`, the canonical form is `.\scripts\run-mod-launcher.cmd cli ...`, not `.\scripts\run-mod-launcher.cmd -- cli ...`.
 - For mod-specific launches, verify the exe-adjacent `game.json` or equivalent runtime artifact after `gamejson write`; process spawn alone is not acceptance evidence.
 
+6. For UI and showcase work, prove player-visible correctness.
+- Identify the owning UI surface and any takeover / restore path.
+- Require first-frame readability, bounds safety, and world-click safety.
+- Do not stop at engine-side correctness; collect adapter-visible evidence.
+
 ## Workflow
 
 1. Define feature scenario card.
@@ -63,7 +69,11 @@ Use this skill to deliver production-grade features with consistent acceptance e
 - `artifacts/acceptance/<feature>/trace.jsonl`
 - `artifacts/acceptance/<feature>/path.mmd`
 
-6. Run gate checks.
+6. Run UI/showcase acceptance checks when applicable.
+- Apply `references/showcase-ui-acceptance-checklist.md`.
+- Record the owning surface, takeover contract, and any temporary mitigation.
+
+7. Run gate checks.
 - Confirm expected gameplay outcomes in battle report.
 - Confirm visual path covers core happy path + failure branch.
 - Confirm no ad-hoc runtime duplication was introduced.
@@ -76,5 +86,6 @@ For each feature delivery, provide:
 - headless E2E execution evidence
 - MUD-style acceptance report
 - visual path artifact
+- UI/showcase acceptance evidence when presentation behavior changed
 - open technical debt list (if any)
 
