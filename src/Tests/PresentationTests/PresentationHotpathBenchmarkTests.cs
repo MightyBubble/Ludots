@@ -105,6 +105,16 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(File.Exists(reportPath), Is.True);
             Assert.That(File.Exists(tracePath), Is.True);
+            Assert.That(steadyState.AverageDirtyLanes, Is.EqualTo(0d),
+                "steady_same_view: expected zero dirty lanes in steady state");
+            Assert.That(steadyState.AverageRebuiltLanes, Is.EqualTo(0d),
+                "steady_same_view: expected zero rebuilt lanes in steady state");
+            Assert.That(steadyState.CompositeSkipRate, Is.EqualTo(1d),
+                "steady_same_view: expected composite upload to be skipped every measured frame");
+            Assert.That(cameraPan.CompositeSkipRate, Is.EqualTo(0d),
+                "camera_pan: expected composite upload to run every measured frame");
+            Assert.That(valueChurn.CompositeSkipRate, Is.EqualTo(0d),
+                "value_churn: expected composite upload to run every measured frame");
         }
 
         private static BenchmarkScenarioResult RunScenario(
@@ -387,8 +397,9 @@ namespace Ludots.Tests.Presentation
 
         private sealed class UnderUiHostHarness
         {
-            private bool _hadContent;
-            private int _lastLayerVersion = -1;
+            private bool _underlayHadContent;
+            private bool _compositeHadContent;
+            private int _underlayLayerVersion = -1;
             private int _compositeSkipCount;
             private readonly PresentationOverlayLanePacer _pacer = new(PresentationOverlayLayer.UnderUi);
 
@@ -405,10 +416,45 @@ namespace Ludots.Tests.Presentation
 
                 bool hasUnderlay = scene.ContainsLayer(PresentationOverlayLayer.UnderUi);
                 int layerVersion = scene.GetLayerVersion(PresentationOverlayLayer.UnderUi);
-                bool refresh = (hasUnderlay || _hadContent) &&
-                    (layerVersion != _lastLayerVersion || hasUnderlay != _hadContent);
+                bool refreshUnderlay = (hasUnderlay || _underlayHadContent) &&
+                    (layerVersion != _underlayLayerVersion || hasUnderlay != _underlayHadContent);
+                bool underlayCanvasChanged = false;
+                PresentationOverlayLanePacer.LaneRefreshPlan plan = default;
 
-                if (!refresh)
+                if (refreshUnderlay)
+                {
+                    if (hasUnderlay)
+                    {
+                        plan = _pacer.BuildPlan(scene);
+                    }
+
+                    if (!hasUnderlay || plan.HasAnyRefresh)
+                    {
+                        canvas.Clear(SKColors.Transparent);
+                        if (hasUnderlay)
+                        {
+                            renderer.Render(scene, canvas, PresentationOverlayLayer.UnderUi, plan);
+                        }
+
+                        underlayCanvasChanged = true;
+                    }
+
+                    if (hasUnderlay)
+                    {
+                        _pacer.MarkPresented(scene, plan);
+                    }
+                    else
+                    {
+                        _pacer.Reset();
+                    }
+
+                    _underlayHadContent = hasUnderlay;
+                    _underlayLayerVersion = layerVersion;
+                }
+
+                bool hasCompositeContent = hasUnderlay;
+                bool refreshComposite = underlayCanvasChanged || hasCompositeContent != _compositeHadContent;
+                if (!refreshComposite)
                 {
                     _compositeSkipCount++;
                     rebuiltLaneCount = 0;
@@ -416,20 +462,12 @@ namespace Ludots.Tests.Presentation
                 }
 
                 long renderStart = Stopwatch.GetTimestamp();
-                canvas.Clear(SKColors.Transparent);
-                if (hasUnderlay)
+                if (!underlayCanvasChanged)
                 {
-                    PresentationOverlayLanePacer.LaneRefreshPlan plan = _pacer.BuildPlan(scene);
-                    renderer.Render(scene, canvas, PresentationOverlayLayer.UnderUi, plan);
-                    _pacer.MarkPresented(scene, plan);
-                }
-                else
-                {
-                    _pacer.Reset();
+                    canvas.Clear(SKColors.Transparent);
                 }
 
-                _hadContent = hasUnderlay;
-                _lastLayerVersion = layerVersion;
+                _compositeHadContent = hasCompositeContent;
                 rebuiltLaneCount = renderer.RebuiltLaneCountLastFrame;
                 return ElapsedMs(renderStart);
             }
