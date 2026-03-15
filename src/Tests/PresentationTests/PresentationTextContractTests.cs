@@ -399,6 +399,56 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void WorldHudToScreenSystem_RoundsStationaryProjectionJitter_ForRetainedOverlay()
+        {
+            var world = World.Create();
+            try
+            {
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                var builder = new PresentationOverlaySceneBuilder(screenHud, null, null, null, screenOverlay: null);
+                var scene = new PresentationOverlayScene(8);
+                var projector = new SequenceProjector(
+                    new Vector2(320.49f, 240.49f),
+                    new Vector2(320.48f, 240.48f));
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: projector,
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud);
+
+                EmitWorldHudBar(worldHud);
+                system.Update(0f);
+                builder.Build(scene);
+
+                Assert.That(screenHud.BarCount, Is.EqualTo(1));
+                ref readonly var firstBar = ref screenHud.GetBarSpan()[0];
+                float firstX = firstBar.ScreenX;
+                float firstY = firstBar.ScreenY;
+                int firstLayerVersion = scene.GetLayerVersion(PresentationOverlayLayer.UnderUi);
+
+                worldHud.Clear();
+                EmitWorldHudBar(worldHud);
+                system.Update(0f);
+                builder.Build(scene);
+
+                Assert.That(screenHud.BarCount, Is.EqualTo(1));
+                ref readonly var secondBar = ref screenHud.GetBarSpan()[0];
+                Assert.That(secondBar.ScreenX, Is.EqualTo(firstX));
+                Assert.That(secondBar.ScreenY, Is.EqualTo(firstY));
+                Assert.That(scene.DirtyLaneCount, Is.EqualTo(0),
+                    "sub-pixel stationary jitter should not dirty retained overlay lanes");
+                Assert.That(scene.GetLayerVersion(PresentationOverlayLayer.UnderUi), Is.EqualTo(firstLayerVersion));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
         public void PresentationTextFormatter_FormatsPacketAgainstLocaleTemplate()
         {
             WriteFile("Core", "config_catalog.json",
@@ -547,6 +597,22 @@ namespace Ludots.Tests.Presentation
             throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
 
+        private static void EmitWorldHudBar(WorldHudBatchBuffer worldHud)
+        {
+            worldHud.TryAdd(new WorldHudItem
+            {
+                StableId = 101,
+                DirtySerial = 202,
+                Kind = WorldHudItemKind.Bar,
+                WorldPosition = new Vector3(10f, 2f, 0f),
+                Width = 10f,
+                Height = 3f,
+                Value0 = 0.5f,
+                Color0 = new Vector4(0.1f, 0.1f, 0.1f, 1f),
+                Color1 = new Vector4(0.2f, 0.8f, 0.2f, 1f),
+            });
+        }
+
         private sealed class FixedProjector : IScreenProjector
         {
             private readonly Vector2 _screen;
@@ -557,6 +623,33 @@ namespace Ludots.Tests.Presentation
             }
 
             public Vector2 WorldToScreen(Vector3 worldPosition) => _screen;
+        }
+
+        private sealed class SequenceProjector : IScreenProjector
+        {
+            private readonly Vector2[] _screens;
+            private int _index;
+
+            public SequenceProjector(params Vector2[] screens)
+            {
+                if (screens == null || screens.Length == 0)
+                {
+                    throw new ArgumentException("At least one screen position is required.", nameof(screens));
+                }
+
+                _screens = screens;
+            }
+
+            public Vector2 WorldToScreen(Vector3 worldPosition)
+            {
+                int currentIndex = Math.Min(_index, _screens.Length - 1);
+                if (_index < _screens.Length - 1)
+                {
+                    _index++;
+                }
+
+                return _screens[currentIndex];
+            }
         }
 
         private sealed class FixedViewController : IViewController

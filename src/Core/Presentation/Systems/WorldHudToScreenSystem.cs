@@ -60,8 +60,8 @@ namespace Ludots.Core.Presentation.Systems
                     float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
                     continue;
 
-                float x = screen.X - item.Width * 0.5f;
-                float y = screen.Y;
+                float x = MathF.Round(screen.X - item.Width * 0.5f);
+                float y = MathF.Round(screen.Y);
 
                 int ix = (int)x;
                 int iy = (int)y;
