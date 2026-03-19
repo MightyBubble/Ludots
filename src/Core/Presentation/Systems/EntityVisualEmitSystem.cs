@@ -104,6 +104,7 @@ namespace Ludots.Core.Presentation.Systems
             int templateId = World.Has<VisualTemplateRef>(entity) ? World.Get<VisualTemplateRef>(entity).TemplateId : 0;
             bool hasAnimatorComponent = World.Has<AnimatorPackedState>(entity);
             AnimatorPackedState animator = hasAnimatorComponent ? World.Get<AnimatorPackedState>(entity) : default;
+            AnimatorAuxState animatorAux = World.Has<AnimatorAuxState>(entity) ? World.Get<AnimatorAuxState>(entity) : default;
             PresentationRenderContract.ValidateRuntimeState("EntityVisualEmitSystem", visual, hasAnimatorComponent, animator);
             VisualVisibility visibility = visual.ResolveVisibility(cullVisible);
 
@@ -121,6 +122,7 @@ namespace Ludots.Core.Presentation.Systems
                 Mobility = visual.Mobility,
                 Flags = visual.Flags,
                 Animator = animator,
+                AnimatorAux = animatorAux,
                 Visibility = visibility,
             };
 

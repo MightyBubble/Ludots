@@ -1,0 +1,11 @@
+{
+  "name": "AnimationAcceptanceMod",
+  "version": "1.0.0",
+  "description": "Adapter-side prototype animation acceptance scenarios for layered tank and humanoid rigs.",
+  "main": "bin/net8.0/AnimationAcceptanceMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  }
+}

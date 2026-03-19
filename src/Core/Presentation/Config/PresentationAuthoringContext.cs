@@ -66,6 +66,9 @@ namespace Ludots.Core.Presentation.Config
             if (template.AnimatorControllerId > 0)
             {
                 Upsert(entity, AnimatorPackedState.Create(template.AnimatorControllerId));
+                Upsert(entity, AnimatorRuntimeState.Create(template.AnimatorControllerId));
+                Upsert(entity, default(AnimatorParameterBuffer));
+                Upsert(entity, default(AnimatorAuxState));
             }
         }
 
@@ -161,6 +164,15 @@ namespace Ludots.Core.Presentation.Config
             }
 
             Upsert(entity, packed);
+
+            if (!entity.Has<AnimatorRuntimeState>())
+                entity.Add(AnimatorRuntimeState.Create(packed.GetControllerId()));
+
+            if (!entity.Has<AnimatorParameterBuffer>())
+                entity.Add(default(AnimatorParameterBuffer));
+
+            if (!entity.Has<AnimatorAuxState>())
+                entity.Add(default(AnimatorAuxState));
 
             visual.AnimatorControllerId = packed.GetControllerId();
             visual.Flags |= VisualRuntimeFlags.HasAnimator;

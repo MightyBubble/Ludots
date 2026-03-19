@@ -1,0 +1,26 @@
+[
+  {
+    "id": "animation_acceptance_tank",
+    "components": {
+      "Name": { "Value": "Layered Tank" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 1600, "Y": 1500 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": {
+        "visualTemplateId": "acceptance.vehicle.tank_skinned"
+      }
+    }
+  },
+  {
+    "id": "animation_acceptance_humanoid",
+    "components": {
+      "Name": { "Value": "UpperBody Rifleman" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 3000, "Y": 1800 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": {
+        "visualTemplateId": "acceptance.character.layered_skinned"
+      }
+    }
+  }
+]

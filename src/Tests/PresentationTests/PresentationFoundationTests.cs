@@ -140,6 +140,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(entity.Has<VisualTemplateRef>(), Is.True);
             Assert.That(entity.Has<VisualRuntimeState>(), Is.True);
             Assert.That(entity.Has<AnimatorPackedState>(), Is.True);
+            Assert.That(entity.Has<AnimatorRuntimeState>(), Is.True);
+            Assert.That(entity.Has<AnimatorParameterBuffer>(), Is.True);
+            Assert.That(entity.Has<AnimatorAuxState>(), Is.True);
             Assert.That(entity.Has<PresentationStartupPerformers>(), Is.True);
             Assert.That(entity.Has<PresentationStartupState>(), Is.True);
 
@@ -168,6 +171,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(animator.GetParameterBit(1), Is.True);
             Assert.That(animator.GetParameterBit(7), Is.True);
             Assert.That(animator.GetParameterBit(63), Is.True);
+            Assert.That(entity.Get<AnimatorAuxState>().LayerMode, Is.EqualTo(AnimatorAuxLayerMode.None));
 
             var startupPerformers = entity.Get<PresentationStartupPerformers>();
             Assert.That(startupPerformers.Count, Is.EqualTo(2));
@@ -237,6 +241,7 @@ namespace Ludots.Tests.Presentation
         {
             using var world = World.Create();
             var entity = world.Create();
+            entity.Add(new PresentationStableId { Value = 1 });
             entity.Add(VisualTransform.Default);
             entity.Add(VisualRuntimeState.Create(
                 meshAssetId: 11,

@@ -16,6 +16,7 @@ namespace Ludots.Core.Presentation.Rendering
         public VisualMobility Mobility;
         public VisualRuntimeFlags Flags;
         public AnimatorPackedState Animator;
+        public AnimatorAuxState AnimatorAux;
         public VisualVisibility Visibility;
     }
 }

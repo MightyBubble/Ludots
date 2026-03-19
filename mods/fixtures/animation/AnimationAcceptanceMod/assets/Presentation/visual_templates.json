@@ -1,0 +1,22 @@
+[
+  {
+    "id": "acceptance.vehicle.tank_skinned",
+    "renderPath": "SkinnedMesh",
+    "meshAssetId": "cube",
+    "materialId": 0,
+    "baseScale": 1.15,
+    "mobility": "Movable",
+    "visibleByDefault": true,
+    "animatorControllerId": "acceptance.tank.layered"
+  },
+  {
+    "id": "acceptance.character.layered_skinned",
+    "renderPath": "SkinnedMesh",
+    "meshAssetId": "sphere",
+    "materialId": 0,
+    "baseScale": 1.0,
+    "mobility": "Movable",
+    "visibleByDefault": true,
+    "animatorControllerId": "acceptance.humanoid.layered"
+  }
+]

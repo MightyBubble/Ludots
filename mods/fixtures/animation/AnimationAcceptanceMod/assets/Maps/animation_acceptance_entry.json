@@ -1,0 +1,32 @@
+{
+  "Id": "animation_acceptance_entry",
+  "Tags": ["animation.acceptance", "animation.acceptance.layered"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 1,
+      "HeightInTiles": 1,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 2200,
+    "TargetYCm": 1600
+  },
+  "Entities": [
+    {
+      "Template": "animation_acceptance_tank"
+    },
+    {
+      "Template": "animation_acceptance_humanoid"
+    },
+    {
+      "Template": "moba_dummy",
+      "Overrides": {
+        "Name": { "Value": "Static Baseline Dummy" },
+        "WorldPositionCm": { "Value": { "X": 2300, "Y": 900 } }
+      }
+    }
+  ]
+}

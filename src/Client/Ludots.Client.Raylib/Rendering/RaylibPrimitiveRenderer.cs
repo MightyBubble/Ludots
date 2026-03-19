@@ -129,6 +129,11 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
+                if (TryDrawPrototypeSkinned(item, scaleMul))
+                {
+                    continue;
+                }
+
                 DrawAssetRecursive(
                     item.MeshAssetId, item.Position,
                     item.Scale * scaleMul, item.Color,
@@ -144,6 +149,11 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (TryDrawPrototypeSkinned(item, scaleMul))
+                {
+                    continue;
+                }
+
                 SubmitAssetRecursive(
                     item.MeshAssetId,
                     item.Position,
@@ -216,6 +226,31 @@ namespace Ludots.Client.Raylib.Rendering
             DrawPrimitive(kind, position, scale, color);
         }
 
+        private bool TryDrawPrototypeSkinned(in PrimitiveDrawItem item, float scaleMul)
+        {
+            if (!item.RenderPath.IsSkinnedLane())
+            {
+                return false;
+            }
+
+            Vector3 scale = item.Scale * scaleMul;
+            float baseYaw = ExtractYawRad(item.Rotation);
+
+            switch (item.AnimatorAux.LayerMode)
+            {
+                case AnimatorAuxLayerMode.TankTurret:
+                    DrawTankPrototype(item.Position, scale, item.Color, baseYaw, item.AnimatorAux);
+                    return true;
+
+                case AnimatorAuxLayerMode.HumanoidUpperBody:
+                    DrawHumanoidPrototype(item.Position, scale, item.Color, baseYaw, item.AnimatorAux);
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
         private void DrawAssetRecursive(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int depth)
         {
             if (depth > MaxPrefabDepth) return;
@@ -267,6 +302,177 @@ namespace Ludots.Client.Raylib.Rendering
                 float r = MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.5f;
                 Rl.DrawSphere(position, r, c);
             }
+        }
+
+        private void DrawTankPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimatorAuxState aux)
+        {
+            float unit = MathF.Max(0.12f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.45f);
+            float treadBob = MathF.Sin(aux.LowerBodyPhase01 * MathF.Tau) * unit * 0.08f;
+            float turretYaw = baseYaw + aux.AimYawRad;
+            float recoil = aux.OverlayStateIndex == 2
+                ? MathF.Sin(aux.OverlayNormalizedTime01 * MathF.PI) * unit * 0.35f
+                : 0f;
+
+            Vector4 hullColor = MultiplyColor(color, 0.72f, 0.78f, 0.84f, 1f);
+            Vector4 turretColor = MultiplyColor(color, 0.95f, 0.95f, 0.82f, 1f);
+            Vector4 accentColor = aux.OverlayStateIndex == 2
+                ? new Vector4(1f, 0.45f, 0.2f, 1f)
+                : new Vector4(0.95f, 0.9f, 0.4f, 1f);
+
+            DrawOrientedCube(
+                TransformLocal(position, baseYaw, new Vector3(0f, unit * 0.52f + treadBob, 0f)),
+                new Vector3(unit * 2.2f, unit * 0.7f, unit * 3.0f),
+                baseYaw,
+                hullColor);
+
+            DrawOrientedCube(
+                TransformLocal(position, baseYaw, new Vector3(unit * 0.92f, unit * 0.26f + treadBob, 0f)),
+                new Vector3(unit * 0.38f, unit * 0.25f, unit * 2.7f),
+                baseYaw,
+                MultiplyColor(hullColor, 0.8f, 0.8f, 0.8f, 1f));
+
+            DrawOrientedCube(
+                TransformLocal(position, baseYaw, new Vector3(-unit * 0.92f, unit * 0.26f + treadBob, 0f)),
+                new Vector3(unit * 0.38f, unit * 0.25f, unit * 2.7f),
+                baseYaw,
+                MultiplyColor(hullColor, 0.8f, 0.8f, 0.8f, 1f));
+
+            Vector3 turretCenter = TransformLocal(position, baseYaw, new Vector3(0f, unit * 1.0f, 0f));
+            DrawOrientedCube(
+                turretCenter,
+                new Vector3(unit * 1.1f, unit * 0.42f, unit * 1.3f),
+                turretYaw,
+                turretColor);
+
+            DrawOrientedCube(
+                TransformLocal(turretCenter, turretYaw, new Vector3(0f, unit * 0.02f, unit * 1.15f - recoil)),
+                new Vector3(unit * 0.18f, unit * 0.18f, unit * 2.25f),
+                turretYaw,
+                accentColor);
+
+            DrawPrototypeSphere(
+                TransformLocal(turretCenter, turretYaw, new Vector3(0f, unit * 0.18f, unit * 2.15f - recoil)),
+                unit * (aux.OverlayStateIndex == 2 ? 0.2f : 0.1f),
+                accentColor);
+        }
+
+        private void DrawHumanoidPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimatorAuxState aux)
+        {
+            float unit = MathF.Max(0.1f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.42f);
+            float lowerPhase = aux.LowerBodyPhase01 * MathF.Tau;
+            float stride = MathF.Sin(lowerPhase) * unit * 0.34f;
+            float upperYaw = baseYaw + aux.AimYawRad * aux.OverlayWeight01;
+            float chestLift = MathF.Sin(aux.OverlayNormalizedTime01 * MathF.PI) * unit * 0.08f;
+
+            Vector4 legColor = MultiplyColor(color, 0.72f, 0.85f, 1f, 1f);
+            Vector4 torsoColor = LerpColor(
+                MultiplyColor(color, 0.95f, 0.8f, 0.75f, 1f),
+                new Vector4(1f, 0.45f, 0.25f, 1f),
+                Math.Clamp(aux.OverlayWeight01 * 0.6f, 0f, 1f));
+            Vector4 weaponColor = aux.OverlayStateIndex == 3
+                ? new Vector4(1f, 0.5f, 0.25f, 1f)
+                : new Vector4(0.9f, 0.9f, 0.95f, 1f);
+
+            DrawOrientedCube(
+                TransformLocal(position, baseYaw, new Vector3(0f, unit * 0.55f, 0f)),
+                new Vector3(unit * 0.75f, unit * 0.55f, unit * 0.45f),
+                baseYaw,
+                legColor);
+
+            DrawOrientedCube(
+                TransformLocal(position, baseYaw, new Vector3(unit * 0.2f, unit * 0.18f, stride)),
+                new Vector3(unit * 0.2f, unit * 0.78f, unit * 0.2f),
+                baseYaw,
+                legColor);
+
+            DrawOrientedCube(
+                TransformLocal(position, baseYaw, new Vector3(-unit * 0.2f, unit * 0.18f, -stride)),
+                new Vector3(unit * 0.2f, unit * 0.78f, unit * 0.2f),
+                baseYaw,
+                legColor);
+
+            Vector3 chestCenter = TransformLocal(position, upperYaw, new Vector3(0f, unit * 1.3f + chestLift, 0f));
+            DrawOrientedCube(
+                chestCenter,
+                new Vector3(unit * 0.82f, unit * 0.92f, unit * 0.4f),
+                upperYaw,
+                torsoColor);
+
+            DrawPrototypeSphere(
+                TransformLocal(chestCenter, upperYaw, new Vector3(0f, unit * 0.82f, 0f)),
+                unit * 0.28f,
+                MultiplyColor(color, 1f, 0.92f, 0.86f, 1f));
+
+            DrawOrientedCube(
+                TransformLocal(chestCenter, upperYaw, new Vector3(-unit * 0.48f, unit * 0.05f, unit * 0.05f)),
+                new Vector3(unit * 0.16f, unit * 0.75f, unit * 0.16f),
+                upperYaw - aux.OverlayWeight01 * 0.15f,
+                torsoColor);
+
+            DrawOrientedCube(
+                TransformLocal(chestCenter, upperYaw, new Vector3(unit * 0.5f, unit * 0.02f, unit * (0.18f + aux.OverlayWeight01 * 0.25f))),
+                new Vector3(unit * 0.16f, unit * 0.7f, unit * 0.16f),
+                upperYaw + aux.OverlayWeight01 * 0.35f,
+                torsoColor);
+
+            Vector3 weaponCenter = TransformLocal(chestCenter, upperYaw, new Vector3(unit * 0.18f, -unit * 0.02f, unit * 0.7f));
+            DrawOrientedCube(
+                weaponCenter,
+                new Vector3(unit * 0.14f, unit * 0.14f, unit * 0.95f),
+                upperYaw,
+                weaponColor);
+
+            if (aux.OverlayStateIndex == 3)
+            {
+                DrawPrototypeSphere(
+                    TransformLocal(weaponCenter, upperYaw, new Vector3(0f, 0f, unit * 0.68f)),
+                    unit * 0.14f,
+                    new Vector4(1f, 0.62f, 0.2f, 1f));
+            }
+        }
+
+        private void DrawOrientedCube(Vector3 center, Vector3 size, float yawRad, Vector4 color)
+        {
+            DrawWireBox(center, size, yawRad, color);
+        }
+
+        private static void DrawPrototypeSphere(Vector3 center, float radius, Vector4 color)
+        {
+            Rl.DrawSphere(center, radius, ToRaylibColor(color));
+        }
+
+        private static Vector3 TransformLocal(Vector3 origin, float yawRad, Vector3 local)
+        {
+            Vector3 right = new Vector3(MathF.Sin(yawRad), 0f, MathF.Cos(yawRad));
+            Vector3 forward = new Vector3(MathF.Cos(yawRad), 0f, -MathF.Sin(yawRad));
+            return origin + right * local.X + Vector3.UnitY * local.Y + forward * local.Z;
+        }
+
+        private static float ExtractYawRad(Quaternion rotation)
+        {
+            Quaternion normalized = Quaternion.Normalize(rotation);
+            float sinyCosp = 2f * (normalized.W * normalized.Y + normalized.X * normalized.Z);
+            float cosyCosp = 1f - 2f * (normalized.Y * normalized.Y + normalized.Z * normalized.Z);
+            return MathF.Atan2(sinyCosp, cosyCosp);
+        }
+
+        private static Vector4 MultiplyColor(Vector4 color, float r, float g, float b, float a)
+        {
+            return new Vector4(
+                Math.Clamp(color.X * r, 0f, 1f),
+                Math.Clamp(color.Y * g, 0f, 1f),
+                Math.Clamp(color.Z * b, 0f, 1f),
+                Math.Clamp(color.W * a, 0f, 1f));
+        }
+
+        private static Vector4 LerpColor(Vector4 from, Vector4 to, float t)
+        {
+            t = Math.Clamp(t, 0f, 1f);
+            return new Vector4(
+                from.X + (to.X - from.X) * t,
+                from.Y + (to.Y - from.Y) * t,
+                from.Z + (to.Z - from.Z) * t,
+                from.W + (to.W - from.W) * t);
         }
 
         private void DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color)
@@ -432,6 +638,44 @@ namespace Ludots.Client.Raylib.Rendering
             float s = MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.3f;
             if (s < 0.05f) s = 0.3f;
             Rl.DrawCube(position, s, s, s, new Color(255, 0, 255, 255));
+        }
+
+        private static void DrawWireBox(Vector3 center, Vector3 size, float yawRad, Vector4 color)
+        {
+            Vector3 half = size * 0.5f;
+            Span<Vector3> corners = stackalloc Vector3[8];
+            corners[0] = TransformLocal(center, yawRad, new Vector3(-half.X, -half.Y, -half.Z));
+            corners[1] = TransformLocal(center, yawRad, new Vector3(half.X, -half.Y, -half.Z));
+            corners[2] = TransformLocal(center, yawRad, new Vector3(half.X, -half.Y, half.Z));
+            corners[3] = TransformLocal(center, yawRad, new Vector3(-half.X, -half.Y, half.Z));
+            corners[4] = TransformLocal(center, yawRad, new Vector3(-half.X, half.Y, -half.Z));
+            corners[5] = TransformLocal(center, yawRad, new Vector3(half.X, half.Y, -half.Z));
+            corners[6] = TransformLocal(center, yawRad, new Vector3(half.X, half.Y, half.Z));
+            corners[7] = TransformLocal(center, yawRad, new Vector3(-half.X, half.Y, half.Z));
+
+            var lineColor = ToRaylibColor(color);
+            DrawWireEdge(corners, 0, 1, lineColor);
+            DrawWireEdge(corners, 1, 2, lineColor);
+            DrawWireEdge(corners, 2, 3, lineColor);
+            DrawWireEdge(corners, 3, 0, lineColor);
+
+            DrawWireEdge(corners, 4, 5, lineColor);
+            DrawWireEdge(corners, 5, 6, lineColor);
+            DrawWireEdge(corners, 6, 7, lineColor);
+            DrawWireEdge(corners, 7, 4, lineColor);
+
+            DrawWireEdge(corners, 0, 4, lineColor);
+            DrawWireEdge(corners, 1, 5, lineColor);
+            DrawWireEdge(corners, 2, 6, lineColor);
+            DrawWireEdge(corners, 3, 7, lineColor);
+
+            // Mark the forward-facing top edge so layer orientation is easy to inspect in motion.
+            DrawWireEdge(corners, 6, 7, ToRaylibColor(MultiplyColor(color, 1.2f, 1.2f, 0.8f, 1f)));
+        }
+
+        private static void DrawWireEdge(ReadOnlySpan<Vector3> corners, int start, int end, Color color)
+        {
+            Rl.DrawLine3D(corners[start], corners[end], color);
         }
 
         // ── Instanced rendering (unchanged from original) ──

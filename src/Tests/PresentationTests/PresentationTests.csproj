@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\fixtures\animation\AnimationAcceptanceMod\AnimationAcceptanceMod.csproj" />
   </ItemGroup>
 
   <ItemGroup>
