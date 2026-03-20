@@ -171,7 +171,11 @@ namespace Ludots.Tests.Presentation
             Assert.That(animator.GetParameterBit(1), Is.True);
             Assert.That(animator.GetParameterBit(7), Is.True);
             Assert.That(animator.GetParameterBit(63), Is.True);
-            Assert.That(entity.Get<AnimatorAuxState>().LayerMode, Is.EqualTo(AnimatorAuxLayerMode.None));
+            var aux = entity.Get<AnimatorAuxState>();
+            Assert.That(aux.HasAnyClip, Is.False);
+            Assert.That(aux.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
+            Assert.That(aux.LayerClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
+            Assert.That(aux.OverlayClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
 
             var startupPerformers = entity.Get<PresentationStartupPerformers>();
             Assert.That(startupPerformers.Count, Is.EqualTo(2));

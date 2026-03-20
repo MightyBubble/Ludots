@@ -44,7 +44,6 @@ namespace AnimationAcceptanceMod.Runtime
         public float IdleOverlayClock01 { get; set; }
         public float OverlayNormalizedTime01 { get; set; }
         public float FireNormalizedTime01 { get; set; }
-        public int OverlayStateIndex { get; set; }
         public bool OverlayFiring { get; set; }
         public bool PendingFireTrigger { get; set; }
 
@@ -58,7 +57,6 @@ namespace AnimationAcceptanceMod.Runtime
             LowerBodyPhase01 = Wrap01(profile.LowerBodyPhase01);
             IdleOverlayClock01 = Wrap01(profile.OverlayNormalizedTime01);
             OverlayNormalizedTime01 = Wrap01(profile.OverlayNormalizedTime01);
-            OverlayStateIndex = Definition.IdleOverlayStateIndex;
             OverlayFiring = false;
             FireNormalizedTime01 = 0f;
             PendingFireTrigger = false;
@@ -74,7 +72,6 @@ namespace AnimationAcceptanceMod.Runtime
             PendingFireTrigger = true;
             OverlayFiring = true;
             FireNormalizedTime01 = 0f;
-            OverlayStateIndex = Definition.FireOverlayStateIndex;
             OverlayNormalizedTime01 = 0f;
         }
 

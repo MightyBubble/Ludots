@@ -112,12 +112,13 @@ namespace AnimationAcceptanceMod.Systems
                 _tankFireGate = false;
             }
 
-            aux.LayerMode = AnimatorAuxLayerMode.TankTurret;
-            aux.LowerBodyPhase01 = Fraction(_elapsed * 1.2f);
-            aux.OverlayStateIndex = firingWindow ? 2 : 1;
-            aux.OverlayWeight01 = 1f;
-            aux.OverlayNormalizedTime01 = firingWindow ? Math.Clamp((shotCycle - 0.68f) / 0.22f, 0f, 1f) : 0f;
-            aux.AimYawRad = MathF.Sin(_elapsed * 0.9f) * 0.9f;
+            float lowerPhase = Fraction(_elapsed * 1.2f);
+            float overlayTime = firingWindow ? Math.Clamp((shotCycle - 0.68f) / 0.22f, 0f, 1f) : 0f;
+            float aimYaw = MathF.Sin(_elapsed * 0.9f) * 0.9f;
+
+            aux.BaseClip = CreateLocomotionClip(lowerPhase, speed);
+            aux.LayerClip = CreateAimClip(aimYaw, 1f);
+            aux.OverlayClip = CreateRecoilClip(overlayTime, firingWindow ? 1f : 0f);
         }
 
         private void UpdateHumanoid(
@@ -159,12 +160,14 @@ namespace AnimationAcceptanceMod.Systems
                 _humanoidFireGate = false;
             }
 
-            aux.LayerMode = AnimatorAuxLayerMode.HumanoidUpperBody;
-            aux.LowerBodyPhase01 = Fraction(_elapsed * 1.8f);
-            aux.OverlayStateIndex = firingWindow ? 3 : 2;
-            aux.OverlayWeight01 = firingWindow ? 1f : 0.45f;
-            aux.OverlayNormalizedTime01 = firingWindow ? Math.Clamp((burstCycle - 0.58f) / 0.24f, 0f, 1f) : Fraction(_elapsed * 0.5f);
-            aux.AimYawRad = MathF.Sin(_elapsed * 1.15f) * 1.1f;
+            float lowerPhase = Fraction(_elapsed * 1.8f);
+            float overlayWeight = firingWindow ? 1f : 0.45f;
+            float overlayTime = firingWindow ? Math.Clamp((burstCycle - 0.58f) / 0.24f, 0f, 1f) : Fraction(_elapsed * 0.5f);
+            float aimYaw = MathF.Sin(_elapsed * 1.15f) * 1.1f;
+
+            aux.BaseClip = CreateLocomotionClip(lowerPhase, speed);
+            aux.LayerClip = CreateAimClip(aimYaw, overlayWeight);
+            aux.OverlayClip = CreateRecoilClip(overlayTime, firingWindow ? 1f : 0f);
         }
 
         private static void UpdateManualRig(
@@ -189,12 +192,9 @@ namespace AnimationAcceptanceMod.Systems
 
             AdvanceManualOverlay(slot, definition, dt);
 
-            aux.LayerMode = definition.LayerMode;
-            aux.LowerBodyPhase01 = slot.LowerBodyPhase01;
-            aux.OverlayStateIndex = slot.OverlayStateIndex;
-            aux.OverlayWeight01 = slot.OverlayWeight01;
-            aux.OverlayNormalizedTime01 = slot.OverlayNormalizedTime01;
-            aux.AimYawRad = slot.AimYawRad;
+            aux.BaseClip = CreateLocomotionClip(slot.LowerBodyPhase01, slot.MoveEnabled ? slot.Speed : slot.Speed * 0.18f);
+            aux.LayerClip = CreateAimClip(slot.AimYawRad, slot.OverlayWeight01);
+            aux.OverlayClip = CreateRecoilClip(slot.OverlayNormalizedTime01, slot.OverlayFiring ? 1f : 0f);
         }
 
         private static void AdvanceManualOverlay(
@@ -210,13 +210,11 @@ namespace AnimationAcceptanceMod.Systems
             if (slot.OverlayFiring)
             {
                 slot.FireNormalizedTime01 += dt / MathF.Max(0.05f, definition.FireOverlayDurationSeconds);
-                slot.OverlayStateIndex = definition.FireOverlayStateIndex;
                 slot.OverlayNormalizedTime01 = Math.Clamp(slot.FireNormalizedTime01, 0f, 1f);
                 if (slot.FireNormalizedTime01 >= 1f)
                 {
                     slot.OverlayFiring = false;
                     slot.FireNormalizedTime01 = 0f;
-                    slot.OverlayStateIndex = definition.IdleOverlayStateIndex;
                 }
 
                 return;
@@ -224,8 +222,34 @@ namespace AnimationAcceptanceMod.Systems
 
             slot.IdleOverlayClock01 = AnimationAcceptanceRigControlSlot.Wrap01(
                 slot.IdleOverlayClock01 + dt * (definition.RigId == AnimationAcceptanceRigId.Tank ? 0.35f : 0.55f));
-            slot.OverlayStateIndex = definition.IdleOverlayStateIndex;
             slot.OverlayNormalizedTime01 = slot.IdleOverlayClock01;
+        }
+
+        private static AnimatorBuiltinClipState CreateLocomotionClip(float normalizedTime01, float speed)
+        {
+            float weight = Math.Clamp(speed, 0f, 1f);
+            return AnimatorBuiltinClipState.Create(
+                AnimatorBuiltinClipId.LocomotionCycle,
+                normalizedTime01,
+                weight,
+                speed);
+        }
+
+        private static AnimatorBuiltinClipState CreateAimClip(float aimYawRad, float weight01)
+        {
+            return AnimatorBuiltinClipState.Create(
+                AnimatorBuiltinClipId.AimYawOffset,
+                normalizedTime01: 0f,
+                weight01,
+                scalar0: aimYawRad);
+        }
+
+        private static AnimatorBuiltinClipState CreateRecoilClip(float normalizedTime01, float weight01)
+        {
+            return AnimatorBuiltinClipState.Create(
+                AnimatorBuiltinClipId.RecoilPulse,
+                normalizedTime01,
+                weight01);
         }
 
         private static float Fraction(float value)

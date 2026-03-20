@@ -34,17 +34,14 @@ namespace AnimationAcceptanceMod.Runtime
             string summary,
             string layerSummary,
             string controllerKey,
-            AnimatorAuxLayerMode layerMode,
             Vector2 manualAnchorCm,
             int speedParameterIndex,
             int locomotionBoolParameterIndex,
             int fireTriggerParameterIndex,
-            int idleOverlayStateIndex,
-            int fireOverlayStateIndex,
             float fireOverlayDurationSeconds,
             string[] stateLabels,
             string[] stateDescriptions,
-            string[] overlayStateLabels,
+            string[] builtinClipDescriptions,
             string[] transitionDescriptions,
             AnimationAcceptanceParameterDefinition[] floatParameters,
             AnimationAcceptanceParameterDefinition[] boolParameters,
@@ -57,17 +54,14 @@ namespace AnimationAcceptanceMod.Runtime
             Summary = summary;
             LayerSummary = layerSummary;
             ControllerKey = controllerKey;
-            LayerMode = layerMode;
             ManualAnchorCm = manualAnchorCm;
             SpeedParameterIndex = speedParameterIndex;
             LocomotionBoolParameterIndex = locomotionBoolParameterIndex;
             FireTriggerParameterIndex = fireTriggerParameterIndex;
-            IdleOverlayStateIndex = idleOverlayStateIndex;
-            FireOverlayStateIndex = fireOverlayStateIndex;
             FireOverlayDurationSeconds = fireOverlayDurationSeconds;
             StateLabels = stateLabels ?? Array.Empty<string>();
             StateDescriptions = stateDescriptions ?? Array.Empty<string>();
-            OverlayStateLabels = overlayStateLabels ?? Array.Empty<string>();
+            BuiltinClipDescriptions = builtinClipDescriptions ?? Array.Empty<string>();
             TransitionDescriptions = transitionDescriptions ?? Array.Empty<string>();
             FloatParameters = floatParameters ?? Array.Empty<AnimationAcceptanceParameterDefinition>();
             BoolParameters = boolParameters ?? Array.Empty<AnimationAcceptanceParameterDefinition>();
@@ -81,17 +75,14 @@ namespace AnimationAcceptanceMod.Runtime
         public string Summary { get; }
         public string LayerSummary { get; }
         public string ControllerKey { get; }
-        public AnimatorAuxLayerMode LayerMode { get; }
         public Vector2 ManualAnchorCm { get; }
         public int SpeedParameterIndex { get; }
         public int LocomotionBoolParameterIndex { get; }
         public int FireTriggerParameterIndex { get; }
-        public int IdleOverlayStateIndex { get; }
-        public int FireOverlayStateIndex { get; }
         public float FireOverlayDurationSeconds { get; }
         public string[] StateLabels { get; }
         public string[] StateDescriptions { get; }
-        public string[] OverlayStateLabels { get; }
+        public string[] BuiltinClipDescriptions { get; }
         public string[] TransitionDescriptions { get; }
         public AnimationAcceptanceParameterDefinition[] FloatParameters { get; }
         public AnimationAcceptanceParameterDefinition[] BoolParameters { get; }
@@ -142,13 +133,10 @@ namespace AnimationAcceptanceMod.Runtime
                 summary: "Lower-body chassis locomotion runs through the Core animator state machine. Turret yaw and recoil stay in the Raylib adapter prototype layer.",
                 layerSummary: "Case A: moving hull + independently aiming turret + recoil overlay.",
                 controllerKey: AnimationAcceptanceIds.TankControllerKey,
-                layerMode: AnimatorAuxLayerMode.TankTurret,
                 manualAnchorCm: new Vector2(1600f, 1500f),
                 speedParameterIndex: 0,
                 locomotionBoolParameterIndex: 1,
                 fireTriggerParameterIndex: 2,
-                idleOverlayStateIndex: 1,
-                fireOverlayStateIndex: 2,
                 fireOverlayDurationSeconds: 0.34f,
                 stateLabels:
                 [
@@ -162,11 +150,11 @@ namespace AnimationAcceptanceMod.Runtime
                     "Packed 32. Rolling chassis clip used whenever speed stays above the move threshold.",
                     "Packed 33. Short fire recovery clip triggered by the fire parameter.",
                 ],
-                overlayStateLabels:
+                builtinClipDescriptions:
                 [
-                    "OverlayNone",
-                    "TurretTrack",
-                    "TurretRecoil",
+                    "base: locomotion_cycle -> time=phase, weight=speed-driven stride pulse",
+                    "layer: aim_yaw_offset -> scalar0=aim yaw radians, weight=1.00",
+                    "overlay: recoil_pulse -> time=shot pulse, weight=1 during firing window",
                 ],
                 transitionDescriptions:
                 [
@@ -260,13 +248,10 @@ namespace AnimationAcceptanceMod.Runtime
                 summary: "Lower-body locomotion states stay in Core while upper-body aim and burst timing are driven as adapter-side overlay channels.",
                 layerSummary: "Case B: walk/run lower body + independently aiming, firing upper body.",
                 controllerKey: AnimationAcceptanceIds.HumanoidControllerKey,
-                layerMode: AnimatorAuxLayerMode.HumanoidUpperBody,
                 manualAnchorCm: new Vector2(3000f, 1800f),
                 speedParameterIndex: 0,
                 locomotionBoolParameterIndex: 3,
                 fireTriggerParameterIndex: 4,
-                idleOverlayStateIndex: 2,
-                fireOverlayStateIndex: 3,
                 fireOverlayDurationSeconds: 0.28f,
                 stateLabels:
                 [
@@ -282,12 +267,11 @@ namespace AnimationAcceptanceMod.Runtime
                     "Packed 43. Run cadence to prove multi-threshold transitions.",
                     "Packed 44. Brief fire recovery used to visualize trigger ownership.",
                 ],
-                overlayStateLabels:
+                builtinClipDescriptions:
                 [
-                    "OverlayNone",
-                    "UpperRelaxed",
-                    "UpperAimHold",
-                    "UpperBurstFire",
+                    "base: locomotion_cycle -> time=phase, scalar0=speed, weight=speed-driven gait",
+                    "layer: aim_yaw_offset -> scalar0=aim yaw radians, weight=overlay blend",
+                    "overlay: recoil_pulse -> time=burst pulse, weight=1 during fire trigger window",
                 ],
                 transitionDescriptions:
                 [

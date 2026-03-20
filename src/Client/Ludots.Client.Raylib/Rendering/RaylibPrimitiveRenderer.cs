@@ -122,14 +122,12 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                if (persistentStaticLanesActive &&
-                    item.StableId > 0 &&
-                    StaticMeshLaneKey.Supports(item.RenderPath))
+                if (ShouldSkipImmediateDraw(item, persistentStaticLanesActive))
                 {
                     continue;
                 }
 
-                if (TryDrawPrototypeSkinned(item, scaleMul))
+                if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;
                 }
@@ -142,6 +140,18 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
+        internal bool ShouldSkipImmediateDraw(in PrimitiveDrawItem item, bool persistentStaticLanesActive)
+        {
+            if (!persistentStaticLanesActive ||
+                item.StableId <= 0 ||
+                !StaticMeshLaneKey.Supports(item.RenderPath))
+            {
+                return false;
+            }
+
+            return _persistentStaticLaneSync.TryGetBinding(item.StableId, out _);
+        }
+
         private void DrawHybridInstanced(ReadOnlySpan<PrimitiveDrawItem> span, Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
         {
             EnsureInitialized();
@@ -149,7 +159,7 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                if (TryDrawPrototypeSkinned(item, scaleMul))
+                if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;
                 }
@@ -226,9 +236,12 @@ namespace Ludots.Client.Raylib.Rendering
             DrawPrimitive(kind, position, scale, color);
         }
 
-        private bool TryDrawPrototypeSkinned(in PrimitiveDrawItem item, float scaleMul)
+        private bool TryDrawPrototypeSkinned(in PrimitiveDrawItem item, MeshAssetRegistry meshes, float scaleMul)
         {
-            if (!item.RenderPath.IsSkinnedLane())
+            if (!item.RenderPath.IsSkinnedLane() ||
+                !item.AnimatorAux.HasAnyClip ||
+                !meshes.TryGetDescriptor(item.MeshAssetId, out var descriptor) ||
+                descriptor.Type != MeshAssetType.Primitive)
             {
                 return false;
             }
@@ -236,13 +249,13 @@ namespace Ludots.Client.Raylib.Rendering
             Vector3 scale = item.Scale * scaleMul;
             float baseYaw = ExtractYawRad(item.Rotation);
 
-            switch (item.AnimatorAux.LayerMode)
+            switch (descriptor.PrimitiveKind)
             {
-                case AnimatorAuxLayerMode.TankTurret:
+                case PrimitiveMeshKind.Cube:
                     DrawTankPrototype(item.Position, scale, item.Color, baseYaw, item.AnimatorAux);
                     return true;
 
-                case AnimatorAuxLayerMode.HumanoidUpperBody:
+                case PrimitiveMeshKind.Sphere:
                     DrawHumanoidPrototype(item.Position, scale, item.Color, baseYaw, item.AnimatorAux);
                     return true;
 
@@ -307,15 +320,17 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawTankPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimatorAuxState aux)
         {
             float unit = MathF.Max(0.12f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.45f);
-            float treadBob = MathF.Sin(aux.LowerBodyPhase01 * MathF.Tau) * unit * 0.08f;
-            float turretYaw = baseYaw + aux.AimYawRad;
-            float recoil = aux.OverlayStateIndex == 2
-                ? MathF.Sin(aux.OverlayNormalizedTime01 * MathF.PI) * unit * 0.35f
-                : 0f;
+            float locomotionPhase = ResolveClipTime01(aux.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
+            float locomotionWeight = ResolveClipWeight01(aux.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
+            float aimYaw = ResolveClipScalar0(aux.LayerClip, AnimatorBuiltinClipId.AimYawOffset) * ResolveClipWeight01(aux.LayerClip, AnimatorBuiltinClipId.AimYawOffset);
+            float recoilPulse = ResolvePulse(aux.OverlayClip, AnimatorBuiltinClipId.RecoilPulse);
+            float treadBob = MathF.Sin(locomotionPhase * MathF.Tau) * unit * (0.03f + locomotionWeight * 0.08f);
+            float turretYaw = baseYaw + aimYaw;
+            float recoil = recoilPulse * unit * 0.35f;
 
             Vector4 hullColor = MultiplyColor(color, 0.72f, 0.78f, 0.84f, 1f);
             Vector4 turretColor = MultiplyColor(color, 0.95f, 0.95f, 0.82f, 1f);
-            Vector4 accentColor = aux.OverlayStateIndex == 2
+            Vector4 accentColor = recoilPulse > 0.01f
                 ? new Vector4(1f, 0.45f, 0.2f, 1f)
                 : new Vector4(0.95f, 0.9f, 0.4f, 1f);
 
@@ -352,24 +367,28 @@ namespace Ludots.Client.Raylib.Rendering
 
             DrawPrototypeSphere(
                 TransformLocal(turretCenter, turretYaw, new Vector3(0f, unit * 0.18f, unit * 2.15f - recoil)),
-                unit * (aux.OverlayStateIndex == 2 ? 0.2f : 0.1f),
+                unit * (0.1f + recoilPulse * 0.1f),
                 accentColor);
         }
 
         private void DrawHumanoidPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimatorAuxState aux)
         {
             float unit = MathF.Max(0.1f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.42f);
-            float lowerPhase = aux.LowerBodyPhase01 * MathF.Tau;
-            float stride = MathF.Sin(lowerPhase) * unit * 0.34f;
-            float upperYaw = baseYaw + aux.AimYawRad * aux.OverlayWeight01;
-            float chestLift = MathF.Sin(aux.OverlayNormalizedTime01 * MathF.PI) * unit * 0.08f;
+            float locomotionPhase = ResolveClipTime01(aux.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
+            float locomotionWeight = ResolveClipWeight01(aux.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
+            float lowerPhase = locomotionPhase * MathF.Tau;
+            float stride = MathF.Sin(lowerPhase) * unit * (0.08f + locomotionWeight * 0.34f);
+            float aimWeight = ResolveClipWeight01(aux.LayerClip, AnimatorBuiltinClipId.AimYawOffset);
+            float upperYaw = baseYaw + ResolveClipScalar0(aux.LayerClip, AnimatorBuiltinClipId.AimYawOffset) * aimWeight;
+            float recoilPulse = ResolvePulse(aux.OverlayClip, AnimatorBuiltinClipId.RecoilPulse);
+            float chestLift = recoilPulse * unit * 0.08f;
 
             Vector4 legColor = MultiplyColor(color, 0.72f, 0.85f, 1f, 1f);
             Vector4 torsoColor = LerpColor(
                 MultiplyColor(color, 0.95f, 0.8f, 0.75f, 1f),
                 new Vector4(1f, 0.45f, 0.25f, 1f),
-                Math.Clamp(aux.OverlayWeight01 * 0.6f, 0f, 1f));
-            Vector4 weaponColor = aux.OverlayStateIndex == 3
+                Math.Clamp(aimWeight * 0.6f, 0f, 1f));
+            Vector4 weaponColor = recoilPulse > 0.01f
                 ? new Vector4(1f, 0.5f, 0.25f, 1f)
                 : new Vector4(0.9f, 0.9f, 0.95f, 1f);
 
@@ -406,13 +425,13 @@ namespace Ludots.Client.Raylib.Rendering
             DrawOrientedCube(
                 TransformLocal(chestCenter, upperYaw, new Vector3(-unit * 0.48f, unit * 0.05f, unit * 0.05f)),
                 new Vector3(unit * 0.16f, unit * 0.75f, unit * 0.16f),
-                upperYaw - aux.OverlayWeight01 * 0.15f,
+                upperYaw - aimWeight * 0.15f,
                 torsoColor);
 
             DrawOrientedCube(
-                TransformLocal(chestCenter, upperYaw, new Vector3(unit * 0.5f, unit * 0.02f, unit * (0.18f + aux.OverlayWeight01 * 0.25f))),
+                TransformLocal(chestCenter, upperYaw, new Vector3(unit * 0.5f, unit * 0.02f, unit * (0.18f + aimWeight * 0.25f))),
                 new Vector3(unit * 0.16f, unit * 0.7f, unit * 0.16f),
-                upperYaw + aux.OverlayWeight01 * 0.35f,
+                upperYaw + aimWeight * 0.35f,
                 torsoColor);
 
             Vector3 weaponCenter = TransformLocal(chestCenter, upperYaw, new Vector3(unit * 0.18f, -unit * 0.02f, unit * 0.7f));
@@ -422,13 +441,38 @@ namespace Ludots.Client.Raylib.Rendering
                 upperYaw,
                 weaponColor);
 
-            if (aux.OverlayStateIndex == 3)
+            if (recoilPulse > 0.01f)
             {
                 DrawPrototypeSphere(
                     TransformLocal(weaponCenter, upperYaw, new Vector3(0f, 0f, unit * 0.68f)),
                     unit * 0.14f,
                     new Vector4(1f, 0.62f, 0.2f, 1f));
             }
+        }
+
+        private static float ResolveClipTime01(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        {
+            return clip.ClipId == expectedId ? clip.NormalizedTime01 : 0f;
+        }
+
+        private static float ResolveClipWeight01(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        {
+            return clip.ClipId == expectedId ? clip.Weight01 : 0f;
+        }
+
+        private static float ResolveClipScalar0(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        {
+            return clip.ClipId == expectedId ? clip.Scalar0 : 0f;
+        }
+
+        private static float ResolvePulse(in AnimatorBuiltinClipState clip, AnimatorBuiltinClipId expectedId)
+        {
+            if (clip.ClipId != expectedId || clip.Weight01 <= 0.001f)
+            {
+                return 0f;
+            }
+
+            return MathF.Sin(clip.NormalizedTime01 * MathF.PI) * clip.Weight01;
         }
 
         private void DrawOrientedCube(Vector3 center, Vector3 size, float yawRad, Vector4 color)

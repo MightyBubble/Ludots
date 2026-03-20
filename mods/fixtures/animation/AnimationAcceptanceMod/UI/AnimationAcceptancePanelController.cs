@@ -118,7 +118,7 @@ namespace AnimationAcceptanceMod.UI
                     Ui.Row(
                             Ui.Column(
                                     Ui.Text("Animator Acceptance Inspector").FontSize(22f).Bold().Color("#F7FAFF"),
-                                    Ui.Text("Core lower-body state machine + adapter-side layered tween prototype.")
+                    Ui.Text("Core lower-body state machine + adapter-side builtin clip surrogate prototype.")
                                         .FontSize(12f)
                                         .Color("#B5C4D4")
                                         .WhiteSpace(UiWhiteSpace.Normal))
@@ -281,6 +281,7 @@ namespace AnimationAcceptanceMod.UI
             return Ui.Column(
                     Ui.Text("Sample Config").FontSize(12f).Bold().Color("#F3C87E"),
                     BuildInfoCard("States", rig.StateLines),
+                    BuildInfoCard("Builtin Clips", rig.BuiltinLines),
                     BuildInfoCard("Transitions", rig.TransitionLines))
                 .Gap(8f);
         }
@@ -393,9 +394,9 @@ namespace AnimationAcceptanceMod.UI
                 SelectedRig: controls.SelectedRig,
                 PrimerLines:
                 [
-                    "Tank verifies lower-body locomotion plus turret aim/recoil layering.",
-                    "Humanoid verifies upper/lower body mixing with lower-body walk/run transitions and upper-body fire overlay.",
-                    "Packed state, runtime state, parameter buffer, and adapter aux payload are shown together so ownership is inspectable frame by frame.",
+                    "Tank verifies locomotion_cycle + aim_yaw_offset + recoil_pulse atoms on a vehicle surrogate.",
+                    "Humanoid verifies the same builtin atoms on a biped surrogate with walk/run lower-body transitions.",
+                    "Packed state, runtime state, parameter buffer, and builtin clip payload are shown together so ownership is inspectable frame by frame.",
                 ],
                 Rigs: rigs);
         }
@@ -452,8 +453,6 @@ namespace AnimationAcceptanceMod.UI
             string nextState = sample.RuntimeState.NextStateIndex == AnimatorRuntimeState.NoState
                 ? "None"
                 : ResolveStateLabel(definition.StateLabels, sample.RuntimeState.NextStateIndex);
-            string overlayState = ResolveStateLabel(definition.OverlayStateLabels, sample.AuxState.OverlayStateIndex);
-
             string[] animatorLines =
             [
                 $"current = {currentState}",
@@ -482,12 +481,13 @@ namespace AnimationAcceptanceMod.UI
 
             string[] auxLines =
             [
-                $"layer = {sample.AuxState.LayerMode}  overlay = {overlayState}",
-                $"weight = {sample.AuxState.OverlayWeight01:0.00}  aim = {ToDegrees(sample.AuxState.AimYawRad):0.0} deg",
-                $"lower_phase = {sample.AuxState.LowerBodyPhase01:0.000}  overlay_time = {sample.AuxState.OverlayNormalizedTime01:0.000}",
+                BuildClipLine("base", sample.AuxState.BaseClip),
+                BuildClipLine("layer", sample.AuxState.LayerClip),
+                BuildClipLine("overlay", sample.AuxState.OverlayClip),
             ];
 
             string[] stateLines = BuildStateLines(definition);
+            string[] builtinLines = definition.BuiltinClipDescriptions;
             var profiles = new AnimationAcceptanceProfilePanelState[definition.Profiles.Length];
             for (int i = 0; i < definition.Profiles.Length; i++)
             {
@@ -517,6 +517,7 @@ namespace AnimationAcceptanceMod.UI
                 ParameterLines: parameterLines.ToArray(),
                 AuxLines: auxLines,
                 StateLines: stateLines,
+                BuiltinLines: builtinLines,
                 TransitionLines: definition.TransitionDescriptions,
                 Profiles: profiles);
         }
@@ -541,6 +542,20 @@ namespace AnimationAcceptanceMod.UI
             }
 
             return stateIndex < 0 ? "None" : $"[{stateIndex}] Unknown";
+        }
+
+        private static string BuildClipLine(string slotLabel, AnimatorBuiltinClipState clip)
+        {
+            if (!clip.IsActive)
+            {
+                return $"{slotLabel} = None";
+            }
+
+            string scalar0 = clip.ClipId == AnimatorBuiltinClipId.AimYawOffset
+                ? $"{ToDegrees(clip.Scalar0):0.0} deg"
+                : $"{clip.Scalar0:0.00}";
+
+            return $"{slotLabel} = {clip.ClipId}  time = {clip.NormalizedTime01:0.000}  weight = {clip.Weight01:0.00}  s0 = {scalar0}";
         }
 
         private static UiColor ParseColor(string hex)
@@ -710,6 +725,7 @@ namespace AnimationAcceptanceMod.UI
             string[] ParameterLines,
             string[] AuxLines,
             string[] StateLines,
+            string[] BuiltinLines,
             string[] TransitionLines,
             AnimationAcceptanceProfilePanelState[] Profiles);
 

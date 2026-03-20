@@ -46,18 +46,21 @@ namespace Ludots.Tests.Presentation
                     Assert.That(item.Animator.GetControllerId(), Is.GreaterThan(0));
                     Assert.That(item.StableId, Is.GreaterThan(0));
                     Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
+                    Assert.That(item.AnimatorAux.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.LocomotionCycle));
+                    Assert.That(item.AnimatorAux.LayerClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.AimYawOffset));
+                    Assert.That(item.AnimatorAux.OverlayClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.RecoilPulse));
 
-                    if (item.AnimatorAux.LayerMode == AnimatorAuxLayerMode.TankTurret)
+                    if (item.Animator.GetPrimaryStateIndex() is >= 31 and <= 33)
                     {
                         tankCount++;
-                        Assert.That(item.AnimatorAux.OverlayWeight01, Is.EqualTo(1f).Within(0.001f));
-                        Assert.That(MathF.Abs(item.AnimatorAux.AimYawRad), Is.GreaterThan(0.01f));
+                        Assert.That(item.AnimatorAux.LayerClip.Weight01, Is.EqualTo(1f).Within(0.001f));
+                        Assert.That(MathF.Abs(item.AnimatorAux.LayerClip.Scalar0), Is.GreaterThan(0.01f));
                     }
-                    else if (item.AnimatorAux.LayerMode == AnimatorAuxLayerMode.HumanoidUpperBody)
+                    else if (item.Animator.GetPrimaryStateIndex() is >= 41 and <= 44)
                     {
                         humanoidCount++;
-                        Assert.That(item.AnimatorAux.OverlayWeight01, Is.GreaterThan(0.1f));
-                        Assert.That(MathF.Abs(item.AnimatorAux.AimYawRad), Is.GreaterThan(0.01f));
+                        Assert.That(item.AnimatorAux.LayerClip.Weight01, Is.GreaterThan(0.1f));
+                        Assert.That(MathF.Abs(item.AnimatorAux.LayerClip.Scalar0), Is.GreaterThan(0.01f));
                     }
 
                     traceLines.Add(JsonSerializer.Serialize(new
@@ -67,11 +70,15 @@ namespace Ludots.Tests.Presentation
                         lane = item.RenderPath.ToString(),
                         controller_id = item.Animator.GetControllerId(),
                         primary_state = item.Animator.GetPrimaryStateIndex(),
-                        overlay_state = item.AnimatorAux.OverlayStateIndex,
-                        overlay_weight = item.AnimatorAux.OverlayWeight01,
-                        overlay_time = item.AnimatorAux.OverlayNormalizedTime01,
-                        aim_yaw = item.AnimatorAux.AimYawRad,
-                        layer_mode = item.AnimatorAux.LayerMode.ToString(),
+                        base_clip = item.AnimatorAux.BaseClip.ClipId.ToString(),
+                        base_time = item.AnimatorAux.BaseClip.NormalizedTime01,
+                        base_weight = item.AnimatorAux.BaseClip.Weight01,
+                        layer_clip = item.AnimatorAux.LayerClip.ClipId.ToString(),
+                        layer_weight = item.AnimatorAux.LayerClip.Weight01,
+                        layer_scalar0 = item.AnimatorAux.LayerClip.Scalar0,
+                        overlay_clip = item.AnimatorAux.OverlayClip.ClipId.ToString(),
+                        overlay_weight = item.AnimatorAux.OverlayClip.Weight01,
+                        overlay_time = item.AnimatorAux.OverlayClip.NormalizedTime01,
                     }));
                 }
                 else if (item.RenderPath.IsStaticInstanceLane())
@@ -140,8 +147,8 @@ namespace Ludots.Tests.Presentation
             sb.AppendLine($"- execution timestamp: {DateTime.UtcNow:O}");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
-            sb.AppendLine("- [T+012] Tank prototype reports moving lower body with independent turret aim.");
-            sb.AppendLine("- [T+012] Humanoid prototype reports locomotion lower body with upper-body overlay aim/fire.");
+            sb.AppendLine("- [T+012] Tank prototype reports locomotion_cycle + aim_yaw_offset + recoil_pulse on the vehicle surrogate.");
+            sb.AppendLine("- [T+012] Humanoid prototype reports the same builtin clip atoms on the biped surrogate.");
             sb.AppendLine("- [T+012] Static baseline entity remains on static lane.");
             sb.AppendLine();
             sb.AppendLine("## Outcome");
@@ -159,8 +166,8 @@ namespace Ludots.Tests.Presentation
                     A[start animation acceptance map] --> B[tick prototype driver system]
                     B --> C[tank base locomotion updates packed state]
                     B --> D[humanoid base locomotion updates packed state]
-                    C --> E[tank aux state adds turret aim + recoil overlay]
-                    D --> F[humanoid aux state adds upper-body aim/fire overlay]
+                    C --> E[tank builtin clips emit locomotion_cycle + aim_yaw_offset + recoil_pulse]
+                    D --> F[humanoid builtin clips emit locomotion_cycle + aim_yaw_offset + recoil_pulse]
                     E --> G[snapshot emits skinned tank prototype item]
                     F --> H[snapshot emits skinned humanoid prototype item]
                     A --> I[static baseline remains on static lane]
