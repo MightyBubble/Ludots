@@ -11,10 +11,13 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
+using System.Collections.Generic;
 
 namespace Ludots.Tests.Presentation
 {
@@ -341,6 +344,62 @@ namespace Ludots.Tests.Presentation
             Assert.That(proxyBuffer.Count, Is.EqualTo(2));
             Assert.That(skinnedBatchBuffer.Count, Is.EqualTo(1));
             Assert.That(skinnedBatchBuffer.GetSpan()[0].AnimationOverlay.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.LocomotionCycle));
+            Assert.That(proxyBuffer.GetSpan()[1].StableId, Is.EqualTo(TransientMarkerIdentity.ComposeStableId(1)));
+            Assert.That(proxyBuffer.GetSpan()[1].StableId, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void PerformerEmitSystem_EntityScopedMarker_ComposesPositiveStableId()
+        {
+            using var world = World.Create();
+            var instances = new PerformerInstanceBuffer();
+            var definitions = new PerformerDefinitionRegistry();
+            var groundOverlays = new GroundOverlayBuffer();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
+            var worldHud = new WorldHudBatchBuffer();
+            var programs = new GraphProgramRegistry();
+            var globals = new Dictionary<string, object>();
+
+            int definitionId = definitions.Register(
+                "performer.entity.marker",
+                new PerformerDefinition
+                {
+                    VisualKind = PerformerVisualKind.Marker3D,
+                    EntityScope = EntityScopeFilter.AllWithVisualTransform,
+                    MeshOrShapeId = 77,
+                    DefaultScale = 1f,
+                });
+
+            world.Create(
+                new PresentationStableId { Value = 501 },
+                new VisualTransform
+                {
+                    Position = new Vector3(2f, 0.5f, 3f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+
+            using var system = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                groundOverlays,
+                drawBuffer,
+                worldHud,
+                programs,
+                graphApi: null!,
+                globals,
+                snapshotBuffer: snapshotBuffer);
+
+            system.Update(0.016f);
+
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
+            ref readonly var item = ref snapshotBuffer.GetSpan()[0];
+            Assert.That(item.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh));
+            Assert.That(item.StableId, Is.EqualTo(
+                PerformerVisualIdentity.ComposeStableId(501, PerformerVisualKind.Marker3D, definitionId)));
+            Assert.That(item.StableId, Is.GreaterThan(0));
         }
 
         private static string FindRepoRoot()

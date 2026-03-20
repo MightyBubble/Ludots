@@ -443,9 +443,7 @@ namespace Ludots.Core.Presentation.Systems
             float sz = ResolveParam(handle, def, owner, 3, scaleUniform);
             var color = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
             color.W *= alphaMod;
-            int stableId = 0;
-            if (handle >= 0 && _instances.IsActive(handle))
-                stableId = _instances.Get(handle).StableId;
+            int stableId = ResolveMarkerStableId(handle, def.Id, owner);
 
             _proxyEmitter.Emit(new PresentationVisualProxy
             {
@@ -461,6 +459,26 @@ namespace Ludots.Core.Presentation.Systems
                 Flags = VisualRuntimeFlags.Visible,
                 Visibility = VisualVisibility.Visible,
             });
+        }
+
+        private int ResolveMarkerStableId(int handle, int definitionId, Entity owner)
+        {
+            if (handle >= 0 && _instances.IsActive(handle))
+            {
+                return _instances.Get(handle).StableId;
+            }
+
+            if (World.IsAlive(owner) && World.Has<PresentationStableId>(owner))
+            {
+                int ownerStableId = World.Get<PresentationStableId>(owner).Value;
+                if (ownerStableId > 0)
+                {
+                    return PerformerVisualIdentity.ComposeStableId(ownerStableId, PerformerVisualKind.Marker3D, definitionId);
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Entity-scoped Marker3D performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
         }
 
         private void EmitWorldBar(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)

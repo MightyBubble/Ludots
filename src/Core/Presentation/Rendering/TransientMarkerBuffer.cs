@@ -18,6 +18,7 @@ namespace Ludots.Core.Presentation.Rendering
     {
         private TransientMarker[] _buffer;
         private int _count;
+        private int _nextStableId = 1;
 
         public int Count => _count;
         public int Capacity => _buffer.Length;
@@ -37,6 +38,7 @@ namespace Ludots.Core.Presentation.Rendering
             if (lifetimeSeconds <= 0f) lifetimeSeconds = 0.15f;
             _buffer[_count++] = new TransientMarker
             {
+                StableId = AllocateStableId(),
                 MeshAssetId = meshAssetId,
                 Position = position,
                 Scale = scale,
@@ -59,6 +61,7 @@ namespace Ludots.Core.Presentation.Rendering
             if (lifetimeSeconds <= 0f) lifetimeSeconds = 0.15f;
             _buffer[_count++] = new TransientMarker
             {
+                StableId = AllocateStableId(),
                 MeshAssetId = meshAssetId,
                 Position = anchorOffset, // 初始位置用 offset，Tick 时用锚点更新
                 Scale = scale,
@@ -117,6 +120,7 @@ namespace Ludots.Core.Presentation.Rendering
                     Rotation = Quaternion.Identity,
                     Scale = m.Scale,
                     Color = c,
+                    StableId = m.StableId,
                     RenderPath = VisualRenderPath.StaticMesh,
                     Mobility = VisualMobility.Movable,
                     Flags = VisualRuntimeFlags.Visible,
@@ -127,8 +131,14 @@ namespace Ludots.Core.Presentation.Rendering
             }
         }
 
+        private int AllocateStableId()
+        {
+            return TransientMarkerIdentity.ComposeStableId(_nextStableId++);
+        }
+
         public struct TransientMarker
         {
+            public int StableId;
             public int MeshAssetId;
             public Vector3 Position;
             public Vector3 Scale;
