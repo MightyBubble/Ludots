@@ -9,8 +9,7 @@ namespace Ludots.Core.Presentation.Systems
 {
     public sealed class EntityVisualEmitSystem : BaseSystem<World, float>
     {
-        private readonly PrimitiveDrawBuffer _drawBuffer;
-        private readonly PrimitiveDrawBuffer? _snapshotBuffer;
+        private readonly PresentationVisualProxyEmitter _proxyEmitter;
 
         private readonly QueryDescription _withCullQuery = new QueryDescription()
             .WithAll<VisualTransform, VisualRuntimeState, PresentationStableId, CullState>();
@@ -23,11 +22,15 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<VisualTransform, VisualRuntimeState>()
             .WithNone<PresentationStableId>();
 
-        public EntityVisualEmitSystem(World world, PrimitiveDrawBuffer drawBuffer, PrimitiveDrawBuffer? snapshotBuffer = null)
+        public EntityVisualEmitSystem(
+            World world,
+            PrimitiveDrawBuffer drawBuffer,
+            PrimitiveDrawBuffer? snapshotBuffer = null,
+            PresentationVisualProxyBuffer? proxyBuffer = null,
+            SkinnedVisualBatchBuffer? skinnedBatchBuffer = null)
             : base(world)
         {
-            _drawBuffer = drawBuffer;
-            _snapshotBuffer = snapshotBuffer;
+            _proxyEmitter = new PresentationVisualProxyEmitter(drawBuffer, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
         }
 
         public override void Update(in float dt)
@@ -104,12 +107,13 @@ namespace Ludots.Core.Presentation.Systems
             int templateId = World.Has<VisualTemplateRef>(entity) ? World.Get<VisualTemplateRef>(entity).TemplateId : 0;
             bool hasAnimatorComponent = World.Has<AnimatorPackedState>(entity);
             AnimatorPackedState animator = hasAnimatorComponent ? World.Get<AnimatorPackedState>(entity) : default;
-            AnimatorAuxState animatorAux = World.Has<AnimatorAuxState>(entity) ? World.Get<AnimatorAuxState>(entity) : default;
-            PresentationRenderContract.ValidateRuntimeState("EntityVisualEmitSystem", visual, hasAnimatorComponent, animator);
+            AnimationOverlayRequest animationOverlay = World.Has<AnimationOverlayRequest>(entity) ? World.Get<AnimationOverlayRequest>(entity) : default;
+            PresentationRenderContract.ValidateRuntimeState("EntityVisualEmitSystem", visual, hasAnimatorComponent, animator, animationOverlay);
             VisualVisibility visibility = visual.ResolveVisibility(cullVisible);
 
-            var item = new PrimitiveDrawItem
+            _proxyEmitter.Emit(new PresentationVisualProxy
             {
+                ProxyKind = PresentationVisualProxyKind.Entity,
                 MeshAssetId = visual.MeshAssetId,
                 Position = transform.Position,
                 Rotation = transform.Rotation,
@@ -122,20 +126,9 @@ namespace Ludots.Core.Presentation.Systems
                 Mobility = visual.Mobility,
                 Flags = visual.Flags,
                 Animator = animator,
-                AnimatorAux = animatorAux,
+                AnimationOverlay = animationOverlay,
                 Visibility = visibility,
-            };
-
-            if (_snapshotBuffer != null && !_snapshotBuffer.TryAdd(item))
-            {
-                throw new InvalidOperationException(
-                    $"Presentation visual snapshot buffer overflowed while emitting entity #{entity.Id}:{entity.WorldId}. Capacity={_snapshotBuffer.Capacity}.");
-            }
-
-            if (visibility == VisualVisibility.Visible)
-            {
-                _drawBuffer.TryAdd(item);
-            }
+            });
         }
     }
 }

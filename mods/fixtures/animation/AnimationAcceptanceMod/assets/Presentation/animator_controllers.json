@@ -1,0 +1,127 @@
+[
+  {
+    "id": "acceptance.tank.layered",
+    "defaultStateIndex": 0,
+    "states": [
+      { "packedStateIndex": 31, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 32, "durationSeconds": 0.55, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 33, "durationSeconds": 0.32, "playbackSpeed": 1.0, "loop": false }
+    ],
+    "transitions": [
+      {
+        "fromStateIndex": 0,
+        "toStateIndex": 1,
+        "conditionKind": "FloatGreaterOrEqual",
+        "parameterIndex": 0,
+        "threshold": 0.25,
+        "durationSeconds": 0.12
+      },
+      {
+        "fromStateIndex": 1,
+        "toStateIndex": 0,
+        "conditionKind": "FloatLessOrEqual",
+        "parameterIndex": 0,
+        "threshold": 0.15,
+        "durationSeconds": 0.15
+      },
+      {
+        "fromStateIndex": 0,
+        "toStateIndex": 2,
+        "conditionKind": "Trigger",
+        "parameterIndex": 2,
+        "durationSeconds": 0.03,
+        "consumeTrigger": true
+      },
+      {
+        "fromStateIndex": 1,
+        "toStateIndex": 2,
+        "conditionKind": "Trigger",
+        "parameterIndex": 2,
+        "durationSeconds": 0.02,
+        "consumeTrigger": true
+      },
+      {
+        "fromStateIndex": 2,
+        "toStateIndex": 0,
+        "conditionKind": "AutoOnNormalizedTime",
+        "threshold": 0.92,
+        "durationSeconds": 0.0
+      }
+    ]
+  },
+  {
+    "id": "acceptance.humanoid.layered",
+    "defaultStateIndex": 0,
+    "states": [
+      { "packedStateIndex": 41, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 42, "durationSeconds": 0.58, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 43, "durationSeconds": 0.42, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 44, "durationSeconds": 0.28, "playbackSpeed": 1.0, "loop": false }
+    ],
+    "transitions": [
+      {
+        "fromStateIndex": 0,
+        "toStateIndex": 1,
+        "conditionKind": "FloatGreaterOrEqual",
+        "parameterIndex": 0,
+        "threshold": 0.20,
+        "durationSeconds": 0.08
+      },
+      {
+        "fromStateIndex": 1,
+        "toStateIndex": 0,
+        "conditionKind": "FloatLessOrEqual",
+        "parameterIndex": 0,
+        "threshold": 0.10,
+        "durationSeconds": 0.08
+      },
+      {
+        "fromStateIndex": 1,
+        "toStateIndex": 2,
+        "conditionKind": "FloatGreaterOrEqual",
+        "parameterIndex": 0,
+        "threshold": 0.75,
+        "durationSeconds": 0.06
+      },
+      {
+        "fromStateIndex": 2,
+        "toStateIndex": 1,
+        "conditionKind": "FloatLessOrEqual",
+        "parameterIndex": 0,
+        "threshold": 0.55,
+        "durationSeconds": 0.06
+      },
+      {
+        "fromStateIndex": 0,
+        "toStateIndex": 3,
+        "conditionKind": "Trigger",
+        "parameterIndex": 4,
+        "durationSeconds": 0.02,
+        "consumeTrigger": true
+      },
+      {
+        "fromStateIndex": 1,
+        "toStateIndex": 3,
+        "conditionKind": "Trigger",
+        "parameterIndex": 4,
+        "durationSeconds": 0.02,
+        "consumeTrigger": true
+      },
+      {
+        "fromStateIndex": 2,
+        "toStateIndex": 3,
+        "conditionKind": "Trigger",
+        "parameterIndex": 4,
+        "durationSeconds": 0.02,
+        "consumeTrigger": true
+      },
+      {
+        "fromStateIndex": 3,
+        "toStateIndex": 0,
+        "conditionKind": "AutoOnNormalizedTime",
+        "threshold": 0.92,
+        "durationSeconds": 0.0
+      }
+    ]
+  }
+]

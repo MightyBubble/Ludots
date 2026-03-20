@@ -47,11 +47,12 @@ namespace Ludots.Tests.Presentation
                     meshAssetId: 7,
                     materialId: 1,
                     baseScale: 1f,
-                    renderPath: VisualRenderPath.SkinnedMesh,
-                    animatorControllerId: controllerId),
+                renderPath: VisualRenderPath.SkinnedMesh,
+                animatorControllerId: controllerId),
                 AnimatorPackedState.Create(controllerId),
                 AnimatorRuntimeState.Create(controllerId),
-                default(AnimatorParameterBuffer));
+                default(AnimatorParameterBuffer),
+                default(AnimatorFeedbackBuffer));
 
             ref var parameters = ref world.Get<AnimatorParameterBuffer>(entity);
             parameters.SetFloat(0, 0.75f);
@@ -69,6 +70,7 @@ namespace Ludots.Tests.Presentation
             Assert.That((packedAfterFirstTick.GetFlags() & AnimatorPackedStateFlags.InTransition) != 0, Is.True);
             Assert.That(packedAfterFirstTick.GetParameterBit(3), Is.True);
             Assert.That(packedAfterFirstTick.GetTransitionProgress01(), Is.EqualTo(0.5f).Within(0.05f));
+            Assert.That(world.Get<AnimatorFeedbackBuffer>(entity).Count, Is.GreaterThanOrEqualTo(2));
 
             system.Update(0.1f);
 
@@ -124,11 +126,12 @@ namespace Ludots.Tests.Presentation
                     meshAssetId: 7,
                     materialId: 1,
                     baseScale: 1f,
-                    renderPath: VisualRenderPath.SkinnedMesh,
-                    animatorControllerId: controllerId),
+                renderPath: VisualRenderPath.SkinnedMesh,
+                animatorControllerId: controllerId),
                 AnimatorPackedState.Create(controllerId),
                 AnimatorRuntimeState.Create(controllerId),
-                default(AnimatorParameterBuffer));
+                default(AnimatorParameterBuffer),
+                default(AnimatorFeedbackBuffer));
 
             ref var parameters = ref world.Get<AnimatorParameterBuffer>(entity);
             parameters.SetTrigger(2);
@@ -146,6 +149,7 @@ namespace Ludots.Tests.Presentation
             AppendTrace(trace, tick: 2, world.Get<PresentationStableId>(entity).Value, world.Get<AnimatorPackedState>(entity), world.Get<AnimatorRuntimeState>(entity));
 
             Assert.That(world.Get<AnimatorPackedState>(entity).GetPrimaryStateIndex(), Is.EqualTo(5));
+            Assert.That(world.Get<AnimatorFeedbackBuffer>(entity).GetNewest(0).Kind, Is.EqualTo(AnimatorFeedbackKind.TransitionCompleted));
 
             string repoRoot = FindRepoRoot();
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "animator-runtime-mvp");

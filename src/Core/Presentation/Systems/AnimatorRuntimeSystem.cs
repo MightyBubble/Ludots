@@ -10,7 +10,7 @@ namespace Ludots.Core.Presentation.Systems
     {
         private readonly AnimatorControllerRegistry _controllers;
         private readonly QueryDescription _query = new QueryDescription()
-            .WithAll<VisualRuntimeState, AnimatorPackedState, AnimatorRuntimeState, AnimatorParameterBuffer>();
+            .WithAll<VisualRuntimeState, AnimatorPackedState, AnimatorRuntimeState, AnimatorParameterBuffer, AnimatorFeedbackBuffer>();
 
         public AnimatorRuntimeSystem(World world, AnimatorControllerRegistry controllers)
             : base(world)
@@ -27,10 +27,11 @@ namespace Ludots.Core.Presentation.Systems
                 var packedStates = chunk.GetArray<AnimatorPackedState>();
                 var runtimeStates = chunk.GetArray<AnimatorRuntimeState>();
                 var parameterBuffers = chunk.GetArray<AnimatorParameterBuffer>();
+                var feedbackBuffers = chunk.GetArray<AnimatorFeedbackBuffer>();
 
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    UpdateAnimator(ref visuals[i], ref packedStates[i], ref runtimeStates[i], ref parameterBuffers[i], dt);
+                    UpdateAnimator(ref visuals[i], ref packedStates[i], ref runtimeStates[i], ref parameterBuffers[i], ref feedbackBuffers[i], dt);
                 }
             }
         }
@@ -40,9 +41,15 @@ namespace Ludots.Core.Presentation.Systems
             ref AnimatorPackedState packed,
             ref AnimatorRuntimeState runtime,
             ref AnimatorParameterBuffer parameters,
+            ref AnimatorFeedbackBuffer feedback,
             float dt)
         {
-            PresentationRenderContract.ValidateRuntimeState("AnimatorRuntimeSystem", visual, hasAnimatorComponent: true, packed);
+            PresentationRenderContract.ValidateRuntimeState(
+                "AnimatorRuntimeSystem",
+                visual,
+                hasAnimatorComponent: true,
+                packed,
+                default);
 
             int controllerId = visual.AnimatorControllerId > 0 ? visual.AnimatorControllerId : packed.GetControllerId();
             if (controllerId <= 0)
@@ -55,14 +62,37 @@ namespace Ludots.Core.Presentation.Systems
 
             if (!_controllers.TryGet(controllerId, out AnimatorControllerDefinition definition))
             {
+                if (runtime.ReportedMissingControllerId != controllerId)
+                {
+                    runtime.ReportedMissingControllerId = controllerId;
+                    feedback.Push(new AnimatorFeedbackEvent
+                    {
+                        Kind = AnimatorFeedbackKind.ControllerMissing,
+                        ControllerId = controllerId,
+                        FromStateIndex = runtime.CurrentStateIndex,
+                        ToStateIndex = runtime.NextStateIndex,
+                    });
+                }
+
                 return;
             }
+
+            runtime.ReportedMissingControllerId = 0;
 
             if (!runtime.Initialized || runtime.ControllerId != controllerId)
             {
                 runtime = AnimatorRuntimeState.Create(controllerId);
                 runtime.CurrentStateIndex = definition.ResolveDefaultStateIndex();
                 runtime.Initialized = runtime.CurrentStateIndex != AnimatorRuntimeState.NoState;
+                if (runtime.Initialized)
+                {
+                    feedback.Push(new AnimatorFeedbackEvent
+                    {
+                        Kind = AnimatorFeedbackKind.Initialized,
+                        ControllerId = controllerId,
+                        ToStateIndex = runtime.CurrentStateIndex,
+                    });
+                }
             }
 
             if (!runtime.Initialized || !definition.TryGetState(runtime.CurrentStateIndex, out AnimatorStateDefinition currentState))
@@ -83,11 +113,12 @@ namespace Ludots.Core.Presentation.Systems
 
             float currentDuration = ResolveDuration(currentState.DurationSeconds);
             float currentSpeed = currentState.PlaybackSpeed <= 0f ? 1f : currentState.PlaybackSpeed;
+            int stateBeforeTick = runtime.CurrentStateIndex;
             runtime.StateElapsedSeconds += dt * currentSpeed;
 
             float currentNormalizedTime = ResolveNormalizedTime(runtime.StateElapsedSeconds, currentDuration, currentState.Loop);
             if (!runtime.IsTransitioning &&
-                TryStartTransition(definition, ref parameters, ref runtime, currentNormalizedTime))
+                TryStartTransition(definition, ref parameters, ref runtime, ref feedback, currentNormalizedTime))
             {
                 if (!runtime.IsTransitioning && !definition.TryGetState(runtime.CurrentStateIndex, out currentState))
                 {
@@ -114,6 +145,14 @@ namespace Ludots.Core.Presentation.Systems
                 {
                     if (hasTargetState)
                     {
+                        feedback.Push(new AnimatorFeedbackEvent
+                        {
+                            Kind = AnimatorFeedbackKind.TransitionCompleted,
+                            ControllerId = controllerId,
+                            FromStateIndex = runtime.CurrentStateIndex,
+                            ToStateIndex = runtime.NextStateIndex,
+                            NormalizedTime01 = transitionProgress,
+                        });
                         runtime.CurrentStateIndex = runtime.NextStateIndex;
                         currentState = targetState;
                     }
@@ -126,6 +165,25 @@ namespace Ludots.Core.Presentation.Systems
                     transitionProgress = 0f;
                     hasTargetState = false;
                 }
+            }
+
+            if (!currentState.Loop &&
+                currentNormalizedTime >= 0.999f &&
+                runtime.LastCompletedStateIndex != stateBeforeTick)
+            {
+                runtime.LastCompletedStateIndex = stateBeforeTick;
+                feedback.Push(new AnimatorFeedbackEvent
+                {
+                    Kind = AnimatorFeedbackKind.StateCompleted,
+                    ControllerId = controllerId,
+                    FromStateIndex = stateBeforeTick,
+                    ToStateIndex = stateBeforeTick,
+                    NormalizedTime01 = currentNormalizedTime,
+                });
+            }
+            else if (currentNormalizedTime < 0.999f && runtime.LastCompletedStateIndex == stateBeforeTick)
+            {
+                runtime.LastCompletedStateIndex = AnimatorRuntimeState.NoState;
             }
 
             packed.SetPrimaryStateIndex(ClampPackedStateIndex(currentState.PackedStateIndex));
@@ -188,6 +246,7 @@ namespace Ludots.Core.Presentation.Systems
             AnimatorControllerDefinition definition,
             ref AnimatorParameterBuffer parameters,
             ref AnimatorRuntimeState runtime,
+            ref AnimatorFeedbackBuffer feedback,
             float currentNormalizedTime)
         {
             if (definition.Transitions == null || definition.Transitions.Length == 0)
@@ -215,6 +274,23 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (transition.DurationSeconds <= 0f)
                 {
+                    feedback.Push(new AnimatorFeedbackEvent
+                    {
+                        Kind = AnimatorFeedbackKind.TransitionStarted,
+                        ControllerId = definition.ControllerId,
+                        FromStateIndex = runtime.CurrentStateIndex,
+                        ToStateIndex = transition.ToStateIndex,
+                        NormalizedTime01 = currentNormalizedTime,
+                        Value0 = transition.DurationSeconds,
+                    });
+                    feedback.Push(new AnimatorFeedbackEvent
+                    {
+                        Kind = AnimatorFeedbackKind.TransitionCompleted,
+                        ControllerId = definition.ControllerId,
+                        FromStateIndex = runtime.CurrentStateIndex,
+                        ToStateIndex = transition.ToStateIndex,
+                        NormalizedTime01 = 1f,
+                    });
                     runtime.CurrentStateIndex = transition.ToStateIndex;
                     runtime.NextStateIndex = AnimatorRuntimeState.NoState;
                     runtime.StateElapsedSeconds = 0f;
@@ -223,6 +299,15 @@ namespace Ludots.Core.Presentation.Systems
                 }
                 else
                 {
+                    feedback.Push(new AnimatorFeedbackEvent
+                    {
+                        Kind = AnimatorFeedbackKind.TransitionStarted,
+                        ControllerId = definition.ControllerId,
+                        FromStateIndex = runtime.CurrentStateIndex,
+                        ToStateIndex = transition.ToStateIndex,
+                        NormalizedTime01 = currentNormalizedTime,
+                        Value0 = transition.DurationSeconds,
+                    });
                     runtime.NextStateIndex = transition.ToStateIndex;
                     runtime.TransitionElapsedSeconds = 0f;
                     runtime.TransitionDurationSeconds = transition.DurationSeconds;

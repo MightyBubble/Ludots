@@ -68,7 +68,8 @@ namespace Ludots.Core.Presentation.Config
                 Upsert(entity, AnimatorPackedState.Create(template.AnimatorControllerId));
                 Upsert(entity, AnimatorRuntimeState.Create(template.AnimatorControllerId));
                 Upsert(entity, default(AnimatorParameterBuffer));
-                Upsert(entity, default(AnimatorAuxState));
+                Upsert(entity, default(AnimationOverlayRequest));
+                Upsert(entity, default(AnimatorFeedbackBuffer));
             }
         }
 
@@ -171,12 +172,20 @@ namespace Ludots.Core.Presentation.Config
             if (!entity.Has<AnimatorParameterBuffer>())
                 entity.Add(default(AnimatorParameterBuffer));
 
-            if (!entity.Has<AnimatorAuxState>())
-                entity.Add(default(AnimatorAuxState));
+            if (!entity.Has<AnimationOverlayRequest>())
+                entity.Add(default(AnimationOverlayRequest));
+
+            if (!entity.Has<AnimatorFeedbackBuffer>())
+                entity.Add(default(AnimatorFeedbackBuffer));
 
             visual.AnimatorControllerId = packed.GetControllerId();
             visual.Flags |= VisualRuntimeFlags.HasAnimator;
-            PresentationRenderContract.ValidateRuntimeState("Presentation animator block", visual, hasAnimatorComponent: true, packed);
+            PresentationRenderContract.ValidateRuntimeState(
+                "Presentation animator block",
+                visual,
+                hasAnimatorComponent: true,
+                packed,
+                entity.Get<AnimationOverlayRequest>());
             entity.Set(visual);
         }
 

@@ -1,6 +1,6 @@
 namespace Ludots.Core.Presentation.Components
 {
-    public struct AnimatorAuxState
+    public struct AnimationOverlayRequest
     {
         public AnimatorBuiltinClipState BaseClip;
         public AnimatorBuiltinClipState LayerClip;

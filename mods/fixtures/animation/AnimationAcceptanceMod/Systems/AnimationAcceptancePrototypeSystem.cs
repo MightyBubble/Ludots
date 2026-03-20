@@ -14,7 +14,7 @@ namespace AnimationAcceptanceMod.Systems
         private readonly GameEngine _engine;
         private readonly AnimationAcceptanceControlState _controls;
         private readonly QueryDescription _query = new QueryDescription()
-            .WithAll<WorldPositionCm, FacingDirection, VisualRuntimeState, AnimatorParameterBuffer, AnimatorAuxState>();
+            .WithAll<WorldPositionCm, FacingDirection, VisualRuntimeState, AnimatorParameterBuffer, AnimationOverlayRequest>();
 
         private float _elapsed;
         private bool _tankFireGate;
@@ -43,17 +43,17 @@ namespace AnimationAcceptanceMod.Systems
                 var facings = chunk.GetArray<FacingDirection>();
                 var visuals = chunk.GetArray<VisualRuntimeState>();
                 var parameters = chunk.GetArray<AnimatorParameterBuffer>();
-                var auxStates = chunk.GetArray<AnimatorAuxState>();
+                var overlays = chunk.GetArray<AnimationOverlayRequest>();
 
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     if (visuals[i].AnimatorControllerId == _tankControllerId)
                     {
-                        UpdateTank(ref positions[i], ref facings[i], ref parameters[i], ref auxStates[i], scaledDt);
+                        UpdateTank(ref positions[i], ref facings[i], ref parameters[i], ref overlays[i], scaledDt);
                     }
                     else if (visuals[i].AnimatorControllerId == _humanoidControllerId)
                     {
-                        UpdateHumanoid(ref positions[i], ref facings[i], ref parameters[i], ref auxStates[i], scaledDt);
+                        UpdateHumanoid(ref positions[i], ref facings[i], ref parameters[i], ref overlays[i], scaledDt);
                     }
                 }
             }
@@ -77,13 +77,13 @@ namespace AnimationAcceptanceMod.Systems
             ref WorldPositionCm position,
             ref FacingDirection facing,
             ref AnimatorParameterBuffer parameters,
-            ref AnimatorAuxState aux,
+            ref AnimationOverlayRequest overlay,
             float dt)
         {
             var slot = _controls.Tank;
             if (slot.DriverMode == AnimationAcceptanceDriverMode.Manual)
             {
-                UpdateManualRig(slot, AnimationAcceptanceRigCatalog.Tank, ref position, ref facing, ref parameters, ref aux, dt);
+                UpdateManualRig(slot, AnimationAcceptanceRigCatalog.Tank, ref position, ref facing, ref parameters, ref overlay, dt);
                 return;
             }
 
@@ -116,22 +116,22 @@ namespace AnimationAcceptanceMod.Systems
             float overlayTime = firingWindow ? Math.Clamp((shotCycle - 0.68f) / 0.22f, 0f, 1f) : 0f;
             float aimYaw = MathF.Sin(_elapsed * 0.9f) * 0.9f;
 
-            aux.BaseClip = CreateLocomotionClip(lowerPhase, speed);
-            aux.LayerClip = CreateAimClip(aimYaw, 1f);
-            aux.OverlayClip = CreateRecoilClip(overlayTime, firingWindow ? 1f : 0f);
+            overlay.BaseClip = CreateLocomotionClip(lowerPhase, speed);
+            overlay.LayerClip = CreateAimClip(aimYaw, 1f);
+            overlay.OverlayClip = CreateRecoilClip(overlayTime, firingWindow ? 1f : 0f);
         }
 
         private void UpdateHumanoid(
             ref WorldPositionCm position,
             ref FacingDirection facing,
             ref AnimatorParameterBuffer parameters,
-            ref AnimatorAuxState aux,
+            ref AnimationOverlayRequest overlay,
             float dt)
         {
             var slot = _controls.Humanoid;
             if (slot.DriverMode == AnimationAcceptanceDriverMode.Manual)
             {
-                UpdateManualRig(slot, AnimationAcceptanceRigCatalog.Humanoid, ref position, ref facing, ref parameters, ref aux, dt);
+                UpdateManualRig(slot, AnimationAcceptanceRigCatalog.Humanoid, ref position, ref facing, ref parameters, ref overlay, dt);
                 return;
             }
 
@@ -165,9 +165,9 @@ namespace AnimationAcceptanceMod.Systems
             float overlayTime = firingWindow ? Math.Clamp((burstCycle - 0.58f) / 0.24f, 0f, 1f) : Fraction(_elapsed * 0.5f);
             float aimYaw = MathF.Sin(_elapsed * 1.15f) * 1.1f;
 
-            aux.BaseClip = CreateLocomotionClip(lowerPhase, speed);
-            aux.LayerClip = CreateAimClip(aimYaw, overlayWeight);
-            aux.OverlayClip = CreateRecoilClip(overlayTime, firingWindow ? 1f : 0f);
+            overlay.BaseClip = CreateLocomotionClip(lowerPhase, speed);
+            overlay.LayerClip = CreateAimClip(aimYaw, overlayWeight);
+            overlay.OverlayClip = CreateRecoilClip(overlayTime, firingWindow ? 1f : 0f);
         }
 
         private static void UpdateManualRig(
@@ -176,7 +176,7 @@ namespace AnimationAcceptanceMod.Systems
             ref WorldPositionCm position,
             ref FacingDirection facing,
             ref AnimatorParameterBuffer parameters,
-            ref AnimatorAuxState aux,
+            ref AnimationOverlayRequest overlay,
             float dt)
         {
             position = WorldPositionCm.FromCmFloat(definition.ManualAnchorCm.X, definition.ManualAnchorCm.Y);
@@ -192,9 +192,9 @@ namespace AnimationAcceptanceMod.Systems
 
             AdvanceManualOverlay(slot, definition, dt);
 
-            aux.BaseClip = CreateLocomotionClip(slot.LowerBodyPhase01, slot.MoveEnabled ? slot.Speed : slot.Speed * 0.18f);
-            aux.LayerClip = CreateAimClip(slot.AimYawRad, slot.OverlayWeight01);
-            aux.OverlayClip = CreateRecoilClip(slot.OverlayNormalizedTime01, slot.OverlayFiring ? 1f : 0f);
+            overlay.BaseClip = CreateLocomotionClip(slot.LowerBodyPhase01, slot.MoveEnabled ? slot.Speed : slot.Speed * 0.18f);
+            overlay.LayerClip = CreateAimClip(slot.AimYawRad, slot.OverlayWeight01);
+            overlay.OverlayClip = CreateRecoilClip(slot.OverlayNormalizedTime01, slot.OverlayFiring ? 1f : 0f);
         }
 
         private static void AdvanceManualOverlay(

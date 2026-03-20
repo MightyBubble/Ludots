@@ -38,13 +38,14 @@ namespace Ludots.Core.Presentation.Components
             string sourceName,
             in VisualRuntimeState visual,
             bool hasAnimatorComponent,
-            in AnimatorPackedState animator)
+            in AnimatorPackedState animator,
+            in AnimationOverlayRequest animationOverlay)
         {
             int packedControllerId = animator.GetControllerId();
 
             if (!visual.RenderPath.IsSkinnedLane())
             {
-                if (visual.AnimatorControllerId > 0 || visual.HasAnimator || hasAnimatorComponent || packedControllerId > 0)
+                if (visual.AnimatorControllerId > 0 || visual.HasAnimator || hasAnimatorComponent || packedControllerId > 0 || animationOverlay.HasAnyClip)
                 {
                     throw new InvalidOperationException(
                         $"{sourceName} produced non-skinned render path '{visual.RenderPath}' with animator data attached. " +

@@ -39,7 +39,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PerformerInstanceBuffer _instances;
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly GroundOverlayBuffer _groundOverlays;
-        private readonly PrimitiveDrawBuffer _primitives;
+        private readonly PresentationVisualProxyEmitter _proxyEmitter;
         private readonly WorldHudBatchBuffer _worldHud;
         private readonly GraphProgramRegistry _programs;
         private readonly IGraphRuntimeApi _graphApi;
@@ -78,13 +78,16 @@ namespace Ludots.Core.Presentation.Systems
             GraphProgramRegistry programs,
             IGraphRuntimeApi graphApi,
             Dictionary<string, object> globals,
-            EntityColorResolver entityColorResolver = null)
+            EntityColorResolver entityColorResolver = null,
+            PrimitiveDrawBuffer? snapshotBuffer = null,
+            PresentationVisualProxyBuffer? proxyBuffer = null,
+            SkinnedVisualBatchBuffer? skinnedBatchBuffer = null)
             : base(world)
         {
             _instances = instances;
             _definitions = definitions;
             _groundOverlays = groundOverlays;
-            _primitives = primitives;
+            _proxyEmitter = new PresentationVisualProxyEmitter(primitives, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
             _worldHud = worldHud;
             _programs = programs;
             _graphApi = graphApi;
@@ -444,8 +447,9 @@ namespace Ludots.Core.Presentation.Systems
             if (handle >= 0 && _instances.IsActive(handle))
                 stableId = _instances.Get(handle).StableId;
 
-            _primitives.TryAdd(new PrimitiveDrawItem
+            _proxyEmitter.Emit(new PresentationVisualProxy
             {
+                ProxyKind = PresentationVisualProxyKind.Performer,
                 MeshAssetId = def.MeshOrShapeId,
                 Position = pos,
                 Rotation = Quaternion.Identity,

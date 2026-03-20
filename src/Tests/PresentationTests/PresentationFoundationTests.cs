@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -142,7 +143,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(entity.Has<AnimatorPackedState>(), Is.True);
             Assert.That(entity.Has<AnimatorRuntimeState>(), Is.True);
             Assert.That(entity.Has<AnimatorParameterBuffer>(), Is.True);
-            Assert.That(entity.Has<AnimatorAuxState>(), Is.True);
+            Assert.That(entity.Has<AnimationOverlayRequest>(), Is.True);
+            Assert.That(entity.Has<AnimatorFeedbackBuffer>(), Is.True);
             Assert.That(entity.Has<PresentationStartupPerformers>(), Is.True);
             Assert.That(entity.Has<PresentationStartupState>(), Is.True);
 
@@ -171,11 +173,12 @@ namespace Ludots.Tests.Presentation
             Assert.That(animator.GetParameterBit(1), Is.True);
             Assert.That(animator.GetParameterBit(7), Is.True);
             Assert.That(animator.GetParameterBit(63), Is.True);
-            var aux = entity.Get<AnimatorAuxState>();
-            Assert.That(aux.HasAnyClip, Is.False);
-            Assert.That(aux.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
-            Assert.That(aux.LayerClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
-            Assert.That(aux.OverlayClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
+            var overlay = entity.Get<AnimationOverlayRequest>();
+            Assert.That(overlay.HasAnyClip, Is.False);
+            Assert.That(overlay.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
+            Assert.That(overlay.LayerClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
+            Assert.That(overlay.OverlayClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
+            Assert.That(entity.Get<AnimatorFeedbackBuffer>().Count, Is.EqualTo(0));
 
             var startupPerformers = entity.Get<PresentationStartupPerformers>();
             Assert.That(startupPerformers.Count, Is.EqualTo(2));
@@ -253,6 +256,10 @@ namespace Ludots.Tests.Presentation
                 baseScale: 1f,
                 renderPath: VisualRenderPath.StaticMesh));
             entity.Add(AnimatorPackedState.Create(3));
+            entity.Add(new AnimationOverlayRequest
+            {
+                BaseClip = AnimatorBuiltinClipState.Create(AnimatorBuiltinClipId.LocomotionCycle, 0.5f, 1f),
+            });
 
             var drawBuffer = new PrimitiveDrawBuffer();
             using var system = new EntityVisualEmitSystem(world, drawBuffer);
@@ -261,6 +268,96 @@ namespace Ludots.Tests.Presentation
                 () => system.Update(0.016f),
                 Throws.TypeOf<InvalidOperationException>()
                     .With.Message.Contains("stay separate from skinned runtime sync"));
+        }
+
+        [Test]
+        public void AnimatorControllerConfigLoader_LoadsDefinitionsFromConfigPipeline()
+        {
+            string repoRoot = FindRepoRoot();
+            string assetsRoot = Path.Combine(repoRoot, "assets");
+            var modPaths = new System.Collections.Generic.List<string>
+            {
+                Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod"),
+                Path.Combine(repoRoot, "mods", "fixtures", "animation", "AnimationAcceptanceMod"),
+            };
+
+            using var engine = new Ludots.Core.Engine.GameEngine();
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+
+            var registry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimatorControllerRegistry);
+            Assert.That(registry, Is.Not.Null);
+
+            int tankId = registry!.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.TankControllerKey);
+            int humanoidId = registry.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.HumanoidControllerKey);
+            Assert.That(tankId, Is.GreaterThan(0));
+            Assert.That(humanoidId, Is.GreaterThan(0));
+            Assert.That(registry.TryGet(tankId, out var tank), Is.True);
+            Assert.That(registry.TryGet(humanoidId, out var humanoid), Is.True);
+            Assert.That(tank.States.Length, Is.EqualTo(3));
+            Assert.That(humanoid.Transitions.Length, Is.EqualTo(8));
+        }
+
+        [Test]
+        public void EntityVisualEmitSystem_AndTransientMarkers_PopulateSharedVisualProxyAndSkinnedBatchContracts()
+        {
+            using var world = World.Create();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
+            var proxyBuffer = new PresentationVisualProxyBuffer();
+            var skinnedBatchBuffer = new SkinnedVisualBatchBuffer();
+
+            world.Create(
+                new PresentationStableId { Value = 501 },
+                new VisualTemplateRef { TemplateId = 42 },
+                new VisualTransform
+                {
+                    Position = new Vector3(1f, 0f, 2f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                VisualRuntimeState.Create(
+                    meshAssetId: 7,
+                    materialId: 9,
+                    baseScale: 1f,
+                    renderPath: VisualRenderPath.SkinnedMesh,
+                    animatorControllerId: 3),
+                AnimatorPackedState.Create(3),
+                new AnimationOverlayRequest
+                {
+                    BaseClip = AnimatorBuiltinClipState.Create(AnimatorBuiltinClipId.LocomotionCycle, 0.25f, 0.8f),
+                });
+
+            using (var entityEmit = new EntityVisualEmitSystem(world, drawBuffer, snapshotBuffer, proxyBuffer, skinnedBatchBuffer))
+            {
+                entityEmit.Update(0.016f);
+            }
+
+            var markers = new TransientMarkerBuffer();
+            Assert.That(markers.TryAdd(99, new Vector3(3f, 0.25f, 4f), Vector3.One, Vector4.One, 0.2f), Is.True);
+            var emitter = new PresentationVisualProxyEmitter(drawBuffer, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
+            markers.TickAndEmit(emitter, 0.016f, world);
+
+            Assert.That(proxyBuffer.Count, Is.EqualTo(2));
+            Assert.That(skinnedBatchBuffer.Count, Is.EqualTo(1));
+            Assert.That(skinnedBatchBuffer.GetSpan()[0].AnimationOverlay.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.LocomotionCycle));
+        }
+
+        private static string FindRepoRoot()
+        {
+            string current = TestContext.CurrentContext.WorkDirectory;
+            while (!string.IsNullOrEmpty(current))
+            {
+                if (Directory.Exists(Path.Combine(current, "mods")) &&
+                    File.Exists(Path.Combine(current, "AGENTS.md")))
+                {
+                    return current;
+                }
+
+                current = Path.GetDirectoryName(current)!;
+            }
+
+            throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
 
         [Test]

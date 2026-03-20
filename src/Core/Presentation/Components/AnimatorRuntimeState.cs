@@ -11,6 +11,8 @@ namespace Ludots.Core.Presentation.Components
         public float TransitionElapsedSeconds;
         public float TransitionDurationSeconds;
         public bool Initialized;
+        public int ReportedMissingControllerId;
+        public int LastCompletedStateIndex;
 
         public readonly bool IsTransitioning => NextStateIndex != NoState;
 
@@ -25,6 +27,8 @@ namespace Ludots.Core.Presentation.Components
                 TransitionElapsedSeconds = 0f,
                 TransitionDurationSeconds = 0f,
                 Initialized = false,
+                ReportedMissingControllerId = 0,
+                LastCompletedStateIndex = NoState,
             };
         }
     }

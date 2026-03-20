@@ -19,7 +19,7 @@ namespace AnimationAcceptanceMod.UI
         private const float PanelWidth = 556f;
         private const float PanelHeight = 688f;
         private static readonly QueryDescription RigQuery = new QueryDescription()
-            .WithAll<Name, VisualRuntimeState, AnimatorPackedState, AnimatorRuntimeState, AnimatorParameterBuffer, AnimatorAuxState>();
+            .WithAll<Name, VisualRuntimeState, AnimatorPackedState, AnimatorRuntimeState, AnimatorParameterBuffer, AnimationOverlayRequest, AnimatorFeedbackBuffer>();
 
         private readonly ReactivePage<AnimationAcceptancePanelState> _page;
         private GameEngine? _engine;
@@ -134,7 +134,7 @@ namespace AnimationAcceptanceMod.UI
                         .Justify(UiJustifyContent.SpaceBetween)
                         .Align(UiAlignItems.Center),
                     Ui.Text($"Map: {state.MapId}").FontSize(12f).Color("#86A0BA"),
-                    Ui.Text("Use the rig switcher to inspect one case at a time. Auto shows the canned path; Manual lets you drive state-machine parameters and watch packed/runtime/aux ownership in place.")
+                    Ui.Text("Use the rig switcher to inspect one case at a time. Auto shows the canned path; Manual lets you drive state-machine parameters and watch packed/runtime/overlay/feedback ownership in place.")
                         .FontSize(12f)
                         .Color("#D7E2EE")
                         .WhiteSpace(UiWhiteSpace.Normal))
@@ -272,7 +272,8 @@ namespace AnimationAcceptanceMod.UI
                     Ui.Text("Runtime Snapshot").FontSize(12f).Bold().Color("#F3C87E"),
                     BuildInfoCard("Animator", rig.AnimatorLines),
                     BuildInfoCard("Parameters", rig.ParameterLines),
-                    BuildInfoCard("Aux Layer", rig.AuxLines))
+                    BuildInfoCard("Overlay Request", rig.OverlayLines),
+                    BuildInfoCard("Feedback", rig.FeedbackLines))
                 .Gap(8f);
         }
 
@@ -422,7 +423,8 @@ namespace AnimationAcceptanceMod.UI
                 var packedStates = chunk.GetArray<AnimatorPackedState>();
                 var runtimeStates = chunk.GetArray<AnimatorRuntimeState>();
                 var parameterBuffers = chunk.GetArray<AnimatorParameterBuffer>();
-                var auxStates = chunk.GetArray<AnimatorAuxState>();
+                var overlays = chunk.GetArray<AnimationOverlayRequest>();
+                var feedbackBuffers = chunk.GetArray<AnimatorFeedbackBuffer>();
 
                 for (int i = 0; i < chunk.Count; i++)
                 {
@@ -437,7 +439,8 @@ namespace AnimationAcceptanceMod.UI
                         PackedState: packedStates[i],
                         RuntimeState: runtimeStates[i],
                         Parameters: parameterBuffers[i],
-                        AuxState: auxStates[i]);
+                        OverlayRequest: overlays[i],
+                        Feedback: feedbackBuffers[i]);
                 }
             }
 
@@ -479,12 +482,13 @@ namespace AnimationAcceptanceMod.UI
                 parameterLines.Add($"{parameter.Label}[{parameter.Index}] pending = {sample.Parameters.HasTrigger(parameter.Index)}  ({parameter.Description})");
             }
 
-            string[] auxLines =
+            string[] overlayLines =
             [
-                BuildClipLine("base", sample.AuxState.BaseClip),
-                BuildClipLine("layer", sample.AuxState.LayerClip),
-                BuildClipLine("overlay", sample.AuxState.OverlayClip),
+                BuildClipLine("base", sample.OverlayRequest.BaseClip),
+                BuildClipLine("layer", sample.OverlayRequest.LayerClip),
+                BuildClipLine("overlay", sample.OverlayRequest.OverlayClip),
             ];
+            string[] feedbackLines = BuildFeedbackLines(sample.Feedback, definition.StateLabels);
 
             string[] stateLines = BuildStateLines(definition);
             string[] builtinLines = definition.BuiltinClipDescriptions;
@@ -515,7 +519,8 @@ namespace AnimationAcceptanceMod.UI
                 MoveEnabled: slot.MoveEnabled,
                 AnimatorLines: animatorLines,
                 ParameterLines: parameterLines.ToArray(),
-                AuxLines: auxLines,
+                OverlayLines: overlayLines,
+                FeedbackLines: feedbackLines,
                 StateLines: stateLines,
                 BuiltinLines: builtinLines,
                 TransitionLines: definition.TransitionDescriptions,
@@ -556,6 +561,34 @@ namespace AnimationAcceptanceMod.UI
                 : $"{clip.Scalar0:0.00}";
 
             return $"{slotLabel} = {clip.ClipId}  time = {clip.NormalizedTime01:0.000}  weight = {clip.Weight01:0.00}  s0 = {scalar0}";
+        }
+
+        private static string[] BuildFeedbackLines(AnimatorFeedbackBuffer feedback, string[] stateLabels)
+        {
+            if (feedback.Count <= 0)
+            {
+                return ["No feedback emitted yet."];
+            }
+
+            int count = Math.Min(feedback.Count, 5);
+            var lines = new string[count];
+            for (int i = 0; i < count; i++)
+            {
+                AnimatorFeedbackEvent evt = feedback.GetNewest(i);
+                string fromState = ResolveStateLabel(stateLabels, evt.FromStateIndex);
+                string toState = ResolveStateLabel(stateLabels, evt.ToStateIndex);
+                lines[i] = evt.Kind switch
+                {
+                    AnimatorFeedbackKind.Initialized => $"initialized -> {toState}",
+                    AnimatorFeedbackKind.TransitionStarted => $"transition_start {fromState} -> {toState}  blend = {evt.Value0:0.000}s",
+                    AnimatorFeedbackKind.TransitionCompleted => $"transition_done {fromState} -> {toState}  progress = {evt.NormalizedTime01:0.000}",
+                    AnimatorFeedbackKind.StateCompleted => $"state_complete {fromState}  time = {evt.NormalizedTime01:0.000}",
+                    AnimatorFeedbackKind.ControllerMissing => $"controller_missing id = {evt.ControllerId}",
+                    _ => evt.Kind.ToString(),
+                };
+            }
+
+            return lines;
         }
 
         private static UiColor ParseColor(string hex)
@@ -723,7 +756,8 @@ namespace AnimationAcceptanceMod.UI
             bool MoveEnabled,
             string[] AnimatorLines,
             string[] ParameterLines,
-            string[] AuxLines,
+            string[] OverlayLines,
+            string[] FeedbackLines,
             string[] StateLines,
             string[] BuiltinLines,
             string[] TransitionLines,
@@ -741,13 +775,15 @@ namespace AnimationAcceptanceMod.UI
             AnimatorPackedState PackedState,
             AnimatorRuntimeState RuntimeState,
             AnimatorParameterBuffer Parameters,
-            AnimatorAuxState AuxState)
+            AnimationOverlayRequest OverlayRequest,
+            AnimatorFeedbackBuffer Feedback)
         {
             public static readonly RigRuntimeSample Empty = new(
                 false,
                 string.Empty,
                 default,
                 AnimatorRuntimeState.Create(0),
+                default,
                 default,
                 default);
         }

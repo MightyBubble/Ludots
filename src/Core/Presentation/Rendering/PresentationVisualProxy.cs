@@ -1,9 +1,11 @@
 using System.Numerics;
 using Ludots.Core.Presentation.Components;
+
 namespace Ludots.Core.Presentation.Rendering
 {
-    public struct PrimitiveDrawItem
+    public struct PresentationVisualProxy
     {
+        public PresentationVisualProxyKind ProxyKind;
         public int MeshAssetId;
         public Vector3 Position;
         public Quaternion Rotation;

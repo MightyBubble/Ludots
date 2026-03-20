@@ -174,6 +174,7 @@ namespace Ludots.Core.Presentation.AdapterSync
                 && a.Mobility == b.Mobility
                 && a.Flags == b.Flags
                 && a.Animator.Equals(b.Animator)
+                && a.AnimationOverlay.Equals(b.AnimationOverlay)
                 && a.Visibility == b.Visibility;
         }
 

@@ -76,6 +76,12 @@ namespace Ludots.Core.Presentation.Rendering
         /// </summary>
         public void TickAndEmit(PrimitiveDrawBuffer draw, float dt, World world)
         {
+            TickAndEmit(new PresentationVisualProxyEmitter(draw), dt, world);
+        }
+
+        public void TickAndEmit(PresentationVisualProxyEmitter emitter, float dt, World world)
+        {
+            ArgumentNullException.ThrowIfNull(emitter);
             float delta = dt <= 0f ? 0.016666668f : dt;
             for (int i = 0; i < _count;)
             {
@@ -103,13 +109,17 @@ namespace Ludots.Core.Presentation.Rendering
                 var c = m.Color;
                 c.W *= alpha;
 
-                draw.TryAdd(new PrimitiveDrawItem
+                emitter.Emit(new PresentationVisualProxy
                 {
+                    ProxyKind = PresentationVisualProxyKind.Performer,
                     MeshAssetId = m.MeshAssetId,
                     Position = pos,
                     Rotation = Quaternion.Identity,
                     Scale = m.Scale,
                     Color = c,
+                    RenderPath = VisualRenderPath.StaticMesh,
+                    Mobility = VisualMobility.Movable,
+                    Flags = VisualRuntimeFlags.Visible,
                     Visibility = VisualVisibility.Visible,
                 });
 

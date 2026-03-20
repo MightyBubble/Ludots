@@ -46,8 +46,7 @@ namespace AnimationAcceptanceMod.Runtime
             AnimationAcceptanceParameterDefinition[] floatParameters,
             AnimationAcceptanceParameterDefinition[] boolParameters,
             AnimationAcceptanceParameterDefinition[] triggerParameters,
-            AnimationAcceptanceExampleProfile[] profiles,
-            AnimatorControllerDefinition controllerDefinition)
+            AnimationAcceptanceExampleProfile[] profiles)
         {
             RigId = rigId;
             DisplayName = displayName;
@@ -67,7 +66,6 @@ namespace AnimationAcceptanceMod.Runtime
             BoolParameters = boolParameters ?? Array.Empty<AnimationAcceptanceParameterDefinition>();
             TriggerParameters = triggerParameters ?? Array.Empty<AnimationAcceptanceParameterDefinition>();
             Profiles = profiles ?? Array.Empty<AnimationAcceptanceExampleProfile>();
-            ControllerDefinition = controllerDefinition ?? throw new ArgumentNullException(nameof(controllerDefinition));
         }
 
         public AnimationAcceptanceRigId RigId { get; }
@@ -88,7 +86,6 @@ namespace AnimationAcceptanceMod.Runtime
         public AnimationAcceptanceParameterDefinition[] BoolParameters { get; }
         public AnimationAcceptanceParameterDefinition[] TriggerParameters { get; }
         public AnimationAcceptanceExampleProfile[] Profiles { get; }
-        public AnimatorControllerDefinition ControllerDefinition { get; }
     }
 
     internal static class AnimationAcceptanceRigCatalog
@@ -180,64 +177,7 @@ namespace AnimationAcceptanceMod.Runtime
                     new AnimationAcceptanceExampleProfile("tank_parked", "Parked Aim", "Idle hull with turret tracking only.", 0f, false, 0f, 0.35f, 1f, 0f, 0f, false),
                     new AnimationAcceptanceExampleProfile("tank_patrol", "Patrol Roll", "Cruising hull while the turret scans off-axis.", 0.7f, true, 0.3f, 0.75f, 1f, 0.18f, 0.1f, false),
                     new AnimationAcceptanceExampleProfile("tank_burst", "Burst Shot", "Move-state shot to validate trigger-driven fire recovery and recoil.", 0.55f, true, -0.15f, -0.9f, 1f, 0.42f, 0f, true),
-                ],
-                controllerDefinition: new AnimatorControllerDefinition
-                {
-                    DefaultStateIndex = 0,
-                    States =
-                    [
-                        new AnimatorStateDefinition { PackedStateIndex = 31, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true },
-                        new AnimatorStateDefinition { PackedStateIndex = 32, DurationSeconds = 0.55f, PlaybackSpeed = 1f, Loop = true },
-                        new AnimatorStateDefinition { PackedStateIndex = 33, DurationSeconds = 0.32f, PlaybackSpeed = 1f, Loop = false },
-                    ],
-                    Transitions =
-                    [
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 0,
-                            ToStateIndex = 1,
-                            ConditionKind = AnimatorConditionKind.FloatGreaterOrEqual,
-                            ParameterIndex = 0,
-                            Threshold = 0.25f,
-                            DurationSeconds = 0.12f,
-                        },
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 1,
-                            ToStateIndex = 0,
-                            ConditionKind = AnimatorConditionKind.FloatLessOrEqual,
-                            ParameterIndex = 0,
-                            Threshold = 0.15f,
-                            DurationSeconds = 0.15f,
-                        },
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 0,
-                            ToStateIndex = 2,
-                            ConditionKind = AnimatorConditionKind.Trigger,
-                            ParameterIndex = 2,
-                            DurationSeconds = 0.03f,
-                            ConsumeTrigger = true,
-                        },
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 1,
-                            ToStateIndex = 2,
-                            ConditionKind = AnimatorConditionKind.Trigger,
-                            ParameterIndex = 2,
-                            DurationSeconds = 0.02f,
-                            ConsumeTrigger = true,
-                        },
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 2,
-                            ToStateIndex = 0,
-                            ConditionKind = AnimatorConditionKind.AutoOnNormalizedTime,
-                            Threshold = 0.92f,
-                            DurationSeconds = 0f,
-                        },
-                    ],
-                });
+                ]);
         }
 
         private static AnimationAcceptanceRigDefinition BuildHumanoidDefinition()
@@ -299,92 +239,7 @@ namespace AnimationAcceptanceMod.Runtime
                     new AnimationAcceptanceExampleProfile("humanoid_ready", "Ready Stance", "Idle lower body with upper-body aim hold.", 0f, false, 0.1f, 0.35f, 0.45f, 0.05f, 0.12f, false),
                     new AnimationAcceptanceExampleProfile("humanoid_strafe", "Strafe Aim", "Walking lower body while upper body keeps target lock.", 0.45f, true, 0.2f, 0.75f, 0.65f, 0.38f, 0.3f, false),
                     new AnimationAcceptanceExampleProfile("humanoid_burst", "Burst Fire", "Run-speed lower body with a one-shot fire trigger and upper-body recoil.", 0.92f, true, -0.05f, -1.0f, 1f, 0.62f, 0f, true),
-                ],
-                controllerDefinition: new AnimatorControllerDefinition
-                {
-                    DefaultStateIndex = 0,
-                    States =
-                    [
-                        new AnimatorStateDefinition { PackedStateIndex = 41, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true },
-                        new AnimatorStateDefinition { PackedStateIndex = 42, DurationSeconds = 0.58f, PlaybackSpeed = 1f, Loop = true },
-                        new AnimatorStateDefinition { PackedStateIndex = 43, DurationSeconds = 0.42f, PlaybackSpeed = 1f, Loop = true },
-                        new AnimatorStateDefinition { PackedStateIndex = 44, DurationSeconds = 0.28f, PlaybackSpeed = 1f, Loop = false },
-                    ],
-                    Transitions =
-                    [
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 0,
-                            ToStateIndex = 1,
-                            ConditionKind = AnimatorConditionKind.FloatGreaterOrEqual,
-                            ParameterIndex = 0,
-                            Threshold = 0.20f,
-                            DurationSeconds = 0.08f,
-                        },
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 1,
-                            ToStateIndex = 0,
-                            ConditionKind = AnimatorConditionKind.FloatLessOrEqual,
-                            ParameterIndex = 0,
-                            Threshold = 0.10f,
-                            DurationSeconds = 0.08f,
-                        },
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 1,
-                            ToStateIndex = 2,
-                            ConditionKind = AnimatorConditionKind.FloatGreaterOrEqual,
-                            ParameterIndex = 0,
-                            Threshold = 0.75f,
-                            DurationSeconds = 0.06f,
-                        },
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 2,
-                            ToStateIndex = 1,
-                            ConditionKind = AnimatorConditionKind.FloatLessOrEqual,
-                            ParameterIndex = 0,
-                            Threshold = 0.55f,
-                            DurationSeconds = 0.06f,
-                        },
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 0,
-                            ToStateIndex = 3,
-                            ConditionKind = AnimatorConditionKind.Trigger,
-                            ParameterIndex = 4,
-                            DurationSeconds = 0.02f,
-                            ConsumeTrigger = true,
-                        },
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 1,
-                            ToStateIndex = 3,
-                            ConditionKind = AnimatorConditionKind.Trigger,
-                            ParameterIndex = 4,
-                            DurationSeconds = 0.02f,
-                            ConsumeTrigger = true,
-                        },
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 2,
-                            ToStateIndex = 3,
-                            ConditionKind = AnimatorConditionKind.Trigger,
-                            ParameterIndex = 4,
-                            DurationSeconds = 0.02f,
-                            ConsumeTrigger = true,
-                        },
-                        new AnimatorTransitionDefinition
-                        {
-                            FromStateIndex = 3,
-                            ToStateIndex = 0,
-                            ConditionKind = AnimatorConditionKind.AutoOnNormalizedTime,
-                            Threshold = 0.92f,
-                            DurationSeconds = 0f,
-                        },
-                    ],
-                });
+                ]);
         }
     }
 }

@@ -32,7 +32,9 @@ namespace Ludots.Tests.Presentation
             LoadMap(engine, AnimationAcceptanceIds.StartupMapId, frames: 12);
 
             PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
+            SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
             Assert.That(snapshot, Is.Not.Null);
+            Assert.That(skinnedBatch, Is.Not.Null);
 
             int tankCount = 0;
             int humanoidCount = 0;
@@ -46,21 +48,21 @@ namespace Ludots.Tests.Presentation
                     Assert.That(item.Animator.GetControllerId(), Is.GreaterThan(0));
                     Assert.That(item.StableId, Is.GreaterThan(0));
                     Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
-                    Assert.That(item.AnimatorAux.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.LocomotionCycle));
-                    Assert.That(item.AnimatorAux.LayerClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.AimYawOffset));
-                    Assert.That(item.AnimatorAux.OverlayClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.RecoilPulse));
+                    Assert.That(item.AnimationOverlay.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.LocomotionCycle));
+                    Assert.That(item.AnimationOverlay.LayerClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.AimYawOffset));
+                    Assert.That(item.AnimationOverlay.OverlayClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.RecoilPulse));
 
                     if (item.Animator.GetPrimaryStateIndex() is >= 31 and <= 33)
                     {
                         tankCount++;
-                        Assert.That(item.AnimatorAux.LayerClip.Weight01, Is.EqualTo(1f).Within(0.001f));
-                        Assert.That(MathF.Abs(item.AnimatorAux.LayerClip.Scalar0), Is.GreaterThan(0.01f));
+                        Assert.That(item.AnimationOverlay.LayerClip.Weight01, Is.EqualTo(1f).Within(0.001f));
+                        Assert.That(MathF.Abs(item.AnimationOverlay.LayerClip.Scalar0), Is.GreaterThan(0.01f));
                     }
                     else if (item.Animator.GetPrimaryStateIndex() is >= 41 and <= 44)
                     {
                         humanoidCount++;
-                        Assert.That(item.AnimatorAux.LayerClip.Weight01, Is.GreaterThan(0.1f));
-                        Assert.That(MathF.Abs(item.AnimatorAux.LayerClip.Scalar0), Is.GreaterThan(0.01f));
+                        Assert.That(item.AnimationOverlay.LayerClip.Weight01, Is.GreaterThan(0.1f));
+                        Assert.That(MathF.Abs(item.AnimationOverlay.LayerClip.Scalar0), Is.GreaterThan(0.01f));
                     }
 
                     traceLines.Add(JsonSerializer.Serialize(new
@@ -70,15 +72,15 @@ namespace Ludots.Tests.Presentation
                         lane = item.RenderPath.ToString(),
                         controller_id = item.Animator.GetControllerId(),
                         primary_state = item.Animator.GetPrimaryStateIndex(),
-                        base_clip = item.AnimatorAux.BaseClip.ClipId.ToString(),
-                        base_time = item.AnimatorAux.BaseClip.NormalizedTime01,
-                        base_weight = item.AnimatorAux.BaseClip.Weight01,
-                        layer_clip = item.AnimatorAux.LayerClip.ClipId.ToString(),
-                        layer_weight = item.AnimatorAux.LayerClip.Weight01,
-                        layer_scalar0 = item.AnimatorAux.LayerClip.Scalar0,
-                        overlay_clip = item.AnimatorAux.OverlayClip.ClipId.ToString(),
-                        overlay_weight = item.AnimatorAux.OverlayClip.Weight01,
-                        overlay_time = item.AnimatorAux.OverlayClip.NormalizedTime01,
+                        base_clip = item.AnimationOverlay.BaseClip.ClipId.ToString(),
+                        base_time = item.AnimationOverlay.BaseClip.NormalizedTime01,
+                        base_weight = item.AnimationOverlay.BaseClip.Weight01,
+                        layer_clip = item.AnimationOverlay.LayerClip.ClipId.ToString(),
+                        layer_weight = item.AnimationOverlay.LayerClip.Weight01,
+                        layer_scalar0 = item.AnimationOverlay.LayerClip.Scalar0,
+                        overlay_clip = item.AnimationOverlay.OverlayClip.ClipId.ToString(),
+                        overlay_weight = item.AnimationOverlay.OverlayClip.Weight01,
+                        overlay_time = item.AnimationOverlay.OverlayClip.NormalizedTime01,
                     }));
                 }
                 else if (item.RenderPath.IsStaticInstanceLane())
@@ -90,6 +92,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(tankCount, Is.EqualTo(1), "Exactly one tank prototype should be visible in the acceptance map.");
             Assert.That(humanoidCount, Is.EqualTo(1), "Exactly one humanoid upper-body prototype should be visible in the acceptance map.");
             Assert.That(staticCount, Is.EqualTo(1), "Acceptance map should keep one static baseline entity for lane separation.");
+            Assert.That(skinnedBatch!.Count, Is.EqualTo(2), "Skinned visual batch contract should contain the tank and humanoid once each.");
 
             string repoRoot = FindRepoRoot();
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "animation-layered-prototypes");

@@ -59,10 +59,21 @@ namespace Ludots.Client.Raylib.Rendering
 
         public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, MeshAssetRegistry meshes, float scaleMul = 1f)
         {
-            Draw(draw, camera, snapshot: null, meshes, scaleMul);
+            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul);
         }
 
         public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, PrimitiveDrawBuffer? snapshot, MeshAssetRegistry meshes, float scaleMul = 1f)
+        {
+            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul);
+        }
+
+        public void Draw(
+            PrimitiveDrawBuffer draw,
+            Camera3D camera,
+            PrimitiveDrawBuffer? snapshot,
+            SkinnedVisualBatchBuffer? skinnedBatch,
+            MeshAssetRegistry meshes,
+            float scaleMul = 1f)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
@@ -82,7 +93,12 @@ namespace Ludots.Client.Raylib.Rendering
                 LastPersistentUpdates = _persistentStaticLaneSync.LastUpdateCount;
                 LastPersistentRemoves = _persistentStaticLaneSync.LastRemoveCount;
                 DrawPersistentStaticLanes(camera, meshes, scaleMul);
-                DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: true);
+                if (skinnedBatch != null)
+                {
+                    DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul);
+                }
+
+                DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: true, skinnedBatchActive: skinnedBatch != null);
                 return;
             }
 
@@ -92,7 +108,7 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false);
+            DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: false);
         }
 
         private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
@@ -117,11 +133,22 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void DrawImmediateWithDescriptors(ReadOnlySpan<PrimitiveDrawItem> span, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, bool persistentStaticLanesActive)
+        private void DrawImmediateWithDescriptors(
+            ReadOnlySpan<PrimitiveDrawItem> span,
+            Camera3D camera,
+            MeshAssetRegistry meshes,
+            float scaleMul,
+            bool persistentStaticLanesActive,
+            bool skinnedBatchActive)
         {
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (skinnedBatchActive && item.RenderPath.IsSkinnedLane())
+                {
+                    continue;
+                }
+
                 if (ShouldSkipImmediateDraw(item, persistentStaticLanesActive))
                 {
                     continue;
@@ -239,7 +266,7 @@ namespace Ludots.Client.Raylib.Rendering
         private bool TryDrawPrototypeSkinned(in PrimitiveDrawItem item, MeshAssetRegistry meshes, float scaleMul)
         {
             if (!item.RenderPath.IsSkinnedLane() ||
-                !item.AnimatorAux.HasAnyClip ||
+                !item.AnimationOverlay.HasAnyClip ||
                 !meshes.TryGetDescriptor(item.MeshAssetId, out var descriptor) ||
                 descriptor.Type != MeshAssetType.Primitive)
             {
@@ -252,11 +279,66 @@ namespace Ludots.Client.Raylib.Rendering
             switch (descriptor.PrimitiveKind)
             {
                 case PrimitiveMeshKind.Cube:
-                    DrawTankPrototype(item.Position, scale, item.Color, baseYaw, item.AnimatorAux);
+                    DrawTankPrototype(item.Position, scale, item.Color, baseYaw, item.AnimationOverlay);
                     return true;
 
                 case PrimitiveMeshKind.Sphere:
-                    DrawHumanoidPrototype(item.Position, scale, item.Color, baseYaw, item.AnimatorAux);
+                    DrawHumanoidPrototype(item.Position, scale, item.Color, baseYaw, item.AnimationOverlay);
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void DrawSkinnedBatch(SkinnedVisualBatchBuffer skinnedBatch, Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
+        {
+            var span = skinnedBatch.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (item.Visibility != VisualVisibility.Visible)
+                {
+                    continue;
+                }
+
+                if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
+                {
+                    continue;
+                }
+
+                DrawAssetRecursive(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Scale * scaleMul,
+                    item.Color,
+                    camera,
+                    meshes,
+                    0);
+            }
+        }
+
+        private bool TryDrawPrototypeSkinned(in SkinnedVisualBatchItem item, MeshAssetRegistry meshes, float scaleMul)
+        {
+            if (!item.RenderPath.IsSkinnedLane() ||
+                !item.AnimationOverlay.HasAnyClip ||
+                !meshes.TryGetDescriptor(item.MeshAssetId, out var descriptor) ||
+                descriptor.Type != MeshAssetType.Primitive)
+            {
+                return false;
+            }
+
+            Vector3 scale = item.Scale * scaleMul;
+            float baseYaw = ExtractYawRad(item.Rotation);
+
+            switch (descriptor.PrimitiveKind)
+            {
+                case PrimitiveMeshKind.Cube:
+                    DrawTankPrototype(item.Position, scale, item.Color, baseYaw, item.AnimationOverlay);
+                    return true;
+
+                case PrimitiveMeshKind.Sphere:
+                    DrawHumanoidPrototype(item.Position, scale, item.Color, baseYaw, item.AnimationOverlay);
                     return true;
 
                 default:
@@ -317,13 +399,13 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void DrawTankPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimatorAuxState aux)
+        private void DrawTankPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimationOverlayRequest overlay)
         {
             float unit = MathF.Max(0.12f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.45f);
-            float locomotionPhase = ResolveClipTime01(aux.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
-            float locomotionWeight = ResolveClipWeight01(aux.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
-            float aimYaw = ResolveClipScalar0(aux.LayerClip, AnimatorBuiltinClipId.AimYawOffset) * ResolveClipWeight01(aux.LayerClip, AnimatorBuiltinClipId.AimYawOffset);
-            float recoilPulse = ResolvePulse(aux.OverlayClip, AnimatorBuiltinClipId.RecoilPulse);
+            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
+            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
+            float aimYaw = ResolveClipScalar0(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset) * ResolveClipWeight01(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset);
+            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimatorBuiltinClipId.RecoilPulse);
             float treadBob = MathF.Sin(locomotionPhase * MathF.Tau) * unit * (0.03f + locomotionWeight * 0.08f);
             float turretYaw = baseYaw + aimYaw;
             float recoil = recoilPulse * unit * 0.35f;
@@ -371,16 +453,16 @@ namespace Ludots.Client.Raylib.Rendering
                 accentColor);
         }
 
-        private void DrawHumanoidPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimatorAuxState aux)
+        private void DrawHumanoidPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimationOverlayRequest overlay)
         {
             float unit = MathF.Max(0.1f, MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.42f);
-            float locomotionPhase = ResolveClipTime01(aux.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
-            float locomotionWeight = ResolveClipWeight01(aux.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
+            float locomotionPhase = ResolveClipTime01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
+            float locomotionWeight = ResolveClipWeight01(overlay.BaseClip, AnimatorBuiltinClipId.LocomotionCycle);
             float lowerPhase = locomotionPhase * MathF.Tau;
             float stride = MathF.Sin(lowerPhase) * unit * (0.08f + locomotionWeight * 0.34f);
-            float aimWeight = ResolveClipWeight01(aux.LayerClip, AnimatorBuiltinClipId.AimYawOffset);
-            float upperYaw = baseYaw + ResolveClipScalar0(aux.LayerClip, AnimatorBuiltinClipId.AimYawOffset) * aimWeight;
-            float recoilPulse = ResolvePulse(aux.OverlayClip, AnimatorBuiltinClipId.RecoilPulse);
+            float aimWeight = ResolveClipWeight01(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset);
+            float upperYaw = baseYaw + ResolveClipScalar0(overlay.LayerClip, AnimatorBuiltinClipId.AimYawOffset) * aimWeight;
+            float recoilPulse = ResolvePulse(overlay.OverlayClip, AnimatorBuiltinClipId.RecoilPulse);
             float chestLift = recoilPulse * unit * 0.08f;
 
             Vector4 legColor = MultiplyColor(color, 0.72f, 0.85f, 1f, 1f);

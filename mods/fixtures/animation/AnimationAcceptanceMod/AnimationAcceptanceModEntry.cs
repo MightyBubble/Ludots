@@ -19,7 +19,6 @@ namespace AnimationAcceptanceMod
                 if (engine != null)
                 {
                     engine.SetService(AnimationAcceptanceServiceKeys.ControlState, new AnimationAcceptanceControlState());
-                    RegisterAnimatorControllers(engine);
                     engine.RegisterSystem(new AnimationAcceptancePrototypeSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterPresentationSystem(new AnimationAcceptancePanelPresentationSystem(engine, runtime));
                 }
@@ -33,21 +32,6 @@ namespace AnimationAcceptanceMod
 
         public void OnUnload()
         {
-        }
-
-        private static void RegisterAnimatorControllers(GameEngine engine)
-        {
-            var registry = engine.GetService(CoreServiceKeys.AnimatorControllerRegistry);
-            if (registry == null)
-            {
-                throw new System.InvalidOperationException("Animation acceptance requires AnimatorControllerRegistry.");
-            }
-
-            for (int i = 0; i < AnimationAcceptanceRigCatalog.All.Length; i++)
-            {
-                var rig = AnimationAcceptanceRigCatalog.All[i];
-                registry.Register(rig.ControllerKey, rig.ControllerDefinition);
-            }
         }
     }
 }

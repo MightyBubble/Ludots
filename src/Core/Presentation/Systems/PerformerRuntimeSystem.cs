@@ -22,7 +22,7 @@ namespace Ludots.Core.Presentation.Systems
     {
         private readonly PrefabRegistry _prefabs;
         private readonly PresentationCommandBuffer _commands;
-        private readonly PrimitiveDrawBuffer _draw;
+        private readonly PresentationVisualProxyEmitter _proxyEmitter;
         private readonly TransientMarkerBuffer _markers;
         private readonly PerformerInstanceBuffer _instances;
         private readonly PresentationStableIdAllocator _stableIds;
@@ -34,12 +34,15 @@ namespace Ludots.Core.Presentation.Systems
             PrimitiveDrawBuffer draw,
             TransientMarkerBuffer markers,
             PerformerInstanceBuffer instances,
-            PresentationStableIdAllocator stableIds)
+            PresentationStableIdAllocator stableIds,
+            PrimitiveDrawBuffer? snapshotBuffer = null,
+            PresentationVisualProxyBuffer? proxyBuffer = null,
+            SkinnedVisualBatchBuffer? skinnedBatchBuffer = null)
             : base(world)
         {
             _prefabs = prefabs ?? throw new ArgumentNullException(nameof(prefabs));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
-            _draw = draw ?? throw new ArgumentNullException(nameof(draw));
+            _proxyEmitter = new PresentationVisualProxyEmitter(draw ?? throw new ArgumentNullException(nameof(draw)), snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
             _markers = markers ?? throw new ArgumentNullException(nameof(markers));
             _instances = instances ?? throw new ArgumentNullException(nameof(instances));
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
@@ -81,7 +84,7 @@ namespace Ludots.Core.Presentation.Systems
             _commands.Clear();
 
             // 2. Tick transient markers and emit to PrimitiveDrawBuffer
-            _markers.TickAndEmit(_draw, dt, World);
+            _markers.TickAndEmit(_proxyEmitter, dt, World);
         }
 
         private void HandlePlayOneShot(in PresentationCommand cmd)
