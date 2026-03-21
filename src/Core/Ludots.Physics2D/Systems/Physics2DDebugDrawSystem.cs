@@ -103,10 +103,6 @@ namespace Ludots.Core.Physics2D.Systems
             {
                 color = DebugDrawColor.Gray;
             }
-            else if (World.Has<SelectedTag>(entity))
-            {
-                color = DebugDrawColor.Yellow;
-            }
             else
             {
                 color = mass.IsStatic ? DebugDrawColor.Blue : DebugDrawColor.Green;

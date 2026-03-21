@@ -38,6 +38,11 @@ namespace Ludots.Core.Modding
         public SystemFactoryRegistry SystemFactoryRegistry => _systemFactoryRegistry;
         public TriggerDecoratorRegistry TriggerDecoratorRegistry => _triggerDecoratorRegistry;
 
+        public IReadOnlyDictionary<string, string> GetLoadedModDirectories()
+        {
+            return _modDirectories;
+        }
+
         public void LoadMods(string modsRootPath)
         {
             if (!Directory.Exists(modsRootPath))

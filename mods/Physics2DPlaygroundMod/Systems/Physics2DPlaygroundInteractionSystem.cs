@@ -34,7 +34,6 @@ namespace Physics2DPlaygroundMod.Systems
         private readonly World _world;
         private readonly Physics2DSimulationSystem _sim;
         private readonly List<Entity> _selectedEntities = new(1024);
-        private readonly QueryDescription _selectedQuery = new QueryDescription().WithAll<SelectedTag>();
 
         private Entity _chainDemoEntity;
         private bool _chainDemoInited;
@@ -255,13 +254,34 @@ namespace Physics2DPlaygroundMod.Systems
         private int TryCollectSelectedEntities(List<Entity> selected)
         {
             selected.Clear();
-            var chunks = _world.Query(in _selectedQuery);
-            foreach (var chunk in chunks)
+
+            if (_engine.GetService(CoreServiceKeys.SelectionRuntime) is not SelectionRuntime selectionRuntime)
             {
-                for (int i = 0; i < chunk.Count; i++)
-                {
-                    selected.Add(chunk.Entity(i));
-                }
+                return 0;
+            }
+
+            Entity localPlayer = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (!_world.IsAlive(localPlayer))
+            {
+                return 0;
+            }
+
+            int count = selectionRuntime.GetSelectionCount(localPlayer, SelectionSetKeys.LivePrimary);
+            if (count <= 0)
+            {
+                return 0;
+            }
+
+            Entity[] members = new Entity[count];
+            int written = selectionRuntime.CopySelection(localPlayer, SelectionSetKeys.LivePrimary, members);
+            if (written <= 0)
+            {
+                return 0;
+            }
+
+            for (int i = 0; i < written; i++)
+            {
+                selected.Add(members[i]);
             }
 
             return selected.Count;

@@ -501,9 +501,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(selection.Contains(hero), Is.True);
             Assert.That(selection.Contains(scout), Is.True);
             Assert.That(selection.Contains(captain), Is.True);
-            Assert.That(engine.World.Has<SelectedTag>(hero), Is.True);
-            Assert.That(engine.World.Has<SelectedTag>(scout), Is.True);
-            Assert.That(engine.World.Has<SelectedTag>(captain), Is.True);
+            Assert.That(IsInLiveSelection(engine, local, hero), Is.True);
+            Assert.That(IsInLiveSelection(engine, local, scout), Is.True);
+            Assert.That(IsInLiveSelection(engine, local, captain), Is.True);
 
             var overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
             var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
@@ -565,8 +565,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(selection.Count, Is.EqualTo(1));
             Assert.That(selection.Contains(scout), Is.True);
             Assert.That(selection.Contains(hero), Is.False);
-            Assert.That(engine.World.Has<SelectedTag>(scout), Is.True);
-            Assert.That(engine.World.Has<SelectedTag>(hero), Is.False);
+            Assert.That(IsInLiveSelection(engine, local, scout), Is.True);
+            Assert.That(IsInLiveSelection(engine, local, hero), Is.False);
         }
 
         [Test]
@@ -1326,6 +1326,34 @@ namespace Ludots.Tests.ThreeC.Acceptance
                     selection.Add(entities[i]);
                 }
             }
+        }
+
+        private static bool IsInLiveSelection(GameEngine engine, Entity owner, Entity candidate)
+        {
+            if (candidate == Entity.Null)
+            {
+                return false;
+            }
+
+            SelectionRuntime selectionRuntime = engine.GetService(CoreServiceKeys.SelectionRuntime)
+                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
+            int count = selectionRuntime.GetSelectionCount(owner, SelectionSetKeys.LivePrimary);
+            if (count <= 0)
+            {
+                return false;
+            }
+
+            Entity[] members = new Entity[count];
+            int written = selectionRuntime.CopySelection(owner, SelectionSetKeys.LivePrimary, members);
+            for (int i = 0; i < written; i++)
+            {
+                if (members[i] == candidate)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static Vector2 ProjectEntity(GameEngine engine, IScreenProjector projector, Entity entity)
