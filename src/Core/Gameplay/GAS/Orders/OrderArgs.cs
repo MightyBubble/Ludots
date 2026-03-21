@@ -47,36 +47,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         }
     }
  
-    public unsafe struct OrderEntitySelection
+    public struct OrderSelectionReference
     {
-        public const int MaxEntities = 64;
- 
-        public int Count;
-        public fixed int EntityIds[MaxEntities];
-        public fixed int WorldIds[MaxEntities];
-        public fixed int Versions[MaxEntities];
- 
-        public Entity GetEntity(int index)
-        {
-            if ((uint)index >= (uint)Count) return default;
+        public Entity Container;
 
-            int id;
-            fixed (int* ids = EntityIds) id = ids[index];
-            int worldId;
-            fixed (int* wids = WorldIds) worldId = wids[index];
-            int version;
-            fixed (int* vs = Versions) version = vs[index];
-            return Ludots.Core.Gameplay.GAS.EntityUtil.Reconstruct(id, worldId, version);
-        }
- 
-        public void Add(Entity entity)
-        {
-            if (Count >= MaxEntities) return;
-            fixed (int* ids = EntityIds) ids[Count] = entity.Id;
-            fixed (int* wids = WorldIds) wids[Count] = entity.WorldId;
-            fixed (int* vs = Versions) vs[Count] = entity.Version;
-            Count++;
-        }
+        public readonly bool HasContainer => Container != Entity.Null;
     }
  
     public struct OrderArgs
@@ -90,8 +65,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public float F1;
         public float F2;
         public float F3;
- 
+
         public OrderSpatial Spatial;
-        public OrderEntitySelection Entities;
+        public OrderSelectionReference Selection;
     }
 }

@@ -19,6 +19,11 @@ namespace CameraAcceptanceMod.Runtime
             return SelectionViewRuntime.CopyViewedSelection(world, globals, selection, destination);
         }
 
+        public static Entity[] SnapshotSelectedEntities(World world, Dictionary<string, object> globals)
+        {
+            return SelectionContextRuntime.SnapshotCurrentSelection(world, globals);
+        }
+
         public static string FormatEntityId(Entity entity) => $"#{entity.Id}";
     }
 }

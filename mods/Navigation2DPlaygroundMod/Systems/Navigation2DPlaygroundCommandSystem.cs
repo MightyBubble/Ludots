@@ -105,8 +105,8 @@ namespace Navigation2DPlaygroundMod.Systems
 
         private void IssueMoveCommand(Navigation2DPlaygroundConfig playgroundConfig, Vector2 pointCm)
         {
-            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
-            int count = Navigation2DPlaygroundSelectionView.CopySelectedEntities(_world, _engine.GlobalContext, selected);
+            Entity[] selected = Navigation2DPlaygroundSelectionView.SnapshotSelectedEntities(_world, _engine.GlobalContext);
+            int count = selected.Length;
             if (count <= 0)
             {
                 return;
@@ -114,7 +114,7 @@ namespace Navigation2DPlaygroundMod.Systems
 
             Navigation2DPlaygroundScenarioSpawner.ApplyMoveFormation(
                 _world,
-                selected.Slice(0, count),
+                selected.AsSpan(),
                 pointCm,
                 playgroundConfig.CommandFormationSpacingCm,
                 playgroundConfig.CommandGoalRadiusCm);

@@ -11,44 +11,59 @@ namespace Ludots.Core.Input.Selection
     /// </summary>
     public static class SelectionViewRuntime
     {
-        public static bool TryResolveViewedSet(
+        public static bool TryResolveViewedSelection(
             World world,
             Dictionary<string, object> globals,
-            out Entity owner,
-            out string setKey)
+            SelectionRuntime selection,
+            out Entity viewer,
+            out string viewKey,
+            out Entity container)
         {
-            owner = default;
-            setKey = SelectionSetKeys.Ambient;
+            viewer = default;
+            viewKey = SelectionViewKeys.Primary;
+            container = default;
 
-            if (globals.TryGetValue(CoreServiceKeys.SelectionViewOwnerEntity.Name, out var viewObj) &&
+            if (globals.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out var viewObj) &&
                 viewObj is Entity viewed &&
                 world.IsAlive(viewed))
             {
-                owner = viewed;
+                viewer = viewed;
             }
             else if (globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
                      localObj is Entity local &&
                      world.IsAlive(local))
             {
-                globals[CoreServiceKeys.SelectionViewOwnerEntity.Name] = local;
-                owner = local;
+                globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = local;
+                viewer = local;
             }
             else
             {
-                globals.Remove(CoreServiceKeys.SelectionViewOwnerEntity.Name);
+                globals.Remove(CoreServiceKeys.SelectionViewViewerEntity.Name);
                 return false;
             }
 
-            if (globals.TryGetValue(CoreServiceKeys.SelectionViewSetKey.Name, out var setObj) &&
-                setObj is string configuredSetKey &&
-                !string.IsNullOrWhiteSpace(configuredSetKey))
+            if (globals.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out var setObj) &&
+                setObj is string configuredViewKey &&
+                !string.IsNullOrWhiteSpace(configuredViewKey))
             {
-                setKey = configuredSetKey;
+                viewKey = configuredViewKey;
+            }
+            else
+            {
+                globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            }
+
+            if (selection.TryResolveViewContainer(viewer, viewKey, out container))
+            {
                 return true;
             }
 
-            globals[CoreServiceKeys.SelectionViewSetKey.Name] = SelectionSetKeys.Ambient;
-            return true;
+            if (!selection.TryBindView(viewer, viewKey, viewer, SelectionSetKeys.LivePrimary))
+            {
+                return false;
+            }
+
+            return selection.TryResolveViewContainer(viewer, viewKey, out container);
         }
 
         public static int CopyViewedSelection(
@@ -57,8 +72,18 @@ namespace Ludots.Core.Input.Selection
             SelectionRuntime selection,
             Span<Entity> destination)
         {
-            return TryResolveViewedSet(world, globals, out var owner, out var setKey)
-                ? selection.CopySelection(owner, setKey, destination)
+            return TryResolveViewedSelection(world, globals, selection, out _, out _, out var container)
+                ? selection.CopySelection(container, destination)
+                : 0;
+        }
+
+        public static int GetViewedSelectionCount(
+            World world,
+            Dictionary<string, object> globals,
+            SelectionRuntime selection)
+        {
+            return TryResolveViewedSelection(world, globals, selection, out _, out _, out var container)
+                ? selection.GetSelectionCount(container)
                 : 0;
         }
 
@@ -69,8 +94,8 @@ namespace Ludots.Core.Input.Selection
             out Entity primary)
         {
             primary = default;
-            return TryResolveViewedSet(world, globals, out var owner, out var setKey) &&
-                   selection.TryGetPrimary(owner, setKey, out primary);
+            return TryResolveViewedSelection(world, globals, selection, out _, out _, out var container) &&
+                   selection.TryGetPrimary(container, out primary);
         }
     }
 }

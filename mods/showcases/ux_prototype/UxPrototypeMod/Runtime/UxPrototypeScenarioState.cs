@@ -6,6 +6,7 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -225,8 +226,13 @@ internal sealed class UxPrototypeScenarioState
 
     public void QueueConstruction(GameEngine engine, string templateId)
     {
-        string? selectedLabel = ResolveSelectedLabel(engine);
-        WorldCmInt2 anchor = ResolveSelectedOrFallbackPosition(engine);
+        QueueConstruction(engine, ResolveSelectedEntity(engine), templateId);
+    }
+
+    public void QueueConstruction(GameEngine engine, Entity targetEntity, string templateId)
+    {
+        string? selectedLabel = ResolveEntityLabel(engine, targetEntity);
+        WorldCmInt2 anchor = ResolveEntityOrFallbackPosition(engine, targetEntity);
         WorldCmInt2 target = new(
             anchor.X + 450 + (_construction.Count * 150),
             anchor.Y + ((_construction.Count % 2 == 0) ? 280 : -280));
@@ -240,9 +246,13 @@ internal sealed class UxPrototypeScenarioState
 
     public void QueueProduction(GameEngine engine, string templateId)
     {
-        Entity selected = ResolveSelectedEntity(engine);
-        int producerId = selected.Id;
-        string producerName = ResolveSelectedLabel(engine) ?? "City";
+        QueueProduction(engine, ResolveSelectedEntity(engine), templateId);
+    }
+
+    public void QueueProduction(GameEngine engine, Entity targetEntity, string templateId)
+    {
+        int producerId = targetEntity.Id;
+        string producerName = ResolveEntityLabel(engine, targetEntity) ?? "City";
         if (producerId <= 0)
         {
             producerId = -1;
@@ -262,6 +272,11 @@ internal sealed class UxPrototypeScenarioState
 
     public void TriggerAction(GameEngine engine, string actionId)
     {
+        TriggerAction(engine, ResolveSelectedEntity(engine), actionId);
+    }
+
+    public void TriggerAction(GameEngine engine, Entity targetEntity, string actionId)
+    {
         if (string.IsNullOrWhiteSpace(actionId))
         {
             return;
@@ -269,13 +284,13 @@ internal sealed class UxPrototypeScenarioState
 
         if (TryResolveBuildTemplate(actionId, out string? buildTemplate))
         {
-            QueueConstruction(engine, buildTemplate!);
+            QueueConstruction(engine, targetEntity, buildTemplate!);
             return;
         }
 
         if (TryResolveUnitTemplate(actionId, out string? unitTemplate))
         {
-            QueueProduction(engine, unitTemplate!);
+            QueueProduction(engine, targetEntity, unitTemplate!);
             return;
         }
 
@@ -347,10 +362,11 @@ internal sealed class UxPrototypeScenarioState
             _modeId = activeModeId;
         }
 
-        string? selectedLabel = ResolveSelectedLabel(engine);
+        Entity selectedEntity = ResolveSelectedEntity(engine);
+        string? selectedLabel = ResolveEntityLabel(engine, selectedEntity);
         var counts = CountEntities(engine);
         var selectedQueue = BuildSelectedQueueSnapshot(engine);
-        var minimapDots = BuildMinimapDots(engine, counts.MaxX, counts.MaxY, selectedLabel);
+        var minimapDots = BuildMinimapDots(engine, counts.MaxX, counts.MaxY, selectedEntity);
 
         return new UxPrototypePanelState(
             ActiveModeId: _modeId,
@@ -415,6 +431,43 @@ internal sealed class UxPrototypeScenarioState
             TooltipBody: BuildTooltipBody(selectedLabel),
             MinimapDots: minimapDots,
             MinimapSelectedLabel: selectedLabel ?? string.Empty);
+    }
+
+    public bool TryBuildEntityCommandSlots(GameEngine engine, Entity targetEntity, out string header, out List<SkillEntry> slots)
+    {
+        header = string.Empty;
+        slots = new List<SkillEntry>();
+        if (!engine.World.IsAlive(targetEntity))
+        {
+            return false;
+        }
+
+        string? label = ResolveEntityLabel(engine, targetEntity);
+        header = label ?? $"Entity#{targetEntity.Id}";
+        slots = BuildSkillRows(label);
+        return slots.Count > 0;
+    }
+
+    public bool TryActivateEntityCommand(GameEngine engine, Entity targetEntity, int slotIndex)
+    {
+        if (!TryBuildEntityCommandSlots(engine, targetEntity, out _, out List<SkillEntry> slots))
+        {
+            return false;
+        }
+
+        if ((uint)slotIndex >= (uint)slots.Count)
+        {
+            return false;
+        }
+
+        SkillEntry slot = slots[slotIndex];
+        if (!slot.Enabled)
+        {
+            return false;
+        }
+
+        TriggerAction(engine, targetEntity, slot.ActionId);
+        return true;
     }
 
     private void AdvanceCalendar(float scaledDt)
@@ -608,31 +661,34 @@ internal sealed class UxPrototypeScenarioState
 
     private Entity ResolveSelectedEntity(GameEngine engine)
     {
-        if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out object? selectedObj) ||
-            selectedObj is not Entity entity ||
-            !engine.World.IsAlive(entity))
-        {
-            return Entity.Null;
-        }
-
-        return entity;
+        return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity)
+            ? entity
+            : Entity.Null;
     }
 
     private string? ResolveSelectedLabel(GameEngine engine)
     {
-        Entity selected = ResolveSelectedEntity(engine);
-        if (selected == Entity.Null)
-        {
-            return null;
-        }
-
-        return engine.World.TryGet(selected, out Name name) ? name.Value : $"Entity#{selected.Id}";
+        return ResolveEntityLabel(engine, ResolveSelectedEntity(engine));
     }
 
     private WorldCmInt2 ResolveSelectedOrFallbackPosition(GameEngine engine)
     {
-        Entity selected = ResolveSelectedEntity(engine);
-        if (selected != Entity.Null && engine.World.TryGet(selected, out WorldPositionCm position))
+        return ResolveEntityOrFallbackPosition(engine, ResolveSelectedEntity(engine));
+    }
+
+    private string? ResolveEntityLabel(GameEngine engine, Entity entity)
+    {
+        if (entity == Entity.Null || !engine.World.IsAlive(entity))
+        {
+            return null;
+        }
+
+        return engine.World.TryGet(entity, out Name name) ? name.Value : $"Entity#{entity.Id}";
+    }
+
+    private WorldCmInt2 ResolveEntityOrFallbackPosition(GameEngine engine, Entity entity)
+    {
+        if (entity != Entity.Null && engine.World.TryGet(entity, out WorldPositionCm position))
         {
             return position.ToWorldCmInt2();
         }
@@ -1015,13 +1071,13 @@ internal sealed class UxPrototypeScenarioState
         };
     }
 
-    private List<MinimapDot> BuildMinimapDots(GameEngine engine, int maxX, int maxY, string? selectedLabel)
+    private List<MinimapDot> BuildMinimapDots(GameEngine engine, int maxX, int maxY, Entity selectedEntity)
     {
         var dots = new List<MinimapDot>();
         MapId mapId = new(_activeMapId);
         float safeMaxX = Math.Max(1f, maxX);
         float safeMaxY = Math.Max(1f, maxY);
-        engine.World.Query(in PrototypeEntityQuery, (Entity _, ref Name name, ref WorldPositionCm position, ref MapEntity mapEntity) =>
+        engine.World.Query(in PrototypeEntityQuery, (Entity entity, ref Name name, ref WorldPositionCm position, ref MapEntity mapEntity) =>
         {
             if (mapEntity.MapId != mapId)
             {
@@ -1037,7 +1093,7 @@ internal sealed class UxPrototypeScenarioState
                     ? "#E7C768"
                     : "#78C6FF";
 
-            dots.Add(new MinimapDot(name.Value, x, y, color, string.Equals(name.Value, selectedLabel, StringComparison.OrdinalIgnoreCase)));
+            dots.Add(new MinimapDot(name.Value, x, y, color, entity == selectedEntity));
         });
 
         return dots;

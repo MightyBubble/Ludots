@@ -3,6 +3,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using Ludots.Core.UI.EntityCommandPanels;
 using UxPrototypeMod.Runtime;
 using UxPrototypeMod.Systems;
 
@@ -39,6 +40,13 @@ internal sealed class InstallUxPrototypeOnGameStartTrigger : Trigger
         engine.GlobalContext[InstalledKey] = true;
         engine.GlobalContext["UxPrototypeMod.Runtime"] = _runtime;
         engine.GlobalContext["UxPrototypeMod.State"] = _runtime.State;
+
+        if (engine.GetService(CoreServiceKeys.EntityCommandPanelSourceRegistry) is not IEntityCommandPanelSourceRegistry panelSources)
+        {
+            throw new InvalidOperationException("UxPrototypeMod requires EntityCommandPanelSourceRegistry from EntityCommandPanelMod.");
+        }
+
+        panelSources.Register(UxPrototypeEntityCommandPanelSource.SourceId, new UxPrototypeEntityCommandPanelSource(engine, _runtime.State));
 
         if (engine.GetService(CoreServiceKeys.OrderQueue) is OrderQueue orders)
         {

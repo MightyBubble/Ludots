@@ -326,9 +326,7 @@ namespace InteractionShowcaseMod.UI
 
         private static string ResolveSelectedLabel(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var selectedObj) ||
-                selectedObj is not Entity selected ||
-                !engine.World.IsAlive(selected))
+            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected))
             {
                 return "(none)";
             }
@@ -340,26 +338,16 @@ namespace InteractionShowcaseMod.UI
 
         private static string ResolveSelectionSummary(GameEngine engine, string selectedLabel)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) ||
-                localObj is not Entity localPlayer ||
-                !engine.World.IsAlive(localPlayer) ||
-                !engine.World.Has<SelectionBuffer>(localPlayer))
-            {
-                return selectedLabel == "(none)"
-                    ? "No live selection. Hub map supports single-select, drag multi-select, queue, and per-hero skill routing."
-                    : $"1 unit selected: {selectedLabel}";
-            }
-
-            ref var selection = ref engine.World.Get<SelectionBuffer>(localPlayer);
-            if (selection.Count <= 0)
+            Entity[] selection = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            if (selection.Length <= 0)
             {
                 return "Selection is empty. Drag a box around heroes to test RTS-style multi-cast fan-out.";
             }
 
-            var names = new List<string>(selection.Count);
-            for (int i = 0; i < selection.Count; i++)
+            var names = new List<string>(selection.Length);
+            for (int i = 0; i < selection.Length; i++)
             {
-                Entity entity = selection.Get(i);
+                Entity entity = selection[i];
                 if (!engine.World.IsAlive(entity))
                 {
                     continue;
@@ -372,9 +360,9 @@ namespace InteractionShowcaseMod.UI
             }
 
             string preview = names.Count == 0
-                ? $"{selection.Count} units selected."
+                ? $"{selection.Length} units selected."
                 : string.Join(" | ", names);
-            return $"{selection.Count} units selected. {preview}";
+            return $"{selection.Length} units selected. {preview}";
         }
 
         private static string ResolveRoster(World world)

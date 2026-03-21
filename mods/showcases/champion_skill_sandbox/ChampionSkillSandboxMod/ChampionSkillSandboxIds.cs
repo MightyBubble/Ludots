@@ -25,8 +25,17 @@ namespace ChampionSkillSandboxMod
         public const string StressTeamAIncreaseToolbarButtonId = "ChampionSkillSandbox.Stress.TeamA.Increase";
         public const string StressTeamBDecreaseToolbarButtonId = "ChampionSkillSandbox.Stress.TeamB.Decrease";
         public const string StressTeamBIncreaseToolbarButtonId = "ChampionSkillSandbox.Stress.TeamB.Increase";
+        public const string StressHudBarToggleToolbarButtonId = "ChampionSkillSandbox.Stress.HudBar.Toggle";
+        public const string StressHudTextToggleToolbarButtonId = "ChampionSkillSandbox.Stress.HudText.Toggle";
+        public const string StressCombatTextToggleToolbarButtonId = "ChampionSkillSandbox.Stress.CombatText.Toggle";
+        public const string PlayerSelectionToolbarButtonId = "ChampionSkillSandbox.Selection.Player.Live";
+        public const string PlayerFormationToolbarButtonId = "ChampionSkillSandbox.Selection.Player.Formation";
+        public const string AiTargetToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Targets";
+        public const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
+        public const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
         public const string ResetCameraRequestKey = "ChampionSkillSandbox.Camera.ResetRequested";
         public const string CameraFollowModeKey = "ChampionSkillSandbox.Camera.FollowMode";
+        public const string SelectionViewChoiceKey = "ChampionSkillSandbox.Selection.ViewChoice";
         public const string SelectionIndicatorPerformerKey = "champion_skill_sandbox.selection_indicator";
         public const string HoverIndicatorPerformerKey = "champion_skill_sandbox.hover_indicator";
         public const int SelectionIndicatorScopeId = 4101;
@@ -66,6 +75,40 @@ namespace ChampionSkillSandboxMod
             return string.Equals(buttonId, FreeCameraToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(buttonId, FollowSelectionToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(buttonId, FollowSelectionGroupToolbarButtonId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsSelectionViewButton(string? buttonId)
+        {
+            return string.Equals(buttonId, PlayerSelectionToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(buttonId, PlayerFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(buttonId, AiTargetToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(buttonId, AiFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(buttonId, CommandSnapshotToolbarButtonId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static string ResolveSelectionViewLabel(string? buttonId)
+        {
+            if (string.Equals(buttonId, PlayerFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase))
+            {
+                return "P1 Formation";
+            }
+
+            if (string.Equals(buttonId, AiTargetToolbarButtonId, StringComparison.OrdinalIgnoreCase))
+            {
+                return "AI Targets";
+            }
+
+            if (string.Equals(buttonId, AiFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase))
+            {
+                return "AI Formation";
+            }
+
+            if (string.Equals(buttonId, CommandSnapshotToolbarButtonId, StringComparison.OrdinalIgnoreCase))
+            {
+                return "Command Snapshot";
+            }
+
+            return "P1 Live";
         }
     }
 }

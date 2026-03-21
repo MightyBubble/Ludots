@@ -19,7 +19,7 @@ namespace ChampionSkillSandboxMod.Runtime
             get
             {
                 uint revision = IsVisible ? 1u : 0u;
-                string activeModeId = ResolveViewModeManager()?.ActiveMode?.Id ?? string.Empty;
+                string activeModeId = ResolveActiveModeId();
                 string activeFollowModeId = ResolveActiveCameraFollowMode();
                 if (!string.IsNullOrWhiteSpace(activeModeId))
                 {
@@ -29,6 +29,12 @@ namespace ChampionSkillSandboxMod.Runtime
                 if (!string.IsNullOrWhiteSpace(activeFollowModeId))
                 {
                     revision ^= (uint)activeFollowModeId.GetHashCode(StringComparison.Ordinal);
+                }
+
+                string activeSelectionViewId = ResolveActiveSelectionViewId();
+                if (!string.IsNullOrWhiteSpace(activeSelectionViewId))
+                {
+                    revision ^= (uint)activeSelectionViewId.GetHashCode(StringComparison.Ordinal);
                 }
 
                 if (ChampionSkillSandboxIds.IsStressMap(_engine?.CurrentMapSession?.MapId.Value))
@@ -66,7 +72,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 ChampionSkillStressControlState? control = ResolveStressControl();
                 ChampionSkillStressTelemetry? telemetry = ResolveStressTelemetry();
                 RenderDebugState? renderDebug = ResolveRenderDebugState();
-                return $"A {telemetry?.LiveTeamA ?? 0}/{control?.DesiredTeamA ?? 0} | B {telemetry?.LiveTeamB ?? 0}/{control?.DesiredTeamB ?? 0} | Proj {telemetry?.ProjectileCount ?? 0} peak {telemetry?.PeakProjectileCount ?? 0} | HUD {(renderDebug?.DrawWorldHudBars ?? true ? "B" : "-")}{(renderDebug?.DrawWorldHudText ?? true ? "T" : "-")}{(renderDebug?.DrawCombatText ?? true ? "F" : "-")}";
+                return $"View {ChampionSkillSandboxIds.ResolveSelectionViewLabel(ResolveActiveSelectionViewId())} | A {telemetry?.LiveTeamA ?? 0}/{control?.DesiredTeamA ?? 0} | B {telemetry?.LiveTeamB ?? 0}/{control?.DesiredTeamB ?? 0} | Proj {telemetry?.ProjectileCount ?? 0} peak {telemetry?.PeakProjectileCount ?? 0} | HUD {(renderDebug?.DrawWorldHudBars ?? true ? "B" : "-")}{(renderDebug?.DrawWorldHudText ?? true ? "T" : "-")}{(renderDebug?.DrawCombatText ?? true ? "F" : "-")}";
             }
         }
 
@@ -83,10 +89,11 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             bool isStressMap = ChampionSkillSandboxIds.IsStressMap(_engine?.CurrentMapSession?.MapId.Value);
-            string? activeModeId = ResolveViewModeManager()?.ActiveMode?.Id;
+            string activeModeId = ResolveActiveModeId();
             string activeFollowModeId = ResolveActiveCameraFollowMode();
+            string activeSelectionViewId = ResolveActiveSelectionViewId();
             RenderDebugState? renderDebug = ResolveRenderDebugState();
-            var buttons = new EntityCommandPanelToolbarButtonView[isStressMap ? 14 : 7];
+            var buttons = new EntityCommandPanelToolbarButtonView[isStressMap ? 19 : 7];
             buttons[0] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.SmartCastModeId,
                 "Quick",
@@ -159,6 +166,31 @@ namespace ChampionSkillSandboxMod.Runtime
                     "Float",
                     renderDebug?.DrawCombatText ?? true,
                     "#FFCF86");
+                buttons[14] = new EntityCommandPanelToolbarButtonView(
+                    ChampionSkillSandboxIds.PlayerSelectionToolbarButtonId,
+                    "P1",
+                    string.Equals(activeSelectionViewId, ChampionSkillSandboxIds.PlayerSelectionToolbarButtonId, StringComparison.OrdinalIgnoreCase),
+                    "#98E7A7");
+                buttons[15] = new EntityCommandPanelToolbarButtonView(
+                    ChampionSkillSandboxIds.PlayerFormationToolbarButtonId,
+                    "P1F",
+                    string.Equals(activeSelectionViewId, ChampionSkillSandboxIds.PlayerFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase),
+                    "#DAE89B");
+                buttons[16] = new EntityCommandPanelToolbarButtonView(
+                    ChampionSkillSandboxIds.AiTargetToolbarButtonId,
+                    "AI",
+                    string.Equals(activeSelectionViewId, ChampionSkillSandboxIds.AiTargetToolbarButtonId, StringComparison.OrdinalIgnoreCase),
+                    "#FFAE86");
+                buttons[17] = new EntityCommandPanelToolbarButtonView(
+                    ChampionSkillSandboxIds.AiFormationToolbarButtonId,
+                    "AIF",
+                    string.Equals(activeSelectionViewId, ChampionSkillSandboxIds.AiFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase),
+                    "#F6CF79");
+                buttons[18] = new EntityCommandPanelToolbarButtonView(
+                    ChampionSkillSandboxIds.CommandSnapshotToolbarButtonId,
+                    "CMD",
+                    string.Equals(activeSelectionViewId, ChampionSkillSandboxIds.CommandSnapshotToolbarButtonId, StringComparison.OrdinalIgnoreCase),
+                    "#7FD8F2");
             }
 
             int count = Math.Min(destination.Length, buttons.Length);
@@ -188,6 +220,16 @@ namespace ChampionSkillSandboxMod.Runtime
                 if (_engine != null)
                 {
                     _engine.GlobalContext[ChampionSkillSandboxIds.CameraFollowModeKey] = buttonId;
+                }
+
+                return;
+            }
+
+            if (ChampionSkillSandboxIds.IsSelectionViewButton(buttonId))
+            {
+                if (_engine != null)
+                {
+                    _engine.GlobalContext[ChampionSkillSandboxIds.SelectionViewChoiceKey] = buttonId;
                 }
 
                 return;
@@ -252,7 +294,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 }
             }
 
-            ResolveViewModeManager()?.SwitchTo(buttonId);
+            ViewModeRuntime.TrySwitchTo(_engine?.GlobalContext!, buttonId);
         }
 
         private string ResolveActiveCameraFollowMode()
@@ -265,17 +307,6 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             return ChampionSkillSandboxIds.FreeCameraToolbarButtonId;
-        }
-
-        private ViewModeManager? ResolveViewModeManager()
-        {
-            if (_engine?.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) == true &&
-                managerObj is ViewModeManager manager)
-            {
-                return manager;
-            }
-
-            return null;
         }
 
         private ChampionSkillStressControlState? ResolveStressControl()
@@ -297,6 +328,30 @@ namespace ChampionSkillSandboxMod.Runtime
         private RenderDebugState? ResolveRenderDebugState()
         {
             return _engine?.GetService(CoreServiceKeys.RenderDebugState);
+        }
+
+        private string ResolveActiveModeId()
+        {
+            if (_engine != null &&
+                ViewModeRuntime.TryGetActiveModeId(_engine.GlobalContext, out string activeModeId) &&
+                !string.IsNullOrWhiteSpace(activeModeId))
+            {
+                return activeModeId;
+            }
+
+            return ChampionSkillSandboxIds.SmartCastModeId;
+        }
+
+        private string ResolveActiveSelectionViewId()
+        {
+            if (_engine?.GlobalContext.TryGetValue(ChampionSkillSandboxIds.SelectionViewChoiceKey, out var value) == true &&
+                value is string buttonId &&
+                ChampionSkillSandboxIds.IsSelectionViewButton(buttonId))
+            {
+                return buttonId;
+            }
+
+            return ChampionSkillSandboxIds.PlayerSelectionToolbarButtonId;
         }
     }
 }

@@ -27,7 +27,7 @@ namespace Ludots.Core.Input.Selection
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly SelectionRuntime _selection;
-        private readonly Entity[] _boxSelectionScratch = new Entity[SelectionBuffer.CAPACITY];
+        private Entity[] _boxSelectionScratch = new Entity[16];
         private bool _suppressConfirmRelease;
 
         public Action<WorldCmInt2, Entity>? OnEntitySelected { get; set; }
@@ -202,14 +202,15 @@ namespace Ludots.Core.Input.Selection
 
         private void ApplyClickSelection(Entity owner, Entity clicked)
         {
-            Span<Entity> next = stackalloc Entity[SelectionBuffer.CAPACITY];
-            int nextCount = 0;
             if (_world.IsAlive(clicked))
             {
-                next[nextCount++] = clicked;
+                Span<Entity> next = stackalloc Entity[1];
+                next[0] = clicked;
+                _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next);
+                return;
             }
 
-            _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next.Slice(0, nextCount));
+            _selection.ClearSelection(owner, SelectionSetKeys.Ambient);
         }
 
         private void ApplyBoxSelection(Entity owner, in SelectionDragState drag)
@@ -225,8 +226,7 @@ namespace Ludots.Core.Input.Selection
             int nextCount = 0;
             _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
             {
-                if (nextCount >= _boxSelectionScratch.Length ||
-                    !cull.IsVisible ||
+                if (!cull.IsVisible ||
                     !SelectionEligibility.IsSelectableNow(_world, entity))
                 {
                     return;
@@ -243,11 +243,28 @@ namespace Ludots.Core.Input.Selection
                     return;
                 }
 
+                EnsureScratchCapacity(nextCount + 1);
                 _boxSelectionScratch[nextCount++] = entity;
             });
 
             SortByEntityId(_boxSelectionScratch, nextCount);
             _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, _boxSelectionScratch.AsSpan(0, nextCount));
+        }
+
+        private void EnsureScratchCapacity(int required)
+        {
+            if (required <= _boxSelectionScratch.Length)
+            {
+                return;
+            }
+
+            int nextSize = _boxSelectionScratch.Length;
+            while (nextSize < required)
+            {
+                nextSize *= 2;
+            }
+
+            Array.Resize(ref _boxSelectionScratch, nextSize);
         }
 
         private Entity FindNearestEntity(Vector2 pointer, float radiusPixels)

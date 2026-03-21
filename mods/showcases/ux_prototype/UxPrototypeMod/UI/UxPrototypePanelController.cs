@@ -527,7 +527,10 @@ internal sealed class UxPrototypePanelController
                     Ui.Column(
                             BuildSelectionHeader(state),
                             BuildQueueEntries(state.SelectedQueue),
-                            BuildSkillGrid(state),
+                            Ui.Text("Commands route through the shared EntityCommandPanel runtime.")
+                                .FontSize(10f)
+                                .Color("#7DD3FC")
+                                .WhiteSpace(UiWhiteSpace.Normal),
                             BuildModeStrip(state),
                             BuildSelectionFooter(state))
                         .Gap(8f)
@@ -891,7 +894,21 @@ internal sealed class UxPrototypePanelController
         return Ui.Row(
                 BuildPreferencesPanel(state),
                 BuildPortraitPanel(state),
-                BuildCommandPanel(state))
+                Ui.Column(
+                        BuildQueueEntries(state.SelectedQueue),
+                        Ui.Text("Shared command panel follows the current selection.")
+                            .FontSize(10f)
+                            .Color("#7DD3FC")
+                            .WhiteSpace(UiWhiteSpace.Normal),
+                        BuildSelectionSummaryStrip(state))
+                    .Gap(6f)
+                    .Width(320f)
+                    .Padding(8f, 8f)
+                    .Background("#D0101010")
+                    .Border(1f, Color("#33879AB3"))
+                    .Radius(4f)
+                    .BackdropBlur(8f)
+                    .BoxShadow(0f, 6f, 20f, Color("#66000000")))
             .Gap(8f)
             .Align(UiAlignItems.End);
     }

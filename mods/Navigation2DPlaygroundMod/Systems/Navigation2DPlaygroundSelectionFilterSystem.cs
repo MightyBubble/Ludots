@@ -26,27 +26,25 @@ namespace Navigation2DPlaygroundMod.Systems
         public void Update(in float dt)
         {
             if (!Navigation2DPlaygroundState.Enabled ||
-                !_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) ||
-                localObj is not Entity local ||
-                !_world.IsAlive(local) ||
-                !_world.Has<SelectionBuffer>(local))
+                !SelectionContextRuntime.TryGetRuntime(_engine.GlobalContext, out SelectionRuntime selection) ||
+                !SelectionContextRuntime.TryGetCurrentContainer(_world, _engine.GlobalContext, out Entity container))
             {
                 return;
             }
 
-            ref var selection = ref _world.Get<SelectionBuffer>(local);
-            if (selection.Count <= 0)
+            Entity[] current = SelectionContextRuntime.SnapshotCurrentSelection(_world, _engine.GlobalContext);
+            if (current.Length <= 0)
             {
                 return;
             }
 
-            Span<Entity> kept = stackalloc Entity[SelectionBuffer.CAPACITY];
+            Entity[] kept = new Entity[current.Length];
             int keptCount = 0;
             bool changed = false;
 
-            for (int i = 0; i < selection.Count; i++)
+            for (int i = 0; i < current.Length; i++)
             {
-                Entity entity = selection.Get(i);
+                Entity entity = current[i];
                 if (IsControllable(entity))
                 {
                     kept[keptCount++] = entity;
@@ -58,17 +56,7 @@ namespace Navigation2DPlaygroundMod.Systems
 
             if (changed)
             {
-                selection.Clear();
-                for (int i = 0; i < keptCount; i++)
-                {
-                    Entity entity = kept[i];
-                    if (!selection.Add(entity))
-                    {
-                        break;
-                    }
-                }
-
-                _world.Set(local, selection);
+                selection.ReplaceSelection(container, kept.AsSpan(0, keptCount));
             }
         }
 

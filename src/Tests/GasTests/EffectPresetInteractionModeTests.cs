@@ -79,7 +79,7 @@ namespace Ludots.Tests.GAS
             var target = world.Create();
             mapping.SetLocalPlayer(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
-            mapping.SetSelectedEntityProvider((out Entity e) => { e = target; return true; });
+            mapping.SetSelectedEntityProvider((string _, out Entity e) => { e = target; return true; });
             mapping.SetHoveredEntityProvider((out Entity e) => { e = target; return true; });
 
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();

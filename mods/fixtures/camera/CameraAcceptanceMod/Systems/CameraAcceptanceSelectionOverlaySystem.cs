@@ -86,8 +86,8 @@ namespace CameraAcceptanceMod.Systems
             }
             else
             {
-                Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
-                int count = CameraAcceptanceSelectionView.CopySelectedEntities(_engine.World, _engine.GlobalContext, selected);
+                Entity[] selected = CameraAcceptanceSelectionView.SnapshotSelectedEntities(_engine.World, _engine.GlobalContext);
+                int count = selected.Length;
                 for (int i = 0; i < count; i++)
                 {
                     Entity entity = selected[i];

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -10,6 +11,7 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Input.Config;
@@ -49,6 +51,11 @@ namespace Ludots.Tests.GAS.Production
         private const string StressHudBarToggleToolbarButtonId = "ChampionSkillSandbox.Stress.HudBar.Toggle";
         private const string StressHudTextToggleToolbarButtonId = "ChampionSkillSandbox.Stress.HudText.Toggle";
         private const string StressCombatTextToggleToolbarButtonId = "ChampionSkillSandbox.Stress.CombatText.Toggle";
+        private const string PlayerSelectionToolbarButtonId = "ChampionSkillSandbox.Selection.Player.Live";
+        private const string PlayerFormationToolbarButtonId = "ChampionSkillSandbox.Selection.Player.Formation";
+        private const string AiTargetToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Targets";
+        private const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
+        private const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
         private static readonly string[] SandboxMods =
         {
             "LudotsCoreMod",
@@ -222,9 +229,8 @@ namespace Ludots.Tests.GAS.Production
             AssertEntityHasTag(engine.World, "Garen Courage", "State.Champion.Garen.Courage");
             AssertEntityHasTag(engine.World, "Jayce Hammer", "State.Champion.Jayce.Hammer");
 
-            Entity selected = engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var selectedObj) &&
-                              selectedObj is Entity typedSelected
-                ? typedSelected
+            Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity currentPrimary)
+                ? currentPrimary
                 : Entity.Null;
             Assert.That(ReadEntityName(engine.World, selected), Is.EqualTo("Ezreal Alpha"), "Sandbox runtime should seed an initial controllable selection.");
             var performerRegistry = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
@@ -279,6 +285,55 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(jayceSlots[0].ActionId, Is.EqualTo("SkillQ"));
             Assert.That(jayceSlots[0].StateFlags.HasFlag(EntityCommandSlotStateFlags.FormOverride), Is.True);
             Assert.That(jayceSlots[3].DisplayLabel, Is.EqualTo("Mercury Cannon"));
+        }
+
+        [Test]
+        public void ChampionSkillSandbox_MapMoveOrder_AdvancesControllableHero()
+        {
+            using var engine = CreateEngine();
+            LoadMap(engine, "champion_skill_sandbox");
+
+            Entity ezreal = FindEntityByName(engine.World, "Ezreal Alpha");
+            Vector2 startWorld = engine.World.Get<WorldPositionCm>(ezreal).Value.ToVector2();
+            int moveToOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["moveTo"];
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
+                ?? throw new InvalidOperationException("OrderQueue missing.");
+
+            var order = new Order
+            {
+                OrderTypeId = moveToOrderTypeId,
+                PlayerId = 1,
+                Actor = ezreal,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = new Vector3(startWorld.X + 480f, 0f, startWorld.Y + 180f)
+                    }
+                }
+            };
+
+            Assert.That(orderQueue.TryEnqueue(in order), Is.True, "Sandbox move order should enqueue.");
+
+            TickUntil(engine, () =>
+            {
+                Vector2 currentWorld = engine.World.Get<WorldPositionCm>(ezreal).Value.ToVector2();
+                return Vector2.Distance(currentWorld, startWorld) > 8f;
+            }, maxFrames: 30);
+
+            Assert.That(engine.World.Has<NavAgent2D>(ezreal), Is.True, "Sandbox controllable heroes should bootstrap NavAgent2D.");
+            Assert.That(engine.World.Has<Position2D>(ezreal), Is.True, "Sandbox controllable heroes should expose Position2D during movement.");
+
+            ref var orderBuffer = ref engine.World.Get<OrderBuffer>(ezreal);
+            Assert.That(orderBuffer.HasActive || orderBuffer.HasQueued || engine.World.Has<NavGoal2D>(ezreal), Is.True,
+                "Move order should either stay buffered or materialize into an active nav goal while movement is in progress.");
+
+            Vector2 endWorld = engine.World.Get<WorldPositionCm>(ezreal).Value.ToVector2();
+            Assert.That(endWorld.X, Is.GreaterThan(startWorld.X + 8f));
+            Assert.That(endWorld.Y, Is.GreaterThan(startWorld.Y + 4f));
         }
 
         [Test]
@@ -340,11 +395,9 @@ namespace Ludots.Tests.GAS.Production
             Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             Entity ezrealCooldown = FindEntityByName(engine.World, "Ezreal Cooldown");
             Entity garenAlpha = FindEntityByName(engine.World, "Garen Alpha");
-            ref var selection = ref engine.World.Get<SelectionBuffer>(localPlayer);
-            selection.Clear();
-            selection.Add(ezreal);
-            selection.Add(garenAlpha);
-            engine.World.Set(localPlayer, selection);
+            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
+                ?? throw new InvalidOperationException("SelectionRuntime missing.");
+            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { ezreal, garenAlpha });
 
             engine.World.Add(ezreal, new CameraFollowWeight { Value = 1f });
             engine.World.Add(garenAlpha, new CameraFollowWeight { Value = 3f });
@@ -416,9 +469,9 @@ namespace Ludots.Tests.GAS.Production
                 Is.True,
                 "Stress showcase should reuse DiagnosticsOverlayMod runtime HUD for FPS/performance readout.");
 
-            var buttons = new EntityCommandPanelToolbarButtonView[16];
+            var buttons = new EntityCommandPanelToolbarButtonView[20];
             int buttonCount = toolbar.CopyButtons(buttons);
-            Assert.That(buttonCount, Is.EqualTo(14));
+            Assert.That(buttonCount, Is.EqualTo(19));
             Assert.That(buttons[7].ButtonId, Is.EqualTo("ChampionSkillSandbox.Stress.TeamA.Decrease"));
             Assert.That(buttons[8].ButtonId, Is.EqualTo(StressTeamAIncreaseToolbarButtonId));
             Assert.That(buttons[9].ButtonId, Is.EqualTo("ChampionSkillSandbox.Stress.TeamB.Decrease"));
@@ -426,6 +479,16 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(buttons[11].ButtonId, Is.EqualTo(StressHudBarToggleToolbarButtonId));
             Assert.That(buttons[12].ButtonId, Is.EqualTo(StressHudTextToggleToolbarButtonId));
             Assert.That(buttons[13].ButtonId, Is.EqualTo(StressCombatTextToggleToolbarButtonId));
+            Assert.That(buttons[14].ButtonId, Is.EqualTo(PlayerSelectionToolbarButtonId));
+            Assert.That(buttons[15].ButtonId, Is.EqualTo(PlayerFormationToolbarButtonId));
+            Assert.That(buttons[16].ButtonId, Is.EqualTo(AiTargetToolbarButtonId));
+            Assert.That(buttons[17].ButtonId, Is.EqualTo(AiFormationToolbarButtonId));
+            Assert.That(buttons[18].ButtonId, Is.EqualTo(CommandSnapshotToolbarButtonId));
+            Assert.That(toolbar.Subtitle, Does.Contain("View P1 Live"));
+            Assert.That(
+                OverlayContainsText(overlays, "Selection SSOT"),
+                Is.True,
+                "Stress showcase should expose the active selection view panel for acceptance inspection.");
 
             TickUntil(engine, () =>
             {
@@ -479,6 +542,97 @@ namespace Ludots.Tests.GAS.Production
             StressCounts uncapped = ReadStressCounts(engine.World);
             Assert.That(uncapped.TeamA, Is.GreaterThanOrEqualTo(272), "Stress controls should scale beyond the old 256-unit cap.");
             Assert.That(uncapped.TeamB, Is.GreaterThanOrEqualTo(272), "Stress controls should scale beyond the old 256-unit cap.");
+        }
+
+        [Test]
+        public void ChampionSkillSandbox_StressSelectionViews_SwitchViewerPerspectiveWithoutSecondaryTruth()
+        {
+            using var engine = CreateEngine();
+            LoadMap(engine, StressMapId, frames: 8);
+
+            var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                ?? throw new InvalidOperationException("Toolbar provider missing.");
+            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
+                ?? throw new InvalidOperationException("SelectionRuntime missing.");
+
+            TickUntil(engine, () =>
+            {
+                StressCounts counts = ReadStressCounts(engine.World);
+                return counts.TeamA >= 48 && counts.TeamB >= 48;
+            }, maxFrames: 360);
+
+            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity[] teamASelection =
+            {
+                FindEntityByName(engine.World, "StressFireMageA"),
+                FindEntityByName(engine.World, "StressPriestA"),
+                FindEntityByName(engine.World, "StressWarriorA"),
+            };
+            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, teamASelection);
+            Tick(engine, 2);
+
+            toolbar.Activate(PlayerSelectionToolbarButtonId);
+            Tick(engine, 2);
+            Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
+            Assert.That(ReadEntityName(engine.World, SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity playerPrimary) ? playerPrimary : Entity.Null), Is.EqualTo("StressFireMageA"));
+
+            toolbar.Activate(PlayerFormationToolbarButtonId);
+            Tick(engine, 2);
+            string[] playerFormation = ReadViewedSelectionNames(engine);
+            Assert.That(playerFormation.Length, Is.GreaterThanOrEqualTo(48));
+            Assert.That(playerFormation, Does.Contain("StressWarriorA"));
+            Assert.That(playerFormation, Does.Contain("StressPriestA"));
+
+            TickUntil(engine, () =>
+            {
+                toolbar.Activate(AiTargetToolbarButtonId);
+                Tick(engine, 2);
+                return ReadViewedSelectionNames(engine).Length > 0;
+            }, maxFrames: 120);
+            string[] aiTargets = ReadViewedSelectionNames(engine);
+            Assert.That(aiTargets.Length, Is.GreaterThan(0));
+            Assert.That(aiTargets.Any(name => name.EndsWith("A", StringComparison.Ordinal)), Is.True, "AI target selection should point at opposing team members.");
+
+            toolbar.Activate(AiFormationToolbarButtonId);
+            Tick(engine, 2);
+            string[] aiFormation = ReadViewedSelectionNames(engine);
+            Assert.That(aiFormation.Length, Is.GreaterThanOrEqualTo(48));
+            Assert.That(aiFormation, Does.Contain("StressWarriorB"));
+            Assert.That(aiFormation, Does.Contain("StressPriestB"));
+
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
+                ?? throw new InvalidOperationException("OrderQueue missing.");
+            var order = new Order
+            {
+                OrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["moveTo"],
+                PlayerId = 1,
+                Actor = teamASelection[0],
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = new Vector3(2200f, 0f, 1480f)
+                    },
+                    Selection = new OrderSelectionReference
+                    {
+                        Container = selection.TryCreateSnapshotLease(localPlayer, SelectionSetKeys.LivePrimary, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out Entity snapshot)
+                            ? snapshot
+                            : Entity.Null
+                    }
+                }
+            };
+
+            Assert.That(order.Args.Selection.HasContainer, Is.True);
+            Assert.That(orderQueue.TryEnqueue(in order), Is.True);
+            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { FindEntityByName(engine.World, "StressLaserMageA") });
+            Tick(engine, 4);
+
+            toolbar.Activate(CommandSnapshotToolbarButtonId);
+            Tick(engine, 2);
+            Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
         }
 
         [Test]
@@ -918,6 +1072,14 @@ namespace Ludots.Tests.GAS.Production
             return entity != Entity.Null && world.IsAlive(entity) && world.TryGet(entity, out Name name)
                 ? name.Value
                 : string.Empty;
+        }
+
+        private static string[] ReadViewedSelectionNames(GameEngine engine)
+        {
+            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            return selected.Select(entity => ReadEntityName(engine.World, entity))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToArray();
         }
 
         private static void AssertNamedEntityOwner(World world, string entityName, int expectedPlayerId)

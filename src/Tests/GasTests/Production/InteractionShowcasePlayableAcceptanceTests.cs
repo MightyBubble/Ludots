@@ -787,11 +787,10 @@ namespace Ludots.Tests.GAS.Production
             string selectedName = GetSelectedEntityName(engine);
             Assert.That(selectedName, Is.EqualTo(expectedName));
 
-            Entity localPlayer = GetLocalPlayer(engine);
-            ref var selection = ref engine.World.Get<SelectionBuffer>(localPlayer);
-            Assert.That(selection.Count, Is.EqualTo(1), BuildSelectionStateDiagnostics(engine));
+            Entity[] selection = GetSelectionSnapshot(engine);
+            Assert.That(selection.Length, Is.EqualTo(1), BuildSelectionStateDiagnostics(engine));
 
-            Entity primary = selection.Primary;
+            Entity primary = selection[0];
             Assert.That(primary, Is.Not.EqualTo(Entity.Null));
             Assert.That(engine.World.TryGet(primary, out Name primaryName), Is.True);
             Assert.That(primaryName.Value, Is.EqualTo(expectedName));
@@ -1085,26 +1084,19 @@ namespace Ludots.Tests.GAS.Production
 
         private static int GetSelectionCount(GameEngine engine)
         {
-            Entity localPlayer = GetLocalPlayer(engine);
-            if (!engine.World.Has<SelectionBuffer>(localPlayer))
-            {
-                return 0;
-            }
-
-            return engine.World.Get<SelectionBuffer>(localPlayer).Count;
+            return GetSelectionSnapshot(engine).Length;
         }
 
         private static void AssertQueuedMoveOrders(GameEngine engine, int minimumQueuedOrders)
         {
-            Entity localPlayer = GetLocalPlayer(engine);
-            ref var selection = ref engine.World.Get<SelectionBuffer>(localPlayer);
+            Entity[] selection = GetSelectionSnapshot(engine);
             var config = engine.GetService(CoreServiceKeys.GameConfig);
             int moveOrderTypeId = config.Constants.OrderTypeIds["moveTo"];
             int queuedMoveOrders = 0;
 
-            for (int i = 0; i < selection.Count; i++)
+            for (int i = 0; i < selection.Length; i++)
             {
-                Entity entity = selection.Get(i);
+                Entity entity = selection[i];
                 if (!engine.World.IsAlive(entity) || !engine.World.Has<OrderBuffer>(entity))
                 {
                     continue;
@@ -1752,19 +1744,11 @@ namespace Ludots.Tests.GAS.Production
 
         private static IReadOnlyList<string> GetSelectedNames(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) ||
-                localObj is not Entity localPlayer ||
-                !engine.World.IsAlive(localPlayer) ||
-                !engine.World.Has<SelectionBuffer>(localPlayer))
+            Entity[] selection = GetSelectionSnapshot(engine);
+            var names = new List<string>(selection.Length);
+            for (int i = 0; i < selection.Length; i++)
             {
-                return Array.Empty<string>();
-            }
-
-            ref var selection = ref engine.World.Get<SelectionBuffer>(localPlayer);
-            var names = new List<string>(selection.Count);
-            for (int i = 0; i < selection.Count; i++)
-            {
-                Entity entity = selection.Get(i);
+                Entity entity = selection[i];
                 if (!engine.World.IsAlive(entity))
                 {
                     continue;
@@ -1785,15 +1769,18 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var selectedObj) &&
-                selectedObj is Entity selected &&
-                engine.World.IsAlive(selected) &&
+            if (SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
                 engine.World.TryGet(selected, out Name name))
             {
                 return name.Value;
             }
 
             return string.Empty;
+        }
+
+        private static Entity[] GetSelectionSnapshot(GameEngine engine)
+        {
+            return SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
         }
 
         private static Entity GetLocalPlayer(GameEngine engine)

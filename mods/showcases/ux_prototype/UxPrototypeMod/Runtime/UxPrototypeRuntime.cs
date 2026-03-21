@@ -1,10 +1,13 @@
 using System;
 using System.Threading.Tasks;
+using Arch.Core;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
+using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI;
 using UxPrototypeMod.UI;
 
@@ -14,6 +17,8 @@ internal sealed class UxPrototypeRuntime
 {
     private readonly UxPrototypeScenarioState _state = new();
     private readonly UxPrototypePanelController _panelController;
+    private EntityCommandPanelHandle _commandPanelHandle = EntityCommandPanelHandle.Invalid;
+    private Entity _commandPanelTarget = Entity.Null;
     private bool _inputContextActive;
     private bool _renderDebugCaptured;
     private bool _previousDrawTerrain = true;
@@ -54,6 +59,7 @@ internal sealed class UxPrototypeRuntime
             DeactivateInputContext(input);
             RestoreRenderDebug(engine);
             ClearPanelIfOwned(context);
+            ClearCommandPanel(engine);
         }
 
         return Task.CompletedTask;
@@ -76,6 +82,7 @@ internal sealed class UxPrototypeRuntime
         DeactivateInputContext(context.Get(CoreServiceKeys.InputHandler));
         RestoreRenderDebug(engine);
         ClearPanelIfOwned(context);
+        ClearCommandPanel(engine);
         return Task.CompletedTask;
     }
 
@@ -96,6 +103,7 @@ internal sealed class UxPrototypeRuntime
         if (!UxPrototypeIds.IsPrototypeMap(activeMapId))
         {
             ClearPanelIfOwned(engine);
+            ClearCommandPanel(engine);
             return;
         }
 
@@ -105,6 +113,7 @@ internal sealed class UxPrototypeRuntime
         }
 
         _panelController.MountOrRefresh(root, engine, ResolveViewModeManager(engine));
+        SyncCommandPanel(engine);
     }
 
     private void ActivateInputContext(PlayerInputHandler? input)
@@ -239,5 +248,72 @@ internal sealed class UxPrototypeRuntime
         }
 
         _renderDebugCaptured = false;
+    }
+
+    private void SyncCommandPanel(GameEngine engine)
+    {
+        if (engine.GetService(CoreServiceKeys.EntityCommandPanelService) is not IEntityCommandPanelService panelService)
+        {
+            throw new InvalidOperationException("UxPrototypeMod requires EntityCommandPanelService from EntityCommandPanelMod.");
+        }
+
+        Entity selected = ResolveSelectedEntity(engine);
+        if (selected == Entity.Null)
+        {
+            if (_commandPanelHandle.IsValid)
+            {
+                panelService.SetVisible(_commandPanelHandle, visible: false);
+            }
+
+            _commandPanelTarget = Entity.Null;
+            return;
+        }
+
+        if (!_commandPanelHandle.IsValid ||
+            !panelService.TryGetState(_commandPanelHandle, out _))
+        {
+            _commandPanelHandle = panelService.Open(new EntityCommandPanelOpenRequest
+            {
+                TargetEntity = selected,
+                SourceId = UxPrototypeEntityCommandPanelSource.SourceId,
+                InstanceKey = "uxprototype.selection",
+                Anchor = new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.BottomCenter, 0f, 16f),
+                Size = new EntityCommandPanelSize(420f, 280f),
+                InitialGroupIndex = 0,
+                StartVisible = true
+            });
+            _commandPanelTarget = selected;
+            return;
+        }
+
+        if (_commandPanelTarget != selected)
+        {
+            panelService.RebindTarget(_commandPanelHandle, selected);
+            _commandPanelTarget = selected;
+        }
+
+        panelService.SetVisible(_commandPanelHandle, visible: true);
+    }
+
+    private void ClearCommandPanel(GameEngine engine)
+    {
+        if (!_commandPanelHandle.IsValid ||
+            engine.GetService(CoreServiceKeys.EntityCommandPanelService) is not IEntityCommandPanelService panelService)
+        {
+            _commandPanelHandle = EntityCommandPanelHandle.Invalid;
+            _commandPanelTarget = Entity.Null;
+            return;
+        }
+
+        panelService.Close(_commandPanelHandle);
+        _commandPanelHandle = EntityCommandPanelHandle.Invalid;
+        _commandPanelTarget = Entity.Null;
+    }
+
+    private static Entity ResolveSelectedEntity(GameEngine engine)
+    {
+        return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected)
+            ? selected
+            : Entity.Null;
     }
 }

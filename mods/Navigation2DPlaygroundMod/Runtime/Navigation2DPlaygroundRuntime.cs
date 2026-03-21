@@ -247,11 +247,14 @@ namespace Navigation2DPlaygroundMod.Runtime
 
         private static void EnsureLocalPlayerEntity(GameEngine engine)
         {
+            SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
+                ?? throw new InvalidOperationException("Navigation2DPlaygroundMod requires SelectionRuntime.");
+
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
                 localObj is Entity local &&
                 engine.World.IsAlive(local))
             {
-                EnsureSelectionComponents(engine.World, local);
+                EnsureSelectionComponents(engine.World, local, selection, engine.GlobalContext);
                 return;
             }
 
@@ -268,34 +271,29 @@ namespace Navigation2DPlaygroundMod.Runtime
             {
                 owner = engine.World.Create(
                     new PlayerOwner { PlayerId = 1 },
-                    default(SelectionBuffer),
-                    default(SelectionGroupBuffer),
                     default(SelectionDragState));
             }
             else
             {
-                EnsureSelectionComponents(engine.World, owner);
+                EnsureSelectionComponents(engine.World, owner, selection, engine.GlobalContext);
             }
 
             engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            EnsureSelectionComponents(engine.World, owner, selection, engine.GlobalContext);
         }
 
-        private static void EnsureSelectionComponents(World world, Entity owner)
+        private static void EnsureSelectionComponents(World world, Entity owner, SelectionRuntime selection, System.Collections.Generic.Dictionary<string, object> globals)
         {
-            if (!world.Has<SelectionBuffer>(owner))
-            {
-                world.Add(owner, default(SelectionBuffer));
-            }
-
-            if (!world.Has<SelectionGroupBuffer>(owner))
-            {
-                world.Add(owner, default(SelectionGroupBuffer));
-            }
-
             if (!world.Has<SelectionDragState>(owner))
             {
                 world.Add(owner, default(SelectionDragState));
             }
+
+            selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
+            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
+
+            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
+            globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }
     }
 }

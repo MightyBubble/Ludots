@@ -42,8 +42,8 @@ namespace Navigation2DPlaygroundMod.Systems
                 return;
             }
 
-            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
-            int count = Navigation2DPlaygroundSelectionView.CopySelectedEntities(_engine.World, _engine.GlobalContext, selected);
+            Entity[] selected = Navigation2DPlaygroundSelectionView.SnapshotSelectedEntities(_engine.World, _engine.GlobalContext);
+            int count = selected.Length;
             int maxLabels = Math.Min(count, 16);
             for (int i = 0; i < maxLabels; i++)
             {

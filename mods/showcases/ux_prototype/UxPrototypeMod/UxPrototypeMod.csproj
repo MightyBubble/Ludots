@@ -11,6 +11,7 @@
     <ProjectReference Include="..\..\..\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\..\capabilities\camera\CameraProfilesMod\CameraProfilesMod.csproj" />
     <ProjectReference Include="..\..\..\capabilities\entityinfo\EntityInfoPanelsMod\EntityInfoPanelsMod.csproj" />
+    <ProjectReference Include="..\..\..\EntityCommandPanelMod\EntityCommandPanelMod.csproj" />
     <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj">
       <Private>false</Private>
     </ProjectReference>

@@ -34,7 +34,7 @@ namespace CameraAcceptanceMod.UI
         private const float PanelWidth = 500f;
         private const float SelectionBufferHeight = 180f;
         private const float SelectionRowHeight = 22f;
-        private const int SelectionRowPoolSize = SelectionBuffer.CAPACITY;
+        private const int DefaultSelectionRowPoolSize = 1;
         private const string SelectionBufferHostId = "camera-selection-buffer-list";
         private const float VisibleEntityBufferHeight = 220f;
         private const float VisibleEntityRowHeight = 20f;
@@ -48,7 +48,7 @@ namespace CameraAcceptanceMod.UI
         private CameraAcceptancePanelState _lastState = CameraAcceptancePanelState.Empty;
         private GameEngine? _engine;
         private int _lastSelectionRowsTouched;
-        private int _lastRowPoolSize = SelectionRowPoolSize;
+        private int _lastRowPoolSize = DefaultSelectionRowPoolSize;
         private string[] _cachedDiagnosticsLines = Array.Empty<string>();
         private string _cachedDiagnosticsMapId = string.Empty;
         private long _cachedDiagnosticsTick = -1;
@@ -115,7 +115,7 @@ namespace CameraAcceptanceMod.UI
 
             _lastState = CameraAcceptancePanelState.Empty;
             _lastSelectionRowsTouched = 0;
-            _lastRowPoolSize = SelectionRowPoolSize;
+            _lastRowPoolSize = DefaultSelectionRowPoolSize;
             _page.SetState(_ => CameraAcceptancePanelState.Empty);
             _engine = null;
             ResetDiagnosticsCache();
@@ -369,9 +369,10 @@ namespace CameraAcceptanceMod.UI
 
         private static UiElementBuilder BuildSelectedIdsSection(ReactiveContext<CameraAcceptancePanelState> context, IReadOnlyList<string> selectedIds)
         {
+            int rowPoolSize = ResolveSelectionRowPoolSize(selectedIds.Count);
             UiVirtualWindow window = context.GetVerticalVirtualWindow(
                 SelectionBufferHostId,
-                SelectionRowPoolSize,
+                rowPoolSize,
                 SelectionRowHeight,
                 SelectionBufferHeight,
                 overscan: 2);
@@ -394,8 +395,8 @@ namespace CameraAcceptanceMod.UI
             }
 
             return Ui.Column(
-                    Ui.Text("Selection Buffer").FontSize(12f).Bold().Color("#F4C77D"),
-                    Ui.Text($"Selected Slots: {selectedIds.Count}/{SelectionRowPoolSize} | Visible: {FormatVisibleRange(window)}").Id("camera-selection-buffer-summary").FontSize(11f).Color("#8EA2BD"),
+                    Ui.Text("Selection View").FontSize(12f).Bold().Color("#F4C77D"),
+                    Ui.Text($"Selected Entries: {selectedIds.Count} | Virtual Rows: {rowPoolSize} | Visible: {FormatVisibleRange(window)}").Id("camera-selection-buffer-summary").FontSize(11f).Color("#8EA2BD"),
                     Ui.ScrollView(rows.ToArray())
                         .Id(SelectionBufferHostId)
                         .Height(SelectionBufferHeight)
@@ -1171,10 +1172,7 @@ namespace CameraAcceptanceMod.UI
 
         private static string? ResolveSelectedEntityName(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var value) ||
-                value is not Entity entity ||
-                entity == Entity.Null ||
-                !engine.World.IsAlive(entity) ||
+            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity) ||
                 !engine.World.Has<Name>(entity))
             {
                 return null;
@@ -1185,8 +1183,8 @@ namespace CameraAcceptanceMod.UI
 
         private static string[] ResolveSelectedEntityIds(GameEngine engine)
         {
-            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
-            int count = CameraAcceptanceSelectionView.CopySelectedEntities(engine.World, engine.GlobalContext, selected);
+            Entity[] selected = CameraAcceptanceSelectionView.SnapshotSelectedEntities(engine.World, engine.GlobalContext);
+            int count = selected.Length;
             if (count <= 0)
             {
                 return Array.Empty<string>();
@@ -1284,7 +1282,12 @@ namespace CameraAcceptanceMod.UI
         {
             return string.Equals(state.MapId, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase)
                 ? state.VisibleEntityRows.Length
-                : SelectionRowPoolSize;
+                : ResolveSelectionRowPoolSize(state.SelectedIds.Length);
+        }
+
+        private static int ResolveSelectionRowPoolSize(int selectedCount)
+        {
+            return Math.Max(DefaultSelectionRowPoolSize, selectedCount);
         }
 
         private static string BuildVisibleEntitySummary(IReadOnlyList<string> visibleEntityRows)

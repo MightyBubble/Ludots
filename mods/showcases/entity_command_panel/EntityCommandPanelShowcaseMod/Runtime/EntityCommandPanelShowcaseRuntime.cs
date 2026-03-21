@@ -6,6 +6,7 @@ using EntityInfoPanelsMod.Commands;
 using InteractionShowcaseMod;
 using Ludots.Core.Commands;
 using Ludots.Core.Engine;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -62,7 +63,9 @@ namespace EntityCommandPanelShowcaseMod.Runtime
 
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = true;
 
-            Entity selected = engine.GetService(CoreServiceKeys.SelectedEntity);
+            Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity current)
+                ? current
+                : Entity.Null;
             if (selected == Entity.Null || !engine.World.IsAlive(selected))
             {
                 if (_lastFocusTarget != Entity.Null)
@@ -87,7 +90,8 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             Execute(updateContext, new SetEntityCommandPanelSizeCommand(
                 FocusAlias,
                 new EntityCommandPanelSize(420f, 250f)));
-            Execute(updateContext, new RebindEntityCommandPanelTargetCommand(FocusAlias, CoreServiceKeys.SelectedEntity.Name));
+            updateContext.Set("EntityCommandPanelShowcase.SelectedTarget", selected);
+            Execute(updateContext, new RebindEntityCommandPanelTargetCommand(FocusAlias, "EntityCommandPanelShowcase.SelectedTarget"));
             Execute(updateContext, new SetEntityCommandPanelVisibilityCommand(FocusAlias, visible: true));
             _lastFocusTarget = selected;
         }

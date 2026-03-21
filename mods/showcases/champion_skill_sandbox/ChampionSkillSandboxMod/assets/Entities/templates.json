@@ -1,7 +1,7 @@
 [
   {
     "id": "champion_skill_sandbox_ezreal",
-    "components": {
+      "components": {
       "Name": { "Value": "Ezreal" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
@@ -9,6 +9,24 @@
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
       "AttributeBuffer": { "base": { "Health": 160, "Shield": 0, "MoveSpeed": 355, "Armor": 4 } },
+      "Collider2D": {
+        "shape": {
+          "type": "circle",
+          "radiusCm": 36
+        }
+      },
+      "PhysicsMaterial2D": {
+        "friction": 0.92,
+        "restitution": 0.0,
+        "baseDamping": 0.94
+      },
+      "NavKinematics2D": {
+        "maxAccelCmPerSec2": 1760,
+        "radiusCm": 36,
+        "neighborDistCm": 280,
+        "timeHorizonSec": 2.4,
+        "maxNeighbors": 20
+      },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Champion.Ezreal.MysticShot",
@@ -26,7 +44,7 @@
   },
   {
     "id": "champion_skill_sandbox_garen",
-    "components": {
+      "components": {
       "Name": { "Value": "Garen" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
@@ -34,6 +52,24 @@
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
       "AttributeBuffer": { "base": { "Health": 240, "Shield": 0, "MoveSpeed": 325, "Armor": 14 } },
+      "Collider2D": {
+        "shape": {
+          "type": "circle",
+          "radiusCm": 46
+        }
+      },
+      "PhysicsMaterial2D": {
+        "friction": 0.92,
+        "restitution": 0.0,
+        "baseDamping": 0.94
+      },
+      "NavKinematics2D": {
+        "maxAccelCmPerSec2": 1800,
+        "radiusCm": 46,
+        "neighborDistCm": 320,
+        "timeHorizonSec": 2.4,
+        "maxNeighbors": 20
+      },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Champion.Garen.DecisiveStrike",
@@ -51,7 +87,7 @@
   },
   {
     "id": "champion_skill_sandbox_jayce",
-    "components": {
+      "components": {
       "Name": { "Value": "Jayce" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
@@ -59,6 +95,24 @@
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
       "AttributeBuffer": { "base": { "Health": 190, "Shield": 0, "MoveSpeed": 340, "Armor": 8 } },
+      "Collider2D": {
+        "shape": {
+          "type": "circle",
+          "radiusCm": 40
+        }
+      },
+      "PhysicsMaterial2D": {
+        "friction": 0.92,
+        "restitution": 0.0,
+        "baseDamping": 0.94
+      },
+      "NavKinematics2D": {
+        "maxAccelCmPerSec2": 1780,
+        "radiusCm": 40,
+        "neighborDistCm": 296,
+        "timeHorizonSec": 2.4,
+        "maxNeighbors": 20
+      },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Champion.Jayce.Cannon.ShockBlast",

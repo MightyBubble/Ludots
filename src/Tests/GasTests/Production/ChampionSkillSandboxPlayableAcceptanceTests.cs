@@ -50,6 +50,11 @@ namespace Ludots.Tests.GAS.Production
         private const string SandboxTacticalCameraId = "ChampionSkillSandbox.Camera.Tactical";
         private const string StressTeamAIncreaseToolbarButtonId = "ChampionSkillSandbox.Stress.TeamA.Increase";
         private const string StressTeamBIncreaseToolbarButtonId = "ChampionSkillSandbox.Stress.TeamB.Increase";
+        private const string PlayerSelectionToolbarButtonId = "ChampionSkillSandbox.Selection.Player.Live";
+        private const string PlayerFormationToolbarButtonId = "ChampionSkillSandbox.Selection.Player.Formation";
+        private const string AiTargetToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Targets";
+        private const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
+        private const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
         private const string TestInputBackendKey = "Tests.ChampionSkillSandbox.InputBackend";
         private const string HeadlessCameraKey = "Tests.ChampionSkillSandbox.HeadlessCamera";
 
@@ -316,7 +321,9 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-skill-stress");
+            string screensDir = Path.Combine(artifactDir, "screens");
             Directory.CreateDirectory(artifactDir);
+            Directory.CreateDirectory(screensDir);
 
             var timeline = new List<string>();
             var snapshots = new List<StressAcceptanceSnapshot>();
@@ -327,13 +334,20 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("PrimitiveDrawBuffer missing.");
             var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
                 ?? throw new InvalidOperationException("WorldHudBatchBuffer missing.");
+            var overlays = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+                ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
             var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
+            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
+                ?? throw new InvalidOperationException("SelectionRuntime missing.");
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
+                ?? throw new InvalidOperationException("OrderQueue missing.");
 
             LoadMap(engine, StressMapId, frameTimesMs);
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             Assert.That(toolbar.IsVisible, Is.True);
             Assert.That(toolbar.Title, Is.EqualTo("Stress Harness"));
+            Assert.That(OverlayContainsText(overlays, "Selection SSOT"), Is.True, "Stress map should expose the live selection inspector panel.");
             CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "map_loaded");
             timeline.Add("[T+001] champion_skill_stress loaded | stress toolbar mounted for both team-size controls");
 
@@ -358,6 +372,69 @@ namespace Ludots.Tests.GAS.Production
             CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "formations_saturated");
             timeline.Add($"[T+002] Formations saturated | A={saturated.TeamA} (W/F/L/P {saturated.TeamAWarriors}/{saturated.TeamAFireMages}/{saturated.TeamALaserMages}/{saturated.TeamAPriests}) | B={saturated.TeamB} (W/F/L/P {saturated.TeamBWarriors}/{saturated.TeamBFireMages}/{saturated.TeamBLaserMages}/{saturated.TeamBPriests})");
 
+            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity[] playerSelection =
+            {
+                FindEntityByName(engine.World, "StressFireMageA"),
+                FindEntityByName(engine.World, "StressPriestA"),
+                FindEntityByName(engine.World, "StressWarriorA"),
+            };
+            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, playerSelection);
+            toolbar.Activate(PlayerSelectionToolbarButtonId);
+            Tick(engine, 2, frameTimesMs);
+            Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
+            CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "player_live_view");
+            timeline.Add("[T+003] View=P1 Live | player selection container shows FireMageA, PriestA, WarriorA");
+
+            toolbar.Activate(PlayerFormationToolbarButtonId);
+            Tick(engine, 2, frameTimesMs);
+            string[] playerFormation = ReadViewedSelectionNames(engine);
+            Assert.That(playerFormation.Length, Is.GreaterThanOrEqualTo(48));
+            CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "player_formation_view");
+            timeline.Add($"[T+004] View=P1 Formation | formation container exposes {playerFormation.Length} allied units through the same selection SSOT");
+
+            TickUntil(engine, frameTimesMs, () =>
+            {
+                toolbar.Activate(AiTargetToolbarButtonId);
+                Tick(engine, 2, frameTimesMs);
+                return ReadViewedSelectionNames(engine).Length > 0;
+            }, maxFrames: 120);
+            string[] aiTargets = ReadViewedSelectionNames(engine);
+            Assert.That(aiTargets.Length, Is.GreaterThan(0));
+            CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "ai_target_view");
+            timeline.Add($"[T+005] View=AI Targets | team-B commander publishes {aiTargets.Length} focused enemy targets via selection containers");
+
+            var snapshotOrder = new Order
+            {
+                OrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["moveTo"],
+                PlayerId = 1,
+                Actor = playerSelection[0],
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = new Vector3(2200f, 0f, 1480f)
+                    },
+                    Selection = new OrderSelectionReference
+                    {
+                        Container = selection.TryCreateSnapshotLease(localPlayer, SelectionSetKeys.LivePrimary, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out Entity snapshotContainer)
+                            ? snapshotContainer
+                            : Entity.Null
+                    }
+                }
+            };
+            Assert.That(snapshotOrder.Args.Selection.HasContainer, Is.True);
+            Assert.That(orderQueue.TryEnqueue(in snapshotOrder), Is.True);
+            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { FindEntityByName(engine.World, "StressLaserMageA") });
+            toolbar.Activate(CommandSnapshotToolbarButtonId);
+            Tick(engine, 4, frameTimesMs);
+            Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
+            CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "command_snapshot_view");
+            timeline.Add("[T+006] View=Command Snapshot | queued move order holds the original three-unit selection after live selection mutates to LaserMageA");
+
             var healthHistory = ReadStressEntityHealthMap(engine.World);
             bool sawHeal = false;
             int peakProjectiles = 0;
@@ -381,7 +458,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(active.TeamAInjured + active.TeamBInjured, Is.GreaterThan(0), "Frontline trading should injure live units.");
             Assert.That(sawHeal, Is.True, "Priests should heal damaged allies during the sustained exchange.");
             CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "combat_active");
-            timeline.Add($"[T+003] Frontline melee plus fireball/laser volleys engaged | peak_projectiles={peakProjectiles} | peak_primitives={peakPrimitives} | peak_world_text={peakWorldText} | heal_observed={sawHeal}");
+            timeline.Add($"[T+007] Frontline melee plus fireball/laser volleys engaged | peak_projectiles={peakProjectiles} | peak_primitives={peakPrimitives} | peak_world_text={peakWorldText} | heal_observed={sawHeal}");
 
             toolbar.Activate(StressTeamAIncreaseToolbarButtonId);
             toolbar.Activate(StressTeamBIncreaseToolbarButtonId);
@@ -396,11 +473,12 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(scaled.TeamA, Is.GreaterThanOrEqualTo(56));
             Assert.That(scaled.TeamB, Is.GreaterThanOrEqualTo(56));
             CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "scaled_up");
-            timeline.Add($"[T+004] Toolbar scale-up converged | A={scaled.TeamA} | B={scaled.TeamB} | injured A/B={scaled.TeamAInjured}/{scaled.TeamBInjured}");
+            timeline.Add($"[T+008] Toolbar scale-up converged | A={scaled.TeamA} | B={scaled.TeamB} | injured A/B={scaled.TeamAInjured}/{scaled.TeamBInjured}");
 
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildStressTraceJsonl(snapshots));
             File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildStressBattleReport(timeline, snapshots, frameTimesMs, peakProjectiles, peakPrimitives, peakWorldText, sawHeal));
             File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildStressPathMermaid());
+            WriteStressScreenshots(snapshots, screensDir);
         }
 
         private static GameEngine CreateEngine()
@@ -767,10 +845,13 @@ namespace Ludots.Tests.GAS.Production
             List<StressAcceptanceSnapshot> snapshots,
             string step)
         {
+            string[] viewedSelection = ReadViewedSelectionNames(engine);
             snapshots.Add(new StressAcceptanceSnapshot(
                 Step: step,
                 ActiveModeId: GetActiveModeId(engine),
                 ToolbarSubtitle: toolbar.Subtitle,
+                ViewedPrimary: GetSelectedEntityName(engine),
+                ViewedSelection: viewedSelection,
                 Metrics: ReadStressCombatSnapshot(engine.World),
                 PrimitiveCount: CountPrimitiveMarkers(primitives),
                 WorldTextCount: CountWorldHudItems(worldHud, WorldHudItemKind.Text)));
@@ -809,6 +890,8 @@ namespace Ludots.Tests.GAS.Production
                         team_a = snapshot.Metrics.TeamAInjured,
                         team_b = snapshot.Metrics.TeamBInjured
                     },
+                    viewed_primary = snapshot.ViewedPrimary,
+                    viewed_selection = snapshot.ViewedSelection,
                     projectiles = snapshot.Metrics.Projectiles,
                     primitive_count = snapshot.PrimitiveCount,
                     world_text_count = snapshot.WorldTextCount
@@ -839,6 +922,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- map: champion_skill_stress");
             sb.AppendLine("- clock: FixedFrame @ 60 Hz");
             sb.AppendLine($"- execution_timestamp_utc: {DateTime.UtcNow:O}");
+            sb.AppendLine("- screenshots: `screens/*.svg`, `screens/timeline.svg`");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
             foreach (string entry in timeline)
@@ -851,15 +935,19 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- result: success");
             sb.AppendLine("- failure_branch: toolbar scale-up must converge; otherwise stress spawn or order routing regressed");
             sb.AppendLine($"- final_toolbar: {finalSnapshot.ToolbarSubtitle}");
+            sb.AppendLine($"- final_view_primary: {finalSnapshot.ViewedPrimary}");
+            sb.AppendLine($"- final_view_members: {string.Join(", ", finalSnapshot.ViewedSelection)}");
             sb.AppendLine($"- final_team_counts: A={finalSnapshot.Metrics.TeamA}, B={finalSnapshot.Metrics.TeamB}");
             sb.AppendLine($"- final_injured_counts: A={finalSnapshot.Metrics.TeamAInjured}, B={finalSnapshot.Metrics.TeamBInjured}");
             sb.AppendLine($"- final_projectiles: {finalSnapshot.Metrics.Projectiles}");
             sb.AppendLine();
             sb.AppendLine("## Summary Stats");
-            sb.AppendLine("- total_actions: 4");
+            sb.AppendLine($"- total_actions: {timeline.Count}");
             sb.AppendLine("- formation_saturations: 1");
             sb.AppendLine("- sustained_combat_windows: 1");
             sb.AppendLine("- toolbar_scale_ups: 1");
+            sb.AppendLine("- selection_view_switches: 4");
+            sb.AppendLine("- command_snapshot_checks: 1");
             sb.AppendLine($"- peak_projectiles: {peakProjectiles}");
             sb.AppendLine($"- peak_primitives: {peakPrimitives}");
             sb.AppendLine($"- peak_world_text: {peakWorldText}");
@@ -875,11 +963,74 @@ namespace Ludots.Tests.GAS.Production
             {
                 "flowchart TD",
                 "    A[\"MapLoaded: stress battlefield boot -> toolbar mounted\"] --> B[\"Spawn: both teams converge to 48 units with W/F/L/P roles\"]",
-                "    B --> C[\"Combat: warriors melee while fireball and laser projectiles peak above zero\"]",
-                "    C --> D[\"Support: priests heal damaged allies -> health rises on tracked entities\"]",
-                "    D --> E[\"Toolbar: A+ and B+ -> both teams scale to 56 units\"]",
-                "    B --> F[\"if counts do not converge -> fail stress spawn / queue regression\"]"
+                "    B --> C[\"Selection View: P1 live selection shows player-picked trio\"]",
+                "    C --> D[\"Selection View: P1 formation / AI targets / command snapshot all resolve from selection containers\"]",
+                "    D --> E[\"Combat: warriors melee while fireball and laser projectiles peak above zero\"]",
+                "    E --> F[\"Support: priests heal damaged allies -> health rises on tracked entities\"]",
+                "    F --> G[\"Toolbar: A+ and B+ -> both teams scale to 56 units\"]",
+                "    B --> X[\"if counts do not converge -> fail stress spawn / queue regression\"]"
             });
+        }
+
+        private static void WriteStressScreenshots(IReadOnlyList<StressAcceptanceSnapshot> snapshots, string screensDir)
+        {
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                StressAcceptanceSnapshot snapshot = snapshots[i];
+                WriteStressSnapshotSvg(snapshot, Path.Combine(screensDir, $"{i + 1:000}_{snapshot.Step}.svg"));
+            }
+
+            WriteStressTimelineSvg(snapshots, Path.Combine(screensDir, "timeline.svg"));
+        }
+
+        private static void WriteStressSnapshotSvg(StressAcceptanceSnapshot snapshot, string path)
+        {
+            string viewedSelection = string.Join(", ", snapshot.ViewedSelection);
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#0c1218" />
+  <rect x="40" y="40" width="1520" height="820" rx="18" fill="#14212e" stroke="#5ca6d6" stroke-width="2" />
+  <text x="72" y="104" fill="#f7d36d" font-size="34" font-family="Consolas, monospace">Champion Stress | {{EscapeSvg(snapshot.Step)}}</text>
+  <text x="72" y="148" fill="#ffffff" font-size="24" font-family="Consolas, monospace">{{EscapeSvg(snapshot.ToolbarSubtitle)}}</text>
+  <text x="72" y="204" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Viewed primary: {{EscapeSvg(snapshot.ViewedPrimary)}}</text>
+  <text x="72" y="244" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Viewed selection ({{snapshot.ViewedSelection.Count}}): {{EscapeSvg(viewedSelection)}}</text>
+  <text x="72" y="308" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Team A={{snapshot.Metrics.TeamA}}  Team B={{snapshot.Metrics.TeamB}}</text>
+  <text x="72" y="348" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Roles A W/F/L/P = {{snapshot.Metrics.TeamAWarriors}}/{{snapshot.Metrics.TeamAFireMages}}/{{snapshot.Metrics.TeamALaserMages}}/{{snapshot.Metrics.TeamAPriests}}</text>
+  <text x="72" y="388" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Roles B W/F/L/P = {{snapshot.Metrics.TeamBWarriors}}/{{snapshot.Metrics.TeamBFireMages}}/{{snapshot.Metrics.TeamBLaserMages}}/{{snapshot.Metrics.TeamBPriests}}</text>
+  <text x="72" y="448" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Injured A/B = {{snapshot.Metrics.TeamAInjured}}/{{snapshot.Metrics.TeamBInjured}}  Projectiles = {{snapshot.Metrics.Projectiles}}</text>
+  <text x="72" y="488" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Primitive feedback = {{snapshot.PrimitiveCount}}  World text = {{snapshot.WorldTextCount}}</text>
+  <text x="72" y="560" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Selection evidence is sourced from container/view SSOT, not a compat SelectedEntity mirror.</text>
+</svg>
+""";
+            File.WriteAllText(path, svg);
+        }
+
+        private static void WriteStressTimelineSvg(IReadOnlyList<StressAcceptanceSnapshot> snapshots, string path)
+        {
+            if (snapshots.Count == 0)
+            {
+                return;
+            }
+
+            var lines = new List<string>(snapshots.Count * 4);
+            int y = 100;
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                StressAcceptanceSnapshot snapshot = snapshots[i];
+                lines.Add($"""  <rect x="40" y="{y - 36}" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />""");
+                lines.Add($"""  <text x="72" y="{y}" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">{EscapeSvg($"{i + 1:000} {snapshot.Step}")}</text>""");
+                lines.Add($"""  <text x="420" y="{y}" fill="#ffffff" font-size="20" font-family="Consolas, monospace">{EscapeSvg(snapshot.ToolbarSubtitle)}</text>""");
+                lines.Add($"""  <text x="72" y="{y + 28}" fill="#bccdde" font-size="18" font-family="Consolas, monospace">{EscapeSvg($"primary={snapshot.ViewedPrimary} | count={snapshot.ViewedSelection.Count} | proj={snapshot.Metrics.Projectiles} | feedback={snapshot.PrimitiveCount}/{snapshot.WorldTextCount}")}</text>""");
+                y += 96;
+            }
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="{{Math.Max(240, y + 40)}}" viewBox="0 0 1600 {{Math.Max(240, y + 40)}}">
+  <rect width="1600" height="{{Math.Max(240, y + 40)}}" fill="#080a10" />
+  <text x="20" y="36" fill="#ffffff" font-size="28" font-family="Consolas, monospace">Champion stress selection view timeline</text>
+{{string.Join(Environment.NewLine, lines)}}
+</svg>
+""";
+            File.WriteAllText(path, svg);
         }
 
         private static bool IsCameraNear(CameraState state, Vector2 targetCm, float distanceCm, float pitch, float fovYDeg)
@@ -938,6 +1089,48 @@ namespace Ludots.Tests.GAS.Production
             return count;
         }
 
+        private static bool OverlayContainsText(ScreenOverlayBuffer overlay, string expected)
+        {
+            foreach (ref readonly var item in overlay.GetSpan())
+            {
+                if (item.Kind != ScreenOverlayItemKind.Text)
+                {
+                    continue;
+                }
+
+                string? text = overlay.GetString(item.StringId);
+                if (!string.IsNullOrEmpty(text) &&
+                    text.Contains(expected, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string[] ReadViewedSelectionNames(GameEngine engine)
+        {
+            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            return selected.Select(entity => ReadEntityName(engine.World, entity))
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToArray();
+        }
+
+        private static string EscapeSvg(string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            return value
+                .Replace("&", "&amp;", StringComparison.Ordinal)
+                .Replace("<", "&lt;", StringComparison.Ordinal)
+                .Replace(">", "&gt;", StringComparison.Ordinal)
+                .Replace("\"", "&quot;", StringComparison.Ordinal);
+        }
+
         private static int CountProjectiles(World world)
         {
             int count = 0;
@@ -948,16 +1141,24 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(ViewModeManager.ActiveModeIdKey, out var modeIdObj) && modeIdObj is string modeId
-                ? modeId
-                : string.Empty;
+            if (engine.GlobalContext.TryGetValue(ViewModeManager.ActiveModeIdKey, out var modeIdObj) &&
+                modeIdObj is string modeId &&
+                !string.IsNullOrWhiteSpace(modeId))
+            {
+                return modeId;
+            }
+
+            return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
+            {
+                InteractionModeType.SmartCastWithIndicator => IndicatorModeId,
+                InteractionModeType.PressReleaseAimCast => PressReleaseModeId,
+                _ => SmartCastModeId,
+            };
         }
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var selectedObj) &&
-                selectedObj is Entity selected &&
-                engine.World.IsAlive(selected) &&
+            if (SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
                 engine.World.TryGet(selected, out Name name))
             {
                 return name.Value;
@@ -1101,6 +1302,13 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(found, Is.Not.EqualTo(Entity.Null), $"Entity '{entityName}' should exist on champion_skill_sandbox.");
             return found;
+        }
+
+        private static string ReadEntityName(World world, Entity entity)
+        {
+            return entity != Entity.Null && world.IsAlive(entity) && world.TryGet(entity, out Name name)
+                ? name.Value
+                : string.Empty;
         }
 
         private static IReadOnlyList<string> GetPreferredHoverCandidates(World world, string excludedEntityName)
@@ -1478,6 +1686,8 @@ namespace Ludots.Tests.GAS.Production
             string Step,
             string ActiveModeId,
             string ToolbarSubtitle,
+            string ViewedPrimary,
+            IReadOnlyList<string> ViewedSelection,
             StressCombatSnapshot Metrics,
             int PrimitiveCount,
             int WorldTextCount);

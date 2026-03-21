@@ -26,6 +26,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
+using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Runtime;
@@ -66,6 +67,7 @@ namespace Ludots.Tests.GAS.Production
             "CoreInputMod",
             "CameraProfilesMod",
             "EntityInfoPanelsMod",
+            "EntityCommandPanelMod",
             "UxPrototypeMod"
         };
 
@@ -251,6 +253,43 @@ namespace Ludots.Tests.GAS.Production
             object constructionQueueAfterCancel = ReadObjectProperty(BuildSnapshot(state, engine), "SelectedQueue");
             Assert.That(ReadObjectList(constructionQueueAfterCancel, "Entries"), Is.Empty);
             Assert.That(ReadProperty<string?>(BuildSnapshot(state, engine), "ActiveBuildTemplateId"), Is.Null);
+        }
+
+        [Test]
+        public void UxPrototype_CommandPanelSource_ReusesSharedEntityCommandPanelInfrastructure()
+        {
+            var frameTimesMs = new List<double>();
+
+            using var engine = CreateEngine();
+            LoadMap(engine, "ux_prototype_battle", frameTimesMs);
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+
+            var backend = GetInputBackend(engine);
+            ClickEntityByName(engine, backend, "Blue Barracks");
+
+            var registry = engine.GetService(CoreServiceKeys.EntityCommandPanelSourceRegistry) as IEntityCommandPanelSourceRegistry
+                ?? throw new InvalidOperationException("EntityCommandPanelSourceRegistry missing.");
+            Assert.That(registry.TryGet("uxprototype.entity-actions", out IEntityCommandPanelSource source), Is.True);
+
+            Entity target = FindEntityByName(engine.World, "Blue Barracks");
+            var slots = new EntityCommandPanelSlotView[8];
+            int count = source.CopySlots(target, 0, slots);
+            Assert.That(count, Is.EqualTo(4));
+            Assert.That(slots[0].DisplayLabel, Is.EqualTo("Train Soldier"));
+            Assert.That(slots[1].DisplayLabel, Is.EqualTo("Train Archer"));
+            Assert.That(slots[2].DisplayLabel, Is.EqualTo("Train Mage"));
+            Assert.That(slots[3].DisplayLabel, Is.EqualTo("Train Medic"));
+
+            var actions = source as IEntityCommandPanelActionSource
+                ?? throw new InvalidOperationException("UxPrototype command panel source should support activation.");
+            Assert.That(actions.ActivateSlot(target, 0, 2), Is.True);
+
+            object state = GetPrototypeState(engine);
+            object queueSnapshot = ReadObjectProperty(BuildSnapshot(state, engine), "SelectedQueue");
+            Assert.That(ReadProperty<string>(queueSnapshot, "Header"), Is.EqualTo("Blue Barracks"));
+            IReadOnlyList<object> entries = ReadObjectList(queueSnapshot, "Entries");
+            Assert.That(entries.Count, Is.EqualTo(1));
+            Assert.That(ReadProperty<string>(entries[0], "Label"), Is.EqualTo("Mage"));
         }
 
         [Test]
@@ -526,29 +565,27 @@ namespace Ludots.Tests.GAS.Production
             string selectedEntityName = ReadSelectedEntityName(engine);
             Assert.That(selectedEntityName, Is.EqualTo(entityName), diagnostic);
 
-            ref SelectionBuffer selection = ref GetSelectionBuffer(engine);
-            Assert.That(selection.Count, Is.GreaterThanOrEqualTo(1));
+            Entity[] selection = GetSelectionSnapshot(engine);
+            Assert.That(selection.Length, Is.GreaterThanOrEqualTo(1));
             Entity expected = FindEntityByName(engine.World, entityName);
-            Assert.That(selection.Contains(expected), Is.True);
+            Assert.That(Array.IndexOf(selection, expected), Is.GreaterThanOrEqualTo(0));
         }
 
         private static void AssertSelectionContains(GameEngine engine, params string[] entityNames)
         {
-            ref SelectionBuffer selection = ref GetSelectionBuffer(engine);
-            Assert.That(selection.Count, Is.GreaterThanOrEqualTo(entityNames.Length));
+            Entity[] selection = GetSelectionSnapshot(engine);
+            Assert.That(selection.Length, Is.GreaterThanOrEqualTo(entityNames.Length));
 
             for (int i = 0; i < entityNames.Length; i++)
             {
                 Entity entity = FindEntityByName(engine.World, entityNames[i]);
-                Assert.That(selection.Contains(entity), Is.True, $"Selection should contain '{entityNames[i]}'.");
+                Assert.That(Array.IndexOf(selection, entity), Is.GreaterThanOrEqualTo(0), $"Selection should contain '{entityNames[i]}'.");
             }
         }
 
         private static string ReadSelectedEntityName(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out object? selectedObj) &&
-                   selectedObj is Entity selected &&
-                   selected != Entity.Null &&
+            return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
                    engine.World.TryGet(selected, out Name name)
                 ? name.Value
                 : string.Empty;
@@ -564,16 +601,9 @@ namespace Ludots.Tests.GAS.Production
                 : string.Empty;
         }
 
-        private static ref SelectionBuffer GetSelectionBuffer(GameEngine engine)
+        private static Entity[] GetSelectionSnapshot(GameEngine engine)
         {
-            Entity localPlayer = GetLocalPlayer(engine);
-
-            if (!engine.World.Has<SelectionBuffer>(localPlayer))
-            {
-                throw new InvalidOperationException("Local player is missing SelectionBuffer.");
-            }
-
-            return ref engine.World.Get<SelectionBuffer>(localPlayer);
+            return SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
         }
 
         private static Entity GetLocalPlayer(GameEngine engine)

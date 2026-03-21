@@ -28,7 +28,7 @@ namespace Ludots.Core.Input.Selection
     /// <summary>
     /// Interface for handling selection input events.
     /// Implementations are responsible for translating raw input into selection operations.
-    /// The selection system processes these operations against the SelectionBuffer.
+    /// The selection system processes these operations against selection containers via SelectionRuntime.
     /// 
     /// This allows different game genres to have different selection behaviors:
     ///   - RTS: box select, Shift+click toggle, double-click same-type, Ctrl+group

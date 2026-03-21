@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Arch.Core;
 
 namespace Ludots.Core.Gameplay.GAS.Orders
@@ -82,6 +83,23 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _head = 0;
             _tail = 0;
             _count = 0;
+        }
+
+        public void CollectSelectionContainers(HashSet<Entity> destination)
+        {
+            if (destination == null || _count <= 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _count; i++)
+            {
+                Order order = _items[(_head + i) % _items.Length];
+                if (order.Args.Selection.HasContainer)
+                {
+                    destination.Add(order.Args.Selection.Container);
+                }
+            }
         }
     }
 }

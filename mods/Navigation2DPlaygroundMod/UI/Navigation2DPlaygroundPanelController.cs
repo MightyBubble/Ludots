@@ -401,8 +401,8 @@ namespace Navigation2DPlaygroundMod.UI
 
         private string[] ResolveSelectedIds(GameEngine engine)
         {
-            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
-            int count = Navigation2DPlaygroundSelectionView.CopySelectedEntities(engine.World, engine.GlobalContext, selected);
+            Entity[] selected = Navigation2DPlaygroundSelectionView.SnapshotSelectedEntities(engine.World, engine.GlobalContext);
+            int count = selected.Length;
             if (count <= 0)
             {
                 _lastSelectedEntityIds = Array.Empty<int>();

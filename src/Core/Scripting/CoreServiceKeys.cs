@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Config;
@@ -199,10 +200,15 @@ namespace Ludots.Core.Scripting
 
         // --- Entity Selection (presentation-layer) ---
         public static readonly ServiceKey<Entity> LocalPlayerEntity = new("LocalPlayerEntity");
+        [Obsolete("Legacy selection compatibility key. Do not use. Resolve viewed selection through SelectionContextRuntime or SelectionViewViewerEntity + SelectionViewKey.")]
         public static readonly ServiceKey<Entity> SelectedEntity = new("SelectedEntity");
         public static readonly ServiceKey<Entity> HoveredEntity = new("HoveredEntity");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
+        public static readonly ServiceKey<Entity> SelectionViewViewerEntity = new("SelectionViewViewerEntity");
+        public static readonly ServiceKey<string> SelectionViewKey = new("SelectionViewKey");
+        [Obsolete("Legacy pre-SSOT view key. Do not use. Resolve viewed selection through SelectionViewViewerEntity + SelectionViewKey.")]
         public static readonly ServiceKey<Entity> SelectionViewOwnerEntity = new("SelectionViewOwnerEntity");
+        [Obsolete("Legacy pre-SSOT set key. Do not use. Resolve viewed selection through SelectionViewViewerEntity + SelectionViewKey.")]
         public static readonly ServiceKey<string> SelectionViewSetKey = new("SelectionViewSetKey");
 
         // --- Config & AI ---

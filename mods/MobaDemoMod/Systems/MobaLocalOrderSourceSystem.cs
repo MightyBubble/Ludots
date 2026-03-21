@@ -116,9 +116,13 @@ namespace MobaDemoMod.Systems
             {
                 return TryGetSelected(setKey, out entity);
             });
-            _inputOrderMapping.SetSelectedEntitiesProvider((string setKey, ref OrderEntitySelection entities) =>
+            _inputOrderMapping.SetSelectedContainerProvider((string setKey, out Entity container) =>
             {
-                return TryGetSelectedEntities(setKey, ref entities);
+                return TryGetSelectedContainer(setKey, out container);
+            });
+            _inputOrderMapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) =>
+            {
+                return TryGetSelectedEntities(setKey, entities);
             });
 
             _inputOrderMapping.SetHoveredEntityProvider((out Entity entity) =>
@@ -228,9 +232,9 @@ namespace MobaDemoMod.Systems
             return _selection.TryGetPrimary(owner, setKey, out target);
         }
 
-        private bool TryGetSelectedEntities(string setKey, ref OrderEntitySelection entities)
+        private bool TryGetSelectedContainer(string setKey, out Entity container)
         {
-            entities = default;
+            container = default;
             if (_selection == null ||
                 !_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
                 actorObj is not Entity owner ||
@@ -239,11 +243,35 @@ namespace MobaDemoMod.Systems
                 return false;
             }
 
-            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
-            int count = _selection.CopySelection(owner, setKey, selected);
-            for (int i = 0; i < count && entities.Count < OrderEntitySelection.MaxEntities; i++)
+            return _selection.TryCreateSnapshotLease(owner, setKey, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container);
+        }
+
+        private bool TryGetSelectedEntities(string setKey, List<Entity> entities)
+        {
+            entities.Clear();
+            if (_selection == null ||
+                !_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
+                actorObj is not Entity owner ||
+                !_world.IsAlive(owner))
             {
-                entities.Add(selected[i]);
+                return false;
+            }
+
+            int selectionCount = _selection.GetSelectionCount(owner, setKey);
+            if (selectionCount <= 0)
+            {
+                return false;
+            }
+
+            Entity[] selected = new Entity[selectionCount];
+            int count = _selection.CopySelection(owner, setKey, selected);
+            for (int i = 0; i < count; i++)
+            {
+                Entity entity = selected[i];
+                if (_world.IsAlive(entity))
+                {
+                    entities.Add(entity);
+                }
             }
 
             return entities.Count > 0;

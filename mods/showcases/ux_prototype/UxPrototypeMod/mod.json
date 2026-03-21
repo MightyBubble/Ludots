@@ -8,7 +8,8 @@
     "LudotsCoreMod": "^1.0.0",
     "CoreInputMod": "^1.0.0",
     "CameraProfilesMod": "^1.0.0",
-    "EntityInfoPanelsMod": "^1.0.0"
+    "EntityInfoPanelsMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0"
   },
   "author": "Ludots Team",
   "tags": ["ux", "prototype", "rts", "showcase", "hud", "ecs"]

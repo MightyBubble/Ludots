@@ -23,24 +23,19 @@ namespace Ludots.Core.Input.Orders
     public delegate bool ActorProvider(out Entity entity);
 
     /// <summary>
-    /// Legacy ambient-selection provider kept for tests and transitional callers.
-    /// </summary>
-    public delegate bool AmbientSelectedEntityProvider(out Entity entity);
-
-    /// <summary>
     /// Delegate for getting the selected entity from a named selection set.
     /// </summary>
     public delegate bool SelectedEntityProvider(string selectionSetKey, out Entity entity);
 
     /// <summary>
-    /// Delegate for getting the current selected entity collection from a named selection set.
+    /// Delegate for getting the current selected container snapshot from a named selection set.
     /// </summary>
-    public delegate bool SelectedEntitiesProvider(string selectionSetKey, ref OrderEntitySelection entities);
+    public delegate bool SelectedContainerProvider(string selectionSetKey, out Entity container);
 
     /// <summary>
-    /// Legacy ambient-selection collection provider kept for tests and transitional callers.
+    /// Delegate for copying the current selected entities into a reusable list.
     /// </summary>
-    public delegate bool AmbientSelectedEntitiesProvider(ref OrderEntitySelection entities);
+    public delegate bool SelectedEntityListProvider(string selectionSetKey, List<Entity> entities);
 
     /// <summary>
     /// Delegate for getting the entity currently under the cursor (for SmartCast).
@@ -138,7 +133,8 @@ namespace Ludots.Core.Input.Orders
         private GroundPositionProvider? _groundPositionProvider;
         private ActorProvider? _actorProvider;
         private SelectedEntityProvider? _selectedEntityProvider;
-        private SelectedEntitiesProvider? _selectedEntitiesProvider;
+        private SelectedContainerProvider? _selectedContainerProvider;
+        private SelectedEntityListProvider? _selectedEntityListProvider;
         private HoveredEntityProvider? _hoveredEntityProvider;
         private OrderSubmitHandler? _orderSubmitHandler;
         private ModifierKeyProvider? _queueModifierProvider;
@@ -152,6 +148,7 @@ namespace Ludots.Core.Input.Orders
         private Entity _localPlayer;
         private int _playerId = 1;
         private float _elapsedSeconds;
+        private readonly List<Entity> _selectedActorsScratch = new(16);
 
         // Aiming state (AimCast mode)
         private bool _isAiming;
@@ -239,12 +236,9 @@ namespace Ludots.Core.Input.Orders
         public void SetOrderTypeKeyResolver(OrderTypeKeyResolver resolver) => _orderTypeKeyResolver = resolver;
         public void SetGroundPositionProvider(GroundPositionProvider provider) => _groundPositionProvider = provider;
         public void SetActorProvider(ActorProvider provider) => _actorProvider = provider;
-        public void SetSelectedEntityProvider(AmbientSelectedEntityProvider provider)
-            => _selectedEntityProvider = (string _, out Entity entity) => provider(out entity);
         public void SetSelectedEntityProvider(SelectedEntityProvider provider) => _selectedEntityProvider = provider;
-        public void SetSelectedEntitiesProvider(AmbientSelectedEntitiesProvider provider)
-            => _selectedEntitiesProvider = (string _, ref OrderEntitySelection entities) => provider(ref entities);
-        public void SetSelectedEntitiesProvider(SelectedEntitiesProvider provider) => _selectedEntitiesProvider = provider;
+        public void SetSelectedContainerProvider(SelectedContainerProvider provider) => _selectedContainerProvider = provider;
+        public void SetSelectedEntityListProvider(SelectedEntityListProvider provider) => _selectedEntityListProvider = provider;
         public void SetHoveredEntityProvider(HoveredEntityProvider provider) => _hoveredEntityProvider = provider;
         public void SetOrderSubmitHandler(OrderSubmitHandler handler) => _orderSubmitHandler = handler;
         public void SetQueueModifierProvider(ModifierKeyProvider provider) => _queueModifierProvider = provider;
@@ -725,7 +719,7 @@ namespace Ludots.Core.Input.Orders
             }
             else if (mapping.SelectionType == OrderSelectionType.Entities)
             {
-                _selectedEntitiesProvider?.Invoke(mapping.SelectionSetKey, ref args.Entities);
+                TryCaptureSelectedContainer(mapping.SelectionSetKey, ref args.Selection);
             }
 
             order.OrderTypeId = orderTypeId;
@@ -847,9 +841,9 @@ namespace Ludots.Core.Input.Orders
                     break;
 
                 case OrderSelectionType.Entities:
-                    if (_selectedEntitiesProvider != null)
+                    if (_selectedContainerProvider != null)
                     {
-                        _selectedEntitiesProvider(mapping.SelectionSetKey, ref args.Entities);
+                        TryCaptureSelectedContainer(mapping.SelectionSetKey, ref args.Selection);
                     }
                     else if (mapping.RequireSelection)
                     {
@@ -938,7 +932,7 @@ namespace Ludots.Core.Input.Orders
                         break;
                         
                     case OrderSelectionType.Entities:
-                        if (_selectedEntitiesProvider == null || !_selectedEntitiesProvider(mapping.SelectionSetKey, ref args.Entities) || args.Entities.Count <= 0)
+                        if (!TryCaptureSelectedContainer(mapping.SelectionSetKey, ref args.Selection))
                         {
                             return false;
                         }
@@ -954,7 +948,7 @@ namespace Ludots.Core.Input.Orders
             }
             else if (mapping.SelectionType == OrderSelectionType.Entities)
             {
-                _selectedEntitiesProvider?.Invoke(mapping.SelectionSetKey, ref args.Entities);
+                TryCaptureSelectedContainer(mapping.SelectionSetKey, ref args.Selection);
             }
             
             order.OrderTypeId = orderTypeId;
@@ -974,10 +968,9 @@ namespace Ludots.Core.Input.Orders
 
             if (mapping.SelectionType != OrderSelectionType.Entities)
             {
-                var selectedActors = default(OrderEntitySelection);
-                if (TryCaptureSelectedActors(mapping.SelectionSetKey, ref selectedActors))
+                if (TryCaptureSelectedActors(mapping.SelectionSetKey, _selectedActorsScratch))
                 {
-                    return selectedActors.GetEntity(0);
+                    return _selectedActorsScratch[0];
                 }
             }
 
@@ -989,10 +982,19 @@ namespace Ludots.Core.Input.Orders
             return _localPlayer;
         }
 
-        private bool TryCaptureSelectedActors(string selectionSetKey, ref OrderEntitySelection entities)
+        private bool TryCaptureSelectedContainer(string selectionSetKey, ref OrderSelectionReference selection)
         {
-            return _selectedEntitiesProvider != null &&
-                   _selectedEntitiesProvider(selectionSetKey, ref entities) &&
+            selection = default;
+            return _selectedContainerProvider != null &&
+                   _selectedContainerProvider(selectionSetKey, out selection.Container) &&
+                   selection.HasContainer;
+        }
+
+        private bool TryCaptureSelectedActors(string selectionSetKey, List<Entity> entities)
+        {
+            entities.Clear();
+            return _selectedEntityListProvider != null &&
+                   _selectedEntityListProvider(selectionSetKey, entities) &&
                    entities.Count > 0;
         }
 
@@ -1004,16 +1006,15 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            var selectedActors = default(OrderEntitySelection);
-            if (!TryCaptureSelectedActors(mapping.SelectionSetKey, ref selectedActors) || selectedActors.Count <= 1)
+            if (!TryCaptureSelectedActors(mapping.SelectionSetKey, _selectedActorsScratch) || _selectedActorsScratch.Count <= 1)
             {
                 _orderSubmitHandler!(in order);
                 return;
             }
 
-            for (int i = 0; i < selectedActors.Count; i++)
+            for (int i = 0; i < _selectedActorsScratch.Count; i++)
             {
-                var actor = selectedActors.GetEntity(i);
+                Entity actor = _selectedActorsScratch[i];
                 if (actor == default)
                 {
                     continue;
@@ -1021,7 +1022,7 @@ namespace Ludots.Core.Input.Orders
 
                 var cloned = order;
                 cloned.Actor = actor;
-                ApplyGroupMoveFormation(mapping, selectedActors.Count, i, ref cloned);
+                ApplyGroupMoveFormation(mapping, _selectedActorsScratch.Count, i, ref cloned);
                 _orderSubmitHandler!(in cloned);
             }
         }

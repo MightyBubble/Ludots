@@ -92,8 +92,7 @@ namespace Ludots.Tests.GAS
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var target = world.Create();
-            var local = world.Create(new SelectionBuffer());
-            SeedAmbientSelection(world, local, target);
+            var local = world.Create();
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = input,
@@ -104,6 +103,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
             CreateSelectionRuntime(world, globals);
+            SeedAmbientSelection(world, globals, local, target);
 
             var system = new GasInputResponseSystem(world, globals);
             var requests = (InputRequestQueue)globals[CoreServiceKeys.AbilityInputRequestQueue.Name];
@@ -385,17 +385,20 @@ namespace Ludots.Tests.GAS
             };
 
             using var world = World.Create();
+            var local = world.Create();
             var first = world.Create();
             var second = world.Create();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+            };
+            SelectionRuntime selectionRuntime = CreateSelectionRuntime(world, globals);
+            SeedAmbientSelection(world, globals, local, first, second);
+
             var mapping = new InputOrderMappingSystem(input, cfg);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
-            mapping.SetSelectedEntitiesProvider((ref OrderEntitySelection entities) =>
-            {
-                entities = default;
-                entities.Add(first);
-                entities.Add(second);
-                return true;
-            });
+            mapping.SetSelectedContainerProvider((string setKey, out Entity container) =>
+                selectionRuntime.TryCreateSnapshotLease(local, SelectionSetKeys.Ambient, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container));
 
             var orders = new List<Order>();
             mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
@@ -405,9 +408,116 @@ namespace Ludots.Tests.GAS
             mapping.Update(0f);
 
             That(orders.Count, Is.EqualTo(1));
-            That(orders[0].Args.Entities.Count, Is.EqualTo(2));
-            That(orders[0].Args.Entities.GetEntity(0), Is.EqualTo(first));
-            That(orders[0].Args.Entities.GetEntity(1), Is.EqualTo(second));
+            That(orders[0].Args.Selection.HasContainer, Is.True);
+            Entity[] selected = new Entity[2];
+            int copied = selectionRuntime.CopySelection(orders[0].Args.Selection.Container, selected);
+            That(copied, Is.EqualTo(2));
+            That(selected[0], Is.EqualTo(first));
+            That(selected[1], Is.EqualTo(second));
+        }
+
+        [Test]
+        public void InputOrderMapping_SelectionSnapshot_RemainsStable_AfterLiveSelectionChanges()
+        {
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var cfg = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.TargetFirst,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        RequireSelection = true,
+                        SelectionType = OrderSelectionType.Entities,
+                        IsSkillMapping = false,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            var local = world.Create();
+            var first = world.Create();
+            var second = world.Create();
+            var third = world.Create();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+            };
+            SelectionRuntime selectionRuntime = CreateSelectionRuntime(world, globals);
+            SeedAmbientSelection(world, globals, local, first, second);
+
+            var mapping = new InputOrderMappingSystem(input, cfg);
+            mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
+            mapping.SetSelectedContainerProvider((string setKey, out Entity container) =>
+                selectionRuntime.TryCreateSnapshotLease(local, SelectionSetKeys.Ambient, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container));
+
+            Order submitted = default;
+            mapping.SetOrderSubmitHandler((in Order order) => submitted = order);
+
+            input.InjectButtonPress("SkillQ");
+            input.Update();
+            mapping.Update(0f);
+
+            SeedAmbientSelection(world, globals, local, third);
+
+            That(submitted.Args.Selection.HasContainer, Is.True);
+            Entity[] selected = new Entity[4];
+            int copied = selectionRuntime.CopySelection(submitted.Args.Selection.Container, selected);
+            That(copied, Is.EqualTo(2));
+            That(selected[0], Is.EqualTo(first));
+            That(selected[1], Is.EqualTo(second));
+        }
+
+        [Test]
+        public void OrderSelectionLeaseCleanupSystem_ReclaimsSnapshotLease_WhenContainerLeavesAllOrders()
+        {
+            using var world = World.Create();
+            var local = world.Create();
+            var first = world.Create();
+            var second = world.Create();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+            };
+            SelectionRuntime selectionRuntime = CreateSelectionRuntime(world, globals);
+            SeedAmbientSelection(world, globals, local, first, second);
+
+            That(
+                selectionRuntime.TryCreateSnapshotLease(
+                    local,
+                    SelectionSetKeys.Ambient,
+                    SelectionSetKeys.CommandSnapshot,
+                    SelectionContainerKind.Snapshot,
+                    out Entity leaseOwner,
+                    out Entity container),
+                Is.True);
+
+            var queue = new OrderQueue();
+            var order = new Order
+            {
+                OrderTypeId = 1001,
+                Actor = first,
+                Args = new OrderArgs
+                {
+                    Selection = new OrderSelectionReference { Container = container }
+                }
+            };
+
+            That(queue.TryEnqueue(in order), Is.True);
+
+            var cleanup = new OrderSelectionLeaseCleanupSystem(world, queue);
+            cleanup.Update(0f);
+            That(world.IsAlive(leaseOwner), Is.True, "Lease owner should remain alive while an order references its snapshot container.");
+
+            That(queue.TryDequeue(out _), Is.True);
+            cleanup.Update(0f);
+            That(world.IsAlive(leaseOwner), Is.False, "Lease owner should be reclaimed once no order references the snapshot container.");
+
+            selectionRuntime.SweepDanglingState();
+            That(world.IsAlive(container), Is.False, "Selection container should be removed after its lease owner is reclaimed and swept.");
         }
 
         [Test]
@@ -443,9 +553,9 @@ namespace Ludots.Tests.GAS
                 worldCm = new Vector3(320f, 0f, 640f);
                 return true;
             });
-            mapping.SetSelectedEntitiesProvider((ref OrderEntitySelection entities) =>
+            mapping.SetSelectedEntityListProvider((string _, List<Entity> entities) =>
             {
-                entities = default;
+                entities.Clear();
                 entities.Add(first);
                 entities.Add(second);
                 return true;
@@ -503,9 +613,9 @@ namespace Ludots.Tests.GAS
                 worldCm = new Vector3(320f, 0f, 640f);
                 return true;
             });
-            mapping.SetSelectedEntitiesProvider((ref OrderEntitySelection entities) =>
+            mapping.SetSelectedEntityListProvider((string _, List<Entity> entities) =>
             {
-                entities = default;
+                entities.Clear();
                 entities.Add(first);
                 entities.Add(second);
                 return true;
@@ -553,9 +663,9 @@ namespace Ludots.Tests.GAS
             var mapping = new InputOrderMappingSystem(input, cfg);
             mapping.SetLocalPlayer(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
-            mapping.SetSelectedEntitiesProvider((ref OrderEntitySelection entities) =>
+            mapping.SetSelectedEntityListProvider((string _, List<Entity> entities) =>
             {
-                entities = default;
+                entities.Clear();
                 entities.Add(first);
                 entities.Add(second);
                 return true;
@@ -595,28 +705,20 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
-            var bridge = new SelectionBridgeProjectionSystem(world, globals, selectionRuntime);
 
             var system = new EntityClickSelectSystem(world, globals);
 
-            Click(system, bridge, input, new Vector2(1600f, 1200f));
+            Click(system, input, new Vector2(1600f, 1200f));
 
-            AssertSelection(world, local, first);
-            That(world.Has<SelectedTag>(first), Is.True);
-            That(world.Has<SelectedTag>(second), Is.False);
-            That(globals[CoreServiceKeys.SelectedEntity.Name], Is.EqualTo(first));
+            AssertSelection(selectionRuntime, local, first);
+            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out var currentPrimary), Is.True);
+            That(currentPrimary, Is.EqualTo(first));
 
-            DragSelect(system, bridge, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
+            DragSelect(system, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
 
-            ref var selection = ref world.Get<SelectionBuffer>(local);
-            That(selection.Count, Is.EqualTo(3));
-            That(selection.Contains(first), Is.True);
-            That(selection.Contains(second), Is.True);
-            That(selection.Contains(third), Is.True);
-            That(world.Has<SelectedTag>(first), Is.True);
-            That(world.Has<SelectedTag>(second), Is.True);
-            That(world.Has<SelectedTag>(third), Is.True);
-            That(globals[CoreServiceKeys.SelectedEntity.Name], Is.EqualTo(first), "Primary selected entity should stay deterministic after box select.");
+            AssertSelection(selectionRuntime, local, first, second, third);
+            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out currentPrimary), Is.True);
+            That(currentPrimary, Is.EqualTo(first), "Primary selected entity should stay deterministic after box select.");
         }
 
         [Test]
@@ -625,9 +727,8 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-            var local = world.Create(new SelectionBuffer());
+            var local = world.Create();
             var first = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
-            SeedAmbientSelection(world, local, first);
 
             var globals = new Dictionary<string, object>
             {
@@ -638,16 +739,13 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
-            var bridge = new SelectionBridgeProjectionSystem(world, globals, selectionRuntime);
-            bridge.Update(0f);
+            SeedAmbientSelection(world, globals, local, first);
 
             var system = new EntityClickSelectSystem(world, globals);
-            Click(system, bridge, input, new Vector2(5200f, 4200f));
+            Click(system, input, new Vector2(5200f, 4200f));
 
-            ref var cleared = ref world.Get<SelectionBuffer>(local);
-            That(cleared.Count, Is.EqualTo(0));
-            That(world.Has<SelectedTag>(first), Is.False);
-            That(globals.ContainsKey(CoreServiceKeys.SelectedEntity.Name), Is.False);
+            That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.Ambient), Is.EqualTo(0));
+            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out _), Is.False);
         }
 
         [Test]
@@ -656,7 +754,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-            var local = world.Create(new SelectionBuffer());
+            var local = world.Create();
             _ = world.Create(
                 WorldPositionCm.FromCm(1600, 1200),
                 new VisualTransform { Position = new Vector3(16f, 0f, 12f) },
@@ -673,14 +771,12 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
-            var bridge = new SelectionBridgeProjectionSystem(world, globals, selectionRuntime);
             var system = new EntityClickSelectSystem(world, globals);
 
-            Click(system, bridge, input, new Vector2(1600f, 1200f));
+            Click(system, input, new Vector2(1600f, 1200f));
 
-            ref var selection = ref world.Get<SelectionBuffer>(local);
-            That(selection.Count, Is.EqualTo(0));
-            That(globals.ContainsKey(CoreServiceKeys.SelectedEntity.Name), Is.False);
+            That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.Ambient), Is.EqualTo(0));
+            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out _), Is.False);
         }
 
         [Test]
@@ -689,10 +785,9 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-            var local = world.Create(new SelectionBuffer());
+            var local = world.Create();
             var actor = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
             var enemy = world.Create(WorldPositionCm.FromCm(2600, 1600), new VisualTransform { Position = new Vector3(26f, 0f, 16f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
-            SeedAmbientSelection(world, local, actor);
 
             var globals = new Dictionary<string, object>
             {
@@ -703,8 +798,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
-            var bridge = new SelectionBridgeProjectionSystem(world, globals, selectionRuntime);
-            bridge.Update(0f);
+            SeedAmbientSelection(world, globals, local, actor);
 
             var selectionSystem = new EntityClickSelectSystem(world, globals);
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
@@ -726,7 +820,7 @@ namespace Ludots.Tests.GAS
 
             mapping.SetLocalPlayer(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
-            mapping.SetSelectedEntityProvider((out Entity entity) =>
+            mapping.SetSelectedEntityProvider((string _, out Entity entity) =>
             {
                 entity = actor;
                 return true;
@@ -744,7 +838,6 @@ namespace Ludots.Tests.GAS
             input.InjectButtonPress("SkillQ");
             input.Update();
             selectionSystem.Update(0f);
-            bridge.Update(0f);
             mapping.Update(0f);
             That(mapping.IsAiming, Is.True);
 
@@ -752,19 +845,14 @@ namespace Ludots.Tests.GAS
             input.InjectButtonPress("Select");
             input.Update();
             selectionSystem.Update(0f);
-            bridge.Update(0f);
             mapping.Update(0f);
 
             input.InjectAction("PointerPos", new Vector3(2600f, 1600f, 0f));
             input.Update();
             selectionSystem.Update(0f);
-            bridge.Update(0f);
             mapping.Update(0f);
 
-            AssertSelection(world, local, actor);
-            That(globals[CoreServiceKeys.SelectedEntity.Name], Is.EqualTo(actor));
-            That(world.Has<SelectedTag>(actor), Is.True);
-            That(world.Has<SelectedTag>(enemy), Is.False);
+            AssertSelection(selectionRuntime, local, actor);
             That(orders.Count, Is.EqualTo(1));
             That(orders[0].Actor, Is.EqualTo(actor));
             That(orders[0].Target, Is.EqualTo(enemy));
@@ -827,47 +915,44 @@ namespace Ludots.Tests.GAS
             };
         }
 
-        private static void Click(EntityClickSelectSystem system, SelectionBridgeProjectionSystem bridge, PlayerInputHandler input, Vector2 pointer)
+        private static void Click(EntityClickSelectSystem system, PlayerInputHandler input, Vector2 pointer)
         {
             input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
             input.InjectButtonPress("Select");
             input.Update();
             system.Update(0f);
-            bridge.Update(0f);
 
             input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
             input.Update();
             system.Update(0f);
-            bridge.Update(0f);
         }
 
-        private static void DragSelect(EntityClickSelectSystem system, SelectionBridgeProjectionSystem bridge, PlayerInputHandler input, Vector2 from, Vector2 to)
+        private static void DragSelect(EntityClickSelectSystem system, PlayerInputHandler input, Vector2 from, Vector2 to)
         {
             input.InjectAction("PointerPos", new Vector3(from.X, from.Y, 0f));
             input.InjectButtonPress("Select");
             input.Update();
             system.Update(0f);
-            bridge.Update(0f);
 
             input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
             input.InjectButtonPress("Select");
             input.Update();
             system.Update(0f);
-            bridge.Update(0f);
 
             input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
             input.Update();
             system.Update(0f);
-            bridge.Update(0f);
         }
 
-        private static void AssertSelection(World world, Entity owner, params Entity[] expected)
+        private static void AssertSelection(SelectionRuntime selectionRuntime, Entity owner, params Entity[] expected)
         {
-            ref var selection = ref world.Get<SelectionBuffer>(owner);
-            That(selection.Count, Is.EqualTo(expected.Length));
+            That(selectionRuntime.GetSelectionCount(owner, SelectionSetKeys.Ambient), Is.EqualTo(expected.Length));
+            Entity[] actual = new Entity[expected.Length];
+            int written = selectionRuntime.CopySelection(owner, SelectionSetKeys.Ambient, actual);
+            That(written, Is.EqualTo(expected.Length));
             for (int i = 0; i < expected.Length; i++)
             {
-                That(selection.Get(i), Is.EqualTo(expected[i]));
+                That(actual[i], Is.EqualTo(expected[i]));
             }
         }
 
@@ -882,17 +967,13 @@ namespace Ludots.Tests.GAS
             return runtime;
         }
 
-        private static void SeedAmbientSelection(World world, Entity owner, Entity target)
+        private static void SeedAmbientSelection(World world, Dictionary<string, object> globals, Entity owner, params Entity[] targets)
         {
-            if (!world.Has<SelectionBuffer>(owner))
-            {
-                world.Add(owner, default(SelectionBuffer));
-            }
-
-            ref var selection = ref world.Get<SelectionBuffer>(owner);
-            selection.Clear();
-            selection.Add(target);
-            world.Set(owner, selection);
+            var runtime = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out object? runtimeObj) &&
+                          runtimeObj is SelectionRuntime selection
+                ? selection
+                : throw new InvalidOperationException("SelectionRuntime missing from globals.");
+            runtime.ReplaceSelection(owner, SelectionSetKeys.Ambient, targets);
         }
 
         private static WorldSizeSpec CreateWorldSizeSpec()

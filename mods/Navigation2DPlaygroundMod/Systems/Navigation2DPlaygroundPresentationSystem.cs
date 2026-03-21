@@ -73,6 +73,7 @@ namespace Navigation2DPlaygroundMod.Systems
                 return;
             }
 
+            Entity[] selected = Navigation2DPlaygroundSelectionView.SnapshotSelectedEntities(_engine.World, _engine.GlobalContext);
             foreach (ref var chunk in _world.Query(in AgentQuery))
             {
                 var visuals = chunk.GetSpan<VisualTransform>();
@@ -81,7 +82,7 @@ namespace Navigation2DPlaygroundMod.Systems
 
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    bool isSelected = !isBlockerChunk && _world.Has<SelectedTag>(chunk.Entity(i));
+                    bool isSelected = !isBlockerChunk && ContainsEntity(selected, chunk.Entity(i));
                     Vector4 color = isBlockerChunk
                         ? new Vector4(0.35f, 0.55f, 1f, 1f)
                         : teams[i].Id == 0
@@ -314,8 +315,7 @@ namespace Navigation2DPlaygroundMod.Systems
             string scenarioId = _engine.GetService(Navigation2DPlaygroundKeys.ScenarioId) ?? "unknown";
             string scenarioName = _engine.GetService(Navigation2DPlaygroundKeys.ScenarioName) ?? "Unknown";
 
-            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
-            int selectedCount = Navigation2DPlaygroundSelectionView.CopySelectedEntities(_engine.World, _engine.GlobalContext, selected);
+            int selectedCount = Navigation2DPlaygroundSelectionView.SnapshotSelectedEntities(_engine.World, _engine.GlobalContext).Length;
 
             int x = 16;
             int y = 540;
@@ -338,6 +338,19 @@ namespace Navigation2DPlaygroundMod.Systems
             overlay.AddText(x + 10, y + 150, $"FlowWindow={flowWindowWidth}x{flowWindowHeight}  Selected={flowSelectedTiles}  Retained={flowRetainedTiles}  New={flowNewTiles}  Evict={flowEvictedTiles}", 14, text);
             overlay.AddText(x + 10, y + 170, $"Spatial={spatialMode}  Rebuilds={spatialRebuilds}  Incremental={spatialIncrementalUpdates}  Dirty={spatialDirtyAgents}  CellMigrations={spatialCellMigrations}", 14, text);
             overlay.AddText(x + 10, y + 186, "Panel is primary UI. Overlay remains telemetry-only for headless evidence and perf reads.", 13, hint);
+        }
+
+        private static bool ContainsEntity(ReadOnlySpan<Entity> selected, Entity entity)
+        {
+            for (int i = 0; i < selected.Length; i++)
+            {
+                if (selected[i] == entity)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

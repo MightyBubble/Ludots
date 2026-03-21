@@ -6,6 +6,7 @@ using CoreInputMod.Systems;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
@@ -64,8 +65,11 @@ namespace CoreInputMod.Triggers
             var selectionRules = (SelectionRuleRegistry)engine.GlobalContext[CoreServiceKeys.SelectionRuleRegistry.Name];
             var selectionRuntime = engine.GetService(CoreServiceKeys.SelectionRuntime)
                 ?? throw new InvalidOperationException("SelectionRuntime must be registered before CoreInputMod installs.");
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
+                ?? throw new InvalidOperationException("OrderQueue must be registered before CoreInputMod installs.");
 
             engine.RegisterSystem(new SelectionMaintenanceSystem(engine.World, selectionRuntime), SystemGroup.InputCollection);
+            engine.RegisterSystem(new OrderSelectionLeaseCleanupSystem(engine.World, orderQueue), SystemGroup.Cleanup);
 
             var clickSelect = new EntityClickSelectSystem(engine.World, engine.GlobalContext, selectionRuntime);
             clickSelect.OnEntitySelected = (worldCm, entity) =>
@@ -73,7 +77,6 @@ namespace CoreInputMod.Triggers
                 foreach (var cb in selectionCallbacks) cb(worldCm, entity);
             };
             engine.RegisterSystem(clickSelect, SystemGroup.InputCollection);
-            engine.RegisterSystem(new SelectionBridgeProjectionSystem(engine.World, engine.GlobalContext, selectionRuntime), SystemGroup.InputCollection);
 
             var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries, selectionRules);
             gasSelection.OnSelectionTriggered = (req, worldCm) =>

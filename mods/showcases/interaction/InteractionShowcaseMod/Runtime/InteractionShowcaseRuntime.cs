@@ -6,6 +6,7 @@ using CoreInputMod.ViewMode;
 using InteractionShowcaseMod.Input;
 using InteractionShowcaseMod.UI;
 using Ludots.Core.Engine;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -203,8 +204,7 @@ namespace InteractionShowcaseMod.Runtime
 
         private static EntityInfoPanelTarget? TryResolveSelectedTarget(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out object? selectedObj) ||
-                selectedObj is not Arch.Core.Entity selected ||
+            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Arch.Core.Entity selected) ||
                 selected == Arch.Core.Entity.Null ||
                 !engine.World.IsAlive(selected))
             {

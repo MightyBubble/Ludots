@@ -109,19 +109,40 @@ namespace CoreInputMod.Systems
             return _selection.TryGetPrimary(owner, setKey, out entity);
         }
 
-        public bool TryGetSelectedEntities(string setKey, ref OrderEntitySelection entities)
+        public bool TryGetSelectedContainer(string setKey, out Entity container)
         {
-            entities = default;
+            container = default;
             if (_selection == null || !TryGetSelectionOwner(out var owner))
             {
                 return false;
             }
 
-            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
-            int count = _selection.CopySelection(owner, setKey, selected);
-            for (int i = 0; i < count && entities.Count < OrderEntitySelection.MaxEntities; i++)
+            return _selection.TryCreateSnapshotLease(owner, setKey, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container);
+        }
+
+        public bool TryGetSelectedEntities(string setKey, List<Entity> entities)
+        {
+            entities.Clear();
+            if (_selection == null || !TryGetSelectionOwner(out var owner))
             {
-                entities.Add(selected[i]);
+                return false;
+            }
+
+            int selectionCount = _selection.GetSelectionCount(owner, setKey);
+            if (selectionCount <= 0)
+            {
+                return false;
+            }
+
+            Entity[] selected = new Entity[selectionCount];
+            int count = _selection.CopySelection(owner, setKey, selected);
+            for (int i = 0; i < count; i++)
+            {
+                Entity entity = selected[i];
+                if (_world.IsAlive(entity))
+                {
+                    entities.Add(entity);
+                }
             }
 
             return entities.Count > 0;
