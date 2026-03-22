@@ -22,7 +22,6 @@ namespace RoadNetworkShowcaseMod.Gameplay
             route.Args = new OrderArgs();
             route.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
             route.Args.Spatial.Mode = OrderCollectionMode.List;
-            route.Args.Spatial.A0 = 0;
             RoadRouteFinalTargetResolver.Encode(ref route, finalGoalWorldCm);
 
             for (int i = 0; i < count; i++)

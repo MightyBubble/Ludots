@@ -17,6 +17,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Scripting;
+using RoadNetworkShowcaseMod.Gameplay;
 using CoreInputMod.Systems;
 using RoadNetworkShowcaseMod.Runtime;
 
@@ -295,7 +296,17 @@ namespace RoadNetworkShowcaseMod.Systems
                 if (buffer.HasActive)
                 {
                     ref Order order = ref buffer.ActiveOrder.Order;
-                    activeOrder = $"type:{order.OrderTypeId} wp:{order.Args.Spatial.A0} pts:{order.Args.Spatial.PointCount}";
+                    int waypointIndex = 0;
+                    if (_world.Has<RoadRouteRuntimeState>(actor))
+                    {
+                        ref readonly var state = ref _world.Get<RoadRouteRuntimeState>(actor);
+                        if (RoadRouteRuntimeBinding.Matches(in state, in order))
+                        {
+                            waypointIndex = RoadRouteRuntimeBinding.ResolveStartWaypointIndex(in state, in order);
+                        }
+                    }
+
+                    activeOrder = $"type:{order.OrderTypeId} order:{order.OrderId} wp:{waypointIndex} pts:{order.Args.Spatial.PointCount}";
                 }
             }
 

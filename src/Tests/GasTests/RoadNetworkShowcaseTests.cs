@@ -140,14 +140,68 @@ namespace Ludots.Tests.GAS
         public void RoadRouteSelectionStrategy_DoesNotSkipAheadBeforeReachingCurrentWaypoint()
         {
             Order order = CreateRouteOrder(Entity.Null, roadMoveFollowOrderTypeId: 171, (0, 0), (250, 120), (500, 240));
-            order.Args.Spatial.A0 = 1;
+            order.Args.Spatial.A0 = 2;
 
             var strategy = new RoadRouteSelectionStrategy();
-            bool selected = strategy.TrySelect(in order, Fix64Vec2.FromInt(330, 170), stopRadiusCm: 40f, out RoadRouteSelection selection);
+            bool selected = strategy.TrySelect(in order, Fix64Vec2.FromInt(330, 170), currentWaypointIndex: 1, stopRadiusCm: 40f, out RoadRouteSelection selection);
 
             Assert.That(selected, Is.True);
             Assert.That(selection.Completed, Is.False);
             Assert.That(selection.WaypointIndex, Is.EqualTo(1), "Road-follow selection should keep the current waypoint until the actor actually reaches it, instead of cutting the corner toward the next sampled point.");
+            Assert.That(order.Args.Spatial.A0, Is.EqualTo(2), "Selection must not read authored-order payload as execution cursor.");
+        }
+
+        [Test]
+        public void RoadRouteFollowSystem_TracksWaypointProgressInRuntimeState_NotAuthoredOrderPayload()
+        {
+            using var world = World.Create();
+            const int moveToOrderTypeId = 77;
+            const int roadMoveFollowOrderTypeId = 171;
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            Dictionary<string, object> globals = CreateGlobals(new FailingPathService(), pathStore, moveToOrderTypeId, roadMoveFollowOrderTypeId);
+            OrderTypeRegistry orderTypes = CreateTimeoutOrderTypeRegistry(moveToOrderTypeId, roadMoveFollowOrderTypeId);
+
+            Entity actor = world.Create(
+                new Name { Value = "Runtime Cursor Column" },
+                new RoadColumnTag(),
+                WorldPositionCm.FromCm(330, 170),
+                new Position2D { Value = Fix64Vec2.FromInt(330, 170) },
+                new NavAgent2D(),
+                new NavKinematics2D
+                {
+                    MaxSpeedCmPerSec = Fix64.FromInt(600),
+                    MaxAccelCmPerSec2 = Fix64.FromInt(1200)
+                },
+                OrderBuffer.CreateEmpty(),
+                new AttributeBuffer(),
+                new GameplayTagContainer());
+
+            ref var attributes = ref world.Get<AttributeBuffer>(actor);
+            int moveSpeedId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register("MoveSpeed");
+            attributes.SetBase(moveSpeedId, 1200f);
+
+            Order routeOrder = CreateRouteOrder(actor, roadMoveFollowOrderTypeId, (0, 0), (250, 120), (500, 240));
+            routeOrder.OrderId = 44;
+            routeOrder.Args.Spatial.A0 = 2;
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            buffer.SetActiveDirect(in routeOrder, priority: 100);
+            world.Add(actor, new RoadRouteRuntimeState
+            {
+                ActiveOrderId = 44,
+                ActivePointCount = 3,
+                ActiveGoalXcm = 0,
+                ActiveGoalYcm = 0,
+                CurrentWaypointIndex = 1
+            });
+
+            var system = new RoadRouteFollowSystem(world, globals, orderTypes, new OrderQueue(capacity: 8));
+            system.Update(0.1f);
+
+            ref readonly var activeOrder = ref world.Get<OrderBuffer>(actor).ActiveOrder.Order;
+            ref readonly var runtimeState = ref world.Get<RoadRouteRuntimeState>(actor);
+            Assert.That(activeOrder.Args.Spatial.A0, Is.EqualTo(2), "Follow execution must not overwrite authored order payload.");
+            Assert.That(runtimeState.ActiveOrderId, Is.EqualTo(44));
+            Assert.That(runtimeState.CurrentWaypointIndex, Is.EqualTo(1));
         }
 
         [Test]

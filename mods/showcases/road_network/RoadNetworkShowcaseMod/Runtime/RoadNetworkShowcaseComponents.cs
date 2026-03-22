@@ -32,6 +32,11 @@ namespace RoadNetworkShowcaseMod.Runtime
 
     public struct RoadRouteRuntimeState
     {
+        public int ActiveOrderId;
+        public int ActivePointCount;
+        public int ActiveGoalXcm;
+        public int ActiveGoalYcm;
+        public int CurrentWaypointIndex;
         public Fix64Vec2 LastProgressPosition;
         public int LastResolvedWaypointIndex;
         public float StallSeconds;

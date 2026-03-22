@@ -80,10 +80,16 @@ namespace RoadNetworkShowcaseMod.Systems
                     ref Order activeOrder = ref buffer.ActiveOrder.Order;
                     Fix64Vec2 position = positions[index].Value;
                     RoadRouteExecutionProfile execution = _profiles.ResolveExecution(entity);
+                    ref var routeState = ref EnsureBoundRuntimeState(entity, in activeOrder, preserveTimeoutCount: false);
 
-                    if (!_selection.TrySelect(in activeOrder, position, execution.WaypointRadiusCm, out RoadRouteSelection selection))
+                    if (!_selection.TrySelect(
+                            in activeOrder,
+                            position,
+                            RoadRouteRuntimeBinding.ResolveStartWaypointIndex(in routeState, in activeOrder),
+                            execution.WaypointRadiusCm,
+                            out RoadRouteSelection selection))
                     {
-                        if (!TryContinueOrComplete(entity, ref activeOrder, position, in execution))
+                        if (!TryContinueOrComplete(entity, ref activeOrder, ref routeState, position, in execution))
                         {
                             CompleteRoadOrder(entity);
                         }
@@ -92,14 +98,14 @@ namespace RoadNetworkShowcaseMod.Systems
 
                     if (selection.Completed)
                     {
-                        if (!TryContinueOrComplete(entity, ref activeOrder, position, in execution))
+                        if (!TryContinueOrComplete(entity, ref activeOrder, ref routeState, position, in execution))
                         {
                             CompleteRoadOrder(entity);
                         }
                         continue;
                     }
 
-                    activeOrder.Args.Spatial.A0 = selection.WaypointIndex;
+                    routeState.CurrentWaypointIndex = selection.WaypointIndex;
                     float speedCmPerSec = ResolveMoveSpeed(entity) * Math.Max(0.1f, execution.SpeedMultiplier);
                     if (!_walk.TryApply(World, entity, selection.Target, speedCmPerSec, execution.WaypointRadiusCm))
                     {
@@ -108,8 +114,7 @@ namespace RoadNetworkShowcaseMod.Systems
                         continue;
                     }
 
-                    ref var routeState = ref EnsureRuntimeState(entity);
-                    if (!_timeout.Update(ref routeState, position, selection.WaypointIndex, dt, execution.MinProgressCm, execution.StallTimeoutSeconds))
+                    if (!_timeout.Update(ref routeState, position, routeState.CurrentWaypointIndex, dt, execution.MinProgressCm, execution.StallTimeoutSeconds))
                     {
                         worldPositions[index].Value = position;
                         continue;
@@ -125,7 +130,8 @@ namespace RoadNetworkShowcaseMod.Systems
                     }
 
                     WriteStatus($"Road route refreshed after timeout {routeState.TimeoutCount}. {refreshStatus}");
-                    _timeout.Reset(ref routeState, position, activeOrder.Args.Spatial.A0);
+                    RoadRouteRuntimeBinding.Rebind(ref routeState, in activeOrder, preserveTimeoutCount: true);
+                    _timeout.Reset(ref routeState, position, routeState.CurrentWaypointIndex);
                 }
             }
         }
@@ -153,16 +159,18 @@ namespace RoadNetworkShowcaseMod.Systems
                 return false;
             }
 
+            int existingOrderId = activeOrder.OrderId;
             if (!_refresh.TryRefresh(entity, activeOrder.PlayerId, destinationWorldCm, out Order refreshed, out status))
             {
                 return false;
             }
 
+            refreshed.OrderId = existingOrderId;
             activeOrder = refreshed;
             return true;
         }
 
-        private bool TryContinueOrComplete(Entity entity, ref Order activeOrder, Fix64Vec2 position, in RoadRouteExecutionProfile execution)
+        private bool TryContinueOrComplete(Entity entity, ref Order activeOrder, ref RoadRouteRuntimeState routeState, Fix64Vec2 position, in RoadRouteExecutionProfile execution)
         {
             if (_arrival.HasReachedFinalTarget(in activeOrder, position, execution.FinalArrivalRadiusCm))
             {
@@ -176,7 +184,8 @@ namespace RoadNetworkShowcaseMod.Systems
             }
 
             WriteStatus(refreshStatus);
-            _timeout.Reset(ref EnsureRuntimeState(entity), position, activeOrder.Args.Spatial.A0);
+            RoadRouteRuntimeBinding.Rebind(ref routeState, in activeOrder, preserveTimeoutCount: true);
+            _timeout.Reset(ref routeState, position, routeState.CurrentWaypointIndex);
             return true;
         }
 
@@ -195,6 +204,17 @@ namespace RoadNetworkShowcaseMod.Systems
             }
 
             return ref World.Get<RoadRouteRuntimeState>(entity);
+        }
+
+        private ref RoadRouteRuntimeState EnsureBoundRuntimeState(Entity entity, in Order activeOrder, bool preserveTimeoutCount)
+        {
+            ref var state = ref EnsureRuntimeState(entity);
+            if (!RoadRouteRuntimeBinding.Matches(in state, in activeOrder))
+            {
+                RoadRouteRuntimeBinding.Rebind(ref state, in activeOrder, preserveTimeoutCount);
+            }
+
+            return ref state;
         }
 
         private void ResetRuntimeState(Entity entity)

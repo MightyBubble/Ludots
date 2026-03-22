@@ -20,7 +20,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
 
     internal sealed class RoadRouteSelectionStrategy
     {
-        public bool TrySelect(in Order order, Fix64Vec2 position, float stopRadiusCm, out RoadRouteSelection selection)
+        public bool TrySelect(in Order order, Fix64Vec2 position, int currentWaypointIndex, float stopRadiusCm, out RoadRouteSelection selection)
         {
             selection = default;
             int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
@@ -30,7 +30,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 return false;
             }
 
-            int currentIndex = Math.Clamp(order.Args.Spatial.A0, 0, pointCount - 1);
+            int currentIndex = Math.Clamp(currentWaypointIndex, 0, pointCount - 1);
             while (currentIndex < pointCount)
             {
                 if (!TryResolveWaypoint(in order, currentIndex, out Fix64Vec2 target))

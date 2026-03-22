@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Rendering;
+using RoadNetworkShowcaseMod.Runtime;
 
 namespace RoadNetworkShowcaseMod.Gameplay
 {
@@ -32,7 +33,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             if (buffer.HasActive)
             {
                 ref Order active = ref buffer.ActiveOrder.Order;
-                EmitOrderRoute(in active, originWorldCm, palette, roadSplines, overlays, ref stableCursor, consumeFromCurrentIndex: true);
+                EmitOrderRoute(world, entity, in active, originWorldCm, palette, roadSplines, overlays, ref stableCursor, consumeFromCurrentIndex: true);
                 if (OrderWorldSpatialResolver.TryResolveMoveDestination(in active, out Vector3 activeDestination))
                 {
                     originWorldCm = activeDestination;
@@ -42,7 +43,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             for (int i = 0; i < buffer.QueuedCount; i++)
             {
                 Order queued = buffer.GetQueued(i).Order;
-                EmitOrderRoute(in queued, originWorldCm, palette, roadSplines, overlays, ref stableCursor, consumeFromCurrentIndex: false);
+                EmitOrderRoute(world, entity, in queued, originWorldCm, palette, roadSplines, overlays, ref stableCursor, consumeFromCurrentIndex: false);
                 if (OrderWorldSpatialResolver.TryResolveMoveDestination(in queued, out Vector3 queuedDestination))
                 {
                     originWorldCm = queuedDestination;
@@ -51,6 +52,8 @@ namespace RoadNetworkShowcaseMod.Gameplay
         }
 
         private void EmitOrderRoute(
+            World world,
+            Entity entity,
             in Order order,
             in Vector3 originWorldCm,
             in RoadRoutePreviewPalette palette,
@@ -71,7 +74,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             }
 
             int startIndex = consumeFromCurrentIndex
-                ? Math.Clamp(order.Args.Spatial.A0, 0, pointCount - 1)
+                ? ResolveActiveStartIndex(world, entity, in order, pointCount)
                 : 0;
             int remainingCount = pointCount - startIndex;
             if (remainingCount <= 0)
@@ -144,6 +147,25 @@ namespace RoadNetworkShowcaseMod.Gameplay
         private static Vector3 ToVisualMeters(in Vector3 worldCm)
         {
             return new Vector3(WorldUnits.CmToM(worldCm.X), OverlayY, WorldUnits.CmToM(worldCm.Z));
+        }
+
+        private static int ResolveActiveStartIndex(World world, Entity entity, in Order order, int pointCount)
+        {
+            if (pointCount <= 0)
+            {
+                return 0;
+            }
+
+            if (world.Has<RoadRouteRuntimeState>(entity))
+            {
+                ref readonly var state = ref world.Get<RoadRouteRuntimeState>(entity);
+                if (RoadRouteRuntimeBinding.Matches(in state, in order))
+                {
+                    return RoadRouteRuntimeBinding.ResolveStartWaypointIndex(in state, in order);
+                }
+            }
+
+            return 0;
         }
     }
 }
