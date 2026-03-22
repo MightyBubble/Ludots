@@ -25,6 +25,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private const string TacticalCameraId = "Camera.Profile.Tactical";
         private string? _activeMapId;
         private readonly RoadNetworkShowcasePanelController _panelController;
+        private readonly RoadNetworkShowcaseDebugLogWriter _debugLogWriter;
 
         public enum ShowcaseCommandPreset : byte
         {
@@ -37,12 +38,14 @@ namespace RoadNetworkShowcaseMod.Runtime
         public RoadNetworkShowcaseRuntime()
         {
             _panelController = new RoadNetworkShowcasePanelController(this);
+            _debugLogWriter = new RoadNetworkShowcaseDebugLogWriter();
         }
 
         public NodeGraphBoard? ActiveBoard { get; private set; }
         public RoadNetworkScenarioDefinition? Scenario { get; private set; }
         public bool IsActive => ActiveBoard != null && Scenario != null;
         public string LastSubmitStatus { get; private set; } = "Road command ready. Right-click near a road or fort.";
+        public string? LatestDebugSnapshotPath => _debugLogWriter.SnapshotPath;
 
         public Task HandleMapFocusedAsync(ScriptContext context)
         {
@@ -71,12 +74,9 @@ namespace RoadNetworkShowcaseMod.Runtime
             engine.GlobalContext[RoadNetworkShowcaseIds.ScenarioServiceKey] = Scenario;
             board.LoadedChunksSource.ChunkLoaded += HandleChunkLoaded;
 
-            foreach (long chunkKey in board.LoadedChunksSource.ActiveChunkKeys)
-            {
-                HandleChunkLoaded(chunkKey);
-            }
-
             EnsureShowcaseProfiles(engine.World);
+            ApplyInitialPlayableCamera(engine);
+            PrimeInitialChunkWindow(engine);
             EnsurePrimaryPlayerControl(engine);
             RefreshPanel(engine);
 
@@ -106,6 +106,8 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return;
             }
 
+            EnsurePrimaryPlayerControl(engine);
+
             if (engine.GlobalContext.TryGetValue(RoadMoveOrderExpander.LastSubmitStatusKey, out var statusObj) &&
                 statusObj is string status &&
                 !string.IsNullOrWhiteSpace(status))
@@ -131,13 +133,8 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return false;
             }
 
-            ActivateTacticalCamera(engine);
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
-            {
-                VirtualCameraId = TacticalCameraId,
-                TargetCm = Vector2.Zero
-            });
-            LastSubmitStatus = "Camera reset to tactical overview.";
+            ApplyInitialPlayableCamera(engine);
+            LastSubmitStatus = "Camera reset to blue staging view.";
             return true;
         }
 
@@ -213,21 +210,7 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         public RoadNetworkShowcasePanelState BuildPanelState(GameEngine engine)
         {
-            var profiles = new RoadRouteProfileCatalog(engine.World);
-            Entity actor = ResolveCurrentActor(engine);
-            string actorText = actor != Entity.Null && engine.World.IsAlive(actor)
-                ? $"Actor {DescribeActor(engine, actor)}"
-                : "Actor <none>";
-            string profileText = actor != Entity.Null && engine.World.IsAlive(actor)
-                ? $"Route profile {profiles.Describe(actor)}"
-                : "Route profile <none>";
-            return new RoadNetworkShowcasePanelState(
-                Title: "Road Network Showcase",
-                Status: LastSubmitStatus,
-                Actor: actorText,
-                Profile: profileText,
-                Chunks: $"Chunks {LoadedChunkCount} | Nodes {LoadedNodeCount}",
-                Hint: "RMB route | Shift queue | Home reset | Use presets to validate long-haul, north, and south road-follow.");
+            return new RoadNetworkShowcasePanelStateBuilder(engine, this).Build();
         }
 
         private void ActivateTacticalCamera(GameEngine engine)
@@ -253,6 +236,16 @@ namespace RoadNetworkShowcaseMod.Runtime
                 snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
         }
 
+        private void ApplyInitialPlayableCamera(GameEngine engine)
+        {
+            ActivateTacticalCamera(engine);
+            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            {
+                VirtualCameraId = TacticalCameraId,
+                TargetCm = ResolveInitialCameraTarget(engine)
+            });
+        }
+
         private void EnsurePrimaryPlayerControl(GameEngine engine)
         {
             Entity owner = ResolveNamedEntity(engine, PrimaryPlayerColumnName);
@@ -263,13 +256,88 @@ namespace RoadNetworkShowcaseMod.Runtime
 
             EnsureSelectionComponents(engine.World, owner);
             engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            EnsureSelectionView(engine, owner);
 
-            if (engine.GetService(CoreServiceKeys.SelectionRuntime) is SelectionRuntime selection)
+            if (engine.GetService(CoreServiceKeys.SelectionRuntime) is SelectionRuntime selection &&
+                ShouldSeedAmbientSelection(engine.World, selection, owner))
             {
                 Span<Entity> initialSelection = stackalloc Entity[1];
                 initialSelection[0] = owner;
                 selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, initialSelection);
             }
+        }
+
+        private Vector2 ResolveInitialCameraTarget(GameEngine engine)
+        {
+            Entity owner = ResolveNamedEntity(engine, PrimaryPlayerColumnName);
+            if (owner != Entity.Null &&
+                engine.World.IsAlive(owner) &&
+                engine.World.Has<WorldPositionCm>(owner))
+            {
+                return engine.World.Get<WorldPositionCm>(owner).Value.ToVector2();
+            }
+
+            if (Scenario != null &&
+                Scenario.TryGetLandmarkWorldCm(RoadNetworkScenarioDefinition.RoadLandmarkId.WestGate, out Vector3 westGateWorldCm))
+            {
+                return new Vector2(westGateWorldCm.X, westGateWorldCm.Z);
+            }
+
+            return Vector2.Zero;
+        }
+
+        private void PrimeInitialChunkWindow(GameEngine engine)
+        {
+            if (!IsActive || Scenario == null || ActiveBoard == null)
+            {
+                return;
+            }
+
+            var target = engine.GameSession.Camera.State.TargetCm;
+            ActiveBoard.LoadedChunksSource.Update(
+                (int)target.X,
+                (int)target.Y,
+                Scenario.StreamingRadiusCm);
+
+            foreach (long chunkKey in ActiveBoard.LoadedChunksSource.ActiveChunkKeys)
+            {
+                HandleChunkLoaded(chunkKey);
+            }
+        }
+
+        private static void EnsureSelectionView(GameEngine engine, Entity owner)
+        {
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionViewOwnerEntity.Name, out object? ownerObj) ||
+                ownerObj is not Entity currentOwner ||
+                !engine.World.IsAlive(currentOwner))
+            {
+                engine.GlobalContext[CoreServiceKeys.SelectionViewOwnerEntity.Name] = owner;
+            }
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionViewSetKey.Name, out object? setKeyObj) ||
+                setKeyObj is not string setKey ||
+                string.IsNullOrWhiteSpace(setKey))
+            {
+                engine.GlobalContext[CoreServiceKeys.SelectionViewSetKey.Name] = SelectionSetKeys.Ambient;
+            }
+        }
+
+        private static bool ShouldSeedAmbientSelection(World world, SelectionRuntime selection, Entity owner)
+        {
+            if (!selection.TryGetSelectionBuffer(owner, SelectionSetKeys.Ambient, out SelectionBuffer ambient))
+            {
+                return true;
+            }
+
+            for (int i = 0; i < ambient.Count; i++)
+            {
+                if (world.IsAlive(ambient.Get(i)))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static Entity ResolveNamedEntity(GameEngine engine, string entityName)
@@ -375,7 +443,9 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return;
             }
 
-            _panelController.MountOrSync(root, engine, BuildPanelState(engine));
+            RoadNetworkShowcasePanelState state = BuildPanelState(engine);
+            _panelController.MountOrSync(root, engine, state);
+            _debugLogWriter.WriteLatest(state);
         }
 
         private void Unbind(GameEngine? engine = null)
@@ -446,6 +516,16 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private Entity ResolveCurrentActor(GameEngine engine)
         {
+            if (engine.GetService(CoreServiceKeys.SelectionRuntime) is SelectionRuntime selection &&
+                engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? ownerObj) &&
+                ownerObj is Entity owner &&
+                engine.World.IsAlive(owner) &&
+                selection.TryGetPrimary(owner, SelectionSetKeys.Ambient, out Entity selected) &&
+                engine.World.IsAlive(selected))
+            {
+                return selected;
+            }
+
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? actorObj) &&
                 actorObj is Entity actor &&
                 engine.World.IsAlive(actor))

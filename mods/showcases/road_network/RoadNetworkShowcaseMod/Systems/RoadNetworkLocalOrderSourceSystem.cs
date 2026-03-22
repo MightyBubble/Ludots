@@ -95,6 +95,8 @@ namespace RoadNetworkShowcaseMod.Systems
 
             _mapping.SetOrderSubmitHandler((in Order order) =>
             {
+                _globals[LocalOrderSourceHelper.LastOrderDebugKey] =
+                    $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},submit:{order.SubmitMode}";
                 bool accepted = _expander.TrySubmit(in order);
                 EmitSubmitCue(in order, accepted);
             });

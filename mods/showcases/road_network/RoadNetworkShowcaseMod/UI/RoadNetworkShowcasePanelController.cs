@@ -81,11 +81,13 @@ namespace RoadNetworkShowcaseMod.UI
         private UiElementBuilder BuildRoot(ReactiveContext<RoadNetworkShowcasePanelState> context)
         {
             RoadNetworkShowcasePanelState state = context.State;
+            float panelWidth = 560f;
+            ResolvePanelPosition(panelWidth, out float left, out float top);
             return Ui.Card(
                     Ui.Text(state.Title).FontSize(17f).Bold().Color("#F7FAFF"),
                     Ui.Text(state.Status).FontSize(12f).Color("#E7EEF5").WhiteSpace(UiWhiteSpace.Normal),
-                    Ui.Text(state.Actor).FontSize(12f).Color("#8FD0FF"),
-                    Ui.Text(state.Profile).FontSize(12f).Color("#F7D889"),
+                    Ui.Text(state.Selection).FontSize(12f).Color("#8FD0FF").WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text(state.Input).FontSize(11f).Color("#B8D6EA").WhiteSpace(UiWhiteSpace.PreWrap),
                     Ui.Text(state.Chunks).FontSize(12f).Color("#C2D3E3"),
                     Ui.Row(
                         CommandButton("Reset Camera", ResetCamera, "#244E66"),
@@ -101,16 +103,53 @@ namespace RoadNetworkShowcaseMod.UI
                         CommandButton("North Demo", RunNorthDemo, "#16546B"),
                         CommandButton("South Demo", RunSouthDemo, "#6B1E2D"))
                         .Gap(8f),
+                    Ui.ScrollView(BuildActorCards(state))
+                        .Height(392f),
                     Ui.Text(state.Hint).FontSize(11f).Color("#B9C8D8").WhiteSpace(UiWhiteSpace.Normal))
-                .Width(356f)
+                .Width(panelWidth)
                 .Padding(14f)
                 .Gap(8f)
                 .Radius(14f)
                 .Background("#D40B0E13")
                 .Border(1f, Color("#33879AB3"))
                 .BackdropBlur(8f)
-                .Absolute(16f, 252f)
+                .Absolute(left, top)
                 .ZIndex(30);
+        }
+
+        private static UiElementBuilder BuildActorCards(in RoadNetworkShowcasePanelState state)
+        {
+            if (state.Actors.Length == 0)
+            {
+                return Ui.Column(
+                    Ui.Text("Viewed selection is empty, so there are no actor debug cards yet. Check the Selection line above first.")
+                        .FontSize(11f)
+                        .Color("#D8E1EA")
+                        .WhiteSpace(UiWhiteSpace.Normal))
+                    .Gap(6f);
+            }
+
+            UiElementBuilder[] cards = new UiElementBuilder[state.Actors.Length];
+            for (int i = 0; i < state.Actors.Length; i++)
+            {
+                RoadNetworkShowcaseActorPanelState actor = state.Actors[i];
+                cards[i] = Ui.Card(
+                        Ui.Text(actor.Header).FontSize(13f).Bold().Color("#F8FAFC"),
+                        DebugLine(actor.Queue, "#D9E4EE"),
+                        DebugLine(actor.Query, "#E7D48D"),
+                        DebugLine(actor.Plan, "#F5B4A3"),
+                        DebugLine(actor.Select, "#8FD0FF"),
+                        DebugLine(actor.Execute, "#A7F3D0"),
+                        DebugLine(actor.Check, "#FBCFE8"),
+                        DebugLine(actor.Path, "#CBD5E1", preWrap: true))
+                    .Padding(10f)
+                    .Gap(5f)
+                    .Radius(12f)
+                    .Background("#C4171F27")
+                    .Border(1f, Color("#2F7D90A8"));
+            }
+
+            return Ui.Column(cards).Gap(8f);
         }
 
         private void ResetCamera()
@@ -173,6 +212,26 @@ namespace RoadNetworkShowcaseMod.UI
             return _engine ?? throw new InvalidOperationException("RoadNetworkShowcase panel requires an active engine.");
         }
 
+        private void ResolvePanelPosition(float width, out float left, out float top)
+        {
+            const float horizontalMargin = 16f;
+            const float topMargin = 16f;
+            float viewportWidth = ResolveViewportWidth();
+            left = Math.Max(horizontalMargin, viewportWidth - width - horizontalMargin);
+            top = topMargin;
+        }
+
+        private float ResolveViewportWidth()
+        {
+            if (_engine?.GetService(CoreServiceKeys.UIRoot) is UIRoot root &&
+                root.Width > 0f)
+            {
+                return root.Width;
+            }
+
+            return 1920f;
+        }
+
         private static UiElementBuilder CommandButton(string label, Action onClick, string background)
         {
             return Ui.Button(label, _ => onClick())
@@ -181,6 +240,14 @@ namespace RoadNetworkShowcaseMod.UI
                 .Background(background)
                 .Color("#F7FAFF")
                 .FontSize(11f);
+        }
+
+        private static UiElementBuilder DebugLine(string text, string color, bool preWrap = false)
+        {
+            return Ui.Text(text)
+                .FontSize(11f)
+                .Color(color)
+                .WhiteSpace(preWrap ? UiWhiteSpace.PreWrap : UiWhiteSpace.Normal);
         }
 
         private static UiColor Color(string hex)

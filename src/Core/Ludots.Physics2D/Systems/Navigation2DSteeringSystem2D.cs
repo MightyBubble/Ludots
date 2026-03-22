@@ -37,6 +37,9 @@ namespace Ludots.Core.Physics2D.Systems
         private static readonly QueryDescription _flowObstacleQuery = new QueryDescription()
             .WithAll<NavObstacle2D, Position2D, NavKinematics2D>();
 
+        private static readonly QueryDescription _sleepingPointGoalQuery = new QueryDescription()
+            .WithAll<NavAgent2D, NavGoal2D, SleepingTag>();
+
         private readonly Navigation2DRuntime _runtime;
         private readonly CommandBuffer _commandBuffer = new();
         private int _flowStreamingTick;
@@ -52,6 +55,7 @@ namespace Ludots.Core.Physics2D.Systems
         public override void Update(in float deltaTime)
         {
             EnsureSteeringOutputs();
+            WakeSleepingPointGoalAgents();
 
             bool usedSteadyStateSync = TrySteadyStateSyncAgentSoA(out Navigation2DWorldSyncResult syncResult);
             if (!usedSteadyStateSync)
@@ -99,6 +103,35 @@ namespace Ludots.Core.Physics2D.Systems
             agentSoA.BeginSteeringFrame(unchecked(++_steeringFrameTick), cacheFrameEnabled, stableSteeringWorld);
 
             ApplySteering(deltaTime);
+        }
+
+        private void WakeSleepingPointGoalAgents()
+        {
+            foreach (ref var chunk in World.Query(in _sleepingPointGoalQuery))
+            {
+                Span<NavGoal2D> goals = chunk.GetSpan<NavGoal2D>();
+                ref Entity entityFirst = ref chunk.Entity(0);
+                foreach (int index in chunk)
+                {
+                    if (goals[index].Kind != NavGoalKind2D.Point)
+                    {
+                        continue;
+                    }
+
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    if (!World.IsAlive(entity))
+                    {
+                        continue;
+                    }
+
+                    World.Remove<SleepingTag>(entity);
+                    if (World.TryGet(entity, out Motion motion))
+                    {
+                        motion.SleepTimer = 0;
+                        World.Set(entity, motion);
+                    }
+                }
+            }
         }
 
         private bool EnsureSteeringCellSize(Navigation2DWorld agentSoA)

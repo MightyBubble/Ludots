@@ -94,6 +94,14 @@ This keeps `order` and `selection` loosely coupled:
 - selection does not define the order actor
 - the same selector can maintain multiple named sets for different commands
 
+For RTS-style move workflows, selection ends at the authored-order handoff.
+
+- right-click issues an authored order against the current selection set
+- `Shift` + right-click appends another authored order into the order queue
+- authored order waypoints are not nav-path samples and are not execution cursors
+
+See `docs/architecture/order_navigation_movement.md` for the movement-side SSOT split between order queue, nav plan, immediate nav goal, and steering output.
+
 ## Ability Selection Gates
 
 Ability-driven selection gates reuse the same formal selectability contract for entity acquisition.

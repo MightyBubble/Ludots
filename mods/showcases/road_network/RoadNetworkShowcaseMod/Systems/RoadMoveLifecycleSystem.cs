@@ -20,6 +20,7 @@ namespace RoadNetworkShowcaseMod.Systems
 
         private readonly Dictionary<string, object> _globals;
         private readonly OrderTypeRegistry _orderTypeRegistry;
+        private readonly int _roadMoveFollowOrderTypeId;
         private readonly RoadNavPlanStore _plans;
         private readonly RoadMoveRuntimeService _runtime;
         private readonly RoadRouteArrivalPolicy _arrival = new();
@@ -32,11 +33,13 @@ namespace RoadNetworkShowcaseMod.Systems
             World world,
             Dictionary<string, object> globals,
             OrderTypeRegistry orderTypeRegistry,
+            int roadMoveFollowOrderTypeId,
             RoadNavPlanStore plans,
             RoadMoveRuntimeService runtime) : base(world)
         {
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _orderTypeRegistry = orderTypeRegistry ?? throw new ArgumentNullException(nameof(orderTypeRegistry));
+            _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _refresh = new RoadRouteRefreshService(world, globals, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
@@ -58,8 +61,12 @@ namespace RoadNetworkShowcaseMod.Systems
                     Entity entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
                     ref var orderRuntime = ref orderStates[index];
                     ref var planRuntime = ref planStates[index];
-                    ref var buffer = ref buffers[index];
-                    Order activeOrder = buffer.ActiveOrder.Order;
+                    if (!RoadMoveActiveOrderResolver.TryResolve(World, entity, _roadMoveFollowOrderTypeId, out Order activeOrder) ||
+                        !RoadMoveActiveOrderResolver.OwnsRuntime(in activeOrder, in orderRuntime))
+                    {
+                        continue;
+                    }
+
                     Fix64Vec2 position = positions[index].Value;
                     RoadRouteExecutionProfile execution = _profiles.ResolveExecution(entity);
 
@@ -123,6 +130,13 @@ namespace RoadNetworkShowcaseMod.Systems
             }
 
             rebuiltPlanOrder.OrderId = activeOrder.OrderId;
+            if (!RoadMoveActiveOrderBufferSync.TryReplaceActive(World, entity, in rebuiltPlanOrder))
+            {
+                WriteStatus($"Road route abandoned after {orderRuntime.TimeoutCount} timeout recovery attempt(s): active order payload could not be refreshed.");
+                orderRuntime.FailureReason = RoadMoveFailureReason.RefreshRejected;
+                return false;
+            }
+
             if (!_runtime.TryBindActiveOrder(entity, in rebuiltPlanOrder, preserveTimeoutCount: true, out orderRuntime, out planRuntime))
             {
                 WriteStatus($"Road route abandoned after {orderRuntime.TimeoutCount} timeout recovery attempt(s): refresh plan build was rejected.");
@@ -144,7 +158,10 @@ namespace RoadNetworkShowcaseMod.Systems
         {
             _walk.Clear(World, entity);
             _runtime.Clear(entity);
-            OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypeRegistry);
+            if (RoadMoveActiveOrderResolver.TryResolve(World, entity, _roadMoveFollowOrderTypeId, out _))
+            {
+                OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypeRegistry);
+            }
         }
 
         private void WriteStatus(string message)

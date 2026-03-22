@@ -249,20 +249,17 @@ namespace RoadNetworkShowcaseMod.Systems
 
             string groundDebug = ResolveDebugValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, "<none>");
             string orderDebug = ResolveDebugValue(LocalOrderSourceHelper.LastOrderDebugKey, "<none>");
-            string actorDebug = DescribeControlledActor();
+            string selectionDebug = DescribeSelectionSummary();
 
-            _overlay.AddRect(12, 12, 980, 234, new Vector4(0.04f, 0.07f, 0.10f, 0.78f), new Vector4(0.35f, 0.51f, 0.60f, 0.92f), stableId: 8000, dirtySerial: 1);
+            _overlay.AddRect(12, 12, 980, 170, new Vector4(0.04f, 0.07f, 0.10f, 0.78f), new Vector4(0.35f, 0.51f, 0.60f, 0.92f), stableId: 8000, dirtySerial: 1);
             _overlay.AddText(24, 24, "Road Network Showcase", 22, new Vector4(0.94f, 0.96f, 0.98f, 1f), stableId: 8001, dirtySerial: 1);
             _overlay.AddText(24, 50, $"Blue forts {blueForts} | Red forts {redForts} | Neutral forts {neutralForts}", 16, new Vector4(0.78f, 0.84f, 0.90f, 1f), stableId: 8002, dirtySerial: blueForts ^ (redForts << 8) ^ (neutralForts << 16));
             _overlay.AddText(24, 72, $"Loaded chunks {_runtime.LoadedChunkCount} | Loaded nodes {_runtime.LoadedNodeCount}", 16, new Vector4(0.78f, 0.84f, 0.90f, 1f), stableId: 8003, dirtySerial: _runtime.LoadedChunkCount ^ (_runtime.LoadedNodeCount << 8));
             _overlay.AddText(24, 94, "LMB select columns, RMB dispatch along roads, Shift queue, pan camera to stream chunks, Home reset camera.", 15, new Vector4(0.93f, 0.79f, 0.45f, 1f), stableId: 8004, dirtySerial: 1);
-            _overlay.AddText(24, 116, $"Ground {groundDebug}", 13, new Vector4(0.68f, 0.83f, 0.96f, 1f), stableId: 8006, dirtySerial: groundDebug.GetHashCode(StringComparison.Ordinal));
-            _overlay.AddText(24, 138, $"Order {orderDebug}", 13, new Vector4(0.71f, 0.88f, 0.73f, 1f), stableId: 8007, dirtySerial: orderDebug.GetHashCode(StringComparison.Ordinal));
-            _overlay.AddText(24, 160, actorDebug, 13, new Vector4(0.94f, 0.84f, 0.70f, 1f), stableId: 8008, dirtySerial: actorDebug.GetHashCode(StringComparison.Ordinal));
-            string motionDebug = DescribeControlledActorMotion();
-            _overlay.AddText(24, 182, motionDebug, 13, new Vector4(0.86f, 0.88f, 0.98f, 1f), stableId: 8009, dirtySerial: motionDebug.GetHashCode(StringComparison.Ordinal));
+            _overlay.AddText(24, 116, selectionDebug, 13, new Vector4(0.94f, 0.84f, 0.70f, 1f), stableId: 8008, dirtySerial: selectionDebug.GetHashCode(StringComparison.Ordinal));
+            _overlay.AddText(24, 138, $"Ground {groundDebug} | Order {orderDebug}", 13, new Vector4(0.68f, 0.83f, 0.96f, 1f), stableId: 8006, dirtySerial: HashCode.Combine(groundDebug.GetHashCode(StringComparison.Ordinal), orderDebug.GetHashCode(StringComparison.Ordinal)));
             string status = _runtime.LastSubmitStatus;
-            _overlay.AddText(24, 204, status, 14, new Vector4(0.90f, 0.92f, 0.95f, 1f), stableId: 8005, dirtySerial: status.GetHashCode(StringComparison.Ordinal));
+            _overlay.AddText(24, 160, status, 14, new Vector4(0.90f, 0.92f, 0.95f, 1f), stableId: 8005, dirtySerial: status.GetHashCode(StringComparison.Ordinal));
         }
 
         private string ResolveDebugValue(string key, string fallback)
@@ -277,82 +274,70 @@ namespace RoadNetworkShowcaseMod.Systems
             return fallback;
         }
 
-        private string DescribeControlledActor()
+        private string DescribeSelectionSummary()
         {
-            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? actorObj) ||
-                actorObj is not Entity actor ||
-                !_world.IsAlive(actor))
+            if (_engine.GetService(CoreServiceKeys.SelectionRuntime) is not SelectionRuntime selection ||
+                !_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? ownerObj) ||
+                ownerObj is not Entity owner ||
+                !_world.IsAlive(owner))
             {
-                return "Actor <none>";
+                return "Selection 0 | Primary <none>";
             }
 
-            string world = _world.Has<WorldPositionCm>(actor)
-                ? FormatFixVec(_world.Get<WorldPositionCm>(actor).Value)
-                : "<no-world>";
-            string activeOrder = "<none>";
-            if (_world.Has<OrderBuffer>(actor))
+            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
+            int count = selection.CopySelection(owner, SelectionSetKeys.Ambient, selected);
+            string primary = selection.TryGetPrimary(owner, SelectionSetKeys.Ambient, out Entity actor) && _world.IsAlive(actor)
+                ? DescribeActorLabel(actor)
+                : "<none>";
+            if (count <= 0)
             {
-                ref var buffer = ref _world.Get<OrderBuffer>(actor);
-                if (buffer.HasActive)
+                return $"Selection 0 | Primary {primary}";
+            }
+
+            var text = new System.Text.StringBuilder();
+            text.Append("Selection ").Append(count).Append(" | Primary ").Append(primary).Append(" | ");
+            for (int i = 0; i < count; i++)
+            {
+                if (i > 0)
                 {
-                    ref Order order = ref buffer.ActiveOrder.Order;
-                    int waypointIndex = 0;
-                    string lifecycle = "<no-runtime>";
-                    if (_world.Has<RoadMoveOrderRuntime>(actor))
-                    {
-                        ref readonly var moveState = ref _world.Get<RoadMoveOrderRuntime>(actor);
-                        lifecycle = $"{moveState.LifecycleState}/{moveState.FailureReason} t:{moveState.TimeoutCount}";
-                    }
-
-                    if (_world.Has<RoadNavPlanRuntime>(actor))
-                    {
-                        ref readonly var state = ref _world.Get<RoadNavPlanRuntime>(actor);
-                        if (state.BoundOrderId == order.OrderId)
-                        {
-                            waypointIndex = Math.Clamp(state.CurrentWaypointIndex, 0, Math.Max(0, state.PointCount - 1));
-                        }
-                    }
-
-                    activeOrder = $"type:{order.OrderTypeId} order:{order.OrderId} wp:{waypointIndex} pts:{order.Args.Spatial.PointCount} {lifecycle}";
+                    text.Append(", ");
                 }
+
+                text.Append(DescribeActorLabel(selected[i]));
             }
 
-            string goal = "<none>";
-            if (_world.Has<NavGoal2D>(actor))
-            {
-                ref var navGoal = ref _world.Get<NavGoal2D>(actor);
-                if (navGoal.Kind == NavGoalKind2D.Point)
-                {
-                    goal = $"{FormatFixVec(navGoal.TargetCm)} r:{navGoal.RadiusCm.ToFloat():0}";
-                }
-            }
-
-            return $"Actor world {world} | active {activeOrder} | goal {goal}";
+            return text.ToString();
         }
 
-        private string DescribeControlledActorMotion()
+        private string DescribeActorLabel(Entity actor)
         {
-            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? actorObj) ||
-                actorObj is not Entity actor ||
-                !_world.IsAlive(actor))
+            string name = _world.Has<Name>(actor) ? _world.Get<Name>(actor).Value : $"#{actor.Id}";
+            return $"{name}#{actor.Id}";
+        }
+
+        private bool TryResolveObservedActor(out Entity actor)
+        {
+            actor = default;
+            if (_engine.GetService(CoreServiceKeys.SelectionRuntime) is SelectionRuntime selection &&
+                _engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? ownerObj) &&
+                ownerObj is Entity owner &&
+                _world.IsAlive(owner) &&
+                selection.TryGetPrimary(owner, SelectionSetKeys.Ambient, out Entity selected) &&
+                _world.IsAlive(selected))
             {
-                return "Motion <none>";
+                actor = selected;
+                return true;
             }
 
-            string position2D = _world.Has<Position2D>(actor)
-                ? FormatFixVec(_world.Get<Position2D>(actor).Value)
-                : "<no-pos2d>";
-            string velocity2D = _world.Has<Velocity2D>(actor)
-                ? FormatFixVec(_world.Get<Velocity2D>(actor).Linear)
-                : "<no-vel>";
-            string force2D = _world.Has<ForceInput2D>(actor)
-                ? FormatFixVec(_world.Get<ForceInput2D>(actor).Force)
-                : "<no-force>";
-            string desiredVelocity = _world.Has<NavDesiredVelocity2D>(actor)
-                ? FormatFixVec(_world.Get<NavDesiredVelocity2D>(actor).ValueCmPerSec)
-                : "<no-desired>";
+            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? actorObj) &&
+                actorObj is Entity local &&
+                _world.IsAlive(local))
+            {
+                actor = local;
+                return true;
+            }
 
-            return $"Motion pos2d {position2D} | vel {velocity2D} | desired {desiredVelocity} | force {force2D}";
+            return false;
         }
 
         private static string FormatFixVec(in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 value)

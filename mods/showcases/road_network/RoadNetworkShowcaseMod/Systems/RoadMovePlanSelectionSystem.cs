@@ -18,13 +18,15 @@ namespace RoadNetworkShowcaseMod.Systems
 
         private readonly float _defaultSpeedCmPerSec;
         private readonly int _moveSpeedAttributeId;
+        private readonly int _roadMoveFollowOrderTypeId;
         private readonly RoadNavPlanStore _plans;
         private readonly RoadMoveRuntimeService _runtime;
         private readonly RoadRouteProfileCatalog _profiles;
         private readonly RoadRouteSelectionStrategy _selection = new();
 
-        public RoadMovePlanSelectionSystem(World world, RoadNavPlanStore plans, RoadMoveRuntimeService runtime, float defaultSpeedCmPerSec = 600f) : base(world)
+        public RoadMovePlanSelectionSystem(World world, int roadMoveFollowOrderTypeId, RoadNavPlanStore plans, RoadMoveRuntimeService runtime, float defaultSpeedCmPerSec = 600f) : base(world)
         {
+            _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _defaultSpeedCmPerSec = Math.Max(0f, defaultSpeedCmPerSec);
@@ -47,12 +49,21 @@ namespace RoadNetworkShowcaseMod.Systems
                     Entity entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
                     ref var orderRuntime = ref orderStates[index];
                     ref var planRuntime = ref planStates[index];
-                    Order activeOrder = buffers[index].ActiveOrder.Order;
                     ref var intent = ref _runtime.EnsureExecutionIntent(entity);
                     intent = default;
 
-                    if (orderRuntime.LifecycleState != RoadMoveLifecycleState.Active ||
-                        !_plans.TryGetPlan(entity, activeOrder.OrderId, out RoadNavPlanView plan))
+                    if (!RoadMoveActiveOrderResolver.TryResolve(World, entity, _roadMoveFollowOrderTypeId, out Order activeOrder) ||
+                        !RoadMoveActiveOrderResolver.OwnsRuntime(in activeOrder, in orderRuntime))
+                    {
+                        continue;
+                    }
+
+                    if (orderRuntime.LifecycleState != RoadMoveLifecycleState.Active)
+                    {
+                        continue;
+                    }
+
+                    if (!_plans.TryGetPlan(entity, activeOrder.OrderId, out RoadNavPlanView plan))
                     {
                         orderRuntime.LifecycleState = RoadMoveLifecycleState.Failed;
                         orderRuntime.FailureReason = RoadMoveFailureReason.MissingPlan;

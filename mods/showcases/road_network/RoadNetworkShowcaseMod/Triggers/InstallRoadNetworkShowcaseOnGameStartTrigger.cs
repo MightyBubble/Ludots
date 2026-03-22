@@ -63,16 +63,16 @@ namespace RoadNetworkShowcaseMod.Triggers
                     TryResolveRoadMoveFollowOrderTypeId(engine, out int roadMoveFollowOrderTypeId))
                 {
                     engine.RegisterSystem(
-                        new RoadMoveOrderBindingSystem(engine.World, roadMoveFollowOrderTypeId, moveRuntime),
+                        new RoadMoveOrderBindingSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime),
                         SystemGroup.AbilityActivation);
                     engine.RegisterSystem(
-                        new RoadMovePlanSelectionSystem(engine.World, plans, moveRuntime),
+                        new RoadMovePlanSelectionSystem(engine.World, roadMoveFollowOrderTypeId, plans, moveRuntime),
                         SystemGroup.AbilityActivation);
                     engine.RegisterSystem(
                         new RoadMoveExecutionSystem(engine.World),
                         SystemGroup.AbilityActivation);
                     engine.RegisterSystem(
-                        new RoadMoveLifecycleSystem(engine.World, engine.GlobalContext, orderTypeRegistry, plans, moveRuntime),
+                        new RoadMoveLifecycleSystem(engine.World, engine.GlobalContext, orderTypeRegistry, roadMoveFollowOrderTypeId, plans, moveRuntime),
                         SystemGroup.AbilityActivation);
                     engine.GlobalContext[typeof(RoadNavPlanStore).FullName!] = plans;
                 }

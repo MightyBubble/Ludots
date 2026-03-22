@@ -15,12 +15,14 @@ namespace RoadNetworkShowcaseMod.Systems
             .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm>();
 
         private readonly int _roadMoveFollowOrderTypeId;
+        private readonly RoadNavPlanStore _plans;
         private readonly RoadMoveRuntimeService _runtime;
         private readonly RoadRouteWalkStrategy _walk = new();
 
-        public RoadMoveOrderBindingSystem(World world, int roadMoveFollowOrderTypeId, RoadMoveRuntimeService runtime) : base(world)
+        public RoadMoveOrderBindingSystem(World world, int roadMoveFollowOrderTypeId, RoadNavPlanStore plans, RoadMoveRuntimeService runtime) : base(world)
         {
             _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
+            _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         }
 
@@ -48,10 +50,14 @@ namespace RoadNetworkShowcaseMod.Systems
 
                     ref readonly Order activeOrder = ref buffer.ActiveOrder.Order;
                     ref RoadMoveOrderRuntime orderRuntime = ref _runtime.EnsureOrderRuntime(entity);
+                    ref RoadNavPlanRuntime planRuntime = ref _runtime.EnsurePlanRuntime(entity);
+                    bool hasPlan = _plans.TryGetPlan(entity, activeOrder.OrderId, out RoadNavPlanView plan);
                     bool needsBind =
                         orderRuntime.ActiveOrderId != activeOrder.OrderId ||
                         orderRuntime.LifecycleState == RoadMoveLifecycleState.None ||
-                        !World.Has<RoadNavPlanRuntime>(entity) ||
+                        planRuntime.BoundOrderId != activeOrder.OrderId ||
+                        !hasPlan ||
+                        planRuntime.PlanGeneration != plan.PlanGeneration ||
                         !World.Has<RoadMoveExecutionIntent>(entity);
                     if (!needsBind)
                     {

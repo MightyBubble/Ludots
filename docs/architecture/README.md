@@ -21,6 +21,7 @@
 
 *   [GAS 分层架构与 Sink 最佳实践](gas_layered_architecture.md)
 *   [GAS 战斗体系基建与 MOBA 实践指南](gas_combat_infrastructure.md)
+*   [Order / Navigation / Movement 分层架构](order_navigation_movement.md)
 *   [交互模型与技能系统](interaction/README.md)
 *   [表现管线与 Performer 体系](presentation_performer.md)
 *   [表现层 visual snapshot contract](presentation_snapshot_contract.md)
