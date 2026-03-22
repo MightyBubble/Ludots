@@ -36,6 +36,30 @@
 * 让 graph、navmesh、cost area、agent profile、selection policy 都通过同一套 pathing contract 演示。
 * move 层只输出 `desired speed / desired velocity / goal`，最终由 sink 写入物理速度。
 
+## 2.1 当前实现状态（2026-03-22）
+
+Issue #70 对应的 showcase 运行时已经按本 RFC 的核心边界落地到 mod 层，当前实现不再把 road-follow 策略焊进 Core：
+
+* `mods/showcases/road_network/RoadNetworkShowcaseMod/Systems/RoadMoveOrderBindingSystem.cs`
+  * 负责把 active `roadMoveFollow` order 绑定到 showcase-owned runtime。
+* `mods/showcases/road_network/RoadNetworkShowcaseMod/Systems/RoadMovePlanSelectionSystem.cs`
+  * 负责从 `RoadNavPlanStore` 读取当前 nav plan，并选择本帧局部跟随目标。
+* `mods/showcases/road_network/RoadNetworkShowcaseMod/Systems/RoadMoveExecutionSystem.cs`
+  * 负责把本帧执行意图下沉到 `NavGoal2D` / `NavKinematics2D`。
+* `mods/showcases/road_network/RoadNetworkShowcaseMod/Systems/RoadMoveLifecycleSystem.cs`
+  * 负责 arrival、timeout、refresh、abandon 与 active order 完成。
+* `mods/showcases/road_network/RoadNetworkShowcaseMod/Gameplay/RoadMoveRuntimeService.cs`
+  * 负责 `RoadMoveOrderRuntime` / `RoadNavPlanRuntime` 组件绑定与清理。
+* `mods/showcases/road_network/RoadNetworkShowcaseMod/Gameplay/RoadNavPlanStore.cs`
+  * 负责 showcase-owned nav sample plan 存储，不污染 authored order 队列。
+
+本轮修复同时补上了两个关键稳定性语义：
+
+* `mods/showcases/road_network/RoadNetworkShowcaseMod/Gameplay/RoadMoveRuntimeService.cs`
+  * 修复 runtime bind 只写值拷贝、不写回 ECS world 的缺陷。
+* `mods/showcases/road_network/RoadNetworkShowcaseMod/Gameplay/RoadRouteFinalTargetResolver.cs`
+  * 在 preserved final target 缺失时，回退到最后一个 sampled waypoint，避免 execution-slice route 被 arrival 层立即误判完成。
+
 ## 3 非目标
 
 以下内容不在本 RFC 范围内：
@@ -370,3 +394,36 @@ flowchart TD
 * Issue：[#70](https://github.com/MightyBubble/Ludots/issues/70)
 * 架构索引：见 [../architecture/README.md](../architecture/README.md)
 * 文档治理：见 [../conventions/04_documentation_governance.md](../conventions/04_documentation_governance.md)
+
+## 15 验收证据
+
+当前 RFC 已有对应的代码、测试与 launcher 证据：
+
+* 测试
+  * `src/Tests/GasTests/RoadNetworkShowcaseTests.cs`
+  * `src/Tests/GasTests/ChunkStreamingShowcaseTests.cs`
+* Headless acceptance artifacts
+  * `artifacts/acceptance/road_network_showcase_strategy_matrix/battle-report.md`
+  * `artifacts/acceptance/road_network_showcase_strategy_matrix/trace.jsonl`
+  * `artifacts/acceptance/road_network_showcase_strategy_matrix/path.mmd`
+  * `artifacts/acceptance/road_network_showcase_timeout/battle-report.md`
+  * `artifacts/acceptance/road_network_showcase_timeout/trace.jsonl`
+  * `artifacts/acceptance/road_network_showcase_timeout/path.mmd`
+  * `artifacts/acceptance/chunk_streaming_showcase/battle-report.md`
+  * `artifacts/acceptance/chunk_streaming_showcase/trace.jsonl`
+  * `artifacts/acceptance/chunk_streaming_showcase/path.mmd`
+* Launcher screenshots
+  * `artifacts/acceptance/launcher-road-network-showcase-raylib-codex-20260322-runtimefix/screens/000_start.png`
+  * `artifacts/acceptance/launcher-road-network-showcase-raylib-codex-20260322-runtimefix/screens/002_command_accepted.png`
+  * `artifacts/acceptance/launcher-road-network-showcase-raylib-codex-20260322-runtimefix/screens/003_column_advancing.png`
+  * `artifacts/acceptance/launcher-road-network-showcase-raylib-codex-20260322-runtimefix/screens/004_chunk_shifted.png`
+  * `artifacts/acceptance/launcher-chunk-streaming-showcase-raylib-codex-20260322-runtimefix/screens/000_overview.png`
+  * `artifacts/acceptance/launcher-chunk-streaming-showcase-raylib-codex-20260322-runtimefix/screens/002_red_capital.png`
+
+本轮已验证的边缘场景包括：
+
+* authored order payload 不再被 runtime waypoint cursor 覆写。
+* 长距离跨 chunk 道路移动可完成，不会在首段或首 chunk 停住。
+* 曲线路网 sample 会保留为运行时 nav plan，不再把执行游标混进 authored waypoint。
+* timeout refresh 与 timeout abandon 两个分支都能稳定复现。
+* strategy matrix 中不同 planner / execution profile 会产生不同 corridor 选择与不同移动包络。

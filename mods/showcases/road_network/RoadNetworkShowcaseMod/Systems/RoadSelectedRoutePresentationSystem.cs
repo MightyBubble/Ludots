@@ -16,14 +16,15 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly SelectionRuntime _selection;
         private readonly Entity[] _selected = new Entity[SelectionBuffer.CAPACITY];
-        private readonly RoadRoutePreviewSplineBuilder _builder = new();
+        private readonly RoadRoutePreviewSplineBuilder _builder;
         private readonly RoadRouteProfileCatalog _profiles;
 
-        public RoadSelectedRoutePresentationSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
+        public RoadSelectedRoutePresentationSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection, RoadNavPlanStore plans)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _selection = selection ?? throw new ArgumentNullException(nameof(selection));
+            _builder = new RoadRoutePreviewSplineBuilder(plans ?? throw new ArgumentNullException(nameof(plans)));
             _profiles = new RoadRouteProfileCatalog(world);
         }
 

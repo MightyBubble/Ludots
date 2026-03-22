@@ -10,13 +10,15 @@ namespace RoadNetworkShowcaseMod.Gameplay
         public static bool TryResolve(in Order order, out Vector3 targetWorldCm)
         {
             targetWorldCm = default;
-            if (order.Args.I2 != EncodedFlag)
+            if (order.Args.I2 == EncodedFlag)
             {
-                return false;
+                targetWorldCm = new Vector3(order.Args.I0, 0f, order.Args.I1);
+                return true;
             }
 
-            targetWorldCm = new Vector3(order.Args.I0, 0f, order.Args.I1);
-            return true;
+            // Directly-authored showcase follow orders may omit the preserved click target.
+            // In that case, the last sampled waypoint remains the correct fallback arrival goal.
+            return OrderWorldSpatialResolver.TryResolveMoveDestination(in order, out targetWorldCm);
         }
 
         public static bool TryEncodeFromSource(in Order sourceOrder, ref Order followOrder)

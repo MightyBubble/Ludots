@@ -139,11 +139,16 @@ namespace Ludots.Tests.GAS
         [Test]
         public void RoadRouteSelectionStrategy_DoesNotSkipAheadBeforeReachingCurrentWaypoint()
         {
-            Order order = CreateRouteOrder(Entity.Null, roadMoveFollowOrderTypeId: 171, (0, 0), (250, 120), (500, 240));
+            using var world = World.Create();
+            Entity actor = world.Create();
+            Order order = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (0, 0), (250, 120), (500, 240));
             order.Args.Spatial.A0 = 2;
+            var plans = new RoadNavPlanStore();
+            Assert.That(plans.TryBindFromOrder(actor, in order, out _, out _), Is.True);
+            Assert.That(plans.TryGetPlan(actor, order.OrderId, out RoadNavPlanView plan), Is.True);
 
             var strategy = new RoadRouteSelectionStrategy();
-            bool selected = strategy.TrySelect(in order, Fix64Vec2.FromInt(330, 170), currentWaypointIndex: 1, stopRadiusCm: 40f, out RoadRouteSelection selection);
+            bool selected = strategy.TrySelect(in plan, Fix64Vec2.FromInt(330, 170), currentWaypointIndex: 1, stopRadiusCm: 40f, out RoadRouteSelection selection);
 
             Assert.That(selected, Is.True);
             Assert.That(selection.Completed, Is.False);
@@ -152,14 +157,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void RoadRouteFollowSystem_TracksWaypointProgressInRuntimeState_NotAuthoredOrderPayload()
+        public void RoadMovePlanSelectionSystem_TracksWaypointProgressInRuntimeState_NotAuthoredOrderPayload()
         {
             using var world = World.Create();
             const int moveToOrderTypeId = 77;
             const int roadMoveFollowOrderTypeId = 171;
             var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
             Dictionary<string, object> globals = CreateGlobals(new FailingPathService(), pathStore, moveToOrderTypeId, roadMoveFollowOrderTypeId);
-            OrderTypeRegistry orderTypes = CreateTimeoutOrderTypeRegistry(moveToOrderTypeId, roadMoveFollowOrderTypeId);
 
             Entity actor = world.Create(
                 new Name { Value = "Runtime Cursor Column" },
@@ -185,22 +189,19 @@ namespace Ludots.Tests.GAS
             routeOrder.Args.Spatial.A0 = 2;
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.SetActiveDirect(in routeOrder, priority: 100);
-            world.Add(actor, new RoadRouteRuntimeState
-            {
-                ActiveOrderId = 44,
-                ActivePointCount = 3,
-                ActiveGoalXcm = 0,
-                ActiveGoalYcm = 0,
-                CurrentWaypointIndex = 1
-            });
+            var plans = new RoadNavPlanStore();
+            var runtime = new RoadMoveRuntimeService(world, plans);
+            Assert.That(runtime.TryBindActiveOrder(actor, in routeOrder, preserveTimeoutCount: false, out _, out _), Is.True);
+            ref var planRuntime = ref world.Get<RoadNavPlanRuntime>(actor);
+            planRuntime.CurrentWaypointIndex = 1;
 
-            var system = new RoadRouteFollowSystem(world, globals, orderTypes, new OrderQueue(capacity: 8));
+            var system = new RoadMovePlanSelectionSystem(world, plans, runtime);
             system.Update(0.1f);
 
             ref readonly var activeOrder = ref world.Get<OrderBuffer>(actor).ActiveOrder.Order;
-            ref readonly var runtimeState = ref world.Get<RoadRouteRuntimeState>(actor);
+            ref readonly var runtimeState = ref world.Get<RoadNavPlanRuntime>(actor);
             Assert.That(activeOrder.Args.Spatial.A0, Is.EqualTo(2), "Follow execution must not overwrite authored order payload.");
-            Assert.That(runtimeState.ActiveOrderId, Is.EqualTo(44));
+            Assert.That(world.Get<RoadMoveOrderRuntime>(actor).ActiveOrderId, Is.EqualTo(44));
             Assert.That(runtimeState.CurrentWaypointIndex, Is.EqualTo(1));
         }
 
@@ -750,11 +751,19 @@ namespace Ludots.Tests.GAS
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.SetActiveDirect(in followOrder, priority: 100);
 
-            var system = new RoadRouteFollowSystem(world, globals, orderTypes, new OrderQueue(capacity: 8));
+            var plans = new RoadNavPlanStore();
+            var runtime = new RoadMoveRuntimeService(world, plans);
+            var bindSystem = new RoadMoveOrderBindingSystem(world, roadMoveFollowOrderTypeId, runtime);
+            var selectionSystem = new RoadMovePlanSelectionSystem(world, plans, runtime);
+            var executionSystem = new RoadMoveExecutionSystem(world);
+            var lifecycleSystem = new RoadMoveLifecycleSystem(world, globals, orderTypes, plans, runtime);
             string status = string.Empty;
             for (int step = 0; step < 12; step++)
             {
-                system.Update(0.5f);
+                bindSystem.Update(0.5f);
+                selectionSystem.Update(0.5f);
+                executionSystem.Update(0.5f);
+                lifecycleSystem.Update(0.5f);
                 status = globals.TryGetValue(RoadMoveOrderExpander.LastSubmitStatusKey, out object? statusObj) && statusObj is string statusText
                     ? statusText
                     : string.Empty;
@@ -1024,7 +1033,7 @@ namespace Ludots.Tests.GAS
             return string.Join(System.Environment.NewLine, new[]
             {
                 "flowchart TD",
-                "    A[Seed stalled road-follow order] --> B[Run RoadRouteFollowSystem without movement progress]",
+                "    A[Seed stalled road-follow order] --> B[Run binding, selection, execution, lifecycle systems without movement progress]",
                 "    B --> C{Timeout reached?}",
                 "    C -->|yes + refresh succeeds| D[Replan from preserved final target]",
                 "    D --> E[Status = refreshed after timeout]",

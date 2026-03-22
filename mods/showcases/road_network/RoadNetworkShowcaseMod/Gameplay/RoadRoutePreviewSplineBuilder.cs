@@ -14,6 +14,12 @@ namespace RoadNetworkShowcaseMod.Gameplay
     internal sealed class RoadRoutePreviewSplineBuilder
     {
         private const float OverlayY = 0.055f;
+        private readonly RoadNavPlanStore _plans;
+
+        public RoadRoutePreviewSplineBuilder(RoadNavPlanStore plans)
+        {
+            _plans = plans ?? throw new ArgumentNullException(nameof(plans));
+        }
 
         public void EmitSelectionPreview(
             World world,
@@ -33,7 +39,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             if (buffer.HasActive)
             {
                 ref Order active = ref buffer.ActiveOrder.Order;
-                EmitOrderRoute(world, entity, in active, originWorldCm, palette, roadSplines, overlays, ref stableCursor, consumeFromCurrentIndex: true);
+                EmitActivePlanRoute(world, entity, in active, originWorldCm, palette, roadSplines, overlays, ref stableCursor);
                 if (OrderWorldSpatialResolver.TryResolveMoveDestination(in active, out Vector3 activeDestination))
                 {
                     originWorldCm = activeDestination;
@@ -43,7 +49,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             for (int i = 0; i < buffer.QueuedCount; i++)
             {
                 Order queued = buffer.GetQueued(i).Order;
-                EmitOrderRoute(world, entity, in queued, originWorldCm, palette, roadSplines, overlays, ref stableCursor, consumeFromCurrentIndex: false);
+                EmitOrderRoute(in queued, originWorldCm, palette, roadSplines, overlays, ref stableCursor);
                 if (OrderWorldSpatialResolver.TryResolveMoveDestination(in queued, out Vector3 queuedDestination))
                 {
                     originWorldCm = queuedDestination;
@@ -51,7 +57,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             }
         }
 
-        private void EmitOrderRoute(
+        private void EmitActivePlanRoute(
             World world,
             Entity entity,
             in Order order,
@@ -59,8 +65,55 @@ namespace RoadNetworkShowcaseMod.Gameplay
             in RoadRoutePreviewPalette palette,
             RoadSplineBuffer roadSplines,
             GroundOverlayBuffer overlays,
-            ref int stableCursor,
-            bool consumeFromCurrentIndex)
+            ref int stableCursor)
+        {
+            if (!_plans.TryGetPlan(entity, order.OrderId, out RoadNavPlanView plan))
+            {
+                return;
+            }
+
+            int pointCount = plan.Count;
+            if (pointCount <= 0)
+            {
+                return;
+            }
+
+            int startIndex = ResolveActiveStartIndex(world, entity, in order, pointCount);
+            int remainingCount = pointCount - startIndex;
+            if (remainingCount <= 0)
+            {
+                return;
+            }
+
+            Span<Vector3> points = stackalloc Vector3[Math.Min(OrderSpatial.MaxPoints + 1, 65)];
+            int writeCount = 0;
+            points[writeCount++] = ToVisualMeters(originWorldCm);
+            for (int pointIndex = startIndex; pointIndex < pointCount && writeCount < points.Length; pointIndex++)
+            {
+                if (!plan.TryGetWaypoint(pointIndex, out var point))
+                {
+                    continue;
+                }
+
+                points[writeCount++] = ToVisualMeters(new Vector3(point.X.ToFloat(), 0f, point.Y.ToFloat()));
+            }
+
+            if (writeCount < 2)
+            {
+                return;
+            }
+
+            EmitSplineSegments(points[..writeCount], palette, roadSplines, ref stableCursor);
+            EmitEndpoint(points[writeCount - 1], palette, overlays);
+        }
+
+        private static void EmitOrderRoute(
+            in Order order,
+            in Vector3 originWorldCm,
+            in RoadRoutePreviewPalette palette,
+            RoadSplineBuffer roadSplines,
+            GroundOverlayBuffer overlays,
+            ref int stableCursor)
         {
             if (order.Args.Spatial.Mode != OrderCollectionMode.List)
             {
@@ -73,19 +126,10 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 return;
             }
 
-            int startIndex = consumeFromCurrentIndex
-                ? ResolveActiveStartIndex(world, entity, in order, pointCount)
-                : 0;
-            int remainingCount = pointCount - startIndex;
-            if (remainingCount <= 0)
-            {
-                return;
-            }
-
             Span<Vector3> points = stackalloc Vector3[Math.Min(OrderSpatial.MaxPoints + 1, 65)];
             int writeCount = 0;
             points[writeCount++] = ToVisualMeters(originWorldCm);
-            for (int pointIndex = startIndex; pointIndex < pointCount && writeCount < points.Length; pointIndex++)
+            for (int pointIndex = 0; pointIndex < pointCount && writeCount < points.Length; pointIndex++)
             {
                 if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in order, pointIndex, out Vector3 pointWorldCm))
                 {
@@ -156,12 +200,12 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 return 0;
             }
 
-            if (world.Has<RoadRouteRuntimeState>(entity))
+            if (world.Has<RoadNavPlanRuntime>(entity))
             {
-                ref readonly var state = ref world.Get<RoadRouteRuntimeState>(entity);
-                if (RoadRouteRuntimeBinding.Matches(in state, in order))
+                ref readonly var state = ref world.Get<RoadNavPlanRuntime>(entity);
+                if (state.BoundOrderId == order.OrderId)
                 {
-                    return RoadRouteRuntimeBinding.ResolveStartWaypointIndex(in state, in order);
+                    return Math.Clamp(state.CurrentWaypointIndex, 0, pointCount - 1);
                 }
             }
 

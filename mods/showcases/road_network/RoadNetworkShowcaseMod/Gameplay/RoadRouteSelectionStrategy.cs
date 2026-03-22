@@ -1,5 +1,4 @@
 using System;
-using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace RoadNetworkShowcaseMod.Gameplay
@@ -20,10 +19,10 @@ namespace RoadNetworkShowcaseMod.Gameplay
 
     internal sealed class RoadRouteSelectionStrategy
     {
-        public bool TrySelect(in Order order, Fix64Vec2 position, int currentWaypointIndex, float stopRadiusCm, out RoadRouteSelection selection)
+        public bool TrySelect(in RoadNavPlanView plan, Fix64Vec2 position, int currentWaypointIndex, float stopRadiusCm, out RoadRouteSelection selection)
         {
             selection = default;
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+            int pointCount = plan.Count;
             if (pointCount <= 0)
             {
                 selection = new RoadRouteSelection(completed: true, waypointIndex: pointCount, target: default);
@@ -33,13 +32,13 @@ namespace RoadNetworkShowcaseMod.Gameplay
             int currentIndex = Math.Clamp(currentWaypointIndex, 0, pointCount - 1);
             while (currentIndex < pointCount)
             {
-                if (!TryResolveWaypoint(in order, currentIndex, out Fix64Vec2 target))
+                if (!plan.TryGetWaypoint(currentIndex, out Fix64Vec2 target))
                 {
                     currentIndex++;
                     continue;
                 }
 
-                if (!ShouldConsumeWaypoint(in order, position, currentIndex, target, stopRadiusCm))
+                if (!ShouldConsumeWaypoint(position, target, stopRadiusCm))
                 {
                     selection = new RoadRouteSelection(completed: false, waypointIndex: currentIndex, target: target);
                     return true;
@@ -52,23 +51,9 @@ namespace RoadNetworkShowcaseMod.Gameplay
             return true;
         }
 
-        private static bool ShouldConsumeWaypoint(in Order order, Fix64Vec2 position, int waypointIndex, Fix64Vec2 target, float stopRadiusCm)
+        private static bool ShouldConsumeWaypoint(Fix64Vec2 position, Fix64Vec2 target, float stopRadiusCm)
         {
             return DistanceSquaredCm(position, target) <= stopRadiusCm * stopRadiusCm;
-        }
-
-        private static bool TryResolveWaypoint(in Order order, int waypointIndex, out Fix64Vec2 target)
-        {
-            target = default;
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
-            if ((uint)waypointIndex >= (uint)pointCount ||
-                !OrderWorldSpatialResolver.TryResolveMoveWaypoint(in order, waypointIndex, out var worldCm))
-            {
-                return false;
-            }
-
-            target = Fix64Vec2.FromFloat(worldCm.X, worldCm.Z);
-            return true;
         }
 
         private static float DistanceSquaredCm(Fix64Vec2 current, Fix64Vec2 target)

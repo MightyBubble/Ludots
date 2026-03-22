@@ -7,7 +7,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
     internal sealed class RoadRouteTimeoutPolicy
     {
         public bool Update(
-            ref RoadRouteRuntimeState state,
+            ref RoadNavPlanRuntime state,
             Fix64Vec2 position,
             int waypointIndex,
             float dt,
@@ -34,7 +34,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             return state.StallSeconds >= stallTimeoutSeconds;
         }
 
-        public void Reset(ref RoadRouteRuntimeState state, Fix64Vec2 position, int waypointIndex)
+        public void Reset(ref RoadNavPlanRuntime state, Fix64Vec2 position, int waypointIndex)
         {
             state.LastProgressPosition = position;
             state.LastResolvedWaypointIndex = waypointIndex;
@@ -42,7 +42,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             state.Initialized = 1;
         }
 
-        public void Clear(ref RoadRouteRuntimeState state)
+        public void Clear(ref RoadNavPlanRuntime state)
         {
             state = default;
         }

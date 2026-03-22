@@ -297,16 +297,23 @@ namespace RoadNetworkShowcaseMod.Systems
                 {
                     ref Order order = ref buffer.ActiveOrder.Order;
                     int waypointIndex = 0;
-                    if (_world.Has<RoadRouteRuntimeState>(actor))
+                    string lifecycle = "<no-runtime>";
+                    if (_world.Has<RoadMoveOrderRuntime>(actor))
                     {
-                        ref readonly var state = ref _world.Get<RoadRouteRuntimeState>(actor);
-                        if (RoadRouteRuntimeBinding.Matches(in state, in order))
+                        ref readonly var moveState = ref _world.Get<RoadMoveOrderRuntime>(actor);
+                        lifecycle = $"{moveState.LifecycleState}/{moveState.FailureReason} t:{moveState.TimeoutCount}";
+                    }
+
+                    if (_world.Has<RoadNavPlanRuntime>(actor))
+                    {
+                        ref readonly var state = ref _world.Get<RoadNavPlanRuntime>(actor);
+                        if (state.BoundOrderId == order.OrderId)
                         {
-                            waypointIndex = RoadRouteRuntimeBinding.ResolveStartWaypointIndex(in state, in order);
+                            waypointIndex = Math.Clamp(state.CurrentWaypointIndex, 0, Math.Max(0, state.PointCount - 1));
                         }
                     }
 
-                    activeOrder = $"type:{order.OrderTypeId} order:{order.OrderId} wp:{waypointIndex} pts:{order.Args.Spatial.PointCount}";
+                    activeOrder = $"type:{order.OrderTypeId} order:{order.OrderId} wp:{waypointIndex} pts:{order.Args.Spatial.PointCount} {lifecycle}";
                 }
             }
 
