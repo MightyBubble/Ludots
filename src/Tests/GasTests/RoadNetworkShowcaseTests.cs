@@ -206,6 +206,70 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RoadNavPlanStore_TryBindFromOrder_TrimsCurvedPrefixToProjectedActorPosition()
+        {
+            using var world = World.Create();
+            Entity actor = world.Create(
+                new Position2D { Value = Fix64Vec2.FromInt(40, 340) },
+                WorldPositionCm.FromCm(40, 340));
+
+            Order routeOrder = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (-600, -120), (-300, 80), (0, 300), (300, 620), (600, 900));
+            var plans = new RoadNavPlanStore();
+
+            Assert.That(plans.TryBindFromOrder(actor, in routeOrder, Fix64Vec2.FromInt(40, 340), out _, out _), Is.True);
+            Assert.That(plans.TryGetPlan(actor, routeOrder.OrderId, out RoadNavPlanView plan), Is.True);
+            Assert.That(plan.Count, Is.EqualTo(3), "Execution slice should drop the curved path prefix that is already behind the actor and keep only the local projected start plus the remaining suffix.");
+            Assert.That(plan.TryGetWaypoint(0, out Fix64Vec2 projectedStart), Is.True);
+            Assert.That(projectedStart.X.ToInt(), Is.EqualTo(39).Within(1));
+            Assert.That(projectedStart.Y.ToInt(), Is.EqualTo(341).Within(1));
+            Assert.That(plan.TryGetWaypoint(1, out Fix64Vec2 firstForwardWaypoint), Is.True);
+            Assert.That(firstForwardWaypoint.X.ToInt(), Is.EqualTo(300));
+            Assert.That(firstForwardWaypoint.Y.ToInt(), Is.EqualTo(620));
+            Assert.That(plan.TryGetWaypoint(2, out Fix64Vec2 secondForwardWaypoint), Is.True);
+            Assert.That(secondForwardWaypoint.X.ToInt(), Is.EqualTo(600));
+            Assert.That(secondForwardWaypoint.Y.ToInt(), Is.EqualTo(900));
+        }
+
+        [Test]
+        public void RoadMoveRuntimeService_RebindsCurvedRoute_FromProjectedLocalSliceForEachDirection()
+        {
+            using var world = World.Create();
+            Entity actor = world.Create(
+                new RoadColumnTag(),
+                WorldPositionCm.FromCm(40, 340),
+                new Position2D { Value = Fix64Vec2.FromInt(40, 340) },
+                new NavAgent2D(),
+                new NavKinematics2D
+                {
+                    MaxSpeedCmPerSec = Fix64.FromInt(600),
+                    MaxAccelCmPerSec2 = Fix64.FromInt(1200)
+                },
+                OrderBuffer.CreateEmpty(),
+                new AttributeBuffer(),
+                new GameplayTagContainer());
+
+            Order eastbound = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (-600, -120), (-300, 80), (0, 300), (300, 620), (600, 900));
+            eastbound.OrderId = 101;
+            Order westbound = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (600, 900), (300, 620), (0, 300), (-300, 80), (-600, -120));
+            westbound.OrderId = 102;
+
+            var plans = new RoadNavPlanStore();
+            var runtime = new RoadMoveRuntimeService(world, plans);
+            var selection = new RoadRouteSelectionStrategy();
+            Fix64Vec2 actorPosition = world.Get<Position2D>(actor).Value;
+
+            Assert.That(runtime.TryBindActiveOrder(actor, in eastbound, preserveTimeoutCount: false, out _, out _), Is.True);
+            Assert.That(plans.TryGetPlan(actor, eastbound.OrderId, out RoadNavPlanView eastPlan), Is.True);
+            Assert.That(selection.TrySelect(in eastPlan, actorPosition, currentWaypointIndex: 0, stopRadiusCm: 40f, out RoadRouteSelection eastSelection), Is.True);
+            Assert.That(eastSelection.Target.X.ToFloat(), Is.GreaterThan(actorPosition.X.ToFloat()), "Eastbound rebind should immediately target the local forward suffix, not a waypoint from the curved prefix behind the actor.");
+
+            Assert.That(runtime.TryBindActiveOrder(actor, in westbound, preserveTimeoutCount: false, out _, out _), Is.True);
+            Assert.That(plans.TryGetPlan(actor, westbound.OrderId, out RoadNavPlanView westPlan), Is.True);
+            Assert.That(selection.TrySelect(in westPlan, actorPosition, currentWaypointIndex: 0, stopRadiusCm: 40f, out RoadRouteSelection westSelection), Is.True);
+            Assert.That(westSelection.Target.X.ToFloat(), Is.LessThan(actorPosition.X.ToFloat()), "Westbound rebind should immediately target the local reverse suffix, instead of twitching back to the old curved prefix.");
+        }
+
+        [Test]
         public void RoadRouteComputeService_CreateFollowOrder_PreservesOriginalFinalDestinationBeyondSampledPrefix()
         {
             Order sourceOrder = CreateMoveOrder(Entity.Null, orderTypeId: 102, xcm: 18000, ycm: 0, submitMode: OrderSubmitMode.Immediate);

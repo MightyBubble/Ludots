@@ -57,8 +57,11 @@ Issue #70 对应的 showcase 运行时已经按本 RFC 的核心边界落地到 
 
 * `mods/showcases/road_network/RoadNetworkShowcaseMod/Gameplay/RoadMoveRuntimeService.cs`
   * 修复 runtime bind 只写值拷贝、不写回 ECS world 的缺陷。
+  * bind / replan 时只重建 showcase-owned execution slice；不会回写 authored order payload，也不会要求单位先跑完旧 waypoint。
 * `mods/showcases/road_network/RoadNetworkShowcaseMod/Gameplay/RoadRouteFinalTargetResolver.cs`
   * 在 preserved final target 缺失时，回退到最后一个 sampled waypoint，避免 execution-slice route 被 arrival 层立即误判完成。
+* `mods/showcases/road_network/RoadNetworkShowcaseMod/Gameplay/RoadNavPlanStore.cs`
+  * active plan 在 bind / replan 时会裁到 actor 当前在曲线上的投影点，清掉已经落在身后的路径前缀，保证弯道重定向与掉头从当前位置重新起步。
 
 ## 3 非目标
 

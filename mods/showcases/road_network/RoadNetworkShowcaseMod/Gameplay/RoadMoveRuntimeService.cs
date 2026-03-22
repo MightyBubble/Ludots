@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Mathematics.FixedPoint;
 using RoadNetworkShowcaseMod.Runtime;
 
 namespace RoadNetworkShowcaseMod.Gameplay
@@ -25,7 +26,19 @@ namespace RoadNetworkShowcaseMod.Gameplay
             ref RoadNavPlanRuntime planState = ref _world.Get<RoadNavPlanRuntime>(entity);
 
             short timeoutCount = preserveTimeoutCount ? orderState.TimeoutCount : (short)0;
-            if (!_plans.TryBindFromOrder(entity, in order, out short planGeneration, out Vector3 finalGoalWorldCm))
+            short planGeneration;
+            Vector3 finalGoalWorldCm;
+            bool bound;
+            if (TryResolveBindPosition(entity, out Fix64Vec2 bindPosition))
+            {
+                bound = _plans.TryBindFromOrder(entity, in order, bindPosition, out planGeneration, out finalGoalWorldCm);
+            }
+            else
+            {
+                bound = _plans.TryBindFromOrder(entity, in order, out planGeneration, out finalGoalWorldCm);
+            }
+
+            if (!bound)
             {
                 orderState = new RoadMoveOrderRuntime
                 {
@@ -40,6 +53,8 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 planRuntime = planState;
                 return false;
             }
+
+            int planPointCount = _plans.TryGetPlan(entity, order.OrderId, out RoadNavPlanView plan) ? plan.Count : OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
 
             short executionGeneration = orderState.ExecutionGeneration;
             executionGeneration++;
@@ -60,7 +75,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             {
                 BoundOrderId = order.OrderId,
                 PlanGeneration = planGeneration,
-                PointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial),
+                PointCount = planPointCount,
                 FinalGoalXcm = (int)MathF.Round(finalGoalWorldCm.X, MidpointRounding.AwayFromZero),
                 FinalGoalYcm = (int)MathF.Round(finalGoalWorldCm.Z, MidpointRounding.AwayFromZero),
                 CurrentWaypointIndex = 0,
@@ -68,6 +83,24 @@ namespace RoadNetworkShowcaseMod.Gameplay
             orderRuntime = orderState;
             planRuntime = planState;
             return true;
+        }
+
+        private bool TryResolveBindPosition(Entity entity, out Fix64Vec2 bindPosition)
+        {
+            bindPosition = default;
+            if (_world.Has<Ludots.Core.Physics2D.Components.Position2D>(entity))
+            {
+                bindPosition = _world.Get<Ludots.Core.Physics2D.Components.Position2D>(entity).Value;
+                return true;
+            }
+
+            if (OrderWorldSpatialResolver.TryGetEntityWorldCm(_world, entity, out Vector3 worldCm))
+            {
+                bindPosition = Fix64Vec2.FromFloat(worldCm.X, worldCm.Z);
+                return true;
+            }
+
+            return false;
         }
 
         public void Clear(Entity entity)

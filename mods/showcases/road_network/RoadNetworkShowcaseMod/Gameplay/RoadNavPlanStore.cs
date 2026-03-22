@@ -54,6 +54,16 @@ namespace RoadNetworkShowcaseMod.Gameplay
 
         public bool TryBindFromOrder(Entity entity, in Order order, out short planGeneration, out Vector3 finalGoalWorldCm)
         {
+            return TryBindFromOrder(entity, in order, bindPosition: default, trimToBindPosition: false, out planGeneration, out finalGoalWorldCm);
+        }
+
+        public bool TryBindFromOrder(Entity entity, in Order order, Fix64Vec2 bindPosition, out short planGeneration, out Vector3 finalGoalWorldCm)
+        {
+            return TryBindFromOrder(entity, in order, bindPosition, trimToBindPosition: true, out planGeneration, out finalGoalWorldCm);
+        }
+
+        private bool TryBindFromOrder(Entity entity, in Order order, Fix64Vec2 bindPosition, bool trimToBindPosition, out short planGeneration, out Vector3 finalGoalWorldCm)
+        {
             planGeneration = 0;
             finalGoalWorldCm = default;
             int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
@@ -91,6 +101,11 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 return false;
             }
 
+            if (trimToBindPosition)
+            {
+                TrimSlotPrefixToBindPosition(slot, bindPosition);
+            }
+
             slot.FinalGoalWorldCm = RoadRouteFinalTargetResolver.TryResolve(in order, out Vector3 encodedGoal)
                 ? encodedGoal
                 : OrderWorldSpatialResolver.TryResolveMoveDestination(in order, out Vector3 destinationWorldCm)
@@ -124,6 +139,87 @@ namespace RoadNetworkShowcaseMod.Gameplay
         public void Clear(Entity entity)
         {
             _slotsByEntityId.Remove(entity.Id);
+        }
+
+        private static void TrimSlotPrefixToBindPosition(Slot slot, in Fix64Vec2 bindPosition)
+        {
+            if (slot.PointCount <= 1)
+            {
+                return;
+            }
+
+            float bindXcm = bindPosition.X.ToFloat();
+            float bindYcm = bindPosition.Y.ToFloat();
+            float bestDistanceSq = float.MaxValue;
+            int bestSegmentIndex = 0;
+            int bestProjectedXcm = slot.PathXcm[0];
+            int bestProjectedYcm = slot.PathYcm[0];
+
+            for (int segmentIndex = 0; segmentIndex < slot.PointCount - 1; segmentIndex++)
+            {
+                ProjectPointOnSegment(
+                    bindXcm,
+                    bindYcm,
+                    slot.PathXcm[segmentIndex],
+                    slot.PathYcm[segmentIndex],
+                    slot.PathXcm[segmentIndex + 1],
+                    slot.PathYcm[segmentIndex + 1],
+                    out int projectedXcm,
+                    out int projectedYcm);
+
+                float dx = bindXcm - projectedXcm;
+                float dy = bindYcm - projectedYcm;
+                float distanceSq = (dx * dx) + (dy * dy);
+                if (distanceSq > bestDistanceSq)
+                {
+                    continue;
+                }
+
+                bestDistanceSq = distanceSq;
+                bestSegmentIndex = segmentIndex;
+                bestProjectedXcm = projectedXcm;
+                bestProjectedYcm = projectedYcm;
+            }
+
+            int suffixStart = bestSegmentIndex + 1;
+            int writeCount = 0;
+            slot.PathXcm[writeCount] = bestProjectedXcm;
+            slot.PathYcm[writeCount] = bestProjectedYcm;
+            writeCount++;
+
+            for (int readIndex = suffixStart; readIndex < slot.PointCount && writeCount < OrderSpatial.MaxPoints; readIndex++)
+            {
+                slot.PathXcm[writeCount] = slot.PathXcm[readIndex];
+                slot.PathYcm[writeCount] = slot.PathYcm[readIndex];
+                writeCount++;
+            }
+
+            slot.PointCount = Math.Max(1, writeCount);
+        }
+
+        private static void ProjectPointOnSegment(
+            float pointXcm,
+            float pointYcm,
+            int fromXcm,
+            int fromYcm,
+            int toXcm,
+            int toYcm,
+            out int projectedXcm,
+            out int projectedYcm)
+        {
+            float deltaXcm = toXcm - fromXcm;
+            float deltaYcm = toYcm - fromYcm;
+            float lengthSq = (deltaXcm * deltaXcm) + (deltaYcm * deltaYcm);
+            if (lengthSq <= 0.0001f)
+            {
+                projectedXcm = fromXcm;
+                projectedYcm = fromYcm;
+                return;
+            }
+
+            float t = Math.Clamp(((pointXcm - fromXcm) * deltaXcm + (pointYcm - fromYcm) * deltaYcm) / lengthSq, 0f, 1f);
+            projectedXcm = (int)MathF.Round(fromXcm + (deltaXcm * t), MidpointRounding.AwayFromZero);
+            projectedYcm = (int)MathF.Round(fromYcm + (deltaYcm * t), MidpointRounding.AwayFromZero);
         }
 
         private Slot GetOrCreateSlot(Entity entity)
