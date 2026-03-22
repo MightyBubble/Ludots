@@ -250,7 +250,7 @@ namespace Ludots.Core.Physics2D.Systems
                 }
 
                 ref var entityFirst = ref chunk.Entity(0);
-                chunk.GetSpan<Position2D, Velocity2D, NavKinematics2D>(out var positionsCm, out var velocitiesCm, out var kinematics);
+                chunk.GetSpan<NavAgent2D, Position2D, Velocity2D, NavKinematics2D>(out var agents, out var positionsCm, out var velocitiesCm, out var kinematics);
 
                 bool hasGoal = chunk.Has<NavGoal2D>();
                 Span<NavGoal2D> goals = default;
@@ -296,6 +296,7 @@ namespace Ludots.Core.Physics2D.Systems
                     Vector2 goalPosition = Vector2.Zero;
                     float goalRadius = 0f;
                     float goalDistance = 0f;
+                    bool smartStopSuppressed = agents[entityIndex].SmartStopSuppressed != 0;
 
                     if (hasGoal)
                     {
@@ -329,7 +330,8 @@ namespace Ludots.Core.Physics2D.Systems
                         hasPointGoal,
                         goalPosition,
                         goalRadius,
-                        goalDistance);
+                        goalDistance,
+                        smartStopSuppressed);
                 }
             }
         }
@@ -1288,6 +1290,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var goalRadii = agentSoA.GoalRadii.AsSpan();
                 var goalDistances = agentSoA.GoalDistances.AsSpan();
                 var hasGoals = agentSoA.HasPointGoals.AsSpan();
+                var smartStopSuppressed = agentSoA.SmartStopSuppressed.AsSpan();
 
                 float queryRadius = smartStop.QueryRadiusCm;
                 float selfGoalDistanceLimit = smartStop.SelfGoalDistanceLimitCm;
@@ -1316,6 +1319,11 @@ namespace Ludots.Core.Physics2D.Systems
                         continue;
                     }
 
+                    if (smartStopSuppressed[i] != 0)
+                    {
+                        continue;
+                    }
+
                     int neighborCount = Runtime.CellMap.CollectNearestNeighborsBudgeted(
                         selfIndex: i,
                         selfPos: positions[i],
@@ -1328,6 +1336,11 @@ namespace Ludots.Core.Physics2D.Systems
                     {
                         int j = scratch[n];
                         if (hasGoals[j] == 0)
+                        {
+                            continue;
+                        }
+
+                        if (smartStopSuppressed[j] != 0)
                         {
                             continue;
                         }
@@ -1436,6 +1449,7 @@ namespace Ludots.Core.Physics2D.Systems
 
             foreach (ref var chunk in World.Query(in _agentQuery))
             {
+                var agents = chunk.GetSpan<NavAgent2D>();
                 var positionsCm = chunk.GetSpan<Position2D>();
                 var velocitiesCm = chunk.GetSpan<Velocity2D>();
                 var kinematics = chunk.GetSpan<NavKinematics2D>();
@@ -1469,6 +1483,7 @@ namespace Ludots.Core.Physics2D.Systems
                     Vector2 goalPosition = Vector2.Zero;
                     float goalRadius = 0f;
                     float goalDistance = 0f;
+                    bool smartStopSuppressed = agents[index].SmartStopSuppressed != 0;
 
                     if (hasGoal)
                     {
@@ -1502,7 +1517,8 @@ namespace Ludots.Core.Physics2D.Systems
                         hasPointGoal,
                         goalPosition,
                         goalRadius,
-                        goalDistance))
+                        goalDistance,
+                        smartStopSuppressed))
                     {
                         return _runtime.AgentSoA.EndSync();
                     }

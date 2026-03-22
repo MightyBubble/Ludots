@@ -9,15 +9,36 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 {
     public static class OrderWorldSpatialResolver
     {
-        public static bool TryResolveSpatialTarget(in OrderSpatial spatial, out Vector3 targetWorldCm)
+        public static int GetSpatialPointCount(in OrderSpatial spatial)
+        {
+            return spatial.Mode switch
+            {
+                OrderCollectionMode.Single when spatial.Kind == OrderSpatialKind.WorldCm => 1,
+                OrderCollectionMode.List when spatial.Kind == OrderSpatialKind.WorldCm && spatial.PointCount > 0 => spatial.PointCount,
+                _ => 0
+            };
+        }
+
+        public static bool TryResolveSpatialPointAt(in OrderSpatial spatial, int pointIndex, out Vector3 targetWorldCm)
         {
             targetWorldCm = default;
-            if (spatial.Kind != OrderSpatialKind.WorldCm)
+            if (spatial.Kind != OrderSpatialKind.WorldCm || pointIndex < 0)
             {
                 return false;
             }
 
-            if (spatial.Mode == OrderCollectionMode.List && spatial.PointCount > 0)
+            if (spatial.Mode == OrderCollectionMode.Single)
+            {
+                if (pointIndex != 0)
+                {
+                    return false;
+                }
+
+                targetWorldCm = spatial.WorldCm;
+                return true;
+            }
+
+            if (spatial.Mode == OrderCollectionMode.List && pointIndex < spatial.PointCount)
             {
                 unsafe
                 {
@@ -25,25 +46,30 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     fixed (int* py = spatial.PointY)
                     fixed (int* pz = spatial.PointZ)
                     {
-                        int last = spatial.PointCount - 1;
-                        targetWorldCm = new Vector3(px[last], py[last], pz[last]);
+                        targetWorldCm = new Vector3(px[pointIndex], py[pointIndex], pz[pointIndex]);
                         return true;
                     }
                 }
             }
 
-            if (spatial.Mode == OrderCollectionMode.Single)
-            {
-                targetWorldCm = spatial.WorldCm;
-                return true;
-            }
-
             return false;
+        }
+
+        public static bool TryResolveSpatialTarget(in OrderSpatial spatial, out Vector3 targetWorldCm)
+        {
+            targetWorldCm = default;
+            int pointCount = GetSpatialPointCount(in spatial);
+            return pointCount > 0 && TryResolveSpatialPointAt(in spatial, pointCount - 1, out targetWorldCm);
         }
 
         public static bool TryResolveMoveDestination(in Order order, out Vector3 targetWorldCm)
         {
             return TryResolveSpatialTarget(in order.Args.Spatial, out targetWorldCm);
+        }
+
+        public static bool TryResolveMoveWaypoint(in Order order, int pointIndex, out Vector3 targetWorldCm)
+        {
+            return TryResolveSpatialPointAt(in order.Args.Spatial, pointIndex, out targetWorldCm);
         }
 
         public static bool TryGetEntityWorldCm(World world, Entity entity, out Vector3 worldCm)

@@ -62,7 +62,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return OrderSubmitResult.QueueFull;
             }
 
-            int expireStep = CalculateExpireStep(config, currentStep, stepRateHz);
+            // Queued-mode orders are explicit player-authored follow-up commands, not
+            // same-type buffer retries, so they must not inherit BufferWindow expiry.
+            int expireStep = -1;
             return buffer.Enqueue(order, config.Priority, expireStep, currentStep)
                 ? OrderSubmitResult.Queued
                 : OrderSubmitResult.QueueFull;

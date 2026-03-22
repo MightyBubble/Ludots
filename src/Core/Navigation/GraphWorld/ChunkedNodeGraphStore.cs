@@ -59,11 +59,18 @@ namespace Ludots.Core.Navigation.GraphWorld
         public void AddOrReplace(long chunkKey, GraphChunkData chunk)
         {
             _chunks[chunkKey] = chunk ?? throw new ArgumentNullException(nameof(chunk));
+            _viewDirty = true;
         }
 
         public bool Remove(long chunkKey)
         {
-            return _chunks.Remove(chunkKey);
+            if (_chunks.Remove(chunkKey))
+            {
+                _viewDirty = true;
+                return true;
+            }
+
+            return false;
         }
 
         public bool TryGetChunk(long chunkKey, out GraphChunkData chunk)

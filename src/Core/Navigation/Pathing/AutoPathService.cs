@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.GraphCore;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.Pathing.Config;
 
@@ -13,9 +14,11 @@ namespace Ludots.Core.Navigation.Pathing
     {
         private readonly NodeGraph _graph;
         private readonly INodeGraphSpatialIndex _graphIndex;
-        private readonly NavQueryServiceRegistry _navRegistry;
-        private readonly NavMeshProfileRegistry _navProfiles;
+        private readonly LoadedGraphRuntime _graphRuntime;
+        private readonly NavQueryServiceRegistry? _navRegistry;
+        private readonly NavMeshProfileRegistry? _navProfiles;
         private readonly PathStore _store;
+        private readonly bool _navMeshAvailable;
 
         private readonly Dictionary<string, CompiledAgentType> _agents;
         private readonly CompiledAgentType _defaultAgent;
@@ -28,14 +31,95 @@ namespace Ludots.Core.Navigation.Pathing
         public AutoPathService(NodeGraph graph, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, PathStore store, PathingConfig config)
         {
             _graph = graph ?? throw new ArgumentNullException(nameof(graph));
-            _graphIndex = new LinearScanNodeGraphSpatialIndex(_graph);
+            _graphIndex = LoadedGraphRuntime.CreateSpatialIndex(_graph, preferredCellSizeCm: 0);
+            _graphRuntime = null;
             _navRegistry = navRegistry ?? throw new ArgumentNullException(nameof(navRegistry));
             _navProfiles = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            _navMeshAvailable = true;
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
 
             _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
+            _defaultAgent = default;
+            for (int i = 0; i < config.AgentTypes.Count; i++)
+            {
+                var a = config.AgentTypes[i];
+                if (a == null) continue;
+                var compiled = CompileAgent(a);
+                _agents[compiled.Id] = compiled;
+                if (i == 0) _defaultAgent = compiled;
+            }
+
+            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+        }
+
+        public AutoPathService(LoadedGraphRuntime graphRuntime, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, PathStore store, PathingConfig config)
+        {
+            _graphRuntime = graphRuntime ?? throw new ArgumentNullException(nameof(graphRuntime));
+            _graph = null;
+            _graphIndex = null;
+            _navRegistry = navRegistry ?? throw new ArgumentNullException(nameof(navRegistry));
+            _navProfiles = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
+            _store = store ?? throw new ArgumentNullException(nameof(store));
+            _navMeshAvailable = true;
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
+
+            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
+            _defaultAgent = default;
+            for (int i = 0; i < config.AgentTypes.Count; i++)
+            {
+                var a = config.AgentTypes[i];
+                if (a == null) continue;
+                var compiled = CompileAgent(a);
+                _agents[compiled.Id] = compiled;
+                if (i == 0) _defaultAgent = compiled;
+            }
+
+            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+        }
+
+        public AutoPathService(NodeGraph graph, PathStore store, PathingConfig config)
+        {
+            _graph = graph ?? throw new ArgumentNullException(nameof(graph));
+            _graphIndex = LoadedGraphRuntime.CreateSpatialIndex(_graph, preferredCellSizeCm: 0);
+            _graphRuntime = null;
+            _navRegistry = null;
+            _navProfiles = null;
+            _store = store ?? throw new ArgumentNullException(nameof(store));
+            _navMeshAvailable = false;
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
+
+            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
+            _defaultAgent = default;
+            for (int i = 0; i < config.AgentTypes.Count; i++)
+            {
+                var a = config.AgentTypes[i];
+                if (a == null) continue;
+                var compiled = CompileAgent(a);
+                _agents[compiled.Id] = compiled;
+                if (i == 0) _defaultAgent = compiled;
+            }
+
+            if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
+        }
+
+        public AutoPathService(LoadedGraphRuntime graphRuntime, PathStore store, PathingConfig config)
+        {
+            _graphRuntime = graphRuntime ?? throw new ArgumentNullException(nameof(graphRuntime));
+            _graph = null;
+            _graphIndex = null;
+            _navRegistry = null;
+            _navProfiles = null;
+            _store = store ?? throw new ArgumentNullException(nameof(store));
+            _navMeshAvailable = false;
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
+
+            _agents = new Dictionary<string, CompiledAgentType>(config.AgentTypes.Count, StringComparer.OrdinalIgnoreCase);
+            _defaultAgent = default;
             for (int i = 0; i < config.AgentTypes.Count; i++)
             {
                 var a = config.AgentTypes[i];
@@ -60,12 +144,22 @@ namespace Ludots.Core.Navigation.Pathing
             if (agent.Selection.Mode == PathSelectionMode.PreferGraph)
             {
                 if (TrySolveGraph(in request, in agent, out result, out _)) return true;
+                if (!ShouldFallbackToMesh(agent.Selection.Fallback))
+                {
+                    return true;
+                }
+
                 if (TrySolveMesh(in request, in agent, out result, out _)) return true;
                 return true;
             }
             if (agent.Selection.Mode == PathSelectionMode.PreferMesh)
             {
                 if (TrySolveMesh(in request, in agent, out result, out _)) return true;
+                if (!ShouldFallbackToGraph(agent.Selection.Fallback))
+                {
+                    return true;
+                }
+
                 if (TrySolveGraph(in request, in agent, out result, out _)) return true;
                 return true;
             }
@@ -111,6 +205,9 @@ namespace Ludots.Core.Navigation.Pathing
         private bool TrySolveGraph(in PathRequest request, in CompiledAgentType agent, out PathResult result, out float travelCost)
         {
             travelCost = 0f;
+            NodeGraph graph = ResolveGraph();
+            INodeGraphSpatialIndex graphIndex = ResolveGraphIndex();
+            TagRuleTraversalPolicy policy = agent.CreateGraphPolicy(graph);
 
             int startNodeId;
             int goalNodeId;
@@ -122,12 +219,12 @@ namespace Ludots.Core.Navigation.Pathing
             }
             else if (request.Start.Kind == PathEndpointKind.WorldCm && request.Goal.Kind == PathEndpointKind.WorldCm)
             {
-                if (!_graphIndex.TryFindNearest(new WorldCmInt2(request.Start.Xcm, request.Start.Ycm), agent.GraphProjectionMaxRadiusCm, out startNodeId, out _))
+                if (!graphIndex.TryFindNearest(new WorldCmInt2(request.Start.Xcm, request.Start.Ycm), agent.GraphProjectionMaxRadiusCm, out startNodeId, out _))
                 {
                     result = new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, expanded: 0, errorCode: 10);
                     return false;
                 }
-                if (!_graphIndex.TryFindNearest(new WorldCmInt2(request.Goal.Xcm, request.Goal.Ycm), agent.GraphProjectionMaxRadiusCm, out goalNodeId, out _))
+                if (!graphIndex.TryFindNearest(new WorldCmInt2(request.Goal.Xcm, request.Goal.Ycm), agent.GraphProjectionMaxRadiusCm, out goalNodeId, out _))
                 {
                     result = new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, expanded: 0, errorCode: 11);
                     return false;
@@ -142,12 +239,11 @@ namespace Ludots.Core.Navigation.Pathing
             int maxExpanded = request.Budget.MaxExpanded > 0 ? request.Budget.MaxExpanded : int.MaxValue;
             int maxPoints = request.Budget.MaxPoints > 0 ? request.Budget.MaxPoints : _store.MaxPointsPerPath;
 
-            EnsureCapacity(ref _nodeIdsScratch, Math.Min(_graph.NodeCount, maxPoints));
+            EnsureCapacity(ref _nodeIdsScratch, Math.Min(graph.NodeCount, maxPoints));
             var nodesSpan = _nodeIdsScratch.AsSpan();
 
             var scratch = _graphScratch;
-            var policy = agent.GraphPolicy;
-            var r = NodeGraphPathService.FindPathAStar(_graph, startNodeId, goalNodeId, nodesSpan, ref scratch, ref policy, maxExpanded);
+            var r = NodeGraphPathService.FindPathAStar(graph, startNodeId, goalNodeId, nodesSpan, ref scratch, ref policy, maxExpanded);
             _graphScratch = scratch;
 
             if (r.Status != GraphPathStatus.Success)
@@ -173,8 +269,8 @@ namespace Ludots.Core.Navigation.Pathing
             EnsureCapacity(ref _xScratch, count);
             EnsureCapacity(ref _yScratch, count);
 
-            var xs = _graph.PosXcm;
-            var ys = _graph.PosYcm;
+            var xs = graph.PosXcm;
+            var ys = graph.PosYcm;
             for (int i = 0; i < count; i++)
             {
                 int nodeId = _nodeIdsScratch[i];
@@ -191,6 +287,12 @@ namespace Ludots.Core.Navigation.Pathing
         private bool TrySolveMesh(in PathRequest request, in CompiledAgentType agent, out PathResult result, out float travelCost)
         {
             travelCost = 0f;
+
+            if (!_navMeshAvailable)
+            {
+                result = new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, expanded: 0, errorCode: 22);
+                return false;
+            }
 
             if (request.Start.Kind != PathEndpointKind.WorldCm || request.Goal.Kind != PathEndpointKind.WorldCm)
             {
@@ -253,18 +355,16 @@ namespace Ludots.Core.Navigation.Pathing
 
         private CompiledAgentType CompileAgent(PathingAgentTypeConfig cfg)
         {
-            if (!_navProfiles.TryGetIndex(cfg.ProfileId, out int profileIndex))
+            int profileIndex = -1;
+            if (_navMeshAvailable && (_navProfiles == null || !_navProfiles.TryGetIndex(cfg.ProfileId, out profileIndex)))
             {
                 throw new InvalidOperationException($"Unknown navmesh profileId: {cfg.ProfileId}");
             }
-            var areaCosts = BuildAreaCosts(cfg.NavMesh);
 
-            var policy = new TagRuleTraversalPolicy(_graph)
-            {
-                UseEdgeFilter = cfg.NodeGraph != null && (cfg.NodeGraph.RequiredTagsAll.Count > 0 || cfg.NodeGraph.ForbiddenTagsAny.Count > 0),
-                EdgeFilter = PathingNodeGraphPolicyCompiler.CompileEdgeFilter(cfg.NodeGraph),
-                EdgeRules = PathingNodeGraphPolicyCompiler.CompileEdgeRules(cfg.NodeGraph)
-            };
+            var areaCosts = BuildAreaCosts(cfg.NavMesh);
+            var edgeFilter = PathingNodeGraphPolicyCompiler.CompileEdgeFilter(cfg.NodeGraph);
+            var edgeRules = PathingNodeGraphPolicyCompiler.CompileEdgeRules(cfg.NodeGraph);
+            bool useEdgeFilter = cfg.NodeGraph != null && (cfg.NodeGraph.RequiredTagsAll.Count > 0 || cfg.NodeGraph.ForbiddenTagsAny.Count > 0);
 
             int projection = cfg.NodeGraph?.ProjectionMaxRadiusCm ?? 200000;
             if (projection <= 0) projection = 0;
@@ -274,7 +374,9 @@ namespace Ludots.Core.Navigation.Pathing
                 navLayer: cfg.Layer,
                 navProfileIndex: profileIndex,
                 navAreaCosts: areaCosts,
-                graphPolicy: policy,
+                useGraphEdgeFilter: useEdgeFilter,
+                graphEdgeFilter: edgeFilter,
+                graphEdgeRules: edgeRules,
                 graphProjectionMaxRadiusCm: projection,
                 selection: cfg.Selection ?? new PathingSelectionConfig());
         }
@@ -305,27 +407,69 @@ namespace Ludots.Core.Navigation.Pathing
             Array.Resize(ref array, next);
         }
 
+        private static bool ShouldFallbackToMesh(PathSelectionMode fallback)
+        {
+            return fallback == PathSelectionMode.PreferMesh || fallback == PathSelectionMode.AutoCheapest;
+        }
+
+        private static bool ShouldFallbackToGraph(PathSelectionMode fallback)
+        {
+            return fallback == PathSelectionMode.PreferGraph || fallback == PathSelectionMode.AutoCheapest;
+        }
+
+        private NodeGraph ResolveGraph()
+        {
+            return _graphRuntime != null ? _graphRuntime.CurrentGraph : _graph;
+        }
+
+        private INodeGraphSpatialIndex ResolveGraphIndex()
+        {
+            return _graphRuntime != null ? _graphRuntime.CurrentSpatialIndex : _graphIndex;
+        }
+
         private readonly struct CompiledAgentType
         {
             public readonly string Id;
             public readonly int NavLayer;
             public readonly int NavProfileIndex;
             public readonly NavAreaCostTable NavAreaCosts;
-            public readonly TagRuleTraversalPolicy GraphPolicy;
+            public readonly bool UseGraphEdgeFilter;
+            public readonly TagFilter256 GraphEdgeFilter;
+            public readonly TagRuleTraversalPolicy.TagRule[] GraphEdgeRules;
             public readonly int GraphProjectionMaxRadiusCm;
             public readonly PathingSelectionConfig Selection;
 
-            public CompiledAgentType(string id, int navLayer, int navProfileIndex, NavAreaCostTable navAreaCosts, TagRuleTraversalPolicy graphPolicy, int graphProjectionMaxRadiusCm, PathingSelectionConfig selection)
+            public CompiledAgentType(
+                string id,
+                int navLayer,
+                int navProfileIndex,
+                NavAreaCostTable navAreaCosts,
+                bool useGraphEdgeFilter,
+                TagFilter256 graphEdgeFilter,
+                TagRuleTraversalPolicy.TagRule[] graphEdgeRules,
+                int graphProjectionMaxRadiusCm,
+                PathingSelectionConfig selection)
             {
                 Id = id;
                 NavLayer = navLayer;
                 NavProfileIndex = navProfileIndex;
                 NavAreaCosts = navAreaCosts;
-                GraphPolicy = graphPolicy;
+                UseGraphEdgeFilter = useGraphEdgeFilter;
+                GraphEdgeFilter = graphEdgeFilter;
+                GraphEdgeRules = graphEdgeRules;
                 GraphProjectionMaxRadiusCm = graphProjectionMaxRadiusCm;
                 Selection = selection;
+            }
+
+            public TagRuleTraversalPolicy CreateGraphPolicy(NodeGraph graph)
+            {
+                return new TagRuleTraversalPolicy(graph)
+                {
+                    UseEdgeFilter = UseGraphEdgeFilter,
+                    EdgeFilter = GraphEdgeFilter,
+                    EdgeRules = GraphEdgeRules
+                };
             }
         }
     }
 }
-

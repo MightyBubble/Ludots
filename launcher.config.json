@@ -40,6 +40,22 @@
         "value": "mods/showcases/champion_skill_stress_entry/ChampionSkillStressEntryMod",
         "projectPath": "ChampionSkillStressEntryMod.csproj"
       }
+    },
+    {
+      "name": "road_network_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/road_network/RoadNetworkShowcaseMod",
+        "projectPath": null
+      }
+    },
+    {
+      "name": "chunk_streaming_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod",
+        "projectPath": "ChunkStreamingShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {
