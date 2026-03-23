@@ -386,6 +386,14 @@ namespace Ludots.Core.Input.Runtime
         private void RefreshPointerState()
         {
             var currentMousePosition = _backend.GetMousePosition();
+            if (!float.IsFinite(currentMousePosition.X) || !float.IsFinite(currentMousePosition.Y))
+            {
+                _mouseDelta = Vector2.Zero;
+                _mousePosition = new Vector2(-1f, -1f);
+                _hasMousePosition = false;
+                return;
+            }
+
             _mouseDelta = _hasMousePosition
                 ? currentMousePosition - _mousePosition
                 : Vector2.Zero;

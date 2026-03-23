@@ -23,9 +23,7 @@ namespace Ludots.Adapter.UE5
             var cam = _state.ReadCameraState();
             if (!_IsRenderableCamera(cam))
             {
-                float fallbackFov = float.IsFinite(_state.FovYDeg) && _state.FovYDeg > 1f
-                    ? _state.FovYDeg
-                    : 60f;
+                float fallbackFov = _state.ReadCameraFovYDeg();
                 cam = new CameraRenderState3D(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, fallbackFov);
             }
 

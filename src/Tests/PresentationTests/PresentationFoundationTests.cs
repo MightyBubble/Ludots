@@ -16,6 +16,9 @@ using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map.Hex;
+using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 using System.Collections.Generic;
 
@@ -93,6 +96,20 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void VisualRuntimeState_Create_RejectsAnimationProfileOnStaticLane()
+        {
+            Assert.That(
+                () => VisualRuntimeState.Create(
+                    meshAssetId: 7,
+                    materialId: 3,
+                    baseScale: 1f,
+                    renderPath: VisualRenderPath.StaticMesh,
+                    animationProfileId: 5),
+                Throws.TypeOf<InvalidOperationException>()
+                    .With.Message.Contains("animationProfileId"));
+        }
+
+        [Test]
         public void PresentationAuthoringContext_Apply_AssignsStableIdVisualAnimatorAndStartupPerformers()
         {
             using var world = World.Create();
@@ -111,6 +128,7 @@ namespace Ludots.Tests.Presentation
                     MeshAssetId = 101,
                     MaterialId = 202,
                     AnimatorControllerId = controllerId,
+                    AnimationProfileId = 77,
                     BaseScale = 1.25f,
                     RenderPath = VisualRenderPath.SkinnedMesh,
                     Mobility = VisualMobility.Movable,
@@ -161,6 +179,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(visual.BaseScale, Is.EqualTo(1.25f).Within(0.001f));
             Assert.That(visual.RenderPath, Is.EqualTo(VisualRenderPath.SkinnedMesh));
             Assert.That(visual.AnimatorControllerId, Is.EqualTo(controllerId));
+            Assert.That(visual.AnimationProfileId, Is.EqualTo(77));
             Assert.That(visual.IsVisibleRequested, Is.False);
             Assert.That(visual.HasAnimator, Is.True);
 
@@ -302,6 +321,113 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void AnimationProfileConfigLoaders_LoadProfileClipAndTemplateResolutionChain()
+        {
+            string repoRoot = FindRepoRoot();
+            string assetsRoot = Path.Combine(repoRoot, "assets");
+            var modPaths = new System.Collections.Generic.List<string>
+            {
+                Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod"),
+                Path.Combine(repoRoot, "mods", "fixtures", "animation", "AnimationAcceptanceMod"),
+            };
+
+            using var engine = new Ludots.Core.Engine.GameEngine();
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+
+            var controllerRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimatorControllerRegistry);
+            var templateRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.PresentationVisualTemplateRegistry);
+            var profileRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimationProfileRegistry);
+            var clipRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimationClipRegistry);
+
+            Assert.That(controllerRegistry, Is.Not.Null);
+            Assert.That(templateRegistry, Is.Not.Null);
+            Assert.That(profileRegistry, Is.Not.Null);
+            Assert.That(clipRegistry, Is.Not.Null);
+
+            int tankProfileId = profileRegistry!.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.TankProfileKey);
+            int humanoidProfileId = profileRegistry.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.HumanoidProfileKey);
+            Assert.That(tankProfileId, Is.GreaterThan(0));
+            Assert.That(humanoidProfileId, Is.GreaterThan(0));
+
+            Assert.That(profileRegistry.TryGet(tankProfileId, out var tankProfile), Is.True);
+            Assert.That(profileRegistry.TryGet(humanoidProfileId, out var humanoidProfile), Is.True);
+            Assert.That(
+                tankProfile.AnimatorControllerId,
+                Is.EqualTo(controllerRegistry!.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.TankControllerKey)));
+            Assert.That(
+                humanoidProfile.AnimatorControllerId,
+                Is.EqualTo(controllerRegistry.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.HumanoidControllerKey)));
+
+            Assert.That(profileRegistry.TryResolveStateClipId(tankProfileId, 32, out int tankCruiseClipId), Is.True);
+            Assert.That(profileRegistry.TryResolveBuiltinClipId(tankProfileId, AnimatorBuiltinClipId.RecoilPulse, out int tankRecoilClipId), Is.True);
+            Assert.That(profileRegistry.TryResolveStateClipId(humanoidProfileId, 43, out int humanoidRunClipId), Is.True);
+            Assert.That(profileRegistry.TryResolveBuiltinClipId(humanoidProfileId, AnimatorBuiltinClipId.AimYawOffset, out int humanoidAimClipId), Is.True);
+
+            Assert.That(
+                clipRegistry!.TryResolveLocator(tankCruiseClipId, AnimationAcceptanceMod.AnimationAcceptanceIds.RaylibBackendId, out var tankCruiseRaylib),
+                Is.True);
+            Assert.That(
+                clipRegistry.TryResolveLocator(tankRecoilClipId, AnimationAcceptanceMod.AnimationAcceptanceIds.Ue5BackendId, out var tankRecoilUe5),
+                Is.True);
+            Assert.That(
+                clipRegistry.TryResolveLocator(humanoidRunClipId, AnimationAcceptanceMod.AnimationAcceptanceIds.RaylibBackendId, out var humanoidRunRaylib),
+                Is.True);
+            Assert.That(
+                clipRegistry.TryResolveLocator(humanoidAimClipId, AnimationAcceptanceMod.AnimationAcceptanceIds.Ue5BackendId, out var humanoidAimUe5),
+                Is.True);
+
+            Assert.That(tankCruiseRaylib.AssetRef, Does.Contain("tank_cruise"));
+            Assert.That(tankRecoilUe5.AssetRef, Does.Contain("Tank_RecoilPulse"));
+            Assert.That(humanoidRunRaylib.AssetRef, Does.Contain("humanoid_run"));
+            Assert.That(humanoidAimUe5.AssetRef, Does.Contain("Humanoid_AimYawOffset"));
+
+            int tankTemplateId = templateRegistry!.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.TankVisualTemplateId);
+            int humanoidTemplateId = templateRegistry.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.HumanoidVisualTemplateId);
+            Assert.That(templateRegistry.TryGet(tankTemplateId, out var tankTemplate), Is.True);
+            Assert.That(templateRegistry.TryGet(humanoidTemplateId, out var humanoidTemplate), Is.True);
+            Assert.That(tankTemplate.AnimationProfileId, Is.EqualTo(tankProfileId));
+            Assert.That(humanoidTemplate.AnimationProfileId, Is.EqualTo(humanoidProfileId));
+            Assert.That(tankTemplate.AnimatorControllerId, Is.EqualTo(tankProfile.AnimatorControllerId));
+            Assert.That(humanoidTemplate.AnimatorControllerId, Is.EqualTo(humanoidProfile.AnimatorControllerId));
+        }
+
+        [Test]
+        public void RepositoryVisualTemplates_SkinnedEntries_MustBindThroughAnimationProfiles()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] files = Directory.GetFiles(Path.Combine(repoRoot, "mods"), "visual_templates.json", SearchOption.AllDirectories);
+
+            foreach (string file in files)
+            {
+                JsonNode? root = JsonNode.Parse(File.ReadAllText(file));
+                Assert.That(root, Is.TypeOf<JsonArray>(), $"Visual template file must contain a JSON array: {file}");
+
+                foreach (JsonNode? item in (JsonArray)root!)
+                {
+                    if (item is not JsonObject obj)
+                    {
+                        continue;
+                    }
+
+                    string templateId = obj["id"]?.GetValue<string>() ?? "<missing>";
+                    string renderPath = obj["renderPath"]?.GetValue<string>() ?? string.Empty;
+                    if (!string.Equals(renderPath, nameof(VisualRenderPath.SkinnedMesh), StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(renderPath, nameof(VisualRenderPath.GpuSkinnedInstance), StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    string animationProfileId = obj["animationProfileId"]?.GetValue<string>() ?? string.Empty;
+                    Assert.That(
+                        string.IsNullOrWhiteSpace(animationProfileId),
+                        Is.False,
+                        $"Skinned visual template '{templateId}' in '{file}' must define animationProfileId.");
+                }
+            }
+        }
+
+        [Test]
         public void EntityVisualEmitSystem_AndTransientMarkers_PopulateSharedVisualProxyAndSkinnedBatchContracts()
         {
             using var world = World.Create();
@@ -324,7 +450,8 @@ namespace Ludots.Tests.Presentation
                     materialId: 9,
                     baseScale: 1f,
                     renderPath: VisualRenderPath.SkinnedMesh,
-                    animatorControllerId: 3),
+                    animatorControllerId: 3,
+                    animationProfileId: 9),
                 AnimatorPackedState.Create(3),
                 new AnimationOverlayRequest
                 {
@@ -343,6 +470,9 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(proxyBuffer.Count, Is.EqualTo(2));
             Assert.That(skinnedBatchBuffer.Count, Is.EqualTo(1));
+            Assert.That(proxyBuffer.GetSpan()[0].AnimationProfileId, Is.EqualTo(9));
+            Assert.That(snapshotBuffer.GetSpan()[0].AnimationProfileId, Is.EqualTo(9));
+            Assert.That(skinnedBatchBuffer.GetSpan()[0].AnimationProfileId, Is.EqualTo(9));
             Assert.That(skinnedBatchBuffer.GetSpan()[0].AnimationOverlay.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.LocomotionCycle));
             Assert.That(proxyBuffer.GetSpan()[1].StableId, Is.EqualTo(TransientMarkerIdentity.ComposeStableId(1)));
             Assert.That(proxyBuffer.GetSpan()[1].StableId, Is.GreaterThan(0));
@@ -419,6 +549,51 @@ namespace Ludots.Tests.Presentation
             throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
 
+        private static Vector3 AxialToWorld(float q, float r)
+        {
+            float x = HexCoordinates.EdgeLength * 1.7320508f * (q + r / 2.0f);
+            float z = HexCoordinates.EdgeLength * 1.5f * r;
+            return new Vector3(x, 0f, z);
+        }
+
+        private sealed class RecordingGroundProjector : IVisualGroundProjector
+        {
+            private readonly ProjectCallback _project;
+
+            public delegate void ProjectCallback(ReadOnlySpan<float> xs, ReadOnlySpan<float> ys, Span<float> outHeights);
+
+            public RecordingGroundProjector(ProjectCallback project)
+            {
+                _project = project;
+            }
+
+            public int InvocationCount { get; private set; }
+
+            public float[] LastXs { get; private set; } = Array.Empty<float>();
+
+            public float[] LastYs { get; private set; } = Array.Empty<float>();
+
+            public bool TryProjectHeights(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm)
+            {
+                InvocationCount++;
+                LastXs = worldXCm.ToArray();
+                LastYs = worldYCm.ToArray();
+                _project(worldXCm, worldYCm, outHeightCm);
+                return true;
+            }
+        }
+
+        private sealed class UnavailableGroundProjector : IVisualGroundProjector
+        {
+            public int InvocationCount { get; private set; }
+
+            public bool TryProjectHeights(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm)
+            {
+                InvocationCount++;
+                return false;
+            }
+        }
+
         [Test]
         public void PresentationStartupPerformerSystem_UsesStableIdScope_AndRunsOnlyOnce()
         {
@@ -492,6 +667,122 @@ namespace Ludots.Tests.Presentation
             Assert.That(item.Position.Y, Is.EqualTo(0f).Within(0.001f));
             Assert.That(item.Position.Z, Is.EqualTo(5f).Within(0.001f));
             AssertQuaternionEquivalent(item.Rotation, Quaternion.CreateFromAxisAngle(Vector3.UnitY, -MathF.PI * 0.5f));
+        }
+
+        [Test]
+        public void TerrainHeightSyncSystem_PrefersVisualGroundProjector_AndUsesInterpolatedWorldXY()
+        {
+            using var world = World.Create();
+            world.Create(
+                new PresentationFrameState
+                {
+                    InterpolationAlpha = 0.25f,
+                    Enabled = true,
+                },
+                new PresentationFrameStateTag());
+
+            Entity entity = world.Create(
+                WorldPositionCm.FromCm(400, 800),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(0, 400) },
+                new VisualTransform
+                {
+                    Position = new Vector3(1f, 0f, 5f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+
+            var projector = new RecordingGroundProjector((xs, ys, heights) =>
+            {
+                heights[0] = xs[0] + ys[0];
+            });
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.VisualGroundProjector.Name] = projector,
+            };
+
+            using var system = new TerrainHeightSyncSystem(world, globals);
+            system.Update(0.016f);
+
+            Assert.That(projector.InvocationCount, Is.EqualTo(1));
+            Assert.That(projector.LastXs[0], Is.EqualTo(100f).Within(0.001f));
+            Assert.That(projector.LastYs[0], Is.EqualTo(500f).Within(0.001f));
+
+            VisualTransform visual = world.Get<VisualTransform>(entity);
+            Assert.That(visual.Position.X, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(visual.Position.Y, Is.EqualTo(6f).Within(0.001f));
+            Assert.That(visual.Position.Z, Is.EqualTo(5f).Within(0.001f));
+        }
+
+        [Test]
+        public void TerrainHeightSyncSystem_FallsBackToVertexMap_WhenProjectorIsMissing()
+        {
+            using var world = World.Create();
+            var vertexMap = new VertexMap();
+            vertexMap.Initialize(widthInChunks: 4, heightInChunks: 4);
+            vertexMap.SetHeight(0, 0, 0);
+            vertexMap.SetHeight(1, 0, 10);
+            vertexMap.SetHeight(0, 1, 20);
+
+            Vector3 p0 = AxialToWorld(q: 0f, r: 0f);
+            Vector3 p1 = AxialToWorld(q: 1f, r: 0f);
+            Vector3 p2 = AxialToWorld(q: 0f, r: 1f);
+            Vector3 worldPos = (p0 + p1 + p2) / 3f;
+            float expectedHeight = (0f + 10f + 15f) / 3f;
+
+            Entity entity = world.Create(
+                WorldPositionCm.FromCmFloat(worldPos.X * 100f, worldPos.Z * 100f),
+                new VisualTransform
+                {
+                    Position = worldPos,
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.VertexMap.Name] = vertexMap,
+            };
+
+            using var system = new TerrainHeightSyncSystem(world, globals)
+            {
+                HeightScale = 1f,
+            };
+            system.Update(0.016f);
+
+            VisualTransform visual = world.Get<VisualTransform>(entity);
+            Assert.That(visual.Position.Y, Is.EqualTo(expectedHeight).Within(0.001f));
+        }
+
+        [Test]
+        public void TerrainHeightSyncSystem_DoesNotThrow_WhenProjectorUnavailable_AndVertexMapMissing()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create(
+                WorldPositionCm.FromCm(400, 800),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(300, 700) },
+                new VisualTransform
+                {
+                    Position = new Vector3(1f, 2f, 5f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+
+            var projector = new UnavailableGroundProjector();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.VisualGroundProjector.Name] = projector,
+            };
+
+            using var system = new TerrainHeightSyncSystem(world, globals);
+
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+            Assert.That(projector.InvocationCount, Is.EqualTo(1));
+
+            VisualTransform visual = world.Get<VisualTransform>(entity);
+            Assert.That(visual.Position.X, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(visual.Position.Y, Is.EqualTo(2f).Within(0.001f));
+            Assert.That(visual.Position.Z, Is.EqualTo(5f).Within(0.001f));
         }
 
         [Test]
