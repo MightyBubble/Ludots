@@ -38,7 +38,9 @@ namespace Ludots.Adapter.UE5
         /// </summary>
         public Vector2 GetMousePosition()
         {
-            var pos = new Vector2(_state.MouseX, _state.MouseY);
+            var pos = _state.HasMousePosition
+                ? new Vector2(_state.MouseX, _state.MouseY)
+                : new Vector2(float.NaN, float.NaN);
 
             _logFrameCounter++;
             if (_logFrameCounter >= LogInterval)
@@ -50,7 +52,9 @@ namespace Ludots.Adapter.UE5
         }
 
         /// <summary>返回鼠标屏幕绝对坐标（用于 Hover/命中检测等非 delta 场景）。</summary>
-        public Vector2 GetMouseScreenPosition() => new(_state.MouseX, _state.MouseY);
+        public Vector2 GetMouseScreenPosition() => _state.HasMousePosition
+            ? new Vector2(_state.MouseX, _state.MouseY)
+            : new Vector2(-1f, -1f);
 
         public float GetMouseWheel() => _state.MouseWheelDelta;
 

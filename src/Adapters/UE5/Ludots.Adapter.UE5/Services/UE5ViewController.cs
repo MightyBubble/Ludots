@@ -17,7 +17,7 @@ namespace Ludots.Adapter.UE5
         public UE5ViewController(UE5SharedCameraState state) => _state = state;
 
         public Vector2 Resolution  => new(_state.ViewportWidth, _state.ViewportHeight);
-        public float   Fov         => _state.FovYDeg;
+        public float   Fov         => _state.ReadCameraFovYDeg();
         public float   AspectRatio => _state.ViewportWidth / MathF.Max(1f, _state.ViewportHeight);
     }
 }

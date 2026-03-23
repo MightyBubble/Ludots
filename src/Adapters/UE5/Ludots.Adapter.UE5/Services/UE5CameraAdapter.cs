@@ -17,6 +17,8 @@ namespace Ludots.Adapter.UE5
         public UE5CameraAdapter(UE5SharedCameraState state) => _state = state;
 
         public void UpdateCamera(in CameraRenderState3D state)
-            => _state.PushCameraState(state);
+        {
+            _state.PushCameraState(state);
+        }
     }
 }

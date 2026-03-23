@@ -1,4 +1,5 @@
 using System.Numerics;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Presentation.Camera;
 
 namespace Ludots.Adapter.UE5
@@ -20,17 +21,39 @@ namespace Ludots.Adapter.UE5
 
         /// <summary>Ludots CameraRenderState3D（由 CameraPresenter 通过 UpdateCamera 推入，
         /// 或由 UE5 PlayerCameraManager 直接推入以驱动 Ludots 相机）。</summary>
+        /// <summary>
+        /// Render camera snapshot published by Ludots. UE consumes this snapshot as output only.
+        /// </summary>
         private CameraRenderState3D _cameraState;
+        private CameraStateSnapshot _logicalCameraState;
+        private bool _hasLogicalCameraState;
 
         public void PushCameraState(CameraRenderState3D state) { lock (_lock) _cameraState = state; }
         public CameraRenderState3D ReadCameraState()           { lock (_lock) return _cameraState; }
+
+        public void PushLogicalCameraState(CameraStateSnapshot state)
+        {
+            lock (_lock)
+            {
+                _logicalCameraState = state;
+                _hasLogicalCameraState = true;
+            }
+        }
+
+        public bool TryReadLogicalCameraState(out CameraStateSnapshot state)
+        {
+            lock (_lock)
+            {
+                state = _logicalCameraState;
+                return _hasLogicalCameraState;
+            }
+        }
 
         // ── 视口 ─────────────────────────────────────────────────────
         // C# 中 volatile 不支持 float，统一用 _lock 保护。
 
         private float _viewportWidth  = 1920f;
         private float _viewportHeight = 1080f;
-        private float _fovYDeg        = 60f;
 
         /// <summary>UE5 Viewport 宽度（像素）。线程安全属性。</summary>
         public float ViewportWidth
@@ -47,16 +70,21 @@ namespace Ludots.Adapter.UE5
         }
 
         /// <summary>垂直 FOV（度）。线程安全属性。</summary>
-        public float FovYDeg
+        public float ReadCameraFovYDeg(float fallbackFovYDeg = 60f)
         {
-            get { lock (_lock) return _fovYDeg;  }
-            set { lock (_lock) _fovYDeg  = value; }
+            lock (_lock)
+            {
+                return IsRenderableFov(_cameraState.FovYDeg)
+                    ? _cameraState.FovYDeg
+                    : fallbackFovYDeg;
+            }
         }
 
         // ── 鼠标 ─────────────────────────────────────────────────────
 
         private float _mouseX;
         private float _mouseY;
+        private bool _hasMousePosition;
         private float _mouseDeltaX;
         private float _mouseDeltaY;
         private float _mouseWheelDelta;
@@ -73,6 +101,13 @@ namespace Ludots.Adapter.UE5
         {
             get { lock (_lock) return _mouseY;  }
             set { lock (_lock) _mouseY  = value; }
+        }
+
+        /// <summary>当前帧是否持有可被 Ludots 消费的有效视口鼠标坐标。</summary>
+        public bool HasMousePosition
+        {
+            get { lock (_lock) return _hasMousePosition; }
+            set { lock (_lock) _hasMousePosition = value; }
         }
 
         /// <summary>
@@ -140,6 +175,11 @@ namespace Ludots.Adapter.UE5
                 _mouseDeltaX     = 0f;
                 _mouseDeltaY     = 0f;
             }
+        }
+
+        private static bool IsRenderableFov(float fovYDeg)
+        {
+            return float.IsFinite(fovYDeg) && fovYDeg > 1f && fovYDeg < 179f;
         }
     }
 }

@@ -89,6 +89,7 @@ namespace Ludots.Core.Scripting
         public const string CameraPoseRequest = "CameraPoseRequest";
         public const string VirtualCameraRequest = "VirtualCameraRequest";
         public const string VirtualCameraRegistry = "VirtualCameraRegistry";
+        public const string PlatformManagedCameraDriverRegistry = "PlatformManagedCameraDriverRegistry";
         public const string LocalPlayerEntity = "LocalPlayerEntity";
         [Obsolete("Legacy selection compatibility key. Do not use. Resolve viewed selection through SelectionContextRuntime or SelectionViewViewerEntity + SelectionViewKey.")]
         public const string SelectedEntity = "SelectedEntity";
