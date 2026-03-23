@@ -34,7 +34,7 @@ namespace CameraAcceptanceMod.UI
         private const float PanelWidth = 500f;
         private const float SelectionBufferHeight = 180f;
         private const float SelectionRowHeight = 22f;
-        private const int SelectionRowPoolSize = SelectionBuffer.CAPACITY;
+        private const int SelectionRowPoolSize = 64;
         private const string SelectionBufferHostId = "camera-selection-buffer-list";
         private const float VisibleEntityBufferHeight = 220f;
         private const float VisibleEntityRowHeight = 20f;
@@ -1243,7 +1243,7 @@ namespace CameraAcceptanceMod.UI
 
         private static string[] ResolveSelectedEntityIds(GameEngine engine)
         {
-            Span<Entity> selected = stackalloc Entity[SelectionBuffer.CAPACITY];
+            Span<Entity> selected = stackalloc Entity[SelectionRowPoolSize];
             int count = CameraAcceptanceSelectionView.CopySelectedEntities(engine.World, engine.GlobalContext, selected);
             if (count <= 0)
             {

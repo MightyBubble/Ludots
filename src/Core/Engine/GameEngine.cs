@@ -110,6 +110,7 @@ namespace Ludots.Core.Engine
         private const int PerformerInstanceBufferCapacity = 4096;
         private const int PathStoreMaxPaths = 512;
         private const int PathStoreMaxPointsPerPath = 256;
+        private const string SkipDefaultCameraOnLoadTag = "camera.skip_default_on_load";
 
         private bool _isRunning;
         private EffectTemplateLoader _effectTemplateLoader;
@@ -489,6 +490,8 @@ namespace Ludots.Core.Engine
             var meshAssets = new MeshAssetRegistry();
             var visualTemplates = new VisualTemplateRegistry();
             var animatorControllers = new AnimatorControllerRegistry();
+            var animationClips = new AnimationClipRegistry();
+            var animationProfiles = new AnimationProfileRegistry();
             var presentationStableIds = new PresentationStableIdAllocator();
             var primitiveDrawBuffer = new PrimitiveDrawBuffer(PrimitiveDrawBufferCapacity);
             var visualSnapshotBuffer = new PrimitiveDrawBuffer(VisualSnapshotBufferCapacity);
@@ -502,9 +505,11 @@ namespace Ludots.Core.Engine
             var performerInstances = new PerformerInstanceBuffer(presentationConfig.GetEffectivePerformerInstanceCapacity());
             var projectilePresentationBindings = new ProjectilePresentationBindingRegistry();
             var performerGraphApi = new GasGraphRuntimeApi(World, spatialQueries: null, coords: null, eventBus: null);
-            new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load();
-            new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load();
-            new VisualTemplateConfigLoader(ConfigPipeline, visualTemplates, meshAssets, animatorControllers).Load();
+            new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load(ConfigCatalog, ConfigConflictReport);
+            new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load(ConfigCatalog, ConfigConflictReport);
+            new AnimationClipConfigLoader(ConfigPipeline, animationClips).Load(ConfigCatalog, ConfigConflictReport);
+            new AnimationProfileConfigLoader(ConfigPipeline, animationProfiles, animatorControllers, animationClips).Load(ConfigCatalog, ConfigConflictReport);
+            new VisualTemplateConfigLoader(ConfigPipeline, visualTemplates, meshAssets, animatorControllers, animationProfiles).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
             BuiltinPerformerDefinitions.Register(performerDefinitions, meshAssets, presentationTextCatalog.GetTokenId);
@@ -672,6 +677,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
             SetService(CoreServiceKeys.PresentationVisualTemplateRegistry, visualTemplates);
             SetService(CoreServiceKeys.AnimatorControllerRegistry, animatorControllers);
+            SetService(CoreServiceKeys.AnimationClipRegistry, animationClips);
+            SetService(CoreServiceKeys.AnimationProfileRegistry, animationProfiles);
             SetService(CoreServiceKeys.PresentationStableIdAllocator, presentationStableIds);
             _primitiveDrawBuffer = primitiveDrawBuffer;
             _visualSnapshotBuffer = visualSnapshotBuffer;
@@ -699,6 +706,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ProjectilePresentationBindingRegistry, projectilePresentationBindings);
             SetService(CoreServiceKeys.PerformerDefinitionRegistry, performerDefinitions);
             SetService(CoreServiceKeys.PerformerInstanceBuffer, performerInstances);
+            var platformManagedCameraDrivers = new PlatformManagedCameraDriverRegistry();
+            SetService(CoreServiceKeys.PlatformManagedCameraDriverRegistry, platformManagedCameraDrivers);
+            GameSession.Camera.SetPlatformManagedCameraDriverRegistry(platformManagedCameraDrivers);
             var virtualCameraRegistry = new VirtualCameraRegistry();
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
@@ -1112,6 +1122,14 @@ namespace Ludots.Core.Engine
 
         private void ApplyDefaultCamera(MapConfig mapConfig)
         {
+            if (ShouldSkipDefaultCameraOnLoad(mapConfig))
+            {
+                Diagnostics.Log.Info(
+                    in LogChannels.Engine,
+                    $"Skipped DefaultCamera for map '{mapConfig?.Id ?? "<unknown>"}' due to tag '{SkipDefaultCameraOnLoadTag}'.");
+                return;
+            }
+
             var cam = mapConfig?.DefaultCamera;
             var registry = GetService(CoreServiceKeys.VirtualCameraRegistry)
                 ?? throw new InvalidOperationException("VirtualCameraRegistry is required before loading maps.");
@@ -1159,6 +1177,24 @@ namespace Ludots.Core.Engine
 
             var state = GameSession.Camera.State;
             Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
+        }
+
+        private static bool ShouldSkipDefaultCameraOnLoad(MapConfig mapConfig)
+        {
+            if (mapConfig?.Tags == null)
+            {
+                return false;
+            }
+
+            foreach (string tag in mapConfig.Tags)
+            {
+                if (string.Equals(tag, SkipDefaultCameraOnLoadTag, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void CreateBoardsForSession(MapSession session, MapConfig mapConfig)
