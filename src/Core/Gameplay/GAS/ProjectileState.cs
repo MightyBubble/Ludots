@@ -4,6 +4,12 @@ using Ludots.Core.Gameplay.Teams;
 
 namespace Ludots.Core.Gameplay.GAS
 {
+    public enum ProjectileFlightPhase : byte
+    {
+        Outbound = 0,
+        Returning = 1,
+    }
+
     public unsafe struct ProjectileState
     {
         public const int HitHistoryCapacity = 32;
@@ -20,6 +26,10 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationshipFilter CollisionRelationFilter;
         public byte CollisionExcludeSource;
         public int MaxHitCount;
+        public int TurnRateDegPerSecond;
+        public ProjectileReturnMode ReturnMode;
+        public byte ResetHitHistoryOnReturn;
+        public ProjectileFlightPhase FlightPhase;
         public Entity Source;
         public Entity Target;
         public Fix64Vec2 LaunchOriginCm;
@@ -66,6 +76,11 @@ namespace Ludots.Core.Gameplay.GAS
             HitVersions[DistinctHitCount] = entity.Version;
             DistinctHitCount++;
             return true;
+        }
+
+        public void ClearHitHistory()
+        {
+            DistinctHitCount = 0;
         }
     }
 }

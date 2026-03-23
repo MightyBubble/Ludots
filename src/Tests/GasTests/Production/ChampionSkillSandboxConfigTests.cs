@@ -226,6 +226,8 @@ namespace Ludots.Tests.GAS.Production
             AssertNamedEntityOwner(engine.World, "Jayce Cannon", expectedPlayerId: 1);
             AssertNamedEntityOwner(engine.World, "Jayce Hammer", expectedPlayerId: 1);
             AssertNamedEntityOwner(engine.World, "Geomancer Alpha", expectedPlayerId: 1);
+            AssertNamedEntityOwner(engine.World, "Artillerist Alpha", expectedPlayerId: 1);
+            AssertNamedEntityOwner(engine.World, "Trickblade Alpha", expectedPlayerId: 1);
 
             AssertEntityHasTag(engine.World, "Ezreal Cooldown", "Cooldown.Champion.Ezreal.R");
             AssertEntityHasTag(engine.World, "Garen Courage", "State.Champion.Garen.Courage");
@@ -302,6 +304,22 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(geomancerSlots[1].DisplayLabel, Is.EqualTo("Rune Field"));
             Assert.That(geomancerSlots[2].DisplayLabel, Is.EqualTo("Stone Pillar"));
             Assert.That(geomancerSlots[3].DisplayLabel, Is.EqualTo("Prismatic Beam"));
+
+            var artilleristSlots = new EntityCommandPanelSlotView[8];
+            int artilleristCount = source.CopySlots(FindEntityByName(engine.World, "Artillerist Alpha"), 0, artilleristSlots);
+            Assert.That(artilleristCount, Is.EqualTo(4));
+            Assert.That(artilleristSlots[0].DisplayLabel, Is.EqualTo("Catapult Shot"));
+            Assert.That(artilleristSlots[1].DisplayLabel, Is.EqualTo("Arrow Volley"));
+            Assert.That(artilleristSlots[2].DisplayLabel, Is.EqualTo("Skypiercer"));
+            Assert.That(artilleristSlots[3].DisplayLabel, Is.EqualTo("Cruise Missile"));
+
+            var trickbladeSlots = new EntityCommandPanelSlotView[8];
+            int trickbladeCount = source.CopySlots(FindEntityByName(engine.World, "Trickblade Alpha"), 0, trickbladeSlots);
+            Assert.That(trickbladeCount, Is.EqualTo(4));
+            Assert.That(trickbladeSlots[0].DisplayLabel, Is.EqualTo("Boomerang Blade"));
+            Assert.That(trickbladeSlots[1].DisplayLabel, Is.EqualTo("Blink Step"));
+            Assert.That(trickbladeSlots[2].DisplayLabel, Is.EqualTo("Ramming Dash"));
+            Assert.That(trickbladeSlots[3].DisplayLabel, Is.EqualTo("Gravity Hook"));
         }
 
         [Test]
@@ -422,11 +440,11 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 4);
 
             Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(SandboxTacticalCameraId));
-            Assert.That(engine.GameSession.Camera.State.TargetCm.X, Is.EqualTo(1850f).Within(0.01f));
-            Assert.That(engine.GameSession.Camera.State.TargetCm.Y, Is.EqualTo(980f).Within(0.01f));
-            Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.EqualTo(3900f).Within(0.01f));
-            Assert.That(engine.GameSession.Camera.State.Pitch, Is.EqualTo(54f).Within(0.01f));
-            Assert.That(engine.GameSession.Camera.State.FovYDeg, Is.EqualTo(42f).Within(0.01f));
+            Assert.That(engine.GameSession.Camera.State.TargetCm.X, Is.EqualTo(1910f).Within(0.01f));
+            Assert.That(engine.GameSession.Camera.State.TargetCm.Y, Is.EqualTo(1450f).Within(0.01f));
+            Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.EqualTo(6500f).Within(0.01f));
+            Assert.That(engine.GameSession.Camera.State.Pitch, Is.EqualTo(58f).Within(0.01f));
+            Assert.That(engine.GameSession.Camera.State.FovYDeg, Is.EqualTo(50f).Within(0.01f));
         }
 
         [Test]
@@ -558,6 +576,82 @@ namespace Ludots.Tests.GAS.Production
                 expectedImpactPolicy: ProjectileImpactPolicy.ContinueOnHit,
                 expectedRelationFilter: RelationshipFilter.Hostile,
                 expectedMaxHitCount: 32);
+        }
+
+        [Test]
+        public void ChampionSkillSandbox_ProjectileShowcaseSemantics_AreRegistered()
+        {
+            using var engine = CreateEngine();
+
+            var effects = engine.GetService(CoreServiceKeys.EffectTemplateRegistry)
+                ?? throw new InvalidOperationException("EffectTemplateRegistry missing.");
+
+            int catapultId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.CatapultShot");
+            int volleyId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.ArrowVolley");
+            int piercerId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.SkyPiercer");
+            int missileId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.CruiseMissile");
+            int boomerangId = EffectTemplateIdRegistry.GetId("Effect.Champion.Trickblade.BoomerangBlade");
+
+            Assert.That(effects.TryGet(catapultId, out var catapult), Is.True);
+            Assert.That(catapult.Projectile.ArcHeight, Is.EqualTo(420));
+            Assert.That(catapult.Projectile.ImpactEffectTemplateId, Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.CatapultImpact")));
+            Assert.That(catapult.Projectile.SpawnCount, Is.EqualTo(1));
+
+            Assert.That(effects.TryGet(volleyId, out var volley), Is.True);
+            Assert.That(volley.Projectile.TravelMode, Is.EqualTo(ProjectileTravelMode.Direction));
+            Assert.That(volley.Projectile.ImpactPolicy, Is.EqualTo(ProjectileImpactPolicy.DestroyOnFirstHit));
+            Assert.That(volley.Projectile.SpawnCount, Is.EqualTo(5));
+            Assert.That(volley.Projectile.SpreadAngleDeg, Is.EqualTo(32));
+
+            Assert.That(effects.TryGet(piercerId, out var piercer), Is.True);
+            Assert.That(piercer.Projectile.TravelMode, Is.EqualTo(ProjectileTravelMode.Direction));
+            Assert.That(piercer.Projectile.ImpactPolicy, Is.EqualTo(ProjectileImpactPolicy.ContinueOnHit));
+            Assert.That(piercer.Projectile.MaxHitCount, Is.EqualTo(8));
+
+            Assert.That(effects.TryGet(missileId, out var missile), Is.True);
+            Assert.That(missile.Projectile.TravelMode, Is.EqualTo(ProjectileTravelMode.TrackTarget));
+            Assert.That(missile.Projectile.ImpactPolicy, Is.EqualTo(ProjectileImpactPolicy.DestroyOnFirstHit));
+            Assert.That(missile.Projectile.TurnRateDegPerSecond, Is.EqualTo(240));
+
+            Assert.That(effects.TryGet(boomerangId, out var boomerang), Is.True);
+            Assert.That(boomerang.Projectile.TravelMode, Is.EqualTo(ProjectileTravelMode.Direction));
+            Assert.That(boomerang.Projectile.ImpactPolicy, Is.EqualTo(ProjectileImpactPolicy.ContinueOnHit));
+            Assert.That(boomerang.Projectile.ReturnMode, Is.EqualTo(ProjectileReturnMode.ReturnToSource));
+            Assert.That(boomerang.Projectile.ResetHitHistoryOnReturn, Is.True);
+        }
+
+        [Test]
+        public void ChampionSkillSandbox_DisplacementShowcaseSemantics_AreRegistered()
+        {
+            using var engine = CreateEngine();
+
+            var effects = engine.GetService(CoreServiceKeys.EffectTemplateRegistry)
+                ?? throw new InvalidOperationException("EffectTemplateRegistry missing.");
+
+            AssertThatDisplacement(
+                effects,
+                "Effect.Champion.Trickblade.BlinkStep",
+                DisplacementDirectionMode.ToTarget,
+                totalDistanceCm: 520,
+                totalDurationTicks: 1);
+            AssertThatDisplacement(
+                effects,
+                "Effect.Champion.Trickblade.RammingDashMove",
+                DisplacementDirectionMode.ToTarget,
+                totalDistanceCm: 480,
+                totalDurationTicks: 6);
+            AssertThatDisplacement(
+                effects,
+                "Effect.Champion.Trickblade.RammingDashKnockback",
+                DisplacementDirectionMode.AwayFromSource,
+                totalDistanceCm: 260,
+                totalDurationTicks: 4);
+            AssertThatDisplacement(
+                effects,
+                "Effect.Champion.Trickblade.GravityHookPull",
+                DisplacementDirectionMode.TowardSource,
+                totalDistanceCm: 360,
+                totalDurationTicks: 6);
         }
 
         [Test]
@@ -710,6 +804,26 @@ namespace Ludots.Tests.GAS.Production
                 projectileBindings,
                 projectileEffectKey: "Effect.Champion.Ezreal.TrueshotBarrage",
                 hitEffectKey: "Effect.Champion.Ezreal.TrueshotBarrageHit");
+            AssertProjectileUsesDirectPrimitiveFeedback(
+                effects,
+                projectileBindings,
+                projectileEffectKey: "Effect.Champion.Artillerist.ArrowVolley",
+                hitEffectKey: "Effect.Champion.Artillerist.ArrowVolleyHit");
+            AssertProjectileUsesDirectPrimitiveFeedback(
+                effects,
+                projectileBindings,
+                projectileEffectKey: "Effect.Champion.Artillerist.SkyPiercer",
+                hitEffectKey: "Effect.Champion.Artillerist.SkyPiercerHit");
+            AssertProjectileUsesDirectPrimitiveFeedback(
+                effects,
+                projectileBindings,
+                projectileEffectKey: "Effect.Champion.Artillerist.CruiseMissile",
+                hitEffectKey: "Effect.Champion.Artillerist.CruiseMissileImpact");
+            AssertProjectileUsesDirectPrimitiveFeedback(
+                effects,
+                projectileBindings,
+                projectileEffectKey: "Effect.Champion.Trickblade.BoomerangBlade",
+                hitEffectKey: "Effect.Champion.Trickblade.BoomerangBladeHit");
             AssertProjectileEffect(
                 effects,
                 projectileBindings,
@@ -734,6 +848,9 @@ namespace Ludots.Tests.GAS.Production
                 bindingEffectKey: "Effect.ChampionStress.LaserMage.LaserResolve",
                 hitEffectKey: null,
                 projectilePerformerKey: "champion_skill_sandbox.projectile.stress_laser");
+            Assert.That(effects.TryGet(EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.CatapultShot"), out var catapultShot), Is.True);
+            Assert.That(catapultShot.Projectile.PresentationEffectTemplateId, Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.CatapultShot")));
+            Assert.That(catapultShot.Projectile.ImpactEffectTemplateId, Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.CatapultImpact")));
 
             Assert.That(performers.GetId("champion_skill_sandbox.cue.ezreal_arcane_shift"), Is.GreaterThan(0));
             Assert.That(performers.GetId("champion_skill_sandbox.cue.ezreal_essence_flux_cast"), Is.GreaterThan(0));
@@ -1247,6 +1364,23 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 effect.UnitCreation.OnSpawnEffectTemplateId,
                 Is.EqualTo(EffectTemplateIdRegistry.GetId(onSpawnEffectKey)));
+        }
+
+        private static void AssertThatDisplacement(
+            EffectTemplateRegistry effects,
+            string effectKey,
+            DisplacementDirectionMode directionMode,
+            int totalDistanceCm,
+            int totalDurationTicks)
+        {
+            int effectId = EffectTemplateIdRegistry.GetId(effectKey);
+            Assert.That(effectId, Is.GreaterThan(0), $"{effectKey} should be registered.");
+            Assert.That(effects.TryGet(effectId, out var effect), Is.True);
+            Assert.That(effect.PresetType, Is.EqualTo(EffectPresetType.Displacement));
+            Assert.That(effect.Displacement.DirectionMode, Is.EqualTo(directionMode));
+            Assert.That(effect.Displacement.TotalDistanceCm, Is.EqualTo(totalDistanceCm));
+            Assert.That(effect.Displacement.TotalDurationTicks, Is.EqualTo(totalDurationTicks));
+            Assert.That(effect.Displacement.OverrideNavigation, Is.True);
         }
 
         private static IEntityCommandPanelSource ResolveGasPanelSource(GameEngine engine)

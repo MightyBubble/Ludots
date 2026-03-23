@@ -72,6 +72,16 @@ namespace ChampionSkillSandboxMod.Runtime
         private static readonly Vector4 EzrealETailColor = new(0.3f, 0.76f, 1.0f, 0.42f);
         private static readonly Vector4 EzrealRColor = new(0.76f, 0.95f, 1.0f, 0.98f);
         private static readonly Vector4 EzrealRTailColor = new(0.3f, 0.78f, 1.0f, 0.38f);
+        private static readonly Vector4 CatapultColor = new(0.98f, 0.67f, 0.34f, 0.96f);
+        private static readonly Vector4 CatapultTailColor = new(0.74f, 0.42f, 0.18f, 0.42f);
+        private static readonly Vector4 VolleyColor = new(0.82f, 0.95f, 0.5f, 0.94f);
+        private static readonly Vector4 VolleyTailColor = new(0.52f, 0.74f, 0.28f, 0.38f);
+        private static readonly Vector4 PiercerColor = new(0.66f, 0.9f, 1.0f, 0.96f);
+        private static readonly Vector4 PiercerTailColor = new(0.38f, 0.68f, 0.92f, 0.36f);
+        private static readonly Vector4 MissileColor = new(1.0f, 0.54f, 0.42f, 0.96f);
+        private static readonly Vector4 MissileTailColor = new(0.92f, 0.32f, 0.18f, 0.34f);
+        private static readonly Vector4 BoomerangColor = new(1.0f, 0.74f, 0.44f, 0.96f);
+        private static readonly Vector4 BoomerangTailColor = new(0.84f, 0.44f, 0.2f, 0.34f);
 
         private readonly CombatTextEntry[] _combatTextEntries = new CombatTextEntry[32];
         private readonly TransientPrimitiveEntry[] _transientPrimitiveEntries = new TransientPrimitiveEntry[64];
@@ -97,6 +107,16 @@ namespace ChampionSkillSandboxMod.Runtime
         private int _ezrealEssenceFluxPopEffectId;
         private int _ezrealArcaneShiftHitEffectId;
         private int _ezrealTrueshotHitEffectId;
+        private int _artilleristCatapultProjectileEffectId;
+        private int _artilleristVolleyProjectileEffectId;
+        private int _artilleristSkyPiercerProjectileEffectId;
+        private int _artilleristCruiseMissileProjectileEffectId;
+        private int _trickbladeBoomerangProjectileEffectId;
+        private int _artilleristCatapultHitEffectId;
+        private int _artilleristVolleyHitEffectId;
+        private int _artilleristSkyPiercerHitEffectId;
+        private int _artilleristCruiseMissileHitEffectId;
+        private int _trickbladeBoomerangHitEffectId;
         private int _ezrealWMarkTagId;
         private bool _cueIdsInitialized;
         private bool _directIdsInitialized;
@@ -366,7 +386,8 @@ namespace ChampionSkillSandboxMod.Runtime
                     forward = Vector3.Normalize(forward);
                 }
 
-                Vector3 head = visual.Position + new Vector3(0f, spec.HeightOffset, 0f);
+                float arcOffset = ResolveArcHeightOffset(world, in projectile, in positionCm);
+                Vector3 head = visual.Position + new Vector3(0f, spec.HeightOffset + arcOffset, 0f);
                 for (int segmentIndex = 0; segmentIndex < spec.SegmentCount; segmentIndex++)
                 {
                     float t = spec.SegmentCount <= 1
@@ -440,6 +461,16 @@ namespace ChampionSkillSandboxMod.Runtime
                 _ezrealEssenceFluxPopEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Ezreal.EssenceFluxPop");
                 _ezrealArcaneShiftHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Ezreal.ArcaneShiftBoltHit");
                 _ezrealTrueshotHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Ezreal.TrueshotBarrageHit");
+                _artilleristCatapultProjectileEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.CatapultShot");
+                _artilleristVolleyProjectileEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.ArrowVolley");
+                _artilleristSkyPiercerProjectileEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.SkyPiercer");
+                _artilleristCruiseMissileProjectileEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.CruiseMissile");
+                _trickbladeBoomerangProjectileEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Trickblade.BoomerangBlade");
+                _artilleristCatapultHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.CatapultHit");
+                _artilleristVolleyHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.ArrowVolleyHit");
+                _artilleristSkyPiercerHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.SkyPiercerHit");
+                _artilleristCruiseMissileHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Artillerist.CruiseMissileHit");
+                _trickbladeBoomerangHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Trickblade.BoomerangBladeHit");
                 _ezrealWMarkTagId = TagRegistry.GetId("State.Champion.Ezreal.WMark");
 
                 _projectilePrimitiveSpecs.Clear();
@@ -482,6 +513,56 @@ namespace ChampionSkillSandboxMod.Runtime
                     SegmentSpacing = 0.18f,
                     RadiusFalloff = 0.006f,
                     HeightOffset = 0.94f,
+                });
+                RegisterProjectilePrimitiveSpec(_artilleristCatapultProjectileEffectId, new ProjectilePrimitiveSpec
+                {
+                    HeadColor = CatapultColor,
+                    TailColor = CatapultTailColor,
+                    HeadRadius = 0.18f,
+                    SegmentCount = 6,
+                    SegmentSpacing = 0.16f,
+                    RadiusFalloff = 0.012f,
+                    HeightOffset = 0.58f,
+                });
+                RegisterProjectilePrimitiveSpec(_artilleristVolleyProjectileEffectId, new ProjectilePrimitiveSpec
+                {
+                    HeadColor = VolleyColor,
+                    TailColor = VolleyTailColor,
+                    HeadRadius = 0.1f,
+                    SegmentCount = 5,
+                    SegmentSpacing = 0.12f,
+                    RadiusFalloff = 0.01f,
+                    HeightOffset = 0.78f,
+                });
+                RegisterProjectilePrimitiveSpec(_artilleristSkyPiercerProjectileEffectId, new ProjectilePrimitiveSpec
+                {
+                    HeadColor = PiercerColor,
+                    TailColor = PiercerTailColor,
+                    HeadRadius = 0.12f,
+                    SegmentCount = 7,
+                    SegmentSpacing = 0.16f,
+                    RadiusFalloff = 0.008f,
+                    HeightOffset = 0.8f,
+                });
+                RegisterProjectilePrimitiveSpec(_artilleristCruiseMissileProjectileEffectId, new ProjectilePrimitiveSpec
+                {
+                    HeadColor = MissileColor,
+                    TailColor = MissileTailColor,
+                    HeadRadius = 0.16f,
+                    SegmentCount = 8,
+                    SegmentSpacing = 0.15f,
+                    RadiusFalloff = 0.01f,
+                    HeightOffset = 0.82f,
+                });
+                RegisterProjectilePrimitiveSpec(_trickbladeBoomerangProjectileEffectId, new ProjectilePrimitiveSpec
+                {
+                    HeadColor = BoomerangColor,
+                    TailColor = BoomerangTailColor,
+                    HeadRadius = 0.14f,
+                    SegmentCount = 6,
+                    SegmentSpacing = 0.14f,
+                    RadiusFalloff = 0.01f,
+                    HeightOffset = 0.78f,
                 });
 
                 _directIdsInitialized = true;
@@ -662,6 +743,36 @@ namespace ChampionSkillSandboxMod.Runtime
                 return true;
             }
 
+            if (effectTemplateId == _artilleristCatapultHitEffectId)
+            {
+                QueueAnchoredPulse(anchor, CatapultColor, lifetime: 0.26f, startRadius: 0.2f, endRadius: 0.52f, new Vector3(0f, 0.88f, 0f));
+                return true;
+            }
+
+            if (effectTemplateId == _artilleristVolleyHitEffectId)
+            {
+                QueueAnchoredPulse(anchor, VolleyColor, lifetime: 0.18f, startRadius: 0.14f, endRadius: 0.32f, new Vector3(0f, 0.84f, 0f));
+                return true;
+            }
+
+            if (effectTemplateId == _artilleristSkyPiercerHitEffectId)
+            {
+                QueueAnchoredPulse(anchor, PiercerColor, lifetime: 0.2f, startRadius: 0.16f, endRadius: 0.36f, new Vector3(0f, 0.84f, 0f));
+                return true;
+            }
+
+            if (effectTemplateId == _artilleristCruiseMissileHitEffectId)
+            {
+                QueueAnchoredPulse(anchor, MissileColor, lifetime: 0.28f, startRadius: 0.22f, endRadius: 0.56f, new Vector3(0f, 0.92f, 0f));
+                return true;
+            }
+
+            if (effectTemplateId == _trickbladeBoomerangHitEffectId)
+            {
+                QueueAnchoredPulse(anchor, BoomerangColor, lifetime: 0.18f, startRadius: 0.14f, endRadius: 0.34f, new Vector3(0f, 0.84f, 0f));
+                return true;
+            }
+
             return false;
         }
 
@@ -727,6 +838,29 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             return Vector2.UnitX;
+        }
+
+        private static float ResolveArcHeightOffset(World world, in ProjectileState projectile, in WorldPositionCm positionCm)
+        {
+            if (projectile.ArcHeight <= 0 ||
+                projectile.HasLaunchOrigin == 0 ||
+                projectile.HasTargetPoint == 0)
+            {
+                return 0f;
+            }
+
+            Vector2 launch = projectile.LaunchOriginCm.ToVector2();
+            Vector2 target = projectile.TargetPointCm.ToVector2();
+            float totalDistance = Vector2.Distance(launch, target);
+            if (totalDistance <= 0.001f)
+            {
+                return 0f;
+            }
+
+            float traveled = Vector2.Distance(launch, positionCm.Value.ToVector2());
+            float progress = Math.Clamp(traveled / totalDistance, 0f, 1f);
+            float normalizedArc = 4f * progress * (1f - progress);
+            return (projectile.ArcHeight / 100f) * normalizedArc;
         }
 
         private static Vector2 NormalizeOrFallback(Vector2 value)

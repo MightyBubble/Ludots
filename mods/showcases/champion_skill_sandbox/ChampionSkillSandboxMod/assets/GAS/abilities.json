@@ -490,6 +490,216 @@
     }
   },
   {
+    "id": "Ability.Champion.Artillerist.CatapultShot",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 54, "tag": "Cooldown.Champion.Artillerist.Q" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Artillerist.CatapultShot" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "input": {
+      "selectionType": "Position"
+    },
+    "indicator": { "shape": "Circle", "range": 860, "radius": 180, "showRangeCircle": true, "validColor": "#F29D5C88", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Artillerist.Q"] },
+    "presentation": {
+      "displayName": "Catapult Shot",
+      "iconGlyph": "Q",
+      "accentColor": "#F29D5C",
+      "hintText": "Lob an arcing payload that bursts on impact",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the impact zone",
+        "PressReleaseAimCast": "Release key, then confirm the landing zone"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Artillerist.ArrowVolley",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 42, "tag": "Cooldown.Champion.Artillerist.W" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Artillerist.ArrowVolley" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "input": {
+      "selectionType": "Direction"
+    },
+    "indicator": { "shape": "Line", "range": 920, "radius": 180, "showRangeCircle": true, "validColor": "#BEE07A77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Artillerist.W"] },
+    "presentation": {
+      "displayName": "Arrow Volley",
+      "iconGlyph": "W",
+      "accentColor": "#BEE07A",
+      "hintText": "Fire a five-arrow spread down the lane",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the volley fan",
+        "PressReleaseAimCast": "Release key, then confirm the volley"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Artillerist.SkyPiercer",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 36, "tag": "Cooldown.Champion.Artillerist.E" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Artillerist.SkyPiercer" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "input": {
+      "selectionType": "Direction"
+    },
+    "indicator": { "shape": "Line", "range": 1100, "radius": 60, "showRangeCircle": true, "validColor": "#8FDBFF77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Artillerist.E"] },
+    "presentation": {
+      "displayName": "Skypiercer",
+      "iconGlyph": "E",
+      "accentColor": "#8FDBFF",
+      "hintText": "Piercing arrow that drills through a full line",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the piercing lane",
+        "PressReleaseAimCast": "Release key, then confirm the line shot"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Artillerist.CruiseMissile",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 120, "tag": "Cooldown.Champion.Artillerist.R" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Artillerist.CruiseMissile" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 1180, "radius": 160, "showRangeCircle": true, "validColor": "#FF8B76AA", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Artillerist.R"] },
+    "input": {
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 1180
+    },
+    "presentation": {
+      "displayName": "Cruise Missile",
+      "iconGlyph": "R",
+      "accentColor": "#FF8B76",
+      "hintText": "Lock on and steer a blast missile into clustered targets",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the lock range",
+        "PressReleaseAimCast": "Release key, then confirm the missile lock"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Trickblade.BoomerangBlade",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 30, "tag": "Cooldown.Champion.Trickblade.Q" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Trickblade.BoomerangBlade" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "input": {
+      "selectionType": "Direction"
+    },
+    "indicator": { "shape": "Line", "range": 720, "radius": 70, "showRangeCircle": true, "validColor": "#FFB57077", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Trickblade.Q"] },
+    "presentation": {
+      "displayName": "Boomerang Blade",
+      "iconGlyph": "Q",
+      "accentColor": "#FFB570",
+      "hintText": "Throw a blade that cuts on the way out and back",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the outbound lane",
+        "PressReleaseAimCast": "Release key, then confirm the throw"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Trickblade.BlinkStep",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 54, "tag": "Cooldown.Champion.Trickblade.W" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Trickblade.BlinkStep", "dispatchTarget": "Source" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "input": {
+      "selectionType": "Position"
+    },
+    "indicator": { "shape": "Circle", "range": 520, "radius": 110, "showRangeCircle": true, "validColor": "#7EE9FF77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Trickblade.W"] },
+    "presentation": {
+      "displayName": "Blink Step",
+      "iconGlyph": "W",
+      "accentColor": "#7EE9FF",
+      "hintText": "Instantly reposition through danger",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the blink endpoint",
+        "PressReleaseAimCast": "Release key, then confirm the blink"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Trickblade.RammingDash",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 66, "tag": "Cooldown.Champion.Trickblade.E" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Trickblade.RammingDashMove", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 6, "template": "Effect.Champion.Trickblade.RammingDashShockwave" },
+        { "kind": "End", "tick": 6 }
+      ]
+    },
+    "input": {
+      "selectionType": "Position"
+    },
+    "indicator": { "shape": "Circle", "range": 480, "radius": 160, "showRangeCircle": true, "validColor": "#FFC86A77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Trickblade.E"] },
+    "presentation": {
+      "displayName": "Ramming Dash",
+      "iconGlyph": "E",
+      "accentColor": "#FFC86A",
+      "hintText": "Dash in, then knock nearby enemies away",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the dash endpoint",
+        "PressReleaseAimCast": "Release key, then confirm the dash"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Trickblade.GravityHook",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 84, "tag": "Cooldown.Champion.Trickblade.R" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Trickblade.GravityHook" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "input": {
+      "selectionType": "Position"
+    },
+    "indicator": { "shape": "Circle", "range": 760, "radius": 160, "showRangeCircle": true, "validColor": "#DDA8FF77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Trickblade.R"] },
+    "presentation": {
+      "displayName": "Gravity Hook",
+      "iconGlyph": "R",
+      "accentColor": "#DDA8FF",
+      "hintText": "Latch onto a cluster and drag it back to you",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the pull zone",
+        "PressReleaseAimCast": "Release key, then confirm the hook"
+      }
+    }
+  },
+  {
     "id": "Ability.ChampionStress.Warrior.Cleave",
     "exec": {
       "clockId": "FixedFrame",

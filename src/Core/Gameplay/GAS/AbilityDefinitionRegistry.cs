@@ -13,6 +13,8 @@ namespace Ludots.Core.Gameplay.GAS
         public InputTriggerType Trigger;
         public bool HasHeldPolicy;
         public HeldPolicy HeldPolicy;
+        public bool HasSelectionType;
+        public OrderSelectionType SelectionType;
         public bool HasCastModeOverride;
         public InteractionModeType CastModeOverride;
         public bool HasAutoTargetPolicy;

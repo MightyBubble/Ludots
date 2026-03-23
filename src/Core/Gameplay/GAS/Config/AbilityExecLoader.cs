@@ -516,6 +516,20 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 hasAny = true;
             }
 
+            if (inputObj["selectionType"] is JsonValue selectionTypeNode)
+            {
+                string rawSelectionType = selectionTypeNode.GetValue<string>();
+                if (!Enum.TryParse(rawSelectionType, ignoreCase: true, out OrderSelectionType selectionType))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' input.selectionType uses unsupported value '{rawSelectionType}'.");
+                }
+
+                result.SelectionType = selectionType;
+                result.HasSelectionType = true;
+                hasAny = true;
+            }
+
             if (inputObj["castModeOverride"] is JsonValue castModeNode)
             {
                 string rawCastMode = castModeNode.GetValue<string>();

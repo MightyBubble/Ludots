@@ -71,39 +71,46 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             Fix64Vec2 current = position.Value;
-            bool completed = false;
+            bool legCompleted = false;
 
-            Fix64 remainingRangeCm = Fix64.FromInt(projectile.Range) - projectile.TraveledCm;
-            if (remainingRangeCm <= Fix64.Zero)
+            if (projectile.FlightPhase == ProjectileFlightPhase.Outbound)
             {
-                completed = true;
-            }
-            else if (remainingRangeCm < stepBudgetCm)
-            {
-                stepBudgetCm = remainingRangeCm;
+                Fix64 remainingRangeCm = Fix64.FromInt(projectile.Range) - projectile.TraveledCm;
+                if (remainingRangeCm <= Fix64.Zero)
+                {
+                    legCompleted = true;
+                }
+                else if (remainingRangeCm < stepBudgetCm)
+                {
+                    stepBudgetCm = remainingRangeCm;
+                }
             }
 
             Fix64Vec2 next = current;
             Fix64 actualStepCm = stepBudgetCm;
 
-            if (!completed)
+            if (!legCompleted)
             {
-                switch (projectile.TravelMode)
+                if (projectile.FlightPhase == ProjectileFlightPhase.Returning)
                 {
-                    case ProjectileTravelMode.Direction:
-                        if (!TryMoveDirection(in projectile, current, stepBudgetCm, out next))
-                        {
-                            next = current + new Fix64Vec2(stepBudgetCm, Fix64.Zero);
-                        }
-                        break;
+                    legCompleted = TryMoveReturnToSource(ref projectile, current, stepBudgetCm, deltaTime, out next, out actualStepCm);
+                }
+                else
+                {
+                    switch (projectile.TravelMode)
+                    {
+                        case ProjectileTravelMode.Direction:
+                            TryMoveDirection(ref projectile, current, stepBudgetCm, out next);
+                            break;
 
-                    case ProjectileTravelMode.TrackTarget:
-                        completed = !TryMoveTrackTarget(in projectile, current, stepBudgetCm, out next, out actualStepCm);
-                        break;
+                        case ProjectileTravelMode.TrackTarget:
+                            legCompleted = TryMoveTrackTarget(ref projectile, current, stepBudgetCm, deltaTime, out next, out actualStepCm);
+                            break;
 
-                    default:
-                        completed = TryMoveLegacy(in projectile, current, stepBudgetCm, out next, out actualStepCm);
-                        break;
+                        default:
+                            legCompleted = TryMoveLegacy(ref projectile, current, stepBudgetCm, out next, out actualStepCm);
+                            break;
+                    }
                 }
             }
 
@@ -123,19 +130,60 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
 
-                projectile.TraveledCm += actualStepCm;
+                if (projectile.FlightPhase == ProjectileFlightPhase.Outbound)
+                {
+                    projectile.TraveledCm += actualStepCm;
+                }
+
+                var delta = next - current;
+                if (delta.LengthSquared() > Fix64.OneValue)
+                {
+                    projectile.Direction = delta.Normalized();
+                    projectile.HasDirection = 1;
+                }
+
                 position.Value = next;
             }
 
-            if (projectile.TraveledCm >= Fix64.FromInt(projectile.Range))
+            if (projectile.FlightPhase == ProjectileFlightPhase.Outbound &&
+                projectile.TraveledCm >= Fix64.FromInt(projectile.Range))
             {
-                completed = true;
+                legCompleted = true;
             }
 
-            if (completed)
+            if (!legCompleted)
             {
-                PublishEffect(projectile.ImpactEffectTemplateId, in projectile, World.IsAlive(projectile.Target) ? projectile.Target : Entity.Null, position.Value);
-                _toDestroy.Add(entity);
+                return;
+            }
+
+            if (projectile.FlightPhase == ProjectileFlightPhase.Outbound &&
+                projectile.ReturnMode == ProjectileReturnMode.ReturnToSource)
+            {
+                BeginReturn(ref projectile, position.Value);
+                return;
+            }
+
+            PublishEffect(projectile.ImpactEffectTemplateId, in projectile, World.IsAlive(projectile.Target) ? projectile.Target : Entity.Null, position.Value);
+            _toDestroy.Add(entity);
+        }
+
+        private void BeginReturn(ref ProjectileState projectile, in Fix64Vec2 currentPosition)
+        {
+            projectile.FlightPhase = ProjectileFlightPhase.Returning;
+            if (projectile.ResetHitHistoryOnReturn != 0)
+            {
+                projectile.ClearHitHistory();
+            }
+
+            if (World.IsAlive(projectile.Source) && World.Has<WorldPositionCm>(projectile.Source))
+            {
+                var sourcePosition = World.Get<WorldPositionCm>(projectile.Source).Value;
+                var delta = sourcePosition - currentPosition;
+                if (delta.LengthSquared() > Fix64.OneValue)
+                {
+                    projectile.Direction = delta.Normalized();
+                    projectile.HasDirection = 1;
+                }
             }
         }
 
@@ -328,7 +376,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _effectRequests.Publish(request);
         }
 
-        private static bool TryMoveDirection(in ProjectileState projectile, in Fix64Vec2 current, Fix64 stepBudgetCm, out Fix64Vec2 next)
+        private static bool TryMoveDirection(ref ProjectileState projectile, in Fix64Vec2 current, Fix64 stepBudgetCm, out Fix64Vec2 next)
         {
             if (projectile.HasDirection == 0)
             {
@@ -340,24 +388,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private bool TryMoveTrackTarget(in ProjectileState projectile, in Fix64Vec2 current, Fix64 stepBudgetCm, out Fix64Vec2 next, out Fix64 actualStepCm)
+        private bool TryMoveTrackTarget(ref ProjectileState projectile, in Fix64Vec2 current, Fix64 stepBudgetCm, Fix64 deltaTime, out Fix64Vec2 next, out Fix64 actualStepCm)
         {
             actualStepCm = stepBudgetCm;
             if (World.IsAlive(projectile.Target) && World.Has<WorldPositionCm>(projectile.Target))
             {
                 var targetPosition = World.Get<WorldPositionCm>(projectile.Target).Value;
-                var delta = targetPosition - current;
-                Fix64 distance = delta.Length();
-
-                if (distance <= stepBudgetCm || distance <= Fix64.OneValue)
-                {
-                    next = targetPosition;
-                    actualStepCm = distance;
-                    return true;
-                }
-
-                next = current + delta.Normalized() * stepBudgetCm;
-                return true;
+                return TryMoveTowardPoint(ref projectile, current, targetPosition, stepBudgetCm, deltaTime, out next, out actualStepCm);
             }
 
             next = current;
@@ -365,39 +402,33 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return false;
         }
 
-        private bool TryMoveLegacy(in ProjectileState projectile, in Fix64Vec2 current, Fix64 stepBudgetCm, out Fix64Vec2 next, out Fix64 actualStepCm)
+        private bool TryMoveReturnToSource(ref ProjectileState projectile, in Fix64Vec2 current, Fix64 stepBudgetCm, Fix64 deltaTime, out Fix64Vec2 next, out Fix64 actualStepCm)
+        {
+            actualStepCm = stepBudgetCm;
+            if (World.IsAlive(projectile.Source) && World.Has<WorldPositionCm>(projectile.Source))
+            {
+                var sourcePosition = World.Get<WorldPositionCm>(projectile.Source).Value;
+                return TryMoveTowardPoint(ref projectile, current, sourcePosition, stepBudgetCm, deltaTime, out next, out actualStepCm);
+            }
+
+            next = current;
+            actualStepCm = Fix64.Zero;
+            return false;
+        }
+
+        private bool TryMoveLegacy(ref ProjectileState projectile, in Fix64Vec2 current, Fix64 stepBudgetCm, out Fix64Vec2 next, out Fix64 actualStepCm)
         {
             actualStepCm = stepBudgetCm;
 
             if (World.IsAlive(projectile.Target) && World.Has<WorldPositionCm>(projectile.Target))
             {
                 var targetPosition = World.Get<WorldPositionCm>(projectile.Target).Value;
-                var delta = targetPosition - current;
-                Fix64 distance = delta.Length();
-                if (distance <= stepBudgetCm || distance <= Fix64.OneValue)
-                {
-                    next = targetPosition;
-                    actualStepCm = distance;
-                    return true;
-                }
-
-                next = current + delta.Normalized() * stepBudgetCm;
-                return false;
+                return TryMoveTowardPoint(ref projectile, current, targetPosition, stepBudgetCm, Fix64.Zero, out next, out actualStepCm);
             }
 
             if (projectile.HasTargetPoint != 0)
             {
-                var delta = projectile.TargetPointCm - current;
-                Fix64 distance = delta.Length();
-                if (distance <= stepBudgetCm || distance <= Fix64.OneValue)
-                {
-                    next = projectile.TargetPointCm;
-                    actualStepCm = distance;
-                    return true;
-                }
-
-                next = current + delta.Normalized() * stepBudgetCm;
-                return false;
+                return TryMoveTowardPoint(ref projectile, current, projectile.TargetPointCm, stepBudgetCm, Fix64.Zero, out next, out actualStepCm);
             }
 
             if (projectile.HasDirection != 0)
@@ -408,6 +439,75 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             next = current + new Fix64Vec2(stepBudgetCm, Fix64.Zero);
             return false;
+        }
+
+        private bool TryMoveTowardPoint(
+            ref ProjectileState projectile,
+            in Fix64Vec2 current,
+            in Fix64Vec2 destination,
+            Fix64 stepBudgetCm,
+            Fix64 deltaTime,
+            out Fix64Vec2 next,
+            out Fix64 actualStepCm)
+        {
+            var delta = destination - current;
+            Fix64 distance = delta.Length();
+            if (distance <= stepBudgetCm || distance <= Fix64.OneValue)
+            {
+                next = destination;
+                actualStepCm = distance;
+                if (distance > Fix64.OneValue)
+                {
+                    projectile.Direction = delta.Normalized();
+                    projectile.HasDirection = 1;
+                }
+
+                return true;
+            }
+
+            var desiredDirection = delta.Normalized();
+            var travelDirection = ResolveTravelDirection(ref projectile, desiredDirection, deltaTime);
+            next = current + travelDirection * stepBudgetCm;
+            actualStepCm = stepBudgetCm;
+            return false;
+        }
+
+        private static Fix64Vec2 ResolveTravelDirection(ref ProjectileState projectile, in Fix64Vec2 desiredDirection, Fix64 deltaTime)
+        {
+            Fix64Vec2 direction = desiredDirection;
+            if (projectile.TurnRateDegPerSecond > 0 &&
+                projectile.HasDirection != 0 &&
+                deltaTime > Fix64.Zero)
+            {
+                Fix64 maxTurnRad = Fix64.FromInt(projectile.TurnRateDegPerSecond) * deltaTime * Fix64.Deg2Rad;
+                Fix64 currentRad = Fix64Math.Atan2Fast(projectile.Direction.Y, projectile.Direction.X);
+                Fix64 desiredRad = Fix64Math.Atan2Fast(desiredDirection.Y, desiredDirection.X);
+                Fix64 deltaRad = NormalizeRadians(desiredRad - currentRad);
+                if (Fix64.Abs(deltaRad) > maxTurnRad)
+                {
+                    desiredRad = currentRad + (deltaRad > Fix64.Zero ? maxTurnRad : -maxTurnRad);
+                    direction = new Fix64Vec2(Fix64Math.Cos(desiredRad), Fix64Math.Sin(desiredRad));
+                }
+            }
+
+            projectile.Direction = direction;
+            projectile.HasDirection = 1;
+            return direction;
+        }
+
+        private static Fix64 NormalizeRadians(Fix64 radians)
+        {
+            while (radians > Fix64.Pi)
+            {
+                radians -= Fix64.TwoPi;
+            }
+
+            while (radians < -Fix64.Pi)
+            {
+                radians += Fix64.TwoPi;
+            }
+
+            return radians;
         }
 
         private static int ComputeDirectionDeg(in Fix64Vec2 delta)

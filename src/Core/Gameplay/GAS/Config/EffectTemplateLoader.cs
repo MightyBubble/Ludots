@@ -355,6 +355,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             ProjectileTravelMode travelMode = ParseProjectileTravelMode(cfg.TravelMode);
             ProjectileImpactPolicy impactPolicy = ParseProjectileImpactPolicy(cfg.ImpactPolicy);
+            ProjectileReturnMode returnMode = ParseProjectileReturnMode(cfg.ReturnMode);
             if (impactPolicy != ProjectileImpactPolicy.Legacy)
             {
                 if (hitId <= 0)
@@ -366,6 +367,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 {
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy '{impactPolicy}' requires projectile.collisionHalfWidth > 0.");
                 }
+            }
+
+            if (cfg.SpawnCount < 0)
+            {
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.spawnCount must be >= 0.");
+            }
+
+            if (cfg.TurnRateDegPerSecond < 0)
+            {
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.turnRateDegPerSecond must be >= 0.");
             }
 
             return new ProjectileDescriptor
@@ -381,7 +392,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 CollisionHalfWidthCm = cfg.CollisionHalfWidth,
                 CollisionRelationFilter = RelationshipFilterUtil.Parse(cfg.CollisionRelationFilter),
                 CollisionExcludeSource = cfg.CollisionExcludeSource,
-                MaxHitCount = cfg.MaxHitCount
+                MaxHitCount = cfg.MaxHitCount,
+                SpawnCount = cfg.SpawnCount <= 0 ? 1 : cfg.SpawnCount,
+                SpreadAngleDeg = cfg.SpreadAngleDeg,
+                TurnRateDegPerSecond = cfg.TurnRateDegPerSecond,
+                ReturnMode = returnMode,
+                ResetHitHistoryOnReturn = cfg.ResetHitHistoryOnReturn,
             };
         }
 
@@ -414,6 +430,21 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "destroyonfirsthit" => ProjectileImpactPolicy.DestroyOnFirstHit,
                 "continueonhit" => ProjectileImpactPolicy.ContinueOnHit,
                 _ => throw new InvalidOperationException($"Unsupported projectile.impactPolicy '{raw}'.")
+            };
+        }
+
+        private static ProjectileReturnMode ParseProjectileReturnMode(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return ProjectileReturnMode.None;
+            }
+
+            return raw.Trim().ToLowerInvariant() switch
+            {
+                "none" => ProjectileReturnMode.None,
+                "returntosource" => ProjectileReturnMode.ReturnToSource,
+                _ => throw new InvalidOperationException($"Unsupported projectile.returnMode '{raw}'.")
             };
         }
 

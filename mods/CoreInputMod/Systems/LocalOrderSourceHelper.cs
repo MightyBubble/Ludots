@@ -277,6 +277,11 @@ namespace CoreInputMod.Systems
                     overrideMapping.HeldPolicy = inputOverride.HeldPolicy;
                 }
 
+                if (inputOverride.HasSelectionType)
+                {
+                    overrideMapping.SelectionType = inputOverride.SelectionType;
+                }
+
                 if (inputOverride.HasCastModeOverride)
                 {
                     overrideMapping.CastModeOverride = inputOverride.CastModeOverride;

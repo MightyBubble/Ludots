@@ -148,7 +148,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public struct ProjectileDescriptor
     {
-        /// <summary>Projectile speed in cm/tick.</summary>
+        /// <summary>Projectile speed in cm/sec.</summary>
         public int Speed;
         /// <summary>Maximum range in cm.</summary>
         public int Range;
@@ -172,6 +172,16 @@ namespace Ludots.Core.Gameplay.GAS
         public bool CollisionExcludeSource;
         /// <summary>Maximum number of distinct collision hits before despawn. 0 = unlimited.</summary>
         public int MaxHitCount;
+        /// <summary>How many projectiles are emitted by this effect.</summary>
+        public int SpawnCount;
+        /// <summary>Total spread angle across the emitted projectile fan. 0 = no spread.</summary>
+        public int SpreadAngleDeg;
+        /// <summary>Maximum turn rate while tracking a target, expressed in degrees per second. 0 = instant steering.</summary>
+        public int TurnRateDegPerSecond;
+        /// <summary>How the projectile behaves after its outbound leg completes.</summary>
+        public ProjectileReturnMode ReturnMode;
+        /// <summary>Whether the projectile can hit the same targets again after switching to its return leg.</summary>
+        public bool ResetHitHistoryOnReturn;
     }
 
     public enum ProjectileTravelMode : byte
@@ -186,6 +196,12 @@ namespace Ludots.Core.Gameplay.GAS
         Legacy = 0,
         DestroyOnFirstHit = 1,
         ContinueOnHit = 2,
+    }
+
+    public enum ProjectileReturnMode : byte
+    {
+        None = 0,
+        ReturnToSource = 1,
     }
 
     /// <summary>

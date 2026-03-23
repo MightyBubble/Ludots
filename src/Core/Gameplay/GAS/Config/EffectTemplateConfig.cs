@@ -180,6 +180,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public string CollisionRelationFilter { get; set; }
         public bool CollisionExcludeSource { get; set; } = true;
         public int MaxHitCount { get; set; }
+        public int SpawnCount { get; set; } = 1;
+        public int SpreadAngleDeg { get; set; }
+        public int TurnRateDegPerSecond { get; set; }
+        public string ReturnMode { get; set; }
+        public bool ResetHitHistoryOnReturn { get; set; }
     }
 
     /// <summary>Unit creation component configuration.</summary>

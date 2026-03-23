@@ -501,6 +501,92 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ProjectileRuntimeSystem_TrackTarget_MovesBeforeImpacting()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            var caster = world.Create(WorldPositionCm.FromCm(0, 0));
+            var target = world.Create(WorldPositionCm.FromCm(300, 0));
+            var projectile = world.Create(
+                new ProjectileState
+                {
+                    Speed = Fix64.FromInt(100),
+                    Range = 1000,
+                    ImpactEffectTemplateId = 77,
+                    TravelMode = ProjectileTravelMode.TrackTarget,
+                    Source = caster,
+                    Target = target,
+                    LaunchOriginCm = Fix64Vec2.Zero,
+                    HasLaunchOrigin = 1,
+                    Direction = Fix64Vec2.UnitX,
+                    HasDirection = 1,
+                },
+                WorldPositionCm.FromCm(0, 0),
+                new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(0, 0).Value });
+
+            using var system = new ProjectileRuntimeSystem(world, requests, spatialQueries: null);
+
+            system.Update(1.0f);
+
+            That(world.IsAlive(projectile), Is.True, "TrackTarget projectile should remain alive while still traveling.");
+            That(world.Get<WorldPositionCm>(projectile).Value.X.ToFloat(), Is.EqualTo(100f).Within(0.01f));
+            That(requests.Count, Is.EqualTo(0));
+
+            system.Update(1.0f);
+            system.Update(1.0f);
+
+            That(world.IsAlive(projectile), Is.False, "TrackTarget projectile should resolve only after reaching the target.");
+            That(requests.Count, Is.EqualTo(1));
+            That(requests[0].TemplateId, Is.EqualTo(77));
+            That(requests[0].HasCallerParams, Is.True);
+            That(requests[0].CallerParams.TryGetFloat(EffectParamKeys.TargetPosX, out float targetX), Is.True);
+            That(targetX, Is.EqualTo(300f).Within(0.01f));
+        }
+
+        [Test]
+        public void ProjectileRuntimeSystem_ReturnToSource_MovesBeforeReturnImpact()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            var caster = world.Create(WorldPositionCm.FromCm(0, 0));
+            var projectile = world.Create(
+                new ProjectileState
+                {
+                    Speed = Fix64.FromInt(100),
+                    Range = 300,
+                    ImpactEffectTemplateId = 66,
+                    ReturnMode = ProjectileReturnMode.ReturnToSource,
+                    FlightPhase = ProjectileFlightPhase.Returning,
+                    Source = caster,
+                    Target = Entity.Null,
+                    LaunchOriginCm = Fix64Vec2.Zero,
+                    HasLaunchOrigin = 1,
+                    Direction = new Fix64Vec2(Fix64.FromInt(-1), Fix64.Zero),
+                    HasDirection = 1,
+                },
+                WorldPositionCm.FromCm(300, 0),
+                new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(300, 0).Value });
+
+            using var system = new ProjectileRuntimeSystem(world, requests, spatialQueries: null);
+
+            system.Update(1.0f);
+
+            That(world.IsAlive(projectile), Is.True, "Returning projectile should remain alive until it reaches the source.");
+            That(world.Get<WorldPositionCm>(projectile).Value.X.ToFloat(), Is.EqualTo(200f).Within(0.01f));
+            That(requests.Count, Is.EqualTo(0));
+
+            system.Update(1.0f);
+            system.Update(1.0f);
+
+            That(world.IsAlive(projectile), Is.False);
+            That(requests.Count, Is.EqualTo(1));
+            That(requests[0].TemplateId, Is.EqualTo(66));
+            That(requests[0].HasCallerParams, Is.True);
+            That(requests[0].CallerParams.TryGetFloat(EffectParamKeys.TargetPosX, out float impactX), Is.True);
+            That(impactX, Is.EqualTo(0f).Within(0.01f));
+        }
+
+        [Test]
         public void BuiltinHandlers_CreateUnit_EnqueuesRuntimeSpawnRequests()
         {
             using var world = World.Create();

@@ -3,11 +3,11 @@
   "Tags": ["champion.skill.sandbox", "showcase.3c"],
   "DefaultCamera": {
     "VirtualCameraId": "ChampionSkillSandbox.Camera.Tactical",
-    "TargetXCm": 1850,
-    "TargetYCm": 980,
-    "DistanceCm": 3900,
-    "Pitch": 54,
-    "FovYDeg": 42
+    "TargetXCm": 1910,
+    "TargetYCm": 1450,
+    "DistanceCm": 6500,
+    "Pitch": 58,
+    "FovYDeg": 50
   },
   "Entities": [
     {
@@ -128,6 +128,78 @@
       "Overrides": {
         "Name": { "Value": "Target Dummy F" },
         "WorldPositionCm": { "Value": { "X": 2460, "Y": 1420 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_artillerist",
+      "Overrides": {
+        "Name": { "Value": "Artillerist Alpha" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 1400, "Y": 2060 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_trickblade",
+      "Overrides": {
+        "Name": { "Value": "Trickblade Alpha" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 1820, "Y": 2060 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Projectile Dummy A" },
+        "WorldPositionCm": { "Value": { "X": 1820, "Y": 1940 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Projectile Dummy B" },
+        "WorldPositionCm": { "Value": { "X": 2000, "Y": 2060 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Projectile Dummy C" },
+        "WorldPositionCm": { "Value": { "X": 2200, "Y": 2060 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_brute",
+      "Overrides": {
+        "Name": { "Value": "Projectile Brute A" },
+        "WorldPositionCm": { "Value": { "X": 2120, "Y": 2200 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Mobility Dummy A" },
+        "WorldPositionCm": { "Value": { "X": 2300, "Y": 1940 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Mobility Dummy B" },
+        "WorldPositionCm": { "Value": { "X": 2460, "Y": 2060 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Mobility Dummy C" },
+        "WorldPositionCm": { "Value": { "X": 2460, "Y": 2220 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_brute",
+      "Overrides": {
+        "Name": { "Value": "Mobility Brute A" },
+        "WorldPositionCm": { "Value": { "X": 2640, "Y": 2060 } }
       }
     }
   ]

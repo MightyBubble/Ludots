@@ -199,47 +199,66 @@ namespace Ludots.Core.Gameplay.GAS
                 hasTargetPoint,
                 targetPointCm,
                 out var direction);
+            int spawnCount = proj.SpawnCount <= 0 ? 1 : proj.SpawnCount;
+            Fix64 totalSpreadDeg = Fix64.FromInt(proj.SpreadAngleDeg);
+            Fix64 startSpreadDeg = spawnCount <= 1 ? Fix64.Zero : -totalSpreadDeg / Fix64.FromInt(2);
+            Fix64 spreadStepDeg = spawnCount <= 1 ? Fix64.Zero : totalSpreadDeg / Fix64.FromInt(spawnCount - 1);
 
-            var request = new RuntimeEntitySpawnRequest
+            for (int spawnIndex = 0; spawnIndex < spawnCount; spawnIndex++)
             {
-                Kind = RuntimeEntitySpawnKind.Assembly,
-                Source = context.Source,
-                TargetContext = context.TargetContext,
-                Projectile = new ProjectileState
+                var spawnedDirection = direction;
+                bool spawnedHasDirection = hasDirection;
+                if (spawnedHasDirection && proj.SpreadAngleDeg != 0)
                 {
-                    Speed = Fix64.FromInt(proj.Speed),
-                    Range = proj.Range,
-                    ArcHeight = proj.ArcHeight,
-                    ImpactEffectTemplateId = proj.ImpactEffectTemplateId,
-                    HitEffectTemplateId = proj.HitEffectTemplateId,
-                    PresentationEffectTemplateId = proj.PresentationEffectTemplateId,
-                    TravelMode = proj.TravelMode,
-                    ImpactPolicy = proj.ImpactPolicy,
-                    CollisionHalfWidthCm = proj.CollisionHalfWidthCm,
-                    CollisionRelationFilter = proj.CollisionRelationFilter,
-                    CollisionExcludeSource = (byte)(proj.CollisionExcludeSource ? 1 : 0),
-                    MaxHitCount = proj.MaxHitCount,
+                    Fix64 spreadDeg = startSpreadDeg + (spreadStepDeg * Fix64.FromInt(spawnIndex));
+                    spawnedDirection = RotateDirection(spawnedDirection, spreadDeg * Fix64.Deg2Rad);
+                }
+
+                var request = new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Assembly,
                     Source = context.Source,
-                    Target = context.Target,
-                    LaunchOriginCm = launchOrigin,
-                    HasLaunchOrigin = (byte)(hasLaunchOrigin ? 1 : 0),
-                    TargetPointCm = targetPointCm,
-                    HasTargetPoint = (byte)(hasTargetPoint ? 1 : 0),
-                    Direction = direction,
-                    HasDirection = (byte)(hasDirection ? 1 : 0),
-                },
-                HasProjectileState = 1,
-            };
+                    TargetContext = context.TargetContext,
+                    Projectile = new ProjectileState
+                    {
+                        Speed = Fix64.FromInt(proj.Speed),
+                        Range = proj.Range,
+                        ArcHeight = proj.ArcHeight,
+                        ImpactEffectTemplateId = proj.ImpactEffectTemplateId,
+                        HitEffectTemplateId = proj.HitEffectTemplateId,
+                        PresentationEffectTemplateId = proj.PresentationEffectTemplateId,
+                        TravelMode = proj.TravelMode,
+                        ImpactPolicy = proj.ImpactPolicy,
+                        CollisionHalfWidthCm = proj.CollisionHalfWidthCm,
+                        CollisionRelationFilter = proj.CollisionRelationFilter,
+                        CollisionExcludeSource = (byte)(proj.CollisionExcludeSource ? 1 : 0),
+                        MaxHitCount = proj.MaxHitCount,
+                        TurnRateDegPerSecond = proj.TurnRateDegPerSecond,
+                        ReturnMode = proj.ReturnMode,
+                        ResetHitHistoryOnReturn = (byte)(proj.ResetHitHistoryOnReturn ? 1 : 0),
+                        FlightPhase = ProjectileFlightPhase.Outbound,
+                        Source = context.Source,
+                        Target = context.Target,
+                        LaunchOriginCm = launchOrigin,
+                        HasLaunchOrigin = (byte)(hasLaunchOrigin ? 1 : 0),
+                        TargetPointCm = targetPointCm,
+                        HasTargetPoint = (byte)(hasTargetPoint ? 1 : 0),
+                        Direction = spawnedDirection,
+                        HasDirection = (byte)(spawnedHasDirection ? 1 : 0),
+                    },
+                    HasProjectileState = 1,
+                };
 
-            if (hasLaunchOrigin)
-            {
-                request.WorldPositionCm = launchOrigin;
-                request.HasWorldPosition = 1;
-            }
+                if (hasLaunchOrigin)
+                {
+                    request.WorldPositionCm = launchOrigin;
+                    request.HasWorldPosition = 1;
+                }
 
-            if (!runtime.SpawnRequests.TryEnqueue(request))
-            {
-                throw new InvalidOperationException("RuntimeEntitySpawnQueue capacity exceeded while handling CreateProjectile.");
+                if (!runtime.SpawnRequests.TryEnqueue(request))
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnQueue capacity exceeded while handling CreateProjectile.");
+                }
             }
         }
 
@@ -456,6 +475,15 @@ namespace Ludots.Core.Gameplay.GAS
 
             direction = Fix64Vec2.UnitX;
             return false;
+        }
+
+        private static Fix64Vec2 RotateDirection(in Fix64Vec2 direction, Fix64 radians)
+        {
+            Fix64 cos = Fix64Math.Cos(radians);
+            Fix64 sin = Fix64Math.Sin(radians);
+            return new Fix64Vec2(
+                direction.X * cos - direction.Y * sin,
+                direction.X * sin + direction.Y * cos).Normalized();
         }
 
         private static Fix64Vec2 ComputeScatterOffsetCm(Entity source, int unitTypeId, int index, int radiusCm)

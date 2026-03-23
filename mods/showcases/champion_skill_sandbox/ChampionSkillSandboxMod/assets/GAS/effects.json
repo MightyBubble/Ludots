@@ -643,5 +643,247 @@
     "modifiers": [
       { "attribute": "Health", "op": "Add", "value": -5.0 }
     ]
+  },
+  {
+    "id": "Effect.Champion.Artillerist.CatapultShot",
+    "tags": ["Effect.Champion.Projectile", "Effect.Champion.Artillery"],
+    "presetType": "LaunchProjectile",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "projectile": {
+      "speed": 900,
+      "range": 860,
+      "arcHeight": 420,
+      "impactEffect": "Effect.Champion.Artillerist.CatapultImpact",
+      "presentationEffect": "Effect.Champion.Artillerist.CatapultShot"
+    }
+  },
+  {
+    "id": "Effect.Champion.Artillerist.CatapultImpact",
+    "tags": ["Effect.Champion.Damage", "Effect.Champion.Area"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 180 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 16 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.Artillerist.CatapultHit" }
+  },
+  {
+    "id": "Effect.Champion.Artillerist.CatapultHit",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -18.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Artillerist.ArrowVolley",
+    "tags": ["Effect.Champion.Projectile", "Effect.Champion.Volley"],
+    "presetType": "LaunchProjectile",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "projectile": {
+      "speed": 1900,
+      "range": 920,
+      "arcHeight": 0,
+      "hitEffect": "Effect.Champion.Artillerist.ArrowVolleyHit",
+      "presentationEffect": "Effect.Champion.Artillerist.ArrowVolley",
+      "travelMode": "Direction",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 48,
+      "collisionRelationFilter": "Hostile",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1,
+      "spawnCount": 5,
+      "spreadAngleDeg": 32
+    }
+  },
+  {
+    "id": "Effect.Champion.Artillerist.ArrowVolleyHit",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -10.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Artillerist.SkyPiercer",
+    "tags": ["Effect.Champion.Projectile", "Effect.Champion.Pierce"],
+    "presetType": "LaunchProjectile",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "projectile": {
+      "speed": 2200,
+      "range": 1100,
+      "arcHeight": 0,
+      "hitEffect": "Effect.Champion.Artillerist.SkyPiercerHit",
+      "presentationEffect": "Effect.Champion.Artillerist.SkyPiercer",
+      "travelMode": "Direction",
+      "impactPolicy": "ContinueOnHit",
+      "collisionHalfWidth": 52,
+      "collisionRelationFilter": "Hostile",
+      "collisionExcludeSource": true,
+      "maxHitCount": 8
+    }
+  },
+  {
+    "id": "Effect.Champion.Artillerist.SkyPiercerHit",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -14.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Artillerist.CruiseMissile",
+    "tags": ["Effect.Champion.Projectile", "Effect.Champion.Guided"],
+    "presetType": "LaunchProjectile",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "projectile": {
+      "speed": 1200,
+      "range": 1400,
+      "arcHeight": 0,
+      "impactEffect": "Effect.Champion.Artillerist.CruiseMissileImpact",
+      "hitEffect": "Effect.Champion.Artillerist.CruiseMissileImpact",
+      "presentationEffect": "Effect.Champion.Artillerist.CruiseMissile",
+      "travelMode": "TrackTarget",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 90,
+      "collisionRelationFilter": "Hostile",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1,
+      "turnRateDegPerSecond": 240
+    }
+  },
+  {
+    "id": "Effect.Champion.Artillerist.CruiseMissileImpact",
+    "tags": ["Effect.Champion.Damage", "Effect.Champion.Area"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 170 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 12 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.Artillerist.CruiseMissileHit" }
+  },
+  {
+    "id": "Effect.Champion.Artillerist.CruiseMissileHit",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -19.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Trickblade.BoomerangBlade",
+    "tags": ["Effect.Champion.Projectile", "Effect.Champion.Return"],
+    "presetType": "LaunchProjectile",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "projectile": {
+      "speed": 1700,
+      "range": 720,
+      "arcHeight": 0,
+      "hitEffect": "Effect.Champion.Trickblade.BoomerangBladeHit",
+      "presentationEffect": "Effect.Champion.Trickblade.BoomerangBlade",
+      "travelMode": "Direction",
+      "impactPolicy": "ContinueOnHit",
+      "collisionHalfWidth": 60,
+      "collisionRelationFilter": "Hostile",
+      "collisionExcludeSource": true,
+      "maxHitCount": 12,
+      "returnMode": "ReturnToSource",
+      "resetHitHistoryOnReturn": true
+    }
+  },
+  {
+    "id": "Effect.Champion.Trickblade.BoomerangBladeHit",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -9.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Trickblade.BlinkStep",
+    "tags": ["Effect.Champion.Movement"],
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "displacement": {
+      "directionMode": "ToTarget",
+      "totalDistanceCm": 520,
+      "totalDurationTicks": 1,
+      "overrideNavigation": true
+    }
+  },
+  {
+    "id": "Effect.Champion.Trickblade.RammingDashMove",
+    "tags": ["Effect.Champion.Movement"],
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "displacement": {
+      "directionMode": "ToTarget",
+      "totalDistanceCm": 480,
+      "totalDurationTicks": 6,
+      "overrideNavigation": true
+    }
+  },
+  {
+    "id": "Effect.Champion.Trickblade.RammingDashShockwave",
+    "tags": ["Effect.Champion.Control"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 160 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 8 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.Trickblade.RammingDashKnockback" }
+  },
+  {
+    "id": "Effect.Champion.Trickblade.RammingDashKnockback",
+    "tags": ["Effect.Champion.Control"],
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "displacement": {
+      "directionMode": "AwayFromSource",
+      "totalDistanceCm": 260,
+      "totalDurationTicks": 4,
+      "overrideNavigation": true
+    }
+  },
+  {
+    "id": "Effect.Champion.Trickblade.GravityHook",
+    "tags": ["Effect.Champion.Control"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 160 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 4 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.Trickblade.GravityHookPull" }
+  },
+  {
+    "id": "Effect.Champion.Trickblade.GravityHookPull",
+    "tags": ["Effect.Champion.Control"],
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "displacement": {
+      "directionMode": "TowardSource",
+      "totalDistanceCm": 360,
+      "totalDurationTicks": 6,
+      "overrideNavigation": true
+    }
   }
 ]

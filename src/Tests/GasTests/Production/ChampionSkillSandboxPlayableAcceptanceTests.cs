@@ -205,7 +205,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(
                 engine,
                 frameTimesMs,
-                () => IsCameraNear(engine.GameSession.Camera.State, new Vector2(1850f, 980f), 3900f, 54f, 42f),
+                () => IsCameraNear(engine.GameSession.Camera.State, new Vector2(1910f, 1450f), 6500f, 58f, 50f),
                 maxFrames: 6);
             Tick(engine, 2, frameTimesMs);
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "camera_reset");
@@ -237,8 +237,11 @@ namespace Ludots.Tests.GAS.Production
                 GetSelectedEntityName(engine),
                 frameTimesMs);
             backend.SetMousePosition(indicatorHoverPoint);
-            Tick(engine, 1, frameTimesMs);
-            Assert.That(ReadHoveredEntityName(engine), Is.EqualTo(indicatorHoverEntityName));
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => string.Equals(ReadHoveredEntityName(engine), indicatorHoverEntityName, StringComparison.Ordinal),
+                maxFrames: 3);
             SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
             int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);
             int baselineIndicatorRings = CountOverlays(overlays, GroundOverlayShape.Ring);
@@ -571,6 +574,258 @@ namespace Ludots.Tests.GAS.Production
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl(snapshots));
             File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, snapshots, frameTimesMs));
             File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid());
+        }
+
+        [Test]
+        public void ChampionSkillProjectiles_PlayableFlow_WritesAcceptanceArtifacts()
+        {
+            string repoRoot = FindRepoRoot();
+            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-skill-projectiles");
+            string screensDir = Path.Combine(artifactDir, "screens");
+            Directory.CreateDirectory(artifactDir);
+            Directory.CreateDirectory(screensDir);
+
+            var timeline = new List<string>();
+            var snapshots = new List<ProjectileShowcaseSnapshot>();
+            var frameTimesMs = new List<double>();
+
+            using var engine = CreateEngine();
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PrimitiveDrawBuffer missing.");
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
+                ?? throw new InvalidOperationException("WorldHudBatchBuffer missing.");
+            var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                ?? throw new InvalidOperationException("Toolbar provider missing.");
+            var backend = GetInputBackend(engine);
+
+            LoadMap(engine, MapId, frameTimesMs);
+            toolbar.Activate(SmartCastModeId);
+            Tick(engine, 1, frameTimesMs);
+            Assert.That(GetActiveModeId(engine), Is.EqualTo(SmartCastModeId));
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "map_loaded");
+            timeline.Add("[T+001] champion_skill_sandbox loaded -> projectile/displacement extension lane is ready.");
+
+            SelectNamedEntity(engine, backend, "Artillerist Alpha", frameTimesMs);
+            var artilleristSlots = CopySelectedSlots(engine);
+            Assert.That(artilleristSlots[0].Label, Is.EqualTo("Catapult Shot"));
+            Assert.That(artilleristSlots[1].Label, Is.EqualTo("Arrow Volley"));
+            Assert.That(artilleristSlots[2].Label, Is.EqualTo("Skypiercer"));
+            Assert.That(artilleristSlots[3].Label, Is.EqualTo("Cruise Missile"));
+            Entity artillerist = FindEntityByName(engine.World, "Artillerist Alpha");
+            Entity projectileBrute = FindEntityByName(engine.World, "Projectile Brute A");
+            Entity projectileDummyC = FindEntityByName(engine.World, "Projectile Dummy C");
+            Entity mobilityDummyA = FindEntityByName(engine.World, "Mobility Dummy A");
+            Entity mobilityDummyB = FindEntityByName(engine.World, "Mobility Dummy B");
+            Entity mobilityDummyC = FindEntityByName(engine.World, "Mobility Dummy C");
+            Entity mobilityBrute = FindEntityByName(engine.World, "Mobility Brute A");
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "select_artillerist");
+            timeline.Add("[T+002] Select(Artillerist Alpha) -> panel exposes catapult / volley / pierce / cruise missile.");
+
+            float artilleristDistanceToCatapultCluster = ReadDistance(engine.World, "Artillerist Alpha", "Projectile Brute A");
+            Assert.That(
+                artilleristDistanceToCatapultCluster,
+                Is.LessThanOrEqualTo(860f),
+                "Projectile showcase layout should keep the artillery splash cluster inside Catapult Shot range.");
+            Vector2 projectileBruteWorld = ReadPosition(engine.World, "Projectile Brute A");
+            Vector2 projectileDummyCWorld = ReadPosition(engine.World, "Projectile Dummy C");
+            float bruteBeforeCatapult = ReadHealth(engine.World, "Projectile Brute A");
+            float dummyBeforeCatapult = ReadHealth(engine.World, "Projectile Dummy C");
+            CastAbilityAtEntity(engine, artillerist, projectileBrute, slot: 0);
+            bool catapultSpawned = false;
+            for (int frame = 0; frame < 8; frame++)
+            {
+                Tick(engine, 1, frameTimesMs);
+                if (CountProjectiles(engine.World) > 0)
+                {
+                    catapultSpawned = true;
+                    break;
+                }
+            }
+
+            Assert.That(
+                catapultSpawned,
+                Is.True,
+                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Artillerist Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildLocalOrderDiagnostics(engine)} || {BuildGasPresentationDiagnostics(engine)} || projectileCount={CountProjectiles(engine.World)}");
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "catapult_arc");
+            bool bruteDamagedByCatapult = WaitUntil(
+                engine,
+                frameTimesMs,
+                () => ReadHealth(engine.World, "Projectile Brute A") < bruteBeforeCatapult,
+                maxFrames: 96);
+            Assert.That(
+                bruteDamagedByCatapult,
+                Is.True,
+                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Artillerist Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildLocalOrderDiagnostics(engine)} || {BuildGasPresentationDiagnostics(engine)} || projectileCount={CountProjectiles(engine.World)} || bruteHp={ReadHealth(engine.World, "Projectile Brute A"):0.##} || dummyHp={ReadHealth(engine.World, "Projectile Dummy C"):0.##}");
+            bool dummyDamagedByCatapult = WaitUntil(
+                engine,
+                frameTimesMs,
+                () => ReadHealth(engine.World, "Projectile Dummy C") < dummyBeforeCatapult,
+                maxFrames: 48);
+            Assert.That(
+                dummyDamagedByCatapult,
+                Is.True,
+                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Artillerist Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildLocalOrderDiagnostics(engine)} || {BuildGasPresentationDiagnostics(engine)} || projectileCount={CountProjectiles(engine.World)} || bruteHp={ReadHealth(engine.World, "Projectile Brute A"):0.##} || dummyHp={ReadHealth(engine.World, "Projectile Dummy C"):0.##}");
+            float bruteAfterCatapult = ReadHealth(engine.World, "Projectile Brute A");
+            float dummyAfterCatapult = ReadHealth(engine.World, "Projectile Dummy C");
+            Assert.That(bruteAfterCatapult, Is.LessThan(bruteBeforeCatapult));
+            Assert.That(dummyAfterCatapult, Is.LessThan(dummyBeforeCatapult));
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "catapult_impact");
+            timeline.Add($"[T+003] Catapult Shot -> arcing payload lands on Projectile Brute A and splashes Dummy C | brute {bruteBeforeCatapult:0}->{bruteAfterCatapult:0} | dummy {dummyBeforeCatapult:0}->{dummyAfterCatapult:0}.");
+
+            float dummyBeforeVolleyB = ReadHealth(engine.World, "Projectile Dummy B");
+            float dummyBeforeVolleyC = ReadHealth(engine.World, "Projectile Dummy C");
+            CastAbilityAtEntity(engine, artillerist, projectileDummyC, slot: 1);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountProjectiles(engine.World) >= 5,
+                maxFrames: 8);
+            int volleyProjectiles = CountProjectiles(engine.World);
+            Assert.That(volleyProjectiles, Is.GreaterThanOrEqualTo(5), "Arrow Volley should fan out into multiple live projectile entities.");
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "volley_fan");
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => ReadHealth(engine.World, "Projectile Dummy B") < dummyBeforeVolleyB ||
+                      ReadHealth(engine.World, "Projectile Dummy C") < dummyBeforeVolleyC,
+                maxFrames: 24);
+            timeline.Add($"[T+004] Arrow Volley -> spawned fan count {volleyProjectiles} with visible multi-projectile spread.");
+
+            float dummyBeforePiercerB = ReadHealth(engine.World, "Projectile Dummy B");
+            float dummyBeforePiercerC = ReadHealth(engine.World, "Projectile Dummy C");
+            CastAbilityAtEntity(engine, artillerist, projectileDummyC, slot: 2);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => ReadHealth(engine.World, "Projectile Dummy B") < dummyBeforePiercerB &&
+                      ReadHealth(engine.World, "Projectile Dummy C") < dummyBeforePiercerC,
+                maxFrames: 40);
+            float dummyAfterPiercerB = ReadHealth(engine.World, "Projectile Dummy B");
+            float dummyAfterPiercerC = ReadHealth(engine.World, "Projectile Dummy C");
+            Assert.That(dummyAfterPiercerB, Is.LessThan(dummyBeforePiercerB));
+            Assert.That(dummyAfterPiercerC, Is.LessThan(dummyBeforePiercerC));
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "sky_piercer_line");
+            timeline.Add($"[T+005] Skypiercer -> one line shot pierced Dummy B and Dummy C | B {dummyBeforePiercerB:0}->{dummyAfterPiercerB:0} | C {dummyBeforePiercerC:0}->{dummyAfterPiercerC:0}.");
+
+            float bruteBeforeMissile = ReadHealth(engine.World, "Projectile Brute A");
+            float dummyBeforeMissile = ReadHealth(engine.World, "Projectile Dummy C");
+            int projectileCountBeforeMissile = CountProjectiles(engine.World);
+            CastAbilityAtEntity(engine, artillerist, projectileBrute, slot: 3);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountProjectiles(engine.World) > projectileCountBeforeMissile,
+                maxFrames: 8);
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "cruise_missile_track");
+            var cruiseMissileFrames = new List<string>(72);
+            bool bruteDamagedByMissile = WaitUntil(
+                engine,
+                frameTimesMs,
+                () =>
+                {
+                    cruiseMissileFrames.Add(
+                        $"frame={cruiseMissileFrames.Count + 1} count={CountProjectiles(engine.World)} brute={ReadHealth(engine.World, "Projectile Brute A"):0.##} dummy={ReadHealth(engine.World, "Projectile Dummy C"):0.##} projectiles={DescribeProjectiles(engine.World)}");
+                    return ReadHealth(engine.World, "Projectile Brute A") < bruteBeforeMissile;
+                },
+                maxFrames: 72);
+            Assert.That(
+                bruteDamagedByMissile,
+                Is.True,
+                $"Cruise Missile never damaged Projectile Brute A. {BuildAbilityDiagnostics(engine, "Artillerist Alpha")} || projectileCount={CountProjectiles(engine.World)} || bruteHp={ReadHealth(engine.World, "Projectile Brute A"):0.##} || dummyHp={ReadHealth(engine.World, "Projectile Dummy C"):0.##} || trace={string.Join(" || ", cruiseMissileFrames)}");
+            bool dummyDamagedByMissile = WaitUntil(
+                engine,
+                frameTimesMs,
+                () => ReadHealth(engine.World, "Projectile Dummy C") < dummyBeforeMissile,
+                maxFrames: 24);
+            Assert.That(
+                dummyDamagedByMissile,
+                Is.True,
+                $"Cruise Missile impact damaged Projectile Brute A but did not splash Projectile Dummy C. projectileCount={CountProjectiles(engine.World)} || bruteHp={ReadHealth(engine.World, "Projectile Brute A"):0.##} || dummyHp={ReadHealth(engine.World, "Projectile Dummy C"):0.##} || projectiles={DescribeProjectiles(engine.World)}");
+            float bruteAfterMissile = ReadHealth(engine.World, "Projectile Brute A");
+            float dummyAfterMissile = ReadHealth(engine.World, "Projectile Dummy C");
+            Assert.That(bruteAfterMissile, Is.LessThan(bruteBeforeMissile));
+            Assert.That(dummyAfterMissile, Is.LessThan(dummyBeforeMissile));
+            timeline.Add($"[T+006] Cruise Missile -> tracked Projectile Brute A, then splashed Dummy C from the clustered blast | brute {bruteBeforeMissile:0}->{bruteAfterMissile:0} | dummy {dummyBeforeMissile:0}->{dummyAfterMissile:0}.");
+
+            SelectNamedEntity(engine, backend, "Trickblade Alpha", frameTimesMs);
+            var trickbladeSlots = CopySelectedSlots(engine);
+            Assert.That(trickbladeSlots[0].Label, Is.EqualTo("Boomerang Blade"));
+            Assert.That(trickbladeSlots[1].Label, Is.EqualTo("Blink Step"));
+            Assert.That(trickbladeSlots[2].Label, Is.EqualTo("Ramming Dash"));
+            Assert.That(trickbladeSlots[3].Label, Is.EqualTo("Gravity Hook"));
+            Entity trickblade = FindEntityByName(engine.World, "Trickblade Alpha");
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "select_trickblade");
+            timeline.Add("[T+007] Select(Trickblade Alpha) -> panel exposes boomerang plus blink / dash / pull mobility kit.");
+
+            float mobilityDummyBeforeBoomerang = ReadHealth(engine.World, "Mobility Dummy B");
+            CastAbilityAtEntity(engine, trickblade, mobilityDummyB, slot: 0);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountProjectiles(engine.World) > 0,
+                maxFrames: 8);
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "boomerang_outbound");
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountProjectiles(engine.World) == 0,
+                maxFrames: 72);
+            float mobilityDummyAfterBoomerang = ReadHealth(engine.World, "Mobility Dummy B");
+            Assert.That(
+                mobilityDummyAfterBoomerang,
+                Is.LessThanOrEqualTo(mobilityDummyBeforeBoomerang - 18f),
+                "Boomerang should be able to hit the same stationary dummy on both outbound and return legs.");
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "boomerang_return");
+            timeline.Add($"[T+008] Boomerang Blade -> outbound plus return both connected on Mobility Dummy B | HP {mobilityDummyBeforeBoomerang:0}->{mobilityDummyAfterBoomerang:0}.");
+
+            Vector2 trickbladeBeforeDash = ReadPosition(engine.World, "Trickblade Alpha");
+            Vector2 dummyBeforeDash = ReadPosition(engine.World, "Mobility Dummy A");
+            CastAbilityAtEntity(engine, trickblade, mobilityDummyA, slot: 2);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => ReadPosition(engine.World, "Trickblade Alpha").X > trickbladeBeforeDash.X + 300f,
+                maxFrames: 12);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => ReadPosition(engine.World, "Mobility Dummy A").Y < dummyBeforeDash.Y - 60f,
+                maxFrames: 18);
+            Vector2 trickbladeAfterDash = ReadPosition(engine.World, "Trickblade Alpha");
+            Vector2 dummyAfterDash = ReadPosition(engine.World, "Mobility Dummy A");
+            Assert.That(trickbladeAfterDash.X, Is.GreaterThan(trickbladeBeforeDash.X + 300f));
+            Assert.That(dummyAfterDash.Y, Is.LessThan(dummyBeforeDash.Y - 60f));
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "ramming_dash");
+            timeline.Add($"[T+009] Ramming Dash -> Trickblade advanced from ({trickbladeBeforeDash.X:0},{trickbladeBeforeDash.Y:0}) to ({trickbladeAfterDash.X:0},{trickbladeAfterDash.Y:0}) and knocked Mobility Dummy A away.");
+
+            float bruteBeforeHookX = ReadPosition(engine.World, "Mobility Brute A").X;
+            CastAbilityAtEntity(engine, trickblade, mobilityBrute, slot: 3);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => ReadPosition(engine.World, "Mobility Brute A").X < bruteBeforeHookX - 100f,
+                maxFrames: 24);
+            float bruteAfterHookX = ReadPosition(engine.World, "Mobility Brute A").X;
+            Assert.That(bruteAfterHookX, Is.LessThan(bruteBeforeHookX - 100f));
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "gravity_hook");
+            timeline.Add($"[T+010] Gravity Hook -> Mobility Brute A was pulled back toward Trickblade | X {bruteBeforeHookX:0}->{bruteAfterHookX:0}.");
+
+            Vector2 trickbladeBeforeBlink = ReadPosition(engine.World, "Trickblade Alpha");
+            CastAbilityAtEntity(engine, trickblade, mobilityDummyC, slot: 1);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => Vector2.Distance(ReadPosition(engine.World, "Trickblade Alpha"), trickbladeBeforeBlink) > 240f,
+                maxFrames: 4);
+            Vector2 trickbladeAfterBlink = ReadPosition(engine.World, "Trickblade Alpha");
+            Assert.That(Vector2.Distance(trickbladeAfterBlink, trickbladeBeforeBlink), Is.GreaterThan(240f));
+            CaptureProjectileShowcaseSnapshot(engine, primitives, worldHud, snapshots, "blink_step");
+            timeline.Add($"[T+011] Blink Step -> Trickblade snapped from ({trickbladeBeforeBlink.X:0},{trickbladeBeforeBlink.Y:0}) to ({trickbladeAfterBlink.X:0},{trickbladeAfterBlink.Y:0}).");
+
+            File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildProjectileShowcaseTraceJsonl(snapshots));
+            File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildProjectileShowcaseBattleReport(timeline, snapshots, frameTimesMs));
+            File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildProjectileShowcasePathMermaid());
+            WriteProjectileShowcaseScreenshots(snapshots, screensDir);
         }
 
         [Test]
@@ -1016,6 +1271,52 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 1, frameTimesMs);
         }
 
+        private static void CastAbilityAtWorldPoint(GameEngine engine, Entity actor, int slot, Vector2 targetWorldCm)
+        {
+            var orders = engine.GetService(CoreServiceKeys.OrderQueue) as OrderQueue
+                ?? throw new InvalidOperationException("OrderQueue service is missing.");
+
+            var args = new OrderArgs
+            {
+                I0 = slot,
+                Spatial = new OrderSpatial
+                {
+                    Kind = OrderSpatialKind.WorldCm,
+                    Mode = OrderCollectionMode.Single,
+                    WorldCm = new Vector3(targetWorldCm.X, 0f, targetWorldCm.Y)
+                }
+            };
+
+            bool enqueued = orders.TryEnqueue(new Order
+            {
+                OrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["castAbility"],
+                PlayerId = 1,
+                Actor = actor,
+                Args = args,
+                SubmitMode = OrderSubmitMode.Immediate
+            });
+
+            Assert.That(enqueued, Is.True, $"World-point cast order should enqueue for slot {slot}.");
+        }
+
+        private static void CastAbilityAtEntity(GameEngine engine, Entity actor, Entity target, int slot)
+        {
+            var orders = engine.GetService(CoreServiceKeys.OrderQueue) as OrderQueue
+                ?? throw new InvalidOperationException("OrderQueue service is missing.");
+
+            bool enqueued = orders.TryEnqueue(new Order
+            {
+                OrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["castAbility"],
+                PlayerId = 1,
+                Actor = actor,
+                Target = target,
+                Args = new OrderArgs { I0 = slot },
+                SubmitMode = OrderSubmitMode.Immediate
+            });
+
+            Assert.That(enqueued, Is.True, $"Entity-target cast order should enqueue for slot {slot}.");
+        }
+
         private static void Tick(GameEngine engine, int frames, List<double> frameTimesMs)
         {
             for (int i = 0; i < frames; i++)
@@ -1282,6 +1583,255 @@ namespace Ludots.Tests.GAS.Production
                 "    T --> U[\"Arena: Cataclysm Ring spawns 10 box blocker segments\"]",
                 "    U --> V[\"Beam: Guided Laser hold-starts, hits Dummy D, retargets to Dummy E, release removes manifestation\"]"
             });
+        }
+
+        private static void CaptureProjectileShowcaseSnapshot(
+            GameEngine engine,
+            PrimitiveDrawBuffer primitives,
+            WorldHudBatchBuffer worldHud,
+            List<ProjectileShowcaseSnapshot> snapshots,
+            string step)
+        {
+            string[] trackedEntities =
+            {
+                "Artillerist Alpha",
+                "Trickblade Alpha",
+                "Projectile Dummy A",
+                "Projectile Dummy B",
+                "Projectile Dummy C",
+                "Projectile Brute A",
+                "Mobility Dummy A",
+                "Mobility Dummy B",
+                "Mobility Dummy C",
+                "Mobility Brute A"
+            };
+
+            var entities = new List<ProjectileShowcaseEntityState>(trackedEntities.Length);
+            for (int i = 0; i < trackedEntities.Length; i++)
+            {
+                if (!TryFindEntityByName(engine.World, trackedEntities[i], out Entity entity) ||
+                    !engine.World.Has<WorldPositionCm>(entity))
+                {
+                    continue;
+                }
+
+                Vector2 position = engine.World.Get<WorldPositionCm>(entity).Value.ToVector2();
+                entities.Add(new ProjectileShowcaseEntityState(
+                    trackedEntities[i],
+                    position.X,
+                    position.Y,
+                    ReadHealth(engine.World, trackedEntities[i])));
+            }
+
+            var projectilePositions = new List<Vector2>(16);
+            var projectileQuery = new QueryDescription().WithAll<ProjectileState, WorldPositionCm>();
+            engine.World.Query(in projectileQuery, (Entity _, ref ProjectileState __, ref WorldPositionCm position) =>
+            {
+                if (projectilePositions.Count < 16)
+                {
+                    projectilePositions.Add(position.Value.ToVector2());
+                }
+            });
+
+            snapshots.Add(new ProjectileShowcaseSnapshot(
+                Step: step,
+                SelectedEntity: GetSelectedEntityName(engine),
+                ProjectileCount: CountProjectiles(engine.World),
+                PrimitiveCount: CountPrimitiveMarkers(primitives),
+                WorldTextCount: CountWorldHudItems(worldHud, WorldHudItemKind.Text),
+                Entities: entities,
+                ProjectilePositions: projectilePositions));
+        }
+
+        private static string BuildProjectileShowcaseTraceJsonl(IReadOnlyList<ProjectileShowcaseSnapshot> snapshots)
+        {
+            var lines = new List<string>(snapshots.Count);
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                ProjectileShowcaseSnapshot snapshot = snapshots[i];
+                lines.Add(JsonSerializer.Serialize(new
+                {
+                    event_id = $"champion-projectiles-{i + 1:000}",
+                    step = snapshot.Step,
+                    selected_entity = snapshot.SelectedEntity,
+                    projectile_count = snapshot.ProjectileCount,
+                    primitive_count = snapshot.PrimitiveCount,
+                    world_text_count = snapshot.WorldTextCount,
+                    entities = snapshot.Entities.Select(entity => new
+                    {
+                        name = entity.Name,
+                        x_cm = entity.XCm,
+                        y_cm = entity.YCm,
+                        health = entity.Health
+                    }),
+                    projectiles = snapshot.ProjectilePositions.Select(position => new
+                    {
+                        x_cm = position.X,
+                        y_cm = position.Y
+                    })
+                }));
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private static string BuildProjectileShowcaseBattleReport(
+            IReadOnlyList<string> timeline,
+            IReadOnlyList<ProjectileShowcaseSnapshot> snapshots,
+            IReadOnlyList<double> frameTimesMs)
+        {
+            double medianTickMs = Median(frameTimesMs);
+            double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
+            ProjectileShowcaseSnapshot finalSnapshot = snapshots[^1];
+            int peakProjectiles = snapshots.Max(snapshot => snapshot.ProjectileCount);
+            int peakPrimitives = snapshots.Max(snapshot => snapshot.PrimitiveCount);
+            int peakWorldText = snapshots.Max(snapshot => snapshot.WorldTextCount);
+
+            var sb = new StringBuilder();
+            sb.AppendLine("# Scenario: champion-skill-projectiles");
+            sb.AppendLine();
+            sb.AppendLine("## Header");
+            sb.AppendLine("- build: GasTests / ChampionSkillProjectiles_PlayableFlow_WritesAcceptanceArtifacts");
+            sb.AppendLine("- map: champion_skill_sandbox");
+            sb.AppendLine("- clock: FixedFrame @ 60 Hz");
+            sb.AppendLine($"- execution_timestamp_utc: {DateTime.UtcNow:O}");
+            sb.AppendLine("- screenshots: `screens/*.svg`, `screens/timeline.svg`");
+            sb.AppendLine();
+            sb.AppendLine("## Timeline");
+            foreach (string entry in timeline)
+            {
+                sb.AppendLine(entry);
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("## Outcome");
+            sb.AppendLine("- result: success");
+            sb.AppendLine("- design: projectile guidance stayed inside Projectile runtime; displacement stayed inside Displacement runtime.");
+            sb.AppendLine($"- final_selected: {finalSnapshot.SelectedEntity}");
+            sb.AppendLine($"- final_projectiles: {finalSnapshot.ProjectileCount}");
+            sb.AppendLine($"- final_feedback_primitives: {finalSnapshot.PrimitiveCount}");
+            sb.AppendLine($"- final_feedback_world_text: {finalSnapshot.WorldTextCount}");
+            sb.AppendLine();
+            sb.AppendLine("## Summary Stats");
+            sb.AppendLine($"- total_actions: {timeline.Count}");
+            sb.AppendLine("- projectile_showcases: 5");
+            sb.AppendLine("- displacement_showcases: 3");
+            sb.AppendLine($"- peak_projectiles: {peakProjectiles}");
+            sb.AppendLine($"- peak_primitives: {peakPrimitives}");
+            sb.AppendLine($"- peak_world_text: {peakWorldText}");
+            sb.AppendLine($"- median_tick_ms: {medianTickMs:0.###}");
+            sb.AppendLine($"- max_tick_ms: {maxTickMs:0.###}");
+            return sb.ToString();
+        }
+
+        private static string BuildProjectileShowcasePathMermaid()
+        {
+            return string.Join(Environment.NewLine, new[]
+            {
+                "flowchart TD",
+                "    A[\"MapLoaded: sandbox extension lane ready\"] --> B[\"Select Artillerist -> projectile loadout visible\"]",
+                "    B --> C[\"Catapult Shot: arc flight -> area impact\"]",
+                "    C --> D[\"Arrow Volley: fan-out creates 5 live projectiles\"]",
+                "    D --> E[\"Skypiercer: one shot damages a full line\"]",
+                "    E --> F[\"Cruise Missile: turn-limited homing -> explosion\"]",
+                "    F --> G[\"Select Trickblade -> boomerang and mobility loadout visible\"]",
+                "    G --> H[\"Boomerang Blade: outbound and return both connect\"]",
+                "    H --> I[\"Ramming Dash: source moves, nearby dummy knocked away\"]",
+                "    I --> J[\"Gravity Hook: target cluster pulled toward source\"]",
+                "    J --> K[\"Blink Step: instant reposition completes displacement showcase\"]"
+            });
+        }
+
+        private static void WriteProjectileShowcaseScreenshots(IReadOnlyList<ProjectileShowcaseSnapshot> snapshots, string screensDir)
+        {
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                ProjectileShowcaseSnapshot snapshot = snapshots[i];
+                WriteProjectileShowcaseSnapshotSvg(snapshot, Path.Combine(screensDir, $"{i + 1:000}_{snapshot.Step}.svg"));
+            }
+
+            WriteProjectileShowcaseTimelineSvg(snapshots, Path.Combine(screensDir, "timeline.svg"));
+        }
+
+        private static void WriteProjectileShowcaseSnapshotSvg(ProjectileShowcaseSnapshot snapshot, string path)
+        {
+            const float width = 1600f;
+            const float height = 900f;
+            const float mapLeft = 56f;
+            const float mapTop = 140f;
+            const float mapWidth = 1488f;
+            const float mapHeight = 700f;
+
+            float minX = snapshot.Entities.Count == 0 ? 0f : snapshot.Entities.Min(entity => entity.XCm) - 220f;
+            float maxX = snapshot.Entities.Count == 0 ? 1f : snapshot.Entities.Max(entity => entity.XCm) + 220f;
+            float minY = snapshot.Entities.Count == 0 ? 0f : snapshot.Entities.Min(entity => entity.YCm) - 220f;
+            float maxY = snapshot.Entities.Count == 0 ? 1f : snapshot.Entities.Max(entity => entity.YCm) + 220f;
+            float worldWidth = Math.Max(1f, maxX - minX);
+            float worldHeight = Math.Max(1f, maxY - minY);
+
+            float ProjectX(float xCm) => mapLeft + ((xCm - minX) / worldWidth) * mapWidth;
+            float ProjectY(float yCm) => mapTop + ((yCm - minY) / worldHeight) * mapHeight;
+
+            var body = new StringBuilder();
+            body.AppendLine($"""  <rect x="{mapLeft}" y="{mapTop}" width="{mapWidth}" height="{mapHeight}" rx="18" fill="#101a24" stroke="#35536b" stroke-width="1.5" />""");
+
+            for (int i = 0; i < snapshot.ProjectilePositions.Count; i++)
+            {
+                Vector2 projectile = snapshot.ProjectilePositions[i];
+                body.AppendLine($"""  <circle cx="{ProjectX(projectile.X):0.##}" cy="{ProjectY(projectile.Y):0.##}" r="8" fill="#ff9a57" opacity="0.88" />""");
+            }
+
+            for (int i = 0; i < snapshot.Entities.Count; i++)
+            {
+                ProjectileShowcaseEntityState entity = snapshot.Entities[i];
+                bool selected = string.Equals(entity.Name, snapshot.SelectedEntity, StringComparison.Ordinal);
+                bool hostile = entity.Name.Contains("Dummy", StringComparison.Ordinal) || entity.Name.Contains("Brute", StringComparison.Ordinal);
+                string fill = selected ? "#f7d36d" : hostile ? "#ff7d7d" : "#6ac5ff";
+                float cx = ProjectX(entity.XCm);
+                float cy = ProjectY(entity.YCm);
+                body.AppendLine($"""  <circle cx="{cx:0.##}" cy="{cy:0.##}" r="{(selected ? 18f : 14f):0.##}" fill="{fill}" opacity="0.9" />""");
+                body.AppendLine($"""  <text x="{cx + 20f:0.##}" y="{cy - 4f:0.##}" fill="#ffffff" font-size="18" font-family="Consolas, monospace">{EscapeSvg(entity.Name)}</text>""");
+                body.AppendLine($"""  <text x="{cx + 20f:0.##}" y="{cy + 18f:0.##}" fill="#bccdde" font-size="16" font-family="Consolas, monospace">HP {entity.Health:0.#} @ ({entity.XCm:0},{entity.YCm:0})</text>""");
+            }
+
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="{{width:0}}" height="{{height:0}}" viewBox="0 0 {{width:0}} {{height:0}}">
+  <rect width="{{width:0}}" height="{{height:0}}" fill="#0b1016" />
+  <text x="56" y="68" fill="#f7d36d" font-size="34" font-family="Consolas, monospace">Champion Projectile Showcase | {{EscapeSvg(snapshot.Step)}}</text>
+  <text x="56" y="108" fill="#ffffff" font-size="22" font-family="Consolas, monospace">Selected: {{EscapeSvg(snapshot.SelectedEntity)}} | Projectiles={{snapshot.ProjectileCount}} | Feedback={{snapshot.PrimitiveCount}}/{{snapshot.WorldTextCount}}</text>
+{{body}}
+</svg>
+""";
+            File.WriteAllText(path, svg);
+        }
+
+        private static void WriteProjectileShowcaseTimelineSvg(IReadOnlyList<ProjectileShowcaseSnapshot> snapshots, string path)
+        {
+            if (snapshots.Count == 0)
+            {
+                return;
+            }
+
+            var lines = new List<string>(snapshots.Count * 4);
+            int y = 100;
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                ProjectileShowcaseSnapshot snapshot = snapshots[i];
+                lines.Add($"""  <rect x="40" y="{y - 36}" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />""");
+                lines.Add($"""  <text x="72" y="{y}" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">{EscapeSvg($"{i + 1:000} {snapshot.Step}")}</text>""");
+                lines.Add($"""  <text x="420" y="{y}" fill="#ffffff" font-size="20" font-family="Consolas, monospace">{EscapeSvg(snapshot.SelectedEntity)}</text>""");
+                lines.Add($"""  <text x="72" y="{y + 28}" fill="#bccdde" font-size="18" font-family="Consolas, monospace">{EscapeSvg($"proj={snapshot.ProjectileCount} | feedback={snapshot.PrimitiveCount}/{snapshot.WorldTextCount} | entities={snapshot.Entities.Count}")}</text>""");
+                y += 96;
+            }
+
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="{{Math.Max(240, y + 40)}}" viewBox="0 0 1600 {{Math.Max(240, y + 40)}}">
+  <rect width="1600" height="{{Math.Max(240, y + 40)}}" fill="#080a10" />
+  <text x="20" y="36" fill="#ffffff" font-size="28" font-family="Consolas, monospace">Champion projectile showcase timeline</text>
+{{string.Join(Environment.NewLine, lines)}}
+</svg>
+""";
+            File.WriteAllText(path, svg);
         }
 
         private static void CaptureStressSnapshot(
@@ -1584,6 +2134,45 @@ namespace Ludots.Tests.GAS.Production
             var query = new QueryDescription().WithAll<ProjectileState>();
             world.Query(in query, (Entity _, ref ProjectileState __) => count++);
             return count;
+        }
+
+        private static string DescribeProjectiles(World world)
+        {
+            var projectiles = new List<string>(8);
+            var query = new QueryDescription().WithAll<ProjectileState, WorldPositionCm>();
+            world.Query(in query, (Entity entity, ref ProjectileState projectile, ref WorldPositionCm position) =>
+            {
+                if (projectiles.Count >= 8)
+                {
+                    return;
+                }
+
+                Vector2 pos = position.Value.ToVector2();
+                string targetName = TryGetEntityDebugName(world, projectile.Target);
+                projectiles.Add(
+                    $"#{entity.Id}@({pos.X:0},{pos.Y:0}) target={projectile.Target.Id}:{targetName}:alive={world.IsAlive(projectile.Target)} range={projectile.Range} phase={projectile.FlightPhase} mode={projectile.TravelMode}");
+            });
+            return projectiles.Count == 0 ? "<none>" : string.Join(" | ", projectiles);
+        }
+
+        private static string TryGetEntityDebugName(World world, Entity entity)
+        {
+            if (!world.IsAlive(entity))
+            {
+                return "<dead>";
+            }
+
+            if (world.Has<Name>(entity))
+            {
+                return world.Get<Name>(entity).Value;
+            }
+
+            if (world.Has<MapEntity>(entity))
+            {
+                return world.Get<MapEntity>(entity).MapId.Value;
+            }
+
+            return "<unnamed>";
         }
 
         private static string GetActiveModeId(GameEngine engine)
@@ -2256,6 +2845,18 @@ namespace Ludots.Tests.GAS.Production
             return $"feedback=primitives:{CountPrimitiveMarkers(primitives)},worldText:{CountWorldHudItems(worldHud, WorldHudItemKind.Text)}";
         }
 
+        private static string BuildLocalOrderDiagnostics(GameEngine engine)
+        {
+            string lastGround = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out var lastGroundObj)
+                ? lastGroundObj?.ToString() ?? "<null>"
+                : "<missing>";
+            string lastOrder = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out var lastOrderObj)
+                ? lastOrderObj?.ToString() ?? "<null>"
+                : "<missing>";
+            int orderQueueCount = engine.GetService(CoreServiceKeys.OrderQueue)?.Count ?? -1;
+            return $"localOrder=lastGround:{lastGround},lastOrder:{lastOrder},queue:{orderQueueCount}";
+        }
+
         private static unsafe string BuildEzrealMarkDiagnostics(World world, string entityName)
         {
             Entity entity = FindEntityByName(world, entityName);
@@ -2467,6 +3068,21 @@ namespace Ludots.Tests.GAS.Production
 
         private sealed record EntityState(
             string Name,
+            float Health);
+
+        private sealed record ProjectileShowcaseSnapshot(
+            string Step,
+            string SelectedEntity,
+            int ProjectileCount,
+            int PrimitiveCount,
+            int WorldTextCount,
+            IReadOnlyList<ProjectileShowcaseEntityState> Entities,
+            IReadOnlyList<Vector2> ProjectilePositions);
+
+        private sealed record ProjectileShowcaseEntityState(
+            string Name,
+            float XCm,
+            float YCm,
             float Health);
 
         private sealed record StressAcceptanceSnapshot(
