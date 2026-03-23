@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -22,6 +23,9 @@ namespace ChampionSkillSandboxMod.Runtime
     {
         private static readonly QueryDescription ProjectileVisualQuery = new QueryDescription()
             .WithAll<ProjectileState, WorldPositionCm, VisualTransform>();
+
+        private static readonly QueryDescription ChannelBeamQuery = new QueryDescription()
+            .WithAll<Name, FacingDirection, VisualTransform, DestroyWhenParentExecutionEnds>();
 
         private static readonly QueryDescription EzrealMarkQuery = new QueryDescription()
             .WithAll<GameplayTagContainer, VisualTransform>();
@@ -62,6 +66,18 @@ namespace ChampionSkillSandboxMod.Runtime
             public float HeightOffset;
         }
 
+        private struct ChannelBeamSpec
+        {
+            public Vector4 CoreColor;
+            public Vector4 GlowColor;
+            public float Length;
+            public float CoreThickness;
+            public float GlowThickness;
+            public float HeightOffset;
+            public float TipRadius;
+            public float TipPulseAmplitude;
+        }
+
         private static readonly Vector4 DamageTextColor = new(1.0f, 0.82f, 0.46f, 1.0f);
         private static readonly Vector4 HealTextColor = new(0.62f, 1.0f, 0.72f, 1.0f);
         private static readonly Vector4 EzrealQColor = new(0.36f, 0.9f, 1.0f, 0.94f);
@@ -72,17 +88,23 @@ namespace ChampionSkillSandboxMod.Runtime
         private static readonly Vector4 EzrealETailColor = new(0.3f, 0.76f, 1.0f, 0.42f);
         private static readonly Vector4 EzrealRColor = new(0.76f, 0.95f, 1.0f, 0.98f);
         private static readonly Vector4 EzrealRTailColor = new(0.3f, 0.78f, 1.0f, 0.38f);
+        private static readonly Vector4 GuidedLaserCoreColor = new(0.42f, 0.98f, 1.0f, 0.94f);
+        private static readonly Vector4 GuidedLaserGlowColor = new(0.18f, 0.82f, 1.0f, 0.24f);
+        private static readonly Vector4 SweepLaserCoreColor = new(1.0f, 0.62f, 0.34f, 0.96f);
+        private static readonly Vector4 SweepLaserGlowColor = new(1.0f, 0.48f, 0.2f, 0.28f);
 
         private readonly CombatTextEntry[] _combatTextEntries = new CombatTextEntry[32];
         private readonly TransientPrimitiveEntry[] _transientPrimitiveEntries = new TransientPrimitiveEntry[64];
         private readonly Dictionary<int, int> _castCueByAbility = new();
         private readonly Dictionary<int, int> _hitCueByEffect = new();
         private readonly Dictionary<int, ProjectilePrimitiveSpec> _projectilePrimitiveSpecs = new();
+        private readonly Dictionary<string, ChannelBeamSpec> _channelBeamSpecs = new(StringComparer.Ordinal);
         private int _combatTextCount;
         private int _transientPrimitiveCount;
         private int _nextCombatTextStableId = 1;
         private int _nextTransientPrimitiveStableId = 1000;
         private int _combatDeltaTokenId;
+        private int _cubeMeshAssetId;
         private int _sphereMeshAssetId;
         private int _ezrealMysticShotAbilityId;
         private int _ezrealEssenceFluxAbilityId;
@@ -129,6 +151,7 @@ namespace ChampionSkillSandboxMod.Runtime
             TickCombatText(frameDt);
             TickTransientPrimitives(frameDt);
             EmitActiveEzrealProjectiles(engine.World, primitives);
+            EmitActiveChannelBeams(engine.World, primitives);
             EmitEzrealMarks(engine.World, primitives);
             EmitTransientPrimitives(engine.World, primitives);
             EmitCombatTextEntries(engine.World, worldHud);
@@ -380,6 +403,59 @@ namespace ChampionSkillSandboxMod.Runtime
             });
         }
 
+        private void EmitActiveChannelBeams(World world, PrimitiveDrawBuffer? primitives)
+        {
+            if (primitives == null || _cubeMeshAssetId <= 0 || _sphereMeshAssetId <= 0 || _channelBeamSpecs.Count == 0)
+            {
+                return;
+            }
+
+            world.Query(in ChannelBeamQuery, (Entity entity, ref Name name, ref FacingDirection facing, ref VisualTransform visual, ref DestroyWhenParentExecutionEnds _) =>
+            {
+                if (!_channelBeamSpecs.TryGetValue(name.Value, out ChannelBeamSpec spec))
+                {
+                    return;
+                }
+
+                Vector3 forward = new(MathF.Cos(facing.AngleRad), 0f, MathF.Sin(facing.AngleRad));
+                if (forward.LengthSquared() <= 0.0001f)
+                {
+                    forward = Vector3.UnitX;
+                }
+                else
+                {
+                    forward = Vector3.Normalize(forward);
+                }
+
+                Vector3 center = visual.Position + new Vector3(0f, spec.HeightOffset, 0f);
+                Quaternion rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, -facing.AngleRad);
+
+                TryAddBeamSegment(
+                    primitives,
+                    center,
+                    new Vector3(spec.Length, spec.GlowThickness, spec.GlowThickness),
+                    rotation,
+                    spec.GlowColor,
+                    ComposeBeamStableId(entity, 1));
+                TryAddBeamSegment(
+                    primitives,
+                    center,
+                    new Vector3(spec.Length, spec.CoreThickness, spec.CoreThickness),
+                    rotation,
+                    spec.CoreColor,
+                    ComposeBeamStableId(entity, 2));
+
+                Vector3 tip = center + (forward * (spec.Length * 0.5f));
+                float pulse = 0.5f + (0.5f * MathF.Sin((_feedbackClock * 10f) + (entity.Id * 0.17f)));
+                TryAddSphere(
+                    primitives,
+                    tip,
+                    spec.TipRadius + (spec.TipPulseAmplitude * pulse),
+                    spec.CoreColor,
+                    ComposeBeamStableId(entity, 3));
+            });
+        }
+
         private void EmitEzrealMarks(World world, PrimitiveDrawBuffer? primitives)
         {
             if (primitives == null || _sphereMeshAssetId <= 0 || _ezrealWMarkTagId <= 0)
@@ -424,6 +500,11 @@ namespace ChampionSkillSandboxMod.Runtime
             if (!_directIdsInitialized)
             {
                 _sphereMeshAssetId = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)?.GetId(WellKnownMeshKeys.Sphere) ?? 0;
+                _cubeMeshAssetId = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)?.GetId(WellKnownMeshKeys.Cube) ?? 0;
+                if (_sphereMeshAssetId <= 0 || _cubeMeshAssetId <= 0)
+                {
+                    throw new InvalidOperationException("ChampionSkillSandbox primitive feedback requires built-in Sphere and Cube mesh assets.");
+                }
 
                 _ezrealMysticShotAbilityId = AbilityIdRegistry.GetId("Ability.Champion.Ezreal.MysticShot");
                 _ezrealEssenceFluxAbilityId = AbilityIdRegistry.GetId("Ability.Champion.Ezreal.EssenceFlux");
@@ -482,6 +563,30 @@ namespace ChampionSkillSandboxMod.Runtime
                     SegmentSpacing = 0.18f,
                     RadiusFalloff = 0.006f,
                     HeightOffset = 0.94f,
+                });
+
+                _channelBeamSpecs.Clear();
+                RegisterChannelBeamSpec(ChampionSkillSandboxIds.GuidedLaserName, new ChannelBeamSpec
+                {
+                    CoreColor = GuidedLaserCoreColor,
+                    GlowColor = GuidedLaserGlowColor,
+                    Length = 9.8f,
+                    CoreThickness = 0.18f,
+                    GlowThickness = 0.34f,
+                    HeightOffset = 0.9f,
+                    TipRadius = 0.14f,
+                    TipPulseAmplitude = 0.05f,
+                });
+                RegisterChannelBeamSpec(ChampionSkillSandboxIds.SweepLaserName, new ChannelBeamSpec
+                {
+                    CoreColor = SweepLaserCoreColor,
+                    GlowColor = SweepLaserGlowColor,
+                    Length = 9.8f,
+                    CoreThickness = 0.2f,
+                    GlowThickness = 0.38f,
+                    HeightOffset = 0.84f,
+                    TipRadius = 0.16f,
+                    TipPulseAmplitude = 0.06f,
                 });
 
                 _directIdsInitialized = true;
@@ -598,6 +703,14 @@ namespace ChampionSkillSandboxMod.Runtime
             }
         }
 
+        private void RegisterChannelBeamSpec(string manifestationName, in ChannelBeamSpec spec)
+        {
+            if (!string.IsNullOrWhiteSpace(manifestationName))
+            {
+                _channelBeamSpecs[manifestationName] = spec;
+            }
+        }
+
         private bool TryQueueEzrealCastCue(in GasPresentationEvent evt)
         {
             if (evt.Actor == Entity.Null)
@@ -705,6 +818,31 @@ namespace ChampionSkillSandboxMod.Runtime
                 Flags = VisualRuntimeFlags.Visible,
                 Visibility = VisualVisibility.Visible,
             });
+        }
+
+        private void TryAddBeamSegment(PrimitiveDrawBuffer primitives, Vector3 position, Vector3 scale, Quaternion rotation, in Vector4 color, int stableId)
+        {
+            primitives.TryAdd(new PrimitiveDrawItem
+            {
+                MeshAssetId = _cubeMeshAssetId,
+                Position = position,
+                Rotation = rotation,
+                Scale = scale,
+                Color = color,
+                StableId = stableId,
+                RenderPath = VisualRenderPath.None,
+                Mobility = VisualMobility.Movable,
+                Flags = VisualRuntimeFlags.Visible,
+                Visibility = VisualVisibility.Visible,
+            });
+        }
+
+        private static int ComposeBeamStableId(Entity entity, int slot)
+        {
+            unchecked
+            {
+                return 200000 + (entity.Id * 10) + slot;
+            }
         }
 
         private static Vector2 ResolveProjectileDirection(World world, in ProjectileState projectile, in WorldPositionCm positionCm)

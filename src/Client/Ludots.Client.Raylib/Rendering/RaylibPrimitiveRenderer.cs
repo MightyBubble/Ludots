@@ -126,6 +126,7 @@ namespace Ludots.Client.Raylib.Rendering
                     item.MeshAssetId,
                     item.Position,
                     item.Scale * scaleMul,
+                    item.Rotation,
                     item.Color,
                     camera,
                     meshes,
@@ -161,7 +162,7 @@ namespace Ludots.Client.Raylib.Rendering
 
                 DrawAssetRecursive(
                     item.MeshAssetId, item.Position,
-                    item.Scale * scaleMul, item.Color,
+                    item.Scale * scaleMul, item.Rotation, item.Color,
                     camera,
                     meshes, 0);
             }
@@ -195,6 +196,7 @@ namespace Ludots.Client.Raylib.Rendering
                     item.MeshAssetId,
                     item.Position,
                     item.Scale * scaleMul,
+                    item.Rotation,
                     item.Color,
                     camera,
                     meshes,
@@ -204,7 +206,7 @@ namespace Ludots.Client.Raylib.Rendering
             FlushInstancedBatches();
         }
 
-        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int depth)
+        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Vector3 scale, Quaternion rotation, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int depth)
         {
             if (depth > MaxPrefabDepth) return;
             if (!meshes.TryGetDescriptor(meshAssetId, out var desc)) return;
@@ -212,7 +214,7 @@ namespace Ludots.Client.Raylib.Rendering
             switch (desc.Type)
             {
                 case MeshAssetType.Primitive:
-                    SubmitPrimitive(desc.PrimitiveKind, position, scale, color);
+                    SubmitPrimitive(desc.PrimitiveKind, position, scale, rotation, color);
                     break;
 
                 case MeshAssetType.Model:
@@ -236,17 +238,17 @@ namespace Ludots.Client.Raylib.Rendering
                                 color.Y * part.ColorTint.Y,
                                 color.Z * part.ColorTint.Z,
                                 color.W * part.ColorTint.W);
-                            SubmitAssetRecursive(part.MeshAssetId, childPos, childScale, childColor, camera, meshes, depth + 1);
+                            SubmitAssetRecursive(part.MeshAssetId, childPos, childScale, Quaternion.Identity, childColor, camera, meshes, depth + 1);
                         }
                     }
                     break;
             }
         }
 
-        private void SubmitPrimitive(PrimitiveMeshKind kind, Vector3 position, Vector3 scale, Vector4 color)
+        private void SubmitPrimitive(PrimitiveMeshKind kind, Vector3 position, Vector3 scale, Quaternion rotation, Vector4 color)
         {
             uint key = PackRgba(color);
-            var matrix = RaylibMatrix.FromScaleTranslation(position.X, position.Y, position.Z, scale.X, scale.Y, scale.Z);
+            var matrix = ComposePrimitiveTransform(position, scale, rotation);
 
             if (kind == PrimitiveMeshKind.Cube)
             {
@@ -260,7 +262,7 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            DrawPrimitive(kind, position, scale, color);
+            DrawPrimitive(kind, position, scale, rotation, color);
         }
 
         private bool TryDrawPrototypeSkinned(in PrimitiveDrawItem item, MeshAssetRegistry meshes, float scaleMul)
@@ -346,7 +348,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int depth)
+        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Vector3 scale, Quaternion rotation, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int depth)
         {
             if (depth > MaxPrefabDepth) return;
             if (!meshes.TryGetDescriptor(meshAssetId, out var desc)) return;
@@ -354,7 +356,7 @@ namespace Ludots.Client.Raylib.Rendering
             switch (desc.Type)
             {
                 case MeshAssetType.Primitive:
-                    DrawPrimitive(desc.PrimitiveKind, position, scale, color);
+                    DrawPrimitive(desc.PrimitiveKind, position, scale, rotation, color);
                     break;
 
                 case MeshAssetType.Model:
@@ -378,19 +380,21 @@ namespace Ludots.Client.Raylib.Rendering
                                 color.Y * part.ColorTint.Y,
                                 color.Z * part.ColorTint.Z,
                                 color.W * part.ColorTint.W);
-                            DrawAssetRecursive(part.MeshAssetId, childPos, childScale, childColor, camera, meshes, depth + 1);
+                            DrawAssetRecursive(part.MeshAssetId, childPos, childScale, Quaternion.Identity, childColor, camera, meshes, depth + 1);
                         }
                     }
                     break;
             }
         }
 
-        private void DrawPrimitive(PrimitiveMeshKind kind, Vector3 position, Vector3 scale, Vector4 color)
+        private void DrawPrimitive(PrimitiveMeshKind kind, Vector3 position, Vector3 scale, Quaternion rotation, Vector4 color)
         {
             var c = ToRaylibColor(color);
             if (kind == PrimitiveMeshKind.Cube)
             {
-                Rl.DrawCube(position, scale.X, scale.Y, scale.Z, c);
+                EnsureInitialized();
+                SetTintUniform(PackRgba(color));
+                Rl.DrawMesh(_cubeMesh, _material, ComposePrimitiveTransform(position, scale, rotation));
             }
             else if (kind == PrimitiveMeshKind.Sphere)
             {
@@ -580,6 +584,15 @@ namespace Ludots.Client.Raylib.Rendering
             float sinyCosp = 2f * (normalized.W * normalized.Y + normalized.X * normalized.Z);
             float cosyCosp = 1f - 2f * (normalized.Y * normalized.Y + normalized.Z * normalized.Z);
             return MathF.Atan2(sinyCosp, cosyCosp);
+        }
+
+        private static RaylibMatrix ComposePrimitiveTransform(Vector3 position, Vector3 scale, Quaternion rotation)
+        {
+            Matrix4x4 transform =
+                Matrix4x4.CreateScale(scale) *
+                Matrix4x4.CreateFromQuaternion(rotation) *
+                Matrix4x4.CreateTranslation(position);
+            return RaylibMatrix.FromSystemNumerics(transform);
         }
 
         private static Vector4 MultiplyColor(Vector4 color, float r, float g, float b, float a)

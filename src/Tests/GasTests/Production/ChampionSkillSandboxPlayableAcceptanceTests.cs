@@ -563,6 +563,16 @@ namespace Ludots.Tests.GAS.Production
                 () => EntityExists(engine.World, "Guided Laser"),
                 maxFrames: 12);
             AssertManifestationOwnership(engine.World, "Guided Laser", "Spell Engineer Alpha");
+            Entity guidedLaser = FindEntityByName(engine.World, "Guided Laser");
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountBeamPrimitiveSlots(primitives, guidedLaser) >= 3,
+                maxFrames: 8);
+            Assert.That(
+                CountBeamPrimitiveSlots(primitives, guidedLaser),
+                Is.GreaterThanOrEqualTo(3),
+                "Guided Laser should render dedicated primitive beam geometry while the channel is active.");
             float guidedLaserFacingBefore = ReadFacingRadians(engine.World, "Guided Laser");
             bool laserHitDummyD = false;
             for (int i = 0; i < 24; i++)
@@ -696,6 +706,16 @@ namespace Ludots.Tests.GAS.Production
                 Is.True,
                 $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Sweep Ranger Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
             AssertManifestationOwnership(engine.World, "Sweep Laser", "Sweep Ranger Alpha", LaserSweepMapId);
+            Entity sweepLaser = FindEntityByName(engine.World, "Sweep Laser");
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountBeamPrimitiveSlots(primitives, sweepLaser) >= 3,
+                maxFrames: 8);
+            Assert.That(
+                CountBeamPrimitiveSlots(primitives, sweepLaser),
+                Is.GreaterThanOrEqualTo(3),
+                "Laser Sweep should render a visible primitive beam while the channel is active.");
 
             bool hitDummyA = false;
             for (int i = 0; i < 32; i++)
@@ -2065,6 +2085,22 @@ namespace Ludots.Tests.GAS.Production
         private static int CountPrimitiveMarkers(PrimitiveDrawBuffer primitives)
         {
             return primitives.GetSpan().Length;
+        }
+
+        private static int CountBeamPrimitiveSlots(PrimitiveDrawBuffer primitives, Entity manifestation)
+        {
+            int stableIdBase = 200000 + (manifestation.Id * 10);
+            int count = 0;
+            foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
+            {
+                int slot = item.StableId - stableIdBase;
+                if (slot >= 1 && slot <= 3)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private static int CountWorldHudItems(WorldHudBatchBuffer worldHud, WorldHudItemKind kind)

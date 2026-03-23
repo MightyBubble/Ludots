@@ -363,9 +363,7 @@
       "SelectionSelectableTag": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": {
-        "startupPerformerIds": [
-          "champion_skill_sandbox.manifestation.guided_laser"
-        ]
+        "startupPerformerIds": []
       },
       "AttributeBuffer": { "base": { "Health": 1, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
       "GameplayTagContainer": {},
@@ -384,9 +382,7 @@
       "SelectionSelectableTag": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": {
-        "startupPerformerIds": [
-          "champion_skill_sandbox.manifestation.guided_laser"
-        ]
+        "startupPerformerIds": []
       },
       "AttributeBuffer": { "base": { "Health": 1, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
       "GameplayTagContainer": {},
