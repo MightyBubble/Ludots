@@ -313,6 +313,7 @@ namespace Ludots.Client.Raylib.Rendering
                     item.MeshAssetId,
                     item.Position,
                     item.Scale * scaleMul,
+                    item.Rotation,
                     item.Color,
                     camera,
                     meshes,
@@ -835,7 +836,7 @@ namespace Ludots.Client.Raylib.Rendering
                 ref readonly var item = ref span[i];
                 if (!meshes.TryGetPrimitiveKind(item.MeshAssetId, out var kind)) continue;
 
-                SubmitPrimitive(kind, item.Position, item.Scale, item.Color);
+                SubmitPrimitive(kind, item.Position, item.Scale, item.Rotation, item.Color);
             }
 
             FlushInstancedBatches();
