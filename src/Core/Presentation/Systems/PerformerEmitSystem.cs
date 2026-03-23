@@ -7,6 +7,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
@@ -302,6 +303,9 @@ namespace Ludots.Core.Presentation.Systems
                 case PerformerVisualKind.WorldText:
                     EmitWorldText(handle, definitionId, def, owner, pos, alphaMod);
                     break;
+                case PerformerVisualKind.ManifestationPrimitive:
+                    EmitManifestationPrimitive(handle, definitionId, def, owner, pos, alphaMod);
+                    break;
             }
         }
 
@@ -467,6 +471,7 @@ namespace Ludots.Core.Presentation.Systems
             _proxyEmitter.Emit(new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Performer,
+                PrimitiveKind = PrimitiveDrawKind.MeshAsset,
                 MeshAssetId = def.MeshOrShapeId,
                 Position = pos,
                 Rotation = Quaternion.Identity,
@@ -480,7 +485,69 @@ namespace Ludots.Core.Presentation.Systems
             });
         }
 
+        private void EmitManifestationPrimitive(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
+        {
+            var color = ResolveColor(
+                handle,
+                def,
+                owner,
+                WellKnownPerformerParamKeys.PrimitiveColorR,
+                WellKnownPerformerParamKeys.PrimitiveColorG,
+                WellKnownPerformerParamKeys.PrimitiveColorB,
+                WellKnownPerformerParamKeys.PrimitiveColorA,
+                def.DefaultColor);
+            color.W *= alphaMod;
+
+            bool hasGeometry = World.IsAlive(owner) && World.Has<ManifestationGeometry2D>(owner);
+            ManifestationGeometry2D geometry = hasGeometry ? World.Get<ManifestationGeometry2D>(owner) : default;
+            PrimitiveDrawKind primitiveKind = ResolvePrimitiveKind(def.MeshOrShapeId, hasGeometry ? geometry.PrimitiveKind : ManifestationPrimitiveKind.Beam);
+
+            _proxyEmitter.Emit(new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                PrimitiveKind = primitiveKind,
+                MeshAssetId = 0,
+                Position = pos,
+                Rotation = ResolveOwnerRotation(owner),
+                Scale = Vector3.One,
+                Color = color,
+                StableId = ResolvePerformerStableId(handle, definitionId, owner, PerformerVisualKind.ManifestationPrimitive),
+                RenderPath = VisualRenderPath.None,
+                Mobility = VisualMobility.Movable,
+                Flags = VisualRuntimeFlags.Visible,
+                Visibility = VisualVisibility.Visible,
+                PrimitiveLength = ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitiveLength, ToMeters(geometry.LengthCm)),
+                PrimitiveWidth = ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitiveWidth, ToMeters(geometry.WidthCm)),
+                PrimitiveEndWidth = ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitiveEndWidth, ToMeters(geometry.EndWidthCm)),
+                PrimitiveInnerRadius = ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitiveInnerRadius, ToMeters(geometry.InnerRadiusCm)),
+                PrimitiveOuterRadius = ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitiveOuterRadius, ToMeters(geometry.OuterRadiusCm)),
+                PrimitiveSweepAngleDeg = ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitiveSweepAngleDeg, geometry.SweepAngleDeg),
+                PrimitiveSegmentCount = Math.Max(
+                    0,
+                    (int)ResolveParam(
+                        handle,
+                        def,
+                        owner,
+                        WellKnownPerformerParamKeys.PrimitiveSegmentCount,
+                        geometry.SegmentCount > 0 ? geometry.SegmentCount : 0)),
+                PrimitiveArcHeight = ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitiveArcHeight, ToMeters(geometry.ArcHeightCm)),
+                PrimitiveControlPoint0 = new Vector2(
+                    ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitiveControl0X, ToMeters(geometry.ControlPoint0XCm)),
+                    ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitiveControl0Y, ToMeters(geometry.ControlPoint0YCm))),
+                PrimitiveControlPoint1 = new Vector2(
+                    ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitiveControl1X, ToMeters(geometry.ControlPoint1XCm)),
+                    ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitiveControl1Y, ToMeters(geometry.ControlPoint1YCm))),
+                PrimitivePulseSpeed = ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitivePulseSpeed, geometry.PulseSpeed),
+                PrimitivePulseAmplitude = ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.PrimitivePulseAmplitude, ToMeters(geometry.PulseAmplitudeCm)),
+            });
+        }
+
         private int ResolveMarkerStableId(int handle, int definitionId, Entity owner)
+        {
+            return ResolvePerformerStableId(handle, definitionId, owner, PerformerVisualKind.Marker3D);
+        }
+
+        private int ResolvePerformerStableId(int handle, int definitionId, Entity owner, PerformerVisualKind visualKind)
         {
             if (handle >= 0 && _instances.IsActive(handle))
             {
@@ -492,12 +559,12 @@ namespace Ludots.Core.Presentation.Systems
                 int ownerStableId = World.Get<PresentationStableId>(owner).Value;
                 if (ownerStableId > 0)
                 {
-                    return PerformerVisualIdentity.ComposeStableId(ownerStableId, PerformerVisualKind.Marker3D, definitionId);
+                    return PerformerVisualIdentity.ComposeStableId(ownerStableId, visualKind, definitionId);
                 }
             }
 
             throw new InvalidOperationException(
-                $"Entity-scoped Marker3D performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
+                $"Entity-scoped performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
         }
 
         private void EmitWorldBar(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
@@ -601,6 +668,22 @@ namespace Ludots.Core.Presentation.Systems
             return Vector3.Zero;
         }
 
+        private Quaternion ResolveOwnerRotation(Entity owner)
+        {
+            if (World.IsAlive(owner) && World.Has<VisualTransform>(owner))
+            {
+                return World.Get<VisualTransform>(owner).Rotation;
+            }
+
+            if (World.IsAlive(owner) && World.Has<Ludots.Core.Components.FacingDirection>(owner))
+            {
+                float angle = World.Get<Ludots.Core.Components.FacingDirection>(owner).AngleRad;
+                return Quaternion.CreateFromAxisAngle(Vector3.UnitY, -angle);
+            }
+
+            return Quaternion.Identity;
+        }
+
         private Vector3 ResolveAnchorPosition(in PerformerInstance instance)
         {
             return instance.AnchorKind == PresentationAnchorKind.WorldPosition
@@ -655,6 +738,29 @@ namespace Ludots.Core.Presentation.Systems
                 TargetList = targetList,
             };
             GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
+        }
+
+        private static float ToMeters(int centimeters)
+        {
+            return centimeters * 0.01f;
+        }
+
+        private static PrimitiveDrawKind ResolvePrimitiveKind(int meshOrShapeId, ManifestationPrimitiveKind fallbackKind)
+        {
+            if (meshOrShapeId > 0 &&
+                meshOrShapeId <= byte.MaxValue &&
+                Enum.IsDefined(typeof(PrimitiveDrawKind), (byte)meshOrShapeId))
+            {
+                return (PrimitiveDrawKind)meshOrShapeId;
+            }
+
+            return fallbackKind switch
+            {
+                ManifestationPrimitiveKind.SplineBeam => PrimitiveDrawKind.SplineBeam,
+                ManifestationPrimitiveKind.RingPulse => PrimitiveDrawKind.RingPulse,
+                ManifestationPrimitiveKind.DiskWave => PrimitiveDrawKind.DiskWave,
+                _ => PrimitiveDrawKind.Beam,
+            };
         }
     }
 }

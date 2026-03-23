@@ -526,6 +526,10 @@ namespace ChampionSkillSandboxMod.Runtime
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.GravityWell", "champion_skill_sandbox.cue.spell_engineer_gravity_well_cast");
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.CataclysmRing", "champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast");
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.GuidedLaser", "champion_skill_sandbox.cue.spell_engineer_guided_laser_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.BeamArtisan.SweepArray", "champion_skill_sandbox.cue.beam_artisan_sweep_array_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.BeamArtisan.RibbonLash", "champion_skill_sandbox.cue.beam_artisan_ribbon_lash_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.BeamArtisan.DiffusionBloom", "champion_skill_sandbox.cue.beam_artisan_diffusion_bloom_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.BeamArtisan.HaloCircuit", "champion_skill_sandbox.cue.beam_artisan_halo_circuit_cast");
 
             RegisterEffectCue(performers, "Effect.Champion.Garen.JudgmentHit", "champion_skill_sandbox.cue.garen_judgment_hit");
             RegisterEffectCue(performers, "Effect.Champion.Garen.DemacianJusticeHit", "champion_skill_sandbox.cue.garen_demacian_justice_hit");

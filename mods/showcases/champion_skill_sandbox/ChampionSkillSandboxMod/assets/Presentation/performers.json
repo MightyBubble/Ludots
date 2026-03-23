@@ -310,13 +310,20 @@
   },
   {
     "id": "champion_skill_sandbox.cue.geomancer_prismatic_beam_cast",
-    "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
-    "defaultColor": [0.5, 0.9, 1.0, 0.88],
-    "defaultScale": 0.38,
-    "defaultLifetime": 0.2,
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "Beam",
+    "defaultColor": [0.5, 0.9, 1.0, 0.78],
+    "defaultScale": 1.0,
+    "defaultLifetime": 0.22,
     "alphaFadeOverLifetime": true,
-    "positionOffset": [0, 0.76, 0]
+    "positionOffset": [0, 0.76, 0],
+    "bindings": [
+      { "paramKey": 0, "source": "constant", "constantValue": 9.2 },
+      { "paramKey": 1, "source": "constant", "constantValue": 1.4 },
+      { "paramKey": 2, "source": "constant", "constantValue": 0.95 },
+      { "paramKey": 3, "source": "constant", "constantValue": 0.28 },
+      { "paramKey": 11, "source": "constant", "constantValue": 18.0 }
+    ]
   },
   {
     "id": "champion_skill_sandbox.cue.geomancer_prismatic_beam_hit",
@@ -538,20 +545,12 @@
   },
   {
     "id": "champion_skill_sandbox.manifestation.gravity_well",
-    "visualKind": "GroundOverlay",
-    "meshOrShapeId": "Ring",
-    "defaultColor": [0.48, 0.62, 1.0, 0.12],
-    "defaultScale": 2.4,
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "DiskWave",
+    "defaultColor": [0.48, 0.62, 1.0, 0.2],
+    "defaultScale": 1.0,
     "defaultLifetime": -1,
-    "positionOffset": [0, 0.05, 0],
-    "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 1.68 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.55 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.69 },
-      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
-    ]
+    "positionOffset": [0, 0.06, 0]
   },
   {
     "id": "champion_skill_sandbox.manifestation.barrier_segment",
@@ -574,21 +573,128 @@
   },
   {
     "id": "champion_skill_sandbox.manifestation.guided_laser",
-    "visualKind": "GroundOverlay",
-    "meshOrShapeId": "Line",
-    "defaultColor": [0.72, 0.5, 1.0, 0.12],
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "Beam",
+    "defaultColor": [0.72, 0.5, 1.0, 0.22],
     "defaultScale": 1.0,
     "defaultLifetime": -1,
+    "positionOffset": [0, 0.08, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.manifestation.cataclysm_ring_core",
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "RingPulse",
+    "defaultColor": [1.0, 0.58, 0.42, 0.22],
+    "defaultScale": 1.0,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.06, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.manifestation.beam_artisan_sweep_array",
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "Beam",
+    "defaultColor": [0.98, 0.78, 0.46, 0.22],
+    "defaultScale": 1.0,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.08, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.manifestation.beam_artisan_ribbon_lash",
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "SplineBeam",
+    "defaultColor": [0.58, 0.94, 1.0, 0.22],
+    "defaultScale": 1.0,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.08, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.manifestation.beam_artisan_diffusion_bloom",
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "DiskWave",
+    "defaultColor": [0.58, 1.0, 0.86, 0.18],
+    "defaultScale": 1.0,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.06, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.manifestation.beam_artisan_halo_circuit",
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "RingPulse",
+    "defaultColor": [1.0, 0.86, 0.52, 0.2],
+    "defaultScale": 1.0,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.06, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.beam_artisan_sweep_array_cast",
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "Beam",
+    "defaultColor": [0.98, 0.78, 0.46, 0.74],
+    "defaultScale": 1.0,
+    "defaultLifetime": 0.22,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.76, 0],
+    "bindings": [
+      { "paramKey": 0, "source": "constant", "constantValue": 8.6 },
+      { "paramKey": 1, "source": "constant", "constantValue": 1.2 },
+      { "paramKey": 2, "source": "constant", "constantValue": 0.9 },
+      { "paramKey": 3, "source": "constant", "constantValue": 0.18 },
+      { "paramKey": 11, "source": "constant", "constantValue": 16.0 }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.beam_artisan_ribbon_lash_cast",
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "SplineBeam",
+    "defaultColor": [0.58, 0.94, 1.0, 0.76],
+    "defaultScale": 1.0,
+    "defaultLifetime": 0.24,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.76, 0],
+    "bindings": [
+      { "paramKey": 0, "source": "constant", "constantValue": 8.2 },
+      { "paramKey": 1, "source": "constant", "constantValue": 0.72 },
+      { "paramKey": 2, "source": "constant", "constantValue": 1.18 },
+      { "paramKey": 3, "source": "constant", "constantValue": 0.55 },
+      { "paramKey": 11, "source": "constant", "constantValue": 22.0 },
+      { "paramKey": 14, "source": "constant", "constantValue": -1.2 },
+      { "paramKey": 15, "source": "constant", "constantValue": 2.4 },
+      { "paramKey": 16, "source": "constant", "constantValue": 1.3 },
+      { "paramKey": 17, "source": "constant", "constantValue": 5.8 }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.beam_artisan_diffusion_bloom_cast",
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "DiskWave",
+    "defaultColor": [0.58, 1.0, 0.86, 0.2],
+    "defaultScale": 1.0,
+    "defaultLifetime": 0.28,
+    "alphaFadeOverLifetime": true,
     "positionOffset": [0, 0.06, 0],
     "bindings": [
-      { "paramKey": 3, "source": "facingradians" },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.82 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.66 },
-      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.08 },
-      { "paramKey": 13, "source": "constant", "constantValue": 9.0 },
-      { "paramKey": 14, "source": "constant", "constantValue": 1.4 }
+      { "paramKey": 8, "source": "constant", "constantValue": 0.2 },
+      { "paramKey": 9, "source": "constant", "constantValue": 2.2 },
+      { "paramKey": 10, "source": "constant", "constantValue": 360.0 },
+      { "paramKey": 11, "source": "constant", "constantValue": 42.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.5 }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.beam_artisan_halo_circuit_cast",
+    "visualKind": "ManifestationPrimitive",
+    "meshOrShapeId": "RingPulse",
+    "defaultColor": [1.0, 0.86, 0.52, 0.22],
+    "defaultScale": 1.0,
+    "defaultLifetime": 0.26,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.06, 0],
+    "bindings": [
+      { "paramKey": 8, "source": "constant", "constantValue": 1.6 },
+      { "paramKey": 9, "source": "constant", "constantValue": 3.0 },
+      { "paramKey": 10, "source": "constant", "constantValue": 360.0 },
+      { "paramKey": 11, "source": "constant", "constantValue": 48.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.35 }
     ]
   },
   {

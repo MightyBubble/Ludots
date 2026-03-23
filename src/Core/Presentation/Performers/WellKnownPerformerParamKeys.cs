@@ -104,5 +104,44 @@ namespace Ludots.Core.Presentation.Performers
         public const int MarkerColorB = 6;
         /// <summary>Marker color alpha channel.</summary>
         public const int MarkerColorA = 7;
+
+        // ── ManifestationPrimitive ──
+
+        /// <summary>Beam length in meters.</summary>
+        public const int PrimitiveLength = 0;
+        /// <summary>Beam or band width in meters.</summary>
+        public const int PrimitiveWidth = 1;
+        /// <summary>End width in meters.</summary>
+        public const int PrimitiveEndWidth = 2;
+        /// <summary>Arc height in meters.</summary>
+        public const int PrimitiveArcHeight = 3;
+        /// <summary>Primitive color red channel.</summary>
+        public const int PrimitiveColorR = 4;
+        /// <summary>Primitive color green channel.</summary>
+        public const int PrimitiveColorG = 5;
+        /// <summary>Primitive color blue channel.</summary>
+        public const int PrimitiveColorB = 6;
+        /// <summary>Primitive color alpha channel.</summary>
+        public const int PrimitiveColorA = 7;
+        /// <summary>Inner radius in meters.</summary>
+        public const int PrimitiveInnerRadius = 8;
+        /// <summary>Outer radius in meters.</summary>
+        public const int PrimitiveOuterRadius = 9;
+        /// <summary>Sweep angle in degrees.</summary>
+        public const int PrimitiveSweepAngleDeg = 10;
+        /// <summary>Polyline segment count.</summary>
+        public const int PrimitiveSegmentCount = 11;
+        /// <summary>Pulse amplitude in meters.</summary>
+        public const int PrimitivePulseAmplitude = 12;
+        /// <summary>Pulse speed scalar.</summary>
+        public const int PrimitivePulseSpeed = 13;
+        /// <summary>First spline control point X in meters.</summary>
+        public const int PrimitiveControl0X = 14;
+        /// <summary>First spline control point Y in meters.</summary>
+        public const int PrimitiveControl0Y = 15;
+        /// <summary>Second spline control point X in meters.</summary>
+        public const int PrimitiveControl1X = 16;
+        /// <summary>Second spline control point Y in meters.</summary>
+        public const int PrimitiveControl1Y = 17;
     }
 }

@@ -596,6 +596,19 @@
     }
   },
   {
+    "id": "Effect.Champion.SpellEngineer.CataclysmRingVisual",
+    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Ring"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "champion_skill_sandbox_cataclysm_ring_core",
+      "count": 1,
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
+    }
+  },
+  {
     "id": "Effect.Champion.SpellEngineer.GuidedLaser",
     "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Beam"],
     "presetType": "CreateUnit",
@@ -642,6 +655,201 @@
     "participatesInResponse": true,
     "modifiers": [
       { "attribute": "Health", "op": "Add", "value": -5.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.SweepArray",
+    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Beam"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "champion_skill_sandbox_beam_artisan_sweep_array",
+      "count": 1,
+      "onSpawnEffect": "Effect.Champion.BeamArtisan.SweepArrayPersistent",
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
+    }
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.SweepArrayPersistent",
+    "tags": ["Effect.Champion.Beam"],
+    "presetType": "PeriodicSearch",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1800,
+      "periodTicks": 5
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Line",
+      "length": 840,
+      "halfWidth": 80
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 16
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.BeamArtisan.SweepArrayHit"
+    }
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.SweepArrayHit",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -4.5 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.RibbonLash",
+    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Beam"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "champion_skill_sandbox_beam_artisan_ribbon_lash",
+      "count": 1,
+      "onSpawnEffect": "Effect.Champion.BeamArtisan.RibbonLashPersistent",
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
+    }
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.RibbonLashPersistent",
+    "tags": ["Effect.Champion.Beam"],
+    "presetType": "PeriodicSearch",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1800,
+      "periodTicks": 6
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Line",
+      "length": 880,
+      "halfWidth": 88
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 16
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.BeamArtisan.RibbonLashHit"
+    }
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.RibbonLashHit",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -6.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.DiffusionBloom",
+    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Zone"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "champion_skill_sandbox_beam_artisan_diffusion_bloom",
+      "count": 1,
+      "onSpawnEffect": "Effect.Champion.BeamArtisan.DiffusionBloomPersistent",
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
+    }
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.DiffusionBloomPersistent",
+    "tags": ["Effect.Champion.Zone"],
+    "presetType": "PeriodicSearch",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1800,
+      "periodTicks": 12
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 260
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 16
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.BeamArtisan.DiffusionBloomHit"
+    }
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.DiffusionBloomHit",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -7.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.HaloCircuit",
+    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Ring"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "champion_skill_sandbox_beam_artisan_halo_circuit",
+      "count": 1,
+      "onSpawnEffect": "Effect.Champion.BeamArtisan.HaloCircuitPersistent",
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
+    }
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.HaloCircuitPersistent",
+    "tags": ["Effect.Champion.Ring"],
+    "presetType": "PeriodicSearch",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1800,
+      "periodTicks": 10
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Ring",
+      "radius": 310,
+      "innerRadius": 170
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 16
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.BeamArtisan.HaloCircuitHit"
+    }
+  },
+  {
+    "id": "Effect.Champion.BeamArtisan.HaloCircuitHit",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -8.0 }
     ]
   }
 ]

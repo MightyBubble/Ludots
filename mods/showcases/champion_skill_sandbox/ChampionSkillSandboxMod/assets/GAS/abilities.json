@@ -634,6 +634,7 @@
       "items": [
         { "kind": "TagClip", "tick": 0, "duration": 90, "tag": "Cooldown.Champion.SpellEngineer.E" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.SpellEngineer.CataclysmRing" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.SpellEngineer.CataclysmRingVisual" },
         { "kind": "EventGate", "tick": 0, "payloadA": 180 },
         { "kind": "End", "tick": 0 }
       ]
@@ -676,6 +677,118 @@
       "hintText": "Hold to channel steerable beam, release to stop",
       "modeHints": {
         "SmartCast": "Hold to channel steerable beam, release to stop"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.BeamArtisan.SweepArray",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 72, "tag": "Cooldown.Champion.BeamArtisan.Q" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.BeamArtisan.SweepArray" },
+        { "kind": "EventGate", "tick": 0, "payloadA": 180 },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Line", "range": 900, "radius": 80, "showRangeCircle": true, "validColor": "#F8C26E77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.BeamArtisan.Q"] },
+    "input": {
+      "trigger": "Held",
+      "heldPolicy": "StartEnd",
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Sweep Array",
+      "iconGlyph": "Q",
+      "accentColor": "#F8C26E",
+      "hintText": "Hold to spin a tethered beam fan",
+      "modeHints": {
+        "SmartCast": "Hold to spin the beam, release to stop"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.BeamArtisan.RibbonLash",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 78, "tag": "Cooldown.Champion.BeamArtisan.W" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.BeamArtisan.RibbonLash" },
+        { "kind": "EventGate", "tick": 0, "payloadA": 180 },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Line", "range": 940, "radius": 88, "showRangeCircle": true, "validColor": "#8DE9FF77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.BeamArtisan.W"] },
+    "input": {
+      "trigger": "Held",
+      "heldPolicy": "StartEnd",
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Ribbon Lash",
+      "iconGlyph": "W",
+      "accentColor": "#8DE9FF",
+      "hintText": "Hold to project a curved spline lash",
+      "modeHints": {
+        "SmartCast": "Hold to sustain the curved lash, release to stop"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.BeamArtisan.DiffusionBloom",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 84, "tag": "Cooldown.Champion.BeamArtisan.E" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.BeamArtisan.DiffusionBloom" },
+        { "kind": "EventGate", "tick": 0, "payloadA": 180 },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 860, "radius": 260, "showRangeCircle": true, "validColor": "#8FF3B777", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.BeamArtisan.E"] },
+    "input": {
+      "trigger": "Held",
+      "heldPolicy": "StartEnd",
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Diffusion Bloom",
+      "iconGlyph": "E",
+      "accentColor": "#8FF3B7",
+      "hintText": "Hold an expanding wave field at the target point",
+      "modeHints": {
+        "SmartCast": "Hold to sustain the bloom, release to stop"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.BeamArtisan.HaloCircuit",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 96, "tag": "Cooldown.Champion.BeamArtisan.R" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.BeamArtisan.HaloCircuit" },
+        { "kind": "EventGate", "tick": 0, "payloadA": 180 },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Ring", "range": 860, "radius": 310, "innerRadius": 170, "showRangeCircle": true, "validColor": "#FFD96F77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.BeamArtisan.R"] },
+    "input": {
+      "trigger": "Held",
+      "heldPolicy": "StartEnd",
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Halo Circuit",
+      "iconGlyph": "R",
+      "accentColor": "#FFD96F",
+      "hintText": "Hold a ring-band lattice that punishes the perimeter",
+      "modeHints": {
+        "SmartCast": "Hold to sustain the halo, release to stop"
       }
     }
   }

@@ -154,6 +154,11 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
+                if (TryDrawManifestationPrimitive(item))
+                {
+                    continue;
+                }
+
                 if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;
@@ -186,6 +191,11 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (TryDrawManifestationPrimitive(item))
+                {
+                    continue;
+                }
+
                 if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;
@@ -261,6 +271,27 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             DrawPrimitive(kind, position, scale, color);
+        }
+
+        private bool TryDrawManifestationPrimitive(in PrimitiveDrawItem item)
+        {
+            switch (item.PrimitiveKind)
+            {
+                case PrimitiveDrawKind.Beam:
+                    DrawBeamPrimitive(item.Position, item.Rotation, item.Color, item.PrimitiveLength, item.PrimitiveWidth, item.PrimitiveEndWidth, item.PrimitiveArcHeight, item.PrimitiveSegmentCount);
+                    return true;
+                case PrimitiveDrawKind.SplineBeam:
+                    DrawSplineBeamPrimitive(item.Position, item.Rotation, item.Color, item.PrimitiveLength, item.PrimitiveWidth, item.PrimitiveEndWidth, item.PrimitiveArcHeight, item.PrimitiveSegmentCount, item.PrimitiveControlPoint0, item.PrimitiveControlPoint1);
+                    return true;
+                case PrimitiveDrawKind.RingPulse:
+                    DrawRingPulsePrimitive(item.Position, item.Rotation, item.Color, item.PrimitiveInnerRadius, item.PrimitiveOuterRadius, item.PrimitiveSweepAngleDeg, item.PrimitiveSegmentCount, item.PrimitivePulseAmplitude);
+                    return true;
+                case PrimitiveDrawKind.DiskWave:
+                    DrawDiskWavePrimitive(item.Position, item.Rotation, item.Color, item.PrimitiveInnerRadius, item.PrimitiveOuterRadius, item.PrimitiveSweepAngleDeg, item.PrimitiveSegmentCount, item.PrimitivePulseAmplitude);
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private bool TryDrawPrototypeSkinned(in PrimitiveDrawItem item, MeshAssetRegistry meshes, float scaleMul)
@@ -396,6 +427,139 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 float r = MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.5f;
                 Rl.DrawSphere(position, r, c);
+            }
+        }
+
+        private void DrawBeamPrimitive(
+            Vector3 origin,
+            Quaternion rotation,
+            Vector4 color,
+            float length,
+            float width,
+            float endWidth,
+            float arcHeight,
+            int segmentCount)
+        {
+            if (length <= 0.01f)
+            {
+                return;
+            }
+
+            float yaw = ExtractYawRad(rotation);
+            int segments = Math.Max(4, segmentCount > 0 ? segmentCount : 14);
+            int stripes = ComputeStripeCount(MathF.Max(width, endWidth));
+            for (int stripe = -stripes; stripe <= stripes; stripe++)
+            {
+                float normalizedStripe = stripes == 0 ? 0f : stripe / (float)stripes;
+                Color stripeColor = ToRaylibColor(ScaleAlpha(color, StripeAlpha(normalizedStripe)));
+                Vector3 previous = EvaluateBeamPoint(origin, yaw, 0f, normalizedStripe, length, width, endWidth, arcHeight);
+                for (int segment = 1; segment <= segments; segment++)
+                {
+                    float t = segment / (float)segments;
+                    Vector3 current = EvaluateBeamPoint(origin, yaw, t, normalizedStripe, length, width, endWidth, arcHeight);
+                    Rl.DrawLine3D(previous, current, stripeColor);
+                    previous = current;
+                }
+            }
+        }
+
+        private void DrawSplineBeamPrimitive(
+            Vector3 origin,
+            Quaternion rotation,
+            Vector4 color,
+            float length,
+            float width,
+            float endWidth,
+            float arcHeight,
+            int segmentCount,
+            Vector2 controlPoint0,
+            Vector2 controlPoint1)
+        {
+            if (length <= 0.01f)
+            {
+                return;
+            }
+
+            float yaw = ExtractYawRad(rotation);
+            int segments = Math.Max(6, segmentCount > 0 ? segmentCount : 18);
+            int stripes = ComputeStripeCount(MathF.Max(width, endWidth));
+            for (int stripe = -stripes; stripe <= stripes; stripe++)
+            {
+                float normalizedStripe = stripes == 0 ? 0f : stripe / (float)stripes;
+                Color stripeColor = ToRaylibColor(ScaleAlpha(color, StripeAlpha(normalizedStripe)));
+                Vector3 previous = EvaluateSplinePoint(origin, yaw, 0f, normalizedStripe, length, width, endWidth, arcHeight, controlPoint0, controlPoint1);
+                for (int segment = 1; segment <= segments; segment++)
+                {
+                    float t = segment / (float)segments;
+                    Vector3 current = EvaluateSplinePoint(origin, yaw, t, normalizedStripe, length, width, endWidth, arcHeight, controlPoint0, controlPoint1);
+                    Rl.DrawLine3D(previous, current, stripeColor);
+                    previous = current;
+                }
+            }
+        }
+
+        private void DrawRingPulsePrimitive(
+            Vector3 origin,
+            Quaternion rotation,
+            Vector4 color,
+            float innerRadius,
+            float outerRadius,
+            float sweepAngleDeg,
+            int segmentCount,
+            float pulseAmplitude)
+        {
+            float startRadius = Math.Clamp(innerRadius, 0f, MathF.Max(innerRadius, outerRadius));
+            float endRadius = MathF.Max(startRadius, outerRadius);
+            if (endRadius <= 0.01f)
+            {
+                return;
+            }
+
+            float yaw = ExtractYawRad(rotation);
+            int segments = Math.Max(12, segmentCount > 0 ? segmentCount : 48);
+            int bands = Math.Max(1, ComputeStripeCount(endRadius - startRadius));
+            float sweepRad = ResolveSweepRadians(sweepAngleDeg);
+            float startAngle = yaw - (sweepRad * 0.5f);
+            float endAngle = startAngle + sweepRad;
+            float bandStart = Math.Max(0f, startRadius - MathF.Max(0f, pulseAmplitude));
+            float bandEnd = endRadius + MathF.Max(0f, pulseAmplitude);
+
+            for (int band = 0; band <= bands; band++)
+            {
+                float radius = bandStart + ((bandEnd - bandStart) * band / Math.Max(1, bands));
+                DrawArcLoop(origin, radius, startAngle, endAngle, segments, ToRaylibColor(ScaleAlpha(color, 0.45f + (0.4f * (band / (float)Math.Max(1, bands))))));
+            }
+        }
+
+        private void DrawDiskWavePrimitive(
+            Vector3 origin,
+            Quaternion rotation,
+            Vector4 color,
+            float innerRadius,
+            float outerRadius,
+            float sweepAngleDeg,
+            int segmentCount,
+            float pulseAmplitude)
+        {
+            float startRadius = Math.Max(0f, innerRadius);
+            float endRadius = MathF.Max(startRadius, outerRadius);
+            if (endRadius <= 0.01f)
+            {
+                return;
+            }
+
+            float yaw = ExtractYawRad(rotation);
+            int segments = Math.Max(12, segmentCount > 0 ? segmentCount : 48);
+            int bands = Math.Max(3, segmentCount > 0 ? segmentCount / 3 : 10);
+            float sweepRad = ResolveSweepRadians(sweepAngleDeg);
+            float startAngle = yaw - (sweepRad * 0.5f);
+            float endAngle = startAngle + sweepRad;
+            float expandedOuter = endRadius + MathF.Max(0f, pulseAmplitude);
+
+            for (int band = 0; band <= bands; band++)
+            {
+                float radius = startRadius + ((expandedOuter - startRadius) * band / Math.Max(1, bands));
+                DrawArcLoop(origin, radius, startAngle, endAngle, segments, ToRaylibColor(ScaleAlpha(color, 0.3f + (0.5f * (band / (float)Math.Max(1, bands))))));
             }
         }
 
@@ -557,6 +721,78 @@ namespace Ludots.Client.Raylib.Rendering
             return MathF.Sin(clip.NormalizedTime01 * MathF.PI) * clip.Weight01;
         }
 
+        private static Vector3 EvaluateBeamPoint(
+            Vector3 origin,
+            float yaw,
+            float t,
+            float normalizedStripe,
+            float length,
+            float width,
+            float endWidth,
+            float arcHeight)
+        {
+            float localWidth = Lerp(width, endWidth <= 0f ? width : endWidth, t);
+            float x = normalizedStripe * localWidth * 0.5f;
+            float y = MathF.Sin(t * MathF.PI) * arcHeight;
+            float z = t * length;
+            return TransformLocal(origin, yaw, new Vector3(x, y, z));
+        }
+
+        private static Vector3 EvaluateSplinePoint(
+            Vector3 origin,
+            float yaw,
+            float t,
+            float normalizedStripe,
+            float length,
+            float width,
+            float endWidth,
+            float arcHeight,
+            Vector2 controlPoint0,
+            Vector2 controlPoint1)
+        {
+            Vector2 p0 = Vector2.Zero;
+            Vector2 p1 = controlPoint0;
+            Vector2 p2 = controlPoint1 == Vector2.Zero ? new Vector2(0f, length * 0.75f) : controlPoint1;
+            Vector2 p3 = new Vector2(0f, length);
+            Vector2 point = CubicBezier(p0, p1, p2, p3, t);
+            Vector2 tangent = CubicBezierTangent(p0, p1, p2, p3, t);
+            if (tangent.LengthSquared() <= 0.0001f)
+            {
+                tangent = Vector2.UnitY;
+            }
+            else
+            {
+                tangent = Vector2.Normalize(tangent);
+            }
+
+            Vector2 normal = new Vector2(-tangent.Y, tangent.X);
+            float localWidth = Lerp(width, endWidth <= 0f ? width : endWidth, t);
+            Vector2 offset = normal * (normalizedStripe * localWidth * 0.5f);
+            float y = MathF.Sin(t * MathF.PI) * arcHeight;
+            return TransformLocal(origin, yaw, new Vector3(point.X + offset.X, y, point.Y + offset.Y));
+        }
+
+        private static Vector2 CubicBezier(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
+        {
+            float u = 1f - t;
+            float uu = u * u;
+            float tt = t * t;
+            return
+                (uu * u * p0) +
+                (3f * uu * t * p1) +
+                (3f * u * tt * p2) +
+                (tt * t * p3);
+        }
+
+        private static Vector2 CubicBezierTangent(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
+        {
+            float u = 1f - t;
+            return
+                (3f * u * u * (p1 - p0)) +
+                (6f * u * t * (p2 - p1)) +
+                (3f * t * t * (p3 - p2));
+        }
+
         private void DrawOrientedCube(Vector3 center, Vector3 size, float yawRad, Vector4 color)
         {
             DrawWireBox(center, size, yawRad, color);
@@ -599,6 +835,54 @@ namespace Ludots.Client.Raylib.Rendering
                 from.Y + (to.Y - from.Y) * t,
                 from.Z + (to.Z - from.Z) * t,
                 from.W + (to.W - from.W) * t);
+        }
+
+        private static float Lerp(float from, float to, float t)
+        {
+            return from + ((to - from) * Math.Clamp(t, 0f, 1f));
+        }
+
+        private static int ComputeStripeCount(float width)
+        {
+            return Math.Clamp((int)MathF.Ceiling(MathF.Max(0f, width) / 0.08f), 0, 8);
+        }
+
+        private static float StripeAlpha(float normalizedStripe)
+        {
+            return 0.35f + (0.65f * (1f - MathF.Abs(normalizedStripe)));
+        }
+
+        private static Vector4 ScaleAlpha(Vector4 color, float alphaScale)
+        {
+            return new Vector4(color.X, color.Y, color.Z, Math.Clamp(color.W * alphaScale, 0f, 1f));
+        }
+
+        private static float ResolveSweepRadians(float sweepAngleDeg)
+        {
+            if (sweepAngleDeg <= 0.01f)
+            {
+                return MathF.Tau;
+            }
+
+            return Math.Clamp(sweepAngleDeg, 1f, 360f) * (MathF.PI / 180f);
+        }
+
+        private static void DrawArcLoop(Vector3 center, float radius, float startAngle, float endAngle, int segments, Color color)
+        {
+            if (radius <= 0.001f || segments <= 0)
+            {
+                return;
+            }
+
+            float step = (endAngle - startAngle) / segments;
+            Vector3 previous = new Vector3(center.X + (MathF.Cos(startAngle) * radius), center.Y, center.Z + (MathF.Sin(startAngle) * radius));
+            for (int i = 1; i <= segments; i++)
+            {
+                float angle = startAngle + (step * i);
+                Vector3 current = new Vector3(center.X + (MathF.Cos(angle) * radius), center.Y, center.Z + (MathF.Sin(angle) * radius));
+                Rl.DrawLine3D(previous, current, color);
+                previous = current;
+            }
         }
 
         private void DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color)
@@ -820,6 +1104,11 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (TryDrawManifestationPrimitive(item))
+                {
+                    continue;
+                }
+
                 if (!meshes.TryGetPrimitiveKind(item.MeshAssetId, out var kind)) continue;
 
                 SubmitPrimitive(kind, item.Position, item.Scale, item.Color);

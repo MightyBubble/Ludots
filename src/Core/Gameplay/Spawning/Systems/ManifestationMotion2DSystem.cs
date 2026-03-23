@@ -33,7 +33,7 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
 
                 float? facing = motion.FacingSource switch
                 {
-                    ManifestationFacingSource2D.SweepVelocity => ResolveSweepFacing(entity, motion, deltaSeconds),
+                    ManifestationFacingSource2D.SweepVelocity => ResolveSweepFacing(entity, parent, motion, deltaSeconds),
                     ManifestationFacingSource2D.ParentExecutionTarget => ResolveParentExecutionFacing(parent),
                     _ => null,
                 };
@@ -61,11 +61,9 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
             });
         }
 
-        private float? ResolveSweepFacing(Entity entity, in ManifestationMotion2D motion, float deltaSeconds)
+        private float? ResolveSweepFacing(Entity entity, Entity parent, in ManifestationMotion2D motion, float deltaSeconds)
         {
-            float current = World.Has<FacingDirection>(entity)
-                ? World.Get<FacingDirection>(entity).AngleRad
-                : 0f;
+            float current = ResolveOffsetFacing(entity, parent) ?? 0f;
             return current + (motion.SweepDegreesPerSecond * (MathF.PI / 180f) * deltaSeconds);
         }
 

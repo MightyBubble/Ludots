@@ -226,6 +226,8 @@ namespace Ludots.Tests.GAS.Production
             AssertNamedEntityOwner(engine.World, "Jayce Cannon", expectedPlayerId: 1);
             AssertNamedEntityOwner(engine.World, "Jayce Hammer", expectedPlayerId: 1);
             AssertNamedEntityOwner(engine.World, "Geomancer Alpha", expectedPlayerId: 1);
+            AssertNamedEntityOwner(engine.World, "Spell Engineer Alpha", expectedPlayerId: 1);
+            AssertNamedEntityOwner(engine.World, "Beam Artisan Alpha", expectedPlayerId: 1);
 
             AssertEntityHasTag(engine.World, "Ezreal Cooldown", "Cooldown.Champion.Ezreal.R");
             AssertEntityHasTag(engine.World, "Garen Courage", "State.Champion.Garen.Courage");
@@ -302,6 +304,22 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(geomancerSlots[1].DisplayLabel, Is.EqualTo("Rune Field"));
             Assert.That(geomancerSlots[2].DisplayLabel, Is.EqualTo("Stone Pillar"));
             Assert.That(geomancerSlots[3].DisplayLabel, Is.EqualTo("Prismatic Beam"));
+
+            var spellEngineerSlots = new EntityCommandPanelSlotView[8];
+            int spellEngineerCount = source.CopySlots(FindEntityByName(engine.World, "Spell Engineer Alpha"), 0, spellEngineerSlots);
+            Assert.That(spellEngineerCount, Is.EqualTo(4));
+            Assert.That(spellEngineerSlots[0].DisplayLabel, Is.EqualTo("Spell Beacon"));
+            Assert.That(spellEngineerSlots[1].DisplayLabel, Is.EqualTo("Gravity Well"));
+            Assert.That(spellEngineerSlots[2].DisplayLabel, Is.EqualTo("Cataclysm Ring"));
+            Assert.That(spellEngineerSlots[3].DisplayLabel, Is.EqualTo("Guided Laser"));
+
+            var beamArtisanSlots = new EntityCommandPanelSlotView[8];
+            int beamArtisanCount = source.CopySlots(FindEntityByName(engine.World, "Beam Artisan Alpha"), 0, beamArtisanSlots);
+            Assert.That(beamArtisanCount, Is.EqualTo(4));
+            Assert.That(beamArtisanSlots[0].DisplayLabel, Is.EqualTo("Sweep Array"));
+            Assert.That(beamArtisanSlots[1].DisplayLabel, Is.EqualTo("Ribbon Lash"));
+            Assert.That(beamArtisanSlots[2].DisplayLabel, Is.EqualTo("Diffusion Bloom"));
+            Assert.That(beamArtisanSlots[3].DisplayLabel, Is.EqualTo("Halo Circuit"));
         }
 
         [Test]

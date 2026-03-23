@@ -75,6 +75,14 @@
       }
     },
     {
+      "Template": "champion_skill_sandbox_beam_artisan",
+      "Overrides": {
+        "Name": { "Value": "Beam Artisan Alpha" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 3140, "Y": 1600 } }
+      }
+    },
+    {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
         "Name": { "Value": "Target Dummy A" },
@@ -128,6 +136,27 @@
       "Overrides": {
         "Name": { "Value": "Target Dummy F" },
         "WorldPositionCm": { "Value": { "X": 2460, "Y": 1420 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Target Dummy G" },
+        "WorldPositionCm": { "Value": { "X": 3620, "Y": 1600 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Target Dummy H" },
+        "WorldPositionCm": { "Value": { "X": 3540, "Y": 1760 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Target Dummy I" },
+        "WorldPositionCm": { "Value": { "X": 3540, "Y": 1440 } }
       }
     }
   ]

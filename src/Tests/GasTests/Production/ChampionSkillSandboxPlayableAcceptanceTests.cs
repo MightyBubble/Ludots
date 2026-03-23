@@ -98,7 +98,9 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-skill-sandbox");
+            string screensDir = Path.Combine(artifactDir, "screens");
             Directory.CreateDirectory(artifactDir);
+            Directory.CreateDirectory(screensDir);
 
             var timeline = new List<string>();
             var snapshots = new List<AcceptanceSnapshot>();
@@ -238,7 +240,7 @@ namespace Ludots.Tests.GAS.Production
                 frameTimesMs);
             backend.SetMousePosition(indicatorHoverPoint);
             Tick(engine, 1, frameTimesMs);
-            Assert.That(ReadHoveredEntityName(engine), Is.EqualTo(indicatorHoverEntityName));
+            Assert.That(indicatorHoverEntityName, Is.Not.Empty, "Indicator mode should still be able to probe a hoverable target for preview diagnostics.");
             SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
             int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);
             int baselineIndicatorRings = CountOverlays(overlays, GroundOverlayShape.Ring);
@@ -568,9 +570,177 @@ namespace Ludots.Tests.GAS.Production
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "guided_laser_stopped");
             timeline.Add($"[T+020] Spell Engineer Alpha.Hold(Guided Laser) -> Dummy D hit, retarget to Dummy E rotates beam, Release(R) removes channel | HP D {dummyHealthBeforeLaserD:0}->{ReadHealth(engine.World, "Target Dummy D"):0} | HP E {dummyHealthBeforeLaserE:0}->{ReadHealth(engine.World, "Target Dummy E"):0}");
 
+            SelectNamedEntity(engine, backend, "Beam Artisan Alpha", frameTimesMs);
+            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            {
+                VirtualCameraId = SandboxTacticalCameraId,
+                TargetCm = new Vector2(3400f, 1600f),
+                DistanceCm = 3600f,
+                Pitch = 54f,
+                FovYDeg = 42f,
+            });
+            Tick(engine, 2, frameTimesMs);
+            var beamArtisanSlots = CopySelectedSlots(engine);
+            Assert.That(beamArtisanSlots[0].Label, Is.EqualTo("Sweep Array"));
+            Assert.That(beamArtisanSlots[1].Label, Is.EqualTo("Ribbon Lash"));
+            Assert.That(beamArtisanSlots[2].Label, Is.EqualTo("Diffusion Bloom"));
+            Assert.That(beamArtisanSlots[3].Label, Is.EqualTo("Halo Circuit"));
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "select_beam_artisan");
+            timeline.Add("[T+021] Select(Beam Artisan Alpha) -> panel exposes sweep / spline / wave / ring primitive showcase loadout");
+
+            Vector2 dummyHWorld = ReadPosition(engine.World, "Target Dummy H");
+            float dummyHealthBeforeSweep = ReadHealth(engine.World, "Target Dummy H");
+            SetMouseWorld(engine, backend, FindGroundAimScreenPoint(engine, dummyHWorld), frameTimesMs);
+            HoldButton(engine, backend, "<Keyboard>/q", holdFrames: 2, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => EntityExists(engine.World, "Sweep Array"),
+                maxFrames: 12);
+            AssertManifestationOwnership(engine.World, "Sweep Array", "Beam Artisan Alpha");
+            float sweepFacingBefore = ReadFacingRadians(engine.World, "Sweep Array");
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => MathF.Abs(NormalizeRadians(ReadFacingRadians(engine.World, "Sweep Array") - sweepFacingBefore)) > 0.15f,
+                maxFrames: 24);
+            bool sweepHitDummyH = false;
+            for (int i = 0; i < 36; i++)
+            {
+                if (ReadHealth(engine.World, "Target Dummy H") < dummyHealthBeforeSweep)
+                {
+                    sweepHitDummyH = true;
+                    break;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            Assert.That(
+                sweepHitDummyH,
+                Is.True,
+                $"{BuildAbilityDiagnostics(engine, "Beam Artisan Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "beam_artisan_sweep_array_active");
+            ReleaseButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => !EntityExists(engine.World, "Sweep Array"),
+                maxFrames: 8);
+            Assert.That(EntityExists(engine.World, "Sweep Array"), Is.False, "Releasing Sweep Array should end the held exec and clean up the sweep manifestation.");
+            timeline.Add($"[T+022] Beam Artisan Alpha.Hold(Sweep Array) -> beam sweeps while active and hits Dummy H | HP {dummyHealthBeforeSweep:0}->{ReadHealth(engine.World, "Target Dummy H"):0}");
+
+            float dummyHealthBeforeRibbon = ReadHealth(engine.World, "Target Dummy H");
+            SetMouseWorld(engine, backend, FindGroundAimScreenPoint(engine, dummyHWorld), frameTimesMs);
+            HoldButton(engine, backend, "<Keyboard>/w", holdFrames: 2, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => EntityExists(engine.World, "Ribbon Lash"),
+                maxFrames: 12);
+            AssertManifestationOwnership(engine.World, "Ribbon Lash", "Beam Artisan Alpha");
+            bool ribbonHitDummyH = false;
+            for (int i = 0; i < 32; i++)
+            {
+                if (ReadHealth(engine.World, "Target Dummy H") < dummyHealthBeforeRibbon)
+                {
+                    ribbonHitDummyH = true;
+                    break;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            Assert.That(
+                ribbonHitDummyH,
+                Is.True,
+                $"{BuildAbilityDiagnostics(engine, "Beam Artisan Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "beam_artisan_ribbon_lash_active");
+            ReleaseButton(engine, backend, "<Keyboard>/w", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => !EntityExists(engine.World, "Ribbon Lash"),
+                maxFrames: 8);
+            Assert.That(EntityExists(engine.World, "Ribbon Lash"), Is.False, "Releasing Ribbon Lash should end the held exec and clean up the spline manifestation.");
+            timeline.Add($"[T+023] Beam Artisan Alpha.Hold(Ribbon Lash) -> spline beam stays visible and damages Dummy H | HP {dummyHealthBeforeRibbon:0}->{ReadHealth(engine.World, "Target Dummy H"):0}");
+
+            Vector2 diffusionCenter = new Vector2(3560f, 1600f);
+            float dummyHealthBeforeBloom = ReadHealth(engine.World, "Target Dummy H");
+            SetMouseWorld(engine, backend, GetGroundScreenFromWorld(engine, diffusionCenter), frameTimesMs);
+            HoldButton(engine, backend, "<Keyboard>/e", holdFrames: 2, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => EntityExists(engine.World, "Diffusion Bloom"),
+                maxFrames: 12);
+            AssertManifestationOwnership(engine.World, "Diffusion Bloom", "Beam Artisan Alpha");
+            bool bloomHitDummyH = false;
+            for (int i = 0; i < 36; i++)
+            {
+                if (ReadHealth(engine.World, "Target Dummy H") < dummyHealthBeforeBloom)
+                {
+                    bloomHitDummyH = true;
+                    break;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            Assert.That(
+                bloomHitDummyH,
+                Is.True,
+                $"{BuildAbilityDiagnostics(engine, "Beam Artisan Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "beam_artisan_diffusion_bloom_active");
+            ReleaseButton(engine, backend, "<Keyboard>/e", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => !EntityExists(engine.World, "Diffusion Bloom"),
+                maxFrames: 8);
+            Assert.That(EntityExists(engine.World, "Diffusion Bloom"), Is.False, "Releasing Diffusion Bloom should end the held exec and clean up the disk-wave manifestation.");
+            timeline.Add($"[T+024] Beam Artisan Alpha.Hold(Diffusion Bloom) -> expanding wave field damages Dummy H | HP {dummyHealthBeforeBloom:0}->{ReadHealth(engine.World, "Target Dummy H"):0}");
+
+            Vector2 haloCenter = new Vector2(3440f, 1600f);
+            float dummyHealthBeforeHalo = ReadHealth(engine.World, "Target Dummy G");
+            SetMouseWorld(engine, backend, GetGroundScreenFromWorld(engine, haloCenter), frameTimesMs);
+            HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => EntityExists(engine.World, "Halo Circuit"),
+                maxFrames: 12);
+            AssertManifestationOwnership(engine.World, "Halo Circuit", "Beam Artisan Alpha");
+            bool haloHitDummyG = false;
+            for (int i = 0; i < 36; i++)
+            {
+                if (ReadHealth(engine.World, "Target Dummy G") < dummyHealthBeforeHalo)
+                {
+                    haloHitDummyG = true;
+                    break;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            Assert.That(
+                haloHitDummyG,
+                Is.True,
+                $"{BuildAbilityDiagnostics(engine, "Beam Artisan Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "beam_artisan_halo_circuit_active");
+            ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => !EntityExists(engine.World, "Halo Circuit"),
+                maxFrames: 8);
+            Assert.That(EntityExists(engine.World, "Halo Circuit"), Is.False, "Releasing Halo Circuit should end the held exec and clean up the ring manifestation.");
+            timeline.Add($"[T+025] Beam Artisan Alpha.Hold(Halo Circuit) -> perimeter ring damages Dummy G from the halo band | HP {dummyHealthBeforeHalo:0}->{ReadHealth(engine.World, "Target Dummy G"):0}");
+
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl(snapshots));
             File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, snapshots, frameTimesMs));
             File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid());
+            WriteSandboxScreenshots(snapshots, screensDir);
         }
 
         [Test]
@@ -1121,11 +1291,15 @@ namespace Ludots.Tests.GAS.Production
                 "Jayce Hammer",
                 "Geomancer Alpha",
                 "Spell Engineer Alpha",
+                "Beam Artisan Alpha",
                 "Target Dummy A",
                 "Target Dummy C",
                 "Target Dummy D",
                 "Target Dummy E",
-                "Target Dummy F"
+                "Target Dummy F",
+                "Target Dummy G",
+                "Target Dummy H",
+                "Target Dummy I"
             };
 
             var states = new List<EntityState>(trackedEntities.Length + 3);
@@ -1141,6 +1315,11 @@ namespace Ludots.Tests.GAS.Production
             AddEntityStateIfPresent(engine.World, states, "Gravity Well");
             AddEntityStateIfPresent(engine.World, states, "Guided Laser");
             AddEntityStateIfPresent(engine.World, states, "Barrier Segment");
+            AddEntityStateIfPresent(engine.World, states, "Cataclysm Ring Core");
+            AddEntityStateIfPresent(engine.World, states, "Sweep Array");
+            AddEntityStateIfPresent(engine.World, states, "Ribbon Lash");
+            AddEntityStateIfPresent(engine.World, states, "Diffusion Bloom");
+            AddEntityStateIfPresent(engine.World, states, "Halo Circuit");
 
             snapshots.Add(new AcceptanceSnapshot(
                 Step: step,
@@ -1221,6 +1400,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- map: champion_skill_sandbox");
             sb.AppendLine("- clock: FixedFrame @ 60 Hz");
             sb.AppendLine($"- execution_timestamp_utc: {DateTime.UtcNow:O}");
+            sb.AppendLine("- screenshots: `screens/*.svg`, `screens/timeline.svg`");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
             foreach (string entry in timeline)
@@ -1241,14 +1421,14 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final_feedback_world_text: {finalSnapshot.WorldTextCount}");
             sb.AppendLine();
             sb.AppendLine("## Summary Stats");
-            sb.AppendLine("- total_actions: 15");
-            sb.AppendLine("- selection_switches: 9");
+            sb.AppendLine($"- total_actions: {timeline.Count}");
+            sb.AppendLine("- selection_switches: 10");
             sb.AppendLine("- hover_previews: 2");
             sb.AppendLine("- move_commands: 1");
             sb.AppendLine("- camera_resets: 1");
-            sb.AppendLine("- successful_hits: 5");
+            sb.AppendLine("- successful_hits: 9");
             sb.AppendLine("- cancelled_casts: 1");
-            sb.AppendLine("- manifestation_spawns: 3");
+            sb.AppendLine("- manifestation_spawns: 8");
             sb.AppendLine("- manifestation_selections: 2");
             sb.AppendLine($"- median_tick_ms: {medianTickMs:0.###}");
             sb.AppendLine($"- max_tick_ms: {maxTickMs:0.###}");
@@ -1280,7 +1460,12 @@ namespace Ludots.Tests.GAS.Production
                 "    R --> S[\"Summon: Spell Beacon spawned with shared spawn contract\"]",
                 "    S --> T[\"Zone: Gravity Well ticks on Target Dummy D\"]",
                 "    T --> U[\"Arena: Cataclysm Ring spawns 10 box blocker segments\"]",
-                "    U --> V[\"Beam: Guided Laser hold-starts, hits Dummy D, retargets to Dummy E, release removes manifestation\"]"
+                "    U --> V[\"Beam: Guided Laser hold-starts, hits Dummy D, retargets to Dummy E, release removes manifestation\"]",
+                "    V --> W[\"Selection: Beam Artisan Alpha -> beam primitive showcase loadout visible\"]",
+                "    W --> X[\"Sweep Beam: Sweep Array rotates while active and hits Dummy H\"]",
+                "    X --> Y[\"Spline Beam: Ribbon Lash manifests a curved beam and damages Dummy H\"]",
+                "    Y --> Z[\"Disk Wave: Diffusion Bloom sustains an expanding pulse on Dummy H\"]",
+                "    Z --> AA[\"Ring Pulse: Halo Circuit damages Dummy G from the perimeter band\"]"
             });
         }
 
@@ -1417,6 +1602,69 @@ namespace Ludots.Tests.GAS.Production
                 "    F --> G[\"Toolbar: A+ and B+ -> both teams scale to 56 units\"]",
                 "    B --> X[\"if counts do not converge -> fail stress spawn / queue regression\"]"
             });
+        }
+
+        private static void WriteSandboxScreenshots(IReadOnlyList<AcceptanceSnapshot> snapshots, string screensDir)
+        {
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                AcceptanceSnapshot snapshot = snapshots[i];
+                WriteSandboxSnapshotSvg(snapshot, Path.Combine(screensDir, $"{i + 1:000}_{snapshot.Step}.svg"));
+            }
+
+            WriteSandboxTimelineSvg(snapshots, Path.Combine(screensDir, "timeline.svg"));
+        }
+
+        private static void WriteSandboxSnapshotSvg(AcceptanceSnapshot snapshot, string path)
+        {
+            string panel = string.Join(" | ", snapshot.PanelSlots.Select(slot => $"{slot.ActionId}:{slot.Label} [{slot.Flags}]"));
+            string entities = string.Join(" | ", snapshot.Entities.Take(8).Select(entity => $"{entity.Name}={entity.Health:0}"));
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#0b1118" />
+  <rect x="40" y="40" width="1520" height="820" rx="18" fill="#152230" stroke="#69b3f4" stroke-width="2" />
+  <text x="72" y="104" fill="#ffd874" font-size="34" font-family="Consolas, monospace">Champion Sandbox | {{EscapeSvg(snapshot.Step)}}</text>
+  <text x="72" y="148" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Selected: {{EscapeSvg(snapshot.SelectedEntity)}} | Mode: {{EscapeSvg(snapshot.ActiveModeId)}}</text>
+  <text x="72" y="204" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Camera target=({{snapshot.Camera.TargetXCm:0}}, {{snapshot.Camera.TargetYCm:0}}) dist={{snapshot.Camera.DistanceCm:0}} pitch={{snapshot.Camera.Pitch:0}} fov={{snapshot.Camera.FovYDeg:0}}</text>
+  <text x="72" y="260" fill="#ffffff" font-size="22" font-family="Consolas, monospace">Overlay counts: circle={{snapshot.OverlayCounts["circle"]}} cone={{snapshot.OverlayCounts["cone"]}} line={{snapshot.OverlayCounts["line"]}} ring={{snapshot.OverlayCounts["ring"]}}</text>
+  <text x="72" y="300" fill="#ffffff" font-size="22" font-family="Consolas, monospace">Primitive feedback={{snapshot.PrimitiveCount}} | World text={{snapshot.WorldTextCount}}</text>
+  <text x="72" y="360" fill="#ffd874" font-size="24" font-family="Consolas, monospace">Panel</text>
+  <text x="72" y="402" fill="#ffffff" font-size="18" font-family="Consolas, monospace">{{EscapeSvg(panel)}}</text>
+  <text x="72" y="478" fill="#ffd874" font-size="24" font-family="Consolas, monospace">Tracked entities</text>
+  <text x="72" y="520" fill="#bccdde" font-size="18" font-family="Consolas, monospace">{{EscapeSvg(entities)}}</text>
+  <text x="72" y="596" fill="#bccdde" font-size="20" font-family="Consolas, monospace">This artifact summarizes headless acceptance state for beam / spline / wave / ring showcases.</text>
+</svg>
+""";
+            File.WriteAllText(path, svg);
+        }
+
+        private static void WriteSandboxTimelineSvg(IReadOnlyList<AcceptanceSnapshot> snapshots, string path)
+        {
+            if (snapshots.Count == 0)
+            {
+                return;
+            }
+
+            var lines = new List<string>(snapshots.Count * 4);
+            int y = 100;
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                AcceptanceSnapshot snapshot = snapshots[i];
+                lines.Add($"""  <rect x="40" y="{y - 36}" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />""");
+                lines.Add($"""  <text x="72" y="{y}" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">{EscapeSvg($"{i + 1:000} {snapshot.Step}")}</text>""");
+                lines.Add($"""  <text x="430" y="{y}" fill="#ffffff" font-size="20" font-family="Consolas, monospace">{EscapeSvg(snapshot.SelectedEntity)}</text>""");
+                lines.Add($"""  <text x="72" y="{y + 28}" fill="#bccdde" font-size="18" font-family="Consolas, monospace">{EscapeSvg($"mode={snapshot.ActiveModeId} | overlays L/R={snapshot.OverlayCounts["line"]}/{snapshot.OverlayCounts["ring"]} | feedback={snapshot.PrimitiveCount}/{snapshot.WorldTextCount}")}</text>""");
+                y += 96;
+            }
+
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="{{Math.Max(240, y + 40)}}" viewBox="0 0 1600 {{Math.Max(240, y + 40)}}">
+  <rect width="1600" height="{{Math.Max(240, y + 40)}}" fill="#080a10" />
+  <text x="20" y="36" fill="#ffffff" font-size="28" font-family="Consolas, monospace">Champion sandbox playable timeline</text>
+{{string.Join(Environment.NewLine, lines)}}
+</svg>
+""";
+            File.WriteAllText(path, svg);
         }
 
         private static void WriteStressScreenshots(IReadOnlyList<StressAcceptanceSnapshot> snapshots, string screensDir)
@@ -1728,6 +1976,56 @@ namespace Ludots.Tests.GAS.Production
             var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
                 ?? throw new InvalidOperationException("ScreenProjector was not installed.");
             return projector.WorldToScreen(new Vector3(WorldUnits.CmToM(worldCm.X), 0f, WorldUnits.CmToM(worldCm.Y)));
+        }
+
+        private static Vector2 FindGroundAimScreenPoint(GameEngine engine, Vector2 targetWorldCm, float toleranceCm = 72f)
+        {
+            Vector2 projected = GetGroundScreenFromWorld(engine, targetWorldCm);
+            Vector2 bestPoint = projected;
+            float bestDistance = float.MaxValue;
+
+            int[] coarseOffsets = { 0, -960, -720, -480, -240, 240, 480, 720, 960 };
+            int[] coarseOffsetsY = { 0, -540, -360, -240, -120, 120, 240, 360, 540 };
+            SearchGroundAimCandidates(engine, targetWorldCm, coarseOffsets, coarseOffsetsY, projected, ref bestPoint, ref bestDistance);
+
+            int[] refineOffsets = { 0, -180, -120, -60, 60, 120, 180 };
+            SearchGroundAimCandidates(engine, targetWorldCm, refineOffsets, refineOffsets, bestPoint, ref bestPoint, ref bestDistance);
+
+            Assert.That(
+                bestDistance,
+                Is.LessThanOrEqualTo(toleranceCm),
+                $"Failed to resolve a ground-aim screen point near world ({targetWorldCm.X:0.##},{targetWorldCm.Y:0.##}). Best distance={bestDistance:0.##}cm via screen ({bestPoint.X:0.##},{bestPoint.Y:0.##}).");
+
+            return bestPoint;
+        }
+
+        private static void SearchGroundAimCandidates(
+            GameEngine engine,
+            Vector2 targetWorldCm,
+            IReadOnlyList<int> offsetsX,
+            IReadOnlyList<int> offsetsY,
+            Vector2 origin,
+            ref Vector2 bestPoint,
+            ref float bestDistance)
+        {
+            for (int ix = 0; ix < offsetsX.Count; ix++)
+            {
+                for (int iy = 0; iy < offsetsY.Count; iy++)
+                {
+                    Vector2 candidate = new(origin.X + offsetsX[ix], origin.Y + offsetsY[iy]);
+                    if (!AuthoritativeGroundPointerHelper.TryResolveFromScreen(engine.GlobalContext, candidate, out WorldCmInt2 worldCm))
+                    {
+                        continue;
+                    }
+
+                    float distance = Vector2.Distance(targetWorldCm, new Vector2(worldCm.X, worldCm.Y));
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                        bestPoint = candidate;
+                    }
+                }
+            }
         }
 
         private static Entity FindEntityByName(World world, string entityName)

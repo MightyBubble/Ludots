@@ -1,4 +1,4 @@
-# 架构文档
+# 架构文档。
 
 本目录记录 Ludots 当前实现的核心架构、模块边界和数据流，聚焦“系统现在如何工作”。
 
@@ -9,7 +9,7 @@
 *   [适配器模式与平台抽象](adapter_pattern.md)
 *   [Pacemaker 时间与步进](pacemaker.md)
 *   [ConfigPipeline 合并管线](config_pipeline.md)
-*   [Trigger 开发指南](trigger_guide.md)
+*   [Trigger 开发指北](trigger_guide.md)
 *   [启动顺序与入口点](startup_entrypoints.md)
 *   [Map、Mod 与空间服务可插拔](map_mod_spatial.md)
 *   [Mod 运行时单一真相与收敛准则](mod_runtime_single_source_of_truth.md)
@@ -21,6 +21,7 @@
 
 *   [GAS 分层架构与 Sink 最佳实践](gas_layered_architecture.md)
 *   [GAS 战斗体系基建与 MOBA 实践指南](gas_combat_infrastructure.md)
+*   [GAS Beam / AOE Manifestation](gas_beam_aoe_manifestation.md)
 *   [交互模型与技能系统](interaction/README.md)
 *   [表现管线与 Performer 体系](presentation_performer.md)
 *   [表现层 visual snapshot contract](presentation_snapshot_contract.md)

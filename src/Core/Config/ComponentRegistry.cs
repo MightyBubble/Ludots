@@ -57,6 +57,7 @@ namespace Ludots.Core.Config
             Register("ManifestationObstacleIntent2D", SetManifestationObstacleIntent2D);
             Register("ManifestationObstaclePolygon2D", SetManifestationObstaclePolygon2D);
             Register("ManifestationMotion2D", SetManifestationMotion2D);
+            Register("ManifestationGeometry2D", SetManifestationGeometry2D);
             Register("DestroyWhenParentExecutionEnds", SetDestroyWhenParentExecutionEnds);
         }
 
@@ -410,6 +411,34 @@ namespace Ludots.Core.Config
             });
         }
 
+        private static void SetManifestationGeometry2D(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("ManifestationGeometry2D requires an object payload.");
+            }
+
+            int segmentCount = ReadIntProperty(obj, "segmentCount", "SegmentCount");
+            entity.Add(new ManifestationGeometry2D
+            {
+                PrimitiveKind = ParseManifestationPrimitiveKind(obj["primitiveKind"]?.GetValue<string>() ?? obj["PrimitiveKind"]?.GetValue<string>()),
+                LengthCm = ReadIntProperty(obj, "lengthCm", "LengthCm"),
+                WidthCm = ReadIntProperty(obj, "widthCm", "WidthCm"),
+                EndWidthCm = ReadIntProperty(obj, "endWidthCm", "EndWidthCm"),
+                InnerRadiusCm = ReadIntProperty(obj, "innerRadiusCm", "InnerRadiusCm"),
+                OuterRadiusCm = ReadIntProperty(obj, "outerRadiusCm", "OuterRadiusCm"),
+                SweepAngleDeg = ReadFloatProperty(obj, "sweepAngleDeg", "SweepAngleDeg"),
+                SegmentCount = (byte)Math.Clamp(segmentCount <= 0 ? 0 : segmentCount, 0, 64),
+                ArcHeightCm = ReadIntProperty(obj, "arcHeightCm", "ArcHeightCm"),
+                ControlPoint0XCm = ReadIntProperty(obj, "controlPoint0XCm", "ControlPoint0XCm"),
+                ControlPoint0YCm = ReadIntProperty(obj, "controlPoint0YCm", "ControlPoint0YCm"),
+                ControlPoint1XCm = ReadIntProperty(obj, "controlPoint1XCm", "ControlPoint1XCm"),
+                ControlPoint1YCm = ReadIntProperty(obj, "controlPoint1YCm", "ControlPoint1YCm"),
+                PulseSpeed = ReadFloatProperty(obj, "pulseSpeed", "PulseSpeed"),
+                PulseAmplitudeCm = ReadIntProperty(obj, "pulseAmplitudeCm", "PulseAmplitudeCm"),
+            });
+        }
+
         private static void SetDestroyWhenParentExecutionEnds(Entity entity, JsonNode data)
         {
             entity.Add(new DestroyWhenParentExecutionEnds());
@@ -444,6 +473,23 @@ namespace Ludots.Core.Config
                 "sweepvelocity" => ManifestationFacingSource2D.SweepVelocity,
                 "parentexecutiontarget" => ManifestationFacingSource2D.ParentExecutionTarget,
                 _ => throw new InvalidOperationException($"Unsupported ManifestationMotion2D facingSource '{raw}'.")
+            };
+        }
+
+        private static ManifestationPrimitiveKind ParseManifestationPrimitiveKind(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return ManifestationPrimitiveKind.Beam;
+            }
+
+            return raw.Trim().ToLowerInvariant() switch
+            {
+                "beam" => ManifestationPrimitiveKind.Beam,
+                "splinebeam" => ManifestationPrimitiveKind.SplineBeam,
+                "ringpulse" => ManifestationPrimitiveKind.RingPulse,
+                "diskwave" => ManifestationPrimitiveKind.DiskWave,
+                _ => throw new InvalidOperationException($"Unsupported ManifestationGeometry2D primitiveKind '{raw}'.")
             };
         }
 

@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
@@ -400,6 +401,82 @@ namespace Ludots.Tests.Presentation
             Assert.That(item.StableId, Is.EqualTo(
                 PerformerVisualIdentity.ComposeStableId(501, PerformerVisualKind.Marker3D, definitionId)));
             Assert.That(item.StableId, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void PerformerEmitSystem_ManifestationPrimitive_UsesGeometryPayloadAndStableIdScope()
+        {
+            using var world = World.Create();
+            var instances = new PerformerInstanceBuffer();
+            var definitions = new PerformerDefinitionRegistry();
+            var groundOverlays = new GroundOverlayBuffer();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
+            var worldHud = new WorldHudBatchBuffer();
+            var programs = new GraphProgramRegistry();
+            var globals = new Dictionary<string, object>();
+
+            int definitionId = definitions.Register(
+                "performer.manifestation.ribbon",
+                new PerformerDefinition
+                {
+                    VisualKind = PerformerVisualKind.ManifestationPrimitive,
+                    EntityScope = EntityScopeFilter.AllWithVisualTransform,
+                    MeshOrShapeId = (int)PrimitiveDrawKind.SplineBeam,
+                    DefaultColor = new Vector4(0.6f, 0.9f, 1f, 0.8f),
+                });
+
+            world.Create(
+                new PresentationStableId { Value = 777 },
+                new FacingDirection { AngleRad = 0.4f },
+                new VisualTransform
+                {
+                    Position = new Vector3(4f, 0.1f, 5f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new ManifestationGeometry2D
+                {
+                    PrimitiveKind = ManifestationPrimitiveKind.SplineBeam,
+                    LengthCm = 880,
+                    WidthCm = 74,
+                    EndWidthCm = 138,
+                    SegmentCount = 24,
+                    ArcHeightCm = 86,
+                    ControlPoint0XCm = -170,
+                    ControlPoint0YCm = 250,
+                    ControlPoint1XCm = 160,
+                    ControlPoint1YCm = 620,
+                });
+
+            using var system = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                groundOverlays,
+                drawBuffer,
+                worldHud,
+                programs,
+                graphApi: null!,
+                globals,
+                snapshotBuffer: snapshotBuffer);
+
+            system.Update(0.016f);
+
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
+            ref readonly var item = ref snapshotBuffer.GetSpan()[0];
+            Assert.That(item.PrimitiveKind, Is.EqualTo(PrimitiveDrawKind.SplineBeam));
+            Assert.That(item.StableId, Is.EqualTo(
+                PerformerVisualIdentity.ComposeStableId(777, PerformerVisualKind.ManifestationPrimitive, definitionId)));
+            Assert.That(item.PrimitiveLength, Is.EqualTo(8.8f).Within(0.001f));
+            Assert.That(item.PrimitiveWidth, Is.EqualTo(0.74f).Within(0.001f));
+            Assert.That(item.PrimitiveEndWidth, Is.EqualTo(1.38f).Within(0.001f));
+            Assert.That(item.PrimitiveArcHeight, Is.EqualTo(0.86f).Within(0.001f));
+            Assert.That(item.PrimitiveSegmentCount, Is.EqualTo(24));
+            Assert.That(item.PrimitiveControlPoint0.X, Is.EqualTo(-1.7f).Within(0.001f));
+            Assert.That(item.PrimitiveControlPoint0.Y, Is.EqualTo(2.5f).Within(0.001f));
+            Assert.That(item.PrimitiveControlPoint1.X, Is.EqualTo(1.6f).Within(0.001f));
+            Assert.That(item.PrimitiveControlPoint1.Y, Is.EqualTo(6.2f).Within(0.001f));
         }
 
         private static string FindRepoRoot()

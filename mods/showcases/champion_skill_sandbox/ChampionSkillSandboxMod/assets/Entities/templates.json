@@ -282,7 +282,15 @@
         ]
       },
       "AttributeBuffer": { "base": { "Health": 1, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "ManifestationGeometry2D": {
+        "primitiveKind": "DiskWave",
+        "innerRadiusCm": 30,
+        "outerRadiusCm": 240,
+        "sweepAngleDeg": 360,
+        "segmentCount": 40,
+        "pulseAmplitudeCm": 55
+      }
     }
   },
   {
@@ -326,6 +334,174 @@
         "followParentPosition": true,
         "facingSource": "ParentExecutionTarget",
         "forwardOffsetCm": 450
+      },
+      "ManifestationGeometry2D": {
+        "primitiveKind": "Beam",
+        "lengthCm": 900,
+        "widthCm": 90,
+        "endWidthCm": 132,
+        "segmentCount": 20,
+        "arcHeightCm": 24
+      },
+      "DestroyWhenParentExecutionEnds": {}
+    }
+  },
+  {
+    "id": "champion_skill_sandbox_cataclysm_ring_core",
+    "components": {
+      "Name": { "Value": "Cataclysm Ring Core" },
+      "SelectionSelectableTag": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": {
+        "startupPerformerIds": [
+          "champion_skill_sandbox.manifestation.cataclysm_ring_core"
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 1, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
+      "GameplayTagContainer": {},
+      "ManifestationGeometry2D": {
+        "primitiveKind": "RingPulse",
+        "innerRadiusCm": 220,
+        "outerRadiusCm": 300,
+        "sweepAngleDeg": 360,
+        "segmentCount": 52,
+        "pulseAmplitudeCm": 36
+      },
+      "DestroyWhenParentExecutionEnds": {}
+    }
+  },
+  {
+    "id": "champion_skill_sandbox_beam_artisan",
+    "components": {
+      "Name": { "Value": "Beam Artisan" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "AttributeBuffer": { "base": { "Health": 176, "Shield": 0, "MoveSpeed": 332, "Armor": 5 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Champion.BeamArtisan.SweepArray",
+          "Ability.Champion.BeamArtisan.RibbonLash",
+          "Ability.Champion.BeamArtisan.DiffusionBloom",
+          "Ability.Champion.BeamArtisan.HaloCircuit"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "champion_skill_sandbox_beam_artisan_sweep_array",
+    "components": {
+      "Name": { "Value": "Sweep Array" },
+      "SelectionSelectableTag": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": {
+        "startupPerformerIds": [
+          "champion_skill_sandbox.manifestation.beam_artisan_sweep_array"
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 1, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
+      "GameplayTagContainer": {},
+      "ManifestationMotion2D": {
+        "followParentPosition": true,
+        "facingSource": "SweepVelocity",
+        "sweepDegreesPerSecond": 126,
+        "forwardOffsetCm": 380
+      },
+      "ManifestationGeometry2D": {
+        "primitiveKind": "Beam",
+        "lengthCm": 840,
+        "widthCm": 130,
+        "endWidthCm": 78,
+        "segmentCount": 22,
+        "arcHeightCm": 42
+      },
+      "DestroyWhenParentExecutionEnds": {}
+    }
+  },
+  {
+    "id": "champion_skill_sandbox_beam_artisan_ribbon_lash",
+    "components": {
+      "Name": { "Value": "Ribbon Lash" },
+      "SelectionSelectableTag": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": {
+        "startupPerformerIds": [
+          "champion_skill_sandbox.manifestation.beam_artisan_ribbon_lash"
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 1, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
+      "GameplayTagContainer": {},
+      "ManifestationMotion2D": {
+        "followParentPosition": true,
+        "facingSource": "ParentExecutionTarget",
+        "forwardOffsetCm": 360
+      },
+      "ManifestationGeometry2D": {
+        "primitiveKind": "SplineBeam",
+        "lengthCm": 880,
+        "widthCm": 74,
+        "endWidthCm": 138,
+        "segmentCount": 24,
+        "arcHeightCm": 86,
+        "controlPoint0XCm": -170,
+        "controlPoint0YCm": 250,
+        "controlPoint1XCm": 160,
+        "controlPoint1YCm": 620
+      },
+      "DestroyWhenParentExecutionEnds": {}
+    }
+  },
+  {
+    "id": "champion_skill_sandbox_beam_artisan_diffusion_bloom",
+    "components": {
+      "Name": { "Value": "Diffusion Bloom" },
+      "SelectionSelectableTag": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": {
+        "startupPerformerIds": [
+          "champion_skill_sandbox.manifestation.beam_artisan_diffusion_bloom"
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 1, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
+      "GameplayTagContainer": {},
+      "ManifestationGeometry2D": {
+        "primitiveKind": "DiskWave",
+        "innerRadiusCm": 20,
+        "outerRadiusCm": 260,
+        "sweepAngleDeg": 360,
+        "segmentCount": 44,
+        "pulseAmplitudeCm": 80
+      },
+      "DestroyWhenParentExecutionEnds": {}
+    }
+  },
+  {
+    "id": "champion_skill_sandbox_beam_artisan_halo_circuit",
+    "components": {
+      "Name": { "Value": "Halo Circuit" },
+      "SelectionSelectableTag": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": {
+        "startupPerformerIds": [
+          "champion_skill_sandbox.manifestation.beam_artisan_halo_circuit"
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 1, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
+      "GameplayTagContainer": {},
+      "ManifestationGeometry2D": {
+        "primitiveKind": "RingPulse",
+        "innerRadiusCm": 170,
+        "outerRadiusCm": 310,
+        "sweepAngleDeg": 360,
+        "segmentCount": 54,
+        "pulseAmplitudeCm": 44
       },
       "DestroyWhenParentExecutionEnds": {}
     }

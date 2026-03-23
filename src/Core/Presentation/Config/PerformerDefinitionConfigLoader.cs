@@ -104,6 +104,17 @@ namespace Ludots.Core.Presentation.Config
                 return 0;
             }
 
+            if (visualKind == PerformerVisualKind.ManifestationPrimitive)
+            {
+                if (Enum.TryParse<PrimitiveDrawKind>(meshStr, ignoreCase: true, out var primitiveKind) &&
+                    primitiveKind != PrimitiveDrawKind.MeshAsset)
+                {
+                    return (int)primitiveKind;
+                }
+
+                return 0;
+            }
+
             return _resolveMeshId(meshStr);
         }
 

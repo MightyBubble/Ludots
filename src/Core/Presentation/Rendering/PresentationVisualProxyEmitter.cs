@@ -32,6 +32,7 @@ namespace Ludots.Core.Presentation.Rendering
 
             var primitive = new PrimitiveDrawItem
             {
+                PrimitiveKind = proxy.PrimitiveKind,
                 MeshAssetId = proxy.MeshAssetId,
                 Position = proxy.Position,
                 Rotation = proxy.Rotation,
@@ -46,6 +47,18 @@ namespace Ludots.Core.Presentation.Rendering
                 Animator = proxy.Animator,
                 AnimationOverlay = proxy.AnimationOverlay,
                 Visibility = proxy.Visibility,
+                PrimitiveLength = proxy.PrimitiveLength,
+                PrimitiveWidth = proxy.PrimitiveWidth,
+                PrimitiveEndWidth = proxy.PrimitiveEndWidth,
+                PrimitiveInnerRadius = proxy.PrimitiveInnerRadius,
+                PrimitiveOuterRadius = proxy.PrimitiveOuterRadius,
+                PrimitiveSweepAngleDeg = proxy.PrimitiveSweepAngleDeg,
+                PrimitiveSegmentCount = proxy.PrimitiveSegmentCount,
+                PrimitiveArcHeight = proxy.PrimitiveArcHeight,
+                PrimitiveControlPoint0 = proxy.PrimitiveControlPoint0,
+                PrimitiveControlPoint1 = proxy.PrimitiveControlPoint1,
+                PrimitivePulseSpeed = proxy.PrimitivePulseSpeed,
+                PrimitivePulseAmplitude = proxy.PrimitivePulseAmplitude,
             };
 
             if (_snapshotBuffer != null && !_snapshotBuffer.TryAdd(primitive))
