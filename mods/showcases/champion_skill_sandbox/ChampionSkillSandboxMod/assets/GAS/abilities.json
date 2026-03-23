@@ -678,5 +678,33 @@
         "SmartCast": "Hold to channel steerable beam, release to stop"
       }
     }
+  },
+  {
+    "id": "Ability.Champion.SweepRanger.LaserSweep",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 126, "tag": "Cooldown.Champion.SweepRanger.R" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.SweepRanger.LaserSweep" },
+        { "kind": "EventGate", "tick": 0, "payloadA": 210 },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Line", "range": 1120, "radius": 90, "showRangeCircle": true, "validColor": "#FF8C6777", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.SweepRanger.R"] },
+    "input": {
+      "trigger": "Held",
+      "heldPolicy": "StartEnd",
+      "castModeOverride": "SmartCast"
+    },
+    "presentation": {
+      "displayName": "Laser Sweep",
+      "iconGlyph": "R",
+      "accentColor": "#FF8C67",
+      "hintText": "Hold to channel a sweeping beam, drag to rake targets, release to cut power",
+      "modeHints": {
+        "SmartCast": "Hold to channel a sweeping beam, drag to rake targets, release to cut power"
+      }
+    }
   }
 ]

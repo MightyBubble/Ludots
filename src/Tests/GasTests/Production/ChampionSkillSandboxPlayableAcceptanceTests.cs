@@ -47,12 +47,15 @@ namespace Ludots.Tests.GAS.Production
     public sealed class ChampionSkillSandboxPlayableAcceptanceTests
     {
         private const float DeltaTime = 1f / 60f;
+        private const string LaserSweepMapId = "champion_laser_sweep";
         private const string MapId = "champion_skill_sandbox";
         private const string StressMapId = "champion_skill_stress";
         private const string SmartCastModeId = "ChampionSkillSandbox.Mode.SmartCast";
         private const string IndicatorModeId = "ChampionSkillSandbox.Mode.Indicator";
         private const string PressReleaseModeId = "ChampionSkillSandbox.Mode.PressReleaseAim";
         private const string SandboxTacticalCameraId = "ChampionSkillSandbox.Camera.Tactical";
+        private const string TopDownShooterCameraId = "ChampionSkillSandbox.Camera.TopDownShooter";
+        private const string TopDownShooterMapId = "champion_topdown_shooter";
         private const string StressTeamAIncreaseToolbarButtonId = "ChampionSkillSandbox.Stress.TeamA.Increase";
         private const string StressTeamBIncreaseToolbarButtonId = "ChampionSkillSandbox.Stress.TeamB.Increase";
         private const string PlayerSelectionToolbarButtonId = "ChampionSkillSandbox.Selection.Player.Live";
@@ -71,6 +74,54 @@ namespace Ludots.Tests.GAS.Production
             "DiagnosticsOverlayMod",
             "EntityCommandPanelMod",
             "ChampionSkillSandboxMod"
+        };
+        private static readonly string[] SandboxTrackedEntities =
+        {
+            "Ezreal Alpha",
+            "Ezreal Cooldown",
+            "Garen Courage",
+            "Jayce Hammer",
+            "Geomancer Alpha",
+            "Spell Engineer Alpha",
+            "Target Dummy A",
+            "Target Dummy C",
+            "Target Dummy D",
+            "Target Dummy E",
+            "Target Dummy F"
+        };
+        private static readonly string[] SandboxOptionalEntities =
+        {
+            "Runic Beacon",
+            "Rune Field",
+            "Stone Pillar",
+            "Spell Beacon",
+            "Gravity Well",
+            "Guided Laser",
+            "Barrier Segment"
+        };
+        private static readonly string[] LaserSweepTrackedEntities =
+        {
+            "Sweep Ranger Alpha",
+            "Sweep Dummy A",
+            "Sweep Dummy B",
+            "Sweep Dummy C",
+            "Sweep Dummy D"
+        };
+        private static readonly string[] LaserSweepOptionalEntities =
+        {
+            "Sweep Laser"
+        };
+        private static readonly string[] TopDownShooterTrackedEntities =
+        {
+            "Sweep Ranger Alpha",
+            "Shooter Dummy A",
+            "Shooter Dummy B",
+            "Shooter Dummy C",
+            "Shooter Brute"
+        };
+        private static readonly string[] TopDownShooterOptionalEntities =
+        {
+            "Sweep Laser"
         };
         private static readonly Vector2[] HoverProbeOffsets =
         {
@@ -574,6 +625,310 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
+        public void ChampionLaserSweepShowcase_PlayableFlow_WritesAcceptanceArtifacts()
+        {
+            string repoRoot = FindRepoRoot();
+            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-laser-sweep");
+            Directory.CreateDirectory(artifactDir);
+            string lastFailure = string.Empty;
+
+            for (int attempt = 1; attempt <= 3; attempt++)
+            {
+                try
+                {
+                    ExecuteChampionLaserSweepShowcaseAcceptance(artifactDir);
+                    return;
+                }
+                catch (AssertionException ex) when (attempt < 3)
+                {
+                    lastFailure = $"attempt {attempt}: {ex.Message}";
+                }
+            }
+
+            Assert.Fail($"ChampionLaserSweep showcase acceptance remained unstable after 3 attempts. Last failure: {lastFailure}");
+        }
+
+        private static void ExecuteChampionLaserSweepShowcaseAcceptance(string artifactDir)
+        {
+            var timeline = new List<string>();
+            var snapshots = new List<AcceptanceSnapshot>();
+            var frameTimesMs = new List<double>();
+
+            using var engine = CreateEngine();
+            var overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
+                ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PrimitiveDrawBuffer missing.");
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
+                ?? throw new InvalidOperationException("WorldHudBatchBuffer missing.");
+            var backend = GetInputBackend(engine);
+
+            LoadMap(engine, LaserSweepMapId, frameTimesMs);
+            WaitForFollowCamera(engine, "Sweep Ranger Alpha", frameTimesMs);
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            Assert.That(GetActiveModeId(engine), Is.EqualTo(SmartCastModeId));
+            Assert.That(GetSelectedEntityName(engine), Is.EqualTo("Sweep Ranger Alpha"));
+            Assert.That(engine.CurrentMapSession?.MapConfig?.DefaultCamera?.VirtualCameraId, Is.EqualTo(TopDownShooterCameraId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(TopDownShooterCameraId));
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "map_loaded", LaserSweepTrackedEntities, LaserSweepOptionalEntities);
+            timeline.Add("[T+001] champion_laser_sweep loaded | top-down follow camera active | Sweep Ranger Alpha selected");
+
+            var sweepSlots = CopySelectedSlots(engine);
+            Assert.That(sweepSlots[0].Label, Is.EqualTo("Laser Bolt"));
+            Assert.That(sweepSlots[1].Label, Is.EqualTo("Fireball"));
+            Assert.That(sweepSlots[2].Label, Is.EqualTo("Arcane Shift"));
+            Assert.That(sweepSlots[3].Label, Is.EqualTo("Laser Sweep"));
+            Assert.That(sweepSlots[3].Detail, Is.EqualTo("Hold to channel a sweeping beam, drag to rake targets, release to cut power"));
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "loadout_visible", LaserSweepTrackedEntities, LaserSweepOptionalEntities);
+            timeline.Add("[T+002] Sweep Ranger loadout exposes projectile / blast / blink / held beam on one shooter bar");
+
+            float dummyHealthBeforeA = ReadHealth(engine.World, "Sweep Dummy A");
+            float dummyHealthBeforeC = ReadHealth(engine.World, "Sweep Dummy C");
+            SetMouseGroundTarget(engine, backend, ReadPosition(engine.World, "Sweep Dummy A"), frameTimesMs);
+            HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
+            bool sweepSpawned = WaitUntil(
+                engine,
+                frameTimesMs,
+                () => EntityExists(engine.World, "Sweep Laser"),
+                maxFrames: 12);
+            Assert.That(
+                sweepSpawned,
+                Is.True,
+                $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Sweep Ranger Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            AssertManifestationOwnership(engine.World, "Sweep Laser", "Sweep Ranger Alpha", LaserSweepMapId);
+
+            bool hitDummyA = false;
+            for (int i = 0; i < 32; i++)
+            {
+                if (ReadHealth(engine.World, "Sweep Dummy A") < dummyHealthBeforeA)
+                {
+                    hitDummyA = true;
+                    break;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            Assert.That(
+                hitDummyA,
+                Is.True,
+                $"{BuildAbilityDiagnostics(engine, "Sweep Ranger Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            float sweepFacingBefore = ReadFacingRadians(engine.World, "Sweep Laser");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "channel_hits_dummy_a", LaserSweepTrackedEntities, LaserSweepOptionalEntities);
+            timeline.Add($"[T+003] Hold(Laser Sweep) on Sweep Dummy A -> beam manifestation appears and starts dealing damage | HP A {dummyHealthBeforeA:0}->{ReadHealth(engine.World, "Sweep Dummy A"):0}");
+
+            SetMouseGroundTarget(engine, backend, ReadPosition(engine.World, "Sweep Dummy C"), frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => MathF.Abs(NormalizeRadians(ReadFacingRadians(engine.World, "Sweep Laser") - sweepFacingBefore)) > 0.35f,
+                maxFrames: 18);
+            float sweepFacingAfter = ReadFacingRadians(engine.World, "Sweep Laser");
+            Assert.That(
+                MathF.Abs(NormalizeRadians(sweepFacingAfter - sweepFacingBefore)),
+                Is.GreaterThan(0.35f),
+                "Laser Sweep should rotate with the held cursor while the channel remains active.");
+
+            bool hitDummyC = false;
+            for (int i = 0; i < 32; i++)
+            {
+                if (ReadHealth(engine.World, "Sweep Dummy C") < dummyHealthBeforeC)
+                {
+                    hitDummyC = true;
+                    break;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            Assert.That(
+                hitDummyC,
+                Is.True,
+                $"{BuildAbilityDiagnostics(engine, "Sweep Ranger Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "channel_hits_dummy_c", LaserSweepTrackedEntities, LaserSweepOptionalEntities);
+            timeline.Add($"[T+004] Drag channel from Sweep Dummy A to Sweep Dummy C -> beam rotates and rakes a second lane | HP C {dummyHealthBeforeC:0}->{ReadHealth(engine.World, "Sweep Dummy C"):0}");
+
+            ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => !EntityExists(engine.World, "Sweep Laser"),
+                maxFrames: 12);
+            Assert.That(EntityExists(engine.World, "Sweep Laser"), Is.False, "Releasing the held beam should clean up the active manifestation.");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "channel_stopped", LaserSweepTrackedEntities, LaserSweepOptionalEntities);
+            timeline.Add("[T+005] Release(R) ends Laser Sweep and removes the beam manifestation cleanly");
+
+            File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl("champion-laser-sweep", snapshots));
+            File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildLaserSweepBattleReport(timeline, snapshots, frameTimesMs));
+            File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildLaserSweepPathMermaid());
+        }
+
+        [Test]
+        public void ChampionTopDownShooterShowcase_PlayableFlow_WritesAcceptanceArtifacts()
+        {
+            string repoRoot = FindRepoRoot();
+            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-topdown-shooter");
+            Directory.CreateDirectory(artifactDir);
+
+            var timeline = new List<string>();
+            var snapshots = new List<AcceptanceSnapshot>();
+            var frameTimesMs = new List<double>();
+
+            using var engine = CreateEngine();
+            var overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
+                ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PrimitiveDrawBuffer missing.");
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
+                ?? throw new InvalidOperationException("WorldHudBatchBuffer missing.");
+            var backend = GetInputBackend(engine);
+
+            LoadMap(engine, TopDownShooterMapId, frameTimesMs);
+            WaitForFollowCamera(engine, "Sweep Ranger Alpha", frameTimesMs);
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            Assert.That(GetActiveModeId(engine), Is.EqualTo(SmartCastModeId));
+            Assert.That(GetSelectedEntityName(engine), Is.EqualTo("Sweep Ranger Alpha"));
+            Assert.That(engine.CurrentMapSession?.MapConfig?.DefaultCamera?.VirtualCameraId, Is.EqualTo(TopDownShooterCameraId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(TopDownShooterCameraId));
+            Assert.That(engine.GameSession.Camera.State.Pitch, Is.GreaterThanOrEqualTo(80f));
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "map_loaded", TopDownShooterTrackedEntities, TopDownShooterOptionalEntities);
+            timeline.Add("[T+001] champion_topdown_shooter loaded | near-vertical follow camera active | Sweep Ranger Alpha selected");
+
+            Vector2 shooterStart = ReadPosition(engine.World, "Sweep Ranger Alpha");
+            Vector2 cameraTargetBeforeMove = engine.GameSession.Camera.State.TargetCm;
+            Vector2 moveTarget = shooterStart + new Vector2(180f, 0f);
+            RightClickGroundTarget(engine, backend, moveTarget, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => ReadPosition(engine.World, "Sweep Ranger Alpha").X > shooterStart.X + 80f,
+                maxFrames: 40);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => MathF.Abs(engine.GameSession.Camera.State.TargetCm.X - cameraTargetBeforeMove.X) > 40f,
+                maxFrames: 20);
+            Vector2 shooterAfterMove = ReadPosition(engine.World, "Sweep Ranger Alpha");
+            Assert.That(shooterAfterMove.X, Is.GreaterThan(shooterStart.X + 80f));
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "move_follow", TopDownShooterTrackedEntities, TopDownShooterOptionalEntities);
+            timeline.Add($"[T+002] RMB strafe advances Sweep Ranger Alpha from X {shooterStart.X:0} to {shooterAfterMove.X:0} while the top-down camera follows");
+
+            float dummyHealthBeforeQ = ReadHealth(engine.World, "Shooter Dummy B");
+            SetMouseGroundTarget(engine, backend, ReadPosition(engine.World, "Shooter Dummy B"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            bool laserBoltDamaged = WaitUntil(
+                engine,
+                frameTimesMs,
+                () => ReadHealth(engine.World, "Shooter Dummy B") < dummyHealthBeforeQ,
+                maxFrames: 24);
+            Assert.That(
+                laserBoltDamaged,
+                Is.True,
+                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Sweep Ranger Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            float dummyHealthAfterQ = ReadHealth(engine.World, "Shooter Dummy B");
+            Assert.That(
+                dummyHealthAfterQ,
+                Is.LessThan(dummyHealthBeforeQ),
+                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Sweep Ranger Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "laser_bolt_hit", TopDownShooterTrackedEntities, TopDownShooterOptionalEntities);
+            timeline.Add($"[T+003] Q Laser Bolt tags Shooter Dummy B from the top-down lane | HP {dummyHealthBeforeQ:0}->{dummyHealthAfterQ:0}");
+
+            float dummyHealthBeforeW = ReadHealth(engine.World, "Shooter Dummy A");
+            SetMouseGroundTarget(engine, backend, ReadPosition(engine.World, "Shooter Dummy A"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/w", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Shooter Dummy A", dummyHealthBeforeW, maxFrames: 32);
+            float dummyHealthAfterW = ReadHealth(engine.World, "Shooter Dummy A");
+            Assert.That(
+                dummyHealthAfterW,
+                Is.LessThan(dummyHealthBeforeW),
+                $"{BuildInputActionDiagnostics(engine, "SkillW")} || {BuildAbilityDiagnostics(engine, "Sweep Ranger Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "fireball_hit", TopDownShooterTrackedEntities, TopDownShooterOptionalEntities);
+            timeline.Add($"[T+004] W Fireball lands on Shooter Dummy A and confirms the blast lane | HP {dummyHealthBeforeW:0}->{dummyHealthAfterW:0}");
+
+            Vector2 cameraTargetBeforeShift = engine.GameSession.Camera.State.TargetCm;
+            Vector2 shooterBeforeShift = ReadPosition(engine.World, "Sweep Ranger Alpha");
+            float dummyHealthBeforeE = ReadHealth(engine.World, "Shooter Dummy B");
+            SetMouseGroundTarget(engine, backend, ReadPosition(engine.World, "Shooter Dummy B"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
+            bool shifted = false;
+            bool shiftDamaged = false;
+            for (int frame = 0; frame < 120; frame++)
+            {
+                if (!shifted && ReadPosition(engine.World, "Sweep Ranger Alpha").X > shooterBeforeShift.X + 120f)
+                {
+                    shifted = true;
+                }
+
+                if (ReadHealth(engine.World, "Shooter Dummy B") < dummyHealthBeforeE)
+                {
+                    shiftDamaged = true;
+                }
+
+                if (shifted && shiftDamaged)
+                {
+                    break;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            Assert.That(
+                shifted,
+                Is.True,
+                $"{BuildInputActionDiagnostics(engine, "SkillE")} || {BuildAbilityDiagnostics(engine, "Sweep Ranger Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            Assert.That(
+                shiftDamaged,
+                Is.True,
+                $"{BuildInputActionDiagnostics(engine, "SkillE")} || {BuildAbilityDiagnostics(engine, "Sweep Ranger Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => MathF.Abs(engine.GameSession.Camera.State.TargetCm.X - cameraTargetBeforeShift.X) > 60f,
+                maxFrames: 20);
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "arcane_shift", TopDownShooterTrackedEntities, TopDownShooterOptionalEntities);
+            timeline.Add($"[T+005] E Arcane Shift blinks the shooter forward and the follow camera keeps up | HP B {dummyHealthBeforeE:0}->{ReadHealth(engine.World, "Shooter Dummy B"):0}");
+
+            float bruteHealthBeforeR = ReadHealth(engine.World, "Shooter Brute");
+            SetMouseGroundTarget(engine, backend, ReadPosition(engine.World, "Shooter Brute"), frameTimesMs);
+            HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => EntityExists(engine.World, "Sweep Laser"),
+                maxFrames: 12);
+            AssertManifestationOwnership(engine.World, "Sweep Laser", "Sweep Ranger Alpha", TopDownShooterMapId);
+
+            bool bruteHit = false;
+            for (int i = 0; i < 24; i++)
+            {
+                if (ReadHealth(engine.World, "Shooter Brute") < bruteHealthBeforeR)
+                {
+                    bruteHit = true;
+                    break;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            Assert.That(
+                bruteHit,
+                Is.True,
+                $"{BuildAbilityDiagnostics(engine, "Sweep Ranger Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => !EntityExists(engine.World, "Sweep Laser"),
+                maxFrames: 12);
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "laser_finish", TopDownShooterTrackedEntities, TopDownShooterOptionalEntities);
+            timeline.Add($"[T+006] R Laser Sweep finishes the top-down lane on Shooter Brute, then releases cleanly | HP {bruteHealthBeforeR:0}->{ReadHealth(engine.World, "Shooter Brute"):0}");
+
+            File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl("champion-topdown-shooter", snapshots));
+            File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildTopDownShooterBattleReport(timeline, snapshots, frameTimesMs));
+            File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildTopDownShooterPathMermaid());
+        }
+
+        [Test]
         public void ChampionSkillStress_PlayableFlow_WritesAcceptanceArtifacts()
         {
             string repoRoot = FindRepoRoot();
@@ -1010,10 +1365,43 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 2, frameTimesMs);
         }
 
+        private static void RightClickGroundTarget(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
+        {
+            SetMouseGroundTarget(engine, backend, worldCm, frameTimesMs);
+            backend.SetButton("<Mouse>/RightButton", true);
+            Tick(engine, 2, frameTimesMs);
+            backend.SetButton("<Mouse>/RightButton", false);
+            Tick(engine, 2, frameTimesMs);
+        }
+
         private static void SetMouseWorld(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
         {
             backend.SetMousePosition(screenPosition);
             Tick(engine, 1, frameTimesMs);
+        }
+
+        private static void SetMouseGroundTarget(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
+        {
+            Vector2 screen = GetGroundScreenFromWorld(engine, worldCm);
+            for (int i = 0; i < 3; i++)
+            {
+                SetMouseWorld(engine, backend, screen, frameTimesMs);
+
+                if (TryReadAuthoritativeGroundWorld(engine, out Vector2 authoritativeWorld) &&
+                    MathF.Abs(worldCm.X - authoritativeWorld.X) <= 3f &&
+                    MathF.Abs(worldCm.Y - authoritativeWorld.Y) <= 3f)
+                {
+                    return;
+                }
+
+                Vector2 updatedScreen = GetGroundScreenFromWorld(engine, worldCm);
+                if (Vector2.DistanceSquared(updatedScreen, screen) <= 0.25f)
+                {
+                    return;
+                }
+
+                screen = updatedScreen;
+            }
         }
 
         private static void Tick(GameEngine engine, int frames, List<double> frameTimesMs)
@@ -1021,6 +1409,7 @@ namespace Ludots.Tests.GAS.Production
             for (int i = 0; i < frames; i++)
             {
                 long t0 = Stopwatch.GetTimestamp();
+                UpdateHeadlessCamera(engine);
                 engine.SetService(CoreServiceKeys.UiCaptured, false);
                 engine.Tick(DeltaTime);
                 UpdateHeadlessCamera(engine);
@@ -1052,6 +1441,21 @@ namespace Ludots.Tests.GAS.Production
                 maxFrames);
         }
 
+        private static void WaitForFollowCamera(GameEngine engine, string actorName, List<double> frameTimesMs, float toleranceCm = 12f, int maxFrames = 24)
+        {
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () =>
+                {
+                    Vector2 actorPos = ReadPosition(engine.World, actorName);
+                    Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+                    return MathF.Abs(actorPos.X - cameraTarget.X) <= toleranceCm &&
+                           MathF.Abs(actorPos.Y - cameraTarget.Y) <= toleranceCm;
+                },
+                maxFrames);
+        }
+
         private static bool WaitUntil(GameEngine engine, List<double> frameTimesMs, Func<bool> predicate, int maxFrames)
         {
             for (int i = 0; i < maxFrames; i++)
@@ -1065,6 +1469,19 @@ namespace Ludots.Tests.GAS.Production
             }
 
             return predicate();
+        }
+
+        private static bool TryReadAuthoritativeGroundWorld(GameEngine engine, out Vector2 worldCm)
+        {
+            worldCm = default;
+            if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is not IInputActionReader authoritativeInput ||
+                !AuthoritativeGroundPointerHelper.TryRead(authoritativeInput, out WorldCmInt2 point))
+            {
+                return false;
+            }
+
+            worldCm = new Vector2(point.X, point.Y);
+            return true;
         }
 
         private static IReadOnlyList<PanelSlotSnapshot> CopySelectedSlots(GameEngine engine)
@@ -1112,35 +1529,42 @@ namespace Ludots.Tests.GAS.Production
             List<AcceptanceSnapshot> snapshots,
             string step)
         {
-            string selectedName = GetSelectedEntityName(engine);
-            var trackedEntities = new[]
-            {
-                "Ezreal Alpha",
-                "Ezreal Cooldown",
-                "Garen Courage",
-                "Jayce Hammer",
-                "Geomancer Alpha",
-                "Spell Engineer Alpha",
-                "Target Dummy A",
-                "Target Dummy C",
-                "Target Dummy D",
-                "Target Dummy E",
-                "Target Dummy F"
-            };
+            CaptureSnapshot(
+                engine,
+                overlays,
+                primitives,
+                worldHud,
+                snapshots,
+                step,
+                SandboxTrackedEntities,
+                SandboxOptionalEntities);
+        }
 
-            var states = new List<EntityState>(trackedEntities.Length + 3);
+        private static void CaptureSnapshot(
+            GameEngine engine,
+            GroundOverlayBuffer overlays,
+            PrimitiveDrawBuffer primitives,
+            WorldHudBatchBuffer worldHud,
+            List<AcceptanceSnapshot> snapshots,
+            string step,
+            IReadOnlyList<string> trackedEntities,
+            IReadOnlyList<string> optionalEntities)
+        {
+            string selectedName = GetSelectedEntityName(engine);
+
+            var states = new List<EntityState>(trackedEntities.Count + optionalEntities.Count);
             foreach (string name in trackedEntities)
             {
-                states.Add(new EntityState(name, ReadHealth(engine.World, name)));
+                if (TryFindEntityByName(engine.World, name, out _))
+                {
+                    states.Add(new EntityState(name, ReadHealth(engine.World, name)));
+                }
             }
 
-            AddEntityStateIfPresent(engine.World, states, "Runic Beacon");
-            AddEntityStateIfPresent(engine.World, states, "Rune Field");
-            AddEntityStateIfPresent(engine.World, states, "Stone Pillar");
-            AddEntityStateIfPresent(engine.World, states, "Spell Beacon");
-            AddEntityStateIfPresent(engine.World, states, "Gravity Well");
-            AddEntityStateIfPresent(engine.World, states, "Guided Laser");
-            AddEntityStateIfPresent(engine.World, states, "Barrier Segment");
+            foreach (string entityName in optionalEntities)
+            {
+                AddEntityStateIfPresent(engine.World, states, entityName);
+            }
 
             snapshots.Add(new AcceptanceSnapshot(
                 Step: step,
@@ -1167,13 +1591,18 @@ namespace Ludots.Tests.GAS.Production
 
         private static string BuildTraceJsonl(IReadOnlyList<AcceptanceSnapshot> snapshots)
         {
+            return BuildTraceJsonl("champion-sandbox", snapshots);
+        }
+
+        private static string BuildTraceJsonl(string eventPrefix, IReadOnlyList<AcceptanceSnapshot> snapshots)
+        {
             var lines = new List<string>(snapshots.Count);
             for (int i = 0; i < snapshots.Count; i++)
             {
                 AcceptanceSnapshot snapshot = snapshots[i];
                 lines.Add(JsonSerializer.Serialize(new
                 {
-                    event_id = $"champion-sandbox-{i + 1:000}",
+                    event_id = $"{eventPrefix}-{i + 1:000}",
                     step = snapshot.Step,
                     active_mode_id = snapshot.ActiveModeId,
                     selected_entity = snapshot.SelectedEntity,
@@ -1281,6 +1710,122 @@ namespace Ludots.Tests.GAS.Production
                 "    S --> T[\"Zone: Gravity Well ticks on Target Dummy D\"]",
                 "    T --> U[\"Arena: Cataclysm Ring spawns 10 box blocker segments\"]",
                 "    U --> V[\"Beam: Guided Laser hold-starts, hits Dummy D, retargets to Dummy E, release removes manifestation\"]"
+            });
+        }
+
+        private static string BuildLaserSweepBattleReport(IReadOnlyList<string> timeline, IReadOnlyList<AcceptanceSnapshot> snapshots, IReadOnlyList<double> frameTimesMs)
+        {
+            double medianTickMs = Median(frameTimesMs);
+            double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
+            AcceptanceSnapshot finalSnapshot = snapshots[^1];
+
+            var sb = new StringBuilder();
+            sb.AppendLine("# Scenario: champion-laser-sweep");
+            sb.AppendLine();
+            sb.AppendLine("## Header");
+            sb.AppendLine("- build: GasTests / ChampionLaserSweepShowcase_PlayableFlow_WritesAcceptanceArtifacts");
+            sb.AppendLine($"- map: {LaserSweepMapId}");
+            sb.AppendLine("- clock: FixedFrame @ 60 Hz");
+            sb.AppendLine($"- execution_timestamp_utc: {DateTime.UtcNow:O}");
+            sb.AppendLine();
+            sb.AppendLine("## Timeline");
+            foreach (string entry in timeline)
+            {
+                sb.AppendLine(entry);
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("## Outcome");
+            sb.AppendLine("- result: success");
+            sb.AppendLine("- failure_branch: release removes the held beam immediately instead of leaving stale channel state");
+            sb.AppendLine($"- final_selected: {finalSnapshot.SelectedEntity}");
+            sb.AppendLine($"- final_mode: {finalSnapshot.ActiveModeId}");
+            sb.AppendLine($"- final_camera_target_cm: ({finalSnapshot.Camera.TargetXCm:0.##}, {finalSnapshot.Camera.TargetYCm:0.##})");
+            sb.AppendLine($"- final_camera_distance_cm: {finalSnapshot.Camera.DistanceCm:0.##}");
+            sb.AppendLine($"- final_feedback_primitives: {finalSnapshot.PrimitiveCount}");
+            sb.AppendLine($"- final_feedback_world_text: {finalSnapshot.WorldTextCount}");
+            sb.AppendLine();
+            sb.AppendLine("## Summary Stats");
+            sb.AppendLine("- total_actions: 5");
+            sb.AppendLine("- channel_start_events: 1");
+            sb.AppendLine("- retarget_events: 1");
+            sb.AppendLine("- successful_hits: 2");
+            sb.AppendLine("- cleanup_events: 1");
+            sb.AppendLine($"- median_tick_ms: {medianTickMs:0.###}");
+            sb.AppendLine($"- max_tick_ms: {maxTickMs:0.###}");
+            return sb.ToString();
+        }
+
+        private static string BuildLaserSweepPathMermaid()
+        {
+            return string.Join(Environment.NewLine, new[]
+            {
+                "flowchart TD",
+                "    A[\"MapLoaded: champion_laser_sweep -> Sweep Ranger Alpha selected\"] --> B[\"Loadout: shooter + beam kit visible\"]",
+                "    B --> C[\"Hold R: Sweep Laser manifestation spawns on Dummy A lane\"]",
+                "    C --> D[\"Periodic hit: Sweep Dummy A loses health\"]",
+                "    D --> E[\"Retarget: drag held aim to Sweep Dummy C\"]",
+                "    E --> F[\"Rotation proof: beam facing changes in-channel\"]",
+                "    F --> G[\"Periodic hit: Sweep Dummy C loses health\"]",
+                "    G --> H[\"Release R: beam manifestation removed cleanly\"]"
+            });
+        }
+
+        private static string BuildTopDownShooterBattleReport(IReadOnlyList<string> timeline, IReadOnlyList<AcceptanceSnapshot> snapshots, IReadOnlyList<double> frameTimesMs)
+        {
+            double medianTickMs = Median(frameTimesMs);
+            double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
+            AcceptanceSnapshot finalSnapshot = snapshots[^1];
+
+            var sb = new StringBuilder();
+            sb.AppendLine("# Scenario: champion-topdown-shooter");
+            sb.AppendLine();
+            sb.AppendLine("## Header");
+            sb.AppendLine("- build: GasTests / ChampionTopDownShooterShowcase_PlayableFlow_WritesAcceptanceArtifacts");
+            sb.AppendLine($"- map: {TopDownShooterMapId}");
+            sb.AppendLine("- clock: FixedFrame @ 60 Hz");
+            sb.AppendLine($"- execution_timestamp_utc: {DateTime.UtcNow:O}");
+            sb.AppendLine();
+            sb.AppendLine("## Timeline");
+            foreach (string entry in timeline)
+            {
+                sb.AppendLine(entry);
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("## Outcome");
+            sb.AppendLine("- result: success");
+            sb.AppendLine("- failure_branch: camera follow must keep tracking after move and blink, not stick to the authored spawn pose");
+            sb.AppendLine($"- final_selected: {finalSnapshot.SelectedEntity}");
+            sb.AppendLine($"- final_mode: {finalSnapshot.ActiveModeId}");
+            sb.AppendLine($"- final_camera_target_cm: ({finalSnapshot.Camera.TargetXCm:0.##}, {finalSnapshot.Camera.TargetYCm:0.##})");
+            sb.AppendLine($"- final_camera_distance_cm: {finalSnapshot.Camera.DistanceCm:0.##}");
+            sb.AppendLine($"- final_feedback_primitives: {finalSnapshot.PrimitiveCount}");
+            sb.AppendLine($"- final_feedback_world_text: {finalSnapshot.WorldTextCount}");
+            sb.AppendLine();
+            sb.AppendLine("## Summary Stats");
+            sb.AppendLine("- total_actions: 6");
+            sb.AppendLine("- move_commands: 1");
+            sb.AppendLine("- follow_camera_proofs: 2");
+            sb.AppendLine("- projectile_hits: 2");
+            sb.AppendLine("- blink_hits: 1");
+            sb.AppendLine("- channel_finishes: 1");
+            sb.AppendLine($"- median_tick_ms: {medianTickMs:0.###}");
+            sb.AppendLine($"- max_tick_ms: {maxTickMs:0.###}");
+            return sb.ToString();
+        }
+
+        private static string BuildTopDownShooterPathMermaid()
+        {
+            return string.Join(Environment.NewLine, new[]
+            {
+                "flowchart TD",
+                "    A[\"MapLoaded: champion_topdown_shooter -> follow camera snaps to Sweep Ranger Alpha\"] --> B[\"RMB Move: shooter strafes and camera target follows\"]",
+                "    B --> C[\"Q Laser Bolt: Shooter Dummy B hit\"]",
+                "    C --> D[\"W Fireball: Shooter Dummy A hit\"]",
+                "    D --> E[\"E Arcane Shift: blink forward + bolt damage while camera keeps up\"]",
+                "    E --> F[\"Hold R: Sweep Laser spawns on Shooter Brute lane\"]",
+                "    F --> G[\"Release R: cleanup after top-down finisher\"]"
             });
         }
 
@@ -1723,11 +2268,61 @@ namespace Ludots.Tests.GAS.Production
             return projector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(position.Value, yMeters: 0f));
         }
 
+        private static Vector2 GetEntityGroundScreen(GameEngine engine, string name)
+        {
+            return GetGroundScreenFromWorld(engine, ReadPosition(engine.World, name));
+        }
+
         private static Vector2 GetGroundScreenFromWorld(GameEngine engine, Vector2 worldCm)
         {
+            UpdateHeadlessCamera(engine);
             var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
                 ?? throw new InvalidOperationException("ScreenProjector was not installed.");
-            return projector.WorldToScreen(new Vector3(WorldUnits.CmToM(worldCm.X), 0f, WorldUnits.CmToM(worldCm.Y)));
+
+            Vector2 desiredWorld = worldCm;
+            Vector2 screen = projector.WorldToScreen(new Vector3(WorldUnits.CmToM(desiredWorld.X), 0f, WorldUnits.CmToM(desiredWorld.Y)));
+            Vector2 bestScreen = screen;
+            float bestError = float.MaxValue;
+
+            for (int i = 0; i < 6; i++)
+            {
+                if (!AuthoritativeGroundPointerHelper.TryResolveFromScreen(engine.GlobalContext, screen, out WorldCmInt2 projectedGroundCm))
+                {
+                    break;
+                }
+
+                Vector2 projectedWorld = new Vector2(projectedGroundCm.X, projectedGroundCm.Y);
+                Vector2 error = desiredWorld - projectedWorld;
+                float errorMagnitude = MathF.Max(MathF.Abs(error.X), MathF.Abs(error.Y));
+                if (errorMagnitude < bestError)
+                {
+                    bestError = errorMagnitude;
+                    bestScreen = screen;
+                }
+
+                if (errorMagnitude <= 2f)
+                {
+                    break;
+                }
+
+                Vector2 correctedWorld = desiredWorld + error;
+                Vector2 correctedScreen = projector.WorldToScreen(new Vector3(WorldUnits.CmToM(correctedWorld.X), 0f, WorldUnits.CmToM(correctedWorld.Y)));
+                if (!AuthoritativeGroundPointerHelper.TryResolveFromScreen(engine.GlobalContext, correctedScreen, out WorldCmInt2 correctedGroundCm))
+                {
+                    break;
+                }
+
+                Vector2 correctedError = desiredWorld - new Vector2(correctedGroundCm.X, correctedGroundCm.Y);
+                float correctedErrorMagnitude = MathF.Max(MathF.Abs(correctedError.X), MathF.Abs(correctedError.Y));
+                if (correctedErrorMagnitude >= errorMagnitude)
+                {
+                    break;
+                }
+
+                screen = correctedScreen;
+            }
+
+            return bestScreen;
         }
 
         private static Entity FindEntityByName(World world, string entityName)
@@ -1893,11 +2488,21 @@ namespace Ludots.Tests.GAS.Production
 
         private static void AssertManifestationOwnership(World world, string entityName, string parentName)
         {
+            AssertManifestationOwnership(world, entityName, parentName, MapId);
+        }
+
+        private static void AssertManifestationOwnership(World world, string entityName, string parentName, string expectedMapId)
+        {
             Entity entity = FindEntityByName(world, entityName);
-            AssertManifestationOwnership(world, entity, parentName);
+            AssertManifestationOwnership(world, entity, parentName, expectedMapId);
         }
 
         private static void AssertManifestationOwnership(World world, Entity entity, string parentName)
+        {
+            AssertManifestationOwnership(world, entity, parentName, MapId);
+        }
+
+        private static void AssertManifestationOwnership(World world, Entity entity, string parentName, string expectedMapId)
         {
             Entity parent = FindEntityByName(world, parentName);
             string entityLabel = world.TryGet(entity, out Name name) ? name.Value : $"entity:{entity.Id}";
@@ -1909,7 +2514,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(world.TryGet(entity, out ChildOf child), Is.True, $"{entityLabel} should link back to the caster.");
             Assert.That(child.Parent, Is.EqualTo(parent));
             Assert.That(world.TryGet(entity, out MapEntity map), Is.True, $"{entityLabel} should stay scoped to the sandbox map.");
-            Assert.That(map.MapId.Value, Is.EqualTo(MapId));
+            Assert.That(map.MapId.Value, Is.EqualTo(expectedMapId));
             Assert.That(world.Has<SelectionSelectableTag>(entity), Is.True, $"{entityLabel} should stay formally selectable.");
         }
 
@@ -2209,9 +2814,13 @@ namespace Ludots.Tests.GAS.Production
             {
                 details.Add($"mappingMode={mapping.InteractionMode}");
                 details.Add($"mappingAiming={mapping.IsAiming}");
-                if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
+                InputOrderMapping? actionMapping = mapping.GetEffectiveMapping(actionId) ?? mapping.GetMapping(actionId);
+                if (actionMapping != null)
                 {
                     details.Add($"selectionType={actionMapping.SelectionType}");
+                    details.Add($"trigger={actionMapping.Trigger}");
+                    details.Add($"heldPolicy={actionMapping.HeldPolicy}");
+                    details.Add($"castModeOverride={(actionMapping.CastModeOverride?.ToString() ?? "<none>")}");
                     details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
                 }
             }

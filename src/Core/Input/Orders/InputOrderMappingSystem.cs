@@ -1244,6 +1244,30 @@ namespace Ludots.Core.Input.Orders
             return null;
         }
 
+        /// <summary>
+        /// Returns the runtime-effective mapping for an action after user remaps and
+        /// actor-specific skill overrides have been applied.
+        /// </summary>
+        public InputOrderMapping? GetEffectiveMapping(string actionId)
+        {
+            if (string.IsNullOrWhiteSpace(actionId))
+            {
+                return null;
+            }
+
+            if (_mappingsByActionId.TryGetValue(actionId, out var mapping))
+            {
+                return ResolveEffectiveMapping(actionId, mapping, out _);
+            }
+
+            if (_userOverrides.TryGetValue(actionId, out var overrideMapping))
+            {
+                return overrideMapping;
+            }
+
+            return null;
+        }
+
         public IEnumerable<string> GetMappedActionIds() => _mappingsByActionId.Keys;
 
         /// <summary>

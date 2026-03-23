@@ -1,0 +1,10 @@
+{
+  "name": "ChampionLaserSweepEntryMod",
+  "version": "1.0.0",
+  "description": "Direct launcher entry for the champion laser sweep showcase map.",
+  "main": "bin/net8.0/ChampionLaserSweepEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "ChampionSkillSandboxMod": "^1.0.0"
+  }
+}

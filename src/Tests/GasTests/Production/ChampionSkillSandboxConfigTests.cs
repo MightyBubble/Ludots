@@ -41,8 +41,11 @@ namespace Ludots.Tests.GAS.Production
     public sealed class ChampionSkillSandboxConfigTests
     {
         private const float DeltaTime = 1f / 60f;
+        private const string LaserSweepMapId = "champion_laser_sweep";
         private const string StressMapId = "champion_skill_stress";
         private const string SandboxTacticalCameraId = "ChampionSkillSandbox.Camera.Tactical";
+        private const string TopDownShooterCameraId = "ChampionSkillSandbox.Camera.TopDownShooter";
+        private const string TopDownShooterMapId = "champion_topdown_shooter";
         private const string FreeCameraToolbarButtonId = "ChampionSkillSandbox.Camera.Free";
         private const string FollowSelectionToolbarButtonId = "ChampionSkillSandbox.Camera.Selection";
         private const string FollowSelectionGroupToolbarButtonId = "ChampionSkillSandbox.Camera.SelectionGroup";
@@ -302,6 +305,85 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(geomancerSlots[1].DisplayLabel, Is.EqualTo("Rune Field"));
             Assert.That(geomancerSlots[2].DisplayLabel, Is.EqualTo("Stone Pillar"));
             Assert.That(geomancerSlots[3].DisplayLabel, Is.EqualTo("Prismatic Beam"));
+        }
+
+        [Test]
+        public void ChampionSkillSandbox_LaserSweepMap_LoadsSweepRangerHeldChannel()
+        {
+            using var engine = CreateEngine();
+            LoadMap(engine, LaserSweepMapId);
+
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0), "Laser sweep map should load without trigger errors.");
+            Assert.That(engine.CurrentMapSession?.MapConfig?.DefaultCamera?.VirtualCameraId, Is.EqualTo(TopDownShooterCameraId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(TopDownShooterCameraId));
+
+            Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity currentPrimary)
+                ? currentPrimary
+                : Entity.Null;
+            Assert.That(ReadEntityName(engine.World, selected), Is.EqualTo("Sweep Ranger Alpha"), "Laser sweep showcase should auto-select the player hero.");
+            AssertNamedEntityOwner(engine.World, "Sweep Ranger Alpha", expectedPlayerId: 1);
+            FindEntityByName(engine.World, "Sweep Dummy A");
+            FindEntityByName(engine.World, "Sweep Dummy B");
+            FindEntityByName(engine.World, "Sweep Dummy C");
+            FindEntityByName(engine.World, "Sweep Dummy D");
+
+            var cameraRegistry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
+                ?? throw new InvalidOperationException("VirtualCameraRegistry missing.");
+            Assert.That(cameraRegistry.TryGet(TopDownShooterCameraId, out var topDownCamera), Is.True);
+            Assert.That(topDownCamera, Is.Not.Null);
+            Assert.That(topDownCamera!.RigKind, Is.EqualTo(CameraRigKind.TopDown));
+            Assert.That(topDownCamera.FollowMode, Is.EqualTo(CameraFollowMode.AlwaysFollow));
+            Assert.That(topDownCamera.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(topDownCamera.AllowUserInput, Is.True);
+
+            var source = ResolveGasPanelSource(engine);
+            var slots = new EntityCommandPanelSlotView[8];
+            int slotCount = source.CopySlots(FindEntityByName(engine.World, "Sweep Ranger Alpha"), 0, slots);
+            Assert.That(slotCount, Is.EqualTo(4));
+            Assert.That(slots[0].DisplayLabel, Is.EqualTo("Laser Bolt"));
+            Assert.That(slots[1].DisplayLabel, Is.EqualTo("Fireball"));
+            Assert.That(slots[2].DisplayLabel, Is.EqualTo("Arcane Shift"));
+            Assert.That(slots[3].DisplayLabel, Is.EqualTo("Laser Sweep"));
+            Assert.That(slots[3].DetailLabel, Is.EqualTo("Hold to channel a sweeping beam, drag to rake targets, release to cut power"));
+
+            var mapping = WaitForActiveInputOrderMapping(engine);
+            var sweepMapping = mapping.GetEffectiveMapping("SkillR");
+            Assert.That(sweepMapping, Is.Not.Null);
+            Assert.That(sweepMapping!.SelectionType, Is.EqualTo(OrderSelectionType.Direction));
+            Assert.That(sweepMapping.Trigger, Is.EqualTo(InputTriggerType.Held));
+            Assert.That(sweepMapping.HeldPolicy, Is.EqualTo(HeldPolicy.StartEnd));
+            Assert.That(sweepMapping.CastModeOverride, Is.EqualTo(InteractionModeType.SmartCast));
+        }
+
+        [Test]
+        public void ChampionSkillSandbox_TopDownShooterMap_LoadsFollowCameraAndSharedShooterLoadout()
+        {
+            using var engine = CreateEngine();
+            LoadMap(engine, TopDownShooterMapId);
+
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0), "Top-down shooter map should load without trigger errors.");
+            Assert.That(engine.CurrentMapSession?.MapConfig?.DefaultCamera?.VirtualCameraId, Is.EqualTo(TopDownShooterCameraId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(TopDownShooterCameraId));
+            Assert.That(engine.GameSession.Camera.State.Pitch, Is.GreaterThanOrEqualTo(80f), "Top-down shooter map should enter a near-vertical tactical camera.");
+
+            Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity currentPrimary)
+                ? currentPrimary
+                : Entity.Null;
+            Assert.That(ReadEntityName(engine.World, selected), Is.EqualTo("Sweep Ranger Alpha"), "Top-down shooter showcase should auto-select the player hero.");
+            AssertNamedEntityOwner(engine.World, "Sweep Ranger Alpha", expectedPlayerId: 1);
+            FindEntityByName(engine.World, "Shooter Dummy A");
+            FindEntityByName(engine.World, "Shooter Dummy B");
+            FindEntityByName(engine.World, "Shooter Dummy C");
+            FindEntityByName(engine.World, "Shooter Brute");
+
+            var source = ResolveGasPanelSource(engine);
+            var slots = new EntityCommandPanelSlotView[8];
+            int slotCount = source.CopySlots(FindEntityByName(engine.World, "Sweep Ranger Alpha"), 0, slots);
+            Assert.That(slotCount, Is.EqualTo(4));
+            Assert.That(slots[0].DetailLabel, Is.EqualTo("Fast projectile beam"));
+            Assert.That(slots[1].DetailLabel, Is.EqualTo("Projectile blast with AOE"));
+            Assert.That(slots[2].DetailLabel, Is.EqualTo("Blink, then fire a magic bolt"));
+            Assert.That(slots[3].DetailLabel, Is.EqualTo("Hold to channel a sweeping beam, drag to rake targets, release to cut power"));
         }
 
         [Test]
@@ -801,6 +883,11 @@ namespace Ludots.Tests.GAS.Production
                 "Effect.Champion.SpellEngineer.GuidedLaser",
                 "champion_skill_sandbox_guided_laser",
                 onSpawnEffectKey: "Effect.Champion.SpellEngineer.GuidedLaserPersistent");
+            AssertTemplateBackedCreateUnit(
+                effects,
+                "Effect.Champion.SweepRanger.LaserSweep",
+                "champion_skill_sandbox_laser_sweep",
+                onSpawnEffectKey: "Effect.Champion.SweepRanger.LaserSweepPersistent");
 
             int persistentId = EffectTemplateIdRegistry.GetId("Effect.Champion.Geomancer.RuneFieldPersistent");
             int hitId = EffectTemplateIdRegistry.GetId("Effect.Champion.Geomancer.RuneFieldHit");
@@ -811,6 +898,8 @@ namespace Ludots.Tests.GAS.Production
             int spellCataclysmId = EffectTemplateIdRegistry.GetId("Effect.Champion.SpellEngineer.CataclysmRing");
             int spellGuidedLaserPersistentId = EffectTemplateIdRegistry.GetId("Effect.Champion.SpellEngineer.GuidedLaserPersistent");
             int spellGuidedLaserHitId = EffectTemplateIdRegistry.GetId("Effect.Champion.SpellEngineer.GuidedLaserHit");
+            int sweepLaserPersistentId = EffectTemplateIdRegistry.GetId("Effect.Champion.SweepRanger.LaserSweepPersistent");
+            int sweepLaserHitId = EffectTemplateIdRegistry.GetId("Effect.Champion.SweepRanger.LaserSweepHit");
 
             Assert.That(effects.TryGet(persistentId, out var persistent), Is.True);
             Assert.That(persistent.PresetType, Is.EqualTo(EffectPresetType.PeriodicSearch));
@@ -832,6 +921,12 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(effects.TryGet(spellGuidedLaserPersistentId, out var spellGuidedLaserPersistent), Is.True);
             Assert.That(spellGuidedLaserPersistent.PresetType, Is.EqualTo(EffectPresetType.PeriodicSearch));
             Assert.That(spellGuidedLaserPersistent.TargetDispatch.PayloadEffectTemplateId, Is.EqualTo(spellGuidedLaserHitId));
+
+            Assert.That(effects.TryGet(sweepLaserPersistentId, out var sweepLaserPersistent), Is.True);
+            Assert.That(sweepLaserPersistent.PresetType, Is.EqualTo(EffectPresetType.PeriodicSearch));
+            Assert.That(sweepLaserPersistent.TargetDispatch.PayloadEffectTemplateId, Is.EqualTo(sweepLaserHitId));
+            Assert.That(sweepLaserPersistent.DurationTicks, Is.EqualTo(1800));
+            Assert.That(sweepLaserPersistent.PeriodTicks, Is.EqualTo(3));
         }
 
         private static GameEngine CreateEngine()

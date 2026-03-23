@@ -79,6 +79,19 @@ namespace CoreInputMod.Systems
             return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm);
         }
 
+        public bool TryGetPointerScreenPosition(out Vector2 screenPosition)
+        {
+            screenPosition = default;
+            if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) ||
+                inputObj is not IInputActionReader input)
+            {
+                return false;
+            }
+
+            screenPosition = input.ReadAction<Vector2>("PointerPos");
+            return true;
+        }
+
         public Entity GetControlledActor(int playerId = 1)
         {
             if (TryGetSelectedEntity(SelectionSetKeys.Ambient, out var selected) &&

@@ -46,13 +46,14 @@
     <ProjectReference Include="..\..\..\mods\FourXDemoMod\FourXDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\TcgDemoMod\TcgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\ArpgDemoMod\ArpgDemoMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIDemoMod\AIDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\camera\CameraShowcaseMod\CameraShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\interaction\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\ChampionSkillSandboxMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\champion_laser_sweep_entry\ChampionLaserSweepEntryMod\ChampionLaserSweepEntryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\champion_topdown_shooter_entry\ChampionTopDownShooterEntryMod\ChampionTopDownShooterEntryMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\ux_prototype\UxPrototypeMod\UxPrototypeMod.csproj" />
     <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />

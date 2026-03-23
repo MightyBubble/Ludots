@@ -317,7 +317,7 @@ namespace Ludots.Core.Gameplay.GAS
         private static int ComputeDirection(World world, in EffectContext ctx, in EffectConfigParams mergedParams)
         {
             if (TryResolveQueryOrigin(world, in ctx, in mergedParams, out var sourcePos) &&
-                TryResolveTargetPoint(world, in ctx, in mergedParams, out var targetPos))
+                TryResolveDirectionalTargetPoint(world, in ctx, in mergedParams, out var targetPos))
             {
                 int dx = targetPos.X - sourcePos.X;
                 int dy = targetPos.Y - sourcePos.Y;
@@ -330,6 +330,27 @@ namespace Ludots.Core.Gameplay.GAS
                 }
             }
             return 0;
+        }
+
+        private static bool TryResolveDirectionalTargetPoint(World world, in EffectContext ctx, in EffectConfigParams mergedParams, out WorldCmInt2 point)
+        {
+            if (TryGetPreservedTargetPoint(in mergedParams, out point))
+            {
+                return true;
+            }
+
+            if (world.IsAlive(ctx.Source) &&
+                world.Has<AbilityExecInstance>(ctx.Source))
+            {
+                ref readonly var exec = ref world.Get<AbilityExecInstance>(ctx.Source);
+                if (exec.HasTargetPos != 0)
+                {
+                    point = exec.TargetPosCm.ToWorldCmInt2();
+                    return true;
+                }
+            }
+
+            return TryResolveTargetPoint(world, in ctx, in mergedParams, out point);
         }
 
         private static bool TryResolveQueryOrigin(World world, in EffectContext ctx, out WorldCmInt2 point)

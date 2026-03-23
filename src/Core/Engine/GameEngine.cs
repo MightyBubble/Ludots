@@ -1172,10 +1172,17 @@ namespace Ludots.Core.Engine
 
             if (cam != null)
             {
+                bool shouldPreserveFollowTarget =
+                    definition.FollowTargetKind != CameraFollowTargetKind.None &&
+                    (definition.FollowMode != CameraFollowMode.None ||
+                     definition.TargetSource == VirtualCameraTargetSource.FollowTarget);
+
                 GameSession.Camera.ApplyPose(new CameraPoseRequest
                 {
                     VirtualCameraId = virtualCameraId,
-                    TargetCm = (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
+                    TargetCm = shouldPreserveFollowTarget
+                        ? null
+                        : (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
                         ? new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f)
                         : null,
                     Yaw = cam.Yaw,

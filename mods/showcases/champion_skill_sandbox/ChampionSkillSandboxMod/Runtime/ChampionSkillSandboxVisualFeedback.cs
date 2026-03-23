@@ -526,6 +526,7 @@ namespace ChampionSkillSandboxMod.Runtime
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.GravityWell", "champion_skill_sandbox.cue.spell_engineer_gravity_well_cast");
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.CataclysmRing", "champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast");
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.GuidedLaser", "champion_skill_sandbox.cue.spell_engineer_guided_laser_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.SweepRanger.LaserSweep", "champion_skill_sandbox.cue.spell_engineer_guided_laser_cast");
 
             RegisterEffectCue(performers, "Effect.Champion.Garen.JudgmentHit", "champion_skill_sandbox.cue.garen_judgment_hit");
             RegisterEffectCue(performers, "Effect.Champion.Garen.DemacianJusticeHit", "champion_skill_sandbox.cue.garen_demacian_justice_hit");
@@ -541,6 +542,7 @@ namespace ChampionSkillSandboxMod.Runtime
             RegisterEffectCue(performers, "Effect.ChampionStress.Priest.Heal", "champion_skill_sandbox.cue.stress_priest_heal_hit");
             RegisterEffectCue(performers, "Effect.Champion.SpellEngineer.GravityWellHit", "champion_skill_sandbox.cue.spell_engineer_gravity_well_hit");
             RegisterEffectCue(performers, "Effect.Champion.SpellEngineer.GuidedLaserHit", "champion_skill_sandbox.cue.spell_engineer_guided_laser_hit");
+            RegisterEffectCue(performers, "Effect.Champion.SweepRanger.LaserSweepHit", "champion_skill_sandbox.cue.spell_engineer_guided_laser_hit");
 
             _cueIdsInitialized = true;
         }

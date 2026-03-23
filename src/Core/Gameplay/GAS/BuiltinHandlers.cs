@@ -200,6 +200,16 @@ namespace Ludots.Core.Gameplay.GAS
                 targetPointCm,
                 out var direction);
 
+            Entity projectileTarget = context.Target;
+            if (hasTargetPoint &&
+                context.Target.Equals(context.Source) &&
+                !world.IsAlive(context.TargetContext))
+            {
+                // Ground-cast abilities use source fallback to keep the effect request alive,
+                // but the spawned projectile must still travel toward the authored ground point.
+                projectileTarget = Entity.Null;
+            }
+
             var request = new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Assembly,
@@ -220,7 +230,7 @@ namespace Ludots.Core.Gameplay.GAS
                     CollisionExcludeSource = (byte)(proj.CollisionExcludeSource ? 1 : 0),
                     MaxHitCount = proj.MaxHitCount,
                     Source = context.Source,
-                    Target = context.Target,
+                    Target = projectileTarget,
                     LaunchOriginCm = launchOrigin,
                     HasLaunchOrigin = (byte)(hasLaunchOrigin ? 1 : 0),
                     TargetPointCm = targetPointCm,

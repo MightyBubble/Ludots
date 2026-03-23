@@ -488,10 +488,28 @@ namespace ChampionSkillSandboxMod.Runtime
                     => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.SelectedEntity),
                 var id when string.Equals(id, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.OrdinalIgnoreCase)
                     => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.SelectedGroup),
-                _ => null
+                _ => ResolveDefaultFollowTarget(engine, activeCameraId)
             };
 
-            engine.GameSession.Camera.SetFollowTarget(activeCameraId, followTarget, snapToFollowTargetWhenAvailable: false);
+            engine.GameSession.Camera.SetFollowTarget(
+                activeCameraId,
+                followTarget,
+                snapToFollowTargetWhenAvailable: followTarget != null);
+        }
+
+        private static ICameraFollowTarget? ResolveDefaultFollowTarget(GameEngine engine, string activeCameraId)
+        {
+            var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry);
+            if (registry == null ||
+                string.IsNullOrWhiteSpace(activeCameraId) ||
+                !registry.TryGet(activeCameraId, out var definition) ||
+                definition == null ||
+                definition.FollowTargetKind == CameraFollowTargetKind.None)
+            {
+                return null;
+            }
+
+            return CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, definition.FollowTargetKind);
         }
 
         private static string ResolveCameraFollowMode(GameEngine engine)

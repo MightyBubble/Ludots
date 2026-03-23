@@ -302,11 +302,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return;
             }
 
+            Entity resolvedTarget = World.IsAlive(target) ? target : projectile.Source;
+
             var request = new EffectRequest
             {
                 RootId = 0,
                 Source = projectile.Source,
-                Target = target,
+                Target = resolvedTarget,
                 TargetContext = Entity.Null,
                 TemplateId = templateId,
             };

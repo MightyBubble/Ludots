@@ -1,0 +1,50 @@
+{
+  "Id": "champion_topdown_shooter",
+  "Tags": ["champion.skill.sandbox", "showcase.topdown", "showcase.shooter"],
+  "DefaultCamera": {
+    "VirtualCameraId": "ChampionSkillSandbox.Camera.TopDownShooter",
+    "TargetXCm": 1680,
+    "TargetYCm": 1120,
+    "DistanceCm": 4200,
+    "Pitch": 82,
+    "FovYDeg": 46
+  },
+  "Entities": [
+    {
+      "Template": "champion_skill_sandbox_sweep_ranger",
+      "Overrides": {
+        "Name": { "Value": "Sweep Ranger Alpha" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 1320, "Y": 1120 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Shooter Dummy A" },
+        "WorldPositionCm": { "Value": { "X": 1980, "Y": 920 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Shooter Dummy B" },
+        "WorldPositionCm": { "Value": { "X": 2120, "Y": 1120 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Shooter Dummy C" },
+        "WorldPositionCm": { "Value": { "X": 1980, "Y": 1320 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_brute",
+      "Overrides": {
+        "Name": { "Value": "Shooter Brute" },
+        "WorldPositionCm": { "Value": { "X": 2420, "Y": 1120 } }
+      }
+    }
+  ]
+}

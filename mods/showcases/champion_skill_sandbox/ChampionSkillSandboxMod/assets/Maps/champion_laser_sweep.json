@@ -1,0 +1,50 @@
+{
+  "Id": "champion_laser_sweep",
+  "Tags": ["champion.skill.sandbox", "showcase.channel", "showcase.laser-sweep"],
+  "DefaultCamera": {
+    "VirtualCameraId": "ChampionSkillSandbox.Camera.TopDownShooter",
+    "TargetXCm": 1720,
+    "TargetYCm": 1020,
+    "DistanceCm": 3600,
+    "Pitch": 82,
+    "FovYDeg": 40
+  },
+  "Entities": [
+    {
+      "Template": "champion_skill_sandbox_sweep_ranger",
+      "Overrides": {
+        "Name": { "Value": "Sweep Ranger Alpha" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 1240, "Y": 1020 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Sweep Dummy A" },
+        "WorldPositionCm": { "Value": { "X": 1860, "Y": 820 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_brute",
+      "Overrides": {
+        "Name": { "Value": "Sweep Dummy B" },
+        "WorldPositionCm": { "Value": { "X": 2000, "Y": 1020 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Sweep Dummy C" },
+        "WorldPositionCm": { "Value": { "X": 1860, "Y": 1220 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Sweep Dummy D" },
+        "WorldPositionCm": { "Value": { "X": 2260, "Y": 1020 } }
+      }
+    }
+  ]
+}

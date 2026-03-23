@@ -643,5 +643,54 @@
     "modifiers": [
       { "attribute": "Health", "op": "Add", "value": -5.0 }
     ]
+  },
+  {
+    "id": "Effect.Champion.SweepRanger.LaserSweep",
+    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Beam"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "champion_skill_sandbox_laser_sweep",
+      "count": 1,
+      "onSpawnEffect": "Effect.Champion.SweepRanger.LaserSweepPersistent",
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
+    }
+  },
+  {
+    "id": "Effect.Champion.SweepRanger.LaserSweepPersistent",
+    "tags": ["Effect.Champion.Beam"],
+    "presetType": "PeriodicSearch",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1800,
+      "periodTicks": 3
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Line",
+      "length": 980,
+      "halfWidth": 90
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 24
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.SweepRanger.LaserSweepHit"
+    }
+  },
+  {
+    "id": "Effect.Champion.SweepRanger.LaserSweepHit",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -6.0 }
+    ]
   }
 ]

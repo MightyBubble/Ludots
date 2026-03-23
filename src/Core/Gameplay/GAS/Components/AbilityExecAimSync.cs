@@ -9,5 +9,9 @@ namespace Ludots.Core.Gameplay.GAS.Components
     {
         public int AbilitySlot;
         public byte SyncFacing;
+        public byte HasLastPointerScreen;
+        public int LastPointerScreenX;
+        public int LastPointerScreenY;
+        public int LastSyncedOrderId;
     }
 }

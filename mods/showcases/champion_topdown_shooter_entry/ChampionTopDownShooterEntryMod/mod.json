@@ -1,0 +1,10 @@
+{
+  "name": "ChampionTopDownShooterEntryMod",
+  "version": "1.0.0",
+  "description": "Direct launcher entry for the champion top-down shooter showcase map.",
+  "main": "bin/net8.0/ChampionTopDownShooterEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "ChampionSkillSandboxMod": "^1.0.0"
+  }
+}

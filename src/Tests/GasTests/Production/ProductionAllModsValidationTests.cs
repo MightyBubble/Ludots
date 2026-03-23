@@ -60,7 +60,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "Navigation2DPlaygroundMod",
-                    new[] { "LudotsCoreMod", "Navigation2DPlaygroundMod" },
+                    new[] { "LudotsCoreMod", "CoreInputMod", "Navigation2DPlaygroundMod" },
                     true))
                 .SetName("ProdModSmoke_Navigation2DPlaygroundMod");
 
@@ -102,15 +102,27 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "InteractionShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "InteractionShowcaseMod" },
+                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_InteractionShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
                     "ChampionSkillSandboxMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityCommandPanelMod", "ChampionSkillSandboxMod" },
+                    new[] { "LudotsCoreMod", "DiagnosticsOverlayMod", "CoreInputMod", "CameraProfilesMod", "EntityCommandPanelMod", "ChampionSkillSandboxMod" },
                     true))
                 .SetName("ProdModSmoke_ChampionSkillSandboxMod");
+
+            yield return new TestCaseData(new ModCase(
+                    "ChampionLaserSweepEntryMod",
+                    new[] { "LudotsCoreMod", "DiagnosticsOverlayMod", "CoreInputMod", "CameraProfilesMod", "EntityCommandPanelMod", "ChampionSkillSandboxMod", "ChampionLaserSweepEntryMod" },
+                    true))
+                .SetName("ProdModSmoke_ChampionLaserSweepEntryMod");
+
+            yield return new TestCaseData(new ModCase(
+                    "ChampionTopDownShooterEntryMod",
+                    new[] { "LudotsCoreMod", "DiagnosticsOverlayMod", "CoreInputMod", "CameraProfilesMod", "EntityCommandPanelMod", "ChampionSkillSandboxMod", "ChampionTopDownShooterEntryMod" },
+                    true))
+                .SetName("ProdModSmoke_ChampionTopDownShooterEntryMod");
 
             yield return new TestCaseData(new ModCase(
                     "UiTestMod",

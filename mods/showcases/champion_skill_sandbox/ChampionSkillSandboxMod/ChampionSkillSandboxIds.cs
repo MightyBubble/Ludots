@@ -6,6 +6,8 @@ namespace ChampionSkillSandboxMod
     {
         public const string MapId = "champion_skill_sandbox";
         public const string StressMapId = "champion_skill_stress";
+        public const string LaserSweepMapId = "champion_laser_sweep";
+        public const string TopDownShooterMapId = "champion_topdown_shooter";
         public const string InputContextId = "ChampionSkillSandbox.Controls";
 
         public const string SmartCastModeId = "ChampionSkillSandbox.Mode.SmartCast";
@@ -57,6 +59,8 @@ namespace ChampionSkillSandboxMod
         public const string GravityWellName = "Gravity Well";
         public const string BarrierSegmentName = "Barrier Segment";
         public const string GuidedLaserName = "Guided Laser";
+        public const string SweepRangerAlphaName = "Sweep Ranger Alpha";
+        public const string SweepLaserName = "Sweep Laser";
         public const string TargetDummyDName = "Target Dummy D";
         public const string TargetDummyEName = "Target Dummy E";
         public const string TargetDummyFName = "Target Dummy F";
@@ -68,7 +72,9 @@ namespace ChampionSkillSandboxMod
         public static bool IsSandboxMap(string? mapId)
         {
             return string.Equals(mapId, MapId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(mapId, StressMapId, StringComparison.OrdinalIgnoreCase);
+                   string.Equals(mapId, StressMapId, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(mapId, LaserSweepMapId, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(mapId, TopDownShooterMapId, StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool IsStressMap(string? mapId)
