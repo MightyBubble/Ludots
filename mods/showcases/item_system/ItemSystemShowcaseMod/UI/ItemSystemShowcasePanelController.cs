@@ -55,34 +55,72 @@ internal sealed class ItemSystemShowcasePanelController
 
     private UiElementBuilder BuildRoot(ReactiveContext<ItemSystemShowcasePanelState> context)
     {
-        ItemSystemShowcasePanelState state = context.State;
+        return context.State.SceneKind switch
+        {
+            ItemSystemShowcaseSceneKind.Hub => BuildHubRoot(context.State),
+            ItemSystemShowcaseSceneKind.LoadoutGarage => BuildFocusedRoot(
+                context.State,
+                "Loadout Garage",
+                "Build a hero one slot at a time and watch passives, actives, and paper-doll changes stay in sync.",
+                BuildLoadoutActions(),
+                "Stats",
+                "Paper Doll",
+                "Granted Abilities",
+                "Passives + Tags",
+                "Deep Detail"),
+            ItemSystemShowcaseSceneKind.WeaponBench => BuildFocusedRoot(
+                context.State,
+                "Weapon Bench",
+                "Tune one rifle, prove socket rules, then fire and reload through the same item + GAS stack players would use in combat.",
+                BuildWeaponActions(),
+                "Bench Readout",
+                "Ammo Supply",
+                "Sockets",
+                "Live Log",
+                "Full Equipment"),
+            _ => BuildFocusedRoot(
+                context.State,
+                "Raid Loop",
+                "Move loot through stash, secure case, vendor, and backpack so the extraction-facing rules read like a compact playable run.",
+                BuildRaidActions(),
+                "Backpack",
+                "Secure Case",
+                "Stash",
+                "Live Log",
+                "Vendor")
+        };
+    }
+
+    private UiElementBuilder BuildHubRoot(ItemSystemShowcasePanelState state)
+    {
         return Ui.Column(
                 Ui.ScrollView(
                         Ui.Column(
+                                BuildHeroCard(state, includeBackButton: false),
                                 Ui.Row(
-                                        BuildHeroPanel(state),
-                                        BuildResourcePanel(state),
-                                        BuildActionPanel())
+                                        BuildHubCard(
+                                            "Loadout Garage",
+                                            "#F0C36B",
+                                            state.PrimaryLines,
+                                            "Open Loadout Garage",
+                                            _ => LoadMap(ItemSystemShowcaseIds.LoadoutGarageMapId)),
+                                        BuildHubCard(
+                                            "Weapon Bench",
+                                            "#7DD3FC",
+                                            state.SecondaryLines,
+                                            "Open Weapon Bench",
+                                            _ => LoadMap(ItemSystemShowcaseIds.WeaponBenchMapId)),
+                                        BuildHubCard(
+                                            "Raid Loop",
+                                            "#8DE3AE",
+                                            state.TertiaryLines,
+                                            "Open Raid Loop",
+                                            _ => LoadMap(ItemSystemShowcaseIds.RaidLoopMapId)))
                                     .Gap(12f)
                                     .Wrap()
                                     .Align(UiAlignItems.Start),
-                                Ui.Row(
-                                        BuildSection("Stats", "#F0C36B", state.StatLines, width: 220f),
-                                        BuildSection("Abilities", "#7DD3FC", state.AbilityLines, width: 280f),
-                                        BuildSection("Buffs + Tags", "#8DE3AE", state.BuffLines, width: 280f),
-                                        BuildSection("Equipment + Sockets", "#FFB38A", state.EquipmentLines, width: 280f))
-                                    .Gap(12f)
-                                    .Wrap()
-                                    .Align(UiAlignItems.Start),
-                                Ui.Row(
-                                        BuildSection("Backpack", "#F0C36B", state.BackpackLines, width: 250f, height: 254f),
-                                        BuildSection("Secure", "#7DD3FC", state.SecureLines, width: 220f, height: 254f),
-                                        BuildSection("Stash", "#8DE3AE", state.StashLines, width: 280f, height: 254f),
-                                        BuildSection("Vendor", "#FFB38A", state.VendorLines, width: 250f, height: 254f))
-                                    .Gap(12f)
-                                    .Wrap()
-                                    .Align(UiAlignItems.Start),
-                                BuildSection("Scenario Log", "#F0C36B", state.LogLines, width: 620f, height: 210f))
+                                BuildSection("Shared Tech Promise", "#FFB38A", state.QuaternaryLines, width: 620f, height: 180f),
+                                BuildSection("Recent Run Log", "#F0C36B", state.LogLines, width: 620f, height: 180f))
                             .Gap(12f)
                             .Padding(16f))
                     .WidthPercent(100f)
@@ -93,26 +131,87 @@ internal sealed class ItemSystemShowcasePanelController
             .ZIndex(35);
     }
 
-    private UiElementBuilder BuildHeroPanel(ItemSystemShowcasePanelState state)
+    private UiElementBuilder BuildFocusedRoot(
+        ItemSystemShowcasePanelState state,
+        string sceneLabel,
+        string playerGoal,
+        UiElementBuilder actionPanel,
+        string primaryTitle,
+        string secondaryTitle,
+        string tertiaryTitle,
+        string logTitle,
+        string deepDetailTitle)
     {
-        return Ui.Card(
-                Ui.Text(state.Header)
-                    .FontSize(24f)
-                    .Bold()
-                    .Color("#F5F7FA"),
-                Ui.Text(state.HeroSummary)
-                    .FontSize(12f)
-                    .Color("#D5DEE8")
-                    .WhiteSpace(UiWhiteSpace.Normal),
+        return Ui.Column(
+                Ui.ScrollView(
+                        Ui.Column(
+                                BuildHeroCard(state, includeBackButton: true),
+                                BuildIntentCard(sceneLabel, playerGoal, state.SceneSummary),
+                                actionPanel,
+                                Ui.Row(
+                                        BuildSection(primaryTitle, "#F0C36B", state.PrimaryLines, width: 260f, height: 250f),
+                                        BuildSection(secondaryTitle, "#7DD3FC", state.SecondaryLines, width: 280f, height: 250f),
+                                        BuildSection(tertiaryTitle, "#8DE3AE", state.TertiaryLines, width: 280f, height: 250f),
+                                        BuildSection(logTitle, "#FFB38A", state.LogLines, width: 280f, height: 250f))
+                                    .Gap(12f)
+                                    .Wrap()
+                                    .Align(UiAlignItems.Start),
+                                BuildSection(deepDetailTitle, "#FFB38A", state.QuaternaryLines, width: 620f, height: 220f))
+                            .Gap(12f)
+                            .Padding(16f))
+                    .WidthPercent(100f)
+                    .HeightPercent(100f))
+            .WidthPercent(100f)
+            .HeightPercent(100f)
+            .Background("#16050A12")
+            .ZIndex(35);
+    }
+
+    private UiElementBuilder BuildHeroCard(ItemSystemShowcasePanelState state, bool includeBackButton)
+    {
+        var children = new List<UiElementBuilder>
+        {
+            Ui.Text(state.Header)
+                .FontSize(24f)
+                .Bold()
+                .Color("#F5F7FA"),
+            Ui.Text(state.SceneSummary)
+                .FontSize(12f)
+                .Color("#D5DEE8")
+                .WhiteSpace(UiWhiteSpace.Normal),
+            Ui.Text(state.HeroSummary)
+                .FontSize(12f)
+                .Color("#F0C36B")
+                .WhiteSpace(UiWhiteSpace.Normal),
+            Ui.Text(state.CreditsSummary)
+                .FontSize(12f)
+                .Color("#93A4B8")
+                .WhiteSpace(UiWhiteSpace.Normal)
+        };
+
+        if (!string.IsNullOrWhiteSpace(state.DummySummary))
+        {
+            children.Add(
                 Ui.Text(state.DummySummary)
                     .FontSize(12f)
-                    .Color("#F0C36B")
-                    .WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text("Unified entity-first model: equipment, backpack, stash, vendor, secure case, and rifle sockets all run through the same container + item placement rules.")
-                    .FontSize(11f)
-                    .Color("#93A4B8")
-                    .WhiteSpace(UiWhiteSpace.Normal))
-            .Width(360f)
+                    .Color("#8DE3AE")
+                    .WhiteSpace(UiWhiteSpace.Normal));
+        }
+
+        if (includeBackButton)
+        {
+            children.Add(
+                Ui.Row(
+                        BuildActionButton("Back To Hub", "#23415C", _ => LoadMap(ItemSystemShowcaseIds.HubMapId)),
+                        BuildActionButton("Loadout", "#5E4518", _ => LoadMap(ItemSystemShowcaseIds.LoadoutGarageMapId)),
+                        BuildActionButton("Bench", "#20493A", _ => LoadMap(ItemSystemShowcaseIds.WeaponBenchMapId)),
+                        BuildActionButton("Raid", "#7D3326", _ => LoadMap(ItemSystemShowcaseIds.RaidLoopMapId)))
+                    .Gap(8f)
+                    .Wrap());
+        }
+
+        return Ui.Card(children.ToArray())
+            .Width(760f)
             .Padding(16f)
             .Gap(10f)
             .Radius(22f)
@@ -120,22 +219,22 @@ internal sealed class ItemSystemShowcasePanelController
             .Border(1f, Color("#29435A"));
     }
 
-    private UiElementBuilder BuildResourcePanel(ItemSystemShowcasePanelState state)
+    private static UiElementBuilder BuildIntentCard(string sceneLabel, string playerGoal, string liveSummary)
     {
         return Ui.Card(
-                Ui.Text("Economy + Ammo")
+                Ui.Text(sceneLabel)
                     .FontSize(12f)
                     .Bold()
                     .Color("#F0C36B"),
-                Ui.Text(state.CreditsSummary)
+                Ui.Text(playerGoal)
                     .FontSize(13f)
                     .Color("#F5F7FA")
                     .WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text("Coverage: MOBA passives, ARPG jewelry, extraction storage, modular rifle attachments, ammo stacks, reload loop, vendor buy/sell, split stack, and secure loot routing.")
+                Ui.Text(liveSummary)
                     .FontSize(11f)
                     .Color("#93A4B8")
                     .WhiteSpace(UiWhiteSpace.Normal))
-            .Width(360f)
+            .Width(760f)
             .Padding(16f)
             .Gap(10f)
             .Radius(22f)
@@ -143,39 +242,99 @@ internal sealed class ItemSystemShowcasePanelController
             .Border(1f, Color("#2D4860"));
     }
 
-    private UiElementBuilder BuildActionPanel()
+    private UiElementBuilder BuildLoadoutActions()
     {
         return Ui.Card(
-                Ui.Text("Playable Controls")
+                Ui.Text("Loadout Moves")
                     .FontSize(12f)
                     .Bold()
                     .Color("#F0C36B"),
                 Ui.Row(
                         BuildActionButton("Toggle Boots", "#5E4518", _ => Run(engine => _runtime.ToggleBoots(engine))),
                         BuildActionButton("Equip Ring", "#23415C", _ => Run(engine => _runtime.EquipRing(engine))),
-                        BuildActionButton("Attach Grip", "#20493A", _ => Run(engine => _runtime.AttachGrip(engine))))
+                        BuildActionButton("Mythic Pulse", "#20493A", _ => Run(engine => _runtime.CastMythicPulse(engine))),
+                        BuildActionButton("Second Wind", "#7D3326", _ => Run(engine => _runtime.CastSecondWind(engine))))
                     .Gap(8f)
                     .Wrap(),
+                Ui.Text("Target player feeling: change one slot, immediately understand what changed in stats, passives, and active slots.")
+                    .FontSize(11f)
+                    .Color("#93A4B8")
+                    .WhiteSpace(UiWhiteSpace.Normal))
+            .Width(760f)
+            .Padding(16f)
+            .Gap(10f)
+            .Radius(22f)
+            .Background("#0D1722")
+            .Border(1f, Color("#2F475E"));
+    }
+
+    private UiElementBuilder BuildWeaponActions()
+    {
+        return Ui.Card(
+                Ui.Text("Weapon Bench Moves")
+                    .FontSize(12f)
+                    .Bold()
+                    .Color("#F0C36B"),
                 Ui.Row(
+                        BuildActionButton("Attach Grip", "#20493A", _ => Run(engine => _runtime.AttachGrip(engine))),
                         BuildActionButton("Reload", "#5E4518", _ => Run(engine => _runtime.Reload(engine))),
-                        BuildActionButton("Fire Rifle", "#7D3326", _ => Run(engine => _runtime.FirePrimary(engine))),
-                        BuildActionButton("Mythic Pulse", "#23415C", _ => Run(engine => _runtime.CastMythicPulse(engine))),
-                        BuildActionButton("Second Wind", "#20493A", _ => Run(engine => _runtime.CastSecondWind(engine))))
+                        BuildActionButton("Fire Rifle", "#7D3326", _ => Run(engine => _runtime.FirePrimary(engine))))
                     .Gap(8f)
                     .Wrap(),
+                Ui.Text("Target player feeling: this is one rifle with one magazine and one target, not a spreadsheet of sockets.")
+                    .FontSize(11f)
+                    .Color("#93A4B8")
+                    .WhiteSpace(UiWhiteSpace.Normal))
+            .Width(760f)
+            .Padding(16f)
+            .Gap(10f)
+            .Radius(22f)
+            .Background("#0D1722")
+            .Border(1f, Color("#2F475E"));
+    }
+
+    private UiElementBuilder BuildRaidActions()
+    {
+        return Ui.Card(
+                Ui.Text("Raid Loop Moves")
+                    .FontSize(12f)
+                    .Bold()
+                    .Color("#F0C36B"),
                 Ui.Row(
                         BuildActionButton("Move Artifact", "#5E4518", _ => Run(engine => _runtime.StoreArtifact(engine))),
                         BuildActionButton("Buy AP Ammo", "#23415C", _ => Run(engine => _runtime.BuyApAmmo(engine))),
                         BuildActionButton("Sell Artifact", "#7D3326", _ => Run(engine => _runtime.SellArtifact(engine))),
                         BuildActionButton("Split Ammo", "#20493A", _ => Run(engine => _runtime.SplitAmmo(engine))))
                     .Gap(8f)
-                    .Wrap())
-            .Width(620f)
+                    .Wrap(),
+                Ui.Text("Target player feeling: route loot through secure case, stash, vendor, and backpack without needing to parse every subsystem at once.")
+                    .FontSize(11f)
+                    .Color("#93A4B8")
+                    .WhiteSpace(UiWhiteSpace.Normal))
+            .Width(760f)
             .Padding(16f)
             .Gap(10f)
             .Radius(22f)
             .Background("#0D1722")
             .Border(1f, Color("#2F475E"));
+    }
+
+    private static UiElementBuilder BuildHubCard(string title, string accent, IReadOnlyList<string> lines, string ctaLabel, Action<UiActionContext> onClick)
+    {
+        return Ui.Card(
+                Ui.Text(title)
+                    .FontSize(18f)
+                    .Bold()
+                    .Color("#F5F7FA"),
+                Ui.Column(BuildLineNodes(lines).ToArray())
+                    .Gap(6f),
+                BuildActionButton(ctaLabel, accent == "#F0C36B" ? "#5E4518" : accent == "#7DD3FC" ? "#23415C" : "#20493A", onClick))
+            .Width(320f)
+            .Padding(16f)
+            .Gap(12f)
+            .Radius(22f)
+            .Background("#0E1823")
+            .Border(1f, Color("#284154"));
     }
 
     private static UiElementBuilder BuildSection(string title, string accent, IReadOnlyList<string> lines, float width, float height = 220f)
@@ -227,6 +386,27 @@ internal sealed class ItemSystemShowcasePanelController
             .Background(background)
             .Border(1f, Color("#44FFFFFF"))
             .Color("#F5F7FA");
+    }
+
+    private void LoadMap(string mapId)
+    {
+        if (_engine == null)
+        {
+            return;
+        }
+
+        string? currentMapId = _engine.CurrentMapSession?.MapId.Value;
+        if (string.Equals(currentMapId, mapId, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(currentMapId))
+        {
+            _engine.UnloadMap(currentMapId);
+        }
+
+        _engine.LoadMap(mapId);
     }
 
     private void Run(Action<GameEngine> action)

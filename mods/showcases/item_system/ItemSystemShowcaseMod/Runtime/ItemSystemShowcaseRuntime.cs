@@ -105,24 +105,65 @@ internal sealed class ItemSystemShowcaseRuntime
     public ItemSystemShowcasePanelState BuildState(GameEngine engine)
     {
         EnsureScenario(engine);
+        ItemSystemShowcaseSceneKind sceneKind = ItemSystemShowcaseIds.GetSceneKind(engine.CurrentMapSession?.MapId.Value);
         InventoryRuntimeService inventory = Inventory(engine);
         Entity backpack = Mounted(engine, _backpackItem, "storage");
         Entity secure = Mounted(engine, _secureItem, "vault");
+        string heroSummary = $"Loadout Pilot | passive effects {ActiveEffects(engine, _hero)} | actor #{_hero.Id}";
+        string creditsSummary = $"Credits {inventory.CountStackUnits(_hero, _creditDefId)} | FMJ {inventory.CountStackUnits(_hero, _ammoDefId)} | AP {inventory.CountStackUnits(_hero, _apAmmoDefId)}";
+        string dummySummary = $"Target Dummy health {ReadAttr(engine, _dummy, _healthAttrId):0.0}";
 
-        return new ItemSystemShowcasePanelState(
-            Header: "Ludots Item / Equip / Backpack Showcase",
-            HeroSummary: $"Loadout Pilot | passive effects {ActiveEffects(engine, _hero)} | item actor #{_hero.Id}",
-            CreditsSummary: $"Credits {inventory.CountStackUnits(_hero, _creditDefId)} | FMJ {inventory.CountStackUnits(_hero, _ammoDefId)} | AP {inventory.CountStackUnits(_hero, _apAmmoDefId)}",
-            DummySummary: $"Target Dummy health {ReadAttr(engine, _dummy, _healthAttrId):0.0}",
-            StatLines: BuildStats(engine),
-            AbilityLines: BuildAbilities(engine),
-            BuffLines: BuildBuffs(engine),
-            EquipmentLines: BuildEquipment(engine),
-            BackpackLines: BuildContainer(engine, backpack, "Backpack"),
-            SecureLines: BuildContainer(engine, secure, "Secure"),
-            StashLines: BuildContainer(engine, _stash, "Stash"),
-            VendorLines: BuildContainer(engine, _vendorGrid, "Vendor"),
-            LogLines: _log.ToArray());
+        return sceneKind switch
+        {
+            ItemSystemShowcaseSceneKind.LoadoutGarage => new ItemSystemShowcasePanelState(
+                SceneKind: sceneKind,
+                Header: "Loadout Garage",
+                SceneSummary: "Swap one slot at a time, then read the build as a player would: paper doll, stats, passives, and active buttons all move together.",
+                HeroSummary: heroSummary,
+                CreditsSummary: $"MoveSpeed {ReadAttr(engine, _hero, _moveSpeedAttrId):0.0} | Attack {ReadAttr(engine, _hero, _attackAttrId):0.0} | Armor {ReadAttr(engine, _hero, _armorAttrId):0.0}",
+                DummySummary: "Use this room to understand what one equip change actually does before moving on.",
+                PrimaryLines: BuildStats(engine),
+                SecondaryLines: BuildLoadoutEquipment(engine),
+                TertiaryLines: BuildAbilities(engine),
+                QuaternaryLines: BuildBuffs(engine),
+                LogLines: _log.ToArray()),
+            ItemSystemShowcaseSceneKind.WeaponBench => new ItemSystemShowcasePanelState(
+                SceneKind: sceneKind,
+                Header: "Weapon Bench",
+                SceneSummary: "One rifle, one magazine, one target. Socket rules, ammo routing, reload, and firing all stay grounded in the same item entity tree.",
+                HeroSummary: $"Primary weapon {SlotLabel(engine, _equipment, "primary_weapon")} | {dummySummary}",
+                CreditsSummary: BuildWeaponSummary(engine),
+                DummySummary: "Attach parts, top off the mag, then fire to see item-granted slot 0 resolve against the dummy.",
+                PrimaryLines: BuildWeaponReadout(engine),
+                SecondaryLines: BuildAmmoSupply(engine, backpack),
+                TertiaryLines: BuildWeaponSockets(engine),
+                QuaternaryLines: BuildEquipment(engine),
+                LogLines: _log.ToArray()),
+            ItemSystemShowcaseSceneKind.RaidLoop => new ItemSystemShowcasePanelState(
+                SceneKind: sceneKind,
+                Header: "Raid Loop",
+                SceneSummary: "This room is about extraction-facing decisions: what stays on the body, what moves into secure storage, what gets sold, and how ammo gets repacked.",
+                HeroSummary: heroSummary,
+                CreditsSummary: creditsSummary,
+                DummySummary: "Think like a player between raids: keep value safe, move bulk to stash, and prep the next loadout.",
+                PrimaryLines: BuildContainer(engine, backpack, "Backpack"),
+                SecondaryLines: BuildContainer(engine, secure, "Secure Case"),
+                TertiaryLines: BuildContainer(engine, _stash, "Stash"),
+                QuaternaryLines: BuildContainer(engine, _vendorGrid, "Vendor"),
+                LogLines: _log.ToArray()),
+            _ => new ItemSystemShowcasePanelState(
+                SceneKind: sceneKind,
+                Header: "Ludots Item Demo Pack",
+                SceneSummary: "Three short rooms teach one shared architecture. Pick the player problem you care about instead of reading a mega dashboard first.",
+                HeroSummary: heroSummary,
+                CreditsSummary: "Start with a focused route: build, bench, or raid loop. The same ECS / GAS rules stay underneath every room.",
+                DummySummary: string.Empty,
+                PrimaryLines: BuildHubLoadoutLines(),
+                SecondaryLines: BuildHubWeaponLines(),
+                TertiaryLines: BuildHubRaidLines(),
+                QuaternaryLines: BuildHubSharedRules(),
+                LogLines: _log.ToArray())
+        };
     }
 
     public void ToggleBoots(GameEngine engine)
@@ -631,6 +672,112 @@ internal sealed class ItemSystemShowcaseRuntime
             $"optic: {SlotLabel(engine, sockets, "optic")}",
             $"muzzle: {SlotLabel(engine, sockets, "muzzle")}",
             $"underbarrel: {SlotLabel(engine, sockets, "underbarrel")}"
+        };
+    }
+
+    private string[] BuildLoadoutEquipment(GameEngine engine)
+    {
+        return new[]
+        {
+            $"feet: {SlotLabel(engine, _equipment, "feet")}",
+            $"amulet: {SlotLabel(engine, _equipment, "amulet")}",
+            $"ring_left: {SlotLabel(engine, _equipment, "ring_left")}",
+            $"ring_right: {SlotLabel(engine, _equipment, "ring_right")}",
+            $"charm: {SlotLabel(engine, _equipment, "charm")}",
+            $"back: {SlotLabel(engine, _equipment, "back")}",
+            $"secure: {SlotLabel(engine, _equipment, "secure")}"
+        };
+    }
+
+    private string BuildWeaponSummary(GameEngine engine)
+    {
+        Entity sockets = Mounted(engine, _rifleItem, "sockets");
+        Entity mag = SlotItem(engine, sockets, "magwell");
+        int magCharges = mag != Entity.Null && engine.World.Has<ItemInstanceCm>(mag) ? engine.World.Get<ItemInstanceCm>(mag).Charges : 0;
+        return $"Magazine {magCharges}/30 | FMJ {Inventory(engine).CountStackUnits(_hero, _ammoDefId)} | AP {Inventory(engine).CountStackUnits(_hero, _apAmmoDefId)}";
+    }
+
+    private string[] BuildWeaponReadout(GameEngine engine)
+    {
+        return new[]
+        {
+            $"Dummy Health {ReadAttr(engine, _dummy, _healthAttrId):0.0}",
+            $"Hero AttackDamage {ReadAttr(engine, _hero, _attackAttrId):0.0}",
+            $"Hero Armor {ReadAttr(engine, _hero, _armorAttrId):0.0}",
+            $"Primary weapon: {SlotLabel(engine, _equipment, "primary_weapon")}"
+        };
+    }
+
+    private string[] BuildAmmoSupply(GameEngine engine, Entity backpack)
+    {
+        return new[]
+        {
+            $"Hero credits: {Inventory(engine).CountStackUnits(_hero, _creditDefId)}",
+            $"Hero FMJ total: {Inventory(engine).CountStackUnits(_hero, _ammoDefId)}",
+            $"Hero AP total: {Inventory(engine).CountStackUnits(_hero, _apAmmoDefId)}",
+            $"Backpack line: {FirstNonHeaderLine(BuildContainer(engine, backpack, "Backpack"))}",
+            $"Stash line: {FirstNonHeaderLine(BuildContainer(engine, _stash, "Stash"))}"
+        };
+    }
+
+    private string[] BuildWeaponSockets(GameEngine engine)
+    {
+        Entity sockets = Mounted(engine, _rifleItem, "sockets");
+        return new[]
+        {
+            $"magwell: {SlotLabel(engine, sockets, "magwell")}",
+            $"optic: {SlotLabel(engine, sockets, "optic")}",
+            $"muzzle: {SlotLabel(engine, sockets, "muzzle")}",
+            $"underbarrel: {SlotLabel(engine, sockets, "underbarrel")}"
+        };
+    }
+
+    private static string FirstNonHeaderLine(IReadOnlyList<string> lines)
+    {
+        return lines.Count > 1 ? lines[1] : "(empty)";
+    }
+
+    private static string[] BuildHubLoadoutLines()
+    {
+        return new[]
+        {
+            "Feel the hero build change one slot at a time.",
+            "Toggle boots to drop MoveSpeed and remove the granted active.",
+            "Equip the Duelist Ring to raise AttackDamage.",
+            "Cast Mythic Pulse and Second Wind from item-granted slots."
+        };
+    }
+
+    private static string[] BuildHubWeaponLines()
+    {
+        return new[]
+        {
+            "Treat the rifle like one object players care about.",
+            "Attach the vertical grip into the underbarrel socket.",
+            "Reload from shared FMJ stacks without leaving the item runtime.",
+            "Fire through slot 0 and watch dummy HP drop."
+        };
+    }
+
+    private static string[] BuildHubRaidLines()
+    {
+        return new[]
+        {
+            "Run a compact extraction prep loop.",
+            "Move the artifact between stash and secure case.",
+            "Buy AP ammo from the vendor with credits.",
+            "Sell loot back and split FMJ into the backpack."
+        };
+    }
+
+    private static string[] BuildHubSharedRules()
+    {
+        return new[]
+        {
+            "One architecture underneath all three rooms.",
+            "Equipment, backpack, secure case, vendor, and rifle sockets are all containers plus item placements.",
+            "Passive bonuses stay in GAS as real effects and tags.",
+            "Active item powers flow through item-granted ability slots instead of a second runtime."
         };
     }
 
