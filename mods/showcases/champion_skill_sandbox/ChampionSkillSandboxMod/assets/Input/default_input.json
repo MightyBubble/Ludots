@@ -9,6 +9,8 @@
     { "id": "CastModeSmart", "name": "ChampionSkillSandbox_CastModeSmart", "type": "Button" },
     { "id": "CastModeIndicator", "name": "ChampionSkillSandbox_CastModeIndicator", "type": "Button" },
     { "id": "CastModePressRelease", "name": "ChampionSkillSandbox_CastModePressRelease", "type": "Button" },
+    { "id": "CastModeAction", "name": "ChampionSkillSandbox_CastModeAction", "type": "Button" },
+    { "id": "ActionAttack", "name": "ChampionSkillSandbox_ActionAttack", "type": "Button" },
     { "id": "ResetCamera", "name": "ChampionSkillSandbox_ResetCamera", "type": "Button" }
   ],
   "contexts": [
@@ -26,7 +28,9 @@
         { "actionId": "CastModeSmart", "path": "<Keyboard>/f1" },
         { "actionId": "CastModeIndicator", "path": "<Keyboard>/f2" },
         { "actionId": "CastModePressRelease", "path": "<Keyboard>/f3" },
-        { "actionId": "ResetCamera", "path": "<Keyboard>/f4" }
+        { "actionId": "ResetCamera", "path": "<Keyboard>/f4" },
+        { "actionId": "CastModeAction", "path": "<Keyboard>/f5" },
+        { "actionId": "ActionAttack", "path": "<Keyboard>/space" }
       ]
     }
   ]

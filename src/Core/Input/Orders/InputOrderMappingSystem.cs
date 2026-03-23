@@ -846,6 +846,12 @@ namespace Ludots.Core.Input.Orders
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
             args.I0 = resolution.SlotIndex;
+            if (resolution.HasTargetWorldCm)
+            {
+                args.Spatial.Kind = OrderSpatialKind.WorldCm;
+                args.Spatial.Mode = OrderCollectionMode.Single;
+                args.Spatial.WorldCm = resolution.TargetWorldCm;
+            }
 
             order.OrderTypeId = orderTypeId;
             order.PlayerId = _playerId;

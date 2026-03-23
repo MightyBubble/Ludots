@@ -518,6 +518,12 @@ namespace ChampionSkillSandboxMod.Runtime
             RegisterAbilityCue(performers, "Ability.Champion.Jayce.Hammer.ToTheSkies", "champion_skill_sandbox.cue.jayce_hammer_to_the_skies_cast");
             RegisterAbilityCue(performers, "Ability.Champion.Jayce.Transform.Cannon", "champion_skill_sandbox.cue.jayce_transform_cannon");
             RegisterAbilityCue(performers, "Ability.Champion.Jayce.Transform.Hammer", "champion_skill_sandbox.cue.jayce_transform_hammer");
+            RegisterAbilityCue(performers, "Ability.Champion.Duelist.Combo.Stage1", "champion_skill_sandbox.cue.duelist_chain_jab_1");
+            RegisterAbilityCue(performers, "Ability.Champion.Duelist.Combo.Stage2", "champion_skill_sandbox.cue.duelist_chain_jab_2");
+            RegisterAbilityCue(performers, "Ability.Champion.Duelist.Combo.Stage3", "champion_skill_sandbox.cue.duelist_chain_finish");
+            RegisterAbilityCue(performers, "Ability.Champion.Duelist.StepIn", "champion_skill_sandbox.cue.duelist_step_in");
+            RegisterAbilityCue(performers, "Ability.Champion.Duelist.CrowdSweep", "champion_skill_sandbox.cue.duelist_crowd_sweep");
+            RegisterAbilityCue(performers, "Ability.Champion.Duelist.OpeningBreaker", "champion_skill_sandbox.cue.duelist_opening_breaker_cast");
             RegisterAbilityCue(performers, "Ability.ChampionStress.Warrior.Cleave", "champion_skill_sandbox.cue.stress_warrior_cleave");
             RegisterAbilityCue(performers, "Ability.ChampionStress.FireMage.Fireball", "champion_skill_sandbox.cue.stress_fireball_cast");
             RegisterAbilityCue(performers, "Ability.ChampionStress.LaserMage.Laser", "champion_skill_sandbox.cue.stress_laser_cast");
@@ -535,6 +541,12 @@ namespace ChampionSkillSandboxMod.Runtime
             RegisterEffectCue(performers, "Effect.Champion.Jayce.Hammer.LightningFieldHit", "champion_skill_sandbox.cue.jayce_hammer_lightning_field_hit");
             RegisterEffectCue(performers, "Effect.Champion.Jayce.Hammer.ThunderingBlowHit", "champion_skill_sandbox.cue.jayce_hammer_thundering_blow_hit");
             RegisterEffectCue(performers, "Effect.Champion.Jayce.Hammer.ToTheSkiesHit", "champion_skill_sandbox.cue.jayce_hammer_to_the_skies_hit");
+            RegisterEffectCue(performers, "Effect.Champion.Duelist.Combo.Stage1", "champion_skill_sandbox.cue.duelist_combo_hit");
+            RegisterEffectCue(performers, "Effect.Champion.Duelist.Combo.Stage2", "champion_skill_sandbox.cue.duelist_combo_hit");
+            RegisterEffectCue(performers, "Effect.Champion.Duelist.Combo.Stage3", "champion_skill_sandbox.cue.duelist_opening_breaker_hit");
+            RegisterEffectCue(performers, "Effect.Champion.Duelist.StepInStrike", "champion_skill_sandbox.cue.duelist_step_in_hit");
+            RegisterEffectCue(performers, "Effect.Champion.Duelist.CrowdSweepHit", "champion_skill_sandbox.cue.duelist_crowd_sweep_hit");
+            RegisterEffectCue(performers, "Effect.Champion.Duelist.OpeningBreaker", "champion_skill_sandbox.cue.duelist_opening_breaker_hit");
             RegisterEffectCue(performers, "Effect.ChampionStress.Warrior.CleaveHit", "champion_skill_sandbox.cue.stress_warrior_cleave_hit");
             RegisterEffectCue(performers, "Effect.ChampionStress.FireMage.FireballHit", "champion_skill_sandbox.cue.stress_fireball_hit");
             RegisterEffectCue(performers, "Effect.ChampionStress.LaserMage.LaserHit", "champion_skill_sandbox.cue.stress_laser_hit");

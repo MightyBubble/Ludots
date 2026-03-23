@@ -81,6 +81,8 @@ namespace ChampionSkillSandboxMod.Systems
                        inputObj is IInputActionReader input &&
                        input.IsDown("QueueModifier");
             });
+
+            _globals[SkillBarOverlaySystem.SkillBarKeyLabelsKey] = new[] { "Q", "W", "E", "R", "Space" };
         }
     }
 }

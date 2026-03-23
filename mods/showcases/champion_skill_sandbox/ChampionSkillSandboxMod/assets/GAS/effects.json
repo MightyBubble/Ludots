@@ -653,5 +653,88 @@
     "modifiers": [
       { "attribute": "Health", "op": "Add", "value": -10.0 }
     ]
+  },
+  {
+    "id": "Effect.Champion.Duelist.Combo.Stage1",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -11.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Duelist.Combo.Stage2",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -13.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Duelist.Combo.Stage3",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -18.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Duelist.StepInDash",
+    "tags": ["Effect.Champion.Movement"],
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "displacement": {
+      "directionMode": "ToTarget",
+      "totalDistanceCm": 320,
+      "totalDurationTicks": 4,
+      "overrideNavigation": true
+    }
+  },
+  {
+    "id": "Effect.Champion.Duelist.StepInStrike",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -15.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Duelist.CrowdSweep",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Cone", "radius": 420, "halfAngle": 64 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 10 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.Duelist.CrowdSweepHit" }
+  },
+  {
+    "id": "Effect.Champion.Duelist.CrowdSweepHit",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -14.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Duelist.OpeningBreaker",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -28.0 }
+    ]
   }
 ]

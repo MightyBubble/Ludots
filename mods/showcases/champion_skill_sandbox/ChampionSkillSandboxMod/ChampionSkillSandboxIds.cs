@@ -13,12 +13,15 @@ namespace ChampionSkillSandboxMod
         public const string SmartCastModeId = "ChampionSkillSandbox.Mode.SmartCast";
         public const string IndicatorModeId = "ChampionSkillSandbox.Mode.Indicator";
         public const string PressReleaseModeId = "ChampionSkillSandbox.Mode.PressReleaseAim";
+        public const string ActionModeId = "ChampionSkillSandbox.Mode.Action";
         public const string TacticalCameraId = "ChampionSkillSandbox.Camera.Tactical";
 
         public const string SmartCastActionId = "CastModeSmart";
         public const string IndicatorActionId = "CastModeIndicator";
         public const string PressReleaseActionId = "CastModePressRelease";
+        public const string ActionModeActionId = "CastModeAction";
         public const string ResetCameraActionId = "ResetCamera";
+        public const string ActionAttackActionId = "ActionAttack";
         public const string FreeCameraToolbarButtonId = "ChampionSkillSandbox.Camera.Free";
         public const string FollowSelectionToolbarButtonId = "ChampionSkillSandbox.Camera.Selection";
         public const string FollowSelectionGroupToolbarButtonId = "ChampionSkillSandbox.Camera.SelectionGroup";
@@ -38,6 +41,7 @@ namespace ChampionSkillSandboxMod
         public const string ResetCameraRequestKey = "ChampionSkillSandbox.Camera.ResetRequested";
         public const string CameraFollowModeKey = "ChampionSkillSandbox.Camera.FollowMode";
         public const string SelectionViewChoiceKey = "ChampionSkillSandbox.Selection.ViewChoice";
+        public const string ContextActionSummaryKey = "ChampionSkillSandbox.ContextActionSummary";
         public const string SelectionIndicatorPerformerKey = "champion_skill_sandbox.selection_indicator";
         public const string HoverIndicatorPerformerKey = "champion_skill_sandbox.hover_indicator";
         public const int SelectionIndicatorScopeId = 4101;
@@ -50,6 +54,7 @@ namespace ChampionSkillSandboxMod
         public const string GarenCourageName = "Garen Courage";
         public const string JayceCannonName = "Jayce Cannon";
         public const string JayceHammerName = "Jayce Hammer";
+        public const string DuelistAlphaName = "Duelist Alpha";
         public const string GeomancerAlphaName = "Geomancer Alpha";
         public const string SpellEngineerAlphaName = "Spell Engineer Alpha";
         public const string RunicBeaconName = "Runic Beacon";
@@ -91,7 +96,8 @@ namespace ChampionSkillSandboxMod
         {
             return string.Equals(modeId, SmartCastModeId, StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(modeId, IndicatorModeId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(modeId, PressReleaseModeId, StringComparison.OrdinalIgnoreCase);
+                   string.Equals(modeId, PressReleaseModeId, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(modeId, ActionModeId, StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool IsCameraFollowMode(string? buttonId)

@@ -44,6 +44,16 @@
       "modifierBehavior": "QueueOnModifier"
     },
     {
+      "actionId": "ActionAttack",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 4 },
+      "requireSelection": false,
+      "selectionType": "Entity",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
       "actionId": "Command",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "moveTo",

@@ -469,6 +469,145 @@
     "positionOffset": [0, 0.72, 0]
   },
   {
+    "id": "champion_skill_sandbox.cue.duelist_chain_jab_1",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [0.96, 0.78, 0.34, 0.14],
+    "defaultScale": 1.2,
+    "defaultLifetime": 0.24,
+    "positionOffset": [0, 0.05, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.78 },
+      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.82 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.4 },
+      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.duelist_chain_jab_2",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [1.0, 0.62, 0.3, 0.14],
+    "defaultScale": 1.28,
+    "defaultLifetime": 0.24,
+    "positionOffset": [0, 0.05, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.84 },
+      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.68 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.36 },
+      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.duelist_chain_finish",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Circle",
+    "defaultColor": [1.0, 0.42, 0.28, 0.18],
+    "defaultScale": 1.42,
+    "defaultLifetime": 0.26,
+    "positionOffset": [0, 0.06, 0],
+    "bindings": [
+      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.48 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.32 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.duelist_combo_hit",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "Sphere",
+    "defaultColor": [1.0, 0.78, 0.5, 0.9],
+    "defaultScale": 0.28,
+    "defaultLifetime": 0.18,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.8, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.duelist_step_in",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "Sphere",
+    "defaultColor": [0.44, 0.9, 1.0, 0.9],
+    "defaultScale": 0.34,
+    "defaultLifetime": 0.2,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.72, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.duelist_step_in_hit",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "Sphere",
+    "defaultColor": [0.58, 0.94, 1.0, 0.92],
+    "defaultScale": 0.26,
+    "defaultLifetime": 0.18,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.8, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.duelist_crowd_sweep",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [0.66, 0.94, 0.48, 0.14],
+    "defaultScale": 1.9,
+    "defaultLifetime": 0.28,
+    "positionOffset": [0, 0.05, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 1.2 },
+      { "paramKey": 8, "source": "constant", "constantValue": 0.72 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.98 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.56 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.duelist_crowd_sweep_hit",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Circle",
+    "defaultColor": [0.62, 0.96, 0.54, 0.18],
+    "defaultScale": 1.24,
+    "defaultLifetime": 0.2,
+    "positionOffset": [0, 0.06, 0],
+    "bindings": [
+      { "paramKey": 8, "source": "constant", "constantValue": 0.68 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.98 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.58 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.duelist_opening_breaker_cast",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "Sphere",
+    "defaultColor": [1.0, 0.44, 0.5, 0.92],
+    "defaultScale": 0.42,
+    "defaultLifetime": 0.22,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.82, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.duelist_opening_breaker_hit",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Circle",
+    "defaultColor": [1.0, 0.4, 0.42, 0.2],
+    "defaultScale": 1.52,
+    "defaultLifetime": 0.24,
+    "positionOffset": [0, 0.06, 0],
+    "bindings": [
+      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.44 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.46 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+    ]
+  },
+  {
     "id": "champion_skill_sandbox.projectile.stress_fireball",
     "visualKind": "Marker3D",
     "meshOrShapeId": "Sphere",

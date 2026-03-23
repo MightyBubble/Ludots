@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
@@ -198,6 +199,72 @@ namespace Ludots.Tests.GAS
             Assert.That(resolved, Is.True);
             Assert.That(resolution.SlotIndex, Is.EqualTo(1));
             Assert.That(resolution.Target, Is.EqualTo(target));
+        }
+
+        [Test]
+        public void ContextScoredResolver_RejectsFriendlyTargetsWhenHostilesExist()
+        {
+            using var world = World.Create();
+
+            const int rootAbilityId = 1200;
+            const int strikeAbilityId = 1201;
+
+            var actor = world.Create();
+            var abilities = new AbilityStateBuffer();
+            abilities.AddAbility(rootAbilityId);
+            abilities.AddAbility(strikeAbilityId);
+            world.Add(actor, abilities);
+            world.Add(actor, WorldPositionCm.FromCm(0, 0));
+            world.Add(actor, new FacingDirection { AngleRad = 0f });
+            world.Add(actor, new Team { Id = 1 });
+
+            var friendly = world.Create();
+            world.Add(friendly, WorldPositionCm.FromCm(80, 0));
+            world.Add(friendly, new GameplayTagContainer());
+            world.Add(friendly, new Team { Id = 1 });
+
+            var hostile = world.Create();
+            world.Add(hostile, WorldPositionCm.FromCm(140, 0));
+            world.Add(hostile, new GameplayTagContainer());
+            world.Add(hostile, new Team { Id = 2 });
+
+            var contextGroups = new ContextGroupRegistry();
+            contextGroups.Register(
+                groupId: 1,
+                rootAbilityId: rootAbilityId,
+                new ContextGroupDefinition(
+                    searchRadiusCm: 300,
+                    new[]
+                    {
+                        new ContextGroupCandidate(
+                            abilityId: strikeAbilityId,
+                            preconditionGraphId: 0,
+                            scoreGraphId: 0,
+                            basePriority: 10f,
+                            maxDistanceCm: 300,
+                            distanceWeight: 4f,
+                            maxAngleDeg: 180,
+                            angleWeight: 0f,
+                            hoveredBiasScore: 0f,
+                            requiresTarget: true),
+                    }));
+
+            var resolver = new ContextScoredOrderResolver(
+                world,
+                contextGroups,
+                new GraphProgramRegistry(),
+                new StubSpatialQueryService(friendly, hostile),
+                new StubGraphApi(world));
+
+            bool resolved = resolver.TryResolve(
+                actor,
+                new InputOrderMapping { ArgsTemplate = new OrderArgsTemplate { I0 = 0 } },
+                friendly,
+                out var resolution);
+
+            Assert.That(resolved, Is.True);
+            Assert.That(resolution.SlotIndex, Is.EqualTo(1));
+            Assert.That(resolution.Target, Is.EqualTo(hostile));
         }
 
         private static InputConfigRoot CreateInputConfig()

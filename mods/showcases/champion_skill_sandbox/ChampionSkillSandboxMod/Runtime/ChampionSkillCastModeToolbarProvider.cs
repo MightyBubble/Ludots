@@ -73,7 +73,7 @@ namespace ChampionSkillSandboxMod.Runtime
             {
                 if (!ChampionSkillSandboxIds.IsStressMap(_engine?.CurrentMapSession?.MapId.Value))
                 {
-                    return $"Theme {EntityCommandPanelShowcaseTheme.ResolveLabel(ResolveActiveShowcaseThemeId())} | Cast + Camera | F1/F2/F3 Cast | RMB Move";
+                    return $"Theme {EntityCommandPanelShowcaseTheme.ResolveLabel(ResolveActiveShowcaseThemeId())} | Cast + Camera | F1/F2/F3/F5 Modes | Space Context | RMB Move";
                 }
 
                 ChampionSkillStressControlState? control = ResolveStressControl();
@@ -101,7 +101,7 @@ namespace ChampionSkillSandboxMod.Runtime
             string activeSelectionViewId = ResolveActiveSelectionViewId();
             string activeShowcaseThemeId = ResolveActiveShowcaseThemeId();
             RenderDebugState? renderDebug = ResolveRenderDebugState();
-            var buttons = new EntityCommandPanelToolbarButtonView[isStressMap ? 19 : 10];
+            var buttons = new EntityCommandPanelToolbarButtonView[isStressMap ? 20 : 11];
             buttons[0] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.SmartCastModeId,
                 "Quick",
@@ -118,102 +118,110 @@ namespace ChampionSkillSandboxMod.Runtime
                 string.Equals(activeModeId, ChampionSkillSandboxIds.PressReleaseModeId, StringComparison.OrdinalIgnoreCase),
                 "#93E07A");
             buttons[3] = new EntityCommandPanelToolbarButtonView(
+                ChampionSkillSandboxIds.ActionModeId,
+                "Action",
+                string.Equals(activeModeId, ChampionSkillSandboxIds.ActionModeId, StringComparison.OrdinalIgnoreCase),
+                "#F3DF86");
+            buttons[4] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.FreeCameraToolbarButtonId,
                 "Free",
                 string.Equals(activeFollowModeId, ChampionSkillSandboxIds.FreeCameraToolbarButtonId, StringComparison.OrdinalIgnoreCase),
                 "#D7D2C4");
-            buttons[4] = new EntityCommandPanelToolbarButtonView(
+            buttons[5] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.FollowSelectionToolbarButtonId,
                 "Follow",
                 string.Equals(activeFollowModeId, ChampionSkillSandboxIds.FollowSelectionToolbarButtonId, StringComparison.OrdinalIgnoreCase),
                 "#8ED9A9");
-            buttons[5] = new EntityCommandPanelToolbarButtonView(
+            buttons[6] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId,
                 "Group",
                 string.Equals(activeFollowModeId, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.OrdinalIgnoreCase),
                 "#F0C35A");
-            buttons[6] = new EntityCommandPanelToolbarButtonView(
+            buttons[7] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.ResetCameraToolbarButtonId,
                 "Reset",
                 false,
                 "#D7D2C4");
-            buttons[7] = new EntityCommandPanelToolbarButtonView(
-                EntityCommandPanelShowcaseTheme.Dota2Id,
-                "Dota2",
-                string.Equals(activeShowcaseThemeId, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.OrdinalIgnoreCase),
-                "#D37A4B");
-            buttons[8] = new EntityCommandPanelToolbarButtonView(
-                EntityCommandPanelShowcaseTheme.LolId,
-                "LoL",
-                string.Equals(activeShowcaseThemeId, EntityCommandPanelShowcaseTheme.LolId, StringComparison.OrdinalIgnoreCase),
-                "#D5B25B");
-            buttons[9] = new EntityCommandPanelToolbarButtonView(
-                EntityCommandPanelShowcaseTheme.Sc2Id,
-                "SC2",
-                string.Equals(activeShowcaseThemeId, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.OrdinalIgnoreCase),
-                "#59B7FF");
             if (isStressMap)
             {
-                buttons[7] = new EntityCommandPanelToolbarButtonView(
+                buttons[8] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.StressTeamADecreaseToolbarButtonId,
                     "A-",
                     false,
                     "#FF9B7A");
-                buttons[8] = new EntityCommandPanelToolbarButtonView(
+                buttons[9] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.StressTeamAIncreaseToolbarButtonId,
                     "A+",
                     false,
                     "#FF9B7A");
-                buttons[9] = new EntityCommandPanelToolbarButtonView(
+                buttons[10] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.StressTeamBDecreaseToolbarButtonId,
                     "B-",
                     false,
                     "#67D4FF");
-                buttons[10] = new EntityCommandPanelToolbarButtonView(
+                buttons[11] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.StressTeamBIncreaseToolbarButtonId,
                     "B+",
                     false,
                     "#67D4FF");
-                buttons[11] = new EntityCommandPanelToolbarButtonView(
+                buttons[12] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.StressHudBarToggleToolbarButtonId,
                     "Bar",
                     renderDebug?.DrawWorldHudBars ?? true,
                     "#E2D7A6");
-                buttons[12] = new EntityCommandPanelToolbarButtonView(
+                buttons[13] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.StressHudTextToggleToolbarButtonId,
                     "Text",
                     renderDebug?.DrawWorldHudText ?? true,
                     "#F2E3B3");
-                buttons[13] = new EntityCommandPanelToolbarButtonView(
+                buttons[14] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.StressCombatTextToggleToolbarButtonId,
                     "Float",
                     renderDebug?.DrawCombatText ?? true,
                     "#FFCF86");
-                buttons[14] = new EntityCommandPanelToolbarButtonView(
+                buttons[15] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.PlayerSelectionToolbarButtonId,
                     "P1",
                     string.Equals(activeSelectionViewId, ChampionSkillSandboxIds.PlayerSelectionToolbarButtonId, StringComparison.OrdinalIgnoreCase),
                     "#98E7A7");
-                buttons[15] = new EntityCommandPanelToolbarButtonView(
+                buttons[16] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.PlayerFormationToolbarButtonId,
                     "P1F",
                     string.Equals(activeSelectionViewId, ChampionSkillSandboxIds.PlayerFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase),
                     "#DAE89B");
-                buttons[16] = new EntityCommandPanelToolbarButtonView(
+                buttons[17] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.AiTargetToolbarButtonId,
                     "AI",
                     string.Equals(activeSelectionViewId, ChampionSkillSandboxIds.AiTargetToolbarButtonId, StringComparison.OrdinalIgnoreCase),
                     "#FFAE86");
-                buttons[17] = new EntityCommandPanelToolbarButtonView(
+                buttons[18] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.AiFormationToolbarButtonId,
                     "AIF",
                     string.Equals(activeSelectionViewId, ChampionSkillSandboxIds.AiFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase),
                     "#F6CF79");
-                buttons[18] = new EntityCommandPanelToolbarButtonView(
+                buttons[19] = new EntityCommandPanelToolbarButtonView(
                     ChampionSkillSandboxIds.CommandSnapshotToolbarButtonId,
                     "CMD",
                     string.Equals(activeSelectionViewId, ChampionSkillSandboxIds.CommandSnapshotToolbarButtonId, StringComparison.OrdinalIgnoreCase),
                     "#7FD8F2");
+            }
+            else
+            {
+                buttons[8] = new EntityCommandPanelToolbarButtonView(
+                    EntityCommandPanelShowcaseTheme.Dota2Id,
+                    "Dota2",
+                    string.Equals(activeShowcaseThemeId, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.OrdinalIgnoreCase),
+                    "#D37A4B");
+                buttons[9] = new EntityCommandPanelToolbarButtonView(
+                    EntityCommandPanelShowcaseTheme.LolId,
+                    "LoL",
+                    string.Equals(activeShowcaseThemeId, EntityCommandPanelShowcaseTheme.LolId, StringComparison.OrdinalIgnoreCase),
+                    "#D5B25B");
+                buttons[10] = new EntityCommandPanelToolbarButtonView(
+                    EntityCommandPanelShowcaseTheme.Sc2Id,
+                    "SC2",
+                    string.Equals(activeShowcaseThemeId, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.OrdinalIgnoreCase),
+                    "#59B7FF");
             }
 
             int count = Math.Min(destination.Length, buttons.Length);

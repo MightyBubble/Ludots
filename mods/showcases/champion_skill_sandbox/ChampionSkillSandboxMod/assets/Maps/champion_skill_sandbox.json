@@ -59,6 +59,14 @@
       }
     },
     {
+      "Template": "champion_skill_sandbox_duelist",
+      "Overrides": {
+        "Name": { "Value": "Duelist Alpha" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 2250, "Y": 1330 } }
+      }
+    },
+    {
       "Template": "champion_skill_sandbox_geomancer",
       "Overrides": {
         "Name": { "Value": "Geomancer Alpha" },
@@ -106,28 +114,28 @@
       "Template": "champion_skill_sandbox_enemy_brute",
       "Overrides": {
         "Name": { "Value": "Target Brute B" },
-        "WorldPositionCm": { "Value": { "X": 2280, "Y": 1120 } }
+        "WorldPositionCm": { "Value": { "X": 2420, "Y": 980 } }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
         "Name": { "Value": "Target Dummy D" },
-        "WorldPositionCm": { "Value": { "X": 2580, "Y": 1600 } }
+        "WorldPositionCm": { "Value": { "X": 2460, "Y": 1600 } }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
         "Name": { "Value": "Target Dummy E" },
-        "WorldPositionCm": { "Value": { "X": 2460, "Y": 1780 } }
+        "WorldPositionCm": { "Value": { "X": 2580, "Y": 1780 } }
       }
     },
     {
       "Template": "champion_skill_sandbox_enemy_dummy",
       "Overrides": {
         "Name": { "Value": "Target Dummy F" },
-        "WorldPositionCm": { "Value": { "X": 2460, "Y": 1420 } }
+        "WorldPositionCm": { "Value": { "X": 2580, "Y": 1420 } }
       }
     }
   ]
