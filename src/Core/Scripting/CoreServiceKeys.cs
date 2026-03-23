@@ -219,6 +219,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GasPresentationEventBuffer> GasPresentationEventBuffer = new("GasPresentationEventBuffer");
         public static readonly ServiceKey<GroundOverlayBuffer> GroundOverlayBuffer = new("GroundOverlayBuffer");
         public static readonly ServiceKey<RoadSplineBuffer> RoadSplineBuffer = new("RoadSplineBuffer");
+        public static readonly ServiceKey<SlashRibbonBuffer> SlashRibbonBuffer = new("SlashRibbonBuffer");
         public static readonly ServiceKey<DebugDrawCommandBuffer> DebugDrawCommandBuffer = new("DebugDrawCommandBuffer");
         public static readonly ServiceKey<ProjectilePresentationBindingRegistry> ProjectilePresentationBindingRegistry = new("ProjectilePresentationBindingRegistry");
 

@@ -40,6 +40,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly GroundOverlayBuffer _groundOverlays;
         private readonly RoadSplineBuffer _roadSplines;
+        private readonly SlashRibbonBuffer _slashRibbons;
         private readonly PresentationVisualProxyEmitter _proxyEmitter;
         private readonly WorldHudBatchBuffer _worldHud;
         private readonly GraphProgramRegistry _programs;
@@ -74,6 +75,7 @@ namespace Ludots.Core.Presentation.Systems
             PerformerInstanceBuffer instances,
             PerformerDefinitionRegistry definitions,
             GroundOverlayBuffer groundOverlays,
+            SlashRibbonBuffer slashRibbons,
             PrimitiveDrawBuffer primitives,
             WorldHudBatchBuffer worldHud,
             GraphProgramRegistry programs,
@@ -89,6 +91,7 @@ namespace Ludots.Core.Presentation.Systems
             _instances = instances;
             _definitions = definitions;
             _groundOverlays = groundOverlays;
+            _slashRibbons = slashRibbons;
             _roadSplines = roadSplines ?? new RoadSplineBuffer();
             _proxyEmitter = new PresentationVisualProxyEmitter(primitives, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
             _worldHud = worldHud;
@@ -96,6 +99,38 @@ namespace Ludots.Core.Presentation.Systems
             _graphApi = graphApi;
             _globals = globals;
             _entityColorResolver = entityColorResolver;
+        }
+
+        public PerformerEmitSystem(
+            World world,
+            PerformerInstanceBuffer instances,
+            PerformerDefinitionRegistry definitions,
+            GroundOverlayBuffer groundOverlays,
+            PrimitiveDrawBuffer primitives,
+            WorldHudBatchBuffer worldHud,
+            GraphProgramRegistry programs,
+            IGraphRuntimeApi graphApi,
+            Dictionary<string, object> globals,
+            EntityColorResolver entityColorResolver = null,
+            PrimitiveDrawBuffer? snapshotBuffer = null,
+            PresentationVisualProxyBuffer? proxyBuffer = null,
+            SkinnedVisualBatchBuffer? skinnedBatchBuffer = null)
+            : this(
+                world,
+                instances,
+                definitions,
+                groundOverlays,
+                new SlashRibbonBuffer(),
+                primitives,
+                worldHud,
+                programs,
+                graphApi,
+                globals,
+                entityColorResolver,
+                snapshotBuffer,
+                proxyBuffer,
+                skinnedBatchBuffer)
+        {
         }
 
         public override void Update(in float dt)
@@ -308,6 +343,9 @@ namespace Ludots.Core.Presentation.Systems
                 case PerformerVisualKind.RoadSpline:
                     EmitRoadSpline(handle, definitionId, def, owner, pos, alphaMod);
                     break;
+                case PerformerVisualKind.SlashRibbon:
+                    EmitSlashRibbon(handle, def, owner, pos, alphaMod);
+                    break;
             }
         }
 
@@ -512,6 +550,29 @@ namespace Ludots.Core.Presentation.Systems
 
             int stableId = ResolveRoadSplineStableId(handle, definitionId, owner);
             _roadSplines.TryAdd(stableId, pos, control0, control1, end, width, fill, border, borderWidth, style);
+        }
+
+        private void EmitSlashRibbon(int handle, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
+        {
+            var fill = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
+            fill.W *= alphaMod;
+
+            var edge = ResolveColor(handle, def, owner, 9, 10, 11, 12, new Vector4(fill.X, fill.Y, fill.Z, fill.W));
+            edge.W *= alphaMod;
+
+            _slashRibbons.TryAdd(new SlashRibbonItem
+            {
+                Shape = (SlashRibbonShape)def.MeshOrShapeId,
+                Origin = pos,
+                Rotation = ResolveParam(handle, def, owner, 3, ResolveFacingRadians(owner)),
+                Radius = ResolveParam(handle, def, owner, 0, def.DefaultScale),
+                Width = ResolveParam(handle, def, owner, 1, 0.28f),
+                Span = ResolveParam(handle, def, owner, 2, MathF.PI * 0.55f),
+                Height = ResolveParam(handle, def, owner, 8, 0.32f),
+                Length = ResolveParam(handle, def, owner, 13, def.DefaultScale),
+                FillColor = fill,
+                EdgeColor = edge,
+            });
         }
 
         private int ResolveMarkerStableId(int handle, int definitionId, Entity owner)

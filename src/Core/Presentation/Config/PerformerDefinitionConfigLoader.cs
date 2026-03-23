@@ -104,6 +104,13 @@ namespace Ludots.Core.Presentation.Config
                 return 0;
             }
 
+            if (visualKind == PerformerVisualKind.SlashRibbon)
+            {
+                if (Enum.TryParse<SlashRibbonShape>(meshStr, ignoreCase: true, out var shape))
+                    return (int)shape;
+                return (int)SlashRibbonShape.Arc;
+            }
+
             return _resolveMeshId(meshStr);
         }
 

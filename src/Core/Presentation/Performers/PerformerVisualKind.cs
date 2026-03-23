@@ -20,5 +20,8 @@ namespace Ludots.Core.Presentation.Performers
 
         /// <summary>Ground-following cubic spline ribbon for roads, lanes, and route highlights.</summary>
         RoadSpline = 4,
+
+        /// <summary>Procedural melee slash ribbon rendered as a curved or linear trail.</summary>
+        SlashRibbon = 5,
     }
 }

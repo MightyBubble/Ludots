@@ -42,6 +42,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Gameplay.GAS.Presentation;
@@ -192,6 +193,8 @@ namespace Ludots.Core.Engine
         private GasPresentationEventBuffer _gasPresentationEvents;
         private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
         private Ludots.Core.Presentation.Rendering.RoadSplineBuffer _roadSplineBuffer;
+        private Ludots.Core.Presentation.Rendering.SlashRibbonBuffer _slashRibbonBuffer;
+        private DebugDrawCommandBuffer _debugDrawCommandBuffer;
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
@@ -617,6 +620,8 @@ namespace Ludots.Core.Engine
             var transientMarkerBuffer = new TransientMarkerBuffer();
             var groundOverlayBuffer = new GroundOverlayBuffer();
             var roadSplineBuffer = new RoadSplineBuffer();
+            var slashRibbonBuffer = new SlashRibbonBuffer();
+            var debugDrawCommandBuffer = new DebugDrawCommandBuffer();
             var worldHudBuffer = new WorldHudBatchBuffer();
             var performerDefinitions = new PerformerDefinitionRegistry();
             var presentationConfig = config.Presentation ?? new PresentationRuntimeConfig();
@@ -644,7 +649,7 @@ namespace Ludots.Core.Engine
                 snapshotBuffer: visualSnapshotBuffer,
                 proxyBuffer: visualProxyBuffer,
                 skinnedBatchBuffer: skinnedVisualBatchBuffer);
-            var performerEmitSystem = new PerformerEmitSystem(World, performerInstances, performerDefinitions, groundOverlayBuffer, primitiveDrawBuffer, worldHudBuffer, graphProgramRegistry, performerGraphApi, GlobalContext,
+            var performerEmitSystem = new PerformerEmitSystem(World, performerInstances, performerDefinitions, groundOverlayBuffer, slashRibbonBuffer, primitiveDrawBuffer, worldHudBuffer, graphProgramRegistry, performerGraphApi, GlobalContext,
                 entityColorResolver: (world, entity) => Ludots.Core.Presentation.Utils.TeamColorResolver.Resolve(world, entity),
                 snapshotBuffer: visualSnapshotBuffer,
                 proxyBuffer: visualProxyBuffer,
@@ -825,6 +830,8 @@ namespace Ludots.Core.Engine
             _gasPresentationEvents = gasPresentationEvents;
             _groundOverlayBuffer = groundOverlayBuffer;
             _roadSplineBuffer = roadSplineBuffer;
+            _slashRibbonBuffer = slashRibbonBuffer;
+            _debugDrawCommandBuffer = debugDrawCommandBuffer;
             _worldHudBuffer = worldHudBuffer;
             SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, primitiveDrawBuffer);
             SetService(CoreServiceKeys.PresentationVisualSnapshotBuffer, visualSnapshotBuffer);
@@ -843,6 +850,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasPresentationEventBuffer, gasPresentationEvents);
             SetService(CoreServiceKeys.GroundOverlayBuffer, groundOverlayBuffer);
             SetService(CoreServiceKeys.RoadSplineBuffer, roadSplineBuffer);
+            SetService(CoreServiceKeys.SlashRibbonBuffer, slashRibbonBuffer);
+            SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDrawCommandBuffer);
             SetService(CoreServiceKeys.ProjectilePresentationBindingRegistry, projectilePresentationBindings);
             SetService(CoreServiceKeys.PerformerDefinitionRegistry, performerDefinitions);
             SetService(CoreServiceKeys.PerformerInstanceBuffer, performerInstances);
@@ -2073,6 +2082,8 @@ namespace Ludots.Core.Engine
             _skinnedVisualBatchBuffer?.Clear();
             _groundOverlayBuffer?.Clear();
             _roadSplineBuffer?.Clear();
+            _slashRibbonBuffer?.Clear();
+            _debugDrawCommandBuffer?.Clear();
             _worldHudBuffer?.Clear();
             for (int i = 0; i < _presentationSystems.Count; i++)
             {

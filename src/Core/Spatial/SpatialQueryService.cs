@@ -212,6 +212,89 @@ namespace Ludots.Core.Spatial
             return new SpatialQueryResult(write, dropped);
         }
 
+        public SpatialQueryResult QueryPolylineCapsule(ReadOnlySpan<WorldCmInt2> points, int halfWidthCm, Span<Entity> buffer)
+        {
+            if (_positionProvider is null)
+                throw new InvalidOperationException("EntityPositionProvider not set. Call SetPositionProvider() before shape queries.");
+
+            if (points.Length <= 0)
+                return new SpatialQueryResult(0, 0);
+
+            if (points.Length == 1)
+                return QueryRadius(points[0], halfWidthCm, buffer);
+
+            int minX = points[0].X;
+            int minY = points[0].Y;
+            int maxX = points[0].X;
+            int maxY = points[0].Y;
+            for (int i = 1; i < points.Length; i++)
+            {
+                var point = points[i];
+                if (point.X < minX) minX = point.X;
+                if (point.Y < minY) minY = point.Y;
+                if (point.X > maxX) maxX = point.X;
+                if (point.Y > maxY) maxY = point.Y;
+            }
+
+            minX -= halfWidthCm;
+            minY -= halfWidthCm;
+            maxX += halfWidthCm;
+            maxY += halfWidthCm;
+
+            int count = _backend.QueryAabb(new WorldAabbCm(minX, minY, maxX - minX, maxY - minY), buffer, out int dropped);
+            int unique = SpatialQueryPostProcessor.SortStableDedup(buffer.Slice(0, count));
+            if (unique <= 0)
+            {
+                return new SpatialQueryResult(0, dropped);
+            }
+
+            Span<int> cumulativeLengths = points.Length <= 64
+                ? stackalloc int[points.Length]
+                : new int[points.Length];
+            cumulativeLengths[0] = 0;
+            for (int i = 1; i < points.Length; i++)
+            {
+                long segDx = points[i].X - points[i - 1].X;
+                long segDy = points[i].Y - points[i - 1].Y;
+                cumulativeLengths[i] = cumulativeLengths[i - 1] + IntSqrt(segDx * segDx + segDy * segDy);
+            }
+
+            Span<int> orderedProjections = unique <= 256
+                ? stackalloc int[unique]
+                : new int[unique];
+
+            long hw2 = (long)halfWidthCm * halfWidthCm;
+            int write = 0;
+            for (int i = 0; i < unique; i++)
+            {
+                Entity entity = buffer[i];
+                WorldCmInt2 pos = _positionProvider!(entity);
+                if (!TryProjectOntoPolyline(points, cumulativeLengths, pos, out int projectionCm, out long distanceSqCm))
+                {
+                    continue;
+                }
+
+                if (distanceSqCm > hw2)
+                {
+                    continue;
+                }
+
+                int insertAt = write;
+                while (insertAt > 0 && projectionCm < orderedProjections[insertAt - 1])
+                {
+                    orderedProjections[insertAt] = orderedProjections[insertAt - 1];
+                    buffer[insertAt] = buffer[insertAt - 1];
+                    insertAt--;
+                }
+
+                orderedProjections[insertAt] = projectionCm;
+                buffer[insertAt] = entity;
+                write++;
+            }
+
+            return new SpatialQueryResult(write, dropped);
+        }
+
         // ── Hex spatial queries ──
 
         public SpatialQueryResult QueryHexRange(HexCoordinates center, int hexRadius, Span<Entity> buffer)
@@ -325,6 +408,59 @@ namespace Ludots.Core.Spatial
             while (x * x > v) x--;
             while ((x + 1) * (x + 1) <= v) x++;
             return (int)x;
+        }
+
+        private static bool TryProjectOntoPolyline(
+            ReadOnlySpan<WorldCmInt2> points,
+            ReadOnlySpan<int> cumulativeLengths,
+            WorldCmInt2 pos,
+            out int projectionCm,
+            out long distanceSqCm)
+        {
+            projectionCm = 0;
+            distanceSqCm = long.MaxValue;
+            bool found = false;
+
+            for (int i = 1; i < points.Length; i++)
+            {
+                var a = points[i - 1];
+                var b = points[i];
+                long segDx = b.X - a.X;
+                long segDy = b.Y - a.Y;
+                long segLenSq = segDx * segDx + segDy * segDy;
+                if (segLenSq <= 0)
+                {
+                    continue;
+                }
+
+                long fromAx = pos.X - a.X;
+                long fromAy = pos.Y - a.Y;
+                long dot = fromAx * segDx + fromAy * segDy;
+                long clamped = dot;
+                if (clamped < 0) clamped = 0;
+                if (clamped > segLenSq) clamped = segLenSq;
+
+                long closestX = a.X + segDx * clamped / segLenSq;
+                long closestY = a.Y + segDy * clamped / segLenSq;
+                long errX = pos.X - closestX;
+                long errY = pos.Y - closestY;
+                long candidateDistSq = errX * errX + errY * errY;
+                if (candidateDistSq > distanceSqCm)
+                {
+                    continue;
+                }
+
+                int segLength = cumulativeLengths[i] - cumulativeLengths[i - 1];
+                int localProjection = segLenSq <= 0
+                    ? 0
+                    : (int)(clamped * segLength / segLenSq);
+
+                distanceSqCm = candidateDistSq;
+                projectionCm = cumulativeLengths[i - 1] + localProjection;
+                found = true;
+            }
+
+            return found;
         }
     }
 }

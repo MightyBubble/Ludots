@@ -137,6 +137,7 @@ namespace Ludots.Adapter.Raylib
                 engine.LoadMap(config.StartupMapId);
 
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
+                var slashRibbonRenderer = new RaylibSlashRibbonRenderer();
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS);
 
                 int lastW = screenWidth;
@@ -278,6 +279,13 @@ namespace Ludots.Adapter.Raylib
                         else
                         {
                             presentationTiming?.ObservePrimitiveRender(0d, 0, 0);
+                        }
+
+                        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.SlashRibbonBuffer.Name, out var srObj) &&
+                            srObj is SlashRibbonBuffer slashRibbons &&
+                            slashRibbons.Count > 0)
+                        {
+                            slashRibbonRenderer.Draw(slashRibbons);
                         }
 
                         // Draw ground overlays (range circles, cones, etc.)
