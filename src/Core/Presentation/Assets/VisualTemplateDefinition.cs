@@ -8,6 +8,7 @@ namespace Ludots.Core.Presentation.Assets
         public int MeshAssetId;
         public int MaterialId;
         public int AnimatorControllerId;
+        public int AnimationProfileId;
         public float BaseScale;
         public VisualRenderPath RenderPath;
         public VisualMobility Mobility;
@@ -23,7 +24,8 @@ namespace Ludots.Core.Presentation.Assets
                 RenderPath,
                 Mobility,
                 visible,
-                AnimatorControllerId);
+                AnimatorControllerId,
+                AnimationProfileId);
         }
     }
 }
