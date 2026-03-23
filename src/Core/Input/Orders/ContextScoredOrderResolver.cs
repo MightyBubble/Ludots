@@ -2,8 +2,10 @@ using System;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
@@ -11,6 +13,24 @@ using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
 
 namespace Ludots.Core.Input.Orders
 {
+    public readonly struct ContextScoredCandidateProbe
+    {
+        public ContextScoredCandidateProbe(int abilityId, int slotIndex, Entity target, float score, bool requiresTarget)
+        {
+            AbilityId = abilityId;
+            SlotIndex = slotIndex;
+            Target = target;
+            Score = score;
+            RequiresTarget = requiresTarget;
+        }
+
+        public int AbilityId { get; }
+        public int SlotIndex { get; }
+        public Entity Target { get; }
+        public float Score { get; }
+        public bool RequiresTarget { get; }
+    }
+
     public readonly struct ContextScoredOrderResolution
     {
         public ContextScoredOrderResolution(int slotIndex, Entity target, Vector3 targetWorldCm, bool hasTargetWorldCm)
@@ -52,83 +72,18 @@ namespace Ludots.Core.Input.Orders
 
         public bool TryResolve(Entity actor, InputOrderMapping mapping, Entity hoveredEntity, out ContextScoredOrderResolution resolution)
         {
-            resolution = default;
+            return TryEvaluate(actor, mapping, hoveredEntity, default, out _, out resolution);
+        }
 
-            if (!_world.IsAlive(actor) || !_world.Has<AbilityStateBuffer>(actor))
-            {
-                return false;
-            }
-
-            if (mapping.ArgsTemplate.I0 is null)
-            {
-                return false;
-            }
-
-            int rootSlotIndex = mapping.ArgsTemplate.I0.Value;
-            if (!TryResolveContextGroup(actor, rootSlotIndex, out var group))
-            {
-                return false;
-            }
-
-            if (!_world.TryGet(actor, out WorldPositionCm actorPosition))
-            {
-                return false;
-            }
-
-            var actorWorldCm = actorPosition.Value.ToWorldCmInt2();
-            int candidateCount = 0;
-            if (group.SearchRadiusCm > 0)
-            {
-                candidateCount = _spatialQueries.QueryRadius(actorWorldCm, group.SearchRadiusCm, _queryBuffer).Count;
-            }
-
-            float bestScore = float.MinValue;
-            int bestSlotIndex = -1;
-            Entity bestTarget = default;
-
-            for (int i = 0; i < group.Candidates.Count; i++)
-            {
-                var candidate = group.Candidates[i];
-                if (!TryFindSlotIndexForAbility(actor, candidate.AbilityId, out int candidateSlotIndex))
-                {
-                    continue;
-                }
-
-                if (!candidate.RequiresTarget)
-                {
-                    if (TryScoreCandidate(actor, default, hoveredEntity, actorWorldCm, candidate, out float score) && score > bestScore)
-                    {
-                        bestScore = score;
-                        bestSlotIndex = candidateSlotIndex;
-                        bestTarget = default;
-                    }
-                    continue;
-                }
-
-                for (int targetIndex = 0; targetIndex < candidateCount; targetIndex++)
-                {
-                    Entity target = _queryBuffer[targetIndex];
-                    if (!_world.IsAlive(target) || target.Equals(actor))
-                    {
-                        continue;
-                    }
-
-                    if (TryScoreCandidate(actor, target, hoveredEntity, actorWorldCm, candidate, out float score) && score > bestScore)
-                    {
-                        bestScore = score;
-                        bestSlotIndex = candidateSlotIndex;
-                        bestTarget = target;
-                    }
-                }
-            }
-
-            if (bestSlotIndex < 0)
-            {
-                return false;
-            }
-
-            resolution = new ContextScoredOrderResolution(bestSlotIndex, bestTarget, default, hasTargetWorldCm: false);
-            return true;
+        public bool TryInspect(
+            Entity actor,
+            InputOrderMapping mapping,
+            Entity hoveredEntity,
+            Span<ContextScoredCandidateProbe> probes,
+            out int probeCount,
+            out ContextScoredOrderResolution resolution)
+        {
+            return TryEvaluate(actor, mapping, hoveredEntity, probes, out probeCount, out resolution);
         }
 
         private bool TryResolveContextGroup(Entity actor, int rootSlotIndex, out ContextGroupDefinition group)
@@ -168,6 +123,159 @@ namespace Ludots.Core.Input.Orders
             }
 
             return false;
+        }
+
+        private bool TryEvaluate(
+            Entity actor,
+            InputOrderMapping mapping,
+            Entity hoveredEntity,
+            Span<ContextScoredCandidateProbe> probes,
+            out int probeCount,
+            out ContextScoredOrderResolution resolution)
+        {
+            probeCount = 0;
+            resolution = default;
+
+            if (!_world.IsAlive(actor) || !_world.Has<AbilityStateBuffer>(actor))
+            {
+                return false;
+            }
+
+            if (mapping.ArgsTemplate.I0 is null)
+            {
+                return false;
+            }
+
+            int rootSlotIndex = mapping.ArgsTemplate.I0.Value;
+            if (!TryResolveContextGroup(actor, rootSlotIndex, out var group))
+            {
+                return false;
+            }
+
+            if (!_world.TryGet(actor, out WorldPositionCm actorPosition))
+            {
+                return false;
+            }
+
+            var actorWorldCm = actorPosition.Value.ToWorldCmInt2();
+            int actorTeamId = _world.TryGet(actor, out Team actorTeam) ? actorTeam.Id : 0;
+            int candidateCount = 0;
+            if (group.SearchRadiusCm > 0)
+            {
+                candidateCount = _spatialQueries.QueryRadius(actorWorldCm, group.SearchRadiusCm, _queryBuffer).Count;
+            }
+
+            float bestScore = float.MinValue;
+            int bestSlotIndex = -1;
+            Entity bestTarget = default;
+
+            for (int i = 0; i < group.Candidates.Count; i++)
+            {
+                var candidate = group.Candidates[i];
+                if (!TryFindSlotIndexForAbility(actor, candidate.AbilityId, out int candidateSlotIndex))
+                {
+                    continue;
+                }
+
+                if (!candidate.RequiresTarget)
+                {
+                    if (TryScoreCandidate(actor, default, hoveredEntity, actorWorldCm, candidate, out float score))
+                    {
+                        RecordProbe(probes, ref probeCount, candidate.AbilityId, candidateSlotIndex, default, score, requiresTarget: false);
+                        if (score > bestScore)
+                        {
+                            bestScore = score;
+                            bestSlotIndex = candidateSlotIndex;
+                            bestTarget = default;
+                        }
+                    }
+
+                    continue;
+                }
+
+                for (int targetIndex = 0; targetIndex < candidateCount; targetIndex++)
+                {
+                    Entity target = _queryBuffer[targetIndex];
+                    if (!_world.IsAlive(target) || target.Equals(actor))
+                    {
+                        continue;
+                    }
+
+                    if (!PassesTargetRelationshipFilter(actorTeamId, target))
+                    {
+                        continue;
+                    }
+
+                    if (TryScoreCandidate(actor, target, hoveredEntity, actorWorldCm, candidate, out float score))
+                    {
+                        RecordProbe(probes, ref probeCount, candidate.AbilityId, candidateSlotIndex, target, score, requiresTarget: true);
+                        if (score > bestScore)
+                        {
+                            bestScore = score;
+                            bestSlotIndex = candidateSlotIndex;
+                            bestTarget = target;
+                        }
+                    }
+                }
+            }
+
+            if (bestSlotIndex < 0)
+            {
+                return false;
+            }
+
+            Vector3 targetWorldCm = default;
+            bool hasTargetWorldCm = TryResolveTargetWorldCm(bestTarget, out targetWorldCm);
+            resolution = new ContextScoredOrderResolution(bestSlotIndex, bestTarget, targetWorldCm, hasTargetWorldCm);
+            return true;
+        }
+
+        private bool PassesTargetRelationshipFilter(int actorTeamId, Entity target)
+        {
+            if (actorTeamId == 0 || !_world.TryGet(target, out Team targetTeam))
+            {
+                return true;
+            }
+
+            return RelationshipFilterUtil.Passes(RelationshipFilter.NotFriendly, actorTeamId, targetTeam.Id);
+        }
+
+        private static void RecordProbe(
+            Span<ContextScoredCandidateProbe> probes,
+            ref int probeCount,
+            int abilityId,
+            int slotIndex,
+            Entity target,
+            float score,
+            bool requiresTarget)
+        {
+            if (probes.IsEmpty || probeCount >= probes.Length)
+            {
+                return;
+            }
+
+            int insertIndex = probeCount;
+            while (insertIndex > 0 && probes[insertIndex - 1].Score < score)
+            {
+                probes[insertIndex] = probes[insertIndex - 1];
+                insertIndex--;
+            }
+
+            probes[insertIndex] = new ContextScoredCandidateProbe(abilityId, slotIndex, target, score, requiresTarget);
+            probeCount++;
+        }
+
+        private bool TryResolveTargetWorldCm(Entity target, out Vector3 worldCm)
+        {
+            worldCm = default;
+            if (!_world.IsAlive(target) || !_world.TryGet(target, out WorldPositionCm targetPosition))
+            {
+                return false;
+            }
+
+            Vector2 target2D = targetPosition.Value.ToVector2();
+            worldCm = new Vector3(target2D.X, 0f, target2D.Y);
+            return true;
         }
 
         private bool TryScoreCandidate(

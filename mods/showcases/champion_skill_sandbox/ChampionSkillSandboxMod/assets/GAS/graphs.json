@@ -8,5 +8,32 @@
       { "id": "pop", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Champion.Ezreal.EssenceFluxPop", "inputs": [ "target" ], "next": "consume" },
       { "id": "consume", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.Ezreal.EssenceFluxHit", "inputs": [ "target" ] }
     ]
+  },
+  {
+    "id": "Graph.Champion.Duelist.RequireComboStage1",
+    "kind": "Effect",
+    "entry": "caster",
+    "nodes": [
+      { "id": "caster", "op": "LoadCaster", "next": "stage1" },
+      { "id": "stage1", "op": "HasTag", "tag": "State.Champion.Duelist.Combo.Stage1", "inputs": [ "caster" ] }
+    ]
+  },
+  {
+    "id": "Graph.Champion.Duelist.RequireOpenedTarget",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget", "next": "opened" },
+      { "id": "opened", "op": "HasTag", "tag": "State.Champion.Duelist.Target.Opened", "inputs": [ "target" ] }
+    ]
+  },
+  {
+    "id": "Graph.Champion.Duelist.RequireComboPrimedTarget",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget", "next": "primed" },
+      { "id": "primed", "op": "HasTag", "tag": "State.Champion.Duelist.Target.ComboPrimed", "inputs": [ "target" ] }
+    ]
   }
 ]

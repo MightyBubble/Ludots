@@ -678,5 +678,193 @@
         "SmartCast": "Hold to channel steerable beam, release to stop"
       }
     }
+  },
+  {
+    "id": "Ability.Champion.Duelist.Combo.Stage1",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 8, "tag": "Cooldown.Champion.Duelist.Q" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Duelist.Combo.Stage1" },
+        { "kind": "TagClip", "tick": 0, "duration": 24, "tag": "State.Champion.Duelist.Combo.Stage1" },
+        { "kind": "TagClipTarget", "tick": 0, "duration": 24, "tag": "State.Champion.Duelist.Target.ComboPrimed" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 320, "radius": 180, "showRangeCircle": true, "validColor": "#F6C35B77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Duelist.Q"] },
+    "input": {
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 340
+    },
+    "presentation": {
+      "displayName": "Chain Jab I",
+      "iconGlyph": "Q",
+      "accentColor": "#F6C35B",
+      "hintText": "Open the combo and prime the next strike",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview close engage radius",
+        "PressReleaseAimCast": "Release key, then confirm the opener"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Duelist.Combo.Stage2",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 8, "tag": "Cooldown.Champion.Duelist.Q" },
+        { "kind": "TagSignal", "tick": 0, "tag": "State.Champion.Duelist.Combo.Stage1", "payloadA": 1 },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Duelist.Combo.Stage2" },
+        { "kind": "TagClip", "tick": 0, "duration": 24, "tag": "State.Champion.Duelist.Combo.Stage2" },
+        { "kind": "TagClipTarget", "tick": 0, "duration": 30, "tag": "State.Champion.Duelist.Target.Opened" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 330, "radius": 190, "showRangeCircle": true, "validColor": "#FFAD66AA", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Duelist.Q"] },
+    "input": {
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 340
+    },
+    "presentation": {
+      "displayName": "Chain Jab II",
+      "iconGlyph": "Q2",
+      "accentColor": "#FFAD66",
+      "hintText": "Stagger the target and open a finisher window",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the stagger follow-up",
+        "PressReleaseAimCast": "Release key, then confirm the second hit"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Duelist.Combo.Stage3",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 16, "tag": "Cooldown.Champion.Duelist.Q" },
+        { "kind": "TagSignal", "tick": 0, "tag": "State.Champion.Duelist.Combo.Stage2", "payloadA": 1 },
+        { "kind": "TagSignalTarget", "tick": 0, "tag": "State.Champion.Duelist.Target.Opened", "payloadA": 1 },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Duelist.Combo.Stage3" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 340, "radius": 210, "showRangeCircle": true, "validColor": "#FF7C5FAA", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Duelist.Q"] },
+    "input": {
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 360
+    },
+    "presentation": {
+      "displayName": "Chain Finish",
+      "iconGlyph": "Q3",
+      "accentColor": "#FF7C5F",
+      "hintText": "Cash out the combo before the window closes",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the finishing arc",
+        "PressReleaseAimCast": "Release key, then confirm the finisher"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Duelist.StepIn",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 30, "tag": "Cooldown.Champion.Duelist.W" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Duelist.StepInDash", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 4, "template": "Effect.Champion.Duelist.StepInStrike" },
+        { "kind": "End", "tick": 4 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 620, "radius": 120, "showRangeCircle": true, "validColor": "#62D4FF77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Duelist.W"] },
+    "input": {
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 560
+    },
+    "presentation": {
+      "displayName": "Step In",
+      "iconGlyph": "W",
+      "accentColor": "#62D4FF",
+      "hintText": "Gap-close into melee and keep the pressure on",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview lunge reach",
+        "PressReleaseAimCast": "Release key, then confirm the entry line"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Duelist.CrowdSweep",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 42, "tag": "Cooldown.Champion.Duelist.E" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Duelist.CrowdSweep" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Cone", "range": 420, "radius": 420, "angleDeg": 64, "showRangeCircle": true, "validColor": "#9FE27A77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Duelist.E"] },
+    "presentation": {
+      "displayName": "Crowd Sweep",
+      "iconGlyph": "E",
+      "accentColor": "#9FE27A",
+      "hintText": "Clear the front arc and retake spacing",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the sweep cone",
+        "PressReleaseAimCast": "Release key, then confirm the sweep"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Duelist.OpeningBreaker",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 60, "tag": "Cooldown.Champion.Duelist.R" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Duelist.OpeningBreaker" },
+        { "kind": "TagSignalTarget", "tick": 0, "tag": "State.Champion.Duelist.Target.Opened", "payloadA": 1 },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "activationPrecondition": {
+      "validationGraph": "Graph.Champion.Duelist.RequireOpenedTarget"
+    },
+    "indicator": { "shape": "Circle", "range": 340, "radius": 160, "showRangeCircle": true, "validColor": "#FF7E8A99", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.Duelist.R"] },
+    "presentation": {
+      "displayName": "Opening Breaker",
+      "iconGlyph": "R",
+      "accentColor": "#FF7E8A",
+      "hintText": "Spend the opened window on a heavy single-target finish",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview finisher reach",
+        "PressReleaseAimCast": "Release key, then confirm the breaker"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.Duelist.ActionContext",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "input": {
+      "castModeOverride": "ContextScored"
+    },
+    "presentation": {
+      "displayName": "Action Context",
+      "iconGlyph": "SP",
+      "accentColor": "#F4E18A",
+      "hintText": "One-key context attack: build target group, pick the best opener, and strike",
+      "modeHints": {
+        "ContextScored": "Build target group, score melee candidates, and fire the best action",
+        "SmartCast": "Always resolves through context scoring, even outside Action Focus mode"
+      }
+    }
   }
 ]

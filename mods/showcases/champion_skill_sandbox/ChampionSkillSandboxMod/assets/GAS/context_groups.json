@@ -1,0 +1,56 @@
+[
+  {
+    "id": "champion_skill_sandbox_duelist_action",
+    "rootAbilityId": "Ability.Champion.Duelist.ActionContext",
+    "searchRadiusCm": 760,
+    "candidates": [
+      {
+        "abilityId": "Ability.Champion.Duelist.Combo.Stage2",
+        "preconditionGraph": "Graph.Champion.Duelist.RequireComboPrimedTarget",
+        "basePriority": 96,
+        "maxDistanceCm": 340,
+        "distanceWeight": 12,
+        "maxAngleDeg": 145,
+        "angleWeight": 6,
+        "hoveredBiasScore": 42,
+        "requiresTarget": true
+      },
+      {
+        "abilityId": "Ability.Champion.Duelist.OpeningBreaker",
+        "preconditionGraph": "Graph.Champion.Duelist.RequireOpenedTarget",
+        "basePriority": 120,
+        "maxDistanceCm": 340,
+        "distanceWeight": 14,
+        "maxAngleDeg": 140,
+        "angleWeight": 6,
+        "hoveredBiasScore": 42,
+        "requiresTarget": true
+      },
+      {
+        "abilityId": "Ability.Champion.Duelist.Combo.Stage1",
+        "basePriority": 70,
+        "maxDistanceCm": 340,
+        "distanceWeight": 12,
+        "maxAngleDeg": 150,
+        "angleWeight": 6,
+        "hoveredBiasScore": 42,
+        "requiresTarget": true
+      },
+      {
+        "abilityId": "Ability.Champion.Duelist.StepIn",
+        "basePriority": 48,
+        "maxDistanceCm": 560,
+        "distanceWeight": 4,
+        "maxAngleDeg": 120,
+        "angleWeight": 8,
+        "hoveredBiasScore": 24,
+        "requiresTarget": true
+      },
+      {
+        "abilityId": "Ability.Champion.Duelist.CrowdSweep",
+        "basePriority": 12,
+        "requiresTarget": false
+      }
+    ]
+  }
+]

@@ -13,5 +13,24 @@
         ]
       }
     ]
+  },
+  {
+    "id": "champion_skill_sandbox_duelist_forms",
+    "routes": [
+      {
+        "requiredAll": ["State.Champion.Duelist.Combo.Stage2"],
+        "priority": 200,
+        "slotOverrides": [
+          { "slotIndex": 0, "abilityId": "Ability.Champion.Duelist.Combo.Stage3" }
+        ]
+      },
+      {
+        "requiredAll": ["State.Champion.Duelist.Combo.Stage1"],
+        "priority": 100,
+        "slotOverrides": [
+          { "slotIndex": 0, "abilityId": "Ability.Champion.Duelist.Combo.Stage2" }
+        ]
+      }
+    ]
   }
 ]

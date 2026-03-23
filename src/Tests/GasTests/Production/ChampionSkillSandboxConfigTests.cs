@@ -42,6 +42,7 @@ namespace Ludots.Tests.GAS.Production
     {
         private const float DeltaTime = 1f / 60f;
         private const string StressMapId = "champion_skill_stress";
+        private const string ActionModeId = "ChampionSkillSandbox.Mode.Action";
         private const string SandboxTacticalCameraId = "ChampionSkillSandbox.Camera.Tactical";
         private const string FreeCameraToolbarButtonId = "ChampionSkillSandbox.Camera.Free";
         private const string FollowSelectionToolbarButtonId = "ChampionSkillSandbox.Camera.Selection";
@@ -225,6 +226,7 @@ namespace Ludots.Tests.GAS.Production
             AssertNamedEntityOwner(engine.World, "Garen Courage", expectedPlayerId: 1);
             AssertNamedEntityOwner(engine.World, "Jayce Cannon", expectedPlayerId: 1);
             AssertNamedEntityOwner(engine.World, "Jayce Hammer", expectedPlayerId: 1);
+            AssertNamedEntityOwner(engine.World, "Duelist Alpha", expectedPlayerId: 1);
             AssertNamedEntityOwner(engine.World, "Geomancer Alpha", expectedPlayerId: 1);
 
             AssertEntityHasTag(engine.World, "Ezreal Cooldown", "Cooldown.Champion.Ezreal.R");
@@ -302,6 +304,21 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(geomancerSlots[1].DisplayLabel, Is.EqualTo("Rune Field"));
             Assert.That(geomancerSlots[2].DisplayLabel, Is.EqualTo("Stone Pillar"));
             Assert.That(geomancerSlots[3].DisplayLabel, Is.EqualTo("Prismatic Beam"));
+
+            var duelistSlots = new EntityCommandPanelSlotView[8];
+            int duelistCount = source.CopySlots(FindEntityByName(engine.World, "Duelist Alpha"), 0, duelistSlots);
+            Assert.That(duelistCount, Is.EqualTo(5));
+            Assert.That(duelistSlots[0].DisplayLabel, Is.EqualTo("Chain Jab I"));
+            Assert.That(duelistSlots[1].DisplayLabel, Is.EqualTo("Step In"));
+            Assert.That(duelistSlots[2].DisplayLabel, Is.EqualTo("Crowd Sweep"));
+            Assert.That(duelistSlots[3].DisplayLabel, Is.EqualTo("Opening Breaker"));
+            Assert.That(duelistSlots[4].DisplayLabel, Is.EqualTo("Action Context"));
+            Assert.That(duelistSlots[4].ActionId, Is.EqualTo("ActionAttack"));
+            Assert.That(duelistSlots[4].DetailLabel, Does.Contain("target group"));
+
+            var actionAttackMapping = mapping.GetMapping("ActionAttack");
+            Assert.That(actionAttackMapping, Is.Not.Null);
+            Assert.That(actionAttackMapping!.SelectionType, Is.EqualTo(OrderSelectionType.Entity));
         }
 
         [Test]
@@ -322,16 +339,19 @@ namespace Ludots.Tests.GAS.Production
 
             buttons = new EntityCommandPanelToolbarButtonView[8];
             buttonCount = toolbar.CopyButtons(buttons);
-            Assert.That(buttonCount, Is.EqualTo(7));
+            Assert.That(buttonCount, Is.EqualTo(8));
             Assert.That(buttons[0].ButtonId, Is.EqualTo("ChampionSkillSandbox.Mode.SmartCast"));
             Assert.That(buttons[0].Active, Is.True);
-            Assert.That(buttons[3].ButtonId, Is.EqualTo(FreeCameraToolbarButtonId));
-            Assert.That(buttons[3].Active, Is.True);
-            Assert.That(buttons[6].ButtonId, Is.EqualTo(ResetCameraToolbarButtonId));
-            Assert.That(toolbar.Subtitle, Does.Contain("RMB Move"));
+            Assert.That(buttons[3].ButtonId, Is.EqualTo(ActionModeId));
+            Assert.That(buttons[4].ButtonId, Is.EqualTo(FreeCameraToolbarButtonId));
+            Assert.That(buttons[4].Active, Is.True);
+            Assert.That(buttons[7].ButtonId, Is.EqualTo(ResetCameraToolbarButtonId));
+            Assert.That(toolbar.Subtitle, Does.Contain("F5"));
+            Assert.That(toolbar.Subtitle, Does.Contain("Space"));
 
             var source = ResolveGasPanelSource(engine);
             Entity ezreal = FindEntityByName(engine.World, "Ezreal Alpha");
+            Entity duelist = FindEntityByName(engine.World, "Duelist Alpha");
             Entity spellEngineer = FindEntityByName(engine.World, "Spell Engineer Alpha");
             var slots = new EntityCommandPanelSlotView[8];
 
@@ -339,6 +359,17 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(slots[0].DetailLabel, Is.EqualTo("Projectile that stops on first enemy"));
             source.CopySlots(spellEngineer, 0, slots);
             Assert.That(slots[3].DetailLabel, Is.EqualTo("Hold to channel steerable beam, release to stop"));
+
+            toolbar.Activate(ActionModeId);
+            Tick(engine, 1);
+            Assert.That(mapping.InteractionMode, Is.EqualTo(InteractionModeType.ContextScored));
+            toolbar.CopyButtons(buttons);
+            Assert.That(buttons[3].Active, Is.True);
+
+            source.CopySlots(duelist, 0, slots);
+            Assert.That(slots[4].DisplayLabel, Is.EqualTo("Action Context"));
+            Assert.That(slots[4].ActionId, Is.EqualTo("ActionAttack"));
+            Assert.That(slots[4].DetailLabel, Does.Contain("target group"));
 
             toolbar.Activate("ChampionSkillSandbox.Mode.Indicator");
             Tick(engine, 1);
@@ -383,8 +414,8 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate(FollowSelectionToolbarButtonId);
             Tick(engine, 2);
             toolbar.CopyButtons(buttons);
-            Assert.That(buttons[3].Active, Is.False);
-            Assert.That(buttons[4].Active, Is.True);
+            Assert.That(buttons[4].Active, Is.False);
+            Assert.That(buttons[5].Active, Is.True);
 
             engine.GameSession.Camera.Update(DeltaTime);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm.HasValue, Is.True);
@@ -392,7 +423,7 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate(FollowSelectionGroupToolbarButtonId);
             Tick(engine, 2);
             toolbar.CopyButtons(buttons);
-            Assert.That(buttons[5].Active, Is.True);
+            Assert.That(buttons[6].Active, Is.True);
             engine.GameSession.Camera.Update(DeltaTime);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm.HasValue, Is.True);
 
@@ -405,7 +436,7 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate(FreeCameraToolbarButtonId);
             Tick(engine, 2);
             toolbar.CopyButtons(buttons);
-            Assert.That(buttons[3].Active, Is.True);
+            Assert.That(buttons[4].Active, Is.True);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
 
             engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
@@ -449,8 +480,9 @@ namespace Ludots.Tests.GAS.Production
 
             var buttons = new EntityCommandPanelToolbarButtonView[20];
             int buttonCount = toolbar.CopyButtons(buttons);
-            Assert.That(buttonCount, Is.EqualTo(19));
+            Assert.That(buttonCount, Is.EqualTo(20));
             string[] buttonIds = buttons[..buttonCount].Select(button => button.ButtonId).ToArray();
+            Assert.That(buttonIds, Does.Contain(ActionModeId));
             Assert.That(buttonIds, Does.Contain("ChampionSkillSandbox.Stress.TeamA.Decrease"));
             Assert.That(buttonIds, Does.Contain(StressTeamAIncreaseToolbarButtonId));
             Assert.That(buttonIds, Does.Contain("ChampionSkillSandbox.Stress.TeamB.Decrease"));
