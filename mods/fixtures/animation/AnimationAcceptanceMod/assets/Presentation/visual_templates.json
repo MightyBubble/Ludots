@@ -7,7 +7,7 @@
     "baseScale": 1.15,
     "mobility": "Movable",
     "visibleByDefault": true,
-    "animatorControllerId": "acceptance.tank.layered"
+    "animationProfileId": "acceptance.profile.tank.layered"
   },
   {
     "id": "acceptance.character.layered_skinned",
@@ -17,6 +17,6 @@
     "baseScale": 1.0,
     "mobility": "Movable",
     "visibleByDefault": true,
-    "animatorControllerId": "acceptance.humanoid.layered"
+    "animationProfileId": "acceptance.profile.humanoid.layered"
   }
 ]

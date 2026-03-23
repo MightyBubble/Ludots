@@ -12,7 +12,7 @@ namespace Ludots.Core.Scripting
 
         /// <summary>
         /// Fired when a map has finished loading and dependencies are resolved.
-        /// Use this for spawning entities or initializing level-specific logic.
+        /// If a host-side async world switch participates in completion, this fires after the host world is ready.
         /// </summary>
         public static readonly EventKey MapLoaded = new EventKey("MapLoaded");
 

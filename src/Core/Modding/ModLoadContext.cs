@@ -29,6 +29,17 @@ namespace Ludots.Core.Modding
                 return shared;
             }
 
+            var hostAlc = AssemblyLoadContext.GetLoadContext(typeof(ModLoadContext).Assembly);
+            if (hostAlc != null && hostAlc != AssemblyLoadContext.Default)
+            {
+                var hostShared = hostAlc.Assemblies.FirstOrDefault(a =>
+                    string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
+                if (hostShared != null)
+                {
+                    return hostShared;
+                }
+            }
+
             var sharedModAssembly = _sharedAssemblyResolver?.Invoke(assemblyName);
             if (sharedModAssembly != null)
             {

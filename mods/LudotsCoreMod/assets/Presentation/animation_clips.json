@@ -1,0 +1,44 @@
+[
+  {
+    "id": "core.hero.state.idle",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/core/hero_idle.glb#anim:hero_idle" }
+    ]
+  },
+  {
+    "id": "core.hero.state.walk",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/core/hero_walk.glb#anim:hero_walk" }
+    ]
+  },
+  {
+    "id": "core.hero.state.run",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/core/hero_run.glb#anim:hero_run" }
+    ]
+  },
+  {
+    "id": "core.hero.builtin.locomotion_cycle",
+    "assetKind": "BlendTree",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/core/hero_locomotion_cycle.glb#graph:hero_locomotion_cycle" }
+    ]
+  },
+  {
+    "id": "core.hero.builtin.aim_yaw_offset",
+    "assetKind": "PoseAsset",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/core/hero_aim_offsets.json#pose:hero_aim_yaw" }
+    ]
+  },
+  {
+    "id": "core.hero.builtin.recoil_pulse",
+    "assetKind": "Montage",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/core/hero_recoil.glb#anim:hero_recoil" }
+    ]
+  }
+]

@@ -5,6 +5,7 @@ namespace Ludots.Core.Presentation.Components
         public int MeshAssetId;
         public int MaterialId;
         public int AnimatorControllerId;
+        public int AnimationProfileId;
         public float BaseScale;
         public VisualRenderPath RenderPath;
         public VisualMobility Mobility;
@@ -32,9 +33,10 @@ namespace Ludots.Core.Presentation.Components
             VisualRenderPath renderPath,
             VisualMobility mobility = VisualMobility.Movable,
             bool visible = true,
-            int animatorControllerId = 0)
+            int animatorControllerId = 0,
+            int animationProfileId = 0)
         {
-            PresentationRenderContract.ValidateTemplate(nameof(VisualRuntimeState), renderPath, animatorControllerId);
+            PresentationRenderContract.ValidateTemplate(nameof(VisualRuntimeState), renderPath, animatorControllerId, animationProfileId);
 
             var flags = visible ? VisualRuntimeFlags.Visible : VisualRuntimeFlags.None;
             if (animatorControllerId > 0)
@@ -45,6 +47,7 @@ namespace Ludots.Core.Presentation.Components
                 MeshAssetId = meshAssetId,
                 MaterialId = materialId,
                 AnimatorControllerId = animatorControllerId,
+                AnimationProfileId = animationProfileId,
                 BaseScale = baseScale <= 0f ? 1f : baseScale,
                 RenderPath = renderPath,
                 Mobility = mobility,

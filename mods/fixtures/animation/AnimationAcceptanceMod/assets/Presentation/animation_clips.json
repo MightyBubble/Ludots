@@ -1,0 +1,106 @@
+[
+  {
+    "id": "acceptance.clip.tank.state.idle",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/tank_idle.glb#anim:tank_idle" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Tank/AN_Tank_Idle" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.tank.state.cruise",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/tank_cruise.glb#anim:tank_cruise" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Tank/AN_Tank_Cruise" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.tank.state.fire_recover",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/tank_fire_recover.glb#anim:tank_fire_recover" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Tank/AN_Tank_FireRecover" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.tank.builtin.locomotion_cycle",
+    "assetKind": "BlendTree",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/tank_locomotion_cycle.glb#graph:tank_locomotion_cycle" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Tank/BS_Tank_LocomotionCycle" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.tank.builtin.aim_yaw_offset",
+    "assetKind": "PoseAsset",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/tank_aim_offsets.json#pose:tank_aim_yaw" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Tank/PA_Tank_AimYawOffset" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.tank.builtin.recoil_pulse",
+    "assetKind": "Montage",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/tank_recoil.glb#anim:tank_recoil" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Tank/MG_Tank_RecoilPulse" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.humanoid.state.idle",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/humanoid_idle.glb#anim:humanoid_idle" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Humanoid/AN_Humanoid_Idle" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.humanoid.state.walk",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/humanoid_walk.glb#anim:humanoid_walk" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Humanoid/AN_Humanoid_Walk" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.humanoid.state.run",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/humanoid_run.glb#anim:humanoid_run" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Humanoid/AN_Humanoid_Run" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.humanoid.state.fire_recover",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/humanoid_fire_recover.glb#anim:humanoid_fire_recover" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Humanoid/AN_Humanoid_FireRecover" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.humanoid.builtin.locomotion_cycle",
+    "assetKind": "BlendTree",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/humanoid_locomotion_cycle.glb#graph:humanoid_locomotion_cycle" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Humanoid/BS_Humanoid_LocomotionCycle" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.humanoid.builtin.aim_yaw_offset",
+    "assetKind": "PoseAsset",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/humanoid_aim_offsets.json#pose:humanoid_aim_yaw" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Humanoid/PA_Humanoid_AimYawOffset" }
+    ]
+  },
+  {
+    "id": "acceptance.clip.humanoid.builtin.recoil_pulse",
+    "assetKind": "Montage",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "animations/acceptance/humanoid_recoil.glb#anim:humanoid_recoil" },
+      { "backendId": "ue5", "assetRef": "/Game/Ludots/Acceptance/Humanoid/MG_Humanoid_RecoilPulse" }
+    ]
+  }
+]

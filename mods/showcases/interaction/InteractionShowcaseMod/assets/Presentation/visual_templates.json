@@ -7,7 +7,7 @@
     "baseScale": 2.2,
     "mobility": "Movable",
     "visibleByDefault": true,
-    "animatorControllerId": "core.hero.locomotion"
+    "animationProfileId": "core.hero.profile.locomotion"
   },
   {
     "id": "interaction.prop.dummy_showcase",

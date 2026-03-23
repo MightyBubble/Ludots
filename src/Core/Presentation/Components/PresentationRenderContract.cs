@@ -7,12 +7,12 @@ namespace Ludots.Core.Presentation.Components
     /// </summary>
     public static class PresentationRenderContract
     {
-        public static void ValidateTemplate(string sourceName, VisualRenderPath renderPath, int animatorControllerId)
+        public static void ValidateTemplate(string sourceName, VisualRenderPath renderPath, int animatorControllerId, int animationProfileId = 0)
         {
-            if (!renderPath.IsSkinnedLane() && animatorControllerId > 0)
+            if (!renderPath.IsSkinnedLane() && (animatorControllerId > 0 || animationProfileId > 0))
             {
                 throw new InvalidOperationException(
-                    $"{sourceName} uses render path '{renderPath}' but also sets animatorControllerId={animatorControllerId}. " +
+                    $"{sourceName} uses render path '{renderPath}' but also sets animatorControllerId={animatorControllerId}, animationProfileId={animationProfileId}. " +
                     "Only skinned lanes may consume AnimatorPackedState.");
             }
 
@@ -45,7 +45,7 @@ namespace Ludots.Core.Presentation.Components
 
             if (!visual.RenderPath.IsSkinnedLane())
             {
-                if (visual.AnimatorControllerId > 0 || visual.HasAnimator || hasAnimatorComponent || packedControllerId > 0 || animationOverlay.HasAnyClip)
+                if (visual.AnimatorControllerId > 0 || visual.AnimationProfileId > 0 || visual.HasAnimator || hasAnimatorComponent || packedControllerId > 0 || animationOverlay.HasAnyClip)
                 {
                     throw new InvalidOperationException(
                         $"{sourceName} produced non-skinned render path '{visual.RenderPath}' with animator data attached. " +
