@@ -15,6 +15,7 @@ using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
@@ -120,6 +121,10 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<DeferredTriggerQueue> DeferredTriggerQueue = new("DeferredTriggerQueue");
         public static readonly ServiceKey<AttributeSinkRegistry> AttributeSinkRegistry = new("AttributeSinkRegistry");
         public static readonly ServiceKey<AttributeBindingRegistry> AttributeBindingRegistry = new("AttributeBindingRegistry");
+        public static readonly ServiceKey<ItemShapeRegistry> ItemShapeRegistry = new("ItemShapeRegistry");
+        public static readonly ServiceKey<ItemLayoutRegistry> ItemLayoutRegistry = new("ItemLayoutRegistry");
+        public static readonly ServiceKey<ItemDefinitionRegistry> ItemDefinitionRegistry = new("ItemDefinitionRegistry");
+        public static readonly ServiceKey<InventoryRuntimeService> InventoryRuntimeService = new("InventoryRuntimeService");
 
         // --- GAS Input / Selection / Orders ---
         public static readonly ServiceKey<InputRequestQueue> InputRequestQueue = new("InputRequestQueue");

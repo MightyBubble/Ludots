@@ -1,0 +1,130 @@
+[
+  {
+    "id": "Effect.ItemShowcase.RifleFire",
+    "tags": ["Effect.ItemShowcase.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -14.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemShowcase.MythicPulse",
+    "tags": ["Effect.ItemShowcase.Heal"],
+    "presetType": "Heal",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 18.0 },
+      { "attribute": "Shield", "op": "Add", "value": 12.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemShowcase.SecondWind",
+    "tags": ["Effect.ItemShowcase.Heal"],
+    "presetType": "Heal",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 10.0 },
+      { "attribute": "MoveSpeed", "op": "Add", "value": 6.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemPassive.BootsHaste",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "MoveSpeed", "op": "Add", "value": 18.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemPassive.MythicPower",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "AttackDamage", "op": "Add", "value": 12.0 },
+      { "attribute": "Shield", "op": "Add", "value": 15.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemPassive.BloodRing",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 8.0 },
+      { "attribute": "AttackDamage", "op": "Add", "value": 4.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemPassive.DuelistRing",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "AttackDamage", "op": "Add", "value": 7.0 },
+      { "attribute": "Armor", "op": "Add", "value": 2.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemPassive.CharmWard",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Shield", "op": "Add", "value": 20.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemPassive.RifleReady",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "AttackDamage", "op": "Add", "value": 9.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemPassive.RedDot",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "AttackDamage", "op": "Add", "value": 3.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemPassive.Suppressor",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Armor", "op": "Add", "value": 2.0 }
+    ],
+    "grantedTags": [
+      { "tag": "Weapon.State.Suppressed", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.ItemPassive.VerticalGrip",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Armor", "op": "Add", "value": 3.0 }
+    ]
+  }
+]

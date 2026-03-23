@@ -16,6 +16,7 @@
 *   [统一 UI Runtime 与三前端写法](ui_runtime_architecture.md)
 *   [Entity Command Panel 基础设施](entity_command_panel_infrastructure.md)
 *   [运行时实体生成链路](runtime_entity_spawn_flow.md)
+*   [Item / Equip / Backpack 架构](item_inventory_equipment_architecture.md)
 
 ## 2. Gameplay 与 Presentation
 

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "layout_equipment_actor",
+    "purpose": "Equipment",
+    "grantsEquipmentBonuses": true,
+    "namedSlots": [
+      { "id": "feet", "label": "Feet", "requiredAll": ["Equip.Slot.Feet"] },
+      { "id": "amulet", "label": "Amulet", "requiredAll": ["Equip.Slot.Amulet"] },
+      { "id": "ring_left", "label": "Ring L", "requiredAll": ["Equip.Slot.Ring"] },
+      { "id": "ring_right", "label": "Ring R", "requiredAll": ["Equip.Slot.Ring"] },
+      { "id": "charm", "label": "Charm", "requiredAll": ["Equip.Slot.Charm"] },
+      { "id": "back", "label": "Back", "requiredAll": ["Equip.Slot.Back"] },
+      { "id": "primary_weapon", "label": "Primary", "requiredAll": ["Equip.Slot.PrimaryWeapon"] },
+      { "id": "secure", "label": "Secure", "requiredAll": ["Equip.Slot.Secure"] }
+    ]
+  },
+  {
+    "id": "layout_rifle_sockets",
+    "purpose": "WeaponAttachment",
+    "grantsEquipmentBonuses": true,
+    "namedSlots": [
+      { "id": "magwell", "label": "Magwell", "requiredAll": ["Weapon.Socket.Magwell"] },
+      { "id": "optic", "label": "Optic", "requiredAll": ["Weapon.Socket.Optic"] },
+      { "id": "muzzle", "label": "Muzzle", "requiredAll": ["Weapon.Socket.Muzzle"] },
+      { "id": "underbarrel", "label": "Underbarrel", "requiredAll": ["Weapon.Socket.Underbarrel"] }
+    ]
+  },
+  { "id": "layout_backpack_grid", "purpose": "Backpack", "width": 8, "height": 6 },
+  { "id": "layout_secure_grid", "purpose": "SecureStorage", "width": 4, "height": 4 },
+  { "id": "layout_stash_grid", "purpose": "Stash", "width": 10, "height": 8 },
+  { "id": "layout_vendor_grid", "purpose": "Vendor", "width": 8, "height": 6 }
+]
