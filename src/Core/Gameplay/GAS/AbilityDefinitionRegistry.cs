@@ -13,12 +13,18 @@ namespace Ludots.Core.Gameplay.GAS
         public InputTriggerType Trigger;
         public bool HasHeldPolicy;
         public HeldPolicy HeldPolicy;
+        public bool HasSelectionType;
+        public OrderSelectionType SelectionType;
         public bool HasCastModeOverride;
         public InteractionModeType CastModeOverride;
         public bool HasAutoTargetPolicy;
         public AutoTargetPolicy AutoTargetPolicy;
         public bool HasAutoTargetRangeCm;
         public int AutoTargetRangeCm;
+        public bool HasCursorTargetPolicy;
+        public AutoTargetPolicy CursorTargetPolicy;
+        public bool HasCursorTargetRangeCm;
+        public int CursorTargetRangeCm;
     }
 
     public sealed class AbilityPresentationConfig

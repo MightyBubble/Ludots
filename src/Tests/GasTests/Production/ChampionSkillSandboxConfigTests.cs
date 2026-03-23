@@ -226,6 +226,7 @@ namespace Ludots.Tests.GAS.Production
             AssertNamedEntityOwner(engine.World, "Jayce Cannon", expectedPlayerId: 1);
             AssertNamedEntityOwner(engine.World, "Jayce Hammer", expectedPlayerId: 1);
             AssertNamedEntityOwner(engine.World, "Geomancer Alpha", expectedPlayerId: 1);
+            AssertNamedEntityOwner(engine.World, "Kinetic Vanguard Alpha", expectedPlayerId: 1);
 
             AssertEntityHasTag(engine.World, "Ezreal Cooldown", "Cooldown.Champion.Ezreal.R");
             AssertEntityHasTag(engine.World, "Garen Courage", "State.Champion.Garen.Courage");
@@ -302,6 +303,22 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(geomancerSlots[1].DisplayLabel, Is.EqualTo("Rune Field"));
             Assert.That(geomancerSlots[2].DisplayLabel, Is.EqualTo("Stone Pillar"));
             Assert.That(geomancerSlots[3].DisplayLabel, Is.EqualTo("Prismatic Beam"));
+
+            var kineticSlots = new EntityCommandPanelSlotView[8];
+            int kineticCount = source.CopySlots(FindEntityByName(engine.World, "Kinetic Vanguard Alpha"), 0, kineticSlots);
+            Assert.That(kineticCount, Is.EqualTo(4));
+            Assert.That(kineticSlots[0].DisplayLabel, Is.EqualTo("Shock Mine"));
+            Assert.That(kineticSlots[1].DisplayLabel, Is.EqualTo("Magnetic Lash"));
+            Assert.That(kineticSlots[2].DisplayLabel, Is.EqualTo("Skybreaker"));
+            Assert.That(kineticSlots[3].DisplayLabel, Is.EqualTo("Meteor Crash"));
+            Assert.That(kineticSlots[0].ActionId, Is.EqualTo("SkillQ"));
+            Assert.That(kineticSlots[0].DetailLabel, Is.EqualTo("Shockwave explosion pushes foes away"));
+            Assert.That(kineticSlots[1].ActionId, Is.EqualTo("SkillW"));
+            Assert.That(kineticSlots[1].DetailLabel, Is.EqualTo("Latch the first enemy, tether it, and reel it in"));
+            Assert.That(kineticSlots[2].ActionId, Is.EqualTo("SkillE"));
+            Assert.That(kineticSlots[2].DetailLabel, Is.EqualTo("Launch enemies upward, then punish the landing"));
+            Assert.That(kineticSlots[3].ActionId, Is.EqualTo("SkillR"));
+            Assert.That(kineticSlots[3].DetailLabel, Is.EqualTo("Crash to a point and erupt nearby enemies into the air"));
         }
 
         [Test]
@@ -761,6 +778,14 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast"), Is.GreaterThan(0));
             Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_guided_laser_cast"), Is.GreaterThan(0));
             Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_guided_laser_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.kinetic_vanguard_shock_mine_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.kinetic_vanguard_shock_mine_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.kinetic_vanguard_magnetic_lash_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.kinetic_vanguard_magnetic_lash_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.kinetic_vanguard_skybreaker_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.kinetic_vanguard_skybreaker_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.kinetic_vanguard_meteor_crash_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.kinetic_vanguard_meteor_crash_hit"), Is.GreaterThan(0));
         }
 
         [Test]
@@ -832,6 +857,104 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(effects.TryGet(spellGuidedLaserPersistentId, out var spellGuidedLaserPersistent), Is.True);
             Assert.That(spellGuidedLaserPersistent.PresetType, Is.EqualTo(EffectPresetType.PeriodicSearch));
             Assert.That(spellGuidedLaserPersistent.TargetDispatch.PayloadEffectTemplateId, Is.EqualTo(spellGuidedLaserHitId));
+        }
+
+        [Test]
+        public void ChampionSkillSandbox_KineticVanguard_ForceEffects_CompileOnExistingGasPipelines()
+        {
+            using var engine = CreateEngine();
+
+            var abilities = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
+                ?? throw new InvalidOperationException("AbilityDefinitionRegistry missing.");
+            var effects = engine.GetService(CoreServiceKeys.EffectTemplateRegistry)
+                ?? throw new InvalidOperationException("EffectTemplateRegistry missing.");
+
+            int shockMineAbilityId = AbilityIdRegistry.GetId("Ability.Champion.KineticVanguard.ShockMine");
+            int magneticLashAbilityId = AbilityIdRegistry.GetId("Ability.Champion.KineticVanguard.MagneticLash");
+            int skybreakerAbilityId = AbilityIdRegistry.GetId("Ability.Champion.KineticVanguard.Skybreaker");
+            int meteorCrashAbilityId = AbilityIdRegistry.GetId("Ability.Champion.KineticVanguard.MeteorCrash");
+            Assert.That(shockMineAbilityId, Is.GreaterThan(0));
+            Assert.That(magneticLashAbilityId, Is.GreaterThan(0));
+            Assert.That(skybreakerAbilityId, Is.GreaterThan(0));
+            Assert.That(meteorCrashAbilityId, Is.GreaterThan(0));
+
+            Assert.That(abilities.TryGet(meteorCrashAbilityId, out var meteorCrashAbility), Is.True);
+            Assert.That(meteorCrashAbility.ExecSpec.GetKind(1), Is.EqualTo(ExecItemKind.EffectSignal));
+            Assert.That((ExecEffectDispatchTarget)meteorCrashAbility.ExecSpec.GetPayloadA(1), Is.EqualTo(ExecEffectDispatchTarget.Source));
+            Assert.That(meteorCrashAbility.ExecSpec.GetKind(2), Is.EqualTo(ExecItemKind.EffectSignal));
+
+            int shockMineId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.ShockMine");
+            int shockMineHitId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.ShockMineHit");
+            int shockMineKnockbackId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.ShockMineKnockback");
+            int magneticLashId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.MagneticLash");
+            int magneticLashTetherId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.MagneticLashTether");
+            int magneticLashPullStepId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.MagneticLashPullStep");
+            int skybreakerId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.Skybreaker");
+            int skybreakerAirborneId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.SkybreakerAirborne");
+            int skybreakerLandingId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.SkybreakerLanding");
+            int meteorCrashDashId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.MeteorCrashDash");
+            int meteorCrashImpactId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.MeteorCrashImpact");
+            int meteorCrashAirborneId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.MeteorCrashAirborne");
+            int meteorCrashImpactDamageId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.MeteorCrashImpactDamage");
+            int knockedUpTagId = TagRegistry.GetId("Status.KnockedUp");
+
+            Assert.That(knockedUpTagId, Is.GreaterThan(0));
+
+            Assert.That(effects.TryGet(shockMineId, out var shockMine), Is.True);
+            Assert.That(shockMine.PresetType, Is.EqualTo(EffectPresetType.Search));
+            Assert.That(shockMine.TargetDispatch.PayloadEffectTemplateId, Is.EqualTo(shockMineHitId));
+
+            Assert.That(effects.TryGet(shockMineHitId, out var shockMineHit), Is.True);
+            Assert.That(shockMineHit.PresetType, Is.EqualTo(EffectPresetType.InstantDamage));
+            Assert.That(shockMineHit.PhaseGraphBindings.GetGraphId(EffectPhaseId.OnApply, PhaseSlot.Post), Is.GreaterThan(0));
+
+            Assert.That(effects.TryGet(shockMineKnockbackId, out var shockMineKnockback), Is.True);
+            Assert.That(shockMineKnockback.PresetType, Is.EqualTo(EffectPresetType.Displacement));
+            Assert.That(shockMineKnockback.Displacement.DirectionMode, Is.EqualTo(DisplacementDirectionMode.AwayFromSource));
+
+            Assert.That(effects.TryGet(magneticLashId, out var magneticLash), Is.True);
+            Assert.That(magneticLash.PresetType, Is.EqualTo(EffectPresetType.Search));
+            Assert.That(magneticLash.TargetDispatch.PayloadEffectTemplateId, Is.EqualTo(magneticLashTetherId));
+
+            Assert.That(effects.TryGet(magneticLashTetherId, out var magneticLashTether), Is.True);
+            Assert.That(magneticLashTether.PresetType, Is.EqualTo(EffectPresetType.Buff));
+            Assert.That(magneticLashTether.DurationTicks, Is.EqualTo(30));
+            Assert.That(magneticLashTether.PeriodTicks, Is.EqualTo(5));
+            Assert.That(magneticLashTether.PhaseGraphBindings.GetGraphId(EffectPhaseId.OnPeriod, PhaseSlot.Post), Is.GreaterThan(0));
+
+            Assert.That(effects.TryGet(magneticLashPullStepId, out var magneticLashPullStep), Is.True);
+            Assert.That(magneticLashPullStep.PresetType, Is.EqualTo(EffectPresetType.Displacement));
+            Assert.That(magneticLashPullStep.Displacement.DirectionMode, Is.EqualTo(DisplacementDirectionMode.TowardSource));
+
+            Assert.That(effects.TryGet(skybreakerId, out var skybreaker), Is.True);
+            Assert.That(skybreaker.PresetType, Is.EqualTo(EffectPresetType.Search));
+            Assert.That(skybreaker.TargetDispatch.PayloadEffectTemplateId, Is.EqualTo(skybreakerAirborneId));
+
+            Assert.That(effects.TryGet(skybreakerAirborneId, out var skybreakerAirborne), Is.True);
+            Assert.That(skybreakerAirborne.PresetType, Is.EqualTo(EffectPresetType.Buff));
+            Assert.That(skybreakerAirborne.GrantedTags.Count, Is.EqualTo(1));
+            Assert.That(skybreakerAirborne.GrantedTags.Get(0).TagId, Is.EqualTo(knockedUpTagId));
+            Assert.That(skybreakerAirborne.PhaseGraphBindings.GetGraphId(EffectPhaseId.OnExpire, PhaseSlot.Post), Is.GreaterThan(0));
+
+            Assert.That(effects.TryGet(skybreakerLandingId, out var skybreakerLanding), Is.True);
+            Assert.That(skybreakerLanding.PresetType, Is.EqualTo(EffectPresetType.InstantDamage));
+
+            Assert.That(effects.TryGet(meteorCrashDashId, out var meteorCrashDash), Is.True);
+            Assert.That(meteorCrashDash.PresetType, Is.EqualTo(EffectPresetType.Displacement));
+            Assert.That(meteorCrashDash.Displacement.DirectionMode, Is.EqualTo(DisplacementDirectionMode.ToTarget));
+
+            Assert.That(effects.TryGet(meteorCrashImpactId, out var meteorCrashImpact), Is.True);
+            Assert.That(meteorCrashImpact.PresetType, Is.EqualTo(EffectPresetType.Search));
+            Assert.That(meteorCrashImpact.TargetDispatch.PayloadEffectTemplateId, Is.EqualTo(meteorCrashAirborneId));
+
+            Assert.That(effects.TryGet(meteorCrashAirborneId, out var meteorCrashAirborne), Is.True);
+            Assert.That(meteorCrashAirborne.PresetType, Is.EqualTo(EffectPresetType.Buff));
+            Assert.That(meteorCrashAirborne.GrantedTags.Count, Is.EqualTo(1));
+            Assert.That(meteorCrashAirborne.GrantedTags.Get(0).TagId, Is.EqualTo(knockedUpTagId));
+            Assert.That(meteorCrashAirborne.PhaseGraphBindings.GetGraphId(EffectPhaseId.OnApply, PhaseSlot.Post), Is.GreaterThan(0));
+
+            Assert.That(effects.TryGet(meteorCrashImpactDamageId, out var meteorCrashImpactDamage), Is.True);
+            Assert.That(meteorCrashImpactDamage.PresetType, Is.EqualTo(EffectPresetType.InstantDamage));
         }
 
         private static GameEngine CreateEngine()

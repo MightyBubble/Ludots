@@ -516,6 +516,20 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 hasAny = true;
             }
 
+            if (inputObj["selectionType"] is JsonValue selectionTypeNode)
+            {
+                string rawSelectionType = selectionTypeNode.GetValue<string>();
+                if (!Enum.TryParse(rawSelectionType, ignoreCase: true, out OrderSelectionType selectionType))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' input.selectionType uses unsupported value '{rawSelectionType}'.");
+                }
+
+                result.SelectionType = selectionType;
+                result.HasSelectionType = true;
+                hasAny = true;
+            }
+
             if (inputObj["castModeOverride"] is JsonValue castModeNode)
             {
                 string rawCastMode = castModeNode.GetValue<string>();
@@ -548,6 +562,27 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 result.AutoTargetRangeCm = autoTargetRangeNode.GetValue<int>();
                 result.HasAutoTargetRangeCm = true;
+                hasAny = true;
+            }
+
+            if (inputObj["cursorTargetPolicy"] is JsonValue cursorTargetPolicyNode)
+            {
+                string rawCursorTargetPolicy = cursorTargetPolicyNode.GetValue<string>();
+                if (!Enum.TryParse(rawCursorTargetPolicy, ignoreCase: true, out AutoTargetPolicy cursorTargetPolicy))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' input.cursorTargetPolicy uses unsupported value '{rawCursorTargetPolicy}'.");
+                }
+
+                result.CursorTargetPolicy = cursorTargetPolicy;
+                result.HasCursorTargetPolicy = true;
+                hasAny = true;
+            }
+
+            if (inputObj["cursorTargetRangeCm"] is JsonValue cursorTargetRangeNode)
+            {
+                result.CursorTargetRangeCm = cursorTargetRangeNode.GetValue<int>();
+                result.HasCursorTargetRangeCm = true;
                 hasAny = true;
             }
 

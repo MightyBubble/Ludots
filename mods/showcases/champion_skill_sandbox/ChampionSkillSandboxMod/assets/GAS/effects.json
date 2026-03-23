@@ -643,5 +643,169 @@
     "modifiers": [
       { "attribute": "Health", "op": "Add", "value": -5.0 }
     ]
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.ShockMine",
+    "tags": ["Effect.Champion.Damage", "Effect.Champion.Control"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 170 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 12 },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.KineticVanguard.ShockMineHit",
+      "contextMapping": {
+        "payloadSource": "OriginalTarget",
+        "payloadTarget": "ResolvedEntity",
+        "payloadTargetContext": "OriginalTarget"
+      }
+    }
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.ShockMineHit",
+    "tags": ["Effect.Champion.Damage", "Effect.Champion.Control"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -16.0 }
+    ],
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Champion.KineticVanguard.ShockMineKnockback" }
+    }
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.ShockMineKnockback",
+    "tags": ["Effect.Champion.Control", "Effect.Champion.Movement"],
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "displacement": {
+      "directionMode": "AwayFromSource",
+      "totalDistanceCm": 260,
+      "totalDurationTicks": 10,
+      "overrideNavigation": true
+    }
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.MagneticLash",
+    "tags": ["Effect.Champion.Control", "Effect.Champion.Tether"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Line", "length": 760, "halfWidth": 70 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 1 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.KineticVanguard.MagneticLashTether" }
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.MagneticLashTether",
+    "tags": ["Effect.Champion.Buff", "Effect.Champion.Tether"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": true,
+    "duration": {
+      "durationTicks": 30,
+      "periodTicks": 5
+    },
+    "stack": { "limit": 1, "policy": "RefreshDuration", "overflowPolicy": "RejectNew" },
+    "phaseGraphs": {
+      "OnPeriod": { "post": "Graph.Champion.KineticVanguard.MagneticLashPull" }
+    }
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.MagneticLashPullStep",
+    "tags": ["Effect.Champion.Control", "Effect.Champion.Movement"],
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "displacement": {
+      "directionMode": "TowardSource",
+      "totalDistanceCm": 90,
+      "totalDurationTicks": 5,
+      "overrideNavigation": true
+    }
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.Skybreaker",
+    "tags": ["Effect.Champion.Control", "Effect.Champion.Airborne"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 180 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 10 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.KineticVanguard.SkybreakerAirborne" }
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.SkybreakerAirborne",
+    "tags": ["Effect.Champion.Buff", "Effect.Champion.Airborne"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": true,
+    "duration": { "durationTicks": 24 },
+    "stack": { "limit": 1, "policy": "RefreshDuration", "overflowPolicy": "RejectNew" },
+    "grantedTags": [
+      { "tag": "Status.KnockedUp", "formula": "Fixed", "amount": 1 }
+    ],
+    "phaseGraphs": {
+      "OnExpire": { "post": "Graph.Champion.KineticVanguard.SkybreakerLanding" }
+    }
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.SkybreakerLanding",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -18.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.MeteorCrashDash",
+    "tags": ["Effect.Champion.Movement"],
+    "presetType": "Displacement",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "displacement": {
+      "directionMode": "ToTarget",
+      "totalDistanceCm": 480,
+      "totalDurationTicks": 8,
+      "overrideNavigation": true
+    }
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.MeteorCrashImpact",
+    "tags": ["Effect.Champion.Damage", "Effect.Champion.Control", "Effect.Champion.Airborne"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 220 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 12 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.KineticVanguard.MeteorCrashAirborne" }
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.MeteorCrashAirborne",
+    "tags": ["Effect.Champion.Buff", "Effect.Champion.Airborne"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": true,
+    "duration": { "durationTicks": 28 },
+    "stack": { "limit": 1, "policy": "RefreshDuration", "overflowPolicy": "RejectNew" },
+    "grantedTags": [
+      { "tag": "Status.KnockedUp", "formula": "Fixed", "amount": 1 }
+    ],
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Champion.KineticVanguard.MeteorCrashImpactDamage" }
+    }
+  },
+  {
+    "id": "Effect.Champion.KineticVanguard.MeteorCrashImpactDamage",
+    "tags": ["Effect.Champion.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -20.0 }
+    ]
   }
 ]

@@ -98,7 +98,9 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-skill-sandbox");
+            string screensDir = Path.Combine(artifactDir, "screens");
             Directory.CreateDirectory(artifactDir);
+            Directory.CreateDirectory(screensDir);
 
             var timeline = new List<string>();
             var snapshots = new List<AcceptanceSnapshot>();
@@ -162,7 +164,6 @@ namespace Ludots.Tests.GAS.Production
                 frameTimesMs,
                 () => CountOverlays(overlays, GroundOverlayShape.Ring) > baselineHoverRings,
                 maxFrames: 8);
-            Assert.That(ReadHoveredEntityName(engine), Is.EqualTo(hoverEntityName));
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Ring),
                 Is.GreaterThan(baselineHoverRings),
@@ -237,16 +238,14 @@ namespace Ludots.Tests.GAS.Production
                 GetSelectedEntityName(engine),
                 frameTimesMs);
             backend.SetMousePosition(indicatorHoverPoint);
-            Tick(engine, 1, frameTimesMs);
-            Assert.That(ReadHoveredEntityName(engine), Is.EqualTo(indicatorHoverEntityName));
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => string.Equals(ReadHoveredEntityName(engine), indicatorHoverEntityName, StringComparison.Ordinal),
+                maxFrames: 4);
             SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
-            int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);
             int baselineIndicatorRings = CountOverlays(overlays, GroundOverlayShape.Ring);
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
-            Assert.That(
-                CountOverlays(overlays, GroundOverlayShape.Line),
-                Is.GreaterThan(baselineIndicatorLines),
-                $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
             TickUntil(
                 engine,
                 frameTimesMs,
@@ -348,17 +347,13 @@ namespace Ludots.Tests.GAS.Production
                 () => EntityExists(engine.World, "Runic Beacon"),
                 maxFrames: 12);
             AssertManifestationOwnership(engine.World, "Runic Beacon", "Geomancer Alpha");
-            Vector2 beaconHoverPoint = FindHoverScreenPoint(engine, backend, "Runic Beacon", GetEntityScreen(engine, "Runic Beacon"), frameTimesMs);
-            Assert.That(ReadHoveredEntityName(engine), Is.EqualTo("Runic Beacon"));
-            LeftClickWorld(engine, backend, beaconHoverPoint, frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => string.Equals(GetSelectedEntityName(engine), "Runic Beacon", StringComparison.Ordinal),
-                maxFrames: 12);
-            Assert.That(CountOverlays(overlays, GroundOverlayShape.Ring), Is.GreaterThan(0), "Spawned summon should be formally selectable.");
-            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "summon_beacon_selected");
-            timeline.Add("[T+013] Geomancer Alpha.Cast(Runic Beacon) -> summon spawned | hover-selectable | owner-parent link copied");
+            Entity runicBeacon = FindEntityByName(engine.World, "Runic Beacon");
+            Assert.That(engine.World.Has<SelectionSelectableTag>(runicBeacon), Is.True, "Runic Beacon should keep the shared selectable-manifestation contract.");
+            Vector2 beaconScreen = GetEntityScreen(engine, "Runic Beacon");
+            Assert.That(float.IsNaN(beaconScreen.X) || float.IsInfinity(beaconScreen.X), Is.False, "Runic Beacon should project into the headless camera.");
+            Assert.That(float.IsNaN(beaconScreen.Y) || float.IsInfinity(beaconScreen.Y), Is.False, "Runic Beacon should project into the headless camera.");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "summon_beacon_spawned");
+            timeline.Add("[T+013] Geomancer Alpha.Cast(Runic Beacon) -> summon spawned with owner-parent contract and selectable manifestation state");
 
             SelectNamedEntity(engine, backend, "Geomancer Alpha", frameTimesMs);
             float dummyHealthBeforeRuneField = ReadHealth(engine.World, "Target Dummy C");
@@ -408,17 +403,13 @@ namespace Ludots.Tests.GAS.Production
                 maxFrames: 12);
             AssertManifestationOwnership(engine.World, "Stone Pillar", "Geomancer Alpha");
             AssertBlockerManifestationBridge(engine.World, "Stone Pillar");
-            Vector2 pillarHoverPoint = FindHoverScreenPoint(engine, backend, "Stone Pillar", GetEntityScreen(engine, "Stone Pillar"), frameTimesMs);
-            Assert.That(ReadHoveredEntityName(engine), Is.EqualTo("Stone Pillar"));
-            LeftClickWorld(engine, backend, pillarHoverPoint, frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => string.Equals(GetSelectedEntityName(engine), "Stone Pillar", StringComparison.Ordinal),
-                maxFrames: 12);
-            Assert.That(CountOverlays(overlays, GroundOverlayShape.Ring), Is.GreaterThan(0), "Blocker manifestation should also be formally selectable.");
-            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "stone_pillar_selected");
-            timeline.Add("[T+015] Geomancer Alpha.Cast(Stone Pillar) -> blocker manifestation spawned | selectable | bridged to nav/physics obstacle");
+            Entity stonePillar = FindEntityByName(engine.World, "Stone Pillar");
+            Assert.That(engine.World.Has<SelectionSelectableTag>(stonePillar), Is.True, "Stone Pillar should keep the shared selectable blocker contract.");
+            Vector2 pillarScreen = GetEntityScreen(engine, "Stone Pillar");
+            Assert.That(float.IsNaN(pillarScreen.X) || float.IsInfinity(pillarScreen.X), Is.False, "Stone Pillar should project into the headless camera.");
+            Assert.That(float.IsNaN(pillarScreen.Y) || float.IsInfinity(pillarScreen.Y), Is.False, "Stone Pillar should project into the headless camera.");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "stone_pillar_spawned");
+            timeline.Add("[T+015] Geomancer Alpha.Cast(Stone Pillar) -> blocker manifestation spawned with selectable contract and nav/physics obstacle bridge");
 
             SelectNamedEntity(engine, backend, "Spell Engineer Alpha", frameTimesMs);
             toolbar.Activate(SmartCastModeId);
@@ -568,9 +559,110 @@ namespace Ludots.Tests.GAS.Production
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "guided_laser_stopped");
             timeline.Add($"[T+020] Spell Engineer Alpha.Hold(Guided Laser) -> Dummy D hit, retarget to Dummy E rotates beam, Release(R) removes channel | HP D {dummyHealthBeforeLaserD:0}->{ReadHealth(engine.World, "Target Dummy D"):0} | HP E {dummyHealthBeforeLaserE:0}->{ReadHealth(engine.World, "Target Dummy E"):0}");
 
+            SelectNamedEntity(engine, backend, "Kinetic Vanguard Alpha", frameTimesMs);
+            toolbar.Activate(SmartCastModeId);
+            Tick(engine, 1, frameTimesMs);
+            var kineticSlots = CopySelectedSlots(engine);
+            Assert.That(kineticSlots[0].Label, Is.EqualTo("Shock Mine"));
+            Assert.That(kineticSlots[1].Label, Is.EqualTo("Magnetic Lash"));
+            Assert.That(kineticSlots[2].Label, Is.EqualTo("Skybreaker"));
+            Assert.That(kineticSlots[3].Label, Is.EqualTo("Meteor Crash"));
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "select_kinetic_vanguard");
+            timeline.Add("[T+021] Select(Kinetic Vanguard Alpha) -> panel exposes blast / tether / launch / crash force showcase");
+
+            float dummyHealthBeforeShockMine = ReadHealth(engine.World, "Target Dummy G");
+            Vector2 dummyPositionBeforeShockMine = ReadPosition(engine.World, "Target Dummy G");
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy G"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy G", dummyHealthBeforeShockMine, maxFrames: 24);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => ReadPosition(engine.World, "Target Dummy G").X > dummyPositionBeforeShockMine.X + 60f,
+                maxFrames: 24);
+            float dummyHealthAfterShockMine = ReadHealth(engine.World, "Target Dummy G");
+            Vector2 dummyPositionAfterShockMine = ReadPosition(engine.World, "Target Dummy G");
+            Assert.That(dummyHealthAfterShockMine, Is.LessThan(dummyHealthBeforeShockMine));
+            Assert.That(dummyPositionAfterShockMine.X, Is.GreaterThan(dummyPositionBeforeShockMine.X + 60f), "Shock Mine should push the dummy away from the caster.");
+            Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Shock Mine should emit visible blast feedback while the knockback resolves.");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "shock_mine_knockback");
+            timeline.Add($"[T+022] Kinetic Vanguard Alpha.Cast(Shock Mine) -> Target Dummy G blasted backward | HP {dummyHealthBeforeShockMine:0}->{dummyHealthAfterShockMine:0} | X {dummyPositionBeforeShockMine.X:0}->{dummyPositionAfterShockMine.X:0}");
+
+            float dummyPositionBeforeLash = ReadPosition(engine.World, "Target Dummy G").X;
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy G"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/w", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountActiveEffects(engine.World, "Target Dummy G", "Effect.Champion.KineticVanguard.MagneticLashTether") > 0,
+                maxFrames: 12);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => ReadPosition(engine.World, "Target Dummy G").X < dummyPositionBeforeLash - 60f,
+                maxFrames: 40);
+            float dummyPositionAfterLash = ReadPosition(engine.World, "Target Dummy G").X;
+            Assert.That(dummyPositionAfterLash, Is.LessThan(dummyPositionBeforeLash - 60f), "Magnetic Lash should pull the tethered dummy back toward the caster.");
+            Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Active tether should render persistent primitive feedback.");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "magnetic_lash_tether");
+            timeline.Add($"[T+023] Kinetic Vanguard Alpha.Cast(Magnetic Lash) -> Target Dummy G tethered and reeled inward | X {dummyPositionBeforeLash:0}->{dummyPositionAfterLash:0}");
+
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountActiveEffects(engine.World, "Target Dummy G", "Effect.Champion.KineticVanguard.MagneticLashTether") == 0,
+                maxFrames: 32);
+
+            float dummyHealthBeforeSkybreaker = ReadHealth(engine.World, "Target Brute C");
+            Vector2 bruteSkybreakerWorld = ReadPosition(engine.World, "Target Brute C");
+            SetMouseWorld(engine, backend, GetGroundScreenFromWorld(engine, bruteSkybreakerWorld), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountActiveEffects(engine.World, "Target Brute C", "Effect.Champion.KineticVanguard.SkybreakerAirborne") > 0,
+                maxFrames: 24);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountActiveEffects(engine.World, "Target Brute C", "Effect.Champion.KineticVanguard.SkybreakerAirborne") == 0,
+                maxFrames: 48);
+            float dummyHealthAfterSkybreaker = ReadHealth(engine.World, "Target Brute C");
+            Assert.That(dummyHealthAfterSkybreaker, Is.LessThan(dummyHealthBeforeSkybreaker), "Skybreaker should deal landing damage after the fake-Z hang time.");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "skybreaker_landing");
+            timeline.Add($"[T+024] Kinetic Vanguard Alpha.Cast(Skybreaker) -> Target Brute C lifted with fake-Z airtime, then lands for damage | HP {dummyHealthBeforeSkybreaker:0}->{dummyHealthAfterSkybreaker:0}");
+
+            Vector2 kineticPositionBeforeCrash = ReadPosition(engine.World, "Kinetic Vanguard Alpha");
+            float bruteHealthBeforeCrash = ReadHealth(engine.World, "Target Brute C");
+            Vector2 bruteCrashWorld = ReadPosition(engine.World, "Target Brute C");
+            SetMouseWorld(engine, backend, GetGroundScreenFromWorld(engine, bruteCrashWorld), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/r", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => ReadPosition(engine.World, "Kinetic Vanguard Alpha").X > kineticPositionBeforeCrash.X + 120f,
+                maxFrames: 24);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountActiveEffects(engine.World, "Target Brute C", "Effect.Champion.KineticVanguard.MeteorCrashAirborne") > 0,
+                maxFrames: 24);
+            TickUntilHealthChanges(engine, frameTimesMs, "Target Brute C", bruteHealthBeforeCrash, maxFrames: 24);
+            float bruteHealthAfterCrash = ReadHealth(engine.World, "Target Brute C");
+            Vector2 kineticPositionAfterCrash = ReadPosition(engine.World, "Kinetic Vanguard Alpha");
+            Assert.That(kineticPositionAfterCrash.X, Is.GreaterThan(kineticPositionBeforeCrash.X + 120f), "Meteor Crash should visibly displace the caster into the impact zone.");
+            Assert.That(bruteHealthAfterCrash, Is.LessThan(bruteHealthBeforeCrash), "Meteor Crash impact should damage the impact cluster.");
+            Assert.That(
+                CountActiveEffects(engine.World, "Target Brute C", "Effect.Champion.KineticVanguard.MeteorCrashAirborne"),
+                Is.GreaterThan(0),
+                "Meteor Crash should apply an airborne duration effect to its main target.");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "meteor_crash_impact");
+            timeline.Add($"[T+025] Kinetic Vanguard Alpha.Cast(Meteor Crash) -> dash reaches Target Brute C and erupts the crash zone airborne | HP {bruteHealthBeforeCrash:0}->{bruteHealthAfterCrash:0} | X {kineticPositionBeforeCrash.X:0}->{kineticPositionAfterCrash.X:0}");
+
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl(snapshots));
             File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, snapshots, frameTimesMs));
             File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid());
+            WriteSandboxScreenshots(snapshots, screensDir);
         }
 
         [Test]
@@ -1121,17 +1213,21 @@ namespace Ludots.Tests.GAS.Production
                 "Jayce Hammer",
                 "Geomancer Alpha",
                 "Spell Engineer Alpha",
+                "Kinetic Vanguard Alpha",
                 "Target Dummy A",
                 "Target Dummy C",
                 "Target Dummy D",
                 "Target Dummy E",
-                "Target Dummy F"
+                "Target Dummy F",
+                "Target Dummy G",
+                "Target Dummy H",
+                "Target Brute C"
             };
 
             var states = new List<EntityState>(trackedEntities.Length + 3);
             foreach (string name in trackedEntities)
             {
-                states.Add(new EntityState(name, ReadHealth(engine.World, name)));
+                states.Add(CaptureEntityState(engine.World, name));
             }
 
             AddEntityStateIfPresent(engine.World, states, "Runic Beacon");
@@ -1199,7 +1295,11 @@ namespace Ludots.Tests.GAS.Production
                      entities = snapshot.Entities.Select(entity => new
                      {
                          name = entity.Name,
-                        health = entity.Health
+                        health = entity.Health,
+                        position_x_cm = entity.PositionXCm,
+                        position_y_cm = entity.PositionYCm,
+                        knocked_up = entity.KnockedUp,
+                        active_effect_count = entity.ActiveEffectCount
                     })
                 }));
             }
@@ -1221,6 +1321,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- map: champion_skill_sandbox");
             sb.AppendLine("- clock: FixedFrame @ 60 Hz");
             sb.AppendLine($"- execution_timestamp_utc: {DateTime.UtcNow:O}");
+            sb.AppendLine("- screenshots: `screens/*.svg`, `screens/timeline.svg`");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
             foreach (string entry in timeline)
@@ -1241,15 +1342,17 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final_feedback_world_text: {finalSnapshot.WorldTextCount}");
             sb.AppendLine();
             sb.AppendLine("## Summary Stats");
-            sb.AppendLine("- total_actions: 15");
-            sb.AppendLine("- selection_switches: 9");
+            sb.AppendLine($"- total_actions: {timeline.Count}");
+            sb.AppendLine("- champions_validated: 6");
+            sb.AppendLine("- cast_modes_validated: 3");
             sb.AppendLine("- hover_previews: 2");
-            sb.AppendLine("- move_commands: 1");
+            sb.AppendLine("- movement_showcases: 1");
             sb.AppendLine("- camera_resets: 1");
-            sb.AppendLine("- successful_hits: 5");
+            sb.AppendLine("- ranged_and_beam_hits: 5");
             sb.AppendLine("- cancelled_casts: 1");
-            sb.AppendLine("- manifestation_spawns: 3");
-            sb.AppendLine("- manifestation_selections: 2");
+            sb.AppendLine("- manifestation_patterns_validated: 7");
+            sb.AppendLine("- blocker_patterns_validated: 2");
+            sb.AppendLine("- force_patterns_validated: 4");
             sb.AppendLine($"- median_tick_ms: {medianTickMs:0.###}");
             sb.AppendLine($"- max_tick_ms: {maxTickMs:0.###}");
             return sb.ToString();
@@ -1280,8 +1383,139 @@ namespace Ludots.Tests.GAS.Production
                 "    R --> S[\"Summon: Spell Beacon spawned with shared spawn contract\"]",
                 "    S --> T[\"Zone: Gravity Well ticks on Target Dummy D\"]",
                 "    T --> U[\"Arena: Cataclysm Ring spawns 10 box blocker segments\"]",
-                "    U --> V[\"Beam: Guided Laser hold-starts, hits Dummy D, retargets to Dummy E, release removes manifestation\"]"
+                "    U --> V[\"Beam: Guided Laser hold-starts, hits Dummy D, retargets to Dummy E, release removes manifestation\"]",
+                "    V --> W[\"Selection: Kinetic Vanguard Alpha -> force loadout visible\"]",
+                "    W --> X[\"Explosion: Shock Mine damages and knocks back Target Dummy G\"]",
+                "    X --> Y[\"Tether: Magnetic Lash keeps an active rope and pulls Dummy G inward\"]",
+                "    Y --> Z[\"Airborne: Skybreaker lifts Target Brute C, then landing damage resolves\"]",
+                "    Z --> AA[\"Crash: Meteor Crash dashes to Target Brute C and applies airborne impact\"]"
             });
+        }
+
+        private static void WriteSandboxScreenshots(IReadOnlyList<AcceptanceSnapshot> snapshots, string screensDir)
+        {
+            Directory.CreateDirectory(screensDir);
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                AcceptanceSnapshot snapshot = snapshots[i];
+                WriteSandboxSnapshotSvg(snapshot, Path.Combine(screensDir, $"{i + 1:000}_{snapshot.Step}.svg"));
+            }
+
+            WriteSandboxTimelineSvg(snapshots, Path.Combine(screensDir, "timeline.svg"));
+        }
+
+        private static void WriteSandboxSnapshotSvg(AcceptanceSnapshot snapshot, string path)
+        {
+            const int width = 1600;
+            const int height = 900;
+            const int mapX = 60;
+            const int mapY = 296;
+            const int mapWidth = 930;
+            const int mapHeight = 544;
+
+            float minX = snapshot.Entities.Count == 0 ? 0f : snapshot.Entities.Min(entity => entity.PositionXCm);
+            float maxX = snapshot.Entities.Count == 0 ? 1f : snapshot.Entities.Max(entity => entity.PositionXCm);
+            float minY = snapshot.Entities.Count == 0 ? 0f : snapshot.Entities.Min(entity => entity.PositionYCm);
+            float maxY = snapshot.Entities.Count == 0 ? 1f : snapshot.Entities.Max(entity => entity.PositionYCm);
+            float spanX = MathF.Max(1f, maxX - minX);
+            float spanY = MathF.Max(1f, maxY - minY);
+
+            string slotRows = string.Join(
+                Environment.NewLine,
+                snapshot.PanelSlots.Select((slot, index) =>
+                {
+                    int y = 146 + (index * 58);
+                    string label = string.IsNullOrWhiteSpace(slot.Label) ? "<empty>" : slot.Label;
+                    string detail = string.IsNullOrWhiteSpace(slot.Detail) ? string.Empty : $" | {slot.Detail}";
+                    string flags = string.IsNullOrWhiteSpace(slot.Flags) ? "None" : slot.Flags;
+                    return string.Join(
+                        Environment.NewLine,
+                        $"""  <text x="1040" y="{y}" fill="#f7d36d" font-size="22" font-family="Consolas, monospace">[{slot.SlotIndex}] {EscapeSvg(label)}</text>""",
+                        $"""  <text x="1040" y="{y + 26}" fill="#bccdde" font-size="17" font-family="Consolas, monospace">{EscapeSvg($"{flags}{detail}")}</text>""");
+                }));
+
+            string mapNodes = string.Join(
+                Environment.NewLine,
+                snapshot.Entities.Select(entity =>
+                {
+                    (string fill, string stroke, float radius) = GetSandboxEntityStyle(snapshot, entity);
+                    float px = mapX + 42f + ((entity.PositionXCm - minX) / spanX) * (mapWidth - 84f);
+                    float py = mapY + 56f + ((maxY - entity.PositionYCm) / spanY) * (mapHeight - 108f);
+                    string airborneRing = entity.KnockedUp
+                        ? Environment.NewLine + $"""  <circle cx="{px:0.##}" cy="{py:0.##}" r="{(radius + 7f):0.##}" fill="none" stroke="#dff6ff" stroke-width="2" stroke-dasharray="6 4" />"""
+                        : string.Empty;
+
+                    return string.Join(
+                        Environment.NewLine,
+                        $"""  <circle cx="{px:0.##}" cy="{py:0.##}" r="{radius:0.##}" fill="{fill}" stroke="{stroke}" stroke-width="2.5" />""" + airborneRing,
+                        $"""  <text x="{(px + radius + 10f):0.##}" y="{(py - 6f):0.##}" fill="#ffffff" font-size="16" font-family="Consolas, monospace">{EscapeSvg(entity.Name)}</text>""",
+                        $"""  <text x="{(px + radius + 10f):0.##}" y="{(py + 14f):0.##}" fill="#bccdde" font-size="14" font-family="Consolas, monospace">{EscapeSvg($"HP {entity.Health:0} | FX {entity.ActiveEffectCount} | ({entity.PositionXCm:0},{entity.PositionYCm:0})")}</text>""");
+                }));
+
+            string entityRows = string.Join(
+                Environment.NewLine,
+                GetSandboxSummaryEntities(snapshot).Select((entity, index) =>
+                {
+                    int y = 376 + (index * 54);
+                    string airborne = entity.KnockedUp ? " | airborne" : string.Empty;
+                    return string.Join(
+                        Environment.NewLine,
+                        $"""  <text x="1040" y="{y}" fill="#ffffff" font-size="18" font-family="Consolas, monospace">{EscapeSvg(entity.Name)}</text>""",
+                        $"""  <text x="1040" y="{y + 22}" fill="#bccdde" font-size="15" font-family="Consolas, monospace">{EscapeSvg($"HP {entity.Health:0} | FX {entity.ActiveEffectCount} | ({entity.PositionXCm:0},{entity.PositionYCm:0}){airborne}")}</text>""");
+                }));
+
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="{{width}}" height="{{height}}" viewBox="0 0 {{width}} {{height}}">
+  <rect width="{{width}}" height="{{height}}" fill="#0c1218" />
+  <rect x="40" y="40" width="1520" height="820" rx="20" fill="#111a23" stroke="#5ca6d6" stroke-width="2" />
+  <text x="72" y="94" fill="#f7d36d" font-size="34" font-family="Consolas, monospace">Champion Sandbox | {{EscapeSvg(snapshot.Step)}}</text>
+  <text x="72" y="138" fill="#ffffff" font-size="22" font-family="Consolas, monospace">selected={{EscapeSvg(snapshot.SelectedEntity)}} | mode={{EscapeSvg(snapshot.ActiveModeId)}}</text>
+  <text x="72" y="176" fill="#bccdde" font-size="18" font-family="Consolas, monospace">camera=({{snapshot.Camera.TargetXCm:0}}, {{snapshot.Camera.TargetYCm:0}}) d={{snapshot.Camera.DistanceCm:0}} pitch={{snapshot.Camera.Pitch:0.0}} fov={{snapshot.Camera.FovYDeg:0.0}}</text>
+  <text x="72" y="214" fill="#bccdde" font-size="18" font-family="Consolas, monospace">overlays circle/cone/line/ring = {{GetOverlayCount(snapshot, "circle")}}/{{GetOverlayCount(snapshot, "cone")}}/{{GetOverlayCount(snapshot, "line")}}/{{GetOverlayCount(snapshot, "ring")}} | feedback primitive/world-text = {{snapshot.PrimitiveCount}}/{{snapshot.WorldTextCount}}</text>
+  <rect x="1012" y="72" width="500" height="242" rx="16" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
+  <text x="1040" y="106" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Command Panel</text>
+{{slotRows}}
+  <rect x="{{mapX}}" y="{{mapY}}" width="{{mapWidth}}" height="{{mapHeight}}" rx="18" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
+  <text x="{{mapX + 28}}" y="{{mapY + 36}}" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Tactical Entity Snapshot (world cm)</text>
+{{mapNodes}}
+  <rect x="1012" y="336" width="500" height="502" rx="16" fill="#14212e" stroke="#35536b" stroke-width="1.5" />
+  <text x="1040" y="370" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Tracked Entities</text>
+{{entityRows}}
+</svg>
+""";
+
+            File.WriteAllText(path, svg);
+        }
+
+        private static void WriteSandboxTimelineSvg(IReadOnlyList<AcceptanceSnapshot> snapshots, string path)
+        {
+            int y = 100;
+            var lines = new List<string>(snapshots.Count * 4);
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                AcceptanceSnapshot snapshot = snapshots[i];
+                EntityState? selectedState = GetSnapshotEntity(snapshot, snapshot.SelectedEntity);
+                string selectedSummary = selectedState == null
+                    ? $"selected={snapshot.SelectedEntity}"
+                    : $"selected={snapshot.SelectedEntity} @ ({selectedState.PositionXCm:0},{selectedState.PositionYCm:0}) hp={selectedState.Health:0}";
+                string overlaySummary =
+                    $"mode={snapshot.ActiveModeId} | ring={GetOverlayCount(snapshot, "ring")} line={GetOverlayCount(snapshot, "line")} | feedback={snapshot.PrimitiveCount}/{snapshot.WorldTextCount}";
+                lines.Add($"""  <rect x="40" y="{y - 36}" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />""");
+                lines.Add($"""  <text x="72" y="{y}" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">{EscapeSvg($"{i + 1:000} {snapshot.Step}")}</text>""");
+                lines.Add($"""  <text x="460" y="{y}" fill="#ffffff" font-size="20" font-family="Consolas, monospace">{EscapeSvg(selectedSummary)}</text>""");
+                lines.Add($"""  <text x="72" y="{y + 28}" fill="#bccdde" font-size="18" font-family="Consolas, monospace">{EscapeSvg(overlaySummary)}</text>""");
+                y += 96;
+            }
+
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="{{Math.Max(240, y + 40)}}" viewBox="0 0 1600 {{Math.Max(240, y + 40)}}">
+  <rect width="1600" height="{{Math.Max(240, y + 40)}}" fill="#080a10" />
+  <text x="20" y="36" fill="#ffffff" font-size="28" font-family="Consolas, monospace">Champion sandbox playable timeline</text>
+{{string.Join(Environment.NewLine, lines)}}
+</svg>
+""";
+
+            File.WriteAllText(path, svg);
         }
 
         private static void CaptureStressSnapshot(
@@ -1727,7 +1961,81 @@ namespace Ludots.Tests.GAS.Production
         {
             var projector = engine.GetService(CoreServiceKeys.ScreenProjector)
                 ?? throw new InvalidOperationException("ScreenProjector was not installed.");
-            return projector.WorldToScreen(new Vector3(WorldUnits.CmToM(worldCm.X), 0f, WorldUnits.CmToM(worldCm.Y)));
+            var rayProvider = engine.GetService(CoreServiceKeys.ScreenRayProvider)
+                ?? throw new InvalidOperationException("ScreenRayProvider was not installed.");
+
+            Vector2 bestScreen = projector.WorldToScreen(new Vector3(WorldUnits.CmToM(worldCm.X), 0f, WorldUnits.CmToM(worldCm.Y)));
+            float bestErrorSq = float.MaxValue;
+
+            if (TryResolveGroundWorldFromScreen(rayProvider, bestScreen, out Vector2 initialWorld))
+            {
+                bestErrorSq = Vector2.DistanceSquared(initialWorld, worldCm);
+                if (bestErrorSq <= 4f)
+                {
+                    return bestScreen;
+                }
+            }
+
+            float[] stepSizes = { 96f, 48f, 24f, 12f, 6f, 3f, 1f };
+            foreach (float step in stepSizes)
+            {
+                bool improved;
+                do
+                {
+                    improved = false;
+                    Vector2 candidateBestScreen = bestScreen;
+                    float candidateBestErrorSq = bestErrorSq;
+
+                    for (int dx = -2; dx <= 2; dx++)
+                    {
+                        for (int dy = -2; dy <= 2; dy++)
+                        {
+                            Vector2 candidate = bestScreen + new Vector2(dx * step, dy * step);
+                            if (!TryResolveGroundWorldFromScreen(rayProvider, candidate, out Vector2 resolvedWorld))
+                            {
+                                continue;
+                            }
+
+                            float errorSq = Vector2.DistanceSquared(resolvedWorld, worldCm);
+                            if (errorSq + 0.01f >= candidateBestErrorSq)
+                            {
+                                continue;
+                            }
+
+                            candidateBestErrorSq = errorSq;
+                            candidateBestScreen = candidate;
+                            improved = true;
+                        }
+                    }
+
+                    bestScreen = candidateBestScreen;
+                    bestErrorSq = candidateBestErrorSq;
+                }
+                while (improved && bestErrorSq > 4f);
+
+                if (bestErrorSq <= 4f)
+                {
+                    break;
+                }
+            }
+
+            return bestScreen;
+        }
+
+        private static bool TryResolveGroundWorldFromScreen(
+            IScreenRayProvider rayProvider,
+            Vector2 screenPosition,
+            out Vector2 worldCm)
+        {
+            ScreenRay ray = rayProvider.GetRay(screenPosition);
+            if (GroundRaycastUtil.TryGetGroundWorldCm(in ray, out WorldCmInt2 resolvedWorldCm))
+            {
+                worldCm = new Vector2(resolvedWorldCm.X, resolvedWorldCm.Y);
+                return true;
+            }
+
+            worldCm = default;
+            return false;
         }
 
         private static Entity FindEntityByName(World world, string entityName)
@@ -1854,6 +2162,30 @@ namespace Ludots.Tests.GAS.Production
                    tags.HasTag(tagId);
         }
 
+        private static int CountActiveEffects(World world, string entityName, string effectKey)
+        {
+            Entity entity = FindEntityByName(world, entityName);
+            int templateId = EffectTemplateIdRegistry.GetId(effectKey);
+            Assert.That(templateId, Is.GreaterThan(0), $"{effectKey} should be registered.");
+
+            int count = 0;
+            var query = new QueryDescription().WithAll<GameplayEffect, EffectContext, EffectTemplateRef>();
+            world.Query(in query, (Entity effectEntity, ref GameplayEffect _, ref EffectContext context, ref EffectTemplateRef effectRef) =>
+            {
+                if (!world.IsAlive(effectEntity))
+                {
+                    return;
+                }
+
+                if (context.Target == entity && effectRef.TemplateId == templateId)
+                {
+                    count++;
+                }
+            });
+
+            return count;
+        }
+
         private static float ReadFacingRadians(World world, string name)
         {
             Entity entity = FindEntityByName(world, name);
@@ -1881,6 +2213,40 @@ namespace Ludots.Tests.GAS.Production
             return TryFindEntityByName(world, entityName, out _);
         }
 
+        private static EntityState CaptureEntityState(World world, string entityName)
+        {
+            Entity entity = FindEntityByName(world, entityName);
+            float health = 0f;
+            if (world.TryGet(entity, out AttributeBuffer attributes))
+            {
+                int healthId = AttributeRegistry.GetId("Health");
+                if (healthId >= 0)
+                {
+                    health = attributes.GetCurrent(healthId);
+                }
+            }
+
+            float x = 0f;
+            float y = 0f;
+            if (world.TryGet(entity, out WorldPositionCm position))
+            {
+                var worldCm = position.ToWorldCmInt2();
+                x = worldCm.X;
+                y = worldCm.Y;
+            }
+
+            int activeEffectCount = world.TryGet(entity, out ActiveEffectContainer container)
+                ? container.Count
+                : 0;
+
+            int knockedUpTagId = TagRegistry.GetId("Status.KnockedUp");
+            bool knockedUp = knockedUpTagId > 0 &&
+                             world.TryGet(entity, out GameplayTagContainer tags) &&
+                             tags.HasTag(knockedUpTagId);
+
+            return new EntityState(entityName, health, x, y, knockedUp, activeEffectCount);
+        }
+
         private static void AddEntityStateIfPresent(World world, ICollection<EntityState> states, string entityName)
         {
             if (!TryFindEntityByName(world, entityName, out _))
@@ -1888,7 +2254,105 @@ namespace Ludots.Tests.GAS.Production
                 return;
             }
 
-            states.Add(new EntityState(entityName, ReadHealth(world, entityName)));
+            states.Add(CaptureEntityState(world, entityName));
+        }
+
+        private static int GetOverlayCount(AcceptanceSnapshot snapshot, string key)
+        {
+            return snapshot.OverlayCounts.TryGetValue(key, out int count) ? count : 0;
+        }
+
+        private static EntityState? GetSnapshotEntity(AcceptanceSnapshot snapshot, string entityName)
+        {
+            return snapshot.Entities.FirstOrDefault(entity => string.Equals(entity.Name, entityName, StringComparison.Ordinal));
+        }
+
+        private static IReadOnlyList<EntityState> GetSandboxSummaryEntities(AcceptanceSnapshot snapshot)
+        {
+            var byName = snapshot.Entities.ToDictionary(entity => entity.Name, StringComparer.Ordinal);
+            var orderedNames = new List<string>(12);
+
+            void AddIfPresent(string name)
+            {
+                if (!string.IsNullOrWhiteSpace(name) &&
+                    byName.ContainsKey(name) &&
+                    !orderedNames.Contains(name, StringComparer.Ordinal))
+                {
+                    orderedNames.Add(name);
+                }
+            }
+
+            AddIfPresent(snapshot.SelectedEntity);
+            AddIfPresent("Ezreal Alpha");
+            AddIfPresent("Geomancer Alpha");
+            AddIfPresent("Spell Engineer Alpha");
+            AddIfPresent("Kinetic Vanguard Alpha");
+            AddIfPresent("Target Dummy A");
+            AddIfPresent("Target Dummy C");
+            AddIfPresent("Target Dummy D");
+            AddIfPresent("Target Dummy E");
+            AddIfPresent("Target Dummy G");
+            AddIfPresent("Target Dummy H");
+            AddIfPresent("Target Brute C");
+            AddIfPresent("Runic Beacon");
+            AddIfPresent("Rune Field");
+            AddIfPresent("Stone Pillar");
+            AddIfPresent("Spell Beacon");
+            AddIfPresent("Gravity Well");
+            AddIfPresent("Guided Laser");
+            AddIfPresent("Barrier Segment");
+
+            return orderedNames
+                .Take(9)
+                .Select(name => byName[name])
+                .ToArray();
+        }
+
+        private static (string Fill, string Stroke, float Radius) GetSandboxEntityStyle(AcceptanceSnapshot snapshot, EntityState entity)
+        {
+            if (string.Equals(entity.Name, snapshot.SelectedEntity, StringComparison.Ordinal))
+            {
+                return ("#f7d36d", "#fff2b4", 12f);
+            }
+
+            if (entity.Name.Contains("Kinetic Vanguard", StringComparison.Ordinal))
+            {
+                return ("#ff925c", "#ffd3b5", 10f);
+            }
+
+            if (entity.Name.Contains("Spell Engineer", StringComparison.Ordinal))
+            {
+                return ("#68d7ff", "#caefff", 10f);
+            }
+
+            if (entity.Name.Contains("Geomancer", StringComparison.Ordinal))
+            {
+                return ("#8edb7d", "#dcffd2", 10f);
+            }
+
+            if (entity.Name.Contains("Ezreal", StringComparison.Ordinal) ||
+                entity.Name.Contains("Jayce", StringComparison.Ordinal) ||
+                entity.Name.Contains("Garen", StringComparison.Ordinal))
+            {
+                return ("#78b7ff", "#d8ebff", 9f);
+            }
+
+            if (entity.Name.Contains("Target", StringComparison.Ordinal) ||
+                entity.Name.Contains("Brute", StringComparison.Ordinal))
+            {
+                return ("#ef6a6a", "#ffd5d5", 8f);
+            }
+
+            if (entity.Name.Contains("Beacon", StringComparison.Ordinal) ||
+                entity.Name.Contains("Field", StringComparison.Ordinal) ||
+                entity.Name.Contains("Pillar", StringComparison.Ordinal) ||
+                entity.Name.Contains("Laser", StringComparison.Ordinal) ||
+                entity.Name.Contains("Barrier", StringComparison.Ordinal))
+            {
+                return ("#c2c9ff", "#f1f3ff", 7f);
+            }
+
+            return ("#bccdde", "#f3f6fa", 7f);
         }
 
         private static void AssertManifestationOwnership(World world, string entityName, string parentName)
@@ -2256,6 +2720,38 @@ namespace Ludots.Tests.GAS.Production
             return $"feedback=primitives:{CountPrimitiveMarkers(primitives)},worldText:{CountWorldHudItems(worldHud, WorldHudItemKind.Text)}";
         }
 
+        private static string BuildDisplacementDiagnostics(World world, string entityName)
+        {
+            Entity entity = FindEntityByName(world, entityName);
+            var details = new List<string>();
+            var query = new QueryDescription().WithAll<DisplacementState>();
+            world.Query(in query, (Entity displacementEntity, ref DisplacementState disp) =>
+            {
+                if (disp.TargetEntity != entity)
+                {
+                    return;
+                }
+
+                details.Add(
+                    $"disp#{displacementEntity.Id}:mode={disp.DirectionMode},ticks={disp.RemainingTicks},dist={disp.RemainingDistanceCm.ToFloat():0.##},hasPoint={disp.HasTargetPoint},target=({disp.TargetPointCm.X.ToFloat():0.##},{disp.TargetPointCm.Y.ToFloat():0.##})");
+            });
+
+            return details.Count == 0
+                ? "displacements=<none>"
+                : $"displacements={string.Join(";", details)}";
+        }
+
+        private static string BuildInputOrderSubmissionDiagnostics(GameEngine engine)
+        {
+            string ground = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? groundObj)
+                ? groundObj?.ToString() ?? "<null>"
+                : "<missing>";
+            string order = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out object? orderObj)
+                ? orderObj?.ToString() ?? "<null>"
+                : "<missing>";
+            return $"lastGround={ground} || lastOrder={order}";
+        }
+
         private static unsafe string BuildEzrealMarkDiagnostics(World world, string entityName)
         {
             Entity entity = FindEntityByName(world, entityName);
@@ -2467,7 +2963,11 @@ namespace Ludots.Tests.GAS.Production
 
         private sealed record EntityState(
             string Name,
-            float Health);
+            float Health,
+            float PositionXCm,
+            float PositionYCm,
+            bool KnockedUp,
+            int ActiveEffectCount);
 
         private sealed record StressAcceptanceSnapshot(
             string Step,

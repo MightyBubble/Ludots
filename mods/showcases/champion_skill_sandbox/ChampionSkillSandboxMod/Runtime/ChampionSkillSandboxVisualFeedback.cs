@@ -26,6 +26,9 @@ namespace ChampionSkillSandboxMod.Runtime
         private static readonly QueryDescription EzrealMarkQuery = new QueryDescription()
             .WithAll<GameplayTagContainer, VisualTransform>();
 
+        private static readonly QueryDescription ActiveEffectQuery = new QueryDescription()
+            .WithAll<GameplayEffect, EffectTemplateRef, EffectContext>();
+
         private struct CombatTextEntry
         {
             public int StableId;
@@ -62,6 +65,14 @@ namespace ChampionSkillSandboxMod.Runtime
             public float HeightOffset;
         }
 
+        private struct AirborneVisualState
+        {
+            public Entity Target;
+            public float Lift;
+            public Vector4 LandingColor;
+            public float LandingRadius;
+        }
+
         private static readonly Vector4 DamageTextColor = new(1.0f, 0.82f, 0.46f, 1.0f);
         private static readonly Vector4 HealTextColor = new(0.62f, 1.0f, 0.72f, 1.0f);
         private static readonly Vector4 EzrealQColor = new(0.36f, 0.9f, 1.0f, 0.94f);
@@ -72,12 +83,20 @@ namespace ChampionSkillSandboxMod.Runtime
         private static readonly Vector4 EzrealETailColor = new(0.3f, 0.76f, 1.0f, 0.42f);
         private static readonly Vector4 EzrealRColor = new(0.76f, 0.95f, 1.0f, 0.98f);
         private static readonly Vector4 EzrealRTailColor = new(0.3f, 0.78f, 1.0f, 0.38f);
+        private static readonly Vector4 KineticShockColor = new(1.0f, 0.56f, 0.26f, 0.96f);
+        private static readonly Vector4 KineticShockFadeColor = new(1.0f, 0.78f, 0.38f, 0.26f);
+        private static readonly Vector4 KineticTetherColor = new(0.5f, 0.9f, 1.0f, 0.92f);
+        private static readonly Vector4 KineticTetherFadeColor = new(0.22f, 0.68f, 1.0f, 0.3f);
+        private static readonly Vector4 KineticAirborneColor = new(0.84f, 0.92f, 1.0f, 0.96f);
+        private static readonly Vector4 KineticCrashColor = new(1.0f, 0.74f, 0.4f, 0.98f);
 
         private readonly CombatTextEntry[] _combatTextEntries = new CombatTextEntry[32];
         private readonly TransientPrimitiveEntry[] _transientPrimitiveEntries = new TransientPrimitiveEntry[64];
         private readonly Dictionary<int, int> _castCueByAbility = new();
         private readonly Dictionary<int, int> _hitCueByEffect = new();
         private readonly Dictionary<int, ProjectilePrimitiveSpec> _projectilePrimitiveSpecs = new();
+        private readonly Dictionary<int, AirborneVisualState> _currentAirborneTargets = new();
+        private readonly Dictionary<int, AirborneVisualState> _previousAirborneTargets = new();
         private int _combatTextCount;
         private int _transientPrimitiveCount;
         private int _nextCombatTextStableId = 1;
@@ -98,6 +117,14 @@ namespace ChampionSkillSandboxMod.Runtime
         private int _ezrealArcaneShiftHitEffectId;
         private int _ezrealTrueshotHitEffectId;
         private int _ezrealWMarkTagId;
+        private int _kineticShockMineAbilityId;
+        private int _kineticMagneticLashAbilityId;
+        private int _kineticSkybreakerAbilityId;
+        private int _kineticMeteorCrashAbilityId;
+        private int _kineticShockMineHitEffectId;
+        private int _kineticMagneticLashTetherEffectId;
+        private int _kineticSkybreakerAirborneEffectId;
+        private int _kineticMeteorCrashAirborneEffectId;
         private bool _cueIdsInitialized;
         private bool _directIdsInitialized;
         private float _feedbackClock;
@@ -130,6 +157,8 @@ namespace ChampionSkillSandboxMod.Runtime
             TickTransientPrimitives(frameDt);
             EmitActiveEzrealProjectiles(engine.World, primitives);
             EmitEzrealMarks(engine.World, primitives);
+            ApplyActiveForceAirborneVisuals(engine.World, primitives);
+            EmitActiveForceTethers(engine.World, primitives);
             EmitTransientPrimitives(engine.World, primitives);
             EmitCombatTextEntries(engine.World, worldHud);
 
@@ -441,6 +470,14 @@ namespace ChampionSkillSandboxMod.Runtime
                 _ezrealArcaneShiftHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Ezreal.ArcaneShiftBoltHit");
                 _ezrealTrueshotHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Ezreal.TrueshotBarrageHit");
                 _ezrealWMarkTagId = TagRegistry.GetId("State.Champion.Ezreal.WMark");
+                _kineticShockMineAbilityId = AbilityIdRegistry.GetId("Ability.Champion.KineticVanguard.ShockMine");
+                _kineticMagneticLashAbilityId = AbilityIdRegistry.GetId("Ability.Champion.KineticVanguard.MagneticLash");
+                _kineticSkybreakerAbilityId = AbilityIdRegistry.GetId("Ability.Champion.KineticVanguard.Skybreaker");
+                _kineticMeteorCrashAbilityId = AbilityIdRegistry.GetId("Ability.Champion.KineticVanguard.MeteorCrash");
+                _kineticShockMineHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.ShockMineHit");
+                _kineticMagneticLashTetherEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.MagneticLashTether");
+                _kineticSkybreakerAirborneEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.SkybreakerAirborne");
+                _kineticMeteorCrashAirborneEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.KineticVanguard.MeteorCrashAirborne");
 
                 _projectilePrimitiveSpecs.Clear();
                 RegisterProjectilePrimitiveSpec(_ezrealMysticShotProjectileEffectId, new ProjectilePrimitiveSpec
@@ -526,6 +563,10 @@ namespace ChampionSkillSandboxMod.Runtime
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.GravityWell", "champion_skill_sandbox.cue.spell_engineer_gravity_well_cast");
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.CataclysmRing", "champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast");
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.GuidedLaser", "champion_skill_sandbox.cue.spell_engineer_guided_laser_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.KineticVanguard.ShockMine", "champion_skill_sandbox.cue.kinetic_vanguard_shock_mine_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.KineticVanguard.MagneticLash", "champion_skill_sandbox.cue.kinetic_vanguard_magnetic_lash_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.KineticVanguard.Skybreaker", "champion_skill_sandbox.cue.kinetic_vanguard_skybreaker_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.KineticVanguard.MeteorCrash", "champion_skill_sandbox.cue.kinetic_vanguard_meteor_crash_cast");
 
             RegisterEffectCue(performers, "Effect.Champion.Garen.JudgmentHit", "champion_skill_sandbox.cue.garen_judgment_hit");
             RegisterEffectCue(performers, "Effect.Champion.Garen.DemacianJusticeHit", "champion_skill_sandbox.cue.garen_demacian_justice_hit");
@@ -541,6 +582,10 @@ namespace ChampionSkillSandboxMod.Runtime
             RegisterEffectCue(performers, "Effect.ChampionStress.Priest.Heal", "champion_skill_sandbox.cue.stress_priest_heal_hit");
             RegisterEffectCue(performers, "Effect.Champion.SpellEngineer.GravityWellHit", "champion_skill_sandbox.cue.spell_engineer_gravity_well_hit");
             RegisterEffectCue(performers, "Effect.Champion.SpellEngineer.GuidedLaserHit", "champion_skill_sandbox.cue.spell_engineer_guided_laser_hit");
+            RegisterEffectCue(performers, "Effect.Champion.KineticVanguard.ShockMineHit", "champion_skill_sandbox.cue.kinetic_vanguard_shock_mine_hit");
+            RegisterEffectCue(performers, "Effect.Champion.KineticVanguard.MagneticLashTether", "champion_skill_sandbox.cue.kinetic_vanguard_magnetic_lash_hit");
+            RegisterEffectCue(performers, "Effect.Champion.KineticVanguard.SkybreakerAirborne", "champion_skill_sandbox.cue.kinetic_vanguard_skybreaker_hit");
+            RegisterEffectCue(performers, "Effect.Champion.KineticVanguard.MeteorCrashAirborne", "champion_skill_sandbox.cue.kinetic_vanguard_meteor_crash_hit");
 
             _cueIdsInitialized = true;
         }
@@ -627,6 +672,30 @@ namespace ChampionSkillSandboxMod.Runtime
                 return true;
             }
 
+            if (evt.AbilityId == _kineticShockMineAbilityId)
+            {
+                QueueAnchoredPulse(evt.Actor, KineticShockColor, lifetime: 0.2f, startRadius: 0.18f, endRadius: 0.42f, new Vector3(0f, 0.78f, 0f));
+                return true;
+            }
+
+            if (evt.AbilityId == _kineticMagneticLashAbilityId)
+            {
+                QueueAnchoredPulse(evt.Actor, KineticTetherColor, lifetime: 0.2f, startRadius: 0.14f, endRadius: 0.32f, new Vector3(0f, 0.76f, 0f));
+                return true;
+            }
+
+            if (evt.AbilityId == _kineticSkybreakerAbilityId)
+            {
+                QueueAnchoredPulse(evt.Actor, KineticAirborneColor, lifetime: 0.22f, startRadius: 0.16f, endRadius: 0.36f, new Vector3(0f, 0.8f, 0f));
+                return true;
+            }
+
+            if (evt.AbilityId == _kineticMeteorCrashAbilityId)
+            {
+                QueueAnchoredPulse(evt.Actor, KineticCrashColor, lifetime: 0.26f, startRadius: 0.2f, endRadius: 0.5f, new Vector3(0f, 0.82f, 0f));
+                return true;
+            }
+
             return false;
         }
 
@@ -662,7 +731,194 @@ namespace ChampionSkillSandboxMod.Runtime
                 return true;
             }
 
+            if (effectTemplateId == _kineticShockMineHitEffectId)
+            {
+                QueueAnchoredPulse(anchor, KineticShockColor, lifetime: 0.24f, startRadius: 0.2f, endRadius: 0.48f, new Vector3(0f, 0.86f, 0f));
+                return true;
+            }
+
+            if (effectTemplateId == _kineticMagneticLashTetherEffectId)
+            {
+                QueueAnchoredPulse(anchor, KineticTetherColor, lifetime: 0.18f, startRadius: 0.16f, endRadius: 0.34f, new Vector3(0f, 0.82f, 0f));
+                return true;
+            }
+
+            if (effectTemplateId == _kineticSkybreakerAirborneEffectId)
+            {
+                QueueAnchoredPulse(anchor, KineticAirborneColor, lifetime: 0.2f, startRadius: 0.16f, endRadius: 0.42f, new Vector3(0f, 0.9f, 0f));
+                return true;
+            }
+
+            if (effectTemplateId == _kineticMeteorCrashAirborneEffectId)
+            {
+                QueueAnchoredPulse(anchor, KineticCrashColor, lifetime: 0.24f, startRadius: 0.18f, endRadius: 0.5f, new Vector3(0f, 0.92f, 0f));
+                return true;
+            }
+
             return false;
+        }
+
+        private void EmitActiveForceTethers(World world, PrimitiveDrawBuffer? primitives)
+        {
+            if (primitives == null || _sphereMeshAssetId <= 0 || _kineticMagneticLashTetherEffectId <= 0)
+            {
+                return;
+            }
+
+            world.Query(in ActiveEffectQuery, (Entity _, ref GameplayEffect effect, ref EffectTemplateRef templateRef, ref EffectContext context) =>
+            {
+                if (templateRef.TemplateId != _kineticMagneticLashTetherEffectId ||
+                    !world.IsAlive(context.Source) ||
+                    !world.IsAlive(context.Target) ||
+                    !world.Has<VisualTransform>(context.Source) ||
+                    !world.Has<VisualTransform>(context.Target))
+                {
+                    return;
+                }
+
+                Vector3 start = world.Get<VisualTransform>(context.Source).Position + new Vector3(0f, 0.82f, 0f);
+                Vector3 end = world.Get<VisualTransform>(context.Target).Position + new Vector3(0f, 0.88f, 0f);
+                Vector3 delta = end - start;
+                float length = delta.Length();
+                if (length <= 0.001f)
+                {
+                    return;
+                }
+
+                int segmentCount = Math.Clamp((int)(length / 0.22f), 5, 18);
+                Vector3 direction = delta / length;
+                Vector3 lateral = Vector3.Cross(direction, Vector3.UnitY);
+                if (lateral.LengthSquared() <= 0.0001f)
+                {
+                    lateral = Vector3.UnitX;
+                }
+                else
+                {
+                    lateral = Vector3.Normalize(lateral);
+                }
+
+                float pulse = effect.TotalTicks > 0
+                    ? 1f - (effect.RemainingTicks / (float)effect.TotalTicks)
+                    : 0f;
+                float wavePhase = _feedbackClock * 6f + (pulse * MathF.PI);
+                for (int segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++)
+                {
+                    float t = segmentCount <= 1
+                        ? 0f
+                        : segmentIndex / (float)(segmentCount - 1);
+                    Vector3 position = Vector3.Lerp(start, end, t);
+                    float wave = MathF.Sin(wavePhase + (t * MathF.PI * 2f)) * 0.04f;
+                    position += lateral * wave;
+                    position.Y += MathF.Sin(t * MathF.PI) * 0.06f;
+                    float radius = Lerp(0.07f, 0.035f, t);
+                    Vector4 color = Lerp(KineticTetherColor, KineticTetherFadeColor, t);
+                    TryAddSphere(primitives, position, radius, color, stableId: 0);
+                }
+            });
+        }
+
+        private void ApplyActiveForceAirborneVisuals(World world, PrimitiveDrawBuffer? primitives)
+        {
+            _currentAirborneTargets.Clear();
+
+            if (_kineticSkybreakerAirborneEffectId <= 0 && _kineticMeteorCrashAirborneEffectId <= 0)
+            {
+                _previousAirborneTargets.Clear();
+                return;
+            }
+
+            world.Query(in ActiveEffectQuery, (Entity _, ref GameplayEffect effect, ref EffectTemplateRef templateRef, ref EffectContext context) =>
+            {
+                float peakHeight;
+                Vector4 landingColor;
+                float landingRadius;
+
+                if (templateRef.TemplateId == _kineticSkybreakerAirborneEffectId)
+                {
+                    peakHeight = 1.1f;
+                    landingColor = KineticAirborneColor;
+                    landingRadius = 0.42f;
+                }
+                else if (templateRef.TemplateId == _kineticMeteorCrashAirborneEffectId)
+                {
+                    peakHeight = 1.36f;
+                    landingColor = KineticCrashColor;
+                    landingRadius = 0.58f;
+                }
+                else
+                {
+                    return;
+                }
+
+                if (!world.IsAlive(context.Target) || !world.Has<VisualTransform>(context.Target) || effect.TotalTicks <= 0)
+                {
+                    return;
+                }
+
+                float progress = 1f - (effect.RemainingTicks / (float)effect.TotalTicks);
+                progress = Math.Clamp(progress, 0f, 1f);
+                float lift = peakHeight * MathF.Sin(progress * MathF.PI);
+                if (lift <= 0f)
+                {
+                    return;
+                }
+
+                int key = context.Target.Id;
+                if (_currentAirborneTargets.TryGetValue(key, out AirborneVisualState existing) && existing.Lift >= lift)
+                {
+                    return;
+                }
+
+                _currentAirborneTargets[key] = new AirborneVisualState
+                {
+                    Target = context.Target,
+                    Lift = lift,
+                    LandingColor = landingColor,
+                    LandingRadius = landingRadius,
+                };
+            });
+
+            foreach (AirborneVisualState airborne in _currentAirborneTargets.Values)
+            {
+                if (!world.IsAlive(airborne.Target) || !world.TryGet(airborne.Target, out VisualTransform visual))
+                {
+                    continue;
+                }
+
+                visual.Position.Y += airborne.Lift;
+                world.Set(airborne.Target, visual);
+
+                if (primitives != null && _sphereMeshAssetId > 0)
+                {
+                    Vector3 shadowPosition = visual.Position - new Vector3(0f, airborne.Lift - 0.04f, 0f);
+                    Vector4 shadowColor = Lerp(airborne.LandingColor, KineticShockFadeColor, 0.7f);
+                    shadowColor.W *= 0.45f;
+                    TryAddSphere(primitives, shadowPosition, 0.08f + (airborne.Lift * 0.05f), shadowColor, stableId: 0);
+                    TryAddSphere(primitives, visual.Position + new Vector3(0f, 0.08f, 0f), 0.05f + (airborne.Lift * 0.04f), airborne.LandingColor, stableId: 0);
+                }
+            }
+
+            foreach (KeyValuePair<int, AirborneVisualState> pair in _previousAirborneTargets)
+            {
+                if (_currentAirborneTargets.ContainsKey(pair.Key))
+                {
+                    continue;
+                }
+
+                QueueAnchoredPulse(
+                    pair.Value.Target,
+                    pair.Value.LandingColor,
+                    lifetime: 0.22f,
+                    startRadius: pair.Value.LandingRadius * 0.45f,
+                    endRadius: pair.Value.LandingRadius,
+                    new Vector3(0f, 0.1f, 0f));
+            }
+
+            _previousAirborneTargets.Clear();
+            foreach (KeyValuePair<int, AirborneVisualState> pair in _currentAirborneTargets)
+            {
+                _previousAirborneTargets[pair.Key] = pair.Value;
+            }
         }
 
         private void QueueAnchoredPulse(Entity anchor, in Vector4 color, float lifetime, float startRadius, float endRadius, in Vector3 offset)

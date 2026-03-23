@@ -220,6 +220,13 @@ Required evidence:
 - every skill has a distinct cast and/or impact effect cue
 - camera can reset, stay confined, and follow current selection or weighted group
 
+## Force-control champion evidence
+
+- The new Kinetic Vanguard showcases four force-control skills (Shock Mine, Magnetic Lash, Skybreaker, Meteor Crash). `ChampionSkillSandbox_MapLoad_SeedsStateOwnershipAndPanelPresentation` already copies the command panel slots for `Kinetic Vanguard Alpha` and ensures the display labels, `ActionId`s, and detail labels match the authored hints.
+- `ChampionSkillSandbox_KineticVanguard_ForceEffects_CompileOnExistingGasPipelines` proves every dash, tether, airborne hook, and landing effect flows through the existing GAS pipelines (displacement, buff, search, and linked graph hooks) so the new force logic stays composable.
+- `ChampionSkillSandbox_PlayableFlow_WritesAcceptanceArtifacts` now logs `[T+021]` through `[T+025]` entries with snapshots showing the new champion selection, explosion knockback, tether pull visuals, fake‑Z airtime/landing, and Meteor Crash impact; those steps also assert the relevant `ActiveEffect` entities (`ShockMineKnockback`, `MagneticLashTether`, `SkybreakerAirborne`, `MeteorCrashAirborne`) plus primitive and tag proofs requested for runtime integration.
+- Existing blocker continuity keeps the Spell Engineer Cataclysm Ring/Stone Pillar bridge (`AssertBlockerManifestationBridge`) intact, so raising the arena wall still produces a physics/nav obstacle and stays selectable after the force-control hero arrives.
+
 ## Notes
 
 - Command panel icons are still produced by the existing `EntityCommandPanelMod` icon pipeline. The slot data exposes `AbilityId + ActionId`, and the UI derives icon glyph / mode badge from ability presentation plus current interaction mode.

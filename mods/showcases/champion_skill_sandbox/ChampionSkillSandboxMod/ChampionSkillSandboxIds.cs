@@ -50,6 +50,7 @@ namespace ChampionSkillSandboxMod
         public const string JayceHammerName = "Jayce Hammer";
         public const string GeomancerAlphaName = "Geomancer Alpha";
         public const string SpellEngineerAlphaName = "Spell Engineer Alpha";
+        public const string KineticVanguardAlphaName = "Kinetic Vanguard Alpha";
         public const string RunicBeaconName = "Runic Beacon";
         public const string RuneFieldName = "Rune Field";
         public const string StonePillarName = "Stone Pillar";
@@ -60,6 +61,9 @@ namespace ChampionSkillSandboxMod
         public const string TargetDummyDName = "Target Dummy D";
         public const string TargetDummyEName = "Target Dummy E";
         public const string TargetDummyFName = "Target Dummy F";
+        public const string TargetDummyGName = "Target Dummy G";
+        public const string TargetDummyHName = "Target Dummy H";
+        public const string TargetBruteCName = "Target Brute C";
 
         public const string GarenCourageTag = "State.Champion.Garen.Courage";
         public const string JayceHammerTag = "State.Champion.Jayce.Hammer";

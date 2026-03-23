@@ -8,5 +8,41 @@
       { "id": "pop", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Champion.Ezreal.EssenceFluxPop", "inputs": [ "target" ], "next": "consume" },
       { "id": "consume", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.Ezreal.EssenceFluxHit", "inputs": [ "target" ] }
     ]
+  },
+  {
+    "id": "Graph.Champion.KineticVanguard.ShockMineKnockback",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadContextTarget", "next": "knockback" },
+      { "id": "knockback", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Champion.KineticVanguard.ShockMineKnockback", "inputs": [ "target" ] }
+    ]
+  },
+  {
+    "id": "Graph.Champion.KineticVanguard.MagneticLashPull",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadContextTarget", "next": "pull" },
+      { "id": "pull", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Champion.KineticVanguard.MagneticLashPullStep", "inputs": [ "target" ] }
+    ]
+  },
+  {
+    "id": "Graph.Champion.KineticVanguard.SkybreakerLanding",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadContextTarget", "next": "landing" },
+      { "id": "landing", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Champion.KineticVanguard.SkybreakerLanding", "inputs": [ "target" ] }
+    ]
+  },
+  {
+    "id": "Graph.Champion.KineticVanguard.MeteorCrashImpactDamage",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadContextTarget", "next": "impact" },
+      { "id": "impact", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Champion.KineticVanguard.MeteorCrashImpactDamage", "inputs": [ "target" ] }
+    ]
   }
 ]

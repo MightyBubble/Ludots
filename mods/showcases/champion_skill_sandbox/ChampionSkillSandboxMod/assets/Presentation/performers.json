@@ -770,5 +770,111 @@
     "defaultLifetime": 0.18,
     "alphaFadeOverLifetime": true,
     "positionOffset": [0, 0.82, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.kinetic_vanguard_shock_mine_cast",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Circle",
+    "defaultColor": [1.0, 0.58, 0.34, 0.18],
+    "defaultScale": 1.7,
+    "defaultLifetime": 0.28,
+    "positionOffset": [0, 0.05, 0],
+    "bindings": [
+      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.62 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.36 },
+      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.kinetic_vanguard_shock_mine_hit",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [1.0, 0.72, 0.42, 0.14],
+    "defaultScale": 1.42,
+    "defaultLifetime": 0.26,
+    "positionOffset": [0, 0.06, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.86 },
+      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.78 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.44 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.05 }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.kinetic_vanguard_magnetic_lash_cast",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "Sphere",
+    "defaultColor": [0.48, 0.9, 1.0, 0.88],
+    "defaultScale": 0.32,
+    "defaultLifetime": 0.18,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.76, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.kinetic_vanguard_magnetic_lash_hit",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "Sphere",
+    "defaultColor": [0.62, 0.96, 1.0, 0.92],
+    "defaultScale": 0.28,
+    "defaultLifetime": 0.18,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.84, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.kinetic_vanguard_skybreaker_cast",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Circle",
+    "defaultColor": [0.8, 0.9, 1.0, 0.18],
+    "defaultScale": 1.8,
+    "defaultLifetime": 0.3,
+    "positionOffset": [0, 0.05, 0],
+    "bindings": [
+      { "paramKey": 8, "source": "constant", "constantValue": 0.84 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.92 },
+      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.kinetic_vanguard_skybreaker_hit",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "Sphere",
+    "defaultColor": [0.9, 0.96, 1.0, 0.92],
+    "defaultScale": 0.32,
+    "defaultLifetime": 0.2,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.96, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.kinetic_vanguard_meteor_crash_cast",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "Sphere",
+    "defaultColor": [1.0, 0.74, 0.42, 0.9],
+    "defaultScale": 0.38,
+    "defaultLifetime": 0.22,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [0, 0.82, 0]
+  },
+  {
+    "id": "champion_skill_sandbox.cue.kinetic_vanguard_meteor_crash_hit",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [1.0, 0.72, 0.42, 0.14],
+    "defaultScale": 2.1,
+    "defaultLifetime": 0.28,
+    "positionOffset": [0, 0.06, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 1.18 },
+      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.8 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.48 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.05 }
+    ]
   }
 ]

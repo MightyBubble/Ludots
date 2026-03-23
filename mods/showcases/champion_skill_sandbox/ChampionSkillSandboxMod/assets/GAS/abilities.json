@@ -678,5 +678,101 @@
         "SmartCast": "Hold to channel steerable beam, release to stop"
       }
     }
+  },
+  {
+    "id": "Ability.Champion.KineticVanguard.ShockMine",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 48, "tag": "Cooldown.Champion.KineticVanguard.Q" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.KineticVanguard.ShockMine" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 760, "radius": 170, "showRangeCircle": true, "validColor": "#FF925C77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.KineticVanguard.Q"] },
+    "presentation": {
+      "displayName": "Shock Mine",
+      "iconGlyph": "Q",
+      "accentColor": "#FF925C",
+      "hintText": "Shockwave explosion pushes foes away",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the blast radius",
+        "PressReleaseAimCast": "Release key, then confirm detonation"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.KineticVanguard.MagneticLash",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 54, "tag": "Cooldown.Champion.KineticVanguard.W" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.KineticVanguard.MagneticLash" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Line", "range": 760, "radius": 70, "showRangeCircle": true, "validColor": "#68D7FF77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.KineticVanguard.W"] },
+    "presentation": {
+      "displayName": "Magnetic Lash",
+      "iconGlyph": "W",
+      "accentColor": "#68D7FF",
+      "hintText": "Latch the first enemy, tether it, and reel it in",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the lash line",
+        "PressReleaseAimCast": "Release key, then confirm the tether"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.KineticVanguard.Skybreaker",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 72, "tag": "Cooldown.Champion.KineticVanguard.E" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.KineticVanguard.Skybreaker" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 640, "radius": 180, "showRangeCircle": true, "validColor": "#CBE7FF77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.KineticVanguard.E"] },
+    "presentation": {
+      "displayName": "Skybreaker",
+      "iconGlyph": "E",
+      "accentColor": "#CBE7FF",
+      "hintText": "Launch enemies upward, then punish the landing",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the launch zone",
+        "PressReleaseAimCast": "Release key, then confirm the launch"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.KineticVanguard.MeteorCrash",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 108, "tag": "Cooldown.Champion.KineticVanguard.R" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.KineticVanguard.MeteorCrashDash", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 8, "template": "Effect.Champion.KineticVanguard.MeteorCrashImpact", "dispatchTarget": "Source" },
+        { "kind": "End", "tick": 8 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 560, "radius": 220, "showRangeCircle": true, "validColor": "#FFB96A77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.KineticVanguard.R"] },
+    "input": {
+      "selectionType": "Position"
+    },
+    "presentation": {
+      "displayName": "Meteor Crash",
+      "iconGlyph": "R",
+      "accentColor": "#FFB96A",
+      "hintText": "Crash to a point and erupt nearby enemies into the air",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview the crash zone",
+        "PressReleaseAimCast": "Release key, then confirm the crash"
+      }
+    }
   }
 ]

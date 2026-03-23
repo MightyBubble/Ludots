@@ -186,6 +186,49 @@
     }
   },
   {
+    "id": "champion_skill_sandbox_kinetic_vanguard",
+    "components": {
+      "Name": { "Value": "Kinetic Vanguard" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "AttributeBuffer": { "base": { "Health": 210, "Shield": 0, "MoveSpeed": 335, "Armor": 9 } },
+      "Collider2D": {
+        "shape": {
+          "type": "circle",
+          "radiusCm": 42
+        }
+      },
+      "PhysicsMaterial2D": {
+        "friction": 0.92,
+        "restitution": 0.0,
+        "baseDamping": 0.94
+      },
+      "NavKinematics2D": {
+        "maxAccelCmPerSec2": 1780,
+        "radiusCm": 42,
+        "neighborDistCm": 300,
+        "timeHorizonSec": 2.4,
+        "maxNeighbors": 20
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Champion.KineticVanguard.ShockMine",
+          "Ability.Champion.KineticVanguard.MagneticLash",
+          "Ability.Champion.KineticVanguard.Skybreaker",
+          "Ability.Champion.KineticVanguard.MeteorCrash"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
     "id": "champion_skill_sandbox_runic_beacon",
     "components": {
       "Name": { "Value": "Runic Beacon" },
