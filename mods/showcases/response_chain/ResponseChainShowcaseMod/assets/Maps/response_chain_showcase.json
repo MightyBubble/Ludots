@@ -1,0 +1,61 @@
+{
+  "Id": "response_chain_showcase",
+  "Tags": ["showcase.response-chain", "showcase.qte"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 1400,
+    "TargetYCm": 1020,
+    "DistanceCm": 3600,
+    "Pitch": 54,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "response_chain_showcase_conductor",
+      "Overrides": {
+        "Name": { "Value": "Conductor" },
+        "WorldPositionCm": { "Value": { "X": 1180, "Y": 980 } }
+      }
+    },
+    {
+      "Template": "response_chain_showcase_enemy_raider",
+      "Overrides": {
+        "Name": { "Value": "Combo Raider" },
+        "Presentation": {
+          "visualTemplateId": "core.character.hero_skinned",
+          "startupPerformerIds": [
+            "response_chain_showcase.marker.combo"
+          ]
+        },
+        "WorldPositionCm": { "Value": { "X": 1680, "Y": 760 } }
+      }
+    },
+    {
+      "Template": "response_chain_showcase_enemy_raider",
+      "Overrides": {
+        "Name": { "Value": "Counter Raider" },
+        "Presentation": {
+          "visualTemplateId": "core.character.hero_skinned",
+          "startupPerformerIds": [
+            "response_chain_showcase.marker.counter"
+          ]
+        },
+        "WorldPositionCm": { "Value": { "X": 1460, "Y": 1120 } }
+      }
+    },
+    {
+      "Template": "response_chain_showcase_scholar",
+      "Overrides": {
+        "Name": { "Value": "Scholar" },
+        "WorldPositionCm": { "Value": { "X": 1240, "Y": 1320 } }
+      }
+    },
+    {
+      "Template": "response_chain_showcase_protector",
+      "Overrides": {
+        "Name": { "Value": "Protector" },
+        "WorldPositionCm": { "Value": { "X": 1490, "Y": 1320 } }
+      }
+    }
+  ]
+}

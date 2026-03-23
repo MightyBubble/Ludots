@@ -1,0 +1,74 @@
+[
+  {
+    "id": "Ability.Showcase.Combo.Drill",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Showcase.Combo.Opener" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "range": 560,
+      "radius": 110,
+      "showRangeCircle": true,
+      "validColor": "#F4B04A88",
+      "invalidColor": "#D65B5B88"
+    },
+    "presentation": {
+      "displayName": "Combo Drill",
+      "iconGlyph": "Q",
+      "accentColor": "#F4B04A",
+      "hintText": "Hover Combo Raider, cast, press 1, then double-space to resolve the finisher"
+    }
+  },
+  {
+    "id": "Ability.Showcase.Counter.Drill",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Showcase.Counter.Swing", "dispatchTarget": "Source" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "range": 0,
+      "radius": 140,
+      "showRangeCircle": false,
+      "validColor": "#FF7E6B77",
+      "invalidColor": "#D65B5B88"
+    },
+    "presentation": {
+      "displayName": "Counter Drill",
+      "iconGlyph": "W",
+      "accentColor": "#FF7E6B",
+      "hintText": "Press N to cancel the incoming hit and keep the riposte"
+    }
+  },
+  {
+    "id": "Ability.Showcase.Redirect.Drill",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Showcase.Redirect.Bolt" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "range": 560,
+      "radius": 110,
+      "showRangeCircle": true,
+      "validColor": "#6EC7E688",
+      "invalidColor": "#D65B5B88"
+    },
+    "presentation": {
+      "displayName": "Redirect Drill",
+      "iconGlyph": "E",
+      "accentColor": "#6EC7E6",
+      "hintText": "Hover Scholar, then press N so the fixed guard line takes the hit"
+    }
+  }
+]

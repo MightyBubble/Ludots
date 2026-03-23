@@ -1,0 +1,135 @@
+[
+  {
+    "id": "response_chain_showcase_conductor",
+    "components": {
+      "Name": { "Value": "Conductor" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": {
+        "visualTemplateId": "core.character.hero_skinned",
+        "startupPerformerIds": [
+          "response_chain_showcase.marker.conductor"
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 120, "Shield": 0, "MoveSpeed": 330, "Armor": 6 } },
+      "Collider2D": {
+        "shape": {
+          "type": "circle",
+          "radiusCm": 38
+        }
+      },
+      "PhysicsMaterial2D": {
+        "friction": 0.92,
+        "restitution": 0.0,
+        "baseDamping": 0.94
+      },
+      "NavKinematics2D": {
+        "maxAccelCmPerSec2": 1700,
+        "radiusCm": 38,
+        "neighborDistCm": 260,
+        "timeHorizonSec": 2.4,
+        "maxNeighbors": 16
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Showcase.Combo.Drill",
+          "Ability.Showcase.Counter.Drill",
+          "Ability.Showcase.Redirect.Drill"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "response_chain_showcase_enemy_raider",
+    "components": {
+      "Name": { "Value": "Enemy Raider" },
+      "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "AttributeBuffer": { "base": { "Health": 80, "Shield": 0, "MoveSpeed": 0, "Armor": 2 } },
+      "Collider2D": {
+        "shape": {
+          "type": "circle",
+          "radiusCm": 38
+        }
+      },
+      "PhysicsMaterial2D": {
+        "friction": 0.92,
+        "restitution": 0.0,
+        "baseDamping": 0.94
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {}
+    }
+  },
+  {
+    "id": "response_chain_showcase_scholar",
+    "components": {
+      "Name": { "Value": "Scholar" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": {
+        "visualTemplateId": "core.character.hero_skinned",
+        "startupPerformerIds": [
+          "response_chain_showcase.marker.scholar"
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 90, "Shield": 0, "MoveSpeed": 0, "Armor": 1 } },
+      "Collider2D": {
+        "shape": {
+          "type": "circle",
+          "radiusCm": 36
+        }
+      },
+      "PhysicsMaterial2D": {
+        "friction": 0.92,
+        "restitution": 0.0,
+        "baseDamping": 0.94
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {}
+    }
+  },
+  {
+    "id": "response_chain_showcase_protector",
+    "components": {
+      "Name": { "Value": "Protector" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": {
+        "visualTemplateId": "core.character.hero_skinned",
+        "startupPerformerIds": [
+          "response_chain_showcase.marker.protector"
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 120, "Shield": 0, "MoveSpeed": 0, "Armor": 10 } },
+      "Collider2D": {
+        "shape": {
+          "type": "circle",
+          "radiusCm": 40
+        }
+      },
+      "PhysicsMaterial2D": {
+        "friction": 0.92,
+        "restitution": 0.0,
+        "baseDamping": 0.94
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {}
+    }
+  }
+]

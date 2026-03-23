@@ -40,6 +40,14 @@
         "value": "mods/showcases/champion_skill_stress_entry/ChampionSkillStressEntryMod",
         "projectPath": "ChampionSkillStressEntryMod.csproj"
       }
+    },
+    {
+      "name": "response_chain_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/response_chain/ResponseChainShowcaseMod",
+        "projectPath": "ResponseChainShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {

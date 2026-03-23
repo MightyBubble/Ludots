@@ -1,0 +1,23 @@
+{
+  "actions": [
+    { "id": "SkillQ", "name": "ResponseChainShowcase_SkillQ", "type": "Button" },
+    { "id": "SkillW", "name": "ResponseChainShowcase_SkillW", "type": "Button" },
+    { "id": "SkillE", "name": "ResponseChainShowcase_SkillE", "type": "Button" },
+    { "id": "QueueModifier", "name": "ResponseChainShowcase_QueueModifier", "type": "Button" },
+    { "id": "ResetShowcase", "name": "ResponseChainShowcase_Reset", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "ResponseChainShowcase.Controls",
+      "name": "Response Chain Showcase Controls",
+      "priority": 90,
+      "bindings": [
+        { "actionId": "SkillQ", "path": "<Keyboard>/q" },
+        { "actionId": "SkillW", "path": "<Keyboard>/w" },
+        { "actionId": "SkillE", "path": "<Keyboard>/e" },
+        { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },
+        { "actionId": "ResetShowcase", "path": "<Keyboard>/f4" }
+      ]
+    }
+  ]
+}

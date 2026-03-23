@@ -10,9 +10,14 @@ using Ludots.Adapter.Web.Services;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Presentation;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Runtime;
@@ -76,6 +81,8 @@ public static class LauncherEvidenceRecorder
     private const int DefaultHeight = 1080;
     private const int CameraImageWidth = 1600;
     private const int CameraImageHeight = 900;
+    private const int ResponseImageWidth = 1600;
+    private const int ResponseImageHeight = 900;
     private const int NavImageWidth = 1600;
     private const int NavImageHeight = 900;
     private const int NavAcceptanceAgentsPerTeam = 64;
@@ -95,6 +102,20 @@ public static class LauncherEvidenceRecorder
     private const float NavWorldMinY = -9000f;
     private const float NavWorldMaxY = 9000f;
     private static readonly Vector2 CameraProjectionClickWorldCm = new(3200f, 2000f);
+    private const string ResponseChainShowcaseModId = "ResponseChainShowcaseMod";
+    private const string ResponseChainMapId = "response_chain_showcase";
+    private const string ResponseConductorName = "Conductor";
+    private const string ResponseComboRaiderName = "Combo Raider";
+    private const string ResponseCounterRaiderName = "Counter Raider";
+    private const string ResponseScholarName = "Scholar";
+    private const string ResponseProtectorName = "Protector";
+    private const string ActionSkillQ = "SkillQ";
+    private const string ActionSkillW = "SkillW";
+    private const string ActionSkillE = "SkillE";
+    private const string ActionResponseNegate = "ResponseChainNegate";
+    private const string ActionResponseActivate = "ResponseChainActivate";
+    private const string ActionResponsePass = "ResponseChainPass";
+    private const string ActionResetShowcase = "ResetShowcase";
 
     public static Task<LauncherRecordingResult> RecordAsync(LauncherRecordingRequest request, CancellationToken ct = default)
     {
@@ -105,6 +126,7 @@ public static class LauncherEvidenceRecorder
         return InferScenario(request.Plan) switch
         {
             EvidenceScenario.CameraAcceptanceProjectionClick => Task.FromResult(RecordCameraAcceptanceProjection(request)),
+            EvidenceScenario.ResponseChainShowcase => Task.FromResult(RecordResponseChainShowcase(request)),
             EvidenceScenario.Navigation2DPlaygroundTimedAvoidance => Task.FromResult(RecordNavigation2DTimedAvoidance(request)),
             _ => throw new InvalidOperationException($"No recording scenario is registered for root mods: {string.Join(", ", request.Plan.RootModIds)}")
         };
@@ -120,6 +142,11 @@ public static class LauncherEvidenceRecorder
         if (plan.RootModIds.Any(id => string.Equals(id, "Navigation2DPlaygroundMod", StringComparison.OrdinalIgnoreCase)))
         {
             return EvidenceScenario.Navigation2DPlaygroundTimedAvoidance;
+        }
+
+        if (plan.RootModIds.Any(id => string.Equals(id, ResponseChainShowcaseModId, StringComparison.OrdinalIgnoreCase)))
+        {
+            return EvidenceScenario.ResponseChainShowcase;
         }
 
         return EvidenceScenario.None;
@@ -773,6 +800,644 @@ public static class LauncherEvidenceRecorder
         using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
         using FileStream stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
         data.SaveTo(stream);
+    }
+
+    private static LauncherRecordingResult RecordResponseChainShowcase(LauncherRecordingRequest request)
+    {
+        string screensDir = Path.Combine(request.OutputDirectory, "screens");
+        Directory.CreateDirectory(screensDir);
+
+        var timeline = new List<ResponseChainSnapshot>();
+        var captureFrames = new List<CaptureFrame>();
+        var frameTimesMs = new List<double>();
+
+        using var runtime = CreateRuntime(request.Plan, request.BootstrapPath);
+        if (!string.Equals(runtime.Config.StartupMapId, ResponseChainMapId, StringComparison.OrdinalIgnoreCase))
+        {
+            runtime.Engine.LoadMap(ResponseChainMapId);
+        }
+
+        Tick(runtime, 6, frameTimesMs);
+        CaptureResponseChainSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "000_map_loaded");
+
+        float comboBefore = ReadHealth(runtime.Engine.World, ResponseComboRaiderName);
+        SetMouseWorld(runtime, runtime.ProjectWorldCm(GetEntityWorld(runtime.Engine.World, ResponseComboRaiderName)), frameTimesMs);
+        PressAction(runtime, ActionSkillQ, frameTimesMs);
+        TickUntil(runtime, frameTimesMs, () => GetResponseUiState(runtime.Engine).Visible, 18, () => BuildResponseChainDiagnostics(runtime.Engine));
+        CaptureResponseChainSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "001_combo_window");
+
+        PressAction(runtime, ActionResponseActivate, frameTimesMs);
+        PressAction(runtime, ActionResponsePass, frameTimesMs);
+        PressAction(runtime, ActionResponsePass, frameTimesMs);
+        TickUntil(runtime, frameTimesMs, () => ReadHealth(runtime.Engine.World, ResponseComboRaiderName) < comboBefore, 24, () => BuildResponseChainDiagnostics(runtime.Engine));
+        CaptureResponseChainSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "002_combo_finish");
+
+        PressAction(runtime, ActionResetShowcase, frameTimesMs);
+        TickUntil(runtime, frameTimesMs, () => Math.Abs(ReadHealth(runtime.Engine.World, ResponseComboRaiderName) - comboBefore) < 0.01f, 18, () => BuildResponseChainDiagnostics(runtime.Engine));
+
+        float conductorBeforeCounter = ReadHealth(runtime.Engine.World, ResponseConductorName);
+        float counterBefore = ReadHealth(runtime.Engine.World, ResponseCounterRaiderName);
+        PressAction(runtime, ActionSkillW, frameTimesMs);
+        TickUntil(runtime, frameTimesMs, () => GetResponseUiState(runtime.Engine).Visible, 18, () => BuildResponseChainDiagnostics(runtime.Engine));
+        CaptureResponseChainSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "003_counter_window");
+
+        PressAction(runtime, ActionResponseNegate, frameTimesMs);
+        PressAction(runtime, ActionResponsePass, frameTimesMs);
+        PressAction(runtime, ActionResponsePass, frameTimesMs);
+        TickUntil(
+            runtime,
+            frameTimesMs,
+            () => !GetResponseUiState(runtime.Engine).Visible && ReadHealth(runtime.Engine.World, ResponseCounterRaiderName) < counterBefore,
+            32,
+            () => BuildResponseChainDiagnostics(runtime.Engine));
+        CaptureResponseChainSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "004_counter_finish");
+
+        PressAction(runtime, ActionResetShowcase, frameTimesMs);
+        TickUntil(
+            runtime,
+            frameTimesMs,
+            () => Math.Abs(ReadHealth(runtime.Engine.World, ResponseCounterRaiderName) - counterBefore) < 0.01f &&
+                  Math.Abs(ReadHealth(runtime.Engine.World, ResponseConductorName) - conductorBeforeCounter) < 0.01f,
+            18,
+            () => BuildResponseChainDiagnostics(runtime.Engine));
+
+        float scholarBefore = ReadHealth(runtime.Engine.World, ResponseScholarName);
+        float protectorBefore = ReadHealth(runtime.Engine.World, ResponseProtectorName);
+        SetMouseWorld(runtime, runtime.ProjectWorldCm(GetEntityWorld(runtime.Engine.World, ResponseScholarName)), frameTimesMs);
+        PressAction(runtime, ActionSkillE, frameTimesMs);
+        TickUntil(runtime, frameTimesMs, () => GetResponseUiState(runtime.Engine).Visible, 18, () => BuildResponseChainDiagnostics(runtime.Engine));
+        CaptureResponseChainSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "005_redirect_window");
+
+        PressAction(runtime, ActionResponseNegate, frameTimesMs);
+        PressAction(runtime, ActionResponsePass, frameTimesMs);
+        PressAction(runtime, ActionResponsePass, frameTimesMs);
+        TickUntil(
+            runtime,
+            frameTimesMs,
+            () => !GetResponseUiState(runtime.Engine).Visible && ReadHealth(runtime.Engine.World, ResponseProtectorName) < protectorBefore,
+            32,
+            () => BuildResponseChainDiagnostics(runtime.Engine));
+        CaptureResponseChainSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "006_redirect_finish");
+
+        WriteTimelineSheet("Response chain showcase timeline", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
+
+        ResponseChainAcceptanceResult acceptance = EvaluateResponseChainAcceptance(timeline);
+        string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
+        string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
+        string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
+        string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
+        string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
+
+        File.WriteAllText(battleReportPath, BuildResponseChainBattleReport(request, timeline, frameTimesMs, acceptance));
+        File.WriteAllText(tracePath, BuildResponseChainTraceJsonl(request.Plan.AdapterId, timeline));
+        File.WriteAllText(pathPath, BuildResponseChainPathMermaid());
+        File.WriteAllText(visibleChecklistPath, BuildResponseChainVisibleChecklist(timeline));
+        File.WriteAllText(summaryPath, BuildResponseChainSummaryJson(request, acceptance));
+
+        if (!acceptance.Success)
+        {
+            throw new InvalidOperationException(acceptance.FailureSummary);
+        }
+
+        return new LauncherRecordingResult(
+            request.OutputDirectory,
+            battleReportPath,
+            tracePath,
+            pathPath,
+            summaryPath,
+            visibleChecklistPath,
+            captureFrames.Select(frame => Path.Combine(screensDir, frame.FileName)).Append(Path.Combine(screensDir, "timeline.png")).ToList(),
+            acceptance.NormalizedSignature);
+    }
+
+    private static void CaptureResponseChainSnapshot(
+        RecordingRuntime runtime,
+        string screensDir,
+        IReadOnlyList<double> frameTimesMs,
+        List<ResponseChainSnapshot> timeline,
+        List<CaptureFrame> captureFrames,
+        string step)
+    {
+        ResponseChainSnapshot snapshot = SampleResponseChainSnapshot(runtime, step, frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
+        timeline.Add(snapshot);
+        string fileName = $"{step}.png";
+        string outputPath = Path.Combine(screensDir, fileName);
+        WriteResponseChainSnapshotImage(snapshot, outputPath);
+        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, 0, 0, 0f, 0f));
+    }
+
+    private static ResponseChainSnapshot SampleResponseChainSnapshot(RecordingRuntime runtime, string step, double tickMs)
+    {
+        var namedEntities = new Dictionary<string, Vector2>(StringComparer.OrdinalIgnoreCase);
+        runtime.Engine.World.Query(in CameraNamedEntityQuery, (ref Name name, ref WorldPositionCm position) =>
+        {
+            if (!namedEntities.ContainsKey(name.Value))
+            {
+                namedEntities[name.Value] = position.Value.ToVector2();
+            }
+        });
+
+        ResponseChainUiState ui = GetResponseUiState(runtime.Engine);
+        return new ResponseChainSnapshot(
+            runtime.Engine.GameSession.CurrentTick,
+            step,
+            tickMs,
+            GetSelectedEntityName(runtime.Engine),
+            GetHoveredEntityName(runtime.Engine),
+            ui.Visible,
+            ui.PromptTagId,
+            ReadEntityName(runtime.Engine.World, ui.Actor),
+            ReadEntityName(runtime.Engine.World, ui.Target),
+            ReadHealth(runtime.Engine.World, ResponseConductorName),
+            ReadHealth(runtime.Engine.World, ResponseComboRaiderName),
+            ReadHealth(runtime.Engine.World, ResponseCounterRaiderName),
+            ReadHealth(runtime.Engine.World, ResponseScholarName),
+            ReadHealth(runtime.Engine.World, ResponseProtectorName),
+            namedEntities,
+            ExtractOverlayText(runtime.Engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)),
+            BuildResponseTelemetryLines(runtime.Engine),
+            BuildGasPresentationLines(runtime.Engine));
+    }
+
+    private static ResponseChainAcceptanceResult EvaluateResponseChainAcceptance(IReadOnlyList<ResponseChainSnapshot> timeline)
+    {
+        ResponseChainSnapshot start = timeline[0];
+        ResponseChainSnapshot comboWindow = timeline[1];
+        ResponseChainSnapshot comboFinish = timeline[2];
+        ResponseChainSnapshot counterWindow = timeline[3];
+        ResponseChainSnapshot counterFinish = timeline[4];
+        ResponseChainSnapshot redirectWindow = timeline[5];
+        ResponseChainSnapshot redirectFinish = timeline[6];
+
+        var failures = new List<string>();
+        AddAcceptanceCheck(string.Equals(start.SelectedEntity, ResponseConductorName, StringComparison.Ordinal), "Conductor should be auto-selected when the showcase loads.", failures);
+        AddAcceptanceCheck(comboWindow.WindowVisible, "Combo drill should open the response window before follow-up input.", failures);
+        AddAcceptanceCheck(comboFinish.ComboHealth < start.ComboHealth, $"Combo drill should damage {ResponseComboRaiderName}, but HP stayed {start.ComboHealth:0}->{comboFinish.ComboHealth:0}.", failures);
+        AddAcceptanceCheck(counterWindow.WindowVisible, "Counter drill should open a response window on the self-hit branch.", failures);
+        AddAcceptanceCheck(counterFinish.CounterHealth < counterWindow.CounterHealth, $"Counter drill should damage {ResponseCounterRaiderName}, but HP stayed {counterWindow.CounterHealth:0}->{counterFinish.CounterHealth:0}.", failures);
+        AddAcceptanceCheck(Math.Abs(counterFinish.ConductorHealth - counterWindow.ConductorHealth) < 0.01f, $"Counter drill should preserve {ResponseConductorName} HP, but it moved {counterWindow.ConductorHealth:0}->{counterFinish.ConductorHealth:0}.", failures);
+        AddAcceptanceCheck(redirectWindow.WindowVisible, "Redirect drill should open a response window on the Scholar line.", failures);
+        AddAcceptanceCheck(Math.Abs(redirectFinish.ScholarHealth - redirectWindow.ScholarHealth) < 0.01f, $"Redirect drill should keep {ResponseScholarName} unharmed, but HP moved {redirectWindow.ScholarHealth:0}->{redirectFinish.ScholarHealth:0}.", failures);
+        AddAcceptanceCheck(redirectFinish.ProtectorHealth < redirectWindow.ProtectorHealth, $"Redirect drill should damage {ResponseProtectorName}, but HP stayed {redirectWindow.ProtectorHealth:0}->{redirectFinish.ProtectorHealth:0}.", failures);
+
+        string verdict = failures.Count == 0
+            ? "combo, counter, and redirect drills all resolved on the shared response-window stack."
+            : "one or more response-chain drills diverged from the expected shared-stack behavior.";
+        string signature =
+            $"response_chain_showcase|combo:{start.ComboHealth:0}->{comboFinish.ComboHealth:0}|counter:{counterWindow.CounterHealth:0}->{counterFinish.CounterHealth:0}|redirect:{redirectWindow.ProtectorHealth:0}->{redirectFinish.ProtectorHealth:0}|prompt:{comboWindow.PromptTagId}-{counterWindow.PromptTagId}-{redirectWindow.PromptTagId}";
+
+        return new ResponseChainAcceptanceResult(
+            failures.Count == 0,
+            verdict,
+            failures.Count == 0 ? "Response chain showcase acceptance passed." : string.Join(" ", failures),
+            failures,
+            comboWindow.ComboHealth,
+            comboFinish.ComboHealth,
+            counterWindow.CounterHealth,
+            counterFinish.CounterHealth,
+            counterWindow.ConductorHealth,
+            counterFinish.ConductorHealth,
+            redirectWindow.ScholarHealth,
+            redirectFinish.ScholarHealth,
+            redirectWindow.ProtectorHealth,
+            redirectFinish.ProtectorHealth,
+            redirectFinish.Tick,
+            signature);
+    }
+
+    private static string BuildResponseChainBattleReport(
+        LauncherRecordingRequest request,
+        IReadOnlyList<ResponseChainSnapshot> timeline,
+        IReadOnlyList<double> frameTimesMs,
+        ResponseChainAcceptanceResult acceptance)
+    {
+        double medianTickMs = Median(frameTimesMs.ToArray());
+        double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
+        ResponseChainSnapshot final = timeline[^1];
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# Scenario Card: response-chain-showcase");
+        sb.AppendLine();
+        sb.AppendLine("## Intent");
+        sb.AppendLine("- Player goal: play one combo insert, one negate-driven counter, and one fixed-guard redirect on the production response-window stack.");
+        sb.AppendLine("- Delivery surface: launcher-native evidence recording with scripted inputs, screenshots, trace, and readable acceptance narrative.");
+        sb.AppendLine();
+        sb.AppendLine("## Determinism Inputs");
+        sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
+        sb.AppendLine($"- Map: `{ResponseChainMapId}`");
+        sb.AppendLine($"- Root mods: `{string.Join("`, `", request.Plan.RootModIds)}`");
+        sb.AppendLine("- Clock: fixed `1/60s` tick loop");
+        sb.AppendLine("- Input source: launcher scripted backend reusing production input contexts");
+        sb.AppendLine();
+        sb.AppendLine("## Action Script");
+        sb.AppendLine("1. Load the showcase map and verify Conductor is selected.");
+        sb.AppendLine("2. Hover Combo Raider, press `Q`, then `1`, `Space`, `Space` to finish the combo branch.");
+        sb.AppendLine("3. Press `F4` to reset.");
+        sb.AppendLine("4. Press `W`, then `N`, `Space`, `Space` to negate the hit and keep the riposte.");
+        sb.AppendLine("5. Press `F4` to reset.");
+        sb.AppendLine("6. Hover Scholar, press `E`, then `N`, `Space`, `Space` so Protector intercepts.");
+        sb.AppendLine();
+        sb.AppendLine("## Timeline");
+        foreach (ResponseChainSnapshot snapshot in timeline)
+        {
+            sb.AppendLine($"- [T+{snapshot.Tick:000}] {snapshot.Step} | selected={snapshot.SelectedEntity} hovered={snapshot.HoveredEntity} window={(snapshot.WindowVisible ? "open" : "idle")} prompt={snapshot.PromptTagId} | combo={snapshot.ComboHealth:0} counter={snapshot.CounterHealth:0} scholar={snapshot.ScholarHealth:0} protector={snapshot.ProtectorHealth:0}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Outcome");
+        sb.AppendLine($"- success: {(acceptance.Success ? "yes" : "no")}");
+        sb.AppendLine($"- verdict: {acceptance.Verdict}");
+        foreach (string failedCheck in acceptance.FailedChecks)
+        {
+            sb.AppendLine($"- failed-check: {failedCheck}");
+        }
+
+        sb.AppendLine($"- final state: conductor={final.ConductorHealth:0}, combo={final.ComboHealth:0}, counter={final.CounterHealth:0}, scholar={final.ScholarHealth:0}, protector={final.ProtectorHealth:0}");
+        sb.AppendLine();
+        sb.AppendLine("## Summary Stats");
+        sb.AppendLine($"- trace samples: `{timeline.Count}`");
+        sb.AppendLine($"- screenshot captures: `{timeline.Count}`");
+        sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
+        sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
+        sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
+        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `ResponseChainUiState`, `ResponseChainTelemetryBuffer`, `ScreenOverlayBuffer`");
+        return sb.ToString();
+    }
+
+    private static string BuildResponseChainTraceJsonl(string adapterId, IReadOnlyList<ResponseChainSnapshot> timeline)
+    {
+        var lines = new List<string>(timeline.Count);
+        for (int index = 0; index < timeline.Count; index++)
+        {
+            ResponseChainSnapshot snapshot = timeline[index];
+            lines.Add(JsonSerializer.Serialize(new
+            {
+                event_id = $"response-chain-{adapterId}-{index + 1:000}",
+                tick = snapshot.Tick,
+                step = snapshot.Step,
+                selected = snapshot.SelectedEntity,
+                hovered = snapshot.HoveredEntity,
+                window_visible = snapshot.WindowVisible,
+                prompt_tag_id = snapshot.PromptTagId,
+                actor = snapshot.ActorEntity,
+                target = snapshot.TargetEntity,
+                conductor_hp = Math.Round(snapshot.ConductorHealth, 2),
+                combo_hp = Math.Round(snapshot.ComboHealth, 2),
+                counter_hp = Math.Round(snapshot.CounterHealth, 2),
+                scholar_hp = Math.Round(snapshot.ScholarHealth, 2),
+                protector_hp = Math.Round(snapshot.ProtectorHealth, 2),
+                telemetry = snapshot.TelemetryLines,
+                gas = snapshot.GasLines,
+                status = "done"
+            }));
+        }
+
+        return string.Join(Environment.NewLine, lines) + Environment.NewLine;
+    }
+
+    private static string BuildResponseChainPathMermaid()
+    {
+        return string.Join(Environment.NewLine, new[]
+        {
+            "flowchart TD",
+            "    A[Load response_chain_showcase] --> B[Hover Combo Raider and cast Q]",
+            "    B --> C[Response window opens and player inserts 1]",
+            "    C --> D[Space then Space resolves follow-up damage]",
+            "    D --> E[F4 reset restores baseline]",
+            "    E --> F[Cast W self-window]",
+            "    F --> G[N negates the incoming hit branch]",
+            "    G --> H[Space then Space closes window and riposte lands]",
+            "    H --> I[F4 reset restores baseline]",
+            "    I --> J[Hover Scholar and cast E]",
+            "    J --> K[N negates scholar-hit branch]",
+            "    K --> L[Space then Space resolves fixed Protector intercept]"
+        }) + Environment.NewLine;
+    }
+
+    private static string BuildResponseChainVisibleChecklist(IReadOnlyList<ResponseChainSnapshot> timeline)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Visible Checklist: response-chain-showcase");
+        sb.AppendLine();
+        sb.AppendLine("- `000_map_loaded` should show Conductor selected with all three drills still marked Ready.");
+        sb.AppendLine("- `001_combo_window`, `003_counter_window`, and `005_redirect_window` should show the response window as open.");
+        sb.AppendLine("- `002_combo_finish` should show Combo Raider losing HP.");
+        sb.AppendLine("- `004_counter_finish` should show Counter Raider losing HP while Conductor stays intact.");
+        sb.AppendLine("- `006_redirect_finish` should show Protector losing HP while Scholar stays intact.");
+        sb.AppendLine("- `screens/timeline.png` is the compact frame-strip recording for quick review.");
+        sb.AppendLine();
+        foreach (ResponseChainSnapshot snapshot in timeline)
+        {
+            sb.AppendLine($"- `{snapshot.Step}.png`: window={(snapshot.WindowVisible ? "open" : "idle")}, selected={snapshot.SelectedEntity}, combo={snapshot.ComboHealth:0}, counter={snapshot.CounterHealth:0}, scholar={snapshot.ScholarHealth:0}, protector={snapshot.ProtectorHealth:0}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildResponseChainSummaryJson(LauncherRecordingRequest request, ResponseChainAcceptanceResult acceptance)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            scenario = "response_chain_showcase",
+            adapter = request.Plan.AdapterId,
+            selectors = request.Plan.Selectors,
+            root_mods = request.Plan.RootModIds,
+            combo = new
+            {
+                before = Math.Round(acceptance.ComboBefore, 2),
+                after = Math.Round(acceptance.ComboAfter, 2)
+            },
+            counter = new
+            {
+                raider_before = Math.Round(acceptance.CounterBefore, 2),
+                raider_after = Math.Round(acceptance.CounterAfter, 2),
+                conductor_before = Math.Round(acceptance.ConductorBefore, 2),
+                conductor_after = Math.Round(acceptance.ConductorAfter, 2)
+            },
+            redirect = new
+            {
+                scholar_before = Math.Round(acceptance.ScholarBefore, 2),
+                scholar_after = Math.Round(acceptance.ScholarAfter, 2),
+                protector_before = Math.Round(acceptance.ProtectorBefore, 2),
+                protector_after = Math.Round(acceptance.ProtectorAfter, 2)
+            },
+            final_tick = acceptance.FinalTick,
+            normalized_signature = acceptance.NormalizedSignature
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private static void WriteResponseChainSnapshotImage(ResponseChainSnapshot snapshot, string path)
+    {
+        using var surface = SKSurface.Create(new SKImageInfo(ResponseImageWidth, ResponseImageHeight));
+        SKCanvas canvas = surface.Canvas;
+        canvas.Clear(new SKColor(10, 14, 22));
+
+        var worldPoints = snapshot.NamedEntities.Values.ToList();
+        if (worldPoints.Count == 0)
+        {
+            worldPoints.Add(Vector2.Zero);
+        }
+
+        float minX = worldPoints.Min(point => point.X) - 360f;
+        float maxX = worldPoints.Max(point => point.X) + 360f;
+        float minY = worldPoints.Min(point => point.Y) - 360f;
+        float maxY = worldPoints.Max(point => point.Y) + 360f;
+
+        using var gridPaint = new SKPaint { Color = new SKColor(38, 48, 66), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1f };
+        using var titlePaint = new SKPaint { Color = SKColors.White, IsAntialias = true, TextSize = 26f };
+        using var bodyPaint = new SKPaint { Color = new SKColor(212, 220, 236), IsAntialias = true, TextSize = 18f };
+        using var notePaint = new SKPaint { Color = new SKColor(164, 178, 198), IsAntialias = true, TextSize = 16f };
+        using var selectedPaint = new SKPaint { Color = new SKColor(255, 210, 96), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 4f };
+        using var hoveredPaint = new SKPaint { Color = new SKColor(250, 250, 250), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
+        using var conductorPaint = new SKPaint { Color = new SKColor(92, 190, 255), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var comboPaint = new SKPaint { Color = new SKColor(244, 176, 74), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var counterPaint = new SKPaint { Color = new SKColor(255, 126, 107), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var scholarPaint = new SKPaint { Color = new SKColor(110, 199, 230), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var protectorPaint = new SKPaint { Color = new SKColor(113, 224, 138), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var fallbackPaint = new SKPaint { Color = new SKColor(196, 204, 224), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var panelFill = new SKPaint { Color = new SKColor(14, 18, 28, 220), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var panelBorder = new SKPaint { Color = new SKColor(88, 118, 156), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
+
+        DrawWorldGrid(canvas, minX, maxX, minY, maxY, gridPaint, ResponseImageWidth, ResponseImageHeight);
+
+        foreach ((string name, Vector2 position) in snapshot.NamedEntities.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            SKPoint point = ToScreen(position, minX, maxX, minY, maxY, ResponseImageWidth, ResponseImageHeight);
+            SKPaint fill = ResolveResponseChainPaint(name, conductorPaint, comboPaint, counterPaint, scholarPaint, protectorPaint, fallbackPaint);
+            canvas.DrawCircle(point.X, point.Y, 18f, fill);
+            if (string.Equals(snapshot.SelectedEntity, name, StringComparison.Ordinal))
+            {
+                canvas.DrawCircle(point.X, point.Y, 26f, selectedPaint);
+            }
+
+            if (string.Equals(snapshot.HoveredEntity, name, StringComparison.Ordinal))
+            {
+                canvas.DrawCircle(point.X, point.Y, 32f, hoveredPaint);
+            }
+
+            canvas.DrawText(name, point.X + 24f, point.Y - 10f, bodyPaint);
+        }
+
+        var panel = SKRect.Create(24f, 24f, 600f, 210f);
+        canvas.DrawRect(panel, panelFill);
+        canvas.DrawRect(panel, panelBorder);
+        canvas.DrawText($"Response Chain Showcase | {snapshot.Step} | tick={snapshot.Tick}", 42f, 58f, titlePaint);
+        canvas.DrawText($"Selected={snapshot.SelectedEntity}  Hovered={snapshot.HoveredEntity}", 42f, 90f, bodyPaint);
+        canvas.DrawText($"Window={(snapshot.WindowVisible ? "open" : "idle")}  PromptTag={snapshot.PromptTagId}  Actor={snapshot.ActorEntity}  Target={snapshot.TargetEntity}", 42f, 118f, bodyPaint);
+        canvas.DrawText($"Combo={snapshot.ComboHealth:0}  Counter={snapshot.CounterHealth:0}  Scholar={snapshot.ScholarHealth:0}  Protector={snapshot.ProtectorHealth:0}", 42f, 146f, bodyPaint);
+        canvas.DrawText($"Conductor={snapshot.ConductorHealth:0}  Tick={snapshot.TickMs:F3}ms", 42f, 174f, bodyPaint);
+        if (snapshot.OverlayLines.Count > 0)
+        {
+            canvas.DrawText(snapshot.OverlayLines[0], 42f, 202f, notePaint);
+        }
+
+        if (snapshot.TelemetryLines.Count > 0)
+        {
+            canvas.DrawText(snapshot.TelemetryLines[0], 42f, ResponseImageHeight - 52f, notePaint);
+        }
+
+        if (snapshot.GasLines.Count > 0)
+        {
+            canvas.DrawText(snapshot.GasLines[0], 42f, ResponseImageHeight - 24f, notePaint);
+        }
+
+        using SKImage image = surface.Snapshot();
+        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using FileStream stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        data.SaveTo(stream);
+    }
+
+    private static SKPaint ResolveResponseChainPaint(
+        string name,
+        SKPaint conductorPaint,
+        SKPaint comboPaint,
+        SKPaint counterPaint,
+        SKPaint scholarPaint,
+        SKPaint protectorPaint,
+        SKPaint fallbackPaint)
+    {
+        return name switch
+        {
+            ResponseConductorName => conductorPaint,
+            ResponseComboRaiderName => comboPaint,
+            ResponseCounterRaiderName => counterPaint,
+            ResponseScholarName => scholarPaint,
+            ResponseProtectorName => protectorPaint,
+            _ => fallbackPaint
+        };
+    }
+
+    private static void PressButton(RecordingRuntime runtime, string path, List<double> frameTimesMs)
+    {
+        runtime.InputBackend.SetButton(path, true);
+        Tick(runtime, 2, frameTimesMs);
+        runtime.InputBackend.SetButton(path, false);
+        Tick(runtime, 2, frameTimesMs);
+    }
+
+    private static void PressAction(RecordingRuntime runtime, string actionId, List<double> frameTimesMs)
+    {
+        PlayerInputHandler input = runtime.Engine.GetService(CoreServiceKeys.InputHandler)
+            ?? throw new InvalidOperationException("InputHandler service missing.");
+
+        input.InjectButtonPress(actionId);
+        Tick(runtime, 2, frameTimesMs);
+        input.InjectButtonRelease(actionId);
+        Tick(runtime, 2, frameTimesMs);
+    }
+
+    private static void SetMouseWorld(RecordingRuntime runtime, Vector2 screenPosition, List<double> frameTimesMs)
+    {
+        runtime.InputBackend.SetMousePosition(screenPosition);
+        Tick(runtime, 1, frameTimesMs);
+    }
+
+    private static void TickUntil(
+        RecordingRuntime runtime,
+        List<double> frameTimesMs,
+        Func<bool> predicate,
+        int maxFrames,
+        Func<string>? failureMessageFactory = null)
+    {
+        for (int frame = 0; frame < maxFrames; frame++)
+        {
+            if (predicate())
+            {
+                return;
+            }
+
+            Tick(runtime, 1, frameTimesMs);
+        }
+
+        string detail = failureMessageFactory?.Invoke() ?? string.Empty;
+        throw new InvalidOperationException(
+            $"Predicate was not satisfied within {maxFrames} frames.{(string.IsNullOrWhiteSpace(detail) ? string.Empty : $" {detail}")}");
+    }
+
+    private static ResponseChainUiState GetResponseUiState(GameEngine engine)
+    {
+        return engine.GetService(CoreServiceKeys.ResponseChainUiState)
+            ?? throw new InvalidOperationException("ResponseChainUiState service missing.");
+    }
+
+    private static string GetSelectedEntityName(GameEngine engine)
+    {
+        if (SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            engine.World.TryGet(selected, out Name name))
+        {
+            return name.Value;
+        }
+
+        return string.Empty;
+    }
+
+    private static string GetHoveredEntityName(GameEngine engine)
+    {
+        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out object? hoveredObj) &&
+            hoveredObj is Entity hovered &&
+            engine.World.IsAlive(hovered) &&
+            engine.World.TryGet(hovered, out Name name))
+        {
+            return name.Value;
+        }
+
+        return string.Empty;
+    }
+
+    private static string BuildResponseChainDiagnostics(GameEngine engine)
+    {
+        return string.Join(
+            " || ",
+            $"selected={GetSelectedEntityName(engine)}",
+            $"hovered={GetHoveredEntityName(engine)}",
+            $"uiVisible={GetResponseUiState(engine).Visible}",
+            $"promptTagId={GetResponseUiState(engine).PromptTagId}",
+            $"combo={ReadHealth(engine.World, ResponseComboRaiderName):0.##}",
+            $"counter={ReadHealth(engine.World, ResponseCounterRaiderName):0.##}",
+            $"scholar={ReadHealth(engine.World, ResponseScholarName):0.##}",
+            $"protector={ReadHealth(engine.World, ResponseProtectorName):0.##}",
+            string.Join(" | ", BuildResponseTelemetryLines(engine)),
+            string.Join(" | ", BuildGasPresentationLines(engine)));
+    }
+
+    private static List<string> BuildResponseTelemetryLines(GameEngine engine)
+    {
+        ResponseChainTelemetryBuffer? telemetry = engine.GetService(CoreServiceKeys.ResponseChainTelemetryBuffer);
+        var lines = new List<string>();
+        if (telemetry == null || telemetry.Count == 0)
+        {
+            return lines;
+        }
+
+        int start = Math.Max(0, telemetry.Count - 3);
+        for (int index = start; index < telemetry.Count; index++)
+        {
+            ResponseChainTelemetryEvent evt = telemetry[index];
+            lines.Add($"rc:{evt.Kind}/tag:{evt.TagId}/proposal:{evt.ProposalIndex}/prompt:{evt.PromptTagId}/order:{evt.OrderTypeId}/outcome:{evt.Outcome}/target:{ReadEntityName(engine.World, evt.Target)}");
+        }
+
+        return lines;
+    }
+
+    private static List<string> BuildGasPresentationLines(GameEngine engine)
+    {
+        GasPresentationEventBuffer? buffer = engine.GetService(CoreServiceKeys.GasPresentationEventBuffer);
+        var lines = new List<string>();
+        if (buffer == null || buffer.Count == 0)
+        {
+            return lines;
+        }
+
+        ReadOnlySpan<GasPresentationEvent> events = buffer.Events;
+        int start = Math.Max(0, events.Length - 3);
+        for (int index = start; index < events.Length; index++)
+        {
+            ref readonly GasPresentationEvent evt = ref events[index];
+            lines.Add($"gas:{evt.Kind}/effect:{evt.EffectTemplateId}/delta:{evt.Delta:0.##}/actor:{ReadEntityName(engine.World, evt.Actor)}/target:{ReadEntityName(engine.World, evt.Target)}");
+        }
+
+        return lines;
+    }
+
+    private static Entity FindEntityByName(World world, string name)
+    {
+        Entity found = Entity.Null;
+        world.Query(in CameraNamedEntityQuery, (Entity entity, ref Name entityName, ref WorldPositionCm _) =>
+        {
+            if (found == Entity.Null && string.Equals(entityName.Value, name, StringComparison.OrdinalIgnoreCase))
+            {
+                found = entity;
+            }
+        });
+        return found;
+    }
+
+    private static Vector2 GetEntityWorld(World world, string name)
+    {
+        Entity entity = FindEntityByName(world, name);
+        if (entity == Entity.Null || !world.TryGet(entity, out WorldPositionCm position))
+        {
+            throw new InvalidOperationException($"Entity '{name}' was not found.");
+        }
+
+        return position.Value.ToVector2();
+    }
+
+    private static float ReadHealth(World world, string name)
+    {
+        Entity entity = FindEntityByName(world, name);
+        if (entity == Entity.Null || !world.TryGet(entity, out AttributeBuffer attributes))
+        {
+            return 0f;
+        }
+
+        int healthId = AttributeRegistry.GetId("Health");
+        return healthId >= 0 ? attributes.GetCurrent(healthId) : 0f;
+    }
+
+    private static string ReadEntityName(World world, Entity entity)
+    {
+        return world.IsAlive(entity) && world.TryGet(entity, out Name name) ? name.Value : string.Empty;
     }
 
     private static LauncherRecordingResult RecordNavigation2DTimedAvoidance(LauncherRecordingRequest request)
@@ -1441,6 +2106,7 @@ public static class LauncherEvidenceRecorder
     {
         None,
         CameraAcceptanceProjectionClick,
+        ResponseChainShowcase,
         Navigation2DPlaygroundTimedAvoidance
     }
 
@@ -1537,6 +2203,44 @@ public static class LauncherEvidenceRecorder
         bool CueMarkerVisibleAfterClick,
         bool CueMarkerVisibleMidCapture,
         bool CueMarkerVisibleFinalCapture,
+        int FinalTick,
+        string NormalizedSignature);
+
+    private readonly record struct ResponseChainSnapshot(
+        int Tick,
+        string Step,
+        double TickMs,
+        string SelectedEntity,
+        string HoveredEntity,
+        bool WindowVisible,
+        int PromptTagId,
+        string ActorEntity,
+        string TargetEntity,
+        float ConductorHealth,
+        float ComboHealth,
+        float CounterHealth,
+        float ScholarHealth,
+        float ProtectorHealth,
+        IReadOnlyDictionary<string, Vector2> NamedEntities,
+        IReadOnlyList<string> OverlayLines,
+        IReadOnlyList<string> TelemetryLines,
+        IReadOnlyList<string> GasLines);
+
+    private sealed record ResponseChainAcceptanceResult(
+        bool Success,
+        string Verdict,
+        string FailureSummary,
+        IReadOnlyList<string> FailedChecks,
+        float ComboBefore,
+        float ComboAfter,
+        float CounterBefore,
+        float CounterAfter,
+        float ConductorBefore,
+        float ConductorAfter,
+        float ScholarBefore,
+        float ScholarAfter,
+        float ProtectorBefore,
+        float ProtectorAfter,
         int FinalTick,
         string NormalizedSignature);
 

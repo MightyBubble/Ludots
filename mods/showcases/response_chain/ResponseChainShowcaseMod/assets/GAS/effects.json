@@ -1,0 +1,188 @@
+[
+  {
+    "id": "Effect.Showcase.Combo.Opener",
+    "tags": ["Effect.Showcase.Combo.Opener"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -12.0 }
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Combo.FollowUp",
+    "tags": ["Effect.Showcase.Combo.FollowUp"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -18.0 }
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Counter.Swing",
+    "tags": ["Effect.Showcase.Counter.Swing"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 0.0 }
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Counter.TakeHit",
+    "tags": ["Effect.Showcase.Counter.TakeHit"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -10.0 }
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Counter.Riposte",
+    "tags": ["Effect.Showcase.Counter.Riposte"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 520
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Showcase.Counter.RiposteHit"
+    }
+  },
+  {
+    "id": "Effect.Showcase.Counter.RiposteHit",
+    "tags": ["Effect.Showcase.Counter.RiposteHit"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -16.0 }
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Counter.Flourish",
+    "tags": ["Effect.Showcase.Counter.Flourish"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 520
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Showcase.Counter.FlourishHit"
+    }
+  },
+  {
+    "id": "Effect.Showcase.Counter.FlourishHit",
+    "tags": ["Effect.Showcase.Counter.FlourishHit"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -6.0 }
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Redirect.Bolt",
+    "tags": ["Effect.Showcase.Redirect.Bolt"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 0.0 }
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Redirect.HitScholar",
+    "tags": ["Effect.Showcase.Redirect.HitScholar"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -14.0 }
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Redirect.ToGuard",
+    "tags": ["Effect.Showcase.Redirect.ToGuard"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Ring",
+      "radius": 540,
+      "innerRadius": 360
+    },
+    "targetFilter": {
+      "relationFilter": "Friendly",
+      "excludeSource": false,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Showcase.Redirect.GuardHit",
+      "contextMapping": {
+        "payloadSource": "OriginalSource",
+        "payloadTarget": "ResolvedEntity",
+        "payloadTargetContext": "OriginalTarget"
+      }
+    }
+  },
+  {
+    "id": "Effect.Showcase.Redirect.GuardHit",
+    "tags": ["Effect.Showcase.Redirect.GuardHit"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -14.0 }
+    ]
+  },
+  {
+    "id": "Effect.Showcase.Redirect.Flourish",
+    "tags": ["Effect.Showcase.Redirect.Flourish"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 540
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Showcase.Redirect.FlourishHit"
+    }
+  },
+  {
+    "id": "Effect.Showcase.Redirect.FlourishHit",
+    "tags": ["Effect.Showcase.Redirect.FlourishHit"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -6.0 }
+    ]
+  }
+]

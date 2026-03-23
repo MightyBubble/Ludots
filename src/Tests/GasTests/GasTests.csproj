@@ -53,6 +53,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\camera\CameraShowcaseMod\CameraShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\interaction\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\ChampionSkillSandboxMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\response_chain\ResponseChainShowcaseMod\ResponseChainShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\ux_prototype\UxPrototypeMod\UxPrototypeMod.csproj" />
     <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />

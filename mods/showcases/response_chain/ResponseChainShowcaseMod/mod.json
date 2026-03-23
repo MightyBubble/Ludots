@@ -1,0 +1,14 @@
+{
+  "name": "ResponseChainShowcaseMod",
+  "version": "1.0.0",
+  "description": "Playable response-chain showcase for combo, counter, and redirect drills built on the production GAS and response window stack.",
+  "main": "bin/net8.0/ResponseChainShowcaseMod.dll",
+  "priority": 200,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "response-chain", "gas", "qte", "effects"]
+}

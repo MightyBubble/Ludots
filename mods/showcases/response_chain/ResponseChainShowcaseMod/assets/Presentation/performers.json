@@ -1,0 +1,87 @@
+[
+  {
+    "id": "response_chain_showcase.marker.conductor",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [0.35, 0.83, 1.0, 0.18],
+    "defaultScale": 1.12,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.04, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.72 },
+      { "paramKey": 8, "source": "constant", "constantValue": 0.35 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.83 },
+      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+    ]
+  },
+  {
+    "id": "response_chain_showcase.marker.combo",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [0.96, 0.68, 0.24, 0.18],
+    "defaultScale": 1.18,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.04, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.86 },
+      { "paramKey": 8, "source": "constant", "constantValue": 0.98 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.71 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.29 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.05 }
+    ]
+  },
+  {
+    "id": "response_chain_showcase.marker.counter",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [0.96, 0.44, 0.35, 0.18],
+    "defaultScale": 1.18,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.04, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.86 },
+      { "paramKey": 8, "source": "constant", "constantValue": 0.98 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.47 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.38 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.05 }
+    ]
+  },
+  {
+    "id": "response_chain_showcase.marker.scholar",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [0.41, 0.78, 0.9, 0.16],
+    "defaultScale": 1.12,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.04, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.74 },
+      { "paramKey": 8, "source": "constant", "constantValue": 0.43 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.83 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.93 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+    ]
+  },
+  {
+    "id": "response_chain_showcase.marker.protector",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [0.44, 0.89, 0.58, 0.18],
+    "defaultScale": 1.16,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.04, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.8 },
+      { "paramKey": 8, "source": "constant", "constantValue": 0.47 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.95 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.61 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+    ]
+  }
+]

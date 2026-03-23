@@ -3,6 +3,7 @@ using ChampionSkillSandboxMod.Runtime;
 using ChampionSkillSandboxMod.Triggers;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Modding;
+using Ludots.Core.Physics2D.Config;
 using Ludots.Core.Scripting;
 
 namespace ChampionSkillSandboxMod
@@ -12,7 +13,7 @@ namespace ChampionSkillSandboxMod
         public void OnLoad(IModContext context)
         {
             context.Log("[ChampionSkillSandboxMod] Loaded");
-            ChampionSkillSandboxComponentAuthoring.Register(context.ModId);
+            Physics2DComponentAuthoring.Register(context.ModId);
 
             var runtime = new ChampionSkillSandboxRuntime();
             var toolbarProvider = new ChampionSkillCastModeToolbarProvider();

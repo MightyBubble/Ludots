@@ -4,15 +4,13 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
-using Ludots.Core.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
-using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 
-namespace ChampionSkillSandboxMod.Runtime
+namespace Ludots.Core.Physics2D.Config
 {
-    internal static class ChampionSkillSandboxComponentAuthoring
+    public static class Physics2DComponentAuthoring
     {
         public static void Register(string modId)
         {

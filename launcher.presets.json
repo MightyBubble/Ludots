@@ -54,6 +54,24 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "response_chain_showcase_raylib",
+      "name": "Response Chain Showcase Raylib",
+      "selectors": [
+        "$response_chain_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "response_chain_showcase_web",
+      "name": "Response Chain Showcase Web",
+      "selectors": [
+        "$response_chain_showcase"
+      ],
+      "adapterId": "web",
+      "buildMode": "auto"
     }
   ]
 }

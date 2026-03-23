@@ -1,0 +1,7 @@
+{
+  "startupMapId": "response_chain_showcase",
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "ResponseChainShowcase.Controls"
+  ]
+}
