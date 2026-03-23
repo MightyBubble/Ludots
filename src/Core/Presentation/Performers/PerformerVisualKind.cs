@@ -17,5 +17,8 @@ namespace Ludots.Core.Presentation.Performers
 
         /// <summary>World-space bar (health bar, cast bar).</summary>
         WorldBar = 3,
+
+        /// <summary>Procedural melee slash ribbon rendered as a curved or linear trail.</summary>
+        SlashRibbon = 4,
     }
 }

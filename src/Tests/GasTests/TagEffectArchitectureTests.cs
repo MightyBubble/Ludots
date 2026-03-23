@@ -1107,6 +1107,8 @@ namespace Ludots.Tests.GAS
 
                 return new SpatialQueryResult(count, 0);
             }
+
+            public SpatialQueryResult QueryPolylineCapsule(ReadOnlySpan<WorldCmInt2> points, int halfWidthCm, Span<Entity> buffer) => default;
         }
 
         private static ConfigPipeline CreateMinimalPipeline(string effectJson, string templatesJson = null)

@@ -247,6 +247,12 @@ namespace Ludots.Tests.GAS.Production
                 performerRegistry.GetId("champion_skill_sandbox.hover_indicator"),
                 Is.GreaterThan(0),
                 "Sandbox performer config should register a dedicated hover indicator.");
+            AssertSlashRibbonPerformer(performerRegistry, "champion_skill_sandbox.cue.duelist_chain_jab_1", SlashRibbonShape.Arc);
+            AssertSlashRibbonPerformer(performerRegistry, "champion_skill_sandbox.cue.duelist_chain_jab_2", SlashRibbonShape.Arc);
+            AssertSlashRibbonPerformer(performerRegistry, "champion_skill_sandbox.cue.duelist_chain_finish", SlashRibbonShape.Arc);
+            AssertSlashRibbonPerformer(performerRegistry, "champion_skill_sandbox.cue.duelist_step_in", SlashRibbonShape.Segment);
+            AssertSlashRibbonPerformer(performerRegistry, "champion_skill_sandbox.cue.duelist_crowd_sweep", SlashRibbonShape.Arc);
+            AssertSlashRibbonPerformer(performerRegistry, "champion_skill_sandbox.cue.duelist_opening_breaker_cast", SlashRibbonShape.Segment);
             var cameraRegistry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
                 ?? throw new InvalidOperationException("VirtualCameraRegistry missing.");
             Assert.That(
@@ -1393,6 +1399,15 @@ namespace Ludots.Tests.GAS.Production
             Entity found = FindEntityByName(world, entityName);
             Assert.That(world.TryGet(found, out PlayerOwner owner), Is.True, $"{entityName} should have PlayerOwner.");
             Assert.That(owner.PlayerId, Is.EqualTo(expectedPlayerId), $"{entityName} should receive PlayerOwner from map instance overrides.");
+        }
+
+        private static void AssertSlashRibbonPerformer(PerformerDefinitionRegistry performerRegistry, string performerId, SlashRibbonShape expectedShape)
+        {
+            int performerKey = performerRegistry.GetId(performerId);
+            Assert.That(performerKey, Is.GreaterThan(0), $"{performerId} should be registered.");
+            Assert.That(performerRegistry.TryGet(performerKey, out var definition), Is.True, $"{performerId} definition should resolve.");
+            Assert.That(definition.VisualKind, Is.EqualTo(PerformerVisualKind.SlashRibbon), $"{performerId} should render through the slash ribbon pipe.");
+            Assert.That(definition.MeshOrShapeId, Is.EqualTo((int)expectedShape), $"{performerId} should keep its authored slash ribbon shape.");
         }
 
         private static void AssertEntityHasTag(World world, string entityName, string tagName)

@@ -6,15 +6,22 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.Orders;
+using Ludots.Core.Input.Selection;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 
 namespace ChampionSkillSandboxMod.Runtime
 {
@@ -98,6 +105,12 @@ namespace ChampionSkillSandboxMod.Runtime
         private int _ezrealArcaneShiftHitEffectId;
         private int _ezrealTrueshotHitEffectId;
         private int _ezrealWMarkTagId;
+        private int _duelistActionContextAbilityId;
+        private int _duelistComboStage1AbilityId;
+        private int _duelistComboStage2AbilityId;
+        private int _duelistStepInAbilityId;
+        private int _duelistCrowdSweepAbilityId;
+        private int _duelistOpeningBreakerAbilityId;
         private bool _cueIdsInitialized;
         private bool _directIdsInitialized;
         private float _feedbackClock;
@@ -119,6 +132,7 @@ namespace ChampionSkillSandboxMod.Runtime
             PrimitiveDrawBuffer? primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             PresentationCommandBuffer? commands = engine.GetService(CoreServiceKeys.PresentationCommandBuffer);
             RenderDebugState? renderDebug = engine.GetService(CoreServiceKeys.RenderDebugState);
+            DebugDrawCommandBuffer? debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
             if (ChampionSkillSandboxIds.IsStressMap(engine.CurrentMapSession?.MapId.Value) &&
                 renderDebug is { DrawCombatText: false })
             {
@@ -132,6 +146,7 @@ namespace ChampionSkillSandboxMod.Runtime
             EmitEzrealMarks(engine.World, primitives);
             EmitTransientPrimitives(engine.World, primitives);
             EmitCombatTextEntries(engine.World, worldHud);
+            EmitDuelistContextDebug(engine, debugDraw, renderDebug?.DrawDebugDraw != false);
 
             if (gasEvents == null || gasEvents.Count == 0)
             {
@@ -441,6 +456,12 @@ namespace ChampionSkillSandboxMod.Runtime
                 _ezrealArcaneShiftHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Ezreal.ArcaneShiftBoltHit");
                 _ezrealTrueshotHitEffectId = EffectTemplateIdRegistry.GetId("Effect.Champion.Ezreal.TrueshotBarrageHit");
                 _ezrealWMarkTagId = TagRegistry.GetId("State.Champion.Ezreal.WMark");
+                _duelistActionContextAbilityId = AbilityIdRegistry.GetId("Ability.Champion.Duelist.ActionContext");
+                _duelistComboStage1AbilityId = AbilityIdRegistry.GetId("Ability.Champion.Duelist.Combo.Stage1");
+                _duelistComboStage2AbilityId = AbilityIdRegistry.GetId("Ability.Champion.Duelist.Combo.Stage2");
+                _duelistStepInAbilityId = AbilityIdRegistry.GetId("Ability.Champion.Duelist.StepIn");
+                _duelistCrowdSweepAbilityId = AbilityIdRegistry.GetId("Ability.Champion.Duelist.CrowdSweep");
+                _duelistOpeningBreakerAbilityId = AbilityIdRegistry.GetId("Ability.Champion.Duelist.OpeningBreaker");
 
                 _projectilePrimitiveSpecs.Clear();
                 RegisterProjectilePrimitiveSpec(_ezrealMysticShotProjectileEffectId, new ProjectilePrimitiveSpec
@@ -796,6 +817,216 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             return Entity.Null;
+        }
+
+        private void EmitDuelistContextDebug(GameEngine engine, DebugDrawCommandBuffer? debugDraw, bool allowDebugDraw)
+        {
+            if (!allowDebugDraw ||
+                debugDraw == null ||
+                _duelistActionContextAbilityId <= 0 ||
+                engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is not InputOrderMappingSystem mappingSystem ||
+                mappingSystem.GetMapping("ActionAttack") is not InputOrderMapping actionAttackMapping ||
+                engine.GetService(CoreServiceKeys.ContextGroupRegistry) is not ContextGroupRegistry contextGroups ||
+                engine.GetService(CoreServiceKeys.GraphProgramRegistry) is not GraphProgramRegistry graphPrograms ||
+                engine.GetService(CoreServiceKeys.SpatialQueryService) is not ISpatialQueryService spatialQueries ||
+                engine.GetService(CoreServiceKeys.SpatialCoordinateConverter) is not ISpatialCoordinateConverter spatialCoords)
+            {
+                return;
+            }
+
+            Entity actor = ResolveSelectedDuelist(engine.World, engine.GlobalContext);
+            if (actor == Entity.Null ||
+                !TryResolveContextGroup(engine.World, actor, actionAttackMapping, contextGroups, out ContextGroupDefinition group) ||
+                !engine.World.TryGet(actor, out WorldPositionCm actorPosition))
+            {
+                return;
+            }
+
+            Vector2 actorWorld = ToDebugWorld(actorPosition.Value.ToVector2());
+            float searchRadius = group.SearchRadiusCm / 100f;
+            debugDraw.AddCircle(actorWorld, searchRadius, new DebugDrawColor(84, 198, 255, 210), thickness: 0.05f);
+
+            Entity hovered = ResolveHoveredEntity(engine);
+            if (hovered != Entity.Null && TryGetDebugWorld(engine.World, hovered, out Vector2 hoveredWorld))
+            {
+                debugDraw.AddCircle(hoveredWorld, 0.34f, DebugDrawColor.Yellow, thickness: 0.04f);
+            }
+
+            var graphApi = new GasGraphRuntimeApi(engine.World, spatialQueries, spatialCoords, eventBus: null, effectRequests: null);
+            var resolver = new ContextScoredOrderResolver(engine.World, contextGroups, graphPrograms, spatialQueries, graphApi);
+            Span<ContextScoredCandidateProbe> probes = stackalloc ContextScoredCandidateProbe[8];
+            bool resolved = resolver.TryInspect(actor, actionAttackMapping, hovered, probes, out int probeCount, out ContextScoredOrderResolution resolution);
+
+            for (int i = 0; i < probeCount; i++)
+            {
+                ContextScoredCandidateProbe probe = probes[i];
+                DebugDrawColor color = ResolveCandidateColor(probe.AbilityId);
+                float thickness = i == 0 ? 0.07f : 0.035f;
+
+                if (probe.Target != Entity.Null && TryGetDebugWorld(engine.World, probe.Target, out Vector2 targetWorld))
+                {
+                    debugDraw.AddCapsule(actorWorld, targetWorld, i == 0 ? 0.18f : 0.1f, color, thickness, drawCenterLine: i == 0);
+                    debugDraw.AddCircle(targetWorld, i == 0 ? 0.42f : 0.26f, color, thickness);
+                }
+            }
+
+            if (!resolved)
+            {
+                return;
+            }
+
+            int resolvedAbilityId = probeCount > 0 ? probes[0].AbilityId : 0;
+            Vector2 resolvedTargetWorld = actorWorld;
+            if (resolution.Target != Entity.Null && TryGetDebugWorld(engine.World, resolution.Target, out Vector2 resolvedTarget))
+            {
+                resolvedTargetWorld = resolvedTarget;
+                debugDraw.AddCircle(resolvedTarget, 0.5f, DebugDrawColor.White, thickness: 0.05f);
+            }
+
+            float rotation = ResolveDebugRotation(actorWorld, resolvedTargetWorld, engine.World, actor);
+            DebugDrawColor resolvedColor = ResolveCandidateColor(resolvedAbilityId);
+            if (resolvedAbilityId == _duelistStepInAbilityId && resolution.Target != Entity.Null)
+            {
+                debugDraw.AddCapsule(actorWorld, resolvedTargetWorld, 0.36f, resolvedColor, thickness: 0.08f, drawCenterLine: true);
+                return;
+            }
+
+            if (resolvedAbilityId == _duelistCrowdSweepAbilityId)
+            {
+                debugDraw.AddArc(actorWorld, 2.4f, rotation - 1.1f, rotation + 1.1f, resolvedColor, thickness: 0.08f);
+                return;
+            }
+
+            float radius = resolvedAbilityId == _duelistOpeningBreakerAbilityId
+                ? 1.95f
+                : resolvedAbilityId == _duelistComboStage2AbilityId
+                    ? 1.76f
+                    : 1.58f;
+            float span = resolvedAbilityId == _duelistOpeningBreakerAbilityId ? 0.96f : 0.68f;
+            debugDraw.AddArc(actorWorld, radius, rotation - span, rotation + span, resolvedColor, thickness: 0.08f);
+        }
+
+        private Entity ResolveSelectedDuelist(World world, Dictionary<string, object> globals)
+        {
+            if (!SelectionContextRuntime.TryGetCurrentPrimary(world, globals, out Entity selected) ||
+                selected == Entity.Null ||
+                !world.IsAlive(selected) ||
+                !world.Has<AbilityStateBuffer>(selected))
+            {
+                return Entity.Null;
+            }
+
+            ref readonly AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(selected);
+            bool hasForm = world.Has<AbilityFormSlotBuffer>(selected);
+            AbilityFormSlotBuffer formSlots = hasForm ? world.Get<AbilityFormSlotBuffer>(selected) : default;
+            bool hasGranted = world.Has<GrantedSlotBuffer>(selected);
+            GrantedSlotBuffer granted = hasGranted ? world.Get<GrantedSlotBuffer>(selected) : default;
+            for (int slotIndex = 0; slotIndex < abilities.Count; slotIndex++)
+            {
+                var resolved = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in granted, hasGranted, slotIndex);
+                if (resolved.AbilityId == _duelistActionContextAbilityId)
+                {
+                    return selected;
+                }
+            }
+
+            return Entity.Null;
+        }
+
+        private static Entity ResolveHoveredEntity(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out object? hoveredObj) &&
+                   hoveredObj is Entity hovered &&
+                   hovered != Entity.Null &&
+                   engine.World.IsAlive(hovered)
+                ? hovered
+                : Entity.Null;
+        }
+
+        private static bool TryResolveContextGroup(
+            World world,
+            Entity actor,
+            InputOrderMapping mapping,
+            ContextGroupRegistry contextGroups,
+            out ContextGroupDefinition group)
+        {
+            group = default;
+            if (mapping.ArgsTemplate.I0 is null || !world.Has<AbilityStateBuffer>(actor))
+            {
+                return false;
+            }
+
+            int rootSlotIndex = mapping.ArgsTemplate.I0.Value;
+            ref readonly AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(actor);
+            bool hasForm = world.Has<AbilityFormSlotBuffer>(actor);
+            AbilityFormSlotBuffer formSlots = hasForm ? world.Get<AbilityFormSlotBuffer>(actor) : default;
+            bool hasGranted = world.Has<GrantedSlotBuffer>(actor);
+            GrantedSlotBuffer granted = hasGranted ? world.Get<GrantedSlotBuffer>(actor) : default;
+            var resolved = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in granted, hasGranted, rootSlotIndex);
+            return resolved.AbilityId > 0 && contextGroups.TryGetByRootAbility(resolved.AbilityId, out group);
+        }
+
+        private DebugDrawColor ResolveCandidateColor(int abilityId)
+        {
+            if (abilityId == _duelistStepInAbilityId)
+            {
+                return new DebugDrawColor(84, 210, 255, 220);
+            }
+
+            if (abilityId == _duelistCrowdSweepAbilityId)
+            {
+                return new DebugDrawColor(130, 244, 126, 220);
+            }
+
+            if (abilityId == _duelistOpeningBreakerAbilityId)
+            {
+                return new DebugDrawColor(255, 114, 126, 235);
+            }
+
+            if (abilityId == _duelistComboStage2AbilityId)
+            {
+                return new DebugDrawColor(255, 170, 96, 228);
+            }
+
+            if (abilityId == _duelistComboStage1AbilityId)
+            {
+                return new DebugDrawColor(248, 206, 104, 228);
+            }
+
+            return DebugDrawColor.White;
+        }
+
+        private static bool TryGetDebugWorld(World world, Entity entity, out Vector2 worldPosition)
+        {
+            worldPosition = default;
+            if (!world.IsAlive(entity) || !world.TryGet(entity, out WorldPositionCm position))
+            {
+                return false;
+            }
+
+            worldPosition = ToDebugWorld(position.Value.ToVector2());
+            return true;
+        }
+
+        private static float ResolveDebugRotation(Vector2 actorWorld, Vector2 targetWorld, World world, Entity actor)
+        {
+            Vector2 delta = targetWorld - actorWorld;
+            if (delta.LengthSquared() > 0.0001f)
+            {
+                return MathF.Atan2(delta.Y, delta.X);
+            }
+
+            if (world.TryGet(actor, out FacingDirection facing))
+            {
+                return facing.AngleRad;
+            }
+
+            return 0f;
+        }
+
+        private static Vector2 ToDebugWorld(Vector2 worldCm)
+        {
+            return worldCm / 100f;
         }
     }
 }

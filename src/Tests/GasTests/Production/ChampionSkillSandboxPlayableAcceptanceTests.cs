@@ -28,6 +28,7 @@ using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
@@ -114,6 +115,10 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("PrimitiveDrawBuffer missing.");
             var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
                 ?? throw new InvalidOperationException("WorldHudBatchBuffer missing.");
+            var slashRibbons = engine.GetService(CoreServiceKeys.SlashRibbonBuffer)
+                ?? throw new InvalidOperationException("SlashRibbonBuffer missing.");
+            var debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer)
+                ?? throw new InvalidOperationException("DebugDrawCommandBuffer missing.");
             var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
             var backend = GetInputBackend(engine);
@@ -223,7 +228,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 dummyHealthAfterQ,
                 Is.LessThan(dummyHealthBeforeQ),
-                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)} || distanceToDummy={ezrealDistanceToDummy:0.##}");
+                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(engine, primitives, worldHud)} || distanceToDummy={ezrealDistanceToDummy:0.##}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Smart cast hit should emit visible pulse markers.");
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Smart cast hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "smartcast_hit");
@@ -271,7 +276,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 dummyHealthAfterR,
                 Is.LessThan(dummyHealthBeforeR),
-                $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
+                $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(engine, primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Indicator release hit should emit visible pulse markers.");
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Indicator release hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "indicator_release_hit");
@@ -321,7 +326,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 dummyHealthAfterConfirm,
                 Is.LessThan(dummyHealthAfterCancel),
-                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
+                $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(engine, primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Press-release confirm hit should emit visible pulse markers.");
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Press-release confirm hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "press_release_confirm_hit");
@@ -346,7 +351,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 dummyHealthAfterBeam,
                 Is.LessThan(dummyHealthBeforeBeam),
-                $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Geomancer Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
+                $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Geomancer Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(engine, primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Beam hit should emit visible pulse markers.");
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Beam hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "prismatic_beam_hit");
@@ -455,6 +460,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(duelistSlots.Any(slot => string.Equals(slot.Label, "Crowd Sweep", StringComparison.Ordinal)), Is.True);
             Assert.That(duelistSlots.Any(slot => string.Equals(slot.Label, "Opening Breaker", StringComparison.Ordinal)), Is.True);
             Assert.That(duelistSlots.Any(slot => string.Equals(slot.Label, "Action Context", StringComparison.Ordinal)), Is.True);
+            Assert.That(
+                CountDebugDrawCommands(debugDraw),
+                Is.GreaterThan(0),
+                "Duelist action mode should expose context-group debug geometry so the auto-target decision stays legible.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "select_duelist_action_mode");
             timeline.Add("[T+017] Select(Duelist Alpha) -> reposition to melee staging lane -> F5 enters Context Combo mode with Step In / Chain / Crowd Sweep / Opening Breaker / Space root");
 
@@ -490,11 +499,19 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 dummyHealthAfterStepIn,
                 Is.LessThan(dummyHealthBeforeStepIn),
-                $"{BuildInputActionDiagnostics(engine, "ActionAttack")} || {BuildAbilityDiagnostics(engine, "Duelist Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
+                $"{BuildInputActionDiagnostics(engine, "ActionAttack")} || {BuildAbilityDiagnostics(engine, "Duelist Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildFeedbackDiagnostics(engine, primitives, worldHud)}");
             Assert.That(
                 duelistDistanceAfterStepIn,
                 Is.LessThan(duelistDistanceToDummyF - 120f),
                 $"Step In should close distance into melee. before={duelistDistanceToDummyF:0.##}, after={duelistDistanceAfterStepIn:0.##}, start={duelistBeforeStepIn}, end={ReadPosition(engine.World, "Duelist Alpha")}");
+            Assert.That(
+                CountSlashRibbons(slashRibbons),
+                Is.GreaterThan(0),
+                "Step In should emit a readable slash ribbon instead of only abstract hit markers.");
+            Assert.That(
+                CountDebugDrawCommands(debugDraw),
+                Is.GreaterThan(0),
+                "ActionContext Step In should keep the target-group debug preview alive during the engage frame.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "duelist_step_in");
             timeline.Add($"[T+018] Duelist Alpha.Space(ActionContext) -> Step In auto-locks {duelistFocusTarget} from the nearby target group | distance {duelistDistanceToDummyF:0}->{duelistDistanceAfterStepIn:0} | HP {dummyHealthBeforeStepIn:0}->{dummyHealthAfterStepIn:0}");
 
@@ -519,6 +536,10 @@ namespace Ludots.Tests.GAS.Production
             float dummyHealthAfterCombo1 = ReadHealth(engine.World, duelistFocusTarget);
             var comboStage2Slots = CopySelectedSlots(engine);
             Assert.That(comboStage2Slots[0].Label, Is.EqualTo("Chain Jab II"));
+            Assert.That(
+                CountSlashRibbons(slashRibbons),
+                Is.GreaterThan(0),
+                "Chain Jab I should emit a slash ribbon so the opener reads as a melee swing, not only a damage number.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "duelist_chain_jab_1");
             timeline.Add($"[T+019] Duelist Alpha.Space(ActionContext) -> Chain Jab I auto-selected on engaged target | HP {dummyHealthBeforeCombo1:0}->{dummyHealthAfterCombo1:0} | Q now routes to Chain Jab II");
 
@@ -540,6 +561,10 @@ namespace Ludots.Tests.GAS.Production
             float dummyHealthAfterCombo2 = ReadHealth(engine.World, duelistFocusTarget);
             var comboStage3Slots = CopySelectedSlots(engine);
             Assert.That(comboStage3Slots[0].Label, Is.EqualTo("Chain Finish"));
+            Assert.That(
+                CountSlashRibbons(slashRibbons),
+                Is.GreaterThan(0),
+                "Chain Jab II should keep the melee ribbon feedback alive during combo escalation.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "duelist_chain_jab_2");
             timeline.Add($"[T+020] Duelist Alpha.Space(ActionContext) -> Chain Jab II wins once Stage1 tag is live | {duelistFocusTarget} opened | HP {dummyHealthBeforeCombo2:0}->{dummyHealthAfterCombo2:0}");
 
@@ -553,6 +578,10 @@ namespace Ludots.Tests.GAS.Production
                 dummyHealthAfterBreaker,
                 Is.LessThan(dummyHealthBeforeBreaker),
                 $"{BuildInputActionDiagnostics(engine, "ActionAttack")} || {BuildAbilityDiagnostics(engine, "Duelist Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            Assert.That(
+                CountSlashRibbons(slashRibbons),
+                Is.GreaterThan(0),
+                "Opening Breaker should emit its heavier slash ribbon cue when the opened finisher wins.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "duelist_opening_breaker");
             timeline.Add($"[T+021] Duelist Alpha.Space(ActionContext) -> Opening Breaker spends the opened window as the top-scored finisher | HP {dummyHealthBeforeBreaker:0}->{dummyHealthAfterBreaker:0}");
 
@@ -615,6 +644,10 @@ namespace Ludots.Tests.GAS.Production
                 dummyHealthAfterExplicitStage3,
                 Is.LessThan(dummyHealthBeforeExplicitStage3),
                 $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Duelist Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            Assert.That(
+                CountSlashRibbons(slashRibbons),
+                Is.GreaterThan(0),
+                "Explicit form-routed finisher should still read with slash ribbon feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "duelist_chain_finish");
             timeline.Add($"[T+022] Duelist Alpha.Q smart-cast form routing proves Chain Jab I -> II -> Finish on {duelistFocusTarget} | HP {dummyHealthBeforeExplicitStage1:0}->{dummyHealthAfterExplicitStage3:0}");
 
@@ -638,6 +671,10 @@ namespace Ludots.Tests.GAS.Production
                 sweepHitCount,
                 Is.GreaterThanOrEqualTo(2),
                 $"{BuildInputActionDiagnostics(engine, "SkillE")} || {BuildAbilityDiagnostics(engine, "Duelist Alpha")} || {BuildSelectionStateDiagnostics(engine)}");
+            Assert.That(
+                CountSlashRibbons(slashRibbons),
+                Is.GreaterThan(0),
+                "Crowd Sweep should emit a wide slash ribbon so the cleave footprint reads from the player camera.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "duelist_crowd_sweep");
             timeline.Add($"[T+023] Duelist Alpha.E(Crowd Sweep) cleaves the D/E/F cluster from melee follow-through | damaged_targets={sweepHitCount}");
 
@@ -1390,6 +1427,9 @@ namespace Ludots.Tests.GAS.Production
             AddEntityStateIfPresent(engine.World, states, "Guided Laser");
             AddEntityStateIfPresent(engine.World, states, "Barrier Segment");
 
+            var slashRibbons = engine.GetService(CoreServiceKeys.SlashRibbonBuffer);
+            var debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
+
             snapshots.Add(new AcceptanceSnapshot(
                 Step: step,
                 ActiveModeId: GetActiveModeId(engine),
@@ -1410,6 +1450,8 @@ namespace Ludots.Tests.GAS.Production
                 },
                 PrimitiveCount: CountPrimitiveMarkers(primitives),
                 WorldTextCount: CountWorldHudItems(worldHud, WorldHudItemKind.Text),
+                SlashRibbonCount: slashRibbons == null ? 0 : CountSlashRibbons(slashRibbons),
+                DebugDrawCount: debugDraw == null ? 0 : CountDebugDrawCommands(debugDraw),
                 Entities: states));
         }
 
@@ -1444,6 +1486,8 @@ namespace Ludots.Tests.GAS.Production
                      overlay_counts = snapshot.OverlayCounts,
                      primitive_count = snapshot.PrimitiveCount,
                      world_text_count = snapshot.WorldTextCount,
+                     slash_ribbon_count = snapshot.SlashRibbonCount,
+                     debug_draw_count = snapshot.DebugDrawCount,
                      entities = snapshot.Entities.Select(entity => new
                      {
                          name = entity.Name,
@@ -1488,6 +1532,8 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final_selection_ring_count: {finalSnapshot.OverlayCounts["ring"]}");
             sb.AppendLine($"- final_feedback_primitives: {finalSnapshot.PrimitiveCount}");
             sb.AppendLine($"- final_feedback_world_text: {finalSnapshot.WorldTextCount}");
+            sb.AppendLine($"- final_feedback_slash_ribbons: {finalSnapshot.SlashRibbonCount}");
+            sb.AppendLine($"- final_feedback_debug_draw: {finalSnapshot.DebugDrawCount}");
             sb.AppendLine();
             sb.AppendLine("## Summary Stats");
             sb.AppendLine($"- total_actions: {timeline.Count}");
@@ -1568,7 +1614,7 @@ namespace Ludots.Tests.GAS.Production
   <text x="72" y="104" fill="#f7d36d" font-size="34" font-family="Consolas, monospace">Champion Sandbox | {{EscapeSvg(snapshot.Step)}}</text>
   <text x="72" y="148" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Selected: {{EscapeSvg(snapshot.SelectedEntity)}} | Mode: {{EscapeSvg(snapshot.ActiveModeId)}}</text>
   <text x="72" y="200" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Camera: target=({{snapshot.Camera.TargetXCm:0}}, {{snapshot.Camera.TargetYCm:0}}) distance={{snapshot.Camera.DistanceCm:0}} pitch={{snapshot.Camera.Pitch:0}} fov={{snapshot.Camera.FovYDeg:0}}</text>
-  <text x="72" y="252" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Overlay C/Cn/L/R = {{snapshot.OverlayCounts["circle"]}}/{{snapshot.OverlayCounts["cone"]}}/{{snapshot.OverlayCounts["line"]}}/{{snapshot.OverlayCounts["ring"]}} | feedback = {{snapshot.PrimitiveCount}} / {{snapshot.WorldTextCount}}</text>
+  <text x="72" y="252" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Overlay C/Cn/L/R = {{snapshot.OverlayCounts["circle"]}}/{{snapshot.OverlayCounts["cone"]}}/{{snapshot.OverlayCounts["line"]}}/{{snapshot.OverlayCounts["ring"]}} | feedback = {{snapshot.PrimitiveCount}} / {{snapshot.WorldTextCount}} / {{snapshot.SlashRibbonCount}} / {{snapshot.DebugDrawCount}}</text>
   <text x="72" y="324" fill="#ffffff" font-size="22" font-family="Consolas, monospace">Panel</text>
   <text x="72" y="364" fill="#dde8f1" font-size="18" font-family="Consolas, monospace">{{EscapeSvg(panelText)}}</text>
   <text x="72" y="452" fill="#ffffff" font-size="22" font-family="Consolas, monospace">Tracked HP</text>
@@ -1594,7 +1640,7 @@ namespace Ludots.Tests.GAS.Production
                 lines.Add($"""  <rect x="40" y="{y - 36}" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />""");
                 lines.Add($"""  <text x="72" y="{y}" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">{EscapeSvg($"{i + 1:000} {snapshot.Step}")}</text>""");
                 lines.Add($"""  <text x="540" y="{y}" fill="#ffffff" font-size="20" font-family="Consolas, monospace">{EscapeSvg($"{snapshot.SelectedEntity} | {snapshot.ActiveModeId}")}</text>""");
-                lines.Add($"""  <text x="72" y="{y + 28}" fill="#bccdde" font-size="18" font-family="Consolas, monospace">{EscapeSvg($"overlays={snapshot.OverlayCounts["circle"]}/{snapshot.OverlayCounts["cone"]}/{snapshot.OverlayCounts["line"]}/{snapshot.OverlayCounts["ring"]} | feedback={snapshot.PrimitiveCount}/{snapshot.WorldTextCount}")}</text>""");
+                lines.Add($"""  <text x="72" y="{y + 28}" fill="#bccdde" font-size="18" font-family="Consolas, monospace">{EscapeSvg($"overlays={snapshot.OverlayCounts["circle"]}/{snapshot.OverlayCounts["cone"]}/{snapshot.OverlayCounts["line"]}/{snapshot.OverlayCounts["ring"]} | feedback={snapshot.PrimitiveCount}/{snapshot.WorldTextCount}/{snapshot.SlashRibbonCount}/{snapshot.DebugDrawCount}")}</text>""");
                 y += 96;
             }
 
@@ -1844,6 +1890,16 @@ namespace Ludots.Tests.GAS.Production
         private static int CountPrimitiveMarkers(PrimitiveDrawBuffer primitives)
         {
             return primitives.GetSpan().Length;
+        }
+
+        private static int CountSlashRibbons(SlashRibbonBuffer slashRibbons)
+        {
+            return slashRibbons.Count;
+        }
+
+        private static int CountDebugDrawCommands(DebugDrawCommandBuffer debugDraw)
+        {
+            return debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count;
         }
 
         private static int CountWorldHudItems(WorldHudBatchBuffer worldHud, WorldHudItemKind kind)
@@ -2609,9 +2665,15 @@ namespace Ludots.Tests.GAS.Production
             return $"overlays=count:{overlays.Count},circle:{CountOverlays(overlays, GroundOverlayShape.Circle)},cone:{CountOverlays(overlays, GroundOverlayShape.Cone)},line:{CountOverlays(overlays, GroundOverlayShape.Line)},ring:{CountOverlays(overlays, GroundOverlayShape.Ring)}";
         }
 
-        private static string BuildFeedbackDiagnostics(PrimitiveDrawBuffer primitives, WorldHudBatchBuffer worldHud)
+        private static string BuildFeedbackDiagnostics(GameEngine engine, PrimitiveDrawBuffer primitives, WorldHudBatchBuffer worldHud)
         {
-            return $"feedback=primitives:{CountPrimitiveMarkers(primitives)},worldText:{CountWorldHudItems(worldHud, WorldHudItemKind.Text)}";
+            int slashCount = engine.GetService(CoreServiceKeys.SlashRibbonBuffer) is { } slashRibbons
+                ? CountSlashRibbons(slashRibbons)
+                : 0;
+            int debugDrawCount = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer) is { } debugDraw
+                ? CountDebugDrawCommands(debugDraw)
+                : 0;
+            return $"feedback=primitives:{CountPrimitiveMarkers(primitives)},worldText:{CountWorldHudItems(worldHud, WorldHudItemKind.Text)},slash:{slashCount},debug:{debugDrawCount}";
         }
 
         private static string BuildContextScoredDiagnostics(GameEngine engine, string actorName, string hoveredName)
@@ -2858,6 +2920,8 @@ namespace Ludots.Tests.GAS.Production
             IReadOnlyDictionary<string, int> OverlayCounts,
             int PrimitiveCount,
             int WorldTextCount,
+            int SlashRibbonCount,
+            int DebugDrawCount,
             IReadOnlyList<EntityState> Entities);
 
         private sealed record CameraSnapshot(

@@ -101,6 +101,49 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
+        public void QueryPolylineCapsule_FindsEntitiesAlongBentSweep_AndSortsByPathDistance()
+        {
+            var world = World.Create();
+            try
+            {
+                var coords = new SpatialCoordinateConverter(gridCellSizeCm: 100);
+                var grid = new GridSpatialPartitionWorld(cellSize: 1);
+                var spatial = new SpatialQueryService(new GridSpatialPartitionBackend(grid, coords));
+                spatial.SetPositionProvider(e =>
+                {
+                    ref var pos = ref world.Get<WorldPositionCm>(e);
+                    return pos.Value.ToWorldCmInt2();
+                });
+
+                var earlyHit = world.Create(WorldPositionCm.FromCm(120, 20));
+                var lateHit = world.Create(WorldPositionCm.FromCm(205, 150));
+                var miss = world.Create(WorldPositionCm.FromCm(60, 250));
+
+                grid.Add(earlyHit, new IntRect(1, 0, 2, 1));
+                grid.Add(lateHit, new IntRect(2, 1, 3, 2));
+                grid.Add(miss, new IntRect(0, 2, 1, 3));
+
+                Span<Entity> buffer = stackalloc Entity[32];
+                Span<WorldCmInt2> points = stackalloc WorldCmInt2[]
+                {
+                    new WorldCmInt2(0, 0),
+                    new WorldCmInt2(200, 0),
+                    new WorldCmInt2(200, 200)
+                };
+
+                var r = spatial.QueryPolylineCapsule(points, halfWidthCm: 40, buffer);
+
+                That(r.Count, Is.EqualTo(2));
+                That(buffer[0], Is.EqualTo(earlyHit));
+                That(buffer[1], Is.EqualTo(lateHit));
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
+        [Test]
         public void QueryHexRange_FindsEntitiesWithinHexRadius()
         {
             var world = World.Create();

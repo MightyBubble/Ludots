@@ -20,6 +20,9 @@ namespace Ludots.Core.Spatial
         /// <summary>Line / capsule query from origin along direction with half-width.</summary>
         SpatialQueryResult QueryLine(WorldCmInt2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer);
 
+        /// <summary>Continuous capsule sweep over a polyline path. Results are ordered by accumulated path distance.</summary>
+        SpatialQueryResult QueryPolylineCapsule(ReadOnlySpan<WorldCmInt2> points, int halfWidthCm, Span<Entity> buffer);
+
         /// <summary>Query all entities within hex distance &lt;= <paramref name="hexRadius"/> from center.</summary>
         SpatialQueryResult QueryHexRange(HexCoordinates center, int hexRadius, Span<Entity> buffer);
 

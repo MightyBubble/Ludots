@@ -74,7 +74,7 @@ namespace Ludots.Core.Presentation.Performers
 
         // ── Static default values (used when no Binding or Override exists) ──
 
-        /// <summary>Mesh asset ID (Marker3D) or GroundOverlayShape ordinal (GroundOverlay).</summary>
+        /// <summary>Mesh asset ID (Marker3D) or shape ordinal (GroundOverlay / SlashRibbon).</summary>
         public int MeshOrShapeId;
 
         /// <summary>Default color (RGBA).</summary>

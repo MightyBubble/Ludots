@@ -267,6 +267,8 @@ namespace Ludots.Tests.GAS
                 return default;
             }
 
+            public SpatialQueryResult QueryPolylineCapsule(ReadOnlySpan<WorldCmInt2> points, int halfWidthCm, Span<Entity> buffer) => default;
+
             public SpatialQueryResult QueryHexRange(Ludots.Core.Map.Hex.HexCoordinates center, int hexRadius, Span<Entity> buffer) => default;
 
             public SpatialQueryResult QueryHexRing(Ludots.Core.Map.Hex.HexCoordinates center, int hexRadius, Span<Entity> buffer) => default;
