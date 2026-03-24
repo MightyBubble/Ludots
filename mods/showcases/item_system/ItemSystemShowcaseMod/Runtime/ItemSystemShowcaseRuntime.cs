@@ -1164,7 +1164,7 @@ internal sealed class ItemSystemShowcaseRuntime
     private ItemSystemShowcaseBoardModel BuildSlotBoard(GameEngine engine, Entity container, string title, string accent)
     {
         ItemLayoutDefinition layout = LayoutDef(engine, container);
-        int columns = Math.Min(4, Math.Max(1, layout.NamedSlots.Length));
+        int columns = Math.Min(3, Math.Max(1, layout.NamedSlots.Length));
         int rowsCount = (layout.NamedSlots.Length + columns - 1) / columns;
         ItemSystemShowcaseBoardCellModel[][] rows = new ItemSystemShowcaseBoardCellModel[rowsCount][];
         for (int row = 0; row < rowsCount; row++)
@@ -1189,7 +1189,7 @@ internal sealed class ItemSystemShowcaseRuntime
                 Entity item = SlotItem(engine, container, slot.Id);
                 rows[row][col] = new ItemSystemShowcaseBoardCellModel(
                     PrimaryText: slot.Label,
-                    SecondaryText: item == Entity.Null ? "(empty)" : ShortLabel(engine, item),
+                    SecondaryText: item == Entity.Null ? "(empty)" : SlotLabel(engine, item),
                     FillColor: item == Entity.Null ? "#13202D" : ColorForItem(engine, item),
                     BorderColor: _selectedItem == item && item != Entity.Null ? "#F0C36B" : "#3D5A72",
                     IsSelected: _selectedItem == item && item != Entity.Null,
@@ -1607,9 +1607,30 @@ internal sealed class ItemSystemShowcaseRuntime
     private string ShortLabel(GameEngine engine, Entity item)
     {
         string label = ItemLabel(engine, item);
+        return CompactBoardLabel(label, 7);
+    }
+
+    private string SlotLabel(GameEngine engine, Entity item)
+    {
+        string label = ItemLabel(engine, item);
+        return CompactBoardLabel(label, 10);
+    }
+
+    private static string CompactBoardLabel(string label, int maxLength)
+    {
         string[] parts = label.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        string token = parts.Length == 0 ? label : parts[0];
-        return token.Length <= 7 ? token : token[..7];
+        if (parts.Length == 0)
+        {
+            return label.Length <= maxLength ? label : label[..maxLength];
+        }
+
+        string token = parts[0];
+        if (token.Length <= 2 && parts.Length > 1)
+        {
+            token = parts[1];
+        }
+
+        return token.Length <= maxLength ? token : token[..maxLength];
     }
 
     private string CompactSuffix(GameEngine engine, Entity item)

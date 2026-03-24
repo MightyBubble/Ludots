@@ -616,7 +616,7 @@ internal sealed class ItemSystemShowcasePanelController
         float width = board.Kind switch
         {
             ItemSystemShowcaseBoardKind.Grid => 418f,
-            ItemSystemShowcaseBoardKind.Slots => 430f,
+            ItemSystemShowcaseBoardKind.Slots => 440f,
             ItemSystemShowcaseBoardKind.Recipes => 228f,
             _ => 320f
         };
@@ -644,7 +644,7 @@ internal sealed class ItemSystemShowcasePanelController
                 Ui.Text(" ")
                     .FontSize(10f)
                     .Color("#0E1823"))
-                .Width(board.Kind == ItemSystemShowcaseBoardKind.Recipes ? 196f : board.Kind == ItemSystemShowcaseBoardKind.Slots ? 96f : 60f)
+                .Width(board.Kind == ItemSystemShowcaseBoardKind.Recipes ? 196f : board.Kind == ItemSystemShowcaseBoardKind.Slots ? 112f : 60f)
                 .Height(board.Kind == ItemSystemShowcaseBoardKind.Recipes ? 68f : 60f)
                 .Padding(6f)
                 .Background("#0E1823")
@@ -654,7 +654,7 @@ internal sealed class ItemSystemShowcasePanelController
         string label = string.IsNullOrWhiteSpace(cell.SecondaryText)
             ? cell.PrimaryText
             : $"{cell.PrimaryText}\n{cell.SecondaryText}";
-        float width = board.Kind == ItemSystemShowcaseBoardKind.Recipes ? 196f : board.Kind == ItemSystemShowcaseBoardKind.Slots ? 96f : 60f;
+        float width = board.Kind == ItemSystemShowcaseBoardKind.Recipes ? 196f : board.Kind == ItemSystemShowcaseBoardKind.Slots ? 112f : 60f;
         float height = board.Kind == ItemSystemShowcaseBoardKind.Recipes ? 68f : 60f;
         string border = cell.IsSelected ? "#F0C36B" : cell.BorderColor;
 
