@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.Selection;
@@ -46,9 +46,11 @@ namespace RtsDemoMod.Systems
                 return;
             }
 
+            EnsureSelectionViewBinding();
+
             Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(_engine.World, _engine.GlobalContext, out Entity current)
                 ? current
-                : Entity.Null;
+                : FindFallbackTarget();
             if (!IsPanelTarget(selected))
             {
                 if (_handle.IsValid)
@@ -106,6 +108,87 @@ namespace RtsDemoMod.Systems
         private bool IsPanelTarget(Entity entity)
         {
             return _engine.World.IsAlive(entity) && _engine.World.Has<AbilityStateBuffer>(entity);
+        }
+
+        private void EnsureSelectionViewBinding()
+        {
+            SelectionRuntime? selection = _engine.GetService(CoreServiceKeys.SelectionRuntime);
+            Entity owner = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (selection == null || !_engine.World.IsAlive(owner))
+            {
+                return;
+            }
+
+            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.Ambient);
+            _engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
+            _engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+        }
+
+        private Entity FindFallbackTarget()
+        {
+            Entity result = FindFirstByNameContains("Peasant");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstByNameContains("ConYard");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstByNameContains("Construction Yard");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstByNameContains("Gateway");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstByNameContains("Drone");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            return FindFirstAbilityTarget();
+        }
+
+        private Entity FindFirstByNameContains(string nameToken)
+        {
+            Entity result = Entity.Null;
+            var query = new QueryDescription().WithAll<Name>();
+            _engine.World.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (result == Entity.Null &&
+                    !string.IsNullOrWhiteSpace(name.Value) &&
+                    name.Value.IndexOf(nameToken, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    result = entity;
+                }
+            });
+
+            return result;
+        }
+
+        private Entity FindFirstAbilityTarget()
+        {
+            Entity result = Entity.Null;
+            var query = new QueryDescription().WithAll<Name, AbilityStateBuffer>();
+            _engine.World.Query(in query, (Entity entity, ref Name _, ref AbilityStateBuffer _) =>
+            {
+                if (result == Entity.Null)
+                {
+                    result = entity;
+                }
+            });
+
+            return result;
         }
 
         private void ClosePanel(IEntityCommandPanelService service)
