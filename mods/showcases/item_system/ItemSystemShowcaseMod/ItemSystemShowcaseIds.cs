@@ -8,6 +8,7 @@ internal static class ItemSystemShowcaseIds
     public const string LoadoutGarageMapId = "item_system_showcase_loadout_garage";
     public const string WeaponBenchMapId = "item_system_showcase_weapon_bench";
     public const string RaidLoopMapId = "item_system_showcase_raid_loop";
+    public const string ForgeSocketLabMapId = "item_system_showcase_forge_socket_lab";
     public const string InstalledKey = "ItemSystemShowcaseMod.Installed";
     public const string RuntimeKey = "ItemSystemShowcaseMod.Runtime";
 
@@ -16,7 +17,8 @@ internal static class ItemSystemShowcaseIds
         return string.Equals(mapId, HubMapId, System.StringComparison.OrdinalIgnoreCase) ||
                string.Equals(mapId, LoadoutGarageMapId, System.StringComparison.OrdinalIgnoreCase) ||
                string.Equals(mapId, WeaponBenchMapId, System.StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(mapId, RaidLoopMapId, System.StringComparison.OrdinalIgnoreCase);
+               string.Equals(mapId, RaidLoopMapId, System.StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(mapId, ForgeSocketLabMapId, System.StringComparison.OrdinalIgnoreCase);
     }
 
     public static ItemSystemShowcaseSceneKind GetSceneKind(string? mapId)
@@ -34,6 +36,11 @@ internal static class ItemSystemShowcaseIds
         if (string.Equals(mapId, RaidLoopMapId, System.StringComparison.OrdinalIgnoreCase))
         {
             return ItemSystemShowcaseSceneKind.RaidLoop;
+        }
+
+        if (string.Equals(mapId, ForgeSocketLabMapId, System.StringComparison.OrdinalIgnoreCase))
+        {
+            return ItemSystemShowcaseSceneKind.ForgeSocketLab;
         }
 
         return ItemSystemShowcaseSceneKind.Hub;

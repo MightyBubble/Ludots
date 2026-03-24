@@ -2,13 +2,16 @@ param(
     [string]$ScreenshotPath,
     [int]$ScreenshotFrame = 120,
     [string]$DiagnosticPath = "",
-    [int]$KillAfterSeconds = 12
+    [int]$KillAfterSeconds = 12,
+    [string]$StartupMapId = ""
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = "D:\001_AI\LudotsDev\Ludots-item-worktree"
 $launcher = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\bin\Release\net8.0\Ludots.Launcher.Cli.exe"
+$captureRoot = Join-Path $repoRoot "artifacts\acceptance\item-system-showcase\capture-runtime"
+$overrideModRoot = Join-Path $captureRoot "startup-map-override"
 
 if ([string]::IsNullOrWhiteSpace($ScreenshotPath)) {
     throw "ScreenshotPath is required."
@@ -29,6 +32,39 @@ if (-not [string]::IsNullOrWhiteSpace($DiagnosticPath)) {
     New-Item -ItemType Directory -Path ([System.IO.Path]::GetDirectoryName($DiagnosticPath)) -Force | Out-Null
 }
 
+$selectors = New-Object System.Collections.Generic.List[string]
+$selectors.Add("mod:ItemSystemShowcaseMod")
+
+if (-not [string]::IsNullOrWhiteSpace($StartupMapId)) {
+    if (Test-Path $overrideModRoot) {
+        Remove-Item $overrideModRoot -Recurse -Force
+    }
+
+    New-Item -ItemType Directory -Path (Join-Path $overrideModRoot "assets") -Force | Out-Null
+
+    @"
+{
+  "name": "ItemSystemShowcaseCaptureOverride",
+  "version": "1.0.0",
+  "description": "Resource-only startup map override used by acceptance capture scripts.",
+  "main": "",
+  "priority": 1000,
+  "dependencies": {
+    "ItemSystemShowcaseMod": "*"
+  },
+  "tags": ["acceptance", "capture", "item-showcase"]
+}
+"@ | Set-Content (Join-Path $overrideModRoot "mod.json") -Encoding utf8
+
+    @"
+{
+  "startupMapId": "$StartupMapId"
+}
+"@ | Set-Content (Join-Path $overrideModRoot "assets\game.json") -Encoding utf8
+
+    $selectors.Add("path:$overrideModRoot")
+}
+
 $previousScreenshotWriteUtc = if (Test-Path $ScreenshotPath) { (Get-Item $ScreenshotPath).LastWriteTimeUtc } else { [DateTime]::MinValue }
 $previousDiagnosticWriteUtc = if (-not [string]::IsNullOrWhiteSpace($DiagnosticPath) -and (Test-Path $DiagnosticPath)) {
     (Get-Item $DiagnosticPath).LastWriteTimeUtc
@@ -38,8 +74,9 @@ else {
 }
 
 $startedAt = Get-Date
+$launchArgs = @("launch") + $selectors + @("--adapter", "raylib", "--build", "never")
 $launcherProcess = Start-Process -FilePath $launcher `
-    -ArgumentList @("launch", "mod:ItemSystemShowcaseMod", "--adapter", "raylib", "--build", "never") `
+    -ArgumentList $launchArgs `
     -WorkingDirectory $repoRoot `
     -PassThru
 
@@ -76,4 +113,8 @@ finally {
     Get-Process dotnet -ErrorAction SilentlyContinue |
         Where-Object { $_.StartTime -ge $startedAt.AddSeconds(-1) -and $_.MainWindowTitle -eq "Ludots Engine" } |
         ForEach-Object { & taskkill /PID $_.Id /T /F 2>$null | Out-Null }
+
+    if (Test-Path $overrideModRoot) {
+        Remove-Item $overrideModRoot -Recurse -Force
+    }
 }

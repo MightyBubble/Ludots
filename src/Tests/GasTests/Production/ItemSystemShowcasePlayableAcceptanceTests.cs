@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Numerics;
@@ -37,7 +36,7 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
     private const string LoadoutMapId = "item_system_showcase_loadout_garage";
     private const string WeaponMapId = "item_system_showcase_weapon_bench";
     private const string RaidMapId = "item_system_showcase_raid_loop";
-    private const string RuntimeKey = "ItemSystemShowcaseMod.Runtime";
+    private const string ForgeMapId = "item_system_showcase_forge_socket_lab";
     private static readonly QueryDescription ContainerQuery = new QueryDescription().WithAll<ItemContainerCm>();
     private static readonly QueryDescription MapEntityQuery = new QueryDescription().WithAll<MapEntity>();
     private static readonly QueryDescription NameQuery = new QueryDescription().WithAll<Name>();
@@ -71,13 +70,12 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         var definitions = engine.GetService(CoreServiceKeys.ItemDefinitionRegistry)
             ?? throw new InvalidOperationException("ItemDefinitionRegistry missing.");
 
-        object runtime = GetRuntime(engine);
-
         AssertUiContains(uiRoot, "Ludots Item Demo Pack");
         AssertUiContains(uiRoot, "Open Loadout Garage");
         AssertUiContains(uiRoot, "Open Weapon Bench");
         AssertUiContains(uiRoot, "Open Raid Loop");
-        timeline.Add("[T+001] Hub map loaded as a focused demo selector with three short item-system routes.");
+        AssertUiContains(uiRoot, "Open Forge Lab");
+        timeline.Add("[T+001] Hub map loaded as a focused demo selector with four short item-system routes.");
         snapshots.Add(BuildSnapshot(engine, uiRoot, "hub_loaded"));
 
         ClickButton(uiRoot, "Open Loadout Garage");
@@ -94,20 +92,22 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         snapshots.Add(BuildSnapshot(engine, uiRoot, "loadout_room_loaded"));
 
         float moveSpeedBeforeBootSwap = ReadAttribute(engine.World, hero, "MoveSpeed");
-        InvokeRuntime(runtime, "ToggleBoots", engine);
+        ClickButton(uiRoot, "Toggle Boots");
         Tick(engine, 6, frameTimesMs);
         float moveSpeedWithoutBoots = ReadAttribute(engine.World, hero, "MoveSpeed");
         Assert.That(moveSpeedWithoutBoots, Is.LessThan(moveSpeedBeforeBootSwap));
         timeline.Add($"[T+003] Boots came off in Loadout Garage. MoveSpeed {moveSpeedBeforeBootSwap:0.0} -> {moveSpeedWithoutBoots:0.0}.");
         snapshots.Add(BuildSnapshot(engine, uiRoot, "loadout_boots_off"));
 
-        InvokeRuntime(runtime, "ToggleBoots", engine);
+        ClickButton(uiRoot, "Toggle Boots");
         Tick(engine, 6, frameTimesMs);
         float moveSpeedReequipped = ReadAttribute(engine.World, hero, "MoveSpeed");
         Assert.That(moveSpeedReequipped, Is.GreaterThan(moveSpeedWithoutBoots));
 
         float attackBeforeRing = ReadAttribute(engine.World, hero, "AttackDamage");
-        InvokeRuntime(runtime, "EquipRing", engine);
+        ClickBoardCell(uiRoot, "Stash Grid", "Duelist");
+        Tick(engine, 2, frameTimesMs);
+        ClickBoardCell(uiRoot, "Loadout Slots", "Ring R");
         Tick(engine, 6, frameTimesMs);
         float attackAfterRing = ReadAttribute(engine.World, hero, "AttackDamage");
         Assert.That(attackAfterRing, Is.GreaterThan(attackBeforeRing));
@@ -122,14 +122,14 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
 
         float heroHealthBeforePulse = ReadAttribute(engine.World, hero, "Health");
         float heroShieldBeforePulse = ReadAttribute(engine.World, hero, "Shield");
-        InvokeRuntime(runtime, "CastMythicPulse", engine);
+        ClickButton(uiRoot, "Mythic Pulse");
         Tick(engine, 6, frameTimesMs);
         float heroHealthAfterPulse = ReadAttribute(engine.World, hero, "Health");
         float heroShieldAfterPulse = ReadAttribute(engine.World, hero, "Shield");
         Assert.That(heroHealthAfterPulse, Is.GreaterThanOrEqualTo(heroHealthBeforePulse));
         Assert.That(heroShieldAfterPulse, Is.GreaterThan(heroShieldBeforePulse));
 
-        InvokeRuntime(runtime, "CastSecondWind", engine);
+        ClickButton(uiRoot, "Second Wind");
         Tick(engine, 6, frameTimesMs);
         Assert.That(ReadAttribute(engine.World, hero, "MoveSpeed"), Is.GreaterThanOrEqualTo(moveSpeedReequipped));
         timeline.Add("[T+005] Mythic Pulse and Second Wind resolved from item-granted slots inside the loadout room.");
@@ -149,7 +149,9 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         snapshots.Add(BuildSnapshot(engine, uiRoot, "weapon_room_loaded"));
 
         float armorBeforeGrip = ReadAttribute(engine.World, hero, "Armor");
-        InvokeRuntime(runtime, "AttachGrip", engine);
+        ClickBoardCell(uiRoot, "Bench Backpack", "Vertica");
+        Tick(engine, 2, frameTimesMs);
+        ClickBoardCell(uiRoot, "Weapon Attachments", "Underbarrel");
         Tick(engine, 6, frameTimesMs);
         float armorAfterGrip = ReadAttribute(engine.World, hero, "Armor");
         Assert.That(armorAfterGrip, Is.GreaterThan(armorBeforeGrip));
@@ -159,34 +161,81 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
 
         float dummyHealthBeforeShot = ReadAttribute(engine.World, dummy, "Health");
         int fmjBeforeReload = inventory.CountStackUnits(hero, definitions.GetId("itm_ammo_556"));
-        InvokeRuntime(runtime, "FirePrimary", engine);
+        ClickButton(uiRoot, "Fire Rifle");
         Tick(engine, 6, frameTimesMs);
         float dummyHealthAfterShot = ReadAttribute(engine.World, dummy, "Health");
         Assert.That(dummyHealthAfterShot, Is.LessThan(dummyHealthBeforeShot));
 
-        InvokeRuntime(runtime, "Reload", engine);
+        ClickButton(uiRoot, "Reload");
         Tick(engine, 2, frameTimesMs);
         int fmjAfterReload = inventory.CountStackUnits(hero, definitions.GetId("itm_ammo_556"));
         Assert.That(fmjAfterReload, Is.LessThan(fmjBeforeReload));
         timeline.Add($"[T+008] Rifle fired through GAS and reloaded from shared ammo stacks. Dummy HP {dummyHealthBeforeShot:0.0} -> {dummyHealthAfterShot:0.0}, FMJ {fmjBeforeReload} -> {fmjAfterReload}.");
         snapshots.Add(BuildSnapshot(engine, uiRoot, "weapon_fire_and_reload"));
 
+        ClickButton(uiRoot, "Forge");
+        Tick(engine, 16, frameTimesMs);
+        AssertCurrentMap(engine, ForgeMapId);
+        Assert.That(CountMapEntities(engine.World, WeaponMapId), Is.EqualTo(0), "Weapon Bench entities should be cleaned when leaving the room.");
+        AssertUiContains(uiRoot, "Forge & Socket Lab");
+        AssertUiContains(uiRoot, "Forge Moves");
+        Assert.That(CountEntitiesByName(engine.World, "Loadout Pilot"), Is.EqualTo(1), "Exactly one hero should exist after entering Forge & Socket Lab.");
+        Assert.That(CountEntitiesByName(engine.World, "Target Dummy"), Is.EqualTo(1), "Exactly one dummy should exist after entering Forge & Socket Lab.");
+        hero = FindEntityByName(engine.World, "Loadout Pilot");
+        dummy = FindEntityByName(engine.World, "Target Dummy");
+        timeline.Add("[T+009] Entered Forge & Socket Lab to craft gems and insert them into a socketed amulet.");
+        snapshots.Add(BuildSnapshot(engine, uiRoot, "forge_room_loaded"));
+
+        int crimsonBefore = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.Stash, definitions.GetId("itm_gem_crimson"));
+        float attackBeforeSocket = ReadAttribute(engine.World, hero, "AttackDamage");
+        ClickButton(uiRoot, "Forge Crimson Gem");
+        Tick(engine, 6, frameTimesMs);
+        int crimsonAfterCraft = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.Stash, definitions.GetId("itm_gem_crimson"));
+        Assert.That(crimsonAfterCraft, Is.GreaterThan(crimsonBefore));
+
+        ClickButton(uiRoot, "Crimson");
+        Tick(engine, 2, frameTimesMs);
+        ClickButton(uiRoot, "Alpha");
+        Tick(engine, 6, frameTimesMs);
+        float attackAfterSocket = ReadAttribute(engine.World, hero, "AttackDamage");
+        Assert.That(attackAfterSocket, Is.GreaterThan(attackBeforeSocket));
+
+        int azureBefore = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.Stash, definitions.GetId("itm_gem_azure"));
+        float shieldBeforeSocket = ReadAttribute(engine.World, hero, "Shield");
+        ClickButton(uiRoot, "Forge Azure Gem");
+        Tick(engine, 6, frameTimesMs);
+        int azureAfterCraft = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.Stash, definitions.GetId("itm_gem_azure"));
+        Assert.That(azureAfterCraft, Is.GreaterThan(azureBefore));
+
+        ClickButton(uiRoot, "Azure");
+        Tick(engine, 2, frameTimesMs);
+        ClickButton(uiRoot, "Beta");
+        Tick(engine, 6, frameTimesMs);
+        float shieldAfterSocket = ReadAttribute(engine.World, hero, "Shield");
+        Assert.That(shieldAfterSocket, Is.GreaterThan(shieldBeforeSocket));
+        timeline.Add($"[T+010] Crafted crimson and azure gems, then socketed them into the amulet. AttackDamage {attackBeforeSocket:0.0} -> {attackAfterSocket:0.0}, Shield {shieldBeforeSocket:0.0} -> {shieldAfterSocket:0.0}.");
+        snapshots.Add(BuildSnapshot(engine, uiRoot, "forge_craft_and_socket"));
+
         ClickButton(uiRoot, "Raid");
         Tick(engine, 16, frameTimesMs);
         AssertCurrentMap(engine, RaidMapId);
-        Assert.That(CountMapEntities(engine.World, WeaponMapId), Is.EqualTo(0), "Weapon Bench entities should be cleaned when leaving the room.");
+        Assert.That(CountMapEntities(engine.World, ForgeMapId), Is.EqualTo(0), "Forge & Socket Lab entities should be cleaned when leaving the room.");
         AssertUiContains(uiRoot, "Raid Loop");
         AssertUiContains(uiRoot, "Raid Loop Moves");
         Assert.That(CountEntitiesByName(engine.World, "Loadout Pilot"), Is.EqualTo(1), "Exactly one hero should exist after entering Raid Loop.");
         Assert.That(CountEntitiesByName(engine.World, "Target Dummy"), Is.EqualTo(1), "Exactly one dummy should exist after entering Raid Loop.");
         hero = FindEntityByName(engine.World, "Loadout Pilot");
         dummy = FindEntityByName(engine.World, "Target Dummy");
-        timeline.Add("[T+009] Entered Raid Loop to move loot through stash, secure case, vendor, and backpack.");
+        timeline.Add("[T+011] Entered Raid Loop to move loot through stash, secure case, vendor, and backpack.");
         snapshots.Add(BuildSnapshot(engine, uiRoot, "raid_room_loaded"));
+
+        ClickBoardCell(uiRoot, "Vendor", "Duelist");
+        Tick(engine, 2, frameTimesMs);
+        AssertUiContains(uiRoot, "Vendor inventory is read-only. Use Buy AP Ammo / Sell Artifact buttons.");
 
         int secureArtifactsBefore = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.SecureStorage, definitions.GetId("itm_extraction_artifact"));
         int stashArtifactsBefore = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.Stash, definitions.GetId("itm_extraction_artifact"));
-        InvokeRuntime(runtime, "StoreArtifact", engine);
+        ClickButton(uiRoot, "Move Artifact");
         Tick(engine, 4, frameTimesMs);
         int secureArtifactsAfterStore = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.SecureStorage, definitions.GetId("itm_extraction_artifact"));
         int stashArtifactsAfterStore = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.Stash, definitions.GetId("itm_extraction_artifact"));
@@ -195,7 +244,7 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
 
         int creditsBeforeBuy = inventory.CountStackUnits(hero, definitions.GetId("itm_credit_chip"));
         int apBeforeBuy = inventory.CountStackUnits(hero, definitions.GetId("itm_ammo_556_ap"));
-        InvokeRuntime(runtime, "BuyApAmmo", engine);
+        ClickButton(uiRoot, "Buy AP Ammo");
         Tick(engine, 4, frameTimesMs);
         int creditsAfterBuy = inventory.CountStackUnits(hero, definitions.GetId("itm_credit_chip"));
         int apAfterBuy = inventory.CountStackUnits(hero, definitions.GetId("itm_ammo_556_ap"));
@@ -203,17 +252,17 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         Assert.That(apAfterBuy, Is.GreaterThan(apBeforeBuy));
 
         int creditsBeforeSell = inventory.CountStackUnits(hero, definitions.GetId("itm_credit_chip"));
-        InvokeRuntime(runtime, "SellArtifact", engine);
+        ClickButton(uiRoot, "Sell Artifact");
         Tick(engine, 4, frameTimesMs);
         int creditsAfterSell = inventory.CountStackUnits(hero, definitions.GetId("itm_credit_chip"));
         Assert.That(creditsAfterSell, Is.GreaterThan(creditsBeforeSell));
 
         int backpackFmjBeforeSplit = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.Backpack, definitions.GetId("itm_ammo_556"));
-        InvokeRuntime(runtime, "SplitAmmo", engine);
+        ClickButton(uiRoot, "Split Ammo");
         Tick(engine, 6, frameTimesMs);
         int backpackFmjAfterSplit = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.Backpack, definitions.GetId("itm_ammo_556"));
         Assert.That(backpackFmjAfterSplit, Is.GreaterThanOrEqualTo(backpackFmjBeforeSplit));
-        timeline.Add($"[T+010] Extraction storage, vendor trading, and ammo split flow resolved in the raid room. Credits {creditsBeforeBuy} -> {creditsAfterBuy} -> {creditsAfterSell}.");
+        timeline.Add($"[T+012] Extraction storage, vendor trading, and ammo split flow resolved in the raid room. Credits {creditsBeforeBuy} -> {creditsAfterBuy} -> {creditsAfterSell}.");
         snapshots.Add(BuildSnapshot(engine, uiRoot, "raid_storage_trade_split"));
 
         AssertUiContains(uiRoot, "Bought one AP ammo stack for 20 credits.");
@@ -226,11 +275,47 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         Assert.That(CountMapEntities(engine.World, RaidMapId), Is.EqualTo(0), "Map-scoped showcase entities should be cleaned on unload.");
         Assert.That(FindEntityByNameIfAny(engine.World, "Loadout Pilot"), Is.EqualTo(Entity.Null));
         Assert.That(FindEntityByNameIfAny(engine.World, "Target Dummy"), Is.EqualTo(Entity.Null));
-        timeline.Add("[T+011] Raid room unloaded cleanly. All map-scoped actors, item trees, containers, and UI state were removed.");
+        timeline.Add("[T+013] Raid room unloaded cleanly. All map-scoped actors, item trees, containers, and UI state were removed.");
 
         File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl(snapshots));
         File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, frameTimesMs, outcome, raylibEvidence));
         File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid());
+    }
+
+    [Test]
+    public void ItemSystemShowcase_ForgeRecipeBlockedByFullStash_DoesNotConsumeIngredients()
+    {
+        var frameTimesMs = new List<double>();
+        using var engine = CreateEngine();
+        LoadMap(engine, ForgeMapId, frameTimesMs);
+
+        var uiRoot = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
+            ?? throw new InvalidOperationException("UIRoot missing.");
+        var inventory = engine.GetService(CoreServiceKeys.InventoryRuntimeService)
+            ?? throw new InvalidOperationException("InventoryRuntimeService missing.");
+        var definitions = engine.GetService(CoreServiceKeys.ItemDefinitionRegistry)
+            ?? throw new InvalidOperationException("ItemDefinitionRegistry missing.");
+
+        Entity hero = FindEntityByName(engine.World, "Loadout Pilot");
+        Entity stash = FindActorContainer(engine.World, inventory, hero, ItemContainerPurpose.Stash);
+        FillContainerToCapacity(engine, inventory, stash, definitions.GetId("itm_credit_chip"));
+
+        int creditsBefore = inventory.CountStackUnits(hero, definitions.GetId("itm_credit_chip"));
+        int artifactsBefore = inventory.CountStackUnits(hero, definitions.GetId("itm_extraction_artifact"));
+        int crimsonBefore = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.Stash, definitions.GetId("itm_gem_crimson"));
+
+        ClickButton(uiRoot, "Forge Crimson Gem");
+        Tick(engine, 4, frameTimesMs);
+
+        int creditsAfter = inventory.CountStackUnits(hero, definitions.GetId("itm_credit_chip"));
+        int artifactsAfter = inventory.CountStackUnits(hero, definitions.GetId("itm_extraction_artifact"));
+        int crimsonAfter = CountItemStacksInActorContainers(engine.World, inventory, hero, ItemContainerPurpose.Stash, definitions.GetId("itm_gem_crimson"));
+
+        Assert.That(creditsAfter, Is.EqualTo(creditsBefore));
+        Assert.That(artifactsAfter, Is.EqualTo(artifactsBefore));
+        Assert.That(crimsonAfter, Is.EqualTo(crimsonBefore));
+        AssertUiContains(uiRoot, "Crimson Gem recipe blocked: need one free stash placement for the crafted gem.");
+        Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
     }
 
     private static object BuildSnapshot(GameEngine engine, UIRoot uiRoot, string step)
@@ -289,18 +374,43 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         return total;
     }
 
-    private static object GetRuntime(GameEngine engine)
+    private static Entity FindActorContainer(World world, InventoryRuntimeService inventory, Entity owner, ItemContainerPurpose purpose)
     {
-        return engine.GlobalContext.TryGetValue(RuntimeKey, out object? runtime) && runtime != null
-            ? runtime
-            : throw new InvalidOperationException("Item showcase runtime not found.");
+        Entity found = Entity.Null;
+        world.Query(in ContainerQuery, (Entity container, ref ItemContainerCm data) =>
+        {
+            if (found != Entity.Null ||
+                data.Purpose != purpose ||
+                !inventory.TryResolveOwningActorFromContainer(container, out Entity actor) ||
+                actor != owner)
+            {
+                return;
+            }
+
+            found = container;
+        });
+
+        Assert.That(found, Is.Not.EqualTo(Entity.Null), $"Actor container '{purpose}' should exist.");
+        return found;
     }
 
-    private static void InvokeRuntime(object runtime, string methodName, GameEngine engine)
+    private static void FillContainerToCapacity(GameEngine engine, InventoryRuntimeService inventory, Entity container, int fillerDefinitionId)
     {
-        MethodInfo method = runtime.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public)
-            ?? throw new MissingMethodException(runtime.GetType().FullName, methodName);
-        method.Invoke(runtime, new object[] { engine });
+        while (true)
+        {
+            Entity filler = inventory.CreateItem(fillerDefinitionId, 1);
+            if (inventory.TryAutoPlaceItem(filler, container))
+            {
+                continue;
+            }
+
+            if (engine.World.IsAlive(filler))
+            {
+                engine.World.Destroy(filler);
+            }
+
+            return;
+        }
     }
 
     private static Entity FindEntityByName(World world, string nameValue)
@@ -446,12 +556,66 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         UiScene scene = root.Scene ?? throw new InvalidOperationException("UI scene should be mounted before clicking buttons.");
         UiNode target = FindClickableNodeByLabel(scene.Root, label)
             ?? throw new InvalidOperationException($"Clickable node '{label}' was not found.");
+        ClickNode(scene, target, label);
+    }
+
+    private static void ClickBoardCell(UIRoot root, string boardTitle, string label)
+    {
+        UiScene scene = root.Scene ?? throw new InvalidOperationException("UI scene should be mounted before clicking boards.");
+        UiNode scope = FindBoardScope(scene.Root, boardTitle, label)
+            ?? throw new InvalidOperationException($"Board '{boardTitle}' with clickable label '{label}' was not found.");
+        UiNode target = FindClickableNodeByLabel(scope, label)
+            ?? throw new InvalidOperationException($"Clickable node '{label}' was not found inside board '{boardTitle}'.");
+        ClickNode(scene, target, $"{boardTitle}:{label}");
+    }
+
+    private static void ClickNode(UiScene scene, UiNode target, string label)
+    {
         UiActionHandle handle = target.ActionHandles.FirstOrDefault();
         Assert.That(handle.IsValid, Is.True, $"Clickable node '{label}' should expose an action handle.");
         bool dispatched = scene.Dispatcher.Dispatch(
             handle,
             new UiActionContext(scene, new UiPointerEvent(UiPointerEventType.Up, 0, 0f, 0f, target.Id), target));
         Assert.That(dispatched, Is.True, $"Button '{label}' should dispatch.");
+    }
+
+    private static UiNode? FindBoardScope(UiNode? root, string boardTitle, string label)
+    {
+        var titleNodes = new List<UiNode>();
+        CollectNodesByExactText(root, boardTitle, titleNodes);
+        for (int i = 0; i < titleNodes.Count; i++)
+        {
+            UiNode? current = titleNodes[i].Parent;
+            for (int depth = 0; current != null && depth < 5; depth++)
+            {
+                if (FindClickableNodeByLabel(current, label) != null)
+                {
+                    return current;
+                }
+
+                current = current.Parent;
+            }
+        }
+
+        return null;
+    }
+
+    private static void CollectNodesByExactText(UiNode? root, string text, List<UiNode> output)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        if (string.Equals(root.TextContent?.Trim(), text, StringComparison.Ordinal))
+        {
+            output.Add(root);
+        }
+
+        for (int i = 0; i < root.Children.Count; i++)
+        {
+            CollectNodesByExactText(root.Children[i], text, output);
+        }
     }
 
     private static UiNode? FindClickableNodeByLabel(UiNode? root, string label)
@@ -461,7 +625,8 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
             return null;
         }
 
-        if (string.Equals(root.TextContent?.Trim(), label, StringComparison.Ordinal))
+        string? text = root.TextContent?.Trim();
+        if (string.Equals(text, label, StringComparison.Ordinal))
         {
             UiNode? clickable = root;
             while (clickable != null && clickable.ActionHandles.Count == 0)
@@ -481,6 +646,20 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
             if (match != null)
             {
                 return match;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(text) && text.Contains(label, StringComparison.Ordinal))
+        {
+            UiNode? clickable = root;
+            while (clickable != null && clickable.ActionHandles.Count == 0)
+            {
+                clickable = clickable.Parent;
+            }
+
+            if (clickable != null)
+            {
+                return clickable;
             }
         }
 
@@ -544,12 +723,12 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         sb.AppendLine("# Scenario Card: item-system-showcase");
         sb.AppendLine();
         sb.AppendLine("## Intent");
-        sb.AppendLine("- Player goal: move through a compact demo pack that teaches one unified item/equip/backpack architecture through three short rooms instead of one debug wall.");
-        sb.AppendLine("- Gameplay domain: loadout tuning, modular rifle bench work, and extraction-facing stash/secure/vendor loops built on the same ECS + GAS runtime.");
+        sb.AppendLine("- Player goal: move through a compact demo pack that teaches one unified item/equip/backpack architecture through four short rooms instead of one debug wall.");
+        sb.AppendLine("- Gameplay domain: loadout tuning, modular rifle bench work, socket crafting, and extraction-facing stash/secure/vendor loops built on the same ECS + GAS runtime.");
         sb.AppendLine();
         sb.AppendLine("## Determinism Inputs");
         sb.AppendLine("- Seed: none");
-        sb.AppendLine($"- Route: `{HubMapId}` -> `{LoadoutMapId}` -> `{WeaponMapId}` -> `{RaidMapId}`");
+        sb.AppendLine($"- Route: `{HubMapId}` -> `{LoadoutMapId}` -> `{WeaponMapId}` -> `{ForgeMapId}` -> `{RaidMapId}`");
         sb.AppendLine($"- Mods: `{string.Join("`, `", AcceptanceMods)}`");
         sb.AppendLine("- Clock profile: fixed `1/60s`, headless `GameEngine.Tick()` loop.");
         sb.AppendLine("- Runtime path: real config pipeline, real item registries, real ECS containers, real GAS effect/ability systems, and the production ReactivePage HUD.");
@@ -591,7 +770,7 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         sb.AppendLine($"- dummy health: {outcome.DummyHealth:0.0}");
         sb.AppendLine($"- median tick: {median:F3}ms");
         sb.AppendLine($"- max tick: {max:F3}ms");
-        sb.AppendLine("- verdict: one architecture now reads as a player-facing demo pack, while still covering equipment, mounted containers, stash routing, ammo logistics, trading, and item-driven GAS grants without any fallback runtime path.");
+        sb.AppendLine("- verdict: one architecture now reads as a player-facing demo pack, while still covering equipment, mounted containers, stash routing, gem sockets, crafting, ammo logistics, trading, and item-driven GAS grants without any fallback runtime path.");
         sb.AppendLine();
         sb.AppendLine("## Cross-Layer Note");
         sb.AppendLine("- debt id: `launcher-env-propagation`");
@@ -604,18 +783,21 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
     {
         return """
 flowchart TD
-    A["Load item_system_showcase_hub"] --> B["Read the three-room demo pack and choose a route"]
+    A["Load item_system_showcase_hub"] --> B["Read the four-room demo pack and choose a route"]
     B --> C["Enter item_system_showcase_loadout_garage"]
     C --> D["Toggle boots and equip ring to feel build changes"]
     D --> E["Cast mythic + second wind from item-granted slots"]
     E --> F["Enter item_system_showcase_weapon_bench"]
     F --> G["Attach grip, fire rifle, and reload from shared ammo"]
-    G --> H["Enter item_system_showcase_raid_loop"]
-    H --> I["Move artifact into secure storage"]
-    I --> J["Buy AP ammo and sell loot to vendor"]
-    J --> K["Split FMJ stack into backpack grid"]
-    K --> L["Unload raid room and verify cleanup"]
-    L --> M["Write trace, battle report, and path artifacts"]
+    G --> H["Enter item_system_showcase_forge_socket_lab"]
+    H --> I["Craft crimson and azure gems"]
+    I --> J["Socket gems into the amulet"]
+    J --> K["Enter item_system_showcase_raid_loop"]
+    K --> L["Move artifact into secure storage"]
+    L --> M["Buy AP ammo and sell loot to vendor"]
+    M --> N["Split FMJ stack into backpack grid"]
+    N --> O["Unload raid room and verify cleanup"]
+    O --> P["Write trace, battle report, and path artifacts"]
 """;
     }
 

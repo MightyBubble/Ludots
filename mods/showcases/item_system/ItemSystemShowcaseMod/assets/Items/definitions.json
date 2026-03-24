@@ -18,6 +18,17 @@
     "abilityGrants": [{ "slotIndex": 1, "ability": "Ability.ItemShowcase.MythicPulse" }]
   },
   {
+    "id": "itm_forge_amulet",
+    "displayName": "Artificer Halo",
+    "shape": "shape_1x1",
+    "tags": ["Equip.Slot.Amulet", "Item.Arcane.Socketed"],
+    "allowedNamedSlots": ["amulet"],
+    "equipEffects": ["Effect.ItemPassive.ForgeAmulet"],
+    "mountedContainers": [
+      { "id": "gems", "label": "Gem Sockets", "layout": "layout_gem_sockets", "purpose": "Equipment" }
+    ]
+  },
+  {
     "id": "itm_ring_blood",
     "displayName": "Blood Ring",
     "shape": "shape_1x1",
@@ -103,6 +114,22 @@
     "tags": ["Weapon.Socket.Underbarrel"],
     "allowedNamedSlots": ["underbarrel"],
     "equipEffects": ["Effect.ItemPassive.VerticalGrip"]
+  },
+  {
+    "id": "itm_gem_crimson",
+    "displayName": "Crimson Gem",
+    "shape": "shape_1x1",
+    "tags": ["Socket.Gem", "Item.Socket.Offense"],
+    "allowedNamedSlots": ["socket_alpha", "socket_beta"],
+    "equipEffects": ["Effect.ItemPassive.CrimsonGem"]
+  },
+  {
+    "id": "itm_gem_azure",
+    "displayName": "Azure Gem",
+    "shape": "shape_1x1",
+    "tags": ["Socket.Gem", "Item.Socket.Defense"],
+    "allowedNamedSlots": ["socket_alpha", "socket_beta"],
+    "equipEffects": ["Effect.ItemPassive.AzureGem"]
   },
   {
     "id": "itm_ammo_556",

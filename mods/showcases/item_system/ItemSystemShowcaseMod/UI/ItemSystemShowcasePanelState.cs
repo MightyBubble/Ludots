@@ -5,7 +5,8 @@ internal enum ItemSystemShowcaseSceneKind
     Hub,
     LoadoutGarage,
     WeaponBench,
-    RaidLoop
+    RaidLoop,
+    ForgeSocketLab
 }
 
 internal sealed record ItemSystemShowcasePanelState(
@@ -15,6 +16,7 @@ internal sealed record ItemSystemShowcasePanelState(
     string HeroSummary,
     string CreditsSummary,
     string DummySummary,
+    string SelectionSummary,
     string[] PrimaryLines,
     string[] SecondaryLines,
     string[] TertiaryLines,

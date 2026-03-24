@@ -53,6 +53,17 @@
     ]
   },
   {
+    "id": "Effect.ItemPassive.ForgeAmulet",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Shield", "op": "Add", "value": 10.0 },
+      { "attribute": "Armor", "op": "Add", "value": 2.0 }
+    ]
+  },
+  {
     "id": "Effect.ItemPassive.BloodRing",
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
@@ -125,6 +136,27 @@
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "Armor", "op": "Add", "value": 3.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemPassive.CrimsonGem",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "AttackDamage", "op": "Add", "value": 6.0 }
+    ]
+  },
+  {
+    "id": "Effect.ItemPassive.AzureGem",
+    "tags": ["Effect.ItemShowcase.Passive"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Shield", "op": "Add", "value": 14.0 },
+      { "attribute": "Armor", "op": "Add", "value": 2.0 }
     ]
   }
 ]

@@ -183,6 +183,23 @@ showcase 必须提供：
 * 自动化 trace / battle-report / path
 * Raylib 实机截图
 
+当前 `ItemSystemShowcaseMod` 将玩家路径拆成四个短房间，而不是一个说明墙：
+
+* `item_system_showcase_loadout_garage`
+  * 纸娃娃、装备槽、背包格、item-granted ability、被动效果联动。
+* `item_system_showcase_weapon_bench`
+  * 武器配件槽、弹匣、共享弹药堆、装填与开火反馈。
+* `item_system_showcase_forge_socket_lab`
+  * 合成配方卡、材料仓格、宝石镶嵌槽、嵌入后 GAS 被动刷新。
+  * 配方执行要求输出槽位可落位；扣料后若产物落位失败，必须原路回滚，不允许吞材料。
+* `item_system_showcase_raid_loop`
+  * 背包、保险箱、仓库、商人交易与弹药拆分。
+  * 商人库存面板是只读浏览面板；买卖必须走显式交易动作，不能通过通用格子搬运绕过价格规则。
+
+对应的玩家视角截图由 `scripts/acceptance/capture-item-system-showcase-rooms.ps1` 产出到
+`artifacts/acceptance/item-system-showcase/room-screenshots/`。
+`scripts/acceptance/run-item-system-showcase-acceptance.ps1` 默认会一并触发这些房间截图，保证主截图与分房间证据同步刷新。
+
 ## 8 约束
 
 * 不创建第二套 buff / stat runtime；装备增益必须落到 GAS。

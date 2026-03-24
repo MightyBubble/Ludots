@@ -25,6 +25,15 @@
       { "id": "underbarrel", "label": "Underbarrel", "requiredAll": ["Weapon.Socket.Underbarrel"] }
     ]
   },
+  {
+    "id": "layout_gem_sockets",
+    "purpose": "Equipment",
+    "grantsEquipmentBonuses": true,
+    "namedSlots": [
+      { "id": "socket_alpha", "label": "Alpha", "requiredAll": ["Socket.Gem"] },
+      { "id": "socket_beta", "label": "Beta", "requiredAll": ["Socket.Gem"] }
+    ]
+  },
   { "id": "layout_backpack_grid", "purpose": "Backpack", "width": 8, "height": 6 },
   { "id": "layout_secure_grid", "purpose": "SecureStorage", "width": 4, "height": 4 },
   { "id": "layout_stash_grid", "purpose": "Stash", "width": 10, "height": 8 },

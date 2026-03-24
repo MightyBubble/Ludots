@@ -30,6 +30,8 @@ internal sealed class ItemSystemShowcaseRuntime
     private Entity _backpackItem = Entity.Null;
     private Entity _secureItem = Entity.Null;
     private Entity _rifleItem = Entity.Null;
+    private Entity _forgeAmuletItem = Entity.Null;
+    private Entity _selectedItem = Entity.Null;
 
     private int _healthAttrId;
     private int _shieldAttrId;
@@ -39,6 +41,7 @@ internal sealed class ItemSystemShowcaseRuntime
 
     private int _bootsDefId;
     private int _amuletDefId;
+    private int _forgeAmuletDefId;
     private int _bloodRingDefId;
     private int _duelistRingDefId;
     private int _charmDefId;
@@ -53,6 +56,8 @@ internal sealed class ItemSystemShowcaseRuntime
     private int _apAmmoDefId;
     private int _creditDefId;
     private int _artifactDefId;
+    private int _crimsonGemDefId;
+    private int _azureGemDefId;
 
     public ItemSystemShowcaseRuntime()
     {
@@ -109,9 +114,11 @@ internal sealed class ItemSystemShowcaseRuntime
         InventoryRuntimeService inventory = Inventory(engine);
         Entity backpack = Mounted(engine, _backpackItem, "storage");
         Entity secure = Mounted(engine, _secureItem, "vault");
+        NormalizeSelection(engine);
         string heroSummary = $"Loadout Pilot | passive effects {ActiveEffects(engine, _hero)} | actor #{_hero.Id}";
         string creditsSummary = $"Credits {inventory.CountStackUnits(_hero, _creditDefId)} | FMJ {inventory.CountStackUnits(_hero, _ammoDefId)} | AP {inventory.CountStackUnits(_hero, _apAmmoDefId)}";
         string dummySummary = $"Target Dummy health {ReadAttr(engine, _dummy, _healthAttrId):0.0}";
+        string selectionSummary = BuildSelectionSummary(engine);
 
         return sceneKind switch
         {
@@ -122,6 +129,7 @@ internal sealed class ItemSystemShowcaseRuntime
                 HeroSummary: heroSummary,
                 CreditsSummary: $"MoveSpeed {ReadAttr(engine, _hero, _moveSpeedAttrId):0.0} | Attack {ReadAttr(engine, _hero, _attackAttrId):0.0} | Armor {ReadAttr(engine, _hero, _armorAttrId):0.0}",
                 DummySummary: "Use this room to understand what one equip change actually does before moving on.",
+                SelectionSummary: selectionSummary,
                 PrimaryLines: BuildStats(engine),
                 SecondaryLines: BuildLoadoutEquipment(engine),
                 TertiaryLines: BuildAbilities(engine),
@@ -134,6 +142,7 @@ internal sealed class ItemSystemShowcaseRuntime
                 HeroSummary: $"Primary weapon {SlotLabel(engine, _equipment, "primary_weapon")} | {dummySummary}",
                 CreditsSummary: BuildWeaponSummary(engine),
                 DummySummary: "Attach parts, top off the mag, then fire to see item-granted slot 0 resolve against the dummy.",
+                SelectionSummary: selectionSummary,
                 PrimaryLines: BuildWeaponReadout(engine),
                 SecondaryLines: BuildAmmoSupply(engine, backpack),
                 TertiaryLines: BuildWeaponSockets(engine),
@@ -146,22 +155,37 @@ internal sealed class ItemSystemShowcaseRuntime
                 HeroSummary: heroSummary,
                 CreditsSummary: creditsSummary,
                 DummySummary: "Think like a player between raids: keep value safe, move bulk to stash, and prep the next loadout.",
+                SelectionSummary: selectionSummary,
                 PrimaryLines: BuildContainer(engine, backpack, "Backpack"),
                 SecondaryLines: BuildContainer(engine, secure, "Secure Case"),
                 TertiaryLines: BuildContainer(engine, _stash, "Stash"),
                 QuaternaryLines: BuildContainer(engine, _vendorGrid, "Vendor"),
                 LogLines: _log.ToArray()),
+            ItemSystemShowcaseSceneKind.ForgeSocketLab => new ItemSystemShowcasePanelState(
+                SceneKind: sceneKind,
+                Header: "Forge & Socket Lab",
+                SceneSummary: "Craft socket gems from live resources, then click them into a socketed amulet to watch GAS passives update from nested item containers.",
+                HeroSummary: heroSummary,
+                CreditsSummary: $"Forge amulet {SlotLabel(engine, _equipment, "amulet")} | Credits {inventory.CountStackUnits(_hero, _creditDefId)} | Artifact {inventory.CountStackUnits(_hero, _artifactDefId)}",
+                DummySummary: "This room proves that non-weapon sockets and crafting still stay inside the same item entity architecture.",
+                SelectionSummary: selectionSummary,
+                PrimaryLines: BuildForgeReadout(engine),
+                SecondaryLines: BuildContainer(engine, Mounted(engine, _forgeAmuletItem, "gems"), "Gem Sockets"),
+                TertiaryLines: BuildForgeRecipeLines(engine),
+                QuaternaryLines: BuildContainer(engine, _stash, "Forge Stash"),
+                LogLines: _log.ToArray()),
             _ => new ItemSystemShowcasePanelState(
                 SceneKind: sceneKind,
                 Header: "Ludots Item Demo Pack",
-                SceneSummary: "Three short rooms teach one shared architecture. Pick the player problem you care about instead of reading a mega dashboard first.",
+                SceneSummary: "Four short rooms teach one shared architecture. Pick the player problem you care about instead of reading a mega dashboard first.",
                 HeroSummary: heroSummary,
-                CreditsSummary: "Start with a focused route: build, bench, or raid loop. The same ECS / GAS rules stay underneath every room.",
+                CreditsSummary: "Start with a focused route: build, bench, raid loop, or forge. The same ECS / GAS rules stay underneath every room.",
                 DummySummary: string.Empty,
+                SelectionSummary: selectionSummary,
                 PrimaryLines: BuildHubLoadoutLines(),
                 SecondaryLines: BuildHubWeaponLines(),
                 TertiaryLines: BuildHubRaidLines(),
-                QuaternaryLines: BuildHubSharedRules(),
+                QuaternaryLines: BuildHubForgeLines(),
                 LogLines: _log.ToArray())
         };
     }
@@ -388,6 +412,214 @@ internal sealed class ItemSystemShowcaseRuntime
             : "Split succeeded but backpack transfer failed.");
     }
 
+    public ItemSystemShowcaseBoardModel[] BuildBoards(GameEngine engine, ItemSystemShowcaseSceneKind sceneKind)
+    {
+        EnsureScenario(engine);
+        NormalizeSelection(engine);
+        Entity backpack = Mounted(engine, _backpackItem, "storage");
+        Entity secure = Mounted(engine, _secureItem, "vault");
+
+        return sceneKind switch
+        {
+            ItemSystemShowcaseSceneKind.LoadoutGarage => new[]
+            {
+                BuildSlotBoard(engine, _equipment, "Loadout Slots", "#F0C36B"),
+                BuildGridBoard(engine, _stash, "Stash Grid", "#7DD3FC"),
+                BuildGridBoard(engine, backpack, "Backpack Grid", "#8DE3AE")
+            },
+            ItemSystemShowcaseSceneKind.WeaponBench => new[]
+            {
+                BuildSlotBoard(engine, Mounted(engine, _rifleItem, "sockets"), "Weapon Attachments", "#F0C36B"),
+                BuildGridBoard(engine, backpack, "Bench Backpack", "#7DD3FC"),
+                BuildGridBoard(engine, _stash, "Bench Stash", "#8DE3AE")
+            },
+            ItemSystemShowcaseSceneKind.RaidLoop => new[]
+            {
+                BuildGridBoard(engine, backpack, "Backpack", "#F0C36B"),
+                BuildGridBoard(engine, secure, "Secure Case", "#7DD3FC"),
+                BuildGridBoard(engine, _stash, "Stash", "#8DE3AE"),
+                BuildGridBoard(engine, _vendorGrid, "Vendor", "#FFB38A")
+            },
+            ItemSystemShowcaseSceneKind.ForgeSocketLab => new[]
+            {
+                BuildSlotBoard(engine, Mounted(engine, _forgeAmuletItem, "gems"), "Gem Sockets", "#F0C36B"),
+                BuildGridBoard(engine, _stash, "Forge Stash", "#7DD3FC"),
+                BuildRecipeBoard()
+            },
+            _ => Array.Empty<ItemSystemShowcaseBoardModel>()
+        };
+    }
+
+    public void HandleBoardClick(GameEngine engine, ItemSystemShowcaseClickTarget target)
+    {
+        EnsureScenario(engine);
+        NormalizeSelection(engine);
+
+        switch (target.Kind)
+        {
+            case ItemSystemShowcaseClickTargetKind.GridCell:
+                HandleGridCellClick(engine, target);
+                break;
+            case ItemSystemShowcaseClickTargetKind.SlotCell:
+                HandleSlotCellClick(engine, target);
+                break;
+            case ItemSystemShowcaseClickTargetKind.Recipe:
+                ExecuteRecipe(engine, target.Id);
+                break;
+        }
+    }
+
+    private void HandleGridCellClick(GameEngine engine, ItemSystemShowcaseClickTarget target)
+    {
+        if (target.Container == _vendorGrid)
+        {
+            Log("Vendor inventory is read-only. Use Buy AP Ammo / Sell Artifact buttons.");
+            return;
+        }
+
+        if (target.Item != Entity.Null && engine.World.IsAlive(target.Item))
+        {
+            SelectItem(engine, target.Item);
+            return;
+        }
+
+        if (_selectedItem == Entity.Null || !engine.World.IsAlive(_selectedItem))
+        {
+            Log("Select an item first, then click an empty grid cell to place it.");
+            return;
+        }
+
+        bool moved = Inventory(engine).TryMoveItemToGrid(_selectedItem, target.Container, target.GridX, target.GridY);
+        Log(moved
+            ? $"Moved {ItemLabel(engine, _selectedItem)} to {ContainerLabel(engine, target.Container)} ({target.GridX},{target.GridY})."
+            : $"Could not place {ItemLabel(engine, _selectedItem)} into that grid cell.");
+    }
+
+    private void HandleSlotCellClick(GameEngine engine, ItemSystemShowcaseClickTarget target)
+    {
+        if (target.Item != Entity.Null && engine.World.IsAlive(target.Item) && (_selectedItem == Entity.Null || _selectedItem == target.Item))
+        {
+            SelectItem(engine, target.Item);
+            return;
+        }
+
+        if (_selectedItem == Entity.Null || !engine.World.IsAlive(_selectedItem))
+        {
+            if (target.Item != Entity.Null && engine.World.IsAlive(target.Item))
+            {
+                SelectItem(engine, target.Item);
+            }
+            else
+            {
+                Log($"Select an item before targeting slot '{target.Id}'.");
+            }
+
+            return;
+        }
+
+        bool moved = Inventory(engine).TryMoveItemToNamedSlot(_selectedItem, target.Container, target.Id);
+        Log(moved
+            ? $"Placed {ItemLabel(engine, _selectedItem)} into slot '{target.Id}'."
+            : $"Could not place {ItemLabel(engine, _selectedItem)} into slot '{target.Id}'.");
+    }
+
+    private void SelectItem(GameEngine engine, Entity item)
+    {
+        if (!engine.World.IsAlive(item) || !engine.World.Has<ItemInstanceCm>(item))
+        {
+            _selectedItem = Entity.Null;
+            Log("Selection cleared because the item no longer exists.");
+            return;
+        }
+
+        _selectedItem = item;
+        Log($"Selected {ItemLabel(engine, item)}.");
+    }
+
+    private void ExecuteRecipe(GameEngine engine, string recipeId)
+    {
+        switch (recipeId)
+        {
+            case "forge_crimson_gem":
+                if (!CanAutoPlaceFreshItem(engine, _crimsonGemDefId, _stash))
+                {
+                    Log("Crimson Gem recipe blocked: need one free stash placement for the crafted gem.");
+                    return;
+                }
+
+                if (Inventory(engine).CountStackUnits(_hero, _artifactDefId) < 1 || Inventory(engine).CountStackUnits(_hero, _creditDefId) < 20)
+                {
+                    Log("Crimson Gem recipe blocked: need 1 Raid Artifact and 20 credits.");
+                    return;
+                }
+
+                bool consumedArtifact = Inventory(engine).ConsumeStackUnits(_hero, _artifactDefId, 1);
+                bool consumedCrimsonCredits = consumedArtifact && Inventory(engine).ConsumeStackUnits(_hero, _creditDefId, 20);
+                if (!consumedArtifact || !consumedCrimsonCredits)
+                {
+                    bool refunded = RefundConsumedUnits(engine, _artifactDefId, consumedArtifact ? 1 : 0) &&
+                                    RefundConsumedUnits(engine, _creditDefId, consumedCrimsonCredits ? 20 : 0);
+                    Log(refunded
+                        ? "Crimson Gem crafting failed while consuming ingredients and was rolled back."
+                        : "Crimson Gem crafting failed while consuming ingredients and refund was only partial.");
+                    return;
+                }
+
+                if (!TryPlaceFreshItem(engine, _crimsonGemDefId, _stash))
+                {
+                    bool refunded = RefundConsumedUnits(engine, _artifactDefId, 1) &&
+                                    RefundConsumedUnits(engine, _creditDefId, 20);
+                    Log(refunded
+                        ? "Crimson Gem crafting rolled back because the stash had no free placement."
+                        : "Crimson Gem crafting failed after consumption and refund was only partial.");
+                    return;
+                }
+
+                Log("Forged one Crimson Gem from artifact salvage and credits.");
+                return;
+            case "forge_azure_gem":
+                if (!CanAutoPlaceFreshItem(engine, _azureGemDefId, _stash))
+                {
+                    Log("Azure Gem recipe blocked: need one free stash placement for the crafted gem.");
+                    return;
+                }
+
+                if (Inventory(engine).CountStackUnits(_hero, _ammoDefId) < 30 || Inventory(engine).CountStackUnits(_hero, _creditDefId) < 10)
+                {
+                    Log("Azure Gem recipe blocked: need 30 FMJ and 10 credits.");
+                    return;
+                }
+
+                bool consumedAmmo = Inventory(engine).ConsumeStackUnits(_hero, _ammoDefId, 30);
+                bool consumedAzureCredits = consumedAmmo && Inventory(engine).ConsumeStackUnits(_hero, _creditDefId, 10);
+                if (!consumedAmmo || !consumedAzureCredits)
+                {
+                    bool refunded = RefundConsumedUnits(engine, _ammoDefId, consumedAmmo ? 30 : 0) &&
+                                    RefundConsumedUnits(engine, _creditDefId, consumedAzureCredits ? 10 : 0);
+                    Log(refunded
+                        ? "Azure Gem crafting failed while consuming ingredients and was rolled back."
+                        : "Azure Gem crafting failed while consuming ingredients and refund was only partial.");
+                    return;
+                }
+
+                if (!TryPlaceFreshItem(engine, _azureGemDefId, _stash))
+                {
+                    bool refunded = RefundConsumedUnits(engine, _ammoDefId, 30) &&
+                                    RefundConsumedUnits(engine, _creditDefId, 10);
+                    Log(refunded
+                        ? "Azure Gem crafting rolled back because the stash had no free placement."
+                        : "Azure Gem crafting failed after consumption and refund was only partial.");
+                    return;
+                }
+
+                Log("Forged one Azure Gem from FMJ scrap and credits.");
+                return;
+            default:
+                Log($"Unknown recipe '{recipeId}'.");
+                return;
+        }
+    }
+
     private void EnsureScenario(GameEngine engine)
     {
         if (engine.World.IsAlive(_hero) && engine.World.IsAlive(_stash) && engine.World.IsAlive(_rifleItem))
@@ -396,7 +628,7 @@ internal sealed class ItemSystemShowcaseRuntime
         }
 
         ResolveIds(engine);
-        Seed(engine);
+        Seed(engine, ItemSystemShowcaseIds.GetSceneKind(engine.CurrentMapSession?.MapId.Value));
     }
 
     private void ResolveIds(GameEngine engine)
@@ -412,6 +644,7 @@ internal sealed class ItemSystemShowcaseRuntime
 
         _bootsDefId = definitions.GetId("itm_boots_haste");
         _amuletDefId = definitions.GetId("itm_mythic_amulet");
+        _forgeAmuletDefId = definitions.GetId("itm_forge_amulet");
         _bloodRingDefId = definitions.GetId("itm_ring_blood");
         _duelistRingDefId = definitions.GetId("itm_ring_duelist");
         _charmDefId = definitions.GetId("itm_charm_ward");
@@ -426,9 +659,11 @@ internal sealed class ItemSystemShowcaseRuntime
         _apAmmoDefId = definitions.GetId("itm_ammo_556_ap");
         _creditDefId = definitions.GetId("itm_credit_chip");
         _artifactDefId = definitions.GetId("itm_extraction_artifact");
+        _crimsonGemDefId = definitions.GetId("itm_gem_crimson");
+        _azureGemDefId = definitions.GetId("itm_gem_azure");
     }
 
-    private void Seed(GameEngine engine)
+    private void Seed(GameEngine engine, ItemSystemShowcaseSceneKind sceneKind)
     {
         World world = engine.World;
         _hero = world.Create(new Name { Value = "Loadout Pilot" });
@@ -461,7 +696,10 @@ internal sealed class ItemSystemShowcaseRuntime
         _vendorGrid = CreateTrackedContainer(engine, _vendor, ItemContainerOwnerKind.Vendor, "layout_vendor_grid");
 
         EquipNamed(engine, CreateTrackedItem(engine, _bootsDefId), "feet");
-        EquipNamed(engine, CreateTrackedItem(engine, _amuletDefId), "amulet");
+        _forgeAmuletItem = sceneKind == ItemSystemShowcaseSceneKind.ForgeSocketLab
+            ? CreateTrackedItem(engine, _forgeAmuletDefId)
+            : Entity.Null;
+        EquipNamed(engine, sceneKind == ItemSystemShowcaseSceneKind.ForgeSocketLab ? _forgeAmuletItem : CreateTrackedItem(engine, _amuletDefId), "amulet");
         EquipNamed(engine, CreateTrackedItem(engine, _bloodRingDefId), "ring_left");
         EquipNamed(engine, CreateTrackedItem(engine, _charmDefId), "charm");
         _backpackItem = CreateTrackedItem(engine, _backpackDefId);
@@ -486,14 +724,22 @@ internal sealed class ItemSystemShowcaseRuntime
         Put(engine, CreateTrackedItem(engine, _apAmmoDefId, stackCount: 45), _vendorGrid, 0, 0);
         Put(engine, CreateTrackedItem(engine, _duelistRingDefId), _vendorGrid, 2, 0);
 
+        if (sceneKind == ItemSystemShowcaseSceneKind.ForgeSocketLab)
+        {
+            Put(engine, CreateTrackedItem(engine, _azureGemDefId), _stash, 5, 0);
+            Put(engine, CreateTrackedItem(engine, _artifactDefId), _stash, 6, 0);
+            Put(engine, CreateTrackedItem(engine, _artifactDefId), _stash, 8, 0);
+        }
+
         if (!world.Has<InventoryEquipmentDirtyTag>(_hero))
         {
             world.Add(_hero, new InventoryEquipmentDirtyTag());
         }
 
+        _selectedItem = Entity.Null;
         _log.Clear();
         Log("Scenario seeded from config-driven shapes, layouts, and definitions.");
-        Log("Coverage live: MOBA boots/mythic, ARPG rings/charm, extraction stash/secure, rifle sockets, ammo stacks, vendor trade.");
+        Log("Coverage live: MOBA boots/mythic, ARPG rings/charm, extraction stash/secure, rifle sockets, ammo stacks, vendor trade, and forge sockets.");
     }
 
     private void InitAttributes(ref AttributeBuffer attrs, bool hero)
@@ -548,6 +794,8 @@ internal sealed class ItemSystemShowcaseRuntime
         _backpackItem = Entity.Null;
         _secureItem = Entity.Null;
         _rifleItem = Entity.Null;
+        _forgeAmuletItem = Entity.Null;
+        _selectedItem = Entity.Null;
     }
 
     private AbilitySystem Ability(GameEngine engine)
@@ -732,6 +980,46 @@ internal sealed class ItemSystemShowcaseRuntime
         };
     }
 
+    private string[] BuildForgeReadout(GameEngine engine)
+    {
+        Entity gems = Mounted(engine, _forgeAmuletItem, "gems");
+        return new[]
+        {
+            $"Hero Shield {ReadAttr(engine, _hero, _shieldAttrId):0.0}",
+            $"Hero AttackDamage {ReadAttr(engine, _hero, _attackAttrId):0.0}",
+            $"Hero Armor {ReadAttr(engine, _hero, _armorAttrId):0.0}",
+            $"socket_alpha: {SlotLabel(engine, gems, "socket_alpha")}",
+            $"socket_beta: {SlotLabel(engine, gems, "socket_beta")}"
+        };
+    }
+
+    private string[] BuildForgeRecipeLines(GameEngine engine)
+    {
+        return new[]
+        {
+            "Forge Crimson Gem: consume 1 Raid Artifact + 20 credits.",
+            "Forge Azure Gem: consume 30 FMJ + 10 credits.",
+            $"Current credits: {Inventory(engine).CountStackUnits(_hero, _creditDefId)}",
+            $"Current artifacts: {Inventory(engine).CountStackUnits(_hero, _artifactDefId)}",
+            $"Current FMJ: {Inventory(engine).CountStackUnits(_hero, _ammoDefId)}"
+        };
+    }
+
+    private string BuildSelectionSummary(GameEngine engine)
+    {
+        NormalizeSelection(engine);
+        if (_selectedItem == Entity.Null)
+        {
+            return "Selection: none. Click an item to inspect it, then click a slot or empty cell to move it.";
+        }
+
+        ItemInstanceCm instance = engine.World.Get<ItemInstanceCm>(_selectedItem);
+        ItemLocationCm location = engine.World.Get<ItemLocationCm>(_selectedItem);
+        string stack = instance.StackCount > 1 ? $" x{instance.StackCount}" : string.Empty;
+        string charges = instance.Charges > 0 ? $" | charges {instance.Charges}" : string.Empty;
+        return $"Selection: {ItemLabel(engine, _selectedItem)}{stack} in {ContainerLabel(engine, location.Container)}{charges}.";
+    }
+
     private static string FirstNonHeaderLine(IReadOnlyList<string> lines)
     {
         return lines.Count > 1 ? lines[1] : "(empty)";
@@ -770,15 +1058,164 @@ internal sealed class ItemSystemShowcaseRuntime
         };
     }
 
+    private static string[] BuildHubForgeLines()
+    {
+        return new[]
+        {
+            "Craft and socket without leaving the item runtime.",
+            "Forge gems from live resources in the stash.",
+            "Insert gems into a socketed amulet and watch passives update.",
+            "Use the same nested container logic as weapon attachments."
+        };
+    }
+
     private static string[] BuildHubSharedRules()
     {
         return new[]
         {
-            "One architecture underneath all three rooms.",
-            "Equipment, backpack, secure case, vendor, and rifle sockets are all containers plus item placements.",
+            "One architecture underneath all four rooms.",
+            "Equipment, backpack, secure case, vendor, rifle sockets, and gem sockets are all containers plus item placements.",
             "Passive bonuses stay in GAS as real effects and tags.",
             "Active item powers flow through item-granted ability slots instead of a second runtime."
         };
+    }
+
+    private ItemSystemShowcaseBoardModel BuildGridBoard(GameEngine engine, Entity container, string title, string accent)
+    {
+        ItemLayoutDefinition layout = LayoutDef(engine, container);
+        ItemSystemShowcaseBoardCellModel[][] rows = new ItemSystemShowcaseBoardCellModel[layout.Height][];
+        for (int y = 0; y < layout.Height; y++)
+        {
+            rows[y] = new ItemSystemShowcaseBoardCellModel[layout.Width];
+            for (int x = 0; x < layout.Width; x++)
+            {
+                rows[y][x] = new ItemSystemShowcaseBoardCellModel(
+                    PrimaryText: layout.IsBlockedCell(x, y) ? "XX" : "·",
+                    SecondaryText: string.Empty,
+                    FillColor: layout.IsBlockedCell(x, y) ? "#2B1620" : "#13202D",
+                    BorderColor: "#29435A",
+                    IsSelected: false,
+                    Target: new ItemSystemShowcaseClickTarget(ItemSystemShowcaseClickTargetKind.GridCell, Entity.Null, container, string.Empty, x, y));
+            }
+        }
+
+        var placedItems = new List<Entity>(32);
+        Inventory(engine).CollectItemsInContainer(container, placedItems);
+        placedItems.Sort((a, b) => a.Id.CompareTo(b.Id));
+        for (int i = 0; i < placedItems.Count; i++)
+        {
+            Entity item = placedItems[i];
+            if (!engine.World.Has<ItemLocationCm>(item) || !engine.World.Has<ItemInstanceCm>(item))
+            {
+                continue;
+            }
+
+            ItemLocationCm location = engine.World.Get<ItemLocationCm>(item);
+            if (location.PlacementKind != ItemPlacementKind.Grid)
+            {
+                continue;
+            }
+
+            ItemShapeRotation shape = ShapeFor(engine, item, location.RotationQuarterTurns);
+            for (int dy = 0; dy < shape.Height; dy++)
+            {
+                for (int dx = 0; dx < shape.Width; dx++)
+                {
+                    if (!shape.IsOccupied(dx, dy))
+                    {
+                        continue;
+                    }
+
+                    int px = location.GridX + dx;
+                    int py = location.GridY + dy;
+                    if ((uint)px >= (uint)layout.Width || (uint)py >= (uint)layout.Height)
+                    {
+                        continue;
+                    }
+
+                    bool anchor = dx == 0 && dy == 0;
+                    rows[py][px] = new ItemSystemShowcaseBoardCellModel(
+                        PrimaryText: anchor ? ShortLabel(engine, item) : "■",
+                        SecondaryText: anchor ? CompactSuffix(engine, item) : string.Empty,
+                        FillColor: ColorForItem(engine, item),
+                        BorderColor: _selectedItem == item ? "#F0C36B" : "#3D5A72",
+                        IsSelected: _selectedItem == item,
+                        Target: new ItemSystemShowcaseClickTarget(ItemSystemShowcaseClickTargetKind.GridCell, item, container, string.Empty, location.GridX, location.GridY));
+                }
+            }
+        }
+
+        return new ItemSystemShowcaseBoardModel(title, accent, ItemSystemShowcaseBoardKind.Grid, rows);
+    }
+
+    private ItemSystemShowcaseBoardModel BuildSlotBoard(GameEngine engine, Entity container, string title, string accent)
+    {
+        ItemLayoutDefinition layout = LayoutDef(engine, container);
+        int columns = Math.Min(4, Math.Max(1, layout.NamedSlots.Length));
+        int rowsCount = (layout.NamedSlots.Length + columns - 1) / columns;
+        ItemSystemShowcaseBoardCellModel[][] rows = new ItemSystemShowcaseBoardCellModel[rowsCount][];
+        for (int row = 0; row < rowsCount; row++)
+        {
+            rows[row] = new ItemSystemShowcaseBoardCellModel[columns];
+            for (int col = 0; col < columns; col++)
+            {
+                int slotIndex = (row * columns) + col;
+                if (slotIndex >= layout.NamedSlots.Length)
+                {
+                    rows[row][col] = new ItemSystemShowcaseBoardCellModel(
+                        PrimaryText: string.Empty,
+                        SecondaryText: string.Empty,
+                        FillColor: "#0E1823",
+                        BorderColor: "#0E1823",
+                        IsSelected: false,
+                        Target: new ItemSystemShowcaseClickTarget(ItemSystemShowcaseClickTargetKind.None, Entity.Null, Entity.Null, string.Empty, 0, 0));
+                    continue;
+                }
+
+                ItemNamedSlotDefinition slot = layout.NamedSlots[slotIndex];
+                Entity item = SlotItem(engine, container, slot.Id);
+                rows[row][col] = new ItemSystemShowcaseBoardCellModel(
+                    PrimaryText: slot.Label,
+                    SecondaryText: item == Entity.Null ? "(empty)" : ShortLabel(engine, item),
+                    FillColor: item == Entity.Null ? "#13202D" : ColorForItem(engine, item),
+                    BorderColor: _selectedItem == item && item != Entity.Null ? "#F0C36B" : "#3D5A72",
+                    IsSelected: _selectedItem == item && item != Entity.Null,
+                    Target: new ItemSystemShowcaseClickTarget(ItemSystemShowcaseClickTargetKind.SlotCell, item, container, slot.Id, 0, 0));
+            }
+        }
+
+        return new ItemSystemShowcaseBoardModel(title, accent, ItemSystemShowcaseBoardKind.Slots, rows);
+    }
+
+    private ItemSystemShowcaseBoardModel BuildRecipeBoard()
+    {
+        return new ItemSystemShowcaseBoardModel(
+            "Forge Recipes",
+            "#FFB38A",
+            ItemSystemShowcaseBoardKind.Recipes,
+            new[]
+            {
+                new[]
+                {
+                    new ItemSystemShowcaseBoardCellModel(
+                        "Forge Crimson Gem",
+                        "1 Artifact + 20 Credits",
+                        "#5E4518",
+                        "#C0892F",
+                        false,
+                        new ItemSystemShowcaseClickTarget(ItemSystemShowcaseClickTargetKind.Recipe, Entity.Null, Entity.Null, "forge_crimson_gem", 0, 0))
+                },
+                new[]
+                {
+                    new ItemSystemShowcaseBoardCellModel(
+                        "Forge Azure Gem",
+                        "30 FMJ + 10 Credits",
+                        "#23415C",
+                        "#5DA3D8",
+                        false,
+                        new ItemSystemShowcaseClickTarget(ItemSystemShowcaseClickTargetKind.Recipe, Entity.Null, Entity.Null, "forge_azure_gem", 0, 0))
+                }
+            });
     }
 
     private string[] BuildContainer(GameEngine engine, Entity container, string label)
@@ -790,6 +1227,17 @@ internal sealed class ItemSystemShowcaseRuntime
         for (int i = 0; i < _items.Count; i++) lines.Add(ItemPlacement(engine, _items[i]));
         if (_items.Count == 0) lines.Add("(empty)");
         return lines.ToArray();
+    }
+
+    private void NormalizeSelection(GameEngine engine)
+    {
+        if (_selectedItem != Entity.Null &&
+            (!engine.World.IsAlive(_selectedItem) ||
+             !engine.World.Has<ItemInstanceCm>(_selectedItem) ||
+             !engine.World.Has<ItemLocationCm>(_selectedItem)))
+        {
+            _selectedItem = Entity.Null;
+        }
     }
 
     private Entity SlotItem(GameEngine engine, Entity container, string slotId)
@@ -843,7 +1291,39 @@ internal sealed class ItemSystemShowcaseRuntime
             return;
         }
 
-        Put(engine, CreateTrackedItem(engine, defId, stackCount: amount), _stash, 5, 0);
+        if (!TryPlaceFreshItem(engine, defId, _stash, stackCount: amount))
+        {
+            throw new InvalidOperationException($"Could not grant definition {defId} into stash.");
+        }
+    }
+
+    private bool RefundConsumedUnits(GameEngine engine, int definitionId, int amount)
+    {
+        if (amount <= 0)
+        {
+            return true;
+        }
+
+        var definitions = engine.GetService(CoreServiceKeys.ItemDefinitionRegistry)
+            ?? throw new InvalidOperationException("ItemDefinitionRegistry missing.");
+        if (!definitions.TryGet(definitionId, out ItemDefinition definition))
+        {
+            throw new InvalidOperationException($"Missing item definition id {definitionId}.");
+        }
+
+        if (definition.MaxStack > 1)
+        {
+            GrantToStash(engine, definitionId, amount);
+            return true;
+        }
+
+        bool refunded = true;
+        for (int i = 0; i < amount; i++)
+        {
+            refunded &= TryPlaceFreshItem(engine, definitionId, _stash);
+        }
+
+        return refunded;
     }
 
     private Entity CreateTrackedContainer(GameEngine engine, Entity owner, ItemContainerOwnerKind ownerKind, string layoutId)
@@ -858,6 +1338,154 @@ internal sealed class ItemSystemShowcaseRuntime
         Entity item = Inventory(engine).CreateItem(definitionId, stackCount, charges, durability);
         TrackItemTree(engine, item);
         return item;
+    }
+
+    private bool TryPlaceFreshItem(GameEngine engine, int definitionId, Entity container, int stackCount = 1, int charges = 0, int durability = 0)
+    {
+        Entity item = CreateTrackedItem(engine, definitionId, stackCount, charges, durability);
+        if (Inventory(engine).TryAutoPlaceItem(item, container))
+        {
+            return true;
+        }
+
+        if (engine.World.IsAlive(item))
+        {
+            engine.World.Destroy(item);
+        }
+
+        return false;
+    }
+
+    private bool CanAutoPlaceFreshItem(GameEngine engine, int definitionId, Entity container)
+    {
+        if (!engine.World.IsAlive(container) || !engine.World.Has<ItemContainerCm>(container))
+        {
+            return false;
+        }
+
+        var definitions = engine.GetService(CoreServiceKeys.ItemDefinitionRegistry)
+            ?? throw new InvalidOperationException("ItemDefinitionRegistry missing.");
+        var layouts = engine.GetService(CoreServiceKeys.ItemLayoutRegistry)
+            ?? throw new InvalidOperationException("ItemLayoutRegistry missing.");
+        var shapes = engine.GetService(CoreServiceKeys.ItemShapeRegistry)
+            ?? throw new InvalidOperationException("ItemShapeRegistry missing.");
+        if (!definitions.TryGet(definitionId, out ItemDefinition definition))
+        {
+            throw new InvalidOperationException($"Missing item definition id {definitionId}.");
+        }
+
+        ItemContainerCm containerData = engine.World.Get<ItemContainerCm>(container);
+        if (!layouts.TryGet(containerData.LayoutId, out ItemLayoutDefinition layout))
+        {
+            throw new InvalidOperationException($"Missing layout id {containerData.LayoutId}.");
+        }
+
+        for (int slotIndex = 0; slotIndex < layout.NamedSlots.Length; slotIndex++)
+        {
+            ItemNamedSlotDefinition? slot = layout.GetNamedSlot(slotIndex);
+            if (slot == null)
+            {
+                continue;
+            }
+
+            GameplayTagContainer requiredAll = slot.RequiredAll;
+            GameplayTagContainer blockedAny = slot.BlockedAny;
+            if (definition.AllowsNamedSlot(slot.Id) &&
+                definition.Tags.ContainsAll(in requiredAll) &&
+                !definition.Tags.Intersects(in blockedAny) &&
+                SlotItem(engine, container, slot.Id) == Entity.Null)
+            {
+                return true;
+            }
+        }
+
+        if (!layout.HasGrid || !shapes.TryGet(definition.ShapeId, out ItemShapeDefinition shape))
+        {
+            return false;
+        }
+
+        var placedItems = new List<Entity>(32);
+        Inventory(engine).CollectItemsInContainer(container, placedItems);
+        for (int rotation = 0; rotation < shape.Rotations.Length; rotation++)
+        {
+            ItemShapeRotation rotated = shape.GetRotation(rotation);
+            for (int y = 0; y <= layout.Height - rotated.Height; y++)
+            {
+                for (int x = 0; x <= layout.Width - rotated.Width; x++)
+                {
+                    if (CanPlaceFreshShape(engine, container, layout, placedItems, rotated, x, y))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private bool CanPlaceFreshShape(
+        GameEngine engine,
+        Entity container,
+        ItemLayoutDefinition layout,
+        IReadOnlyList<Entity> placedItems,
+        ItemShapeRotation shape,
+        int x,
+        int y)
+    {
+        for (int sy = 0; sy < shape.Height; sy++)
+        {
+            for (int sx = 0; sx < shape.Width; sx++)
+            {
+                if (!shape.IsOccupied(sx, sy))
+                {
+                    continue;
+                }
+
+                int tx = x + sx;
+                int ty = y + sy;
+                if (layout.IsBlockedCell(tx, ty) || GridCellOccupied(engine, container, placedItems, tx, ty))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private bool GridCellOccupied(GameEngine engine, Entity container, IReadOnlyList<Entity> placedItems, int gridX, int gridY)
+    {
+        for (int i = 0; i < placedItems.Count; i++)
+        {
+            Entity item = placedItems[i];
+            if (!engine.World.IsAlive(item) || !engine.World.Has<ItemInstanceCm>(item) || !engine.World.Has<ItemLocationCm>(item))
+            {
+                continue;
+            }
+
+            ItemLocationCm location = engine.World.Get<ItemLocationCm>(item);
+            if (location.Container != container || location.PlacementKind != ItemPlacementKind.Grid)
+            {
+                continue;
+            }
+
+            ItemShapeRotation placedShape = ShapeFor(engine, item, location.RotationQuarterTurns);
+            for (int sy = 0; sy < placedShape.Height; sy++)
+            {
+                for (int sx = 0; sx < placedShape.Width; sx++)
+                {
+                    if (placedShape.IsOccupied(sx, sy) &&
+                        location.GridX + sx == gridX &&
+                        location.GridY + sy == gridY)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     private void TrackItemTree(GameEngine engine, Entity item)
@@ -893,6 +1521,26 @@ internal sealed class ItemSystemShowcaseRuntime
         return item == Entity.Null ? "(empty)" : ItemLabel(engine, item);
     }
 
+    private string ContainerLabel(GameEngine engine, Entity container)
+    {
+        if (!engine.World.IsAlive(container) || !engine.World.Has<ItemContainerCm>(container))
+        {
+            return "missing-container";
+        }
+
+        ItemContainerCm data = engine.World.Get<ItemContainerCm>(container);
+        return data.Purpose switch
+        {
+            ItemContainerPurpose.Backpack => "backpack",
+            ItemContainerPurpose.SecureStorage => "secure",
+            ItemContainerPurpose.Stash => "stash",
+            ItemContainerPurpose.Vendor => "vendor",
+            ItemContainerPurpose.Equipment => "equipment",
+            ItemContainerPurpose.WeaponAttachment => "sockets",
+            _ => $"container#{container.Id}"
+        };
+    }
+
     private string ItemLabel(GameEngine engine, Entity item)
     {
         if (!engine.World.IsAlive(item) || !engine.World.Has<ItemInstanceCm>(item)) return "(missing)";
@@ -911,6 +1559,80 @@ internal sealed class ItemSystemShowcaseRuntime
         return location.PlacementKind == ItemPlacementKind.NamedSlot
             ? $"{label}{stack}{charges} @slot#{location.NamedSlotIndex}"
             : $"{label}{stack}{charges} @({location.GridX},{location.GridY}) rot={location.RotationQuarterTurns}";
+    }
+
+    private ItemLayoutDefinition LayoutDef(GameEngine engine, Entity container)
+    {
+        if (!engine.World.Has<ItemContainerCm>(container))
+        {
+            throw new InvalidOperationException($"Container {container.Id} is missing ItemContainerCm.");
+        }
+
+        int layoutId = engine.World.Get<ItemContainerCm>(container).LayoutId;
+        var layouts = engine.GetService(CoreServiceKeys.ItemLayoutRegistry) ?? throw new InvalidOperationException("ItemLayoutRegistry missing.");
+        if (!layouts.TryGet(layoutId, out ItemLayoutDefinition layout))
+        {
+            throw new InvalidOperationException($"Missing layout id {layoutId}.");
+        }
+
+        return layout;
+    }
+
+    private ItemShapeRotation ShapeFor(GameEngine engine, Entity item, int rotationQuarterTurns)
+    {
+        ItemInstanceCm instance = engine.World.Get<ItemInstanceCm>(item);
+        var definitions = engine.GetService(CoreServiceKeys.ItemDefinitionRegistry) ?? throw new InvalidOperationException("ItemDefinitionRegistry missing.");
+        var shapes = engine.GetService(CoreServiceKeys.ItemShapeRegistry) ?? throw new InvalidOperationException("ItemShapeRegistry missing.");
+        if (!definitions.TryGet(instance.DefinitionId, out ItemDefinition definition) || !shapes.TryGet(definition.ShapeId, out ItemShapeDefinition shape))
+        {
+            throw new InvalidOperationException($"Missing shape for item {item.Id}.");
+        }
+
+        return shape.GetRotation(rotationQuarterTurns);
+    }
+
+    private string ShortLabel(GameEngine engine, Entity item)
+    {
+        string label = ItemLabel(engine, item);
+        string[] parts = label.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string token = parts.Length == 0 ? label : parts[0];
+        return token.Length <= 7 ? token : token[..7];
+    }
+
+    private string CompactSuffix(GameEngine engine, Entity item)
+    {
+        if (!engine.World.Has<ItemInstanceCm>(item))
+        {
+            return string.Empty;
+        }
+
+        ItemInstanceCm instance = engine.World.Get<ItemInstanceCm>(item);
+        if (instance.Charges > 0)
+        {
+            return $"{instance.Charges}";
+        }
+
+        return instance.StackCount > 1 ? $"x{instance.StackCount}" : string.Empty;
+    }
+
+    private string ColorForItem(GameEngine engine, Entity item)
+    {
+        if (!engine.World.Has<ItemInstanceCm>(item))
+        {
+            return "#13202D";
+        }
+
+        int definitionId = engine.World.Get<ItemInstanceCm>(item).DefinitionId;
+        return definitionId switch
+        {
+            var id when id == _creditDefId => "#5E4518",
+            var id when id == _ammoDefId || id == _apAmmoDefId => "#23415C",
+            var id when id == _artifactDefId => "#7D3326",
+            var id when id == _crimsonGemDefId => "#7D3326",
+            var id when id == _azureGemDefId => "#20493A",
+            var id when id == _rifleDefId || id == _magDefId => "#263544",
+            _ => "#20493A"
+        };
     }
 
     private void Log(string text)

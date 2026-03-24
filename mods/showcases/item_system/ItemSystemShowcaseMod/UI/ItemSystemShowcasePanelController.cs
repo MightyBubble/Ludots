@@ -78,6 +78,16 @@ internal sealed class ItemSystemShowcasePanelController
                 "Sockets",
                 "Live Log",
                 "Full Equipment"),
+            ItemSystemShowcaseSceneKind.ForgeSocketLab => BuildFocusedRoot(
+                context.State,
+                "Forge & Socket Lab",
+                "Craft gems from real resources, then click them into a socketed amulet so nested containers grant passives just like weapon attachments do.",
+                BuildForgeActions(),
+                "Forge Readout",
+                "Gem Sockets",
+                "Recipes",
+                "Live Log",
+                "Forge Stash"),
             _ => BuildFocusedRoot(
                 context.State,
                 "Raid Loop",
@@ -115,11 +125,17 @@ internal sealed class ItemSystemShowcasePanelController
                                             "#8DE3AE",
                                             state.TertiaryLines,
                                             "Open Raid Loop",
-                                            _ => LoadMap(ItemSystemShowcaseIds.RaidLoopMapId)))
+                                            _ => LoadMap(ItemSystemShowcaseIds.RaidLoopMapId)),
+                                        BuildHubCard(
+                                            "Forge & Socket Lab",
+                                            "#FFB38A",
+                                            state.QuaternaryLines,
+                                            "Open Forge Lab",
+                                            _ => LoadMap(ItemSystemShowcaseIds.ForgeSocketLabMapId)))
                                     .Gap(12f)
                                     .Wrap()
                                     .Align(UiAlignItems.Start),
-                                BuildSection("Shared Tech Promise", "#FFB38A", state.QuaternaryLines, width: 620f, height: 180f),
+                                BuildSection("Shared Tech Promise", "#FFB38A", BuildHubPromiseLines(), width: 620f, height: 180f),
                                 BuildSection("Recent Run Log", "#F0C36B", state.LogLines, width: 620f, height: 180f))
                             .Gap(12f)
                             .Padding(16f))
@@ -148,6 +164,7 @@ internal sealed class ItemSystemShowcasePanelController
                                 BuildHeroCard(state, includeBackButton: true),
                                 BuildIntentCard(sceneLabel, playerGoal, state.SceneSummary),
                                 actionPanel,
+                                BuildBoardGallery(state.SceneKind),
                                 Ui.Row(
                                         BuildSection(primaryTitle, "#F0C36B", state.PrimaryLines, width: 260f, height: 250f),
                                         BuildSection(secondaryTitle, "#7DD3FC", state.SecondaryLines, width: 280f, height: 250f),
@@ -198,6 +215,15 @@ internal sealed class ItemSystemShowcasePanelController
                     .WhiteSpace(UiWhiteSpace.Normal));
         }
 
+        if (!string.IsNullOrWhiteSpace(state.SelectionSummary))
+        {
+            children.Add(
+                Ui.Text(state.SelectionSummary)
+                    .FontSize(12f)
+                    .Color("#FFB38A")
+                    .WhiteSpace(UiWhiteSpace.Normal));
+        }
+
         if (includeBackButton)
         {
             children.Add(
@@ -205,7 +231,8 @@ internal sealed class ItemSystemShowcasePanelController
                         BuildActionButton("Back To Hub", "#23415C", _ => LoadMap(ItemSystemShowcaseIds.HubMapId)),
                         BuildActionButton("Loadout", "#5E4518", _ => LoadMap(ItemSystemShowcaseIds.LoadoutGarageMapId)),
                         BuildActionButton("Bench", "#20493A", _ => LoadMap(ItemSystemShowcaseIds.WeaponBenchMapId)),
-                        BuildActionButton("Raid", "#7D3326", _ => LoadMap(ItemSystemShowcaseIds.RaidLoopMapId)))
+                        BuildActionButton("Raid", "#7D3326", _ => LoadMap(ItemSystemShowcaseIds.RaidLoopMapId)),
+                        BuildActionButton("Forge", "#6A4B1B", _ => LoadMap(ItemSystemShowcaseIds.ForgeSocketLabMapId)))
                     .Gap(8f)
                     .Wrap());
         }
@@ -307,7 +334,34 @@ internal sealed class ItemSystemShowcasePanelController
                         BuildActionButton("Split Ammo", "#20493A", _ => Run(engine => _runtime.SplitAmmo(engine))))
                     .Gap(8f)
                     .Wrap(),
+                Ui.Text("Vendor board is read-only for browsing. Buying and selling stay explicit so pricing rules cannot be bypassed by generic item moves.")
+                    .FontSize(11f)
+                    .Color("#F5F7FA")
+                    .WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text("Target player feeling: route loot through secure case, stash, vendor, and backpack without needing to parse every subsystem at once.")
+                    .FontSize(11f)
+                    .Color("#93A4B8")
+                    .WhiteSpace(UiWhiteSpace.Normal))
+            .Width(760f)
+            .Padding(16f)
+            .Gap(10f)
+            .Radius(22f)
+            .Background("#0D1722")
+            .Border(1f, Color("#2F475E"));
+    }
+
+    private UiElementBuilder BuildForgeActions()
+    {
+        return Ui.Card(
+                Ui.Text("Forge Moves")
+                    .FontSize(12f)
+                    .Bold()
+                    .Color("#F0C36B"),
+                Ui.Text("Click a recipe card to craft. Click a gem in the forge stash to select it, then click an amulet socket to insert it. Click socketed gems to inspect them.")
+                    .FontSize(11f)
+                    .Color("#F5F7FA")
+                    .WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text("Target player feeling: this is a real item interface for crafting and socketing, not a hidden data transform.")
                     .FontSize(11f)
                     .Color("#93A4B8")
                     .WhiteSpace(UiWhiteSpace.Normal))
@@ -355,6 +409,147 @@ internal sealed class ItemSystemShowcasePanelController
             .Radius(18f)
             .Background("#0E1823")
             .Border(1f, Color("#284154"));
+    }
+
+    private UiElementBuilder BuildBoardGallery(ItemSystemShowcaseSceneKind sceneKind)
+    {
+        if (_engine == null)
+        {
+            return Ui.Card(
+                    Ui.Text("Interactive Boards")
+                        .FontSize(12f)
+                        .Bold()
+                        .Color("#F0C36B"),
+                    Ui.Text("Engine unavailable.")
+                        .FontSize(11f)
+                        .Color("#93A4B8"))
+                .Width(760f)
+                .Padding(16f)
+                .Gap(10f)
+                .Radius(18f)
+                .Background("#0E1823")
+                .Border(1f, Color("#284154"));
+        }
+
+        ItemSystemShowcaseBoardModel[] boards = _runtime.BuildBoards(_engine, sceneKind);
+        if (boards.Length == 0)
+        {
+            return Ui.Card(
+                    Ui.Text("Interactive Boards")
+                        .FontSize(12f)
+                        .Bold()
+                        .Color("#F0C36B"),
+                    Ui.Text("No board content in this scene.")
+                        .FontSize(11f)
+                        .Color("#93A4B8"))
+                .Width(760f)
+                .Padding(16f)
+                .Gap(10f)
+                .Radius(18f)
+                .Background("#0E1823")
+                .Border(1f, Color("#284154"));
+        }
+
+        var boardCards = new List<UiElementBuilder>(boards.Length);
+        for (int i = 0; i < boards.Length; i++)
+        {
+            boardCards.Add(BuildBoard(boards[i]));
+        }
+
+        return Ui.Card(
+                Ui.Text("Interactive Item Boards")
+                    .FontSize(12f)
+                    .Bold()
+                    .Color("#F0C36B"),
+                Ui.Text("Click items to select them. Click empty grid cells or named slots to move them. Recipes execute directly from their cards.")
+                    .FontSize(11f)
+                    .Color("#93A4B8")
+                    .WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Row(boardCards.ToArray())
+                    .Gap(12f)
+                    .Wrap()
+                    .Align(UiAlignItems.Start))
+            .Width(1120f)
+            .Padding(16f)
+            .Gap(12f)
+            .Radius(22f)
+            .Background("#0D1722")
+            .Border(1f, Color("#2F475E"));
+    }
+
+    private UiElementBuilder BuildBoard(ItemSystemShowcaseBoardModel board)
+    {
+        var rowBuilders = new List<UiElementBuilder>(board.Rows.Length);
+        for (int row = 0; row < board.Rows.Length; row++)
+        {
+            ItemSystemShowcaseBoardCellModel[] cells = board.Rows[row];
+            var cellBuilders = new List<UiElementBuilder>(cells.Length);
+            for (int col = 0; col < cells.Length; col++)
+            {
+                cellBuilders.Add(BuildBoardCell(board, cells[col]));
+            }
+
+            rowBuilders.Add(
+                Ui.Row(cellBuilders.ToArray())
+                    .Gap(6f)
+                    .Wrap());
+        }
+
+        float width = board.Kind switch
+        {
+            ItemSystemShowcaseBoardKind.Grid => 540f,
+            ItemSystemShowcaseBoardKind.Slots => 520f,
+            ItemSystemShowcaseBoardKind.Recipes => 320f,
+            _ => 420f
+        };
+
+        return Ui.Card(
+                Ui.Text(board.Title)
+                    .FontSize(12f)
+                    .Bold()
+                    .Color(board.AccentColor),
+                Ui.Column(rowBuilders.ToArray())
+                    .Gap(6f))
+            .Width(width)
+            .Padding(14f)
+            .Gap(10f)
+            .Radius(18f)
+            .Background("#0E1823")
+            .Border(1f, Color("#284154"));
+    }
+
+    private UiElementBuilder BuildBoardCell(ItemSystemShowcaseBoardModel board, ItemSystemShowcaseBoardCellModel cell)
+    {
+        if (cell.Target.Kind == ItemSystemShowcaseClickTargetKind.None)
+        {
+            return Ui.Card(
+                    Ui.Text(" ")
+                        .FontSize(10f)
+                        .Color("#0E1823"))
+                .Width(board.Kind == ItemSystemShowcaseBoardKind.Recipes ? 260f : 76f)
+                .Height(board.Kind == ItemSystemShowcaseBoardKind.Recipes ? 70f : 76f)
+                .Padding(6f)
+                .Background("#0E1823")
+                .Border(1f, Color("#0E1823"));
+        }
+
+        string label = string.IsNullOrWhiteSpace(cell.SecondaryText)
+            ? cell.PrimaryText
+            : $"{cell.PrimaryText}\n{cell.SecondaryText}";
+        float width = board.Kind == ItemSystemShowcaseBoardKind.Recipes ? 260f : board.Kind == ItemSystemShowcaseBoardKind.Slots ? 118f : 76f;
+        float height = board.Kind == ItemSystemShowcaseBoardKind.Recipes ? 70f : 76f;
+        string border = cell.IsSelected ? "#F0C36B" : cell.BorderColor;
+
+        return Ui.Button(label, _ => Run(engine => _runtime.HandleBoardClick(engine, cell.Target)))
+            .Width(width)
+            .Height(height)
+            .Padding(8f)
+            .Radius(12f)
+            .Background(cell.FillColor)
+            .Border(1f, Color(border))
+            .Color("#F5F7FA")
+            .FontSize(10f)
+            .WhiteSpace(UiWhiteSpace.Normal);
     }
 
     private static List<UiElementBuilder> BuildLineNodes(IReadOnlyList<string> lines)
@@ -427,5 +622,16 @@ internal sealed class ItemSystemShowcasePanelController
         }
 
         return color;
+    }
+
+    private static string[] BuildHubPromiseLines()
+    {
+        return new[]
+        {
+            "One architecture underneath all four rooms.",
+            "Equipment, backpack, secure case, vendor, rifle sockets, and gem sockets are all containers plus item placements.",
+            "Passive bonuses stay in GAS as real effects and tags.",
+            "Active item powers still flow through item-granted ability slots instead of a second runtime."
+        };
     }
 }
