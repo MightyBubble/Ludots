@@ -17,12 +17,18 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly ConfigPipeline _pipeline;
         private readonly EffectTemplateRegistry _registry;
         private readonly GasConditionRegistry _conditions;
+        private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
 
-        public EffectTemplateLoader(ConfigPipeline pipeline, EffectTemplateRegistry registry, GasConditionRegistry conditions = null)
+        public EffectTemplateLoader(
+            ConfigPipeline pipeline,
+            EffectTemplateRegistry registry,
+            GasConditionRegistry conditions = null,
+            TargetDispatchPresetRegistry targetDispatchPresets = null)
         {
             _pipeline = pipeline;
             _registry = registry;
             _conditions = conditions;
+            _targetDispatchPresets = targetDispatchPresets;
         }
 
         public void Load(
@@ -523,16 +529,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         // ── TeamFilter vocabulary mapping ──
         // Mapping table: teamFilter vocabulary → canonical RelationshipFilter names.
         // Lives in the Loader (migration boundary), NOT in RelationshipFilterUtil (clean API).
-        private static ContextSlot ParseContextSlot(string slot, ContextSlot defaultValue)
-        {
-            if (string.IsNullOrWhiteSpace(slot)) return defaultValue;
-            if (string.Equals(slot, "OriginalSource", StringComparison.OrdinalIgnoreCase)) return ContextSlot.OriginalSource;
-            if (string.Equals(slot, "OriginalTarget", StringComparison.OrdinalIgnoreCase)) return ContextSlot.OriginalTarget;
-            if (string.Equals(slot, "OriginalTargetContext", StringComparison.OrdinalIgnoreCase)) return ContextSlot.OriginalTargetContext;
-            if (string.Equals(slot, "ResolvedEntity", StringComparison.OrdinalIgnoreCase)) return ContextSlot.ResolvedEntity;
-            return defaultValue;
-        }
-
         private static EffectPresetType ParsePresetType(string presetType, string ownerId, string relativePath)
         {
             return GasEnumParser.ParsePresetTypeStrict(presetType, $"Effect template '{ownerId}' in {relativePath}");
@@ -793,7 +789,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return desc;
         }
 
-        private static TargetDispatchDescriptor CompileTargetDispatch(TargetDispatchConfig cfg, string effectId, string path)
+        private TargetDispatchDescriptor CompileTargetDispatch(TargetDispatchConfig cfg, string effectId, string path)
         {
             var desc = default(TargetDispatchDescriptor);
             if (!string.IsNullOrWhiteSpace(cfg.PayloadEffect))
@@ -802,13 +798,33 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (desc.PayloadEffectTemplateId <= 0)
                     throw new InvalidOperationException($"Effect template '{effectId}' in {path}: targetDispatch.payloadEffect '{cfg.PayloadEffect}' not found.");
             }
+
+            if (!string.IsNullOrWhiteSpace(cfg.Preset))
+            {
+                if (_targetDispatchPresets == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{effectId}' in {path}: targetDispatch.preset requires TargetDispatchPresetRegistry.");
+                }
+
+                int presetId = _targetDispatchPresets.GetId(cfg.Preset);
+                desc.ContextMapping = _targetDispatchPresets.Get(presetId);
+                return desc;
+            }
+
             if (cfg.ContextMapping != null)
             {
                 desc.ContextMapping = new TargetResolverContextMapping
                 {
-                    PayloadSource = ParseContextSlot(cfg.ContextMapping.PayloadSource, ContextSlot.OriginalSource),
-                    PayloadTarget = ParseContextSlot(cfg.ContextMapping.PayloadTarget, ContextSlot.ResolvedEntity),
-                    PayloadTargetContext = ParseContextSlot(cfg.ContextMapping.PayloadTargetContext, ContextSlot.OriginalTarget),
+                    PayloadSource = string.IsNullOrWhiteSpace(cfg.ContextMapping.PayloadSource)
+                        ? ContextSlot.OriginalSource
+                        : TargetDispatchPresetLoader.ParseContextSlotStrict(cfg.ContextMapping.PayloadSource, effectId, "targetDispatch.contextMapping.payloadSource", path),
+                    PayloadTarget = string.IsNullOrWhiteSpace(cfg.ContextMapping.PayloadTarget)
+                        ? ContextSlot.ResolvedEntity
+                        : TargetDispatchPresetLoader.ParseContextSlotStrict(cfg.ContextMapping.PayloadTarget, effectId, "targetDispatch.contextMapping.payloadTarget", path),
+                    PayloadTargetContext = string.IsNullOrWhiteSpace(cfg.ContextMapping.PayloadTargetContext)
+                        ? ContextSlot.OriginalTarget
+                        : TargetDispatchPresetLoader.ParseContextSlotStrict(cfg.ContextMapping.PayloadTargetContext, effectId, "targetDispatch.contextMapping.payloadTargetContext", path),
                 };
             }
             else

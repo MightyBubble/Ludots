@@ -161,6 +161,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
     /// <summary>Target dispatch configuration (how to DISPATCH payload effects).</summary>
     public sealed class TargetDispatchConfig
     {
+        public string Preset { get; set; }
         public string PayloadEffect { get; set; }
         public ContextMappingConfig ContextMapping { get; set; }
     }

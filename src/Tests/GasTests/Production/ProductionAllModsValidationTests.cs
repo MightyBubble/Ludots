@@ -113,6 +113,12 @@ namespace Ludots.Tests.GAS.Production
                 .SetName("ProdModSmoke_ChampionSkillSandboxMod");
 
             yield return new TestCaseData(new ModCase(
+                    "RelationshipShowcaseMod",
+                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "RelationshipShowcaseMod" },
+                    true))
+                .SetName("ProdModSmoke_RelationshipShowcaseMod");
+
+            yield return new TestCaseData(new ModCase(
                     "UiTestMod",
                     new[] { "LudotsCoreMod", "UiTestMod" },
                     true))

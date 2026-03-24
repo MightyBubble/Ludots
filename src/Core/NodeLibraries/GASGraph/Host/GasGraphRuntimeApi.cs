@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
+using Ludots.Core.Gameplay.Relationships;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -19,12 +20,30 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly GameplayEventBus? _eventBus;
         private readonly EffectRequestQueue? _effectRequests;
         private readonly TagOps _tagOps;
+        private readonly RelationshipRuntime _relationshipRuntime;
+        private readonly RelationshipTypeRegistry _relationshipTypeRegistry;
+        private readonly RelationshipMetricRegistry _relationshipMetricRegistry;
+        private readonly RelationshipFlagRegistry _relationshipFlagRegistry;
+        private readonly RelationshipReasonRegistry _relationshipReasonRegistry;
+        private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
 
         // ── Config context: set before each graph execution, cleared after ──
         private EffectConfigParams _currentConfigParams;
         private bool _hasConfigContext;
 
-        public GasGraphRuntimeApi(World world, ISpatialQueryService? spatialQueries, ISpatialCoordinateConverter? coords, GameplayEventBus? eventBus, EffectRequestQueue? effectRequests = null, TagOps? tagOps = null)
+        public GasGraphRuntimeApi(
+            World world,
+            ISpatialQueryService? spatialQueries = null,
+            ISpatialCoordinateConverter? coords = null,
+            GameplayEventBus? eventBus = null,
+            EffectRequestQueue? effectRequests = null,
+            TagOps? tagOps = null,
+            RelationshipRuntime? relationshipRuntime = null,
+            RelationshipTypeRegistry? typeRegistry = null,
+            RelationshipMetricRegistry? metricRegistry = null,
+            RelationshipFlagRegistry? flagRegistry = null,
+            RelationshipReasonRegistry? reasonRegistry = null,
+            TargetDispatchPresetRegistry? targetDispatchPresets = null)
         {
             _world = world;
             _spatialQueries = spatialQueries;
@@ -32,11 +51,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _eventBus = eventBus;
             _effectRequests = effectRequests;
             _tagOps = tagOps ?? new TagOps();
-        }
-
-        public GasGraphRuntimeApi(World world, ISpatialQueryService? spatialQueries, GameplayEventBus? eventBus, EffectRequestQueue? effectRequests = null)
-            : this(world, spatialQueries, coords: null, eventBus, effectRequests)
-        {
+            _relationshipTypeRegistry = typeRegistry ?? new RelationshipTypeRegistry();
+            _relationshipMetricRegistry = metricRegistry ?? new RelationshipMetricRegistry();
+            _relationshipFlagRegistry = flagRegistry ?? new RelationshipFlagRegistry();
+            _relationshipReasonRegistry = reasonRegistry ?? new RelationshipReasonRegistry();
+            _targetDispatchPresets = targetDispatchPresets ?? new TargetDispatchPresetRegistry();
+            _relationshipRuntime = relationshipRuntime ?? new RelationshipRuntime(
+                world,
+                _relationshipTypeRegistry,
+                _relationshipMetricRegistry,
+                _relationshipFlagRegistry,
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer());
         }
 
         /// <summary>
@@ -149,6 +175,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             return (int)TeamManager.GetRelationship(teamA, teamB);
         }
+        public void EnsureRelationshipLink(Entity source, Entity target, int typeId) => _relationshipRuntime.EnsureLink(source, target, typeId);
+        public void RemoveRelationshipLink(Entity source, Entity target, int typeId) => _relationshipRuntime.RemoveLink(source, target, typeId);
+        public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
+            => _relationshipRuntime.SetMetric(source, target, typeId, metricId, value, reasonId);
+        public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
+            => _relationshipRuntime.AddMetric(source, target, typeId, metricId, delta, reasonId);
+        public short GetRelationshipMetric(Entity source, Entity target, int metricId, int typeId)
+            => _relationshipRuntime.GetMetric(source, target, typeId, metricId);
+        public bool HasRelationshipFlag(Entity source, Entity target, int flagId, int typeId)
+            => _relationshipRuntime.HasFlag(source, target, typeId, flagId);
+        public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
+            => _relationshipRuntime.SetFlag(source, target, typeId, flagId, enabled, reasonId);
+        public int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+            => _relationshipRuntime.CollectOutgoing(source, typeId, buffer);
+        public int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+            => _relationshipRuntime.CollectIncoming(target, typeId, buffer);
+        public int CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+            => _relationshipRuntime.CollectMutual(first, second, typeId, buffer);
+        public int CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+            => _relationshipRuntime.CollectBetweenPair(source, target, typeId, buffer);
 
         public void ApplyEffectTemplate(Entity caster, Entity target, int templateId)
         {
@@ -186,6 +232,30 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             _effectRequests.Publish(req);
+        }
+
+        public void FanOutDispatchEffect(Entity source, Entity target, Entity targetContext, ReadOnlySpan<Entity> targets, int templateId, int payloadPresetId)
+        {
+            if (_effectRequests == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEffectRequestQueue");
+            }
+
+            if (templateId <= 0)
+            {
+                return;
+            }
+
+            TargetResolverContextMapping mapping = _targetDispatchPresets.Get(payloadPresetId);
+            TargetResolverFanOutHelper.PublishResolvedTargets(
+                rootId: 0,
+                source,
+                target,
+                targetContext,
+                targets,
+                templateId,
+                in mapping,
+                _effectRequests);
         }
 
         public void RemoveEffectTemplate(Entity target, int templateId)

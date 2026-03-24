@@ -1,0 +1,44 @@
+{
+  "Id": "relationship_showcase",
+  "Tags": ["relationship.showcase", "relationship.peach_garden"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 1600,
+    "TargetYCm": 920,
+    "DistanceCm": 3600,
+    "Pitch": 54,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "relationship_liu_bei",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 1080, "Y": 920 } }
+      }
+    },
+    {
+      "Template": "relationship_guan_yu",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 1280, "Y": 660 } }
+      }
+    },
+    {
+      "Template": "relationship_zhang_fei",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 1280, "Y": 1180 } }
+      }
+    },
+    {
+      "Template": "relationship_rebel_captain",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 1940, "Y": 860 } }
+      }
+    },
+    {
+      "Template": "relationship_rebel_spearman",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 2140, "Y": 1090 } }
+      }
+    }
+  ]
+}

@@ -161,6 +161,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         }
                         ins.Flags = floatCount;
                         break;
+                    case GraphNodeOp.ApplyEffectDynamic:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.FanOutApplyEffect:
+                        ins.Imm = Intern(symbolToIndex, symbols, node.EffectTemplate);
+                        break;
+                    case GraphNodeOp.FanOutApplyEffectDynamic:
+                        ins.A = RequireInput(node, 0, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.FanOutDispatchEffect:
+                        ins.Imm = Intern(symbolToIndex, symbols, node.EffectTemplate);
+                        ins.Dst = RequirePayloadPresetSymbol(node.PayloadPreset, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.FanOutDispatchEffectDynamic:
+                        ins.A = RequireInput(node, 0, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                        ins.Dst = RequirePayloadPresetSymbol(node.PayloadPreset, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
                     case GraphNodeOp.RemoveEffectTemplate:
                         ins.A = node.Inputs.Count > 0
                             ? RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics)
@@ -180,6 +198,105 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
                         ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
                         ins.Imm = Intern(symbolToIndex, symbols, node.Tag);
+                        break;
+                    case GraphNodeOp.RelationshipEnsureLink:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipRemoveLink:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipSetMetric:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.C = RequireInput(node, 2, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Metric);
+                        ins.Dst = node.Reason == null ? byte.MaxValue : checked((byte)Intern(symbolToIndex, symbols, node.Reason));
+                        ins.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipAddMetric:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.C = RequireInput(node, 2, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Metric);
+                        ins.Dst = node.Reason == null ? byte.MaxValue : checked((byte)Intern(symbolToIndex, symbols, node.Reason));
+                        ins.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipGetMetric:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Metric);
+                        ins.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipHasFlag:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Flag);
+                        ins.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipSetFlag:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.C = RequireInput(node, 2, GraphValueType.Bool, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Flag);
+                        ins.Dst = node.Reason == null ? byte.MaxValue : checked((byte)Intern(symbolToIndex, symbols, node.Reason));
+                        ins.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipQueryOutgoing:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Dst = EncodeByteSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipQueryIncoming:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Dst = EncodeByteSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipQueryMutual:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Dst = EncodeByteSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipQueryBetweenPair:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Dst = EncodeByteSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipFilterMetricRange:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        ins.C = RequireInput(node, 2, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Metric);
+                        ins.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipFilterFlag:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        if (node.Inputs.Count > 1)
+                        {
+                            ins.B = RequireInput(node, 1, GraphValueType.Bool, valueMap, cfg.Id, diagnostics);
+                            ins.Flags = 0;
+                        }
+                        else
+                        {
+                            ins.B = 0;
+                            ins.Flags = 1;
+                        }
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Flag);
+                        ins.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.RelationshipSortByMetric:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Metric);
+                        ins.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        ins.Flags = node.Descending ? (byte)1 : (byte)0;
+                        break;
+                    case GraphNodeOp.RelationshipAggSumMetric:
+                    case GraphNodeOp.RelationshipAggMaxMetric:
+                    case GraphNodeOp.RelationshipAggAverageMetric:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Metric);
+                        ins.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
                         break;
                 }
 
@@ -214,6 +331,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SelectEntity => (GraphValueType.Entity, null),
                 GraphNodeOp.AggCount => (GraphValueType.Int, null),
                 GraphNodeOp.AggMinByDistance => (GraphValueType.Entity, null),
+                GraphNodeOp.RelationshipGetMetric => (GraphValueType.Int, null),
+                GraphNodeOp.RelationshipHasFlag => (GraphValueType.Bool, null),
+                GraphNodeOp.RelationshipAggSumMetric => (GraphValueType.Int, null),
+                GraphNodeOp.RelationshipAggMaxMetric => (GraphValueType.Int, null),
+                GraphNodeOp.RelationshipAggAverageMetric => (GraphValueType.Int, null),
                 _ => (GraphValueType.Void, null)
             };
         }
@@ -275,6 +397,78 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             symbolToIndex[symbol] = idx;
             symbols.Add(symbol);
             return idx;
+        }
+
+        private static byte EncodeByteSymbol(
+            string? symbol,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            string graphId,
+            string nodeId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                return byte.MaxValue;
+            }
+
+            int symbolIndex = Intern(symbolToIndex, symbols, symbol);
+            if (symbolIndex >= byte.MaxValue)
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.BudgetExceeded,
+                    $"Graph symbol budget exceeded for byte-encoded relationship symbol '{symbol}'.",
+                    graphId,
+                    nodeId));
+                return byte.MaxValue;
+            }
+
+            return checked((byte)symbolIndex);
+        }
+
+        private static byte RequireRelationshipTypeSymbol(
+            string? symbol,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            string graphId,
+            string nodeId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{nodeId}' requires a non-empty relationshipType.",
+                    graphId,
+                    nodeId));
+                return byte.MaxValue;
+            }
+
+            return EncodeByteSymbol(symbol, symbolToIndex, symbols, graphId, nodeId, diagnostics);
+        }
+
+        private static byte RequirePayloadPresetSymbol(
+            string? symbol,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            string graphId,
+            string nodeId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{nodeId}' requires a non-empty payloadPreset.",
+                    graphId,
+                    nodeId));
+                return byte.MaxValue;
+            }
+
+            return EncodeByteSymbol(symbol, symbolToIndex, symbols, graphId, nodeId, diagnostics);
         }
     }
 }

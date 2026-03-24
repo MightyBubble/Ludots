@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
@@ -54,8 +55,62 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Returns one of the <see cref="GraphRelationship"/> constants.
         /// </summary>
         int GetRelationship(int teamA, int teamB);
+        void EnsureRelationshipLink(Entity source, Entity target, int typeId)
+        {
+        }
+
+        void RemoveRelationshipLink(Entity source, Entity target, int typeId)
+        {
+        }
+
+        short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
+        {
+            return 0;
+        }
+
+        short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
+        {
+            return 0;
+        }
+
+        short GetRelationshipMetric(Entity source, Entity target, int metricId, int typeId)
+        {
+            return 0;
+        }
+
+        bool HasRelationshipFlag(Entity source, Entity target, int flagId, int typeId)
+        {
+            return false;
+        }
+
+        void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
+        {
+        }
+
+        int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            return 0;
+        }
+
+        int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            return 0;
+        }
+
+        int CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            return 0;
+        }
+
+        int CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
+        {
+            return 0;
+        }
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId);
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args);
+        void FanOutDispatchEffect(Entity source, Entity target, Entity targetContext, ReadOnlySpan<Entity> targets, int templateId, int payloadPresetId)
+        {
+        }
         void RemoveEffectTemplate(Entity target, int templateId);
         void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta);
         void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude);
@@ -84,5 +139,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTag(string name);
         int ResolveAttribute(string name);
         int ResolveEffectTemplate(string name);
+        int ResolveRelationshipType(string name);
+        int ResolveRelationshipMetric(string name);
+        int ResolveRelationshipFlag(string name);
+        int ResolveRelationshipReason(string name);
+        int ResolveTargetDispatchPreset(string name);
     }
 }

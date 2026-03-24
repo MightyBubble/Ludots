@@ -1,0 +1,195 @@
+{
+  "mapId": "relationship_showcase",
+  "synergyTeamId": 1,
+  "scenario": {
+    "teams": [
+      { "id": 1, "name": "Shu Brotherhood" },
+      { "id": 2, "name": "Yellow Turban Vanguard" }
+    ],
+    "heroes": [
+      { "name": "Liu Bei", "teamId": 1, "tags": ["Faction.Shu", "Bond.PeachGarden"] },
+      { "name": "Guan Yu", "teamId": 1, "tags": ["Faction.Shu", "Bond.PeachGarden"] },
+      { "name": "Zhang Fei", "teamId": 1, "tags": ["Faction.Shu", "Bond.PeachGarden"] }
+    ],
+    "enemies": [
+      {
+        "name": "Yellow Turban Captain",
+        "teamId": 2,
+        "tags": ["Faction.YellowTurbans"],
+        "threats": [
+          { "targetName": "Liu Bei", "value": 25 },
+          { "targetName": "Guan Yu", "value": 35 },
+          { "targetName": "Zhang Fei", "value": 45 }
+        ]
+      },
+      {
+        "name": "Yellow Turban Spearman",
+        "teamId": 2,
+        "tags": ["Faction.YellowTurbans"],
+        "threats": [
+          { "targetName": "Liu Bei", "value": 20 },
+          { "targetName": "Guan Yu", "value": 30 },
+          { "targetName": "Zhang Fei", "value": 40 }
+        ]
+      }
+    ]
+  },
+  "actions": {
+    "nextHero": "Relationship.NextHero",
+    "doctrine": "Relationship.Doctrine",
+    "drill": "Relationship.Drill",
+    "taunt": "Relationship.Taunt",
+    "rally": "Relationship.Rally",
+    "drillBindings": [
+      { "selectedName": "Liu Bei", "sourceName": "Guan Yu", "targetName": "Zhang Fei" },
+      { "selectedName": "Guan Yu", "sourceName": "Guan Yu", "targetName": "Zhang Fei" },
+      { "selectedName": "Zhang Fei", "sourceName": "Zhang Fei", "targetName": "Guan Yu" }
+    ]
+  },
+  "events": {
+    "trustedUnlocked": "RelationshipShowcase.TrustedUnlocked",
+    "oathBondUnlocked": "RelationshipShowcase.OathBondUnlocked",
+    "synergyActivated": "RelationshipShowcase.SynergyActivated",
+    "focusLocked": "RelationshipShowcase.FocusLocked"
+  },
+  "types": {
+    "socialBond": "SocialBond",
+    "hostility": "Hostility"
+  },
+  "flags": {
+    "trusted": "Trusted"
+  },
+  "tags": {
+    "oathBond": "State.Relationship.OathBond",
+    "synergy": "State.Relationship.Showcase.ShuSynergy",
+    "focusedByEnemy": "State.Relationship.Showcase.FocusedByEnemy"
+  },
+  "effects": {
+    "benevolencePulse": "Effect.RelationshipShowcase.BenevolencePulse",
+    "trustedGuard": "Effect.RelationshipShowcase.TrustedGuard",
+    "oathSpark": "Effect.RelationshipShowcase.OathSpark",
+    "tauntGuard": "Effect.RelationshipShowcase.TauntGuard",
+    "rallyBanner": "Effect.RelationshipShowcase.RallyBanner",
+    "enemyStrike": "Effect.RelationshipShowcase.EnemyStrike"
+  },
+  "metrics": {
+    "loyalty": "Loyalty",
+    "support": "Support",
+    "threat": "Threat"
+  },
+  "reasons": {
+    "setup": "Scenario.Setup",
+    "doctrine": "Doctrine.Benevolence",
+    "drill": "Bond.OathDrill",
+    "taunt": "Combat.Taunt"
+  },
+  "seed": {
+    "metrics": [
+      { "sourceName": "Liu Bei", "targetName": "Guan Yu", "type": "SocialBond", "metric": "Loyalty", "value": 50, "reason": "Scenario.Setup" },
+      { "sourceName": "Liu Bei", "targetName": "Zhang Fei", "type": "SocialBond", "metric": "Loyalty", "value": 50, "reason": "Scenario.Setup" },
+      { "sourceName": "Guan Yu", "targetName": "Zhang Fei", "type": "SocialBond", "metric": "Support", "value": 30, "reason": "Scenario.Setup" },
+      { "sourceName": "Zhang Fei", "targetName": "Guan Yu", "type": "SocialBond", "metric": "Support", "value": 30, "reason": "Scenario.Setup" }
+    ]
+  },
+  "state": {
+    "trusted": {
+      "sourceName": "Liu Bei",
+      "type": "SocialBond",
+      "targetNames": ["Guan Yu", "Zhang Fei"],
+      "minimumMatches": 2
+    },
+    "oathBond": {
+      "entityNames": ["Guan Yu", "Zhang Fei"],
+      "minimumTaggedCount": 2
+    },
+    "synergy": {
+      "teamId": 1
+    }
+  },
+  "status": {
+    "oathBondTag": "State.Relationship.OathBond",
+    "synergyTag": "State.Relationship.Showcase.ShuSynergy",
+    "trustedRelationshipType": "SocialBond",
+    "trustedPairs": [
+      { "sourceName": "Liu Bei", "targetName": "Guan Yu" },
+      { "sourceName": "Liu Bei", "targetName": "Zhang Fei" }
+    ],
+    "oathBondMembers": ["Guan Yu", "Zhang Fei"]
+  },
+  "behaviors": {
+    "doctrine": {
+      "relationshipType": "SocialBond",
+      "loyaltyDelta": 15,
+      "reciprocalSupportDelta": 5,
+      "effectTemplate": "Effect.RelationshipShowcase.BenevolencePulse"
+    },
+    "drill": {
+      "relationshipType": "SocialBond",
+      "sourceName": "Guan Yu",
+      "targetName": "Zhang Fei",
+      "supportDelta": 30
+    },
+    "taunt": {
+      "relationshipType": "Hostility",
+      "threatDelta": 60,
+      "effectTemplate": "Effect.RelationshipShowcase.TauntGuard"
+    },
+    "rally": {
+      "effectTemplate": "Effect.RelationshipShowcase.RallyBanner"
+    },
+    "enemyPressure": {
+      "relationshipType": "Hostility",
+      "metricId": "Threat",
+      "intervalFrames": 45,
+      "effectTemplate": "Effect.RelationshipShowcase.EnemyStrike",
+      "emptyFocusText": "Scanning"
+    }
+  },
+  "ui": {
+    "controlsLine": "Controls: Tab cycle hero | 1 doctrine | 2 oath drill | 3 taunt | 4 rally",
+    "coverageLine": "Coverage: CRPG trust, JRPG support rank, auto-battler synergy count, Three Kingdoms oath fantasy."
+  },
+  "presentation": {
+    "titlePrefix": "Relationship Showcase",
+    "selectedHeroLabel": "Selected Hero",
+    "enemyFocusLabel": "Enemy Focus",
+    "trustedLabel": "Trusted",
+    "oathBondLabel": "Oath Bond",
+    "synergyLabel": "Synergy",
+    "controlsLine": "Controls: Tab cycle hero | 1 doctrine | 2 oath drill | 3 taunt | 4 rally",
+    "coverageLine": "Coverage: CRPG trust, JRPG support rank, auto-battler synergy count, Three Kingdoms oath fantasy.",
+    "battleLogTitle": "Battle Log",
+    "metricsPendingText": "Metrics: scenario not ready yet.",
+    "enemyFocusPendingText": "Scanning",
+    "readyText": "Ready",
+    "lockedText": "Locked",
+    "metrics": {
+      "loyaltyPairs": [
+        { "sourceName": "Liu Bei", "targetName": "Guan Yu" },
+        { "sourceName": "Liu Bei", "targetName": "Zhang Fei" }
+      ],
+      "supportPairs": [
+        { "sourceName": "Guan Yu", "targetName": "Zhang Fei" }
+      ],
+      "threatSourceName": "Yellow Turban Captain"
+    }
+  },
+  "teamRelations": [
+    { "teamA": 1, "teamB": 2, "relationship": "Hostile" }
+  ],
+  "logs": {
+    "scenarioBootstrap": "Scenario bootstrapped: Peach Garden trio holds center while Yellow Turbans probe threat.",
+    "selectionRotated": "Selection moved to {0}.",
+    "doctrine": "{0} invoked Benevolence Doctrine and raised loyalty across the trio.",
+    "drill": "{0} and {1} completed an oath drill and tightened support.",
+    "taunt": "{0} roared a taunt and pulled Yellow Turban focus.",
+    "rally": "{0} raised the rally banner and converted relationship state into GAS buffs.",
+    "rallyDenied": "Rally denied: trust, oath, or synergy thresholds are still locked.",
+    "pressure": "{0} struck {1} at threat {2}.",
+    "triggerTrustedUnlocked": "Trigger callback granted Trusted Guard.",
+    "triggerOathBondUnlocked": "Trigger callback confirmed Oath Bond.",
+    "triggerSynergyActivated": "Trigger callback fired for Peach Garden synergy.",
+    "triggerFocusLocked": "Trigger callback updated enemy focus.",
+    "systemInstalled": "[RelationshipShowcaseMod] Relationship showcase systems registered."
+  }
+}
