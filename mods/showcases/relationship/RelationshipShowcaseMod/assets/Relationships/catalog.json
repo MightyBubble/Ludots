@@ -1,0 +1,63 @@
+{
+  "types": [
+    { "id": "SocialBond", "isSymmetric": false },
+    { "id": "Hostility", "isSymmetric": false }
+  ],
+  "metrics": [
+    { "id": "Loyalty", "minValue": -100, "maxValue": 100, "defaultValue": 0 },
+    { "id": "Support", "minValue": -100, "maxValue": 100, "defaultValue": 0 },
+    { "id": "Threat", "minValue": 0, "maxValue": 2000, "defaultValue": 0 }
+  ],
+  "flags": [
+    { "id": "Trusted" },
+    { "id": "Rank2" },
+    { "id": "FocusTarget" }
+  ],
+  "bands": [
+    { "id": "Loyalty.Trusted", "typeId": "SocialBond", "metricId": "Loyalty", "flagId": "Trusted", "threshold": 60, "comparison": "GreaterOrEqual" },
+    { "id": "Support.Rank2", "typeId": "SocialBond", "metricId": "Support", "flagId": "Rank2", "threshold": 55, "comparison": "GreaterOrEqual" },
+    { "id": "Threat.FocusTarget", "typeId": "Hostility", "metricId": "Threat", "flagId": "FocusTarget", "threshold": 70, "comparison": "GreaterOrEqual" }
+  ],
+  "reasons": [
+    { "id": "Scenario.Setup" },
+    { "id": "Doctrine.Benevolence" },
+    { "id": "Bond.OathDrill" },
+    { "id": "Combat.Taunt" }
+  ],
+  "callbacks": [
+    {
+      "id": "TrustedUnlocked",
+      "typeId": "SocialBond",
+      "metricId": "Loyalty",
+      "minimumValue": 60,
+      "eventKey": "RelationshipShowcase.TrustedUnlocked",
+      "addTagsToTarget": ["State.Relationship.Trusted"]
+    },
+    {
+      "id": "OathBondUnlocked",
+      "typeId": "SocialBond",
+      "metricId": "Support",
+      "minimumValue": 55,
+      "eventKey": "RelationshipShowcase.OathBondUnlocked",
+      "addTagsToSource": ["State.Relationship.OathBond"],
+      "addTagsToTarget": ["State.Relationship.OathBond"]
+    },
+    {
+      "id": "FocusLocked",
+      "typeId": "Hostility",
+      "metricId": "Threat",
+      "minimumValue": 70,
+      "eventKey": "RelationshipShowcase.FocusLocked",
+      "addTagsToTarget": ["State.Relationship.Showcase.FocusedByEnemy"]
+    }
+  ],
+  "synergies": [
+    {
+      "id": "ShuBrotherhood",
+      "requireAllTags": ["Faction.Shu", "Bond.PeachGarden", "State.Relationship.Trusted"],
+      "minimumCount": 2,
+      "applyTagsToTeam": ["State.Relationship.Showcase.ShuSynergy"],
+      "eventKey": "RelationshipShowcase.SynergyActivated"
+    }
+  ]
+}

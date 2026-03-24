@@ -28,6 +28,8 @@
     *   看板状态、issue 拆解、workspace dispatch、变更/重构/事故/skill 操作 playbook。
 *   [Champion Skill Stress Scenario](champion_skill_stress_scenario.md)
     *   `ChampionSkillSandboxMod` 双阵营压力地图的场景卡、复用清单、工具面板与验收要求。
+*   [关系系统：市场案例抽象与 Ludots 复用设计](relationship_system_market_abstraction.md)
+    *   CRPG/JRPG/自走棋/三国英雄题材的关系机制抽象、Ludots 基建复用清单、配置/回调点与 showcase 验收口径。
 
 ## 2 相关文档
 

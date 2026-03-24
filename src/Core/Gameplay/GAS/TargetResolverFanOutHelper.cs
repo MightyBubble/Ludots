@@ -281,15 +281,57 @@ namespace Ludots.Core.Gameplay.GAS
 
             for (int i = 0; i < commands.Count; i++)
             {
-                var cmd = commands[i];
-                queue.Publish(new EffectRequest
+                FanOutCommand cmd = commands[i];
+                PublishCommand(in cmd, queue);
+            }
+        }
+
+        public static void PublishCommand(in FanOutCommand cmd, EffectRequestQueue queue)
+        {
+            if (queue == null || cmd.PayloadEffectTemplateId <= 0)
+            {
+                return;
+            }
+
+            queue.Publish(new EffectRequest
+            {
+                RootId = cmd.RootId,
+                Source = ResolveSlot(cmd.ContextMapping.PayloadSource, in cmd),
+                Target = ResolveSlot(cmd.ContextMapping.PayloadTarget, in cmd),
+                TargetContext = ResolveSlot(cmd.ContextMapping.PayloadTargetContext, in cmd),
+                TemplateId = cmd.PayloadEffectTemplateId
+            });
+        }
+
+        public static void PublishResolvedTargets(
+            int rootId,
+            Entity originalSource,
+            Entity originalTarget,
+            Entity originalTargetContext,
+            ReadOnlySpan<Entity> resolvedTargets,
+            int payloadEffectTemplateId,
+            in TargetResolverContextMapping contextMapping,
+            EffectRequestQueue queue)
+        {
+            if (queue == null || payloadEffectTemplateId <= 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < resolvedTargets.Length; i++)
+            {
+                var resolved = resolvedTargets[i];
+                var cmd = new FanOutCommand
                 {
-                    RootId = cmd.RootId,
-                    Source = ResolveSlot(cmd.ContextMapping.PayloadSource, in cmd),
-                    Target = ResolveSlot(cmd.ContextMapping.PayloadTarget, in cmd),
-                    TargetContext = ResolveSlot(cmd.ContextMapping.PayloadTargetContext, in cmd),
-                    TemplateId = cmd.PayloadEffectTemplateId
-                });
+                    RootId = rootId,
+                    OriginalSource = originalSource,
+                    OriginalTarget = originalTarget,
+                    OriginalTargetContext = originalTargetContext,
+                    PayloadEffectTemplateId = payloadEffectTemplateId,
+                    ContextMapping = contextMapping,
+                    ResolvedEntity = resolved
+                };
+                PublishCommand(in cmd, queue);
             }
         }
 

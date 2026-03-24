@@ -31,6 +31,8 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Systems;
@@ -431,11 +433,31 @@ namespace Ludots.Core.Engine
             var schemaUpdateSystem = new AttributeSchemaUpdateSystem(World, extensionAttributeRegistry, attributeSchemaUpdateQueue);
             var gasBudget = new GasBudget();
             TeamManager.DefaultRelationship = TeamRelationship.Hostile;
+            var teamEntityLookup = new TeamEntityLookup();
+            var relationshipTypeRegistry = new RelationshipTypeRegistry();
+            var relationshipMetricRegistry = new RelationshipMetricRegistry();
+            var relationshipFlagRegistry = new RelationshipFlagRegistry();
+            var relationshipBandRegistry = new RelationshipBandRegistry();
+            var relationshipReasonRegistry = new RelationshipReasonRegistry();
+            var relationshipChangeBuffer = new RelationshipChangeBuffer();
+            var relationshipRuntime = new RelationshipRuntime(World, relationshipTypeRegistry, relationshipMetricRegistry, relationshipFlagRegistry, relationshipBandRegistry, relationshipChangeBuffer);
+            var relationshipCatalog = new RelationshipCatalogPipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var tagOps = new TagOps(new TagRuleRegistry(), gasBudget);
+            var relationshipCatalogRuntime = RelationshipCatalogInstaller.Install(
+                relationshipCatalog,
+                relationshipTypeRegistry,
+                relationshipMetricRegistry,
+                relationshipFlagRegistry,
+                relationshipBandRegistry,
+                relationshipReasonRegistry);
+            var relationshipProcessingSystem = new RelationshipProcessingSystem(this, relationshipChangeBuffer, tagOps, teamEntityLookup);
             var effectTemplateRegistry = new EffectTemplateRegistry();
             effectTemplateRegistry.SetConflictReport(ConflictReport);
             var gasConditions = new GasConditionRegistry();
-            _effectTemplateLoader = new EffectTemplateLoader(ConfigPipeline, effectTemplateRegistry, gasConditions);
+            var targetDispatchPresetRegistry = new TargetDispatchPresetRegistry();
+            var targetDispatchPresetLoader = new TargetDispatchPresetLoader(ConfigPipeline, targetDispatchPresetRegistry);
+            targetDispatchPresetLoader.Load(ConfigCatalog, ConfigConflictReport);
+            _effectTemplateLoader = new EffectTemplateLoader(ConfigPipeline, effectTemplateRegistry, gasConditions, targetDispatchPresetRegistry);
             var gasClockConfigLoader = new GasClockConfigLoader(ConfigPipeline);
             var gasClockConfig = gasClockConfigLoader.Load();
             var physics2dClockConfigLoader = new Physics2DClockConfigLoader(ConfigPipeline);
@@ -443,7 +465,12 @@ namespace Ludots.Core.Engine
             var navigation2dClockConfigLoader = new Navigation2DClockConfigLoader(ConfigPipeline);
             var navigation2dClockConfig = navigation2dClockConfigLoader.Load();
             var graphProgramRegistry = new GraphProgramRegistry();
-            var graphSymbolResolver = new GasGraphSymbolResolver();
+            var graphSymbolResolver = new GasGraphSymbolResolver(
+                relationshipTypeRegistry,
+                relationshipMetricRegistry,
+                relationshipFlagRegistry,
+                relationshipReasonRegistry,
+                targetDispatchPresetRegistry);
             var graphConfigLoader = new GraphProgramConfigLoader(ConfigPipeline, graphProgramRegistry, graphSymbolResolver);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile();
             var presetTypes = new PresetTypeRegistry();
@@ -466,7 +493,19 @@ namespace Ludots.Core.Engine
             new AbilityFormSetConfigLoader(ConfigPipeline, abilityFormSets).Load(ConfigCatalog, ConfigConflictReport);
             graphConfigLoader.PatchAndRegister(graphPackages);
             new ContextGroupConfigLoader(ConfigPipeline, contextGroups).Load(ConfigCatalog, ConfigConflictReport);
-            var gasGraphApi = new GasGraphRuntimeApi(World, SpatialQueries, SpatialCoords, EventBus, effectRequestQueue, tagOps);
+            var gasGraphApi = new GasGraphRuntimeApi(
+                World,
+                SpatialQueries,
+                SpatialCoords,
+                EventBus,
+                effectRequestQueue,
+                tagOps,
+                relationshipRuntime,
+                relationshipTypeRegistry,
+                relationshipMetricRegistry,
+                relationshipFlagRegistry,
+                relationshipReasonRegistry,
+                targetDispatchPresetRegistry);
             var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus, budget: gasBudget);
             var tagRules = new TagRuleSetLoader(ConfigPipeline).Load();
             for (int i = 0; i < tagRules.Count; i++)
@@ -645,6 +684,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AttributeSchemaUpdateQueue, attributeSchemaUpdateQueue);
             SetService(CoreServiceKeys.GasBudget, gasBudget);
             SetService(CoreServiceKeys.EffectTemplateRegistry, effectTemplateRegistry);
+            SetService(CoreServiceKeys.TargetDispatchPresetRegistry, targetDispatchPresetRegistry);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
             SetService(CoreServiceKeys.EffectRequestQueue, effectRequestQueue);
             SetService(CoreServiceKeys.Clock, (IClock)clock);
@@ -678,6 +718,16 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ChainOrderQueue, chainOrderQueue);
             SetService(CoreServiceKeys.AttributeSinkRegistry, attributeSinks);
             SetService(CoreServiceKeys.AttributeBindingRegistry, attributeBindings);
+            SetService(CoreServiceKeys.RelationshipTypeRegistry, relationshipTypeRegistry);
+            SetService(CoreServiceKeys.RelationshipMetricRegistry, relationshipMetricRegistry);
+            SetService(CoreServiceKeys.RelationshipFlagRegistry, relationshipFlagRegistry);
+            SetService(CoreServiceKeys.RelationshipBandRegistry, relationshipBandRegistry);
+            SetService(CoreServiceKeys.RelationshipReasonRegistry, relationshipReasonRegistry);
+            SetService(CoreServiceKeys.RelationshipChangeBuffer, relationshipChangeBuffer);
+            SetService(CoreServiceKeys.RelationshipRuntime, relationshipRuntime);
+            SetService(CoreServiceKeys.RelationshipCatalogConfig, relationshipCatalog);
+            SetService(CoreServiceKeys.RelationshipCatalogRuntime, relationshipCatalogRuntime);
+            SetService(CoreServiceKeys.TeamEntityLookup, teamEntityLookup);
             SetService(CoreServiceKeys.AuthoritativeInput, authoritativeInput);
             SetService(CoreServiceKeys.PresentationEventStream, presentationEventStream);
             SetService(CoreServiceKeys.PresentationCommandBuffer, presentationCommandBuffer);
@@ -803,6 +853,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
             RegisterSystem(moveToOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(orderContinuationSystem, SystemGroup.AbilityActivation);
+            RegisterSystem(relationshipProcessingSystem, SystemGroup.AbilityActivation);
             
             // Phase 3: EffectProcessing (含响应链)
             var responseChainOrderTypes = new ResponseChainOrderTypes
