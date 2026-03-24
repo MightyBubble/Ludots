@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -19,10 +22,17 @@ namespace Ludots.Core.Presentation.Systems
     /// </summary>
     public sealed class TerrainHeightSyncSystem : ISystem<float>
     {
+        private const float CmToM = 0.01f;
         private readonly World _world;
         private readonly IReadOnlyDictionary<string, object> _globals;
         private static readonly QueryDescription _query = new QueryDescription()
             .WithAll<WorldPositionCm, VisualTransform>();
+        private static readonly QueryDescription _frameStateQuery = new QueryDescription()
+            .WithAll<PresentationFrameState>();
+        private Entity[] _projectedEntities = Array.Empty<Entity>();
+        private float[] _projectedXs = Array.Empty<float>();
+        private float[] _projectedYs = Array.Empty<float>();
+        private float[] _projectedHeights = Array.Empty<float>();
 
         /// <summary>地形高度缩放（米/高度单位），需与地形渲染器一致，默认 2.0。</summary>
         public float HeightScale { get; set; } = 2.0f;
@@ -37,38 +47,132 @@ namespace Ludots.Core.Presentation.Systems
 
         public void Update(in float dt)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.VertexMap.Name, out var vtxObj) || vtxObj is not VertexMap vertexMap)
+            bool hasProjector = _globals.TryGetValue(CoreServiceKeys.VisualGroundProjector.Name, out var projectorObj) &&
+                                projectorObj is IVisualGroundProjector projector;
+            bool hasVertexMap = _globals.TryGetValue(CoreServiceKeys.VertexMap.Name, out var vertexObj) &&
+                                vertexObj is VertexMap vertexMap;
+            if (!hasProjector && !hasVertexMap)
+            {
                 return;
+            }
 
-            var job = new SyncJob { VertexMap = vertexMap, HeightScale = HeightScale };
-            _world.InlineQuery<SyncJob, WorldPositionCm, VisualTransform>(in _query, ref job);
+            float alpha = ReadInterpolationAlpha();
+            if (hasProjector && TrySyncFromProjector(projector!, alpha))
+            {
+                return;
+            }
+
+            if (!hasVertexMap)
+            {
+                return;
+            }
+
+            _world.Query(in _query, (Entity entity, ref WorldPositionCm current, ref VisualTransform visual) =>
+            {
+                Vector2 worldCm = ResolveWorldCm(entity, current.Value, alpha);
+                var sample = new Vector3(worldCm.X * CmToM, visual.Position.Y, worldCm.Y * CmToM);
+                float rawHeight;
+                try
+                {
+                    rawHeight = vertexMap!.GetLogicHeight(sample);
+                }
+                catch
+                {
+                    return;
+                }
+
+                if (float.IsNaN(rawHeight) || float.IsInfinity(rawHeight))
+                {
+                    return;
+                }
+
+                Vector3 position = visual.Position;
+                position.Y = rawHeight * HeightScale;
+                visual.Position = position;
+            });
         }
 
         public void AfterUpdate(in float dt) { }
         public void BeforeUpdate(in float dt) { }
         public void Dispose() { }
 
-        private struct SyncJob : IForEach<WorldPositionCm, VisualTransform>
+        private float ReadInterpolationAlpha()
         {
-            public VertexMap VertexMap;
-            public float HeightScale;
-
-            public void Update(ref WorldPositionCm _, ref VisualTransform visual)
+            float alpha = 1f;
+            _world.Query(in _frameStateQuery, (ref PresentationFrameState state) =>
             {
-                var pos = visual.Position;
-                float rawHeight;
-                try
-                {
-                    rawHeight = VertexMap.GetLogicHeight(pos);
-                }
-                catch
-                {
-                    return;
-                }
-                if (float.IsNaN(rawHeight) || float.IsInfinity(rawHeight)) return;
-                pos.Y = rawHeight * HeightScale;
-                visual.Position = pos;
+                alpha = state.Enabled ? state.InterpolationAlpha : 1f;
+            });
+            return alpha;
+        }
+
+        private bool TrySyncFromProjector(IVisualGroundProjector projector, float alpha)
+        {
+            int count = 0;
+            _world.Query(in _query, (Entity entity, ref WorldPositionCm current, ref VisualTransform visual) =>
+            {
+                EnsureProjectionCapacity(count + 1);
+                Vector2 worldCm = ResolveWorldCm(entity, current.Value, alpha);
+                _projectedEntities[count] = entity;
+                _projectedXs[count] = worldCm.X;
+                _projectedYs[count] = worldCm.Y;
+                count++;
+            });
+
+            if (count <= 0 ||
+                !projector.TryProjectHeights(
+                    _projectedXs.AsSpan(0, count),
+                    _projectedYs.AsSpan(0, count),
+                    _projectedHeights.AsSpan(0, count)))
+            {
+                return false;
             }
+
+            for (int i = 0; i < count; i++)
+            {
+                Entity entity = _projectedEntities[i];
+                if (!_world.IsAlive(entity) || !_world.Has<VisualTransform>(entity))
+                {
+                    continue;
+                }
+
+                float heightCm = _projectedHeights[i];
+                if (float.IsNaN(heightCm) || float.IsInfinity(heightCm))
+                {
+                    continue;
+                }
+
+                ref var visual = ref _world.Get<VisualTransform>(entity);
+                Vector3 position = visual.Position;
+                position.Y = heightCm * CmToM;
+                visual.Position = position;
+            }
+
+            return true;
+        }
+
+        private Vector2 ResolveWorldCm(Entity entity, in Fix64Vec2 current, float alpha)
+        {
+            if (_world.TryGet(entity, out PreviousWorldPositionCm previous))
+            {
+                return Fix64Vec2.Lerp(previous.Value, current, Fix64.FromFloat(alpha)).ToVector2();
+            }
+
+            return current.ToVector2();
+        }
+
+        private void EnsureProjectionCapacity(int required)
+        {
+            if (required <= _projectedEntities.Length)
+            {
+                return;
+            }
+
+            int capacity = Math.Max(required, Math.Max(4, _projectedEntities.Length * 2));
+            Array.Resize(ref _projectedEntities, capacity);
+            Array.Resize(ref _projectedXs, capacity);
+            Array.Resize(ref _projectedYs, capacity);
+            Array.Resize(ref _projectedHeights, capacity);
         }
     }
 }
