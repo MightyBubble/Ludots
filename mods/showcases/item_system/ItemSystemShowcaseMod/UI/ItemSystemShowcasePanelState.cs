@@ -13,6 +13,7 @@ internal sealed record ItemSystemShowcasePanelState(
     ItemSystemShowcaseSceneKind SceneKind,
     string Header,
     string SceneSummary,
+    bool ShowSceneNavigation,
     string HeroSummary,
     string CreditsSummary,
     string DummySummary,

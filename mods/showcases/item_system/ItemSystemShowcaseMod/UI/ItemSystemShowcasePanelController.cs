@@ -161,7 +161,7 @@ internal sealed class ItemSystemShowcasePanelController
         return Ui.Column(
                 Ui.ScrollView(
                         Ui.Column(
-                                BuildHeroCard(state, includeBackButton: true),
+                                BuildHeroCard(state, includeBackButton: state.ShowSceneNavigation),
                                 BuildIntentCard(sceneLabel, playerGoal, state.SceneSummary),
                                 actionPanel,
                                 BuildBoardGallery(state.SceneKind),

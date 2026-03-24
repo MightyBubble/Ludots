@@ -3,7 +3,8 @@ param(
     [int]$ScreenshotFrame = 120,
     [string]$DiagnosticPath = "",
     [int]$KillAfterSeconds = 12,
-    [string]$StartupMapId = ""
+    [string]$StartupMapId = "",
+    [string]$RootModName = "ItemSystemShowcaseMod"
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,7 +34,7 @@ if (-not [string]::IsNullOrWhiteSpace($DiagnosticPath)) {
 }
 
 $selectors = New-Object System.Collections.Generic.List[string]
-$selectors.Add("mod:ItemSystemShowcaseMod")
+$selectors.Add("mod:$RootModName")
 
 if (-not [string]::IsNullOrWhiteSpace($StartupMapId)) {
     if (Test-Path $overrideModRoot) {
@@ -107,12 +108,12 @@ try {
 }
 finally {
     if (-not $launcherProcess.HasExited) {
-        & taskkill /PID $launcherProcess.Id /T /F 2>$null | Out-Null
+        Stop-Process -Id $launcherProcess.Id -Force -ErrorAction SilentlyContinue
     }
 
     Get-Process dotnet -ErrorAction SilentlyContinue |
         Where-Object { $_.StartTime -ge $startedAt.AddSeconds(-1) -and $_.MainWindowTitle -eq "Ludots Engine" } |
-        ForEach-Object { & taskkill /PID $_.Id /T /F 2>$null | Out-Null }
+        ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
 
     if (Test-Path $overrideModRoot) {
         Remove-Item $overrideModRoot -Recurse -Force

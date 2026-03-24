@@ -4,7 +4,10 @@ param(
     [int]$ScreenshotFrame = 180,
     [int]$KillAfterSeconds = 45,
     [string]$Configuration = "Release",
-    [bool]$CaptureRoomScreenshots = $true
+    [int]$CaptureRoomScreenshots = 1,
+    [string]$RootModName = "ItemSystemShowcaseMod",
+    [string]$TestFilter = "ItemSystemShowcase",
+    [string]$StartupMapId = "item_system_showcase_forge_socket_lab"
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,7 +24,8 @@ $notBeforeUtc = [DateTimeOffset]::UtcNow.ToString("O")
     -DiagnosticPath $DiagnosticPath `
     -ScreenshotFrame $ScreenshotFrame `
     -KillAfterSeconds $KillAfterSeconds `
-    -StartupMapId "item_system_showcase_forge_socket_lab"
+    -StartupMapId $StartupMapId `
+    -RootModName $RootModName
 if ($LASTEXITCODE -ne 0) {
     throw "Raylib screenshot capture failed with exit code $LASTEXITCODE."
 }
@@ -34,7 +38,7 @@ $env:LUDOTS_ACCEPTANCE_SCREENSHOT_NOT_BEFORE_UTC = $notBeforeUtc
 Push-Location $repoRoot
 $testExitCode = 0
 try {
-    dotnet test src\Tests\GasTests\GasTests.csproj -c $Configuration --filter ItemSystemShowcase
+    dotnet test src\Tests\GasTests\GasTests.csproj -c $Configuration --no-build --filter $TestFilter
     $testExitCode = $LASTEXITCODE
 }
 finally {
@@ -48,7 +52,7 @@ if ($testExitCode -ne 0) {
     throw "ItemSystemShowcase acceptance tests failed with exit code $testExitCode."
 }
 
-if ($CaptureRoomScreenshots) {
+if ($CaptureRoomScreenshots -ne 0 -and $RootModName -eq "ItemSystemShowcaseMod") {
     & powershell -NoProfile -ExecutionPolicy Bypass -File $roomCaptureScript `
         -ScreenshotFrame $ScreenshotFrame `
         -KillAfterSeconds $KillAfterSeconds

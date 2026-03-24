@@ -119,6 +119,7 @@ internal sealed class ItemSystemShowcaseRuntime
         string creditsSummary = $"Credits {inventory.CountStackUnits(_hero, _creditDefId)} | FMJ {inventory.CountStackUnits(_hero, _ammoDefId)} | AP {inventory.CountStackUnits(_hero, _apAmmoDefId)}";
         string dummySummary = $"Target Dummy health {ReadAttr(engine, _dummy, _healthAttrId):0.0}";
         string selectionSummary = BuildSelectionSummary(engine);
+        bool showSceneNavigation = !ItemSystemShowcaseFocusPack.IsFocused(ResolveFocusPack(engine));
 
         return sceneKind switch
         {
@@ -126,6 +127,7 @@ internal sealed class ItemSystemShowcaseRuntime
                 SceneKind: sceneKind,
                 Header: "Loadout Garage",
                 SceneSummary: "Swap one slot at a time, then read the build as a player would: paper doll, stats, passives, and active buttons all move together.",
+                ShowSceneNavigation: showSceneNavigation,
                 HeroSummary: heroSummary,
                 CreditsSummary: $"MoveSpeed {ReadAttr(engine, _hero, _moveSpeedAttrId):0.0} | Attack {ReadAttr(engine, _hero, _attackAttrId):0.0} | Armor {ReadAttr(engine, _hero, _armorAttrId):0.0}",
                 DummySummary: "Use this room to understand what one equip change actually does before moving on.",
@@ -139,6 +141,7 @@ internal sealed class ItemSystemShowcaseRuntime
                 SceneKind: sceneKind,
                 Header: "Weapon Bench",
                 SceneSummary: "One rifle, one magazine, one target. Socket rules, ammo routing, reload, and firing all stay grounded in the same item entity tree.",
+                ShowSceneNavigation: showSceneNavigation,
                 HeroSummary: $"Primary weapon {SlotLabel(engine, _equipment, "primary_weapon")} | {dummySummary}",
                 CreditsSummary: BuildWeaponSummary(engine),
                 DummySummary: "Attach parts, top off the mag, then fire to see item-granted slot 0 resolve against the dummy.",
@@ -152,6 +155,7 @@ internal sealed class ItemSystemShowcaseRuntime
                 SceneKind: sceneKind,
                 Header: "Raid Loop",
                 SceneSummary: "This room is about extraction-facing decisions: what stays on the body, what moves into secure storage, what gets sold, and how ammo gets repacked.",
+                ShowSceneNavigation: showSceneNavigation,
                 HeroSummary: heroSummary,
                 CreditsSummary: creditsSummary,
                 DummySummary: "Think like a player between raids: keep value safe, move bulk to stash, and prep the next loadout.",
@@ -165,6 +169,7 @@ internal sealed class ItemSystemShowcaseRuntime
                 SceneKind: sceneKind,
                 Header: "Forge & Socket Lab",
                 SceneSummary: "Craft socket gems from live resources, then click them into a socketed amulet to watch GAS passives update from nested item containers.",
+                ShowSceneNavigation: showSceneNavigation,
                 HeroSummary: heroSummary,
                 CreditsSummary: $"Forge amulet {SlotLabel(engine, _equipment, "amulet")} | Credits {inventory.CountStackUnits(_hero, _creditDefId)} | Artifact {inventory.CountStackUnits(_hero, _artifactDefId)}",
                 DummySummary: "This room proves that non-weapon sockets and crafting still stay inside the same item entity architecture.",
@@ -178,6 +183,7 @@ internal sealed class ItemSystemShowcaseRuntime
                 SceneKind: sceneKind,
                 Header: "Ludots Item Demo Pack",
                 SceneSummary: "Four short rooms teach one shared architecture. Pick the player problem you care about instead of reading a mega dashboard first.",
+                ShowSceneNavigation: showSceneNavigation,
                 HeroSummary: heroSummary,
                 CreditsSummary: "Start with a focused route: build, bench, raid loop, or forge. The same ECS / GAS rules stay underneath every room.",
                 DummySummary: string.Empty,
@@ -1023,6 +1029,13 @@ internal sealed class ItemSystemShowcaseRuntime
     private static string FirstNonHeaderLine(IReadOnlyList<string> lines)
     {
         return lines.Count > 1 ? lines[1] : "(empty)";
+    }
+
+    private string ResolveFocusPack(GameEngine engine)
+    {
+        return engine.GlobalContext.TryGetValue(ItemSystemShowcaseFocusPack.Key, out object? focus) && focus is string focusPack
+            ? ItemSystemShowcaseFocusPack.Normalize(focusPack)
+            : ItemSystemShowcaseFocusPack.AllInOne;
     }
 
     private static string[] BuildHubLoadoutLines()

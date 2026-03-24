@@ -200,6 +200,36 @@ showcase 必须提供：
 `artifacts/acceptance/item-system-showcase/room-screenshots/`。
 `scripts/acceptance/run-item-system-showcase-acceptance.ps1` 默认会一并触发这些房间截图，保证主截图与分房间证据同步刷新。
 
+为避免“大而全但无法单项验收”，当前交付采用“共享运行时 + 聚焦入口 mod”拆分：
+
+* 共享运行时仍由 `mods/showcases/item_system/ItemSystemShowcaseMod/` 提供。
+  * 这里承载 item/equip/backpack 的统一 ECS + GAS + UI 联动、四个房间的运行时逻辑，以及聚焦模式识别。
+* 四个入口 mod 只负责设置启动房间与焦点包，不复制任何库存/装备运行时：
+  * `mods/showcases/item_system/ItemLoadoutShowcaseMod/`
+  * `mods/showcases/item_system/WeaponBenchShowcaseMod/`
+  * `mods/showcases/item_system/ForgeSocketShowcaseMod/`
+  * `mods/showcases/item_system/RaidLoopShowcaseMod/`
+* 聚焦模式下会隐藏跨房间导航，只保留当前玩家任务所需的板块与操作，便于单 demo 验收。
+
+独立入口的验收与截图脚本如下：
+
+* `scripts/acceptance/run-item-loadout-showcase-acceptance.ps1`
+  * 产出到 `artifacts/acceptance/item-loadout-showcase/`
+* `scripts/acceptance/run-weapon-bench-showcase-acceptance.ps1`
+  * 产出到 `artifacts/acceptance/weapon-bench-showcase/`
+* `scripts/acceptance/run-forge-socket-showcase-acceptance.ps1`
+  * 产出到 `artifacts/acceptance/forge-socket-showcase/`
+* `scripts/acceptance/run-raid-loop-showcase-acceptance.ps1`
+  * 产出到 `artifacts/acceptance/raid-loop-showcase/`
+
+对应的 focused acceptance 用例位于
+`src/Tests/GasTests/Production/ItemSystemShowcasePlayableAcceptanceTests.cs`：
+
+* `ItemLoadoutShowcaseMod_StartsInLoadoutGarageWithoutCrossRoomNavigation`
+* `WeaponBenchShowcaseMod_StartsInWeaponBenchWithoutCrossRoomNavigation`
+* `ForgeSocketShowcaseMod_StartsInForgeLabWithoutCrossRoomNavigation`
+* `RaidLoopShowcaseMod_StartsInRaidLoopWithoutCrossRoomNavigation`
+
 ## 8 约束
 
 * 不创建第二套 buff / stat runtime；装备增益必须落到 GAS。
@@ -214,3 +244,8 @@ showcase 必须提供：
 * `docs/architecture/gas_layered_architecture.md`
 * `docs/architecture/ui_runtime_architecture.md`
 * `docs/architecture/runtime_entity_spawn_flow.md`
+* `mods/showcases/item_system/ItemSystemShowcaseMod/`
+* `mods/showcases/item_system/ItemLoadoutShowcaseMod/`
+* `mods/showcases/item_system/WeaponBenchShowcaseMod/`
+* `mods/showcases/item_system/ForgeSocketShowcaseMod/`
+* `mods/showcases/item_system/RaidLoopShowcaseMod/`

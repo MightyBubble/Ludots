@@ -47,6 +47,34 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         "ItemSystemShowcaseMod"
     };
 
+    private static readonly string[] LoadoutFocusedMods =
+    {
+        "LudotsCoreMod",
+        "ItemSystemShowcaseMod",
+        "ItemLoadoutShowcaseMod"
+    };
+
+    private static readonly string[] WeaponFocusedMods =
+    {
+        "LudotsCoreMod",
+        "ItemSystemShowcaseMod",
+        "WeaponBenchShowcaseMod"
+    };
+
+    private static readonly string[] ForgeFocusedMods =
+    {
+        "LudotsCoreMod",
+        "ItemSystemShowcaseMod",
+        "ForgeSocketShowcaseMod"
+    };
+
+    private static readonly string[] RaidFocusedMods =
+    {
+        "LudotsCoreMod",
+        "ItemSystemShowcaseMod",
+        "RaidLoopShowcaseMod"
+    };
+
     [Test]
     public void ItemSystemShowcase_PlayableFlow_WritesAcceptanceArtifacts()
     {
@@ -318,6 +346,30 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
     }
 
+    [Test]
+    public void ItemLoadoutShowcaseMod_StartsInLoadoutGarageWithoutCrossRoomNavigation()
+    {
+        AssertFocusedShowcaseLaunch(LoadoutFocusedMods, LoadoutMapId, "Loadout Garage", "Loadout Moves");
+    }
+
+    [Test]
+    public void WeaponBenchShowcaseMod_StartsInWeaponBenchWithoutCrossRoomNavigation()
+    {
+        AssertFocusedShowcaseLaunch(WeaponFocusedMods, WeaponMapId, "Weapon Bench", "Weapon Bench Moves");
+    }
+
+    [Test]
+    public void ForgeSocketShowcaseMod_StartsInForgeLabWithoutCrossRoomNavigation()
+    {
+        AssertFocusedShowcaseLaunch(ForgeFocusedMods, ForgeMapId, "Forge & Socket Lab", "Forge Moves");
+    }
+
+    [Test]
+    public void RaidLoopShowcaseMod_StartsInRaidLoopWithoutCrossRoomNavigation()
+    {
+        AssertFocusedShowcaseLaunch(RaidFocusedMods, RaidMapId, "Raid Loop", "Raid Loop Moves");
+    }
+
     private static object BuildSnapshot(GameEngine engine, UIRoot uiRoot, string step)
     {
         Entity hero = FindEntityByName(engine.World, "Loadout Pilot");
@@ -481,11 +533,27 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         Assert.That(engine.CurrentMapSession?.MapId.Value, Is.EqualTo(expectedMapId), $"Expected current map '{expectedMapId}'.");
     }
 
-    private static GameEngine CreateEngine()
+    private static void AssertFocusedShowcaseLaunch(string[] mods, string expectedMapId, string expectedHeader, string expectedActionPanel)
+    {
+        var frameTimesMs = new List<double>();
+        using var engine = CreateEngine(mods);
+        var uiRoot = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
+            ?? throw new InvalidOperationException("UIRoot missing.");
+
+        Assert.That(engine.MergedConfig.StartupMapId, Is.EqualTo(expectedMapId));
+        LoadMap(engine, expectedMapId, frameTimesMs);
+        AssertCurrentMap(engine, expectedMapId);
+        AssertUiContains(uiRoot, expectedHeader);
+        AssertUiContains(uiRoot, expectedActionPanel);
+        AssertUiNotContains(uiRoot, "Back To Hub");
+        Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+    }
+
+    private static GameEngine CreateEngine(params string[] mods)
     {
         string repoRoot = FindRepoRoot();
         string assetsRoot = Path.Combine(repoRoot, "assets");
-        var modPaths = RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods);
+        var modPaths = RepoModPaths.ResolveExplicit(repoRoot, mods is { Length: > 0 } ? mods : AcceptanceMods);
 
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
