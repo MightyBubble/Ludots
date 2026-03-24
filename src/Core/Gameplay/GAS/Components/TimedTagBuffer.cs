@@ -25,5 +25,29 @@ namespace Ludots.Core.Gameplay.GAS.Components
             fixed (int* exp = ExpireAt) exp[index] = exp[Count];
             fixed (byte* clocks = ClockIds) clocks[index] = clocks[Count];
         }
+
+        public int GetTagId(int index)
+        {
+            fixed (int* tags = TagIds)
+            {
+                return tags[index];
+            }
+        }
+
+        public int GetExpireAt(int index)
+        {
+            fixed (int* expires = ExpireAt)
+            {
+                return expires[index];
+            }
+        }
+
+        public GasClockId GetClockId(int index)
+        {
+            fixed (byte* clocks = ClockIds)
+            {
+                return (GasClockId)clocks[index];
+            }
+        }
     }
 }

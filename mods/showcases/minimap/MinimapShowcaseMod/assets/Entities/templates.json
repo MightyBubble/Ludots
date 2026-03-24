@@ -1,0 +1,223 @@
+[
+  {
+    "id": "imperial_capital",
+    "components": {
+      "Name": { "Value": "Imperial Capital" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 400 } }
+    }
+  },
+  {
+    "id": "ironforge_colony",
+    "components": {
+      "Name": { "Value": "Ironforge Colony" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 4800, "Y": -1200 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 240 } }
+    }
+  },
+  {
+    "id": "frontier_bastion",
+    "components": {
+      "Name": { "Value": "Frontier Bastion" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 9800, "Y": 3600 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 260 } }
+    }
+  },
+  {
+    "id": "imperial_vanguard_fleet",
+    "components": {
+      "Name": { "Value": "Imperial Vanguard Fleet" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 7200, "Y": 2900 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 160 } }
+    }
+  },
+  {
+    "id": "imperial_surveyor",
+    "components": {
+      "Name": { "Value": "Imperial Surveyor" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 3600, "Y": -4200 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 80 } }
+    }
+  },
+  {
+    "id": "imperial_relay",
+    "components": {
+      "Name": { "Value": "Imperial Relay" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": -2600, "Y": 2200 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 120 } }
+    }
+  },
+  {
+    "id": "federation_prime",
+    "components": {
+      "Name": { "Value": "Federation Prime" },
+      "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 15400, "Y": -600 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 400 } }
+    }
+  },
+  {
+    "id": "federation_carrier_group",
+    "components": {
+      "Name": { "Value": "Federation Carrier Group" },
+      "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 12800, "Y": 1400 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 180 } }
+    }
+  },
+  {
+    "id": "federation_border_watch",
+    "components": {
+      "Name": { "Value": "Federation Border Watch" },
+      "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 10400, "Y": 4200 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 150 } }
+    }
+  },
+  {
+    "id": "horde_nest",
+    "components": {
+      "Name": { "Value": "Horde Nest" },
+      "Team": { "Id": 3 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": -13200, "Y": 7600 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 360 } }
+    }
+  },
+  {
+    "id": "horde_warpack",
+    "components": {
+      "Name": { "Value": "Horde Warpack" },
+      "Team": { "Id": 3 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": -9600, "Y": 5200 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 170 } }
+    }
+  },
+  {
+    "id": "horde_raider_wing",
+    "components": {
+      "Name": { "Value": "Horde Raider Wing" },
+      "Team": { "Id": 3 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": -6200, "Y": 9800 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 150 } }
+    }
+  },
+  {
+    "id": "nomad_enclave",
+    "components": {
+      "Name": { "Value": "Nomad Enclave" },
+      "Team": { "Id": 4 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": -2600, "Y": -11800 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 220 } }
+    }
+  },
+  {
+    "id": "nomad_caravan",
+    "components": {
+      "Name": { "Value": "Nomad Caravan" },
+      "Team": { "Id": 4 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 1800, "Y": -9200 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 110 } }
+    }
+  },
+  {
+    "id": "nomad_scout_swarm",
+    "components": {
+      "Name": { "Value": "Nomad Scout Swarm" },
+      "Team": { "Id": 4 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": -5400, "Y": -7600 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 70 } }
+    }
+  },
+  {
+    "id": "ancient_gate",
+    "components": {
+      "Name": { "Value": "Ancient Gate" },
+      "Team": { "Id": 0 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 2200, "Y": 7800 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 9999 } }
+    }
+  },
+  {
+    "id": "crystal_relay",
+    "components": {
+      "Name": { "Value": "Crystal Relay" },
+      "Team": { "Id": 0 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 6200, "Y": -7600 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 9999 } }
+    }
+  },
+  {
+    "id": "helium_well",
+    "components": {
+      "Name": { "Value": "Helium Well" },
+      "Team": { "Id": 0 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": -8200, "Y": -1600 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 9999 } }
+    }
+  },
+  {
+    "id": "void_rift",
+    "components": {
+      "Name": { "Value": "Void Rift" },
+      "Team": { "Id": 0 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": -10800, "Y": -9800 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 9999 } }
+    }
+  },
+  {
+    "id": "ember_storm",
+    "components": {
+      "Name": { "Value": "Ember Storm" },
+      "Team": { "Id": 0 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 11800, "Y": 8800 } },
+      "GameplayTagContainer": {},
+      "AttributeBuffer": { "base": { "Health": 9999 } }
+    }
+  }
+]

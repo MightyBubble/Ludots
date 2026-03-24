@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using CoreInputMod.ViewMode;
+using EntityCommandPanelMod.UI;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
@@ -37,6 +38,12 @@ namespace ChampionSkillSandboxMod.Runtime
                     revision ^= (uint)activeSelectionViewId.GetHashCode(StringComparison.Ordinal);
                 }
 
+                string activeShowcaseThemeId = ResolveActiveShowcaseThemeId();
+                if (!string.IsNullOrWhiteSpace(activeShowcaseThemeId))
+                {
+                    revision ^= (uint)activeShowcaseThemeId.GetHashCode(StringComparison.Ordinal);
+                }
+
                 if (ChampionSkillSandboxIds.IsStressMap(_engine?.CurrentMapSession?.MapId.Value))
                 {
                     ChampionSkillStressControlState? control = ResolveStressControl();
@@ -58,7 +65,7 @@ namespace ChampionSkillSandboxMod.Runtime
 
         public string Title => ChampionSkillSandboxIds.IsStressMap(_engine?.CurrentMapSession?.MapId.Value)
             ? "Stress Harness"
-            : "Cast Mode";
+            : "Cast + Showcase";
 
         public string Subtitle
         {
@@ -66,7 +73,7 @@ namespace ChampionSkillSandboxMod.Runtime
             {
                 if (!ChampionSkillSandboxIds.IsStressMap(_engine?.CurrentMapSession?.MapId.Value))
                 {
-                    return "Cast + Camera | F1/F2/F3 Cast | RMB Move";
+                    return $"Theme {EntityCommandPanelShowcaseTheme.ResolveLabel(ResolveActiveShowcaseThemeId())} | Cast + Camera | F1/F2/F3 Cast | RMB Move";
                 }
 
                 ChampionSkillStressControlState? control = ResolveStressControl();
@@ -92,8 +99,9 @@ namespace ChampionSkillSandboxMod.Runtime
             string activeModeId = ResolveActiveModeId();
             string activeFollowModeId = ResolveActiveCameraFollowMode();
             string activeSelectionViewId = ResolveActiveSelectionViewId();
+            string activeShowcaseThemeId = ResolveActiveShowcaseThemeId();
             RenderDebugState? renderDebug = ResolveRenderDebugState();
-            var buttons = new EntityCommandPanelToolbarButtonView[isStressMap ? 19 : 7];
+            var buttons = new EntityCommandPanelToolbarButtonView[isStressMap ? 19 : 10];
             buttons[0] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.SmartCastModeId,
                 "Quick",
@@ -129,6 +137,21 @@ namespace ChampionSkillSandboxMod.Runtime
                 "Reset",
                 false,
                 "#D7D2C4");
+            buttons[7] = new EntityCommandPanelToolbarButtonView(
+                EntityCommandPanelShowcaseTheme.Dota2Id,
+                "Dota2",
+                string.Equals(activeShowcaseThemeId, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.OrdinalIgnoreCase),
+                "#D37A4B");
+            buttons[8] = new EntityCommandPanelToolbarButtonView(
+                EntityCommandPanelShowcaseTheme.LolId,
+                "LoL",
+                string.Equals(activeShowcaseThemeId, EntityCommandPanelShowcaseTheme.LolId, StringComparison.OrdinalIgnoreCase),
+                "#D5B25B");
+            buttons[9] = new EntityCommandPanelToolbarButtonView(
+                EntityCommandPanelShowcaseTheme.Sc2Id,
+                "SC2",
+                string.Equals(activeShowcaseThemeId, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.OrdinalIgnoreCase),
+                "#59B7FF");
             if (isStressMap)
             {
                 buttons[7] = new EntityCommandPanelToolbarButtonView(
@@ -294,6 +317,16 @@ namespace ChampionSkillSandboxMod.Runtime
                 }
             }
 
+            if (EntityCommandPanelShowcaseTheme.IsThemeButton(buttonId))
+            {
+                if (_engine != null)
+                {
+                    _engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey] = EntityCommandPanelShowcaseTheme.Normalize(buttonId, ChampionSkillSandboxIds.ResolveDefaultShowcaseThemeId());
+                }
+
+                return;
+            }
+
             ViewModeRuntime.TrySwitchTo(_engine?.GlobalContext!, buttonId);
         }
 
@@ -307,6 +340,17 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             return ChampionSkillSandboxIds.FreeCameraToolbarButtonId;
+        }
+
+        private string ResolveActiveShowcaseThemeId()
+        {
+            if (_engine?.GlobalContext.TryGetValue(EntityCommandPanelShowcaseTheme.ContextKey, out var themeObj) == true &&
+                themeObj is string themeId)
+            {
+                return EntityCommandPanelShowcaseTheme.Normalize(themeId, ChampionSkillSandboxIds.ResolveDefaultShowcaseThemeId());
+            }
+
+            return ChampionSkillSandboxIds.ResolveDefaultShowcaseThemeId();
         }
 
         private ChampionSkillStressControlState? ResolveStressControl()

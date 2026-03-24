@@ -1,0 +1,26 @@
+{
+  "Id": "minimap_showcase",
+  "Tags": ["showcase", "fourx", "minimap"],
+  "Entities": [
+    { "Template": "imperial_capital", "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } } },
+    { "Template": "ironforge_colony", "Overrides": { "WorldPositionCm": { "Value": { "X": 4800, "Y": -1200 } } } },
+    { "Template": "frontier_bastion", "Overrides": { "WorldPositionCm": { "Value": { "X": 9800, "Y": 3600 } } } },
+    { "Template": "imperial_vanguard_fleet", "Overrides": { "WorldPositionCm": { "Value": { "X": 7200, "Y": 2900 } } } },
+    { "Template": "imperial_surveyor", "Overrides": { "WorldPositionCm": { "Value": { "X": 3600, "Y": -4200 } } } },
+    { "Template": "imperial_relay", "Overrides": { "WorldPositionCm": { "Value": { "X": -2600, "Y": 2200 } } } },
+    { "Template": "federation_prime", "Overrides": { "WorldPositionCm": { "Value": { "X": 15400, "Y": -600 } } } },
+    { "Template": "federation_carrier_group", "Overrides": { "WorldPositionCm": { "Value": { "X": 12800, "Y": 1400 } } } },
+    { "Template": "federation_border_watch", "Overrides": { "WorldPositionCm": { "Value": { "X": 10400, "Y": 4200 } } } },
+    { "Template": "horde_nest", "Overrides": { "WorldPositionCm": { "Value": { "X": -13200, "Y": 7600 } } } },
+    { "Template": "horde_warpack", "Overrides": { "WorldPositionCm": { "Value": { "X": -9600, "Y": 5200 } } } },
+    { "Template": "horde_raider_wing", "Overrides": { "WorldPositionCm": { "Value": { "X": -6200, "Y": 9800 } } } },
+    { "Template": "nomad_enclave", "Overrides": { "WorldPositionCm": { "Value": { "X": -2600, "Y": -11800 } } } },
+    { "Template": "nomad_caravan", "Overrides": { "WorldPositionCm": { "Value": { "X": 1800, "Y": -9200 } } } },
+    { "Template": "nomad_scout_swarm", "Overrides": { "WorldPositionCm": { "Value": { "X": -5400, "Y": -7600 } } } },
+    { "Template": "ancient_gate", "Overrides": { "WorldPositionCm": { "Value": { "X": 2200, "Y": 7800 } } } },
+    { "Template": "crystal_relay", "Overrides": { "WorldPositionCm": { "Value": { "X": 6200, "Y": -7600 } } } },
+    { "Template": "helium_well", "Overrides": { "WorldPositionCm": { "Value": { "X": -8200, "Y": -1600 } } } },
+    { "Template": "void_rift", "Overrides": { "WorldPositionCm": { "Value": { "X": -10800, "Y": -9800 } } } },
+    { "Template": "ember_storm", "Overrides": { "WorldPositionCm": { "Value": { "X": 11800, "Y": 8800 } } } }
+  ]
+}
