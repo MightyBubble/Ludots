@@ -34,5 +34,9 @@ namespace Ludots.Core.Gameplay.GAS
         // ── Displacement ──
         /// <summary>Read DisplacementParams, create displacement state entity.</summary>
         ApplyDisplacement = 40,
+
+        // ── Entity relations ──
+        /// <summary>Read RelationParams and mutate entity parent-child relationships.</summary>
+        ApplyRelation = 50,
     }
 }

@@ -46,6 +46,8 @@ namespace Ludots.Core.Config
             Register("AbilityFormSetRef", SetAbilityFormSetRef);
             Register<ForceInput2D>("ForceInput2D");
             Register<GameplayTagContainer>("GameplayTagContainer");
+            Register<TagCountContainer>("TagCountContainer");
+            Register<TimedTagBuffer>("TimedTagBuffer");
             Register("OrderBuffer", SetOrderBuffer);
             Register<SelectionSelectableTag>("SelectionSelectableTag");
             Register("SelectionSelectableState", SetSelectionSelectableState);

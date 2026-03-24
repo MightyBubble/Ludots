@@ -44,6 +44,12 @@ namespace RtsDemoMod.Triggers
                 _ctx.Log("[RtsDemoMod] RtsLocalOrderSourceSystem registered");
             }
 
+            // Run after effect/spawn processing so relation-driven garrison/build/morph state
+            // becomes visible in the same simulation frame.
+            engine.RegisterSystem(new RtsRelationRuntimeSystem(engine), SystemGroup.EffectProcessing);
+            engine.RegisterPresentationSystem(new RtsSelectionCommandPanelSystem(engine));
+            _ctx.Log("[RtsDemoMod] RTS relation runtime and selection command panel systems registered");
+
             ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");
 
             return Task.CompletedTask;

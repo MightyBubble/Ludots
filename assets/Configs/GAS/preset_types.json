@@ -100,5 +100,14 @@
     "defaultPhaseHandlers": {
       "OnApply": { "type": "builtin", "id": "ApplyDisplacement" }
     }
+  },
+  {
+    "id": "Relation",
+    "components": ["RelationParams"],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "ApplyRelation" }
+    }
   }
 ]

@@ -1,78 +1,300 @@
 [
   {
-    "id": "Ability.Rts.BuildBarracks",
+    "id": "Ability.Rts.Strategy.Shared.Hold",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.BuildCost.Barracks" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.BuildBarracks" },
         { "kind": "End", "tick": 0 }
       ]
+    },
+    "presentation": {
+      "displayName": "待命",
+      "iconGlyph": "H",
+      "accentColor": "#6B7280",
+      "hintText": "保留槽位，不执行任何命令。"
     }
   },
   {
-    "id": "Ability.Rts.TrainMarine",
+    "id": "Ability.Rts.Strategy.Shared.GarrisonEnter",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.TrainCost.Marine" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.TrainMarine" },
-        { "kind": "End", "tick": 0 }
-      ]
-    }
-  },
-  {
-    "id": "Ability.Rts.ResearchStim",
-    "exec": {
-      "clockId": "FixedFrame",
-      "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 120, "tag": "Status.Researching" },
-        { "kind": "EffectSignal", "tick": 120, "template": "Effect.Rts.ResearchComplete" },
-        { "kind": "End", "tick": 120 }
-      ]
-    }
-  },
-  {
-    "id": "Ability.Rts.StimPack",
-    "exec": {
-      "clockId": "FixedFrame",
-      "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.StimBuff" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Shared.EnterGarrison" },
         { "kind": "End", "tick": 0 }
       ]
     },
     "blockTags": {
-      "requiredAll": ["Tech.Stim"]
+      "blockedAny": [
+        "State.Rts.BuilderAttached",
+        "State.Rts.Constructing",
+        "State.Rts.MorphConsumed",
+        "State.Rts.Warping"
+      ]
+    },
+    "indicator": {
+      "shape": "Single",
+      "range": 1200,
+      "showRangeCircle": true
+    },
+    "presentation": {
+      "displayName": "进驻",
+      "iconGlyph": "IN",
+      "accentColor": "#F59E0B",
+      "hintText": "选择可进驻建筑，把当前单位挂入建筑关系。"
     }
   },
   {
-    "id": "Ability.Rts.SiegeModeAoe",
+    "id": "Ability.Rts.Strategy.Shared.UngarrisonAll",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.SiegeTankAoe" },
+        { "kind": "TagSignal", "tick": 0, "tag": "Command.Rts.UngarrisonAll" },
         { "kind": "End", "tick": 0 }
       ]
+    },
+    "presentation": {
+      "displayName": "出驻",
+      "iconGlyph": "OUT",
+      "accentColor": "#EF4444",
+      "hintText": "命令当前建筑弹出全部驻军。"
     }
   },
   {
-    "id": "Ability.Rts.ShieldAura",
+    "id": "Ability.Rts.Strategy.War3.BuildLumberMill",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.ShieldAura" },
+        { "kind": "TagSignal", "tick": 0, "tag": "State.Rts.BuilderAttached" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.War3.CostLumberMill" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.War3.CreateLumberMillSite" },
         { "kind": "End", "tick": 0 }
       ]
+    },
+    "blockTags": {
+      "blockedAny": ["State.Rts.BuilderAttached", "State.Rts.MorphConsumed"]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "range": 1600,
+      "radius": 240,
+      "showRangeCircle": true
+    },
+    "presentation": {
+      "displayName": "伐木场",
+      "iconGlyph": "LM",
+      "accentColor": "#22C55E",
+      "hintText": "War3 式农民驻场施工，完工后自动脱离。"
     }
   },
   {
-    "id": "Ability.Rts.Irradiate",
+    "id": "Ability.Rts.Strategy.War3.BuildGuardTower",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Irradiate" },
+        { "kind": "TagSignal", "tick": 0, "tag": "State.Rts.BuilderAttached" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.War3.CostGuardTower" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.War3.CreateGuardTowerSite" },
         { "kind": "End", "tick": 0 }
       ]
+    },
+    "blockTags": {
+      "blockedAny": ["State.Rts.BuilderAttached", "State.Rts.MorphConsumed"]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "range": 1500,
+      "radius": 220,
+      "showRangeCircle": true
+    },
+    "presentation": {
+      "displayName": "箭塔",
+      "iconGlyph": "GT",
+      "accentColor": "#A16207",
+      "hintText": "War3 式带工人进驻施工，可继续收容驻军。"
+    }
+  },
+  {
+    "id": "Ability.Rts.Strategy.War3.TrainFootman",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 90, "tag": "Status.Rts.Training" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.War3.CostTrainFootman" },
+        { "kind": "EffectSignal", "tick": 90, "template": "Effect.Rts.War3.TrainFootman", "dispatchTarget": "Source" },
+        { "kind": "End", "tick": 90 }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": ["Status.Rts.Training", "State.Rts.Constructing"]
+    },
+    "presentation": {
+      "displayName": "训练步兵",
+      "iconGlyph": "FM",
+      "accentColor": "#2563EB",
+      "hintText": "90 tick 后从兵营外滚出可进驻步兵。"
+    }
+  },
+  {
+    "id": "Ability.Rts.Strategy.Cnc.PlacePowerPlant",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.CostPowerPlant" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.PlacePowerPlant" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "range": 2200,
+      "radius": 280,
+      "showRangeCircle": true
+    },
+    "presentation": {
+      "displayName": "发电厂",
+      "iconGlyph": "PP",
+      "accentColor": "#F97316",
+      "hintText": "C&C 式拍地而起，短暂升起后即可运作。"
+    }
+  },
+  {
+    "id": "Ability.Rts.Strategy.Cnc.PlaceRefinery",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.CostRefinery" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.PlaceRefinery" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "range": 2200,
+      "radius": 300,
+      "showRangeCircle": true
+    },
+    "presentation": {
+      "displayName": "矿石精炼厂",
+      "iconGlyph": "RF",
+      "accentColor": "#DC2626",
+      "hintText": "C&C 式重型生产建筑，落地即进入短施工态。"
+    }
+  },
+  {
+    "id": "Ability.Rts.Strategy.Cnc.TrainRhino",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 105, "tag": "Status.Rts.Training" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.CostTrainRhino" },
+        { "kind": "EffectSignal", "tick": 105, "template": "Effect.Rts.Cnc.TrainRhino", "dispatchTarget": "Source" },
+        { "kind": "End", "tick": 105 }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": ["Status.Rts.Training", "State.Rts.Constructing"]
+    },
+    "presentation": {
+      "displayName": "训练犀牛",
+      "iconGlyph": "TNK",
+      "accentColor": "#7C3AED",
+      "hintText": "战车工厂完成后推出重坦克。"
+    }
+  },
+  {
+    "id": "Ability.Rts.Strategy.Sc2.TrainZealot",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 75, "tag": "Status.Rts.Training" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Sc2.CostTrainZealot" },
+        { "kind": "EffectSignal", "tick": 75, "template": "Effect.Rts.Sc2.TrainZealot", "dispatchTarget": "Source" },
+        { "kind": "End", "tick": 75 }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": ["Status.Rts.Training", "State.Rts.Constructing", "Tech.Rts.WarpGate"]
+    },
+    "presentation": {
+      "displayName": "训练狂热者",
+      "iconGlyph": "ZT",
+      "accentColor": "#0EA5E9",
+      "hintText": "折跃门科技完成前，Gateway 仍采用常规训练。"
+    }
+  },
+  {
+    "id": "Ability.Rts.Strategy.Sc2.ResearchWarpGate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 135, "tag": "Status.Rts.Researching" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Sc2.CostResearchWarpGate" },
+        { "kind": "EffectSignal", "tick": 135, "template": "Effect.Rts.Sc2.ResearchWarpGateComplete", "dispatchTarget": "Source" },
+        { "kind": "End", "tick": 135 }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": ["Status.Rts.Researching", "Tech.Rts.WarpGate", "State.Rts.Constructing"]
+    },
+    "presentation": {
+      "displayName": "研究折跃门",
+      "iconGlyph": "WG",
+      "accentColor": "#38BDF8",
+      "hintText": "完成后将 Gateway 解锁为 Warpgate 形态。"
+    }
+  },
+  {
+    "id": "Ability.Rts.Strategy.Sc2.WarpZealot",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Sc2.CostWarpZealot" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Sc2.WarpZealot" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": {
+      "requiredAll": ["Tech.Rts.WarpGate"],
+      "blockedAny": ["State.Rts.Constructing"]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "range": 2600,
+      "radius": 180,
+      "showRangeCircle": true
+    },
+    "presentation": {
+      "displayName": "折跃狂热者",
+      "iconGlyph": "WP",
+      "accentColor": "#06B6D4",
+      "hintText": "SC2 神族式地面折跃，单位在落点短暂成型。"
+    }
+  },
+  {
+    "id": "Ability.Rts.Strategy.Zerg.MorphSpawningPool",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagSignal", "tick": 0, "tag": "State.Rts.MorphConsumed" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Zerg.CostMorphSpawningPool" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Zerg.MorphSpawningPool" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": ["State.Rts.MorphConsumed", "State.Rts.BuilderAttached"]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "range": 1500,
+      "radius": 260,
+      "showRangeCircle": true
+    },
+    "presentation": {
+      "displayName": "变形血池",
+      "iconGlyph": "MP",
+      "accentColor": "#84CC16",
+      "hintText": "虫族 Drone 会被吸入建筑，完工时自身消失。"
     }
   }
 ]

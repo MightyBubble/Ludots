@@ -229,6 +229,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var projectile = CompileProjectile(cfg.Projectile, cfg.Id, relativePath);
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
             var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
+            var relation = CompileRelation(cfg.Relation, cfg.Id, relativePath);
 
             if (cfg.Displacement != null && presetType != EffectPresetType.Displacement)
             {
@@ -246,6 +247,25 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 {
                     throw new InvalidOperationException(
                         $"Effect template '{cfg.Id}' in {relativePath}: presetType Displacement requires a 'displacement' block.");
+                }
+            }
+
+            if (cfg.Relation != null && presetType != EffectPresetType.Relation)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'relation' block is only valid when presetType=Relation.");
+            }
+            if (presetType == EffectPresetType.Relation)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Relation requires lifetime=Instant.");
+                }
+                if (cfg.Relation == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Relation requires a 'relation' block.");
                 }
             }
 
@@ -268,6 +288,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 Projectile = projectile,
                 UnitCreation = unitCreation,
                 Displacement = displacement,
+                Relation = relation,
                 PhaseGraphBindings = behaviorTemplate,
                 ConfigParams = configParams,
                 ListenerSetup = listenerSetup,
@@ -312,6 +333,51 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 TotalDistanceCm = cfg.TotalDistanceCm,
                 TotalDurationTicks = cfg.TotalDurationTicks,
                 OverrideNavigation = cfg.OverrideNavigation
+            };
+        }
+
+        private static RelationDescriptor CompileRelation(RelationConfig cfg, string ownerId, string relativePath)
+        {
+            if (cfg == null) return default;
+
+            RelationOperation operation = ParseRelationOperation(cfg.Operation, ownerId, relativePath);
+            RelationEntitySlot subject = ParseRelationEntitySlot(
+                cfg.Subject,
+                RelationEntitySlot.Source,
+                ownerId,
+                "relation.subject",
+                relativePath);
+            RelationEntitySlot parent = ParseRelationEntitySlot(
+                cfg.Parent,
+                RelationEntitySlot.Target,
+                ownerId,
+                "relation.parent",
+                relativePath);
+
+            if (subject == RelationEntitySlot.None)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.subject cannot be None.");
+            }
+
+            if (operation == RelationOperation.SetParent && parent == RelationEntitySlot.None)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.parent cannot be None when operation=SetParent.");
+            }
+
+            if (operation == RelationOperation.RemoveParent && cfg.SnapSubjectToParentPosition)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.snapSubjectToParentPosition is only valid when operation=SetParent.");
+            }
+
+            return new RelationDescriptor
+            {
+                Operation = operation,
+                Subject = subject,
+                Parent = parent,
+                SnapSubjectToParentPosition = cfg.SnapSubjectToParentPosition
             };
         }
 
@@ -499,6 +565,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
+        private static RelationOperation ParseRelationOperation(string value, string ownerId, string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return RelationOperation.SetParent;
+            }
+
+            return value.Trim().ToLowerInvariant() switch
+            {
+                "setparent" => RelationOperation.SetParent,
+                "removeparent" => RelationOperation.RemoveParent,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported relation.operation '{value}'. Supported: SetParent, RemoveParent.")
+            };
+        }
+
         private static ModifierOp ParseModifierOp(string op, string ownerId, string relativePath, int modifierIndex)
         {
             if (string.IsNullOrWhiteSpace(op)) return ModifierOp.Add;
@@ -531,6 +613,23 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (string.Equals(slot, "OriginalTargetContext", StringComparison.OrdinalIgnoreCase)) return ContextSlot.OriginalTargetContext;
             if (string.Equals(slot, "ResolvedEntity", StringComparison.OrdinalIgnoreCase)) return ContextSlot.ResolvedEntity;
             return defaultValue;
+        }
+
+        private static RelationEntitySlot ParseRelationEntitySlot(
+            string slot,
+            RelationEntitySlot defaultValue,
+            string ownerId,
+            string fieldPath,
+            string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(slot)) return defaultValue;
+            if (string.Equals(slot, "None", StringComparison.OrdinalIgnoreCase)) return RelationEntitySlot.None;
+            if (string.Equals(slot, "Source", StringComparison.OrdinalIgnoreCase)) return RelationEntitySlot.Source;
+            if (string.Equals(slot, "Target", StringComparison.OrdinalIgnoreCase)) return RelationEntitySlot.Target;
+            if (string.Equals(slot, "TargetContext", StringComparison.OrdinalIgnoreCase)) return RelationEntitySlot.TargetContext;
+
+            throw new InvalidOperationException(
+                $"Effect template '{ownerId}' in {relativePath}: {fieldPath} uses unsupported entity slot '{slot}'. Supported: None, Source, Target, TargetContext.");
         }
 
         private static EffectPresetType ParsePresetType(string presetType, string ownerId, string relativePath)

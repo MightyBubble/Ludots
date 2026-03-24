@@ -5,6 +5,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 
@@ -30,7 +31,7 @@ namespace RtsDemoMod.Triggers
             if (engine == null) return Task.CompletedTask;
 
             var mapTags = context.Get(CoreServiceKeys.MapTags) ?? new List<string>();
-            if (!HasTag(mapTags, "rts")) return Task.CompletedTask;
+            if (!HasTag(mapTags, "rts") && !HasTag(mapTags, "rts_showcase")) return Task.CompletedTask;
 
             var world = engine.World;
             var q = new QueryDescription().WithAll<Name>();
@@ -40,6 +41,10 @@ namespace RtsDemoMod.Triggers
                 if (!world.Has<GameplayTagContainer>(e)) world.Add(e, new GameplayTagContainer());
                 if (!world.Has<TagCountContainer>(e)) world.Add(e, new TagCountContainer());
                 if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
+                if (world.Has<SelectionSelectableTag>(e) && !world.Has<SelectionSelectableState>(e))
+                {
+                    world.Add(e, SelectionSelectableState.EnabledByDefault);
+                }
             });
 
             return Task.CompletedTask;
