@@ -1,0 +1,43 @@
+[
+  {
+    "_comment": "RTS actor ground ring: always-on entity-scoped overlay so units/buildings remain readable on the grid.",
+    "id": "rts_actor_ring",
+    "visualKind": "GroundOverlay",
+    "entityScope": "AllWithVisualTransform",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [0.18, 0.32, 0.46, 0.10],
+    "defaultScale": 0.92,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.04, 0],
+    "visibility": { "inline": "OwnerCullVisible" },
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.62 },
+      { "paramKey": 8, "source": "entityColor", "sourceId": 0 },
+      { "paramKey": 9, "source": "entityColor", "sourceId": 1 },
+      { "paramKey": 10, "source": "entityColor", "sourceId": 2 },
+      { "paramKey": 11, "source": "constant", "constantValue": 0.96 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.05 }
+    ]
+  },
+  {
+    "_comment": "RTS actor marker: simple readable body proxy for RtsDemoMod when no showcase-only performer pack is loaded.",
+    "id": "rts_actor_marker",
+    "visualKind": "Marker3D",
+    "entityScope": "AllWithVisualTransform",
+    "meshOrShapeId": "Cube",
+    "defaultColor": [0.84, 0.88, 0.94, 0.96],
+    "defaultScale": 0.56,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.32, 0],
+    "visibility": { "inline": "OwnerCullVisible" },
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.72 },
+      { "paramKey": 2, "source": "constant", "constantValue": 0.82 },
+      { "paramKey": 3, "source": "constant", "constantValue": 0.72 },
+      { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
+      { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
+      { "paramKey": 6, "source": "entityColor", "sourceId": 2 },
+      { "paramKey": 7, "source": "constant", "constantValue": 0.98 }
+    ]
+  }
+]
