@@ -51,6 +51,11 @@ namespace Ludots.Tests.GAS.Production
         private const float DeltaTime = 1f / 60f;
         private const string MapId = "champion_skill_sandbox";
         private const string StressMapId = "champion_skill_stress";
+        private const string MusouBranchMapId = "champion_musou_branch_showcase";
+        private const string MusouHitConfirmMapId = "champion_musou_hit_confirm_showcase";
+        private const string MusouBranchHeroName = "Musou Branch Alpha";
+        private const string MusouHitHeroName = "Musou Confirm Alpha";
+        private const string MusouMissHeroName = "Musou Confirm Miss";
         private const string SmartCastModeId = "ChampionSkillSandbox.Mode.SmartCast";
         private const string IndicatorModeId = "ChampionSkillSandbox.Mode.Indicator";
         private const string PressReleaseModeId = "ChampionSkillSandbox.Mode.PressReleaseAim";
@@ -941,6 +946,320 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
+        public void ChampionMusouBranch_PlayableFlow_WritesAcceptanceArtifacts()
+        {
+            string repoRoot = FindRepoRoot();
+            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-musou-branch-showcase");
+            string screensDir = Path.Combine(artifactDir, "screens");
+            Directory.CreateDirectory(artifactDir);
+            Directory.CreateDirectory(screensDir);
+
+            var timeline = new List<string>();
+            var snapshots = new List<AcceptanceSnapshot>();
+            var frameTimesMs = new List<double>();
+            string[] trackedEntities =
+            {
+                MusouBranchHeroName,
+                "Branch Dummy Front",
+                "Branch Dummy Left",
+                "Branch Dummy Right",
+                "Branch Brute Ender"
+            };
+
+            using var engine = CreateEngine();
+            var overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
+                ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PrimitiveDrawBuffer missing.");
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
+                ?? throw new InvalidOperationException("WorldHudBatchBuffer missing.");
+            var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                ?? throw new InvalidOperationException("Toolbar provider missing.");
+            var backend = GetInputBackend(engine);
+
+            LoadMap(engine, MusouBranchMapId, frameTimesMs);
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            Assert.That(toolbar.Title, Is.EqualTo("Musou Branch"));
+            Assert.That(GetSelectedEntityName(engine), Is.EqualTo(MusouBranchHeroName));
+
+            IReadOnlyList<PanelSlotSnapshot> slots = CopySelectedSlots(engine);
+            Assert.That(slots[0].Label, Is.EqualTo("Square 1"));
+            Assert.That(slots[1].Label, Is.EqualTo("Step Slash"));
+            Assert.That(slots[2].Label, Is.EqualTo("Triangle Neutral"));
+            Assert.That(slots[3].Label, Is.EqualTo("Whirlwind Sweep"));
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "map_loaded");
+            timeline.Add("[T+001] champion_musou_branch_showcase loaded | Square/Triangle branch routing ready");
+
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Branch Dummy Front"), frameTimesMs);
+            float frontBeforeSquare1 = ReadHealth(engine.World, "Branch Dummy Front");
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Branch Dummy Front", frontBeforeSquare1, maxFrames: 24);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () =>
+                {
+                    IReadOnlyList<PanelSlotSnapshot> routed = CopySelectedSlots(engine);
+                    return routed[0].Label == "Square 2" && routed[2].Label == "Square-Triangle";
+                },
+                maxFrames: 12);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "square1_routed");
+            timeline.Add($"[T+002] Q opener hits Branch Dummy Front | HP {frontBeforeSquare1:0}->{ReadHealth(engine.World, "Branch Dummy Front"):0} | Q routes to Square 2 and E routes to Square-Triangle");
+
+            float frontBeforeTriangle1 = ReadHealth(engine.World, "Branch Dummy Front");
+            PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Branch Dummy Front", frontBeforeTriangle1, maxFrames: 24);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () =>
+                {
+                    IReadOnlyList<PanelSlotSnapshot> neutral = CopySelectedSlots(engine);
+                    return neutral[0].Label == "Square 1" && neutral[2].Label == "Triangle Neutral";
+                },
+                maxFrames: 12);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "square_triangle_finisher");
+            timeline.Add($"[T+003] E branch from Stage1 lands classic Square-Triangle finisher | Front HP {frontBeforeTriangle1:0}->{ReadHealth(engine.World, "Branch Dummy Front"):0}");
+
+            float leftBeforeSquare2 = ReadHealth(engine.World, "Branch Dummy Left");
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Branch Dummy Left"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CopySelectedSlots(engine)[0].Label == "Square 2",
+                maxFrames: 12);
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Branch Dummy Left", leftBeforeSquare2, maxFrames: 24);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () =>
+                {
+                    IReadOnlyList<PanelSlotSnapshot> routed = CopySelectedSlots(engine);
+                    return routed[0].Label == "Square 3" && routed[2].Label == "Square-Square-Triangle";
+                },
+                maxFrames: 12);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "square2_routed");
+            timeline.Add($"[T+004] Q follow-up hits the left lane dummy | HP {leftBeforeSquare2:0}->{ReadHealth(engine.World, "Branch Dummy Left"):0} | E upgrades to Square-Square-Triangle");
+
+            float rightBeforeTriangle2 = ReadHealth(engine.World, "Branch Dummy Right");
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Branch Dummy Right"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Branch Dummy Right", rightBeforeTriangle2, maxFrames: 24);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () =>
+                {
+                    IReadOnlyList<PanelSlotSnapshot> neutral = CopySelectedSlots(engine);
+                    return neutral[0].Label == "Square 1" && neutral[2].Label == "Triangle Neutral";
+                },
+                maxFrames: 24);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "square_square_triangle_finisher");
+            timeline.Add($"[T+005] Stage2 branch finisher sweeps the right lane, then the panel returns to neutral Square 1 / Triangle Neutral | HP {rightBeforeTriangle2:0}->{ReadHealth(engine.World, "Branch Dummy Right"):0}");
+
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () =>
+                {
+                    IReadOnlyList<PanelSlotSnapshot> neutral = CopySelectedSlots(engine);
+                    return neutral[0].Label == "Square 1" && neutral[2].Label == "Triangle Neutral";
+                },
+                maxFrames: 12);
+
+            float frontBeforeSquare3 = ReadHealth(engine.World, "Branch Dummy Front");
+            float bruteBeforeSquare3 = ReadHealth(engine.World, "Branch Brute Ender");
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Branch Dummy Front"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CopySelectedSlots(engine)[0].Label == "Square 2",
+                maxFrames: 12);
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CopySelectedSlots(engine)[0].Label == "Square 3",
+                maxFrames: 12);
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Branch Brute Ender", bruteBeforeSquare3, maxFrames: 24);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CopySelectedSlots(engine)[2].Label == "Square-Square-Square-Triangle",
+                maxFrames: 12);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "square3_routed");
+            timeline.Add($"[T+006] Third Q completes the full Square chain on the front lane | HP {frontBeforeSquare3:0}->{ReadHealth(engine.World, "Branch Dummy Front"):0} | E upgrades to the full Square-Square-Square-Triangle ender");
+
+            float frontBeforeTriangle3 = ReadHealth(engine.World, "Branch Dummy Front");
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Branch Dummy Front"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Branch Dummy Front", frontBeforeTriangle3, maxFrames: 24);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "square_square_square_triangle_finisher");
+            timeline.Add($"[T+007] Full-chain Triangle finisher lands after the complete Square route | Front HP {frontBeforeTriangle3:0}->{ReadHealth(engine.World, "Branch Dummy Front"):0}");
+
+            float frontBeforeW = ReadHealth(engine.World, "Branch Dummy Front");
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Branch Dummy Front"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/w", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Branch Dummy Front", frontBeforeW, maxFrames: 24);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "step_slash_hit");
+            timeline.Add($"[T+008] W Step Slash lands without affecting combo routing | Front HP {frontBeforeW:0}->{ReadHealth(engine.World, "Branch Dummy Front"):0}");
+
+            float leftBeforeR = ReadHealth(engine.World, "Branch Dummy Left");
+            PressButton(engine, backend, "<Keyboard>/r", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Branch Dummy Left", leftBeforeR, maxFrames: 24);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "whirlwind_sweep_hit");
+            timeline.Add($"[T+009] R Whirlwind Sweep clips the nearby crowd pack | Left HP {leftBeforeR:0}->{ReadHealth(engine.World, "Branch Dummy Left"):0}");
+
+            File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildScenarioTraceJsonl(snapshots, "champion-musou-branch"));
+            File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildMusouBranchBattleReport(timeline, snapshots, frameTimesMs));
+            File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildMusouBranchPathMermaid());
+            WriteAcceptanceScreenshots(snapshots, "Champion Musou Branch", screensDir);
+        }
+
+        [Test]
+        public void ChampionMusouHitConfirm_PlayableFlow_WritesAcceptanceArtifacts()
+        {
+            string repoRoot = FindRepoRoot();
+            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-musou-hit-confirm-showcase");
+            string screensDir = Path.Combine(artifactDir, "screens");
+            Directory.CreateDirectory(artifactDir);
+            Directory.CreateDirectory(screensDir);
+
+            var timeline = new List<string>();
+            var snapshots = new List<AcceptanceSnapshot>();
+            var frameTimesMs = new List<double>();
+            string[] trackedEntities =
+            {
+                MusouHitHeroName,
+                MusouMissHeroName,
+                "Confirm Dummy Front",
+                "Confirm Brute Finisher"
+            };
+
+            using var engine = CreateEngine();
+            var overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
+                ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PrimitiveDrawBuffer missing.");
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
+                ?? throw new InvalidOperationException("WorldHudBatchBuffer missing.");
+            var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                ?? throw new InvalidOperationException("Toolbar provider missing.");
+            var backend = GetInputBackend(engine);
+
+            LoadMap(engine, MusouHitConfirmMapId, frameTimesMs);
+            Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
+            Assert.That(toolbar.Title, Is.EqualTo("Hit Confirm"));
+            Assert.That(GetSelectedEntityName(engine), Is.EqualTo(MusouHitHeroName));
+
+            IReadOnlyList<PanelSlotSnapshot> slots = CopySelectedSlots(engine);
+            Assert.That(slots[0].Label, Is.EqualTo("Hit Confirm Q1"));
+            Assert.That(slots[1].Label, Is.EqualTo("Guard Step"));
+            Assert.That(slots[2].Label, Is.EqualTo("Triangle Locked"));
+            Assert.That(slots[2].Flags, Does.Contain("Blocked"));
+            Assert.That(slots[3].Label, Is.EqualTo("Execution Sweep"));
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "map_loaded");
+            timeline.Add("[T+001] champion_musou_hit_confirm_showcase loaded | E starts locked until a real hit grants the follow-up window");
+
+            SelectNamedEntity(engine, backend, MusouMissHeroName, frameTimesMs);
+            SetMouseWorld(engine, backend, GetGroundScreenFromWorld(engine, new Vector2(980f, 1700f)), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            Tick(engine, 20, frameTimesMs);
+            Assert.That(EntityHasTag(engine.World, MusouMissHeroName, "State.Champion.MusouConfirm.HitStage1"), Is.False);
+            slots = CopySelectedSlots(engine);
+            Assert.That(slots[0].Label, Is.EqualTo("Hit Confirm Q1"));
+            Assert.That(slots[2].Label, Is.EqualTo("Triangle Locked"));
+            Assert.That(slots[2].Flags, Does.Contain("Blocked"));
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "miss_keeps_followups_locked");
+            timeline.Add("[T+002] Musou Confirm Miss whiffs Q1 in empty space | no hit-confirm tag granted | Q2/E stay locked");
+
+            SelectNamedEntity(engine, backend, MusouHitHeroName, frameTimesMs);
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Confirm Dummy Front"), frameTimesMs);
+            float frontBeforeQ1 = ReadHealth(engine.World, "Confirm Dummy Front");
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Confirm Dummy Front", frontBeforeQ1, maxFrames: 24);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () =>
+                {
+                    IReadOnlyList<PanelSlotSnapshot> routed = CopySelectedSlots(engine);
+                    return routed[0].Label == "Hit Confirm Q2" && routed[2].Label == "Confirm Triangle 1";
+                },
+                maxFrames: 12);
+            Assert.That(EntityHasTag(engine.World, MusouHitHeroName, "State.Champion.MusouConfirm.HitStage1"), Is.True);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "hit_unlocks_q2_and_e1");
+            timeline.Add($"[T+003] Alpha lands Q1 on Confirm Dummy Front | HP {frontBeforeQ1:0}->{ReadHealth(engine.World, "Confirm Dummy Front"):0} | hit-confirm opens Q2 and Triangle 1");
+
+            float frontBeforeQ2 = ReadHealth(engine.World, "Confirm Dummy Front");
+            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Confirm Dummy Front", frontBeforeQ2, maxFrames: 24);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CopySelectedSlots(engine)[2].Label == "Confirm Triangle 2",
+                maxFrames: 12);
+            Assert.That(EntityHasTag(engine.World, MusouHitHeroName, "State.Champion.MusouConfirm.HitStage2"), Is.True);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "q2_hit_unlocks_e2");
+            timeline.Add($"[T+004] Q2 also lands on the front dummy | HP {frontBeforeQ2:0}->{ReadHealth(engine.World, "Confirm Dummy Front"):0} | final Triangle 2 unlocks only after the second confirmed hit");
+
+            float bruteBeforeE2 = ReadHealth(engine.World, "Confirm Brute Finisher");
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Confirm Brute Finisher"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Confirm Brute Finisher", bruteBeforeE2, maxFrames: 24);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () =>
+                {
+                    IReadOnlyList<PanelSlotSnapshot> neutral = CopySelectedSlots(engine);
+                    return neutral[0].Label == "Hit Confirm Q1" && neutral[2].Label == "Triangle Locked";
+                },
+                maxFrames: 12);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "triangle2_finisher_resets_windows");
+            timeline.Add($"[T+005] Confirm Triangle 2 lands on the brute lane and consumes the hit-confirm windows | Brute HP {bruteBeforeE2:0}->{ReadHealth(engine.World, "Confirm Brute Finisher"):0}");
+
+            float frontBeforeW = ReadHealth(engine.World, "Confirm Dummy Front");
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Confirm Dummy Front"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/w", frameTimesMs);
+            TickUntilHealthChanges(engine, frameTimesMs, "Confirm Dummy Front", frontBeforeW, maxFrames: 24);
+            Assert.That(EntityHasTag(engine.World, MusouHitHeroName, "State.Champion.MusouConfirm.HitStage1"), Is.False);
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "guard_step_no_unlock");
+            timeline.Add($"[T+006] Guard Step deals damage but does not fake a confirm window | Front HP {frontBeforeW:0}->{ReadHealth(engine.World, "Confirm Dummy Front"):0}");
+
+            float frontBeforeR = ReadHealth(engine.World, "Confirm Dummy Front");
+            int primitiveBeforeR = CountPrimitiveMarkers(primitives);
+            int worldTextBeforeR = CountWorldHudItems(worldHud, WorldHudItemKind.Text);
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Confirm Dummy Front"), frameTimesMs);
+            PressButton(engine, backend, "<Keyboard>/r", frameTimesMs);
+            bool executionSweepHit = WaitUntil(
+                engine,
+                frameTimesMs,
+                () => ReadHealth(engine.World, "Confirm Dummy Front") < frontBeforeR,
+                maxFrames: 24);
+            bool executionSweepCast = EntityHasTag(engine.World, MusouHitHeroName, "Cooldown.Champion.MusouConfirm.R") ||
+                                      CountPrimitiveMarkers(primitives) > primitiveBeforeR ||
+                                      CountWorldHudItems(worldHud, WorldHudItemKind.Text) > worldTextBeforeR;
+            Assert.That(
+                executionSweepHit || executionSweepCast,
+                Is.True,
+                $"Execution Sweep should at least commit and emit visible feedback. {BuildAbilityDiagnostics(engine, MusouHitHeroName)} || {BuildSelectionStateDiagnostics(engine)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
+            CaptureScenarioSnapshot(engine, overlays, primitives, worldHud, snapshots, trackedEntities, "execution_sweep_hit");
+            timeline.Add(executionSweepHit
+                ? $"[T+007] Execution Sweep gives a neutral comparison skill outside the hit-confirm route | Front HP {frontBeforeR:0}->{ReadHealth(engine.World, "Confirm Dummy Front"):0}"
+                : $"[T+007] Execution Sweep commits as a neutral comparison skill outside the hit-confirm route | feedback {primitiveBeforeR}->{CountPrimitiveMarkers(primitives)} primitives, text {worldTextBeforeR}->{CountWorldHudItems(worldHud, WorldHudItemKind.Text)}");
+
+            File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildScenarioTraceJsonl(snapshots, "champion-musou-hit-confirm"));
+            File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildMusouHitConfirmBattleReport(timeline, snapshots, frameTimesMs));
+            File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildMusouHitConfirmPathMermaid());
+            WriteAcceptanceScreenshots(snapshots, "Champion Musou Hit Confirm", screensDir);
+        }
+
+        [Test]
         public void ChampionSkillStress_PlayableFlow_WritesAcceptanceArtifacts()
         {
             string repoRoot = FindRepoRoot();
@@ -1523,27 +1842,44 @@ namespace Ludots.Tests.GAS.Production
             List<AcceptanceSnapshot> snapshots,
             string step)
         {
-            string selectedName = GetSelectedEntityName(engine);
-            var trackedEntities = new[]
-            {
-                "Ezreal Alpha",
-                "Ezreal Cooldown",
-                "Garen Courage",
-                "Jayce Hammer",
-                "Duelist Alpha",
-                "Geomancer Alpha",
-                "Spell Engineer Alpha",
-                "Target Dummy A",
-                "Target Dummy C",
-                "Target Dummy D",
-                "Target Dummy E",
-                "Target Dummy F"
-            };
+            CaptureScenarioSnapshot(
+                engine,
+                overlays,
+                primitives,
+                worldHud,
+                snapshots,
+                new[]
+                {
+                    "Ezreal Alpha",
+                    "Ezreal Cooldown",
+                    "Garen Courage",
+                    "Jayce Hammer",
+                    "Duelist Alpha",
+                    "Geomancer Alpha",
+                    "Spell Engineer Alpha",
+                    "Target Dummy A",
+                    "Target Dummy C",
+                    "Target Dummy D",
+                    "Target Dummy E",
+                    "Target Dummy F"
+                },
+                step);
+        }
 
-            var states = new List<EntityState>(trackedEntities.Length + 3);
+        private static void CaptureScenarioSnapshot(
+            GameEngine engine,
+            GroundOverlayBuffer overlays,
+            PrimitiveDrawBuffer primitives,
+            WorldHudBatchBuffer worldHud,
+            List<AcceptanceSnapshot> snapshots,
+            IReadOnlyList<string> trackedEntities,
+            string step)
+        {
+            string selectedName = GetSelectedEntityName(engine);
+            var states = new List<EntityState>(trackedEntities.Count + 8);
             foreach (string name in trackedEntities)
             {
-                states.Add(new EntityState(name, ReadHealth(engine.World, name)));
+                AddEntityStateIfPresent(engine.World, states, name);
             }
 
             AddEntityStateIfPresent(engine.World, states, "Runic Beacon");
@@ -1584,13 +1920,18 @@ namespace Ludots.Tests.GAS.Production
 
         private static string BuildTraceJsonl(IReadOnlyList<AcceptanceSnapshot> snapshots)
         {
+            return BuildScenarioTraceJsonl(snapshots, "champion-sandbox");
+        }
+
+        private static string BuildScenarioTraceJsonl(IReadOnlyList<AcceptanceSnapshot> snapshots, string eventPrefix)
+        {
             var lines = new List<string>(snapshots.Count);
             for (int i = 0; i < snapshots.Count; i++)
             {
                 AcceptanceSnapshot snapshot = snapshots[i];
                 lines.Add(JsonSerializer.Serialize(new
                 {
-                    event_id = $"champion-sandbox-{i + 1:000}",
+                    event_id = $"{eventPrefix}-{i + 1:000}",
                     step = snapshot.Step,
                     active_mode_id = snapshot.ActiveModeId,
                     selected_entity = snapshot.SelectedEntity,
@@ -1832,6 +2173,127 @@ namespace Ludots.Tests.GAS.Production
             });
         }
 
+        private static string BuildMusouBranchBattleReport(
+            IReadOnlyList<string> timeline,
+            IReadOnlyList<AcceptanceSnapshot> snapshots,
+            IReadOnlyList<double> frameTimesMs)
+        {
+            double medianTickMs = Median(frameTimesMs);
+            double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
+            AcceptanceSnapshot finalSnapshot = snapshots[^1];
+
+            var sb = new StringBuilder();
+            sb.AppendLine("# Scenario: champion-musou-branch-showcase");
+            sb.AppendLine();
+            sb.AppendLine("## Header");
+            sb.AppendLine("- build: GasTests / ChampionMusouBranch_PlayableFlow_WritesAcceptanceArtifacts");
+            sb.AppendLine($"- map: {MusouBranchMapId}");
+            sb.AppendLine("- clock: FixedFrame @ 60 Hz");
+            sb.AppendLine($"- execution_timestamp_utc: {DateTime.UtcNow:O}");
+            sb.AppendLine("- screenshots: `screens/*.svg`, `screens/timeline.svg`");
+            sb.AppendLine();
+            sb.AppendLine("## Timeline");
+            foreach (string entry in timeline)
+            {
+                sb.AppendLine(entry);
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("## Outcome");
+            sb.AppendLine("- result: success");
+            sb.AppendLine("- failure_branch: combo slot routing or stage reset fails to reflect the expected Square/Triangle branch state");
+            sb.AppendLine($"- final_selected: {finalSnapshot.SelectedEntity}");
+            sb.AppendLine($"- final_mode: {finalSnapshot.ActiveModeId}");
+            sb.AppendLine($"- final_feedback_primitives: {finalSnapshot.PrimitiveCount}");
+            sb.AppendLine($"- final_feedback_world_text: {finalSnapshot.WorldTextCount}");
+            sb.AppendLine();
+            sb.AppendLine("## Summary Stats");
+            sb.AppendLine($"- total_actions: {timeline.Count}");
+            sb.AppendLine("- square_openers: 3");
+            sb.AppendLine("- triangle_finishers: 3");
+            sb.AppendLine("- utility_melee_skills: 2");
+            sb.AppendLine("- classic_branch_cases: 3");
+            sb.AppendLine($"- median_tick_ms: {medianTickMs:0.###}");
+            sb.AppendLine($"- max_tick_ms: {maxTickMs:0.###}");
+            return sb.ToString();
+        }
+
+        private static string BuildMusouHitConfirmBattleReport(
+            IReadOnlyList<string> timeline,
+            IReadOnlyList<AcceptanceSnapshot> snapshots,
+            IReadOnlyList<double> frameTimesMs)
+        {
+            double medianTickMs = Median(frameTimesMs);
+            double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
+            AcceptanceSnapshot finalSnapshot = snapshots[^1];
+
+            var sb = new StringBuilder();
+            sb.AppendLine("# Scenario: champion-musou-hit-confirm-showcase");
+            sb.AppendLine();
+            sb.AppendLine("## Header");
+            sb.AppendLine("- build: GasTests / ChampionMusouHitConfirm_PlayableFlow_WritesAcceptanceArtifacts");
+            sb.AppendLine($"- map: {MusouHitConfirmMapId}");
+            sb.AppendLine("- clock: FixedFrame @ 60 Hz");
+            sb.AppendLine($"- execution_timestamp_utc: {DateTime.UtcNow:O}");
+            sb.AppendLine("- screenshots: `screens/*.svg`, `screens/timeline.svg`");
+            sb.AppendLine();
+            sb.AppendLine("## Timeline");
+            foreach (string entry in timeline)
+            {
+                sb.AppendLine(entry);
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("## Outcome");
+            sb.AppendLine("- result: success");
+            sb.AppendLine("- failure_branch: follow-up slots unlock without a landed hit or fail to reset after the finisher");
+            sb.AppendLine($"- final_selected: {finalSnapshot.SelectedEntity}");
+            sb.AppendLine($"- final_mode: {finalSnapshot.ActiveModeId}");
+            sb.AppendLine($"- final_feedback_primitives: {finalSnapshot.PrimitiveCount}");
+            sb.AppendLine($"- final_feedback_world_text: {finalSnapshot.WorldTextCount}");
+            sb.AppendLine();
+            sb.AppendLine("## Summary Stats");
+            sb.AppendLine($"- total_actions: {timeline.Count}");
+            sb.AppendLine("- intentional_whiffs: 1");
+            sb.AppendLine("- confirms_required: 2");
+            sb.AppendLine("- confirm_only_finishers: 1");
+            sb.AppendLine("- neutral_comparison_skills: 2");
+            sb.AppendLine($"- median_tick_ms: {medianTickMs:0.###}");
+            sb.AppendLine($"- max_tick_ms: {maxTickMs:0.###}");
+            return sb.ToString();
+        }
+
+        private static string BuildMusouBranchPathMermaid()
+        {
+            return string.Join(Environment.NewLine, new[]
+            {
+                "flowchart TD",
+                "    A[\"MapLoaded: Musou Branch Alpha selected\"] --> B[\"Q1 hits front dummy -> Q routes to Square 2\"]",
+                "    B --> C[\"E from Stage1 -> Square-Triangle finisher\"]",
+                "    C --> D[\"Q1 into Q2 -> Stage2 route opens Square-Square-Triangle\"]",
+                "    D --> E[\"E from Stage2 -> wide sweep branch lands\"]",
+                "    E --> F[\"Q1 into Q2 into Q3 -> Stage3 route opens full Triangle finisher\"]",
+                "    F --> G[\"E from Stage3 -> long-line musou finisher lands on brute\"]",
+                "    G --> H[\"W Step Slash -> independent utility strike\"]",
+                "    H --> I[\"R Whirlwind Sweep -> neutral crowd finisher\"]"
+            });
+        }
+
+        private static string BuildMusouHitConfirmPathMermaid()
+        {
+            return string.Join(Environment.NewLine, new[]
+            {
+                "flowchart TD",
+                "    A[\"MapLoaded: Hit Confirm Alpha selected\"] --> B[\"Miss hero whiffs Q1 -> follow-ups remain locked\"]",
+                "    B --> C[\"Alpha Q1 hits front dummy -> Q2 and Triangle1 unlock\"]",
+                "    C --> D[\"Alpha Q2 hits again -> Triangle2 unlocks\"]",
+                "    D --> E[\"Triangle2 finisher lands -> confirm windows reset\"]",
+                "    E --> F[\"Guard Step deals damage but does not unlock combo\"]",
+                "    F --> G[\"Execution Sweep provides neutral comparison skill\"]",
+                "    B --> X[\"if miss still unlocks follow-ups -> fail hit-confirm contract\"]"
+            });
+        }
+
         private static void WriteAcceptanceScreenshots(IReadOnlyList<AcceptanceSnapshot> snapshots, string screensDir)
         {
             for (int i = 0; i < snapshots.Count; i++)
@@ -2035,6 +2497,77 @@ namespace Ludots.Tests.GAS.Production
                 "    F --> G[\"Toolbar: A+ and B+ -> both teams scale to 56 units\"]",
                 "    B --> X[\"if counts do not converge -> fail stress spawn / queue regression\"]"
             });
+        }
+
+        private static void WriteAcceptanceScreenshots(IReadOnlyList<AcceptanceSnapshot> snapshots, string title, string screensDir)
+        {
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                AcceptanceSnapshot snapshot = snapshots[i];
+                WriteAcceptanceSnapshotSvg(snapshot, title, Path.Combine(screensDir, $"{i + 1:000}_{snapshot.Step}.svg"));
+            }
+
+            WriteAcceptanceTimelineSvg(snapshots, title, Path.Combine(screensDir, "timeline.svg"));
+        }
+
+        private static void WriteAcceptanceSnapshotSvg(AcceptanceSnapshot snapshot, string title, string path)
+        {
+            var slotLines = snapshot.PanelSlots
+                .Select((slot, index) => $"[{index}] {slot.Label} | {slot.ActionId} | {slot.Flags}")
+                .Take(6)
+                .ToArray();
+            var entityLines = snapshot.Entities
+                .Select(entity => $"{entity.Name}: {entity.Health:0}")
+                .Take(8)
+                .ToArray();
+
+            string slotsText = EscapeSvg(string.Join(" || ", slotLines));
+            string entitiesText = EscapeSvg(string.Join(" || ", entityLines));
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#0b1218" />
+  <rect x="40" y="40" width="1520" height="820" rx="18" fill="#152330" stroke="#5ea2cf" stroke-width="2" />
+  <text x="72" y="104" fill="#f7d36d" font-size="34" font-family="Consolas, monospace">{{EscapeSvg(title)}} | {{EscapeSvg(snapshot.Step)}}</text>
+  <text x="72" y="152" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Selected: {{EscapeSvg(snapshot.SelectedEntity)}} | Mode: {{EscapeSvg(snapshot.ActiveModeId)}}</text>
+  <text x="72" y="198" fill="#bccdde" font-size="20" font-family="Consolas, monospace">Camera target=({{snapshot.Camera.TargetXCm:0}}, {{snapshot.Camera.TargetYCm:0}}) distance={{snapshot.Camera.DistanceCm:0}} pitch={{snapshot.Camera.Pitch:0}} fov={{snapshot.Camera.FovYDeg:0}}</text>
+  <text x="72" y="256" fill="#ffffff" font-size="22" font-family="Consolas, monospace">Panel</text>
+  <text x="72" y="292" fill="#bccdde" font-size="18" font-family="Consolas, monospace">{{slotsText}}</text>
+  <text x="72" y="360" fill="#ffffff" font-size="22" font-family="Consolas, monospace">Tracked Health</text>
+  <text x="72" y="396" fill="#bccdde" font-size="18" font-family="Consolas, monospace">{{entitiesText}}</text>
+  <text x="72" y="468" fill="#ffffff" font-size="22" font-family="Consolas, monospace">Overlay counts circle/cone/line/ring = {{snapshot.OverlayCounts["circle"]}} / {{snapshot.OverlayCounts["cone"]}} / {{snapshot.OverlayCounts["line"]}} / {{snapshot.OverlayCounts["ring"]}}</text>
+  <text x="72" y="508" fill="#ffffff" font-size="22" font-family="Consolas, monospace">Primitive feedback = {{snapshot.PrimitiveCount}} | World text = {{snapshot.WorldTextCount}}</text>
+</svg>
+""";
+            File.WriteAllText(path, svg);
+        }
+
+        private static void WriteAcceptanceTimelineSvg(IReadOnlyList<AcceptanceSnapshot> snapshots, string title, string path)
+        {
+            if (snapshots.Count == 0)
+            {
+                return;
+            }
+
+            var lines = new List<string>(snapshots.Count * 4);
+            int y = 100;
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                AcceptanceSnapshot snapshot = snapshots[i];
+                lines.Add($"""  <rect x="40" y="{y - 36}" width="1520" height="72" rx="12" fill="#14212e" stroke="#35536b" stroke-width="1.5" />""");
+                lines.Add($"""  <text x="72" y="{y}" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">{EscapeSvg($"{i + 1:000} {snapshot.Step}")}</text>""");
+                lines.Add($"""  <text x="430" y="{y}" fill="#ffffff" font-size="20" font-family="Consolas, monospace">{EscapeSvg(snapshot.SelectedEntity)}</text>""");
+                lines.Add($"""  <text x="72" y="{y + 28}" fill="#bccdde" font-size="18" font-family="Consolas, monospace">{EscapeSvg($"mode={snapshot.ActiveModeId} | overlays={snapshot.OverlayCounts["circle"]}/{snapshot.OverlayCounts["cone"]}/{snapshot.OverlayCounts["line"]}/{snapshot.OverlayCounts["ring"]} | feedback={snapshot.PrimitiveCount}/{snapshot.WorldTextCount}")}</text>""");
+                y += 96;
+            }
+
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="{{Math.Max(240, y + 40)}}" viewBox="0 0 1600 {{Math.Max(240, y + 40)}}">
+  <rect width="1600" height="{{Math.Max(240, y + 40)}}" fill="#080a10" />
+  <text x="20" y="36" fill="#ffffff" font-size="28" font-family="Consolas, monospace">{{EscapeSvg(title)}} timeline</text>
+{{string.Join(Environment.NewLine, lines)}}
+</svg>
+""";
+            File.WriteAllText(path, svg);
         }
 
         private static void WriteStressScreenshots(IReadOnlyList<StressAcceptanceSnapshot> snapshots, string screensDir)

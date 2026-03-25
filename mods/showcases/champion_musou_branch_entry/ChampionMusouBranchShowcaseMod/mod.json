@@ -1,0 +1,10 @@
+{
+  "name": "ChampionMusouBranchShowcaseMod",
+  "version": "1.0.0",
+  "description": "Direct launcher entry for the Dynasty Warriors style square-triangle branching melee showcase.",
+  "main": "bin/net8.0/ChampionMusouBranchShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "ChampionSkillSandboxMod": "^1.0.0"
+  }
+}

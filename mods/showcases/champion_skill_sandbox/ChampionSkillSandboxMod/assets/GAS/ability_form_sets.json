@@ -32,5 +32,52 @@
         ]
       }
     ]
+  },
+    "id": "champion_skill_sandbox_musou_branch_forms",
+    "routes": [
+      {
+        "requiredAll": ["State.Champion.MusouBranch.ComboStage3"],
+        "priority": 300,
+        "slotOverrides": [
+          { "slotIndex": 2, "abilityId": "Ability.Champion.MusouBranch.TriangleStage3" }
+        ]
+      },
+      {
+        "requiredAll": ["State.Champion.MusouBranch.ComboStage2"],
+        "priority": 200,
+        "slotOverrides": [
+          { "slotIndex": 0, "abilityId": "Ability.Champion.MusouBranch.Square3" },
+          { "slotIndex": 2, "abilityId": "Ability.Champion.MusouBranch.TriangleStage2" }
+        ]
+      },
+      {
+        "requiredAll": ["State.Champion.MusouBranch.ComboStage1"],
+        "priority": 100,
+        "slotOverrides": [
+          { "slotIndex": 0, "abilityId": "Ability.Champion.MusouBranch.Square2" },
+          { "slotIndex": 2, "abilityId": "Ability.Champion.MusouBranch.TriangleStage1" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox_musou_confirm_forms",
+    "routes": [
+      {
+        "requiredAll": ["State.Champion.MusouConfirm.HitStage2"],
+        "priority": 200,
+        "slotOverrides": [
+          { "slotIndex": 2, "abilityId": "Ability.Champion.MusouConfirm.TriangleStage2" }
+        ]
+      },
+      {
+        "requiredAll": ["State.Champion.MusouConfirm.HitStage1"],
+        "priority": 100,
+        "slotOverrides": [
+          { "slotIndex": 0, "abilityId": "Ability.Champion.MusouConfirm.Square2" },
+          { "slotIndex": 2, "abilityId": "Ability.Champion.MusouConfirm.TriangleStage1" }
+        ]
+      }
+    ]
   }
 ]

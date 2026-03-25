@@ -986,5 +986,314 @@
         "SmartCast": "The melee route still works here, but Action Combo is the clearest way to read it."
       }
     }
+  },
+    "id": "Ability.Champion.MusouBranch.Square1",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.Source.Stage1Window", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.Square1" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["State.Champion.MusouBranch.ComboStage1", "State.Champion.MusouBranch.ComboStage2", "State.Champion.MusouBranch.ComboStage3"] },
+    "indicator": { "shape": "Circle", "range": 220, "radius": 120, "showRangeCircle": true, "validColor": "#F7D76877", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Square 1",
+      "iconGlyph": "Q",
+      "accentColor": "#F7D768",
+      "hintText": "Classic opener that starts the Square chain",
+      "modeHints": {
+        "SmartCastWithIndicator": "Press Q to open the Square combo",
+        "PressReleaseAimCast": "Release Q to commit the opener"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouBranch.Square2",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.Source.Stage2Window", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.Square2" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "requiredAll": ["State.Champion.MusouBranch.ComboStage1"] },
+    "indicator": { "shape": "Circle", "range": 240, "radius": 135, "showRangeCircle": true, "validColor": "#F4BD5D77", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Square 2",
+      "iconGlyph": "Q",
+      "accentColor": "#F4BD5D",
+      "hintText": "Continue into the second Square hit",
+      "modeHints": {
+        "SmartCastWithIndicator": "Press Q again before the combo tag expires"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouBranch.Square3",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.Source.Stage3Window", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.Square3" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "requiredAll": ["State.Champion.MusouBranch.ComboStage2"] },
+    "indicator": { "shape": "Circle", "range": 270, "radius": 150, "showRangeCircle": true, "validColor": "#F29D4F77", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Square 3",
+      "iconGlyph": "Q",
+      "accentColor": "#F29D4F",
+      "hintText": "Third Square hit that opens the longest Triangle finisher",
+      "modeHints": {
+        "SmartCastWithIndicator": "Press Q a third time to hold the Stage 3 window"
+      }
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouBranch.TriangleNeutral",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 36, "tag": "Cooldown.Champion.MusouBranch.E" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.TriangleNeutral" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["State.Champion.MusouBranch.ComboStage1", "State.Champion.MusouBranch.ComboStage2", "State.Champion.MusouBranch.ComboStage3", "Cooldown.Champion.MusouBranch.E"] },
+    "indicator": { "shape": "Cone", "range": 260, "radius": 160, "showRangeCircle": true, "validColor": "#87D6FF77", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Triangle Neutral",
+      "iconGlyph": "E",
+      "accentColor": "#87D6FF",
+      "hintText": "Standalone heavy slash when no Square stage is active"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouBranch.TriangleStage1",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.Source.ResetWindows", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.TriangleStage1" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "requiredAll": ["State.Champion.MusouBranch.ComboStage1"] },
+    "indicator": { "shape": "Cone", "range": 280, "radius": 190, "showRangeCircle": true, "validColor": "#79E7BC77", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Square-Triangle",
+      "iconGlyph": "E",
+      "accentColor": "#79E7BC",
+      "hintText": "First Dynasty-style branch ender"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouBranch.TriangleStage2",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.Source.ResetWindows", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.TriangleStage2" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "requiredAll": ["State.Champion.MusouBranch.ComboStage2"] },
+    "indicator": { "shape": "Circle", "range": 300, "radius": 210, "showRangeCircle": true, "validColor": "#67E2A777", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Square-Square-Triangle",
+      "iconGlyph": "E",
+      "accentColor": "#67E2A7",
+      "hintText": "Wide crowd sweep branch from the second Square"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouBranch.TriangleStage3",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.Source.ResetWindows", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.TriangleStage3" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "requiredAll": ["State.Champion.MusouBranch.ComboStage3"] },
+    "indicator": { "shape": "Line", "range": 360, "radius": 110, "showRangeCircle": true, "validColor": "#4FE8F077", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Square-Square-Square-Triangle",
+      "iconGlyph": "E",
+      "accentColor": "#4FE8F0",
+      "hintText": "Long-range crowd finisher from the full Square chain"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouBranch.StepSlash",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 42, "tag": "Cooldown.Champion.MusouBranch.W" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.StepSlash" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.MusouBranch.W"] },
+    "indicator": { "shape": "Line", "range": 260, "radius": 90, "showRangeCircle": true, "validColor": "#FFB06A77", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Step Slash",
+      "iconGlyph": "W",
+      "accentColor": "#FFB06A",
+      "hintText": "Short melee puncture for spacing without touching the combo route"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouBranch.WhirlwindSweep",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 84, "tag": "Cooldown.Champion.MusouBranch.R" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouBranch.WhirlwindSweep" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.MusouBranch.R"] },
+    "indicator": { "shape": "Circle", "range": 0, "radius": 260, "showRangeCircle": false, "validColor": "#FF8E6B77", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Whirlwind Sweep",
+      "iconGlyph": "R",
+      "accentColor": "#FF8E6B",
+      "hintText": "Big circular melee showcase finisher"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouConfirm.Square1",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouConfirm.Square1" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["State.Champion.MusouConfirm.HitStage1", "State.Champion.MusouConfirm.HitStage2"] },
+    "indicator": { "shape": "Circle", "range": 200, "radius": 105, "showRangeCircle": true, "validColor": "#F4D96A77", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Hit Confirm Q1",
+      "iconGlyph": "Q",
+      "accentColor": "#F4D96A",
+      "hintText": "Must land before any follow-up slot unlocks"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouConfirm.Square2",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouConfirm.Square2" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "requiredAll": ["State.Champion.MusouConfirm.HitStage1"] },
+    "indicator": { "shape": "Cone", "range": 240, "radius": 135, "showRangeCircle": true, "validColor": "#F0BC5777", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Hit Confirm Q2",
+      "iconGlyph": "Q",
+      "accentColor": "#F0BC57",
+      "hintText": "Only appears after Q1 actually hits"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouConfirm.TriangleLocked",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "requiredAll": ["State.Champion.MusouConfirm.HitStage1"] },
+    "indicator": { "shape": "Circle", "range": 0, "radius": 0, "showRangeCircle": false, "validColor": "#5BD2FF77", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Triangle Locked",
+      "iconGlyph": "E",
+      "accentColor": "#5BD2FF",
+      "hintText": "Land Q first to unlock the Triangle route"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouConfirm.TriangleStage1",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouConfirm.Source.ResetWindows", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouConfirm.TriangleStage1" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "requiredAll": ["State.Champion.MusouConfirm.HitStage1"] },
+    "indicator": { "shape": "Cone", "range": 260, "radius": 170, "showRangeCircle": true, "validColor": "#68DDFB77", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Confirm Triangle 1",
+      "iconGlyph": "E",
+      "accentColor": "#68DDFB",
+      "hintText": "Triangle branch that only exists after a confirmed Q hit"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouConfirm.TriangleStage2",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouConfirm.Source.ResetWindows", "dispatchTarget": "Source" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouConfirm.TriangleStage2" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "requiredAll": ["State.Champion.MusouConfirm.HitStage2"] },
+    "indicator": { "shape": "Line", "range": 320, "radius": 95, "showRangeCircle": true, "validColor": "#4FE9E277", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Confirm Triangle 2",
+      "iconGlyph": "E",
+      "accentColor": "#4FE9E2",
+      "hintText": "Final confirm-only ender unlocked by landing Q2"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouConfirm.GuardStep",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 45, "tag": "Cooldown.Champion.MusouConfirm.W" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouConfirm.GuardStep" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.MusouConfirm.W"] },
+    "indicator": { "shape": "Circle", "range": 170, "radius": 110, "showRangeCircle": true, "validColor": "#FFA45C77", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Guard Step",
+      "iconGlyph": "W",
+      "accentColor": "#FFA45C",
+      "hintText": "Independent melee interrupt that does not unlock combo follow-ups"
+    }
+  },
+  {
+    "id": "Ability.Champion.MusouConfirm.ExecutionSweep",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 90, "tag": "Cooldown.Champion.MusouConfirm.R" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.MusouConfirm.ExecutionSweep" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.Champion.MusouConfirm.R"] },
+    "indicator": { "shape": "Circle", "range": 0, "radius": 250, "showRangeCircle": false, "validColor": "#FF7E7277", "invalidColor": "#E2575788" },
+    "presentation": {
+      "displayName": "Execution Sweep",
+      "iconGlyph": "R",
+      "accentColor": "#FF7E72",
+      "hintText": "Standalone crowd sweep for comparison against the confirm-only chain"
+    }
   }
 ]

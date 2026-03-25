@@ -736,5 +736,394 @@
     "modifiers": [
       { "attribute": "Health", "op": "Add", "value": -28.0 }
     ]
+  },
+    "id": "Effect.Champion.MusouBranch.Source.Stage1Window",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.ComboWindow"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": { "durationTicks": 32 },
+    "grantedTags": [
+      { "tag": "State.Champion.MusouBranch.ComboStage1", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.Source.Stage2Window",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.ComboWindow"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": { "durationTicks": 34 },
+    "grantedTags": [
+      { "tag": "State.Champion.MusouBranch.ComboStage2", "formula": "Fixed", "amount": 1 }
+    ],
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Champion.MusouBranch.RemoveStage1Window" }
+    }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.Source.Stage3Window",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.ComboWindow"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": { "durationTicks": 36 },
+    "grantedTags": [
+      { "tag": "State.Champion.MusouBranch.ComboStage3", "formula": "Fixed", "amount": 1 }
+    ],
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Champion.MusouBranch.RemoveStage2Window" }
+    }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.Source.ResetWindows",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.ComboReset"],
+    "presetType": "None",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Champion.MusouBranch.ResetWindows" }
+    }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.Square1",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 150 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 4 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouBranch.Square1Hit" }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.Square1Hit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -11.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.Square2",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Cone", "radius": 230, "halfAngle": 42 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 6 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouBranch.Square2Hit" }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.Square2Hit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -13.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.Square3",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Line", "length": 320, "halfWidth": 95 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 8 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouBranch.Square3Hit" }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.Square3Hit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -16.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.TriangleNeutral",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Cone", "radius": 240, "halfAngle": 38 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 5 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouBranch.TriangleNeutralHit" }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.TriangleNeutralHit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -18.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.TriangleStage1",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Cone", "radius": 270, "halfAngle": 50 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 6 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouBranch.TriangleStage1Hit" }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.TriangleStage1Hit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -21.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.TriangleStage2",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 210 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 8 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouBranch.TriangleStage2Hit" }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.TriangleStage2Hit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -24.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.TriangleStage3",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Line", "length": 360, "halfWidth": 120 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 10 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouBranch.TriangleStage3Hit" }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.TriangleStage3Hit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -29.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.StepSlash",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Line", "length": 250, "halfWidth": 80 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 3 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouBranch.StepSlashHit" }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.StepSlashHit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -17.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.WhirlwindSweep",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Ring", "radius": 270, "innerRadius": 80 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 10 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouBranch.WhirlwindSweepHit" }
+  },
+  {
+    "id": "Effect.Champion.MusouBranch.WhirlwindSweepHit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.MusouBranch"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -23.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.Source.HitStage1Window",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": { "durationTicks": 24 },
+    "grantedTags": [
+      { "tag": "State.Champion.MusouConfirm.HitStage1", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.Source.HitStage2Window",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": { "durationTicks": 28 },
+    "grantedTags": [
+      { "tag": "State.Champion.MusouConfirm.HitStage2", "formula": "Fixed", "amount": 1 }
+    ],
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Champion.MusouConfirm.RemoveHitStage1Window" }
+    }
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.Source.ResetWindows",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "None",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Champion.MusouConfirm.ResetWindows" }
+    }
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.Square1",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 120 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 1 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouConfirm.Square1Hit" }
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.Square1Hit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Champion.MusouConfirm.GrantHitStage1" }
+    },
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -12.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.Square2",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Cone", "radius": 220, "halfAngle": 34 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 1 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouConfirm.Square2Hit" }
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.Square2Hit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "phaseGraphs": {
+      "OnApply": { "post": "Graph.Champion.MusouConfirm.GrantHitStage2" }
+    },
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -16.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.TriangleStage1",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Cone", "radius": 260, "halfAngle": 46 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 2 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouConfirm.TriangleStage1Hit" }
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.TriangleStage1Hit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -20.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.TriangleStage2",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Line", "length": 320, "halfWidth": 100 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 3 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouConfirm.TriangleStage2Hit" }
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.TriangleStage2Hit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -27.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.GuardStep",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 140 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 2 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouConfirm.GuardStepHit" }
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.GuardStepHit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -15.0 }
+    ]
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.ExecutionSweep",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Ring", "radius": 255, "innerRadius": 60 },
+    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 6 },
+    "targetDispatch": { "payloadEffect": "Effect.Champion.MusouConfirm.ExecutionSweepHit" }
+  },
+  {
+    "id": "Effect.Champion.MusouConfirm.ExecutionSweepHit",
+    "tags": ["Effect.Champion.Melee", "Effect.Champion.HitConfirm"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -22.0 }
+    ]
   }
 ]

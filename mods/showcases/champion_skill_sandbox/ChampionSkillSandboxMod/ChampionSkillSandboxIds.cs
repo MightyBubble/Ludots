@@ -8,6 +8,8 @@ namespace ChampionSkillSandboxMod
         public const string MapId = "champion_skill_sandbox";
         public const string StressMapId = "champion_skill_stress";
         public const string ControlMapId = "champion_control_showcase";
+        public const string MusouBranchMapId = "champion_musou_branch_showcase";
+        public const string MusouHitConfirmMapId = "champion_musou_hit_confirm_showcase";
         public const string InputContextId = "ChampionSkillSandbox.Controls";
 
         public const string SmartCastModeId = "ChampionSkillSandbox.Mode.SmartCast";
@@ -72,6 +74,9 @@ namespace ChampionSkillSandboxMod
         public const string ControlHeroName = "Control Marshal";
         public const string ControlRunnerName = "Control Runner";
         public const string ControlCasterName = "Control Caster";
+        public const string MusouBranchHeroName = "Musou Branch Alpha";
+        public const string MusouHitHeroName = "Musou Confirm Alpha";
+        public const string MusouMissHeroName = "Musou Confirm Miss";
 
         public const string GarenCourageTag = "State.Champion.Garen.Courage";
         public const string JayceHammerTag = "State.Champion.Jayce.Hammer";
@@ -81,7 +86,9 @@ namespace ChampionSkillSandboxMod
         {
             return string.Equals(mapId, MapId, StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(mapId, StressMapId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(mapId, ControlMapId, StringComparison.OrdinalIgnoreCase);
+                   string.Equals(mapId, ControlMapId, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(mapId, MusouBranchMapId, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(mapId, MusouHitConfirmMapId, StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool IsStressMap(string? mapId)
@@ -92,6 +99,16 @@ namespace ChampionSkillSandboxMod
         public static bool IsControlMap(string? mapId)
         {
             return string.Equals(mapId, ControlMapId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsMusouBranchMap(string? mapId)
+        {
+            return string.Equals(mapId, MusouBranchMapId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsMusouHitConfirmMap(string? mapId)
+        {
+            return string.Equals(mapId, MusouHitConfirmMapId, StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool IsSandboxMode(string? modeId)

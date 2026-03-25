@@ -113,6 +113,18 @@ namespace Ludots.Tests.GAS.Production
                 .SetName("ProdModSmoke_ChampionSkillSandboxMod");
 
             yield return new TestCaseData(new ModCase(
+                    "ChampionMusouBranchShowcaseMod",
+                    new[] { "LudotsCoreMod", "CommonControlBuffsMod", "CommonControlBuffsPresentationMod", "CoreInputMod", "CameraProfilesMod", "EntityCommandPanelMod", "DiagnosticsOverlayMod", "ChampionSkillSandboxMod", "ChampionMusouBranchShowcaseMod" },
+                    true))
+                .SetName("ProdModSmoke_ChampionMusouBranchShowcaseMod");
+
+            yield return new TestCaseData(new ModCase(
+                    "ChampionMusouHitConfirmShowcaseMod",
+                    new[] { "LudotsCoreMod", "CommonControlBuffsMod", "CommonControlBuffsPresentationMod", "CoreInputMod", "CameraProfilesMod", "EntityCommandPanelMod", "DiagnosticsOverlayMod", "ChampionSkillSandboxMod", "ChampionMusouHitConfirmShowcaseMod" },
+                    true))
+                .SetName("ProdModSmoke_ChampionMusouHitConfirmShowcaseMod");
+
+            yield return new TestCaseData(new ModCase(
                     "NarrativeFrontendMod",
                     new[] { "LudotsCoreMod", "NarrativeFrontendMod" },
                     true))

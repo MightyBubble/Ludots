@@ -1,0 +1,10 @@
+{
+  "name": "ChampionMusouHitConfirmShowcaseMod",
+  "version": "1.0.0",
+  "description": "Direct launcher entry for the hit-confirm gated melee combo showcase.",
+  "main": "bin/net8.0/ChampionMusouHitConfirmShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "ChampionSkillSandboxMod": "^1.0.0"
+  }
+}
