@@ -8,6 +8,8 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 
 namespace RtsDemoMod.Triggers
@@ -48,10 +50,26 @@ namespace RtsDemoMod.Triggers
                 }
             });
 
+            EnsurePresentationStableIds(engine, world);
             EnsureLocalSelectionOwner(engine, world);
             EnsureSelectionViewBinding(engine, world);
             EnsureDefaultSelection(engine, world);
             return Task.CompletedTask;
+        }
+
+        private static void EnsurePresentationStableIds(GameEngine engine, World world)
+        {
+            PresentationStableIdAllocator? allocator = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator);
+            if (allocator == null)
+            {
+                return;
+            }
+
+            var query = new QueryDescription().WithAll<VisualTransform>().WithNone<PresentationStableId>();
+            world.Query(in query, (Entity entity, ref VisualTransform _) =>
+            {
+                world.Add(entity, new PresentationStableId { Value = allocator.Allocate() });
+            });
         }
 
         private static void EnsureLocalSelectionOwner(GameEngine engine, World world)

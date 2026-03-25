@@ -170,14 +170,24 @@ namespace EntityCommandPanelMod.UI
 
             var slots = new EntityCommandPanelSlotView[AbilityStateBuffer.CAPACITY];
             int slotCount = source == null ? 0 : source.CopySlots(state.TargetEntity, state.GroupIndex, slots);
-            float slotSectionHeight = ResolveSlotSectionHeight(state.Size.HeightPx, slotCount);
+            var statuses = new EntityCommandPanelStatusView[6];
+            var queueItems = new EntityCommandPanelQueueItemView[8];
+            int statusCount = 0;
+            int queueItemCount = 0;
+            if (source is IEntityCommandPanelSupplementalSource supplementalSource)
+            {
+                statusCount = supplementalSource.CopyStatuses(state.TargetEntity, statuses);
+                queueItemCount = supplementalSource.CopyQueueItems(state.TargetEntity, queueItems);
+            }
+
+            float slotSectionHeight = ResolveSlotSectionHeight(state.Size.HeightPx, slotCount, statusCount, queueItemCount);
 
             ResolvePanelPosition(state.Anchor, state.Size, viewportWidth, viewportHeight, out float left, out float top);
 
             return Ui.Card(
                     BuildHeader(state, group, groupCount),
                     BuildToolbar(state),
-                    BuildSlotSection(state.TargetEntity, state.GroupIndex, source, slotCount, slots, slotSectionHeight))
+                    BuildSlotSection(state.TargetEntity, state.GroupIndex, source, slotCount, slots, statusCount, statuses, queueItemCount, queueItems, slotSectionHeight))
                 .Id($"entity-command-panel-{slot}")
                 .Width(Math.Max(220f, state.Size.WidthPx))
                 .Height(Math.Max(180f, state.Size.HeightPx))
@@ -243,12 +253,17 @@ namespace EntityCommandPanelMod.UI
             IEntityCommandPanelSource? source,
             int slotCount,
             Span<EntityCommandPanelSlotView> slots,
+            int statusCount,
+            Span<EntityCommandPanelStatusView> statuses,
+            int queueItemCount,
+            Span<EntityCommandPanelQueueItemView> queueItems,
             float sectionHeight)
         {
-            if (slotCount <= 0)
+            int totalItems = slotCount + statusCount + queueItemCount + (statusCount > 0 ? 1 : 0) + (queueItemCount > 0 ? 1 : 0);
+            if (totalItems <= 0)
             {
                 return Ui.Card(
-                        Ui.Text("No slot data available for this source.")
+                        Ui.Text("No slot or runtime state data available for this source.")
                             .FontSize(12f)
                             .Color("#8FA6BD"))
                     .Padding(12f)
@@ -256,10 +271,29 @@ namespace EntityCommandPanelMod.UI
                     .Background("#0E1E2D");
             }
 
-            var rows = new UiElementBuilder[slotCount];
+            var rows = new UiElementBuilder[totalItems];
+            int rowIndex = 0;
             for (int i = 0; i < slotCount; i++)
             {
-                rows[i] = BuildSlotRow(target, groupIndex, source, in slots[i]);
+                rows[rowIndex++] = BuildSlotRow(target, groupIndex, source, in slots[i]);
+            }
+
+            if (statusCount > 0)
+            {
+                rows[rowIndex++] = BuildSupplementalHeader("Runtime Status", $"{statusCount} live");
+                for (int i = 0; i < statusCount; i++)
+                {
+                    rows[rowIndex++] = BuildStatusRow(in statuses[i]);
+                }
+            }
+
+            if (queueItemCount > 0)
+            {
+                rows[rowIndex++] = BuildSupplementalHeader("Order Queue", $"{queueItemCount} tracked");
+                for (int i = 0; i < queueItemCount; i++)
+                {
+                    rows[rowIndex++] = BuildQueueRow(in queueItems[i]);
+                }
             }
 
             return Ui.ScrollView(rows)
@@ -270,15 +304,15 @@ namespace EntityCommandPanelMod.UI
                 .Background("#08111A");
         }
 
-        private static float ResolveSlotSectionHeight(float panelHeight, int slotCount)
+        private static float ResolveSlotSectionHeight(float panelHeight, int slotCount, int statusCount, int queueItemCount)
         {
-            if (slotCount <= 0)
+            if (slotCount + statusCount + queueItemCount <= 0)
             {
                 return 96f;
             }
 
             const float reservedHeightPx = 148f;
-            return Math.Max(96f, panelHeight - reservedHeightPx);
+            return Math.Max(120f, panelHeight - reservedHeightPx);
         }
 
         private UiElementBuilder BuildSlotRow(
@@ -335,6 +369,90 @@ namespace EntityCommandPanelMod.UI
             }
 
             return row;
+        }
+
+        private static UiElementBuilder BuildSupplementalHeader(string title, string detail)
+        {
+            return Ui.Row(
+                    Ui.Text(title)
+                        .FontSize(11f)
+                        .Bold()
+                        .Color("#F2C36B"),
+                    Ui.Text(detail)
+                        .FontSize(10f)
+                        .Color("#7E93A8"))
+                .Justify(UiJustifyContent.SpaceBetween)
+                .Align(UiAlignItems.Center)
+                .Padding(6f, 4f);
+        }
+
+        private static UiElementBuilder BuildStatusRow(in EntityCommandPanelStatusView status)
+        {
+            string accent = NormalizeColor(status.AccentColorHex, status.Kind == EntityCommandPanelStatusKind.ActiveAbility ? "#58B7FF" : "#34D399");
+            string progress = $"{Math.Clamp(status.ProgressPermille, (short)0, (short)1000) / 10f:0.#}%";
+            string kindLabel = status.Kind == EntityCommandPanelStatusKind.ActiveAbility ? "ABILITY" : "EFFECT";
+
+            return Ui.Card(
+                    Ui.Row(
+                            Ui.Column(
+                                    Ui.Text(string.IsNullOrWhiteSpace(status.Label) ? "(unnamed status)" : status.Label)
+                                        .FontSize(12f)
+                                        .Bold()
+                                        .Color("#F5F7FA"),
+                                    Ui.Text(string.IsNullOrWhiteSpace(status.Detail) ? "Running" : status.Detail)
+                                        .FontSize(11f)
+                                        .Color("#8FA6BD"))
+                                .Gap(4f)
+                                .FlexGrow(1f)
+                                .FlexBasis(0f),
+                            Ui.Column(
+                                    Ui.Text(kindLabel)
+                                        .FontSize(9f)
+                                        .Bold()
+                                        .Color("#0B1520")
+                                        .Padding(7f, 4f)
+                                        .Radius(999f)
+                                        .Background(accent),
+                                    Ui.Text(progress)
+                                        .FontSize(10f)
+                                        .Bold()
+                                        .Color("#DCE7F3"))
+                                .Gap(6f)
+                                .Align(UiAlignItems.End))
+                        .Gap(10f))
+                .Padding(10f)
+                .Radius(12f)
+                .Background("#0E1E2D");
+        }
+
+        private static UiElementBuilder BuildQueueRow(in EntityCommandPanelQueueItemView queueItem)
+        {
+            string accent = NormalizeColor(queueItem.AccentColorHex, ResolveQueueStageAccent(queueItem.Stage));
+            return Ui.Card(
+                    Ui.Row(
+                            Ui.Column(
+                                    Ui.Text(string.IsNullOrWhiteSpace(queueItem.Label) ? "(unnamed order)" : queueItem.Label)
+                                        .FontSize(12f)
+                                        .Bold()
+                                        .Color("#F5F7FA"),
+                                    Ui.Text(string.IsNullOrWhiteSpace(queueItem.Detail) ? "Queued" : queueItem.Detail)
+                                        .FontSize(11f)
+                                        .Color("#8FA6BD"))
+                                .Gap(4f)
+                                .FlexGrow(1f)
+                                .FlexBasis(0f),
+                            Ui.Text(ResolveQueueStageLabel(queueItem.Stage))
+                                .FontSize(9f)
+                                .Bold()
+                                .Color("#0B1520")
+                                .Padding(7f, 4f)
+                                .Radius(999f)
+                                .Background(accent))
+                        .Gap(10f)
+                        .Align(UiAlignItems.Center))
+                .Padding(10f)
+                .Radius(12f)
+                .Background("#0E1E2D");
         }
 
         private UiElementBuilder BuildAbilityIcon(in EntityCommandPanelSlotView slot, string interactionModeKey)
@@ -422,6 +540,28 @@ namespace EntityCommandPanelMod.UI
             }
 
             return "No command assigned";
+        }
+
+        private static string ResolveQueueStageLabel(EntityCommandPanelQueueStage stage)
+        {
+            return stage switch
+            {
+                EntityCommandPanelQueueStage.Active => "ACTIVE",
+                EntityCommandPanelQueueStage.Queued => "QUEUED",
+                EntityCommandPanelQueueStage.Pending => "PENDING",
+                _ => "ORDER"
+            };
+        }
+
+        private static string ResolveQueueStageAccent(EntityCommandPanelQueueStage stage)
+        {
+            return stage switch
+            {
+                EntityCommandPanelQueueStage.Active => "#58B7FF",
+                EntityCommandPanelQueueStage.Queued => "#F2C36B",
+                EntityCommandPanelQueueStage.Pending => "#F59E0B",
+                _ => "#8FA6BD"
+            };
         }
 
         private static void AppendFlag(List<UiElementBuilder> flags, bool enabled, string label, string background, string color)

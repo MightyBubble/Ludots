@@ -659,6 +659,7 @@ namespace Ludots.Tests.GAS
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
             var effects = new EffectRequestQueue();
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
@@ -667,7 +668,8 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
                     new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    new Ludots.Core.Presentation.PresentationStableIdAllocator()),
+                    stableIds),
+                stableIds,
                 effects);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
@@ -707,6 +709,8 @@ namespace Ludots.Tests.GAS
             That(world.Get<Team>(spawned).Id, Is.EqualTo(7));
             That(world.Has<MapEntity>(spawned), Is.True);
             That(world.Get<MapEntity>(spawned).MapId.Value, Is.EqualTo("runtime_spawn_test"));
+            That(world.Has<Ludots.Core.Presentation.Components.PresentationStableId>(spawned), Is.True);
+            That(world.Get<Ludots.Core.Presentation.Components.PresentationStableId>(spawned).Value, Is.GreaterThan(0));
 
             That(effects.Count, Is.EqualTo(1));
             That(effects[0].Source, Is.EqualTo(source));
@@ -724,6 +728,7 @@ namespace Ludots.Tests.GAS
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
             var effects = new EffectRequestQueue();
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
@@ -732,7 +737,8 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
                     new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    new Ludots.Core.Presentation.PresentationStableIdAllocator()),
+                    stableIds),
+                stableIds,
                 effects);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
@@ -754,14 +760,15 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             int count = 0;
-            var query = new QueryDescription().WithAll<ProjectileState, WorldPositionCm, PreviousWorldPositionCm, MapEntity>();
-            world.Query(in query, (ref ProjectileState projectile, ref WorldPositionCm position, ref PreviousWorldPositionCm previous, ref MapEntity map) =>
+            var query = new QueryDescription().WithAll<ProjectileState, WorldPositionCm, PreviousWorldPositionCm, MapEntity, Ludots.Core.Presentation.Components.PresentationStableId>();
+            world.Query(in query, (ref ProjectileState projectile, ref WorldPositionCm position, ref PreviousWorldPositionCm previous, ref MapEntity map, ref Ludots.Core.Presentation.Components.PresentationStableId stableId) =>
             {
                 count++;
                 That(projectile.Speed, Is.EqualTo(Fix64.FromInt(333)));
                 That(position.Value, Is.EqualTo(Fix64Vec2.FromInt(150, 275)));
                 That(previous.Value, Is.EqualTo(Fix64Vec2.FromInt(150, 275)));
                 That(map.MapId.Value, Is.EqualTo("assembly_spawn_test"));
+                That(stableId.Value, Is.GreaterThan(0));
             });
 
             That(count, Is.EqualTo(1));
@@ -790,6 +797,7 @@ namespace Ludots.Tests.GAS
                 new PlayerOwner { PlayerId = 12 },
                 new MapEntity { MapId = new Ludots.Core.Map.MapId("template_spawn_test") });
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
@@ -798,7 +806,8 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
                     new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    new Ludots.Core.Presentation.PresentationStableIdAllocator()));
+                    stableIds),
+                stableIds);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
             {
@@ -830,6 +839,8 @@ namespace Ludots.Tests.GAS
                 That(team.Id, Is.EqualTo(5));
                 That(map.MapId.Value, Is.EqualTo("template_spawn_test"));
                 That(world.Has<GameplayTagContainer>(entity), Is.True);
+                That(world.Has<Ludots.Core.Presentation.Components.PresentationStableId>(entity), Is.True);
+                That(world.Get<Ludots.Core.Presentation.Components.PresentationStableId>(entity).Value, Is.GreaterThan(0));
             });
 
             That(count, Is.EqualTo(1));
@@ -850,6 +861,7 @@ namespace Ludots.Tests.GAS
                 new MapEntity { MapId = new Ludots.Core.Map.MapId("summon_spawn_test") });
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
@@ -858,7 +870,8 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
                     new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    new Ludots.Core.Presentation.PresentationStableIdAllocator()));
+                    stableIds),
+                stableIds);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
             {

@@ -15,9 +15,15 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.UI;
+using Ludots.UI.Skia;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
@@ -44,13 +50,19 @@ namespace Ludots.Tests.GAS.Production
             string repoRoot = FindRepoRoot();
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", ArtifactFolderName);
             Directory.CreateDirectory(artifactDir);
+            string screensDir = Path.Combine(artifactDir, "screens");
+            Directory.CreateDirectory(screensDir);
 
             var timeline = new List<string>();
             var trace = new List<object>();
             var frameTimesMs = new List<double>();
+            var panelSnapshots = new List<RtsPanelSnapshot>();
 
             using var engine = CreateEngine();
             LoadMap(engine, MapId, frameTimesMs);
+            var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                ?? throw new InvalidOperationException("EntityCommandPanelToolbarProvider service is missing.");
+            IEntityCommandPanelSource panelSource = ResolveGasPanelSource(engine);
 
             var world = engine.World;
             var tagOps = engine.GetService(CoreServiceKeys.TagOps)
@@ -83,6 +95,16 @@ namespace Ludots.Tests.GAS.Production
 
             trace.Add(CaptureSnapshot(world, engine, "map_loaded", "Baseline RTS strategic sandbox ready.", peasant, barracks, guardTower, constructionYard, warFactory, battleBunker, gateway, drone));
             timeline.Add("[T+001] rts_entry loaded with Warcraft worker build, C&C placement, Protoss gateway tech, and Zerg morph actors ready.");
+            RtsPanelSnapshot peasantPanel = CapturePanelSnapshot(
+                engine,
+                toolbar,
+                panelSource,
+                peasant,
+                panelSnapshots,
+                "001_peasant_build_palette",
+                previewSlotIndex: 0,
+                previewWorldCm: new Vector2(-1950f, -1150f));
+            Assert.That(peasantPanel.Preview?.PerformerId, Is.EqualTo("core_input_preview_build_site"));
 
             float peasantMineralsBeforeLumberMill = ReadAttribute(world, peasant, mineralsAttrId);
             float peasantLumberBeforeLumberMill = ReadAttribute(world, peasant, lumberAttrId);
@@ -140,6 +162,9 @@ namespace Ludots.Tests.GAS.Production
                 maxFrames: 8,
                 "Barracks should enter Training.",
                 () => BuildTrainingDiagnostics(world, tagOps, barracks, "Footman"));
+            RtsPanelSnapshot barracksPanel = CapturePanelSnapshot(engine, toolbar, panelSource, barracks, panelSnapshots, "002_barracks_training_queue");
+            Assert.That(barracksPanel.Statuses.Count, Is.GreaterThan(0), "Barracks panel should expose its active training status.");
+            Assert.That(barracksPanel.QueueItems.Count, Is.GreaterThan(0), "Barracks panel should expose its order queue.");
             TickUntil(
                 engine,
                 frameTimesMs,
@@ -210,9 +235,30 @@ namespace Ludots.Tests.GAS.Production
             float gatewayGasBeforeResearch = ReadAttribute(world, gateway, gasAttrId);
             CastAbility(engine, gateway, gateway, slot: 3);
             TickUntil(engine, frameTimesMs, () => HasEffectiveTag(world, tagOps, gateway, researchingTagId), maxFrames: 8, "Gateway should enter Researching.");
+            RtsPanelSnapshot gatewayResearchPanel = CapturePanelSnapshot(engine, toolbar, panelSource, gateway, panelSnapshots, "003_gateway_research_status");
+            Assert.That(gatewayResearchPanel.Statuses.Count, Is.GreaterThan(0), "Gateway panel should expose its active research status.");
+            Assert.That(gatewayResearchPanel.QueueItems.Count, Is.GreaterThan(0), "Gateway panel should expose its research order queue.");
             TickUntil(engine, frameTimesMs, () => HasEffectiveTag(world, tagOps, gateway, warpGateTechTagId), maxFrames: 900, "Warp Gate tech should be granted after the research clip.");
             Assert.That(ReadAttribute(world, gateway, mineralsAttrId), Is.EqualTo(gatewayMineralsBeforeResearch - 50f).Within(0.01f));
             Assert.That(ReadAttribute(world, gateway, gasAttrId), Is.EqualTo(gatewayGasBeforeResearch - 50f).Within(0.01f));
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => TryGetSlotDisplayLabel(panelSource, gateway, slotIndex: 0, out string label) &&
+                      string.Equals(label, "折跃狂热者", StringComparison.Ordinal),
+                maxFrames: 4,
+                "Gateway panel should refresh its slot 0 form override after Warp Gate research.");
+            RtsPanelSnapshot warpgatePanel = CapturePanelSnapshot(
+                engine,
+                toolbar,
+                panelSource,
+                gateway,
+                panelSnapshots,
+                "004_warpgate_preview",
+                previewSlotIndex: 0,
+                previewWorldCm: new Vector2(300f, 2380f));
+            Assert.That(warpgatePanel.Slots[0].DisplayLabel, Is.EqualTo("折跃狂热者"));
+            Assert.That(warpgatePanel.Preview?.PerformerId, Is.EqualTo("core_input_preview_warp_site"));
 
             var zealotIdsBeforeWarp = SnapshotEntityIdsByName(world, "Zealot");
             CastAbilityAtWorldPoint(engine, gateway, slot: 0, new Vector2(300f, 2380f));
@@ -228,6 +274,16 @@ namespace Ludots.Tests.GAS.Production
 
             var spawningPoolIdsBefore = SnapshotEntityIdsByName(world, "Spawning Pool");
             float droneMineralsBefore = ReadAttribute(world, drone, mineralsAttrId);
+            RtsPanelSnapshot dronePanel = CapturePanelSnapshot(
+                engine,
+                toolbar,
+                panelSource,
+                drone,
+                panelSnapshots,
+                "005_drone_morph_preview",
+                previewSlotIndex: 0,
+                previewWorldCm: new Vector2(3250f, 2200f));
+            Assert.That(dronePanel.Preview?.PerformerId, Is.EqualTo("core_input_preview_morph_site"));
             CastAbilityAtWorldPoint(engine, drone, slot: 0, new Vector2(3250f, 2200f));
             TickUntil(engine, frameTimesMs, () => CountEntitiesByName(world, "Spawning Pool") == spawningPoolIdsBefore.Count + 1, maxFrames: 20, "Drone morph should spawn a Spawning Pool.");
             Entity spawningPool = FindNewestEntityByName(world, "Spawning Pool", spawningPoolIdsBefore);
@@ -244,8 +300,10 @@ namespace Ludots.Tests.GAS.Production
             timeline.Add("[T+011] Zerg morph: Drone attaches to the Spawning Pool shell, stays non-interactable during Constructing, then is destroyed when the morph completes.");
 
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl(trace), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(artifactDir, "panel-trace.jsonl"), BuildTraceJsonl(panelSnapshots), Encoding.UTF8);
             File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, frameTimesMs), Encoding.UTF8);
             File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid(), Encoding.UTF8);
+            WritePanelScreens(panelSnapshots, screensDir);
         }
 
         private static GameEngine CreateEngine()
@@ -257,6 +315,11 @@ namespace Ludots.Tests.GAS.Production
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallDummyInput(engine);
+            var uiRoot = new UIRoot(new SkiaUiRenderer());
+            uiRoot.Resize(1920f, 1080f);
+            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+            engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
+            engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
             engine.Start();
             return engine;
         }
@@ -622,7 +685,7 @@ namespace Ludots.Tests.GAS.Production
             }
         }
 
-        private static string BuildTraceJsonl(IEnumerable<object> snapshots)
+        private static string BuildTraceJsonl<T>(IEnumerable<T> snapshots)
         {
             return string.Join(
                 Environment.NewLine,
@@ -670,8 +733,10 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine();
             sb.AppendLine("## Evidence Artifacts");
             sb.AppendLine("- `artifacts/acceptance/rts-strategic-showcase/trace.jsonl`");
+            sb.AppendLine("- `artifacts/acceptance/rts-strategic-showcase/panel-trace.jsonl`");
             sb.AppendLine("- `artifacts/acceptance/rts-strategic-showcase/battle-report.md`");
             sb.AppendLine("- `artifacts/acceptance/rts-strategic-showcase/path.mmd`");
+            sb.AppendLine("- `artifacts/acceptance/rts-strategic-showcase/screens/*.svg`");
             return sb.ToString();
         }
 
@@ -704,6 +769,347 @@ namespace Ludots.Tests.GAS.Production
             var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.UiCaptured, false);
+        }
+
+        private static IEntityCommandPanelSource ResolveGasPanelSource(GameEngine engine)
+        {
+            var registry = engine.GetService(CoreServiceKeys.EntityCommandPanelSourceRegistry)
+                ?? throw new InvalidOperationException("EntityCommandPanelSourceRegistry service is missing.");
+            Assert.That(registry.TryGet("gas.ability-slots", out IEntityCommandPanelSource source), Is.True);
+            return source;
+        }
+
+        private static RtsPanelSnapshot CapturePanelSnapshot(
+            GameEngine engine,
+            IEntityCommandPanelToolbarProvider toolbar,
+            IEntityCommandPanelSource source,
+            Entity target,
+            List<RtsPanelSnapshot> snapshots,
+            string step,
+            int previewSlotIndex = -1,
+            Vector2? previewWorldCm = null)
+        {
+            SelectEntity(engine, target);
+
+            var slots = new EntityCommandPanelSlotView[8];
+            int slotCount = source.CopySlots(target, 0, slots);
+            var slotSnapshots = new List<RtsPanelSlotSnapshot>(slotCount);
+            for (int i = 0; i < slotCount; i++)
+            {
+                EntityCommandPanelSlotView slot = slots[i];
+                slotSnapshots.Add(new RtsPanelSlotSnapshot(
+                    slot.SlotIndex,
+                    slot.ActionId,
+                    slot.DisplayLabel,
+                    slot.DetailLabel,
+                    FormatSlotFlags(slot.StateFlags)));
+            }
+
+            var statusSnapshots = new List<RtsPanelStatusSnapshot>();
+            if (source is IEntityCommandPanelSupplementalSource supplemental)
+            {
+                var statuses = new EntityCommandPanelStatusView[6];
+                int statusCount = supplemental.CopyStatuses(target, statuses);
+                for (int i = 0; i < statusCount; i++)
+                {
+                    EntityCommandPanelStatusView status = statuses[i];
+                    statusSnapshots.Add(new RtsPanelStatusSnapshot(
+                        status.Kind.ToString(),
+                        status.Label,
+                        status.Detail,
+                        status.ProgressPermille,
+                        status.AccentColorHex));
+                }
+            }
+
+            var queueSnapshots = new List<RtsPanelQueueSnapshot>();
+            if (source is IEntityCommandPanelSupplementalSource queueSource)
+            {
+                var queueItems = new EntityCommandPanelQueueItemView[8];
+                int queueCount = queueSource.CopyQueueItems(target, queueItems);
+                for (int i = 0; i < queueCount; i++)
+                {
+                    EntityCommandPanelQueueItemView item = queueItems[i];
+                    queueSnapshots.Add(new RtsPanelQueueSnapshot(
+                        item.Stage.ToString(),
+                        item.Label,
+                        item.Detail,
+                        item.AccentColorHex));
+                }
+            }
+
+            var toolbarSnapshots = new List<RtsToolbarButtonSnapshot>();
+            var buttons = new EntityCommandPanelToolbarButtonView[8];
+            int buttonCount = toolbar.CopyButtons(buttons);
+            for (int i = 0; i < buttonCount; i++)
+            {
+                EntityCommandPanelToolbarButtonView button = buttons[i];
+                toolbarSnapshots.Add(new RtsToolbarButtonSnapshot(
+                    button.ButtonId,
+                    button.Label,
+                    button.Active,
+                    button.AccentColorHex));
+            }
+
+            RtsPreviewSnapshot? preview = null;
+            if (previewSlotIndex >= 0 && previewWorldCm.HasValue)
+            {
+                preview = CapturePreviewSnapshot(engine, target, previewSlotIndex, previewWorldCm.Value);
+            }
+
+            var snapshot = new RtsPanelSnapshot(
+                step,
+                ReadName(engine.World, target),
+                toolbar.Subtitle,
+                toolbarSnapshots,
+                slotSnapshots,
+                statusSnapshots,
+                queueSnapshots,
+                preview);
+            snapshots.Add(snapshot);
+            return snapshot;
+        }
+
+        private static bool TryGetSlotDisplayLabel(IEntityCommandPanelSource source, Entity target, int slotIndex, out string label)
+        {
+            label = string.Empty;
+            if (slotIndex < 0)
+            {
+                return false;
+            }
+
+            var slots = new EntityCommandPanelSlotView[8];
+            int slotCount = source.CopySlots(target, 0, slots);
+            for (int i = 0; i < slotCount; i++)
+            {
+                if (slots[i].SlotIndex != slotIndex)
+                {
+                    continue;
+                }
+
+                label = slots[i].DisplayLabel ?? string.Empty;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static RtsPreviewSnapshot? CapturePreviewSnapshot(GameEngine engine, Entity actor, int slotIndex, Vector2 targetWorldCm)
+        {
+            var abilities = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
+                ?? throw new InvalidOperationException("AbilityDefinitionRegistry service is missing.");
+            var overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
+                ?? throw new InvalidOperationException("GroundOverlayBuffer service is missing.");
+            var performerDefinitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                ?? throw new InvalidOperationException("PerformerDefinitionRegistry service is missing.");
+            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
+                ?? throw new InvalidOperationException("PerformerInstanceBuffer service is missing.");
+
+            overlays.Clear();
+            performers.Clear();
+
+            var bridge = new AbilityIndicatorOverlayBridge(engine.World, abilities, overlays, performerDefinitions, performers);
+            bridge.UpdateAiming(
+                actor,
+                new InputOrderMapping
+                {
+                    ActionId = $"PreviewSlot{slotIndex}",
+                    SelectionType = OrderSelectionType.Position,
+                    ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex }
+                },
+                hasCursorWorldCm: true,
+                cursorWorldCm: new Vector3(targetWorldCm.X, 0f, targetWorldCm.Y),
+                hoveredEntity: Entity.Null);
+
+            string overlaySummary = string.Join(", ",
+                overlays.GetSpan().ToArray().GroupBy(item => item.Shape).Select(group => $"{group.Key}:{group.Count()}"));
+
+            for (int handle = 0; handle < performers.Capacity; handle++)
+            {
+                if (!performers.IsActive(handle))
+                {
+                    continue;
+                }
+
+                ref readonly var instance = ref performers.Get(handle);
+                string performerId = performerDefinitions.GetName(instance.DefId);
+                performers.TryGetParamOverride(handle, WellKnownPerformerParamKeys.MarkerScaleX, out float scaleX);
+                performers.TryGetParamOverride(handle, WellKnownPerformerParamKeys.MarkerScaleY, out float scaleY);
+                performers.TryGetParamOverride(handle, WellKnownPerformerParamKeys.MarkerScaleZ, out float scaleZ);
+                bridge.ClearPreview();
+                overlays.Clear();
+                performers.Clear();
+                return new RtsPreviewSnapshot(
+                    performerId,
+                    instance.WorldPosition.X,
+                    instance.WorldPosition.Y,
+                    instance.WorldPosition.Z,
+                    scaleX,
+                    scaleY,
+                    scaleZ,
+                    overlaySummary);
+            }
+
+            overlays.Clear();
+            performers.Clear();
+            return null;
+        }
+
+        private static void SelectEntity(GameEngine engine, Entity target)
+        {
+            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
+                ?? throw new InvalidOperationException("SelectionRuntime service is missing.");
+            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Assert.That(engine.World.IsAlive(owner), Is.True, "Local player selection owner should exist on RTS map.");
+            Assert.That(engine.World.IsAlive(target), Is.True, "Selection target should exist.");
+
+            Span<Entity> next = stackalloc Entity[1];
+            next[0] = target;
+            selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next);
+            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.Ambient);
+            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
+            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+        }
+
+        private static string ReadName(World world, Entity entity)
+        {
+            return world.IsAlive(entity) && world.TryGet(entity, out Name name)
+                ? name.Value
+                : "(unknown)";
+        }
+
+        private static string FormatSlotFlags(EntityCommandSlotStateFlags flags)
+        {
+            if (flags == EntityCommandSlotStateFlags.None)
+            {
+                return "None";
+            }
+
+            var parts = new List<string>(6);
+            if (flags.HasFlag(EntityCommandSlotStateFlags.Base)) parts.Add(nameof(EntityCommandSlotStateFlags.Base));
+            if (flags.HasFlag(EntityCommandSlotStateFlags.FormOverride)) parts.Add(nameof(EntityCommandSlotStateFlags.FormOverride));
+            if (flags.HasFlag(EntityCommandSlotStateFlags.GrantedOverride)) parts.Add(nameof(EntityCommandSlotStateFlags.GrantedOverride));
+            if (flags.HasFlag(EntityCommandSlotStateFlags.TemplateBacked)) parts.Add(nameof(EntityCommandSlotStateFlags.TemplateBacked));
+            if (flags.HasFlag(EntityCommandSlotStateFlags.Blocked)) parts.Add(nameof(EntityCommandSlotStateFlags.Blocked));
+            if (flags.HasFlag(EntityCommandSlotStateFlags.Active)) parts.Add(nameof(EntityCommandSlotStateFlags.Active));
+            if (flags.HasFlag(EntityCommandSlotStateFlags.Empty)) parts.Add(nameof(EntityCommandSlotStateFlags.Empty));
+            return string.Join("|", parts);
+        }
+
+        private static void WritePanelScreens(IReadOnlyList<RtsPanelSnapshot> snapshots, string screensDir)
+        {
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                RtsPanelSnapshot snapshot = snapshots[i];
+                WritePanelSnapshotSvg(snapshot, Path.Combine(screensDir, $"{i + 1:000}_{snapshot.Step}.svg"));
+            }
+
+            WritePanelTimelineSvg(snapshots, Path.Combine(screensDir, "timeline.svg"));
+        }
+
+        private static void WritePanelSnapshotSvg(RtsPanelSnapshot snapshot, string path)
+        {
+            const int width = 1600;
+            int toolbarHeight = 92 + snapshot.ToolbarButtons.Count * 28;
+            int slotHeight = 160 + snapshot.Slots.Count * 28;
+            int statusHeight = 140 + Math.Max(1, snapshot.Statuses.Count) * 28;
+            int queueHeight = 140 + Math.Max(1, snapshot.QueueItems.Count) * 28;
+            int previewHeight = snapshot.Preview == null ? 120 : 184;
+            int height = Math.Max(920, 120 + Math.Max(toolbarHeight + slotHeight, statusHeight + queueHeight + previewHeight));
+
+            var toolbarLines = snapshot.ToolbarButtons.Count == 0
+                ? new[] { "no quick-select buttons visible" }
+                : snapshot.ToolbarButtons.Select(button => $"{(button.Active ? "[x]" : "[ ]")} {button.Label} ({button.ButtonId}) {button.AccentColorHex}").ToArray();
+            var slotLines = snapshot.Slots.Count == 0
+                ? new[] { "no slots" }
+                : snapshot.Slots.Select(slot => $"[{slot.SlotIndex}] {slot.DisplayLabel} | {slot.DetailLabel} | {slot.Flags} | action={slot.ActionId}").ToArray();
+            var statusLines = snapshot.Statuses.Count == 0
+                ? new[] { "no active statuses" }
+                : snapshot.Statuses.Select(status => $"{status.Kind} {status.ProgressPermille / 10.0:F1}% | {status.Label} | {status.Detail}").ToArray();
+            var queueLines = snapshot.QueueItems.Count == 0
+                ? new[] { "queue empty" }
+                : snapshot.QueueItems.Select(item => $"{item.Stage} | {item.Label} | {item.Detail}").ToArray();
+            var preview = snapshot.Preview;
+            var previewLines = preview == null
+                ? new[] { "preview unavailable" }
+                : new[]
+                {
+                    $"performer={preview.Value.PerformerId}",
+                    $"worldPos=({preview.Value.WorldX:0.##}, {preview.Value.WorldY:0.##}, {preview.Value.WorldZ:0.##})",
+                    $"scale=({preview.Value.ScaleX:0.##}, {preview.Value.ScaleY:0.##}, {preview.Value.ScaleZ:0.##})",
+                    $"overlays={preview.Value.OverlaySummary}"
+                };
+
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="{{width}}" height="{{height}}" viewBox="0 0 {{width}} {{height}}">
+  <rect width="{{width}}" height="{{height}}" fill="#0b1017" />
+  <rect x="32" y="28" width="1536" height="{{height - 56}}" rx="20" fill="#122031" stroke="#4c89c7" stroke-width="2" />
+  <text x="64" y="84" fill="#f7d36d" font-size="34" font-family="Consolas, monospace">RTS Command Snapshot | {{EscapeSvg(snapshot.Step)}}</text>
+  <text x="64" y="126" fill="#ffffff" font-size="24" font-family="Consolas, monospace">Focus: {{EscapeSvg(snapshot.FocusEntity)}} | {{EscapeSvg(snapshot.Subtitle)}}</text>
+  {{RenderPanelSectionSvg("Quick Select", toolbarLines, 64, 170, 690)}}
+  {{RenderPanelSectionSvg("Command Slots", slotLines, 64, 170 + toolbarHeight, 690)}}
+  {{RenderPanelSectionSvg("Statuses", statusLines, 790, 170, 746)}}
+  {{RenderPanelSectionSvg("Order Queue", queueLines, 790, 170 + statusHeight, 746)}}
+  {{RenderPanelSectionSvg("Preview Ghost", previewLines, 790, 170 + statusHeight + queueHeight, 746)}}
+  <text x="64" y="{{height - 40}}" fill="#9db4cc" font-size="18" font-family="Consolas, monospace">Data source: gas.ability-slots + toolbar provider + AbilityIndicatorOverlayBridge preview buffer.</text>
+</svg>
+""";
+            File.WriteAllText(path, svg, Encoding.UTF8);
+        }
+
+        private static void WritePanelTimelineSvg(IReadOnlyList<RtsPanelSnapshot> snapshots, string path)
+        {
+            int y = 76;
+            var lines = new List<string>(snapshots.Count * 2);
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                RtsPanelSnapshot snapshot = snapshots[i];
+                string preview = snapshot.Preview == null ? "preview=none" : $"preview={snapshot.Preview.Value.PerformerId}";
+                lines.Add($"""  <text x="56" y="{y}" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">{EscapeSvg($"{i + 1:000} {snapshot.Step}")}</text>""");
+                lines.Add($"""  <text x="460" y="{y}" fill="#ffffff" font-size="20" font-family="Consolas, monospace">{EscapeSvg($"focus={snapshot.FocusEntity} | slots={snapshot.Slots.Count} | statuses={snapshot.Statuses.Count} | queue={snapshot.QueueItems.Count} | {preview}")}</text>""");
+                y += 72;
+            }
+
+            string svg = $$"""
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="{{Math.Max(240, y + 32)}}" viewBox="0 0 1600 {{Math.Max(240, y + 32)}}">
+  <rect width="1600" height="{{Math.Max(240, y + 32)}}" fill="#081018" />
+  <text x="24" y="40" fill="#ffffff" font-size="28" font-family="Consolas, monospace">RTS command panel evidence timeline</text>
+{{string.Join(Environment.NewLine, lines)}}
+</svg>
+""";
+            File.WriteAllText(path, svg, Encoding.UTF8);
+        }
+
+        private static string RenderPanelSectionSvg(string title, IReadOnlyList<string> lines, int x, int y, int width)
+        {
+            int height = 84 + lines.Count * 28;
+            var textLines = new List<string>(lines.Count + 1)
+            {
+                $"""<rect x="{x}" y="{y}" width="{width}" height="{height}" rx="14" fill="#16283d" stroke="#35597d" stroke-width="1.5" />""",
+                $"""<text x="{x + 24}" y="{y + 40}" fill="#f7d36d" font-size="24" font-family="Consolas, monospace">{EscapeSvg(title)}</text>"""
+            };
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                int lineY = y + 74 + i * 28;
+                textLines.Add($"""<text x="{x + 24}" y="{lineY}" fill="#d7e5f3" font-size="18" font-family="Consolas, monospace">{EscapeSvg(lines[i])}</text>""");
+            }
+
+            return string.Join(Environment.NewLine, textLines);
+        }
+
+        private static string EscapeSvg(string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            return value
+                .Replace("&", "&amp;", StringComparison.Ordinal)
+                .Replace("<", "&lt;", StringComparison.Ordinal)
+                .Replace(">", "&gt;", StringComparison.Ordinal)
+                .Replace("\"", "&quot;", StringComparison.Ordinal);
         }
 
         private static string FindRepoRoot()
@@ -743,5 +1149,51 @@ namespace Ludots.Tests.GAS.Production
 
             public string GetCharBuffer() => string.Empty;
         }
+
+        private readonly record struct RtsPanelSnapshot(
+            string Step,
+            string FocusEntity,
+            string Subtitle,
+            IReadOnlyList<RtsToolbarButtonSnapshot> ToolbarButtons,
+            IReadOnlyList<RtsPanelSlotSnapshot> Slots,
+            IReadOnlyList<RtsPanelStatusSnapshot> Statuses,
+            IReadOnlyList<RtsPanelQueueSnapshot> QueueItems,
+            RtsPreviewSnapshot? Preview);
+
+        private readonly record struct RtsToolbarButtonSnapshot(
+            string ButtonId,
+            string Label,
+            bool Active,
+            string AccentColorHex);
+
+        private readonly record struct RtsPanelSlotSnapshot(
+            int SlotIndex,
+            string ActionId,
+            string DisplayLabel,
+            string DetailLabel,
+            string Flags);
+
+        private readonly record struct RtsPanelStatusSnapshot(
+            string Kind,
+            string Label,
+            string Detail,
+            int ProgressPermille,
+            string AccentColorHex);
+
+        private readonly record struct RtsPanelQueueSnapshot(
+            string Stage,
+            string Label,
+            string Detail,
+            string AccentColorHex);
+
+        private readonly record struct RtsPreviewSnapshot(
+            string PerformerId,
+            float WorldX,
+            float WorldY,
+            float WorldZ,
+            float ScaleX,
+            float ScaleY,
+            float ScaleZ,
+            string OverlaySummary);
     }
 }

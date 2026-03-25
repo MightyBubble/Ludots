@@ -154,12 +154,74 @@ namespace Ludots.Core.UI.EntityCommandPanels
         public string ActionId { get; }
     }
 
+    public enum EntityCommandPanelStatusKind : byte
+    {
+        ActiveAbility,
+        ActiveEffect
+    }
+
+    public readonly struct EntityCommandPanelStatusView
+    {
+        public EntityCommandPanelStatusView(
+            EntityCommandPanelStatusKind kind,
+            short progressPermille,
+            string label = "",
+            string detail = "",
+            string accentColorHex = "")
+        {
+            Kind = kind;
+            ProgressPermille = progressPermille;
+            Label = label ?? string.Empty;
+            Detail = detail ?? string.Empty;
+            AccentColorHex = accentColorHex ?? string.Empty;
+        }
+
+        public EntityCommandPanelStatusKind Kind { get; }
+        public short ProgressPermille { get; }
+        public string Label { get; }
+        public string Detail { get; }
+        public string AccentColorHex { get; }
+    }
+
+    public enum EntityCommandPanelQueueStage : byte
+    {
+        Active,
+        Queued,
+        Pending
+    }
+
+    public readonly struct EntityCommandPanelQueueItemView
+    {
+        public EntityCommandPanelQueueItemView(
+            EntityCommandPanelQueueStage stage,
+            string label = "",
+            string detail = "",
+            string accentColorHex = "")
+        {
+            Stage = stage;
+            Label = label ?? string.Empty;
+            Detail = detail ?? string.Empty;
+            AccentColorHex = accentColorHex ?? string.Empty;
+        }
+
+        public EntityCommandPanelQueueStage Stage { get; }
+        public string Label { get; }
+        public string Detail { get; }
+        public string AccentColorHex { get; }
+    }
+
     public interface IEntityCommandPanelSource
     {
         bool TryGetRevision(Entity target, out uint revision);
         int GetGroupCount(Entity target);
         bool TryGetGroup(Entity target, int groupIndex, out EntityCommandPanelGroupView group);
         int CopySlots(Entity target, int groupIndex, Span<EntityCommandPanelSlotView> destination);
+    }
+
+    public interface IEntityCommandPanelSupplementalSource
+    {
+        int CopyStatuses(Entity target, Span<EntityCommandPanelStatusView> destination);
+        int CopyQueueItems(Entity target, Span<EntityCommandPanelQueueItemView> destination);
     }
 
     public interface IEntityCommandPanelActionSource

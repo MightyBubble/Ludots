@@ -62,7 +62,7 @@ namespace RtsDemoMod.Systems
             }
 
             var anchor = new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.BottomCenter, 0f, 20f);
-            var size = new EntityCommandPanelSize(460f, 268f);
+            var size = new EntityCommandPanelSize(520f, 352f);
 
             if (!_handle.IsValid || !service.TryGetState(_handle, out _))
             {

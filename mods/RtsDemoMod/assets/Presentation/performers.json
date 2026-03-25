@@ -5,18 +5,19 @@
     "visualKind": "GroundOverlay",
     "entityScope": "AllWithVisualTransform",
     "meshOrShapeId": "Ring",
-    "defaultColor": [0.18, 0.32, 0.46, 0.10],
-    "defaultScale": 0.92,
+    "defaultColor": [0.22, 0.54, 0.96, 0.18],
+    "defaultScale": 1.5,
     "defaultLifetime": -1,
-    "positionOffset": [0, 0.04, 0],
+    "maxVisibilityDistanceCm": 30000,
+    "positionOffset": [0, 0.05, 0],
     "visibility": { "inline": "OwnerCullVisible" },
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.62 },
+      { "paramKey": 1, "source": "constant", "constantValue": 0.84 },
       { "paramKey": 8, "source": "entityColor", "sourceId": 0 },
       { "paramKey": 9, "source": "entityColor", "sourceId": 1 },
       { "paramKey": 10, "source": "entityColor", "sourceId": 2 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.96 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.05 }
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.08 }
     ]
   },
   {
@@ -25,19 +26,20 @@
     "visualKind": "Marker3D",
     "entityScope": "AllWithVisualTransform",
     "meshOrShapeId": "Cube",
-    "defaultColor": [0.84, 0.88, 0.94, 0.96],
-    "defaultScale": 0.56,
+    "defaultColor": [0.92, 0.96, 1.0, 0.98],
+    "defaultScale": 1.05,
     "defaultLifetime": -1,
-    "positionOffset": [0, 0.32, 0],
+    "maxVisibilityDistanceCm": 30000,
+    "positionOffset": [0, 0.55, 0],
     "visibility": { "inline": "OwnerCullVisible" },
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.72 },
-      { "paramKey": 2, "source": "constant", "constantValue": 0.82 },
-      { "paramKey": 3, "source": "constant", "constantValue": 0.72 },
+      { "paramKey": 1, "source": "constant", "constantValue": 1.18 },
+      { "paramKey": 2, "source": "constant", "constantValue": 1.38 },
+      { "paramKey": 3, "source": "constant", "constantValue": 1.18 },
       { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
       { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
       { "paramKey": 6, "source": "entityColor", "sourceId": 2 },
-      { "paramKey": 7, "source": "constant", "constantValue": 0.98 }
+      { "paramKey": 7, "source": "constant", "constantValue": 1.0 }
     ]
   }
 ]

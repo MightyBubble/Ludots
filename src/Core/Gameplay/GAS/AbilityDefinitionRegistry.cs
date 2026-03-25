@@ -63,6 +63,17 @@ namespace Ludots.Core.Gameplay.GAS
     /// <summary>
     /// Visual indicator configuration for an ability (range circles, cones, etc.).
     /// </summary>
+    public struct AbilityIndicatorPreviewConfig
+    {
+        public string PerformerId;
+        public float ScaleX;
+        public float ScaleY;
+        public float ScaleZ;
+        public float OffsetY;
+
+        public readonly bool IsEnabled => !string.IsNullOrWhiteSpace(PerformerId);
+    }
+
     public struct AbilityIndicatorConfig
     {
         public TargetShape Shape;
@@ -74,6 +85,7 @@ namespace Ludots.Core.Gameplay.GAS
         public Vector4 InvalidColor;     // color when out of range / invalid
         public Vector4 RangeCircleColor; // range circle fill color
         public bool ShowRangeCircle;     // whether to show the cast range circle
+        public AbilityIndicatorPreviewConfig Preview;
     }
 
     /// <summary>

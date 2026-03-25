@@ -413,6 +413,18 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 ShowRangeCircle = indicatorObj["showRangeCircle"]?.GetValue<bool>() ?? false
             };
 
+            if (indicatorObj["preview"] is JsonObject previewObj)
+            {
+                indicator.Preview = new AbilityIndicatorPreviewConfig
+                {
+                    PerformerId = previewObj["performerId"]?.GetValue<string>() ?? string.Empty,
+                    ScaleX = previewObj["scaleX"]?.GetValue<float>() ?? 0f,
+                    ScaleY = previewObj["scaleY"]?.GetValue<float>() ?? 0f,
+                    ScaleZ = previewObj["scaleZ"]?.GetValue<float>() ?? 0f,
+                    OffsetY = previewObj["offsetY"]?.GetValue<float>() ?? 0f,
+                };
+            }
+
             if (indicatorObj["angleDeg"] is JsonNode angleDegNode)
             {
                 indicator.Angle = MathF.PI * angleDegNode.GetValue<float>() / 180f;

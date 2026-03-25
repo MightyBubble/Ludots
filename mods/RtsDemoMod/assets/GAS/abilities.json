@@ -77,7 +77,12 @@
       "shape": "Circle",
       "range": 1600,
       "radius": 240,
-      "showRangeCircle": true
+      "showRangeCircle": true,
+      "preview": {
+        "performerId": "core_input_preview_build_site",
+        "scaleY": 1.1,
+        "offsetY": 0.05
+      }
     },
     "presentation": {
       "displayName": "伐木场",
@@ -104,7 +109,12 @@
       "shape": "Circle",
       "range": 1500,
       "radius": 220,
-      "showRangeCircle": true
+      "showRangeCircle": true,
+      "preview": {
+        "performerId": "core_input_preview_build_site",
+        "scaleY": 1.45,
+        "offsetY": 0.08
+      }
     },
     "presentation": {
       "displayName": "箭塔",
@@ -148,7 +158,12 @@
       "shape": "Circle",
       "range": 2200,
       "radius": 280,
-      "showRangeCircle": true
+      "showRangeCircle": true,
+      "preview": {
+        "performerId": "core_input_preview_build_site",
+        "scaleY": 0.82,
+        "offsetY": 0.02
+      }
     },
     "presentation": {
       "displayName": "发电厂",
@@ -171,7 +186,12 @@
       "shape": "Circle",
       "range": 2200,
       "radius": 300,
-      "showRangeCircle": true
+      "showRangeCircle": true,
+      "preview": {
+        "performerId": "core_input_preview_build_site",
+        "scaleY": 1.25,
+        "offsetY": 0.06
+      }
     },
     "presentation": {
       "displayName": "矿石精炼厂",
@@ -261,7 +281,12 @@
       "shape": "Circle",
       "range": 2600,
       "radius": 180,
-      "showRangeCircle": true
+      "showRangeCircle": true,
+      "preview": {
+        "performerId": "core_input_preview_warp_site",
+        "scaleY": 2.4,
+        "offsetY": 0.18
+      }
     },
     "presentation": {
       "displayName": "折跃狂热者",
@@ -288,7 +313,12 @@
       "shape": "Circle",
       "range": 1500,
       "radius": 260,
-      "showRangeCircle": true
+      "showRangeCircle": true,
+      "preview": {
+        "performerId": "core_input_preview_morph_site",
+        "scaleY": 1.8,
+        "offsetY": 0.1
+      }
     },
     "presentation": {
       "displayName": "变形血池",
