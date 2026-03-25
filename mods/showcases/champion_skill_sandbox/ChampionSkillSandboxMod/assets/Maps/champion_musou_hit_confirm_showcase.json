@@ -1,0 +1,44 @@
+{
+  "Id": "champion_musou_hit_confirm_showcase",
+  "Tags": ["champion.skill.sandbox", "showcase.melee", "showcase.combo", "showcase.hit-confirm"],
+  "DefaultCamera": {
+    "VirtualCameraId": "ChampionSkillSandbox.Camera.Tactical",
+    "TargetXCm": 1880,
+    "TargetYCm": 960,
+    "DistanceCm": 4200,
+    "Pitch": 54,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "champion_skill_sandbox_musou_confirm_hero",
+      "Overrides": {
+        "Name": { "Value": "Musou Confirm Miss" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 980, "Y": 1460 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_musou_confirm_hero",
+      "Overrides": {
+        "Name": { "Value": "Musou Confirm Alpha" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 1380, "Y": 920 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Confirm Dummy Front" },
+        "WorldPositionCm": { "Value": { "X": 1550, "Y": 920 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_brute",
+      "Overrides": {
+        "Name": { "Value": "Confirm Brute Finisher" },
+        "WorldPositionCm": { "Value": { "X": 1710, "Y": 920 } }
+      }
+    }
+  ]
+}

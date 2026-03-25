@@ -331,6 +331,98 @@
     }
   },
   {
+    "id": "champion_skill_sandbox_musou_branch_hero",
+    "components": {
+      "Name": { "Value": "Musou Branch Hero" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "AttributeBuffer": { "base": { "Health": 280, "Shield": 0, "MoveSpeed": 332, "Armor": 14 } },
+      "Collider2D": {
+        "shape": {
+          "type": "circle",
+          "radiusCm": 44
+        }
+      },
+      "PhysicsMaterial2D": {
+        "friction": 0.92,
+        "restitution": 0.0,
+        "baseDamping": 0.94
+      },
+      "NavKinematics2D": {
+        "maxAccelCmPerSec2": 1820,
+        "radiusCm": 44,
+        "neighborDistCm": 312,
+        "timeHorizonSec": 2.4,
+        "maxNeighbors": 20
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Champion.MusouBranch.Square1",
+          "Ability.Champion.MusouBranch.StepSlash",
+          "Ability.Champion.MusouBranch.TriangleNeutral",
+          "Ability.Champion.MusouBranch.WhirlwindSweep"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "champion_skill_sandbox_musou_branch_forms"
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "champion_skill_sandbox_musou_confirm_hero",
+    "components": {
+      "Name": { "Value": "Musou Confirm Hero" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "AttributeBuffer": { "base": { "Health": 265, "Shield": 0, "MoveSpeed": 336, "Armor": 12 } },
+      "Collider2D": {
+        "shape": {
+          "type": "circle",
+          "radiusCm": 42
+        }
+      },
+      "PhysicsMaterial2D": {
+        "friction": 0.92,
+        "restitution": 0.0,
+        "baseDamping": 0.94
+      },
+      "NavKinematics2D": {
+        "maxAccelCmPerSec2": 1840,
+        "radiusCm": 42,
+        "neighborDistCm": 304,
+        "timeHorizonSec": 2.4,
+        "maxNeighbors": 20
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Champion.MusouConfirm.Square1",
+          "Ability.Champion.MusouConfirm.GuardStep",
+          "Ability.Champion.MusouConfirm.TriangleLocked",
+          "Ability.Champion.MusouConfirm.ExecutionSweep"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "champion_skill_sandbox_musou_confirm_forms"
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
     "id": "champion_skill_sandbox_enemy_dummy",
     "components": {
       "Name": { "Value": "EnemyDummy" },

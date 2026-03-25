@@ -8,5 +8,71 @@
       { "id": "pop", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Champion.Ezreal.EssenceFluxPop", "inputs": [ "target" ], "next": "consume" },
       { "id": "consume", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.Ezreal.EssenceFluxHit", "inputs": [ "target" ] }
     ]
+  },
+  {
+    "id": "Graph.Champion.MusouBranch.RemoveStage1Window",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadContextTarget", "next": "remove" },
+      { "id": "remove", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.MusouBranch.Source.Stage1Window", "inputs": [ "target" ] }
+    ]
+  },
+  {
+    "id": "Graph.Champion.MusouBranch.RemoveStage2Window",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadContextTarget", "next": "remove" },
+      { "id": "remove", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.MusouBranch.Source.Stage2Window", "inputs": [ "target" ] }
+    ]
+  },
+  {
+    "id": "Graph.Champion.MusouBranch.ResetWindows",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadContextTarget", "next": "remove_stage1" },
+      { "id": "remove_stage1", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.MusouBranch.Source.Stage1Window", "inputs": [ "target" ], "next": "remove_stage2" },
+      { "id": "remove_stage2", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.MusouBranch.Source.Stage2Window", "inputs": [ "target" ], "next": "remove_stage3" },
+      { "id": "remove_stage3", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.MusouBranch.Source.Stage3Window", "inputs": [ "target" ] }
+    ]
+  },
+  {
+    "id": "Graph.Champion.MusouConfirm.GrantHitStage1",
+    "kind": "Effect",
+    "entry": "source",
+    "nodes": [
+      { "id": "source", "op": "LoadContextSource", "next": "grant" },
+      { "id": "grant", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Champion.MusouConfirm.Source.HitStage1Window", "inputs": [ "source" ] }
+    ]
+  },
+  {
+    "id": "Graph.Champion.MusouConfirm.GrantHitStage2",
+    "kind": "Effect",
+    "entry": "source",
+    "nodes": [
+      { "id": "source", "op": "LoadContextSource", "next": "grant" },
+      { "id": "grant", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Champion.MusouConfirm.Source.HitStage2Window", "inputs": [ "source" ] }
+    ]
+  },
+  {
+    "id": "Graph.Champion.MusouConfirm.RemoveHitStage1Window",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadContextTarget", "next": "remove" },
+      { "id": "remove", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.MusouConfirm.Source.HitStage1Window", "inputs": [ "target" ] }
+    ]
+  },
+  {
+    "id": "Graph.Champion.MusouConfirm.ResetWindows",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadContextTarget", "next": "remove_stage1" },
+      { "id": "remove_stage1", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.MusouConfirm.Source.HitStage1Window", "inputs": [ "target" ], "next": "remove_stage2" },
+      { "id": "remove_stage2", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Champion.MusouConfirm.Source.HitStage2Window", "inputs": [ "target" ] }
+    ]
   }
 ]

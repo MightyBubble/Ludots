@@ -526,6 +526,21 @@ namespace ChampionSkillSandboxMod.Runtime
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.GravityWell", "champion_skill_sandbox.cue.spell_engineer_gravity_well_cast");
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.CataclysmRing", "champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast");
             RegisterAbilityCue(performers, "Ability.Champion.SpellEngineer.GuidedLaser", "champion_skill_sandbox.cue.spell_engineer_guided_laser_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouBranch.Square1", "champion_skill_sandbox.cue.musou_branch_square1_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouBranch.Square2", "champion_skill_sandbox.cue.musou_branch_square2_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouBranch.Square3", "champion_skill_sandbox.cue.musou_branch_square3_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouBranch.TriangleNeutral", "champion_skill_sandbox.cue.musou_branch_triangle_neutral_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouBranch.TriangleStage1", "champion_skill_sandbox.cue.musou_branch_triangle_stage1_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouBranch.TriangleStage2", "champion_skill_sandbox.cue.musou_branch_triangle_stage2_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouBranch.TriangleStage3", "champion_skill_sandbox.cue.musou_branch_triangle_stage3_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouBranch.StepSlash", "champion_skill_sandbox.cue.musou_branch_step_slash_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouBranch.WhirlwindSweep", "champion_skill_sandbox.cue.musou_branch_whirlwind_sweep_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouConfirm.Square1", "champion_skill_sandbox.cue.musou_confirm_square1_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouConfirm.Square2", "champion_skill_sandbox.cue.musou_confirm_square2_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouConfirm.TriangleStage1", "champion_skill_sandbox.cue.musou_confirm_triangle_stage1_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouConfirm.TriangleStage2", "champion_skill_sandbox.cue.musou_confirm_triangle_stage2_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouConfirm.GuardStep", "champion_skill_sandbox.cue.musou_confirm_guard_step_cast");
+            RegisterAbilityCue(performers, "Ability.Champion.MusouConfirm.ExecutionSweep", "champion_skill_sandbox.cue.musou_confirm_execution_sweep_cast");
 
             RegisterEffectCue(performers, "Effect.Champion.Garen.JudgmentHit", "champion_skill_sandbox.cue.garen_judgment_hit");
             RegisterEffectCue(performers, "Effect.Champion.Garen.DemacianJusticeHit", "champion_skill_sandbox.cue.garen_demacian_justice_hit");
@@ -541,6 +556,21 @@ namespace ChampionSkillSandboxMod.Runtime
             RegisterEffectCue(performers, "Effect.ChampionStress.Priest.Heal", "champion_skill_sandbox.cue.stress_priest_heal_hit");
             RegisterEffectCue(performers, "Effect.Champion.SpellEngineer.GravityWellHit", "champion_skill_sandbox.cue.spell_engineer_gravity_well_hit");
             RegisterEffectCue(performers, "Effect.Champion.SpellEngineer.GuidedLaserHit", "champion_skill_sandbox.cue.spell_engineer_guided_laser_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouBranch.Square1Hit", "champion_skill_sandbox.cue.musou_branch_square1_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouBranch.Square2Hit", "champion_skill_sandbox.cue.musou_branch_square2_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouBranch.Square3Hit", "champion_skill_sandbox.cue.musou_branch_square3_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouBranch.TriangleNeutralHit", "champion_skill_sandbox.cue.musou_branch_triangle_neutral_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouBranch.TriangleStage1Hit", "champion_skill_sandbox.cue.musou_branch_triangle_stage1_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouBranch.TriangleStage2Hit", "champion_skill_sandbox.cue.musou_branch_triangle_stage2_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouBranch.TriangleStage3Hit", "champion_skill_sandbox.cue.musou_branch_triangle_stage3_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouBranch.StepSlashHit", "champion_skill_sandbox.cue.musou_branch_step_slash_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouBranch.WhirlwindSweepHit", "champion_skill_sandbox.cue.musou_branch_whirlwind_sweep_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouConfirm.Square1Hit", "champion_skill_sandbox.cue.musou_confirm_square1_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouConfirm.Square2Hit", "champion_skill_sandbox.cue.musou_confirm_square2_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouConfirm.TriangleStage1Hit", "champion_skill_sandbox.cue.musou_confirm_triangle_stage1_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouConfirm.TriangleStage2Hit", "champion_skill_sandbox.cue.musou_confirm_triangle_stage2_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouConfirm.GuardStepHit", "champion_skill_sandbox.cue.musou_confirm_guard_step_hit");
+            RegisterEffectCue(performers, "Effect.Champion.MusouConfirm.ExecutionSweepHit", "champion_skill_sandbox.cue.musou_confirm_execution_sweep_hit");
 
             _cueIdsInitialized = true;
         }

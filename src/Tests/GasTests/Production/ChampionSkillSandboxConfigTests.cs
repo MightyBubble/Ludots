@@ -42,6 +42,10 @@ namespace Ludots.Tests.GAS.Production
     {
         private const float DeltaTime = 1f / 60f;
         private const string StressMapId = "champion_skill_stress";
+        private const string MusouBranchMapId = "champion_musou_branch_showcase";
+        private const string MusouHitConfirmMapId = "champion_musou_hit_confirm_showcase";
+        private const string MusouBranchHeroName = "Musou Branch Alpha";
+        private const string MusouHitHeroName = "Musou Confirm Alpha";
         private const string SandboxTacticalCameraId = "ChampionSkillSandbox.Camera.Tactical";
         private const string FreeCameraToolbarButtonId = "ChampionSkillSandbox.Camera.Free";
         private const string FollowSelectionToolbarButtonId = "ChampionSkillSandbox.Camera.Selection";
@@ -117,6 +121,154 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 3).AbilityId,
                 Is.EqualTo(cannonR));
+        }
+
+        [Test]
+        public void ChampionSkillSandbox_TemplateConfig_LoadsMusouBranchFormRouting()
+        {
+            using var engine = CreateEngine();
+
+            var templates = new Dictionary<string, EntityTemplate>(StringComparer.OrdinalIgnoreCase);
+            foreach (var template in engine.MapLoader.TemplateRegistry.GetAll())
+            {
+                templates[template.Id] = template;
+            }
+
+            var entity = new EntityBuilder(engine.World, templates, engine.MapLoader.PresentationAuthoringContext)
+                .UseTemplate("champion_skill_sandbox_musou_branch_hero")
+                .Build();
+
+            Assert.That(engine.World.Has<AbilityStateBuffer>(entity), Is.True);
+            Assert.That(engine.World.Has<AbilityFormSetRef>(entity), Is.True);
+            Assert.That(engine.World.Has<AbilityFormSlotBuffer>(entity), Is.True);
+
+            ref var abilities = ref engine.World.Get<AbilityStateBuffer>(entity);
+            Assert.That(abilities.Count, Is.EqualTo(4));
+
+            int stage1TagId = TagRegistry.GetId("State.Champion.MusouBranch.ComboStage1");
+            int stage2TagId = TagRegistry.GetId("State.Champion.MusouBranch.ComboStage2");
+            int stage3TagId = TagRegistry.GetId("State.Champion.MusouBranch.ComboStage3");
+            Assert.That(stage1TagId, Is.GreaterThan(0));
+            Assert.That(stage2TagId, Is.GreaterThan(0));
+            Assert.That(stage3TagId, Is.GreaterThan(0));
+
+            int square1 = AbilityIdRegistry.GetId("Ability.Champion.MusouBranch.Square1");
+            int square2 = AbilityIdRegistry.GetId("Ability.Champion.MusouBranch.Square2");
+            int square3 = AbilityIdRegistry.GetId("Ability.Champion.MusouBranch.Square3");
+            int triangleNeutral = AbilityIdRegistry.GetId("Ability.Champion.MusouBranch.TriangleNeutral");
+            int triangleStage1 = AbilityIdRegistry.GetId("Ability.Champion.MusouBranch.TriangleStage1");
+            int triangleStage2 = AbilityIdRegistry.GetId("Ability.Champion.MusouBranch.TriangleStage2");
+            int triangleStage3 = AbilityIdRegistry.GetId("Ability.Champion.MusouBranch.TriangleStage3");
+
+            var routing = new AbilityFormRoutingSystem(
+                engine.World,
+                engine.GetService(CoreServiceKeys.AbilityFormSetRegistry),
+                engine.GetService(CoreServiceKeys.TagOps));
+            ref var tags = ref engine.World.Get<GameplayTagContainer>(entity);
+            ref var formSlots = ref engine.World.Get<AbilityFormSlotBuffer>(entity);
+            var grantedSlots = default(GrantedSlotBuffer);
+
+            routing.Update(0f);
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId,
+                Is.EqualTo(square1));
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 2).AbilityId,
+                Is.EqualTo(triangleNeutral));
+
+            tags.AddTag(stage1TagId);
+            routing.Update(0f);
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId,
+                Is.EqualTo(square2));
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 2).AbilityId,
+                Is.EqualTo(triangleStage1));
+
+            tags.RemoveTag(stage1TagId);
+            tags.AddTag(stage2TagId);
+            routing.Update(0f);
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId,
+                Is.EqualTo(square3));
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 2).AbilityId,
+                Is.EqualTo(triangleStage2));
+
+            tags.RemoveTag(stage2TagId);
+            tags.AddTag(stage3TagId);
+            routing.Update(0f);
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId,
+                Is.EqualTo(square1));
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 2).AbilityId,
+                Is.EqualTo(triangleStage3));
+        }
+
+        [Test]
+        public void ChampionSkillSandbox_TemplateConfig_LoadsMusouHitConfirmFormRouting()
+        {
+            using var engine = CreateEngine();
+
+            var templates = new Dictionary<string, EntityTemplate>(StringComparer.OrdinalIgnoreCase);
+            foreach (var template in engine.MapLoader.TemplateRegistry.GetAll())
+            {
+                templates[template.Id] = template;
+            }
+
+            var entity = new EntityBuilder(engine.World, templates, engine.MapLoader.PresentationAuthoringContext)
+                .UseTemplate("champion_skill_sandbox_musou_confirm_hero")
+                .Build();
+
+            Assert.That(engine.World.Has<AbilityStateBuffer>(entity), Is.True);
+            Assert.That(engine.World.Has<AbilityFormSetRef>(entity), Is.True);
+            Assert.That(engine.World.Has<AbilityFormSlotBuffer>(entity), Is.True);
+
+            ref var abilities = ref engine.World.Get<AbilityStateBuffer>(entity);
+            Assert.That(abilities.Count, Is.EqualTo(4));
+
+            int stage1TagId = TagRegistry.GetId("State.Champion.MusouConfirm.HitStage1");
+            int stage2TagId = TagRegistry.GetId("State.Champion.MusouConfirm.HitStage2");
+            Assert.That(stage1TagId, Is.GreaterThan(0));
+            Assert.That(stage2TagId, Is.GreaterThan(0));
+
+            int square1 = AbilityIdRegistry.GetId("Ability.Champion.MusouConfirm.Square1");
+            int square2 = AbilityIdRegistry.GetId("Ability.Champion.MusouConfirm.Square2");
+            int triangleLocked = AbilityIdRegistry.GetId("Ability.Champion.MusouConfirm.TriangleLocked");
+            int triangleStage1 = AbilityIdRegistry.GetId("Ability.Champion.MusouConfirm.TriangleStage1");
+            int triangleStage2 = AbilityIdRegistry.GetId("Ability.Champion.MusouConfirm.TriangleStage2");
+
+            var routing = new AbilityFormRoutingSystem(
+                engine.World,
+                engine.GetService(CoreServiceKeys.AbilityFormSetRegistry),
+                engine.GetService(CoreServiceKeys.TagOps));
+            ref var tags = ref engine.World.Get<GameplayTagContainer>(entity);
+            ref var formSlots = ref engine.World.Get<AbilityFormSlotBuffer>(entity);
+            var grantedSlots = default(GrantedSlotBuffer);
+
+            routing.Update(0f);
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId,
+                Is.EqualTo(square1));
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 2).AbilityId,
+                Is.EqualTo(triangleLocked));
+
+            tags.AddTag(stage1TagId);
+            routing.Update(0f);
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId,
+                Is.EqualTo(square2));
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 2).AbilityId,
+                Is.EqualTo(triangleStage1));
+
+            tags.AddTag(stage2TagId);
+            routing.Update(0f);
+            Assert.That(
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 2).AbilityId,
+                Is.EqualTo(triangleStage2));
         }
 
         [Test]
@@ -302,6 +454,70 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(geomancerSlots[1].DisplayLabel, Is.EqualTo("Rune Field"));
             Assert.That(geomancerSlots[2].DisplayLabel, Is.EqualTo("Stone Pillar"));
             Assert.That(geomancerSlots[3].DisplayLabel, Is.EqualTo("Prismatic Beam"));
+        }
+
+        [Test]
+        public void ChampionSkillSandbox_MusouMaps_LoadSelectionAndPanelRouting()
+        {
+            using (var engine = CreateEngine())
+            {
+                var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                    ?? throw new InvalidOperationException("Toolbar provider missing.");
+
+                LoadMap(engine, MusouBranchMapId);
+
+                Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity currentPrimary)
+                    ? currentPrimary
+                    : Entity.Null;
+                Assert.That(ReadEntityName(engine.World, selected), Is.EqualTo(MusouBranchHeroName));
+                Assert.That(toolbar.Title, Is.EqualTo("Musou Branch"));
+                Assert.That(toolbar.Subtitle, Does.Contain("Square chain"));
+
+                var source = ResolveGasPanelSource(engine);
+                var slots = new EntityCommandPanelSlotView[8];
+                int branchCount = source.CopySlots(FindEntityByName(engine.World, MusouBranchHeroName), 0, slots);
+                Assert.That(branchCount, Is.EqualTo(4));
+                Assert.That(slots[0].DisplayLabel, Is.EqualTo("Square 1"));
+                Assert.That(slots[1].DisplayLabel, Is.EqualTo("Step Slash"));
+                Assert.That(slots[2].DisplayLabel, Is.EqualTo("Triangle Neutral"));
+                Assert.That(slots[3].DisplayLabel, Is.EqualTo("Whirlwind Sweep"));
+            }
+
+            using (var engine = CreateEngine())
+            {
+                var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                    ?? throw new InvalidOperationException("Toolbar provider missing.");
+
+                LoadMap(engine, MusouHitConfirmMapId);
+
+                Assert.That(toolbar.Title, Is.EqualTo("Hit Confirm"));
+                Assert.That(toolbar.Subtitle, Does.Contain("must hit"));
+
+                SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
+                    ?? throw new InvalidOperationException("SelectionRuntime missing.");
+                Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+                Entity musouHitHero = FindEntityByName(engine.World, MusouHitHeroName);
+                if (!engine.World.IsAlive(owner))
+                {
+                    owner = musouHitHero;
+                    engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+                }
+
+                Span<Entity> nextSelection = stackalloc Entity[1];
+                nextSelection[0] = musouHitHero;
+                selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, nextSelection);
+                Tick(engine, 2);
+
+                var source = ResolveGasPanelSource(engine);
+                var slots = new EntityCommandPanelSlotView[8];
+                int confirmCount = source.CopySlots(musouHitHero, 0, slots);
+                Assert.That(confirmCount, Is.EqualTo(4));
+                Assert.That(slots[0].DisplayLabel, Is.EqualTo("Hit Confirm Q1"));
+                Assert.That(slots[1].DisplayLabel, Is.EqualTo("Guard Step"));
+                Assert.That(slots[2].DisplayLabel, Is.EqualTo("Triangle Locked"));
+                Assert.That(slots[2].StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked), Is.True);
+                Assert.That(slots[3].DisplayLabel, Is.EqualTo("Execution Sweep"));
+            }
         }
 
         [Test]
@@ -761,6 +977,36 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast"), Is.GreaterThan(0));
             Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_guided_laser_cast"), Is.GreaterThan(0));
             Assert.That(performers.GetId("champion_skill_sandbox.cue.spell_engineer_guided_laser_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_square1_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_square2_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_square3_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_triangle_neutral_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_triangle_stage1_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_triangle_stage2_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_triangle_stage3_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_step_slash_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_whirlwind_sweep_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_square1_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_square2_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_square3_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_triangle_neutral_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_triangle_stage1_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_triangle_stage2_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_triangle_stage3_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_step_slash_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_branch_whirlwind_sweep_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_square1_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_square2_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_triangle_stage1_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_triangle_stage2_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_guard_step_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_execution_sweep_cast"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_square1_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_square2_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_triangle_stage1_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_triangle_stage2_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_guard_step_hit"), Is.GreaterThan(0));
+            Assert.That(performers.GetId("champion_skill_sandbox.cue.musou_confirm_execution_sweep_hit"), Is.GreaterThan(0));
         }
 
         [Test]

@@ -1,0 +1,50 @@
+{
+  "Id": "champion_musou_branch_showcase",
+  "Tags": ["champion.skill.sandbox", "showcase.melee", "showcase.combo", "showcase.musou"],
+  "DefaultCamera": {
+    "VirtualCameraId": "ChampionSkillSandbox.Camera.Tactical",
+    "TargetXCm": 1640,
+    "TargetYCm": 920,
+    "DistanceCm": 3200,
+    "Pitch": 54,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "champion_skill_sandbox_musou_branch_hero",
+      "Overrides": {
+        "Name": { "Value": "Musou Branch Alpha" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 1260, "Y": 920 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Branch Dummy Front" },
+        "WorldPositionCm": { "Value": { "X": 1440, "Y": 920 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Branch Dummy Left" },
+        "WorldPositionCm": { "Value": { "X": 1500, "Y": 840 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_dummy",
+      "Overrides": {
+        "Name": { "Value": "Branch Dummy Right" },
+        "WorldPositionCm": { "Value": { "X": 1500, "Y": 1000 } }
+      }
+    },
+    {
+      "Template": "champion_skill_sandbox_enemy_brute",
+      "Overrides": {
+        "Name": { "Value": "Branch Brute Ender" },
+        "WorldPositionCm": { "Value": { "X": 1560, "Y": 920 } }
+      }
+    }
+  ]
+}

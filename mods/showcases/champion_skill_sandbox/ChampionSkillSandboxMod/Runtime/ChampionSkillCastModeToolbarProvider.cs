@@ -56,16 +56,47 @@ namespace ChampionSkillSandboxMod.Runtime
             }
         }
 
-        public string Title => ChampionSkillSandboxIds.IsStressMap(_engine?.CurrentMapSession?.MapId.Value)
-            ? "Stress Harness"
-            : "Cast Mode";
+        public string Title
+        {
+            get
+            {
+                string? mapId = _engine?.CurrentMapSession?.MapId.Value;
+                if (ChampionSkillSandboxIds.IsStressMap(mapId))
+                {
+                    return "Stress Harness";
+                }
+
+                if (ChampionSkillSandboxIds.IsMusouBranchMap(mapId))
+                {
+                    return "Musou Branch";
+                }
+
+                if (ChampionSkillSandboxIds.IsMusouHitConfirmMap(mapId))
+                {
+                    return "Hit Confirm";
+                }
+
+                return "Cast Mode";
+            }
+        }
 
         public string Subtitle
         {
             get
             {
-                if (!ChampionSkillSandboxIds.IsStressMap(_engine?.CurrentMapSession?.MapId.Value))
+                string? mapId = _engine?.CurrentMapSession?.MapId.Value;
+                if (!ChampionSkillSandboxIds.IsStressMap(mapId))
                 {
+                    if (ChampionSkillSandboxIds.IsMusouBranchMap(mapId))
+                    {
+                        return "Q=Square chain | E=Triangle branch | W/R extra melee";
+                    }
+
+                    if (ChampionSkillSandboxIds.IsMusouHitConfirmMap(mapId))
+                    {
+                        return "Q must hit before Q/E follow-ups unlock";
+                    }
+
                     return "Cast + Camera | F1/F2/F3 Cast | RMB Move";
                 }
 
