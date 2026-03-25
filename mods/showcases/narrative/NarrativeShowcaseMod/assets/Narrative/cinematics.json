@@ -1,0 +1,41 @@
+[
+  {
+    "id": "Cinematic.Narrative.Intro",
+    "displayName": "Ashen Oath Intro",
+    "steps": [
+      {
+        "id": "intro_elder",
+        "cameraId": "Narrative.Intro.Elder",
+        "speakerAlias": "elder",
+        "speakerName": "Warden Mirelle",
+        "text": "The lanterns still burn. That means the valley is still waiting for a witness.",
+        "durationSeconds": 0.75,
+        "requiresAdvance": true
+      },
+      {
+        "id": "intro_shrine",
+        "cameraId": "Narrative.Intro.Shrine",
+        "speakerAlias": "elder",
+        "speakerName": "Warden Mirelle",
+        "text": "Wake the shrine, face what it sends, and bring me back a judgment worth keeping.",
+        "durationSeconds": 0.75,
+        "requiresAdvance": true
+      }
+    ]
+  },
+  {
+    "id": "Cinematic.Narrative.TrialReveal",
+    "displayName": "Ashen Oath Trial Reveal",
+    "steps": [
+      {
+        "id": "trial_shrine",
+        "cameraId": "Narrative.Trial.Reveal",
+        "speakerAlias": "shrine",
+        "speakerName": "Ember Shrine",
+        "text": "The shrine cracks. Heat rolls out across the flagstones.",
+        "durationSeconds": 0.6,
+        "requiresAdvance": true
+      }
+    ]
+  }
+]

@@ -14,6 +14,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Narrative;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -42,7 +43,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Gameplay.GAS.Presentation;
-// Indicators directory removed — unified into Performers
+// Indicators directory removed �?unified into Performers
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Projectiles;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -70,26 +71,26 @@ namespace Ludots.Core.Engine
 {
     public enum SystemGroup
     {
-        // Phase 0: Schema更新（运行时注册：属性/Graph等）
+        // Phase 0: Schema更新（运行时注册：属�?Graph等）
         // 说明：为保证确定性，运行时schema变更通过队列提交，在每帧开始统一生效
         SchemaUpdate,
         
-        // Phase 1: 输入与状态收集
+        // Phase 1: 输入与状态收�?
         InputCollection,
 
-        // Phase 1.5: 移动后同步与空间更新（物理/导航输出落地后的 SSOT 更新）
+        // Phase 1.5: 移动后同步与空间更新（物�?导航输出落地后的 SSOT 更新�?
         PostMovement,
         
-        // Phase 2: 能力激活
+        // Phase 2: 能力激�?
         AbilityActivation,
         
         // Phase 3: Effect处理（含响应链）
         EffectProcessing,
         
-        // Phase 4: 属性计算
+        // Phase 4: 属性计�?
         AttributeCalculation,
         
-        // Phase 5: 延迟触发器收集
+        // Phase 5: 延迟触发器收�?
         DeferredTriggerCollection,
         
         // Phase 6: 清理
@@ -98,8 +99,8 @@ namespace Ludots.Core.Engine
         // Phase 7: 事件分发
         EventDispatch,
         
-        // Phase 7.1: 表现层标记清理
-        // 目的：清理 EffectiveChangedBitset 等仅服务于 UI/表现层的脏标记位
+        // Phase 7.1: 表现层标记清�?
+        // 目的：清�?EffectiveChangedBitset 等仅服务�?UI/表现层的脏标记位
         ClearPresentationFlags,
     }
 
@@ -179,7 +180,7 @@ namespace Ludots.Core.Engine
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
 
-        // Spatial systems — kept for hot-swap on map load
+        // Spatial systems �?kept for hot-swap on map load
         private WorldToGridSyncSystem _worldToGridSyncSystem;
         private SpatialPartitionUpdateSystem _spatialPartitionUpdateSystem;
 
@@ -240,7 +241,7 @@ namespace Ludots.Core.Engine
 
         public void InitializeWithConfigPipeline(List<string> modPaths, string assetsRoot)
         {
-            // Early log bootstrap with console backend — will be upgraded after config merge
+            // Early log bootstrap with console backend �?will be upgraded after config merge
             if (Diagnostics.Log.Backend is NullLogBackend)
                 Diagnostics.Log.Initialize(new ConsoleLogBackend());
             Diagnostics.Log.Info(in LogChannels.Engine, "Initializing with ConfigPipeline...");
@@ -362,6 +363,18 @@ namespace Ludots.Core.Engine
                          || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("AI/", StringComparison.OrdinalIgnoreCase));
 
             if (reloadAi) RebuildAiRuntime();
+
+            bool reloadNarrative = string.IsNullOrWhiteSpace(group)
+                                 || string.Equals(group, "Narrative", StringComparison.OrdinalIgnoreCase)
+                                 || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Narrative/", StringComparison.OrdinalIgnoreCase));
+            if (reloadNarrative && GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry narrativeDefinitions)
+            {
+                new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+                if (GetService(CoreServiceKeys.NarrativeDirector) is NarrativeDirector narrativeDirector)
+                {
+                    narrativeDirector.ResetState();
+                }
+            }
 
             SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
             SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
@@ -573,7 +586,7 @@ namespace Ludots.Core.Engine
             _gasController = new Ludots.Core.Gameplay.GAS.GasController(World, clockStepPolicy, simulationLoopController, CreateContext, TriggerManager.FireEvent);
             var timedTagSystem = new TimedTagExpirationSystem(World, clock, tagOps);
             
-            // Get order tags from config — fail-fast if missing (SSOT: game.json + OrderStateTags.cs)
+            // Get order tags from config �?fail-fast if missing (SSOT: game.json + OrderStateTags.cs)
             if (!orderTypeIds.ContainsKey("castAbility") ||
                 !orderTypeIds.ContainsKey("moveTo") ||
                 !orderTypeIds.ContainsKey("attackTarget") ||
@@ -703,6 +716,11 @@ namespace Ludots.Core.Engine
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             GameSession.Camera.SetVirtualCameraRegistry(virtualCameraRegistry);
+            var narrativeDefinitions = new NarrativeDefinitionRegistry();
+            new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions);
+            SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
+            SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
             var animatorRuntimeSystem = new AnimatorRuntimeSystem(World, animatorControllers);
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
@@ -715,6 +733,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(sessionSystem, SystemGroup.InputCollection); // Session handles input gathering
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
+            RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
             RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
@@ -841,7 +860,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationFrameSetup, presentationFrameSetup);
             
             RegisterPresentationSystem(new ProjectilePresentationBootstrapSystem(World, projectilePresentationBindings, presentationStableIds));
-            // WorldToVisualSyncSystem: 插值 WorldPositionCm → VisualTransform（必须在 PresentationFrameSetup 之后）
+            // WorldToVisualSyncSystem: 插�?WorldPositionCm �?VisualTransform（必须在 PresentationFrameSetup 之后�?
             RegisterPresentationSystem(new WorldToVisualSyncSystem(World));
             // TerrainHeightSyncSystem: 采样地形高度写入 VisualTransform.Y，使实体贴附地表
             RegisterPresentationSystem(new TerrainHeightSyncSystem(World, GlobalContext));
@@ -895,10 +914,10 @@ namespace Ludots.Core.Engine
             {
                 var previousFocused = MapSessions.FocusedSession;
 
-                // Create new session with boards (additive — old sessions stay)
+                // Create new session with boards (additive �?old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
                 CreateBoardsForSession(session, mapConfig);
-                MapSessions.PushFocused(mid);   // old focused → Suspended
+                MapSessions.PushFocused(mid);   // old focused �?Suspended
                 if (previousFocused != null)
                 {
                     SetMapEntitiesSuspended(previousFocused.MapId, true);
@@ -967,7 +986,7 @@ namespace Ludots.Core.Engine
                 return;
             }
 
-            // Fire MapUnloaded — scoped to this map's triggers
+            // Fire MapUnloaded �?scoped to this map's triggers
             var unloadCtx = CreateContext();
             unloadCtx.Set(CoreServiceKeys.MapId, mid);
             foreach (var kvp in GlobalContext) unloadCtx.Set(kvp.Key, kvp.Value);
@@ -1012,7 +1031,7 @@ namespace Ludots.Core.Engine
         }
 
         /// <summary>
-        /// Push a nested inner map (三国志12 mode). Outer map is suspended, inner map becomes active.
+        /// Push a nested inner map (三国�?2 mode). Outer map is suspended, inner map becomes active.
         /// </summary>
         public void PushMap(string innerMapId, Dictionary<string, object> passthrough = null)
         {
@@ -1038,7 +1057,7 @@ namespace Ludots.Core.Engine
 
             CreateBoardsForSession(session, mapConfig);
 
-            // Push focus — outer becomes Suspended
+            // Push focus �?outer becomes Suspended
             MapSessions.PushFocused(inner);
             if (outerSession != null)
             {
@@ -1107,7 +1126,7 @@ namespace Ludots.Core.Engine
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
             }
 
-            // Pop focus — restores previous session
+            // Pop focus �?restores previous session
             var poppedId = MapSessions.PopFocused();
             if (innerSession != null)
             {
@@ -1881,3 +1900,6 @@ namespace Ludots.Core.Engine
         }
     }
 }
+
+
+
