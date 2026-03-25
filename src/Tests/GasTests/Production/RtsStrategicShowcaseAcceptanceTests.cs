@@ -45,6 +45,43 @@ namespace Ludots.Tests.GAS.Production
         };
 
         [Test]
+        public void RtsToolbar_ResetCameraButton_WritesDefaultCameraRequests()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            LoadMap(engine, MapId, frameTimesMs);
+
+            var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                ?? throw new InvalidOperationException("EntityCommandPanelToolbarProvider service is missing.");
+
+            var buttons = new EntityCommandPanelToolbarButtonView[8];
+            int buttonCount = toolbar.CopyButtons(buttons);
+            Assert.That(buttonCount, Is.GreaterThan(0));
+            Assert.That(
+                buttons.Take(buttonCount).Any(button => string.Equals(button.ButtonId, "camera_reset", StringComparison.Ordinal)),
+                Is.True,
+                "RTS toolbar should expose a camera reset button.");
+
+            toolbar.Activate("camera_reset");
+
+            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.VirtualCameraRequest.Name, out object? virtualRequestObj), Is.True);
+            Assert.That(virtualRequestObj, Is.TypeOf<Ludots.Core.Gameplay.Camera.VirtualCameraRequest>());
+            var virtualRequest = (Ludots.Core.Gameplay.Camera.VirtualCameraRequest)virtualRequestObj;
+            Assert.That(virtualRequest.Id, Is.EqualTo("Rts"));
+            Assert.That(virtualRequest.ResetRuntimeState, Is.True);
+
+            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.CameraPoseRequest.Name, out object? poseRequestObj), Is.True);
+            Assert.That(poseRequestObj, Is.TypeOf<Ludots.Core.Gameplay.Camera.CameraPoseRequest>());
+            var poseRequest = (Ludots.Core.Gameplay.Camera.CameraPoseRequest)poseRequestObj;
+            Assert.That(poseRequest.VirtualCameraId, Is.EqualTo("Rts"));
+            Assert.That(poseRequest.TargetCm, Is.EqualTo(new Vector2(0f, 0f)));
+            Assert.That(poseRequest.Yaw, Is.EqualTo(180f));
+            Assert.That(poseRequest.Pitch, Is.EqualTo(55f));
+            Assert.That(poseRequest.DistanceCm, Is.EqualTo(14000f));
+            Assert.That(poseRequest.FovYDeg, Is.EqualTo(60f));
+        }
+
+        [Test]
         public void RtsStrategicShowcase_WritesAcceptanceArtifacts()
         {
             string repoRoot = FindRepoRoot();

@@ -1,7 +1,9 @@
 using System;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
@@ -11,14 +13,15 @@ namespace RtsDemoMod.Runtime
 {
     internal sealed class RtsQuickSelectToolbarProvider : IEntityCommandPanelToolbarProvider
     {
-        private static readonly QuickSelectButton[] Buttons =
+        private static readonly ToolbarButtonSpec[] Buttons =
         {
-            new("peasant", "Peasant", "Peasant", "#93C572"),
-            new("barracks", "Barracks", "Barracks", "#D4A15A"),
-            new("conyard", "ConYard", "Construction Yard", "#F18F5A"),
-            new("warfactory", "Factory", "War Factory", "#B889FF"),
-            new("gateway", "Gateway", "Gateway", "#62C8F3"),
-            new("drone", "Drone", "Drone", "#F07C9A")
+            new(ToolbarButtonKind.SelectEntity, "peasant", "Peasant", "Peasant", "#93C572"),
+            new(ToolbarButtonKind.SelectEntity, "barracks", "Barracks", "Barracks", "#D4A15A"),
+            new(ToolbarButtonKind.SelectEntity, "conyard", "ConYard", "Construction Yard", "#F18F5A"),
+            new(ToolbarButtonKind.SelectEntity, "warfactory", "Factory", "War Factory", "#B889FF"),
+            new(ToolbarButtonKind.SelectEntity, "gateway", "Gateway", "Gateway", "#62C8F3"),
+            new(ToolbarButtonKind.SelectEntity, "drone", "Drone", "Drone", "#F07C9A"),
+            new(ToolbarButtonKind.ResetCamera, "camera_reset", "Reset Cam", string.Empty, "#F2C36B")
         };
 
         private readonly GameEngine _engine;
@@ -48,7 +51,7 @@ namespace RtsDemoMod.Runtime
 
         public string Title => "RTS Quick Select";
 
-        public string Subtitle => "Click a unit/building or use these buttons to swap build palettes instantly.";
+        public string Subtitle => "Click a unit/building, or tap Reset Cam to snap the RTS view back to the map default.";
 
         public int CopyButtons(Span<EntityCommandPanelToolbarButtonView> destination)
         {
@@ -61,13 +64,14 @@ namespace RtsDemoMod.Runtime
             int written = 0;
             for (int i = 0; i < Buttons.Length && written < destination.Length; i++)
             {
-                ref readonly QuickSelectButton button = ref Buttons[i];
-                if (!TryFindEntity(button.EntityName, out _))
+                ref readonly ToolbarButtonSpec button = ref Buttons[i];
+                if (button.Kind == ToolbarButtonKind.SelectEntity && !TryFindEntity(button.EntityName, out _))
                 {
                     continue;
                 }
 
-                bool active = string.Equals(selectedName, button.EntityName, StringComparison.OrdinalIgnoreCase);
+                bool active = button.Kind == ToolbarButtonKind.SelectEntity &&
+                              string.Equals(selectedName, button.EntityName, StringComparison.OrdinalIgnoreCase);
                 destination[written++] = new EntityCommandPanelToolbarButtonView(
                     button.ButtonId,
                     button.Label,
@@ -87,10 +91,16 @@ namespace RtsDemoMod.Runtime
 
             for (int i = 0; i < Buttons.Length; i++)
             {
-                ref readonly QuickSelectButton button = ref Buttons[i];
+                ref readonly ToolbarButtonSpec button = ref Buttons[i];
                 if (!string.Equals(button.ButtonId, buttonId, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
+                }
+
+                if (button.Kind == ToolbarButtonKind.ResetCamera)
+                {
+                    ResetCameraToMapDefault();
+                    return;
                 }
 
                 if (TryFindEntity(button.EntityName, out Entity target))
@@ -172,6 +182,40 @@ namespace RtsDemoMod.Runtime
             return found != Entity.Null;
         }
 
+        private void ResetCameraToMapDefault()
+        {
+            MapConfig? mapConfig = _engine.CurrentMapSession?.MapConfig;
+            if (mapConfig == null)
+            {
+                return;
+            }
+
+            CameraConfig? cam = mapConfig.DefaultCamera;
+            string virtualCameraId = string.IsNullOrWhiteSpace(cam?.VirtualCameraId)
+                ? "Default"
+                : cam.VirtualCameraId;
+
+            _engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
+            {
+                Id = virtualCameraId,
+                BlendDurationSeconds = 0f,
+                SnapToFollowTargetWhenAvailable = true,
+                ResetRuntimeState = true
+            };
+
+            _engine.GlobalContext[CoreServiceKeys.CameraPoseRequest.Name] = new CameraPoseRequest
+            {
+                VirtualCameraId = virtualCameraId,
+                TargetCm = (cam?.TargetXCm.HasValue == true || cam?.TargetYCm.HasValue == true)
+                    ? new System.Numerics.Vector2(cam?.TargetXCm ?? 0f, cam?.TargetYCm ?? 0f)
+                    : null,
+                Yaw = cam?.Yaw,
+                Pitch = cam?.Pitch,
+                DistanceCm = cam?.DistanceCm,
+                FovYDeg = cam?.FovYDeg
+            };
+        }
+
         private bool IsRtsMapActive()
         {
             var tags = _engine.CurrentMapSession?.MapConfig?.Tags;
@@ -192,6 +236,17 @@ namespace RtsDemoMod.Runtime
             return false;
         }
 
-        private readonly record struct QuickSelectButton(string ButtonId, string Label, string EntityName, string AccentColorHex);
+        private enum ToolbarButtonKind : byte
+        {
+            SelectEntity,
+            ResetCamera
+        }
+
+        private readonly record struct ToolbarButtonSpec(
+            ToolbarButtonKind Kind,
+            string ButtonId,
+            string Label,
+            string EntityName,
+            string AccentColorHex);
     }
 }
