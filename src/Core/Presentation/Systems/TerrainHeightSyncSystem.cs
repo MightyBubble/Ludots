@@ -47,22 +47,26 @@ namespace Ludots.Core.Presentation.Systems
 
         public void Update(in float dt)
         {
-            bool hasProjector = _globals.TryGetValue(CoreServiceKeys.VisualGroundProjector.Name, out var projectorObj) &&
-                                projectorObj is IVisualGroundProjector projector;
-            bool hasVertexMap = _globals.TryGetValue(CoreServiceKeys.VertexMap.Name, out var vertexObj) &&
-                                vertexObj is VertexMap vertexMap;
-            if (!hasProjector && !hasVertexMap)
+            IVisualGroundProjector? projector =
+                _globals.TryGetValue(CoreServiceKeys.VisualGroundProjector.Name, out var projectorObj)
+                    ? projectorObj as IVisualGroundProjector
+                    : null;
+            VertexMap? vertexMap =
+                _globals.TryGetValue(CoreServiceKeys.VertexMap.Name, out var vertexObj)
+                    ? vertexObj as VertexMap
+                    : null;
+            if (projector is null && vertexMap is null)
             {
                 return;
             }
 
             float alpha = ReadInterpolationAlpha();
-            if (hasProjector && TrySyncFromProjector(projector!, alpha))
+            if (projector is not null && TrySyncFromProjector(projector, alpha))
             {
                 return;
             }
 
-            if (!hasVertexMap)
+            if (vertexMap is null)
             {
                 return;
             }
@@ -74,7 +78,7 @@ namespace Ludots.Core.Presentation.Systems
                 float rawHeight;
                 try
                 {
-                    rawHeight = vertexMap!.GetLogicHeight(sample);
+                    rawHeight = vertexMap.GetLogicHeight(sample);
                 }
                 catch
                 {
