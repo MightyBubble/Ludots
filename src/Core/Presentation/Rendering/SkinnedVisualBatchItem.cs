@@ -9,6 +9,7 @@ namespace Ludots.Core.Presentation.Rendering
         public int MeshAssetId;
         public int MaterialId;
         public int TemplateId;
+        public int AnimationProfileId;
         public VisualRenderPath RenderPath;
         public Vector3 Position;
         public Quaternion Rotation;

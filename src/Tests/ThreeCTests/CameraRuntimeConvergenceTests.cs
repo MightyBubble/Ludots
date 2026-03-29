@@ -15,6 +15,28 @@ namespace Ludots.Tests.ThreeC
     [TestFixture]
     public sealed class CameraRuntimeConvergenceTests
     {
+        private sealed class PlatformManagedTestDriver : IPlatformManagedCameraDriver
+        {
+            public Vector2 TargetCm { get; set; }
+            public float DistanceCm { get; set; }
+            public int PrimeCalls { get; private set; }
+            public int UpdateCalls { get; private set; }
+
+            public void PrimeDefinition(VirtualCameraDefinition definition)
+            {
+                PrimeCalls++;
+                definition.MinDistanceCm = 500f;
+            }
+
+            public bool Update(PlatformManagedCameraUpdateContext context)
+            {
+                UpdateCalls++;
+                context.State.TargetCm = TargetCm;
+                context.State.DistanceCm = DistanceCm;
+                return true;
+            }
+        }
+
         private sealed class StaticFollowTarget : ICameraFollowTarget
         {
             public Vector2? PositionCm { get; set; }
@@ -63,37 +85,41 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void SelectedGroupFollowTarget_UsesWeightedSelectionCentroid_AndStopsWithoutSecondaryTruth()
+        public void SelectedGroupFollowTarget_UsesViewedSelectionCentroid_AndTracksViewedPrimarySelection()
         {
             using var world = World.Create();
             var globals = new Dictionary<string, object>();
-
             var selectionRuntime = new SelectionRuntime(
                 world,
                 new SelectionRuntimeConfig(),
-                new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-            globals[CoreServiceKeys.SelectionRuntime.Name] = selectionRuntime;
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
 
             Entity selector = world.Create();
             globals[CoreServiceKeys.LocalPlayerEntity.Name] = selector;
+            globals[CoreServiceKeys.SelectionRuntime.Name] = selectionRuntime;
+            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = selector;
+            globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
 
             Entity light = world.Create(new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(1000, 2000) });
             Entity heavy = world.Create(
                 new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(4000, 5000) },
                 new CameraFollowWeight { Value = 3f });
 
-            selectionRuntime.ReplaceSelection(selector, SelectionSetKeys.LivePrimary, new[] { light, heavy });
-            selectionRuntime.TryBindView(selector, SelectionViewKeys.Primary, selector, SelectionSetKeys.LivePrimary);
-            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = selector;
-            globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            Assert.That(selectionRuntime.ReplaceSelection(selector, SelectionSetKeys.Ambient, new[] { light, heavy }), Is.True);
+            Assert.That(selectionRuntime.TryBindView(selector, SelectionViewKeys.Primary, selector, SelectionSetKeys.Ambient), Is.True);
 
             var target = new SelectedGroupFollowTarget(world, globals);
             Assert.That(target.TryGetPosition(out var centroid), Is.True);
             Assert.That(centroid.X, Is.EqualTo(3250f).Within(0.01f));
             Assert.That(centroid.Y, Is.EqualTo(4250f).Within(0.01f));
 
-            selectionRuntime.ClearSelection(selector, SelectionSetKeys.LivePrimary);
-            Assert.That(target.TryGetPosition(out _), Is.False);
+            Assert.That(selectionRuntime.ReplaceSelection(selector, SelectionSetKeys.Ambient, new[] { light }), Is.True);
+            Assert.That(SelectionContextRuntime.TryGetCurrentPrimary(world, globals, out var primary), Is.True);
+            Assert.That(primary, Is.EqualTo(light));
+
+            Assert.That(target.TryGetPosition(out var fallback), Is.True);
+            Assert.That(fallback.X, Is.EqualTo(1000f).Within(0.01f));
+            Assert.That(fallback.Y, Is.EqualTo(2000f).Within(0.01f));
         }
 
         [Test]

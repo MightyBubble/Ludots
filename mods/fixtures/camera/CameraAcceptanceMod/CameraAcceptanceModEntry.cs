@@ -22,11 +22,6 @@ namespace CameraAcceptanceMod
                 if (engine != null)
                 {
                     ViewModeRegistrar.RegisterFromVfs(context, engine.GlobalContext, sourceModId: context.ModId, activateWhenUnset: false);
-                    if (engine.GetService(CoreServiceKeys.InputHandler) is PlayerInputHandler input &&
-                        input.HasContext(CameraAcceptanceIds.InputContextId))
-                    {
-                        input.PushContext(CameraAcceptanceIds.InputContextId);
-                    }
                     engine.SetService(CameraAcceptanceServiceKeys.DiagnosticsState, new CameraAcceptanceDiagnosticsState());
                     CameraAcceptanceRuntime.InitializeProjectionSpawnCount(engine);
                     engine.GlobalContext[CameraAcceptanceIds.ActiveBlendCameraIdKey] = CameraAcceptanceIds.BlendSmoothCameraId;

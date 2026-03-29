@@ -55,6 +55,8 @@ namespace Ludots.Core.Gameplay.Camera
                         Id = config.Id,
                         DisplayName = string.IsNullOrWhiteSpace(config.DisplayName) ? config.Id : config.DisplayName,
                         Priority = config.Priority,
+                        ControlMode = config.ControlMode,
+                        PlatformDriverId = config.PlatformDriverId,
                         RigKind = config.RigKind,
                         TargetSource = config.TargetSource,
                         FixedTargetCm = config.FixedTargetCm == null
@@ -111,6 +113,8 @@ namespace Ludots.Core.Gameplay.Camera
             public string Id { get; set; } = string.Empty;
             public string DisplayName { get; set; } = string.Empty;
             public int Priority { get; set; }
+            public VirtualCameraControlMode ControlMode { get; set; } = VirtualCameraControlMode.BuiltIn;
+            public string PlatformDriverId { get; set; } = string.Empty;
             public CameraRigKind RigKind { get; set; } = CameraRigKind.Orbit;
             public VirtualCameraTargetSource TargetSource { get; set; } = VirtualCameraTargetSource.CurrentState;
             public Vector2Config? FixedTargetCm { get; set; }

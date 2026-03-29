@@ -122,6 +122,7 @@ namespace Ludots.Core.Presentation.Systems
                 StableId = stableId,
                 MaterialId = visual.MaterialId,
                 TemplateId = templateId,
+                AnimationProfileId = visual.AnimationProfileId,
                 RenderPath = visual.RenderPath,
                 Mobility = visual.Mobility,
                 Flags = visual.Flags,

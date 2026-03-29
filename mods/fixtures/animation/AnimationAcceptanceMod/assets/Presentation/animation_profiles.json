@@ -1,0 +1,31 @@
+[
+  {
+    "id": "acceptance.profile.tank.layered",
+    "animatorControllerId": "acceptance.tank.layered",
+    "stateClips": [
+      { "packedStateIndex": 31, "clipAssetId": "acceptance.clip.tank.state.idle" },
+      { "packedStateIndex": 32, "clipAssetId": "acceptance.clip.tank.state.cruise" },
+      { "packedStateIndex": 33, "clipAssetId": "acceptance.clip.tank.state.fire_recover" }
+    ],
+    "builtinClips": [
+      { "builtinClipId": "LocomotionCycle", "clipAssetId": "acceptance.clip.tank.builtin.locomotion_cycle" },
+      { "builtinClipId": "AimYawOffset", "clipAssetId": "acceptance.clip.tank.builtin.aim_yaw_offset" },
+      { "builtinClipId": "RecoilPulse", "clipAssetId": "acceptance.clip.tank.builtin.recoil_pulse" }
+    ]
+  },
+  {
+    "id": "acceptance.profile.humanoid.layered",
+    "animatorControllerId": "acceptance.humanoid.layered",
+    "stateClips": [
+      { "packedStateIndex": 41, "clipAssetId": "acceptance.clip.humanoid.state.idle" },
+      { "packedStateIndex": 42, "clipAssetId": "acceptance.clip.humanoid.state.walk" },
+      { "packedStateIndex": 43, "clipAssetId": "acceptance.clip.humanoid.state.run" },
+      { "packedStateIndex": 44, "clipAssetId": "acceptance.clip.humanoid.state.fire_recover" }
+    ],
+    "builtinClips": [
+      { "builtinClipId": "LocomotionCycle", "clipAssetId": "acceptance.clip.humanoid.builtin.locomotion_cycle" },
+      { "builtinClipId": "AimYawOffset", "clipAssetId": "acceptance.clip.humanoid.builtin.aim_yaw_offset" },
+      { "builtinClipId": "RecoilPulse", "clipAssetId": "acceptance.clip.humanoid.builtin.recoil_pulse" }
+    ]
+  }
+]

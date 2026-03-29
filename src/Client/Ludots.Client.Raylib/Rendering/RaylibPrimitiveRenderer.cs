@@ -125,6 +125,7 @@ namespace Ludots.Client.Raylib.Rendering
                 DrawAssetRecursive(
                     item.MeshAssetId,
                     item.Position,
+                    item.Rotation,
                     item.Scale * scaleMul,
                     item.Color,
                     camera,
@@ -161,6 +162,7 @@ namespace Ludots.Client.Raylib.Rendering
 
                 DrawAssetRecursive(
                     item.MeshAssetId, item.Position,
+                    item.Rotation,
                     item.Scale * scaleMul, item.Color,
                     camera,
                     meshes, 0);
@@ -194,6 +196,7 @@ namespace Ludots.Client.Raylib.Rendering
                 SubmitAssetRecursive(
                     item.MeshAssetId,
                     item.Position,
+                    item.Rotation,
                     item.Scale * scaleMul,
                     item.Color,
                     camera,
@@ -204,7 +207,7 @@ namespace Ludots.Client.Raylib.Rendering
             FlushInstancedBatches();
         }
 
-        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int depth)
+        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int depth)
         {
             if (depth > MaxPrefabDepth) return;
             if (!meshes.TryGetDescriptor(meshAssetId, out var desc)) return;
@@ -212,11 +215,11 @@ namespace Ludots.Client.Raylib.Rendering
             switch (desc.Type)
             {
                 case MeshAssetType.Primitive:
-                    SubmitPrimitive(desc.PrimitiveKind, position, scale, color);
+                    SubmitPrimitive(desc.PrimitiveKind, position, rotation, scale, color);
                     break;
 
                 case MeshAssetType.Model:
-                    DrawModel(meshAssetId, desc, position, scale, color);
+                    DrawModel(meshAssetId, desc, position, rotation, scale, color);
                     break;
 
                 case MeshAssetType.Billboard:
@@ -229,24 +232,26 @@ namespace Ludots.Client.Raylib.Rendering
                         for (int p = 0; p < desc.PrefabParts.Length; p++)
                         {
                             ref var part = ref desc.PrefabParts[p];
-                            var childPos = position + part.LocalPosition * scale;
-                            var childScale = scale * part.LocalScale;
+                            PrefabTransformUtility.Compose(position, rotation, scale, in part, out Vector3 childPos, out Quaternion childRot, out Vector3 childScale);
                             var childColor = new Vector4(
                                 color.X * part.ColorTint.X,
                                 color.Y * part.ColorTint.Y,
                                 color.Z * part.ColorTint.Z,
                                 color.W * part.ColorTint.W);
-                            SubmitAssetRecursive(part.MeshAssetId, childPos, childScale, childColor, camera, meshes, depth + 1);
+                            SubmitAssetRecursive(part.MeshAssetId, childPos, childRot, childScale, childColor, camera, meshes, depth + 1);
                         }
                     }
                     break;
             }
         }
 
-        private void SubmitPrimitive(PrimitiveMeshKind kind, Vector3 position, Vector3 scale, Vector4 color)
+        private void SubmitPrimitive(PrimitiveMeshKind kind, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
         {
             uint key = PackRgba(color);
-            var matrix = RaylibMatrix.FromScaleTranslation(position.X, position.Y, position.Z, scale.X, scale.Y, scale.Z);
+            var matrix = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(scale) *
+                Matrix4x4.CreateFromQuaternion(PrefabTransformUtility.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateTranslation(position));
 
             if (kind == PrimitiveMeshKind.Cube)
             {
@@ -310,6 +315,7 @@ namespace Ludots.Client.Raylib.Rendering
                 DrawAssetRecursive(
                     item.MeshAssetId,
                     item.Position,
+                    item.Rotation,
                     item.Scale * scaleMul,
                     item.Color,
                     camera,
@@ -346,7 +352,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int depth)
+        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int depth)
         {
             if (depth > MaxPrefabDepth) return;
             if (!meshes.TryGetDescriptor(meshAssetId, out var desc)) return;
@@ -358,7 +364,7 @@ namespace Ludots.Client.Raylib.Rendering
                     break;
 
                 case MeshAssetType.Model:
-                    DrawModel(meshAssetId, desc, position, scale, color);
+                    DrawModel(meshAssetId, desc, position, rotation, scale, color);
                     break;
 
                 case MeshAssetType.Billboard:
@@ -371,14 +377,13 @@ namespace Ludots.Client.Raylib.Rendering
                         for (int p = 0; p < desc.PrefabParts.Length; p++)
                         {
                             ref var part = ref desc.PrefabParts[p];
-                            var childPos = position + part.LocalPosition * scale;
-                            var childScale = scale * part.LocalScale;
+                            PrefabTransformUtility.Compose(position, rotation, scale, in part, out Vector3 childPos, out Quaternion childRot, out Vector3 childScale);
                             var childColor = new Vector4(
                                 color.X * part.ColorTint.X,
                                 color.Y * part.ColorTint.Y,
                                 color.Z * part.ColorTint.Z,
                                 color.W * part.ColorTint.W);
-                            DrawAssetRecursive(part.MeshAssetId, childPos, childScale, childColor, camera, meshes, depth + 1);
+                            DrawAssetRecursive(part.MeshAssetId, childPos, childRot, childScale, childColor, camera, meshes, depth + 1);
                         }
                     }
                     break;
@@ -601,7 +606,7 @@ namespace Ludots.Client.Raylib.Rendering
                 from.W + (to.W - from.W) * t);
         }
 
-        private void DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color)
+        private void DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
         {
             if (!TryGetOrLoadModel(meshAssetId, desc, out var cached))
             {
@@ -611,7 +616,8 @@ namespace Ludots.Client.Raylib.Rendering
 
             var tint = ToRaylibColor(color);
             var model = cached.Model;
-            Rl.DrawModelEx(model, position, Vector3.UnitY, 0f, scale, tint);
+            ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
+            Rl.DrawModelEx(model, position, axis, angleDegrees, scale, tint);
         }
 
         private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera)
@@ -804,6 +810,27 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawLine3D(corners[start], corners[end], color);
         }
 
+        private static void ToAxisAngleDegrees(Quaternion rotation, out Vector3 axis, out float angleDegrees)
+        {
+            Quaternion normalized = PrefabTransformUtility.NormalizeOrIdentity(rotation);
+            float w = Math.Clamp(normalized.W, -1f, 1f);
+            float angleRad = 2f * MathF.Acos(w);
+            float sinHalf = MathF.Sqrt(MathF.Max(0f, 1f - (w * w)));
+
+            if (sinHalf < 0.0001f)
+            {
+                axis = Vector3.UnitY;
+                angleDegrees = 0f;
+                return;
+            }
+
+            axis = new Vector3(
+                normalized.X / sinHalf,
+                normalized.Y / sinHalf,
+                normalized.Z / sinHalf);
+            angleDegrees = angleRad * (180f / MathF.PI);
+        }
+
         // ── Instanced rendering (unchanged from original) ──
 
         public void DrawInstanced(PrimitiveDrawBuffer draw, MeshAssetRegistry meshes)
@@ -822,7 +849,7 @@ namespace Ludots.Client.Raylib.Rendering
                 ref readonly var item = ref span[i];
                 if (!meshes.TryGetPrimitiveKind(item.MeshAssetId, out var kind)) continue;
 
-                SubmitPrimitive(kind, item.Position, item.Scale, item.Color);
+                SubmitPrimitive(kind, item.Position, item.Rotation, item.Scale, item.Color);
             }
 
             FlushInstancedBatches();

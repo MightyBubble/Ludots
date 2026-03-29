@@ -160,14 +160,61 @@ namespace Ludots.Tests.GAS
             Assert.That(handler.PressedThisFrame("RunicAttack"), Is.True);
         }
 
+        [Test]
+        public void PlayerInputHandler_UnavailableMouseFrame_ResetsPointerWithoutDeltaSpike()
+        {
+            var backend = new StubInputBackend();
+            var config = new InputConfigRoot
+            {
+                Actions = new List<InputActionDef>
+                {
+                    new() { Id = "PointerPos", Type = InputActionType.Axis2D },
+                    new() { Id = "PointerDelta", Type = InputActionType.Axis2D },
+                },
+                Contexts = new List<InputContextDef>
+                {
+                    new()
+                    {
+                        Id = "Camera",
+                        Priority = 10,
+                        Bindings = new List<InputBindingDef>
+                        {
+                            new() { ActionId = "PointerPos", Path = "<Mouse>/Pos" },
+                            new() { ActionId = "PointerDelta", Path = "<Mouse>/Delta" },
+                        }
+                    }
+                }
+            };
+
+            var handler = new PlayerInputHandler(backend, config);
+            handler.PushContext("Camera");
+
+            backend.MousePosition = new Vector2(320f, 240f);
+            handler.Update();
+
+            backend.HasMousePosition = false;
+            handler.Update();
+
+            Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(-1f, -1f)));
+            Assert.That(handler.ReadAction<Vector2>("PointerDelta"), Is.EqualTo(Vector2.Zero));
+
+            backend.HasMousePosition = true;
+            backend.MousePosition = new Vector2(680f, 420f);
+            handler.Update();
+
+            Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(680f, 420f)));
+            Assert.That(handler.ReadAction<Vector2>("PointerDelta"), Is.EqualTo(Vector2.Zero));
+        }
+
         private sealed class StubInputBackend : IInputBackend
         {
             public Dictionary<string, bool> Buttons { get; } = new();
             public Vector2 MousePosition { get; set; }
+            public bool HasMousePosition { get; set; } = true;
 
             public float GetAxis(string devicePath) => 0f;
             public bool GetButton(string devicePath) => Buttons.TryGetValue(devicePath, out var down) && down;
-            public Vector2 GetMousePosition() => MousePosition;
+            public Vector2 GetMousePosition() => HasMousePosition ? MousePosition : new Vector2(float.NaN, float.NaN);
             public float GetMouseWheel() => 0f;
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }

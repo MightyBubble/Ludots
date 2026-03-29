@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Ludots.WebUI</RootNamespace>
+    <AssemblyName>Ludots.WebUI</AssemblyName>
+    <Description>Ludots WebUI bridge abstractions. Provides IWebUIBridge and related types for mods to communicate with platform-specific Web/CEF layers without depending on UnrealEngine or any host runtime.</Description>
+  </PropertyGroup>
+
+</Project>

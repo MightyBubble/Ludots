@@ -2,10 +2,12 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using CameraAcceptanceMod.UI;
+using CoreInputMod.ViewMode;
 using CoreInputMod.Triggers;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Assets;
@@ -20,6 +22,7 @@ namespace CameraAcceptanceMod.Runtime
 {
     internal sealed class CameraAcceptanceRuntime
     {
+        private const string AcceptanceModePrefix = "Camera.Acceptance.Mode.";
         private const float TwoPiRadians = 6.2831855f;
         private const float GoldenAngleRadians = 2.3999631f;
         private const float ProjectionScatterSpacingCm = 120f;
@@ -85,6 +88,7 @@ namespace CameraAcceptanceMod.Runtime
                 return Task.CompletedTask;
             }
 
+            SyncMapScopedInputOwnership(engine);
             ConfigureRenderDefaultsForMap(engine);
             RefreshPanel(engine);
 
@@ -93,6 +97,12 @@ namespace CameraAcceptanceMod.Runtime
 
         public Task HandleMapUnloadedAsync(ScriptContext context)
         {
+            var engine = context.GetEngine();
+            if (engine != null)
+            {
+                SyncMapScopedInputOwnership(engine);
+            }
+
             var mapId = context.Get(CoreServiceKeys.MapId);
             if (CameraAcceptanceIds.IsAcceptanceMap(mapId.Value))
             {
@@ -105,6 +115,40 @@ namespace CameraAcceptanceMod.Runtime
             }
 
             return Task.CompletedTask;
+        }
+
+        private static void SyncMapScopedInputOwnership(GameEngine engine)
+        {
+            string? activeMapId = engine.CurrentMapSession?.MapId.Value;
+            bool isAcceptanceMap = CameraAcceptanceIds.IsAcceptanceMap(activeMapId);
+
+            if (engine.GetService(CoreServiceKeys.InputHandler) is PlayerInputHandler input)
+            {
+                if (isAcceptanceMap)
+                {
+                    if (input.HasContext(CameraAcceptanceIds.InputContextId))
+                    {
+                        input.PushContext(CameraAcceptanceIds.InputContextId);
+                    }
+                }
+                else
+                {
+                    input.PopContext(CameraAcceptanceIds.InputContextId);
+                }
+            }
+
+            if (!engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) ||
+                managerObj is not ViewModeManager manager)
+            {
+                return;
+            }
+
+            string activeModeId = manager.ActiveMode?.Id ?? string.Empty;
+            if (!isAcceptanceMap &&
+                activeModeId.StartsWith(AcceptanceModePrefix, System.StringComparison.OrdinalIgnoreCase))
+            {
+                manager.ClearActiveMode();
+            }
         }
 
         private CameraAcceptancePanelController EnsurePanelController(GameEngine engine)

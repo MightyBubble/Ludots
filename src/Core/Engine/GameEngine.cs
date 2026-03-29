@@ -103,13 +103,14 @@ namespace Ludots.Core.Engine
         ClearPresentationFlags,
     }
 
-    public class GameEngine : IDisposable // Implement IDisposable
+    public partial class GameEngine : IDisposable // Implement IDisposable
     {
         private const int PrimitiveDrawBufferCapacity = 8192;
         private const int VisualSnapshotBufferCapacity = 131072;
         private const int PerformerInstanceBufferCapacity = 4096;
         private const int PathStoreMaxPaths = 512;
         private const int PathStoreMaxPointsPerPath = 256;
+        private const string SkipDefaultCameraOnLoadTag = "camera.skip_default_on_load";
 
         private bool _isRunning;
         private EffectTemplateLoader _effectTemplateLoader;
@@ -489,6 +490,8 @@ namespace Ludots.Core.Engine
             var meshAssets = new MeshAssetRegistry();
             var visualTemplates = new VisualTemplateRegistry();
             var animatorControllers = new AnimatorControllerRegistry();
+            var animationClips = new AnimationClipRegistry();
+            var animationProfiles = new AnimationProfileRegistry();
             var presentationStableIds = new PresentationStableIdAllocator();
             var primitiveDrawBuffer = new PrimitiveDrawBuffer(PrimitiveDrawBufferCapacity);
             var visualSnapshotBuffer = new PrimitiveDrawBuffer(VisualSnapshotBufferCapacity);
@@ -502,9 +505,11 @@ namespace Ludots.Core.Engine
             var performerInstances = new PerformerInstanceBuffer(presentationConfig.GetEffectivePerformerInstanceCapacity());
             var projectilePresentationBindings = new ProjectilePresentationBindingRegistry();
             var performerGraphApi = new GasGraphRuntimeApi(World, spatialQueries: null, coords: null, eventBus: null);
-            new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load();
-            new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load();
-            new VisualTemplateConfigLoader(ConfigPipeline, visualTemplates, meshAssets, animatorControllers).Load();
+            new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load(ConfigCatalog, ConfigConflictReport);
+            new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load(ConfigCatalog, ConfigConflictReport);
+            new AnimationClipConfigLoader(ConfigPipeline, animationClips).Load(ConfigCatalog, ConfigConflictReport);
+            new AnimationProfileConfigLoader(ConfigPipeline, animationProfiles, animatorControllers, animationClips).Load(ConfigCatalog, ConfigConflictReport);
+            new VisualTemplateConfigLoader(ConfigPipeline, visualTemplates, meshAssets, animatorControllers, animationProfiles).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
             BuiltinPerformerDefinitions.Register(performerDefinitions, meshAssets, presentationTextCatalog.GetTokenId);
@@ -672,6 +677,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
             SetService(CoreServiceKeys.PresentationVisualTemplateRegistry, visualTemplates);
             SetService(CoreServiceKeys.AnimatorControllerRegistry, animatorControllers);
+            SetService(CoreServiceKeys.AnimationClipRegistry, animationClips);
+            SetService(CoreServiceKeys.AnimationProfileRegistry, animationProfiles);
             SetService(CoreServiceKeys.PresentationStableIdAllocator, presentationStableIds);
             _primitiveDrawBuffer = primitiveDrawBuffer;
             _visualSnapshotBuffer = visualSnapshotBuffer;
@@ -699,6 +706,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ProjectilePresentationBindingRegistry, projectilePresentationBindings);
             SetService(CoreServiceKeys.PerformerDefinitionRegistry, performerDefinitions);
             SetService(CoreServiceKeys.PerformerInstanceBuffer, performerInstances);
+            var platformManagedCameraDrivers = new PlatformManagedCameraDriverRegistry();
+            SetService(CoreServiceKeys.PlatformManagedCameraDriverRegistry, platformManagedCameraDrivers);
+            GameSession.Camera.SetPlatformManagedCameraDriverRegistry(platformManagedCameraDrivers);
             var virtualCameraRegistry = new VirtualCameraRegistry();
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
@@ -867,23 +877,13 @@ namespace Ludots.Core.Engine
             _gasController?.AfterFixedTick();
         }
 
-        public MapSession CurrentMapSession { get; private set; }
-
         public void LoadMap(string mapId)
         {
             Diagnostics.Log.Info(in LogChannels.Engine, $"Loading Map: {mapId}");
             var mid = new MapId(mapId);
 
-            // Initialize MapSessionManager if first time
-            if (MapSessions == null)
-            {
-                MapSessions = new MapSessionManager();
-                BoardIdRegistry = new BoardIdRegistry();
-                SetService(CoreServiceKeys.MapSessions, MapSessions);
-                SetService(CoreServiceKeys.BoardIdRegistry, BoardIdRegistry);
-            }
+            EnsureMapSessionInfrastructure();
 
-            // Unload first when same map already loaded, then reload
             if (MapSessions.GetSession(mid) != null)
             {
                 UnloadMap(mapId);
@@ -898,13 +898,17 @@ namespace Ludots.Core.Engine
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
                 CreateBoardsForSession(session, mapConfig);
+                if (previousFocused != null)
+                {
+                    CancelPendingMapLoad(previousFocused.MapId, $"Map load canceled because '{mid.Value}' became focused.", markFailed: true);
+                }
                 MapSessions.PushFocused(mid);   // old focused → Suspended
                 if (previousFocused != null)
                 {
                     SetMapEntitiesSuspended(previousFocused.MapId, true);
                 }
-                CurrentMapSession = session;
-                SetService(CoreServiceKeys.MapSession, session);
+                _mapLoadStatuses[mid] = MapLoadStatus.ImmediateSuccess;
+                SetCurrentMapSession(session);
 
                 // Apply primary board spatial config to engine-level services
                 var primaryBoard = session.PrimaryBoard;
@@ -918,7 +922,7 @@ namespace Ludots.Core.Engine
                 LoadPathingForSession(session);
                 Diagnostics.Log.Info(in LogChannels.Engine, "Creating Entities from MapConfig...");
                 MapLoader.LoadEntities(mapConfig);
-                SetMapEntitiesSuspended(mid, false);
+                SetMapEntitiesSuspended(mid, true);
 
                 // Instantiate map triggers + apply decorators
                 var definition = ((MapManager)MapManager).GetDefinition(mid);
@@ -930,19 +934,13 @@ namespace Ludots.Core.Engine
                     TriggerManager.RegisterMapTriggers(mid, triggers);
                 }
 
-                var finalCtx = CreateContext();
-                finalCtx.Set(CoreServiceKeys.MapId, mid);
-                finalCtx.Set(CoreServiceKeys.MapTags, mapConfig.Tags);
-                var featureFlags = MapFeatureFlags.FromTags(mapConfig.Tags);
-                SetService(CoreServiceKeys.MapFeatureFlags, featureFlags);
-                finalCtx.Set(CoreServiceKeys.MapFeatureFlags, featureFlags);
+                if (TryStartPendingMapLoad(session, mapConfig, isPush: false, out var loadStatus))
+                {
+                    Diagnostics.Log.Info(in LogChannels.Engine, $"MapLoaded deferred for '{mapId}'.");
+                    return;
+                }
 
-                foreach (var kvp in GlobalContext) finalCtx.Set(kvp.Key, kvp.Value);
-
-                ApplyDefaultCamera(mapConfig);
-
-                Diagnostics.Log.Info(in LogChannels.Engine, $"Firing MapLoaded event for {mapId}...");
-                CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapLoaded, finalCtx));
+                CompleteMapLoad(session, mapConfig, loadStatus);
             }
             else
             {
@@ -968,9 +966,9 @@ namespace Ludots.Core.Engine
             }
 
             // Fire MapUnloaded — scoped to this map's triggers
-            var unloadCtx = CreateContext();
-            unloadCtx.Set(CoreServiceKeys.MapId, mid);
-            foreach (var kvp in GlobalContext) unloadCtx.Set(kvp.Key, kvp.Value);
+            CancelPendingMapLoad(mid, $"Map '{mapId}' was unloaded before completion.", markFailed: false);
+
+            var unloadCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
 
@@ -979,33 +977,19 @@ namespace Ludots.Core.Engine
             bool wasFocused = focused != null && focused.MapId == mid;
 
             MapSessions.UnloadSession(mid, World);
+            _mapLoadStatuses.Remove(mid);
 
             if (wasFocused && MapSessions.FocusedSession != null)
             {
-                // The stack auto-pops in UnloadSession; restore next focused
                 var restored = MapSessions.FocusedSession;
-                CurrentMapSession = restored;
-                SetService(CoreServiceKeys.MapSession, restored);
+                RestoreFocusedMapSession(restored);
 
-                var primaryBoard = restored.PrimaryBoard;
-                if (primaryBoard != null)
-                {
-                    ApplyBoardSpatialConfig(primaryBoard);
-                    LoadBoardTerrainData(restored, restored.MapConfig);
-                    LoadNavForMap(restored.MapId.Value, restored.MapConfig);
-                }
-                LoadPathingForSession(restored);
-                SetMapEntitiesSuspended(restored.MapId, false);
-
-                var resumeCtx = CreateContext();
-                resumeCtx.Set(CoreServiceKeys.MapId, restored.MapId);
-                foreach (var kvp in GlobalContext) resumeCtx.Set(kvp.Key, kvp.Value);
+                var resumeCtx = CreateMapEventContext(restored);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(restored.MapId, GameEvents.MapResumed, resumeCtx));
             }
             else if (wasFocused)
             {
-                CurrentMapSession = null;
-                GlobalContext.Remove(CoreServiceKeys.MapSession.Name);
+                SetCurrentMapSession(null);
                 ClearNavServices();
                 ClearPathingServices();
             }
@@ -1016,6 +1000,8 @@ namespace Ludots.Core.Engine
         /// </summary>
         public void PushMap(string innerMapId, Dictionary<string, object> passthrough = null)
         {
+            EnsureMapSessionInfrastructure();
+
             var inner = new MapId(innerMapId);
             var outerSession = MapSessions?.FocusedSession;
 
@@ -1037,6 +1023,10 @@ namespace Ludots.Core.Engine
             }
 
             CreateBoardsForSession(session, mapConfig);
+            if (outerSession != null)
+            {
+                CancelPendingMapLoad(outerSession.MapId, $"Map load canceled because '{inner.Value}' was pushed on top.", markFailed: true);
+            }
 
             // Push focus — outer becomes Suspended
             MapSessions.PushFocused(inner);
@@ -1044,8 +1034,8 @@ namespace Ludots.Core.Engine
             {
                 SetMapEntitiesSuspended(outerSession.MapId, true);
             }
-            CurrentMapSession = session;
-            SetService(CoreServiceKeys.MapSession, session);
+            _mapLoadStatuses[inner] = MapLoadStatus.ImmediateSuccess;
+            SetCurrentMapSession(session);
 
             var primaryBoard = session.PrimaryBoard;
             if (primaryBoard != null)
@@ -1057,14 +1047,12 @@ namespace Ludots.Core.Engine
             LoadPathingForSession(session);
 
             MapLoader.LoadEntities(mapConfig);
-            SetMapEntitiesSuspended(inner, false);
+            SetMapEntitiesSuspended(inner, true);
 
             // Fire MapSuspended on outer (scoped)
             if (outerSession != null)
             {
-                var suspendCtx = CreateContext();
-                suspendCtx.Set(CoreServiceKeys.MapId, outerSession.MapId);
-                foreach (var kvp in GlobalContext) suspendCtx.Set(kvp.Key, kvp.Value);
+                var suspendCtx = CreateMapEventContext(outerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(outerSession.MapId, GameEvents.MapSuspended, suspendCtx));
             }
 
@@ -1078,11 +1066,13 @@ namespace Ludots.Core.Engine
                 TriggerManager.RegisterMapTriggers(inner, triggers);
             }
 
-            var ctx = CreateContext();
-            ctx.Set(CoreServiceKeys.MapId, inner);
-            ctx.Set(CoreServiceKeys.MapTags, mapConfig.Tags);
-            foreach (var kvp in GlobalContext) ctx.Set(kvp.Key, kvp.Value);
-            CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(inner, GameEvents.MapLoaded, ctx));
+            if (TryStartPendingMapLoad(session, mapConfig, isPush: true, out var loadStatus))
+            {
+                Diagnostics.Log.Info(in LogChannels.Engine, $"MapLoaded deferred for pushed map '{innerMapId}'.");
+                return;
+            }
+
+            CompleteMapLoad(session, mapConfig, loadStatus);
         }
 
         /// <summary>
@@ -1099,10 +1089,9 @@ namespace Ludots.Core.Engine
             var innerSession = MapSessions.FocusedSession;
             if (innerSession != null)
             {
-                // Fire MapUnloaded (scoped) + unregister triggers
-                var unloadCtx = CreateContext();
-                unloadCtx.Set(CoreServiceKeys.MapId, innerSession.MapId);
-                foreach (var kvp in GlobalContext) unloadCtx.Set(kvp.Key, kvp.Value);
+                CancelPendingMapLoad(innerSession.MapId, $"Map '{innerSession.MapId.Value}' was popped before completion.", markFailed: false);
+
+                var unloadCtx = CreateMapEventContext(innerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx));
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
             }
@@ -1112,34 +1101,35 @@ namespace Ludots.Core.Engine
             if (innerSession != null)
             {
                 MapSessions.UnloadSession(poppedId, World);
+                _mapLoadStatuses.Remove(poppedId);
             }
 
-            // Restore outer
             var outerSession = MapSessions.FocusedSession;
             if (outerSession != null)
             {
-                CurrentMapSession = outerSession;
-                SetService(CoreServiceKeys.MapSession, outerSession);
+                RestoreFocusedMapSession(outerSession);
 
-                var primaryBoard = outerSession.PrimaryBoard;
-                if (primaryBoard != null)
-                {
-                    ApplyBoardSpatialConfig(primaryBoard);
-                    LoadBoardTerrainData(outerSession, outerSession.MapConfig);
-                    LoadNavForMap(outerSession.MapId.Value, outerSession.MapConfig);
-                }
-                LoadPathingForSession(outerSession);
-                SetMapEntitiesSuspended(outerSession.MapId, false);
-
-                var resumeCtx = CreateContext();
-                resumeCtx.Set(CoreServiceKeys.MapId, outerSession.MapId);
-                foreach (var kvp in GlobalContext) resumeCtx.Set(kvp.Key, kvp.Value);
+                var resumeCtx = CreateMapEventContext(outerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(outerSession.MapId, GameEvents.MapResumed, resumeCtx));
+            }
+            else
+            {
+                SetCurrentMapSession(null);
+                ClearNavServices();
+                ClearPathingServices();
             }
         }
 
         private void ApplyDefaultCamera(MapConfig mapConfig)
         {
+            if (ShouldSkipDefaultCameraOnLoad(mapConfig))
+            {
+                Diagnostics.Log.Info(
+                    in LogChannels.Engine,
+                    $"Skipped DefaultCamera for map '{mapConfig?.Id ?? "<unknown>"}' due to tag '{SkipDefaultCameraOnLoadTag}'.");
+                return;
+            }
+
             var cam = mapConfig?.DefaultCamera;
             var registry = GetService(CoreServiceKeys.VirtualCameraRegistry)
                 ?? throw new InvalidOperationException("VirtualCameraRegistry is required before loading maps.");
@@ -1187,6 +1177,24 @@ namespace Ludots.Core.Engine
 
             var state = GameSession.Camera.State;
             Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
+        }
+
+        private static bool ShouldSkipDefaultCameraOnLoad(MapConfig mapConfig)
+        {
+            if (mapConfig?.Tags == null)
+            {
+                return false;
+            }
+
+            foreach (string tag in mapConfig.Tags)
+            {
+                if (string.Equals(tag, SkipDefaultCameraOnLoadTag, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void CreateBoardsForSession(MapSession session, MapConfig mapConfig)
@@ -1778,6 +1786,15 @@ namespace Ludots.Core.Engine
         public void Dispose()
         {
             Stop();
+            if (_pendingMapLoads.Count > 0)
+            {
+                var pendingMapIds = new List<MapId>(_pendingMapLoads.Keys);
+                for (int i = 0; i < pendingMapIds.Count; i++)
+                {
+                    CancelPendingMapLoad(pendingMapIds[i], $"Engine disposed before '{pendingMapIds[i].Value}' completed.", markFailed: false);
+                }
+            }
+
             if (ModLoader != null)
             {
                 Diagnostics.Log.Info(in LogChannels.Engine, "Unloading ModLoader contexts...");
@@ -1811,6 +1828,7 @@ namespace Ludots.Core.Engine
             SyncContext.ProcessQueue();
             EnsureCameraRuntimeConfigured();
             _inputRuntimeSystem?.Update(dt);
+            ProcessPendingMapLoads();
 
             // 1. Simulation Loop (GAS, Physics, AI) - Controlled by Pacemaker
             if (!_simulationBudgetFused)

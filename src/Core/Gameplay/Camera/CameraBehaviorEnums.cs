@@ -52,4 +52,10 @@ namespace Ludots.Core.Gameplay.Camera
         Fixed,
         FollowTarget
     }
+
+    public enum VirtualCameraControlMode
+    {
+        BuiltIn,
+        PlatformManaged
+    }
 }

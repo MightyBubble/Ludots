@@ -12,6 +12,7 @@ namespace Ludots.Core.Presentation.Rendering
         public int StableId;
         public int MaterialId;
         public int TemplateId;
+        public int AnimationProfileId;
         public VisualRenderPath RenderPath;
         public VisualMobility Mobility;
         public VisualRuntimeFlags Flags;

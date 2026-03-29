@@ -32,13 +32,14 @@ namespace CameraAcceptanceMod.UI
         private const string DiagnosticsCardId = "camera-diagnostics-card";
         private const int DiagnosticsRefreshIntervalTicks = 6;
         private const float PanelWidth = 500f;
-        private const float SelectionViewHeight = 180f;
+        private const float SelectionBufferHeight = 180f;
         private const float SelectionRowHeight = 22f;
-        private const int DefaultSelectionRowPoolSize = 1;
-        private const string SelectionViewHostId = "camera-selection-view-list";
+        private const int SelectionRowPoolSize = 64;
+        private const string SelectionBufferHostId = "camera-selection-buffer-list";
         private const float VisibleEntityBufferHeight = 220f;
         private const float VisibleEntityRowHeight = 20f;
         private const string VisibleEntityBufferHostId = "camera-visible-entity-list";
+        private const string ReturnMapIdGlobalKey = "CameraAcceptance.ReturnMapId";
         private static readonly Vector2 CaptainOriginCm = new(3400f, 2200f);
         private static readonly Vector2 CaptainMovedCm = new(4200f, 2800f);
         private static readonly QueryDescription VisibleEntityQuery = new QueryDescription()
@@ -48,7 +49,7 @@ namespace CameraAcceptanceMod.UI
         private CameraAcceptancePanelState _lastState = CameraAcceptancePanelState.Empty;
         private GameEngine? _engine;
         private int _lastSelectionRowsTouched;
-        private int _lastRowPoolSize = DefaultSelectionRowPoolSize;
+        private int _lastRowPoolSize = SelectionRowPoolSize;
         private string[] _cachedDiagnosticsLines = Array.Empty<string>();
         private string _cachedDiagnosticsMapId = string.Empty;
         private long _cachedDiagnosticsTick = -1;
@@ -115,7 +116,7 @@ namespace CameraAcceptanceMod.UI
 
             _lastState = CameraAcceptancePanelState.Empty;
             _lastSelectionRowsTouched = 0;
-            _lastRowPoolSize = DefaultSelectionRowPoolSize;
+            _lastRowPoolSize = SelectionRowPoolSize;
             _page.SetState(_ => CameraAcceptancePanelState.Empty);
             _engine = null;
             ResetDiagnosticsCache();
@@ -169,6 +170,17 @@ namespace CameraAcceptanceMod.UI
                     Ui.Text("How To Verify").FontSize(12f).Bold().Color("#F4C77D"),
                     Ui.Text(state.ControlsDescription).FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
                 };
+
+                if (TryResolveReturnMapId(out string returnMapId))
+                {
+                    children.Add(Ui.Text("Return").FontSize(12f).Bold().Color("#F4C77D"));
+                    children.Add(BuildReturnToMenuButton("Back To X28 Menu", () => LoadReturnMap(returnMapId)));
+                }
+                else if (!string.IsNullOrWhiteSpace(state.ReturnButtonLabel))
+                {
+                    children.Add(Ui.Text("Return").FontSize(12f).Bold().Color("#F4C77D"));
+                    children.Add(BuildReturnToMenuButton(state.ReturnButtonLabel, ReturnToPreviousMap));
+                }
 
                 if (string.Equals(state.MapId, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase))
                 {
@@ -369,12 +381,11 @@ namespace CameraAcceptanceMod.UI
 
         private static UiElementBuilder BuildSelectedIdsSection(ReactiveContext<CameraAcceptancePanelState> context, IReadOnlyList<string> selectedIds)
         {
-            int rowPoolSize = ResolveSelectionRowPoolSize(selectedIds.Count);
             UiVirtualWindow window = context.GetVerticalVirtualWindow(
-                SelectionViewHostId,
-                rowPoolSize,
+                SelectionBufferHostId,
+                SelectionRowPoolSize,
                 SelectionRowHeight,
-                SelectionViewHeight,
+                SelectionBufferHeight,
                 overscan: 2);
 
             var rows = new List<UiElementBuilder>();
@@ -395,11 +406,11 @@ namespace CameraAcceptanceMod.UI
             }
 
             return Ui.Column(
-                    Ui.Text("Selection View").FontSize(12f).Bold().Color("#F4C77D"),
-                    Ui.Text($"Selected Entries: {selectedIds.Count} | Virtual Rows: {rowPoolSize} | Visible: {FormatVisibleRange(window)}").Id("camera-selection-view-summary").FontSize(11f).Color("#8EA2BD"),
+                    Ui.Text("Selection Buffer").FontSize(12f).Bold().Color("#F4C77D"),
+                    Ui.Text($"Selected Slots: {selectedIds.Count}/{SelectionRowPoolSize} | Visible: {FormatVisibleRange(window)}").Id("camera-selection-buffer-summary").FontSize(11f).Color("#8EA2BD"),
                     Ui.ScrollView(rows.ToArray())
-                        .Id(SelectionViewHostId)
-                        .Height(SelectionViewHeight)
+                        .Id(SelectionBufferHostId)
+                        .Height(SelectionBufferHeight)
                         .Padding(8f)
                         .Gap(4f)
                         .Radius(12f)
@@ -602,6 +613,31 @@ namespace CameraAcceptanceMod.UI
                 .Color(active ? "#F7FAFF" : "#C7D3E1");
         }
 
+        private UiElementBuilder BuildReturnToMenuButton(string buttonLabel, Action onClick)
+        {
+            return Ui.Button(buttonLabel, _ => onClick())
+                .Padding(10f, 8f)
+                .Radius(10f)
+                .Background("#E6A93D")
+                .Color("#11151A");
+        }
+
+        private bool TryResolveReturnMapId(out string returnMapId)
+        {
+            returnMapId = string.Empty;
+            return _engine != null &&
+                   _engine.GlobalContext.TryGetValue(ReturnMapIdGlobalKey, out object? value) &&
+                   value is string mapId &&
+                   !string.IsNullOrWhiteSpace(mapId) &&
+                   (returnMapId = mapId) != null;
+        }
+
+        private void LoadReturnMap(string mapId)
+        {
+            GameEngine engine = RequireEngine();
+            engine.GlobalContext.Remove(ReturnMapIdGlobalKey);
+            engine.LoadMap(mapId);
+        }
         private bool ApplyStateSnapshot(GameEngine engine)
         {
             CameraAcceptancePanelState next = CaptureState(engine);
@@ -634,6 +670,7 @@ namespace CameraAcceptanceMod.UI
             RenderDebugState? renderDebug = engine.GetService(CoreServiceKeys.RenderDebugState);
             Vector2 viewport = ResolveViewportSize(engine);
             string[] diagnosticsLines = BuildDiagnosticsLines(engine, mapId, diagnostics, renderDebug);
+            bool canReturnToPreviousMap = engine.MapSessions != null && engine.MapSessions.All.Count > 1;
             return new CameraAcceptancePanelState(
                 mapId,
                 CameraAcceptanceIds.DescribeMap(mapId),
@@ -648,6 +685,7 @@ namespace CameraAcceptanceMod.UI
                 CameraAcceptanceRuntime.ResolveProjectionSpawnCount(engine),
                 BuildVisibleEntitySummary(visibleEntityRows),
                 visibleEntityRows,
+                canReturnToPreviousMap ? "Back To Previous Map" : string.Empty,
                 viewport.X,
                 viewport.Y,
                 ComputeDiagnosticsCardLeft(viewport.X, diagnosticsLines),
@@ -849,6 +887,24 @@ namespace CameraAcceptanceMod.UI
             }
 
             engine.LoadMap(mapId);
+            SyncMountedRoot();
+        }
+
+        private void ReturnToPreviousMap()
+        {
+            GameEngine engine = RequireEngine();
+            string? currentMapId = engine.CurrentMapSession?.MapId.Value;
+            if (string.IsNullOrWhiteSpace(currentMapId))
+            {
+                return;
+            }
+
+            if (engine.MapSessions == null || engine.MapSessions.All.Count <= 1)
+            {
+                return;
+            }
+
+            engine.UnloadMap(currentMapId);
             SyncMountedRoot();
         }
 
@@ -1089,6 +1145,7 @@ namespace CameraAcceptanceMod.UI
                 !string.Equals(left.ActiveBlendCameraId, right.ActiveBlendCameraId, StringComparison.Ordinal) ||
                 left.ProjectionSpawnCount != right.ProjectionSpawnCount ||
                 !string.Equals(left.VisibleEntitySummary, right.VisibleEntitySummary, StringComparison.Ordinal) ||
+                !string.Equals(left.ReturnButtonLabel, right.ReturnButtonLabel, StringComparison.Ordinal) ||
                 left.ViewportWidth != right.ViewportWidth ||
                 left.ViewportHeight != right.ViewportHeight ||
                 left.DiagnosticsCardLeft != right.DiagnosticsCardLeft ||
@@ -1172,7 +1229,10 @@ namespace CameraAcceptanceMod.UI
 
         private static string? ResolveSelectedEntityName(GameEngine engine)
         {
-            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity) ||
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var value) ||
+                value is not Entity entity ||
+                entity == Entity.Null ||
+                !engine.World.IsAlive(entity) ||
                 !engine.World.Has<Name>(entity))
             {
                 return null;
@@ -1183,8 +1243,8 @@ namespace CameraAcceptanceMod.UI
 
         private static string[] ResolveSelectedEntityIds(GameEngine engine)
         {
-            Entity[] selected = CameraAcceptanceSelectionView.SnapshotSelectedEntities(engine.World, engine.GlobalContext);
-            int count = selected.Length;
+            Span<Entity> selected = stackalloc Entity[SelectionRowPoolSize];
+            int count = CameraAcceptanceSelectionView.CopySelectedEntities(engine.World, engine.GlobalContext, selected);
             if (count <= 0)
             {
                 return Array.Empty<string>();
@@ -1282,12 +1342,7 @@ namespace CameraAcceptanceMod.UI
         {
             return string.Equals(state.MapId, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase)
                 ? state.VisibleEntityRows.Length
-                : ResolveSelectionRowPoolSize(state.SelectedIds.Length);
-        }
-
-        private static int ResolveSelectionRowPoolSize(int selectedCount)
-        {
-            return Math.Max(DefaultSelectionRowPoolSize, selectedCount);
+                : SelectionRowPoolSize;
         }
 
         private static string BuildVisibleEntitySummary(IReadOnlyList<string> visibleEntityRows)
@@ -1422,6 +1477,7 @@ namespace CameraAcceptanceMod.UI
             int ProjectionSpawnCount,
             string VisibleEntitySummary,
             string[] VisibleEntityRows,
+            string ReturnButtonLabel,
             float ViewportWidth,
             float ViewportHeight,
             float DiagnosticsCardLeft,
@@ -1450,6 +1506,7 @@ namespace CameraAcceptanceMod.UI
                 CameraAcceptanceIds.ProjectionSpawnCountDefault,
                 "Visible on screen: 0",
                 Array.Empty<string>(),
+                string.Empty,
                 1920f,
                 1080f,
                 16f,

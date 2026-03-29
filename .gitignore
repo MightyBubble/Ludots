@@ -5,10 +5,11 @@
 # ----- .NET / C# 构建产物 -----
 **/bin/
 **/obj/
+**/publish/
 *.nupkg
 *.snupkg
+*.pdb
 # NuGet Packages
-*.nupkg
 packages/
 **/TestResults/
 **/*.trx
@@ -79,7 +80,11 @@ out.log
 out.host.*.log
 *.zip
 *.dll
+
+# ----- Native 二进制白名单（预编译平台依赖，需跟踪） -----
 !src/Platforms/Desktop/raylib.dll
+!src/Platforms/Desktop/libraylib.so
+!src/Libraries/SkiaSharp/runtimes/**/native/*
 
 Thumbs.db
 ehthumbs.db

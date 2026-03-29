@@ -17,6 +17,7 @@ namespace Ludots.Core.Gameplay.Camera
         private PlayerInputHandler? _liveInput;
         private CameraBehaviorContext? _runtimeContext;
         private CompositeCameraController? _controller;
+        private PlatformManagedCameraDriverRegistry? _platformManagedCameraDrivers;
         private string _controllerCameraId = string.Empty;
         private long _lastCapturedInputRevision = -1;
         private Func<WorldAabbCm>? _targetBoundsProvider;
@@ -67,6 +68,11 @@ namespace Ludots.Core.Gameplay.Camera
             VirtualCameraBrain = new VirtualCameraBrain(registry);
             InvalidateController();
             FollowTargetPositionCm = null;
+        }
+
+        public void SetPlatformManagedCameraDriverRegistry(PlatformManagedCameraDriverRegistry registry)
+        {
+            _platformManagedCameraDrivers = registry ?? throw new ArgumentNullException(nameof(registry));
         }
 
         /// <summary>
@@ -210,13 +216,22 @@ namespace Ludots.Core.Gameplay.Camera
 
             VirtualCameraBrain.ApplyToState(State, _logicInput, dt);
             var activeDefinition = VirtualCameraBrain.ActiveDefinition;
-            EnsureController();
+            bool allowsUserInput = VirtualCameraBrain.AllowsInput && !_userInputSuppressed;
 
             bool runtimeStateNeedsCapture = false;
-            if (_controller != null && VirtualCameraBrain.AllowsInput && !_userInputSuppressed)
+            if (activeDefinition != null && activeDefinition.ControlMode == VirtualCameraControlMode.PlatformManaged)
             {
-                _controller.Update(State, dt);
-                runtimeStateNeedsCapture = true;
+                InvalidateController();
+                runtimeStateNeedsCapture = UpdatePlatformManagedCamera(activeDefinition, dt, allowsUserInput);
+            }
+            else
+            {
+                EnsureController();
+                if (_controller != null && allowsUserInput)
+                {
+                    _controller.Update(State, dt);
+                    runtimeStateNeedsCapture = true;
+                }
             }
 
             if (ApplyWorldBoundsConfine(activeDefinition))
@@ -230,6 +245,30 @@ namespace Ludots.Core.Gameplay.Camera
             }
 
             FollowTargetPositionCm = VirtualCameraBrain.ActiveFollowTargetPositionCm;
+        }
+
+        private bool UpdatePlatformManagedCamera(VirtualCameraDefinition definition, float dt, bool allowsUserInput)
+        {
+            if (_platformManagedCameraDrivers == null)
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' requires platform-managed driver '{definition.PlatformDriverId}', but no driver registry is configured.");
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.PlatformDriverId))
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' is marked PlatformManaged but did not declare PlatformDriverId.");
+            }
+
+            IPlatformManagedCameraDriver driver = _platformManagedCameraDrivers.Get(definition.PlatformDriverId);
+            driver.PrimeDefinition(definition);
+            return driver.Update(new PlatformManagedCameraUpdateContext(
+                definition,
+                State,
+                _logicInput,
+                dt,
+                allowsUserInput));
         }
 
         public CameraStateSnapshot GetInterpolatedState(float alpha)

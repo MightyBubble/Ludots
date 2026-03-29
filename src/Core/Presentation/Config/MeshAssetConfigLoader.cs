@@ -141,6 +141,7 @@ namespace Ludots.Core.Presentation.Config
                 {
                     MeshAssetId = meshId,
                     LocalPosition = ParseVector3(p?["localPosition"]),
+                    LocalRotation = ParseQuaternionWithDefault(p?["localRotation"], Quaternion.Identity),
                     LocalScale = ParseVector3WithDefault(p?["localScale"], Vector3.One),
                     ColorTint = ParseVector4WithDefault(p?["colorTint"], Vector4.One),
                 };
@@ -166,6 +167,29 @@ namespace Ludots.Core.Presentation.Config
         {
             if (node is JsonArray arr && arr.Count >= 4)
                 return new Vector4(arr[0]?.GetValue<float>() ?? defaultValue.X, arr[1]?.GetValue<float>() ?? defaultValue.Y, arr[2]?.GetValue<float>() ?? defaultValue.Z, arr[3]?.GetValue<float>() ?? defaultValue.W);
+            return defaultValue;
+        }
+
+        private static Quaternion ParseQuaternionWithDefault(JsonNode node, Quaternion defaultValue)
+        {
+            if (node is JsonArray arr && arr.Count >= 4)
+            {
+                return new Quaternion(
+                    arr[0]?.GetValue<float>() ?? defaultValue.X,
+                    arr[1]?.GetValue<float>() ?? defaultValue.Y,
+                    arr[2]?.GetValue<float>() ?? defaultValue.Z,
+                    arr[3]?.GetValue<float>() ?? defaultValue.W);
+            }
+
+            if (node is JsonObject obj)
+            {
+                return new Quaternion(
+                    obj["x"]?.GetValue<float>() ?? obj["X"]?.GetValue<float>() ?? defaultValue.X,
+                    obj["y"]?.GetValue<float>() ?? obj["Y"]?.GetValue<float>() ?? defaultValue.Y,
+                    obj["z"]?.GetValue<float>() ?? obj["Z"]?.GetValue<float>() ?? defaultValue.Z,
+                    obj["w"]?.GetValue<float>() ?? obj["W"]?.GetValue<float>() ?? defaultValue.W);
+            }
+
             return defaultValue;
         }
     }
