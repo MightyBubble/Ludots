@@ -27,6 +27,7 @@ This directory is the architecture SSOT entry for Ludots. It documents behavior 
 - [GAS Combat Infrastructure](gas_combat_infrastructure.md)
 - [GAS Layered Architecture](gas_layered_architecture.md)
 - [Narrative Quest / Dialogue / Cinematic](narrative_quest_dialogue_cinematic.md)
+- [Narrative Frontend Kit](narrative_frontend_kit.md)
 - [Interaction Architecture](interaction/README.md)
 - [Persistent Static Adapter Sync](persistent_static_adapter_sync.md)
 - [Presentation Performer](presentation_performer.md)

@@ -12,6 +12,7 @@ namespace RelationshipShowcaseMod.Runtime
         }
 
         public RelationshipShowcaseConfig Config { get; }
+        public RelationshipShowcaseFrontendConfig FrontendConfig { get; set; } = new();
         public RelationshipShowcaseScenarioContext? ScenarioContext { get; private set; }
 
         public int Frame { get; private set; }

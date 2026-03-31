@@ -102,6 +102,35 @@ namespace Ludots.Core.Gameplay.Narrative
             return false;
         }
 
+        public IReadOnlyList<NarrativeQuestView> GetQuestViews()
+        {
+            var views = new List<NarrativeQuestView>(_quests.Count);
+            foreach (var pair in _quests)
+            {
+                NarrativeQuestRuntime runtime = pair.Value;
+                if (runtime.State == NarrativeQuestState.Inactive)
+                {
+                    continue;
+                }
+
+                NarrativeQuestStageDefinition? stage =
+                    runtime.StageIndex >= 0 && runtime.StageIndex < runtime.Definition.Stages.Count
+                        ? runtime.Definition.Stages[runtime.StageIndex]
+                        : null;
+                views.Add(new NarrativeQuestView(
+                    runtime.Definition.Id,
+                    runtime.Definition.DisplayName,
+                    runtime.Definition.Summary,
+                    runtime.State,
+                    stage?.Id ?? string.Empty,
+                    stage?.Title ?? string.Empty,
+                    stage?.ObjectiveText ?? string.Empty,
+                    stage?.ObjectiveHint ?? string.Empty));
+            }
+
+            return views;
+        }
+
         public void StartQuest(string questId)
         {
             if (!_definitions.TryGetQuest(questId, out var definition))
@@ -334,7 +363,40 @@ namespace Ludots.Core.Gameplay.Narrative
         }
 
         public IReadOnlyList<NarrativeDialogueChoiceDefinition> GetCurrentChoices()
-            => _activeDialogue?.CurrentChoices != null ? _activeDialogue.CurrentChoices : Array.Empty<NarrativeDialogueChoiceDefinition>();
+            => _activeDialogue?.CurrentChoices != null
+                ? _activeDialogue.CurrentChoices
+                : Array.Empty<NarrativeDialogueChoiceDefinition>();
+
+        public bool TryGetActiveDialogueView(out NarrativeDialogueView view)
+        {
+            if (_activeDialogue?.CurrentNode == null)
+            {
+                view = null!;
+                return false;
+            }
+
+            var choices = new List<NarrativeDialogueChoiceView>(_activeDialogue.CurrentChoices.Count);
+            for (int i = 0; i < _activeDialogue.CurrentChoices.Count; i++)
+            {
+                NarrativeDialogueChoiceDefinition choice = _activeDialogue.CurrentChoices[i];
+                choices.Add(new NarrativeDialogueChoiceView(
+                    choice.Id,
+                    FormatText(choice.Text),
+                    choice.NextNodeId));
+            }
+
+            view = new NarrativeDialogueView(
+                _activeDialogue.Definition.Id,
+                _activeDialogue.Definition.DisplayName,
+                _activeDialogue.CurrentNode.Id,
+                ResolveSpeakerName(_activeDialogue.CurrentNode.SpeakerAlias, _activeDialogue.CurrentNode.SpeakerName),
+                FormatText(_activeDialogue.CurrentNode.Text),
+                _activeDialogue.CurrentNode.CameraId,
+                _activeDialogue.CurrentNode.AutoAdvanceSeconds,
+                _activeDialogue.ElapsedSeconds,
+                choices);
+            return true;
+        }
 
         public string BuildCinematicSummary()
         {
@@ -346,6 +408,27 @@ namespace Ludots.Core.Gameplay.Narrative
             string speaker = ResolveSpeakerName(_activeCinematic.CurrentStep.SpeakerAlias, _activeCinematic.CurrentStep.SpeakerName);
             string body = FormatText(_activeCinematic.CurrentStep.Text);
             return string.IsNullOrWhiteSpace(speaker) ? body : $"{speaker}: {body}";
+        }
+
+        public bool TryGetActiveCinematicView(out NarrativeCinematicView view)
+        {
+            if (_activeCinematic?.CurrentStep == null)
+            {
+                view = null!;
+                return false;
+            }
+
+            view = new NarrativeCinematicView(
+                _activeCinematic.Definition.Id,
+                _activeCinematic.Definition.DisplayName,
+                _activeCinematic.CurrentStep.Id,
+                ResolveSpeakerName(_activeCinematic.CurrentStep.SpeakerAlias, _activeCinematic.CurrentStep.SpeakerName),
+                FormatText(_activeCinematic.CurrentStep.Text),
+                _activeCinematic.CurrentStep.CameraId,
+                _activeCinematic.CurrentStep.DurationSeconds,
+                _activeCinematic.ElapsedSeconds,
+                _activeCinematic.CurrentStep.RequiresAdvance);
+            return true;
         }
 
         public string BuildVariableSummary(params string[] variableIds)
@@ -898,5 +981,3 @@ namespace Ludots.Core.Gameplay.Narrative
         }
     }
 }
-
-
