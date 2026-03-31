@@ -2,6 +2,12 @@ using System;
 using Arch.Core;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Orders;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -56,9 +62,26 @@ namespace ChampionSkillSandboxMod.Runtime
             }
         }
 
-        public string Title => ChampionSkillSandboxIds.IsStressMap(_engine?.CurrentMapSession?.MapId.Value)
-            ? "Stress Harness"
-            : "Cast Mode";
+        public string Title
+        {
+            get
+            {
+                if (ChampionSkillSandboxIds.IsStressMap(_engine?.CurrentMapSession?.MapId.Value))
+                {
+                    return "Stress Harness";
+                }
+
+                Entity selected = ResolveSelectedEntity();
+                if (!IsNamedEntity(selected, ChampionSkillSandboxIds.DuelistAlphaName))
+                {
+                    return "Cast Mode";
+                }
+
+                return string.Equals(ResolveActiveModeId(), ChampionSkillSandboxIds.ActionModeId, StringComparison.OrdinalIgnoreCase)
+                    ? "Duelist Action Combo"
+                    : "Duelist Showcase";
+            }
+        }
 
         public string Subtitle
         {
@@ -66,7 +89,7 @@ namespace ChampionSkillSandboxMod.Runtime
             {
                 if (!ChampionSkillSandboxIds.IsStressMap(_engine?.CurrentMapSession?.MapId.Value))
                 {
-                    return "Cast + Camera | F1/F2/F3/F5 Modes | Space Context | RMB Move";
+                    return BuildSandboxSubtitle();
                 }
 
                 ChampionSkillStressControlState? control = ResolveStressControl();
@@ -101,22 +124,22 @@ namespace ChampionSkillSandboxMod.Runtime
                 "#F6C35B");
             buttons[1] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.IndicatorModeId,
-                "Indicator",
+                "Preview",
                 string.Equals(activeModeId, ChampionSkillSandboxIds.IndicatorModeId, StringComparison.OrdinalIgnoreCase),
                 "#61C3FF");
             buttons[2] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.PressReleaseModeId,
-                "RTS",
+                "Confirm",
                 string.Equals(activeModeId, ChampionSkillSandboxIds.PressReleaseModeId, StringComparison.OrdinalIgnoreCase),
                 "#93E07A");
             buttons[3] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.ActionModeId,
-                "Action",
+                "Auto",
                 string.Equals(activeModeId, ChampionSkillSandboxIds.ActionModeId, StringComparison.OrdinalIgnoreCase),
                 "#F3DF86");
             buttons[4] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.FreeCameraToolbarButtonId,
-                "Free",
+                "FreeCam",
                 string.Equals(activeFollowModeId, ChampionSkillSandboxIds.FreeCameraToolbarButtonId, StringComparison.OrdinalIgnoreCase),
                 "#D7D2C4");
             buttons[5] = new EntityCommandPanelToolbarButtonView(
@@ -126,12 +149,12 @@ namespace ChampionSkillSandboxMod.Runtime
                 "#8ED9A9");
             buttons[6] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId,
-                "Group",
+                "PackCam",
                 string.Equals(activeFollowModeId, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.OrdinalIgnoreCase),
                 "#F0C35A");
             buttons[7] = new EntityCommandPanelToolbarButtonView(
                 ChampionSkillSandboxIds.ResetCameraToolbarButtonId,
-                "Reset",
+                "ResetCam",
                 false,
                 "#D7D2C4");
             if (isStressMap)
@@ -344,7 +367,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 return activeModeId;
             }
 
-            return ChampionSkillSandboxIds.SmartCastModeId;
+            return ChampionSkillSandboxIds.ActionModeId;
         }
 
         private string ResolveActiveSelectionViewId()
@@ -357,6 +380,191 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             return ChampionSkillSandboxIds.PlayerSelectionToolbarButtonId;
+        }
+
+        private string BuildSandboxSubtitle()
+        {
+            Entity selected = ResolveSelectedEntity();
+            if (selected == Entity.Null)
+            {
+                return "1 Select Duelist Alpha | 2 Leave Auto mode on | 3 Hover D/E/F | 4 Tap Space for the melee route";
+            }
+
+            if (!IsNamedEntity(selected, ChampionSkillSandboxIds.DuelistAlphaName))
+            {
+                string selectedName = ResolveEntityName(selected);
+                return string.IsNullOrWhiteSpace(selectedName)
+                    ? "Select Duelist Alpha | Auto mode | Hover D/E/F | Space = auto melee | Q = manual chain"
+                    : $"Current {selectedName} | Select Duelist Alpha for auto melee | Space = auto route | Q = manual chain";
+            }
+
+            if (!string.Equals(ResolveActiveModeId(), ChampionSkillSandboxIds.ActionModeId, StringComparison.OrdinalIgnoreCase))
+            {
+                return "Duelist ready | Press F5 for Auto mode | Hover D/E/F | Space = auto melee | Q = manual chain";
+            }
+
+            if (TryBuildDuelistActionSummary(selected, out string summary))
+            {
+                return summary;
+            }
+
+            return "Duelist auto melee | Hover D/E/F | Space = auto route | Q = manual chain | E = pack sweep";
+        }
+
+        private bool TryBuildDuelistActionSummary(Entity actor, out string summary)
+        {
+            summary = string.Empty;
+            if (_engine == null ||
+                actor == Entity.Null ||
+                !_engine.World.IsAlive(actor))
+            {
+                return false;
+            }
+
+            Span<ContextScoredCandidateProbe> probes = stackalloc ContextScoredCandidateProbe[8];
+            int actionContextAbilityId = AbilityIdRegistry.GetId("Ability.Champion.Duelist.ActionContext");
+            bool resolved = ChampionSkillSandboxDuelistContextInspector.TryInspect(
+                _engine,
+                actionContextAbilityId,
+                probes,
+                out Entity inspectedActor,
+                out Entity hovered,
+                out _,
+                out int probeCount,
+                out ContextScoredOrderResolution resolution);
+
+            if (inspectedActor != actor)
+            {
+                return false;
+            }
+
+            string hoverName = ResolveEntityName(hovered);
+            string targetName = ResolveEntityName(resolution.Target);
+            string qLabel = ResolveResolvedSlotAbilityLabel(actor, slotIndex: 0, fallback: "Chain Jab I");
+            string eLabel = ResolveResolvedSlotAbilityLabel(actor, slotIndex: 2, fallback: "Crowd Sweep");
+
+            if (!resolved || probeCount <= 0)
+            {
+                summary = $"Hover {(string.IsNullOrWhiteSpace(hoverName) ? "none" : hoverName)} | Auto scans the pack | Q manual {qLabel} | E {eLabel}";
+                return true;
+            }
+
+            string spaceLabel = ResolveAbilityDisplayName(probes[0].AbilityId);
+            if (string.IsNullOrWhiteSpace(spaceLabel))
+            {
+                return false;
+            }
+
+            string hoverSegment = string.IsNullOrWhiteSpace(hoverName) ? "Hover none" : $"Hover {hoverName}";
+            string autoSegment = string.IsNullOrWhiteSpace(targetName)
+                ? $"Auto {spaceLabel}"
+                : $"Auto {spaceLabel} -> {targetName}";
+            summary = $"{hoverSegment} | {autoSegment} | Q manual {qLabel} | E {eLabel}";
+            return true;
+        }
+
+        private Entity ResolveSelectedEntity()
+        {
+            if (_engine == null)
+            {
+                return Entity.Null;
+            }
+
+            return SelectionContextRuntime.TryGetCurrentPrimary(_engine.World, _engine.GlobalContext, out Entity selected) &&
+                   selected != Entity.Null &&
+                   _engine.World.IsAlive(selected)
+                ? selected
+                : Entity.Null;
+        }
+
+        private Entity ResolveHoveredEntity()
+        {
+            if (_engine == null)
+            {
+                return Entity.Null;
+            }
+
+            return _engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out object? hoveredObj) &&
+                   hoveredObj is Entity hovered &&
+                   hovered != Entity.Null &&
+                   _engine.World.IsAlive(hovered)
+                ? hovered
+                : Entity.Null;
+        }
+
+        private bool IsNamedEntity(Entity entity, string expectedName)
+        {
+            return string.Equals(ResolveEntityName(entity), expectedName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private string ResolveEntityName(Entity entity)
+        {
+            if (_engine == null ||
+                entity == Entity.Null ||
+                !_engine.World.IsAlive(entity) ||
+                !_engine.World.TryGet(entity, out Ludots.Core.Components.Name name))
+            {
+                return string.Empty;
+            }
+
+            return name.Value ?? string.Empty;
+        }
+
+        private string ResolveAbilityDisplayName(int abilityId)
+        {
+            if (abilityId <= 0)
+            {
+                return string.Empty;
+            }
+
+            if (_engine?.GetService(CoreServiceKeys.AbilityDefinitionRegistry) is AbilityDefinitionRegistry definitions &&
+                definitions.TryGet(abilityId, out var definition) &&
+                definition.HasPresentation &&
+                definition.Presentation != null)
+            {
+                string displayName = definition.Presentation.ResolveDisplayName(string.Empty);
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    return displayName;
+                }
+            }
+
+            string raw = AbilityIdRegistry.GetName(abilityId);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return $"Ability#{abilityId}";
+            }
+
+            int lastDot = raw.LastIndexOf('.');
+            return lastDot >= 0 && lastDot + 1 < raw.Length
+                ? raw[(lastDot + 1)..]
+                : raw;
+        }
+
+        private string ResolveResolvedSlotAbilityLabel(Entity actor, int slotIndex, string fallback)
+        {
+            if (_engine == null ||
+                actor == Entity.Null ||
+                !_engine.World.IsAlive(actor) ||
+                !_engine.World.Has<AbilityStateBuffer>(actor))
+            {
+                return fallback;
+            }
+
+            ref readonly AbilityStateBuffer abilities = ref _engine.World.Get<AbilityStateBuffer>(actor);
+            if ((uint)slotIndex >= (uint)abilities.Count)
+            {
+                return fallback;
+            }
+
+            bool hasForm = _engine.World.Has<AbilityFormSlotBuffer>(actor);
+            AbilityFormSlotBuffer formSlots = hasForm ? _engine.World.Get<AbilityFormSlotBuffer>(actor) : default;
+            bool hasGranted = _engine.World.Has<GrantedSlotBuffer>(actor);
+            GrantedSlotBuffer granted = hasGranted ? _engine.World.Get<GrantedSlotBuffer>(actor) : default;
+            var resolved = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in granted, hasGranted, slotIndex);
+            return resolved.AbilityId > 0
+                ? ResolveAbilityDisplayName(resolved.AbilityId)
+                : fallback;
         }
     }
 }

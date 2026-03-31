@@ -34,6 +34,23 @@
     ]
   },
   {
+    "id": "champion_skill_sandbox.resolved_indicator",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [1.0, 0.97, 0.82, 0.22],
+    "defaultScale": 1.34,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.08, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.98 },
+      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.96 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.82 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.06 }
+    ]
+  },
+  {
     "id": "champion_skill_sandbox.projectile.ezreal_e",
     "visualKind": "Marker3D",
     "meshOrShapeId": "Sphere",

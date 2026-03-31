@@ -823,20 +823,21 @@ namespace ChampionSkillSandboxMod.Runtime
         {
             if (!allowDebugDraw ||
                 debugDraw == null ||
-                _duelistActionContextAbilityId <= 0 ||
-                engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is not InputOrderMappingSystem mappingSystem ||
-                mappingSystem.GetMapping("ActionAttack") is not InputOrderMapping actionAttackMapping ||
-                engine.GetService(CoreServiceKeys.ContextGroupRegistry) is not ContextGroupRegistry contextGroups ||
-                engine.GetService(CoreServiceKeys.GraphProgramRegistry) is not GraphProgramRegistry graphPrograms ||
-                engine.GetService(CoreServiceKeys.SpatialQueryService) is not ISpatialQueryService spatialQueries ||
-                engine.GetService(CoreServiceKeys.SpatialCoordinateConverter) is not ISpatialCoordinateConverter spatialCoords)
+                _duelistActionContextAbilityId <= 0)
             {
                 return;
             }
 
-            Entity actor = ResolveSelectedDuelist(engine.World, engine.GlobalContext);
-            if (actor == Entity.Null ||
-                !TryResolveContextGroup(engine.World, actor, actionAttackMapping, contextGroups, out ContextGroupDefinition group) ||
+            Span<ContextScoredCandidateProbe> probes = stackalloc ContextScoredCandidateProbe[8];
+            if (!ChampionSkillSandboxDuelistContextInspector.TryInspect(
+                    engine,
+                    _duelistActionContextAbilityId,
+                    probes,
+                    out Entity actor,
+                    out Entity hovered,
+                    out ContextGroupDefinition group,
+                    out int probeCount,
+                    out ContextScoredOrderResolution resolution) ||
                 !engine.World.TryGet(actor, out WorldPositionCm actorPosition))
             {
                 return;
@@ -846,16 +847,10 @@ namespace ChampionSkillSandboxMod.Runtime
             float searchRadius = group.SearchRadiusCm / 100f;
             debugDraw.AddCircle(actorWorld, searchRadius, new DebugDrawColor(84, 198, 255, 210), thickness: 0.05f);
 
-            Entity hovered = ResolveHoveredEntity(engine);
             if (hovered != Entity.Null && TryGetDebugWorld(engine.World, hovered, out Vector2 hoveredWorld))
             {
                 debugDraw.AddCircle(hoveredWorld, 0.34f, DebugDrawColor.Yellow, thickness: 0.04f);
             }
-
-            var graphApi = new GasGraphRuntimeApi(engine.World, spatialQueries, spatialCoords, eventBus: null, effectRequests: null);
-            var resolver = new ContextScoredOrderResolver(engine.World, contextGroups, graphPrograms, spatialQueries, graphApi);
-            Span<ContextScoredCandidateProbe> probes = stackalloc ContextScoredCandidateProbe[8];
-            bool resolved = resolver.TryInspect(actor, actionAttackMapping, hovered, probes, out int probeCount, out ContextScoredOrderResolution resolution);
 
             for (int i = 0; i < probeCount; i++)
             {
@@ -868,11 +863,6 @@ namespace ChampionSkillSandboxMod.Runtime
                     debugDraw.AddCapsule(actorWorld, targetWorld, i == 0 ? 0.18f : 0.1f, color, thickness, drawCenterLine: i == 0);
                     debugDraw.AddCircle(targetWorld, i == 0 ? 0.42f : 0.26f, color, thickness);
                 }
-            }
-
-            if (!resolved)
-            {
-                return;
             }
 
             int resolvedAbilityId = probeCount > 0 ? probes[0].AbilityId : 0;
@@ -904,66 +894,6 @@ namespace ChampionSkillSandboxMod.Runtime
                     : 1.58f;
             float span = resolvedAbilityId == _duelistOpeningBreakerAbilityId ? 0.96f : 0.68f;
             debugDraw.AddArc(actorWorld, radius, rotation - span, rotation + span, resolvedColor, thickness: 0.08f);
-        }
-
-        private Entity ResolveSelectedDuelist(World world, Dictionary<string, object> globals)
-        {
-            if (!SelectionContextRuntime.TryGetCurrentPrimary(world, globals, out Entity selected) ||
-                selected == Entity.Null ||
-                !world.IsAlive(selected) ||
-                !world.Has<AbilityStateBuffer>(selected))
-            {
-                return Entity.Null;
-            }
-
-            ref readonly AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(selected);
-            bool hasForm = world.Has<AbilityFormSlotBuffer>(selected);
-            AbilityFormSlotBuffer formSlots = hasForm ? world.Get<AbilityFormSlotBuffer>(selected) : default;
-            bool hasGranted = world.Has<GrantedSlotBuffer>(selected);
-            GrantedSlotBuffer granted = hasGranted ? world.Get<GrantedSlotBuffer>(selected) : default;
-            for (int slotIndex = 0; slotIndex < abilities.Count; slotIndex++)
-            {
-                var resolved = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in granted, hasGranted, slotIndex);
-                if (resolved.AbilityId == _duelistActionContextAbilityId)
-                {
-                    return selected;
-                }
-            }
-
-            return Entity.Null;
-        }
-
-        private static Entity ResolveHoveredEntity(GameEngine engine)
-        {
-            return engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out object? hoveredObj) &&
-                   hoveredObj is Entity hovered &&
-                   hovered != Entity.Null &&
-                   engine.World.IsAlive(hovered)
-                ? hovered
-                : Entity.Null;
-        }
-
-        private static bool TryResolveContextGroup(
-            World world,
-            Entity actor,
-            InputOrderMapping mapping,
-            ContextGroupRegistry contextGroups,
-            out ContextGroupDefinition group)
-        {
-            group = default;
-            if (mapping.ArgsTemplate.I0 is null || !world.Has<AbilityStateBuffer>(actor))
-            {
-                return false;
-            }
-
-            int rootSlotIndex = mapping.ArgsTemplate.I0.Value;
-            ref readonly AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(actor);
-            bool hasForm = world.Has<AbilityFormSlotBuffer>(actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? world.Get<AbilityFormSlotBuffer>(actor) : default;
-            bool hasGranted = world.Has<GrantedSlotBuffer>(actor);
-            GrantedSlotBuffer granted = hasGranted ? world.Get<GrantedSlotBuffer>(actor) : default;
-            var resolved = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in granted, hasGranted, rootSlotIndex);
-            return resolved.AbilityId > 0 && contextGroups.TryGetByRootAbility(resolved.AbilityId, out group);
         }
 
         private DebugDrawColor ResolveCandidateColor(int abilityId)

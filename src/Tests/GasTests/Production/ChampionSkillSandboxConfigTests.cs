@@ -19,6 +19,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
+using CoreInputMod.ViewMode;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Systems;
 using Ludots.Core.Presentation.Performers;
@@ -236,7 +237,11 @@ namespace Ludots.Tests.GAS.Production
             Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity currentPrimary)
                 ? currentPrimary
                 : Entity.Null;
-            Assert.That(ReadEntityName(engine.World, selected), Is.EqualTo("Ezreal Alpha"), "Sandbox runtime should seed an initial controllable selection.");
+            Assert.That(ReadEntityName(engine.World, selected), Is.EqualTo("Duelist Alpha"), "Sandbox runtime should seed the melee showcase entry champion by default.");
+            Assert.That(
+                ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId) ? activeModeId : string.Empty,
+                Is.EqualTo(ActionModeId),
+                "Sandbox runtime should open the sandbox in the Duelist-first action-combo mode.");
             var performerRegistry = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
                 ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
             Assert.That(
@@ -247,6 +252,10 @@ namespace Ludots.Tests.GAS.Production
                 performerRegistry.GetId("champion_skill_sandbox.hover_indicator"),
                 Is.GreaterThan(0),
                 "Sandbox performer config should register a dedicated hover indicator.");
+            Assert.That(
+                performerRegistry.GetId("champion_skill_sandbox.resolved_indicator"),
+                Is.GreaterThan(0),
+                "Sandbox performer config should register a dedicated resolved-target indicator for action-combo preview.");
             AssertSlashRibbonPerformer(performerRegistry, "champion_skill_sandbox.cue.duelist_chain_jab_1", SlashRibbonShape.Arc);
             AssertSlashRibbonPerformer(performerRegistry, "champion_skill_sandbox.cue.duelist_chain_jab_2", SlashRibbonShape.Arc);
             AssertSlashRibbonPerformer(performerRegistry, "champion_skill_sandbox.cue.duelist_chain_finish", SlashRibbonShape.Arc);
@@ -318,9 +327,9 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(duelistSlots[1].DisplayLabel, Is.EqualTo("Step In"));
             Assert.That(duelistSlots[2].DisplayLabel, Is.EqualTo("Crowd Sweep"));
             Assert.That(duelistSlots[3].DisplayLabel, Is.EqualTo("Opening Breaker"));
-            Assert.That(duelistSlots[4].DisplayLabel, Is.EqualTo("Action Context"));
+            Assert.That(duelistSlots[4].DisplayLabel, Is.EqualTo("Action Combo"));
             Assert.That(duelistSlots[4].ActionId, Is.EqualTo("ActionAttack"));
-            Assert.That(duelistSlots[4].DetailLabel, Does.Contain("target group"));
+            Assert.That(duelistSlots[4].DetailLabel, Does.Contain("tap Space"));
 
             var actionAttackMapping = mapping.GetMapping("ActionAttack");
             Assert.That(actionAttackMapping, Is.Not.Null);
@@ -332,12 +341,19 @@ namespace Ludots.Tests.GAS.Production
         {
             using var engine = CreateEngine();
             LoadMap(engine, "champion_skill_sandbox");
+            Tick(engine, 1);
 
             var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
+            var overlays = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+                ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
             var mapping = WaitForActiveInputOrderMapping(engine);
             Assert.That(toolbar.IsVisible, Is.True);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(InteractionModeType.SmartCast));
+            Assert.That(mapping.InteractionMode, Is.EqualTo(InteractionModeType.ContextScored));
+            Assert.That(
+                OverlayContainsText(overlays, "Runtime HUD | FPS="),
+                Is.False,
+                "Player-facing melee showcase should hide the generic runtime debug HUD on the normal sandbox map.");
 
             var buttons = new EntityCommandPanelToolbarButtonView[5];
             int buttonCount = toolbar.CopyButtons(buttons);
@@ -347,19 +363,28 @@ namespace Ludots.Tests.GAS.Production
             buttonCount = toolbar.CopyButtons(buttons);
             Assert.That(buttonCount, Is.EqualTo(8));
             Assert.That(buttons[0].ButtonId, Is.EqualTo("ChampionSkillSandbox.Mode.SmartCast"));
-            Assert.That(buttons[0].Active, Is.True);
+            Assert.That(buttons[0].Active, Is.False);
             Assert.That(buttons[3].ButtonId, Is.EqualTo(ActionModeId));
+            Assert.That(buttons[3].Active, Is.True);
             Assert.That(buttons[4].ButtonId, Is.EqualTo(FreeCameraToolbarButtonId));
-            Assert.That(buttons[4].Active, Is.True);
+            Assert.That(buttons[4].Active, Is.False);
+            Assert.That(buttons[5].ButtonId, Is.EqualTo(FollowSelectionToolbarButtonId));
+            Assert.That(buttons[5].Active, Is.True);
             Assert.That(buttons[7].ButtonId, Is.EqualTo(ResetCameraToolbarButtonId));
-            Assert.That(toolbar.Subtitle, Does.Contain("F5"));
-            Assert.That(toolbar.Subtitle, Does.Contain("Space"));
+            Assert.That(toolbar.Title, Is.EqualTo("Duelist Action Combo"));
+            Assert.That(toolbar.Subtitle, Does.Contain("Auto"));
+            Assert.That(toolbar.Subtitle, Does.Contain("Q manual"));
+            Assert.That(toolbar.Subtitle, Does.Contain("E "));
 
             var source = ResolveGasPanelSource(engine);
             Entity ezreal = FindEntityByName(engine.World, "Ezreal Alpha");
             Entity duelist = FindEntityByName(engine.World, "Duelist Alpha");
+            Entity duelistTarget = FindEntityByName(engine.World, "Target Dummy F");
             Entity spellEngineer = FindEntityByName(engine.World, "Spell Engineer Alpha");
             var slots = new EntityCommandPanelSlotView[8];
+            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
+                ?? throw new InvalidOperationException("SelectionRuntime missing.");
+            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
 
             source.CopySlots(ezreal, 0, slots);
             Assert.That(slots[0].DetailLabel, Is.EqualTo("Projectile that stops on first enemy"));
@@ -372,10 +397,21 @@ namespace Ludots.Tests.GAS.Production
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[3].Active, Is.True);
 
+            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { duelist });
+            selection.TryBindView(localPlayer, SelectionViewKeys.Primary, localPlayer, SelectionSetKeys.LivePrimary);
+            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = localPlayer;
+            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            engine.GlobalContext[CoreServiceKeys.HoveredEntity.Name] = duelistTarget;
+
             source.CopySlots(duelist, 0, slots);
-            Assert.That(slots[4].DisplayLabel, Is.EqualTo("Action Context"));
+            Assert.That(slots[4].DisplayLabel, Is.EqualTo("Action Combo"));
             Assert.That(slots[4].ActionId, Is.EqualTo("ActionAttack"));
-            Assert.That(slots[4].DetailLabel, Does.Contain("target group"));
+            Assert.That(slots[4].DetailLabel, Does.Contain("tap Space"));
+            Assert.That(toolbar.Title, Is.EqualTo("Duelist Action Combo"));
+            Assert.That(toolbar.Subtitle, Does.Contain("Hover Target Dummy F"));
+            Assert.That(toolbar.Subtitle, Does.Contain("Auto Step In -> Target Dummy F"));
+            Assert.That(toolbar.Subtitle, Does.Contain("Q manual Chain Jab I"));
+            Assert.That(toolbar.Subtitle, Does.Contain("E Crowd Sweep"));
 
             toolbar.Activate("ChampionSkillSandbox.Mode.Indicator");
             Tick(engine, 1);
@@ -404,11 +440,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(command!.OrderTypeKey, Is.EqualTo("moveTo"));
             Assert.That(command.SelectionType, Is.EqualTo(OrderSelectionType.Position));
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             Entity ezrealCooldown = FindEntityByName(engine.World, "Ezreal Cooldown");
             Entity garenAlpha = FindEntityByName(engine.World, "Garen Alpha");
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime missing.");
             selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { ezreal, garenAlpha });
             selection.TryBindView(localPlayer, SelectionViewKeys.Primary, localPlayer, SelectionSetKeys.LivePrimary);
             engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = localPlayer;

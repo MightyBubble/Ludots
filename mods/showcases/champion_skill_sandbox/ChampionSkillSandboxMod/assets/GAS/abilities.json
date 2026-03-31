@@ -701,10 +701,11 @@
       "displayName": "Chain Jab I",
       "iconGlyph": "Q",
       "accentColor": "#F6C35B",
-      "hintText": "Open the combo and prime the next strike",
+      "hintText": "Start the pressure. After this lands, Q advances to Chain Jab II.",
       "modeHints": {
         "SmartCastWithIndicator": "Hold to preview close engage radius",
-        "PressReleaseAimCast": "Release key, then confirm the opener"
+        "PressReleaseAimCast": "Release key, then confirm the opener",
+        "ContextScored": "Use when you are already in melee and want to start the chain."
       }
     }
   },
@@ -731,10 +732,11 @@
       "displayName": "Chain Jab II",
       "iconGlyph": "Q2",
       "accentColor": "#FFAD66",
-      "hintText": "Stagger the target and open a finisher window",
+      "hintText": "Manual Q route second hit. Stay on the same dummy to crack them open for the finish.",
       "modeHints": {
         "SmartCastWithIndicator": "Hold to preview the stagger follow-up",
-        "PressReleaseAimCast": "Release key, then confirm the second hit"
+        "PressReleaseAimCast": "Release key, then confirm the second hit",
+        "ContextScored": "Space uses this once the same target is already under pressure from the first jab."
       }
     }
   },
@@ -760,10 +762,11 @@
       "displayName": "Chain Finish",
       "iconGlyph": "Q3",
       "accentColor": "#FF7C5F",
-      "hintText": "Cash out the combo before the window closes",
+      "hintText": "Manual Q route finisher. Cash out before the window closes and the chain drops.",
       "modeHints": {
         "SmartCastWithIndicator": "Hold to preview the finishing arc",
-        "PressReleaseAimCast": "Release key, then confirm the finisher"
+        "PressReleaseAimCast": "Release key, then confirm the finisher",
+        "ContextScored": "Manual ender once you have stayed on one target long enough to finish the chain."
       }
     }
   },
@@ -788,10 +791,11 @@
       "displayName": "Step In",
       "iconGlyph": "W",
       "accentColor": "#62D4FF",
-      "hintText": "Gap-close into melee and keep the pressure on",
+      "hintText": "Auto opener from outside melee. Space uses this first when the hovered target is too far away.",
       "modeHints": {
         "SmartCastWithIndicator": "Hold to preview lunge reach",
-        "PressReleaseAimCast": "Release key, then confirm the entry line"
+        "PressReleaseAimCast": "Release key, then confirm the entry line",
+        "ContextScored": "Space chooses this whenever the hovered target is still outside jab range."
       }
     }
   },
@@ -811,10 +815,11 @@
       "displayName": "Crowd Sweep",
       "iconGlyph": "E",
       "accentColor": "#9FE27A",
-      "hintText": "Clear the front arc and retake spacing",
+      "hintText": "Cleave the pack in front of you and retake spacing.",
       "modeHints": {
         "SmartCastWithIndicator": "Hold to preview the sweep cone",
-        "PressReleaseAimCast": "Release key, then confirm the sweep"
+        "PressReleaseAimCast": "Release key, then confirm the sweep",
+        "ContextScored": "Manual crowd clear for clustered enemies in front of the duelist."
       }
     }
   },
@@ -838,10 +843,11 @@
       "displayName": "Opening Breaker",
       "iconGlyph": "R",
       "accentColor": "#FF7E8A",
-      "hintText": "Spend the opened window on a heavy single-target finish",
+      "hintText": "Auto heavy finisher. Space cashes out with this once the target is opened up.",
       "modeHints": {
         "SmartCastWithIndicator": "Hold to preview finisher reach",
-        "PressReleaseAimCast": "Release key, then confirm the breaker"
+        "PressReleaseAimCast": "Release key, then confirm the breaker",
+        "ContextScored": "Space prefers this once the current target is opened and ready to break."
       }
     }
   },
@@ -857,13 +863,13 @@
       "castModeOverride": "ContextScored"
     },
     "presentation": {
-      "displayName": "Action Context",
+      "displayName": "Action Combo",
       "iconGlyph": "SP",
       "accentColor": "#F4E18A",
-      "hintText": "One-key context attack: build target group, pick the best opener, and strike",
+      "hintText": "Space auto route: far target = Step In, close target = chain, opened target = breaker. Q is the separate manual Q1 -> Q2 -> Q3 route.",
       "modeHints": {
-        "ContextScored": "Build target group, score melee candidates, and fire the best action",
-        "SmartCast": "Always resolves through context scoring, even outside Action Focus mode"
+        "ContextScored": "Hover a dummy or pack, then tap Space: far = Step In, close = chain, opened = breaker. Q stays manual.",
+        "SmartCast": "The melee route still works here, but Action Combo is the clearest way to read it."
       }
     }
   }
