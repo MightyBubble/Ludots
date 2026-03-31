@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.Items;
 
 namespace Ludots.Core.Gameplay.GAS.Components
 {
@@ -270,6 +271,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
             in AbilityStateBuffer baseSlots,
             in AbilityFormSlotBuffer formSlots,
             bool hasForm,
+            in ItemGrantedSlotBuffer itemGrantedSlots,
+            bool hasItemGranted,
             in GrantedSlotBuffer grantedSlots,
             bool hasGranted,
             int slotIndex)
@@ -279,12 +282,29 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 return grantedSlots.GetOverride(slotIndex);
             }
 
+            if (hasItemGranted && itemGrantedSlots.HasOverride(slotIndex))
+            {
+                return itemGrantedSlots.GetOverride(slotIndex);
+            }
+
             if (hasForm && formSlots.HasOverride(slotIndex))
             {
                 return formSlots.GetOverride(slotIndex);
             }
 
             return baseSlots.Get(slotIndex);
+        }
+
+        public static AbilitySlotState Resolve(
+            in AbilityStateBuffer baseSlots,
+            in AbilityFormSlotBuffer formSlots,
+            bool hasForm,
+            in GrantedSlotBuffer grantedSlots,
+            bool hasGranted,
+            int slotIndex)
+        {
+            ItemGrantedSlotBuffer itemGranted = default;
+            return Resolve(in baseSlots, in formSlots, hasForm, in itemGranted, hasItemGranted: false, in grantedSlots, hasGranted, slotIndex);
         }
     }
 }

@@ -9,6 +9,7 @@ This directory is the architecture SSOT entry for Ludots. It documents behavior 
 - [Config Pipeline](config_pipeline.md)
 - [ECS and SoA](ecs_soa.md)
 - [Entity Command Panel Infrastructure](entity_command_panel_infrastructure.md)
+- [Item Inventory Equipment Architecture](item_inventory_equipment_architecture.md)
 - [Map, Mod, and Spatial Ownership](map_mod_spatial.md)
 - [Mod Architecture](mod_architecture.md)
 - [Mod Runtime Single Source of Truth](mod_runtime_single_source_of_truth.md)

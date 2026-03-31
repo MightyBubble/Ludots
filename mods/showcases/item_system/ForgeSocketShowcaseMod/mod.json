@@ -1,0 +1,12 @@
+{
+  "name": "ForgeSocketShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused forge and socket showcase entry mod for the shared Ludots item architecture demo.",
+  "main": "bin/net8.0/ForgeSocketShowcaseMod.dll",
+  "priority": 10,
+  "dependencies": {
+    "ItemSystemShowcaseMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["items", "forge", "socket", "showcase"]
+}

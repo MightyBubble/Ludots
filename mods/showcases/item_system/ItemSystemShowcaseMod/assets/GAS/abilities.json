@@ -1,0 +1,41 @@
+[
+  {
+    "id": "Ability.ItemShowcase.RifleFire",
+    "onActivateEffects": ["Effect.ItemShowcase.RifleFire"],
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 8, "tag": "Cooldown.ItemShowcase.RifleFire" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ItemShowcase.RifleFire" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.ItemShowcase.RifleFire"] }
+  },
+  {
+    "id": "Ability.ItemShowcase.MythicPulse",
+    "onActivateEffects": ["Effect.ItemShowcase.MythicPulse"],
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 36, "tag": "Cooldown.ItemShowcase.MythicPulse" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ItemShowcase.MythicPulse" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.ItemShowcase.MythicPulse"] }
+  },
+  {
+    "id": "Ability.ItemShowcase.SecondWind",
+    "onActivateEffects": ["Effect.ItemShowcase.SecondWind"],
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 54, "tag": "Cooldown.ItemShowcase.SecondWind" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ItemShowcase.SecondWind" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.ItemShowcase.SecondWind"] }
+  }
+]

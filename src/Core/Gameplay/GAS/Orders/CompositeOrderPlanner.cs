@@ -3,6 +3,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 
@@ -135,9 +136,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             bool hasForm = _world.Has<AbilityFormSlotBuffer>(order.Actor);
             AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(order.Actor) : default;
+            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(order.Actor);
+            ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(order.Actor) : default;
             bool hasGranted = _world.Has<GrantedSlotBuffer>(order.Actor);
             GrantedSlotBuffer grantedSlots = hasGranted ? _world.Get<GrantedSlotBuffer>(order.Actor) : default;
-            AbilitySlotState slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in grantedSlots, hasGranted, order.Args.I0);
+            AbilitySlotState slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGrantedSlots, hasItemGranted, in grantedSlots, hasGranted, order.Args.I0);
 
             if (slot.AbilityId <= 0 ||
                 !_abilities!.TryGet(slot.AbilityId, out var definition) ||

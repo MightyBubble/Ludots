@@ -1,12 +1,15 @@
 # Documentation Governance Report
 
-Date: 2026-03-20
+Date: 2026-03-24
 Scope:
 
-- `docs/architecture/entity_selection_architecture.md`
-- `docs/architecture/interaction/features/companion/r3_multi_unit_micro.md`
-- `docs/rfcs/RFC-0059-entity-selection-container-ssot.md`
-- `docs/rfcs/README.md`
+- `docs/architecture/item_inventory_equipment_architecture.md`
+- `scripts/acceptance/run-item-system-showcase-acceptance.ps1`
+- `scripts/acceptance/run-item-system-showcase-raylib.ps1`
+- `scripts/acceptance/run-item-loadout-showcase-acceptance.ps1`
+- `scripts/acceptance/run-weapon-bench-showcase-acceptance.ps1`
+- `scripts/acceptance/run-forge-socket-showcase-acceptance.ps1`
+- `scripts/acceptance/run-raid-loop-showcase-acceptance.ps1`
 
 Ruleset:
 
@@ -16,32 +19,22 @@ Ruleset:
 
 ## Summary
 
-- Total findings in scoped docs after fixes: 0
+- Total findings: 0
 - P0: 0
 - P1: 0
 - P2: 0
 - P3: 0
 
-## Validation Notes
-
-Validated in scope:
-
-- architecture SSOT now points to container/member selection truth
-- RFC-0059 now explicitly defers to architecture SSOT and links implementation evidence
-- multi-unit micro reference no longer cites `SelectionGroupBuffer`
-- referenced code/doc/artifact paths exist
-
 ## Findings
 
-No governance violations remain in the scoped selection packet.
-
-## Residual Risks Outside Scope
-
-- historical docs such as `docs/rfcs/RFC-0053-entity-info-panels-for-ui-and-overlay.md` still contain legacy `SelectedEntity` wording
-- debt is tracked in `artifacts/techdebt/2026-03-20-selection-container-ssot-redesign.md`
+No governance violations remain in the scoped item showcase split-mod packet.
 
 ## Fix Order
 
-1. Keep the updated selection architecture document as the only authoritative design doc.
-2. Migrate remaining stale historical docs when their owning subsystems are touched.
-3. Delete remaining legacy key names from core once stale tests and docs are migrated.
+1. Keep `docs/architecture/item_inventory_equipment_architecture.md` as the SSOT for the split-mod showcase delivery shape.
+2. When adding new focused item demos, extend the same shared-runtime section and add matching acceptance/evidence paths there.
+3. Keep wrapper-script examples aligned with the real script parameters before publishing any new doc examples.
+
+## Residual Risks
+
+- This report only covers the item showcase split-mod delivery slice; unrelated historical docs and wrapper scripts were not re-audited in this run.
