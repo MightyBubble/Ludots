@@ -16,6 +16,11 @@ namespace NarrativeShowcaseMod
             context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);
+            context.OnEvent(NarrativeEventKeys.QuestStageChanged, runtime.HandleQuestStageChangedAsync);
+            context.OnEvent(NarrativeEventKeys.QuestCompleted, runtime.HandleQuestCompletedAsync);
+            context.OnEvent(NarrativeEventKeys.DialogueNodeEntered, runtime.HandleDialogueNodeEnteredAsync);
+            context.OnEvent(NarrativeEventKeys.DialogueChoiceCommitted, runtime.HandleDialogueChoiceCommittedAsync);
+            context.OnEvent(NarrativeEventKeys.CinematicStepEntered, runtime.HandleCinematicStepEnteredAsync);
             context.OnEvent(NarrativeEventKeys.Signal, runtime.HandleNarrativeSignalAsync);
             context.OnEvent(NarrativeEventKeys.CinematicCompleted, runtime.HandleCinematicCompletedAsync);
         }

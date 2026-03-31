@@ -15,6 +15,7 @@ namespace RelationshipShowcaseMod
         {
             var config = LoadConfig(context);
             var state = new RelationshipShowcaseScenarioState(config);
+            state.FrontendConfig = LoadFrontendConfig(context);
             context.OnEvent(GameEvents.GameStart, new InstallRelationshipShowcaseOnGameStartTrigger(context, state, config).ExecuteAsync);
             context.OnEvent(new EventKey(config.Events.TrustedUnlocked), ctx => OnTrustedUnlockedAsync(ctx, state));
             context.OnEvent(new EventKey(config.Events.OathBondUnlocked), ctx => OnOathBondUnlockedAsync(ctx, state));
@@ -30,6 +31,12 @@ namespace RelationshipShowcaseMod
         {
             using var stream = context.GetResource($"{context.ModId}:assets/RelationshipShowcaseConfig.json");
             return RelationshipShowcaseConfig.Load(stream);
+        }
+
+        private static RelationshipShowcaseFrontendConfig LoadFrontendConfig(IModContext context)
+        {
+            using var stream = context.GetResource($"{context.ModId}:assets/Frontend/relationship_frontend.json");
+            return RelationshipShowcaseFrontendConfig.Load(stream);
         }
 
         private static Task OnTrustedUnlockedAsync(ScriptContext context, RelationshipShowcaseScenarioState state)

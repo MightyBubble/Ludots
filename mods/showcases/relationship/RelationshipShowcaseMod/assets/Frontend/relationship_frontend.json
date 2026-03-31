@@ -1,0 +1,82 @@
+{
+  "ownerId": "RelationshipShowcase",
+  "backdropHex": "#04070C04",
+  "promptRibbon": {
+    "anchor": "BottomCenter",
+    "width": 920,
+    "offsetY": 144,
+    "zIndex": 55,
+    "title": "Relationship Showcase",
+    "footer": "Doctrine / Drill / Taunt / Rally are gameplay inputs. The frontend only reflects shared state.",
+    "backgroundHex": "#08121CE8",
+    "borderHex": "#365875",
+    "foregroundHex": "#F5F7FA",
+    "accentHex": "#F6C56B"
+  },
+  "statusPanel": {
+    "anchor": "TopLeft",
+    "width": 420,
+    "zIndex": 40,
+    "eyebrow": "Faction State",
+    "title": "Peach Garden Covenant",
+    "footer": "Loyalty, support, trust flags, synergy tags, and enemy focus are all runtime projections.",
+    "backgroundHex": "#0B1520E6",
+    "borderHex": "#294259",
+    "foregroundHex": "#F5F7FA",
+    "mutedHex": "#B5C5D3",
+    "accentHex": "#76D8FF"
+  },
+  "relationshipNotebook": {
+    "anchor": "TopRight",
+    "width": 420,
+    "zIndex": 42,
+    "eyebrow": "Relationship Notebook",
+    "title": "Named Bonds",
+    "footer": "Display pairs come from RelationshipShowcaseConfig.Presentation.Metrics.",
+    "backgroundHex": "#09131DE6",
+    "borderHex": "#243C53",
+    "foregroundHex": "#F5F7FA",
+    "mutedHex": "#B2C1D0",
+    "accentHex": "#8BE9FD"
+  },
+  "notificationStack": {
+    "anchor": "TopRight",
+    "width": 420,
+    "offsetY": 250,
+    "zIndex": 56,
+    "backgroundHex": "#0C1622E6",
+    "borderHex": "#2E455B",
+    "foregroundHex": "#F5F7FA",
+    "mutedHex": "#B7C6D5",
+    "accentHex": "#F6C56B"
+  },
+  "threatBanner": {
+    "anchor": "BottomLeft",
+    "width": 520,
+    "offsetX": 24,
+    "offsetY": 10,
+    "zIndex": 58,
+    "eyebrow": "Enemy Pressure",
+    "title": "Threat Focus",
+    "footer": "Threat redirection and focused-by-enemy tags are relationship-driven, not UI-driven.",
+    "backgroundHex": "#4E1610E8",
+    "borderHex": "#FFB88A",
+    "foregroundHex": "#FFF7F0",
+    "mutedHex": "#FADBC1",
+    "accentHex": "#FFAA55"
+  },
+  "flowReview": {
+    "anchor": "BottomRight",
+    "width": 460,
+    "offsetY": 16,
+    "zIndex": 57,
+    "eyebrow": "Battle Review",
+    "title": "Recent Flow",
+    "footer": "Trigger callbacks, enemy pressure, and rally gating are recorded here.",
+    "backgroundHex": "#09131DE6",
+    "borderHex": "#243C53",
+    "foregroundHex": "#F5F7FA",
+    "mutedHex": "#B2C1D0",
+    "accentHex": "#FDE68A"
+  }
+}

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
@@ -10,6 +12,8 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using NarrativeFrontendMod;
+using NarrativeFrontendMod.Runtime;
 using RelationshipShowcaseMod.Runtime;
 
 namespace RelationshipShowcaseMod.Systems
@@ -19,13 +23,9 @@ namespace RelationshipShowcaseMod.Systems
         private readonly GameEngine _engine;
         private readonly World _world;
         private readonly RelationshipShowcaseScenarioState _state;
-        private readonly Vector4 _titleColor = new(0.96f, 0.92f, 0.7f, 1f);
-        private readonly Vector4 _textColor = new(0.9f, 0.93f, 0.98f, 1f);
-        private readonly Vector4 _hintColor = new(0.72f, 0.82f, 0.92f, 1f);
-        private readonly Vector4 _okColor = new(0.62f, 0.92f, 0.68f, 1f);
-        private readonly Vector4 _warnColor = new(0.96f, 0.68f, 0.42f, 1f);
 
         private RelationshipShowcaseConfig Config => _state.Config;
+        private RelationshipShowcaseFrontendConfig Frontend => _state.FrontendConfig;
         private RelationshipShowcaseScenarioContext? ScenarioContext => _state.ScenarioContext;
 
         public RelationshipShowcasePresentationSystem(GameEngine engine, RelationshipShowcaseScenarioState state)
@@ -47,17 +47,17 @@ namespace RelationshipShowcaseMod.Systems
         {
             if (!IsShowcaseMap() || ScenarioContext == null)
             {
+                ClearFrontend();
                 return;
             }
 
-            if (_engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is not ScreenOverlayBuffer overlay ||
-                _engine.GetService(CoreServiceKeys.GroundOverlayBuffer) is not GroundOverlayBuffer ground)
+            if (_engine.GetService(CoreServiceKeys.GroundOverlayBuffer) is not GroundOverlayBuffer ground)
             {
                 return;
             }
 
             RefreshDerivedState();
-            DrawPanel(overlay);
+            PublishFrontend();
             DrawWorldHighlights(ground);
         }
 
@@ -74,6 +74,219 @@ namespace RelationshipShowcaseMod.Systems
             return string.Equals(_engine.CurrentMapSession?.MapId.Value, Config.MapId, StringComparison.OrdinalIgnoreCase);
         }
 
+        private void PublishFrontend()
+        {
+            if (_engine.GetService(NarrativeFrontendServiceKeys.Service) is not NarrativeFrontendService frontend ||
+                ScenarioContext == null)
+            {
+                return;
+            }
+
+            RelationshipRuntime runtime = _engine.GetService(CoreServiceKeys.RelationshipRuntime)
+                ?? throw new InvalidOperationException("RelationshipRuntime missing.");
+            RelationshipMetricRegistry metrics = _engine.GetService(CoreServiceKeys.RelationshipMetricRegistry)
+                ?? throw new InvalidOperationException("RelationshipMetricRegistry missing.");
+            RelationshipTypeRegistry types = _engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+                ?? throw new InvalidOperationException("RelationshipTypeRegistry missing.");
+
+            int socialBondTypeId = types.GetId(Config.Types.SocialBond);
+            int hostilityTypeId = types.GetId(Config.Types.Hostility);
+            int loyaltyId = metrics.GetId(Config.Metrics.Loyalty);
+            int supportId = metrics.GetId(Config.Metrics.Support);
+            int threatId = metrics.GetId(Config.Metrics.Threat);
+            int healthId = AttributeRegistry.GetId("Health");
+
+            RelationshipNamedPair loyaltyA = Config.Presentation.Metrics.LoyaltyPairs[0];
+            RelationshipNamedPair loyaltyB = Config.Presentation.Metrics.LoyaltyPairs[1];
+            RelationshipNamedPair supportPair = Config.Presentation.Metrics.SupportPairs[0];
+            Entity selectedHero = GetSelectedHero();
+            Entity threatSource = ScenarioContext.GetEntityByName(Config.Presentation.Metrics.ThreatSourceName);
+
+            var surfaces = new List<NarrativeFrontendSurfaceModel>
+            {
+                CreateSurface(
+                    Frontend.PromptRibbon,
+                    NarrativeFrontendSurfaceKind.PromptRibbon,
+                    Frontend.PromptRibbon.Title,
+                    Config.Ui.ControlsLine,
+                    Config.Ui.CoverageLine),
+                CreateSurface(
+                    Frontend.StatusPanel,
+                    NarrativeFrontendSurfaceKind.StatusPanel,
+                    Frontend.StatusPanel.Title,
+                    string.Empty,
+                    Frontend.StatusPanel.Footer,
+                    new[]
+                    {
+                        new NarrativeFrontendSurfaceItem(Config.Presentation.SelectedHeroLabel, _state.SelectedName, Active: true, AccentHex: "#74D7FF"),
+                        new NarrativeFrontendSurfaceItem(Config.Presentation.EnemyFocusLabel, _state.EnemyFocusName, AccentHex: "#FFAA55"),
+                        new NarrativeFrontendSurfaceItem(Config.Presentation.TrustedLabel, FormatBool(_state.TrustedUnlocked), AccentHex: _state.TrustedUnlocked ? "#86EFAC" : "#FDBA74", Active: _state.TrustedUnlocked),
+                        new NarrativeFrontendSurfaceItem(Config.Presentation.OathBondLabel, FormatBool(_state.OathBondUnlocked), AccentHex: _state.OathBondUnlocked ? "#86EFAC" : "#FDBA74", Active: _state.OathBondUnlocked),
+                        new NarrativeFrontendSurfaceItem(Config.Presentation.SynergyLabel, FormatBool(_state.SynergyActive), AccentHex: _state.SynergyActive ? "#86EFAC" : "#FDBA74", Active: _state.SynergyActive),
+                    }),
+                CreateSurface(
+                    Frontend.RelationshipNotebook,
+                    NarrativeFrontendSurfaceKind.RelationshipNotebook,
+                    Frontend.RelationshipNotebook.Title,
+                    string.Empty,
+                    Frontend.RelationshipNotebook.Footer,
+                    new[]
+                    {
+                        BuildMetricItem(runtime, loyaltyA, socialBondTypeId, loyaltyId, "Loyalty A"),
+                        BuildMetricItem(runtime, loyaltyB, socialBondTypeId, loyaltyId, "Loyalty B"),
+                        BuildMetricItem(runtime, supportPair, socialBondTypeId, supportId, "Support"),
+                        new NarrativeFrontendSurfaceItem(
+                            Config.Presentation.EnemyFocusLabel,
+                            ReadMetric(runtime, threatSource, selectedHero, hostilityTypeId, threatId).ToString(),
+                            $"{Config.Presentation.Metrics.ThreatSourceName} -> {_state.SelectedName}",
+                            AccentHex: "#FFAA55"),
+                        new NarrativeFrontendSurfaceItem(
+                            "HP",
+                            ReadHealth(selectedHero, healthId).ToString("0"),
+                            _state.SelectedName,
+                            AccentHex: "#93C5FD"),
+                    }),
+                CreateSurface(
+                    Frontend.NotificationStack,
+                    NarrativeFrontendSurfaceKind.NotificationStack,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    new[]
+                    {
+                        new NarrativeFrontendSurfaceItem("Trusted", _state.TrustedUnlocked ? Config.Logs.TriggerTrustedUnlocked : Config.Logs.RallyDenied, AccentHex: _state.TrustedUnlocked ? "#86EFAC" : "#FDBA74"),
+                        new NarrativeFrontendSurfaceItem("Oath", _state.OathBondUnlocked ? Config.Logs.TriggerOathBondUnlocked : Config.Logs.Drill, AccentHex: _state.OathBondUnlocked ? "#86EFAC" : "#FDE68A"),
+                        new NarrativeFrontendSurfaceItem("Synergy", _state.SynergyActive ? Config.Logs.TriggerSynergyActivated : Config.Logs.Doctrine, AccentHex: _state.SynergyActive ? "#86EFAC" : "#93C5FD"),
+                    }),
+                CreateSurface(
+                    Frontend.ThreatBanner,
+                    NarrativeFrontendSurfaceKind.ThreatBanner,
+                    Frontend.ThreatBanner.Title,
+                    $"{Config.Presentation.EnemyFocusLabel}: {_state.EnemyFocusName}",
+                    Frontend.ThreatBanner.Footer),
+                CreateSurface(
+                    Frontend.FlowReview,
+                    NarrativeFrontendSurfaceKind.FlowReview,
+                    Frontend.FlowReview.Title,
+                    string.Empty,
+                    Frontend.FlowReview.Footer,
+                    BuildLogItems()),
+            };
+
+            frontend.Publish(new NarrativeFrontendPageState(
+                Frontend.OwnerId,
+                BuildSignature(runtime, socialBondTypeId, hostilityTypeId, loyaltyId, supportId, threatId, healthId),
+                true,
+                Frontend.BackdropHex,
+                surfaces));
+        }
+
+        private NarrativeFrontendSurfaceItem BuildMetricItem(
+            RelationshipRuntime runtime,
+            RelationshipNamedPair pair,
+            int typeId,
+            int metricId,
+            string shortcut)
+        {
+            if (ScenarioContext == null)
+            {
+                return new NarrativeFrontendSurfaceItem(shortcut, "0");
+            }
+
+            Entity source = ScenarioContext.GetEntityByName(pair.SourceName);
+            Entity target = ScenarioContext.GetEntityByName(pair.TargetName);
+            short value = ReadMetric(runtime, source, target, typeId, metricId);
+            return new NarrativeFrontendSurfaceItem(
+                pair.SourceName,
+                value.ToString(),
+                $"{pair.SourceName} -> {pair.TargetName}",
+                AccentHex: "#8BE9FD",
+                Shortcut: shortcut);
+        }
+
+        private IReadOnlyList<NarrativeFrontendSurfaceItem> BuildLogItems()
+        {
+            var items = new List<NarrativeFrontendSurfaceItem>(_state.Log.Count);
+            for (int i = _state.Log.Count - 1; i >= Math.Max(0, _state.Log.Count - 6); i--)
+            {
+                items.Add(new NarrativeFrontendSurfaceItem(
+                    Label: $"T{i + 1:00}",
+                    Value: _state.Log[i]));
+            }
+
+            return items;
+        }
+
+        private string BuildSignature(
+            RelationshipRuntime runtime,
+            int socialBondTypeId,
+            int hostilityTypeId,
+            int loyaltyId,
+            int supportId,
+            int threatId,
+            int healthId)
+        {
+            if (ScenarioContext == null)
+            {
+                return "inactive";
+            }
+
+            RelationshipNamedPair loyaltyA = Config.Presentation.Metrics.LoyaltyPairs[0];
+            RelationshipNamedPair loyaltyB = Config.Presentation.Metrics.LoyaltyPairs[1];
+            RelationshipNamedPair supportPair = Config.Presentation.Metrics.SupportPairs[0];
+            Entity selectedHero = GetSelectedHero();
+            Entity threatSource = ScenarioContext.GetEntityByName(Config.Presentation.Metrics.ThreatSourceName);
+            return string.Join("||",
+                _state.Frame,
+                _state.SelectedName,
+                _state.EnemyFocusName,
+                _state.TrustedUnlocked,
+                _state.OathBondUnlocked,
+                _state.SynergyActive,
+                ReadMetric(runtime, ScenarioContext.GetEntityByName(loyaltyA.SourceName), ScenarioContext.GetEntityByName(loyaltyA.TargetName), socialBondTypeId, loyaltyId),
+                ReadMetric(runtime, ScenarioContext.GetEntityByName(loyaltyB.SourceName), ScenarioContext.GetEntityByName(loyaltyB.TargetName), socialBondTypeId, loyaltyId),
+                ReadMetric(runtime, ScenarioContext.GetEntityByName(supportPair.SourceName), ScenarioContext.GetEntityByName(supportPair.TargetName), socialBondTypeId, supportId),
+                ReadMetric(runtime, threatSource, selectedHero, hostilityTypeId, threatId),
+                ReadHealth(selectedHero, healthId),
+                _state.Log.Count == 0 ? string.Empty : _state.Log[^1]);
+        }
+
+        private NarrativeFrontendSurfaceModel CreateSurface(
+            RelationshipShowcaseSurfaceConfig config,
+            NarrativeFrontendSurfaceKind kind,
+            string title,
+            string body,
+            string footer = "",
+            IReadOnlyList<NarrativeFrontendSurfaceItem>? items = null)
+        {
+            return new NarrativeFrontendSurfaceModel(
+                SurfaceId: $"{Frontend.OwnerId}.{kind}.{config.ResolveAnchor()}",
+                Kind: kind,
+                Anchor: config.ResolveAnchor(),
+                Title: title,
+                Subtitle: config.Eyebrow,
+                Body: body,
+                Footer: string.IsNullOrWhiteSpace(footer) ? config.Footer : footer,
+                Items: items,
+                Width: config.Width,
+                OffsetX: config.OffsetX,
+                OffsetY: config.OffsetY,
+                ZIndex: config.ZIndex,
+                AccentHex: config.AccentHex,
+                BackgroundHex: config.BackgroundHex,
+                BorderHex: config.BorderHex,
+                ForegroundHex: config.ForegroundHex,
+                MutedHex: config.MutedHex);
+        }
+
+        private void ClearFrontend()
+        {
+            if (_engine.GetService(NarrativeFrontendServiceKeys.Service) is NarrativeFrontendService frontend)
+            {
+                frontend.Clear(Frontend.OwnerId);
+            }
+        }
+
         private void RefreshDerivedState()
         {
             if (ScenarioContext == null)
@@ -81,11 +294,7 @@ namespace RelationshipShowcaseMod.Systems
                 return;
             }
 
-            int heroCount = ScenarioContext.HeroEntities.Count;
-            if (heroCount > 0)
-            {
-                _state.SelectedName = Config.Scenario.Heroes[Math.Clamp(_state.SelectedHeroIndex, 0, heroCount - 1)].Name;
-            }
+            _state.SelectedName = Config.Scenario.Heroes[Math.Clamp(_state.SelectedHeroIndex, 0, ScenarioContext.HeroEntities.Count - 1)].Name;
 
             RelationshipRuntime runtime = _engine.GetService(CoreServiceKeys.RelationshipRuntime)
                 ?? throw new InvalidOperationException("RelationshipRuntime missing.");
@@ -119,71 +328,6 @@ namespace RelationshipShowcaseMod.Systems
             {
                 _state.EnemyFocusName = Config.Presentation.EnemyFocusPendingText;
             }
-        }
-
-        private void DrawPanel(ScreenOverlayBuffer overlay)
-        {
-            overlay.AddRect(18, 18, 620, 300, new Vector4(0.05f, 0.06f, 0.09f, 0.82f), new Vector4(0.45f, 0.62f, 0.82f, 0.8f));
-            overlay.AddText(34, 34, $"{Config.Presentation.TitlePrefix}: {Config.Scenario.Teams[0].Name}", 18, _titleColor);
-            overlay.AddText(34, 62, $"{Config.Presentation.SelectedHeroLabel}: {_state.SelectedName}", 15, _textColor);
-            overlay.AddText(34, 84, $"{Config.Presentation.EnemyFocusLabel}: {_state.EnemyFocusName}", 15, _textColor);
-            overlay.AddText(34, 106, $"{Config.Presentation.TrustedLabel}: {FormatBool(_state.TrustedUnlocked)}", 15, _state.TrustedUnlocked ? _okColor : _warnColor);
-            overlay.AddText(220, 106, $"{Config.Presentation.OathBondLabel}: {FormatBool(_state.OathBondUnlocked)}", 15, _state.OathBondUnlocked ? _okColor : _warnColor);
-            overlay.AddText(432, 106, $"{Config.Presentation.SynergyLabel}: {FormatBool(_state.SynergyActive)}", 15, _state.SynergyActive ? _okColor : _warnColor);
-            overlay.AddText(34, 134, Config.Ui.ControlsLine, 14, _hintColor);
-            overlay.AddText(34, 156, BuildMetricLine(), 14, _textColor);
-            overlay.AddText(34, 178, Config.Ui.CoverageLine, 13, _hintColor);
-            overlay.AddText(34, 202, Config.Presentation.BattleLogTitle, 15, _titleColor);
-
-            int logStart = Math.Max(0, _state.Log.Count - 5);
-            int y = 226;
-            for (int i = logStart; i < _state.Log.Count; i++)
-            {
-                overlay.AddText(34, y, _state.Log[i], 13, _textColor);
-                y += 18;
-            }
-        }
-
-        private string BuildMetricLine()
-        {
-            if (ScenarioContext == null)
-            {
-                return Config.Presentation.MetricsPendingText;
-            }
-
-            RelationshipMetricRegistry metrics = _engine.GetService(CoreServiceKeys.RelationshipMetricRegistry)
-                ?? throw new InvalidOperationException("RelationshipMetricRegistry missing.");
-            RelationshipRuntime runtime = _engine.GetService(CoreServiceKeys.RelationshipRuntime)
-                ?? throw new InvalidOperationException("RelationshipRuntime missing.");
-            RelationshipTypeRegistry types = _engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
-                ?? throw new InvalidOperationException("RelationshipTypeRegistry missing.");
-
-            int loyaltyId = metrics.GetId(Config.Metrics.Loyalty);
-            int supportId = metrics.GetId(Config.Metrics.Support);
-            int threatId = metrics.GetId(Config.Metrics.Threat);
-            int socialBondTypeId = types.GetId(Config.Types.SocialBond);
-            int threatTypeId = types.GetId(Config.Types.Hostility);
-            int healthId = AttributeRegistry.GetId("Health");
-
-            RelationshipNamedPair loyaltyA = Config.Presentation.Metrics.LoyaltyPairs[0];
-            RelationshipNamedPair loyaltyB = Config.Presentation.Metrics.LoyaltyPairs[1];
-            RelationshipNamedPair supportPair = Config.Presentation.Metrics.SupportPairs[0];
-            Entity loyaltySourceA = ScenarioContext.GetEntityByName(loyaltyA.SourceName);
-            Entity loyaltyTargetA = ScenarioContext.GetEntityByName(loyaltyA.TargetName);
-            Entity loyaltySourceB = ScenarioContext.GetEntityByName(loyaltyB.SourceName);
-            Entity loyaltyTargetB = ScenarioContext.GetEntityByName(loyaltyB.TargetName);
-            Entity supportSource = ScenarioContext.GetEntityByName(supportPair.SourceName);
-            Entity supportTarget = ScenarioContext.GetEntityByName(supportPair.TargetName);
-            Entity threatSource = ScenarioContext.GetEntityByName(Config.Presentation.Metrics.ThreatSourceName);
-            Entity selected = GetSelectedHero();
-
-            short loyaltyValueA = ReadMetric(runtime, loyaltySourceA, loyaltyTargetA, socialBondTypeId, loyaltyId);
-            short loyaltyValueB = ReadMetric(runtime, loyaltySourceB, loyaltyTargetB, socialBondTypeId, loyaltyId);
-            short supportValue = ReadMetric(runtime, supportSource, supportTarget, socialBondTypeId, supportId);
-            short threatValue = ReadMetric(runtime, threatSource, selected, threatTypeId, threatId);
-            float selectedHealth = ReadHealth(selected, healthId);
-
-            return $"Metrics: Loyalty({loyaltyA.SourceName}->{loyaltyA.TargetName}={loyaltyValueA}, {loyaltyB.SourceName}->{loyaltyB.TargetName}={loyaltyValueB}) | Support({supportPair.SourceName}<->{supportPair.TargetName}={supportValue}) | Threat(Selected={threatValue}) | HP(Selected={selectedHealth:0})";
         }
 
         private void DrawWorldHighlights(GroundOverlayBuffer ground)

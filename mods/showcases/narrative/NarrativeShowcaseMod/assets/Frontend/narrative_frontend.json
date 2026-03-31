@@ -1,0 +1,152 @@
+{
+  "ownerId": "NarrativeShowcase",
+  "backdropHex": "#04070C08",
+  "promptRibbon": {
+    "anchor": "BottomCenter",
+    "width": 980,
+    "offsetY": 140,
+    "zIndex": 55,
+    "title": "Narrative Showcase",
+    "backgroundHex": "#08121CE8",
+    "borderHex": "#2D4F69",
+    "foregroundHex": "#F5F7FA",
+    "accentHex": "#F6C56B"
+  },
+  "objectiveTracker": {
+    "anchor": "TopLeft",
+    "width": 390,
+    "zIndex": 40,
+    "eyebrow": "Quest Tracker",
+    "title": "Ashen Oath",
+    "footer": "Quest, stage, objective, and hint all come from NarrativeDirector state plus showcase config.",
+    "backgroundHex": "#0B1520E6",
+    "borderHex": "#294259",
+    "foregroundHex": "#F5F7FA",
+    "mutedHex": "#B5C5D3",
+    "accentHex": "#76D8FF"
+  },
+  "historyJournal": {
+    "anchor": "TopRight",
+    "width": 420,
+    "zIndex": 42,
+    "eyebrow": "Flow Review",
+    "title": "Narrative Log",
+    "footer": "Quest, dialogue, cinematic, signal, GAS reward, and trigger callbacks accumulate here.",
+    "backgroundHex": "#09131DE6",
+    "borderHex": "#243C53",
+    "foregroundHex": "#F5F7FA",
+    "mutedHex": "#B2C1D0",
+    "accentHex": "#8BE9FD"
+  },
+  "variablesPanel": {
+    "anchor": "TopLeft",
+    "width": 390,
+    "offsetY": 214,
+    "zIndex": 41,
+    "eyebrow": "Branch State",
+    "title": "Variables",
+    "footer": "Conditions and branch outcomes stay fully data-driven.",
+    "backgroundHex": "#0B1520E6",
+    "borderHex": "#2E4B63",
+    "foregroundHex": "#F5F7FA",
+    "mutedHex": "#B2C2CF",
+    "accentHex": "#A7F3D0"
+  },
+  "overlayDialogue": {
+    "anchor": "BottomCenter",
+    "width": 760,
+    "offsetY": 28,
+    "zIndex": 60,
+    "eyebrow": "Overlay Dialogue",
+    "footer": "Enter advances | Number keys commit choices | Tab skips cinematics",
+    "backgroundHex": "#08111BEF",
+    "borderHex": "#5AD7E9FF",
+    "foregroundHex": "#F8FAFC",
+    "mutedHex": "#C6D3DE",
+    "accentHex": "#F6C56B"
+  },
+  "dialogueBubble": {
+    "anchor": "BottomLeft",
+    "width": 520,
+    "offsetX": 28,
+    "offsetY": 12,
+    "zIndex": 58,
+    "eyebrow": "Bubble Dialogue",
+    "footer": "This node is rendered as an in-world bubble style panel instead of a full overlay.",
+    "backgroundHex": "#0C1622E8",
+    "borderHex": "#49FFFFFF",
+    "foregroundHex": "#F5F7FA",
+    "mutedHex": "#A9B9C9",
+    "accentHex": "#F0C36B"
+  },
+  "subtitleBubble": {
+    "anchor": "BottomCenter",
+    "width": 720,
+    "offsetY": 84,
+    "zIndex": 59,
+    "eyebrow": "Auto Bubble",
+    "footer": "Auto-advance subtitle bubbles can still be skipped through gameplay input.",
+    "backgroundHex": "#08121CE8",
+    "borderHex": "#31546B",
+    "foregroundHex": "#F2F6FA",
+    "mutedHex": "#AFC3D4",
+    "accentHex": "#F59E0B"
+  },
+  "choiceList": {
+    "anchor": "BottomRight",
+    "width": 440,
+    "offsetY": 12,
+    "zIndex": 61,
+    "eyebrow": "Choice Grid",
+    "title": "Available Responses",
+    "footer": "Choice availability comes from narrative conditions, not UI-side branching.",
+    "backgroundHex": "#0A1220E8",
+    "borderHex": "#2F4358",
+    "foregroundHex": "#F8FAFC",
+    "mutedHex": "#B7C5D2",
+    "accentHex": "#F6C56B"
+  },
+  "transmissionOverlay": {
+    "anchor": "TopRight",
+    "width": 420,
+    "offsetY": 236,
+    "zIndex": 56,
+    "eyebrow": "Transmission",
+    "footer": "Cinematic callouts can occupy a separate overlay channel from dialogue and objectives.",
+    "backgroundHex": "#08121CE0",
+    "borderHex": "#2A536B",
+    "foregroundHex": "#E7F5FF",
+    "mutedHex": "#A7C6D8",
+    "accentHex": "#7DD3FC"
+  },
+  "hints": {
+    "promptTitle": "Narrative Showcase",
+    "explorePrompt": "Select Arcweaver, move to the shrine with RMB, and press E to wake the trial.",
+    "choicePrompt": "Overlay dialogue is active: use 1/2/3 for choices or Enter to advance non-choice nodes.",
+    "combatPrompt": "The Ashen Beast is loose: right-click to approach, then use Q/W/E/R/Space to engage through ECS + GAS.",
+    "returnPrompt": "The trial is resolved: go back to Warden Mirelle and choose the ending branch.",
+    "skipPrompt": "Tab skips the current cinematic if you already understand the beat.",
+    "autoAdvancePrompt": "This subtitle bubble is auto-advancing; progress is driven by runtime elapsed time."
+  },
+  "templates": {
+    "objectiveTitleFormat": "{quest}: {stage}",
+    "variableCaptionFormat": "{label}: {value}",
+    "questStageChanged": "Quest stage changed -> {bodyText}",
+    "dialogueEntered": "{speaker}: {bodyText}",
+    "dialogueChoiceCommitted": "Choice locked -> {bodyText}",
+    "cinematicEntered": "Cinematic beat -> {speaker}: {bodyText}",
+    "questCompleted": "Quest completed -> {questId}",
+    "signal": "Signal -> {signalId}",
+    "beastSpawned": "Runtime entity queue delivered the Ashen Beast into the shrine arena.",
+    "rewardApplied": "Reward signal resolved into healing + movement blessing through GAS effects."
+  },
+  "routing": {
+    "transmissionCinematicIds": [ "Cinematic.Narrative.Intro" ],
+    "subtitleCinematicIds": [ "Cinematic.Narrative.TrialReveal" ]
+  },
+  "variables": [
+    { "variableId": "trust", "label": "Trust", "accentHex": "#A7F3D0" },
+    { "variableId": "lore", "label": "Lore", "accentHex": "#93C5FD" },
+    { "variableId": "ending", "label": "Ending", "accentHex": "#FDE68A" }
+  ]
+}

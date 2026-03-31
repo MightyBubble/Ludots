@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -19,7 +16,6 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
@@ -29,6 +25,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using RelationshipShowcaseMod.Runtime;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -45,6 +42,7 @@ namespace Ludots.Tests.GAS.Production
             "LudotsCoreMod",
             "CoreInputMod",
             "CameraProfilesMod",
+            "NarrativeFrontendMod",
             "RelationshipShowcaseMod"
         };
 
@@ -52,22 +50,23 @@ namespace Ludots.Tests.GAS.Production
         public void RelationshipShowcase_PlayableAcceptance_WritesArtifacts()
         {
             string repoRoot = FindRepoRoot();
-            RelationshipShowcaseMod.Runtime.RelationshipShowcaseConfig showcaseConfig = LoadShowcaseConfig(repoRoot);
+            RelationshipShowcaseConfig showcaseConfig = LoadShowcaseConfig(repoRoot);
+            RelationshipShowcaseFrontendConfig frontendConfig = LoadFrontendConfig(repoRoot);
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "relationship-showcase");
             string screensDir = Path.Combine(artifactDir, "screens");
-            Directory.CreateDirectory(artifactDir);
-            Directory.CreateDirectory(screensDir);
+            AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 
             var timeline = new List<string>();
             var snapshots = new List<AcceptanceSnapshot>();
+            var frames = new List<UiAcceptanceEvidenceFrame>();
             var frameTimesMs = new List<double>();
             string selectedHero = showcaseConfig.Scenario.Heroes[0].Name;
             string enemyFocus = showcaseConfig.Presentation.EnemyFocusPendingText;
 
             using var engine = CreateEngine();
             var backend = GetInputBackend(engine);
-            var screen = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) as ScreenOverlayBuffer
-                ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
+            var uiRoot = engine.GetService(CoreServiceKeys.UIRoot) as UIRoot
+                ?? throw new InvalidOperationException("UIRoot missing.");
             var ground = engine.GetService(CoreServiceKeys.GroundOverlayBuffer) as GroundOverlayBuffer
                 ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
             var runtime = engine.GetService(CoreServiceKeys.RelationshipRuntime) as RelationshipRuntime
@@ -102,15 +101,16 @@ namespace Ludots.Tests.GAS.Production
             int synergyTagId = TagRegistry.GetId(showcaseConfig.Tags.Synergy);
             int focusTagId = TagRegistry.GetId(showcaseConfig.Tags.FocusedByEnemy);
 
-            IReadOnlyList<string> overlayText = ExtractScreenText(screen);
-            Assert.That(overlayText.Any(text => text.Contains(showcaseConfig.Presentation.TitlePrefix, StringComparison.Ordinal)), Is.True);
+            IReadOnlyList<string> uiText = AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot);
+            Assert.That(uiText.Any(text => text.Contains(frontendConfig.PromptRibbon.Title, StringComparison.Ordinal)), Is.True);
+            Assert.That(uiText.Any(text => text.Contains(frontendConfig.StatusPanel.Title, StringComparison.Ordinal)), Is.True);
             Assert.That(CountGroundOverlays(ground, GroundOverlayShape.Ring), Is.GreaterThanOrEqualTo(1));
-            CaptureSnapshot(engine, screen, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, "map_loaded", selectedHero, enemyFocus);
-            timeline.Add("[T+001] relationship_showcase booted with Peach Garden panel text and world highlight rings visible.");
+            CaptureSnapshot(engine, uiRoot, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, frames, "map_loaded", selectedHero, enemyFocus);
+            timeline.Add("[T+001] relationship_showcase booted with Peach Garden panel text mounted and GroundOverlayBuffer ring telemetry already live.");
 
             PressButton(engine, backend, "<Keyboard>/4", frameTimesMs);
-            Assert.That(ScreenContains(screen, showcaseConfig.Logs.RallyDenied), Is.True);
-            CaptureSnapshot(engine, screen, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, "guard_branch_rally_denied", selectedHero, enemyFocus);
+            Assert.That(AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text => text.Contains(showcaseConfig.Logs.RallyDenied, StringComparison.Ordinal)), Is.True);
+            CaptureSnapshot(engine, uiRoot, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, frames, "guard_branch_rally_denied", selectedHero, enemyFocus);
             timeline.Add("[T+002] Rally guard branch rejected because trust, oath, or synergy thresholds were still locked.");
 
             float guanShieldBeforeDoctrine = ReadAttribute(engine.World, guanYu, shieldId);
@@ -131,12 +131,12 @@ namespace Ludots.Tests.GAS.Production
             float zhangShieldAfterDoctrine = ReadAttribute(engine.World, zhangFei, shieldId);
             Assert.That(loyaltyToGuan, Is.GreaterThanOrEqualTo(60));
             Assert.That(loyaltyToZhang, Is.GreaterThanOrEqualTo(60));
-            Assert.That(ScreenContains(screen, $"{showcaseConfig.Presentation.TrustedLabel}: {showcaseConfig.Presentation.ReadyText}"), Is.True);
-            Assert.That(ScreenContains(screen, $"{showcaseConfig.Presentation.SynergyLabel}: {showcaseConfig.Presentation.ReadyText}"), Is.True);
+            Assert.That(AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text => text.Contains(showcaseConfig.Presentation.TrustedLabel, StringComparison.Ordinal)), Is.True);
+            Assert.That(AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text => text.Contains(showcaseConfig.Presentation.ReadyText, StringComparison.Ordinal)), Is.True);
             Assert.That(guanShieldAfterDoctrine, Is.GreaterThan(guanShieldBeforeDoctrine));
             Assert.That(zhangShieldAfterDoctrine, Is.GreaterThan(zhangShieldBeforeDoctrine));
             Assert.That(HasTag(engine.World, FindTeamEntity(engine, showcaseConfig.SynergyTeamId), synergyTagId), Is.True);
-            CaptureSnapshot(engine, screen, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, "doctrine_trust_synergy", selectedHero, enemyFocus);
+            CaptureSnapshot(engine, uiRoot, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, frames, "doctrine_trust_synergy", selectedHero, enemyFocus);
             timeline.Add($"[T+003] Liu Bei.Benevolence Doctrine -> Loyalty(Liu->Guan={loyaltyToGuan}, Liu->Zhang={loyaltyToZhang}) | Trusted callbacks fired | Shu synergy online.");
 
             float guanSpeedBeforeDrill = ReadAttribute(engine.World, guanYu, moveSpeedId);
@@ -156,16 +156,15 @@ namespace Ludots.Tests.GAS.Production
             float zhangSpeedAfterDrill = ReadAttribute(engine.World, zhangFei, moveSpeedId);
             Assert.That(guanToZhangSupport, Is.GreaterThanOrEqualTo(55));
             Assert.That(zhangToGuanSupport, Is.GreaterThanOrEqualTo(55));
-            Assert.That(ScreenContains(screen, $"{showcaseConfig.Presentation.OathBondLabel}: {showcaseConfig.Presentation.ReadyText}"), Is.True);
             Assert.That(guanSpeedAfterDrill, Is.GreaterThan(guanSpeedBeforeDrill));
             Assert.That(zhangSpeedAfterDrill, Is.GreaterThan(zhangSpeedBeforeDrill));
-            CaptureSnapshot(engine, screen, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, "oath_rank_up", selectedHero, enemyFocus);
+            CaptureSnapshot(engine, uiRoot, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, frames, "oath_rank_up", selectedHero, enemyFocus);
             timeline.Add($"[T+004] Guan Yu + Zhang Fei.Oath Drill -> Support rank crossed to {guanToZhangSupport}/{zhangToGuanSupport} and movement buffs landed through GAS.");
 
             PressButton(engine, backend, "<Keyboard>/tab", frameTimesMs);
             selectedHero = guanYuName;
-            Assert.That(ScreenContains(screen, $"{showcaseConfig.Presentation.SelectedHeroLabel}: {guanYuName}"), Is.True);
-            CaptureSnapshot(engine, screen, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, "selection_rotated", selectedHero, enemyFocus);
+            Assert.That(AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text => text.Contains(guanYuName, StringComparison.Ordinal)), Is.True);
+            CaptureSnapshot(engine, uiRoot, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, frames, "selection_rotated", selectedHero, enemyFocus);
             timeline.Add("[T+005] Player rotated focus with Tab to Guan Yu, proving the showcase is playable through authoritative input.");
 
             float guanHealthBeforeTaunt = ReadAttribute(engine.World, guanYu, healthId);
@@ -175,7 +174,8 @@ namespace Ludots.Tests.GAS.Production
                 frameTimesMs,
                 () =>
                     ReadAttribute(engine.World, guanYu, healthId) < guanHealthBeforeTaunt &&
-                    ScreenContains(screen, $"{showcaseConfig.Presentation.EnemyFocusLabel}: {guanYuName}"),
+                    AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Count(text => string.Equals(text, guanYuName, StringComparison.Ordinal)) >= 2 &&
+                    AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).All(text => !text.Contains(showcaseConfig.Presentation.EnemyFocusPendingText, StringComparison.Ordinal)),
                 maxFrames: 80);
 
             short captainThreat = runtime.GetMetric(rebelCaptain, guanYu, hostilityTypeId, threatId);
@@ -186,7 +186,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(spearmanThreat, Is.GreaterThanOrEqualTo(70));
             Assert.That(guanHealthAfterTaunt, Is.LessThan(guanHealthBeforeTaunt));
             Assert.That(HasTag(engine.World, guanYu, focusTagId), Is.True);
-            CaptureSnapshot(engine, screen, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, "threat_focus_and_enemy_strike", selectedHero, enemyFocus);
+            CaptureSnapshot(engine, uiRoot, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, frames, "threat_focus_and_enemy_strike", selectedHero, enemyFocus);
             timeline.Add($"[T+006] Guan Yu.Taunt -> Threat(Captain={captainThreat}, Spearman={spearmanThreat}) | enemy focus locked on Guan Yu | HP {guanHealthBeforeTaunt:0} -> {guanHealthAfterTaunt:0}.");
 
             float liuShieldBeforeRally = ReadAttribute(engine.World, liuBei, shieldId);
@@ -197,15 +197,16 @@ namespace Ludots.Tests.GAS.Production
             float zhangShieldAfterRally = ReadAttribute(engine.World, zhangFei, shieldId);
             Assert.That(liuShieldAfterRally, Is.GreaterThan(liuShieldBeforeRally));
             Assert.That(zhangShieldAfterRally, Is.GreaterThan(zhangShieldBeforeRally));
-            CaptureSnapshot(engine, screen, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, "rally_banner", selectedHero, enemyFocus);
+            CaptureSnapshot(engine, uiRoot, ground, runtime, metrics, showcaseConfig, socialBondTypeId, hostilityTypeId, snapshots, frames, "rally_banner", selectedHero, enemyFocus);
             timeline.Add($"[T+007] Guan Yu.Rally Banner converted relationship state into shared GAS buffs | Liu Shield {liuShieldBeforeRally:0}->{liuShieldAfterRally:0} | Zhang Shield {zhangShieldBeforeRally:0}->{zhangShieldAfterRally:0}.");
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
 
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl(snapshots));
-            File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, snapshots, frameTimesMs));
+            File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, snapshots, frames, frameTimesMs));
             File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid());
-            WriteAcceptanceScreenshots(snapshots, screensDir);
+            AcceptanceUiEvidenceWriter.WriteTimelineSheet(frames, screensDir, Path.Combine(screensDir, "timeline.png"), "Relationship showcase 5W1H screenshot flow");
+            AcceptanceUiEvidenceWriter.WriteFiveWOneHMarkdown("relationship-showcase", frames, Path.Combine(artifactDir, "5w1h.md"));
         }
 
         private static GameEngine CreateEngine()
@@ -333,14 +334,15 @@ namespace Ludots.Tests.GAS.Production
 
         private static void CaptureSnapshot(
             GameEngine engine,
-            ScreenOverlayBuffer screen,
+            UIRoot uiRoot,
             GroundOverlayBuffer ground,
             RelationshipRuntime runtime,
             RelationshipMetricRegistry metrics,
-            RelationshipShowcaseMod.Runtime.RelationshipShowcaseConfig showcaseConfig,
+            RelationshipShowcaseConfig showcaseConfig,
             int socialBondTypeId,
             int hostilityTypeId,
             List<AcceptanceSnapshot> snapshots,
+            List<UiAcceptanceEvidenceFrame> frames,
             string step,
             string selectedHero,
             string enemyFocus)
@@ -361,27 +363,36 @@ namespace Ludots.Tests.GAS.Production
                 selectedEntity = liuBei;
             }
 
-            var overlayCounts = new Dictionary<string, int>(StringComparer.Ordinal)
-            {
-                ["screen"] = screen.Count,
-                ["ground"] = ground.Count,
-                ["rings"] = CountGroundOverlays(ground, GroundOverlayShape.Ring)
-            };
+            (string when, string who, string what, string where, string why, string how) = GetEvidenceMetadata(step);
+            UiAcceptanceEvidenceFrame frame = AcceptanceUiEvidenceWriter.CaptureFrame(
+                uiRoot,
+                Path.Combine(FindRepoRoot(), "artifacts", "acceptance", "relationship-showcase", "screens"),
+                snapshots.Count + 1,
+                step,
+                when,
+                who,
+                what,
+                where,
+                why,
+                how);
+            frames.Add(frame);
 
             snapshots.Add(new AcceptanceSnapshot(
                 Step: step,
+                ScreenshotFileName: frame.ScreenshotFileName,
                 SelectedHero: selectedHero,
                 EnemyFocus: enemyFocus,
-                TrustedUnlocked: ScreenContains(screen, $"{showcaseConfig.Presentation.TrustedLabel}: {showcaseConfig.Presentation.ReadyText}"),
-                OathBondUnlocked: ScreenContains(screen, $"{showcaseConfig.Presentation.OathBondLabel}: {showcaseConfig.Presentation.ReadyText}"),
-                SynergyActive: ScreenContains(screen, $"{showcaseConfig.Presentation.SynergyLabel}: {showcaseConfig.Presentation.ReadyText}"),
+                TrustedUnlocked: AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text => text.Contains(showcaseConfig.Presentation.TrustedLabel, StringComparison.Ordinal)) &&
+                                 AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot).Any(text => text.Contains(showcaseConfig.Presentation.ReadyText, StringComparison.Ordinal)),
+                OathBondUnlocked: HasTag(engine.World, guanYu, TagRegistry.GetId(showcaseConfig.Tags.OathBond)) &&
+                                  HasTag(engine.World, zhangFei, TagRegistry.GetId(showcaseConfig.Tags.OathBond)),
+                SynergyActive: HasTag(engine.World, FindTeamEntity(engine, showcaseConfig.SynergyTeamId), TagRegistry.GetId(showcaseConfig.Tags.Synergy)),
                 LoyaltyLiuToGuan: runtime.GetMetric(liuBei, guanYu, socialBondTypeId, loyaltyId),
                 LoyaltyLiuToZhang: runtime.GetMetric(liuBei, zhangFei, socialBondTypeId, loyaltyId),
                 SupportGuanToZhang: runtime.GetMetric(guanYu, zhangFei, socialBondTypeId, supportId),
                 ThreatCaptainToSelected: runtime.GetMetric(rebelCaptain, selectedEntity, hostilityTypeId, threatId),
-                OverlayCounts: overlayCounts,
-                ScreenText: ExtractScreenText(screen).TakeLast(8).ToArray(),
-                RecentLog: ExtractScreenText(screen).Where(line => line.StartsWith("[T+", StringComparison.Ordinal)).TakeLast(5).ToArray(),
+                GroundRingCount: CountGroundOverlays(ground, GroundOverlayShape.Ring),
+                UiText: frame.UiHead,
                 Heroes: new[]
                 {
                     BuildHeroSnapshot(engine.World, liuBei, shieldId, healthId),
@@ -390,7 +401,7 @@ namespace Ludots.Tests.GAS.Production
             }));
         }
 
-        private static RelationshipShowcaseMod.Runtime.RelationshipShowcaseConfig LoadShowcaseConfig(string repoRoot)
+        private static RelationshipShowcaseConfig LoadShowcaseConfig(string repoRoot)
         {
             string path = Path.Combine(
                 repoRoot,
@@ -401,7 +412,22 @@ namespace Ludots.Tests.GAS.Production
                 "assets",
                 "RelationshipShowcaseConfig.json");
             using var stream = File.OpenRead(path);
-            return RelationshipShowcaseMod.Runtime.RelationshipShowcaseConfig.Load(stream);
+            return RelationshipShowcaseConfig.Load(stream);
+        }
+
+        private static RelationshipShowcaseFrontendConfig LoadFrontendConfig(string repoRoot)
+        {
+            string path = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "relationship",
+                "RelationshipShowcaseMod",
+                "assets",
+                "Frontend",
+                "relationship_frontend.json");
+            using var stream = File.OpenRead(path);
+            return RelationshipShowcaseFrontendConfig.Load(stream);
         }
 
         private static HeroSnapshot BuildHeroSnapshot(World world, Entity entity, int shieldId, int healthId)
@@ -415,48 +441,6 @@ namespace Ludots.Tests.GAS.Production
                 name.Value,
                 ReadAttribute(world, entity, healthId),
                 ReadAttribute(world, entity, shieldId));
-        }
-
-        private static IReadOnlyList<string> ExtractScreenText(ScreenOverlayBuffer overlay)
-        {
-            var lines = new List<string>(overlay.Count);
-            ReadOnlySpan<ScreenOverlayItem> items = overlay.GetSpan();
-            for (int i = 0; i < items.Length; i++)
-            {
-                ref readonly ScreenOverlayItem item = ref items[i];
-                if (item.Kind != ScreenOverlayItemKind.Text)
-                {
-                    continue;
-                }
-
-                string? text = overlay.GetString(item.StringId);
-                if (!string.IsNullOrWhiteSpace(text))
-                {
-                    lines.Add(text);
-                }
-            }
-
-            return lines;
-        }
-
-        private static bool ScreenContains(ScreenOverlayBuffer overlay, string fragment)
-        {
-            return ExtractScreenText(overlay).Any(line => line.Contains(fragment, StringComparison.Ordinal));
-        }
-
-        private static string ReadPanelValue(ScreenOverlayBuffer overlay, string prefix)
-        {
-            IReadOnlyList<string> lines = ExtractScreenText(overlay);
-            for (int i = lines.Count - 1; i >= 0; i--)
-            {
-                string line = lines[i];
-                if (line.StartsWith(prefix, StringComparison.Ordinal))
-                {
-                    return line[prefix.Length..].Trim();
-                }
-            }
-
-            return string.Empty;
         }
 
         private static int CountGroundOverlays(GroundOverlayBuffer ground, GroundOverlayShape shape)
@@ -522,7 +506,9 @@ namespace Ludots.Tests.GAS.Production
                 lines.Add(JsonSerializer.Serialize(new
                 {
                     event_id = $"relationship-showcase-{i + 1:000}",
+                    logical_time = $"T+{i + 1:000}",
                     step = snapshot.Step,
+                    screenshot = snapshot.ScreenshotFileName,
                     selected_hero = snapshot.SelectedHero,
                     enemy_focus = snapshot.EnemyFocus,
                     trusted_unlocked = snapshot.TrustedUnlocked,
@@ -532,9 +518,8 @@ namespace Ludots.Tests.GAS.Production
                     loyalty_liu_to_zhang = snapshot.LoyaltyLiuToZhang,
                     support_guan_to_zhang = snapshot.SupportGuanToZhang,
                     threat_captain_to_selected = snapshot.ThreatCaptainToSelected,
-                    overlay_counts = snapshot.OverlayCounts,
-                    screen_text = snapshot.ScreenText,
-                    recent_log = snapshot.RecentLog,
+                    ground_ring_count = snapshot.GroundRingCount,
+                    ui_text = snapshot.UiText,
                     heroes = snapshot.Heroes,
                     status = "done"
                 }));
@@ -546,18 +531,27 @@ namespace Ludots.Tests.GAS.Production
         private static string BuildBattleReport(
             IReadOnlyList<string> timeline,
             IReadOnlyList<AcceptanceSnapshot> snapshots,
+            IReadOnlyList<UiAcceptanceEvidenceFrame> frames,
             IReadOnlyList<double> frameTimesMs)
         {
             AcceptanceSnapshot final = snapshots[^1];
             double medianTick = Median(frameTimesMs);
             double maxTick = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
+            string buildStamp = typeof(GameEngine).Assembly.GetName().Version?.ToString() ?? "unknown";
 
             var sb = new StringBuilder();
             sb.AppendLine("# Scenario Card: relationship-showcase");
             sb.AppendLine();
+            sb.AppendLine("## Header");
+            sb.AppendLine("- scenario: `relationship-showcase`");
+            sb.AppendLine($"- build: `GameEngine {buildStamp}`");
+            sb.AppendLine($"- execution_timestamp_utc: `{DateTimeOffset.UtcNow:O}`");
+            sb.AppendLine("- map: `relationship_showcase`");
+            sb.AppendLine("- clock: `fixed 1/60s`");
+            sb.AppendLine();
             sb.AppendLine("## Intent");
             sb.AppendLine("- Player goal: prove one reusable relationship runtime can drive CRPG trust, JRPG support rank, auto-battler synergy tiers, and Three Kingdoms oath fantasy inside a playable Ludots mod.");
-            sb.AppendLine("- Gameplay domain: ECS relationship edges, team meta-entity synergy, GAS effects, Trigger callbacks, input-driven showcase presentation, and deterministic battle telemetry.");
+            sb.AppendLine("- Gameplay domain: ECS relationship edges, team meta-entity synergy, GAS effects, Trigger callbacks, authoritative input, ground overlay rings, and one reusable narrative frontend scene.");
             sb.AppendLine();
             sb.AppendLine("## Determinism Inputs");
             sb.AppendLine("- Seed: none");
@@ -567,7 +561,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- Input source: production `InputConfigPipelineLoader` + `PlayerInputHandler` backed by a deterministic keyboard backend.");
             sb.AppendLine();
             sb.AppendLine("## Action Script");
-            sb.AppendLine("1. Load the Peach Garden showcase and confirm the relationship panel plus world rings render.");
+            sb.AppendLine("1. Load the Peach Garden showcase, confirm the relationship panel mounts, and verify ground ring telemetry is non-zero.");
             sb.AppendLine("2. Trigger the rally guard branch before trust, oath, and synergy are ready.");
             sb.AppendLine("3. Cast Benevolence Doctrine to unlock CRPG-style trust thresholds and auto-battler team synergy.");
             sb.AppendLine("4. Run Oath Drill to push JRPG-style support rank over the unlock threshold.");
@@ -576,16 +570,18 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("## Expected Outcomes");
             sb.AppendLine("- Primary success condition: relationship callbacks, team synergy, Trigger events, and GAS effects all resolve on the production runtime path.");
             sb.AppendLine("- Failure branch condition: pressing rally before unlocks exist must deny cleanly without granting buffs.");
-            sb.AppendLine("- Key metrics: loyalty, support, threat, synergy state, selected/focused hero, shield/health deltas, overlay visibility, and recent battle log lines.");
+            sb.AppendLine("- Key metrics: loyalty, support, threat, synergy state, selected/focused hero, shield/health deltas, UI surface text, and ground ring telemetry.");
             sb.AppendLine();
             sb.AppendLine("## Evidence Artifacts");
             sb.AppendLine("- `artifacts/acceptance/relationship-showcase/trace.jsonl`");
             sb.AppendLine("- `artifacts/acceptance/relationship-showcase/battle-report.md`");
             sb.AppendLine("- `artifacts/acceptance/relationship-showcase/path.mmd`");
-            sb.AppendLine("- `artifacts/acceptance/relationship-showcase/screens/01_doctrine_trust_synergy.png`");
-            sb.AppendLine("- `artifacts/acceptance/relationship-showcase/screens/02_rally_banner.png`");
+            sb.AppendLine("- `artifacts/acceptance/relationship-showcase/5w1h.md`");
+            for (int i = 0; i < frames.Count; i++)
+            {
+                sb.AppendLine($"- `artifacts/acceptance/relationship-showcase/screens/{frames[i].ScreenshotFileName}`");
+            }
             sb.AppendLine("- `artifacts/acceptance/relationship-showcase/screens/timeline.png`");
-            sb.AppendLine("- `artifacts/techdebt/2026-03-23-raylib-relationship-showcase-launch.md`");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
             for (int i = 0; i < timeline.Count; i++)
@@ -605,162 +601,25 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- max headless tick: `{maxTick:F3}ms`");
             sb.AppendLine($"- final loyalty: `Liu->Guan {final.LoyaltyLiuToGuan}`, `Liu->Zhang {final.LoyaltyLiuToZhang}`");
             sb.AppendLine($"- final support: `Guan->Zhang {final.SupportGuanToZhang}`");
-            sb.AppendLine($"- final overlay counts: `screen={final.OverlayCounts["screen"]}`, `ground={final.OverlayCounts["ground"]}`, `rings={final.OverlayCounts["rings"]}`");
+            sb.AppendLine($"- final ground rings: `{final.GroundRingCount}`");
+            sb.AppendLine($"- final ui excerpt: `{string.Join(" | ", final.UiText.Take(5))}`");
             sb.AppendLine("- reusable wiring: `RelationshipRuntime`, `RelationshipChangeBuffer`, `RelationshipCatalogPipelineLoader`, `RelationshipCatalogInstaller`, `RelationshipProcessingSystem`, `RelationshipCallbackProcessor`, `RelationshipSynergyProcessor`, `TriggerManager`, `EffectRequestQueue`, `TeamEntityLookup`");
-            sb.AppendLine();
-            sb.AppendLine("## Open Tech Debt");
-            sb.AppendLine("- debt_id: `TD-2026-03-23-raylib-relationship-showcase-launch`");
-            sb.AppendLine("- status: `open`");
-            sb.AppendLine("- note: headless acceptance and PNG evidence are complete, but live raylib launch still hits a host-side `Arch` assembly load failure recorded in `artifacts/techdebt/2026-03-23-raylib-relationship-showcase-launch.md`.");
             return sb.ToString();
         }
 
-        private static void WriteAcceptanceScreenshots(IReadOnlyList<AcceptanceSnapshot> snapshots, string screensDir)
+        private static (string When, string Who, string What, string Where, string Why, string How) GetEvidenceMetadata(string step)
         {
-            AcceptanceSnapshot doctrine = GetSnapshotOrThrow(snapshots, "doctrine_trust_synergy");
-            AcceptanceSnapshot rally = GetSnapshotOrThrow(snapshots, "rally_banner");
-
-            WriteAcceptanceSnapshotPng(doctrine, Path.Combine(screensDir, "01_doctrine_trust_synergy.png"));
-            WriteAcceptanceSnapshotPng(rally, Path.Combine(screensDir, "02_rally_banner.png"));
-            WriteAcceptanceTimelinePng(snapshots, Path.Combine(screensDir, "timeline.png"));
-        }
-
-        private static AcceptanceSnapshot GetSnapshotOrThrow(IReadOnlyList<AcceptanceSnapshot> snapshots, string step)
-        {
-            AcceptanceSnapshot? match = snapshots.FirstOrDefault(snapshot => string.Equals(snapshot.Step, step, StringComparison.Ordinal));
-            if (match == null)
+            return step switch
             {
-                throw new InvalidOperationException($"Acceptance snapshot '{step}' was not captured.");
-            }
-
-            return match;
-        }
-
-        private static void WriteAcceptanceSnapshotPng(AcceptanceSnapshot snapshot, string path)
-        {
-            using var bitmap = new Bitmap(1600, 900);
-            using var graphics = Graphics.FromImage(bitmap);
-            graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            graphics.Clear(Color.FromArgb(10, 16, 24));
-
-            using var panelBrush = new SolidBrush(Color.FromArgb(18, 30, 44));
-            using var panelPen = new Pen(Color.FromArgb(70, 122, 168), 2f);
-            using var titleBrush = new SolidBrush(Color.FromArgb(246, 212, 108));
-            using var bodyBrush = new SolidBrush(Color.White);
-            using var minorBrush = new SolidBrush(Color.FromArgb(188, 205, 222));
-            using var accentBrush = new SolidBrush(Color.FromArgb(119, 215, 173));
-            using var titleFont = new Font("Consolas", 22f, FontStyle.Bold, GraphicsUnit.Pixel);
-            using var bodyFont = new Font("Consolas", 15f, FontStyle.Regular, GraphicsUnit.Pixel);
-            using var minorFont = new Font("Consolas", 13f, FontStyle.Regular, GraphicsUnit.Pixel);
-            using var accentFont = new Font("Consolas", 14f, FontStyle.Bold, GraphicsUnit.Pixel);
-
-            using (GraphicsPath panelPath = CreateRoundedRect(new RectangleF(36, 36, 1528, 828), 18f))
-            {
-                graphics.FillPath(panelBrush, panelPath);
-                graphics.DrawPath(panelPen, panelPath);
-            }
-
-            graphics.DrawString($"Relationship Showcase | {snapshot.Step}", titleFont, titleBrush, 72, 72);
-            graphics.DrawString($"Selected Hero: {snapshot.SelectedHero}", bodyFont, bodyBrush, 72, 122);
-            graphics.DrawString($"Enemy Focus: {snapshot.EnemyFocus}", bodyFont, bodyBrush, 72, 154);
-            graphics.DrawString($"Liu->Guan Loyalty: {snapshot.LoyaltyLiuToGuan}   Liu->Zhang Loyalty: {snapshot.LoyaltyLiuToZhang}", bodyFont, bodyBrush, 72, 196);
-            graphics.DrawString($"Guan->Zhang Support: {snapshot.SupportGuanToZhang}   Captain Threat: {snapshot.ThreatCaptainToSelected}", bodyFont, bodyBrush, 72, 228);
-            graphics.DrawString($"Overlay Counts: screen={snapshot.OverlayCounts["screen"]} ground={snapshot.OverlayCounts["ground"]} rings={snapshot.OverlayCounts["rings"]}", minorFont, minorBrush, 72, 262);
-
-            DrawStatusPill(graphics, 72, 300, snapshot.TrustedUnlocked ? "Trusted Ready" : "Trusted Locked", snapshot.TrustedUnlocked);
-            DrawStatusPill(graphics, 280, 300, snapshot.OathBondUnlocked ? "Oath Bond Ready" : "Oath Bond Locked", snapshot.OathBondUnlocked);
-            DrawStatusPill(graphics, 538, 300, snapshot.SynergyActive ? "Synergy Ready" : "Synergy Locked", snapshot.SynergyActive);
-
-            graphics.DrawString("Hero State", accentFont, accentBrush, 72, 386);
-            int heroY = 458;
-            for (int i = 0; i < snapshot.Heroes.Count; i++)
-            {
-                HeroSnapshot hero = snapshot.Heroes[i];
-                graphics.DrawString($"{hero.Name}: HP {hero.Health:0}  Shield {hero.Shield:0}", bodyFont, bodyBrush, 72, heroY);
-                heroY += 28;
-            }
-
-            graphics.DrawString("Recent Battle Log", accentFont, accentBrush, 72, 560);
-            int recentLogY = 638;
-            for (int i = 0; i < snapshot.RecentLog.Count; i++)
-            {
-                graphics.DrawString(snapshot.RecentLog[i], minorFont, minorBrush, 72, recentLogY);
-                recentLogY += 24;
-            }
-
-            graphics.DrawString("Visible Panel Text", accentFont, accentBrush, 820, 122);
-            int panelY = 182;
-            for (int i = 0; i < snapshot.ScreenText.Count; i++)
-            {
-                graphics.DrawString(snapshot.ScreenText[i], minorFont, minorBrush, 820, panelY);
-                panelY += 24;
-            }
-
-            bitmap.Save(path, ImageFormat.Png);
-        }
-
-        private static void WriteAcceptanceTimelinePng(IReadOnlyList<AcceptanceSnapshot> snapshots, string path)
-        {
-            if (snapshots.Count == 0)
-            {
-                return;
-            }
-
-            int height = Math.Max(320, 120 + snapshots.Count * 92);
-            using var bitmap = new Bitmap(1600, height);
-            using var graphics = Graphics.FromImage(bitmap);
-            graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            graphics.Clear(Color.FromArgb(8, 12, 18));
-
-            using var titleBrush = new SolidBrush(Color.White);
-            using var stepBrush = new SolidBrush(Color.FromArgb(246, 212, 108));
-            using var detailBrush = new SolidBrush(Color.FromArgb(188, 205, 222));
-            using var boxBrush = new SolidBrush(Color.FromArgb(20, 30, 44));
-            using var boxPen = new Pen(Color.FromArgb(53, 83, 107), 1.5f);
-            using var titleFont = new Font("Consolas", 20f, FontStyle.Bold, GraphicsUnit.Pixel);
-            using var stepFont = new Font("Consolas", 15f, FontStyle.Bold, GraphicsUnit.Pixel);
-            using var detailFont = new Font("Consolas", 12f, FontStyle.Regular, GraphicsUnit.Pixel);
-
-            graphics.DrawString("Relationship showcase acceptance timeline", titleFont, titleBrush, 24, 18);
-            int y = 94;
-            for (int i = 0; i < snapshots.Count; i++)
-            {
-                AcceptanceSnapshot snapshot = snapshots[i];
-                using GraphicsPath boxPath = CreateRoundedRect(new RectangleF(40, y - 30, 1520, 68), 12f);
-                graphics.FillPath(boxBrush, boxPath);
-                graphics.DrawPath(boxPen, boxPath);
-                graphics.DrawString($"{i + 1:000} {snapshot.Step}", stepFont, stepBrush, 68, y - 12);
-                graphics.DrawString($"selected={snapshot.SelectedHero} | focus={snapshot.EnemyFocus} | trust={snapshot.TrustedUnlocked} | oath={snapshot.OathBondUnlocked} | synergy={snapshot.SynergyActive} | support={snapshot.SupportGuanToZhang} | threat={snapshot.ThreatCaptainToSelected}", detailFont, detailBrush, 420, y - 8);
-                y += 92;
-            }
-
-            bitmap.Save(path, ImageFormat.Png);
-        }
-
-        private static void DrawStatusPill(Graphics graphics, float x, float y, string label, bool active)
-        {
-            using var fill = new SolidBrush(active ? Color.FromArgb(44, 108, 82) : Color.FromArgb(84, 56, 56));
-            using var stroke = new Pen(active ? Color.FromArgb(119, 215, 173) : Color.FromArgb(227, 128, 128), 1.5f);
-            using var textBrush = new SolidBrush(Color.White);
-            using var textFont = new Font("Consolas", 13f, FontStyle.Regular, GraphicsUnit.Pixel);
-
-            float width = 180f + label.Length * 2f;
-            using GraphicsPath pillPath = CreateRoundedRect(new RectangleF(x, y, width, 38f), 19f);
-            graphics.FillPath(fill, pillPath);
-            graphics.DrawPath(stroke, pillPath);
-            graphics.DrawString(label, textFont, textBrush, x + 16f, y + 10f);
-        }
-
-        private static GraphicsPath CreateRoundedRect(RectangleF rect, float radius)
-        {
-            float diameter = radius * 2f;
-            var path = new GraphicsPath();
-            path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
-            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
-            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
-            path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
-            path.CloseFigure();
-            return path;
+                "map_loaded" => ("T+001", "Liu Bei, Guan Yu, Zhang Fei, and the shared relationship HUD", "Boot the showcase and confirm faction state, named bonds, notification stack, and threat banner while ring telemetry is already active.", "relationship_showcase", "Verify the shared frontend is mounted before any relationship action mutates runtime state.", "Load the real mod set, tick the engine, snapshot the mounted UIRoot scene, and record GroundOverlayBuffer ring counts beside the screenshot."),
+                "guard_branch_rally_denied" => ("T+002", "Guan Yu's rally input and the locked relationship state", "Trigger the rally guard branch before trust, oath, and synergy unlock.", "The Peach Garden formation before thresholds are met.", "Prove the runtime can deny a branch cleanly without leaking buffs.", "Press Rally immediately and wait for the denial message to surface on the frontend."),
+                "doctrine_trust_synergy" => ("T+003", "Liu Bei and the doctrine-driven trust state", "Cast Benevolence Doctrine and show trust plus synergy thresholds crossing together.", "The center formation after doctrine resolves.", "Validate CRPG trust callbacks and auto-battler synergy reuse the same runtime edges.", "Apply doctrine through authoritative input, then wait for loyalty metrics, synergy tags, and shield buffs."),
+                "oath_rank_up" => ("T+004", "Guan Yu, Zhang Fei, and the oath support ladder", "Run Oath Drill and capture the JRPG-style support rank upgrade.", "The brotherhood formation while the notebook and flow review remain visible.", "Prove support-rank style progression is just another projection of the same relationship runtime.", "Trigger drill input and wait until both support metrics cross the unlock threshold."),
+                "selection_rotated" => ("T+005", "The selected hero panel and Guan Yu focus", "Rotate player focus with Tab and show the frontend updating the selected hero.", "The same tactical setup with authoritative input still active.", "Demonstrate the frontend reflects gameplay-owned selection instead of owning selection itself.", "Press Tab and snapshot the shared status panel once Guan Yu becomes the active hero."),
+                "threat_focus_and_enemy_strike" => ("T+006", "Guan Yu, enemy focus, and the threat banner", "Taunt into enemy focus and capture the strike feedback on the threat surfaces.", "The battlefield after hostility metrics spike onto Guan Yu.", "Validate Detroit-like consequence visibility and RTS/4X threat readability through the same projection kit.", "Apply Taunt, wait for threat metrics and enemy strike damage, then snapshot the updated frontend."),
+                "rally_banner" => ("T+007", "Guan Yu, the brotherhood buffs, and the completed readiness stack", "Cash out the unlocked relationship state into Rally Banner buffs.", "The Peach Garden formation after trust, oath, and synergy are all online.", "Show relationship state can convert into reusable GAS outcomes once every gate is satisfied.", "Press Rally after all thresholds are live and verify shields rise while the frontend reflects the pay-off."),
+                _ => ($"T+{step}", "Relationship showcase actors", "Capture the current relationship frontend state.", "The active showcase map.", "Keep the screenshot flow auditable.", "Snapshot the mounted UIRoot scene.")
+            };
         }
 
         private static string BuildPathMermaid()
@@ -768,7 +627,7 @@ namespace Ludots.Tests.GAS.Production
             return string.Join(Environment.NewLine, new[]
             {
                 "flowchart TD",
-                "    A[Load relationship_showcase -> panel and rings visible] --> B{Press Rally before unlocks?}",
+                "    A[Load relationship_showcase -> panel mounts and ring telemetry is live] --> B{Press Rally before unlocks?}",
                 "    B -- yes --> C[Guard branch: deny rally and keep buffs locked]",
                 "    B -- no --> D[Doctrine: loyalty thresholds cross -> Trusted callbacks fire]",
                 "    C --> D",
@@ -818,6 +677,7 @@ namespace Ludots.Tests.GAS.Production
 
         private sealed record AcceptanceSnapshot(
             string Step,
+            string ScreenshotFileName,
             string SelectedHero,
             string EnemyFocus,
             bool TrustedUnlocked,
@@ -827,9 +687,8 @@ namespace Ludots.Tests.GAS.Production
             short LoyaltyLiuToZhang,
             short SupportGuanToZhang,
             short ThreatCaptainToSelected,
-            IReadOnlyDictionary<string, int> OverlayCounts,
-            IReadOnlyList<string> ScreenText,
-            IReadOnlyList<string> RecentLog,
+            int GroundRingCount,
+            IReadOnlyList<string> UiText,
             IReadOnlyList<HeroSnapshot> Heroes);
 
         private sealed record HeroSnapshot(

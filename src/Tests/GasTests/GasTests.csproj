@@ -43,6 +43,7 @@
     <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraBootstrapMod\CameraBootstrapMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraProfilesMod\CameraProfilesMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\camera\VirtualCameraShotsMod\VirtualCameraShotsMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\narrativefrontend\NarrativeFrontendMod\NarrativeFrontendMod.csproj" />
     <ProjectReference Include="..\..\..\mods\VersionMismatchMod\VersionMismatchMod.csproj" />
     <ProjectReference Include="..\..\..\mods\FourXDemoMod\FourXDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\TcgDemoMod\TcgDemoMod.csproj" />

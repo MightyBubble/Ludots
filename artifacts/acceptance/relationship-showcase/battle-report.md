@@ -1,18 +1,25 @@
 # Scenario Card: relationship-showcase
 
+## Header
+- scenario: `relationship-showcase`
+- build: `GameEngine 1.0.0.0`
+- execution_timestamp_utc: `2026-03-25T13:44:07.2187180+00:00`
+- map: `relationship_showcase`
+- clock: `fixed 1/60s`
+
 ## Intent
 - Player goal: prove one reusable relationship runtime can drive CRPG trust, JRPG support rank, auto-battler synergy tiers, and Three Kingdoms oath fantasy inside a playable Ludots mod.
-- Gameplay domain: ECS relationship edges, team meta-entity synergy, GAS effects, Trigger callbacks, input-driven showcase presentation, and deterministic battle telemetry.
+- Gameplay domain: ECS relationship edges, team meta-entity synergy, GAS effects, Trigger callbacks, authoritative input, ground overlay rings, and one reusable narrative frontend scene.
 
 ## Determinism Inputs
 - Seed: none
 - Map: `relationship_showcase`
-- Mods: `LudotsCoreMod`, `CoreInputMod`, `CameraProfilesMod`, `RelationshipShowcaseMod`
+- Mods: `LudotsCoreMod`, `CoreInputMod`, `CameraProfilesMod`, `NarrativeFrontendMod`, `RelationshipShowcaseMod`
 - Clock profile: fixed `1/60s`, headless `GameEngine.Tick()` loop.
 - Input source: production `InputConfigPipelineLoader` + `PlayerInputHandler` backed by a deterministic keyboard backend.
 
 ## Action Script
-1. Load the Peach Garden showcase and confirm the relationship panel plus world rings render.
+1. Load the Peach Garden showcase, confirm the relationship panel mounts, and verify ground ring telemetry is non-zero.
 2. Trigger the rally guard branch before trust, oath, and synergy are ready.
 3. Cast Benevolence Doctrine to unlock CRPG-style trust thresholds and auto-battler team synergy.
 4. Run Oath Drill to push JRPG-style support rank over the unlock threshold.
@@ -21,19 +28,24 @@
 ## Expected Outcomes
 - Primary success condition: relationship callbacks, team synergy, Trigger events, and GAS effects all resolve on the production runtime path.
 - Failure branch condition: pressing rally before unlocks exist must deny cleanly without granting buffs.
-- Key metrics: loyalty, support, threat, synergy state, selected/focused hero, shield/health deltas, overlay visibility, and recent battle log lines.
+- Key metrics: loyalty, support, threat, synergy state, selected/focused hero, shield/health deltas, UI surface text, and ground ring telemetry.
 
 ## Evidence Artifacts
 - `artifacts/acceptance/relationship-showcase/trace.jsonl`
 - `artifacts/acceptance/relationship-showcase/battle-report.md`
 - `artifacts/acceptance/relationship-showcase/path.mmd`
-- `artifacts/acceptance/relationship-showcase/screens/01_doctrine_trust_synergy.png`
-- `artifacts/acceptance/relationship-showcase/screens/02_rally_banner.png`
+- `artifacts/acceptance/relationship-showcase/5w1h.md`
+- `artifacts/acceptance/relationship-showcase/screens/001_map_loaded.png`
+- `artifacts/acceptance/relationship-showcase/screens/002_guard_branch_rally_denied.png`
+- `artifacts/acceptance/relationship-showcase/screens/003_doctrine_trust_synergy.png`
+- `artifacts/acceptance/relationship-showcase/screens/004_oath_rank_up.png`
+- `artifacts/acceptance/relationship-showcase/screens/005_selection_rotated.png`
+- `artifacts/acceptance/relationship-showcase/screens/006_threat_focus_and_enemy_strike.png`
+- `artifacts/acceptance/relationship-showcase/screens/007_rally_banner.png`
 - `artifacts/acceptance/relationship-showcase/screens/timeline.png`
-- `artifacts/techdebt/2026-03-23-raylib-relationship-showcase-launch.md`
 
 ## Timeline
-- [T+001] relationship_showcase booted with Peach Garden panel text and world highlight rings visible.
+- [T+001] relationship_showcase booted with Peach Garden panel text mounted and GroundOverlayBuffer ring telemetry already live.
 - [T+002] Rally guard branch rejected because trust, oath, or synergy thresholds were still locked.
 - [T+003] Liu Bei.Benevolence Doctrine -> Loyalty(Liu->Guan=65, Liu->Zhang=65) | Trusted callbacks fired | Shu synergy online.
 - [T+004] Guan Yu + Zhang Fei.Oath Drill -> Support rank crossed to 60/60 and movement buffs landed through GAS.
@@ -48,14 +60,10 @@
 
 ## Summary Stats
 - snapshots captured: `7`
-- median headless tick: `0.099ms`
-- max headless tick: `14.239ms`
+- median headless tick: `0.611ms`
+- max headless tick: `21.613ms`
 - final loyalty: `Liu->Guan 65`, `Liu->Zhang 65`
 - final support: `Guan->Zhang 60`
-- final overlay counts: `screen=1512`, `ground=2`, `rings=2`
+- final ground rings: `2`
+- final ui excerpt: `Faction State | Peach Garden Covenant | Selected Hero | Guan Yu | Enemy Focus`
 - reusable wiring: `RelationshipRuntime`, `RelationshipChangeBuffer`, `RelationshipCatalogPipelineLoader`, `RelationshipCatalogInstaller`, `RelationshipProcessingSystem`, `RelationshipCallbackProcessor`, `RelationshipSynergyProcessor`, `TriggerManager`, `EffectRequestQueue`, `TeamEntityLookup`
-
-## Open Tech Debt
-- debt_id: `TD-2026-03-23-raylib-relationship-showcase-launch`
-- status: `open`
-- note: headless acceptance and PNG evidence are complete, but live raylib launch still hits a host-side `Arch` assembly load failure recorded in `artifacts/techdebt/2026-03-23-raylib-relationship-showcase-launch.md`.
