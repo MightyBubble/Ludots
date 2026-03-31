@@ -1,4 +1,5 @@
 using System;
+using EntityInfoPanelsMod.Insight;
 
 namespace EntityInfoPanelsMod;
 
@@ -31,6 +32,26 @@ public sealed partial class EntityInfoPanelService
         for (int i = 0; i < MaxGasLinesPerPanel; i++)
         {
             _gasLines[lineBase + i] = string.Empty;
+        }
+    }
+
+    private void ClearInsightState(int slot)
+    {
+        _insightProfileIndices[slot] = 0;
+        _insightStatCounts[slot] = 0;
+        _insightActionCounts[slot] = 0;
+
+        int statBase = slot * MaxInsightStatsPerPanel;
+        for (int i = 0; i < MaxInsightStatsPerPanel; i++)
+        {
+            _insightStatCurrentValues[statBase + i] = 0f;
+            _insightStatBaseValues[statBase + i] = 0f;
+        }
+
+        int actionBase = slot * MaxInsightActionsPerPanel;
+        for (int i = 0; i < MaxInsightActionsPerPanel; i++)
+        {
+            _insightActionFlags[actionBase + i] = 0;
         }
     }
 
@@ -73,6 +94,9 @@ public sealed partial class EntityInfoPanelService
         return dirty;
     }
 
+    private static int InsightStatIndex(int slot, int statIndex) => (slot * MaxInsightStatsPerPanel) + statIndex;
+    private static int InsightActionIndex(int slot, int actionIndex) => (slot * MaxInsightActionsPerPanel) + actionIndex;
+
     private void SetComponentLine(int slot, int lineIndex, string text)
     {
         if ((uint)lineIndex < (uint)MaxComponentLinesPerPanel)
@@ -85,6 +109,45 @@ public sealed partial class EntityInfoPanelService
     {
         return (uint)lineIndex < (uint)MaxGasLinesPerPanel &&
                SetString(_gasLines, GasLineIndex(slot, lineIndex), text);
+    }
+
+    private bool SetInsightProfileIndex(int slot, int profileIndex)
+    {
+        return SetInt(_insightProfileIndices, slot, profileIndex);
+    }
+
+    private bool SetInsightStatCount(int slot, int count)
+    {
+        return SetInt(_insightStatCounts, slot, count);
+    }
+
+    private bool SetInsightActionCount(int slot, int count)
+    {
+        return SetInt(_insightActionCounts, slot, count);
+    }
+
+    private bool SetInsightStatValue(float[] array, int index, float value)
+    {
+        if (Math.Abs(array[index] - value) <= 0.0001f)
+        {
+            return false;
+        }
+
+        array[index] = value;
+        return true;
+    }
+
+    private bool SetInsightActionFlags(int slot, int actionIndex, EntityInsightActionRuntimeFlags flags)
+    {
+        int index = InsightActionIndex(slot, actionIndex);
+        byte value = (byte)flags;
+        if (_insightActionFlags[index] == value)
+        {
+            return false;
+        }
+
+        _insightActionFlags[index] = value;
+        return true;
     }
 
     private static int SectionIndex(int slot, int sectionIndex) => (slot * MaxComponentSectionsPerPanel) + sectionIndex;

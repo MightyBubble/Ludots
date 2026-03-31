@@ -1,7 +1,9 @@
 using System.Threading.Tasks;
+using EntityInfoPanelsMod.Insight;
 using EntityInfoPanelsMod.Systems;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
 namespace EntityInfoPanelsMod.Triggers;
@@ -34,7 +36,21 @@ internal sealed class InstallEntityInfoPanelsOnGameStartTrigger : Trigger
 
         engine.GlobalContext[InstalledKey] = true;
 
-        var service = new EntityInfoPanelService();
+        PresentationTextCatalog presentationTextCatalog = engine.GetService(CoreServiceKeys.PresentationTextCatalog) ?? PresentationTextCatalog.Empty;
+        PresentationTextLocaleSelection presentationLocaleSelection = engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection)
+            ?? new PresentationTextLocaleSelection(presentationTextCatalog);
+        var insightCatalog = new EntityInsightProfileLoader(engine.ConfigPipeline).Load(
+            engine.ConfigCatalog,
+            engine.ConfigConflictReport,
+            engine.MapLoader.EntityTemplateKeys,
+            presentationTextCatalog);
+
+        var service = new EntityInfoPanelService(
+            insightCatalog,
+            presentationTextCatalog,
+            presentationLocaleSelection,
+            engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry),
+            engine.GetService(CoreServiceKeys.TagOps));
         var handles = new EntityInfoPanelHandleStore();
         engine.SetService(EntityInfoPanelServiceKeys.Service, service);
         engine.SetService(EntityInfoPanelServiceKeys.HandleStore, handles);

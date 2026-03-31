@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Arch.Core;
+using EntityInfoPanelsMod.Insight;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
 
@@ -11,7 +14,15 @@ public sealed partial class EntityInfoPanelService
     private const int MaxComponentSectionsPerPanel = 64;
     private const int MaxComponentLinesPerPanel = 256;
     private const int MaxGasLinesPerPanel = 320;
+    private const int MaxInsightStatsPerPanel = 8;
+    private const int MaxInsightActionsPerPanel = 8;
     private const int ComponentToggleWordCount = 16;
+
+    private readonly EntityInsightProfileCatalog _insightCatalog;
+    private readonly EntityInsightTextResolver _insightTextResolver;
+    private readonly EntityInsightIconFactory _insightIconFactory = new();
+    private readonly AbilityDefinitionRegistry? _abilityDefinitions;
+    private readonly TagOps _tagOps;
 
     private readonly bool[] _active = new bool[PanelCapacity];
     private readonly int[] _generation = new int[PanelCapacity];
@@ -37,6 +48,12 @@ public sealed partial class EntityInfoPanelService
 
     private readonly int[] _gasLineCounts = new int[PanelCapacity];
     private readonly string[] _gasLines = new string[PanelCapacity * MaxGasLinesPerPanel];
+    private readonly int[] _insightProfileIndices = new int[PanelCapacity];
+    private readonly int[] _insightStatCounts = new int[PanelCapacity];
+    private readonly float[] _insightStatCurrentValues = new float[PanelCapacity * MaxInsightStatsPerPanel];
+    private readonly float[] _insightStatBaseValues = new float[PanelCapacity * MaxInsightStatsPerPanel];
+    private readonly int[] _insightActionCounts = new int[PanelCapacity];
+    private readonly byte[] _insightActionFlags = new byte[PanelCapacity * MaxInsightActionsPerPanel];
 
     private readonly int[] _visibleUiSlots = new int[PanelCapacity];
     private readonly int[] _visibleOverlaySlots = new int[PanelCapacity];
@@ -48,6 +65,24 @@ public sealed partial class EntityInfoPanelService
     private int _overlayRevision;
     private bool _pendingUiInvalidation;
     private bool _pendingOverlayInvalidation;
+    private int _lastLocaleId;
+
+    public EntityInfoPanelService(
+        EntityInsightProfileCatalog? insightCatalog = null,
+        PresentationTextCatalog? presentationTextCatalog = null,
+        PresentationTextLocaleSelection? localeSelection = null,
+        AbilityDefinitionRegistry? abilityDefinitions = null,
+        TagOps? tagOps = null)
+    {
+        PresentationTextCatalog effectiveCatalog = presentationTextCatalog ?? PresentationTextCatalog.Empty;
+        PresentationTextLocaleSelection effectiveLocaleSelection = localeSelection ?? new PresentationTextLocaleSelection(effectiveCatalog);
+
+        _insightCatalog = insightCatalog ?? EntityInsightProfileCatalog.Empty;
+        _insightTextResolver = new EntityInsightTextResolver(effectiveCatalog, effectiveLocaleSelection);
+        _abilityDefinitions = abilityDefinitions;
+        _tagOps = tagOps ?? new TagOps();
+        _lastLocaleId = effectiveLocaleSelection.ActiveLocaleId;
+    }
 
     public int UiRevision => _uiRevision;
     public int OverlayRevision => _overlayRevision;
@@ -75,6 +110,7 @@ public sealed partial class EntityInfoPanelService
         ResetComponentToggleState(slot, enabled: true);
         ClearComponentState(slot);
         ClearGasState(slot);
+        ClearInsightState(slot);
         InvalidateSurface(request.Surface);
         return new EntityInfoPanelHandle(slot, _generation[slot]);
     }
@@ -97,6 +133,7 @@ public sealed partial class EntityInfoPanelService
         ResetComponentToggleState(slot, enabled: true);
         ClearComponentState(slot);
         ClearGasState(slot);
+        ClearInsightState(slot);
         InvalidateSurface(surface);
         return true;
     }
@@ -198,6 +235,7 @@ public sealed partial class EntityInfoPanelService
     public EntityInfoGasDetailFlags GetGasDetailFlags(int slot) => _gasFlags[slot];
     public string GetTitle(int slot) => _titles[slot] ?? string.Empty;
     public string GetSubtitle(int slot) => _subtitles[slot] ?? string.Empty;
+    public int GetActiveLocaleId() => _insightTextResolver.ActiveLocaleId;
     public int GetComponentSectionCount(int slot) => _componentSectionCounts[slot];
     public int GetComponentSectionTypeId(int slot, int sectionIndex) => _componentSectionTypeIds[SectionIndex(slot, sectionIndex)];
     public string GetComponentSectionName(int slot, int sectionIndex) => _componentSectionNames[SectionIndex(slot, sectionIndex)] ?? string.Empty;

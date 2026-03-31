@@ -21,6 +21,7 @@ public enum EntityInfoPanelKind : byte
 {
     ComponentInspector = 0,
     GasInspector = 1,
+    InsightBrief = 2,
 }
 
 public enum EntityInfoPanelAnchor : byte

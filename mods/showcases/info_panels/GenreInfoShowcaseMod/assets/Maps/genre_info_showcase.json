@@ -1,0 +1,209 @@
+{
+  "Id": "genre_info_showcase",
+  "Tags": ["showcase", "info_panels"],
+  "Entities": [
+    {
+      "Template": "fourx_governor",
+      "Overrides": {
+        "Name": { "Value": "Governor Aurelia" },
+        "WorldPositionCm": { "Value": { "X": -4200, "Y": 400 } }
+      }
+    },
+    {
+      "Template": "moba_hero",
+      "Overrides": {
+        "Name": { "Value": "Captain Nyx" },
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 2200 } }
+      }
+    },
+    {
+      "Template": "rts_barracks",
+      "Overrides": {
+        "Name": { "Value": "Field Barracks" },
+        "WorldPositionCm": { "Value": { "X": 2600, "Y": 0 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 01" },
+        "WorldPositionCm": { "Value": { "X": 3000, "Y": -420 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 02" },
+        "WorldPositionCm": { "Value": { "X": 3160, "Y": -420 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 03" },
+        "WorldPositionCm": { "Value": { "X": 3320, "Y": -420 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 04" },
+        "WorldPositionCm": { "Value": { "X": 3480, "Y": -420 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 05" },
+        "WorldPositionCm": { "Value": { "X": 3000, "Y": -180 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 06" },
+        "WorldPositionCm": { "Value": { "X": 3160, "Y": -180 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 07" },
+        "WorldPositionCm": { "Value": { "X": 3320, "Y": -180 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 08" },
+        "WorldPositionCm": { "Value": { "X": 3480, "Y": -180 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 09" },
+        "WorldPositionCm": { "Value": { "X": 3080, "Y": 60 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 10" },
+        "WorldPositionCm": { "Value": { "X": 3400, "Y": 60 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 11" },
+        "WorldPositionCm": { "Value": { "X": 3000, "Y": 300 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 12" },
+        "WorldPositionCm": { "Value": { "X": 3160, "Y": 300 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 13" },
+        "WorldPositionCm": { "Value": { "X": 3320, "Y": 300 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 14" },
+        "WorldPositionCm": { "Value": { "X": 3480, "Y": 300 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 15" },
+        "WorldPositionCm": { "Value": { "X": 3000, "Y": 540 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 16" },
+        "WorldPositionCm": { "Value": { "X": 3160, "Y": 540 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 17" },
+        "WorldPositionCm": { "Value": { "X": 3320, "Y": 540 } }
+      }
+    },
+    {
+      "Template": "rts_marine",
+      "Overrides": {
+        "Name": { "Value": "Marine 18" },
+        "WorldPositionCm": { "Value": { "X": 3480, "Y": 540 } }
+      }
+    },
+    {
+      "Template": "rts_siege_tank",
+      "Overrides": {
+        "Name": { "Value": "Siege Tank 01" },
+        "WorldPositionCm": { "Value": { "X": 2860, "Y": 860 } }
+      }
+    },
+    {
+      "Template": "rts_siege_tank",
+      "Overrides": {
+        "Name": { "Value": "Siege Tank 02" },
+        "WorldPositionCm": { "Value": { "X": 3220, "Y": 860 } }
+      }
+    },
+    {
+      "Template": "rts_siege_tank",
+      "Overrides": {
+        "Name": { "Value": "Siege Tank 03" },
+        "WorldPositionCm": { "Value": { "X": 3580, "Y": 860 } }
+      }
+    },
+    {
+      "Template": "rts_siege_tank",
+      "Overrides": {
+        "Name": { "Value": "Siege Tank 04" },
+        "WorldPositionCm": { "Value": { "X": 3940, "Y": 860 } }
+      }
+    },
+    {
+      "Template": "rts_science_vessel",
+      "Overrides": {
+        "Name": { "Value": "Sky Vessel 01" },
+        "WorldPositionCm": { "Value": { "X": 2940, "Y": 1160 } }
+      }
+    },
+    {
+      "Template": "rts_science_vessel",
+      "Overrides": {
+        "Name": { "Value": "Sky Vessel 02" },
+        "WorldPositionCm": { "Value": { "X": 3260, "Y": 1160 } }
+      }
+    },
+    {
+      "Template": "rts_science_vessel",
+      "Overrides": {
+        "Name": { "Value": "Sky Vessel 03" },
+        "WorldPositionCm": { "Value": { "X": 3580, "Y": 1160 } }
+      }
+    },
+    {
+      "Template": "rts_science_vessel",
+      "Overrides": {
+        "Name": { "Value": "Sky Vessel 04" },
+        "WorldPositionCm": { "Value": { "X": 3900, "Y": 1160 } }
+      }
+    }
+  ]
+}
