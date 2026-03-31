@@ -128,6 +128,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SelectionRequestQueue> SelectionRequestQueue = new("SelectionRequestQueue");
         public static readonly ServiceKey<SelectionResponseBuffer> SelectionResponseBuffer = new("SelectionResponseBuffer");
         public static readonly ServiceKey<RuntimeEntitySpawnQueue> RuntimeEntitySpawnQueue = new("RuntimeEntitySpawnQueue");
+        public static readonly ServiceKey<EntityTemplateKeyRegistry> EntityTemplateKeyRegistry = new("EntityTemplateKeyRegistry");
         public static readonly ServiceKey<SelectionRuleRegistry> SelectionRuleRegistry = new("SelectionRuleRegistry");
         public static readonly ServiceKey<SelectionRuntime> SelectionRuntime = new("SelectionRuntime");
         public static readonly ServiceKey<SelectionRuntimeConfig> SelectionConfig = new("SelectionConfig");

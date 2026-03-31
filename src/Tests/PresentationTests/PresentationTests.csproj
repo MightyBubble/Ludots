@@ -26,8 +26,12 @@
     <ProjectReference Include="..\..\..\mods\capabilities\entityinfo\EntityInfoPanelsMod\EntityInfoPanelsMod.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\FourXDemoMod\FourXDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\MobaDemoMod\MobaDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\RtsDemoMod\RtsDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\animation\AnimationAcceptanceMod\AnimationAcceptanceMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\info_panels\GenreInfoShowcaseMod\GenreInfoShowcaseMod.csproj" />
   </ItemGroup>
 
   <ItemGroup>

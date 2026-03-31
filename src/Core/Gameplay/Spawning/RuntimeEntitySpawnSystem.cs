@@ -20,6 +20,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly RuntimeEntitySpawnQueue _requests;
         private readonly EffectRequestQueue _effectRequests;
         private readonly DataRegistry<EntityTemplate> _templateRegistry;
+        private readonly EntityTemplateKeyRegistry _templateKeys;
         private readonly Dictionary<string, EntityTemplate> _cachedTemplates = new(StringComparer.OrdinalIgnoreCase);
         private readonly EntityBuilder _builder;
 
@@ -27,12 +28,14 @@ namespace Ludots.Core.Gameplay.Spawning
             World world,
             RuntimeEntitySpawnQueue requests,
             DataRegistry<EntityTemplate> templateRegistry,
+            EntityTemplateKeyRegistry templateKeys,
             PresentationAuthoringContext presentationAuthoring,
             EffectRequestQueue effectRequests = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
+            _templateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
             _effectRequests = effectRequests;
             _builder = new EntityBuilder(world, _cachedTemplates, presentationAuthoring ?? throw new ArgumentNullException(nameof(presentationAuthoring)));
         }
@@ -91,6 +94,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
             EnsureTemplateLoaded(request.TemplateId);
             var entity = _builder.UseTemplate(request.TemplateId).Build();
+            ApplyTemplateKey(entity, request.TemplateId);
 
             ApplyWorldPosition(entity, request.WorldPositionCm);
             TryApplyFacing(in request, entity);
@@ -137,6 +141,25 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             _cachedTemplates[templateId] = template;
+        }
+
+        private void ApplyTemplateKey(Entity entity, string templateId)
+        {
+            int templateKeyId = _templateKeys.GetId(templateId);
+            if (templateKeyId <= 0)
+            {
+                templateKeyId = _templateKeys.Register(templateId);
+            }
+
+            var templateKey = new EntityTemplateKeyCm { TemplateKeyId = templateKeyId };
+            if (World.Has<EntityTemplateKeyCm>(entity))
+            {
+                World.Set(entity, templateKey);
+            }
+            else
+            {
+                World.Add(entity, templateKey);
+            }
         }
 
         private void ApplyWorldPosition(Entity entity, in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPositionCm)

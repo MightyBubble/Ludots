@@ -15,6 +15,13 @@ public sealed partial class EntityInfoPanelService
     {
         bool uiDirty = _pendingUiInvalidation;
         bool overlayDirty = _pendingOverlayInvalidation;
+        if (_lastLocaleId != _insightTextResolver.ActiveLocaleId)
+        {
+            _lastLocaleId = _insightTextResolver.ActiveLocaleId;
+            uiDirty = true;
+            overlayDirty = true;
+        }
+
         int nextUiCount = 0;
         int nextOverlayCount = 0;
 
@@ -99,18 +106,32 @@ public sealed partial class EntityInfoPanelService
             dirty = true;
         }
 
-        string title = _kinds[slot] == EntityInfoPanelKind.ComponentInspector
-            ? "Entity Component Inspector"
-            : "Entity GAS Inspector";
-        string subtitle = resolved != Entity.Null && world.IsAlive(resolved)
-            ? ResolveEntityLabel(world, resolved)
-            : ResolveMissingSubtitle(_targets[slot]);
-
-        dirty |= SetString(_titles, slot, title);
-        dirty |= SetString(_subtitles, slot, subtitle);
-        dirty |= _kinds[slot] == EntityInfoPanelKind.ComponentInspector
-            ? SampleComponentInspector(slot, world, resolved)
-            : SampleGasInspector(slot, world, resolved);
+        switch (_kinds[slot])
+        {
+            case EntityInfoPanelKind.ComponentInspector:
+            {
+                string subtitle = resolved != Entity.Null && world.IsAlive(resolved)
+                    ? ResolveEntityLabel(world, resolved)
+                    : ResolveMissingSubtitle(_targets[slot]);
+                dirty |= SetString(_titles, slot, "Entity Component Inspector");
+                dirty |= SetString(_subtitles, slot, subtitle);
+                dirty |= SampleComponentInspector(slot, world, resolved);
+                break;
+            }
+            case EntityInfoPanelKind.GasInspector:
+            {
+                string subtitle = resolved != Entity.Null && world.IsAlive(resolved)
+                    ? ResolveEntityLabel(world, resolved)
+                    : ResolveMissingSubtitle(_targets[slot]);
+                dirty |= SetString(_titles, slot, "Entity GAS Inspector");
+                dirty |= SetString(_subtitles, slot, subtitle);
+                dirty |= SampleGasInspector(slot, world, resolved);
+                break;
+            }
+            default:
+                dirty |= SampleInsightBrief(slot, world, resolved);
+                break;
+        }
 
         if (dirty)
         {

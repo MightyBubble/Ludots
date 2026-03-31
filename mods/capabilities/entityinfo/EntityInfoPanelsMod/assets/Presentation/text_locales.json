@@ -1,0 +1,27 @@
+{
+  "defaultLocale": "en-US",
+  "locales": {
+    "en-US": {
+      "entityinfo.action.close": "Close",
+      "entityinfo.component.expand_all": "Expand All",
+      "entityinfo.component.collapse_all": "Collapse All",
+      "entityinfo.component.show_prefix": "Show",
+      "entityinfo.component.hide_prefix": "Hide",
+      "entityinfo.gas.sources_on": "Sources ON",
+      "entityinfo.gas.sources_off": "Sources OFF",
+      "entityinfo.gas.modifiers_on": "Modifiers ON",
+      "entityinfo.gas.modifiers_off": "Modifiers OFF"
+    },
+    "zh-CN": {
+      "entityinfo.action.close": "关闭",
+      "entityinfo.component.expand_all": "全部展开",
+      "entityinfo.component.collapse_all": "全部收起",
+      "entityinfo.component.show_prefix": "展开",
+      "entityinfo.component.hide_prefix": "收起",
+      "entityinfo.gas.sources_on": "来源 开",
+      "entityinfo.gas.sources_off": "来源 关",
+      "entityinfo.gas.modifiers_on": "修饰器 开",
+      "entityinfo.gas.modifiers_off": "修饰器 关"
+    }
+  }
+}

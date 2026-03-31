@@ -1,0 +1,11 @@
+[
+  { "id": "entityinfo.action.close", "argCount": 0 },
+  { "id": "entityinfo.component.expand_all", "argCount": 0 },
+  { "id": "entityinfo.component.collapse_all", "argCount": 0 },
+  { "id": "entityinfo.component.show_prefix", "argCount": 0 },
+  { "id": "entityinfo.component.hide_prefix", "argCount": 0 },
+  { "id": "entityinfo.gas.sources_on", "argCount": 0 },
+  { "id": "entityinfo.gas.sources_off", "argCount": 0 },
+  { "id": "entityinfo.gas.modifiers_on", "argCount": 0 },
+  { "id": "entityinfo.gas.modifiers_off", "argCount": 0 }
+]

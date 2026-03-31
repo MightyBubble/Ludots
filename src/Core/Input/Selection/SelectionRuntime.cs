@@ -459,6 +459,43 @@ namespace Ludots.Core.Input.Selection
             return written;
         }
 
+        public bool TryGetSelectionAt(Entity owner, string aliasKey, int index, out Entity target)
+        {
+            target = default;
+            return TryGetSelectionEntity(owner, aliasKey, out Entity container) &&
+                   TryGetSelectionAt(container, index, out target);
+        }
+
+        public bool TryGetSelectionAt(Entity container, int index, out Entity target)
+        {
+            target = default;
+            if (!IsContainerAlive(container) || index < 0)
+            {
+                return false;
+            }
+
+            List<Entity> members = GetOrCreateMemberList(container);
+            if ((uint)index >= (uint)members.Count)
+            {
+                return false;
+            }
+
+            Entity relation = members[index];
+            if (!_world.IsAlive(relation) || !_world.Has<SelectionMemberTarget>(relation))
+            {
+                return false;
+            }
+
+            Entity resolved = _world.Get<SelectionMemberTarget>(relation).Value;
+            if (!_world.IsAlive(resolved))
+            {
+                return false;
+            }
+
+            target = resolved;
+            return true;
+        }
+
         public bool TryBindView(Entity viewer, string viewKey, Entity owner, string aliasKey)
         {
             return TryGetOrCreateSelectionEntity(owner, aliasKey, out Entity container) &&
