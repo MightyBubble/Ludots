@@ -1,47 +1,31 @@
-# Documentation Governance Report
+# Doc Governance Report
 
-Date: 2026-03-20
+Date: 2026-04-01
 Scope:
+- `docs/architecture/time_flow.md`
+- `docs/audits/pr92_timeflow_core_mainline_delivery.md`
+- `docs/architecture/README.md`
+- `docs/audits/README.md`
 
-- `docs/architecture/entity_selection_architecture.md`
-- `docs/architecture/interaction/features/companion/r3_multi_unit_micro.md`
-- `docs/rfcs/RFC-0059-entity-selection-container-ssot.md`
-- `docs/rfcs/README.md`
-
-Ruleset:
-
+Rule Set:
 - `docs/conventions/04_documentation_governance.md`
-- `C:/Users/ROG/.codex/skills/ludots-doc-governance/references/doc-governance-checklist.md`
-- `C:/Users/ROG/.codex/skills/ludots-doc-governance/references/link-validation.md`
+- `C:/Users/123/.codex/skills/ludots-doc-governance/references/doc-governance-checklist.md`
 
-## Summary
+Findings:
+- P0: none
+- P1: none
+- P2: none
+- P3:
+  - Removed two stale links from `docs/architecture/README.md`:
+    - `animation_profile_clip_pipeline.md`
+    - `animation_profile_clip_kanban.md`
 
-- Total findings in scoped docs after fixes: 0
-- P0: 0
-- P1: 0
-- P2: 0
-- P3: 0
+Validation:
+- Changed-doc markdown links resolved successfully.
+- New TimeFlow SSOT stays within `docs/architecture/`.
+- PR92 split-plan document stays within `docs/audits/` and does not redefine SSOT.
 
-## Validation Notes
-
-Validated in scope:
-
-- architecture SSOT now points to container/member selection truth
-- RFC-0059 now explicitly defers to architecture SSOT and links implementation evidence
-- multi-unit micro reference no longer cites `SelectionGroupBuffer`
-- referenced code/doc/artifact paths exist
-
-## Findings
-
-No governance violations remain in the scoped selection packet.
-
-## Residual Risks Outside Scope
-
-- historical docs such as `docs/rfcs/RFC-0053-entity-info-panels-for-ui-and-overlay.md` still contain legacy `SelectedEntity` wording
-- debt is tracked in `artifacts/techdebt/2026-03-20-selection-container-ssot-redesign.md`
-
-## Fix Order
-
-1. Keep the updated selection architecture document as the only authoritative design doc.
-2. Migrate remaining stale historical docs when their owning subsystems are touched.
-3. Delete remaining legacy key names from core once stale tests and docs are migrated.
+Fix Order:
+1. Keep `docs/architecture/time_flow.md` as the only TimeFlow SSOT.
+2. Keep upper-layer PR92 convergence notes in `docs/audits/`.
+3. Regenerate this report if changed-doc scope expands.
