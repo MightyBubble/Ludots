@@ -1,18 +1,25 @@
-[
+﻿[
   {
-    "id": "rts_scv",
+    "id": "rts_war3_peasant",
     "components": {
-      "Name": { "Value": "SCV" },
+      "Name": { "Value": "Peasant" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 60, "Minerals": 500 } },
+      "AttributeBuffer": { "base": { "Health": 230, "Minerals": 900, "Lumber": 400 } },
       "AbilityStateBuffer": {
         "abilityIds": [
-          "Ability.Rts.BuildBarracks"
+          "Ability.Rts.Strategy.War3.BuildLumberMill",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
         ]
       },
+      "AbilityFormSetRef": { "formSetId": "rts_war3_worker_forms" },
       "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
@@ -20,20 +27,24 @@
     }
   },
   {
-    "id": "rts_barracks",
+    "id": "rts_war3_barracks",
     "components": {
       "Name": { "Value": "Barracks" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 400, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 1000 } },
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 1200, "Minerals": 700 } },
       "AbilityStateBuffer": {
         "abilityIds": [
-          "Ability.Rts.TrainMarine",
-          "Ability.Rts.ResearchStim"
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.War3.TrainFootman"
         ]
       },
       "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
@@ -41,19 +52,17 @@
     }
   },
   {
-    "id": "rts_marine",
+    "id": "rts_war3_lumber_mill_site",
     "components": {
-      "Name": { "Value": "Marine" },
+      "Name": { "Value": "Lumber Mill" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 40, "Shield": 0, "AttackSpeed": 100 } },
-      "AbilityStateBuffer": {
-        "abilityIds": [
-          "Ability.Rts.StimPack"
-        ]
-      },
+      "AttributeBuffer": { "base": { "Health": 900 } },
       "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
@@ -61,19 +70,25 @@
     }
   },
   {
-    "id": "rts_siege_tank",
+    "id": "rts_war3_guard_tower_site",
     "components": {
-      "Name": { "Value": "SiegeTank" },
+      "Name": { "Value": "Guard Tower" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 150, "Shield": 0 } },
+      "AttributeBuffer": { "base": { "Health": 750 } },
       "AbilityStateBuffer": {
         "abilityIds": [
-          "Ability.Rts.SiegeModeAoe"
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
         ]
       },
+      "AbilityFormSetRef": { "formSetId": "rts_shared_ungarrison_forms" },
       "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
@@ -81,20 +96,24 @@
     }
   },
   {
-    "id": "rts_science_vessel",
+    "id": "rts_war3_footman",
     "components": {
-      "Name": { "Value": "ScienceVessel" },
+      "Name": { "Value": "Footman" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 200, "Energy": 200 } },
+      "AttributeBuffer": { "base": { "Health": 420 } },
       "AbilityStateBuffer": {
         "abilityIds": [
-          "Ability.Rts.ShieldAura",
-          "Ability.Rts.Irradiate"
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.GarrisonEnter",
+          "Ability.Rts.Strategy.Shared.Hold"
         ]
       },
       "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
@@ -102,23 +121,282 @@
     }
   },
   {
-    "id": "rts_zergling",
+    "id": "rts_ra2_conyard",
     "components": {
-      "Name": { "Value": "Zergling" },
-      "Team": { "Id": 2 },
+      "Name": { "Value": "Construction Yard" },
+      "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 2000, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 35 } }
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 1600, "Credits": 6000 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Cnc.PlacePowerPlant",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      },
+      "AbilityFormSetRef": { "formSetId": "rts_ra2_conyard_forms" },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
     }
   },
   {
-    "id": "rts_zealot",
+    "id": "rts_ra2_power_plant",
+    "components": {
+      "Name": { "Value": "Power Plant" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 900 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_ra2_refinery",
+    "components": {
+      "Name": { "Value": "Refinery" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 1200 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_ra2_war_factory",
+    "components": {
+      "Name": { "Value": "War Factory" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 1400, "Credits": 2800 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Cnc.TrainRhino"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_ra2_bunker",
+    "components": {
+      "Name": { "Value": "Battle Bunker" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 1100 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      },
+      "AbilityFormSetRef": { "formSetId": "rts_shared_ungarrison_forms" },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_ra2_rhino",
+    "components": {
+      "Name": { "Value": "Rhino Tank" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 660 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_ra2_rocket_trooper",
+    "components": {
+      "Name": { "Value": "Rocket Trooper" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 240 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.GarrisonEnter",
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc2_gateway",
+    "components": {
+      "Name": { "Value": "Gateway" },
+      "Team": { "Id": 3 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 1000, "Shield": 1000, "Minerals": 800, "Gas": 300 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Shared.Hold",
+          "Ability.Rts.Strategy.Sc2.TrainZealot",
+          "Ability.Rts.Strategy.Sc2.ResearchWarpGate"
+        ]
+      },
+      "AbilityFormSetRef": { "formSetId": "rts_sc2_gateway_forms" },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc2_probe",
+    "components": {
+      "Name": { "Value": "Probe" },
+      "Team": { "Id": 3 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 200, "Shield": 200, "Minerals": 500 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_sc2_zealot",
     "components": {
       "Name": { "Value": "Zealot" },
       "Team": { "Id": 3 },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": -2000, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 100, "Shield": 60 } }
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 500, "Shield": 500 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Shared.Hold"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_zerg_drone",
+    "components": {
+      "Name": { "Value": "Drone" },
+      "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 240, "Minerals": 700 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.Strategy.Zerg.MorphSpawningPool"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_zerg_spawning_pool",
+    "components": {
+      "Name": { "Value": "Spawning Pool" },
+      "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 1100 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
     }
   }
 ]
+
+
+

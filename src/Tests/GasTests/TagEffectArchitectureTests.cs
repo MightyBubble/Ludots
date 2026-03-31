@@ -289,7 +289,7 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void BuiltinHandlers_RegisterAll_RegistersAllSeven()
+        public void BuiltinHandlers_RegisterAll_RegistersAllNine()
         {
             var registry = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(registry);
@@ -301,6 +301,8 @@ namespace Ludots.Tests.GAS
             That(registry.IsRegistered(BuiltinHandlerId.ReResolveAndDispatch), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CreateProjectile), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CreateUnit), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.ApplyDisplacement), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.ApplyRelation), Is.True);
         }
 
         [Test]
@@ -347,6 +349,70 @@ namespace Ludots.Tests.GAS
             ref var attrBuf = ref world.Get<AttributeBuffer>(target);
             That(attrBuf.GetCurrent(5), Is.EqualTo(10f));
             That(attrBuf.GetCurrent(6), Is.EqualTo(-3f));
+        }
+
+        [Test]
+        public void BuiltinHandlers_ApplyRelation_SetParentLinksAndSnapsSubjectToParentPosition()
+        {
+            using var world = World.Create();
+            var parent = world.Create(
+                WorldPositionCm.FromCm(1200, 800),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(1100, 700) });
+            var child = world.Create(
+                WorldPositionCm.FromCm(10, 20),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(5, 15) });
+            var effect = world.Create();
+
+            var ctx = new EffectContext { Source = child, Target = parent };
+            var tpl = new EffectTemplateData
+            {
+                Relation = new RelationDescriptor
+                {
+                    Operation = RelationOperation.SetParent,
+                    Subject = RelationEntitySlot.Source,
+                    Parent = RelationEntitySlot.Target,
+                    SnapSubjectToParentPosition = true
+                }
+            };
+
+            var mergedParams = new EffectConfigParams();
+            BuiltinHandlers.HandleApplyRelation(world, effect, ref ctx, in mergedParams, in tpl);
+
+            That(world.Has<ChildOf>(child), Is.True);
+            That(world.Get<ChildOf>(child).Parent, Is.EqualTo(parent));
+            That(world.Has<ChildrenBuffer>(parent), Is.True);
+            That(world.Get<ChildrenBuffer>(parent).Count, Is.EqualTo(1));
+            That(world.Get<WorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(1200, 800)));
+            That(world.Get<PreviousWorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(1100, 700)));
+        }
+
+        [Test]
+        public void BuiltinHandlers_ApplyRelation_RemoveParentDetachesChild()
+        {
+            using var world = World.Create();
+            var parent = world.Create();
+            var child = world.Create();
+            var effect = world.Create();
+
+            RelationOps.SetParent(world, child, parent);
+            That(world.Has<ChildOf>(child), Is.True);
+
+            var ctx = new EffectContext { Source = child };
+            var tpl = new EffectTemplateData
+            {
+                Relation = new RelationDescriptor
+                {
+                    Operation = RelationOperation.RemoveParent,
+                    Subject = RelationEntitySlot.Source
+                }
+            };
+
+            var mergedParams = new EffectConfigParams();
+            BuiltinHandlers.HandleApplyRelation(world, effect, ref ctx, in mergedParams, in tpl);
+
+            That(world.Has<ChildOf>(child), Is.False);
+            That(world.Has<ChildrenBuffer>(parent), Is.True);
+            That(world.Get<ChildrenBuffer>(parent).Count, Is.EqualTo(0));
         }
 
         [Test]
@@ -593,6 +659,7 @@ namespace Ludots.Tests.GAS
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
             var effects = new EffectRequestQueue();
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
@@ -601,7 +668,8 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
                     new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    new Ludots.Core.Presentation.PresentationStableIdAllocator()),
+                    stableIds),
+                stableIds,
                 effects);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
@@ -641,6 +709,8 @@ namespace Ludots.Tests.GAS
             That(world.Get<Team>(spawned).Id, Is.EqualTo(7));
             That(world.Has<MapEntity>(spawned), Is.True);
             That(world.Get<MapEntity>(spawned).MapId.Value, Is.EqualTo("runtime_spawn_test"));
+            That(world.Has<Ludots.Core.Presentation.Components.PresentationStableId>(spawned), Is.True);
+            That(world.Get<Ludots.Core.Presentation.Components.PresentationStableId>(spawned).Value, Is.GreaterThan(0));
 
             That(effects.Count, Is.EqualTo(1));
             That(effects[0].Source, Is.EqualTo(source));
@@ -658,6 +728,7 @@ namespace Ludots.Tests.GAS
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
             var effects = new EffectRequestQueue();
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
@@ -666,7 +737,8 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
                     new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    new Ludots.Core.Presentation.PresentationStableIdAllocator()),
+                    stableIds),
+                stableIds,
                 effects);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
@@ -688,14 +760,15 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             int count = 0;
-            var query = new QueryDescription().WithAll<ProjectileState, WorldPositionCm, PreviousWorldPositionCm, MapEntity>();
-            world.Query(in query, (ref ProjectileState projectile, ref WorldPositionCm position, ref PreviousWorldPositionCm previous, ref MapEntity map) =>
+            var query = new QueryDescription().WithAll<ProjectileState, WorldPositionCm, PreviousWorldPositionCm, MapEntity, Ludots.Core.Presentation.Components.PresentationStableId>();
+            world.Query(in query, (ref ProjectileState projectile, ref WorldPositionCm position, ref PreviousWorldPositionCm previous, ref MapEntity map, ref Ludots.Core.Presentation.Components.PresentationStableId stableId) =>
             {
                 count++;
                 That(projectile.Speed, Is.EqualTo(Fix64.FromInt(333)));
                 That(position.Value, Is.EqualTo(Fix64Vec2.FromInt(150, 275)));
                 That(previous.Value, Is.EqualTo(Fix64Vec2.FromInt(150, 275)));
                 That(map.MapId.Value, Is.EqualTo("assembly_spawn_test"));
+                That(stableId.Value, Is.GreaterThan(0));
             });
 
             That(count, Is.EqualTo(1));
@@ -724,6 +797,7 @@ namespace Ludots.Tests.GAS
                 new PlayerOwner { PlayerId = 12 },
                 new MapEntity { MapId = new Ludots.Core.Map.MapId("template_spawn_test") });
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
@@ -732,7 +806,8 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
                     new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    new Ludots.Core.Presentation.PresentationStableIdAllocator()));
+                    stableIds),
+                stableIds);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
             {
@@ -764,6 +839,8 @@ namespace Ludots.Tests.GAS
                 That(team.Id, Is.EqualTo(5));
                 That(map.MapId.Value, Is.EqualTo("template_spawn_test"));
                 That(world.Has<GameplayTagContainer>(entity), Is.True);
+                That(world.Has<Ludots.Core.Presentation.Components.PresentationStableId>(entity), Is.True);
+                That(world.Get<Ludots.Core.Presentation.Components.PresentationStableId>(entity).Value, Is.GreaterThan(0));
             });
 
             That(count, Is.EqualTo(1));
@@ -784,6 +861,7 @@ namespace Ludots.Tests.GAS
                 new MapEntity { MapId = new Ludots.Core.Map.MapId("summon_spawn_test") });
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
@@ -792,7 +870,8 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
                     new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    new Ludots.Core.Presentation.PresentationStableIdAllocator()));
+                    stableIds),
+                stableIds);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
             {
@@ -860,6 +939,38 @@ namespace Ludots.Tests.GAS
 
             ref readonly var cond = ref conditions.Get(tpl.ExpireCondition);
             That(cond.Kind, Is.EqualTo(GasConditionKind.TagPresent));
+        }
+
+        [Test]
+        public void Relation_Loader_ParsesRelationDescriptor()
+        {
+            var conditions = new GasConditionRegistry();
+            var templates = new EffectTemplateRegistry();
+            var pipeline = CreateMinimalPipeline(
+                @"{
+                    ""id"": ""test_attach"",
+                    ""presetType"": ""Relation"",
+                    ""lifetime"": ""Instant"",
+                    ""relation"": {
+                        ""operation"": ""SetParent"",
+                        ""subject"": ""Source"",
+                        ""parent"": ""TargetContext"",
+                        ""snapSubjectToParentPosition"": true
+                    }
+                }");
+
+            var loader = new EffectTemplateLoader(pipeline, templates, conditions);
+            loader.Load(relativePath: "GAS/effects.json");
+
+            int tplId = EffectTemplateIdRegistry.GetId("test_attach");
+            That(tplId, Is.GreaterThan(0));
+            That(templates.TryGetRef(tplId, out int idx), Is.True);
+            ref readonly var tpl = ref templates.GetRef(idx);
+            That(tpl.PresetType, Is.EqualTo(EffectPresetType.Relation));
+            That(tpl.Relation.Operation, Is.EqualTo(RelationOperation.SetParent));
+            That(tpl.Relation.Subject, Is.EqualTo(RelationEntitySlot.Source));
+            That(tpl.Relation.Parent, Is.EqualTo(RelationEntitySlot.TargetContext));
+            That(tpl.Relation.SnapSubjectToParentPosition, Is.True);
         }
 
         // ════════════════════════════════════════════════════════════════════

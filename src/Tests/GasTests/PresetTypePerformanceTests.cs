@@ -66,8 +66,8 @@ namespace Ludots.Tests.GAS
         public void PresetTypeRegistry_Lookup_HighThroughput()
         {
             var reg = new PresetTypeRegistry();
-            // Register all 10 types
-            for (int i = 0; i <= 10; i++)
+            int registeredTypeCount = (int)EffectPresetType.Relation + 1;
+            for (int i = 0; i < registeredTypeCount; i++)
             {
                 var def = new PresetTypeDefinition
                 {
@@ -81,14 +81,14 @@ namespace Ludots.Tests.GAS
 
             // Warm up
             for (int i = 0; i < 1000; i++)
-                reg.Get((EffectPresetType)(i % 11));
+                reg.Get((EffectPresetType)(i % registeredTypeCount));
 
             var sw = Stopwatch.StartNew();
             const int iterations = 1_000_000;
             int checksum = 0;
             for (int i = 0; i < iterations; i++)
             {
-                ref readonly var def = ref reg.Get((EffectPresetType)(i % 11));
+                ref readonly var def = ref reg.Get((EffectPresetType)(i % registeredTypeCount));
                 checksum += (int)def.Components;
             }
             sw.Stop();

@@ -23,6 +23,8 @@ namespace Ludots.Core.Gameplay.GAS
         CreateUnit = 10,
         /// <summary>Displacement effect: dash, knockback, pull, blink.</summary>
         Displacement = 11,
+        /// <summary>Entity relation effect: garrison, detach, or link parent-child state.</summary>
+        Relation = 12,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──
@@ -263,6 +265,29 @@ namespace Ludots.Core.Gameplay.GAS
         public bool OverrideNavigation;
     }
 
+    public enum RelationOperation : byte
+    {
+        None = 0,
+        SetParent = 1,
+        RemoveParent = 2,
+    }
+
+    public enum RelationEntitySlot : byte
+    {
+        None = 0,
+        Source = 1,
+        Target = 2,
+        TargetContext = 3,
+    }
+
+    public struct RelationDescriptor
+    {
+        public RelationOperation Operation;
+        public RelationEntitySlot Subject;
+        public RelationEntitySlot Parent;
+        public bool SnapSubjectToParentPosition;
+    }
+
     // ── EffectTemplateData ──
 
     public struct EffectTemplateData
@@ -289,6 +314,7 @@ namespace Ludots.Core.Gameplay.GAS
         public ProjectileDescriptor Projectile;
         public UnitCreationDescriptor UnitCreation;
         public DisplacementDescriptor Displacement;
+        public RelationDescriptor Relation;
 
         // ── Phase Graph bindings ──
         public EffectPhaseGraphBindings PhaseGraphBindings;

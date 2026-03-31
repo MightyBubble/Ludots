@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 
@@ -22,12 +23,14 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly DataRegistry<EntityTemplate> _templateRegistry;
         private readonly Dictionary<string, EntityTemplate> _cachedTemplates = new(StringComparer.OrdinalIgnoreCase);
         private readonly EntityBuilder _builder;
+        private readonly PresentationStableIdAllocator _stableIds;
 
         public RuntimeEntitySpawnSystem(
             World world,
             RuntimeEntitySpawnQueue requests,
             DataRegistry<EntityTemplate> templateRegistry,
             PresentationAuthoringContext presentationAuthoring,
+            PresentationStableIdAllocator stableIds,
             EffectRequestQueue effectRequests = null)
             : base(world)
         {
@@ -35,6 +38,7 @@ namespace Ludots.Core.Gameplay.Spawning
             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
             _effectRequests = effectRequests;
             _builder = new EntityBuilder(world, _cachedTemplates, presentationAuthoring ?? throw new ArgumentNullException(nameof(presentationAuthoring)));
+            _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
         }
 
         public override void Update(in float dt)
@@ -66,6 +70,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 VisualTransform.Default,
                 new CullState { IsVisible = true, LOD = LODLevel.High },
                 new AttributeBuffer());
+            EnsurePresentationStableId(entity);
 
             string typeName = UnitTypeRegistry.GetName(request.UnitTypeId);
             if (string.IsNullOrWhiteSpace(typeName))
@@ -171,6 +176,18 @@ namespace Ludots.Core.Gameplay.Spawning
             {
                 World.Add(entity, new CullState { IsVisible = true, LOD = LODLevel.High });
             }
+
+            EnsurePresentationStableId(entity);
+        }
+
+        private void EnsurePresentationStableId(Entity entity)
+        {
+            if (World.Has<PresentationStableId>(entity))
+            {
+                return;
+            }
+
+            World.Add(entity, new PresentationStableId { Value = _stableIds.Allocate() });
         }
 
         private void TryApplySourceTeam(in RuntimeEntitySpawnRequest request, Entity entity)

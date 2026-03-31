@@ -25,6 +25,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.CreateProjectile, HandleCreateProjectile);
             registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit);
             registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
+            registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
         }
 
         public static void HandleApplyModifiers(
@@ -351,6 +352,43 @@ namespace Ludots.Core.Gameplay.GAS
                 });
         }
 
+        public static void HandleApplyRelation(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            ref readonly var relation = ref templateData.Relation;
+            Entity subject = ResolveRelationEntity(in context, relation.Subject);
+            if (!world.IsAlive(subject))
+            {
+                return;
+            }
+
+            switch (relation.Operation)
+            {
+                case RelationOperation.SetParent:
+                {
+                    Entity parent = ResolveRelationEntity(in context, relation.Parent);
+                    if (!world.IsAlive(parent))
+                    {
+                        return;
+                    }
+
+                    RelationOps.SetParent(world, subject, parent);
+                    if (relation.SnapSubjectToParentPosition)
+                    {
+                        SnapSubjectToParentPosition(world, subject, parent);
+                    }
+                    break;
+                }
+                case RelationOperation.RemoveParent:
+                    RelationOps.RemoveParent(world, subject);
+                    break;
+            }
+        }
+
         private static Fix64Vec2 ResolveCreateUnitOrigin(World world, in EffectContext context, in EffectConfigParams mergedParams)
         {
             if (world.IsAlive(context.TargetContext) && world.Has<WorldPositionCm>(context.TargetContext))
@@ -378,6 +416,50 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             throw new InvalidOperationException("CreateUnit requires target point or source WorldPositionCm.");
+        }
+
+        private static Entity ResolveRelationEntity(in EffectContext context, RelationEntitySlot slot)
+        {
+            return slot switch
+            {
+                RelationEntitySlot.Source => context.Source,
+                RelationEntitySlot.Target => context.Target,
+                RelationEntitySlot.TargetContext => context.TargetContext,
+                _ => Entity.Null,
+            };
+        }
+
+        private static void SnapSubjectToParentPosition(World world, Entity subject, Entity parent)
+        {
+            if (!world.Has<WorldPositionCm>(parent))
+            {
+                return;
+            }
+
+            Fix64Vec2 parentPosition = world.Get<WorldPositionCm>(parent).Value;
+            Fix64Vec2 previousPosition = world.Has<PreviousWorldPositionCm>(parent)
+                ? world.Get<PreviousWorldPositionCm>(parent).Value
+                : parentPosition;
+
+            if (world.Has<WorldPositionCm>(subject))
+            {
+                ref var subjectPosition = ref world.Get<WorldPositionCm>(subject);
+                subjectPosition.Value = parentPosition;
+            }
+            else
+            {
+                world.Add(subject, new WorldPositionCm { Value = parentPosition });
+            }
+
+            if (world.Has<PreviousWorldPositionCm>(subject))
+            {
+                ref var previousSubjectPosition = ref world.Get<PreviousWorldPositionCm>(subject);
+                previousSubjectPosition.Value = previousPosition;
+            }
+            else
+            {
+                world.Add(subject, new PreviousWorldPositionCm { Value = previousPosition });
+            }
         }
 
         private static bool TryResolvePreservedTargetPoint(in EffectConfigParams mergedParams, out Fix64Vec2 targetPointCm)

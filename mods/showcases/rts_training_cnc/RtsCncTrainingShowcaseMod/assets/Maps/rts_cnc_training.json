@@ -1,0 +1,32 @@
+{
+  "Id": "rts_cnc_training",
+  "Tags": ["rts_showcase", "rts_training", "cnc"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 9800,
+    "TargetYCm": 22600,
+    "Yaw": 200,
+    "Pitch": 54,
+    "DistanceCm": 12400,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "ra2_shoreline.vtxm" }
+  ],
+  "Entities": [
+    {
+      "Template": "rts_ra2_war_factory",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 9800, "Y": 22600 } },
+        "Name": { "Value": "War Factory" }
+      }
+    },
+    {
+      "Template": "rts_ra2_rhino",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 10900, "Y": 21950 } },
+        "Name": { "Value": "Armor Display" }
+      }
+    }
+  ]
+}

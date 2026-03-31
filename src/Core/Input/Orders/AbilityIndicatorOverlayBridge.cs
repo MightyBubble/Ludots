@@ -1,11 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Input.Orders
@@ -19,23 +22,37 @@ namespace Ludots.Core.Input.Orders
         private const float DefaultSelfRadiusCm = 90f;
         private const float DefaultLineWidthCm = 110f;
         private const float OverlayY = 0.03f;
+        private const int PreviewScopeId = -44021;
 
         private readonly World _world;
         private readonly AbilityDefinitionRegistry _abilities;
         private readonly GroundOverlayBuffer _overlays;
+        private readonly PerformerDefinitionRegistry? _performerDefinitions;
+        private readonly PerformerInstanceBuffer? _performers;
+        private readonly Dictionary<string, int> _previewPerformerIds = new(StringComparer.OrdinalIgnoreCase);
+        private int _previewHandle = -1;
+        private int _previewDefinitionId;
 
-        public AbilityIndicatorOverlayBridge(World world, AbilityDefinitionRegistry abilities, GroundOverlayBuffer overlays)
+        public AbilityIndicatorOverlayBridge(
+            World world,
+            AbilityDefinitionRegistry abilities,
+            GroundOverlayBuffer overlays,
+            PerformerDefinitionRegistry? performerDefinitions = null,
+            PerformerInstanceBuffer? performers = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _abilities = abilities ?? throw new ArgumentNullException(nameof(abilities));
             _overlays = overlays ?? throw new ArgumentNullException(nameof(overlays));
+            _performerDefinitions = performerDefinitions;
+            _performers = performers;
         }
 
         public void UpdateAiming(Entity actor, InputOrderMapping mapping, bool hasCursorWorldCm, Vector3 cursorWorldCm, Entity hoveredEntity)
         {
-            if (!TryResolveIndicator(actor, mapping, out var indicator) ||
+            if (!TryResolveIndicator(actor, mapping, out var indicator, out var definition) ||
                 !TryGetWorldPosition(actor, out var actorWorldCm, out var actorVisual))
             {
+                ClearPreview();
                 return;
             }
 
@@ -47,6 +64,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             EmitRangeCircleIfNeeded(actorVisual, indicator);
+            UpdatePreview(actor, mapping.SelectionType, ResolvePreviewCenter(mapping.SelectionType, actorWorldCm, aimedWorldCm), indicator, definition, valid);
 
             switch (indicator.Shape)
             {
@@ -79,13 +97,15 @@ namespace Ludots.Core.Input.Orders
 
         public void UpdateVectorAiming(Entity actor, InputOrderMapping mapping, Vector3 originWorldCm, Vector3 cursorWorldCm, VectorAimPhase phase)
         {
-            if (!TryResolveIndicator(actor, mapping, out var indicator) ||
+            if (!TryResolveIndicator(actor, mapping, out var indicator, out _) ||
                 !TryGetWorldPosition(actor, out var actorWorldCm, out var actorVisual))
             {
+                ClearPreview();
                 return;
             }
 
             EmitRangeCircleIfNeeded(actorVisual, indicator);
+            ClearPreview();
 
             float originDistanceCm = DistanceCm(actorWorldCm, originWorldCm);
             bool originValid = indicator.Range <= 0f || originDistanceCm <= indicator.Range + 0.01f;
@@ -121,9 +141,25 @@ namespace Ludots.Core.Input.Orders
             });
         }
 
-        private bool TryResolveIndicator(Entity actor, InputOrderMapping mapping, out AbilityIndicatorConfig indicator)
+        public void ClearPreview()
+        {
+            if (_performers != null && _previewHandle >= 0)
+            {
+                _performers.Release(_previewHandle);
+            }
+
+            _previewHandle = -1;
+            _previewDefinitionId = 0;
+        }
+
+        private bool TryResolveIndicator(
+            Entity actor,
+            InputOrderMapping mapping,
+            out AbilityIndicatorConfig indicator,
+            out AbilityDefinition definition)
         {
             indicator = default;
+            definition = default;
             if (!_world.IsAlive(actor) ||
                 !_world.Has<AbilityStateBuffer>(actor) ||
                 mapping.ArgsTemplate.I0 is null)
@@ -144,7 +180,7 @@ namespace Ludots.Core.Input.Orders
             GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
             AbilitySlotState slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in granted, hasGranted, slotIndex);
             if (slot.AbilityId <= 0 ||
-                !_abilities.TryGet(slot.AbilityId, out var definition) ||
+                !_abilities.TryGet(slot.AbilityId, out definition) ||
                 !definition.HasIndicator)
             {
                 return false;
@@ -305,6 +341,124 @@ namespace Ludots.Core.Input.Orders
             });
         }
 
+        private void UpdatePreview(
+            Entity actor,
+            OrderSelectionType selectionType,
+            Vector3 centerWorldCm,
+            in AbilityIndicatorConfig indicator,
+            in AbilityDefinition definition,
+            bool valid)
+        {
+            if (_performers == null ||
+                _performerDefinitions == null ||
+                !indicator.Preview.IsEnabled)
+            {
+                ClearPreview();
+                return;
+            }
+
+            int definitionId = ResolvePreviewDefinitionId(indicator.Preview.PerformerId);
+            if (definitionId <= 0)
+            {
+                ClearPreview();
+                return;
+            }
+
+            Vector3 worldPosition = ToVisualMeters(centerWorldCm);
+            worldPosition.Y += indicator.Preview.OffsetY;
+
+            if (_previewHandle < 0 || !_performers.IsActive(_previewHandle) || _previewDefinitionId != definitionId)
+            {
+                ClearPreview();
+                if (!_performers.TryAllocate(
+                        definitionId,
+                        actor,
+                        PreviewScopeId,
+                        PresentationAnchorKind.WorldPosition,
+                        worldPosition,
+                        stableId: 0,
+                        out _previewHandle))
+                {
+                    _previewHandle = -1;
+                    _previewDefinitionId = 0;
+                    return;
+                }
+
+                _previewDefinitionId = definitionId;
+            }
+
+            ref var preview = ref _performers.Get(_previewHandle);
+            preview.WorldPosition = worldPosition;
+            preview.Owner = actor;
+
+            var color = ResolvePreviewColor(indicator, definition, valid);
+            Vector3 scale = ResolvePreviewScale(selectionType, indicator);
+            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerScaleX, scale.X);
+            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerScaleY, scale.Y);
+            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerScaleZ, scale.Z);
+            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerColorR, color.X);
+            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerColorG, color.Y);
+            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerColorB, color.Z);
+            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerColorA, color.W);
+        }
+
+        private int ResolvePreviewDefinitionId(string performerId)
+        {
+            if (string.IsNullOrWhiteSpace(performerId) || _performerDefinitions == null)
+            {
+                return 0;
+            }
+
+            if (_previewPerformerIds.TryGetValue(performerId, out int cached))
+            {
+                return cached;
+            }
+
+            int resolved = _performerDefinitions.GetId(performerId);
+            _previewPerformerIds[performerId] = resolved;
+            return resolved;
+        }
+
+        private static Vector3 ResolvePreviewCenter(OrderSelectionType selectionType, Vector3 actorWorldCm, Vector3 aimedWorldCm)
+        {
+            return selectionType switch
+            {
+                OrderSelectionType.None => actorWorldCm,
+                _ => aimedWorldCm
+            };
+        }
+
+        private static Vector3 ResolvePreviewScale(OrderSelectionType selectionType, in AbilityIndicatorConfig indicator)
+        {
+            float footprintMeters = indicator.Radius > 0f
+                ? WorldUnits.CmToM(indicator.Radius * 2f)
+                : MathF.Max(0.9f, WorldUnits.CmToM(indicator.Range * 0.18f));
+            if (selectionType == OrderSelectionType.Entity || selectionType == OrderSelectionType.Entities)
+            {
+                footprintMeters = MathF.Max(0.8f, WorldUnits.CmToM(indicator.Radius > 0f ? indicator.Radius : DefaultSingleTargetRadiusCm));
+            }
+
+            float scaleX = indicator.Preview.ScaleX > 0f ? indicator.Preview.ScaleX : footprintMeters;
+            float scaleY = indicator.Preview.ScaleY > 0f ? indicator.Preview.ScaleY : MathF.Max(0.3f, footprintMeters * 0.45f);
+            float scaleZ = indicator.Preview.ScaleZ > 0f ? indicator.Preview.ScaleZ : footprintMeters;
+            return new Vector3(scaleX, scaleY, scaleZ);
+        }
+
+        private static Vector4 ResolvePreviewColor(in AbilityIndicatorConfig indicator, in AbilityDefinition definition, bool valid)
+        {
+            if (valid &&
+                definition.HasPresentation &&
+                definition.Presentation != null &&
+                TryParseHexColor(definition.Presentation.AccentColorHex, alpha: 0.34f, out var accent))
+            {
+                return accent;
+            }
+
+            Vector4 color = GetStateColor(indicator, valid);
+            color.W = MathF.Max(color.W, valid ? 0.3f : 0.26f);
+            return color;
+        }
+
         private static Vector3 ResolveGroundCenter(OrderSelectionType selectionType, Vector3 actorWorldCm, Vector3 aimedWorldCm)
         {
             return selectionType switch
@@ -373,6 +527,32 @@ namespace Ludots.Core.Input.Orders
         private static Vector4 GetBorderColor(Vector4 baseColor)
         {
             return new Vector4(baseColor.X, baseColor.Y, baseColor.Z, MathF.Max(baseColor.W, 0.85f));
+        }
+
+        private static bool TryParseHexColor(string? value, float alpha, out Vector4 color)
+        {
+            color = default;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            string hex = value.Trim();
+            if (hex.StartsWith('#'))
+            {
+                hex = hex[1..];
+            }
+
+            if (hex.Length != 6 ||
+                !byte.TryParse(hex[..2], System.Globalization.NumberStyles.HexNumber, null, out byte r) ||
+                !byte.TryParse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber, null, out byte g) ||
+                !byte.TryParse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber, null, out byte b))
+            {
+                return false;
+            }
+
+            color = new Vector4(r / 255f, g / 255f, b / 255f, alpha);
+            return true;
         }
     }
 }
