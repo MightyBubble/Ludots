@@ -1,0 +1,54 @@
+=== NavMesh Bake Artifact Report ===
+Tile: (30, 27, Layer=0)
+Version: 1
+Timestamp: 2026-03-31 10:43:56 UTC
+
+[SUCCESS]
+
+Pipeline Statistics:
+  - Input Walkable Triangles: 5704
+  - Extracted Rings: 1
+  - Processed Polygons: 1
+  - Output Triangles: 38
+  - Output Vertices: 40
+  - Output Portals: 2
+
+Pipeline Logs:
+  [WalkMask] Building walk mask for chunk (30,27)...
+  [WalkMask] Found 5704 walkable triangles.
+  [Contour] Extracting contour rings...
+  [Contour] Extracted 1 rings.
+  [Polygon] Processing polygons (cleaning, hole assignment)...
+  [Polygon] Processed 1 polygons.
+  [Triangulate] Triangulating with CDT...
+  [Triangulate] CDT: 38 triangles, 40 vertices.
+  [Adjacency] Building adjacency and converting to NavTile format...
+  [Adjacency] Converting 40 vertices. startC=1920, startR=1728, originXm=13302.15, originZm=10368.00
+  [Adjacency]   V[0]: v2d=(48.0,31.0) -> global=(1968,1759) -> world=(336.02,186.00) h=12.00 -> cm=(33602,1200,18600)
+  [Adjacency]   V[1]: v2d=(64.0,0.0) -> global=(1984,1728) -> world=(443.40,0.00) h=14.00 -> cm=(44340,1400,0)
+  [Adjacency]   V[2]: v2d=(64.0,63.0) -> global=(1984,1791) -> world=(446.87,378.00) h=14.00 -> cm=(44687,1400,37800)
+  [Adjacency]   V[3]: v2d=(48.0,63.0) -> global=(1968,1791) -> world=(336.02,378.00) h=12.00 -> cm=(33602,1200,37800)
+  [Adjacency]   V[4]: v2d=(44.0,31.0) -> global=(1964,1759) -> world=(308.30,186.00) h=10.00 -> cm=(30830,1000,18600)
+  [Adjacency]   V[5]: v2d=(41.0,32.0) -> global=(1961,1760) -> world=(284.06,192.00) h=10.00 -> cm=(28406,1000,19200)
+  [Adjacency]   V[6]: v2d=(0.0,0.0) -> global=(1920,1728) -> world=(0.00,0.00) h=6.00 -> cm=(0,600,0)
+  [Adjacency]   V[7]: v2d=(44.0,32.0) -> global=(1964,1760) -> world=(304.84,192.00) h=10.00 -> cm=(30484,1000,19200)
+  [Adjacency]   V[8]: v2d=(37.0,33.0) -> global=(1957,1761) -> world=(259.81,198.00) h=10.00 -> cm=(25981,1000,19800)
+  [Adjacency]   V[9]: v2d=(40.0,33.0) -> global=(1960,1761) -> world=(280.59,198.00) h=10.00 -> cm=(28059,1000,19800)
+  [Adjacency] Built adjacency for 38 triangles.
+  [Clearance] Computing clearance field...
+  [Portal] Building border portals...
+  [Portal] Built 2 portals.
+  [Serialize] Tile serialized. Checksum: F1FFA700B207DF47
+
+WalkMask Details:
+  - Tile Size: 64x64
+  - Walkable Count: 5704
+Contour Rings:
+  - Outer Boundaries: 1
+  - Holes: 0
+Polygon Set:
+  - Polygon Count: 1
+  - Has Warnings: False
+TriMesh:
+  - Vertices: 40
+  - Triangles: 38

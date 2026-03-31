@@ -28,6 +28,7 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Navigation2D.Runtime;
@@ -175,6 +176,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TransientMarkerBuffer> TransientMarkerBuffer = new("TransientMarkerBuffer");
         public static readonly ServiceKey<GasPresentationEventBuffer> GasPresentationEventBuffer = new("GasPresentationEventBuffer");
         public static readonly ServiceKey<GroundOverlayBuffer> GroundOverlayBuffer = new("GroundOverlayBuffer");
+        public static readonly ServiceKey<RoadSplineBuffer> RoadSplineBuffer = new("RoadSplineBuffer");
         public static readonly ServiceKey<DebugDrawCommandBuffer> DebugDrawCommandBuffer = new("DebugDrawCommandBuffer");
         public static readonly ServiceKey<ProjectilePresentationBindingRegistry> ProjectilePresentationBindingRegistry = new("ProjectilePresentationBindingRegistry");
 
@@ -194,6 +196,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");
         public static readonly ServiceKey<NavMeshProfileRegistry> NavMeshProfiles = new("NavMeshProfiles");
         public static readonly ServiceKey<NavQueryServiceRegistry> NavQueryServices = new("NavQueryServices");
+        public static readonly ServiceKey<LoadedGraphRuntime> LoadedGraphRuntime = new("LoadedGraphRuntime");
         public static readonly ServiceKey<PathingConfig> PathingConfig = new("PathingConfig");
         public static readonly ServiceKey<PathStore> PathStore = new("PathStore");
         public static readonly ServiceKey<IPathService> PathService = new("PathService");

@@ -82,6 +82,13 @@ namespace Ludots.Core.Modding
                 var manifestPath = Path.Combine(current, "mod.json");
                 if (File.Exists(manifestPath))
                 {
+                    var nestedManifestPath = FindNestedManifestPath(current);
+                    if (nestedManifestPath != null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Nested mod roots are not allowed. Outer='{current}', nested='{Path.GetDirectoryName(nestedManifestPath)}'.");
+                    }
+
                     yield return current;
                     continue;
                 }
@@ -111,6 +118,54 @@ namespace Ludots.Core.Modding
                 || normalized.EndsWith("/obj", StringComparison.OrdinalIgnoreCase)
                 || normalized.Contains("/bin/", StringComparison.OrdinalIgnoreCase)
                 || normalized.Contains("/obj/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string? FindNestedManifestPath(string rootPath)
+        {
+            var pending = new Stack<string>();
+            try
+            {
+                var children = Directory.GetDirectories(rootPath);
+                Array.Sort(children, StringComparer.OrdinalIgnoreCase);
+                for (int i = children.Length - 1; i >= 0; i--)
+                {
+                    pending.Push(children[i]);
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            while (pending.Count > 0)
+            {
+                var current = pending.Pop();
+                if (ShouldIgnoreDirectory(current))
+                {
+                    continue;
+                }
+
+                var manifestPath = Path.Combine(current, "mod.json");
+                if (File.Exists(manifestPath))
+                {
+                    return manifestPath;
+                }
+
+                try
+                {
+                    var children = Directory.GetDirectories(current);
+                    Array.Sort(children, StringComparer.OrdinalIgnoreCase);
+                    for (int i = children.Length - 1; i >= 0; i--)
+                    {
+                        pending.Push(children[i]);
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            return null;
         }
     }
 }

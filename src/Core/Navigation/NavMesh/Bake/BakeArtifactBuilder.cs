@@ -165,6 +165,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             NavBakeStage failedStage,
             NavBakeErrorCode errorCode,
             string errorMessage,
+            int outputPortalCount = 0,
             bool includeDetailedData = true)
         {
             var artifact = new ExtendedBakeArtifact(tileId, tileVersion, failedStage, errorCode, errorMessage);
@@ -193,6 +194,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 artifact.OutputVertexCount = context.TriMesh.VertexCount;
                 artifact.OutputTriangleCount = context.TriMesh.TriangleCount;
             }
+
+            artifact.OutputPortalCount = outputPortalCount;
 
             // Detailed data for debugging
             if (includeDetailedData)

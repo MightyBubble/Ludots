@@ -40,6 +40,30 @@
         "value": "mods/showcases/champion_skill_stress_entry/ChampionSkillStressEntryMod",
         "projectPath": "ChampionSkillStressEntryMod.csproj"
       }
+    },
+    {
+      "name": "road_network_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/road_network/RoadNetworkShowcaseMod",
+        "projectPath": "RoadNetworkShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "chunk_streaming_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/chunk_streaming",
+        "projectPath": "ChunkStreamingShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "terrain_navmesh_bake",
+      "target": {
+        "type": "path",
+        "value": "mods/TerrainBenchmarkMod",
+        "projectPath": "TerrainBenchmarkMod.csproj"
+      }
     }
   ],
   "adapters": {

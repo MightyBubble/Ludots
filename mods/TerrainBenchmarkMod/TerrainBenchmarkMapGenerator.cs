@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using Ludots.Core.Map.Hex;
 using Ludots.Core.Modding;
 
 namespace TerrainBenchmarkMod
@@ -21,18 +22,88 @@ namespace TerrainBenchmarkMod
                 throw new InvalidOperationException($"Failed to resolve path: {uri}");
             }
 
+            EnsureGenerated(fullPath, message => context.Log($"[TerrainBenchmarkMod] {message}"));
+        }
+
+        public static void EnsureGenerated(string fullPath, Action<string>? log = null)
+        {
             var dir = Path.GetDirectoryName(fullPath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             {
                 Directory.CreateDirectory(dir);
             }
 
-            if (File.Exists(fullPath))
+            if (!NeedsRegeneration(fullPath, out string reason))
             {
-                var info = new FileInfo(fullPath);
-                if (info.Length > 0) return;
+                return;
             }
 
+            Generate(fullPath);
+            var info = new FileInfo(fullPath);
+            log?.Invoke($"{reason} Rebuilt {fullPath} ({info.Length} bytes).");
+        }
+
+        private static bool NeedsRegeneration(string fullPath, out string reason)
+        {
+            reason = string.Empty;
+            if (!File.Exists(fullPath))
+            {
+                reason = "Benchmark map was missing.";
+                return true;
+            }
+
+            var info = new FileInfo(fullPath);
+            if (info.Length <= 0)
+            {
+                reason = "Benchmark map was empty.";
+                return true;
+            }
+
+            try
+            {
+                using var stream = File.OpenRead(fullPath);
+                using var br = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
+                string magic = Encoding.ASCII.GetString(br.ReadBytes(4));
+                int version = br.ReadInt32();
+                int widthChunks = br.ReadInt32();
+                int heightChunks = br.ReadInt32();
+                int chunkSize = br.ReadInt32();
+
+                if (!string.Equals(magic, "VTXM", StringComparison.Ordinal))
+                {
+                    reason = "Benchmark map header magic was invalid.";
+                    return true;
+                }
+
+                if (version != Version)
+                {
+                    reason = $"Benchmark map version was {version} instead of {Version}.";
+                    return true;
+                }
+
+                if (widthChunks != WidthChunks || heightChunks != HeightChunks)
+                {
+                    reason = $"Benchmark map dimensions were {widthChunks}x{heightChunks} instead of {WidthChunks}x{HeightChunks} chunks.";
+                    return true;
+                }
+
+                if (chunkSize != VertexChunk.ChunkSize)
+                {
+                    reason = $"Benchmark map chunk size was {chunkSize} instead of {VertexChunk.ChunkSize}.";
+                    return true;
+                }
+
+                return false;
+            }
+            catch (Exception ex) when (ex is EndOfStreamException or InvalidDataException or IOException)
+            {
+                reason = $"Benchmark map could not be validated: {ex.Message}";
+                return true;
+            }
+        }
+
+        private static void Generate(string fullPath)
+        {
             using var fs = File.Create(fullPath);
             using var bw = new BinaryWriter(fs, Encoding.UTF8, leaveOpen: true);
 
@@ -152,7 +223,6 @@ namespace TerrainBenchmarkMod
             }
 
             bw.Flush();
-            context.Log($"[TerrainBenchmarkMod] Generated {fullPath} ({new FileInfo(fullPath).Length} bytes)");
         }
 
         private static byte HeightAt(int c, int r)

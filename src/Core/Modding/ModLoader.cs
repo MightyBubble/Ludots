@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Loader;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
@@ -159,9 +160,18 @@ namespace Ludots.Core.Modding
                 {
                     dllPath = Path.GetFullPath(dllPath);
                     Log.Info(in LogChannels.ModLoader, $"Loading DLL for {manifest.Name} at {dllPath}");
-                    var loadContext = new ModLoadContext(dllPath, ResolveSharedAssembly);
-                    var assembly = loadContext.LoadFromAssemblyPath(dllPath);
-                    _loadContexts.Add(loadContext);
+                    Assembly assembly;
+                    if (TryResolveAlreadyLoadedAssembly(dllPath, out var existingAssembly))
+                    {
+                        assembly = existingAssembly;
+                        Log.Info(in LogChannels.ModLoader, $"Reusing default-context assembly for {manifest.Name} from {existingAssembly.Location}");
+                    }
+                    else
+                    {
+                        var loadContext = new ModLoadContext(dllPath, ResolveSharedAssembly);
+                        assembly = loadContext.LoadFromAssemblyPath(dllPath);
+                        _loadContexts.Add(loadContext);
+                    }
                     CacheSharedAssembly(assembly);
 
                     Type[] allTypes;
@@ -225,6 +235,7 @@ namespace Ludots.Core.Modding
             catch (Exception ex)
             {
                 Log.Error(in LogChannels.ModLoader, $"Failed to load DLL for {manifest.Name}: {ex}");
+                throw;
             }
         }
 
@@ -289,6 +300,157 @@ namespace Ludots.Core.Modding
 
             results.Sort(StringComparer.OrdinalIgnoreCase);
             return results;
+        }
+
+        private static bool TryResolveAlreadyLoadedAssembly(string dllPath, out Assembly assembly)
+        {
+            var fullPath = Path.GetFullPath(dllPath);
+            assembly = null;
+
+            if (TryResolveDefaultAssemblyByIdentity(fullPath, out var defaultAssembly))
+            {
+                assembly = defaultAssembly;
+                return true;
+            }
+
+            if (!TryFindLoadedAssembly(fullPath, out var loadedAssembly, out var loadContext))
+            {
+                return false;
+            }
+
+            if (loadContext == AssemblyLoadContext.Default)
+            {
+                assembly = loadedAssembly;
+                return true;
+            }
+
+            if (loadContext?.IsCollectible == true && TryCollectibleUnload(fullPath))
+            {
+                if (!TryFindLoadedAssembly(fullPath, out loadedAssembly, out loadContext))
+                {
+                    return false;
+                }
+
+                if (loadContext == AssemblyLoadContext.Default)
+                {
+                    assembly = loadedAssembly;
+                    return true;
+                }
+            }
+
+            var contextName = loadContext?.Name ?? "<unknown>";
+            throw new InvalidOperationException(
+                $"Unsafe mod assembly reuse detected for '{fullPath}'. " +
+                $"The assembly is already loaded in non-default context '{contextName}'. " +
+                "Only AssemblyLoadContext.Default assemblies may be reused across engine lifecycles.");
+        }
+
+        private static bool TryGetAssemblyLocation(Assembly assembly, out string location)
+        {
+            location = string.Empty;
+            try
+            {
+                if (assembly == null || string.IsNullOrWhiteSpace(assembly.Location))
+                {
+                    return false;
+                }
+
+                location = Path.GetFullPath(assembly.Location);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool TryFindLoadedAssembly(string fullPath, out Assembly assembly, out AssemblyLoadContext loadContext)
+        {
+            assembly = null;
+            loadContext = null;
+
+            foreach (var loadedAssembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (!TryGetAssemblyLocation(loadedAssembly, out var assemblyPath) ||
+                    !string.Equals(assemblyPath, fullPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                assembly = loadedAssembly;
+                loadContext = AssemblyLoadContext.GetLoadContext(loadedAssembly);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryResolveDefaultAssemblyByIdentity(string fullPath, out Assembly assembly)
+        {
+            assembly = null;
+
+            AssemblyName requestedName;
+            try
+            {
+                requestedName = AssemblyName.GetAssemblyName(fullPath);
+            }
+            catch
+            {
+                return false;
+            }
+
+            string requestedFileName = Path.GetFileName(fullPath);
+            foreach (var loadedAssembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (AssemblyLoadContext.GetLoadContext(loadedAssembly) != AssemblyLoadContext.Default ||
+                    !TryGetAssemblyLocation(loadedAssembly, out var assemblyPath) ||
+                    !string.Equals(Path.GetFileName(assemblyPath), requestedFileName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                AssemblyName loadedName;
+                try
+                {
+                    loadedName = loadedAssembly.GetName();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (!string.Equals(loadedName.FullName, requestedName.FullName, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                assembly = loadedAssembly;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryCollectibleUnload(string fullPath)
+        {
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+
+                if (!TryFindLoadedAssembly(fullPath, out var loadedAssembly, out var loadContext))
+                {
+                    return true;
+                }
+
+                if (loadContext == AssemblyLoadContext.Default || loadContext?.IsCollectible != true)
+                {
+                    return false;
+                }
+            }
+
+            return false;
         }
 
         public void UnloadAll()

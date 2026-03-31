@@ -37,6 +37,9 @@ namespace Ludots.Core.Physics2D.Systems
         private static readonly QueryDescription _flowObstacleQuery = new QueryDescription()
             .WithAll<NavObstacle2D, Position2D, NavKinematics2D>();
 
+        private static readonly QueryDescription _sleepingPointGoalQuery = new QueryDescription()
+            .WithAll<NavAgent2D, NavGoal2D, Position2D, SleepingTag>();
+
         private readonly Navigation2DRuntime _runtime;
         private readonly CommandBuffer _commandBuffer = new();
         private int _flowStreamingTick;
@@ -51,6 +54,7 @@ namespace Ludots.Core.Physics2D.Systems
 
         public override void Update(in float deltaTime)
         {
+            WakeSleepingPointGoalAgents();
             EnsureSteeringOutputs();
 
             bool usedSteadyStateSync = TrySteadyStateSyncAgentSoA(out Navigation2DWorldSyncResult syncResult);
@@ -99,6 +103,32 @@ namespace Ludots.Core.Physics2D.Systems
             agentSoA.BeginSteeringFrame(unchecked(++_steeringFrameTick), cacheFrameEnabled, stableSteeringWorld);
 
             ApplySteering(deltaTime);
+        }
+
+        private void WakeSleepingPointGoalAgents()
+        {
+            World.Query(in _sleepingPointGoalQuery, (Entity entity, ref NavGoal2D goal, ref Position2D position) =>
+            {
+                if (goal.Kind != NavGoalKind2D.Point)
+                {
+                    return;
+                }
+
+                Fix64 radiusCm = goal.RadiusCm > Fix64.Zero ? goal.RadiusCm : Fix64.OneValue;
+                Fix64 radiusSq = radiusCm * radiusCm;
+                Fix64 distanceSq = Fix64Vec2.DistanceSquared(position.Value, goal.TargetCm);
+                if (distanceSq <= radiusSq)
+                {
+                    return;
+                }
+
+                World.Remove<SleepingTag>(entity);
+                if (World.TryGet(entity, out Motion motion))
+                {
+                    motion.SleepTimer = 0;
+                    World.Set(entity, motion);
+                }
+            });
         }
 
         private bool EnsureSteeringCellSize(Navigation2DWorld agentSoA)

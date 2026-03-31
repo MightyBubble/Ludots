@@ -1,9 +1,12 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Loader;
 using NUnit.Framework;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using ExampleMod;
 
 namespace GasTests
 {
@@ -40,6 +43,51 @@ namespace GasTests
             }
         }
 
+        [Test]
+        public void LoadMods_ReusesMainAssembly_FromDefaultContextOnly()
+        {
+            _ = typeof(ExampleModEntry).Assembly;
+
+            string repoRoot = FindRepoRoot();
+            string modRoot = Path.Combine(repoRoot, "mods", "ExampleMod");
+
+            var vfs = new VirtualFileSystem();
+            var loader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+
+            Assert.DoesNotThrow(() => loader.LoadMods(new[] { modRoot }));
+            Assert.That(loader.LoadedModIds, Does.Contain("ExampleMod"));
+        }
+
+        [Test]
+        public void LoadMods_WhenAssemblyAlreadyLoadedInCollectibleContext_ThrowsUnsafeReuseError()
+        {
+            string tempRoot = CreateTempDir();
+            try
+            {
+                string modDir = CreateModDir(tempRoot, "UnsafeReuseMod");
+                string outputDir = Path.Combine(modDir, "bin", "Release", "net8.0");
+                Directory.CreateDirectory(outputDir);
+
+                string sourceAssemblyPath = typeof(ModLoaderLifecycleTests).Assembly.Location;
+                string copiedAssemblyPath = Path.Combine(outputDir, "UnsafeReuseMod.dll");
+                File.Copy(sourceAssemblyPath, copiedAssemblyPath, overwrite: true);
+
+                using var collectibleContext = new TempCollectibleLoadContext(copiedAssemblyPath);
+                _ = collectibleContext.LoadFromAssemblyPath(copiedAssemblyPath);
+
+                var vfs = new VirtualFileSystem();
+                var loader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+
+                var ex = Assert.Throws<InvalidOperationException>(() => loader.LoadMods(new[] { modDir }));
+                Assert.That(ex!.Message, Does.Contain("Unsafe mod assembly reuse detected"));
+                Assert.That(ex.Message, Does.Contain("Only AssemblyLoadContext.Default assemblies may be reused"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
         private static string CreateModDir(string root, string modName)
         {
             var modDir = Path.Combine(root, modName);
@@ -65,6 +113,23 @@ namespace GasTests
             return path;
         }
 
+        private static string FindRepoRoot()
+        {
+            var current = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
+            while (current != null)
+            {
+                if (Directory.Exists(Path.Combine(current.FullName, "assets")) &&
+                    Directory.Exists(Path.Combine(current.FullName, "mods")))
+                {
+                    return current.FullName;
+                }
+
+                current = current.Parent;
+            }
+
+            throw new DirectoryNotFoundException("Could not locate repository root from test directory.");
+        }
+
         private static void TryDelete(string path)
         {
             try
@@ -73,6 +138,28 @@ namespace GasTests
             }
             catch
             {
+            }
+        }
+
+        private sealed class TempCollectibleLoadContext : AssemblyLoadContext, IDisposable
+        {
+            private readonly AssemblyDependencyResolver _resolver;
+
+            public TempCollectibleLoadContext(string mainAssemblyPath)
+                : base(name: "TempCollectibleLoadContext", isCollectible: true)
+            {
+                _resolver = new AssemblyDependencyResolver(mainAssemblyPath);
+            }
+
+            protected override Assembly Load(AssemblyName assemblyName)
+            {
+                string? path = _resolver.ResolveAssemblyToPath(assemblyName);
+                return path == null ? null : LoadFromAssemblyPath(path);
+            }
+
+            public void Dispose()
+            {
+                Unload();
             }
         }
     }

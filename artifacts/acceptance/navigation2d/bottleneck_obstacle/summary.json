@@ -1,0 +1,23 @@
+{
+  "scenario": "navigation2d-bottleneck-obstacle",
+  "scenario_name": "Bottleneck",
+  "adapter": "raylib",
+  "selectors": [
+    "$nav_playground"
+  ],
+  "root_mods": [
+    "Navigation2DPlaygroundMod"
+  ],
+  "team0_mid_advance_cm": 5764.1,
+  "team1_mid_advance_cm": 5785.83,
+  "team0_final_advance_cm": 9716.34,
+  "team1_final_advance_cm": 9448.86,
+  "final_center_fraction": 0.7266,
+  "final_center_stopped_fraction": 0.2734,
+  "final_center_count": 93,
+  "final_center_stopped_agents": 35,
+  "final_live_agents": 128,
+  "peak_center_count": 98,
+  "peak_center_tick": 600,
+  "normalized_signature": "navigation2d-bottleneck-obstacle|mid:5764/5786|final:9716/9449|center:93/128|stopped:35|peak:98@600"
+}

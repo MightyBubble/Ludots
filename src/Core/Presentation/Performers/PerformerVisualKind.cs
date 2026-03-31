@@ -17,5 +17,8 @@ namespace Ludots.Core.Presentation.Performers
 
         /// <summary>World-space bar (health bar, cast bar).</summary>
         WorldBar = 3,
+
+        /// <summary>Bezier road spline ribbon rendered in world space.</summary>
+        RoadSpline = 4,
     }
 }

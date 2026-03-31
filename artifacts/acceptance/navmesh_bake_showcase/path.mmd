@@ -1,0 +1,8 @@
+flowchart TD
+    A[Load TerrainBenchmark vertex map] --> B[Scan chunks and auto-pick the most legible shoreline tile]
+    B --> C[Audit blocked causes: water, hard block, cliff, straightening]
+    C --> D[Build final walk mask and extract contour rings]
+    D --> E[Process polygons and holes]
+    E --> F[Triangulate movement surface and build final nav tile]
+    F --> G[Run runtime proof queries: same tile, cross portal, blocked rejection]
+    G --> H[Export screenshots, report, summary, and video]

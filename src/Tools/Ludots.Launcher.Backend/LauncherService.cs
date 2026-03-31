@@ -913,6 +913,8 @@ public sealed class LauncherService
             entries.Add(CreateCatalogEntry(config, sources, mod.DirectoryPath, mod.Manifest));
         }
 
+        ValidateBindingTargets(config, entries);
+
         var byId = entries
             .GroupBy(entry => entry.Info.Id, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
@@ -1055,6 +1057,49 @@ public sealed class LauncherService
         }
 
         return bindingMap;
+    }
+
+    private void ValidateBindingTargets(LauncherConfig config, IReadOnlyList<CatalogEntry> entries)
+    {
+        var discoveredRoots = entries
+            .Select(entry => Path.GetFullPath(entry.Info.RootPath))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var binding in config.Bindings)
+        {
+            if (binding?.Target == null ||
+                !string.Equals(binding.Target.Type, "path", StringComparison.OrdinalIgnoreCase) ||
+                string.IsNullOrWhiteSpace(binding.Target.Value))
+            {
+                continue;
+            }
+
+            var bindingPath = Path.GetFullPath(LauncherWorkspaceSourceResolver.ResolvePath(_repoRoot, binding.Target.Value));
+            if (discoveredRoots.Contains(bindingPath, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var nestedRoot = discoveredRoots.FirstOrDefault(root => IsPathUnder(bindingPath, root));
+            if (nestedRoot != null)
+            {
+                throw new InvalidOperationException(
+                    $"Launcher binding '{binding.Name}' points inside discovered mod root '{GetPortablePath(nestedRoot)}'. " +
+                    $"Use the canonical mod root instead of nested path '{GetPortablePath(bindingPath)}'.");
+            }
+
+            var childRoots = discoveredRoots
+                .Where(root => IsPathUnder(root, bindingPath))
+                .OrderBy(root => root, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (childRoots.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Launcher binding '{binding.Name}' points to '{GetPortablePath(bindingPath)}', but runtime discovery resolves canonical mod root(s): " +
+                    string.Join(", ", childRoots.Select(GetPortablePath)));
+            }
+        }
     }
 
     private IReadOnlyList<LauncherPreset> BuildPresetViews(LauncherPresetDocument presetDocument, CatalogIndex catalog)
@@ -1584,6 +1629,21 @@ public sealed class LauncherService
     private static bool PathsEqual(string left, string right)
     {
         return string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPathUnder(string candidatePath, string rootPath)
+    {
+        var candidate = Path.GetFullPath(candidatePath)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var root = Path.GetFullPath(rootPath)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (string.Equals(candidate, root, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string prefix = root + Path.DirectorySeparatorChar;
+        return candidate.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string CreateStableId(string prefix, string raw)

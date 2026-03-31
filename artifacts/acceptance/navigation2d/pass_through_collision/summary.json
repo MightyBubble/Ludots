@@ -1,0 +1,23 @@
+{
+  "scenario": "navigation2d-pass-through-collision",
+  "scenario_name": "Pass Through",
+  "adapter": "raylib",
+  "selectors": [
+    "$nav_playground"
+  ],
+  "root_mods": [
+    "Navigation2DPlaygroundMod"
+  ],
+  "team0_mid_advance_cm": 7515.88,
+  "team1_mid_advance_cm": 7380.2,
+  "team0_final_advance_cm": 16475.09,
+  "team1_final_advance_cm": 16263.1,
+  "final_center_fraction": 0,
+  "final_center_stopped_fraction": 0,
+  "final_center_count": 0,
+  "final_center_stopped_agents": 0,
+  "final_live_agents": 128,
+  "peak_center_count": 82,
+  "peak_center_tick": 450,
+  "normalized_signature": "navigation2d-pass-through-collision|mid:7516/7380|final:16475/16263|center:0/128|stopped:0|peak:82@450"
+}

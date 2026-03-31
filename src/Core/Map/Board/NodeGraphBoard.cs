@@ -15,8 +15,10 @@ namespace Ludots.Core.Map.Board
         public ISpatialCoordinateConverter CoordinateConverter { get; }
         public ISpatialPartitionWorld SpatialPartition { get; }
         public ISpatialQueryService QueryService { get; }
-        public ILoadedChunks LoadedChunks => null;
+        public ILoadedChunks LoadedChunks => LoadedChunksSource;
+        public WorldGridLoadedChunks LoadedChunksSource { get; }
         public ChunkedNodeGraphStore GraphStore { get; }
+        public LoadedGraphRuntime GraphRuntime { get; }
 
         private bool _disposed;
 
@@ -37,13 +39,22 @@ namespace Ludots.Core.Map.Board
             SpatialPartition = partition;
             QueryService = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, WorldSize));
 
+            LoadedChunksSource = new WorldGridLoadedChunks(config.ChunkSizeCells * gridCellSizeCm);
             GraphStore = new ChunkedNodeGraphStore();
+            GraphStore.SubscribeToLoadedChunks(LoadedChunksSource);
+            GraphRuntime = new LoadedGraphRuntime(
+                GraphStore,
+                LoadedChunksSource,
+                preferredProjectionCellSizeCm: config.ChunkSizeCells * gridCellSizeCm);
         }
 
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
+            GraphRuntime.Dispose();
+            GraphStore.UnsubscribeFromLoadedChunks();
+            LoadedChunksSource.Reset();
             SpatialPartition?.Clear();
         }
     }

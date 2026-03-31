@@ -46,6 +46,62 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return TryResolveSpatialTarget(in order.Args.Spatial, out targetWorldCm);
         }
 
+        public static int GetSpatialPointCount(in OrderSpatial spatial)
+        {
+            if (spatial.Kind != OrderSpatialKind.WorldCm)
+            {
+                return 0;
+            }
+
+            return spatial.Mode switch
+            {
+                OrderCollectionMode.Single => 1,
+                OrderCollectionMode.List => spatial.PointCount,
+                _ => 0,
+            };
+        }
+
+        public static bool TryResolveMoveWaypoint(in Order order, int pointIndex, out Vector3 waypointWorldCm)
+        {
+            return TryResolveMoveWaypoint(in order.Args.Spatial, pointIndex, out waypointWorldCm);
+        }
+
+        public static bool TryResolveMoveWaypoint(in OrderSpatial spatial, int pointIndex, out Vector3 waypointWorldCm)
+        {
+            waypointWorldCm = default;
+            if (spatial.Kind != OrderSpatialKind.WorldCm || pointIndex < 0)
+            {
+                return false;
+            }
+
+            if (spatial.Mode == OrderCollectionMode.Single)
+            {
+                if (pointIndex != 0)
+                {
+                    return false;
+                }
+
+                waypointWorldCm = spatial.WorldCm;
+                return true;
+            }
+
+            if (spatial.Mode != OrderCollectionMode.List || pointIndex >= spatial.PointCount)
+            {
+                return false;
+            }
+
+            unsafe
+            {
+                fixed (int* px = spatial.PointX)
+                fixed (int* py = spatial.PointY)
+                fixed (int* pz = spatial.PointZ)
+                {
+                    waypointWorldCm = new Vector3(px[pointIndex], py[pointIndex], pz[pointIndex]);
+                    return true;
+                }
+            }
+        }
+
         public static bool TryGetEntityWorldCm(World world, Entity entity, out Vector3 worldCm)
         {
             worldCm = default;

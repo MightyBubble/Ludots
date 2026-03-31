@@ -1,0 +1,11 @@
+flowchart TD
+    A[Boot launcher runtime for RoadNetworkShowcaseMod] --> B[Settle tactical camera and chunk window]
+    B --> C[Project Blue Vanguard visual pivot and inject left-click]
+    C --> D{Selection contains Blue Vanguard?}
+    D -->|yes| E[Resolve visible ground near 0,0 and inject right-click]
+    E --> F{HUD shows an accepted route selection and cue marker is visible?}
+    F -->|yes| G[Advance simulation until the controlled blue column moves east]
+    G --> H[Apply east camera target and wait for loaded chunk signature to change]
+    H --> I[Write battle-report + trace + path + PNG timeline]
+    D -->|no| X[Fail acceptance: selection bridge diverged]
+    F -->|no| Y[Fail acceptance: road command still invalid or marker missing]

@@ -81,6 +81,7 @@ namespace Ludots.Core.Scripting
         public const string HexMetrics = "HexMetrics";
         public const string MapSession = "MapSession";
         public const string LoadedChunks = "LoadedChunks";
+        public const string LoadedGraphRuntime = "LoadedGraphRuntime";
         public const string RegistrationConflictReport = "RegistrationConflictReport";
         public const string ConfigConflictReport = "ConfigConflictReport";
         public const string ConfigCatalog = "ConfigCatalog";
@@ -90,15 +91,10 @@ namespace Ludots.Core.Scripting
         public const string VirtualCameraRequest = "VirtualCameraRequest";
         public const string VirtualCameraRegistry = "VirtualCameraRegistry";
         public const string LocalPlayerEntity = "LocalPlayerEntity";
-        [Obsolete("Legacy selection compatibility key. Do not use. Resolve viewed selection through SelectionContextRuntime or SelectionViewViewerEntity + SelectionViewKey.")]
         public const string SelectedEntity = "SelectedEntity";
         public const string HoveredEntity = "HoveredEntity";
         public const string TabTargetEntity = "TabTargetEntity";
-        public const string SelectionViewViewerEntity = "SelectionViewViewerEntity";
-        public const string SelectionViewKey = "SelectionViewKey";
-        [Obsolete("Legacy pre-SSOT view key. Do not use. Resolve viewed selection through SelectionViewViewerEntity + SelectionViewKey.")]
         public const string SelectionViewOwnerEntity = "SelectionViewOwnerEntity";
-        [Obsolete("Legacy pre-SSOT set key. Do not use. Resolve viewed selection through SelectionViewViewerEntity + SelectionViewKey.")]
         public const string SelectionViewSetKey = "SelectionViewSetKey";
         public const string AbilityInputRequestQueue = "AbilityInputRequestQueue";
         public const string GameConfig = "GameConfig";
@@ -107,6 +103,7 @@ namespace Ludots.Core.Scripting
         // WorldHudConfig removed �?unified into Performer entity-scoped definitions
         public const string GasPresentationEventBuffer = "GasPresentationEventBuffer";
         public const string GroundOverlayBuffer = "GroundOverlayBuffer";
+        public const string RoadSplineBuffer = "RoadSplineBuffer";
         // IndicatorRequestBuffer removed �?unified into Performer direct API
         public const string PerformerDefinitionRegistry = "PerformerDefinitionRegistry";
         public const string PerformerInstanceBuffer = "PerformerInstanceBuffer";

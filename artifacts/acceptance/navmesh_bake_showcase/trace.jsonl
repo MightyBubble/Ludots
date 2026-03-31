@@ -1,0 +1,5 @@
+{"event_id":"navmesh-bake-001","step":"walk_mask","metric":5704,"stage":"Serialize","error_code":"None","status":"done"}
+{"event_id":"navmesh-bake-002","step":"contours","metric":1,"stage":"Serialize","error_code":"None","status":"done"}
+{"event_id":"navmesh-bake-003","step":"polygons","metric":1,"stage":"Serialize","error_code":"None","status":"done"}
+{"event_id":"navmesh-bake-004","step":"triangulate","metric":38,"stage":"Serialize","error_code":"None","status":"done"}
+{"event_id":"navmesh-bake-005","step":"serialize","metric":2,"stage":"Serialize","error_code":"None","status":"done"}

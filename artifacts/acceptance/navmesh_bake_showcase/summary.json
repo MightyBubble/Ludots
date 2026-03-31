@@ -1,0 +1,33 @@
+{
+  "scenario": "navmesh-bake-terrain-visualization",
+  "adapter": "raylib",
+  "selectors": [
+    "$terrain_navmesh_bake"
+  ],
+  "root_mods": [
+    "TerrainBenchmarkMod"
+  ],
+  "input_map": "D:\\001_AI\\LudotsDev\\Ludots-issue78-acceptance\\mods\\TerrainBenchmarkMod\\assets\\Data\\Maps\\terrain_bench.vtxm",
+  "chunk_x": 30,
+  "chunk_y": 27,
+  "selection_reason": "Auto-picked chunk 30,27: water=28%, blockedVertices=0%, shorelineTransitions=97, polygons=1, holes=0, triangles=38, portals=2.",
+  "water_fraction": 0.2849,
+  "blocked_vertex_fraction": 0,
+  "shoreline_transitions": 97,
+  "walkable_triangles": 5704,
+  "water_blocked_triangles": 2487,
+  "hard_blocked_triangles": 0,
+  "cliff_blocked_triangles": 0,
+  "straightened_triangles": 1,
+  "contour_rings": 1,
+  "polygons": 1,
+  "polygon_holes": 0,
+  "mesh_vertices": 40,
+  "mesh_triangles": 38,
+  "border_portals": 2,
+  "used_grid_fallback": false,
+  "runtime_same_tile_path": true,
+  "runtime_cross_portal_path": true,
+  "runtime_blocked_rejected": true,
+  "normalized_signature": "navmesh-bake-terrain-visualization|chunk:30,27|walk:5704|water:2487|cliff:0|rings:1|polys:1|holes:0|verts:40|tris:38|portals:2|fallback:0"
+}

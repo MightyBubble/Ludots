@@ -1,0 +1,23 @@
+{
+  "scenario": "navigation2d-lane-merge-hybrid",
+  "scenario_name": "Lane Merge",
+  "adapter": "raylib",
+  "selectors": [
+    "$nav_playground"
+  ],
+  "root_mods": [
+    "Navigation2DPlaygroundMod"
+  ],
+  "team0_mid_advance_cm": 5238.77,
+  "team1_mid_advance_cm": 5562.26,
+  "team0_final_advance_cm": 13276.97,
+  "team1_final_advance_cm": 13553.41,
+  "final_center_fraction": 0,
+  "final_center_stopped_fraction": 0,
+  "final_center_count": 0,
+  "final_center_stopped_agents": 0,
+  "final_live_agents": 128,
+  "peak_center_count": 61,
+  "peak_center_tick": 600,
+  "normalized_signature": "navigation2d-lane-merge-hybrid|mid:5239/5562|final:13277/13553|center:0/128|stopped:0|peak:61@600"
+}
