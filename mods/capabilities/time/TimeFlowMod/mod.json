@@ -1,0 +1,10 @@
+{
+  "name": "TimeFlowMod",
+  "version": "1.0.0",
+  "description": "Shared time-flow capability mod that exposes reusable pause, bullet-time, and multi-domain rate profiles.",
+  "main": "bin/net8.0/TimeFlowMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

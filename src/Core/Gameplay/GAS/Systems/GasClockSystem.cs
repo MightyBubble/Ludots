@@ -19,7 +19,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public void Update(in float dt)
         {
             _clock.Advance(ClockDomainId.FixedFrame);
-            if (_stepPolicy.ShouldAdvanceStepOnThisFixedTick())
+            int steps = _stepPolicy.ConsumeStepsForThisFixedTick();
+            for (int i = 0; i < steps; i++)
             {
                 _clock.Advance(ClockDomainId.Step);
             }

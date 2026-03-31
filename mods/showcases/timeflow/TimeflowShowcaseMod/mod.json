@@ -1,0 +1,13 @@
+{
+  "name": "TimeflowHubPrototypeMod",
+  "version": "1.0.0",
+  "description": "Prototype hub for timeflow experiments. The shipped showcase pack lives under mods/showcases/time/TimeFlowShowcaseMod.",
+  "main": "bin/net8.0/TimeflowShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["timeflow", "showcase", "bullet-time", "pause", "rts", "atb"]
+}

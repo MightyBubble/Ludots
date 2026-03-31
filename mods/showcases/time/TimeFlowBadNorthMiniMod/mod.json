@@ -1,0 +1,10 @@
+{
+  "name": "TimeFlowBadNorthMiniMod",
+  "version": "1.0.0",
+  "description": "Standalone mini-game entry for the Bad-North-style active pause showcase.",
+  "main": "bin/net8.0/TimeFlowBadNorthMiniMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "TimeFlowShowcaseMod": "^1.0.0"
+  }
+}

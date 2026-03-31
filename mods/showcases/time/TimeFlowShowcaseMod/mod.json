@@ -1,0 +1,13 @@
+{
+  "name": "TimeFlowShowcaseMod",
+  "version": "1.0.0",
+  "description": "Deterministic showcase pack for ATB wait, auto-battle ult freeze, burst fever, command pause, CK3 macro speed ladders, and Bad North active pause.",
+  "main": "bin/net8.0/TimeFlowShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "TimeFlowMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["timeflow", "showcase", "pause", "bullet-time", "atb", "ck3", "badnorth"]
+}

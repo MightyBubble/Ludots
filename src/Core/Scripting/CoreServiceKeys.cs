@@ -7,6 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Engine.Physics2D;
+using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Camera;
@@ -66,6 +67,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GameEngine> Engine = new("Engine");
         public static readonly ServiceKey<GameConfig> GameConfig = new("GameConfig");
         public static readonly ServiceKey<SystemFactoryRegistry> SystemFactoryRegistry = new("SystemFactoryRegistry");
+        public static readonly ServiceKey<TimeFlowService> TimeFlow = new("TimeFlow");
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");
 
         // --- Map ---

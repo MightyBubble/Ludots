@@ -1,0 +1,57 @@
+{
+  "actions": [
+    { "id": "TimeflowScenarioAtb", "name": "Timeflow_Scenario_Atb", "type": "Button" },
+    { "id": "TimeflowScenarioAutoBattle", "name": "Timeflow_Scenario_AutoBattle", "type": "Button" },
+    { "id": "TimeflowScenarioBreakFever", "name": "Timeflow_Scenario_BreakFever", "type": "Button" },
+    { "id": "TimeflowScenarioSentinels", "name": "Timeflow_Scenario_Sentinels", "type": "Button" },
+    { "id": "TimeflowScenarioCk3", "name": "Timeflow_Scenario_Ck3", "type": "Button" },
+    { "id": "TimeflowScenarioBadNorth", "name": "Timeflow_Scenario_BadNorth", "type": "Button" },
+    { "id": "TimeflowGlobalPause", "name": "Timeflow_Global_Pause", "type": "Button" },
+    { "id": "TimeflowGlobalBullet", "name": "Timeflow_Global_Bullet", "type": "Button" },
+    { "id": "TimeflowReset", "name": "Timeflow_Reset", "type": "Button" },
+    { "id": "TimeflowPrimaryA", "name": "Timeflow_Primary_A", "type": "Button" },
+    { "id": "TimeflowPrimaryB", "name": "Timeflow_Primary_B", "type": "Button" },
+    { "id": "TimeflowPrimaryC", "name": "Timeflow_Primary_C", "type": "Button" },
+    { "id": "TimeflowPrimaryD", "name": "Timeflow_Primary_D", "type": "Button" },
+    { "id": "TimeflowOptionA", "name": "Timeflow_Option_A", "type": "Button" },
+    { "id": "TimeflowOptionB", "name": "Timeflow_Option_B", "type": "Button" },
+    { "id": "TimeflowOptionC", "name": "Timeflow_Option_C", "type": "Button" },
+    { "id": "TimeflowTogglePause", "name": "Timeflow_Toggle_Pause", "type": "Button" },
+    { "id": "TimeflowConfirm", "name": "Timeflow_Confirm", "type": "Button" },
+    { "id": "TimeflowSpeed1", "name": "Timeflow_Speed_1", "type": "Button" },
+    { "id": "TimeflowSpeed2", "name": "Timeflow_Speed_2", "type": "Button" },
+    { "id": "TimeflowSpeed3", "name": "Timeflow_Speed_3", "type": "Button" },
+    { "id": "TimeflowSpeed4", "name": "Timeflow_Speed_4", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "TimeflowShowcase.Controls",
+      "name": "Timeflow Showcase Controls",
+      "priority": 80,
+      "bindings": [
+        { "actionId": "TimeflowScenarioAtb", "path": "<Keyboard>/f1" },
+        { "actionId": "TimeflowScenarioAutoBattle", "path": "<Keyboard>/f2" },
+        { "actionId": "TimeflowScenarioBreakFever", "path": "<Keyboard>/f3" },
+        { "actionId": "TimeflowScenarioSentinels", "path": "<Keyboard>/f4" },
+        { "actionId": "TimeflowScenarioCk3", "path": "<Keyboard>/f5" },
+        { "actionId": "TimeflowScenarioBadNorth", "path": "<Keyboard>/f6" },
+        { "actionId": "TimeflowGlobalPause", "path": "<Keyboard>/space" },
+        { "actionId": "TimeflowGlobalBullet", "path": "<Keyboard>/tab" },
+        { "actionId": "TimeflowReset", "path": "<Keyboard>/backspace" },
+        { "actionId": "TimeflowPrimaryA", "path": "<Keyboard>/q" },
+        { "actionId": "TimeflowPrimaryB", "path": "<Keyboard>/w" },
+        { "actionId": "TimeflowPrimaryC", "path": "<Keyboard>/e" },
+        { "actionId": "TimeflowPrimaryD", "path": "<Keyboard>/r" },
+        { "actionId": "TimeflowOptionA", "path": "<Keyboard>/z" },
+        { "actionId": "TimeflowOptionB", "path": "<Keyboard>/x" },
+        { "actionId": "TimeflowOptionC", "path": "<Keyboard>/c" },
+        { "actionId": "TimeflowTogglePause", "path": "<Keyboard>/p" },
+        { "actionId": "TimeflowConfirm", "path": "<Keyboard>/enter" },
+        { "actionId": "TimeflowSpeed1", "path": "<Keyboard>/1" },
+        { "actionId": "TimeflowSpeed2", "path": "<Keyboard>/2" },
+        { "actionId": "TimeflowSpeed3", "path": "<Keyboard>/3" },
+        { "actionId": "TimeflowSpeed4", "path": "<Keyboard>/4" }
+      ]
+    }
+  ]
+}

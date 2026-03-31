@@ -1,0 +1,10 @@
+{
+  "name": "TimeFlowDotaUltMiniMod",
+  "version": "1.0.0",
+  "description": "Standalone mini-game entry for the manual-ult freeze and bullet-time showcase.",
+  "main": "bin/net8.0/TimeFlowDotaUltMiniMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "TimeFlowShowcaseMod": "^1.0.0"
+  }
+}

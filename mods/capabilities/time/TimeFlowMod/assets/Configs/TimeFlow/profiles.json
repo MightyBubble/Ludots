@@ -1,0 +1,58 @@
+{
+  "profiles": {
+    "showcase.atb_wait_pause": {
+      "description": "ATB wait-mode command pause. Freeze simulation until the command window resolves.",
+      "simulationScalePermille": 0,
+      "loopMode": "TurnBased"
+    },
+    "showcase.dota_ult_freeze": {
+      "description": "Manual ultimate freeze frame before the cinematic release.",
+      "simulationScalePermille": 0,
+      "loopMode": "TurnBased"
+    },
+    "showcase.bullet_time_30": {
+      "description": "Global bullet time at roughly 30% wall-clock speed.",
+      "simulationScalePermille": 300
+    },
+    "showcase.break_fever": {
+      "description": "Burst-fever window with slowed world time and reduced navigation cadence.",
+      "simulationScalePermille": 350,
+      "navigation2DScalePermille": 500
+    },
+    "showcase.sentinel_command_pause": {
+      "description": "13 Sentinels inspired command pause for queued actions.",
+      "simulationScalePermille": 0,
+      "loopMode": "TurnBased"
+    },
+    "showcase.ck3_pause": {
+      "description": "Macro pause used for map-level event acknowledgements.",
+      "simulationScalePermille": 0,
+      "loopMode": "TurnBased"
+    },
+    "showcase.ck3_speed_1": {
+      "description": "Macro baseline speed.",
+      "simulationScalePermille": 1000
+    },
+    "showcase.ck3_speed_2": {
+      "description": "Macro fast-forward speed 2.",
+      "simulationScalePermille": 1750
+    },
+    "showcase.ck3_speed_3": {
+      "description": "Macro fast-forward speed 3.",
+      "simulationScalePermille": 2500
+    },
+    "showcase.ck3_speed_4": {
+      "description": "Macro fast-forward speed 4.",
+      "simulationScalePermille": 3500
+    },
+    "showcase.badnorth_pause": {
+      "description": "Active pause for squad command assignment.",
+      "simulationScalePermille": 0,
+      "loopMode": "TurnBased"
+    },
+    "showcase.badnorth_resume": {
+      "description": "Baseline active-pause realtime between command bursts.",
+      "simulationScalePermille": 1000
+    }
+  }
+}

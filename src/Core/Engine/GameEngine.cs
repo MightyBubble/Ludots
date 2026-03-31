@@ -54,6 +54,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Components;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Engine.Physics2D;
+using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.AOI;
@@ -178,6 +179,9 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
+        private TimeFlowService _timeFlow;
+        private int _physics2DBaseHz;
+        private int _navigation2DBaseHz;
 
         // Spatial systems — kept for hot-swap on map load
         private WorldToGridSyncSystem _worldToGridSyncSystem;
@@ -412,6 +416,8 @@ namespace Ludots.Core.Engine
             var engineClockConfigLoader = new EngineClockConfigLoader(ConfigPipeline);
             var engineClockConfig = engineClockConfigLoader.Load();
             Time.FixedDeltaTime = 1f / engineClockConfig.FixedHz;
+            _timeFlow = new TimeFlowService();
+            Time.TimeScale = _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation) / 1000f;
 
             var extensionAttributeRegistry = new ExtensionAttributeRegistry();
             var attributeSchemaUpdateQueue = new AttributeSchemaUpdateQueue();
@@ -429,6 +435,8 @@ namespace Ludots.Core.Engine
             var physics2dClockConfig = physics2dClockConfigLoader.Load();
             var navigation2dClockConfigLoader = new Navigation2DClockConfigLoader(ConfigPipeline);
             var navigation2dClockConfig = navigation2dClockConfigLoader.Load();
+            _physics2DBaseHz = physics2dClockConfig.PhysicsHz;
+            _navigation2DBaseHz = navigation2dClockConfig.NavigationHz;
             var graphProgramRegistry = new GraphProgramRegistry();
             var graphSymbolResolver = new GasGraphSymbolResolver();
             var graphConfigLoader = new GraphProgramConfigLoader(ConfigPipeline, graphProgramRegistry, graphSymbolResolver);
@@ -634,6 +642,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.EffectTemplateRegistry, effectTemplateRegistry);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
             SetService(CoreServiceKeys.EffectRequestQueue, effectRequestQueue);
+            SetService(CoreServiceKeys.TimeFlow, _timeFlow);
             SetService(CoreServiceKeys.Clock, (IClock)clock);
             SetService(CoreServiceKeys.GasClockStepPolicy, clockStepPolicy);
             SetService(CoreServiceKeys.GasClocks, gasClocks);
@@ -865,6 +874,43 @@ namespace Ludots.Core.Engine
         {
             _physics2DController?.AfterPhysicsFixedTick();
             _gasController?.AfterFixedTick();
+        }
+
+        private void ApplyBuiltInTimeFlowScales()
+        {
+            if (_timeFlow == null)
+            {
+                return;
+            }
+
+            Time.TimeScale = _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation) / 1000f;
+
+            if (GetService(CoreServiceKeys.GasClockStepPolicy) is GasClockStepPolicy gasClockStepPolicy)
+            {
+                gasClockStepPolicy.SetScalePermille(_timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Gas));
+            }
+
+            if (GetService(CoreServiceKeys.Physics2DTickPolicy) is Physics2DTickPolicy physics2dTickPolicy)
+            {
+                physics2dTickPolicy.SetTargetHz(ScaleRateHz(_physics2DBaseHz, _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Physics2D)));
+            }
+
+            if (GetService(CoreServiceKeys.Navigation2DTickPolicy) is Navigation2DTickPolicy navigation2dTickPolicy)
+            {
+                navigation2dTickPolicy.SetTargetHz(ScaleRateHz(_navigation2DBaseHz, _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Navigation2D)));
+            }
+        }
+
+        private static int ScaleRateHz(int baseHz, int scalePermille)
+        {
+            if (baseHz <= 0 || scalePermille <= 0)
+            {
+                return 0;
+            }
+
+            long scaled = (long)baseHz * scalePermille;
+            int targetHz = (int)((scaled + 999) / 1000);
+            return Math.Max(1, targetHz);
         }
 
         public MapSession CurrentMapSession { get; private set; }
@@ -1803,6 +1849,7 @@ namespace Ludots.Core.Engine
         {
             if (!_isRunning) return;
 
+            ApplyBuiltInTimeFlowScales();
             float dt = platformDeltaTime * Time.TimeScale;
             Time.DeltaTime = dt;
             Time.TotalTime += dt;

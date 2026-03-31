@@ -1,0 +1,10 @@
+{
+  "name": "TimeFlowCk3MacroMiniMod",
+  "version": "1.0.0",
+  "description": "Standalone mini-game entry for the CK3-style macro speed ladder showcase.",
+  "main": "bin/net8.0/TimeFlowCk3MacroMiniMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "TimeFlowShowcaseMod": "^1.0.0"
+  }
+}

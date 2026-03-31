@@ -1,0 +1,10 @@
+{
+  "name": "TimeFlowSentinelPauseMiniMod",
+  "version": "1.0.0",
+  "description": "Standalone mini-game entry for the WT-based command-pause showcase.",
+  "main": "bin/net8.0/TimeFlowSentinelPauseMiniMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "TimeFlowShowcaseMod": "^1.0.0"
+  }
+}

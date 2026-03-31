@@ -1,0 +1,10 @@
+{
+  "name": "TimeFlowBreakFeverMiniMod",
+  "version": "1.0.0",
+  "description": "Standalone mini-game entry for the break-fever burst showcase.",
+  "main": "bin/net8.0/TimeFlowBreakFeverMiniMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "TimeFlowShowcaseMod": "^1.0.0"
+  }
+}

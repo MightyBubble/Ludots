@@ -1,0 +1,29 @@
+{
+  "Id": "timeflow_showcase",
+  "ParentId": null,
+  "Dependencies": {},
+  "Tags": [
+    "timeflow_showcase",
+    "showcase"
+  ],
+  "Entities": [],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInTiles": 64,
+      "HeightInTiles": 64,
+      "GridCellSizeCm": 100,
+      "HexEdgeLengthCm": 400,
+      "ChunkSizeCells": 64,
+      "DataFile": "timeflow_showcase.vtxm",
+      "NavigationEnabled": false
+    }
+  ],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "Pitch": 48,
+    "DistanceCm": 6200,
+    "FovYDeg": 58
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "TimeFlowAtbWaitMiniMod",
+  "version": "1.0.0",
+  "description": "Standalone mini-game entry for the ATB wait-mode duel showcase.",
+  "main": "bin/net8.0/TimeFlowAtbWaitMiniMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "TimeFlowShowcaseMod": "^1.0.0"
+  }
+}
