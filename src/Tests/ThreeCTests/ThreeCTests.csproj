@@ -41,6 +41,7 @@
 
   <ItemGroup>
     <Compile Include="..\TestCommon\RepoModPaths.cs" Link="RepoModPaths.cs" />
+    <Compile Include="..\NetworkingTests\GameplayReplicationFoundationTests.cs" Link="GameplayReplicationFoundationTests.cs" />
     <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*" Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

@@ -24,6 +24,7 @@ This directory is the architecture SSOT entry for Ludots. It documents behavior 
 - [Animation Profile and Clip Kanban](animation_profile_clip_kanban.md)
 - [GAS Combat Infrastructure](gas_combat_infrastructure.md)
 - [GAS Layered Architecture](gas_layered_architecture.md)
+- [Gameplay Replication Contract](gameplay_replication_contract.md)
 - [Interaction Architecture](interaction/README.md)
 - [Persistent Static Adapter Sync](persistent_static_adapter_sync.md)
 - [Presentation Performer](presentation_performer.md)

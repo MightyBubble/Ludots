@@ -60,6 +60,8 @@ using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
+using Ludots.Core.Networking;
+using Ludots.Core.Networking.Systems;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
 using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.Pathing;
@@ -107,6 +109,7 @@ namespace Ludots.Core.Engine
     {
         private const int PrimitiveDrawBufferCapacity = 8192;
         private const int VisualSnapshotBufferCapacity = 131072;
+        private const int GameplayReplicationSnapshotCapacity = 32768;
         private const int PerformerInstanceBufferCapacity = 4096;
         private const int PathStoreMaxPaths = 512;
         private const int PathStoreMaxPointsPerPath = 256;
@@ -493,8 +496,10 @@ namespace Ludots.Core.Engine
             var animationClips = new AnimationClipRegistry();
             var animationProfiles = new AnimationProfileRegistry();
             var presentationStableIds = new PresentationStableIdAllocator();
+            var gameplayReplicationIds = new GameplayReplicationEntityIdAllocator();
             var primitiveDrawBuffer = new PrimitiveDrawBuffer(PrimitiveDrawBufferCapacity);
             var visualSnapshotBuffer = new PrimitiveDrawBuffer(VisualSnapshotBufferCapacity);
+            var gameplayReplicationSnapshotBuffer = new GameplayReplicationSnapshotBuffer(GameplayReplicationSnapshotCapacity);
             var visualProxyBuffer = new PresentationVisualProxyBuffer(VisualSnapshotBufferCapacity);
             var skinnedVisualBatchBuffer = new SkinnedVisualBatchBuffer(VisualSnapshotBufferCapacity);
             var transientMarkerBuffer = new TransientMarkerBuffer();
@@ -680,6 +685,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AnimationClipRegistry, animationClips);
             SetService(CoreServiceKeys.AnimationProfileRegistry, animationProfiles);
             SetService(CoreServiceKeys.PresentationStableIdAllocator, presentationStableIds);
+            SetService(CoreServiceKeys.GameplayReplicationEntityIdAllocator, gameplayReplicationIds);
+            SetService(CoreServiceKeys.GameplayReplicationSnapshotBuffer, gameplayReplicationSnapshotBuffer);
             _primitiveDrawBuffer = primitiveDrawBuffer;
             _visualSnapshotBuffer = visualSnapshotBuffer;
             _visualProxyBuffer = visualProxyBuffer;
@@ -834,6 +841,8 @@ namespace Ludots.Core.Engine
             // Phase 6: Cleanup
             RegisterSystem(animatorRuntimeSystem, SystemGroup.EventDispatch);
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
+            RegisterSystem(new GameplayReplicationBootstrapSystem(World, gameplayReplicationIds), SystemGroup.EventDispatch);
+            RegisterSystem(new GameplayReplicationEmitSystem(World, gameplayReplicationIds, gameplayReplicationSnapshotBuffer, GameSession), SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget), SystemGroup.EventDispatch);
             
             // Phase 7.1: ClearPresentationFlags

@@ -10,6 +10,7 @@ var baseDir = AppDomain.CurrentDomain.BaseDirectory;
 var configFile = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]) ? args[0] : "launcher.runtime.json";
 var gameHost = new WebGameHost(baseDir, configFile);
 var setup = gameHost.Setup;
+var gameplaySnapshotExtractor = new GameplayReplicationSnapshotExtractor(setup.Engine);
 
 var cts = new CancellationTokenSource();
 var gameLoopTask = Task.Run(() => gameHost.Run(cts.Token));
@@ -34,6 +35,8 @@ app.MapGet("/health", () =>
         sessions = sessions.Select(s => new { s.Id, s.FramesSent, s.BytesSent, s.FramesDropped }),
     });
 });
+
+app.MapGet("/api/runtime/gameplay-snapshot", () => Results.Json(gameplaySnapshotExtractor.Extract()));
 
 app.Map("/ws", async (HttpContext context) =>
 {

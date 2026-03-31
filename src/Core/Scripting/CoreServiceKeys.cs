@@ -31,6 +31,7 @@ using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Navigation2D.Runtime;
+using Ludots.Core.Networking;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
@@ -153,6 +154,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Physics2DTickPolicy> Physics2DTickPolicy = new("Physics2DTickPolicy");
         public static readonly ServiceKey<Physics2DController> Physics2DController = new("Physics2DController");
         public static readonly ServiceKey<Navigation2DTickPolicy> Navigation2DTickPolicy = new("Navigation2DTickPolicy");
+        public static readonly ServiceKey<GameplayReplicationEntityIdAllocator> GameplayReplicationEntityIdAllocator = new("GameplayReplicationEntityIdAllocator");
+        public static readonly ServiceKey<GameplayReplicationSnapshotBuffer> GameplayReplicationSnapshotBuffer = new("GameplayReplicationSnapshotBuffer");
 
         // --- Presentation ---
         public static readonly ServiceKey<PresentationEventStream> PresentationEventStream = new("PresentationEventStream");
