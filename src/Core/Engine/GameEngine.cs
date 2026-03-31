@@ -14,6 +14,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Narrative;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -367,6 +368,18 @@ namespace Ludots.Core.Engine
                          || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("AI/", StringComparison.OrdinalIgnoreCase));
 
             if (reloadAi) RebuildAiRuntime();
+
+            bool reloadNarrative = string.IsNullOrWhiteSpace(group)
+                                 || string.Equals(group, "Narrative", StringComparison.OrdinalIgnoreCase)
+                                 || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Narrative/", StringComparison.OrdinalIgnoreCase));
+            if (reloadNarrative && GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry narrativeDefinitions)
+            {
+                new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+                if (GetService(CoreServiceKeys.NarrativeDirector) is NarrativeDirector narrativeDirector)
+                {
+                    narrativeDirector.ResetState();
+                }
+            }
 
             SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
             SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
@@ -774,6 +787,11 @@ namespace Ludots.Core.Engine
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             GameSession.Camera.SetVirtualCameraRegistry(virtualCameraRegistry);
+            var narrativeDefinitions = new NarrativeDefinitionRegistry();
+            new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions);
+            SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
+            SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
             var animatorRuntimeSystem = new AnimatorRuntimeSystem(World, animatorControllers);
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
@@ -786,6 +804,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(sessionSystem, SystemGroup.InputCollection); // Session handles input gathering
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
+            RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
             RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);

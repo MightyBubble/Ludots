@@ -1,0 +1,54 @@
+[
+  {
+    "id": "Narrative.Intro.Elder",
+    "displayName": "Narrative Intro Elder",
+    "priority": 160,
+    "targetSource": "Fixed",
+    "fixedTargetCm": { "x": 1360, "y": 960 },
+    "yaw": 182,
+    "pitch": 46,
+    "distanceCm": 1700,
+    "fovYDeg": 34,
+    "allowUserInput": false,
+    "defaultBlendDuration": 0.2
+  },
+  {
+    "id": "Narrative.Intro.Shrine",
+    "displayName": "Narrative Intro Shrine",
+    "priority": 170,
+    "targetSource": "Fixed",
+    "fixedTargetCm": { "x": 1740, "y": 960 },
+    "yaw": 205,
+    "pitch": 48,
+    "distanceCm": 1850,
+    "fovYDeg": 34,
+    "allowUserInput": false,
+    "defaultBlendDuration": 0.25
+  },
+  {
+    "id": "Narrative.Trial.Reveal",
+    "displayName": "Narrative Trial Reveal",
+    "priority": 180,
+    "targetSource": "Fixed",
+    "fixedTargetCm": { "x": 1920, "y": 940 },
+    "yaw": 180,
+    "pitch": 44,
+    "distanceCm": 1600,
+    "fovYDeg": 32,
+    "allowUserInput": false,
+    "defaultBlendDuration": 0.2
+  },
+  {
+    "id": "Narrative.Return.Close",
+    "displayName": "Narrative Return Close",
+    "priority": 160,
+    "targetSource": "Fixed",
+    "fixedTargetCm": { "x": 1360, "y": 960 },
+    "yaw": 186,
+    "pitch": 46,
+    "distanceCm": 1650,
+    "fovYDeg": 33,
+    "allowUserInput": false,
+    "defaultBlendDuration": 0.2
+  }
+]

@@ -10,6 +10,7 @@ using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Input;
@@ -109,6 +110,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<VirtualCameraRegistry> VirtualCameraRegistry = new("VirtualCameraRegistry");
         public static readonly ServiceKey<PlatformManagedCameraDriverRegistry> PlatformManagedCameraDriverRegistry = new("PlatformManagedCameraDriverRegistry");
         public static readonly ServiceKey<IPlatformManagedCameraHostService> PlatformManagedCameraHostService = new("PlatformManagedCameraHostService");
+        public static readonly ServiceKey<NarrativeDefinitionRegistry> NarrativeDefinitions = new("NarrativeDefinitions");
+        public static readonly ServiceKey<NarrativeDirector> NarrativeDirector = new("NarrativeDirector");
 
         // --- GAS Core ---
         public static readonly ServiceKey<IClock> Clock = new("Clock");
