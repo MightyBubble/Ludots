@@ -15,13 +15,12 @@ This directory is the architecture SSOT entry for Ludots. It documents behavior 
 - [Pacemaker](pacemaker.md)
 - [Runtime Entity Spawn Flow](runtime_entity_spawn_flow.md)
 - [Startup Entrypoints](startup_entrypoints.md)
+- [Time Flow](time_flow.md)
 - [Trigger Guide](trigger_guide.md)
 - [UI Runtime Architecture](ui_runtime_architecture.md)
 
 ## Gameplay and Presentation
 
-- [Animation Profile and Clip Pipeline](animation_profile_clip_pipeline.md)
-- [Animation Profile and Clip Kanban](animation_profile_clip_kanban.md)
 - [GAS Combat Infrastructure](gas_combat_infrastructure.md)
 - [GAS Layered Architecture](gas_layered_architecture.md)
 - [Interaction Architecture](interaction/README.md)
