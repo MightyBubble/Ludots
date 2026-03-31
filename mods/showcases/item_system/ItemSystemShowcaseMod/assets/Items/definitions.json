@@ -1,0 +1,161 @@
+[
+  {
+    "id": "itm_boots_haste",
+    "displayName": "Runner Boots",
+    "shape": "shape_1x2",
+    "tags": ["Equip.Slot.Feet", "Item.Moba.Boots"],
+    "allowedNamedSlots": ["feet"],
+    "equipEffects": ["Effect.ItemPassive.BootsHaste"],
+    "abilityGrants": [{ "slotIndex": 4, "ability": "Ability.ItemShowcase.SecondWind" }]
+  },
+  {
+    "id": "itm_mythic_amulet",
+    "displayName": "Mythic Embercore",
+    "shape": "shape_1x1",
+    "tags": ["Equip.Slot.Amulet", "Item.Moba.Mythic"],
+    "allowedNamedSlots": ["amulet"],
+    "equipEffects": ["Effect.ItemPassive.MythicPower"],
+    "abilityGrants": [{ "slotIndex": 1, "ability": "Ability.ItemShowcase.MythicPulse" }]
+  },
+  {
+    "id": "itm_forge_amulet",
+    "displayName": "Artificer Halo",
+    "shape": "shape_1x1",
+    "tags": ["Equip.Slot.Amulet", "Item.Arcane.Socketed"],
+    "allowedNamedSlots": ["amulet"],
+    "equipEffects": ["Effect.ItemPassive.ForgeAmulet"],
+    "mountedContainers": [
+      { "id": "gems", "label": "Gem Sockets", "layout": "layout_gem_sockets", "purpose": "Equipment" }
+    ]
+  },
+  {
+    "id": "itm_ring_blood",
+    "displayName": "Blood Ring",
+    "shape": "shape_1x1",
+    "tags": ["Equip.Slot.Ring", "Item.Arpg.Ring"],
+    "allowedNamedSlots": ["ring_left", "ring_right"],
+    "equipEffects": ["Effect.ItemPassive.BloodRing"]
+  },
+  {
+    "id": "itm_ring_duelist",
+    "displayName": "Duelist Ring",
+    "shape": "shape_1x1",
+    "tags": ["Equip.Slot.Ring", "Item.Arpg.Ring"],
+    "allowedNamedSlots": ["ring_left", "ring_right"],
+    "equipEffects": ["Effect.ItemPassive.DuelistRing"]
+  },
+  {
+    "id": "itm_charm_ward",
+    "displayName": "Ward Talisman",
+    "shape": "shape_1x1",
+    "tags": ["Equip.Slot.Charm", "Item.Arpg.Charm"],
+    "allowedNamedSlots": ["charm"],
+    "equipEffects": ["Effect.ItemPassive.CharmWard"]
+  },
+  {
+    "id": "itm_backpack_assault",
+    "displayName": "Assault Backpack",
+    "shape": "shape_2x2",
+    "tags": ["Equip.Slot.Back", "Container.Backpack"],
+    "allowedNamedSlots": ["back"],
+    "mountedContainers": [
+      { "id": "storage", "label": "Backpack", "layout": "layout_backpack_grid", "purpose": "Backpack" }
+    ]
+  },
+  {
+    "id": "itm_secure_case",
+    "displayName": "Secure Case",
+    "shape": "shape_2x2",
+    "tags": ["Equip.Slot.Secure", "Container.Secure"],
+    "allowedNamedSlots": ["secure"],
+    "mountedContainers": [
+      { "id": "vault", "label": "Secure", "layout": "layout_secure_grid", "purpose": "SecureStorage" }
+    ]
+  },
+  {
+    "id": "itm_rifle_modular",
+    "displayName": "Modular Rifle",
+    "shape": "shape_2x5",
+    "tags": ["Equip.Slot.PrimaryWeapon", "Item.Weapon.Rifle"],
+    "allowedNamedSlots": ["primary_weapon"],
+    "equipEffects": ["Effect.ItemPassive.RifleReady"],
+    "abilityGrants": [{ "slotIndex": 0, "ability": "Ability.ItemShowcase.RifleFire" }],
+    "mountedContainers": [
+      { "id": "sockets", "label": "Sockets", "layout": "layout_rifle_sockets", "purpose": "WeaponAttachment" }
+    ]
+  },
+  {
+    "id": "itm_mag_556",
+    "displayName": "STANAG 30",
+    "shape": "shape_1x2",
+    "tags": ["Weapon.Socket.Magwell", "Ammo.Magazine", "Ammo.556"],
+    "allowedNamedSlots": ["magwell"]
+  },
+  {
+    "id": "itm_scope_red_dot",
+    "displayName": "Red Dot",
+    "shape": "shape_1x1",
+    "tags": ["Weapon.Socket.Optic"],
+    "allowedNamedSlots": ["optic"],
+    "equipEffects": ["Effect.ItemPassive.RedDot"]
+  },
+  {
+    "id": "itm_suppressor_s",
+    "displayName": "S Suppressor",
+    "shape": "shape_1x1",
+    "tags": ["Weapon.Socket.Muzzle"],
+    "allowedNamedSlots": ["muzzle"],
+    "equipEffects": ["Effect.ItemPassive.Suppressor"]
+  },
+  {
+    "id": "itm_grip_vertical",
+    "displayName": "Vertical Grip",
+    "shape": "shape_1x1",
+    "tags": ["Weapon.Socket.Underbarrel"],
+    "allowedNamedSlots": ["underbarrel"],
+    "equipEffects": ["Effect.ItemPassive.VerticalGrip"]
+  },
+  {
+    "id": "itm_gem_crimson",
+    "displayName": "Crimson Gem",
+    "shape": "shape_1x1",
+    "tags": ["Socket.Gem", "Item.Socket.Offense"],
+    "allowedNamedSlots": ["socket_alpha", "socket_beta"],
+    "equipEffects": ["Effect.ItemPassive.CrimsonGem"]
+  },
+  {
+    "id": "itm_gem_azure",
+    "displayName": "Azure Gem",
+    "shape": "shape_1x1",
+    "tags": ["Socket.Gem", "Item.Socket.Defense"],
+    "allowedNamedSlots": ["socket_alpha", "socket_beta"],
+    "equipEffects": ["Effect.ItemPassive.AzureGem"]
+  },
+  {
+    "id": "itm_ammo_556",
+    "displayName": "5.56 FMJ",
+    "shape": "shape_1x1",
+    "maxStack": 120,
+    "tags": ["Ammo.556", "Loot.Ammo"]
+  },
+  {
+    "id": "itm_ammo_556_ap",
+    "displayName": "5.56 AP",
+    "shape": "shape_1x1",
+    "maxStack": 90,
+    "tags": ["Ammo.556", "Ammo.AP", "Loot.Ammo"]
+  },
+  {
+    "id": "itm_credit_chip",
+    "displayName": "Credit Chips",
+    "shape": "shape_1x1",
+    "maxStack": 999,
+    "tags": ["Currency.Credit"]
+  },
+  {
+    "id": "itm_extraction_artifact",
+    "displayName": "Raid Artifact",
+    "shape": "shape_2x2",
+    "tags": ["Loot.Artifact"]
+  }
+]

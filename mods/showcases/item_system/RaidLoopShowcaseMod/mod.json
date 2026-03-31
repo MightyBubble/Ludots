@@ -1,0 +1,12 @@
+{
+  "name": "RaidLoopShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused raid loop showcase entry mod for the shared Ludots item architecture demo.",
+  "main": "bin/net8.0/RaidLoopShowcaseMod.dll",
+  "priority": 10,
+  "dependencies": {
+    "ItemSystemShowcaseMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["items", "raid", "stash", "trade", "showcase"]
+}

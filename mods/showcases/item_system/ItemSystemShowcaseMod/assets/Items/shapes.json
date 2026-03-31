@@ -1,0 +1,6 @@
+[
+  { "id": "shape_1x1", "rows": ["X"], "rotatable": false },
+  { "id": "shape_1x2", "rows": ["X", "X"], "rotatable": true },
+  { "id": "shape_2x2", "rows": ["XX", "XX"], "rotatable": true },
+  { "id": "shape_2x5", "rows": ["XX", "XX", "XX", "XX", "XX"], "rotatable": true }
+]

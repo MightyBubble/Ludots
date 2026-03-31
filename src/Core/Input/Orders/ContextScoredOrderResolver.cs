@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
@@ -142,9 +143,11 @@ namespace Ludots.Core.Input.Orders
 
             bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
             AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
+            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
+            ItemGrantedSlotBuffer itemGranted = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
             bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
             GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-            var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in granted, hasGranted, rootSlotIndex);
+            var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGranted, hasItemGranted, in granted, hasGranted, rootSlotIndex);
             return slot.AbilityId > 0 && _contextGroups.TryGetByRootAbility(slot.AbilityId, out group);
         }
 
@@ -154,12 +157,14 @@ namespace Ludots.Core.Input.Orders
             ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
             bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
             AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
+            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
+            ItemGrantedSlotBuffer itemGranted = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
             bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
             GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
 
             for (int i = 0; i < abilities.Count; i++)
             {
-                var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in granted, hasGranted, i);
+                var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGranted, hasItemGranted, in granted, hasGranted, i);
                 if (slot.AbilityId == abilityId)
                 {
                     slotIndex = i;
