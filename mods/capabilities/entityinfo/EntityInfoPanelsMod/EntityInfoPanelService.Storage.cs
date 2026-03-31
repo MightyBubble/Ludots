@@ -1,4 +1,5 @@
 using System;
+using Arch.Core;
 
 namespace EntityInfoPanelsMod;
 
@@ -31,6 +32,24 @@ public sealed partial class EntityInfoPanelService
         for (int i = 0; i < MaxGasLinesPerPanel; i++)
         {
             _gasLines[lineBase + i] = string.Empty;
+        }
+    }
+
+    private void ClearEntityCollectionState(int slot)
+    {
+        _entityCollectionContainers[slot] = Entity.Null;
+        _entityCollectionPrimaries[slot] = Entity.Null;
+        _entityCollectionViewKeys[slot] = string.Empty;
+        _entityCollectionAliasKeys[slot] = string.Empty;
+        _entityCollectionCounts[slot] = 0;
+        _entityCollectionRevisions[slot] = 0;
+        _entityCollectionCategoryCounts[slot] = 0;
+        int baseIndex = slot * MaxEntityCollectionCategories;
+        for (int i = 0; i < MaxEntityCollectionCategories; i++)
+        {
+            _entityCollectionCategoryLabels[baseIndex + i] = string.Empty;
+            _entityCollectionCategoryMembers[baseIndex + i] = 0;
+            _entityCollectionCategoryContainsPrimary[baseIndex + i] = false;
         }
     }
 
@@ -90,6 +109,7 @@ public sealed partial class EntityInfoPanelService
     private static int SectionIndex(int slot, int sectionIndex) => (slot * MaxComponentSectionsPerPanel) + sectionIndex;
     private static int ComponentLineIndex(int slot, int lineIndex) => (slot * MaxComponentLinesPerPanel) + lineIndex;
     private static int GasLineIndex(int slot, int lineIndex) => (slot * MaxGasLinesPerPanel) + lineIndex;
+    private static int EntityCollectionCategoryIndex(int slot, int categoryIndex) => (slot * MaxEntityCollectionCategories) + categoryIndex;
 
     private static bool SetString(string[] array, int index, string text)
     {

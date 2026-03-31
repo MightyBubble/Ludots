@@ -75,6 +75,9 @@ namespace InteractionShowcaseMod.Triggers
             engine.RegisterSystem(
                 new InteractionShowcaseStressSystem(engine, spawnQueue, stressOrders, _stressTelemetry),
                 SystemGroup.InputCollection);
+            engine.RegisterSystem(
+                new InteractionShowcaseSelectionDockSystem(engine, _runtime),
+                SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new InteractionShowcasePanelPresentationSystem(engine, _runtime));
 
             WireSelectionFeedback(context, engine);

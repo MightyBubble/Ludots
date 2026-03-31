@@ -247,8 +247,94 @@ public sealed partial class EntityInfoPanelService
         {
             EntityInfoPanelTargetKind.FixedEntity => "Fixed target unavailable.",
             EntityInfoPanelTargetKind.GlobalEntityKey when !string.IsNullOrWhiteSpace(target.Key) => $"Waiting for `{target.Key}`.",
+            EntityInfoPanelTargetKind.CurrentSelectionView => "Waiting for active selection view.",
             _ => "Target unavailable.",
         };
+    }
+
+    private static string ResolveEntityDisplayName(World world, Entity entity)
+    {
+        if (world.TryGet(entity, out Name name) && !string.IsNullOrWhiteSpace(name.Value))
+        {
+            return name.Value;
+        }
+
+        return $"Entity #{entity.Id}";
+    }
+
+    private static string BuildEntityAttributePreview(World world, Entity entity)
+    {
+        if (!world.TryGet(entity, out AttributeBuffer attributes))
+        {
+            return "(no attributes)";
+        }
+
+        int appended = 0;
+        int hidden = 0;
+        string preview = string.Empty;
+        for (int attrId = 0; attrId < AttributeRegistry.MaxAttributes; attrId++)
+        {
+            float baseValue = attributes.GetBase(attrId);
+            float currentValue = attributes.GetCurrent(attrId);
+            if (baseValue == 0f && currentValue == 0f)
+            {
+                continue;
+            }
+
+            string attrName = AttributeRegistry.GetName(attrId);
+            if (string.IsNullOrWhiteSpace(attrName))
+            {
+                attrName = $"attr:{attrId}";
+            }
+
+            if (appended < MaxEntityCollectionPreviewAttributes)
+            {
+                string segment = $"{attrName} {FormatNumber(currentValue)}/{FormatNumber(baseValue)}";
+                preview = appended == 0 ? segment : $"{preview} | {segment}";
+                appended++;
+            }
+            else
+            {
+                hidden++;
+            }
+        }
+
+        if (appended == 0)
+        {
+            return "(no attributes)";
+        }
+
+        return hidden > 0
+            ? $"{preview} | +{hidden} more"
+            : preview;
+    }
+
+    private static string ResolveEntityCollectionCategoryLabel(World world, Entity entity)
+    {
+        string displayName = ResolveEntityDisplayName(world, entity).Trim();
+        if (displayName.Length == 0)
+        {
+            return $"Entity #{entity.Id}";
+        }
+
+        int end = displayName.Length;
+        while (end > 0 && char.IsDigit(displayName[end - 1]))
+        {
+            end--;
+        }
+
+        while (end > 0)
+        {
+            char current = displayName[end - 1];
+            if (current != ' ' && current != '-' && current != '_' && current != '#')
+            {
+                break;
+            }
+
+            end--;
+        }
+
+        return end <= 0 ? displayName : displayName[..end];
     }
 
     private static string FormatObject(object? value)

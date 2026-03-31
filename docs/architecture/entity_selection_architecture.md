@@ -59,6 +59,7 @@ Current built-in aliases and views:
 - selection aliases:
   - `selection.live.primary`
   - `selection.formation.primary`
+  - `selection.group.<n>`
   - `selection.command.preview`
   - `selection.command.snapshot`
 - view keys:
@@ -186,6 +187,14 @@ Selection-facing consumers should resolve through:
 - `SelectionRuntime.TryDescribeView(...)`
 - `SelectionRuntime.TryDescribeContainer(...)`
 
+The reusable entity-collection panel path now resolves the active viewed selection through the same contract:
+
+- `mods/capabilities/entityinfo/EntityInfoPanelsMod/`
+  - `EntityInfoPanelKind.EntityCollectionInspector`
+  - `EntityInfoPanelTarget.CurrentSelectionView()`
+  - UI virtualization reads rows through `SelectionRuntime.TryGetSelectionAt(...)`
+  - category buckets and dense grid tiles are sampled from the same viewed-selection container
+
 The champion sandbox stress harness is the reference acceptance mod for this contract:
 
 - player live selection view
@@ -205,6 +214,7 @@ Relevant code:
 Formation and control-group semantics reuse the same selection container truth.
 
 - formation is a container kind and/or alias choice, not a second member-truth structure
+- control groups are group-kind containers keyed by alias, not a duplicated ambient-selection buffer
 - command previews and command snapshots are containers or leased snapshot containers
 - multiple viewers can inspect different containers at the same time
 

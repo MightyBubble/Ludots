@@ -722,6 +722,29 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void SelectionRuntime_TryGetSelectionAt_PreservesContainerOrder_ForVirtualizedConsumers()
+        {
+            using var world = World.Create();
+            var owner = world.Create();
+            var first = world.Create();
+            var second = world.Create();
+            var third = world.Create();
+            var globals = new Dictionary<string, object>();
+            SelectionRuntime selectionRuntime = CreateSelectionRuntime(world, globals);
+
+            That(selectionRuntime.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, new[] { first, second, third }), Is.True);
+
+            That(selectionRuntime.TryGetSelectionAt(owner, SelectionSetKeys.LivePrimary, 0, out Entity firstResolved), Is.True);
+            That(selectionRuntime.TryGetSelectionAt(owner, SelectionSetKeys.LivePrimary, 1, out Entity secondResolved), Is.True);
+            That(selectionRuntime.TryGetSelectionAt(owner, SelectionSetKeys.LivePrimary, 2, out Entity thirdResolved), Is.True);
+            That(selectionRuntime.TryGetSelectionAt(owner, SelectionSetKeys.LivePrimary, 3, out _), Is.False);
+
+            That(firstResolved, Is.EqualTo(first));
+            That(secondResolved, Is.EqualTo(second));
+            That(thirdResolved, Is.EqualTo(third));
+        }
+
+        [Test]
         public void EntityClickSelectSystem_ClickEmptyGround_ClearsSelection()
         {
             using var world = World.Create();

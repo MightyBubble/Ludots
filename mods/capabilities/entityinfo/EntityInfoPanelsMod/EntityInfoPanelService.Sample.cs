@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Selection;
 
 namespace EntityInfoPanelsMod;
 
@@ -13,6 +14,8 @@ public sealed partial class EntityInfoPanelService
 {
     public void Refresh(World world, Dictionary<string, object> globals)
     {
+        _sampledWorld = world;
+        _sampledGlobals = globals;
         bool uiDirty = _pendingUiInvalidation;
         bool overlayDirty = _pendingOverlayInvalidation;
         int nextUiCount = 0;
@@ -101,16 +104,22 @@ public sealed partial class EntityInfoPanelService
 
         string title = _kinds[slot] == EntityInfoPanelKind.ComponentInspector
             ? "Entity Component Inspector"
-            : "Entity GAS Inspector";
+            : _kinds[slot] == EntityInfoPanelKind.GasInspector
+                ? "Entity GAS Inspector"
+                : "Entity Collection Inspector";
         string subtitle = resolved != Entity.Null && world.IsAlive(resolved)
             ? ResolveEntityLabel(world, resolved)
             : ResolveMissingSubtitle(_targets[slot]);
 
         dirty |= SetString(_titles, slot, title);
         dirty |= SetString(_subtitles, slot, subtitle);
-        dirty |= _kinds[slot] == EntityInfoPanelKind.ComponentInspector
-            ? SampleComponentInspector(slot, world, resolved)
-            : SampleGasInspector(slot, world, resolved);
+        dirty |= _kinds[slot] switch
+        {
+            EntityInfoPanelKind.ComponentInspector => SampleComponentInspector(slot, world, resolved),
+            EntityInfoPanelKind.GasInspector => SampleGasInspector(slot, world, resolved),
+            EntityInfoPanelKind.EntityCollectionInspector => SampleEntityCollectionInspector(slot, world, globals),
+            _ => false,
+        };
 
         if (dirty)
         {
@@ -278,6 +287,144 @@ public sealed partial class EntityInfoPanelService
         }
 
         dirty |= TrimGasLines(slot, lineCount);
+        return dirty;
+    }
+
+    private bool SampleEntityCollectionInspector(int slot, World world, Dictionary<string, object> globals)
+    {
+        bool dirty = false;
+        Entity container = Entity.Null;
+        Entity primary = Entity.Null;
+        string viewKey = string.Empty;
+        string aliasKey = string.Empty;
+        int count = 0;
+        uint revision = 0;
+
+        if (SelectionContextRuntime.TryDescribeCurrentView(world, globals, out SelectionViewDescriptor descriptor))
+        {
+            container = descriptor.Container.Container;
+            primary = descriptor.Container.Primary;
+            viewKey = descriptor.ViewKey;
+            aliasKey = descriptor.Container.AliasKey;
+            count = descriptor.Container.MemberCount;
+            revision = descriptor.Container.Revision;
+            dirty |= SetString(_subtitles, slot, $"{viewKey} -> {aliasKey} | {count} entities");
+        }
+        else
+        {
+            dirty |= SetString(_subtitles, slot, "No active selection view.");
+        }
+
+        if (_resolvedTargets[slot] != primary)
+        {
+            _resolvedTargets[slot] = primary;
+            dirty = true;
+        }
+
+        bool sourceChanged = _entityCollectionContainers[slot] != container ||
+                             _entityCollectionRevisions[slot] != revision;
+
+        if (_entityCollectionContainers[slot] != container)
+        {
+            _entityCollectionContainers[slot] = container;
+            dirty = true;
+        }
+
+        if (_entityCollectionPrimaries[slot] != primary)
+        {
+            _entityCollectionPrimaries[slot] = primary;
+            dirty = true;
+        }
+
+        dirty |= SetString(_entityCollectionViewKeys, slot, viewKey);
+        dirty |= SetString(_entityCollectionAliasKeys, slot, aliasKey);
+        dirty |= SetInt(_entityCollectionCounts, slot, count);
+        if (_entityCollectionRevisions[slot] != revision)
+        {
+            _entityCollectionRevisions[slot] = revision;
+            dirty = true;
+        }
+
+        if (sourceChanged)
+        {
+            dirty |= RebuildEntityCollectionCategories(slot, world, globals, container, primary, count);
+        }
+
+        return dirty;
+    }
+
+    private bool RebuildEntityCollectionCategories(
+        int slot,
+        World world,
+        Dictionary<string, object> globals,
+        Entity container,
+        Entity primary,
+        int count)
+    {
+        bool dirty = false;
+        int categoryCount = 0;
+        if (container != Entity.Null &&
+            count > 0 &&
+            SelectionContextRuntime.TryGetRuntime(globals, out SelectionRuntime selection))
+        {
+            var order = new List<string>(Math.Min(count, MaxEntityCollectionCategories));
+            var countsByLabel = new Dictionary<string, int>(StringComparer.Ordinal);
+            var primaryByLabel = new Dictionary<string, bool>(StringComparer.Ordinal);
+            for (int i = 0; i < count; i++)
+            {
+                if (!selection.TryGetSelectionAt(container, i, out Entity entity) ||
+                    !world.IsAlive(entity))
+                {
+                    continue;
+                }
+
+                string label = ResolveEntityCollectionCategoryLabel(world, entity);
+                if (countsByLabel.TryGetValue(label, out int members))
+                {
+                    countsByLabel[label] = members + 1;
+                    primaryByLabel[label] = primaryByLabel[label] || entity == primary;
+                    continue;
+                }
+
+                order.Add(label);
+                countsByLabel[label] = 1;
+                primaryByLabel[label] = entity == primary;
+            }
+
+            order.Sort((left, right) =>
+            {
+                int countCompare = countsByLabel[right].CompareTo(countsByLabel[left]);
+                return countCompare != 0 ? countCompare : string.CompareOrdinal(left, right);
+            });
+
+            categoryCount = Math.Min(order.Count, MaxEntityCollectionCategories);
+            for (int i = 0; i < categoryCount; i++)
+            {
+                string label = order[i];
+                int categoryIndex = EntityCollectionCategoryIndex(slot, i);
+                dirty |= SetString(_entityCollectionCategoryLabels, categoryIndex, label);
+                dirty |= SetInt(_entityCollectionCategoryMembers, categoryIndex, countsByLabel[label]);
+                if (_entityCollectionCategoryContainsPrimary[categoryIndex] != primaryByLabel[label])
+                {
+                    _entityCollectionCategoryContainsPrimary[categoryIndex] = primaryByLabel[label];
+                    dirty = true;
+                }
+            }
+        }
+
+        dirty |= SetInt(_entityCollectionCategoryCounts, slot, categoryCount);
+        for (int i = categoryCount; i < MaxEntityCollectionCategories; i++)
+        {
+            int categoryIndex = EntityCollectionCategoryIndex(slot, i);
+            dirty |= SetString(_entityCollectionCategoryLabels, categoryIndex, string.Empty);
+            dirty |= SetInt(_entityCollectionCategoryMembers, categoryIndex, 0);
+            if (_entityCollectionCategoryContainsPrimary[categoryIndex])
+            {
+                _entityCollectionCategoryContainsPrimary[categoryIndex] = false;
+                dirty = true;
+            }
+        }
+
         return dirty;
     }
 }

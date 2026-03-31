@@ -20,6 +20,14 @@ namespace InteractionShowcaseMod
         public const string Sc2ModeActionId = "InteractionModeSC2";
         public const string IndicatorModeActionId = "InteractionModeIndicator";
         public const string ActionModeActionId = "InteractionModeAction";
+        public const string SelectionGroupRecall1ActionId = "SelectionGroupRecall1";
+        public const string SelectionGroupRecall2ActionId = "SelectionGroupRecall2";
+        public const string SelectionGroupRecall3ActionId = "SelectionGroupRecall3";
+        public const string SelectionGroupRecall4ActionId = "SelectionGroupRecall4";
+        public const string SelectionGroupSave1ActionId = "SelectionGroupSave1";
+        public const string SelectionGroupSave2ActionId = "SelectionGroupSave2";
+        public const string SelectionGroupSave3ActionId = "SelectionGroupSave3";
+        public const string SelectionGroupSave4ActionId = "SelectionGroupSave4";
 
         public const string ArcweaverName = "Arcweaver";
         public const string ArcweaverFormsDemoName = "ArcweaverForms";
@@ -31,8 +39,12 @@ namespace InteractionShowcaseMod
         public const string SelectedComponentUiHandleKey = "InteractionShowcaseMod.EntityInfo.SelectedComponentUi";
         public const string SelectedGasUiHandleKey = "InteractionShowcaseMod.EntityInfo.SelectedGasUi";
         public const string SelectedGasOverlayHandleKey = "InteractionShowcaseMod.EntityInfo.SelectedGasOverlay";
+        public const string SelectionViewUiHandleKey = "InteractionShowcaseMod.EntityInfo.SelectionViewUi";
         public const string ArcweaverOverlayHandleKey = "InteractionShowcaseMod.EntityInfo.ArcweaverOverlay";
         public const string VanguardOverlayHandleKey = "InteractionShowcaseMod.EntityInfo.VanguardOverlay";
+        public const string ActiveControlGroupKey = "InteractionShowcase.Selection.ActiveGroup";
+        public const string LiveSelectionButtonId = "InteractionShowcase.Selection.Live";
+        public const string FormationSelectionButtonId = "InteractionShowcase.Selection.Formation";
 
         public static bool IsShowcaseMap(string? mapId)
         {
