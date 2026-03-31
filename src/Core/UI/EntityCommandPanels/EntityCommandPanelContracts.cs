@@ -46,6 +46,13 @@ namespace Ludots.Core.UI.EntityCommandPanels
         public float HeightPx { get; }
     }
 
+    public enum EntityCommandPanelLayoutPreset : byte
+    {
+        Standard = 0,
+        CommandDeck = 1,
+        OrderMonitor = 2
+    }
+
     [Flags]
     public enum EntityCommandSlotStateFlags : ushort
     {
@@ -66,6 +73,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
         public string InstanceKey { get; init; }
         public EntityCommandPanelAnchor Anchor { get; init; }
         public EntityCommandPanelSize Size { get; init; }
+        public EntityCommandPanelLayoutPreset LayoutPreset { get; init; }
         public int InitialGroupIndex { get; init; }
         public bool StartVisible { get; init; }
     }
@@ -79,6 +87,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
             string instanceKey,
             EntityCommandPanelAnchor anchor,
             EntityCommandPanelSize size,
+            EntityCommandPanelLayoutPreset layoutPreset,
             int groupIndex,
             bool visible)
         {
@@ -88,6 +97,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
             InstanceKey = instanceKey ?? string.Empty;
             Anchor = anchor;
             Size = size;
+            LayoutPreset = layoutPreset;
             GroupIndex = groupIndex;
             Visible = visible;
         }
@@ -98,6 +108,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
         public string InstanceKey { get; }
         public EntityCommandPanelAnchor Anchor { get; }
         public EntityCommandPanelSize Size { get; }
+        public EntityCommandPanelLayoutPreset LayoutPreset { get; }
         public int GroupIndex { get; }
         public bool Visible { get; }
     }

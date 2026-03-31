@@ -18,6 +18,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
@@ -54,7 +55,7 @@ namespace Ludots.Tests.GAS.Production
             var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
                 ?? throw new InvalidOperationException("EntityCommandPanelToolbarProvider service is missing.");
 
-            var buttons = new EntityCommandPanelToolbarButtonView[8];
+            var buttons = new EntityCommandPanelToolbarButtonView[12];
             int buttonCount = toolbar.CopyButtons(buttons);
             Assert.That(buttonCount, Is.GreaterThan(0));
             Assert.That(
@@ -79,6 +80,105 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(poseRequest.Pitch, Is.EqualTo(55f));
             Assert.That(poseRequest.DistanceCm, Is.EqualTo(14000f));
             Assert.That(poseRequest.FovYDeg, Is.EqualTo(60f));
+        }
+
+        [Test]
+        public void RtsToolbar_SelectEntity_SelectsAndFocusesTarget()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            LoadMap(engine, MapId, frameTimesMs);
+
+            var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                ?? throw new InvalidOperationException("EntityCommandPanelToolbarProvider service is missing.");
+            Entity barracks = FindEntity(engine.World, "Barracks");
+
+            toolbar.Activate("war3_train");
+
+            Assert.That(
+                SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected),
+                Is.True,
+                "Selecting from the RTS toolbar should seed a real primary selection.");
+            Assert.That(selected, Is.EqualTo(barracks));
+
+            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.VirtualCameraRequest.Name, out object? virtualRequestObj), Is.True);
+            Assert.That(virtualRequestObj, Is.TypeOf<Ludots.Core.Gameplay.Camera.VirtualCameraRequest>());
+            var virtualRequest = (Ludots.Core.Gameplay.Camera.VirtualCameraRequest)virtualRequestObj;
+            Assert.That(virtualRequest.Id, Is.EqualTo("Rts"));
+
+            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.CameraPoseRequest.Name, out object? poseRequestObj), Is.True);
+            Assert.That(poseRequestObj, Is.TypeOf<Ludots.Core.Gameplay.Camera.CameraPoseRequest>());
+            var poseRequest = (Ludots.Core.Gameplay.Camera.CameraPoseRequest)poseRequestObj;
+            Assert.That(poseRequest.TargetCm, Is.EqualTo(ReadWorldPosition(engine.World, barracks)));
+            Assert.That(poseRequest.DistanceCm, Is.EqualTo(10080f).Within(0.01f));
+        }
+
+        [Test]
+        public void RtsMap_Load_SeedsPrimarySelectionForFirstContact()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            LoadMap(engine, MapId, frameTimesMs);
+
+            Assert.That(
+                SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected),
+                Is.True,
+                "RTS showcase should auto-select a starter sample so the first-contact UI is coherent.");
+            Assert.That(engine.World.Get<Name>(selected).Value, Is.EqualTo("Peasant"));
+        }
+
+        [Test]
+        public void RtsActors_AreReadable_OnMapLoad_And_AfterProductionSpawns()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            LoadMap(engine, MapId, frameTimesMs);
+
+            World world = engine.World;
+            Entity peasant = FindEntity(world, "Peasant");
+            Entity barracks = FindEntity(world, "Barracks");
+            Entity gateway = FindEntity(world, "Gateway");
+
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => world.Has<VisualTransform>(peasant) &&
+                      world.Has<PreviousWorldPositionCm>(peasant) &&
+                      world.Has<PresentationStableId>(peasant) &&
+                      world.Has<VisualTransform>(barracks) &&
+                      world.Has<VisualTransform>(gateway),
+                maxFrames: 8,
+                "RTS showcase actors should become visually readable immediately after load.");
+
+            AssertReadableActor(world, peasant, "Peasant");
+            AssertReadableActor(world, barracks, "Barracks");
+            AssertReadableActor(world, gateway, "Gateway");
+
+            var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                ?? throw new InvalidOperationException("EntityCommandPanelToolbarProvider service is missing.");
+            Assert.That(toolbar.Subtitle, Does.Contain("RMB"));
+            Assert.That(toolbar.Subtitle, Does.Contain("SC2 Warp"));
+
+            var footmanIdsBefore = SnapshotEntityIdsByName(world, "Footman");
+            CastAbility(engine, barracks, barracks, slot: 2);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountEntitiesByName(world, "Footman") == footmanIdsBefore.Count + 1,
+                maxFrames: 600,
+                "Barracks should train a Footman that also receives readable presentation state.");
+
+            Entity newFootman = FindNewestEntityByName(world, "Footman", footmanIdsBefore);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => world.Has<VisualTransform>(newFootman) &&
+                      world.Has<PreviousWorldPositionCm>(newFootman) &&
+                      world.Has<PresentationStableId>(newFootman),
+                maxFrames: 8,
+                "Produced Footman should receive presentation bootstrap components.");
+
+            AssertReadableActor(world, newFootman, "Trained Footman");
         }
 
         [Test]
@@ -876,7 +976,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             var toolbarSnapshots = new List<RtsToolbarButtonSnapshot>();
-            var buttons = new EntityCommandPanelToolbarButtonView[8];
+            var buttons = new EntityCommandPanelToolbarButtonView[12];
             int buttonCount = toolbar.CopyButtons(buttons);
             for (int i = 0; i < buttonCount; i++)
             {
@@ -1147,6 +1247,17 @@ namespace Ludots.Tests.GAS.Production
                 .Replace("<", "&lt;", StringComparison.Ordinal)
                 .Replace(">", "&gt;", StringComparison.Ordinal)
                 .Replace("\"", "&quot;", StringComparison.Ordinal);
+        }
+
+        private static void AssertReadableActor(World world, Entity entity, string label)
+        {
+            Assert.That(world.IsAlive(entity), Is.True, $"{label} should exist.");
+            Assert.That(world.Has<VisualTransform>(entity), Is.True, $"{label} should expose VisualTransform for RTS markers.");
+            Assert.That(world.Has<PreviousWorldPositionCm>(entity), Is.True, $"{label} should expose PreviousWorldPositionCm for interpolation.");
+            Assert.That(world.Has<PresentationStableId>(entity), Is.True, $"{label} should expose PresentationStableId for entity-scoped performers.");
+
+            VisualTransform visual = world.Get<VisualTransform>(entity);
+            Assert.That(visual.Scale, Is.Not.EqualTo(Vector3.Zero), $"{label} should have a non-zero marker scale.");
         }
 
         private static string FindRepoRoot()

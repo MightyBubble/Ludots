@@ -1,0 +1,32 @@
+{
+  "Id": "rts_war3_training",
+  "Tags": ["rts_showcase", "rts_training", "war3"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 7600,
+    "TargetYCm": 5200,
+    "Yaw": 172,
+    "Pitch": 48,
+    "DistanceCm": 11200,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "war3_forest.vtxm" }
+  ],
+  "Entities": [
+    {
+      "Template": "rts_war3_barracks",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 6700, "Y": 4700 } },
+        "Name": { "Value": "Barracks" }
+      }
+    },
+    {
+      "Template": "rts_war3_footman",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 7400, "Y": 5480 } },
+        "Name": { "Value": "Line Infantry" }
+      }
+    }
+  ]
+}

@@ -23,6 +23,7 @@ namespace EntityCommandPanelMod.Runtime
         private readonly string[] _instanceKeys = new string[MaxInstances];
         private readonly EntityCommandPanelAnchor[] _anchors = new EntityCommandPanelAnchor[MaxInstances];
         private readonly EntityCommandPanelSize[] _sizes = new EntityCommandPanelSize[MaxInstances];
+        private readonly EntityCommandPanelLayoutPreset[] _layouts = new EntityCommandPanelLayoutPreset[MaxInstances];
         private readonly int[] _groupIndices = new int[MaxInstances];
         private readonly uint[] _generations = new uint[MaxInstances];
         private readonly uint[] _observedRevisions = new uint[MaxInstances];
@@ -83,6 +84,7 @@ namespace EntityCommandPanelMod.Runtime
             changed |= Assign(ref _instanceKeys[slot], request.InstanceKey ?? string.Empty);
             changed |= Assign(ref _anchors[slot], request.Anchor);
             changed |= Assign(ref _sizes[slot], request.Size);
+            changed |= Assign(ref _layouts[slot], request.LayoutPreset);
             changed |= Assign(ref _visible[slot], request.StartVisible);
             changed |= Assign(ref _groupIndices[slot], request.InitialGroupIndex);
 
@@ -122,6 +124,7 @@ namespace EntityCommandPanelMod.Runtime
             _instanceKeys[slot] = string.Empty;
             _anchors[slot] = default;
             _sizes[slot] = default;
+            _layouts[slot] = EntityCommandPanelLayoutPreset.Standard;
             _groupIndices[slot] = 0;
             _observedRevisions[slot] = 0;
             _aliases.RemoveHandle(handle);
@@ -436,6 +439,7 @@ namespace EntityCommandPanelMod.Runtime
                 _instanceKeys[slot],
                 _anchors[slot],
                 _sizes[slot],
+                _layouts[slot],
                 _groupIndices[slot],
                 _visible[slot]);
         }

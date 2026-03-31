@@ -4,7 +4,6 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -15,12 +14,14 @@ namespace RtsDemoMod.Runtime
     {
         private static readonly ToolbarButtonSpec[] Buttons =
         {
-            new(ToolbarButtonKind.SelectEntity, "peasant", "Peasant", "Peasant", "#93C572"),
-            new(ToolbarButtonKind.SelectEntity, "barracks", "Barracks", "Barracks", "#D4A15A"),
-            new(ToolbarButtonKind.SelectEntity, "conyard", "ConYard", "Construction Yard", "#F18F5A"),
-            new(ToolbarButtonKind.SelectEntity, "warfactory", "Factory", "War Factory", "#B889FF"),
-            new(ToolbarButtonKind.SelectEntity, "gateway", "Gateway", "Gateway", "#62C8F3"),
-            new(ToolbarButtonKind.SelectEntity, "drone", "Drone", "Drone", "#F07C9A"),
+            new(ToolbarButtonKind.SelectEntity, "war3_build", "W3 Build", "Peasant", "#93C572"),
+            new(ToolbarButtonKind.SelectEntity, "war3_train", "W3 Train", "Barracks", "#D4A15A"),
+            new(ToolbarButtonKind.SelectEntity, "war3_garrison", "W3 Tower", "Footman", "#C8A96B"),
+            new(ToolbarButtonKind.SelectEntity, "cnc_build", "C&C Build", "Construction Yard", "#F18F5A"),
+            new(ToolbarButtonKind.SelectEntity, "cnc_train", "C&C Train", "War Factory", "#B889FF"),
+            new(ToolbarButtonKind.SelectEntity, "cnc_garrison", "C&C Bunker", "Rocket Trooper", "#FF8FA3"),
+            new(ToolbarButtonKind.SelectEntity, "sc2_train", "SC2 Train", "Gateway", "#62C8F3"),
+            new(ToolbarButtonKind.SelectEntity, "zerg_morph", "Zerg Morph", "Drone", "#7ED957"),
             new(ToolbarButtonKind.ResetCamera, "camera_reset", "Reset Cam", string.Empty, "#F2C36B")
         };
 
@@ -49,9 +50,9 @@ namespace RtsDemoMod.Runtime
             }
         }
 
-        public string Title => "RTS Quick Select";
+        public string Title => ResolveToolbarProfile().Title;
 
-        public string Subtitle => "Click a unit/building, or tap Reset Cam to snap the RTS view back to the map default.";
+        public string Subtitle => ResolveToolbarProfile().Subtitle;
 
         public int CopyButtons(Span<EntityCommandPanelToolbarButtonView> destination)
         {
@@ -61,10 +62,16 @@ namespace RtsDemoMod.Runtime
             }
 
             string selectedName = ResolveCurrentPrimaryName();
+            ToolbarProfile profile = ResolveToolbarProfile();
             int written = 0;
             for (int i = 0; i < Buttons.Length && written < destination.Length; i++)
             {
                 ref readonly ToolbarButtonSpec button = ref Buttons[i];
+                if (!profile.Accepts(button.ButtonId))
+                {
+                    continue;
+                }
+
                 if (button.Kind == ToolbarButtonKind.SelectEntity && !TryFindEntity(button.EntityName, out _))
                 {
                     continue;
@@ -126,37 +133,7 @@ namespace RtsDemoMod.Runtime
 
         private void SelectEntity(Entity target)
         {
-            SelectionRuntime? selection = _engine.GetService(CoreServiceKeys.SelectionRuntime);
-            if (selection == null || !_engine.World.IsAlive(target))
-            {
-                return;
-            }
-
-            Entity owner = ResolveSelectionOwner();
-            if (!_engine.World.IsAlive(owner))
-            {
-                return;
-            }
-
-            Span<Entity> next = stackalloc Entity[1];
-            next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next);
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.Ambient);
-            _engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            _engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
-        }
-
-        private Entity ResolveSelectionOwner()
-        {
-            Entity owner = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (_engine.World.IsAlive(owner))
-            {
-                return owner;
-            }
-
-            owner = _engine.World.Create(new PlayerOwner { PlayerId = 1 });
-            _engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
-            return owner;
+            RtsShowcaseSelectionHelper.TrySelectAndFocus(_engine, target, snapCamera: true);
         }
 
         private bool TryFindEntity(string entityName, out Entity result)
@@ -236,10 +213,101 @@ namespace RtsDemoMod.Runtime
             return false;
         }
 
+        private ToolbarProfile ResolveToolbarProfile()
+        {
+            ScenarioKind scenario = ResolveScenarioKind();
+            return scenario switch
+            {
+                ScenarioKind.War3Training => new ToolbarProfile(
+                    "War3 Training Yard",
+                    "Goal: queue Footman. Watch for upfront cost, Barracks progress, and the finished unit stepping out of the building.",
+                    "war3_train",
+                    "camera_reset"),
+                ScenarioKind.CncTraining => new ToolbarProfile(
+                    "C&C Factory Line",
+                    "Goal: queue Rhino. Watch for staged credit drain pulses, factory progress, and the tank rolling out when the bar completes.",
+                    "cnc_train",
+                    "camera_reset"),
+                ScenarioKind.Sc2Training => new ToolbarProfile(
+                    "SC2 Gateway Drill",
+                    "Goal: queue Zealot. Watch for upfront cost, gateway charge-up, and the unit materializing when training completes.",
+                    "sc2_train",
+                    "camera_reset"),
+                _ => new ToolbarProfile(
+                    "RTS Sandbox",
+                    "Select a showcase unit, try one focused command, and use Reset Cam if the board drifts out of view.")
+            };
+        }
+
+        private ScenarioKind ResolveScenarioKind()
+        {
+            var tags = _engine.CurrentMapSession?.MapConfig?.Tags;
+            if (tags == null)
+            {
+                return ScenarioKind.None;
+            }
+
+            bool isTraining = false;
+            bool war3 = false;
+            bool cnc = false;
+            bool sc2 = false;
+
+            for (int i = 0; i < tags.Count; i++)
+            {
+                string tag = tags[i];
+                if (string.Equals(tag, "rts_training", StringComparison.OrdinalIgnoreCase))
+                {
+                    isTraining = true;
+                }
+                else if (string.Equals(tag, "war3", StringComparison.OrdinalIgnoreCase))
+                {
+                    war3 = true;
+                }
+                else if (string.Equals(tag, "cnc", StringComparison.OrdinalIgnoreCase))
+                {
+                    cnc = true;
+                }
+                else if (string.Equals(tag, "sc2", StringComparison.OrdinalIgnoreCase))
+                {
+                    sc2 = true;
+                }
+            }
+
+            if (!isTraining)
+            {
+                return ScenarioKind.None;
+            }
+
+            if (war3)
+            {
+                return ScenarioKind.War3Training;
+            }
+
+            if (cnc)
+            {
+                return ScenarioKind.CncTraining;
+            }
+
+            if (sc2)
+            {
+                return ScenarioKind.Sc2Training;
+            }
+
+            return ScenarioKind.None;
+        }
+
         private enum ToolbarButtonKind : byte
         {
             SelectEntity,
             ResetCamera
+        }
+
+        private enum ScenarioKind : byte
+        {
+            None,
+            War3Training,
+            CncTraining,
+            Sc2Training
         }
 
         private readonly record struct ToolbarButtonSpec(
@@ -248,5 +316,23 @@ namespace RtsDemoMod.Runtime
             string Label,
             string EntityName,
             string AccentColorHex);
+
+        private readonly record struct ToolbarProfile(
+            string Title,
+            string Subtitle,
+            string PrimaryButtonId = "",
+            string SecondaryButtonId = "")
+        {
+            public bool Accepts(string buttonId)
+            {
+                if (string.IsNullOrWhiteSpace(PrimaryButtonId) && string.IsNullOrWhiteSpace(SecondaryButtonId))
+                {
+                    return true;
+                }
+
+                return string.Equals(buttonId, PrimaryButtonId, StringComparison.OrdinalIgnoreCase) ||
+                       string.Equals(buttonId, SecondaryButtonId, StringComparison.OrdinalIgnoreCase);
+            }
+        }
     }
 }

@@ -233,10 +233,10 @@ namespace EntityCommandPanelMod.Runtime
 
             string label = kind switch
             {
-                GasPanelGroupKind.Current => "Current",
-                GasPanelGroupKind.Base => "Base",
+                GasPanelGroupKind.Current => "Live Loadout",
+                GasPanelGroupKind.Base => "Base Kit",
                 GasPanelGroupKind.RoutePreview => ResolveRouteLabel(target, routeIndex),
-                GasPanelGroupKind.Granted => "Granted",
+                GasPanelGroupKind.Granted => "Unlocked",
                 _ => string.Empty
             };
 
@@ -445,7 +445,7 @@ namespace EntityCommandPanelMod.Runtime
 
             int remainingTicks = Math.Max(0, totalTicks - exec.CurrentTick);
             string label = ResolveAbilityExecLabel(exec.AbilityId);
-            string detail = $"{ResolveExecStateLabel(exec.State)} - {remainingTicks}/{totalTicks} ticks left";
+            string detail = $"{ResolveExecStateLabel(exec.State)} · {remainingTicks} steps left";
             string accent = ResolveAbilityExecAccent(exec.AbilityId);
             status = new EntityCommandPanelStatusView(
                 EntityCommandPanelStatusKind.ActiveAbility,
@@ -486,7 +486,7 @@ namespace EntityCommandPanelMod.Runtime
 
         private EntityCommandPanelQueueItemView BuildQueueItem(in QueuedOrder queuedOrder, EntityCommandPanelQueueStage stage)
         {
-            string label = ResolveOrderLabel(queuedOrder.Order.OrderTypeId);
+            string label = ResolveOrderLabel(in queuedOrder.Order);
             string detail = BuildOrderDetail(in queuedOrder.Order, stage, queuedOrder.ExpireStep);
             string accent = stage switch
             {
@@ -600,8 +600,14 @@ namespace EntityCommandPanelMod.Runtime
             return "#58B7FF";
         }
 
-        private string ResolveOrderLabel(int orderTypeId)
+        private string ResolveOrderLabel(in Order order)
         {
+            if (TryResolveCastAbilityLabel(in order, out string castAbilityLabel))
+            {
+                return castAbilityLabel;
+            }
+
+            int orderTypeId = order.OrderTypeId;
             if (_orderTypes != null && orderTypeId > 0 && _orderTypes.TryGet(orderTypeId, out var config))
             {
                 if (!string.IsNullOrWhiteSpace(config.Label))
@@ -618,6 +624,44 @@ namespace EntityCommandPanelMod.Runtime
             return orderTypeId > 0 ? $"Order#{orderTypeId}" : "Order";
         }
 
+        private bool TryResolveCastAbilityLabel(in Order order, out string label)
+        {
+            label = string.Empty;
+            if (!_engine.World.IsAlive(order.Actor) ||
+                !_engine.World.Has<AbilityStateBuffer>(order.Actor) ||
+                order.Args.I0 < 0)
+            {
+                return false;
+            }
+
+            if (_orderTypes == null ||
+                !_orderTypes.TryGet(order.OrderTypeId, out var orderConfig) ||
+                !string.Equals(orderConfig.Key, "castAbility", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            ref var slots = ref _engine.World.Get<AbilityStateBuffer>(order.Actor);
+            if ((uint)order.Args.I0 >= AbilityStateBuffer.CAPACITY)
+            {
+                return false;
+            }
+
+            AbilitySlotState slot = slots.Get(order.Args.I0);
+            if (slot.AbilityId <= 0 ||
+                _abilityDefinitions == null ||
+                !_abilityDefinitions.TryGet(slot.AbilityId, out var definition))
+            {
+                return false;
+            }
+
+            string fallbackLabel = ResolveFallbackLabel(slot.AbilityId, slot.TemplateEntityId);
+            label = definition.HasPresentation && definition.Presentation != null
+                ? definition.Presentation.ResolveDisplayName(fallbackLabel)
+                : fallbackLabel;
+            return !string.IsNullOrWhiteSpace(label);
+        }
+
         private string BuildOrderDetail(in Order order, EntityCommandPanelQueueStage stage, int expireStep)
         {
             string stageLabel = stage switch
@@ -629,16 +673,37 @@ namespace EntityCommandPanelMod.Runtime
             };
 
             string targetLabel = ResolveOrderTargetLabel(in order);
+            string actionLabel = ResolveOrderActionDetail(in order);
             if (expireStep > 0 && _clock != null)
             {
                 int currentStep = _clock.Now(ClockDomainId.Step);
                 int remaining = Math.Max(0, expireStep - currentStep);
+                if (!string.IsNullOrWhiteSpace(actionLabel) && !string.IsNullOrWhiteSpace(targetLabel))
+                {
+                    return $"{stageLabel} - {actionLabel} - {targetLabel} - expires in {remaining} ticks";
+                }
+
+                if (!string.IsNullOrWhiteSpace(actionLabel))
+                {
+                    return $"{stageLabel} - {actionLabel} - expires in {remaining} ticks";
+                }
+
                 if (!string.IsNullOrWhiteSpace(targetLabel))
                 {
                     return $"{stageLabel} - {targetLabel} - expires in {remaining} ticks";
                 }
 
                 return $"{stageLabel} - expires in {remaining} ticks";
+            }
+
+            if (!string.IsNullOrWhiteSpace(actionLabel) && !string.IsNullOrWhiteSpace(targetLabel))
+            {
+                return $"{stageLabel} - {actionLabel} - {targetLabel}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(actionLabel))
+            {
+                return $"{stageLabel} - {actionLabel}";
             }
 
             return string.IsNullOrWhiteSpace(targetLabel)
@@ -663,6 +728,13 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             return string.Empty;
+        }
+
+        private static string ResolveOrderActionDetail(in Order order)
+        {
+            return order.OrderTypeId == 100 && order.Args.I0 >= 0
+                ? $"slot {order.Args.I0}"
+                : string.Empty;
         }
 
         private static string ResolveExecStateLabel(AbilityExecRunState state)
@@ -785,7 +857,7 @@ namespace EntityCommandPanelMod.Runtime
         {
             if (!_engine.World.Has<AbilityFormSetRef>(target))
             {
-                return $"Form {routeIndex + 1}";
+                return $"Preview {routeIndex + 1}";
             }
 
             int formSetId = _engine.World.Get<AbilityFormSetRef>(target).FormSetId;
@@ -800,7 +872,7 @@ namespace EntityCommandPanelMod.Runtime
                 return cached[routeIndex];
             }
 
-            return $"Form {routeIndex + 1}";
+            return $"Preview {routeIndex + 1}";
         }
 
         private string[] BuildRouteLabels(int formSetId)
@@ -822,15 +894,15 @@ namespace EntityCommandPanelMod.Runtime
 
                 if (!string.IsNullOrWhiteSpace(required))
                 {
-                    labels[routeIndex] = $"Form {routeIndex + 1}: {required}";
+                    labels[routeIndex] = $"Preview: {required}";
                 }
                 else if (!string.IsNullOrWhiteSpace(blocked))
                 {
-                    labels[routeIndex] = $"Form {routeIndex + 1}: !{blocked}";
+                    labels[routeIndex] = $"Preview: not {blocked}";
                 }
                 else
                 {
-                    labels[routeIndex] = $"Form {routeIndex + 1}";
+                    labels[routeIndex] = $"Preview {routeIndex + 1}";
                 }
             }
 

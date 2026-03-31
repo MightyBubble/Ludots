@@ -7,17 +7,21 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
+using RtsDemoMod.Runtime;
 
 namespace RtsDemoMod.Systems
 {
     public sealed class RtsSelectionCommandPanelSystem : ISystem<float>
     {
         private const string GasSourceId = "gas.ability-slots";
-        private const string PanelInstanceKey = "rts.selection.focus";
+        private const string CommandDeckInstanceKey = "rts.selection.command";
+        private const string OrderMonitorInstanceKey = "rts.selection.orders";
 
         private readonly GameEngine _engine;
-        private EntityCommandPanelHandle _handle = EntityCommandPanelHandle.Invalid;
+        private EntityCommandPanelHandle _commandDeckHandle = EntityCommandPanelHandle.Invalid;
+        private EntityCommandPanelHandle _orderMonitorHandle = EntityCommandPanelHandle.Invalid;
         private Entity _lastTarget = Entity.Null;
+        private bool _seededDefaultSelection;
 
         public RtsSelectionCommandPanelSystem(GameEngine engine)
         {
@@ -43,53 +47,66 @@ namespace RtsDemoMod.Systems
             if (!IsRtsMapActive())
             {
                 ClosePanel(service);
+                _seededDefaultSelection = false;
                 return;
             }
 
-            EnsureSelectionViewBinding();
+            RtsShowcaseSelectionHelper.EnsureSelectionViewBinding(_engine);
 
             Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(_engine.World, _engine.GlobalContext, out Entity current)
                 ? current
-                : FindFallbackTarget();
+                : Entity.Null;
+            if (!IsPanelTarget(selected) && !_seededDefaultSelection)
+            {
+                Entity fallback = FindFallbackTarget();
+                if (IsPanelTarget(fallback) && RtsShowcaseSelectionHelper.TrySelectAndFocus(_engine, fallback, snapCamera: true))
+                {
+                    _seededDefaultSelection = true;
+                    selected = fallback;
+                }
+            }
+
             if (!IsPanelTarget(selected))
             {
-                if (_handle.IsValid)
-                {
-                    service.SetVisible(_handle, visible: false);
-                }
+                SetVisible(service, _commandDeckHandle, visible: false);
+                SetVisible(service, _orderMonitorHandle, visible: false);
                 _lastTarget = Entity.Null;
                 return;
             }
 
-            var anchor = new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.BottomCenter, 0f, 20f);
-            var size = new EntityCommandPanelSize(520f, 352f);
+            var commandAnchor = new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.BottomCenter, 0f, 18f);
+            var commandSize = new EntityCommandPanelSize(702f, 226f);
+            var monitorAnchor = new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.TopRight, 28f, 126f);
+            var monitorSize = new EntityCommandPanelSize(390f, 428f);
 
-            if (!_handle.IsValid || !service.TryGetState(_handle, out _))
-            {
-                _handle = service.Open(new EntityCommandPanelOpenRequest
-                {
-                    TargetEntity = selected,
-                    SourceId = GasSourceId,
-                    InstanceKey = PanelInstanceKey,
-                    Anchor = anchor,
-                    Size = size,
-                    InitialGroupIndex = 0,
-                    StartVisible = true
-                });
-                _lastTarget = selected;
-                return;
-            }
+            EnsurePanel(
+                service,
+                ref _commandDeckHandle,
+                selected,
+                CommandDeckInstanceKey,
+                commandAnchor,
+                commandSize,
+                EntityCommandPanelLayoutPreset.CommandDeck);
+            EnsurePanel(
+                service,
+                ref _orderMonitorHandle,
+                selected,
+                OrderMonitorInstanceKey,
+                monitorAnchor,
+                monitorSize,
+                EntityCommandPanelLayoutPreset.OrderMonitor);
 
-            service.SetAnchor(_handle, in anchor);
-            service.SetSize(_handle, in size);
             if (_lastTarget != selected)
             {
-                service.RebindTarget(_handle, selected);
-                service.SetGroupIndex(_handle, 0);
+                service.RebindTarget(_commandDeckHandle, selected);
+                service.RebindTarget(_orderMonitorHandle, selected);
+                service.SetGroupIndex(_commandDeckHandle, 0);
+                service.SetGroupIndex(_orderMonitorHandle, 0);
                 _lastTarget = selected;
             }
 
-            service.SetVisible(_handle, visible: true);
+            SetVisible(service, _commandDeckHandle, visible: true);
+            SetVisible(service, _orderMonitorHandle, visible: true);
         }
 
         public void AfterUpdate(in float dt)
@@ -110,23 +127,27 @@ namespace RtsDemoMod.Systems
             return _engine.World.IsAlive(entity) && _engine.World.Has<AbilityStateBuffer>(entity);
         }
 
-        private void EnsureSelectionViewBinding()
-        {
-            SelectionRuntime? selection = _engine.GetService(CoreServiceKeys.SelectionRuntime);
-            Entity owner = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (selection == null || !_engine.World.IsAlive(owner))
-            {
-                return;
-            }
-
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.Ambient);
-            _engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            _engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
-        }
-
         private Entity FindFallbackTarget()
         {
-            Entity result = FindFirstByNameContains("Peasant");
+            Entity result = FindFirstByNameContains("Barracks");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstByNameContains("War Factory");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstByNameContains("Gateway");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstByNameContains("Peasant");
             if (result != Entity.Null)
             {
                 return result;
@@ -139,12 +160,6 @@ namespace RtsDemoMod.Systems
             }
 
             result = FindFirstByNameContains("Construction Yard");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("Gateway");
             if (result != Entity.Null)
             {
                 return result;
@@ -193,13 +208,58 @@ namespace RtsDemoMod.Systems
 
         private void ClosePanel(IEntityCommandPanelService service)
         {
-            if (_handle.IsValid)
-            {
-                service.Close(_handle);
-                _handle = EntityCommandPanelHandle.Invalid;
-            }
+            CloseHandle(service, ref _commandDeckHandle);
+            CloseHandle(service, ref _orderMonitorHandle);
 
             _lastTarget = Entity.Null;
+        }
+
+        private static void CloseHandle(IEntityCommandPanelService service, ref EntityCommandPanelHandle handle)
+        {
+            if (!handle.IsValid)
+            {
+                return;
+            }
+
+            service.Close(handle);
+            handle = EntityCommandPanelHandle.Invalid;
+        }
+
+        private static void SetVisible(IEntityCommandPanelService service, EntityCommandPanelHandle handle, bool visible)
+        {
+            if (handle.IsValid)
+            {
+                service.SetVisible(handle, visible);
+            }
+        }
+
+        private static void EnsurePanel(
+            IEntityCommandPanelService service,
+            ref EntityCommandPanelHandle handle,
+            Entity selected,
+            string instanceKey,
+            in EntityCommandPanelAnchor anchor,
+            in EntityCommandPanelSize size,
+            EntityCommandPanelLayoutPreset layoutPreset)
+        {
+            if (!handle.IsValid || !service.TryGetState(handle, out _))
+            {
+                handle = service.Open(new EntityCommandPanelOpenRequest
+                {
+                    TargetEntity = selected,
+                    SourceId = GasSourceId,
+                    InstanceKey = instanceKey,
+                    Anchor = anchor,
+                    Size = size,
+                    LayoutPreset = layoutPreset,
+                    InitialGroupIndex = 0,
+                    StartVisible = true
+                });
+                return;
+            }
+
+            service.SetAnchor(handle, in anchor);
+            service.SetSize(handle, in size);
         }
 
         private bool IsRtsMapActive()

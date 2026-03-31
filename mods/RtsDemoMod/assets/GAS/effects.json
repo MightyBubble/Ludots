@@ -159,6 +159,15 @@
     ]
   },
   {
+    "id": "Effect.Rts.Cnc.CostTrainRhinoStep",
+    "tags": ["Effect.Rts.Cnc.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Credits", "op": "Add", "value": -100 }
+    ]
+  },
+  {
     "id": "Effect.Rts.Cnc.PlacePowerPlant",
     "tags": ["Effect.Rts.Cnc.Build"],
     "presetType": "CreateUnit",

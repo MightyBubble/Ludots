@@ -11,6 +11,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
+using RtsDemoMod.Runtime;
 
 namespace RtsDemoMod.Triggers
 {
@@ -50,26 +51,11 @@ namespace RtsDemoMod.Triggers
                 }
             });
 
-            EnsurePresentationStableIds(engine, world);
+            RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
             EnsureLocalSelectionOwner(engine, world);
             EnsureSelectionViewBinding(engine, world);
             EnsureDefaultSelection(engine, world);
             return Task.CompletedTask;
-        }
-
-        private static void EnsurePresentationStableIds(GameEngine engine, World world)
-        {
-            PresentationStableIdAllocator? allocator = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator);
-            if (allocator == null)
-            {
-                return;
-            }
-
-            var query = new QueryDescription().WithAll<VisualTransform>().WithNone<PresentationStableId>();
-            world.Query(in query, (Entity entity, ref VisualTransform _) =>
-            {
-                world.Add(entity, new PresentationStableId { Value = allocator.Allocate() });
-            });
         }
 
         private static void EnsureLocalSelectionOwner(GameEngine engine, World world)
@@ -155,7 +141,25 @@ namespace RtsDemoMod.Triggers
 
         private static Entity FindPreferredTarget(World world)
         {
-            Entity result = FindFirstNamedEntityContaining(world, "Peasant");
+            Entity result = FindFirstNamedEntityContaining(world, "Barracks");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstNamedEntityContaining(world, "War Factory");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstNamedEntityContaining(world, "Gateway");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstNamedEntityContaining(world, "Peasant");
             if (result != Entity.Null)
             {
                 return result;
@@ -168,12 +172,6 @@ namespace RtsDemoMod.Triggers
             }
 
             result = FindFirstNamedEntityContaining(world, "Construction Yard");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstNamedEntityContaining(world, "Gateway");
             if (result != Entity.Null)
             {
                 return result;

@@ -206,7 +206,15 @@
       "clockId": "FixedFrame",
       "items": [
         { "kind": "TagClip", "tick": 0, "duration": 105, "tag": "Status.Rts.Training" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.CostTrainRhino" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 12, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 24, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 36, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 48, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 60, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 72, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 84, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 96, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
         { "kind": "EffectSignal", "tick": 105, "template": "Effect.Rts.Cnc.TrainRhino", "dispatchTarget": "Source" },
         { "kind": "End", "tick": 105 }
       ]
