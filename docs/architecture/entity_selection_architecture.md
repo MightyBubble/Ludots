@@ -1,50 +1,50 @@
 # Entity Selection Architecture
 
-## Scope
+## 范围
 
-This document is the architecture SSOT for Ludots selection storage, viewed selection, order-bound selection snapshots, and selection-facing consumers such as camera, panels, overlays, and debug tooling.
+本文是 Ludots 选择系统的架构 SSOT，覆盖选择存储、视图选择、订单绑定的选择快照，以及相机、面板、覆盖层、调试工具等选择消费方。
 
-The goals are:
+目标如下：
 
-- keep selection truth in ECS entities and relations
-- allow any entity to own or view selection state
-- keep input as mutation intent, not selection truth
-- keep orders, formations, panels, and cameras consuming the same viewed-selection contract
-- forbid semantic caps such as hardcoded `64` on selection truth
+- 让选择真相始终落在 ECS 实体与关系上
+- 允许任意实体拥有或查看选择状态
+- 把输入限定为“变更意图”，而不是选择真相本身
+- 让订单、编队、面板与相机消费同一套 viewed-selection 契约
+- 禁止把 `64` 之类的硬编码上限写进选择真相
 
-## Single Source Of Truth
+## 单一事实源
 
-Formal selection state lives in container entities plus member-relation entities.
+正式选择状态存储在容器实体与成员关系实体中。
 
-- container entity:
+- 容器实体：
   - `SelectionContainerTag`
   - `SelectionContainerOwner`
   - `SelectionContainerAliasId`
   - `SelectionContainerKindComponent`
   - `SelectionContainerRevision`
   - `SelectionContainerMemberCount`
-- member relation entity:
+- 成员关系实体：
   - `SelectionMemberTag`
   - `SelectionMemberContainer`
   - `SelectionMemberTarget`
   - `SelectionMemberOrdinal`
   - `SelectionMemberRoleId`
 
-`SelectionRuntime` is the only runtime mutation/query API for formal selection storage.
+`SelectionRuntime` 是唯一允许正式读写这套选择真相的运行时 API。
 
-Relevant code:
+相关代码：
 
 - `src/Core/Input/Selection/SelectionComponents.cs`
 - `src/Core/Input/Selection/SelectionRuntime.cs`
 - `src/Core/Input/Selection/SelectionMaintenanceSystem.cs`
 
-This means selection is not player-only. A local player, AI commander, boss controller, replay inspector, debug viewer, or order lease owner can all participate as ordinary entities.
+这意味着选择不是“玩家专属”机制。本地玩家、AI 指挥官、Boss 控制器、回放观察者、调试视图拥有者、订单快照 lease owner 都只是普通实体。
 
-## Container Model
+## 容器模型
 
-Selection containers are keyed by `(owner entity, alias key)` and classified by `SelectionContainerKind`.
+选择容器以 `(owner entity, alias key)` 为键，并由 `SelectionContainerKind` 标记语义类别。
 
-Current built-in kinds:
+当前内建 kind：
 
 - `Live`
 - `Snapshot`
@@ -54,200 +54,198 @@ Current built-in kinds:
 - `CommandBinding`
 - `Debug`
 
-Current built-in aliases and views:
+当前内建 alias 与 view key：
 
-- selection aliases:
+- 选择 alias：
   - `selection.live.primary`
   - `selection.formation.primary`
   - `selection.command.preview`
   - `selection.command.snapshot`
-- view keys:
+- 视图 key：
   - `selection.view.primary`
   - `selection.view.secondary`
   - `selection.view.command-preview`
   - `selection.view.formation`
   - `selection.view.debug`
 
-Relevant code:
+相关代码：
 
 - `src/Core/Input/Selection/SelectionComponents.cs`
 - `src/Core/Input/Selection/SelectionRuntime.cs`
 
-## Mutation And Query Contract
+## 变更与查询契约
 
-Selection writers must go through `SelectionRuntime`.
+所有选择写入都必须经过 `SelectionRuntime`。
 
-Important operations:
+关键操作：
 
-- create or resolve containers:
+- 创建或解析容器：
   - `TryGetSelectionEntity(...)`
   - `TryGetOrCreateSelectionEntity(...)`
   - `TryGetOrCreateContainer(...)`
-- mutate membership:
+- 变更成员：
   - `ReplaceSelection(...)`
   - `AddToSelection(...)`
   - `RemoveFromSelection(...)`
   - `ClearSelection(...)`
-- clone or snapshot:
+- 克隆或快照：
   - `TryCloneSelection(...)`
   - `TryCreateSnapshotLease(...)`
-- bind views:
+- 绑定视图：
   - `TryBindView(...)`
   - `TryResolveViewContainer(...)`
-- describe containers and views for consumers:
+- 为消费者描述容器或视图：
   - `TryDescribeContainer(...)`
   - `TryDescribeSelection(...)`
   - `TryDescribeView(...)`
 
-Read-side helpers for consumers:
+消费者侧辅助 API：
 
 - `SelectionContextRuntime.TryGetCurrentPrimary(...)`
 - `SelectionContextRuntime.TryGetCurrentContainer(...)`
 - `SelectionContextRuntime.CopyCurrentSelection(...)`
 - `SelectionContextRuntime.TryDescribeCurrentView(...)`
 
-Relevant code:
+相关代码：
 
 - `src/Core/Input/Selection/SelectionRuntime.cs`
 - `src/Core/Input/Selection/SelectionContextRuntime.cs`
 - `src/Core/Input/Selection/SelectionViewDescriptors.cs`
 
-## Acquisition Rules
+## 选取规则
 
-Input produces selection mutations against formal containers.
+输入系统只负责把“选择变更意图”写进正式容器。
 
-Current acquisition systems:
+当前选取系统：
 
-- click and box selection:
+- 点击与框选：
   - `src/Core/Input/Selection/EntityClickSelectSystem.cs`
-- ability-driven selection responses:
+- ability 驱动的选择响应：
   - `src/Core/Input/Selection/GasSelectionResponseSystem.cs`
-- tab target cycling:
+- Tab 目标循环：
   - `mods/CoreInputMod/Systems/TabTargetCycleSystem.cs`
 
-Eligibility remains split into stable capability and temporary runtime gate:
+被选资格仍然拆成稳定能力与临时运行时门控两层：
 
 - `SelectionSelectableTag`
 - `SelectionSelectableState`
 - `SelectionEligibility`
 
-Existing selection is not automatically pruned when a unit becomes temporarily unselectable. Automatic maintenance only removes dead members. This keeps AI/debug/order snapshots stable and avoids hidden policy rewrites.
+当单位临时不可选时，已有选择不会被自动剔除；自动维护只移除已经死亡的成员。这样可以保持 AI、调试视图、订单快照等状态稳定，不把隐藏策略重写进维护系统。
 
-## Viewed Selection
+## 视图选择
 
-Viewed selection is explicit and separate from storage.
+viewed selection 与底层存储显式分离。
 
-- storage truth lives in containers and member relations
-- a viewer entity binds a `view key` to a container
-- consumers resolve the active viewed selection from:
+- 存储真相位于容器与成员关系实体
+- viewer entity 把某个 `view key` 绑定到容器
+- 消费者从以下服务解析当前 viewed selection：
   - `CoreServiceKeys.SelectionViewViewerEntity`
   - `CoreServiceKeys.SelectionViewKey`
 
-`SelectionViewRuntime` resolves the active viewed selection, and `SelectionContextRuntime` exposes consumer-facing helpers on top of it.
+`SelectionViewRuntime` 负责解析当前 viewed selection，`SelectionContextRuntime` 在其之上提供消费者友好的辅助 API。
 
-Relevant code:
+相关代码：
 
 - `src/Core/Input/Selection/SelectionViewRuntime.cs`
 - `src/Core/Input/Selection/SelectionContextRuntime.cs`
 
-Consumers must not recreate a second truth such as `SelectedEntity`, `SelectedTag`, or player-only ambient buffers.
+消费者不得再创造第二套真相，例如 `SelectedEntity`、`SelectedTag` 或玩家私有缓冲区。
 
-## Orders And Selection Snapshots
+## 订单与选择快照
 
-Orders no longer embed a fixed-capacity entity array for selected targets.
+订单不再内嵌固定容量的“已选实体数组”。
 
-Formal order-side selection now uses:
+正式订单侧选择改为：
 
 - `OrderSelectionReference`
 - `OrderArgs.Selection`
 
-When an order must keep a stable selection snapshot after submission, the snapshot is materialized as a selection container and retained by a lease owner entity.
+当订单需要在提交后保留稳定选择快照时，系统会把快照物化为选择容器，并由 lease owner entity 负责持有。
 
-Relevant code:
+相关代码：
 
 - `src/Core/Gameplay/GAS/Orders/OrderArgs.cs`
 - `src/Core/Gameplay/GAS/Orders/OrderQueue.cs`
 - `src/Core/Gameplay/GAS/Orders/OrderSelectionLeaseCleanupSystem.cs`
 - `src/Core/Input/Orders/InputOrderMappingSystem.cs`
 
-This is the selection-order contract:
+当前选择到订单的契约如下：
 
-- actor resolution still comes from the order actor provider
-- selection contributes entity collections or stable snapshots
-- queued orders retain container references, not a duplicated fixed-size payload
+- actor 解析仍由 order actor provider 决定
+- selection 负责提供实体集合或稳定快照
+- 队列中的订单持有的是容器引用，而不是复制一份定长 payload
 
-For RTS-style move workflows, selection ends at the authored-order handoff.
+对于 RTS 风格移动流程，选择在 authored-order handoff 处结束。
 
-- right-click issues an authored order against the current selection set
-- `Shift` + right-click appends another authored order into the order queue
-- authored order waypoints are not nav-path samples and are not execution cursors
+- 右键基于当前选择集提交 authored order
+- `Shift +` 右键会继续向 order queue 追加 authored order
+- authored waypoint 不是 nav path sample，也不是执行游标
 
-See `docs/architecture/order_navigation_movement.md` for the movement-side SSOT split between order queue, nav plan, immediate nav goal, and steering output.
+移动侧的 SSOT 拆分见 `docs/architecture/order_navigation_movement.md`。
 
-## Panels, Camera, And Mod Consumers
+## 面板、相机与 Mod 消费者
 
-Panels, camera follow targets, overlays, and showcase mods must consume viewed-selection APIs or descriptor APIs, not selection storage internals.
+面板、相机 follow target、覆盖层和 showcase mod 必须消费 viewed-selection API 或 descriptor API，而不是直接读底层选择存储。
 
-Selection-facing consumers should resolve through:
+建议通过以下入口读取：
 
 - `SelectionContextRuntime`
 - `SelectionRuntime.TryDescribeView(...)`
 - `SelectionRuntime.TryDescribeContainer(...)`
 
-The champion sandbox stress harness is the reference acceptance mod for this contract:
+冠军技能沙盒压力测试是这套契约的参考验收 Mod：
 
-- player live selection view
-- player formation view
+- 玩家 live selection view
+- 玩家 formation view
 - AI target view
 - AI formation view
 - command snapshot view
 
-Relevant code:
+相关代码：
 
 - `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Runtime/ChampionSkillSandboxRuntime.cs`
 - `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Runtime/ChampionSkillCastModeToolbarProvider.cs`
 - `src/Core/Commands/EntityCommandPanelCommands.cs`
 
-## Formation And Control-Group Semantics
+## 编队与控制组语义
 
-Formation and control-group semantics reuse the same selection container truth.
+编队与控制组语义复用同一套选择容器真相。
 
-- formation is a container kind and/or alias choice, not a second member-truth structure
-- command previews and command snapshots are containers or leased snapshot containers
-- multiple viewers can inspect different containers at the same time
+- formation 是一种容器 kind 或 alias 选择，而不是第二套成员真相结构
+- command preview 与 command snapshot 也是容器或 leased snapshot container
+- 多个 viewer 可以同时查看不同容器
 
-This allows:
+因此下面这些状态可以并存，而不需要兼容投影：
 
-- player-selected units
-- AI-selected targets
-- boss-selected victims
-- debug-inspected formation groups
-- order-bound snapshots
+- 玩家当前选中的单位
+- AI 当前锁定的目标
+- Boss 当前标记的受害者
+- 调试视图当前查看的编队
+- 订单绑定的快照
 
-to coexist without compatibility projections.
+## 预算与禁止事项
 
-## Budgets And Prohibitions
+选择真相不允许编码“语义成员上限”。
 
-Selection truth must not encode a semantic member cap.
+允许：
 
-Allowed:
+- `SelectionRuntimeConfig.MutationApplyBudgetPerFrame` 之类的运行时预算
+- UI 边界上的窗口化、截断或虚拟化
+- 基于遥测数据的成本控制
 
-- runtime budgets such as `SelectionRuntimeConfig.MutationApplyBudgetPerFrame`
-- UI windowing, truncation, or virtualization at presentation boundaries
-- telemetry-driven cost controls
+禁止：
 
-Forbidden:
+- `SelectionBuffer.CAPACITY = 64` 之类的硬编码语义上限
+- 对正式选择真相做静默截断
+- 把 `SelectedEntity` 或 `SelectedTag` 当成权威真相
+- 为同一份游戏真相再造一套 mod-local 选择存储
 
-- hardcoded semantic caps like `SelectionBuffer.CAPACITY = 64`
-- silent truncation of formal selection truth
-- consumers treating `SelectedEntity` or `SelectedTag` as authoritative
-- mod-local parallel selection storage for the same gameplay truth
+`OrderSpatial.MaxPoints = 64` 是多点空间 payload 的预算，不是选择真相的上限，禁止复用为选择人数限制。
 
-`OrderSpatial.MaxPoints = 64` is a spatial payload budget for multi-point geometry, not selection truth. It must not be reused as a selection limit.
+## 验收证据
 
-## Acceptance Evidence
-
-Reference acceptance evidence for the delivered architecture:
+与当前架构对应的验收证据：
 
 - `artifacts/acceptance/champion-skill-sandbox/battle-report.md`
 - `artifacts/acceptance/champion-skill-sandbox/trace.jsonl`
@@ -257,10 +255,10 @@ Reference acceptance evidence for the delivered architecture:
 - `artifacts/acceptance/champion-skill-stress/path.mmd`
 - `artifacts/acceptance/champion-skill-stress/screens/timeline.svg`
 
-## Residual Debt
+## 剩余债务
 
-Any remaining references to `SelectionBuffer`, `SelectionGroupBuffer`, `SelectedEntity`, or `SelectedTag` outside the contracts above are migration debt, not architecture.
+凡是仍然引用 `SelectionBuffer`、`SelectionGroupBuffer`、`SelectedEntity` 或 `SelectedTag`，且又不属于上述正式契约的代码，都是迁移债务，不是正式架构。
 
-The active debt inventory is tracked in:
+当前债务清单记录在：
 
 - `artifacts/techdebt/2026-03-20-selection-container-ssot-redesign.md`

@@ -16,6 +16,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
         private const string TacticalCameraId = "Camera.Profile.Tactical";
 
         private string? _activeMapId;
+        private Vector2? _commandedCameraTargetCm;
         private readonly ChunkStreamingShowcasePanelController _panelController;
 
         public ChunkStreamingShowcaseRuntime()
@@ -80,11 +81,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
             engine.GlobalContext[ChunkStreamingShowcaseIds.ScenarioServiceKey] = Scenario;
             board.LoadedChunksSource.ChunkLoaded += HandleChunkLoaded;
 
-            foreach (long chunkKey in board.LoadedChunksSource.ActiveChunkKeys)
-            {
-                HandleChunkLoaded(chunkKey);
-            }
-
+            PrimeInitialChunkWindow(engine);
             RefreshPanel(engine);
             return Task.CompletedTask;
         }
@@ -112,7 +109,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
                 return;
             }
 
-            Vector2 target = engine.GameSession.Camera.State.TargetCm;
+            Vector2 target = _commandedCameraTargetCm ?? engine.GameSession.Camera.State.TargetCm;
             ActiveBoard.LoadedChunksSource.Update(
                 (int)target.X,
                 (int)target.Y,
@@ -127,7 +124,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
                 return false;
             }
 
-            ActivateTacticalCamera(engine, Vector2.Zero);
+            ApplyCameraTargetAndPrimeChunkWindow(engine, Vector2.Zero);
             LastStatus = "Camera reset to the central chunk window.";
             RefreshPanel(engine);
             return true;
@@ -140,7 +137,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
                 return false;
             }
 
-            ActivateTacticalCamera(engine, new Vector2(landmarkWorldCm.X, landmarkWorldCm.Z));
+            ApplyCameraTargetAndPrimeChunkWindow(engine, new Vector2(landmarkWorldCm.X, landmarkWorldCm.Z));
             LastStatus = status;
             RefreshPanel(engine);
             return true;
@@ -161,13 +158,49 @@ namespace ChunkStreamingShowcaseMod.Runtime
 
         public ChunkStreamingShowcasePanelState BuildPanelState(GameEngine engine)
         {
-            Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+            Vector2 cameraTarget = _commandedCameraTargetCm ?? engine.GameSession.Camera.State.TargetCm;
             return new ChunkStreamingShowcasePanelState(
                 Title: "Chunk Streaming Showcase",
                 Status: LastStatus,
                 Camera: $"Camera ({cameraTarget.X:0},{cameraTarget.Y:0})",
                 Chunks: $"Chunks {LoadedChunkCount} | Nodes {LoadedNodeCount} | Splines {LoadedRoadSplineCount}",
                 Hint: "Jump west/center/east to verify chunk windows, loaded node counts, and spline batches change with the camera.");
+        }
+
+        private void PrimeInitialChunkWindow(GameEngine engine)
+        {
+            if (!IsActive || Scenario == null || ActiveBoard == null)
+            {
+                return;
+            }
+
+            Vector2 target = engine.GameSession.Camera.State.TargetCm;
+            _commandedCameraTargetCm = target;
+            ActiveBoard.LoadedChunksSource.Update(
+                (int)target.X,
+                (int)target.Y,
+                Scenario.StreamingRadiusCm);
+
+            foreach (long chunkKey in ActiveBoard.LoadedChunksSource.ActiveChunkKeys)
+            {
+                HandleChunkLoaded(chunkKey);
+            }
+        }
+
+        private void ApplyCameraTargetAndPrimeChunkWindow(GameEngine engine, Vector2 targetCm)
+        {
+            _commandedCameraTargetCm = targetCm;
+            ActivateTacticalCamera(engine, targetCm);
+
+            if (!IsActive || Scenario == null || ActiveBoard == null)
+            {
+                return;
+            }
+
+            ActiveBoard.LoadedChunksSource.Update(
+                (int)targetCm.X,
+                (int)targetCm.Y,
+                Scenario.StreamingRadiusCm);
         }
 
         private void ActivateTacticalCamera(GameEngine engine, Vector2 targetCm)
@@ -233,6 +266,7 @@ namespace ChunkStreamingShowcaseMod.Runtime
             }
 
             _activeMapId = null;
+            _commandedCameraTargetCm = null;
             ActiveBoard = null;
             Scenario = null;
             LastStatus = "Chunk window ready. Use the panel to jump between landmarks and inspect streamed road splines.";

@@ -35,6 +35,7 @@ namespace ChunkStreamingShowcaseMod.Triggers
             }
 
             engine.GlobalContext[ChunkStreamingShowcaseIds.InstalledKey] = true;
+            engine.GlobalContext[ChunkStreamingShowcaseIds.RuntimeServiceKey] = _runtime;
             engine.RegisterSystem(new ChunkStreamingShowcaseChunkSystem(engine, _runtime), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new ChunkStreamingShowcasePresentationSystem(engine, _runtime));
             _context.Log("[ChunkStreamingShowcaseMod] Chunk streaming runtime and presentation systems registered.");

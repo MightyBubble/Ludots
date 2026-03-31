@@ -1,8 +1,8 @@
-# Architecture
+# 架构文档总览
 
-This directory is the architecture SSOT entry for Ludots. It documents behavior that exists in the repository today and links each subsystem to its primary design note.
+`docs/architecture/` 是 Ludots 当前已落地架构的 SSOT 入口。这里的文档只描述仓库里已经存在、并且能被代码与测试路径佐证的运行时行为。
 
-## Core Runtime
+## 核心运行时
 
 - [Adapter Pattern](adapter_pattern.md)
 - [Camera Character Control](camera_character_control.md)
@@ -18,7 +18,7 @@ This directory is the architecture SSOT entry for Ludots. It documents behavior 
 - [Trigger Guide](trigger_guide.md)
 - [UI Runtime Architecture](ui_runtime_architecture.md)
 
-## Gameplay and Presentation
+## 玩法与表现
 
 - [Animation Profile and Clip Pipeline](animation_profile_clip_pipeline.md)
 - [Animation Profile and Clip Kanban](animation_profile_clip_kanban.md)
@@ -29,8 +29,9 @@ This directory is the architecture SSOT entry for Ludots. It documents behavior 
 - [Persistent Static Adapter Sync](persistent_static_adapter_sync.md)
 - [Presentation Performer](presentation_performer.md)
 - [Presentation Snapshot Contract](presentation_snapshot_contract.md)
+- [Entity Selection Architecture](entity_selection_architecture.md)
 
-## Related References
+## 相关参考
 
 - [CLI Runbook](../reference/cli_runbook.md)
 - [Config Data Merge Best Practices](../reference/config_data_merge_best_practices.md)
@@ -39,7 +40,7 @@ This directory is the architecture SSOT entry for Ludots. It documents behavior 
 - [Recent Commit Audit and E2E Showcase](../audits/recent_commit_audit_and_e2e_showcase.md)
 - [Convergence Disposition Matrix](../audits/convergence_disposition_matrix.md)
 
-## Repository Docs
+## 仓库文档入口
 
 - [Docs Overview](../README.md)
 - [Conventions](../conventions/README.md)

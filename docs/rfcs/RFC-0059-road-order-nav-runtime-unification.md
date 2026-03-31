@@ -390,7 +390,7 @@ flowchart TD
 
 * 当前 `MoveToWorldCmOrderSystem` 与 showcase 自定义 follow 订单存在职责重叠，需要先界定 Core 与 showcase 边界。
 * `RoadRouteQueryService` 过胖，迁移时应先拆 query / scoring / variant / projection。
-* 顶层 `mods/showcases/chunk_streaming/` 与子目录 `ChunkStreamingShowcaseMod/` 目前存在重复壳，需要在迁移中清理。
+* `chunk_streaming` showcase 必须保持 `mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod/` 为唯一根目录，禁止重新引入顶层重复壳。
 
 ## 14 相关文档
 

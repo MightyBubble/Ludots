@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Reflection;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Map.Board;
 using NUnit.Framework;
 using RoadNetworkShowcaseMod.Runtime;
@@ -26,15 +27,21 @@ namespace Ludots.Tests.GAS
             Tick(engine, 6);
             timeline.Add(Capture(engine, "start"));
 
-            ApplyCamera(engine, new Vector2(9000f, 0f));
+            FocusLandmark(
+                engine,
+                "EastGate",
+                "Camera focused on East Gate chunk window.");
             Tick(engine, 6);
             timeline.Add(Capture(engine, "east_gate"));
 
-            ApplyCamera(engine, new Vector2(18000f, 0f));
+            FocusLandmark(
+                engine,
+                "RedCapital",
+                "Camera focused on Red Capital chunk window.");
             Tick(engine, 6);
             timeline.Add(Capture(engine, "red_capital"));
 
-            ApplyCamera(engine, Vector2.Zero);
+            ResetCamera(engine);
             Tick(engine, 6);
             timeline.Add(Capture(engine, "reset_center"));
 
@@ -77,13 +84,37 @@ namespace Ludots.Tests.GAS
                 string.Join(",", board.LoadedChunksSource.ActiveChunkKeys));
         }
 
-        private static void ApplyCamera(GameEngine engine, Vector2 targetCm)
+        private static void FocusLandmark(GameEngine engine, string landmarkName, string status)
         {
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
-            {
-                VirtualCameraId = "Camera.Profile.Tactical",
-                TargetCm = targetCm
-            });
+            object runtime = RequireRuntime(engine);
+            Type runtimeType = runtime.GetType();
+            object landmark = Enum.Parse(typeof(RoadNetworkScenarioDefinition.RoadLandmarkId), landmarkName, ignoreCase: false);
+            MethodInfo? focusMethod = runtimeType
+                .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .FirstOrDefault(method => string.Equals(method.Name, "TryFocusLandmark", StringComparison.Ordinal));
+
+            Assert.That(focusMethod, Is.Not.Null, "Chunk streaming runtime must expose TryFocusLandmark for showcase control.");
+            object? result = focusMethod!.Invoke(runtime, new object[] { engine, landmark, status });
+            Assert.That(result, Is.EqualTo(true), $"Chunk streaming runtime failed to focus landmark '{landmarkName}'.");
+        }
+
+        private static void ResetCamera(GameEngine engine)
+        {
+            object runtime = RequireRuntime(engine);
+            MethodInfo? resetMethod = runtime.GetType()
+                .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .FirstOrDefault(method => string.Equals(method.Name, "TryResetCamera", StringComparison.Ordinal));
+            Assert.That(resetMethod, Is.Not.Null, "Chunk streaming runtime must expose TryResetCamera for showcase control.");
+            object? result = resetMethod!.Invoke(runtime, new object[] { engine });
+            Assert.That(result, Is.EqualTo(true), "Chunk streaming runtime failed to reset the tactical camera.");
+        }
+
+        private static object RequireRuntime(GameEngine engine)
+        {
+            bool found = engine.GlobalContext.TryGetValue("ChunkStreamingShowcaseMod.Runtime", out object? runtime);
+            Assert.That(found, Is.True, "Chunk streaming runtime should be registered into engine.GlobalContext.");
+            Assert.That(runtime, Is.Not.Null, "Chunk streaming runtime instance should not be null.");
+            return runtime!;
         }
 
         private static void Tick(GameEngine engine, int count)

@@ -1,13 +1,12 @@
 # Documentation Governance Report
 
-Date: 2026-03-31
+Date: 2026-04-01
 Scope:
 
 - `docs/architecture/README.md`
 - `docs/architecture/entity_selection_architecture.md`
-- `docs/architecture/gas_layered_architecture.md`
 - `docs/architecture/order_navigation_movement.md`
-- `docs/rfcs/README.md`
+- `docs/architecture/interaction/README.md`
 - `docs/rfcs/RFC-0059-road-order-nav-runtime-unification.md`
 
 Ruleset:
@@ -27,15 +26,15 @@ Ruleset:
 
 ## Findings
 
-No governance findings in the reviewed scope.
+No governance findings in the reviewed scope after conflict cleanup, Chinese prose alignment, and stale-state correction.
 
 ## Fix Order
 
-1. Keep `docs/architecture/README.md` as the only index entry for architecture SSOT links.
-2. Keep `docs/architecture/entity_selection_architecture.md` and `docs/architecture/order_navigation_movement.md` aligned when selection-order handoff changes.
-3. Re-run path-integrity checks whenever code paths referenced by these docs move.
+1. Keep `docs/architecture/README.md` 作为 architecture SSOT navigation 的唯一入口。
+2. Keep `docs/architecture/entity_selection_architecture.md` and `docs/architecture/order_navigation_movement.md` aligned whenever selection-order handoff changes.
+3. Re-run path-integrity checks whenever referenced code or doc paths move.
 
 ## Residual Risks
 
-- This report validates only the reviewed architecture-doc scope, not the entire `docs/` tree.
-- Future renames of code paths referenced by these docs still require a fresh path-integrity pass.
+- This report covers the reviewed architecture / RFC scope, not the entire `docs/` tree.
+- Future path renames still require a fresh integrity pass.
