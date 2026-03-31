@@ -1,5 +1,16 @@
 [
   {
+    "Id": "ChampionSkillSandbox.Mode.Action",
+    "DisplayName": "Action Combo",
+    "VirtualCameraId": "ChampionSkillSandbox.Camera.Tactical",
+    "FollowTargetKind": "SelectedEntity",
+    "InputContextId": "ChampionSkillSandbox.Controls",
+    "InteractionMode": "ContextScored",
+    "SkillBarKeyLabels": ["Q", "W", "E", "R", "Space"],
+    "SkillBarEnabled": true,
+    "SwitchActionId": "CastModeAction"
+  },
+  {
     "Id": "ChampionSkillSandbox.Mode.SmartCast",
     "DisplayName": "Quick Cast",
     "VirtualCameraId": "ChampionSkillSandbox.Camera.Tactical",
@@ -31,16 +42,5 @@
     "SkillBarKeyLabels": ["Q", "W", "E", "R", "Space"],
     "SkillBarEnabled": true,
     "SwitchActionId": "CastModePressRelease"
-  },
-  {
-    "Id": "ChampionSkillSandbox.Mode.Action",
-    "DisplayName": "Context Combo",
-    "VirtualCameraId": "ChampionSkillSandbox.Camera.Tactical",
-    "FollowTargetKind": "SelectedEntity",
-    "InputContextId": "ChampionSkillSandbox.Controls",
-    "InteractionMode": "ContextScored",
-    "SkillBarKeyLabels": ["Q", "W", "E", "R", "Space"],
-    "SkillBarEnabled": true,
-    "SwitchActionId": "CastModeAction"
   }
 ]

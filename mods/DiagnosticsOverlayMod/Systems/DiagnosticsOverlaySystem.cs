@@ -22,6 +22,7 @@ namespace DiagnosticsOverlayMod.Systems
 {
     public sealed class DiagnosticsOverlaySystem : ISystem<float>
     {
+        private const string HideRuntimeHudKey = "DiagnosticsOverlay.HideRuntimeHud";
         private readonly GameEngine _engine;
         private PlayerInputHandler? _input;
 
@@ -69,7 +70,10 @@ namespace DiagnosticsOverlayMod.Systems
             if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var obj) ||
                 obj is not ScreenOverlayBuffer overlay) return;
 
-            RenderRuntimeHud(overlay, renderDebugState, t);
+            if (!ShouldHideRuntimeHud())
+            {
+                RenderRuntimeHud(overlay, renderDebugState, t);
+            }
 
             if (_activePanel == Panel.None && !_turnBasedMode) return;
 
@@ -333,6 +337,13 @@ namespace DiagnosticsOverlayMod.Systems
             overlay.AddText(x + 10, y + 92, $"F9 Terrain[{OnOff(renderDebugState.DrawTerrain)}]  F10 Primitive[{OnOff(renderDebugState.DrawPrimitives)}]", 14, text);
             overlay.AddText(x + 10, y + 112, $"F11 DebugDraw[{OnOff(renderDebugState.DrawDebugDraw)}]  F12 SkiaUI[{OnOff(renderDebugState.DrawSkiaUi)}]", 14, text);
             overlay.AddText(x + 10, y + 132, "F5 Config | F6 Mods | F7 Attributes | F8 TurnBased", 13, new Vector4(0.7f, 0.8f, 0.9f, 0.95f));
+        }
+
+        private bool ShouldHideRuntimeHud()
+        {
+            return _engine.GlobalContext.TryGetValue(HideRuntimeHudKey, out var hiddenObj) &&
+                   hiddenObj is bool hidden &&
+                   hidden;
         }
 
         private static string OnOff(bool enabled) => enabled ? "ON" : "OFF";

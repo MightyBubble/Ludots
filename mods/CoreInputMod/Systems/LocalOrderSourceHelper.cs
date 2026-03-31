@@ -209,11 +209,23 @@ namespace CoreInputMod.Systems
             return true;
         }
 
-        private static string DescribeOrder(in Order order)
+        private string DescribeOrder(in Order order)
         {
+            string actorName = "<none>";
+            string targetName = "<none>";
+            if (order.Actor != Entity.Null)
+            {
+                actorName = TryReadEntityName(order.Actor, out string resolvedActorName) ? resolvedActorName : "<unnamed>";
+            }
+
+            if (order.Target != Entity.Null)
+            {
+                targetName = TryReadEntityName(order.Target, out string resolvedTargetName) ? resolvedTargetName : "<unnamed>";
+            }
+
             string target = order.Target == Entity.Null
                 ? "<none>"
-                : $"{order.Target.Id}:{order.Target.WorldId}:{order.Target.Version}";
+                : $"{order.Target.Id}:{order.Target.WorldId}:{order.Target.Version}/{targetName}";
             string spatial = order.Args.Spatial.Mode switch
             {
                 OrderCollectionMode.None => "<none>",
@@ -221,7 +233,19 @@ namespace CoreInputMod.Systems
                 _ => $"list(count:{order.Args.Spatial.PointCount})"
             };
 
-            return $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},target:{target},slot:{order.Args.I0},spatial:{spatial},submit:{order.SubmitMode}";
+            return $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version}/{actorName},target:{target},slot:{order.Args.I0},spatial:{spatial},submit:{order.SubmitMode}";
+        }
+
+        private bool TryReadEntityName(Entity entity, out string name)
+        {
+            name = string.Empty;
+            if (!_world.IsAlive(entity) || !_world.TryGet(entity, out Name entityName))
+            {
+                return false;
+            }
+
+            name = entityName.Value;
+            return !string.IsNullOrWhiteSpace(name);
         }
 
         private sealed class SkillMappingOverrideResolver

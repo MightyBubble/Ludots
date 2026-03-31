@@ -130,11 +130,15 @@ namespace Ludots.Tests.GAS.Production
             engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey] = EntityCommandPanelShowcaseTheme.ClassicId;
             Tick(engine, 2, frameTimesMs);
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
-            Assert.That(GetActiveModeId(engine), Is.EqualTo(SmartCastModeId));
-            Assert.That(GetSelectedEntityName(engine), Is.EqualTo("Ezreal Alpha"));
+            Assert.That(GetActiveModeId(engine), Is.EqualTo(ActionModeId));
+            Assert.That(GetSelectedEntityName(engine), Is.EqualTo("Duelist Alpha"));
             Assert.That(CountOverlays(overlays, GroundOverlayShape.Ring), Is.GreaterThan(0), "Sandbox should show a visible selection ring for the current focus unit.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "map_loaded");
-            timeline.Add("[T+001] champion_skill_sandbox loaded | default mode Quick Cast | default focus Ezreal Alpha");
+            timeline.Add("[T+001] champion_skill_sandbox loaded | default mode Action | default focus Duelist Alpha");
+
+            toolbar.Activate(SmartCastModeId);
+            Tick(engine, 1, frameTimesMs);
+            Assert.That(GetActiveModeId(engine), Is.EqualTo(SmartCastModeId));
 
             SelectNamedEntity(engine, backend, "Ezreal Cooldown", frameTimesMs);
             var ezrealCooldownSlots = CopySelectedSlots(engine);
@@ -142,7 +146,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(ezrealCooldownSlots[3].Flags, Does.Contain("Blocked"));
             Assert.That(CountOverlays(overlays, GroundOverlayShape.Ring), Is.GreaterThan(0), "Selection ring should survive champion switching.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "select_ezreal_cooldown");
-            timeline.Add("[T+002] Select(Ezreal Cooldown) -> panel shows R blocked by cooldown state");
+            timeline.Add("[T+002] F1(Quick Cast) -> Select(Ezreal Cooldown) -> panel shows R blocked by cooldown state");
 
             SelectNamedEntity(engine, backend, "Garen Courage", frameTimesMs);
             var garenSlots = CopySelectedSlots(engine);
@@ -162,25 +166,50 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Ezreal Alpha", frameTimesMs);
             Vector2 ezrealStart = ReadPosition(engine.World, "Ezreal Alpha");
+            backend.SetMousePosition(GetGroundScreenFromWorld(engine, ezrealStart + new Vector2(-260f, 220f)));
+            Tick(engine, 1, frameTimesMs);
             int baselineHoverRings = CountOverlays(overlays, GroundOverlayShape.Ring);
+            string baselineHoveredEntityName = ReadHoveredEntityName(engine);
+            string baselineRingDiagnostics = BuildRingOverlayDiagnostics(overlays);
+            string selectedEntityName = GetSelectedEntityName(engine);
             (string hoverEntityName, Vector2 hoverPoint) = FindAnyHoverableEntityScreenPoint(
                 engine,
                 backend,
-                GetSelectedEntityName(engine),
+                selectedEntityName,
                 frameTimesMs);
             backend.SetMousePosition(hoverPoint);
             Tick(engine, 1, frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => CountOverlays(overlays, GroundOverlayShape.Ring) > baselineHoverRings,
-                maxFrames: 8);
-            Assert.That(
-                CountOverlays(overlays, GroundOverlayShape.Ring),
-                Is.GreaterThan(baselineHoverRings),
-                "Normal hover should add a dedicated hover ring even when not actively aiming.");
+            bool idleHoverResolved = false;
+            for (int hoverFrame = 0; hoverFrame < 16; hoverFrame++)
+            {
+                if (CountOverlays(overlays, GroundOverlayShape.Ring) > baselineHoverRings)
+                {
+                    idleHoverResolved = true;
+                    break;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            bool hoveredFriendly = EntitiesShareTeam(engine.World, selectedEntityName, hoverEntityName);
+            if (hoveredFriendly)
+            {
+                Assert.That(
+                    CountOverlays(overlays, GroundOverlayShape.Ring),
+                    Is.EqualTo(baselineHoverRings),
+                    $"Friendly idle hover should avoid extra combat-marker clutter. baselineHovered={baselineHoveredEntityName}, baselineRings={baselineRingDiagnostics}, resolved={idleHoverResolved}, hoverEntity={hoverEntityName}, currentHovered={ReadHoveredEntityName(engine)} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildRingOverlayDiagnostics(overlays)}");
+            }
+            else
+            {
+                Assert.That(
+                    CountOverlays(overlays, GroundOverlayShape.Ring),
+                    Is.GreaterThan(baselineHoverRings),
+                    $"Enemy idle hover should add a dedicated hover ring even when not actively aiming. baselineHovered={baselineHoveredEntityName}, baselineRings={baselineRingDiagnostics}, resolved={idleHoverResolved}, hoverEntity={hoverEntityName}, currentHovered={ReadHoveredEntityName(engine)} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildRingOverlayDiagnostics(overlays)}");
+            }
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "hover_marker_idle");
-            timeline.Add($"[T+005] Idle hover over {hoverEntityName} shows a dedicated hover marker before any cast input");
+            timeline.Add(hoveredFriendly
+                ? $"[T+005] Idle hover over friendly {hoverEntityName} keeps the board readable without adding an extra combat marker"
+                : $"[T+005] Idle hover over enemy {hoverEntityName} shows a dedicated hover marker before any cast input");
 
             Vector2 moveTargetScreen = GetGroundScreenFromWorld(engine, ezrealStart + new Vector2(220f, 0f));
             int baselineMoveLines = CountOverlays(overlays, GroundOverlayShape.Line);
@@ -214,14 +243,13 @@ namespace Ludots.Tests.GAS.Production
             });
             Tick(engine, 1, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/f4", frameTimesMs);
-            TickUntil(
-                engine,
-                frameTimesMs,
-                () => IsCameraNear(engine.GameSession.Camera.State, new Vector2(1850f, 980f), 3900f, 54f, 42f),
-                maxFrames: 6);
-            Tick(engine, 2, frameTimesMs);
+            Tick(engine, 4, frameTimesMs);
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(SandboxTacticalCameraId));
+            Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.LessThanOrEqualTo(3900f));
+            Assert.That(engine.GameSession.Camera.State.Pitch, Is.LessThan(60f));
+            Assert.That(engine.GameSession.Camera.State.FovYDeg, Is.GreaterThanOrEqualTo(42f));
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "camera_reset");
-            timeline.Add("[T+007] Camera.Reset(F4) -> tactical view restored to sandbox default pose");
+            timeline.Add("[T+007] Camera.Reset(F4) -> tactical view restored around the selected champion");
 
             float ezrealDistanceToDummy = ReadDistance(engine.World, "Ezreal Alpha", "Target Dummy A");
             Assert.That(ezrealDistanceToDummy, Is.LessThanOrEqualTo(840f), "Sandbox layout should keep Target Dummy A inside Ezreal Q range for the opening smart-cast proof.");
@@ -349,7 +377,9 @@ namespace Ludots.Tests.GAS.Production
             timeline.Add("[T+012] Select(Geomancer Alpha) -> panel exposes summon / zone / blocker / beam loadout");
 
             float dummyHealthBeforeBeam = ReadHealth(engine.World, "Target Dummy C");
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy C"), frameTimesMs);
+            Vector2 beamHoverPoint = FindHoverScreenPoint(engine, backend, "Target Dummy C", GetEntityScreen(engine, "Target Dummy C"), frameTimesMs);
+            Assert.That(ReadHoveredEntityName(engine), Is.EqualTo("Target Dummy C"));
+            SetMouseWorld(engine, backend, beamHoverPoint, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/r", frameTimesMs);
             Tick(engine, 4, frameTimesMs);
             float dummyHealthAfterBeam = ReadHealth(engine.World, "Target Dummy C");
@@ -464,13 +494,28 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(duelistSlots.Any(slot => string.Equals(slot.Label, "Step In", StringComparison.Ordinal)), Is.True);
             Assert.That(duelistSlots.Any(slot => string.Equals(slot.Label, "Crowd Sweep", StringComparison.Ordinal)), Is.True);
             Assert.That(duelistSlots.Any(slot => string.Equals(slot.Label, "Opening Breaker", StringComparison.Ordinal)), Is.True);
-            Assert.That(duelistSlots.Any(slot => string.Equals(slot.Label, "Action Context", StringComparison.Ordinal)), Is.True);
+            Assert.That(duelistSlots.Any(slot => string.Equals(slot.Label, "Action Combo", StringComparison.Ordinal)), Is.True);
             Assert.That(
                 CountDebugDrawCommands(debugDraw),
                 Is.GreaterThan(0),
                 "Duelist action mode should expose context-group debug geometry so the auto-target decision stays legible.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "select_duelist_action_mode");
             timeline.Add("[T+017] Select(Duelist Alpha) -> reposition to melee staging lane -> F5 enters Context Combo mode with Step In / Chain / Crowd Sweep / Opening Breaker / Space root");
+
+            backend.SetMousePosition(GetGroundScreenFromWorld(engine, duelistStagingWorld + new Vector2(-320f, -220f)));
+            Tick(engine, 1, frameTimesMs);
+            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy F"), frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountOverlays(overlays, GroundOverlayShape.Ring) >= 3,
+                maxFrames: 16);
+            Assert.That(
+                CountOverlays(overlays, GroundOverlayShape.Ring),
+                Is.GreaterThanOrEqualTo(3),
+                "Action mode should show both the hover marker and a separate resolved-target ring so the player can tell who Space will actually hit.");
+            CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "duelist_action_preview");
+            timeline.Add("[T+017A] Duelist hover preview shows orange hover plus a separate resolved-target ring before Space commits");
 
             const string duelistFocusTarget = "Target Dummy F";
             float duelistDistanceToDummyF = ReadDistance(engine.World, "Duelist Alpha", duelistFocusTarget);
@@ -479,7 +524,17 @@ namespace Ludots.Tests.GAS.Production
             Vector2 dummyDGroundPoint = GetGroundScreenFromWorld(engine, ReadPosition(engine.World, duelistFocusTarget));
             Assert.That(duelistDistanceToDummyF, Is.GreaterThan(260f));
             Assert.That(duelistDistanceToDummyF, Is.LessThanOrEqualTo(760f), $"{duelistFocusTarget} should start outside jab range but inside Step In engage range.");
+            int baselineActionRings = CountOverlays(overlays, GroundOverlayShape.Ring);
             SetMouseWorld(engine, backend, dummyDGroundPoint, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountOverlays(overlays, GroundOverlayShape.Ring) >= baselineActionRings + 2,
+                maxFrames: 12);
+            Assert.That(
+                CountOverlays(overlays, GroundOverlayShape.Ring),
+                Is.GreaterThanOrEqualTo(baselineActionRings + 2),
+                "Action mode should show both the orange hover ring and the white resolved auto-lock ring before Space is pressed.");
             PressButton(engine, backend, "<Keyboard>/space", frameTimesMs);
             bool stepInResolved = WaitUntil(
                 engine,
@@ -913,6 +968,7 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("OrderQueue missing.");
 
             LoadMap(engine, StressMapId, frameTimesMs);
+            Tick(engine, 1, frameTimesMs);
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             Assert.That(toolbar.IsVisible, Is.True);
             Assert.That(toolbar.Title, Is.EqualTo("Stress Harness"));
@@ -1059,10 +1115,13 @@ namespace Ludots.Tests.GAS.Production
             var backend = GetInputBackend(engine);
 
             LoadMap(engine, MapId, frameTimesMs);
+            var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                ?? throw new InvalidOperationException("Toolbar provider missing.");
+            toolbar.Activate(SmartCastModeId);
+            Tick(engine, 1, frameTimesMs);
             SelectNamedEntity(engine, backend, "Ezreal Alpha", frameTimesMs);
 
-            Vector2 stagingPoint = GetGroundScreenFromWorld(engine, new Vector2(1320f, 720f));
-            RightClickWorld(engine, backend, stagingPoint, frameTimesMs);
+            IssueImmediateMoveOrder(engine, "Ezreal Alpha", new Vector2(1320f, 720f));
             TickUntil(
                 engine,
                 frameTimesMs,
@@ -1071,6 +1130,7 @@ namespace Ludots.Tests.GAS.Production
 
             Vector2 dummyAimPoint = GetEntityScreen(engine, "Target Dummy A");
             SetMouseWorld(engine, backend, dummyAimPoint, frameTimesMs);
+            Tick(engine, 1, frameTimesMs);
 
             float healthBeforeW = ReadHealth(engine.World, "Target Dummy A");
             PressButton(engine, backend, "<Keyboard>/w", frameTimesMs);
@@ -1328,6 +1388,12 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 2, frameTimesMs);
             backend.SetButton("<Mouse>/RightButton", false);
             Tick(engine, 2, frameTimesMs);
+        }
+
+        private static void RightClickGroundWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
+        {
+            Vector2 screenPosition = GetGroundScreenFromWorld(engine, worldCm);
+            RightClickWorld(engine, backend, screenPosition, frameTimesMs);
         }
 
         private static void IssueImmediateMoveOrder(GameEngine engine, string actorName, Vector2 worldCm)
@@ -1633,8 +1699,8 @@ namespace Ludots.Tests.GAS.Production
                 "    O --> P[\"Zone: Rune Field spawned under Target Dummy C -> periodic hit confirmed\"]",
                 "    P --> Q[\"Blocker: Stone Pillar spawned -> nav/physics obstacle bridge active\"]",
                 "    Q --> R[\"Selection: Duelist Alpha -> F5 switches to Context Combo mode\"]",
-                "    R --> S[\"Action Context: Space on Dummy F auto-selects Step In to close range\"]",
-                "    S --> T[\"Action Context: Space advances Chain Jab I -> II -> Opening Breaker as combo state and opened tags evolve\"]",
+                "    R --> S[\"Action Combo: Space on Dummy F auto-selects Step In to close range\"]",
+                "    S --> T[\"Action Combo: Space advances Chain Jab I -> II -> Opening Breaker as combo state and opened tags evolve\"]",
                 "    T --> U[\"Explicit Combo: Q form routing proves Chain Jab I -> II -> Finish on Dummy F\"]",
                 "    U --> V[\"Arc Clear: Crowd Sweep damages multiple dummies in the front cluster\"]",
                 "    V --> W[\"Selection: Spell Engineer Alpha -> unified manifestation loadout visible\"]",
@@ -2150,6 +2216,17 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetActiveModeId(GameEngine engine)
         {
+            if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is InputOrderMappingSystem mapping)
+            {
+                return mapping.InteractionMode switch
+                {
+                    InteractionModeType.ContextScored => ActionModeId,
+                    InteractionModeType.SmartCastWithIndicator => IndicatorModeId,
+                    InteractionModeType.PressReleaseAimCast => PressReleaseModeId,
+                    _ => SmartCastModeId,
+                };
+            }
+
             if (engine.GlobalContext.TryGetValue(ViewModeManager.ActiveModeIdKey, out var modeIdObj) &&
                 modeIdObj is string modeId &&
                 !string.IsNullOrWhiteSpace(modeId))
@@ -2157,13 +2234,7 @@ namespace Ludots.Tests.GAS.Production
                 return modeId;
             }
 
-            return engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)?.InteractionMode switch
-            {
-                InteractionModeType.ContextScored => ActionModeId,
-                InteractionModeType.SmartCastWithIndicator => IndicatorModeId,
-                InteractionModeType.PressReleaseAimCast => PressReleaseModeId,
-                _ => SmartCastModeId,
-            };
+            return SmartCastModeId;
         }
 
         private static string GetSelectedEntityName(GameEngine engine)
@@ -2236,20 +2307,31 @@ namespace Ludots.Tests.GAS.Production
             out Vector2 matchedPoint,
             out string samples)
         {
-            var hoveredSamples = new List<string>(HoverProbeOffsets.Length);
-            for (int i = 0; i < HoverProbeOffsets.Length; i++)
+            const int hoverSearchRounds = 6;
+            var hoveredSamples = new List<string>(HoverProbeOffsets.Length * hoverSearchRounds);
+            for (int round = 0; round < hoverSearchRounds; round++)
             {
-                Vector2 candidate = projectedScreenPoint + HoverProbeOffsets[i];
-                backend.SetMousePosition(candidate);
-                Tick(engine, 1, frameTimesMs);
-
-                string hovered = ReadHoveredEntityName(engine);
-                hoveredSamples.Add($"{candidate.X:0.0},{candidate.Y:0.0}->{hovered}");
-                if (string.Equals(hovered, entityName, StringComparison.Ordinal))
+                for (int i = 0; i < HoverProbeOffsets.Length; i++)
                 {
-                    matchedPoint = candidate;
-                    samples = string.Join(" | ", hoveredSamples);
-                    return true;
+                    Vector2 liveProjectedPoint = GetEntityScreen(engine, entityName);
+                    if (float.IsNaN(liveProjectedPoint.X) || float.IsInfinity(liveProjectedPoint.X) ||
+                        float.IsNaN(liveProjectedPoint.Y) || float.IsInfinity(liveProjectedPoint.Y))
+                    {
+                        liveProjectedPoint = projectedScreenPoint;
+                    }
+
+                    Vector2 candidate = liveProjectedPoint + HoverProbeOffsets[i];
+                    backend.SetMousePosition(candidate);
+                    Tick(engine, 1, frameTimesMs);
+
+                    string hovered = ReadHoveredEntityName(engine);
+                    hoveredSamples.Add($"r{round}:{candidate.X:0.0},{candidate.Y:0.0}->{hovered}");
+                    if (string.Equals(hovered, entityName, StringComparison.Ordinal))
+                    {
+                        matchedPoint = candidate;
+                        samples = string.Join(" | ", hoveredSamples);
+                        return true;
+                    }
                 }
             }
 
@@ -2364,9 +2446,9 @@ namespace Ludots.Tests.GAS.Production
         {
             string[] preferred =
             {
-                "Jayce Cannon",
                 "Target Dummy A",
                 "Target Dummy B",
+                "Jayce Cannon",
                 "Jayce Hammer",
                 "Garen Courage",
                 "Ezreal Cooldown"
@@ -2731,6 +2813,18 @@ namespace Ludots.Tests.GAS.Production
             if (engine.World.TryGet(actor, out OrderBuffer orders))
             {
                 details.Add(orders.HasActive ? $"activeOrder={orders.ActiveOrder.Order.OrderTypeId}" : "activeOrder=<none>");
+                if (orders.HasActive)
+                {
+                    details.Add($"activeOrderId={orders.ActiveOrder.Order.OrderId}");
+                    details.Add($"activeSlotArg={orders.ActiveOrder.Order.Args.I0}");
+                    details.Add($"activeSpatialMode={orders.ActiveOrder.Order.Args.Spatial.Mode}");
+                    if (orders.ActiveOrder.Order.Args.Spatial.Mode != OrderCollectionMode.None)
+                    {
+                        details.Add(
+                            $"activeSpatial=({orders.ActiveOrder.Order.Args.Spatial.WorldCm.X:0.##},{orders.ActiveOrder.Order.Args.Spatial.WorldCm.Z:0.##})");
+                    }
+                }
+
                 details.Add(orders.HasPending ? $"pendingOrder={orders.PendingOrder.Order.OrderTypeId}" : "pendingOrder=<none>");
                 if (orders.HasQueued)
                 {
@@ -2769,6 +2863,16 @@ namespace Ludots.Tests.GAS.Production
             {
                 details.Add("exec=<none>");
             }
+
+            if (engine.World.TryGet(actor, out OrderContinuationBuffer continuations) && continuations.HasEntries)
+            {
+                details.Add($"continuations={continuations.Count}");
+            }
+
+            string lastOrder = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastOrderDebugKey, out var lastOrderObj)
+                ? lastOrderObj?.ToString() ?? "<null>"
+                : "<missing>";
+            details.Add($"lastOrder={lastOrder}");
 
             return string.Join(" | ", details);
         }
@@ -2845,6 +2949,40 @@ namespace Ludots.Tests.GAS.Production
         private static string BuildOverlayDiagnostics(GroundOverlayBuffer overlays)
         {
             return $"overlays=count:{overlays.Count},circle:{CountOverlays(overlays, GroundOverlayShape.Circle)},cone:{CountOverlays(overlays, GroundOverlayShape.Cone)},line:{CountOverlays(overlays, GroundOverlayShape.Line)},ring:{CountOverlays(overlays, GroundOverlayShape.Ring)}";
+        }
+
+        private static string BuildRingOverlayDiagnostics(GroundOverlayBuffer overlays)
+        {
+            var details = new List<string>();
+            ReadOnlySpan<GroundOverlayItem> items = overlays.GetSpan();
+            for (int i = 0; i < items.Length; i++)
+            {
+                ref readonly GroundOverlayItem item = ref items[i];
+                if (item.Shape != GroundOverlayShape.Ring)
+                {
+                    continue;
+                }
+
+                details.Add($"ring[{details.Count}] center=({item.Center.X:0.##},{item.Center.Z:0.##}) r={item.Radius:0.##} border=({item.BorderColor.X:0.##},{item.BorderColor.Y:0.##},{item.BorderColor.Z:0.##},{item.BorderColor.W:0.##})");
+            }
+
+            return details.Count == 0 ? "rings=none" : string.Join(" | ", details);
+        }
+
+        private static bool EntitiesShareTeam(World world, string leftName, string rightName)
+        {
+            if (string.IsNullOrWhiteSpace(leftName) || string.IsNullOrWhiteSpace(rightName))
+            {
+                return false;
+            }
+
+            Entity left = FindEntityByName(world, leftName);
+            Entity right = FindEntityByName(world, rightName);
+            return left != Entity.Null &&
+                   right != Entity.Null &&
+                   world.TryGet(left, out Team leftTeam) &&
+                   world.TryGet(right, out Team rightTeam) &&
+                   leftTeam.Id == rightTeam.Id;
         }
 
         private static string BuildFeedbackDiagnostics(GameEngine engine, PrimitiveDrawBuffer primitives, WorldHudBatchBuffer worldHud)

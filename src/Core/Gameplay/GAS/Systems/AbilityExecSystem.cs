@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
@@ -302,6 +303,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             bbSpatial.TryGetPointAt(OrderBlackboardKeys.Cast_TargetPosition, targetPointIndex, out var targetPos))
                         {
                             targetPosCm = Fix64Vec2.FromFloat(targetPos.X, targetPos.Z);
+                            hasTargetPos = true;
+                        }
+                    }
+
+                    if ((!hasTargetOriginPos || !hasTargetPos) &&
+                        TryResolveOrderSpatial(orderBuffer.ActiveOrder.Order.Args.Spatial, out var orderTargetOriginPosCm, out bool orderHasTargetOriginPos, out var orderTargetPosCm, out bool orderHasTargetPos))
+                    {
+                        if (!hasTargetOriginPos && orderHasTargetOriginPos)
+                        {
+                            targetOriginPosCm = orderTargetOriginPosCm;
+                            hasTargetOriginPos = true;
+                        }
+
+                        if (!hasTargetPos && orderHasTargetPos)
+                        {
+                            targetPosCm = orderTargetPosCm;
                             hasTargetPos = true;
                         }
                     }
@@ -724,6 +741,66 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             return added;
+        }
+
+        private static bool TryResolveOrderSpatial(
+            in Orders.OrderSpatial spatial,
+            out Fix64Vec2 targetOriginPosCm,
+            out bool hasTargetOriginPos,
+            out Fix64Vec2 targetPosCm,
+            out bool hasTargetPos)
+        {
+            targetOriginPosCm = default;
+            hasTargetOriginPos = false;
+            targetPosCm = default;
+            hasTargetPos = false;
+
+            if (spatial.Kind != Orders.OrderSpatialKind.WorldCm ||
+                spatial.Mode == Orders.OrderCollectionMode.None)
+            {
+                return false;
+            }
+
+            if (spatial.PointCount > 1 &&
+                TryGetSpatialPoint(in spatial, 0, out Vector3 originPoint))
+            {
+                targetOriginPosCm = Fix64Vec2.FromInt((int)originPoint.X, (int)originPoint.Z);
+                hasTargetOriginPos = true;
+            }
+
+            if (spatial.PointCount > 0)
+            {
+                int targetPointIndex = spatial.PointCount > 1 ? spatial.PointCount - 1 : 0;
+                if (TryGetSpatialPoint(in spatial, targetPointIndex, out Vector3 targetPoint))
+                {
+                    targetPosCm = Fix64Vec2.FromInt((int)targetPoint.X, (int)targetPoint.Z);
+                    hasTargetPos = true;
+                }
+            }
+            else if (spatial.Mode == Orders.OrderCollectionMode.Single)
+            {
+                targetPosCm = Fix64Vec2.FromInt((int)spatial.WorldCm.X, (int)spatial.WorldCm.Z);
+                hasTargetPos = true;
+            }
+
+            return hasTargetOriginPos || hasTargetPos;
+        }
+
+        private static unsafe bool TryGetSpatialPoint(in Orders.OrderSpatial spatial, int index, out Vector3 point)
+        {
+            point = default;
+            if ((uint)index >= (uint)spatial.PointCount)
+            {
+                return false;
+            }
+
+            fixed (int* px = spatial.PointX)
+            fixed (int* py = spatial.PointY)
+            fixed (int* pz = spatial.PointZ)
+            {
+                point = new Vector3(px[index], py[index], pz[index]);
+                return true;
+            }
         }
 
         // 鈹€鈹€ Tag Clip (add at start, auto-remove via TimedTag) 鈹€鈹€

@@ -53,6 +53,7 @@ namespace CoreInputMod.ViewMode
             int nextIndex = _modes.IndexOf(target);
             if (nextIndex == _activeIndex)
             {
+                EnsureActiveModeApplied(target);
                 return true;
             }
 
@@ -126,6 +127,14 @@ namespace CoreInputMod.ViewMode
             ApplyInteractionMode(next);
             ApplySkillBar(next);
             _globals[ActiveModeIdKey] = next.Id;
+        }
+
+        private void EnsureActiveModeApplied(ViewModeConfig mode)
+        {
+            ApplyCamera(previous: null, mode);
+            ApplyInteractionMode(mode);
+            ApplySkillBar(mode);
+            _globals[ActiveModeIdKey] = mode.Id;
         }
 
         private void ApplyCamera(ViewModeConfig? previous, ViewModeConfig next)
