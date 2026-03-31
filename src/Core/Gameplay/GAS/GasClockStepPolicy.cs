@@ -4,12 +4,14 @@ namespace Ludots.Core.Gameplay.GAS
     {
         private GasStepMode _mode;
         private int _stepEveryFixedTicks;
-        private int _fixedTicksSinceLastStep;
         private int _pendingManualSteps;
+        private int _scalePermille = 1000;
+        private int _autoAccumulatorPermille;
         private int _version;
 
         public int StepEveryFixedTicks => _stepEveryFixedTicks;
         public GasStepMode Mode => _mode;
+        public int ScalePermille => _scalePermille;
         public int Version => _version;
 
         public GasClockStepPolicy(int stepEveryFixedTicks, GasStepMode mode = GasStepMode.Auto)
@@ -23,7 +25,7 @@ namespace Ludots.Core.Gameplay.GAS
             if (value < 1) throw new System.ArgumentOutOfRangeException(nameof(value));
             if (_stepEveryFixedTicks == value && _version != 0) return;
             _stepEveryFixedTicks = value;
-            _fixedTicksSinceLastStep = 0;
+            _autoAccumulatorPermille = 0;
             _version++;
             if (_version == 0) _version = 1;
         }
@@ -32,8 +34,18 @@ namespace Ludots.Core.Gameplay.GAS
         {
             if (_mode == mode && _version != 0) return;
             _mode = mode;
-            _fixedTicksSinceLastStep = 0;
+            _autoAccumulatorPermille = 0;
             _pendingManualSteps = 0;
+            _version++;
+            if (_version == 0) _version = 1;
+        }
+
+        public void SetScalePermille(int value)
+        {
+            if (value < 0) throw new System.ArgumentOutOfRangeException(nameof(value));
+            if (_scalePermille == value && _version != 0) return;
+            _scalePermille = value;
+            _autoAccumulatorPermille = 0;
             _version++;
             if (_version == 0) _version = 1;
         }
@@ -44,21 +56,23 @@ namespace Ludots.Core.Gameplay.GAS
             _pendingManualSteps += count;
         }
 
-        public bool ShouldAdvanceStepOnThisFixedTick()
+        public int ConsumeStepsForThisFixedTick()
         {
             switch (_mode)
             {
                 case GasStepMode.Paused:
-                    return false;
+                    return 0;
                 case GasStepMode.Manual:
-                    if (_pendingManualSteps < 1) return false;
+                    if (_pendingManualSteps < 1) return 0;
                     _pendingManualSteps--;
-                    return true;
+                    return 1;
                 case GasStepMode.Auto:
-                    _fixedTicksSinceLastStep++;
-                    if (_fixedTicksSinceLastStep < _stepEveryFixedTicks) return false;
-                    _fixedTicksSinceLastStep = 0;
-                    return true;
+                    if (_scalePermille <= 0) return 0;
+                    _autoAccumulatorPermille += _scalePermille;
+                    int threshold = _stepEveryFixedTicks * 1000;
+                    int steps = _autoAccumulatorPermille / threshold;
+                    _autoAccumulatorPermille -= steps * threshold;
+                    return steps;
                 default:
                     throw new System.ArgumentOutOfRangeException();
             }
