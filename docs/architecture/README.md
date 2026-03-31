@@ -29,6 +29,7 @@
 
 ## Gameplay and Presentation
 
+- [Control Buff Infrastructure](control_buff_infrastructure.md)
 - [GAS Combat Infrastructure](gas_combat_infrastructure.md)
 - [GAS Layered Architecture](gas_layered_architecture.md)
 - [Order / Navigation / Movement Architecture](order_navigation_movement.md)

@@ -643,5 +643,15 @@
     "modifiers": [
       { "attribute": "Health", "op": "Add", "value": -5.0 }
     ]
+  },
+  {
+    "id": "Effect.ControlShowcase.Caster.ArcPulse",
+    "tags": ["Effect.ControlShowcase", "Effect.ControlShowcase.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -10.0 }
+    ]
   }
 ]

@@ -54,6 +54,8 @@
     <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\camera\CameraShowcaseMod\CameraShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\gameplay\CommonControlBuffsPresentationMod\CommonControlBuffsPresentationMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\champion_control_showcase_entry\ChampionControlShowcaseEntryMod\ChampionControlShowcaseEntryMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\interaction\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\relationship\RelationshipShowcaseMod\RelationshipShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\narrative\NarrativeShowcaseMod\NarrativeShowcaseMod.csproj" />

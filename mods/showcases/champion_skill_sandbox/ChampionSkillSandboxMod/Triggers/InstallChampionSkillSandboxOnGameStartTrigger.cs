@@ -66,6 +66,10 @@ namespace ChampionSkillSandboxMod.Triggers
                         new ChampionSkillStressCombatSystem(engine, orders, stressTelemetry),
                         SystemGroup.InputCollection);
                 }
+
+                engine.RegisterSystem(
+                    new ChampionControlShowcaseSystem(engine, orders),
+                    SystemGroup.InputCollection);
             }
 
             _toolbarProvider.Bind(engine);

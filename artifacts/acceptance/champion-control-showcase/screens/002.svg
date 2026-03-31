@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#0b1018" />
+  <text x="40" y="42" fill="#ffffff" font-size="30" font-family="Consolas, monospace">Champion Control Showcase | 002 slow</text>
+  <text x="40" y="70" fill="#f4d074" font-size="18" font-family="Consolas, monospace">Marshal Q applies a heavy slow through the MoveSpeed chain and preserves movement.</text>
+  <rect x="40" y="90" width="860" height="760" rx="18" fill="#152130" stroke="#5b7fa0" stroke-width="2" />
+  <circle cx="336.29" cy="278.26" r="18" fill="#62baff" />
+  <text x="360.29" y="284.26" fill="#ffffff" font-size="18" font-family="Consolas, monospace">Marshal</text>
+  <circle cx="278.02" cy="278.26" r="18" fill="#76e88c" />
+  <text x="302.02" y="284.26" fill="#ffffff" font-size="18" font-family="Consolas, monospace">Runner</text>
+  <circle cx="548.87" cy="674.78" r="18" fill="#ff926a" />
+  <text x="572.87" y="680.78" fill="#ffffff" font-size="18" font-family="Consolas, monospace">Caster</text>
+  Ludots.Tests.GAS.Production.ChampionControlShowcasePlayableAcceptanceTests+<RenderActorLines>d__39
+Ludots.Tests.GAS.Production.ChampionControlShowcasePlayableAcceptanceTests+<RenderActorLines>d__39
+Ludots.Tests.GAS.Production.ChampionControlShowcasePlayableAcceptanceTests+<RenderActorLines>d__39
+  <text x="950" y="166" fill="#ffffff" font-size="20" font-family="Consolas, monospace">Overlay</text>
+  <text x="950" y="188" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">Runtime HUD | FPS=60</text>
+<text x="950" y="210" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">VertexMap: NULL | Primitives: 3 (Dropped: 0) | WorldPositionCm: 3</text>
+<text x="950" y="232" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">Camera: Target=(0,0)cm Pitch=45.0 Dist=2000cm</text>
+<text x="950" y="254" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">Scale: Grid=1.00m | HexWidth=6.928m | RowSpacing=6.000m</text>
+<text x="950" y="276" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">F9 Terrain[ON]  F10 Primitive[ON]</text>
+<text x="950" y="298" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">F11 DebugDraw[ON]  F12 SkiaUI[ON]</text>
+<text x="950" y="320" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">F5 Config | F6 Mods | F7 Attributes | F8 TurnBased</text>
+<text x="950" y="342" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">Q</text>
+<text x="950" y="364" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">1</text>
+<text x="950" y="386" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">W</text>
+<text x="950" y="408" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">2</text>
+<text x="950" y="430" fill="#e0e8f0" font-size="18" font-family="Consolas, monospace">E</text>
+</svg>

@@ -1,0 +1,36 @@
+{
+  "Id": "champion_control_showcase",
+  "Tags": ["champion.skill.sandbox", "showcase.control"],
+  "DefaultCamera": {
+    "VirtualCameraId": "ChampionSkillSandbox.Camera.Tactical",
+    "TargetXCm": 2640,
+    "TargetYCm": 980,
+    "DistanceCm": 4200,
+    "Pitch": 56,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "champion_control_showcase_marshal",
+      "Overrides": {
+        "Name": { "Value": "Control Marshal" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 2360, "Y": 1060 } }
+      }
+    },
+    {
+      "Template": "champion_control_showcase_runner",
+      "Overrides": {
+        "Name": { "Value": "Control Runner" },
+        "WorldPositionCm": { "Value": { "X": 2300, "Y": 1060 } }
+      }
+    },
+    {
+      "Template": "champion_control_showcase_caster",
+      "Overrides": {
+        "Name": { "Value": "Control Caster" },
+        "WorldPositionCm": { "Value": { "X": 2760, "Y": 820 } }
+      }
+    }
+  ]
+}

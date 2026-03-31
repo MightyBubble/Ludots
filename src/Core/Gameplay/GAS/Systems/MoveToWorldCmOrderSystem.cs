@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
+using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -83,6 +84,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         SetSmartStopSuppression(entity, suppressed: false);
                         ClearNavGoal(entity);
+                        StopNavigationMotion(entity);
                         continue;
                     }
 
@@ -119,17 +121,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private float ResolveMoveSpeed(Entity entity)
         {
+            float configured = 0f;
             if (_moveSpeedAttributeId != AttributeRegistry.InvalidId &&
                 World.TryGet(entity, out AttributeBuffer attributes))
             {
-                float configured = attributes.GetCurrent(_moveSpeedAttributeId);
+                configured = attributes.GetCurrent(_moveSpeedAttributeId);
                 if (configured > 0f)
                 {
-                    return configured;
+                    return GameplayControlStateResolver.ResolveMoveSpeed(World, entity, configured);
                 }
             }
 
-            return _defaultSpeedCmPerSec;
+            return GameplayControlStateResolver.ResolveMoveSpeed(
+                World,
+                entity,
+                configured > 0f ? configured : _defaultSpeedCmPerSec);
         }
 
         private bool TryDriveNavigationGoal(Entity entity, in Order order, int currentWaypointIndex, float speedCmPerSec, out bool completed, out int nextWaypointIndex)
@@ -207,6 +213,33 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             navAgent.SmartStopSuppressed = suppressedByte;
+        }
+
+        private void StopNavigationMotion(Entity entity)
+        {
+            if (World.Has<Velocity2D>(entity))
+            {
+                ref var velocity = ref World.Get<Velocity2D>(entity);
+                velocity = Velocity2D.Zero;
+            }
+
+            if (World.Has<NavDesiredVelocity2D>(entity))
+            {
+                ref var desiredVelocity = ref World.Get<NavDesiredVelocity2D>(entity);
+                desiredVelocity = new NavDesiredVelocity2D
+                {
+                    ValueCmPerSec = Fix64Vec2.Zero
+                };
+            }
+
+            if (World.Has<ForceInput2D>(entity))
+            {
+                ref var force = ref World.Get<ForceInput2D>(entity);
+                force = new ForceInput2D
+                {
+                    Force = Fix64Vec2.Zero
+                };
+            }
         }
 
         private static bool TryResolveTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)

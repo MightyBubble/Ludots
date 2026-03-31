@@ -1,0 +1,20 @@
+[
+  {
+    "id": "Bind.Control.Common.MoveBlock",
+    "attribute": "Control.MoveBlockCount",
+    "sink": "Gameplay.ControlState",
+    "channel": 0,
+    "mode": "Add",
+    "scale": 1.0,
+    "resetPolicy": "None"
+  },
+  {
+    "id": "Bind.Control.Common.ActionBlock",
+    "attribute": "Control.ActionBlockCount",
+    "sink": "Gameplay.ControlState",
+    "channel": 1,
+    "mode": "Add",
+    "scale": 1.0,
+    "resetPolicy": "None"
+  }
+]

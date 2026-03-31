@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
+    <ProjectReference Include="..\..\..\capabilities\gameplay\CommonControlBuffsMod\CommonControlBuffsMod.csproj" />
     <ProjectReference Include="..\..\..\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\..\DiagnosticsOverlayMod\DiagnosticsOverlayMod.csproj" />
     <ProjectReference Include="..\..\..\EntityCommandPanelMod\EntityCommandPanelMod.csproj" />

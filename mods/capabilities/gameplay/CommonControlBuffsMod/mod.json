@@ -1,0 +1,12 @@
+{
+  "name": "CommonControlBuffsMod",
+  "version": "1.0.0",
+  "description": "Reusable common control buffs, tag rules, and sink-authoritative gameplay lockouts.",
+  "main": "bin/net8.0/CommonControlBuffsMod.dll",
+  "priority": 50,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["gameplay", "gas", "control", "buffs"]
+}

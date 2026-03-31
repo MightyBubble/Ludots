@@ -1,0 +1,14 @@
+[
+  {
+    "id": "Status.Rooted",
+    "attached": ["Status.CannotMove"]
+  },
+  {
+    "id": "Status.Silenced",
+    "attached": ["Status.CannotCast"]
+  },
+  {
+    "id": "Status.Stunned",
+    "attached": ["Status.CannotMove", "Status.CannotCast"]
+  }
+]

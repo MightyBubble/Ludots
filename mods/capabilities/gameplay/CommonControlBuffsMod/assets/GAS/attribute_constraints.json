@@ -1,0 +1,8 @@
+{
+  "Control.MoveBlockCount": {
+    "min": 0.0
+  },
+  "Control.ActionBlockCount": {
+    "min": 0.0
+  }
+}

@@ -80,6 +80,78 @@ namespace Ludots.Tests.GAS
             }
         }
 
+        [Test]
+        public void AttributeBindingLoader_AndSystem_WriteGameplayControlState()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "attribute_bindings.json"),
+                    """
+                    [
+                      {
+                        "id": "Bind.Control.Move",
+                        "attribute": "Control.MoveBlockCount",
+                        "sink": "Gameplay.ControlState",
+                        "channel": 0,
+                        "mode": "Add",
+                        "scale": 1.0,
+                        "resetPolicy": "None"
+                      },
+                      {
+                        "id": "Bind.Control.Action",
+                        "attribute": "Control.ActionBlockCount",
+                        "sink": "Gameplay.ControlState",
+                        "channel": 1,
+                        "mode": "Add",
+                        "scale": 1.0,
+                        "resetPolicy": "None"
+                      }
+                    ]
+                    """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+
+                var sinks = new AttributeSinkRegistry();
+                GasAttributeSinks.RegisterBuiltins(sinks);
+
+                var registry = new AttributeBindingRegistry();
+                var loader = new AttributeBindingLoader(pipeline, sinks, registry);
+                loader.Load(relativePath: "GAS/attribute_bindings.json");
+
+                using var world = World.Create();
+                int moveBlockId = AttributeRegistry.Register("Control.MoveBlockCount");
+                int actionBlockId = AttributeRegistry.Register("Control.ActionBlockCount");
+                var entity = world.Create(new AttributeBuffer(), GameplayControlState.CreateDefault());
+                ref var attributes = ref world.Get<AttributeBuffer>(entity);
+                attributes.SetCurrent(moveBlockId, 1f);
+                attributes.SetCurrent(actionBlockId, 0f);
+
+                var system = new Ludots.Core.Gameplay.GAS.Systems.AttributeBindingSystem(world, sinks, registry);
+                system.Update(0.016f);
+
+                ref var controlState = ref world.Get<GameplayControlState>(entity);
+                That(controlState.MoveBlocked, Is.EqualTo(1));
+                That(controlState.ActionBlocked, Is.EqualTo(0));
+
+                attributes.SetCurrent(moveBlockId, 0f);
+                attributes.SetCurrent(actionBlockId, 1f);
+                system.Update(0.016f);
+
+                controlState = ref world.Get<GameplayControlState>(entity);
+                That(controlState.MoveBlocked, Is.EqualTo(0), "Action block should stay independent from move-blocked.");
+                That(controlState.ActionBlocked, Is.EqualTo(1));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
         private static string CreateTempRoot()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_AttributeBindingTests", Guid.NewGuid().ToString("N"));

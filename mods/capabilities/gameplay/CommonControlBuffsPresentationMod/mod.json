@@ -1,0 +1,13 @@
+{
+  "name": "CommonControlBuffsPresentationMod",
+  "version": "1.0.0",
+  "description": "Optional performer-layer presentation for the reusable common control buffs.",
+  "main": "bin/net8.0/CommonControlBuffsPresentationMod.dll",
+  "priority": 55,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CommonControlBuffsMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["presentation", "gameplay", "control", "buffs"]
+}
