@@ -176,6 +176,14 @@ This is the selection-order contract:
 - selection contributes entity collections or stable snapshots
 - queued orders retain container references, not a duplicated fixed-size payload
 
+For RTS-style move workflows, selection ends at the authored-order handoff.
+
+- right-click issues an authored order against the current selection set
+- `Shift` + right-click appends another authored order into the order queue
+- authored order waypoints are not nav-path samples and are not execution cursors
+
+See `docs/architecture/order_navigation_movement.md` for the movement-side SSOT split between order queue, nav plan, immediate nav goal, and steering output.
+
 ## Panels, Camera, And Mod Consumers
 
 Panels, camera follow targets, overlays, and showcase mods must consume viewed-selection APIs or descriptor APIs, not selection storage internals.

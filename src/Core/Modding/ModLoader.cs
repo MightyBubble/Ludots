@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Loader;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Scripting;
@@ -159,9 +160,19 @@ namespace Ludots.Core.Modding
                 {
                     dllPath = Path.GetFullPath(dllPath);
                     Log.Info(in LogChannels.ModLoader, $"Loading DLL for {manifest.Name} at {dllPath}");
-                    var loadContext = new ModLoadContext(dllPath, ResolveSharedAssembly);
-                    var assembly = loadContext.LoadFromAssemblyPath(dllPath);
-                    _loadContexts.Add(loadContext);
+                    Assembly assembly;
+                    if (TryResolveAlreadyLoadedAssembly(dllPath, out var existingAssembly))
+                    {
+                        assembly = existingAssembly;
+                        Log.Info(in LogChannels.ModLoader, $"Reusing already loaded assembly for {manifest.Name} from {existingAssembly.Location}");
+                    }
+                    else
+                    {
+                        var loadContext = new ModLoadContext(dllPath, ResolveSharedAssembly);
+                        assembly = loadContext.LoadFromAssemblyPath(dllPath);
+                        _loadContexts.Add(loadContext);
+                    }
+
                     CacheSharedAssembly(assembly);
 
                     Type[] allTypes;
@@ -289,6 +300,98 @@ namespace Ludots.Core.Modding
 
             results.Sort(StringComparer.OrdinalIgnoreCase);
             return results;
+        }
+
+        private static bool TryResolveAlreadyLoadedAssembly(string dllPath, out Assembly assembly)
+        {
+            assembly = null;
+            string fullPath = Path.GetFullPath(dllPath);
+
+            foreach (var candidate in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (candidate == null || candidate.IsDynamic)
+                {
+                    continue;
+                }
+
+                string candidatePath;
+                try
+                {
+                    candidatePath = candidate.Location;
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(candidatePath) &&
+                    string.Equals(Path.GetFullPath(candidatePath), fullPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    assembly = candidate;
+                    return true;
+                }
+            }
+
+            AssemblyName targetName;
+            try
+            {
+                targetName = AssemblyName.GetAssemblyName(fullPath);
+            }
+            catch
+            {
+                return false;
+            }
+
+            foreach (var candidate in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (candidate == null || candidate.IsDynamic)
+                {
+                    continue;
+                }
+
+                if (MatchesAssemblyIdentity(targetName, candidate.GetName()))
+                {
+                    assembly = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool MatchesAssemblyIdentity(AssemblyName expected, AssemblyName candidate)
+        {
+            if (!string.Equals(expected.Name, candidate.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (expected.Version != null &&
+                candidate.Version != null &&
+                expected.Version != candidate.Version)
+            {
+                return false;
+            }
+
+            string expectedCulture = expected.CultureName ?? string.Empty;
+            string candidateCulture = candidate.CultureName ?? string.Empty;
+            if (!string.Equals(expectedCulture, candidateCulture, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            byte[]? expectedToken = expected.GetPublicKeyToken();
+            byte[]? candidateToken = candidate.GetPublicKeyToken();
+            if (expectedToken != null &&
+                candidateToken != null &&
+                expectedToken.Length > 0 &&
+                candidateToken.Length > 0 &&
+                !expectedToken.SequenceEqual(candidateToken))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         public void UnloadAll()

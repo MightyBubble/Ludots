@@ -1,11 +1,13 @@
 using System;
 using Ludots.Core.Navigation.GraphCore;
+using Ludots.Core.Navigation.GraphWorld;
 
 namespace Ludots.Core.Navigation.Pathing
 {
     public sealed class NodeGraphPathServiceAdapter : IPathService
     {
         private readonly NodeGraph _graph;
+        private readonly LoadedGraphRuntime _graphRuntime;
         private readonly PathStore _store;
         private readonly DefaultTraversalPolicy _policy;
 
@@ -17,6 +19,16 @@ namespace Ludots.Core.Navigation.Pathing
         public NodeGraphPathServiceAdapter(NodeGraph graph, PathStore store)
         {
             _graph = graph ?? throw new ArgumentNullException(nameof(graph));
+            _graphRuntime = null;
+            _store = store ?? throw new ArgumentNullException(nameof(store));
+            _policy = new DefaultTraversalPolicy();
+            _scratch = new NodeGraphPathScratch();
+        }
+
+        public NodeGraphPathServiceAdapter(LoadedGraphRuntime graphRuntime, PathStore store)
+        {
+            _graphRuntime = graphRuntime ?? throw new ArgumentNullException(nameof(graphRuntime));
+            _graph = null;
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _policy = new DefaultTraversalPolicy();
             _scratch = new NodeGraphPathScratch();
@@ -38,13 +50,14 @@ namespace Ludots.Core.Navigation.Pathing
 
             int maxExpanded = request.Budget.MaxExpanded > 0 ? request.Budget.MaxExpanded : int.MaxValue;
             int maxPoints = request.Budget.MaxPoints > 0 ? request.Budget.MaxPoints : _store.MaxPointsPerPath;
+            NodeGraph graph = ResolveGraph();
 
-            EnsureCapacity(ref _nodeIdsScratch, Math.Min(_graph.NodeCount, maxPoints));
+            EnsureCapacity(ref _nodeIdsScratch, Math.Min(graph.NodeCount, maxPoints));
             var nodesSpan = _nodeIdsScratch.AsSpan();
 
             var scratch = _scratch;
             var policy = _policy;
-            var r = NodeGraphPathService.FindPathAStar(_graph, request.Start.NodeId, request.Goal.NodeId, nodesSpan, ref scratch, ref policy, maxExpanded);
+            var r = NodeGraphPathService.FindPathAStar(graph, request.Start.NodeId, request.Goal.NodeId, nodesSpan, ref scratch, ref policy, maxExpanded);
             _scratch = scratch;
 
             if (r.Status == GraphPathStatus.Success)
@@ -59,8 +72,8 @@ namespace Ludots.Core.Navigation.Pathing
                 EnsureCapacity(ref _xScratch, count);
                 EnsureCapacity(ref _yScratch, count);
 
-                var xs = _graph.PosXcm;
-                var ys = _graph.PosYcm;
+                var xs = graph.PosXcm;
+                var ys = graph.PosYcm;
                 for (int i = 0; i < count; i++)
                 {
                     int nodeId = _nodeIdsScratch[i];
@@ -88,6 +101,11 @@ namespace Ludots.Core.Navigation.Pathing
         public bool TryCopyPath(in PathHandle handle, Span<int> xcmOut, Span<int> ycmOut, out int count)
         {
             return _store.TryCopy(in handle, xcmOut, ycmOut, out count);
+        }
+
+        private NodeGraph ResolveGraph()
+        {
+            return _graphRuntime != null ? _graphRuntime.CurrentGraph : _graph;
         }
 
         private static void EnsureCapacity<T>(ref T[] array, int required)

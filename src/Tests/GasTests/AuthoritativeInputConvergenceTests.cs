@@ -227,6 +227,45 @@ namespace Ludots.Tests.GAS
             Assert.That(worldCm.Y, Is.EqualTo(3475));
         }
 
+        [Test]
+        public void InputRuntimeSystem_CapturesPointerButtonPressAndReleaseScreenPositionsWithinOneLogicTick()
+        {
+            var (backend, handler) = BuildSelectionHandler();
+            var pointerButtons = new AuthoritativePointerButtonAccumulator();
+            var snapshot = new AuthoritativePointerButtonSnapshot();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.InputHandler.Name] = handler,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings()
+            };
+
+            var system = new InputRuntimeSystem(globals, pointerButtons: pointerButtons);
+
+            backend.MousePosition = new Vector2(120f, 240f);
+            system.Update(1f / 60f);
+
+            backend.Buttons["<Mouse>/LeftButton"] = true;
+            system.Update(1f / 60f);
+
+            backend.MousePosition = new Vector2(420f, 540f);
+            system.Update(1f / 60f);
+
+            backend.Buttons["<Mouse>/LeftButton"] = false;
+            system.Update(1f / 60f);
+
+            pointerButtons.BuildTickSnapshot(snapshot);
+
+            Assert.That(snapshot.TryGetState("Select", out var state), Is.True);
+            Assert.That(state.PressedThisFrame, Is.True);
+            Assert.That(state.ReleasedThisFrame, Is.True);
+            Assert.That(state.IsDown, Is.False);
+            Assert.That(state.HasPressPointer, Is.True);
+            Assert.That(state.PressPointer, Is.EqualTo(new Vector2(120f, 240f)));
+            Assert.That(state.HasReleasePointer, Is.True);
+            Assert.That(state.ReleasePointer, Is.EqualTo(new Vector2(420f, 540f)));
+            Assert.That(state.Pointer, Is.EqualTo(new Vector2(420f, 540f)));
+        }
+
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildHandler()
         {
             var backend = new TestInputBackend();
@@ -282,6 +321,40 @@ namespace Ludots.Tests.GAS
 
             var handler = new PlayerInputHandler(backend, config);
             handler.PushContext("Camera");
+            return (backend, handler);
+        }
+
+        private static (TestInputBackend backend, PlayerInputHandler handler) BuildSelectionHandler()
+        {
+            var backend = new TestInputBackend();
+            var config = new InputConfigRoot
+            {
+                Actions = new List<InputActionDef>
+                {
+                    new() { Id = "Select", Type = InputActionType.Button },
+                    new() { Id = "Command", Type = InputActionType.Button },
+                    new() { Id = "Cancel", Type = InputActionType.Button },
+                    new() { Id = "PointerPos", Type = InputActionType.Axis2D },
+                },
+                Contexts = new List<InputContextDef>
+                {
+                    new()
+                    {
+                        Id = "Gameplay",
+                        Priority = 1,
+                        Bindings = new List<InputBindingDef>
+                        {
+                            new() { ActionId = "Select", Path = "<Mouse>/LeftButton", Processors = new() },
+                            new() { ActionId = "Command", Path = "<Mouse>/RightButton", Processors = new() },
+                            new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
+                            new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
+                        }
+                    }
+                }
+            };
+
+            var handler = new PlayerInputHandler(backend, config);
+            handler.PushContext("Gameplay");
             return (backend, handler);
         }
 

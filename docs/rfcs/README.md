@@ -22,6 +22,8 @@
     *   提议以现有 selection / input / GAS / command panel / indicator 为基础，交付 EZ / 盖伦 / 杰斯技能 sandbox，并补齐全局施法模式与技能图标呈现基建
 *   [RFC-0058 运行时具现体与空间查询策略统一合同](RFC-0058-runtime-manifestation-and-spatial-query-strategy-unification.md)
     *   提议把 projectile、summon、beam、zone、wall、trap 等运行时法术形态统一收敛到同一套 runtime manifestation + spatial query strategy 合同
+*   [RFC-0059 路网移动 Order、Nav Runtime 与多策略路径演示统一方案](RFC-0059-road-order-nav-runtime-unification.md)
+    *   提议把玩家 move order、nav runtime path、move sink 和 timeout/arrival 分层，同时用一个 unified showcase 演示 road graph、navmesh、cost area 与多 agent 策略
 
 ## 2 使用规则
 

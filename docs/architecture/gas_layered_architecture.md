@@ -142,3 +142,21 @@ Physics2D 的时钟域与事件出口由 `Physics2DController` 管理，并通�
 *   sink 的名称与 ID 是契约：注册集中化并冻结，避免运行时漂移。
 *   effect phase 不应依赖某个 sink 的执行顺序；顺序由 SystemGroup 固化。
 
+## 7 导航/移动链路中的分层边界
+
+RTS-style movement follows the same sink discipline.
+
+- gameplay/order systems may decide authored targets and write `NavGoal2D`
+- `NavGoal2D` is the gameplay-to-navigation sink contract for point-goal movement
+- Navigation2D owns path following, desired steering, and writes `NavDesiredVelocity2D`
+- Physics2D consumes navigation output and owns wake/sleep correctness for nav-driven bodies
+
+This means gameplay and showcase mods must not:
+
+- write `NavDesiredVelocity2D` as movement input
+- write `ForceInput2D` directly for normal nav-follow movement
+- patch `Position2D` / `WorldPositionCm` every frame to force movement
+- re-implement sleeping wakeup logic in feature code when a live `NavGoal2D` exists
+
+For the authoritative order queue / nav plan / execution split, see `docs/architecture/order_navigation_movement.md`.
+

@@ -76,7 +76,13 @@ namespace Ludots.Core.Input.Orders
             ref var buffer = ref _world.Get<OrderBuffer>(entity);
             if (buffer.HasActive &&
                 buffer.ActiveOrder.Order.OrderTypeId == _moveToOrderTypeId &&
-                OrderWorldSpatialResolver.TryResolveMoveDestination(in buffer.ActiveOrder.Order, out var activeDestination))
+                TryEmitAuthoredRoute(in buffer.ActiveOrder.Order, originWorldCm, isPrimary, consumeFromCurrentIndex: true, out var activeDestination))
+            {
+                originWorldCm = activeDestination;
+            }
+            else if (buffer.HasActive &&
+                     buffer.ActiveOrder.Order.OrderTypeId == _moveToOrderTypeId &&
+                     OrderWorldSpatialResolver.TryResolveMoveDestination(in buffer.ActiveOrder.Order, out activeDestination))
             {
                 EmitSolvedLeg(entity, originWorldCm, activeDestination, isPrimary);
                 originWorldCm = activeDestination;
@@ -85,15 +91,70 @@ namespace Ludots.Core.Input.Orders
             for (int i = 0; i < buffer.QueuedCount; i++)
             {
                 Order queued = buffer.GetQueued(i).Order;
-                if (queued.OrderTypeId != _moveToOrderTypeId ||
-                    !OrderWorldSpatialResolver.TryResolveMoveDestination(in queued, out var queuedDestination))
+                if (queued.OrderTypeId != _moveToOrderTypeId)
                 {
                     continue;
                 }
 
-                EmitSolvedLeg(entity, originWorldCm, queuedDestination, isPrimary);
+                bool emittedAuthoredRoute = TryEmitAuthoredRoute(
+                    in queued,
+                    originWorldCm,
+                    isPrimary,
+                    consumeFromCurrentIndex: false,
+                    out var queuedDestination);
+                if (!emittedAuthoredRoute &&
+                    !OrderWorldSpatialResolver.TryResolveMoveDestination(in queued, out queuedDestination))
+                {
+                    continue;
+                }
+
+                if (!emittedAuthoredRoute)
+                {
+                    EmitSolvedLeg(entity, originWorldCm, queuedDestination, isPrimary);
+                }
+
                 originWorldCm = queuedDestination;
             }
+        }
+
+        private bool TryEmitAuthoredRoute(in Order order, Vector3 originWorldCm, bool isPrimary, bool consumeFromCurrentIndex, out Vector3 finalDestination)
+        {
+            finalDestination = default;
+            if (order.Args.Spatial.Mode != OrderCollectionMode.List)
+            {
+                return false;
+            }
+
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+            if (pointCount <= 0)
+            {
+                return false;
+            }
+
+            int startIndex = consumeFromCurrentIndex
+                ? Math.Clamp(order.Args.Spatial.A0, 0, pointCount - 1)
+                : 0;
+            int writeCount = 0;
+            for (int pointIndex = startIndex; pointIndex < pointCount; pointIndex++)
+            {
+                if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in order, pointIndex, out var pointWorldCm))
+                {
+                    continue;
+                }
+
+                _pathXcm[writeCount] = (int)MathF.Round(pointWorldCm.X);
+                _pathYcm[writeCount] = (int)MathF.Round(pointWorldCm.Z);
+                writeCount++;
+                finalDestination = pointWorldCm;
+            }
+
+            if (writeCount == 0)
+            {
+                return false;
+            }
+
+            EmitPolylineFromOrigin(originWorldCm, writeCount, isPrimary);
+            return true;
         }
 
         private void EmitSolvedLeg(Entity actor, Vector3 startWorldCm, Vector3 goalWorldCm, bool isPrimary)
@@ -182,6 +243,47 @@ namespace Ludots.Core.Input.Orders
             {
                 Shape = GroundOverlayShape.Circle,
                 Center = ToVisualMeters(_pathXcm[count - 1], _pathYcm[count - 1]),
+                Radius = WorldUnits.CmToM(WaypointRadiusCm),
+                FillColor = fill,
+                BorderColor = border,
+                BorderWidth = 0.025f
+            });
+        }
+
+        private void EmitPolylineFromOrigin(Vector3 originWorldCm, int count, bool isPrimary)
+        {
+            Vector4 fill = isPrimary ? PrimaryFill : SecondaryFill;
+            Vector4 border = isPrimary ? PrimaryBorder : SecondaryBorder;
+            float widthMeters = WorldUnits.CmToM(isPrimary ? PrimaryLineWidthCm : SecondaryLineWidthCm);
+
+            Vector3 previous = ToVisualMeters((int)MathF.Round(originWorldCm.X), (int)MathF.Round(originWorldCm.Z));
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 current = ToVisualMeters(_pathXcm[i], _pathYcm[i]);
+                Vector2 delta = new(current.X - previous.X, current.Z - previous.Z);
+                float length = delta.Length();
+                if (length > 0.0001f)
+                {
+                    _overlays.TryAdd(new GroundOverlayItem
+                    {
+                        Shape = GroundOverlayShape.Line,
+                        Center = previous,
+                        Length = length,
+                        Width = widthMeters,
+                        Rotation = MathF.Atan2(delta.Y, delta.X),
+                        FillColor = fill,
+                        BorderColor = border,
+                        BorderWidth = 0.02f
+                    });
+                }
+
+                previous = current;
+            }
+
+            _overlays.TryAdd(new GroundOverlayItem
+            {
+                Shape = GroundOverlayShape.Circle,
+                Center = previous,
                 Radius = WorldUnits.CmToM(WaypointRadiusCm),
                 FillColor = fill,
                 BorderColor = border,
