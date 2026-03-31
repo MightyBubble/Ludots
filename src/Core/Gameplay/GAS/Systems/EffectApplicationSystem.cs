@@ -434,14 +434,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         var cmd = _fanOutCommands[_playbackCursor++];
                         if (_effectRequests != null)
                         {
-                            _effectRequests.Publish(new EffectRequest
-                            {
-                                RootId = cmd.RootId,
-                                Source = TargetResolverFanOutHelper.ResolveSlot(cmd.ContextMapping.PayloadSource, in cmd),
-                                Target = TargetResolverFanOutHelper.ResolveSlot(cmd.ContextMapping.PayloadTarget, in cmd),
-                                TargetContext = TargetResolverFanOutHelper.ResolveSlot(cmd.ContextMapping.PayloadTargetContext, in cmd),
-                                TemplateId = cmd.PayloadEffectTemplateId
-                            });
+                            TargetResolverFanOutHelper.PublishCommand(in cmd, _effectRequests);
                         }
                         workUnits++;
                     }

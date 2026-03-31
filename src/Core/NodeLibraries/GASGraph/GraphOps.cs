@@ -68,6 +68,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         ApplyEffectDynamic = 202,           // source=Caster, target=E[A], templateId=I[B]
         FanOutApplyEffectDynamic = 203,     // source=Caster, TargetList, templateId=I[A]
         RemoveEffectTemplate = 204,         // Remove all active effects matching templateId from E[A]
+        FanOutDispatchEffect = 205,         // source/target/context mapped by payload preset, templateId=Imm, targets=TargetList
+        FanOutDispatchEffectDynamic = 206,  // source/target/context mapped by payload preset, templateId=I[A], targets=TargetList
         ModifyAttributeAdd = 210,
         SendEvent = 220,
 
@@ -92,6 +94,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         // ── Self attribute access for derived graphs (330-331) ──
         LoadSelfAttribute        = 330,  // F[dst] = Caster.Attribute[Imm] (no EffectContext needed)
         WriteSelfAttribute       = 331,  // Caster.Attribute[Imm] = F[A] (direct SetCurrent, bypasses modifiers)
+        RelationshipEnsureLink   = 360,
+        RelationshipRemoveLink   = 361,
+        RelationshipSetMetric    = 362,
+        RelationshipAddMetric    = 363,
+        RelationshipGetMetric    = 364,
+        RelationshipHasFlag      = 365,
+        RelationshipSetFlag      = 366,
+        RelationshipQueryOutgoing = 367,
+        RelationshipQueryIncoming = 368,
+        RelationshipQueryMutual  = 369,
+        RelationshipQueryBetweenPair = 370,
+        RelationshipFilterMetricRange = 371,
+        RelationshipFilterFlag   = 372,
+        RelationshipSortByMetric = 373,
+        RelationshipAggSumMetric = 374,
+        RelationshipAggMaxMetric = 375,
+        RelationshipAggAverageMetric = 376,
     }
 
     public static class GraphNodeOpParser

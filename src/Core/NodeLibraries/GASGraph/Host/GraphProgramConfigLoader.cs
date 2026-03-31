@@ -118,19 +118,103 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         ins.Imm = _symbolResolver.ResolveAttribute(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.ApplyEffectTemplate:
+                    case GraphNodeOp.FanOutApplyEffect:
                     case GraphNodeOp.RemoveEffectTemplate:
                         ins.Imm = _symbolResolver.ResolveEffectTemplate(ResolveSymbol(symbols, ins.Imm));
                         break;
-                    case GraphNodeOp.ReadBlackboardFloat:
-                    case GraphNodeOp.ReadBlackboardInt:
-                    case GraphNodeOp.ReadBlackboardEntity:
-                    case GraphNodeOp.WriteBlackboardFloat:
+                    case GraphNodeOp.FanOutDispatchEffect:
+                        ins.Imm = _symbolResolver.ResolveEffectTemplate(ResolveSymbol(symbols, ins.Imm));
+                        ins.Dst = checked((byte)_symbolResolver.ResolveTargetDispatchPreset(ResolveSymbol(symbols, ins.Dst)));
+                        break;
+                    case GraphNodeOp.FanOutDispatchEffectDynamic:
+                        ins.Dst = checked((byte)_symbolResolver.ResolveTargetDispatchPreset(ResolveSymbol(symbols, ins.Dst)));
+                        break;
+                case GraphNodeOp.ReadBlackboardFloat:
+                case GraphNodeOp.ReadBlackboardInt:
+                case GraphNodeOp.ReadBlackboardEntity:
+                case GraphNodeOp.WriteBlackboardFloat:
                     case GraphNodeOp.WriteBlackboardInt:
                     case GraphNodeOp.WriteBlackboardEntity:
                     case GraphNodeOp.LoadConfigFloat:
                     case GraphNodeOp.LoadConfigInt:
                     case GraphNodeOp.LoadConfigEffectId:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.RelationshipSetMetric:
+                    case GraphNodeOp.RelationshipAddMetric:
+                    case GraphNodeOp.RelationshipGetMetric:
+                    case GraphNodeOp.RelationshipAggSumMetric:
+                    case GraphNodeOp.RelationshipAggMaxMetric:
+                    case GraphNodeOp.RelationshipAggAverageMetric:
+                        if (ins.Imm >= 0)
+                        {
+                            ins.Imm = _symbolResolver.ResolveRelationshipMetric(ResolveSymbol(symbols, ins.Imm));
+                        }
+
+                        if ((op == GraphNodeOp.RelationshipSetMetric || op == GraphNodeOp.RelationshipAddMetric) &&
+                            ins.Dst != byte.MaxValue)
+                        {
+                            ins.Dst = checked((byte)_symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
+                        }
+
+                        if ((op == GraphNodeOp.RelationshipSetMetric ||
+                             op == GraphNodeOp.RelationshipAddMetric ||
+                             op == GraphNodeOp.RelationshipGetMetric ||
+                             op == GraphNodeOp.RelationshipAggSumMetric ||
+                             op == GraphNodeOp.RelationshipAggMaxMetric ||
+                             op == GraphNodeOp.RelationshipAggAverageMetric) &&
+                            ins.Flags != byte.MaxValue)
+                        {
+                            ins.Flags = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Flags)));
+                        }
+                        break;
+                    case GraphNodeOp.RelationshipFilterMetricRange:
+                    case GraphNodeOp.RelationshipSortByMetric:
+                        if (ins.Imm >= 0)
+                        {
+                            ins.Imm = _symbolResolver.ResolveRelationshipMetric(ResolveSymbol(symbols, ins.Imm));
+                        }
+
+                        if (ins.Dst != byte.MaxValue)
+                        {
+                            ins.Dst = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Dst)));
+                        }
+                        break;
+                    case GraphNodeOp.RelationshipHasFlag:
+                    case GraphNodeOp.RelationshipSetFlag:
+                    case GraphNodeOp.RelationshipFilterFlag:
+                        if (ins.Imm >= 0)
+                        {
+                            ins.Imm = _symbolResolver.ResolveRelationshipFlag(ResolveSymbol(symbols, ins.Imm));
+                        }
+
+                        if (op == GraphNodeOp.RelationshipSetFlag && ins.Dst != byte.MaxValue)
+                        {
+                            ins.Dst = checked((byte)_symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
+                        }
+
+                        if (op == GraphNodeOp.RelationshipSetFlag || op == GraphNodeOp.RelationshipHasFlag)
+                        {
+                            if (ins.Flags != byte.MaxValue)
+                            {
+                                ins.Flags = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Flags)));
+                            }
+                        }
+                        else if (ins.Dst != byte.MaxValue)
+                        {
+                            ins.Dst = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Dst)));
+                        }
+                        break;
+                    case GraphNodeOp.RelationshipEnsureLink:
+                    case GraphNodeOp.RelationshipRemoveLink:
+                    case GraphNodeOp.RelationshipQueryOutgoing:
+                    case GraphNodeOp.RelationshipQueryIncoming:
+                    case GraphNodeOp.RelationshipQueryMutual:
+                    case GraphNodeOp.RelationshipQueryBetweenPair:
+                        if (ins.Dst != byte.MaxValue)
+                        {
+                            ins.Dst = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Dst)));
+                        }
                         break;
                 }
             }
