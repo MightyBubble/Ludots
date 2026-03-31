@@ -60,6 +60,8 @@ namespace Ludots.Tests.GAS.Production
         private static readonly string[] SandboxMods =
         {
             "LudotsCoreMod",
+            "CommonControlBuffsMod",
+            "CommonControlBuffsPresentationMod",
             "CoreInputMod",
             "CameraProfilesMod",
             "DiagnosticsOverlayMod",

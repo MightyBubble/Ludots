@@ -1,0 +1,15 @@
+flowchart TD
+    A[Load champion_control_showcase] --> B[Submit runner move order]
+    B --> C[Apply Slow -> MoveSpeed drops but runner still moves]
+    C --> D[Apply Root -> move blocked and nav speed becomes 0]
+    D --> E[Root expires -> runner movement recovers]
+    E --> F[Apply Stun on runner -> ActionBlocked and move blocked]
+    F --> G[Submit baseline Arc Pulse cast -> marshal takes damage]
+    G --> H[Apply Silence on caster -> manual cast blocked before exec]
+    H --> I{Exec prevented and cooldown unchanged?}
+    I -->|no| X[Fail: silence wiring broken]
+    I -->|yes| J[Submit cast again and wait for active exec]
+    J --> K[Apply Stun mid-cast -> exec interrupted]
+    K --> L{Marshal HP unchanged after stun?}
+    L -->|no| Y[Fail: stun did not interrupt active cast]
+    L -->|yes| M[Write trace, battle report, path, SVG timeline]

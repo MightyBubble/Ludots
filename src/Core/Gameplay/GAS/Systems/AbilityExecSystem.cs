@@ -170,6 +170,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         bbEntities.TryGet(OrderBlackboardKeys.Cast_TargetEntity, out targetEntity);
                     }
 
+                    if (GameplayControlStateResolver.IsCastBlocked(World, actor))
+                    {
+                        if (_orderTypeRegistry != null)
+                        {
+                            OrderSubmitter.CancelCurrent(World, actor, _orderTypeRegistry);
+                        }
+                        _presentationEvents?.Publish(new GasPresentationEvent
+                        {
+                            Kind = GasPresentationEventKind.CastFailed,
+                            Actor = actor,
+                            Target = targetEntity,
+                            AbilitySlot = slotIndex,
+                            AbilityId = slot.AbilityId,
+                            FailReason = AbilityCastFailReason.BlockedByTag
+                        });
+                        continue;
+                    }
+
                     AbilityDefinition abilityDef = default;
                     bool hasAbilityDef = slot.AbilityId > 0 &&
                         _abilityDefinitions != null &&
@@ -433,7 +451,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 // Interrupt check
                 ref var actorTags = ref World.TryGetRef<GameplayTagContainer>(actor, out bool hasActorTags);
-                if (hasActorTags && !spec.InterruptAny.IsEmpty && actorTags.Intersects(in spec.InterruptAny))
+                if (GameplayControlStateResolver.IsCastBlocked(World, actor) ||
+                    (hasActorTags && !spec.InterruptAny.IsEmpty && actorTags.Intersects(in spec.InterruptAny)))
                 {
                     instance.State = AbilityExecRunState.Interrupted;
                 }

@@ -1,47 +1,31 @@
 # Documentation Governance Report
 
-Date: 2026-03-20
-Scope:
-
-- `docs/architecture/entity_selection_architecture.md`
-- `docs/architecture/interaction/features/companion/r3_multi_unit_micro.md`
-- `docs/rfcs/RFC-0059-entity-selection-container-ssot.md`
-- `docs/rfcs/README.md`
-
-Ruleset:
-
-- `docs/conventions/04_documentation_governance.md`
-- `C:/Users/ROG/.codex/skills/ludots-doc-governance/references/doc-governance-checklist.md`
-- `C:/Users/ROG/.codex/skills/ludots-doc-governance/references/link-validation.md`
+Date: 2026-03-23
+Scope: `docs/architecture/control_buff_infrastructure.md`, `docs/architecture/README.md`
+Ruleset: Ludots doc governance checklist, path integrity, SSOT consistency, evidence-backed claims
 
 ## Summary
-
-- Total findings in scoped docs after fixes: 0
+- Total findings: 0
 - P0: 0
 - P1: 0
 - P2: 0
 - P3: 0
 
-## Validation Notes
-
-Validated in scope:
-
-- architecture SSOT now points to container/member selection truth
-- RFC-0059 now explicitly defers to architecture SSOT and links implementation evidence
-- multi-unit micro reference no longer cites `SelectionGroupBuffer`
-- referenced code/doc/artifact paths exist
-
 ## Findings
 
-No governance violations remain in the scoped selection packet.
+No governance findings in the reviewed scope after the control-buff architecture document rewrite.
 
-## Residual Risks Outside Scope
+Validated items:
 
-- historical docs such as `docs/rfcs/RFC-0053-entity-info-panels-for-ui-and-overlay.md` still contain legacy `SelectedEntity` wording
-- debt is tracked in `artifacts/techdebt/2026-03-20-selection-container-ssot-redesign.md`
+- `docs/architecture/README.md` still points to `docs/architecture/control_buff_infrastructure.md`
+- strong claims in `docs/architecture/control_buff_infrastructure.md` are backed by concrete code, test, or artifact paths
+- path references use repository-relative targets only
+- document status and scope match the implemented v1 surface
 
 ## Fix Order
+1. No documentation fixes required in the reviewed scope.
+2. Keep the architecture document aligned if the control-state contract changes again.
+3. Extend the same evidence style when `disarm` or other control effects enter scope.
 
-1. Keep the updated selection architecture document as the only authoritative design doc.
-2. Migrate remaining stale historical docs when their owning subsystems are touched.
-3. Delete remaining legacy key names from core once stale tests and docs are migrated.
+## Residual Risks
+- The reviewed scope intentionally documents only the implemented v1 surface; if future work reintroduces tag-authoritative cast gating, this document must be updated together with Core and acceptance evidence.

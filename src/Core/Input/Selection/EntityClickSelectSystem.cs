@@ -23,12 +23,17 @@ namespace Ludots.Core.Input.Selection
     {
         private static readonly InteractionActionBindings DefaultBindings = new();
         private static readonly QueryDescription SelectableQuery = new QueryDescription().WithAll<VisualTransform, CullState, SelectionSelectableTag>();
-
+        // Preserve the previous hover through small one-frame projection drift so
+        // ability previews do not flicker while the cursor is already on target.
+        private const float HoverRetainPaddingPixels = 28f;
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly SelectionRuntime _selection;
         private Entity[] _boxSelectionScratch = new Entity[16];
         private bool _suppressConfirmRelease;
+        private Entity _lastConfirmedHovered = Entity.Null;
+        private Vector2 _lastConfirmedHoverPointer;
+        private bool _hasLastConfirmedHoverPointer;
 
         public Action<WorldCmInt2, Entity>? OnEntitySelected { get; set; }
 
@@ -69,6 +74,17 @@ namespace Ludots.Core.Input.Selection
 
             bool hasGroundPoint = TryResolveGroundPointer(pointer, out var groundWorldCm);
             Entity hovered = FindNearestEntity(pointer, _selection.Config.ClickPickRadiusPixels);
+            if (hovered == Entity.Null &&
+                TryRetainHoveredEntity(pointer, _selection.Config.ClickPickRadiusPixels + HoverRetainPaddingPixels, out Entity retainedHovered))
+            {
+                hovered = retainedHovered;
+            }
+            else if (_world.IsAlive(hovered))
+            {
+                _lastConfirmedHovered = hovered;
+                _lastConfirmedHoverPointer = pointer;
+                _hasLastConfirmedHoverPointer = true;
+            }
             UpdateHoveredEntity(hovered);
 
             bool hasOwner = TryGetSelectionOwner(out var owner);
@@ -202,6 +218,9 @@ namespace Ludots.Core.Input.Selection
             else
             {
                 _globals.Remove(CoreServiceKeys.HoveredEntity.Name);
+                _lastConfirmedHovered = Entity.Null;
+                _lastConfirmedHoverPointer = default;
+                _hasLastConfirmedHoverPointer = false;
             }
         }
 
@@ -270,6 +289,22 @@ namespace Ludots.Core.Input.Selection
             }
 
             Array.Resize(ref _boxSelectionScratch, nextSize);
+        }
+
+        private bool TryRetainHoveredEntity(Vector2 pointer, float retainRadiusPixels, out Entity retainedHovered)
+        {
+            retainedHovered = _lastConfirmedHovered;
+            if (!_hasLastConfirmedHoverPointer ||
+                retainedHovered == Entity.Null ||
+                !SelectionEligibility.IsSelectableNow(_world, retainedHovered))
+            {
+                retainedHovered = Entity.Null;
+                return false;
+            }
+
+            float dx = _lastConfirmedHoverPointer.X - pointer.X;
+            float dy = _lastConfirmedHoverPointer.Y - pointer.Y;
+            return (dx * dx) + (dy * dy) <= retainRadiusPixels * retainRadiusPixels;
         }
 
         private Entity FindNearestEntity(Vector2 pointer, float radiusPixels)

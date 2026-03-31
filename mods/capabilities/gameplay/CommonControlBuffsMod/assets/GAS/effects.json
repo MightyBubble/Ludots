@@ -1,0 +1,83 @@
+[
+  {
+    "id": "Effect.Control.Common.Slow.Light",
+    "tags": ["Effect.Control.Common", "Effect.Control.Slow"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90
+    },
+    "modifiers": [
+      { "attribute": "MoveSpeed", "op": "Add", "value": -80.0 }
+    ],
+    "grantedTags": [
+      { "tag": "Status.Slowed", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Control.Common.Slow.Heavy",
+    "tags": ["Effect.Control.Common", "Effect.Control.Slow"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90
+    },
+    "modifiers": [
+      { "attribute": "MoveSpeed", "op": "Add", "value": -140.0 }
+    ],
+    "grantedTags": [
+      { "tag": "Status.Slowed", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Control.Common.Silence",
+    "tags": ["Effect.Control.Common", "Effect.Control.Silence"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90
+    },
+    "modifiers": [
+      { "attribute": "Control.ActionBlockCount", "op": "Add", "value": 1.0 }
+    ],
+    "grantedTags": [
+      { "tag": "Status.Silenced", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Control.Common.Root",
+    "tags": ["Effect.Control.Common", "Effect.Control.Root"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 72
+    },
+    "modifiers": [
+      { "attribute": "Control.MoveBlockCount", "op": "Add", "value": 1.0 }
+    ],
+    "grantedTags": [
+      { "tag": "Status.Rooted", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Control.Common.Stun",
+    "tags": ["Effect.Control.Common", "Effect.Control.Stun"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 54
+    },
+    "modifiers": [
+      { "attribute": "Control.MoveBlockCount", "op": "Add", "value": 1.0 },
+      { "attribute": "Control.ActionBlockCount", "op": "Add", "value": 1.0 }
+    ],
+    "grantedTags": [
+      { "tag": "Status.Stunned", "formula": "Fixed", "amount": 1 }
+    ]
+  }
+]

@@ -678,5 +678,119 @@
         "SmartCast": "Hold to channel steerable beam, release to stop"
       }
     }
+  },
+  {
+    "id": "Ability.ControlShowcase.Marshal.CripplingShot",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 18, "tag": "Cooldown.ControlShowcase.Marshal.Q" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Control.Common.Slow.Heavy" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 760, "radius": 120, "showRangeCircle": true, "validColor": "#69C9FF77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.ControlShowcase.Marshal.Q"] },
+    "presentation": {
+      "displayName": "Crippling Shot",
+      "iconGlyph": "Q",
+      "accentColor": "#69C9FF",
+      "hintText": "Applies a heavy slow through the MoveSpeed chain",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview slow range",
+        "PressReleaseAimCast": "Release key, then confirm slow"
+      }
+    }
+  },
+  {
+    "id": "Ability.ControlShowcase.Marshal.HushSeal",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 30, "tag": "Cooldown.ControlShowcase.Marshal.W" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Control.Common.Silence" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 760, "radius": 120, "showRangeCircle": true, "validColor": "#F0C96A77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.ControlShowcase.Marshal.W"] },
+    "presentation": {
+      "displayName": "Hush Seal",
+      "iconGlyph": "W",
+      "accentColor": "#F0C96A",
+      "hintText": "Applies silence through the action-block control sink",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview silence range",
+        "PressReleaseAimCast": "Release key, then confirm silence"
+      }
+    }
+  },
+  {
+    "id": "Ability.ControlShowcase.Marshal.IronSnare",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 36, "tag": "Cooldown.ControlShowcase.Marshal.E" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Control.Common.Root" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 760, "radius": 120, "showRangeCircle": true, "validColor": "#8EE48A77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.ControlShowcase.Marshal.E"] },
+    "presentation": {
+      "displayName": "Iron Snare",
+      "iconGlyph": "E",
+      "accentColor": "#8EE48A",
+      "hintText": "Projects move-block through the control sink",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview root range",
+        "PressReleaseAimCast": "Release key, then confirm root"
+      }
+    }
+  },
+  {
+    "id": "Ability.ControlShowcase.Marshal.ShockJail",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 54, "tag": "Cooldown.ControlShowcase.Marshal.R" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Control.Common.Stun" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 760, "radius": 130, "showRangeCircle": true, "validColor": "#FF8C6A77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.ControlShowcase.Marshal.R"] },
+    "presentation": {
+      "displayName": "Shock Jail",
+      "iconGlyph": "R",
+      "accentColor": "#FF8C6A",
+      "hintText": "Stun projects move-block and action-block through the shared sink",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hold to preview stun range",
+        "PressReleaseAimCast": "Release key, then confirm stun"
+      }
+    }
+  },
+  {
+    "id": "Ability.ControlShowcase.Caster.ArcPulse",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 42, "tag": "Cooldown.ControlShowcase.Caster.Q" },
+        { "kind": "EffectSignal", "tick": 20, "template": "Effect.ControlShowcase.Caster.ArcPulse" },
+        { "kind": "End", "tick": 20 }
+      ]
+    },
+    "indicator": { "shape": "Circle", "range": 760, "radius": 140, "showRangeCircle": true, "validColor": "#B88DFF77", "invalidColor": "#E2575788" },
+    "blockTags": { "blockedAny": ["Cooldown.ControlShowcase.Caster.Q"] },
+    "presentation": {
+      "displayName": "Arc Pulse",
+      "iconGlyph": "Q",
+      "accentColor": "#B88DFF",
+      "hintText": "20-tick hostile cast used to verify startup rejection and stun interruption",
+      "modeHints": {
+        "SmartCastWithIndicator": "Hostile AI cast"
+      }
+    }
   }
 ]

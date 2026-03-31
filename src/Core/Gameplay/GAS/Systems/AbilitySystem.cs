@@ -68,6 +68,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public bool TryActivateAbility(Entity caster, int slotIndex, in AbilityActivationArgs args)
         {
             if (!World.IsAlive(caster)) return false;
+            if (GameplayControlStateResolver.IsCastBlocked(World, caster)) return false;
 
             ref var buffer = ref World.TryGetRef<AbilityStateBuffer>(caster, out bool hasAbilityBuffer);
             if (!hasAbilityBuffer) return false;

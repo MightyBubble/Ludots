@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -190,17 +191,21 @@ namespace Ludots.Core.Navigation2D.Systems
 
         private float ResolveMoveSpeed(Entity entity)
         {
+            float configured = 0f;
             if (_moveSpeedAttributeId != AttributeRegistry.InvalidId &&
                 World.TryGet(entity, out AttributeBuffer attributes))
             {
-                float configured = attributes.GetCurrent(_moveSpeedAttributeId);
+                configured = attributes.GetCurrent(_moveSpeedAttributeId);
                 if (configured > 0f)
                 {
-                    return configured;
+                    return GameplayControlStateResolver.ResolveMoveSpeed(World, entity, configured);
                 }
             }
 
-            return _defaultSpeedCmPerSec;
+            return GameplayControlStateResolver.ResolveMoveSpeed(
+                World,
+                entity,
+                configured > 0f ? configured : _defaultSpeedCmPerSec);
         }
     }
 }

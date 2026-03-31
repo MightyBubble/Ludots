@@ -1,0 +1,54 @@
+[
+  {
+    "id": "control.common.status.slowed",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [0.34, 0.78, 1.0, 0.16],
+    "defaultScale": 1.18,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.05, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.78 },
+      { "paramKey": 8, "source": "constant", "constantValue": 0.34 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.78 },
+      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 11, "source": "constant", "constantValue": 0.96 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+    ]
+  },
+  {
+    "id": "control.common.status.silenced",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "Sphere",
+    "defaultColor": [0.98, 0.82, 0.38, 0.9],
+    "defaultScale": 0.22,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 1.55, 0]
+  },
+  {
+    "id": "control.common.status.rooted",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [0.74, 0.94, 0.42, 0.18],
+    "defaultScale": 1.08,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.05, 0],
+    "bindings": [
+      { "paramKey": 1, "source": "constant", "constantValue": 0.56 },
+      { "paramKey": 8, "source": "constant", "constantValue": 0.78 },
+      { "paramKey": 9, "source": "constant", "constantValue": 0.96 },
+      { "paramKey": 10, "source": "constant", "constantValue": 0.46 },
+      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "constant", "constantValue": 0.05 }
+    ]
+  },
+  {
+    "id": "control.common.status.stunned",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "Sphere",
+    "defaultColor": [1.0, 0.58, 0.34, 0.94],
+    "defaultScale": 0.28,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 1.82, 0]
+  }
+]

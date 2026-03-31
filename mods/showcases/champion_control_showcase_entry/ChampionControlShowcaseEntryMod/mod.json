@@ -1,0 +1,10 @@
+{
+  "name": "ChampionControlShowcaseEntryMod",
+  "version": "1.0.0",
+  "description": "Direct launcher entry for the champion control showcase map.",
+  "main": "bin/net8.0/ChampionControlShowcaseEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "ChampionSkillSandboxMod": "^1.0.0"
+  }
+}

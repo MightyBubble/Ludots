@@ -22,7 +22,7 @@ using Ludots.Core.UI.EntityCommandPanels;
 
 namespace ChampionSkillSandboxMod.Runtime
 {
-    internal sealed class ChampionSkillSandboxRuntime
+    internal sealed partial class ChampionSkillSandboxRuntime
     {
         private static readonly QueryDescription StressSelectableQuery = new QueryDescription().WithAll<Name, Team, MapEntity, AbilityStateBuffer>();
         private static readonly QueryDescription StressOrderBufferQuery = new QueryDescription().WithAll<Team, MapEntity, OrderBuffer>();
@@ -96,6 +96,7 @@ namespace ChampionSkillSandboxMod.Runtime
             SyncFocusPanel(engine);
             SyncHoverIndicator(engine);
             SyncAimHoverIndicator(engine);
+            SyncControlShowcaseOverlay(engine);
         }
 
         private void EnsureScenarioState(GameEngine engine)
@@ -112,9 +113,12 @@ namespace ChampionSkillSandboxMod.Runtime
 
             if (!_scenarioTagsApplied)
             {
-                ApplyInitialTag(engine, ChampionSkillSandboxIds.EzrealCooldownName, ChampionSkillSandboxIds.EzrealBlockedTag);
-                ApplyInitialTag(engine, ChampionSkillSandboxIds.GarenCourageName, ChampionSkillSandboxIds.GarenCourageTag);
-                ApplyInitialTag(engine, ChampionSkillSandboxIds.JayceHammerName, ChampionSkillSandboxIds.JayceHammerTag);
+                if (!ChampionSkillSandboxIds.IsControlMap(mapId))
+                {
+                    ApplyInitialTag(engine, ChampionSkillSandboxIds.EzrealCooldownName, ChampionSkillSandboxIds.EzrealBlockedTag);
+                    ApplyInitialTag(engine, ChampionSkillSandboxIds.GarenCourageName, ChampionSkillSandboxIds.GarenCourageTag);
+                    ApplyInitialTag(engine, ChampionSkillSandboxIds.JayceHammerName, ChampionSkillSandboxIds.JayceHammerTag);
+                }
                 _scenarioTagsApplied = true;
             }
 

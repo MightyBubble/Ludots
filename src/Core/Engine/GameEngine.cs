@@ -707,6 +707,7 @@ namespace Ludots.Core.Engine
             var animatorRuntimeSystem = new AnimatorRuntimeSystem(World, animatorControllers);
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
+            RegisterSystem(new GameplayControlStateBootstrapSystem(World), SystemGroup.SchemaUpdate);
             
             // Phase 0.5: 保存上一帧位置（插值前置条件，必须在所有移动系统之前）
             RegisterSystem(new SavePreviousWorldPositionSystem(World), SystemGroup.SchemaUpdate);

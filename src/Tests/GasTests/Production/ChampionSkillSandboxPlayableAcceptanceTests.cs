@@ -66,6 +66,8 @@ namespace Ludots.Tests.GAS.Production
         private static readonly string[] AcceptanceMods =
         {
             "LudotsCoreMod",
+            "CommonControlBuffsMod",
+            "CommonControlBuffsPresentationMod",
             "CoreInputMod",
             "CameraProfilesMod",
             "DiagnosticsOverlayMod",
@@ -231,13 +233,11 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 1, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
             SetMouseWorld(engine, backend, GetEntityScreen(engine, "Ezreal Alpha"), frameTimesMs);
-            (string indicatorHoverEntityName, Vector2 indicatorHoverPoint) = FindAnyHoverableEntityScreenPoint(
+            (string indicatorHoverEntityName, _) = FindAnyHoverableEntityScreenPoint(
                 engine,
                 backend,
                 GetSelectedEntityName(engine),
                 frameTimesMs);
-            backend.SetMousePosition(indicatorHoverPoint);
-            Tick(engine, 1, frameTimesMs);
             Assert.That(ReadHoveredEntityName(engine), Is.EqualTo(indicatorHoverEntityName));
             SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
             int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);

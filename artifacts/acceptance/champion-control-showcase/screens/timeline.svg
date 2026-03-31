@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="392" viewBox="0 0 1600 392">
+  <rect width="1600" height="392" fill="#081018" />
+  <text x="40" y="56" fill="#ffffff" font-size="30" font-family="Consolas, monospace">Champion control showcase screenshot timeline</text>
+  <text x="40" y="100" fill="#e0e8f0" font-size="22" font-family="Consolas, monospace">001 | loaded | 001.svg</text>
+<text x="40" y="136" fill="#e0e8f0" font-size="22" font-family="Consolas, monospace">002 | slow | 002.svg</text>
+<text x="40" y="172" fill="#e0e8f0" font-size="22" font-family="Consolas, monospace">003 | root | 003.svg</text>
+<text x="40" y="208" fill="#e0e8f0" font-size="22" font-family="Consolas, monospace">004 | stun_runner | 004.svg</text>
+<text x="40" y="244" fill="#e0e8f0" font-size="22" font-family="Consolas, monospace">005 | baseline_cast | 005.svg</text>
+<text x="40" y="280" fill="#e0e8f0" font-size="22" font-family="Consolas, monospace">006 | silence | 006.svg</text>
+<text x="40" y="316" fill="#e0e8f0" font-size="22" font-family="Consolas, monospace">007 | stun_interrupt | 007.svg</text>
+</svg>
