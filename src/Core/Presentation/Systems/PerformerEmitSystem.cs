@@ -39,6 +39,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PerformerInstanceBuffer _instances;
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly GroundOverlayBuffer _groundOverlays;
+        private readonly RoadSplineBuffer _roadSplines;
         private readonly PresentationVisualProxyEmitter _proxyEmitter;
         private readonly WorldHudBatchBuffer _worldHud;
         private readonly GraphProgramRegistry _programs;
@@ -81,12 +82,14 @@ namespace Ludots.Core.Presentation.Systems
             EntityColorResolver entityColorResolver = null,
             PrimitiveDrawBuffer? snapshotBuffer = null,
             PresentationVisualProxyBuffer? proxyBuffer = null,
-            SkinnedVisualBatchBuffer? skinnedBatchBuffer = null)
+            SkinnedVisualBatchBuffer? skinnedBatchBuffer = null,
+            RoadSplineBuffer? roadSplines = null)
             : base(world)
         {
             _instances = instances;
             _definitions = definitions;
             _groundOverlays = groundOverlays;
+            _roadSplines = roadSplines ?? new RoadSplineBuffer();
             _proxyEmitter = new PresentationVisualProxyEmitter(primitives, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
             _worldHud = worldHud;
             _programs = programs;
@@ -302,6 +305,9 @@ namespace Ludots.Core.Presentation.Systems
                 case PerformerVisualKind.WorldText:
                     EmitWorldText(handle, definitionId, def, owner, pos, alphaMod);
                     break;
+                case PerformerVisualKind.RoadSpline:
+                    EmitRoadSpline(handle, definitionId, def, owner, pos, alphaMod);
+                    break;
             }
         }
 
@@ -480,6 +486,34 @@ namespace Ludots.Core.Presentation.Systems
             });
         }
 
+        private void EmitRoadSpline(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
+        {
+            Vector3 control0 = pos + new Vector3(
+                ResolveParam(handle, def, owner, 0, 0f),
+                ResolveParam(handle, def, owner, 1, 0f),
+                ResolveParam(handle, def, owner, 2, 0f));
+            Vector3 control1 = pos + new Vector3(
+                ResolveParam(handle, def, owner, 3, 0f),
+                ResolveParam(handle, def, owner, 4, 0f),
+                ResolveParam(handle, def, owner, 5, 0f));
+            Vector3 end = pos + new Vector3(
+                ResolveParam(handle, def, owner, 6, 0f),
+                ResolveParam(handle, def, owner, 7, 0f),
+                ResolveParam(handle, def, owner, 8, 0f));
+
+            float width = ResolveParam(handle, def, owner, 12, def.DefaultScale > 0f ? def.DefaultScale : 0.25f);
+            float borderWidth = ResolveParam(handle, def, owner, 13, 0.03f);
+            byte style = (byte)Math.Clamp((int)ResolveParam(handle, def, owner, 14, 0f), 0, byte.MaxValue);
+
+            Vector4 fill = ResolveColor(handle, def, owner, 20, 21, 22, 23, def.DefaultColor);
+            fill.W *= alphaMod;
+            Vector4 border = ResolveColor(handle, def, owner, 24, 25, 26, 27, new Vector4(1f, 1f, 1f, 1f));
+            border.W *= alphaMod;
+
+            int stableId = ResolveRoadSplineStableId(handle, definitionId, owner);
+            _roadSplines.TryAdd(stableId, pos, control0, control1, end, width, fill, border, borderWidth, style);
+        }
+
         private int ResolveMarkerStableId(int handle, int definitionId, Entity owner)
         {
             if (handle >= 0 && _instances.IsActive(handle))
@@ -498,6 +532,26 @@ namespace Ludots.Core.Presentation.Systems
 
             throw new InvalidOperationException(
                 $"Entity-scoped Marker3D performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
+        }
+
+        private int ResolveRoadSplineStableId(int handle, int definitionId, Entity owner)
+        {
+            if (handle >= 0 && _instances.IsActive(handle))
+            {
+                return _instances.Get(handle).StableId;
+            }
+
+            if (World.IsAlive(owner) && World.Has<PresentationStableId>(owner))
+            {
+                int ownerStableId = World.Get<PresentationStableId>(owner).Value;
+                if (ownerStableId > 0)
+                {
+                    return PerformerVisualIdentity.ComposeStableId(ownerStableId, PerformerVisualKind.RoadSpline, definitionId);
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Entity-scoped RoadSpline performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
         }
 
         private void EmitWorldBar(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)

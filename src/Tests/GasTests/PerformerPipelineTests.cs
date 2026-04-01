@@ -397,6 +397,7 @@ namespace Ludots.Tests.Presentation
         private PrimitiveDrawBuffer _primitives;
         private WorldHudBatchBuffer _hud;
         private GroundOverlayBuffer _overlays;
+        private RoadSplineBuffer _roadSplines;
         private PerformerEmitSystem _system;
         private System.Collections.Generic.Dictionary<string, object> _globals;
         private RenderDebugState _renderDebug;
@@ -410,12 +411,13 @@ namespace Ludots.Tests.Presentation
             _primitives = new PrimitiveDrawBuffer();
             _hud = new WorldHudBatchBuffer();
             _overlays = new GroundOverlayBuffer();
+            _roadSplines = new RoadSplineBuffer();
             var programs = new GraphProgramRegistry();
             var api = new GasGraphRuntimeApi(_world, null, null, null);
             _globals = new System.Collections.Generic.Dictionary<string, object>();
             _renderDebug = new RenderDebugState();
             _globals[CoreServiceKeys.RenderDebugState.Name] = _renderDebug;
-            _system = new PerformerEmitSystem(_world, _instances, _defs, _overlays, _primitives, _hud, programs, api, _globals);
+            _system = new PerformerEmitSystem(_world, _instances, _defs, _overlays, _primitives, _hud, programs, api, _globals, roadSplines: _roadSplines);
         }
 
         [TearDown]
@@ -647,6 +649,68 @@ namespace Ludots.Tests.Presentation
             _system.Update(0.016f);
 
             Assert.That(_hud.GetSpan().Length, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void InstanceScoped_RoadSpline_EmitsControlPointsAndColorsWithoutParamCollisions()
+        {
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.RoadSpline,
+                DefaultColor = new Vector4(0.25f, 0.35f, 0.45f, 0.9f),
+                DefaultScale = 0.75f,
+                Bindings = new[]
+                {
+                    new PerformerParamBinding { ParamKey = 0, Value = ValueRef.FromConstant(2f) },
+                    new PerformerParamBinding { ParamKey = 1, Value = ValueRef.FromConstant(0.1f) },
+                    new PerformerParamBinding { ParamKey = 2, Value = ValueRef.FromConstant(3f) },
+                    new PerformerParamBinding { ParamKey = 3, Value = ValueRef.FromConstant(4f) },
+                    new PerformerParamBinding { ParamKey = 4, Value = ValueRef.FromConstant(0.2f) },
+                    new PerformerParamBinding { ParamKey = 5, Value = ValueRef.FromConstant(6f) },
+                    new PerformerParamBinding { ParamKey = 6, Value = ValueRef.FromConstant(8f) },
+                    new PerformerParamBinding { ParamKey = 7, Value = ValueRef.FromConstant(0.3f) },
+                    new PerformerParamBinding { ParamKey = 8, Value = ValueRef.FromConstant(12f) },
+                    new PerformerParamBinding { ParamKey = 12, Value = ValueRef.FromConstant(1.25f) },
+                    new PerformerParamBinding { ParamKey = 13, Value = ValueRef.FromConstant(0.15f) },
+                    new PerformerParamBinding { ParamKey = 14, Value = ValueRef.FromConstant(3f) },
+                    new PerformerParamBinding { ParamKey = 20, Value = ValueRef.FromConstant(0.9f) },
+                    new PerformerParamBinding { ParamKey = 21, Value = ValueRef.FromConstant(0.8f) },
+                    new PerformerParamBinding { ParamKey = 22, Value = ValueRef.FromConstant(0.2f) },
+                    new PerformerParamBinding { ParamKey = 23, Value = ValueRef.FromConstant(0.7f) },
+                    new PerformerParamBinding { ParamKey = 24, Value = ValueRef.FromConstant(0.1f) },
+                    new PerformerParamBinding { ParamKey = 25, Value = ValueRef.FromConstant(0.2f) },
+                    new PerformerParamBinding { ParamKey = 26, Value = ValueRef.FromConstant(0.3f) },
+                    new PerformerParamBinding { ParamKey = 27, Value = ValueRef.FromConstant(0.4f) },
+                }
+            };
+
+            int defId = _defs.Register("test_road_spline", def);
+            Assert.That(
+                _instances.TryAllocate(defId, owner: default, scopeId: 0, PresentationAnchorKind.WorldPosition, new Vector3(10f, 0.5f, 20f), stableId: 701, out _),
+                Is.True);
+
+            _system.Update(0.016f);
+
+            Assert.That(_roadSplines.Count, Is.EqualTo(1));
+            Assert.That(_roadSplines.StableIds[0], Is.EqualTo(701));
+            Assert.That(_roadSplines.P0X[0], Is.EqualTo(10f).Within(0.001f));
+            Assert.That(_roadSplines.P1X[0], Is.EqualTo(12f).Within(0.001f));
+            Assert.That(_roadSplines.P1Z[0], Is.EqualTo(23f).Within(0.001f));
+            Assert.That(_roadSplines.P2X[0], Is.EqualTo(14f).Within(0.001f));
+            Assert.That(_roadSplines.P2Z[0], Is.EqualTo(26f).Within(0.001f));
+            Assert.That(_roadSplines.P3X[0], Is.EqualTo(18f).Within(0.001f));
+            Assert.That(_roadSplines.P3Z[0], Is.EqualTo(32f).Within(0.001f));
+            Assert.That(_roadSplines.Width[0], Is.EqualTo(1.25f).Within(0.001f));
+            Assert.That(_roadSplines.BorderWidth[0], Is.EqualTo(0.15f).Within(0.001f));
+            Assert.That(_roadSplines.FillR[0], Is.EqualTo(0.9f).Within(0.001f));
+            Assert.That(_roadSplines.FillG[0], Is.EqualTo(0.8f).Within(0.001f));
+            Assert.That(_roadSplines.FillB[0], Is.EqualTo(0.2f).Within(0.001f));
+            Assert.That(_roadSplines.FillA[0], Is.EqualTo(0.7f).Within(0.001f));
+            Assert.That(_roadSplines.BorderR[0], Is.EqualTo(0.1f).Within(0.001f));
+            Assert.That(_roadSplines.BorderG[0], Is.EqualTo(0.2f).Within(0.001f));
+            Assert.That(_roadSplines.BorderB[0], Is.EqualTo(0.3f).Within(0.001f));
+            Assert.That(_roadSplines.BorderA[0], Is.EqualTo(0.4f).Within(0.001f));
+            Assert.That(_roadSplines.Style[0], Is.EqualTo((byte)3));
         }
     }
 

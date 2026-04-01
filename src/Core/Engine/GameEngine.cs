@@ -63,6 +63,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
 using Ludots.Core.Navigation.GraphCore;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Registry;
@@ -177,6 +178,7 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Rendering.SkinnedVisualBatchBuffer _skinnedVisualBatchBuffer;
         private GasPresentationEventBuffer _gasPresentationEvents;
         private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
+        private Ludots.Core.Presentation.Rendering.RoadSplineBuffer _roadSplineBuffer;
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
@@ -507,6 +509,7 @@ namespace Ludots.Core.Engine
             var skinnedVisualBatchBuffer = new SkinnedVisualBatchBuffer(VisualSnapshotBufferCapacity);
             var transientMarkerBuffer = new TransientMarkerBuffer();
             var groundOverlayBuffer = new GroundOverlayBuffer();
+            var roadSplineBuffer = new RoadSplineBuffer();
             var worldHudBuffer = new WorldHudBatchBuffer();
             var performerDefinitions = new PerformerDefinitionRegistry();
             var presentationConfig = config.Presentation ?? new PresentationRuntimeConfig();
@@ -538,7 +541,8 @@ namespace Ludots.Core.Engine
                 entityColorResolver: (world, entity) => Ludots.Core.Presentation.Utils.TeamColorResolver.Resolve(world, entity),
                 snapshotBuffer: visualSnapshotBuffer,
                 proxyBuffer: visualProxyBuffer,
-                skinnedBatchBuffer: skinnedVisualBatchBuffer);
+                skinnedBatchBuffer: skinnedVisualBatchBuffer,
+                roadSplines: roadSplineBuffer);
             new PerformerDefinitionConfigLoader(
                 ConfigPipeline,
                 performerDefinitions,
@@ -575,7 +579,9 @@ namespace Ludots.Core.Engine
             var sessionSystem = new GameSessionSystem(GameSession);
             var authoritativeInput = new FrozenInputActionReader();
             var authoritativeInputAccumulator = new AuthoritativeInputAccumulator();
-            _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext, authoritativeInputAccumulator);
+            var authoritativePointerButtons = new AuthoritativePointerButtonSnapshot();
+            var authoritativePointerButtonsAccumulator = new AuthoritativePointerButtonAccumulator();
+            _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext, authoritativeInputAccumulator, authoritativePointerButtonsAccumulator);
             _inputRuntimeSystem.Initialize();
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
             var clockSystem = new GasClockSystem(clock, clockStepPolicy);
@@ -680,6 +686,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AttributeSinkRegistry, attributeSinks);
             SetService(CoreServiceKeys.AttributeBindingRegistry, attributeBindings);
             SetService(CoreServiceKeys.AuthoritativeInput, authoritativeInput);
+            SetService(CoreServiceKeys.AuthoritativePointerButtons, authoritativePointerButtons);
             SetService(CoreServiceKeys.PresentationEventStream, presentationEventStream);
             SetService(CoreServiceKeys.PresentationCommandBuffer, presentationCommandBuffer);
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
@@ -695,6 +702,7 @@ namespace Ludots.Core.Engine
             _skinnedVisualBatchBuffer = skinnedVisualBatchBuffer;
             _gasPresentationEvents = gasPresentationEvents;
             _groundOverlayBuffer = groundOverlayBuffer;
+            _roadSplineBuffer = roadSplineBuffer;
             _worldHudBuffer = worldHudBuffer;
             SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, primitiveDrawBuffer);
             SetService(CoreServiceKeys.PresentationVisualSnapshotBuffer, visualSnapshotBuffer);
@@ -712,6 +720,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TransientMarkerBuffer, transientMarkerBuffer);
             SetService(CoreServiceKeys.GasPresentationEventBuffer, gasPresentationEvents);
             SetService(CoreServiceKeys.GroundOverlayBuffer, groundOverlayBuffer);
+            SetService(CoreServiceKeys.RoadSplineBuffer, roadSplineBuffer);
             SetService(CoreServiceKeys.ProjectilePresentationBindingRegistry, projectilePresentationBindings);
             SetService(CoreServiceKeys.PerformerDefinitionRegistry, performerDefinitions);
             SetService(CoreServiceKeys.PerformerInstanceBuffer, performerInstances);
@@ -733,6 +742,7 @@ namespace Ludots.Core.Engine
             // Phase 1: InputCollection
             RegisterSystem(sessionSystem, SystemGroup.InputCollection); // Session handles input gathering
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
+            RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
             RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
@@ -1328,6 +1338,15 @@ namespace Ludots.Core.Engine
                 loadedChunks = board.LoadedChunks;
             }
 
+            if (board is INodeGraphBoard nodeGraphBoard)
+            {
+                SetService(CoreServiceKeys.LoadedGraphRuntime, nodeGraphBoard.GraphRuntime);
+            }
+            else
+            {
+                GlobalContext.Remove(CoreServiceKeys.LoadedGraphRuntime.Name);
+            }
+
             if (GlobalContext.TryGetValue(CoreServiceKeys.Navigation2DRuntime.Name, out var navigationObj) &&
                 navigationObj is Navigation2DRuntime navigation2dRuntime)
             {
@@ -1598,8 +1617,21 @@ namespace Ludots.Core.Engine
 
             var pathingConfig = new PathingConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var pathStore = new PathStore(PathStoreMaxPaths, PathStoreMaxPointsPerPath);
-            var graph = BuildPathingGraph(session.PrimaryBoard);
-            IPathService nodeGraphService = new NodeGraphPathServiceAdapter(graph, pathStore);
+            LoadedGraphRuntime loadedGraphRuntime = null;
+            IPathService nodeGraphService;
+            NodeGraph emptyGraph = null;
+
+            if (session.PrimaryBoard is INodeGraphBoard nodeGraphBoard)
+            {
+                loadedGraphRuntime = nodeGraphBoard.GraphRuntime;
+                nodeGraphService = new NodeGraphPathServiceAdapter(loadedGraphRuntime, pathStore);
+            }
+            else
+            {
+                emptyGraph = new NodeGraphBuilder(0, 0).Build();
+                nodeGraphService = new NodeGraphPathServiceAdapter(emptyGraph, pathStore);
+            }
+
             IPathService pathService = nodeGraphService;
 
             var navRegistry = GetService(CoreServiceKeys.NavQueryServices);
@@ -1607,13 +1639,19 @@ namespace Ludots.Core.Engine
 
             if (navRegistry != null && navProfiles != null)
             {
-                var autoPathService = new AutoPathService(graph, navRegistry, navProfiles, pathStore, pathingConfig);
+                IPathService autoPathService = loadedGraphRuntime != null
+                    ? new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, pathStore, pathingConfig)
+                    : new AutoPathService(emptyGraph ?? new NodeGraphBuilder(0, 0).Build(), navRegistry, navProfiles, pathStore, pathingConfig);
                 pathService = autoPathService;
 
                 if (TryCreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, pathStore, out var navMeshService))
                 {
                     pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore);
                 }
+            }
+            else if (loadedGraphRuntime != null)
+            {
+                pathService = new AutoPathService(loadedGraphRuntime, pathStore, pathingConfig);
             }
 
             SetService(CoreServiceKeys.PathingConfig, pathingConfig);
@@ -1622,7 +1660,7 @@ namespace Ludots.Core.Engine
 
             Diagnostics.Log.Info(
                 in LogChannels.Engine,
-                $"Pathing bootstrap ready for map '{session.MapId.Value}': service={pathService.GetType().Name}, board='{session.PrimaryBoard?.Name ?? "<none>"}'.");
+                $"Pathing bootstrap ready for map '{session.MapId.Value}': service={pathService.GetType().Name}, board='{session.PrimaryBoard?.Name ?? "<none>"}', loadedGraphChunks={loadedGraphRuntime?.LoadedChunkCount ?? 0}.");
         }
 
         private void ClearPathingServices()
@@ -1630,16 +1668,7 @@ namespace Ludots.Core.Engine
             GlobalContext.Remove(CoreServiceKeys.PathingConfig.Name);
             GlobalContext.Remove(CoreServiceKeys.PathStore.Name);
             GlobalContext.Remove(CoreServiceKeys.PathService.Name);
-        }
-
-        private static NodeGraph BuildPathingGraph(IBoard board)
-        {
-            if (board is INodeGraphBoard nodeGraphBoard)
-            {
-                return nodeGraphBoard.GraphStore.BuildLoadedView().Graph;
-            }
-
-            return new NodeGraphBuilder(0, 0).Build();
+            GlobalContext.Remove(CoreServiceKeys.LoadedGraphRuntime.Name);
         }
 
         private static bool TryCreateDefaultNavMeshPathService(
@@ -1921,6 +1950,7 @@ namespace Ludots.Core.Engine
             _visualProxyBuffer?.Clear();
             _skinnedVisualBatchBuffer?.Clear();
             _groundOverlayBuffer?.Clear();
+            _roadSplineBuffer?.Clear();
             _worldHudBuffer?.Clear();
             for (int i = 0; i < _presentationSystems.Count; i++)
             {

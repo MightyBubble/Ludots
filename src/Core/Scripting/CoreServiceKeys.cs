@@ -27,6 +27,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Modding;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
@@ -95,6 +96,7 @@ namespace Ludots.Core.Scripting
         // --- Input ---
         public static readonly ServiceKey<PlayerInputHandler> InputHandler = new("InputHandler");
         public static readonly ServiceKey<IInputActionReader> AuthoritativeInput = new("AuthoritativeInput");
+        public static readonly ServiceKey<AuthoritativePointerButtonSnapshot> AuthoritativePointerButtons = new("AuthoritativePointerButtons");
         public static readonly ServiceKey<IInputBackend> InputBackend = new("InputBackend");
 
         // --- Camera & View ---
@@ -184,6 +186,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TransientMarkerBuffer> TransientMarkerBuffer = new("TransientMarkerBuffer");
         public static readonly ServiceKey<GasPresentationEventBuffer> GasPresentationEventBuffer = new("GasPresentationEventBuffer");
         public static readonly ServiceKey<GroundOverlayBuffer> GroundOverlayBuffer = new("GroundOverlayBuffer");
+        public static readonly ServiceKey<RoadSplineBuffer> RoadSplineBuffer = new("RoadSplineBuffer");
         public static readonly ServiceKey<DebugDrawCommandBuffer> DebugDrawCommandBuffer = new("DebugDrawCommandBuffer");
         public static readonly ServiceKey<ProjectilePresentationBindingRegistry> ProjectilePresentationBindingRegistry = new("ProjectilePresentationBindingRegistry");
 
@@ -199,6 +202,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ILoadedChunks> LoadedChunks = new("LoadedChunks");
 
         // --- Navigation ---
+        public static readonly ServiceKey<LoadedGraphRuntime> LoadedGraphRuntime = new("LoadedGraphRuntime");
         public static readonly ServiceKey<Navigation2DRuntime> Navigation2DRuntime = new("Navigation2DRuntime");
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");
         public static readonly ServiceKey<NavMeshProfileRegistry> NavMeshProfiles = new("NavMeshProfiles");

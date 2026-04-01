@@ -422,6 +422,39 @@ namespace Ludots.Tests.GAS
             That(bbTarget, Is.EqualTo(target));
         }
 
+        [Test]
+        public void OrderSubmitter_QueuedMode_UsesBufferWindowExpiry()
+        {
+            using var world = World.Create();
+            var actor = world.Create(OrderBuffer.CreateEmpty(), new GameplayTagContainer());
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = 11,
+                AllowQueuedMode = true,
+                BufferWindowMs = 300,
+                ClearQueueOnActivate = false,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1
+            });
+
+            var order = new Order
+            {
+                Actor = actor,
+                OrderTypeId = 11,
+                SubmitMode = OrderSubmitMode.Queued
+            };
+
+            var submit = OrderSubmitter.Submit(world, actor, in order, orderTypes, orderRuleRegistry: null, currentStep: 0, stepRateHz: 30);
+            That(submit, Is.EqualTo(OrderSubmitResult.Queued));
+
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            That(buffer.QueuedCount, Is.EqualTo(1));
+            That(buffer.GetQueued(0).ExpireStep, Is.EqualTo(9));
+        }
+
         // ════════════════════════════════════════════════════════════════════
         [Test]
         public void AbilityExecSystem_ActiveCastOrderFromOrderBuffer_DoesNotRequireGameplayTag()

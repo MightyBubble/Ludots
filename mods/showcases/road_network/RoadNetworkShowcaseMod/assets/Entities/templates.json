@@ -1,0 +1,94 @@
+[
+  {
+    "id": "road_column_player",
+    "components": {
+      "Name": { "Value": "Blue Column" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": -9000, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 1200 } },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "RoadColumnTag": {},
+      "RoadMoveProfileRef": {
+        "PlannerPresetId": 1,
+        "ExecutionPresetId": 1,
+        "PreviewPaletteId": 1
+      }
+    }
+  },
+  {
+    "id": "road_column_enemy",
+    "components": {
+      "Name": { "Value": "Red Column" },
+      "Team": { "Id": 2 },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 9000, "Y": 0 } },
+      "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 1180 } },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "RoadColumnTag": {},
+      "RoadAiControlledTag": {},
+      "RoadMoveProfileRef": {
+        "PlannerPresetId": 1,
+        "ExecutionPresetId": 1,
+        "PreviewPaletteId": 1
+      }
+    }
+  },
+  {
+    "id": "road_fort_blue",
+    "components": {
+      "Name": { "Value": "Blue Fort" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": -9000, "Y": 0 } },
+      "RoadFortTag": {},
+      "RoadFortControlState": {
+        "ControllerTeamId": 1,
+        "CapturingTeamId": 0,
+        "CaptureProgressSeconds": 0.0,
+        "CaptureDurationSeconds": 4.0,
+        "CaptureRadiusCm": 1400
+      }
+    }
+  },
+  {
+    "id": "road_fort_red",
+    "components": {
+      "Name": { "Value": "Red Fort" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 9000, "Y": 0 } },
+      "RoadFortTag": {},
+      "RoadFortControlState": {
+        "ControllerTeamId": 2,
+        "CapturingTeamId": 0,
+        "CaptureProgressSeconds": 0.0,
+        "CaptureDurationSeconds": 4.0,
+        "CaptureRadiusCm": 1400
+      }
+    }
+  },
+  {
+    "id": "road_fort_neutral",
+    "components": {
+      "Name": { "Value": "Neutral Fort" },
+      "Team": { "Id": 0 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "RoadFortTag": {},
+      "RoadFortControlState": {
+        "ControllerTeamId": 0,
+        "CapturingTeamId": 0,
+        "CaptureProgressSeconds": 0.0,
+        "CaptureDurationSeconds": 4.0,
+        "CaptureRadiusCm": 1400
+      }
+    }
+  }
+]

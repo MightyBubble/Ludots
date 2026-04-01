@@ -31,6 +31,7 @@ namespace Ludots.Core.Navigation2D.Runtime
         public UnsafeList<float> GoalRadii;
         public UnsafeList<float> GoalDistances;
         public UnsafeList<byte> HasPointGoals;
+        public UnsafeList<byte> SmartStopSuppressed;
         public UnsafeList<byte> SmartStopFlags;
         public UnsafeList<int> SpatialDirtyAgentIndices;
         public UnsafeList<float> MaxSpeeds;
@@ -94,6 +95,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             GoalRadii = new UnsafeList<float>(settings.MaxAgents);
             GoalDistances = new UnsafeList<float>(settings.MaxAgents);
             HasPointGoals = new UnsafeList<byte>(settings.MaxAgents);
+            SmartStopSuppressed = new UnsafeList<byte>(settings.MaxAgents);
             SmartStopFlags = new UnsafeList<byte>(settings.MaxAgents);
             SpatialDirtyAgentIndices = new UnsafeList<int>(settings.MaxAgents);
             MaxSpeeds = new UnsafeList<float>(settings.MaxAgents);
@@ -236,9 +238,11 @@ namespace Ludots.Core.Navigation2D.Runtime
             bool hasPointGoal,
             in Vector2 goalPosition,
             float goalRadius,
-            float goalDistance)
+            float goalDistance,
+            bool smartStopSuppressed)
         {
             byte hasPointGoalByte = hasPointGoal ? (byte)1 : (byte)0;
+            byte smartStopSuppressedByte = smartStopSuppressed ? (byte)1 : (byte)0;
 
             if (Positions[agentIndex] != position)
             {
@@ -263,7 +267,8 @@ namespace Ludots.Core.Navigation2D.Runtime
                 GoalPositions[agentIndex] != goalPosition ||
                 GoalRadii[agentIndex] != goalRadius ||
                 GoalDistances[agentIndex] != goalDistance ||
-                HasPointGoals[agentIndex] != hasPointGoalByte)
+                HasPointGoals[agentIndex] != hasPointGoalByte ||
+                SmartStopSuppressed[agentIndex] != smartStopSuppressedByte)
             {
                 Interlocked.Exchange(ref _steadySmartStopDirty, 1);
             }
@@ -280,6 +285,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             GoalRadii[agentIndex] = goalRadius;
             GoalDistances[agentIndex] = goalDistance;
             HasPointGoals[agentIndex] = hasPointGoalByte;
+            SmartStopSuppressed[agentIndex] = smartStopSuppressedByte;
         }
 
         public bool SyncAgent(
@@ -296,7 +302,8 @@ namespace Ludots.Core.Navigation2D.Runtime
             bool hasPointGoal,
             in Vector2 goalPosition,
             float goalRadius,
-            float goalDistance)
+            float goalDistance,
+            bool smartStopSuppressed)
         {
             if (entityId < 0)
             {
@@ -304,6 +311,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             }
 
             byte hasPointGoalByte = hasPointGoal ? (byte)1 : (byte)0;
+            byte smartStopSuppressedByte = smartStopSuppressed ? (byte)1 : (byte)0;
             if (!TryGetAgentIndex(entityId, out int agentIndex))
             {
                 if (Count >= Settings.MaxAgents)
@@ -331,6 +339,7 @@ namespace Ludots.Core.Navigation2D.Runtime
                 GoalRadii.Add(goalRadius);
                 GoalDistances.Add(goalDistance);
                 HasPointGoals.Add(hasPointGoalByte);
+                SmartStopSuppressed.Add(smartStopSuppressedByte);
                 SmartStopFlags.Add(0);
                 SpatialDirtyAgentIndices.Add(agentIndex);
                 CachedSteeringDesiredVelocities.Add(Vector2.Zero);
@@ -372,7 +381,8 @@ namespace Ludots.Core.Navigation2D.Runtime
                 GoalPositions[agentIndex] != goalPosition ||
                 GoalRadii[agentIndex] != goalRadius ||
                 GoalDistances[agentIndex] != goalDistance ||
-                HasPointGoals[agentIndex] != hasPointGoalByte)
+                HasPointGoals[agentIndex] != hasPointGoalByte ||
+                SmartStopSuppressed[agentIndex] != smartStopSuppressedByte)
             {
                 _smartStopDirty = true;
             }
@@ -389,6 +399,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             GoalRadii[agentIndex] = goalRadius;
             GoalDistances[agentIndex] = goalDistance;
             HasPointGoals[agentIndex] = hasPointGoalByte;
+            SmartStopSuppressed[agentIndex] = smartStopSuppressedByte;
             return true;
         }
 
@@ -444,6 +455,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             GoalRadii.Clear();
             GoalDistances.Clear();
             HasPointGoals.Clear();
+            SmartStopSuppressed.Clear();
             SmartStopFlags.Clear();
             SpatialDirtyAgentIndices.Clear();
             CachedSteeringDesiredVelocities.Clear();
@@ -490,6 +502,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             GoalRadii.Dispose();
             GoalDistances.Dispose();
             HasPointGoals.Dispose();
+            SmartStopSuppressed.Dispose();
             SmartStopFlags.Dispose();
             SpatialDirtyAgentIndices.Dispose();
             CachedSteeringDesiredVelocities.Dispose();
@@ -548,6 +561,7 @@ namespace Ludots.Core.Navigation2D.Runtime
                 GoalRadii[index] = GoalRadii[lastIndex];
                 GoalDistances[index] = GoalDistances[lastIndex];
                 HasPointGoals[index] = HasPointGoals[lastIndex];
+                SmartStopSuppressed[index] = SmartStopSuppressed[lastIndex];
                 SmartStopFlags[index] = SmartStopFlags[lastIndex];
                 CachedSteeringDesiredVelocities[index] = CachedSteeringDesiredVelocities[lastIndex];
                 CachedSteeringPreferredVelocities[index] = CachedSteeringPreferredVelocities[lastIndex];
@@ -579,6 +593,7 @@ namespace Ludots.Core.Navigation2D.Runtime
             GoalRadii.RemoveAt(lastIndex);
             GoalDistances.RemoveAt(lastIndex);
             HasPointGoals.RemoveAt(lastIndex);
+            SmartStopSuppressed.RemoveAt(lastIndex);
             SmartStopFlags.RemoveAt(lastIndex);
             CachedSteeringDesiredVelocities.RemoveAt(lastIndex);
             CachedSteeringPreferredVelocities.RemoveAt(lastIndex);

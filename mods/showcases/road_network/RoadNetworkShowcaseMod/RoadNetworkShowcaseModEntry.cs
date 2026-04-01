@@ -1,0 +1,26 @@
+using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
+using RoadNetworkShowcaseMod.Runtime;
+using RoadNetworkShowcaseMod.Triggers;
+
+namespace RoadNetworkShowcaseMod
+{
+    public sealed class RoadNetworkShowcaseModEntry : IMod
+    {
+        public void OnLoad(IModContext context)
+        {
+            context.Log("[RoadNetworkShowcaseMod] Loaded");
+            RoadNetworkShowcaseComponentAuthoring.Register();
+
+            var runtime = new RoadNetworkShowcaseRuntime();
+            context.OnEvent(GameEvents.GameStart, new InstallRoadNetworkShowcaseOnGameStartTrigger(context, runtime).ExecuteAsync);
+            context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
+            context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
+            context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);
+        }
+
+        public void OnUnload()
+        {
+        }
+    }
+}

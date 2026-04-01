@@ -81,6 +81,7 @@ namespace Ludots.Core.Scripting
         public const string HexMetrics = "HexMetrics";
         public const string MapSession = "MapSession";
         public const string LoadedChunks = "LoadedChunks";
+        public const string LoadedGraphRuntime = "LoadedGraphRuntime";
         public const string RegistrationConflictReport = "RegistrationConflictReport";
         public const string ConfigConflictReport = "ConfigConflictReport";
         public const string ConfigCatalog = "ConfigCatalog";
@@ -108,6 +109,7 @@ namespace Ludots.Core.Scripting
         // WorldHudConfig removed �?unified into Performer entity-scoped definitions
         public const string GasPresentationEventBuffer = "GasPresentationEventBuffer";
         public const string GroundOverlayBuffer = "GroundOverlayBuffer";
+        public const string RoadSplineBuffer = "RoadSplineBuffer";
         // IndicatorRequestBuffer removed �?unified into Performer direct API
         public const string PerformerDefinitionRegistry = "PerformerDefinitionRegistry";
         public const string PerformerInstanceBuffer = "PerformerInstanceBuffer";
