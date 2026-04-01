@@ -11,7 +11,7 @@
 - 所有长时运行 skill 都必须有边界：前置检查、启动超时、完成超时、最大重试次数、blocked 退出。
 - 不做兼容层；旧的本地 skill 副本视为同步目标，不再是规范来源。
 
-## 1 分层结构
+## 1 分层与配套目录
 
 | 目录 | 作用 |
 |------|------|
@@ -21,7 +21,7 @@
 | `skills/evidence/` | 截图、录屏、关键帧抽取、可视化证据产出 |
 | `skills/audit/` | 技术债熔断、视觉审计、特种审计 |
 | `skills/tooling/` | hook 编排、CI gate、同步与校验配套 |
-| `skills/contracts/` | hook packet 与证据 JSON 契约 |
+| `skills/contracts/` | 机器契约目录，不属于分层 skill layer，但仍是仓库内 SSOT 的一部分 |
 
 ## 2 当前技能清单
 

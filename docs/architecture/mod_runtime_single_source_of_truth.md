@@ -30,15 +30,26 @@
 
 参考实现：
 
-- `src/Tools/ModLauncher/MainViewModel.cs`
-- `src/Tools/ModLauncher/Cli/CliRunner.cs`
+- `scripts/run-mod-launcher.ps1`
+- `src/Tools/Ludots.Launcher.Cli/Program.cs`
+- `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
 - `src/Tools/Ludots.Tool/Program.cs`
 
 ### 2.2 依赖闭包与顺序
 
 - 显式选择的 Mod 集合必须补齐依赖闭包。
 - 输出顺序必须可复现（依赖拓扑 + 稳定排序）。
-- `game.json` 写回路径需保持稳定且可读。
+- launcher graph 工件路径需保持稳定且可读。
+- `launcher.runtime.json` 必须只作为 graph 指针载体，不再承载产品级 `ModPaths` 真相。
+
+### 2.3 配置分层与运行时工件
+
+- 项目配置（`launcher.config.json`、`launcher.presets.json`）与用户偏好（`preferences.json`、`config.overlay.json`）必须分层。
+- 运行时 bootstrap（`launcher.runtime.json`）必须保持“仅承载启动必需数据”的约束。
+- 当前计划级真相应通过 launcher graph 工件沉淀，避免 build/runtime/adapter 各自推导一份真相。
+- runtime 读取 bootstrap 时，应直接消费 graph 中的有序 Mod 计划；`ModLoader` 只做计划校验与加载，不再重跑依赖拓扑。
+- `game.json` 仅保留 direct-debug/宿主兼容用途，不再作为产品启动主链的依赖真相。
+- lock 工件属于下一阶段，用于冻结跨环境复现所需的更强约束，而不是假装当前已经存在。
 
 ## 3 配置 ID 规则（配置即意图）
 
@@ -86,19 +97,53 @@
 
 参考实现：`src/Tests/GasTests/RootBudgetTests.cs`
 
-## 5 主线收束检查清单
+## 5 适配层与服务注入收束
+
+### 5.1 Adapter 描述层
+
+- 适配层应以 adapter descriptor 描述 host kind、bootstrap schema、契约依赖和构建入口。
+- 禁止将具体 adapter 项目引用关系当成玩法依赖真相。
+
+### 5.2 Typed Service Scope
+
+- `CoreServiceKeys` 作为 typed key 合约名录应继续保留。
+- Mod 初始化状态也应进入各自的 `*ServiceKeys`，避免在 `GlobalContext` 中散落裸字符串。
+- `ContextKeys` 和 string 访问路径应逐步退场，避免同一服务出现多套访问语义。
+- 运行时服务建议收束到显式作用域（Engine/Session/Map/Adapter），减少手配遗漏。
+
+### 5.3 Shared Assembly Policy
+
+- 一个 launcher graph / `ResolvedModLoadPlan` 只应对应一个 `ModLoadContext`。
+- 同一 launch plan 内的代码 Mod 必须共享同一个类型宇宙，避免 capability service、shared runtime state、mod-local service key 因 `AssemblyLoadContext` 分裂而失配。
+- 不允许产品主链继续依赖“每个 mod 一个独立 ALC，再靠裸字符串或运行时猜测兜底”的模式。
+- host/default ALC 只承担 Core、adapter、tooling 侧共享程序集；plan 内 mod 依赖关系由 plan load context 统一承载。
+
+当前迁移边界：
+
+- 允许：direct-debug 或历史系统内部暂存少量 string payload
+- 推荐：`SetService/GetService/TryGetService + ServiceKey<T>`
+- 禁止：新增产品启动链依赖 `GlobalContext["SomeString"]` 才能正确启动
+
+## 6 主线收束检查清单
 
 - [ ] ModLoader 不存在 DLL 回退分支。
 - [ ] `mod.json.main` 全量指向 `bin/net8.0/*.dll`。
 - [ ] GUI/CLI/Tool 默认目录一致且依赖闭包一致。
+- [ ] 项目配置、用户偏好、运行时 bootstrap、内容配置职责边界清晰。
+- [x] launcher graph 工件可用于复现同一 launch plan。
+- [x] runtime 消费 launcher graph 顺序时不再二次解析依赖。
+- [ ] 后续 lock 工件冻结跨环境复现所需的额外输入（manifest/hash/shared assembly policy/sdk band）。
+- [x] 同一 runtime launch plan 使用单一 `ModLoadContext`，避免跨 mod capability/service 类型失配。
 - [ ] `config_catalog.json` 的 ArrayById 条目使用 `IdField: "id"`。
 - [ ] 关键配置文件 `id` 字段为字符串。
 - [ ] GasBudget 包含主要丢弃路径统计。
 - [ ] 生产报告与演示日志相关测试可直接通过。
 
-## 6 相关文档
+## 7 相关文档
 
 - Mod 架构与配置系统：见 [Mod 架构与配置系统](mod_architecture.md)
+- Launcher 终局规范：见 [Launcher SSOT and User-First Endgame](launcher_ssot_user_first.md)
+- 当前启动入口：见 [Startup Entrypoints](startup_entrypoints.md)
 - CLI 启动与调试指南：见 [CLI 运行与调试手册](../reference/cli_runbook.md)
 - ConfigPipeline 合并管线：见 [ConfigPipeline 合并管线](config_pipeline.md)
 - 数据配置合并策略：见 [配置数据合并最佳实践](../reference/config_data_merge_best_practices.md)

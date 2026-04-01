@@ -11,6 +11,7 @@ Both entrypoints reuse the same backend:
 
 - `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
 - `src/Tools/Ludots.Editor.Bridge/Program.cs`
+- `src/Tools/Ludots.Launcher.Cli/Program.cs`
 
 ## 0. Quick Start
 
@@ -47,6 +48,19 @@ Rules:
 - `launch` with no selectors uses the currently selected preset.
 - Pass `--adapter` explicitly in scripts and reproducible runs.
 
+Visual launcher contract:
+
+- `.\scripts\run-mod-launcher.cmd` is the canonical user-facing entry.
+- The wrapper opens `http://localhost:5299/launcher/index.html`.
+- `http://localhost:5299/launcher` redirects to that page.
+- `http://localhost:5299/launcher/` is also valid.
+- `http://localhost:5299/index.html` is not a launcher entrypoint and currently returns `404`.
+
+Dependency split:
+
+- Visual launcher path requires Node/NPM because it builds `src/Tools/Ludots.Launcher.React`.
+- CLI path does not require Node/NPM; it goes straight through `dotnet run` into the launcher backend.
+
 ## 1. State Files
 
 Launcher state is split into separate files with non-overlapping responsibilities.
@@ -63,7 +77,12 @@ Launcher state is split into separate files with non-overlapping responsibilitie
 Runtime bootstrap is separate:
 
 - `launcher.runtime.json`
-  Written by `launch`; contains only adapter bootstrap data such as `ModPaths`.
+  Written by `launch`; acts as adapter bootstrap carrier and must point to the launcher graph artifact. Product runtime bootstrap no longer carries `ModPaths`.
+- launcher graph artifact
+  Generated orchestration truth for selector expansion, dependency closure, adapter/build/runtime planning metadata, and the ordered mod plan consumed by runtime.
+  Default path today: `artifacts/launcher/<adapter>.launch.graph.json`.
+- future lock artifact
+  Not implemented yet; intended to freeze cross-environment reproducibility inputs after the graph contract stabilizes.
 - `game.json`
   Optional direct-debug bootstrap only. Product launch flows do not require manual `gamejson write`.
 
@@ -72,6 +91,12 @@ Runtime gameplay configuration still comes from the merged config pipeline:
 - `assets/Configs/game.json`
 - `<Mod>/assets/game.json`
 - `<Mod>/assets/Configs/game.json`
+
+Direct-debug / sandbox boundary:
+
+- Product launch: use the wrapper or CLI `launch`.
+- Direct adapter debugging: run an app with `launcher.runtime.json` explicitly.
+- Manual `game.json` bootstrap is direct-debug compatibility only; it is not the product launch contract and should not be the default creator workflow.
 
 ## 2. Selector Model
 
@@ -171,7 +196,8 @@ Notes:
 - `workspace add` extends recursive scan roots.
 - `binding set` creates an explicit global-name-to-path mapping.
 - A bound mod may live anywhere, inside or outside the repository.
-- `--project` is only a hint; dependency and DLL resolution still come from the backend.
+- `--project` is an advanced implementation hint; dependency and DLL resolution still come from the backend.
+- product-facing launcher UX should default to selector/binding intent, not project-file details.
 
 ### 3.5 Presets
 
@@ -210,8 +236,13 @@ Notes:
 
 - Use `--adapter raylib|web` explicitly in reproducible commands.
 - Web launcher and CLI both call the same backend launch plan logic.
+- Canonical browser URL is `http://localhost:5299/launcher/index.html`.
+- Bridge also redirects `/` and `/launcher` to `/launcher/index.html`.
 - `game.json` is optional and only relevant when bypassing the launcher to debug an adapter app directly.
 - The canonical wrapper form is `.\scripts\run-mod-launcher.cmd cli ...`. Do not write `-- cli ...`.
+- `launcher.runtime.json` is not the only evidence artifact; the launcher also writes a graph artifact and links to it from bootstrap metadata.
+- runtime bootstrap now requires the linked graph artifact; runtime no longer re-derives dependency order from `ModPaths`.
+- direct `gamejson write` style flows should be treated as direct-debug compatibility only, not the product launch contract.
 
 ## 5. Current Technical Debt
 
@@ -229,4 +260,5 @@ See:
 
 - [Environment Setup](../conventions/03_environment_setup.md)
 - [Startup Entrypoints](../architecture/startup_entrypoints.md)
+- [Launcher SSOT and User-First Endgame](../architecture/launcher_ssot_user_first.md)
 - [Unified Launcher RFC](../rfcs/RFC-0001-unified-launcher-cli-and-workspace.md)

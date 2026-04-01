@@ -48,9 +48,9 @@ namespace Ludots.Core.Engine
             CurrentMapSession = session;
             if (session == null)
             {
-                GlobalContext.Remove(CoreServiceKeys.MapSession.Name);
-                GlobalContext.Remove(CoreServiceKeys.MapFeatureFlags.Name);
-                GlobalContext.Remove(CoreServiceKeys.MapLoadStatus.Name);
+                RemoveService(CoreServiceKeys.MapSession);
+                RemoveService(CoreServiceKeys.MapFeatureFlags);
+                RemoveService(CoreServiceKeys.MapLoadStatus);
                 return;
             }
 

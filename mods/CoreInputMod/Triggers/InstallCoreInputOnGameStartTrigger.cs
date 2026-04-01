@@ -25,7 +25,6 @@ namespace CoreInputMod.Triggers
     /// </summary>
     public sealed class InstallCoreInputOnGameStartTrigger : Trigger
     {
-        private const string InstalledKey = "CoreInputMod.Installed";
         public const string EntitySelectionCallbacksKey = "CoreInputMod.EntitySelectionCallbacks";
         public const string SelectionTriggeredCallbacksKey = "CoreInputMod.SelectionTriggeredCallbacks";
         private readonly IModContext _ctx;
@@ -41,28 +40,27 @@ namespace CoreInputMod.Triggers
             var engine = context.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            if (engine.GlobalContext.TryGetValue(InstalledKey, out var obj) && obj is bool b && b)
+            if (engine.TryGetService(CoreInputServiceKeys.Installed, out bool installed) && installed)
                 return Task.CompletedTask;
-            engine.GlobalContext[InstalledKey] = true;
+            engine.SetService(CoreInputServiceKeys.Installed, true);
 
             var selectionCallbacks = new List<Action<WorldCmInt2, Entity>>();
             var triggeredCallbacks = new List<Action<SelectionRequest, WorldCmInt2>>();
-            engine.GlobalContext[EntitySelectionCallbacksKey] = selectionCallbacks;
-            engine.GlobalContext[SelectionTriggeredCallbacksKey] = triggeredCallbacks;
+            engine.SetService(CoreInputServiceKeys.EntitySelectionCallbacks, selectionCallbacks);
+            engine.SetService(CoreInputServiceKeys.SelectionTriggeredCallbacks, triggeredCallbacks);
 
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var bindingsObj)
-                || bindingsObj is not InteractionActionBindings)
+            if (!engine.TryGetService(CoreServiceKeys.InteractionActionBindings, out _))
             {
-                engine.GlobalContext[CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings();
+                engine.SetService(CoreServiceKeys.InteractionActionBindings, new InteractionActionBindings());
             }
 
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionRuleRegistry.Name, out var rulesObj)
-                || rulesObj is not SelectionRuleRegistry)
+            if (!engine.TryGetService(CoreServiceKeys.SelectionRuleRegistry, out _))
             {
-                engine.GlobalContext[CoreServiceKeys.SelectionRuleRegistry.Name] = SelectionRuleRegistry.CreateWithDefaults();
+                engine.SetService(CoreServiceKeys.SelectionRuleRegistry, SelectionRuleRegistry.CreateWithDefaults());
             }
 
-            var selectionRules = (SelectionRuleRegistry)engine.GlobalContext[CoreServiceKeys.SelectionRuleRegistry.Name];
+            var selectionRules = engine.GetService(CoreServiceKeys.SelectionRuleRegistry)
+                ?? throw new InvalidOperationException("SelectionRuleRegistry must be registered before CoreInputMod installs.");
             var selectionRuntime = engine.GetService(CoreServiceKeys.SelectionRuntime)
                 ?? throw new InvalidOperationException("SelectionRuntime must be registered before CoreInputMod installs.");
             var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
@@ -94,7 +92,7 @@ namespace CoreInputMod.Triggers
             engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
 
             var vmManager = new ViewModeManager(engine.World, engine.GlobalContext, engine.GameSession.Camera);
-            engine.GlobalContext[ViewModeManager.GlobalKey] = vmManager;
+            engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
 
             _ctx.Log("[CoreInputMod] EntityClickSelect, GasSelectionResponse, GasInputResponse, SkillBar, SelectionBox, AbilityAimOverlay, SelectedMovePathOverlay, TabTarget, ViewMode registered");

@@ -1,3 +1,4 @@
 {
-  "ModPaths": []
+  "LaunchGraphPath": "raylib.launch.graph.json",
+  "PlanSchemaVersion": 1
 }

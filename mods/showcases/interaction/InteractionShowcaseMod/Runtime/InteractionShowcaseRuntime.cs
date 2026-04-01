@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using CoreInputMod;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Commands;
 using CoreInputMod.ViewMode;
@@ -20,7 +21,7 @@ namespace InteractionShowcaseMod.Runtime
 
         public InteractionShowcaseRuntime()
         {
-            _panelController = new InteractionShowcasePanelController();
+            _panelController = new InteractionShowcasePanelController(this);
         }
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -40,6 +41,7 @@ namespace InteractionShowcaseMod.Runtime
             {
                 ActivateInputContext(input);
                 EnsureDefaultShowcaseMode(viewModeManager);
+                EnsureShowcaseSelectionView(engine);
                 EnsureEntityInfoPanels(context, engine);
                 RefreshPanel(engine);
             }
@@ -100,6 +102,77 @@ namespace InteractionShowcaseMod.Runtime
             _panelController.MountOrRefresh(root, engine, activeMapId!, ResolveViewModeManager(engine));
         }
 
+        public bool SaveControlGroup(GameEngine engine, int groupIndex)
+        {
+            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Arch.Core.Entity viewer))
+            {
+                return false;
+            }
+
+            bool saved = SelectionControlGroupRuntime.TrySaveViewedSelectionToGroup(
+                engine.World,
+                engine.GlobalContext,
+                selection,
+                viewer,
+                groupIndex,
+                mirrorToFormation: true);
+            if (saved)
+            {
+                engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = groupIndex;
+            }
+
+            return saved;
+        }
+
+        public bool RecallControlGroup(GameEngine engine, int groupIndex)
+        {
+            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Arch.Core.Entity viewer))
+            {
+                return false;
+            }
+
+            bool recalled = SelectionControlGroupRuntime.TryRecallGroupToLive(
+                engine.World,
+                engine.GlobalContext,
+                selection,
+                viewer,
+                groupIndex,
+                mirrorToFormation: true);
+            if (recalled)
+            {
+                engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = groupIndex;
+            }
+
+            return recalled;
+        }
+
+        public bool ShowLiveSelection(GameEngine engine)
+        {
+            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Arch.Core.Entity viewer))
+            {
+                return false;
+            }
+
+            selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
+            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
+            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            return true;
+        }
+
+        public bool ShowFormationSelection(GameEngine engine)
+        {
+            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Arch.Core.Entity viewer))
+            {
+                return false;
+            }
+
+            selection.TryGetOrCreateContainer(viewer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation, out _);
+            selection.TryBindView(viewer, SelectionViewKeys.Formation, viewer, SelectionSetKeys.FormationPrimary);
+            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
+            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Formation;
+            return true;
+        }
+
         private void ActivateInputContext(PlayerInputHandler? input)
         {
             if (input == null || _inputContextActive)
@@ -149,6 +222,18 @@ namespace InteractionShowcaseMod.Runtime
             {
                 return;
             }
+
+            OpenOrUpdate(
+                context,
+                handles,
+                InteractionShowcaseIds.SelectionViewUiHandleKey,
+                new EntityInfoPanelRequest(
+                    EntityInfoPanelKind.EntityCollectionInspector,
+                    EntityInfoPanelSurface.Ui,
+                    EntityInfoPanelTarget.CurrentSelectionView(),
+                    new EntityInfoPanelLayout(EntityInfoPanelAnchor.BottomLeft, 16f, 16f, 632f, 332f),
+                    EntityInfoGasDetailFlags.None,
+                    true));
 
             EntityInfoPanelTarget? selectedTarget = TryResolveSelectedTarget(engine);
             if (!selectedTarget.HasValue)
@@ -251,6 +336,7 @@ namespace InteractionShowcaseMod.Runtime
             CloseIfPresent(context, handles, InteractionShowcaseIds.SelectedComponentUiHandleKey);
             CloseIfPresent(context, handles, InteractionShowcaseIds.SelectedGasUiHandleKey);
             CloseIfPresent(context, handles, InteractionShowcaseIds.SelectedGasOverlayHandleKey);
+            CloseIfPresent(context, handles, InteractionShowcaseIds.SelectionViewUiHandleKey);
             CloseIfPresent(context, handles, InteractionShowcaseIds.ArcweaverOverlayHandleKey);
             CloseIfPresent(context, handles, InteractionShowcaseIds.VanguardOverlayHandleKey);
         }
@@ -270,13 +356,7 @@ namespace InteractionShowcaseMod.Runtime
 
         private static ViewModeManager? ResolveViewModeManager(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) &&
-                managerObj is ViewModeManager manager)
-            {
-                return manager;
-            }
-
-            return null;
+            return CoreInputRuntimeServices.GetViewModeManager(engine);
         }
 
         private static void EnsureDefaultShowcaseMode(ViewModeManager? viewModeManager)
@@ -323,7 +403,15 @@ namespace InteractionShowcaseMod.Runtime
                 InteractionShowcaseIds.LolModeActionId,
                 InteractionShowcaseIds.Sc2ModeActionId,
                 InteractionShowcaseIds.IndicatorModeActionId,
-                InteractionShowcaseIds.ActionModeActionId
+                InteractionShowcaseIds.ActionModeActionId,
+                InteractionShowcaseIds.SelectionGroupRecall1ActionId,
+                InteractionShowcaseIds.SelectionGroupRecall2ActionId,
+                InteractionShowcaseIds.SelectionGroupRecall3ActionId,
+                InteractionShowcaseIds.SelectionGroupRecall4ActionId,
+                InteractionShowcaseIds.SelectionGroupSave1ActionId,
+                InteractionShowcaseIds.SelectionGroupSave2ActionId,
+                InteractionShowcaseIds.SelectionGroupSave3ActionId,
+                InteractionShowcaseIds.SelectionGroupSave4ActionId
             };
 
             for (int i = 0; i < requiredActions.Length; i++)
@@ -332,6 +420,48 @@ namespace InteractionShowcaseMod.Runtime
                 {
                     throw new InvalidOperationException($"Missing input action: {requiredActions[i]}");
                 }
+            }
+        }
+
+        private static bool TryResolveSelectionContext(GameEngine engine, out SelectionRuntime selection, out Arch.Core.Entity viewer)
+        {
+            selection = default!;
+            viewer = Arch.Core.Entity.Null;
+            if (engine.GetService(CoreServiceKeys.SelectionRuntime) is not SelectionRuntime runtime)
+            {
+                return false;
+            }
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+                viewerObj is not Arch.Core.Entity localViewer ||
+                !engine.World.IsAlive(localViewer))
+            {
+                return false;
+            }
+
+            selection = runtime;
+            viewer = localViewer;
+            return true;
+        }
+
+        private void EnsureShowcaseSelectionView(GameEngine engine)
+        {
+            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Arch.Core.Entity viewer))
+            {
+                return;
+            }
+
+            selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
+            selection.TryGetOrCreateContainer(viewer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation, out _);
+            selection.TryBindView(viewer, SelectionViewKeys.Formation, viewer, SelectionSetKeys.FormationPrimary);
+            if (!engine.GlobalContext.ContainsKey(CoreServiceKeys.SelectionViewViewerEntity.Name))
+            {
+                engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
+            }
+
+            if (!engine.GlobalContext.ContainsKey(CoreServiceKeys.SelectionViewKey.Name))
+            {
+                engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
             }
         }
     }

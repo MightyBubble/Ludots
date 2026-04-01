@@ -77,17 +77,17 @@ namespace Ludots.Adapter.Raylib
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
         {
-            ValidateKey<object>(engine, CoreServiceKeys.UIRoot.Name);
-            ValidateKey<Core.UI.IUiSystem>(engine, CoreServiceKeys.UISystem.Name);
-            ValidateKey<PlayerInputHandler>(engine, CoreServiceKeys.InputHandler.Name);
-            ValidateKey<IInputBackend>(engine, CoreServiceKeys.InputBackend.Name);
+            ValidateKey(engine, CoreServiceKeys.UIRoot);
+            ValidateKey(engine, CoreServiceKeys.UISystem);
+            ValidateKey(engine, CoreServiceKeys.InputHandler);
+            ValidateKey(engine, CoreServiceKeys.InputBackend);
         }
 
-        private static void ValidateKey<T>(GameEngine engine, string key)
+        private static void ValidateKey<T>(GameEngine engine, ServiceKey<T> key)
         {
-            if (!engine.GlobalContext.TryGetValue(key, out var obj) || obj is not T)
+            if (!engine.TryGetService(key, out _))
             {
-                throw new InvalidOperationException($"GlobalContext missing or invalid: {key} expected {typeof(T).FullName}");
+                throw new InvalidOperationException($"Required service missing or invalid: {key.Name} expected {typeof(T).FullName}");
             }
         }
     }

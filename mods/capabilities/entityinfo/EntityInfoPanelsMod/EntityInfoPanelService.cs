@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Arch.Core;
 using EntityInfoPanelsMod.Insight;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Presentation.Hud;
 
@@ -14,6 +15,8 @@ public sealed partial class EntityInfoPanelService
     private const int MaxComponentSectionsPerPanel = 64;
     private const int MaxComponentLinesPerPanel = 256;
     private const int MaxGasLinesPerPanel = 320;
+    private const int MaxEntityCollectionPreviewAttributes = 4;
+    private const int MaxEntityCollectionCategories = 24;
     private const int MaxInsightStatsPerPanel = 8;
     private const int MaxInsightActionsPerPanel = 8;
     private const int ComponentToggleWordCount = 16;
@@ -48,6 +51,16 @@ public sealed partial class EntityInfoPanelService
 
     private readonly int[] _gasLineCounts = new int[PanelCapacity];
     private readonly string[] _gasLines = new string[PanelCapacity * MaxGasLinesPerPanel];
+    private readonly Entity[] _entityCollectionContainers = new Entity[PanelCapacity];
+    private readonly Entity[] _entityCollectionPrimaries = new Entity[PanelCapacity];
+    private readonly string[] _entityCollectionViewKeys = new string[PanelCapacity];
+    private readonly string[] _entityCollectionAliasKeys = new string[PanelCapacity];
+    private readonly int[] _entityCollectionCounts = new int[PanelCapacity];
+    private readonly uint[] _entityCollectionRevisions = new uint[PanelCapacity];
+    private readonly int[] _entityCollectionCategoryCounts = new int[PanelCapacity];
+    private readonly string[] _entityCollectionCategoryLabels = new string[PanelCapacity * MaxEntityCollectionCategories];
+    private readonly int[] _entityCollectionCategoryMembers = new int[PanelCapacity * MaxEntityCollectionCategories];
+    private readonly bool[] _entityCollectionCategoryContainsPrimary = new bool[PanelCapacity * MaxEntityCollectionCategories];
     private readonly int[] _insightProfileIndices = new int[PanelCapacity];
     private readonly int[] _insightStatCounts = new int[PanelCapacity];
     private readonly float[] _insightStatCurrentValues = new float[PanelCapacity * MaxInsightStatsPerPanel];
@@ -66,6 +79,8 @@ public sealed partial class EntityInfoPanelService
     private bool _pendingUiInvalidation;
     private bool _pendingOverlayInvalidation;
     private int _lastLocaleId;
+    private World? _sampledWorld;
+    private Dictionary<string, object>? _sampledGlobals;
 
     public EntityInfoPanelService(
         EntityInsightProfileCatalog? insightCatalog = null,
@@ -110,6 +125,7 @@ public sealed partial class EntityInfoPanelService
         ResetComponentToggleState(slot, enabled: true);
         ClearComponentState(slot);
         ClearGasState(slot);
+        ClearEntityCollectionState(slot);
         ClearInsightState(slot);
         InvalidateSurface(request.Surface);
         return new EntityInfoPanelHandle(slot, _generation[slot]);
@@ -133,6 +149,7 @@ public sealed partial class EntityInfoPanelService
         ResetComponentToggleState(slot, enabled: true);
         ClearComponentState(slot);
         ClearGasState(slot);
+        ClearEntityCollectionState(slot);
         ClearInsightState(slot);
         InvalidateSurface(surface);
         return true;
@@ -236,6 +253,10 @@ public sealed partial class EntityInfoPanelService
     public string GetTitle(int slot) => _titles[slot] ?? string.Empty;
     public string GetSubtitle(int slot) => _subtitles[slot] ?? string.Empty;
     public int GetActiveLocaleId() => _insightTextResolver.ActiveLocaleId;
+    public int GetEntityCollectionCount(int slot) => _entityCollectionCounts[slot];
+    public string GetEntityCollectionViewKey(int slot) => _entityCollectionViewKeys[slot] ?? string.Empty;
+    public string GetEntityCollectionAliasKey(int slot) => _entityCollectionAliasKeys[slot] ?? string.Empty;
+    public int GetEntityCollectionCategoryCount(int slot) => _entityCollectionCategoryCounts[slot];
     public int GetComponentSectionCount(int slot) => _componentSectionCounts[slot];
     public int GetComponentSectionTypeId(int slot, int sectionIndex) => _componentSectionTypeIds[SectionIndex(slot, sectionIndex)];
     public string GetComponentSectionName(int slot, int sectionIndex) => _componentSectionNames[SectionIndex(slot, sectionIndex)] ?? string.Empty;
@@ -251,6 +272,56 @@ public sealed partial class EntityInfoPanelService
 
     public int GetGasLineCount(int slot) => _gasLineCounts[slot];
     public string GetGasLine(int slot, int lineIndex) => _gasLines[GasLineIndex(slot, lineIndex)] ?? string.Empty;
+
+    public bool TryGetEntityCollectionRow(int slot, int index, out EntityCollectionPanelRow row)
+    {
+        row = default;
+        if ((uint)slot >= (uint)PanelCapacity ||
+            _kinds[slot] != EntityInfoPanelKind.EntityCollectionInspector ||
+            index < 0 ||
+            _sampledWorld == null ||
+            _sampledGlobals == null ||
+            !SelectionContextRuntime.TryGetRuntime(_sampledGlobals, out SelectionRuntime selection))
+        {
+            return false;
+        }
+
+        Entity container = _entityCollectionContainers[slot];
+        if (container == Entity.Null ||
+            !selection.TryGetSelectionAt(container, index, out Entity entity) ||
+            !_sampledWorld.IsAlive(entity))
+        {
+            return false;
+        }
+
+        string name = ResolveEntityDisplayName(_sampledWorld, entity);
+        string attributesSummary = BuildEntityAttributePreview(_sampledWorld, entity);
+        row = new EntityCollectionPanelRow(
+            index,
+            entity.Id,
+            name,
+            attributesSummary,
+            entity == _entityCollectionPrimaries[slot]);
+        return true;
+    }
+
+    public bool TryGetEntityCollectionCategory(int slot, int index, out EntityCollectionCategorySummary summary)
+    {
+        summary = default;
+        if ((uint)slot >= (uint)PanelCapacity ||
+            index < 0 ||
+            index >= _entityCollectionCategoryCounts[slot])
+        {
+            return false;
+        }
+
+        int categoryIndex = EntityCollectionCategoryIndex(slot, index);
+        summary = new EntityCollectionCategorySummary(
+            _entityCollectionCategoryLabels[categoryIndex] ?? string.Empty,
+            _entityCollectionCategoryMembers[categoryIndex],
+            _entityCollectionCategoryContainsPrimary[categoryIndex]);
+        return true;
+    }
 
     private bool IsComponentEnabled(int slot, int componentTypeId)
     {
@@ -295,6 +366,7 @@ public sealed partial class EntityInfoPanelService
             _componentDisabled[baseIndex + i] = value;
         }
     }
+
     private void InvalidateSurface(EntityInfoPanelSurface surface)
     {
         if ((surface & EntityInfoPanelSurface.Ui) != 0)

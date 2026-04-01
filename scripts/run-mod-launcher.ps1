@@ -6,10 +6,14 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+if ($null -eq $ArgsList) {
+    $ArgsList = @()
+}
+
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Resolve-Path (Join-Path $scriptDir "..")
 $bridgeHealthUrl = "http://localhost:5299/health"
-$launcherUrl = "http://localhost:5299/launcher/"
+$launcherUrl = "http://localhost:5299/launcher/index.html"
 function Wait-BridgeReady {
     param(
         [string]$Url,

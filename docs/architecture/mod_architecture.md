@@ -6,11 +6,11 @@ Ludots 采用了"一切皆 Mod"的设计理念，不仅允许用户扩展内容�
 
 `ModLoader` (`src/Core/Modding/ModLoader.cs`) 负责扫描、解析和加载所有 Mod。
 
-1.  **决定要加载哪些 Mod 目录**：引擎初始化时接收一个 `modPaths` 列表。通常这个列表来自应用旁边的 `game.json`（只包含 `ModPaths`），由启动器生成与覆盖。
+1.  **决定要加载哪些 Mod 目录**：产品启动链优先从 launcher graph 恢复有序 Mod 计划；direct-debug/test 才会显式传入 `modPaths`。
 2.  **解析 mod.json**：读取每个 Mod 根目录下的 `mod.json` 文件。`name` 字段是 Mod 的唯一标识（下文称 ModId）。
-3.  **依赖排序**：根据 `dependencies` 解析依赖图，计算加载顺序，确保先加载前置依赖。
+3.  **依赖排序或校验**：当输入来自显式 `modPaths` 时，加载器会解析依赖图并计算顺序；当输入来自 launcher graph 时，加载器只校验 graph 已给出的顺序与版本约束。
 4.  **挂载虚拟文件系统**：把每个 Mod 的根目录挂载为 `ModId:` 前缀，用于资源与配置读取。
-5.  **程序集加载**：如果 `mod.json` 声明 `main`（入口 DLL 相对路径），则加载该程序集并查找入口类型进行初始化；没有 `main` 的 Mod 也可以作为"纯资源 Mod"存在。
+5.  **程序集加载**：如果 `mod.json` 声明 `main`（入口 DLL 相对路径），则加载该程序集并查找入口类型进行初始化；没有 `main` 的 Mod 也可以作为"纯资源 Mod"存在。同一 launcher graph / `ResolvedModLoadPlan` 下的代码 Mod 共享一个 `ModLoadContext`，避免跨 Mod capability/service 因类型宇宙分裂而失配。
 6.  **初始化**：按加载顺序调用入口的 `OnLoad(IModContext)`，在这里通过正式 API 注册事件处理、System 工厂、Trigger 修饰器等扩展点。
 
 ### mod.json 示例
@@ -48,14 +48,14 @@ public void OnLoad(IModContext context)
     // 1. 全局事件：注册能力定义
     context.OnEvent(GameEvents.GameStart, async ctx =>
     {
-        var registry = ctx.Get<AbilityDefinitionRegistry>(ContextKeys.AbilityDefinitionRegistry);
+        var registry = ctx.Get(CoreServiceKeys.AbilityDefinitionRegistry);
         registry.Register(/* ... */);
     });
 
     // 2. Map 事件：根据地图 tags 执行初始化
     context.OnEvent(GameEvents.MapLoaded, async ctx =>
     {
-        var tags = ctx.Get<List<string>>(ContextKeys.MapTags);
+        var tags = ctx.Get(CoreServiceKeys.MapTags);
         if (tags?.Contains("moba") != true) return;
         // MOBA 地图专属逻辑
     });
@@ -69,7 +69,9 @@ public void OnLoad(IModContext context)
 }
 ```
 
-> **注意**：`context.TriggerManager` 已不再对 Mod 暴露。所有 Mod 必须使用 `OnEvent()`、`SystemFactoryRegistry` 或 `TriggerDecorators`。
+> **注意**：
+> - `context.TriggerManager` 已不再对 Mod 暴露。所有 Mod 必须使用 `OnEvent()`、`SystemFactoryRegistry` 或 `TriggerDecorators`。
+> - 新增启动链和 capability 共享服务应优先使用 `CoreServiceKeys` 或 mod-local `*ServiceKeys`，不要新增 `ContextKeys` / 裸字符串依赖。
 
 ## 3 虚拟文件系统
 

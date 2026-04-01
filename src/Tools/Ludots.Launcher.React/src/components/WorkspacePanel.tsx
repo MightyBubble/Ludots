@@ -7,6 +7,7 @@ export function WorkspacePanel() {
   const [newPath, setNewPath] = useState("");
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
+  const [showImplementationDetails, setShowImplementationDetails] = useState(false);
 
   const handleAdd = async () => {
     if (!newPath.trim()) {
@@ -46,7 +47,19 @@ export function WorkspacePanel() {
       </div>
 
       <div className="mb-3">
-        <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">Bindings</h4>
+        <div className="mb-2 flex items-center justify-between">
+          <h4 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500">Bindings</h4>
+          <button
+            onClick={() => setShowImplementationDetails((value) => !value)}
+            className="text-[10px] uppercase tracking-[0.2em] text-gray-500 transition hover:text-gray-300"
+            title="Show advanced implementation hints such as project path"
+          >
+            {showImplementationDetails ? "Hide Advanced" : "Show Advanced"}
+          </button>
+        </div>
+        <p className="mb-2 text-[11px] text-gray-500">
+          Default view shows selector intent only. Advanced mode reveals implementation hints.
+        </p>
         <div className="space-y-1">
           {bindings.map((binding) => (
             <div key={binding.name} className="rounded-lg border border-bg-border/70 bg-bg px-3 py-2 text-[11px] text-gray-400">
@@ -54,7 +67,9 @@ export function WorkspacePanel() {
               <div className="truncate">
                 {binding.targetType}:{binding.targetValue}
               </div>
-              {binding.projectPath ? <div className="truncate text-gray-500">project: {binding.projectPath}</div> : null}
+              {showImplementationDetails && binding.projectPath ? (
+                <div className="truncate text-gray-500">project: {binding.projectPath}</div>
+              ) : null}
             </div>
           ))}
           {bindings.length === 0 ? <div className="text-[11px] text-gray-500">No explicit bindings configured.</div> : null}

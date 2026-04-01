@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Arch.Core;
+using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -186,8 +187,7 @@ namespace Navigation2DPlaygroundMod.Runtime
 
         private void EnsureOwnedViewMode(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) ||
-                managerObj is not ViewModeManager manager)
+            if (!CoreInputRuntimeServices.TryGetViewModeManager(engine, out var manager))
             {
                 return;
             }
@@ -200,8 +200,7 @@ namespace Navigation2DPlaygroundMod.Runtime
 
         private void ClearOwnedViewMode(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) ||
-                managerObj is not ViewModeManager manager)
+            if (!CoreInputRuntimeServices.TryGetViewModeManager(engine, out var manager))
             {
                 return;
             }

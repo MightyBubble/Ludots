@@ -19,6 +19,7 @@ using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Hosting;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
@@ -228,6 +229,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ConfigCatalog> ConfigCatalog = new("ConfigCatalog");
         public static readonly ServiceKey<ConfigConflictReport> ConfigConflictReport = new("ConfigConflictReport");
         public static readonly ServiceKey<RegistrationConflictReport> RegistrationConflictReport = new("RegistrationConflictReport");
+        public static readonly ServiceKey<ResolvedModLoadPlan> ModLoadPlan = new("ModLoadPlan");
         public static readonly ServiceKey<AiCompiledRuntime> AiRuntime = new("AiRuntime");
 
         // --- Diagnostics ---

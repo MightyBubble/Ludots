@@ -18,6 +18,19 @@ public sealed record LauncherPlatformProfile(
     string LaunchUrl,
     string RuntimeBootstrapFileName);
 
+public sealed record LauncherAdapterDescriptor(
+    string Id,
+    string Name,
+    string HostKind,
+    string BuildPipeline,
+    string RuntimeBootstrapSchema,
+    string AppProjectPath,
+    string OutputDirectory,
+    string ClientProjectDirectory,
+    string ClientDistributionDirectory,
+    string LaunchUrl,
+    string RuntimeBootstrapFileName);
+
 public enum LauncherBuildState
 {
     NoProject,
@@ -117,6 +130,27 @@ public sealed record LauncherPlanDiagnostics(
     IReadOnlyList<LauncherResolvedSetting> Settings,
     IReadOnlyList<string> Warnings);
 
+public sealed record LauncherRuntimeArtifacts(
+    string BootstrapArtifactStrategy,
+    string BootstrapArtifactPath,
+    string GraphArtifactPath,
+    string AppOutputDirectory,
+    string AppAssemblyPath,
+    string LaunchUrl);
+
+public sealed record LauncherGraphDocument(
+    int SchemaVersion,
+    string GeneratedAtUtc,
+    string PlanFingerprint,
+    LauncherAdapterDescriptor Adapter,
+    string BuildMode,
+    IReadOnlyList<string> Selectors,
+    IReadOnlyList<string> RootModIds,
+    IReadOnlyList<string> OrderedModIds,
+    IReadOnlyList<LauncherPlannedMod> PlannedMods,
+    LauncherRuntimeArtifacts RuntimeArtifacts,
+    LauncherPlanDiagnostics Diagnostics);
+
 public sealed record LauncherLaunchPlan(
     string AdapterId,
     string BuildMode,
@@ -129,7 +163,12 @@ public sealed record LauncherLaunchPlan(
     string AppOutputDirectory,
     string AppAssemblyPath,
     string LaunchUrl,
-    LauncherPlanDiagnostics Diagnostics);
+    LauncherPlanDiagnostics Diagnostics,
+    LauncherAdapterDescriptor Adapter,
+    int SchemaVersion,
+    string GeneratedAtUtc,
+    string PlanFingerprint,
+    string GraphArtifactPath);
 
 public sealed record LauncherResolveResult(
     LauncherLaunchPlan Plan,

@@ -6,6 +6,9 @@ using EntityInfoPanelsMod;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Selection;
+using Ludots.Core.Registry;
+using Ludots.Core.Scripting;
 using Ludots.Core.Presentation.Hud;
 using NUnit.Framework;
 
@@ -239,6 +242,70 @@ public sealed class EntityInfoPanelServiceTests
         Assert.That(secondHandle.Slot, Is.EqualTo(firstHandle.Slot));
         Assert.That(service.GetComponentSectionLineCount(secondHandle.Slot, 0), Is.GreaterThan(0));
     }
+
+    [Test]
+    public void Refresh_SelectionViewInspector_UsesViewedSelectionDescriptor_AndFormatsEntityRows()
+    {
+        using var world = World.Create();
+        int healthId = AttributeRegistry.Register("Tests.EntityInfo.Selection.Health");
+        int manaId = AttributeRegistry.Register("Tests.EntityInfo.Selection.Mana");
+        var firstAttributes = new AttributeBuffer();
+        firstAttributes.SetBase(healthId, 100f);
+        firstAttributes.SetCurrent(healthId, 75f);
+        firstAttributes.SetBase(manaId, 80f);
+        firstAttributes.SetCurrent(manaId, 32f);
+        Entity viewer = world.Create();
+        Entity first = world.Create(new Name { Value = "Arcweaver 01" }, firstAttributes);
+        Entity second = world.Create(new Name { Value = "Arcweaver 02" });
+        Entity third = world.Create(new Name { Value = "Vanguard 01" });
+
+        var selectionRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        var selection = new SelectionRuntime(world, new SelectionRuntimeConfig(), selectionRegistry);
+        Assert.That(selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, new[] { first, second, third }), Is.True);
+        Assert.That(selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary), Is.True);
+
+        var globals = new Dictionary<string, object>
+        {
+            [CoreServiceKeys.SelectionRuntime.Name] = selection,
+            [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
+            [CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary,
+        };
+
+        var service = new EntityInfoPanelService();
+        EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
+            EntityInfoPanelKind.EntityCollectionInspector,
+            EntityInfoPanelSurface.Ui,
+            EntityInfoPanelTarget.CurrentSelectionView(),
+            new EntityInfoPanelLayout(EntityInfoPanelAnchor.BottomLeft, 16f, 16f, 480f, 280f),
+            EntityInfoGasDetailFlags.None,
+            true));
+
+        service.Refresh(world, globals);
+
+        Assert.That(service.GetEntityCollectionCount(handle.Slot), Is.EqualTo(3));
+        Assert.That(service.GetEntityCollectionViewKey(handle.Slot), Is.EqualTo(SelectionViewKeys.Primary));
+        Assert.That(service.GetEntityCollectionAliasKey(handle.Slot), Is.EqualTo(SelectionSetKeys.LivePrimary));
+        Assert.That(service.GetSubtitle(handle.Slot), Does.Contain("3 entities"));
+        Assert.That(service.TryGetEntityCollectionRow(handle.Slot, 0, out EntityCollectionPanelRow firstRow), Is.True);
+        Assert.That(firstRow.EntityId, Is.EqualTo(first.Id));
+        Assert.That(firstRow.Name, Is.EqualTo("Arcweaver 01"));
+        Assert.That(firstRow.IsPrimary, Is.True);
+        Assert.That(firstRow.AttributesSummary, Does.Contain("Selection.Health 75/100"));
+        Assert.That(firstRow.AttributesSummary, Does.Contain("Selection.Mana 32/80"));
+        Assert.That(service.TryGetEntityCollectionRow(handle.Slot, 1, out EntityCollectionPanelRow secondRow), Is.True);
+        Assert.That(secondRow.EntityId, Is.EqualTo(second.Id));
+        Assert.That(secondRow.Name, Is.EqualTo("Arcweaver 02"));
+        Assert.That(secondRow.AttributesSummary, Is.EqualTo("(no attributes)"));
+        Assert.That(service.GetEntityCollectionCategoryCount(handle.Slot), Is.EqualTo(2));
+        Assert.That(service.TryGetEntityCollectionCategory(handle.Slot, 0, out EntityCollectionCategorySummary firstCategory), Is.True);
+        Assert.That(firstCategory.Label, Is.EqualTo("Arcweaver"));
+        Assert.That(firstCategory.Count, Is.EqualTo(2));
+        Assert.That(firstCategory.ContainsPrimary, Is.True);
+        Assert.That(service.TryGetEntityCollectionCategory(handle.Slot, 1, out EntityCollectionCategorySummary secondCategory), Is.True);
+        Assert.That(secondCategory.Label, Is.EqualTo("Vanguard"));
+        Assert.That(secondCategory.Count, Is.EqualTo(1));
+    }
+
     private static string[] GetOverlayStrings(ScreenOverlayBuffer overlay, ReadOnlySpan<ScreenOverlayItem> items)
     {
         var lines = new List<string>(items.Length);

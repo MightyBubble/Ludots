@@ -22,6 +22,7 @@ public enum EntityInfoPanelKind : byte
     ComponentInspector = 0,
     GasInspector = 1,
     InsightBrief = 2,
+    EntityCollectionInspector = 3,
 }
 
 public enum EntityInfoPanelAnchor : byte
@@ -39,6 +40,7 @@ public enum EntityInfoPanelTargetKind : byte
 {
     FixedEntity = 0,
     GlobalEntityKey = 1,
+    CurrentSelectionView = 2,
 }
 
 [Flags]
@@ -66,7 +68,22 @@ public readonly record struct EntityInfoPanelTarget(
 
     public static EntityInfoPanelTarget Global(string key) =>
         new(EntityInfoPanelTargetKind.GlobalEntityKey, Entity.Null, key ?? string.Empty);
+
+    public static EntityInfoPanelTarget CurrentSelectionView() =>
+        new(EntityInfoPanelTargetKind.CurrentSelectionView, Entity.Null, string.Empty);
 }
+
+public readonly record struct EntityCollectionPanelRow(
+    int Index,
+    int EntityId,
+    string Name,
+    string AttributesSummary,
+    bool IsPrimary);
+
+public readonly record struct EntityCollectionCategorySummary(
+    string Label,
+    int Count,
+    bool ContainsPrimary);
 
 public readonly record struct EntityInfoPanelRequest(
     EntityInfoPanelKind Kind,

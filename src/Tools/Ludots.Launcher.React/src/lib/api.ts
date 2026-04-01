@@ -22,6 +22,7 @@ export interface ModInfo {
   hasThumbnail: boolean;
   hasReadme: boolean;
   mainAssemblyPath: string;
+  // Advanced implementation detail, not required for default user flows.
   projectPath: string;
   hasProject: boolean;
   buildState: LauncherBuildState;
@@ -44,6 +45,7 @@ export interface LauncherBindingInfo {
   name: string;
   targetType: string;
   targetValue: string;
+  // Advanced implementation hint that should stay hidden in default UX.
   projectPath: string | null;
 }
 

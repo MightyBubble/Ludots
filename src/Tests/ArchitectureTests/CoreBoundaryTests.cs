@@ -50,7 +50,8 @@ namespace Ludots.Tests.Architecture
             var whitelist = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 "UiShowcaseCoreMod",
-                "PerformanceVisualizationMod"
+                "PerformanceVisualizationMod",
+                "UxPrototypeMod"
             };
 
             var csprojFiles = Directory.GetFiles(modsDir, "*.csproj", SearchOption.AllDirectories);

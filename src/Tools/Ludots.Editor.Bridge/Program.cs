@@ -39,7 +39,17 @@ app.UseCors("dev");
 if (Directory.Exists(launcherDistPath))
 {
     var launcherDistProvider = new PhysicalFileProvider(launcherDistPath);
-    app.MapGet("/launcher", () => Results.Redirect("/launcher/"));
+    app.Use(async (context, next) =>
+    {
+        if (string.Equals(context.Request.Path.Value, "/", StringComparison.Ordinal) ||
+            string.Equals(context.Request.Path.Value, "/launcher", StringComparison.Ordinal))
+        {
+            context.Response.Redirect("/launcher/index.html");
+            return;
+        }
+
+        await next();
+    });
     app.UseDefaultFiles(new DefaultFilesOptions
     {
         FileProvider = launcherDistProvider,

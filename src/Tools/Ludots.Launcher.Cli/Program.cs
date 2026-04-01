@@ -307,7 +307,7 @@ static async Task<int> RunRecordedLaunchAsync(
         return appBuild.ExitCode;
     }
 
-    string bootstrapPath = service.WriteBootstrap(selectors, resolveResult.Plan.AdapterId, command.BuildMode);
+    string bootstrapPath = service.WriteBootstrap(resolveResult.Plan);
     string outputDirectory = ResolveOutputPath(repoRoot, command.RecordDirectory!);
     var recording = await LauncherEvidenceRecorder.RecordAsync(new LauncherRecordingRequest(
         repoRoot,

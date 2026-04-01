@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
@@ -34,17 +35,20 @@ public sealed partial class EntityInfoPanelService
 
             int lineY = y + 52;
             int bottom = y + height - 14;
-            if (_kinds[slot] == EntityInfoPanelKind.ComponentInspector)
+            switch (_kinds[slot])
             {
-                RenderComponentOverlay(overlay, slot, x + 12, ref lineY, bottom);
-            }
-            else if (_kinds[slot] == EntityInfoPanelKind.GasInspector)
-            {
-                RenderGasOverlay(overlay, slot, x + 12, ref lineY, bottom);
-            }
-            else
-            {
-                RenderInsightOverlay(overlay, slot, x + 12, ref lineY, bottom);
+                case EntityInfoPanelKind.ComponentInspector:
+                    RenderComponentOverlay(overlay, slot, x + 12, ref lineY, bottom);
+                    break;
+                case EntityInfoPanelKind.GasInspector:
+                    RenderGasOverlay(overlay, slot, x + 12, ref lineY, bottom);
+                    break;
+                case EntityInfoPanelKind.EntityCollectionInspector:
+                    RenderEntityCollectionOverlay(overlay, slot, x + 12, ref lineY, bottom);
+                    break;
+                default:
+                    RenderInsightOverlay(overlay, slot, x + 12, ref lineY, bottom);
+                    break;
             }
         }
     }
@@ -91,6 +95,57 @@ public sealed partial class EntityInfoPanelService
                 ComposeStableId(slot, 2000 + line),
                 ComposeTextSerial(text, sectionLine ? 13 : 12));
             y += sectionLine ? 18 : 16;
+        }
+    }
+
+    private void RenderEntityCollectionOverlay(ScreenOverlayBuffer overlay, int slot, int x, ref int y, int bottom)
+    {
+        string summary = $"[{_entityCollectionViewKeys[slot]} -> {_entityCollectionAliasKeys[slot]}] count={_entityCollectionCounts[slot]}";
+        overlay.AddText(x, y, summary, 13, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 3000), ComposeTextSerial(summary, 13));
+        y += 18;
+
+        int categoryCount = Math.Min(4, _entityCollectionCategoryCounts[slot]);
+        if (categoryCount > 0)
+        {
+            var labels = new List<string>(categoryCount);
+            for (int i = 0; i < categoryCount; i++)
+            {
+                if (!TryGetEntityCollectionCategory(slot, i, out EntityCollectionCategorySummary category))
+                {
+                    continue;
+                }
+
+                labels.Add(category.ContainsPrimary
+                    ? $"{category.Label} x{category.Count}*"
+                    : $"{category.Label} x{category.Count}");
+            }
+
+            if (labels.Count > 0)
+            {
+                string categoryLine = string.Join(" | ", labels);
+                overlay.AddText(x, y, categoryLine, 12, new Vector4(0.82f, 0.86f, 0.91f, 1f), ComposeStableId(slot, 3001), ComposeTextSerial(categoryLine, 12));
+                y += 16;
+            }
+        }
+
+        int maxRows = Math.Min(_entityCollectionCounts[slot], Math.Max(0, (bottom - y) / 18));
+        for (int i = 0; i < maxRows && y <= bottom; i++)
+        {
+            if (!TryGetEntityCollectionRow(slot, i, out EntityCollectionPanelRow row))
+            {
+                continue;
+            }
+
+            string text = $"#{row.EntityId} {row.Name} | {row.AttributesSummary}";
+            overlay.AddText(
+                x,
+                y,
+                text,
+                12,
+                row.IsPrimary ? new Vector4(0.965f, 0.886f, 0.686f, 1f) : new Vector4(0.82f, 0.86f, 0.91f, 1f),
+                ComposeStableId(slot, 3010 + i),
+                ComposeTextSerial(text, 12));
+            y += 16;
         }
     }
 
@@ -147,6 +202,7 @@ public sealed partial class EntityInfoPanelService
         {
             EntityInfoPanelTargetKind.FixedEntity => target.FixedEntity,
             EntityInfoPanelTargetKind.GlobalEntityKey when globals.TryGetValue(target.Key, out object? value) && value is Entity resolved => resolved,
+            EntityInfoPanelTargetKind.CurrentSelectionView when SelectionContextRuntime.TryGetCurrentPrimary(world, globals, out Entity currentPrimary) => currentPrimary,
             _ => Entity.Null,
         };
 

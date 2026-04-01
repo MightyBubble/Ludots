@@ -839,6 +839,73 @@ namespace Ludots.Tests.ThreeC.Acceptance
         }
 
         [Test]
+        public void CameraAcceptanceHotpathEntryMod_LauncherResolve_WritesLaunchGraphAndBootstrapLink()
+        {
+            string repoRoot = FindRepoRoot();
+            string tempDirectory = Path.Combine(Path.GetTempPath(), $"ludots-launcher-graph-test-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            string? graphPath = null;
+            string? bootstrapPath = null;
+            try
+            {
+                string preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                string userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var service = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var result = service.Resolve(new[] { "$camera_acceptance_hotpath" }, LauncherPlatformIds.Raylib, LauncherBuildMode.Never);
+                graphPath = result.Plan.GraphArtifactPath;
+
+                Assert.That(File.Exists(graphPath), Is.True, "Resolve should materialize a launch graph artifact.");
+
+                using (var graphDocument = JsonDocument.Parse(File.ReadAllText(graphPath)))
+                {
+                    var root = graphDocument.RootElement;
+                    Assert.That(root.GetProperty("schemaVersion").GetInt32(), Is.GreaterThanOrEqualTo(1));
+                    Assert.That(root.GetProperty("planFingerprint").GetString(), Is.EqualTo(result.Plan.PlanFingerprint));
+                    Assert.That(root.GetProperty("adapter").GetProperty("id").GetString(), Is.EqualTo(LauncherPlatformIds.Raylib));
+                    Assert.That(root.GetProperty("orderedModIds").EnumerateArray().Select(item => item.GetString()).ToArray(),
+                        Does.Contain("CameraAcceptanceMod"));
+                }
+
+                bootstrapPath = service.WriteBootstrap(result.Plan);
+                Assert.That(File.Exists(bootstrapPath), Is.True, "WriteBootstrap should emit a runtime bootstrap artifact.");
+
+                using var bootstrapDocument = JsonDocument.Parse(File.ReadAllText(bootstrapPath));
+                var bootstrapRoot = bootstrapDocument.RootElement;
+                Assert.That(bootstrapRoot.GetProperty("PlanFingerprint").GetString(), Is.EqualTo(result.Plan.PlanFingerprint));
+                Assert.That(bootstrapRoot.GetProperty("LaunchGraphFullPath").GetString(), Is.EqualTo(graphPath));
+                Assert.That(bootstrapRoot.GetProperty("PlanSchemaVersion").GetInt32(), Is.EqualTo(result.Plan.SchemaVersion));
+                Assert.That(bootstrapRoot.GetProperty("PlanGeneratedAtUtc").GetString(), Is.EqualTo(result.Plan.GeneratedAtUtc));
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(bootstrapPath) && File.Exists(bootstrapPath))
+                {
+                    File.Delete(bootstrapPath);
+                }
+
+                if (!string.IsNullOrWhiteSpace(graphPath) && File.Exists(graphPath))
+                {
+                    File.Delete(graphPath);
+                }
+
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void CameraAcceptanceMod_RtsMap_ComposesKeyboardEdgeGrabDragAndZoom()
         {
             using var engine = CreateEngine(AcceptanceMods);

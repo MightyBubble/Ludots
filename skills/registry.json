@@ -348,7 +348,9 @@
                        "references":  [
                                           "skills/audit/ludots-visual-review/references/review-checklist.md"
                                       ],
-                       "consumes_hooks":  "visual.frames.ready",
+                       "consumes_hooks":  [
+                                              "visual.frames.ready"
+                                          ],
                        "produces_hooks":  [
                                               "visual.review.completed",
                                               "visual.review.blocked"

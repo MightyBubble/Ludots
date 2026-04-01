@@ -1,8 +1,9 @@
 # Architecture
 
 This directory is the architecture SSOT entry for Ludots. It documents behavior that exists in the repository today and links each subsystem to its primary design note.
+Some documents also describe target-state migration contracts; those are grouped separately below.
 
-## Core Runtime
+## Current Behavior
 
 - [Adapter Pattern](adapter_pattern.md)
 - [Camera Character Control](camera_character_control.md)
@@ -14,16 +15,20 @@ This directory is the architecture SSOT entry for Ludots. It documents behavior 
 - [Map, Mod, and Spatial Ownership](map_mod_spatial.md)
 - [Mod Architecture](mod_architecture.md)
 - [Mod Runtime Single Source of Truth](mod_runtime_single_source_of_truth.md)
+- [Launcher SSOT and User-First Endgame](launcher_ssot_user_first.md)
 - [Pacemaker](pacemaker.md)
 - [Runtime Entity Spawn Flow](runtime_entity_spawn_flow.md)
 - [Startup Entrypoints](startup_entrypoints.md)
 - [Trigger Guide](trigger_guide.md)
 - [UI Runtime Architecture](ui_runtime_architecture.md)
 
+## Target State And Migration
+
+- [Launcher SSOT and User-First Endgame](launcher_ssot_user_first.md)
+- [Mod Runtime Single Source of Truth](mod_runtime_single_source_of_truth.md)
+
 ## Gameplay and Presentation
 
-- [Animation Profile and Clip Pipeline](animation_profile_clip_pipeline.md)
-- [Animation Profile and Clip Kanban](animation_profile_clip_kanban.md)
 - [GAS Combat Infrastructure](gas_combat_infrastructure.md)
 - [GAS Layered Architecture](gas_layered_architecture.md)
 - [Interaction Architecture](interaction/README.md)

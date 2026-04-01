@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Ludots.Core.Config;
+using Ludots.Core.Hosting;
+using Ludots.Core.Modding;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Engine
@@ -20,16 +22,25 @@ namespace Ludots.Core.Engine
         {
             var baseDir = Path.GetDirectoryName(Path.GetFullPath(assetsRoot)) ?? ".";
             var modPaths = config?.ModPaths ?? new List<string>();
-            var resolved = new List<string>();
+            var orderedMods = new List<ResolvedModLoadEntry>();
             for (int i = 0; i < modPaths.Count; i++)
             {
                 var raw = modPaths[i];
                 if (string.IsNullOrWhiteSpace(raw)) continue;
                 var path = Path.IsPathRooted(raw) ? raw : Path.Combine(baseDir, raw);
-                resolved.Add(Path.GetFullPath(path));
+                var fullPath = Path.GetFullPath(path);
+                var manifestPath = Path.Combine(fullPath, "mod.json");
+                if (!File.Exists(manifestPath))
+                {
+                    throw new FileNotFoundException($"mod.json not found in mod directory: {fullPath}");
+                }
+
+                var manifest = ModManifestJson.ParseStrict(File.ReadAllText(manifestPath), manifestPath)
+                    ?? throw new InvalidOperationException($"Failed to parse mod manifest from '{manifestPath}'.");
+                orderedMods.Add(new ResolvedModLoadEntry(manifest.Name, fullPath));
             }
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(resolved, assetsRoot);
+            engine.InitializeWithConfigPipeline(ResolvedModLoadPlan.CreateExplicit(orderedMods), assetsRoot);
             return new WorldRuntime(engine);
         }
 

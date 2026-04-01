@@ -301,18 +301,18 @@ namespace Ludots.Adapter.UE5
 
         private static void ValidateRequiredContext(GameEngine engine)
         {
-            ValidateKey<Ludots.Core.UI.IUiSystem>(engine, CoreServiceKeys.UISystem.Name);
-            ValidateKey<IInputBackend>(engine, CoreServiceKeys.InputBackend.Name);
-            ValidateKey<PlayerInputHandler>(engine, CoreServiceKeys.InputHandler.Name);
-            ValidateKey<Ludots.Core.Presentation.Camera.IViewController>(engine, CoreServiceKeys.ViewController.Name);
-            ValidateKey<IScreenRayProvider>(engine, CoreServiceKeys.ScreenRayProvider.Name);
-            ValidateKey<IScreenProjector>(engine, CoreServiceKeys.ScreenProjector.Name);
+            ValidateKey(engine, CoreServiceKeys.UISystem);
+            ValidateKey(engine, CoreServiceKeys.InputBackend);
+            ValidateKey(engine, CoreServiceKeys.InputHandler);
+            ValidateKey(engine, CoreServiceKeys.ViewController);
+            ValidateKey(engine, CoreServiceKeys.ScreenRayProvider);
+            ValidateKey(engine, CoreServiceKeys.ScreenProjector);
         }
 
-        private static void ValidateKey<T>(GameEngine engine, string key)
+        private static void ValidateKey<T>(GameEngine engine, ServiceKey<T> key)
         {
-            if (!engine.GlobalContext.TryGetValue(key, out var obj) || obj is not T)
-                throw new InvalidOperationException(
+            if (!engine.TryGetService(key, out _))
+                throw new InvalidOperationException($"Required service missing or invalid: {key.Name} expected {typeof(T).FullName}. " +
                     $"GlobalContext 缺少或类型不匹配：{key}，期望 {typeof(T).FullName}");
         }
     }

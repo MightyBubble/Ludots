@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.Hosting;
 using Ludots.Core.Scripting;
 using Ludots.Core.Map;
 
@@ -21,6 +22,7 @@ namespace Ludots.Core.Modding
         private readonly List<ModLoadContext> _loadContexts = new List<ModLoadContext>();
         private readonly Dictionary<string, Assembly> _sharedAssemblies = new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, string> _modDirectories = new Dictionary<string, string>();
+        private ModLoadContext? _activePlanLoadContext;
 
         public IMapManager MapManager { get; set; }
         public List<string> LoadedModIds { get; private set; } = new List<string>();
@@ -52,52 +54,15 @@ namespace Ludots.Core.Modding
 
         public void LoadMods(IEnumerable<string> modDirectories)
         {
-            // Unmount previous mod mounts before re-scan.
-            var staleMounts = new HashSet<string>(LoadedModIds, StringComparer.OrdinalIgnoreCase);
-            foreach (var id in _modDirectories.Keys) staleMounts.Add(id);
-            foreach (var id in staleMounts) _vfs.Unmount(id);
-
-            LoadedModIds.Clear();
-            _modDirectories.Clear();
-            _sharedAssemblies.Clear();
-
-            // 1. Scan for mod.json
-            var modNodes = new List<DependencyResolver.ModNode>();
-            int scanIndex = 0;
-
-            foreach (var dir in modDirectories)
-            {
-                var manifestPath = Path.Combine(dir, "mod.json");
-                if (File.Exists(manifestPath))
+            var scannedMods = ScanModDirectories(modDirectories);
+            var modNodes = scannedMods
+                .Select(item => new DependencyResolver.ModNode
                 {
-                    try
-                    {
-                        var json = File.ReadAllText(manifestPath);
-                        var manifest = ModManifestJson.ParseStrict(json, manifestPath);
-                        
-                        if (manifest != null)
-                        {
-                            modNodes.Add(new DependencyResolver.ModNode
-                            {
-                                Manifest = manifest,
-                                CreationIndex = scanIndex++
-                            });
-                            
-                            // Store path for later DLL loading
-                            _modDirectories[manifest.Name] = dir;
+                    Manifest = item.Manifest,
+                    CreationIndex = item.CreationIndex
+                })
+                .ToList();
 
-                            // Mount resources
-                            _vfs.Mount(manifest.Name, dir);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(in LogChannels.ModLoader, $"Failed to load manifest from {dir}: {ex.Message}");
-                    }
-                }
-            }
-
-            // 2. Resolve Dependencies
             var resolver = new DependencyResolver();
             List<ModManifest> sortedManifests;
             try
@@ -116,11 +81,203 @@ namespace Ludots.Core.Modding
                 Log.Info(in LogChannels.ModLoader, $"- {m.Name} (P:{m.Priority})");
             }
 
-            // 3. Load Assemblies and Init
-            foreach (var manifest in sortedManifests)
+            var scannedByName = scannedMods.ToDictionary(item => item.Manifest.Name, StringComparer.OrdinalIgnoreCase);
+            var orderedPlan = sortedManifests
+                .Select(manifest => new ResolvedModLoadEntry(manifest.Name, scannedByName[manifest.Name].Directory))
+                .ToList();
+            LoadResolvedPlan(orderedPlan);
+        }
+
+        public void LoadResolvedPlan(IReadOnlyList<ResolvedModLoadEntry> orderedMods)
+        {
+            if (orderedMods == null)
             {
-                LoadModAssembly(manifest);
-                LoadedModIds.Add(manifest.Name);
+                throw new ArgumentNullException(nameof(orderedMods));
+            }
+
+            ResetLoadedState();
+
+            var validatedMods = new List<ValidatedResolvedMod>(orderedMods.Count);
+            var orderById = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var versionById = new Dictionary<string, DependencyResolver.SemVersion>(StringComparer.OrdinalIgnoreCase);
+            var seenRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            for (int i = 0; i < orderedMods.Count; i++)
+            {
+                var entry = orderedMods[i];
+                if (string.IsNullOrWhiteSpace(entry.Id))
+                {
+                    throw new InvalidOperationException($"Resolved mod plan entry {i} has an empty id.");
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.RootPath))
+                {
+                    throw new InvalidOperationException($"Resolved mod plan entry '{entry.Id}' has an empty root path.");
+                }
+
+                var modDir = Path.GetFullPath(entry.RootPath);
+                if (!seenRoots.Add(modDir))
+                {
+                    throw new InvalidOperationException($"Duplicate mod root in resolved mod plan: '{modDir}'.");
+                }
+
+                if (!Directory.Exists(modDir))
+                {
+                    throw new DirectoryNotFoundException($"Mod directory not found: {modDir}");
+                }
+
+                var manifestPath = Path.Combine(modDir, "mod.json");
+                if (!File.Exists(manifestPath))
+                {
+                    throw new FileNotFoundException($"mod.json not found in mod directory: {modDir}");
+                }
+
+                var manifest = ModManifestJson.ParseStrict(File.ReadAllText(manifestPath), manifestPath)
+                    ?? throw new InvalidOperationException($"Failed to parse mod manifest from '{manifestPath}'.");
+                if (!string.Equals(manifest.Name, entry.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Resolved mod plan mismatch: entry id '{entry.Id}' does not match manifest '{manifest.Name}' at '{modDir}'.");
+                }
+
+                if (orderById.ContainsKey(manifest.Name))
+                {
+                    throw new InvalidOperationException($"Duplicate mod id in resolved mod plan: '{manifest.Name}'.");
+                }
+
+                if (!DependencyResolver.SemVersion.TryParse(manifest.Version, out var version))
+                {
+                    throw new InvalidOperationException($"Invalid version '{manifest.Version}' for mod '{manifest.Name}'.");
+                }
+
+                validatedMods.Add(new ValidatedResolvedMod(modDir, manifest, version));
+                orderById[manifest.Name] = i;
+                versionById[manifest.Name] = version;
+            }
+
+            ValidateResolvedPlanDependencies(validatedMods.Select(item => item.Manifest).ToList(), orderById, versionById);
+
+            Log.Info(in LogChannels.ModLoader, "Resolved Mod Load Order (launcher graph):");
+            foreach (var item in validatedMods)
+            {
+                Log.Info(in LogChannels.ModLoader, $"- {item.Manifest.Name} (P:{item.Manifest.Priority})");
+            }
+
+            foreach (var item in validatedMods)
+            {
+                _modDirectories[item.Manifest.Name] = item.ModDirectory;
+                _vfs.Mount(item.Manifest.Name, item.ModDirectory);
+            }
+
+            _activePlanLoadContext = new ModLoadContext(ResolveSharedAssembly);
+            _loadContexts.Add(_activePlanLoadContext);
+
+            foreach (var item in validatedMods)
+            {
+                LoadModAssembly(item.Manifest);
+                LoadedModIds.Add(item.Manifest.Name);
+            }
+        }
+
+        private List<ScannedModDirectory> ScanModDirectories(IEnumerable<string> modDirectories)
+        {
+            var scanned = new List<ScannedModDirectory>();
+            int scanIndex = 0;
+
+            foreach (var dir in modDirectories)
+            {
+                var manifestPath = Path.Combine(dir, "mod.json");
+                if (!File.Exists(manifestPath))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var json = File.ReadAllText(manifestPath);
+                    var manifest = ModManifestJson.ParseStrict(json, manifestPath);
+                    if (manifest == null)
+                    {
+                        continue;
+                    }
+
+                    scanned.Add(new ScannedModDirectory(Path.GetFullPath(dir), manifest, scanIndex++));
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(in LogChannels.ModLoader, $"Failed to load manifest from {dir}: {ex.Message}");
+                }
+            }
+
+            return scanned;
+        }
+
+        private void ResetLoadedState()
+        {
+            foreach (var mod in _loadedMods)
+            {
+                try { mod.OnUnload(); } catch { }
+            }
+            _loadedMods.Clear();
+
+            foreach (var ctx in _loadContexts)
+            {
+                try { ctx.Unload(); } catch { }
+            }
+            _loadContexts.Clear();
+
+            var staleMounts = new HashSet<string>(LoadedModIds, StringComparer.OrdinalIgnoreCase);
+            foreach (var id in _modDirectories.Keys)
+            {
+                staleMounts.Add(id);
+            }
+
+            foreach (var id in staleMounts)
+            {
+                _vfs.Unmount(id);
+            }
+
+            LoadedModIds.Clear();
+            _modDirectories.Clear();
+            _sharedAssemblies.Clear();
+            _activePlanLoadContext = null;
+        }
+
+        private static void ValidateResolvedPlanDependencies(
+            IReadOnlyList<ModManifest> orderedManifests,
+            IReadOnlyDictionary<string, int> orderById,
+            IReadOnlyDictionary<string, DependencyResolver.SemVersion> versionById)
+        {
+            for (int i = 0; i < orderedManifests.Count; i++)
+            {
+                var manifest = orderedManifests[i];
+                foreach (var dependency in manifest.Dependencies)
+                {
+                    var dependencyId = dependency.Key;
+                    if (!orderById.TryGetValue(dependencyId, out var dependencyIndex))
+                    {
+                        throw new InvalidOperationException(
+                            $"Resolved mod plan missing dependency: mod '{manifest.Name}' requires '{dependencyId}'.");
+                    }
+
+                    if (!DependencyResolver.SemVersionRange.TryParse(dependency.Value, out var range))
+                    {
+                        throw new InvalidOperationException(
+                            $"Invalid dependency version range '{dependency.Value}' for '{manifest.Name}' -> '{dependencyId}'.");
+                    }
+
+                    if (!range.Matches(versionById[dependencyId]))
+                    {
+                        throw new InvalidOperationException(
+                            $"Version mismatch: mod '{manifest.Name}' requires '{dependencyId}' {dependency.Value} but found {versionById[dependencyId]}.");
+                    }
+
+                    if (dependencyIndex >= i)
+                    {
+                        throw new InvalidOperationException(
+                            $"Launch plan order is invalid: Mod '{manifest.Name}' depends on '{dependencyId}', but the graph ordered '{dependencyId}' after '{manifest.Name}'.");
+                    }
+                }
             }
         }
 
@@ -159,9 +316,15 @@ namespace Ludots.Core.Modding
                 {
                     dllPath = Path.GetFullPath(dllPath);
                     Log.Info(in LogChannels.ModLoader, $"Loading DLL for {manifest.Name} at {dllPath}");
-                    var loadContext = new ModLoadContext(dllPath, ResolveSharedAssembly);
+                    var loadContext = _activePlanLoadContext ?? new ModLoadContext(ResolveSharedAssembly);
+                    if (_activePlanLoadContext == null)
+                    {
+                        _activePlanLoadContext = loadContext;
+                        _loadContexts.Add(loadContext);
+                    }
+
+                    loadContext.RegisterMainAssemblyPath(dllPath);
                     var assembly = loadContext.LoadFromAssemblyPath(dllPath);
-                    _loadContexts.Add(loadContext);
                     CacheSharedAssembly(assembly);
 
                     Type[] allTypes;
@@ -313,9 +476,17 @@ namespace Ludots.Core.Modding
             LoadedModIds.Clear();
             _modDirectories.Clear();
             _sharedAssemblies.Clear();
+            _activePlanLoadContext = null;
 
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }
+
+        private sealed record ValidatedResolvedMod(
+            string ModDirectory,
+            ModManifest Manifest,
+            DependencyResolver.SemVersion Version);
+
+        private sealed record ScannedModDirectory(string Directory, ModManifest Manifest, int CreationIndex);
     }
 }

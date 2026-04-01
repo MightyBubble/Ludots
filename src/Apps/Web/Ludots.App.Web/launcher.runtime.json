@@ -1,3 +1,4 @@
 {
-  "ModPaths": []
+  "LaunchGraphPath": "web.launch.graph.json",
+  "PlanSchemaVersion": 1
 }

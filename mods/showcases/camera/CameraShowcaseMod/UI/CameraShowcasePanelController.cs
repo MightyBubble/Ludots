@@ -1,3 +1,4 @@
+using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
@@ -36,9 +37,7 @@ namespace CameraShowcaseMod.UI
 
         private UiElementBuilder BuildRoot(GameEngine engine, string mapId, ViewModeManager? viewModeManager)
         {
-            string activeMode = engine.GlobalContext.TryGetValue(ViewModeManager.ActiveModeIdKey, out var modeObj) && modeObj is string modeId
-                ? modeId
-                : "map-default";
+            string activeMode = CoreInputRuntimeServices.GetActiveViewModeId(engine) ?? "map-default";
 
             return Ui.Card(
                 Ui.Text("Camera Showcase").FontSize(22f).Bold().Color("#F7FAFF"),

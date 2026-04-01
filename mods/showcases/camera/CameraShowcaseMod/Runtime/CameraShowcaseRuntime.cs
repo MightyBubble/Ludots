@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using CameraShowcaseMod.Input;
 using CameraShowcaseMod.UI;
+using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Runtime;
@@ -117,13 +118,7 @@ namespace CameraShowcaseMod.Runtime
 
         private static ViewModeManager? ResolveViewModeManager(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) &&
-                managerObj is ViewModeManager manager)
-            {
-                return manager;
-            }
-
-            return null;
+            return CoreInputRuntimeServices.GetViewModeManager(engine);
         }
 
         private static void ClearSelectionModeIfOwned(ViewModeManager? viewModeManager)

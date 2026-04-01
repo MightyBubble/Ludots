@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using Ludots.UI.Compose;
+using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
 
@@ -7,12 +9,19 @@ namespace EntityInfoPanelsMod.UI;
 
 public static class EntityInfoPanelUiComposer
 {
-    public static UiElementBuilder BuildLayer(EntityInfoPanelService service)
+    private const float EntityCollectionTileWidth = 148f;
+    private const float EntityCollectionTileHeight = 84f;
+    private const float EntityCollectionGridGap = 8f;
+    private const float EntityCollectionGridRowHeight = EntityCollectionTileHeight + EntityCollectionGridGap;
+
+    public static UiElementBuilder BuildLayer<TState>(EntityInfoPanelService service, ReactiveContext<TState> context)
     {
         if (service == null)
         {
             throw new ArgumentNullException(nameof(service));
         }
+
+        ArgumentNullException.ThrowIfNull(context);
 
         int visibleCount = service.GetVisibleUiCount();
         if (visibleCount <= 0)
@@ -24,7 +33,7 @@ public static class EntityInfoPanelUiComposer
         for (int i = 0; i < visibleCount; i++)
         {
             int slot = service.GetVisibleUiSlot(i);
-            wrappers[i] = WrapAnchoredPanel(service, slot, i);
+            wrappers[i] = WrapAnchoredPanel(service, context, slot, i);
         }
 
         return Ui.Column(wrappers)
@@ -34,10 +43,10 @@ public static class EntityInfoPanelUiComposer
             .ZIndex(48);
     }
 
-    private static UiElementBuilder WrapAnchoredPanel(EntityInfoPanelService service, int slot, int zIndex)
+    private static UiElementBuilder WrapAnchoredPanel<TState>(EntityInfoPanelService service, ReactiveContext<TState> context, int slot, int zIndex)
     {
         EntityInfoPanelLayout layout = service.GetLayout(slot);
-        UiElementBuilder card = BuildPanelCard(service, slot)
+        UiElementBuilder card = BuildPanelCard(service, context, slot)
             .Width(layout.Width)
             .Height(layout.Height);
 
@@ -60,7 +69,7 @@ public static class EntityInfoPanelUiComposer
         };
     }
 
-    private static UiElementBuilder BuildPanelCard(EntityInfoPanelService service, int slot)
+    private static UiElementBuilder BuildPanelCard<TState>(EntityInfoPanelService service, ReactiveContext<TState> context, int slot)
     {
         string closeText = service.ResolveTextTokenKey("entityinfo.action.close");
         if (service.GetKind(slot) == EntityInfoPanelKind.InsightBrief)
@@ -83,9 +92,13 @@ public static class EntityInfoPanelUiComposer
             .Align(UiAlignItems.Center)
             .Gap(10f);
 
-        UiElementBuilder body = service.GetKind(slot) == EntityInfoPanelKind.ComponentInspector
-            ? BuildComponentInspector(service, slot, handle)
-            : BuildGasInspector(service, slot, handle);
+        UiElementBuilder body = service.GetKind(slot) switch
+        {
+            EntityInfoPanelKind.ComponentInspector => BuildComponentInspector(service, slot, handle),
+            EntityInfoPanelKind.GasInspector => BuildGasInspector(service, slot, handle),
+            EntityInfoPanelKind.EntityCollectionInspector => BuildEntityCollectionInspector(service, context, slot),
+            _ => Ui.Column(),
+        };
 
         return Ui.Card(header, body)
             .Gap(10f)
@@ -318,6 +331,151 @@ public static class EntityInfoPanelUiComposer
             .FlexGrow(1f);
     }
 
+    private static UiElementBuilder BuildEntityCollectionInspector<TState>(EntityInfoPanelService service, ReactiveContext<TState> context, int slot)
+    {
+        int count = service.GetEntityCollectionCount(slot);
+        EntityInfoPanelLayout layout = service.GetLayout(slot);
+        string hostId = GetEntityCollectionGridHostId(slot);
+
+        if (count <= 0)
+        {
+            return Ui.Column(
+                    Ui.Text("Current viewed selection").FontSize(12f).Bold().Color("#F6E2AF"),
+                    Ui.Text("Waiting for active selection view.")
+                        .FontSize(11f)
+                        .Color("#9FB4C9")
+                        .WhiteSpace(UiWhiteSpace.Normal))
+                .Gap(8f)
+                .FlexGrow(1f);
+        }
+
+        float usableWidth = Math.Max(200f, layout.Width - 28f);
+        int columns = Math.Max(1, (int)MathF.Floor((usableWidth + EntityCollectionGridGap) / (EntityCollectionTileWidth + EntityCollectionGridGap)));
+        int rowCount = Math.Max(1, (count + columns - 1) / columns);
+        float viewportHeight = Math.Max(120f, layout.Height - 168f);
+        UiVirtualWindow window = context.GetVerticalVirtualWindow(
+            hostId,
+            rowCount,
+            EntityCollectionGridRowHeight,
+            viewportHeight,
+            overscan: 2);
+
+        var rows = new List<UiElementBuilder>();
+        if (window.LeadingSpacerExtent > 0.01f)
+        {
+            rows.Add(Ui.Spacer(window.LeadingSpacerExtent));
+        }
+
+        for (int rowIndex = window.StartIndex; rowIndex < window.EndIndexExclusive; rowIndex++)
+        {
+            rows.Add(BuildEntityCollectionGridRow(service, slot, rowIndex, columns));
+        }
+
+        if (window.TrailingSpacerExtent > 0.01f)
+        {
+            rows.Add(Ui.Spacer(window.TrailingSpacerExtent));
+        }
+
+        return Ui.Column(
+                Ui.Text("Current viewed selection").FontSize(12f).Bold().Color("#F6E2AF"),
+                Ui.Text($"{service.GetEntityCollectionViewKey(slot)} -> {service.GetEntityCollectionAliasKey(slot)} | {count} entities | {service.GetEntityCollectionCategoryCount(slot)} categories | rows {FormatVisibleRange(window)}")
+                    .Id($"{hostId}-summary")
+                    .FontSize(11f)
+                    .Color("#9FB4C9")
+                    .WhiteSpace(UiWhiteSpace.Normal),
+                BuildEntityCollectionCategories(service, slot),
+                Ui.ScrollView(rows.ToArray())
+                    .Id(hostId)
+                    .Height(viewportHeight)
+                    .Padding(6f)
+                    .Gap(0f)
+                    .Radius(12f)
+                    .Background("#111C28"))
+            .Gap(8f)
+            .FlexGrow(1f);
+    }
+
+    private static UiElementBuilder BuildEntityCollectionCategories(EntityInfoPanelService service, int slot)
+    {
+        int categoryCount = service.GetEntityCollectionCategoryCount(slot);
+        if (categoryCount <= 0)
+        {
+            return Ui.Text("No category buckets yet.")
+                .FontSize(10f)
+                .Color("#6F869B");
+        }
+
+        var categories = new UiElementBuilder[Math.Min(categoryCount, 8)];
+        for (int i = 0; i < categories.Length; i++)
+        {
+            service.TryGetEntityCollectionCategory(slot, i, out EntityCollectionCategorySummary category);
+            categories[i] = Ui.Text(category.ContainsPrimary ? $"{category.Label} x{category.Count} *" : $"{category.Label} x{category.Count}")
+                .FontSize(10f)
+                .Bold()
+                .Color(category.ContainsPrimary ? "#08131D" : "#D5E0EA")
+                .Padding(8f, 5f)
+                .Radius(999f)
+                .Background(category.ContainsPrimary ? "#F0C36B" : "#162533");
+        }
+
+        return Ui.Row(categories)
+            .Gap(6f)
+            .Wrap();
+    }
+
+    private static UiElementBuilder BuildEntityCollectionGridRow(EntityInfoPanelService service, int slot, int rowIndex, int columns)
+    {
+        var tiles = new UiElementBuilder[columns];
+        int startIndex = rowIndex * columns;
+        for (int column = 0; column < columns; column++)
+        {
+            int entityIndex = startIndex + column;
+            tiles[column] = service.TryGetEntityCollectionRow(slot, entityIndex, out EntityCollectionPanelRow row)
+                ? BuildEntityCollectionTile(slot, row)
+                : Ui.Panel().Width(EntityCollectionTileWidth).Height(EntityCollectionTileHeight);
+        }
+
+        return Ui.Row(tiles)
+            .Gap(EntityCollectionGridGap)
+            .Height(EntityCollectionGridRowHeight);
+    }
+
+    private static UiElementBuilder BuildEntityCollectionTile(int slot, EntityCollectionPanelRow row)
+    {
+        return Ui.Card(
+                Ui.Row(
+                        Ui.Text($"{row.Index + 1:000}").FontSize(10f).Color("#60758A"),
+                        Ui.Text($"#{row.EntityId}").FontSize(11f).Bold().Color("#F6E2AF"),
+                        row.IsPrimary
+                            ? Ui.Text("PRIMARY")
+                                .FontSize(9f)
+                                .Bold()
+                                .Color("#08131D")
+                                .Padding(6f, 3f)
+                                .Radius(999f)
+                                .Background("#F6E2AF")
+                            : Ui.Panel())
+                    .Gap(6f)
+                    .Align(UiAlignItems.Center),
+                Ui.Text(row.Name)
+                    .Id($"{GetEntityCollectionGridHostId(slot)}-tile-{row.Index:0000}-name")
+                    .FontSize(12f)
+                    .Bold()
+                    .Color("#F5F7FA")
+                    .WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text(row.AttributesSummary)
+                    .Id($"{GetEntityCollectionGridHostId(slot)}-tile-{row.Index:0000}-attrs")
+                    .FontSize(10f)
+                    .Color("#9FB4C9")
+                    .WhiteSpace(UiWhiteSpace.Normal))
+            .Width(EntityCollectionTileWidth)
+            .Height(EntityCollectionTileHeight)
+            .Padding(10f)
+            .Radius(12f)
+            .Background(row.IsPrimary ? "#183247" : "#162230")
+            .Border(1f, row.IsPrimary ? new UiColor(0x73, 0x95, 0xB8) : new UiColor(0x2B, 0x41, 0x58));
+    }
+
     private static UiElementBuilder BuildToggleButton(string label, bool active, Action<UiActionContext> onClick)
     {
         return Ui.Button(label, onClick)
@@ -326,6 +484,18 @@ public static class EntityInfoPanelUiComposer
             .Background(active ? "#335872" : "#172433")
             .Color(active ? "#F6E2AF" : "#C8D5E2");
     }
+
+    private static string FormatVisibleRange(UiVirtualWindow window)
+    {
+        if (window.TotalCount <= 0 || window.VisibleCount <= 0)
+        {
+            return "0-0";
+        }
+
+        return $"{window.StartIndex + 1}-{window.EndIndexExclusive}";
+    }
+
+    private static string GetEntityCollectionGridHostId(int slot) => $"entity-info-collection-grid-{slot:00}";
 
     private static UiColor ParseHexColor(string value, UiColor fallback)
     {

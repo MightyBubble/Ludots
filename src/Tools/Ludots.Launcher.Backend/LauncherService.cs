@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -8,6 +9,14 @@ namespace Ludots.Launcher.Backend;
 
 public sealed class LauncherService
 {
+    private const int LaunchGraphSchemaVersion = 1;
+    private static readonly JsonSerializerOptions BootstrapJsonWriteOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions GraphJsonWriteOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     private sealed record ActiveLaunchProcessRecord(
         int Pid,
         long StartedAtUtcTicks,
@@ -282,6 +291,7 @@ public sealed class LauncherService
             .ToList();
         var config = LoadConfig();
         var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
+        WriteLaunchGraphDocument(resolveResult.Plan);
         return await BuildPlannedModsAsync(resolveResult.Plan, config, ct);
     }
 
@@ -329,6 +339,19 @@ public sealed class LauncherService
         return WriteBootstrap(selectors, platformId);
     }
 
+    public string WriteLaunchGraph(
+        IEnumerable<string> selectors,
+        string? adapterId = null,
+        LauncherBuildMode buildMode = LauncherBuildMode.Never)
+    {
+        var resolvedSelectors = selectors
+            .Where(selector => !string.IsNullOrWhiteSpace(selector))
+            .ToList();
+        var config = LoadConfig();
+        var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
+        return WriteLaunchGraphDocument(resolveResult.Plan);
+    }
+
     public async Task<LauncherLaunchResult> LaunchAsync(string platformId, IEnumerable<string> modIds)
     {
         var selectors = modIds
@@ -348,7 +371,17 @@ public sealed class LauncherService
             .ToList();
         var config = LoadConfig();
         var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
-        return WriteRuntimeBootstrap(resolveResult.Plan);
+        return WriteBootstrap(resolveResult.Plan);
+    }
+
+    public string WriteBootstrap(LauncherLaunchPlan plan)
+    {
+        if (plan == null)
+        {
+            throw new ArgumentNullException(nameof(plan));
+        }
+
+        return WriteRuntimeBootstrap(plan);
     }
 
     public async Task<LauncherLaunchResult> LaunchAsync(
@@ -396,7 +429,9 @@ public sealed class LauncherService
     {
         var config = LoadConfig();
         var catalog = BuildCatalog(config);
-        return ResolvePlan(selectors.Where(selector => !string.IsNullOrWhiteSpace(selector)).ToList(), adapterId, buildMode, config, catalog, LoadPresets());
+        var result = ResolvePlan(selectors.Where(selector => !string.IsNullOrWhiteSpace(selector)).ToList(), adapterId, buildMode, config, catalog, LoadPresets());
+        WriteLaunchGraphDocument(result.Plan);
+        return result;
     }
 
     public Task<string> ExportSdkAsync(CancellationToken ct = default)
@@ -504,6 +539,7 @@ public sealed class LauncherService
             ? ResolveSelectedAdapterId(config, LoadPreferences())
             : adapterId!.Trim().ToLowerInvariant();
         var profile = GetPlatformProfile(resolvedAdapterId);
+        var buildModeText = buildMode.ToString().ToLowerInvariant();
         var plannedMods = ordered
             .Select(entry => new LauncherPlannedMod(
                 entry.Info.Id,
@@ -514,21 +550,51 @@ public sealed class LauncherService
                 entry.Info.BuildState,
                 entry.Info.BindingNames))
             .ToList();
+        var rootModIds = roots
+            .Select(entry => entry.Info.Id)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var orderedModIds = ordered
+            .Select(entry => entry.Info.Id)
+            .ToList();
         var diagnostics = BuildPlanDiagnostics(roots, ordered);
+        var adapterDescriptor = BuildAdapterDescriptor(profile);
+        var bootstrapArtifactPath = Path.Combine(profile.OutputDirectory, profile.RuntimeBootstrapFileName);
+        var appAssemblyPath = ResolveAppAssemblyPath(profile);
+        var graphArtifactPath = ResolveGraphArtifactPath(profile);
+        var generatedAtUtc = DateTimeOffset.UtcNow.ToString("O");
+        var planFingerprint = ComputePlanFingerprint(
+            adapterDescriptor,
+            buildModeText,
+            selectors,
+            rootModIds,
+            orderedModIds,
+            plannedMods,
+            "file",
+            bootstrapArtifactPath,
+            graphArtifactPath,
+            profile.OutputDirectory,
+            appAssemblyPath,
+            profile.LaunchUrl);
 
         var plan = new LauncherLaunchPlan(
             profile.Id,
-            buildMode.ToString().ToLowerInvariant(),
+            buildModeText,
             selectors,
-            roots.Select(entry => entry.Info.Id).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
-            ordered.Select(entry => entry.Info.Id).ToList(),
+            rootModIds,
+            orderedModIds,
             plannedMods,
             "file",
-            Path.Combine(profile.OutputDirectory, profile.RuntimeBootstrapFileName),
+            bootstrapArtifactPath,
             profile.OutputDirectory,
-            ResolveAppAssemblyPath(profile),
+            appAssemblyPath,
             profile.LaunchUrl,
-            diagnostics);
+            diagnostics,
+            adapterDescriptor,
+            LaunchGraphSchemaVersion,
+            generatedAtUtc,
+            planFingerprint,
+            graphArtifactPath);
 
         return new LauncherResolveResult(plan, catalog.Entries.Select(entry => entry.Info).ToList());
     }
@@ -903,6 +969,70 @@ public sealed class LauncherService
         return Path.Combine(profile.OutputDirectory, assemblyName);
     }
 
+    private static LauncherAdapterDescriptor BuildAdapterDescriptor(LauncherPlatformProfile profile)
+    {
+        var isWeb = string.Equals(profile.Id, LauncherPlatformIds.Web, StringComparison.OrdinalIgnoreCase);
+        return new LauncherAdapterDescriptor(
+            profile.Id,
+            profile.Name,
+            isWeb ? "web" : "desktop",
+            isWeb ? "dotnet+npm" : "dotnet",
+            "launcher.runtime.v1",
+            profile.AppProjectPath,
+            profile.OutputDirectory,
+            profile.ClientProjectDirectory,
+            profile.ClientDistributionDirectory,
+            profile.LaunchUrl,
+            profile.RuntimeBootstrapFileName);
+    }
+
+    private string ResolveGraphArtifactPath(LauncherPlatformProfile profile)
+    {
+        var fileName = $"{profile.Id}.launch.graph.json";
+        return Path.Combine(_repoRoot, "artifacts", "launcher", fileName);
+    }
+
+    private static string ComputePlanFingerprint(
+        LauncherAdapterDescriptor adapter,
+        string buildMode,
+        IReadOnlyList<string> selectors,
+        IReadOnlyList<string> rootModIds,
+        IReadOnlyList<string> orderedModIds,
+        IReadOnlyList<LauncherPlannedMod> plannedMods,
+        string bootstrapArtifactStrategy,
+        string bootstrapArtifactPath,
+        string graphArtifactPath,
+        string appOutputDirectory,
+        string appAssemblyPath,
+        string launchUrl)
+    {
+        var payload = new PlanFingerprintPayload(
+            LaunchGraphSchemaVersion,
+            adapter,
+            buildMode,
+            selectors.ToList(),
+            rootModIds.ToList(),
+            orderedModIds.ToList(),
+            plannedMods
+                .Select(mod => new PlanFingerprintModPayload(
+                    mod.Id,
+                    mod.RootPath,
+                    mod.ProjectPath,
+                    mod.MainAssemblyPath,
+                    mod.Kind.ToString(),
+                    mod.BindingNames.ToList()))
+                .ToList(),
+            bootstrapArtifactStrategy,
+            bootstrapArtifactPath,
+            graphArtifactPath,
+            appOutputDirectory,
+            appAssemblyPath,
+            launchUrl);
+        var json = JsonSerializer.Serialize(payload);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
     private CatalogIndex BuildCatalog(LauncherConfig config)
     {
         var sources = LauncherWorkspaceSourceResolver.ResolveSources(_repoRoot, config);
@@ -1233,13 +1363,49 @@ public sealed class LauncherService
 
     private string WriteRuntimeBootstrap(LauncherLaunchPlan plan)
     {
+        var graphPath = WriteLaunchGraphDocument(plan);
         Directory.CreateDirectory(plan.AppOutputDirectory);
-        var modPaths = plan.Mods
-            .Select(mod => Path.GetRelativePath(plan.AppOutputDirectory, mod.RootPath).Replace('\\', '/'))
-            .ToArray();
-        var json = JsonSerializer.Serialize(new { ModPaths = modPaths }, new JsonSerializerOptions { WriteIndented = true });
+        var graphRelativePath = Path.GetRelativePath(plan.AppOutputDirectory, graphPath).Replace('\\', '/');
+        var json = JsonSerializer.Serialize(new
+        {
+            LaunchGraphPath = graphRelativePath,
+            LaunchGraphFullPath = graphPath,
+            PlanFingerprint = plan.PlanFingerprint,
+            PlanSchemaVersion = plan.SchemaVersion,
+            PlanGeneratedAtUtc = plan.GeneratedAtUtc
+        }, BootstrapJsonWriteOptions);
         File.WriteAllText(plan.BootstrapArtifactPath, json);
         return plan.BootstrapArtifactPath;
+    }
+
+    private string WriteLaunchGraphDocument(LauncherLaunchPlan plan)
+    {
+        var document = new LauncherGraphDocument(
+            plan.SchemaVersion,
+            plan.GeneratedAtUtc,
+            plan.PlanFingerprint,
+            plan.Adapter,
+            plan.BuildMode,
+            plan.Selectors,
+            plan.RootModIds,
+            plan.OrderedModIds,
+            plan.Mods,
+            new LauncherRuntimeArtifacts(
+                plan.BootstrapArtifactStrategy,
+                plan.BootstrapArtifactPath,
+                plan.GraphArtifactPath,
+                plan.AppOutputDirectory,
+                plan.AppAssemblyPath,
+                plan.LaunchUrl),
+            plan.Diagnostics);
+        var directory = Path.GetDirectoryName(plan.GraphArtifactPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        File.WriteAllText(plan.GraphArtifactPath, JsonSerializer.Serialize(document, GraphJsonWriteOptions));
+        return plan.GraphArtifactPath;
     }
 
     private void ReplacePreviousActiveProcess(LauncherLaunchPlan plan)
@@ -1685,6 +1851,29 @@ public sealed class LauncherService
 
         return RunProcessAsync("npm", arguments, workingDirectory, timeoutMs);
     }
+
+    private sealed record PlanFingerprintModPayload(
+        string Id,
+        string RootPath,
+        string ProjectPath,
+        string MainAssemblyPath,
+        string Kind,
+        IReadOnlyList<string> BindingNames);
+
+    private sealed record PlanFingerprintPayload(
+        int SchemaVersion,
+        LauncherAdapterDescriptor Adapter,
+        string BuildMode,
+        IReadOnlyList<string> Selectors,
+        IReadOnlyList<string> RootModIds,
+        IReadOnlyList<string> OrderedModIds,
+        IReadOnlyList<PlanFingerprintModPayload> PlannedMods,
+        string BootstrapArtifactStrategy,
+        string BootstrapArtifactPath,
+        string GraphArtifactPath,
+        string AppOutputDirectory,
+        string AppAssemblyPath,
+        string LaunchUrl);
 
     private sealed record CatalogEntry(LauncherModInfo Info, ModManifest Manifest);
     private sealed record GameConfigFragment(string Source, string? OwnerModId, bool IsRootSelection, JsonObject Content);

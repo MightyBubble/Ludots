@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Selection;
@@ -291,8 +292,7 @@ namespace Navigation2DPlaygroundMod.UI
         private void SwitchViewMode(string modeId)
         {
             GameEngine engine = RequireEngine();
-            if (engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) &&
-                managerObj is ViewModeManager manager)
+            if (CoreInputRuntimeServices.TryGetViewModeManager(engine, out var manager))
             {
                 manager.SwitchTo(modeId);
                 SyncMountedRoot();
@@ -394,9 +394,7 @@ namespace Navigation2DPlaygroundMod.UI
 
         private static string ResolveActiveModeId(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(ViewModeManager.ActiveModeIdKey, out var modeObj) && modeObj is string modeId
-                ? modeId
-                : "map-default";
+            return CoreInputRuntimeServices.GetActiveViewModeId(engine) ?? "map-default";
         }
 
         private string[] ResolveSelectedIds(GameEngine engine)

@@ -66,6 +66,7 @@ using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Registry;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Hosting;
 
 namespace Ludots.Core.Engine
 {
@@ -157,13 +158,21 @@ namespace Ludots.Core.Engine
         // GAS
         public GameplayEventBus EventBus { get; private set; } // Added EventBus
 
-        public Dictionary<string, object> GlobalContext { get; } = new Dictionary<string, object>();
+        private readonly TypedServiceScope _engineServices = new("engine");
+
+        public Dictionary<string, object> GlobalContext => _engineServices.LegacyStore;
 
         public void SetService<T>(ServiceKey<T> key, T value)
-            => GlobalContext[key.Name] = value;
+            => _engineServices.Set(key, value);
 
         public T GetService<T>(ServiceKey<T> key)
-            => GlobalContext.TryGetValue(key.Name, out var v) && v is T t ? t : default;
+            => _engineServices.GetOrDefault(key);
+
+        public bool TryGetService<T>(ServiceKey<T> key, out T value)
+            => _engineServices.TryGet(key, out value);
+
+        public bool RemoveService<T>(ServiceKey<T> key)
+            => _engineServices.Remove(key);
 
         public GameSynchronizationContext SyncContext { get; private set; }
 
@@ -222,11 +231,7 @@ namespace Ludots.Core.Engine
             ctx.Set(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
             ctx.Set(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
             ctx.Set(CoreServiceKeys.SpatialQueryService, SpatialQueries);
-
-            foreach (var kvp in GlobalContext)
-            {
-                ctx.Set(kvp.Key, kvp.Value);
-            }
+            ctx.MergeFrom(_engineServices);
 
             return ctx;
         }
@@ -242,6 +247,21 @@ namespace Ludots.Core.Engine
 
         public void InitializeWithConfigPipeline(List<string> modPaths, string assetsRoot)
         {
+            InitializeWithConfigPipelineInternal(modPaths, null, assetsRoot);
+        }
+
+        public void InitializeWithConfigPipeline(ResolvedModLoadPlan modPlan, string assetsRoot)
+        {
+            if (modPlan == null)
+            {
+                throw new ArgumentNullException(nameof(modPlan));
+            }
+
+            InitializeWithConfigPipelineInternal(null, modPlan, assetsRoot);
+        }
+
+        private void InitializeWithConfigPipelineInternal(List<string>? modPaths, ResolvedModLoadPlan? modPlan, string assetsRoot)
+        {
             // Early log bootstrap with console backend — will be upgraded after config merge
             if (Diagnostics.Log.Backend is NullLogBackend)
                 Diagnostics.Log.Initialize(new ConsoleLogBackend());
@@ -254,6 +274,16 @@ namespace Ludots.Core.Engine
             // Setup conflict report for mod registration tracing
             ConflictReport = new RegistrationConflictReport();
             Ludots.Core.Config.ComponentRegistry.SetConflictReport(ConflictReport);
+            SetService(CoreServiceKeys.Engine, this);
+            SetService(CoreServiceKeys.RegistrationConflictReport, ConflictReport);
+            if (modPlan != null)
+            {
+                SetService(CoreServiceKeys.ModLoadPlan, modPlan);
+            }
+            else
+            {
+                RemoveService(CoreServiceKeys.ModLoadPlan);
+            }
 
             // 1. Setup Infrastructure (VFS, ModLoader)
             VFS = new VirtualFileSystem();
@@ -271,8 +301,24 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TriggerDecoratorRegistry, TriggerDecoratorRegistry);
 
             // 2. Load Mods first (so ConfigPipeline can access their game.json)
-            if (modPaths != null && modPaths.Count > 0)
+            if (modPlan != null && modPlan.OrderedMods.Count > 0)
             {
+                if (!string.IsNullOrWhiteSpace(modPlan.PlanFingerprint))
+                {
+                    Diagnostics.Log.Info(
+                        in LogChannels.Engine,
+                        $"Applying launcher-resolved mod plan: fingerprint={modPlan.PlanFingerprint}, schema={modPlan.SchemaVersion?.ToString() ?? "explicit"}, mods={modPlan.OrderedMods.Count}");
+                }
+                else
+                {
+                    Diagnostics.Log.Info(in LogChannels.Engine, $"Applying explicit mod plan: mods={modPlan.OrderedMods.Count}");
+                }
+
+                ModLoader.LoadResolvedPlan(modPlan.OrderedMods);
+            }
+            else if (modPaths != null && modPaths.Count > 0)
+            {
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Resolving mod dependencies from explicit mod paths: mods={modPaths.Count}");
                 ModLoader.LoadMods(modPaths);
             }
             
@@ -299,7 +345,9 @@ namespace Ludots.Core.Engine
 
             // 4. Setup ECS & Session using merged config values
             InitializeWorld(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
+            SetService(CoreServiceKeys.World, World);
             WorldMap = new WorldMap(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
+            SetService(CoreServiceKeys.WorldMap, WorldMap);
             GameSession = new GameSession();
             SetService(CoreServiceKeys.GameSession, GameSession);
             int gridCellSizeCm = MergedConfig.GridCellSizeCm;
@@ -1288,14 +1336,13 @@ namespace Ludots.Core.Engine
             }
             else
             {
-                GlobalContext.Remove(CoreServiceKeys.HexMetrics.Name);
+                RemoveService(CoreServiceKeys.HexMetrics);
                 SetService(CoreServiceKeys.LoadedChunks, board.LoadedChunks);
                 HexGridAOI = null;
                 loadedChunks = board.LoadedChunks;
             }
 
-            if (GlobalContext.TryGetValue(CoreServiceKeys.Navigation2DRuntime.Name, out var navigationObj) &&
-                navigationObj is Navigation2DRuntime navigation2dRuntime)
+            if (TryGetService(CoreServiceKeys.Navigation2DRuntime, out Navigation2DRuntime navigation2dRuntime))
             {
                 navigation2dRuntime.BindLoadedChunks(loadedChunks);
             }
@@ -1548,9 +1595,9 @@ namespace Ludots.Core.Engine
 
         private void ClearNavServices()
         {
-            GlobalContext.Remove(CoreServiceKeys.NavMeshBakeConfig.Name);
-            GlobalContext.Remove(CoreServiceKeys.NavMeshProfiles.Name);
-            GlobalContext.Remove(CoreServiceKeys.NavQueryServices.Name);
+            RemoveService(CoreServiceKeys.NavMeshBakeConfig);
+            RemoveService(CoreServiceKeys.NavMeshProfiles);
+            RemoveService(CoreServiceKeys.NavQueryServices);
         }
 
         private void LoadPathingForSession(MapSession session)
@@ -1593,9 +1640,9 @@ namespace Ludots.Core.Engine
 
         private void ClearPathingServices()
         {
-            GlobalContext.Remove(CoreServiceKeys.PathingConfig.Name);
-            GlobalContext.Remove(CoreServiceKeys.PathStore.Name);
-            GlobalContext.Remove(CoreServiceKeys.PathService.Name);
+            RemoveService(CoreServiceKeys.PathingConfig);
+            RemoveService(CoreServiceKeys.PathStore);
+            RemoveService(CoreServiceKeys.PathService);
         }
 
         private static NodeGraph BuildPathingGraph(IBoard board)
@@ -1760,15 +1807,7 @@ namespace Ludots.Core.Engine
             _cooperativeSimulation?.Reset();
             if (Pacemaker is RealtimePacemaker realtime) realtime.Reset();
 
-            var ctx = new ScriptContext();
-            ctx.Set(CoreServiceKeys.World, World);
-            ctx.Set(CoreServiceKeys.WorldMap, WorldMap);
-            ctx.Set(CoreServiceKeys.GameSession, GameSession);
-            ctx.Set(CoreServiceKeys.Engine, this);
-            ctx.Set(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
-            ctx.Set(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
-            ctx.Set(CoreServiceKeys.SpatialQueryService, SpatialQueries);
-            foreach (var kvp in GlobalContext) ctx.Set(kvp.Key, kvp.Value);
+            var ctx = CreateContext();
 
             Diagnostics.Log.Info(in LogChannels.Engine, "Firing GameStart event...");
             CompleteLifecycleEvent(TriggerManager.FireEventAsync(GameEvents.GameStart, ctx));

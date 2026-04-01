@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
+using CoreInputMod;
 using CoreInputMod.Triggers;
 using InteractionShowcaseMod.Runtime;
 using InteractionShowcaseMod.Systems;
@@ -75,6 +76,9 @@ namespace InteractionShowcaseMod.Triggers
             engine.RegisterSystem(
                 new InteractionShowcaseStressSystem(engine, spawnQueue, stressOrders, _stressTelemetry),
                 SystemGroup.InputCollection);
+            engine.RegisterSystem(
+                new InteractionShowcaseSelectionDockSystem(engine, _runtime),
+                SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new InteractionShowcasePanelPresentationSystem(engine, _runtime));
 
             WireSelectionFeedback(context, engine);
@@ -84,8 +88,7 @@ namespace InteractionShowcaseMod.Triggers
 
         private static void WireSelectionFeedback(ScriptContext context, GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(InstallCoreInputOnGameStartTrigger.EntitySelectionCallbacksKey, out var callbacksObj) ||
-                callbacksObj is not List<Action<WorldCmInt2, Entity>> selectionCallbacks)
+            if (!CoreInputRuntimeServices.TryGetEntitySelectionCallbacks(engine, out List<Action<WorldCmInt2, Entity>> selectionCallbacks))
             {
                 return;
             }

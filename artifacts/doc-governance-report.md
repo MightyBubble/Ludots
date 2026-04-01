@@ -1,20 +1,8 @@
 # Documentation Governance Report
 
 Date: 2026-04-01
-Scope:
-- `docs/architecture/README.md`
-- `docs/architecture/entity_insight_panel_architecture.md`
-- `docs/architecture/item_inventory_equipment_architecture.md`
-- `scripts/acceptance/run-item-system-showcase-acceptance.ps1`
-- `scripts/acceptance/run-item-system-showcase-raylib.ps1`
-- `scripts/acceptance/run-item-loadout-showcase-acceptance.ps1`
-- `scripts/acceptance/run-weapon-bench-showcase-acceptance.ps1`
-- `scripts/acceptance/run-forge-socket-showcase-acceptance.ps1`
-- `scripts/acceptance/run-raid-loop-showcase-acceptance.ps1`
-Ruleset:
-- `docs/conventions/04_documentation_governance.md`
-- `C:/Users/123/.codex/skills/ludots-doc-governance/references/doc-governance-checklist.md`
-- `C:/Users/123/.codex/skills/ludots-doc-governance/references/link-validation.md`
+Scope: `docs/architecture/*.md`, `docs/reference/cli_runbook.md`, launcher workspace UX surface
+Ruleset: `ludots-doc-governance` checklist + SSOT/user-first remediation goals
 
 ## Summary
 - Total findings: 0
@@ -24,18 +12,15 @@ Ruleset:
 - P3: 0
 
 ## Findings
-
-No governance violations remain in the merged architecture-entry and item-showcase acceptance scope.
-
-Validated items:
-- `docs/architecture/README.md` keeps one current SSOT entry list and now indexes both `entity_insight_panel_architecture.md` and `item_inventory_equipment_architecture.md`.
-- Added architecture docs use repository-relative links only.
-- Item showcase acceptance script references remain repository-relative and align with the current wrapper-script governance requirements.
+- No open documentation-governance findings remain in the remediated scope.
+- The launcher SSOT page now exists, startup/runbook language distinguishes current graph from future lock, the canonical launcher URL is aligned with wrapper and bridge behavior, the mod runtime docs now record the single-plan `ModLoadContext` policy, and skills docs no longer blur layer directories with the `skills/contracts/` contract directory.
 
 ## Fix Order
-1. Keep `docs/architecture/README.md` as the single architecture entry index.
-2. Extend the existing item and entity-insight SSOT docs instead of creating parallel overview files.
-3. Re-run governance checks when acceptance scripts or architecture entry links change.
+1. Keep code and docs synchronized as launcher graph fields evolve.
+2. Introduce a distinct lock contract only when code support lands.
+3. Continue moving product UX toward selector/preset intent and keep project-file details in advanced surfaces only.
 
 ## Residual Risks
-- This report covers the merged entity insight and item-system slices only; unrelated historical docs and artifacts were not re-audited in this run.
+- Launcher graph is now both documented and consumed through bootstrap metadata, but a distinct lock contract still does not exist; future lock rollout must update code and docs together.
+- Some advanced CLI commands still expose project hints for professional users; this is expected, but those details should remain out of default creator-facing flows.
+- Direct-debug/test code paths still exist for explicit `modPaths`; those are intentional compatibility paths, but product docs must continue to keep them outside the default user workflow.

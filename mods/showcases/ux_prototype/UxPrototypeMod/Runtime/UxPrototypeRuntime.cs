@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Arch.Core;
+using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Runtime;
@@ -161,10 +162,7 @@ internal sealed class UxPrototypeRuntime
 
     private static ViewModeManager? ResolveViewModeManager(GameEngine engine)
     {
-        return engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) &&
-               managerObj is ViewModeManager manager
-            ? manager
-            : null;
+        return CoreInputRuntimeServices.GetViewModeManager(engine);
     }
 
     private static void EnsureDefaultMode(ViewModeManager? viewModeManager)

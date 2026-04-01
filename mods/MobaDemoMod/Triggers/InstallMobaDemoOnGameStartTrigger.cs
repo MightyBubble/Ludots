@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
-using Arch.Core;
+using Arch.Core;
+using CoreInputMod;
 using CoreInputMod.Triggers;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Config;
@@ -85,8 +86,7 @@ namespace MobaDemoMod.Triggers
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var cmdObj) && cmdObj is PresentationCommandBuffer pcb)
                 cmdBuffer = pcb;
 
-            if (engine.GlobalContext.TryGetValue(InstallCoreInputOnGameStartTrigger.EntitySelectionCallbacksKey, out var selObj) &&
-                selObj is List<System.Action<WorldCmInt2, Entity>> selectionCallbacks)
+            if (CoreInputRuntimeServices.TryGetEntitySelectionCallbacks(engine, out List<System.Action<WorldCmInt2, Entity>> selectionCallbacks))
             {
                 var capturedCmdBuffer = cmdBuffer;
                 var perfReg = context.Get(CoreServiceKeys.PerformerDefinitionRegistry) as PerformerDefinitionRegistry;
@@ -112,8 +112,7 @@ namespace MobaDemoMod.Triggers
                 });
             }
 
-            if (engine.GlobalContext.TryGetValue(InstallCoreInputOnGameStartTrigger.SelectionTriggeredCallbacksKey, out var trigObj) &&
-                trigObj is List<System.Action<SelectionRequest, WorldCmInt2>> triggeredCallbacks)
+            if (CoreInputRuntimeServices.TryGetSelectionTriggeredCallbacks(engine, out List<System.Action<SelectionRequest, WorldCmInt2>> triggeredCallbacks))
             {
                 var capturedMarkerBuffer = markerBuffer;
                 var meshReg = context.Get(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry;

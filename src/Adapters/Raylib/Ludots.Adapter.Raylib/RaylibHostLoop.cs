@@ -92,21 +92,21 @@ namespace Ludots.Adapter.Raylib
                 var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, presentationTiming);
 
                 var viewController = new RaylibViewController(cameraAdapter);
-                engine.GlobalContext[CoreServiceKeys.ViewController.Name] = viewController;
+                engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
 
                 var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
                 var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
                 screenProjector.BindPresenter(cameraPresenter);
                 screenRayProvider.BindPresenter(cameraPresenter);
-                engine.GlobalContext[CoreServiceKeys.ScreenProjector.Name] = screenProjector;
-                engine.GlobalContext[CoreServiceKeys.ScreenRayProvider.Name] = screenRayProvider;
+                engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
+                engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
                 var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController, presentationTiming);
                 engine.RegisterPresentationSystem(cullingSystem);
-                engine.GlobalContext[CoreServiceKeys.CameraCullingDebugState.Name] = cullingSystem.DebugState;
+                engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
                 var renderCameraDebug = new RenderCameraDebugState();
-                engine.GlobalContext[CoreServiceKeys.RenderCameraDebugState.Name] = renderCameraDebug;
+                engine.SetService(CoreServiceKeys.RenderCameraDebugState, renderCameraDebug);
 
                 engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
                 var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
@@ -115,8 +115,8 @@ namespace Ludots.Adapter.Raylib
                 PresentationOverlaySceneBuilder? overlaySceneBuilder = null;
                 PresentationOverlayScene? overlayScene = null;
                 ScreenOverlayBuffer? screenOverlayBuffer = null;
-                if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationWorldHudBuffer.Name, out var whObj) && whObj is WorldHudBatchBuffer worldHud &&
-                    engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationScreenHudBuffer.Name, out var shObj) && shObj is ScreenHudBatchBuffer screenHud)
+                if (engine.TryGetService(CoreServiceKeys.PresentationWorldHudBuffer, out WorldHudBatchBuffer worldHud) &&
+                    engine.TryGetService(CoreServiceKeys.PresentationScreenHudBuffer, out ScreenHudBatchBuffer screenHud))
                 {
                     WorldHudStringTable? worldHudStrings = engine.GetService(CoreServiceKeys.PresentationWorldHudStrings);
                     PresentationTextCatalog? textCatalog = engine.GetService(CoreServiceKeys.PresentationTextCatalog);
@@ -199,7 +199,7 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         presentationTiming?.ObserveUiInput(uiInputMs);
-                        engine.GlobalContext[CoreServiceKeys.UiCaptured.Name] = uiCaptured;
+                        engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
 
                         engine.Tick(dt);
 
@@ -258,10 +258,8 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         if (drawPrimitives &&
-                            engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationPrimitiveDrawBuffer.Name, out var drawObj) &&
-                            engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationMeshAssetRegistry.Name, out var meshObj) &&
-                            drawObj is PrimitiveDrawBuffer draw &&
-                            meshObj is MeshAssetRegistry meshes)
+                            engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
+                            engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
                         {
                             if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
                             {
@@ -283,15 +281,14 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         // Draw ground overlays (range circles, cones, etc.)
-                        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.GroundOverlayBuffer.Name, out var goObj) &&
-                            goObj is GroundOverlayBuffer overlays && overlays.Count > 0)
+                        if (engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
+                            overlays.Count > 0)
                         {
                             DrawGroundOverlays(overlays);
                         }
 
                         if (drawDebugDraw &&
-                            engine.GlobalContext.TryGetValue(CoreServiceKeys.DebugDrawCommandBuffer.Name, out var ddObj) &&
-                            ddObj is DebugDrawCommandBuffer dd)
+                            engine.TryGetService(CoreServiceKeys.DebugDrawCommandBuffer, out DebugDrawCommandBuffer dd))
                         {
                             debugDrawRenderer.Draw(dd);
                         }
@@ -479,28 +476,27 @@ namespace Ludots.Adapter.Raylib
 
         private static void ValidateRequiredContextBeforeLoop(GameEngine engine)
         {
-            ValidateKey<IScreenProjector>(engine, CoreServiceKeys.ScreenProjector.Name);
-            ValidateKey<IScreenRayProvider>(engine, CoreServiceKeys.ScreenRayProvider.Name);
-            ValidateKey<RenderDebugState>(engine, CoreServiceKeys.RenderDebugState.Name);
+            ValidateKey(engine, CoreServiceKeys.ScreenProjector);
+            ValidateKey(engine, CoreServiceKeys.ScreenRayProvider);
+            ValidateKey(engine, CoreServiceKeys.RenderDebugState);
         }
 
-        private static void ValidateKey<T>(GameEngine engine, string key)
+        private static void ValidateKey<T>(GameEngine engine, ServiceKey<T> key)
         {
-            if (!engine.GlobalContext.TryGetValue(key, out var obj) || obj is not T)
+            if (!engine.TryGetService(key, out _))
             {
-                throw new InvalidOperationException($"GlobalContext missing or invalid: {key} expected {typeof(T).FullName}");
+                throw new InvalidOperationException($"Required service missing or invalid: {key.Name} expected {typeof(T).FullName}");
             }
         }
 
         private static RenderDebugState ResolveRenderDebugState(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out var obj) &&
-                obj is RenderDebugState state)
+            if (engine.TryGetService(CoreServiceKeys.RenderDebugState, out RenderDebugState state))
             {
                 return state;
             }
 
-            throw new InvalidOperationException($"GlobalContext missing or invalid: {CoreServiceKeys.RenderDebugState.Name} expected {typeof(RenderDebugState).FullName}");
+            throw new InvalidOperationException($"Required service missing or invalid: {CoreServiceKeys.RenderDebugState.Name} expected {typeof(RenderDebugState).FullName}");
         }
 
         private static bool UpdateInput(UIRoot uiRoot)
@@ -558,8 +554,7 @@ namespace Ludots.Adapter.Raylib
             string pointerSummary = "pointer=(n/a)";
             string liveSelectSummary = "liveSelect=missing";
             string liveCommandSummary = "liveCommand=missing";
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) &&
-                inputObj is PlayerInputHandler input)
+            if (engine.TryGetService(CoreServiceKeys.InputHandler, out PlayerInputHandler input))
             {
                 Vector2 pointer = input.ReadAction<Vector2>("PointerPos");
                 pointerSummary = $"pointer=({pointer.X:0.##},{pointer.Y:0.##})";
@@ -570,8 +565,7 @@ namespace Ludots.Adapter.Raylib
             string authSelectSummary = "authSelect=missing";
             string authCommandSummary = "authCommand=missing";
             string authPointerSummary = "authPointer=(n/a)";
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var authoritativeInputObj) &&
-                authoritativeInputObj is IInputActionReader authoritativeInput)
+            if (engine.TryGetService(CoreServiceKeys.AuthoritativeInput, out IInputActionReader authoritativeInput))
             {
                 Vector2 authoritativePointer = authoritativeInput.ReadAction<Vector2>("PointerPos");
                 authPointerSummary = $"authPointer=({authoritativePointer.X:0.##},{authoritativePointer.Y:0.##})";
@@ -580,8 +574,7 @@ namespace Ludots.Adapter.Raylib
             }
 
             string hoveredSummary = "hovered=(none)";
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out var hoveredObj) &&
-                hoveredObj is Entity hovered &&
+            if (engine.TryGetService(CoreServiceKeys.HoveredEntity, out Entity hovered) &&
                 hovered != Entity.Null)
             {
                 hoveredSummary = $"hovered={DescribeEntity(engine, hovered)}";
@@ -594,13 +587,11 @@ namespace Ludots.Adapter.Raylib
                 selectedSummary = $"selected={DescribeEntity(engine, selected)}";
             }
 
-            bool uiCaptured = engine.GlobalContext.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var uiCapturedObj) &&
-                uiCapturedObj is bool captured &&
+            bool uiCaptured = engine.TryGetService(CoreServiceKeys.UiCaptured, out bool captured) &&
                 captured;
 
             string dragSummary = "drag=inactive";
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localPlayerObj) &&
-                localPlayerObj is Entity localPlayer &&
+            if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) &&
                 engine.World.IsAlive(localPlayer) &&
                 engine.World.Has<SelectionDragState>(localPlayer))
             {

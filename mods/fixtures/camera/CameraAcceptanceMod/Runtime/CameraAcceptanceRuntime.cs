@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using CameraAcceptanceMod.UI;
+using CoreInputMod;
 using CoreInputMod.ViewMode;
 using CoreInputMod.Triggers;
 using Ludots.Core.Engine;
@@ -69,8 +70,7 @@ namespace CameraAcceptanceMod.Runtime
                 return;
             }
 
-            if (!engine.GlobalContext.TryGetValue(InstallCoreInputOnGameStartTrigger.EntitySelectionCallbacksKey, out var callbacksObj) ||
-                callbacksObj is not System.Collections.Generic.List<System.Action<WorldCmInt2, Entity>> callbacks)
+            if (!CoreInputRuntimeServices.TryGetEntitySelectionCallbacks(engine, out var callbacks))
             {
                 throw new System.InvalidOperationException(
                     "CameraAcceptanceMod requires CoreInputMod entity selection callbacks to be installed before GameStart handlers run.");
@@ -137,8 +137,7 @@ namespace CameraAcceptanceMod.Runtime
                 }
             }
 
-            if (!engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) ||
-                managerObj is not ViewModeManager manager)
+            if (!CoreInputRuntimeServices.TryGetViewModeManager(engine, out var manager))
             {
                 return;
             }

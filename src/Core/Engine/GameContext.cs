@@ -1,5 +1,6 @@
 using Ludots.Core.Engine;
 using Ludots.Core.Map;
+using Ludots.Core.Scripting;
 using Arch.Core;
 
 namespace Ludots.Core.Engine
@@ -11,6 +12,12 @@ namespace Ludots.Core.Engine
         public IMapManager MapManager => Engine.MapManager;
         
         // Helper to access services stored in GlobalContext (like UIRoot)
+        public T GetService<T>(ServiceKey<T> key)
+        {
+            return Engine.GetService(key);
+        }
+
+        // Legacy string lookup kept for incremental migration only.
         public T GetService<T>(string name) 
         {
              if (Engine.GlobalContext.TryGetValue(name, out var obj) && obj is T t) return t;

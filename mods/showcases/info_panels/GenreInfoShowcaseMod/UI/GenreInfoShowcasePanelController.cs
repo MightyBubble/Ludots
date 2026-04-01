@@ -88,7 +88,7 @@ namespace GenreInfoShowcaseMod.UI
 
             return Ui.Column(
                     BuildMainDock(context, dock, localeSelection.ActiveLocaleKey, textResolver),
-                    infoService == null ? Ui.Column() : EntityInfoPanelUiComposer.BuildLayer(infoService))
+                    infoService == null ? Ui.Column() : EntityInfoPanelUiComposer.BuildLayer(infoService, context))
                 .WidthPercent(100f)
                 .HeightPercent(100f)
                 .Absolute(0f, 0f)

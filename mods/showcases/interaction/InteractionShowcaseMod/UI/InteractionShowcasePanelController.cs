@@ -19,10 +19,16 @@ namespace InteractionShowcaseMod.UI
 {
     internal sealed class InteractionShowcasePanelController
     {
+        private readonly InteractionShowcaseRuntime _runtime;
         private ReactivePage<InteractionShowcasePanelState>? _page;
         private UiScene? _mountedScene;
         private GameEngine? _engine;
         private ViewModeManager? _viewModeManager;
+
+        public InteractionShowcasePanelController(InteractionShowcaseRuntime runtime)
+        {
+            _runtime = runtime;
+        }
 
         public void MountOrRefresh(UIRoot root, GameEngine engine, string mapId, ViewModeManager? viewModeManager)
         {
@@ -65,7 +71,7 @@ namespace InteractionShowcaseMod.UI
             var state = context.State;
             return Ui.Column(
                     BuildMainPanel(state),
-                    BuildEntityInfoLayer())
+                    BuildEntityInfoLayer(context))
                 .WidthPercent(100f)
                 .HeightPercent(100f)
                 .Absolute(0f, 0f)
@@ -78,6 +84,7 @@ namespace InteractionShowcaseMod.UI
                     BuildHeroStrip(state),
                     BuildModeCard(state),
                     BuildSelectionCard(state),
+                    BuildSelectionDockCard(state),
                     BuildCoverageCard(state),
                     state.IsStressMap ? BuildStressCard(state) : BuildSkillCard(state))
                 .Width(472f)
@@ -89,14 +96,14 @@ namespace InteractionShowcaseMod.UI
                 .ZIndex(30);
         }
 
-        private UiElementBuilder BuildEntityInfoLayer()
+        private UiElementBuilder BuildEntityInfoLayer(ReactiveContext<InteractionShowcasePanelState> context)
         {
             if (_engine?.GetService(EntityInfoPanelServiceKeys.Service) is not EntityInfoPanelService service)
             {
                 return Ui.Column();
             }
 
-            return EntityInfoPanelUiComposer.BuildLayer(service);
+            return EntityInfoPanelUiComposer.BuildLayer(service, context);
         }
 
         private UiElementBuilder BuildHeroStrip(InteractionShowcasePanelState state)
@@ -153,6 +160,9 @@ namespace InteractionShowcaseMod.UI
         {
             return Ui.Card(
                     Ui.Text("Selection + Orders").FontSize(12f).Bold().Color("#F0C36B"),
+                    Ui.Text($"View: {state.SelectionViewLabel}")
+                        .FontSize(12f)
+                        .Color("#F0C36B"),
                     Ui.Text($"Primary: {state.SelectedLabel}")
                         .FontSize(12f)
                         .Color("#F5F7FA"),
@@ -160,11 +170,11 @@ namespace InteractionShowcaseMod.UI
                         .FontSize(12f)
                         .Color("#C7D0DD")
                         .WhiteSpace(UiWhiteSpace.Normal),
-                    Ui.Text("Select a hero to open the inspector stack on the right and a compact GAS HUD card at the top.")
+                    Ui.Text("Select a hero to open the inspector stack on the right and a dense RTS-style roster panel at the bottom.")
                         .FontSize(12f)
                         .Color("#E2C27A")
                         .WhiteSpace(UiWhiteSpace.Normal),
-                    Ui.Text("LMB select | drag box-select | Tab cycle hover target | RMB move / confirm | Shift queue | S stop | F1-F5 switch reference feel.")
+                    Ui.Text("LMB select | drag box-select | Ctrl+1..4 save group | 1..4 recall group | RMB move / confirm | Shift queue | S stop | F1-F5 switch reference feel.")
                         .FontSize(12f)
                         .Color("#93A4B8")
                         .WhiteSpace(UiWhiteSpace.Normal))
@@ -172,6 +182,32 @@ namespace InteractionShowcaseMod.UI
                 .Padding(14f)
                 .Radius(18f)
                 .Background("#101A24");
+        }
+
+        private UiElementBuilder BuildSelectionDockCard(InteractionShowcasePanelState state)
+        {
+            return Ui.Card(
+                    Ui.Text("RTS Selection Dock").FontSize(12f).Bold().Color("#F0C36B"),
+                    Ui.Row(
+                            BuildSelectionViewButton("LIVE", state.LiveCount, state.SelectionViewMode == SelectionViewMode.Live, InteractionShowcaseIds.LiveSelectionButtonId, _ => ShowLiveSelection()),
+                            BuildSelectionViewButton("FORM", state.FormationCount, state.SelectionViewMode == SelectionViewMode.Formation, InteractionShowcaseIds.FormationSelectionButtonId, _ => ShowFormationSelection()))
+                        .Gap(8f)
+                        .Wrap(),
+                    Ui.Row(
+                            BuildControlGroupButton(1, state.ActiveControlGroup == 1, state.Group1),
+                            BuildControlGroupButton(2, state.ActiveControlGroup == 2, state.Group2),
+                            BuildControlGroupButton(3, state.ActiveControlGroup == 3, state.Group3),
+                            BuildControlGroupButton(4, state.ActiveControlGroup == 4, state.Group4))
+                        .Gap(8f)
+                        .Wrap(),
+                    Ui.Text("Click G1-G4 to recall the saved formation into live selection. The FORM view tracks the last saved or recalled group snapshot.")
+                        .FontSize(11f)
+                        .Color("#93A4B8")
+                        .WhiteSpace(UiWhiteSpace.Normal))
+                .Gap(10f)
+                .Padding(14f)
+                .Radius(18f)
+                .Background("#0D1822");
         }
 
         private UiElementBuilder BuildCoverageCard(InteractionShowcasePanelState state)
@@ -260,6 +296,51 @@ namespace InteractionShowcaseMod.UI
                 .Color("#F5F7FA");
         }
 
+        private static UiElementBuilder BuildSelectionViewButton(string label, int count, bool active, string elementId, Action<UiActionContext> onClick)
+        {
+            return Ui.Button($"{label} {count}", onClick)
+                .Id(elementId)
+                .Padding(10f, 8f)
+                .Radius(10f)
+                .Background(active ? "#5E4518" : "#132232")
+                .Color(active ? "#FFF4D8" : "#D5DEE8");
+        }
+
+        private UiElementBuilder BuildControlGroupButton(int groupIndex, bool active, SelectionGroupSummary summary)
+        {
+            string label = summary.Count <= 0
+                ? $"G{groupIndex} empty"
+                : $"G{groupIndex} {summary.Count}u {summary.PrimaryLabel}";
+            return Ui.Button(label, _ =>
+                {
+                    if (_engine != null)
+                    {
+                        _runtime.RecallControlGroup(_engine, groupIndex);
+                    }
+                })
+                .Id($"interaction-selection-group-{groupIndex}")
+                .Padding(10f, 8f)
+                .Radius(10f)
+                .Background(active ? "#23415B" : (summary.Count > 0 ? "#152432" : "#111A24"))
+                .Color(summary.Count > 0 ? "#F5F7FA" : "#7E93A8");
+        }
+
+        private void ShowLiveSelection()
+        {
+            if (_engine != null)
+            {
+                _runtime.ShowLiveSelection(_engine);
+            }
+        }
+
+        private void ShowFormationSelection()
+        {
+            if (_engine != null)
+            {
+                _runtime.ShowFormationSelection(_engine);
+            }
+        }
+
         private void LoadShowcaseMap(string mapId)
         {
             if (_engine == null)
@@ -287,6 +368,10 @@ namespace InteractionShowcaseMod.UI
             string selectionSummary = ResolveSelectionSummary(engine, selectedLabel);
             string roster = ResolveRoster(engine.World);
             string skillSummary = ResolveSkillSummary(selectedLabel);
+            SelectionViewMode selectionViewMode = ResolveSelectionViewMode(engine);
+            string selectionViewLabel = ResolveSelectionViewLabel(engine, selectionViewMode);
+            int activeControlGroup = ResolveActiveControlGroup(engine);
+            ResolveSelectionDockState(engine, out int liveCount, out int formationCount, out SelectionGroupSummary group1, out SelectionGroupSummary group2, out SelectionGroupSummary group3, out SelectionGroupSummary group4);
 
             var telemetry = ResolveStressTelemetry(engine);
             return new InteractionShowcasePanelState(
@@ -295,8 +380,17 @@ namespace InteractionShowcaseMod.UI
                 ActiveModeId: viewModeManager?.ActiveMode?.Id ?? string.Empty,
                 ActiveModeName: viewModeManager?.ActiveMode?.DisplayName ?? "Unassigned",
                 ModeSummary: ResolveModeSummary(viewModeManager?.ActiveMode?.Id),
+                SelectionViewMode: selectionViewMode,
+                SelectionViewLabel: selectionViewLabel,
+                ActiveControlGroup: activeControlGroup,
                 SelectedLabel: selectedLabel,
                 SelectionSummary: selectionSummary,
+                LiveCount: liveCount,
+                FormationCount: formationCount,
+                Group1: group1,
+                Group2: group2,
+                Group3: group3,
+                Group4: group4,
                 RosterSummary: roster,
                 CoverageSummary: ResolveCoverageSummary(selectedLabel),
                 SkillSummary: skillSummary,
@@ -363,6 +457,81 @@ namespace InteractionShowcaseMod.UI
                 ? $"{selection.Length} units selected."
                 : string.Join(" | ", names);
             return $"{selection.Length} units selected. {preview}";
+        }
+
+        private static void ResolveSelectionDockState(
+            GameEngine engine,
+            out int liveCount,
+            out int formationCount,
+            out SelectionGroupSummary group1,
+            out SelectionGroupSummary group2,
+            out SelectionGroupSummary group3,
+            out SelectionGroupSummary group4)
+        {
+            liveCount = 0;
+            formationCount = 0;
+            group1 = SelectionGroupSummary.Empty;
+            group2 = SelectionGroupSummary.Empty;
+            group3 = SelectionGroupSummary.Empty;
+            group4 = SelectionGroupSummary.Empty;
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+                viewerObj is not Entity viewer ||
+                !engine.World.IsAlive(viewer) ||
+                engine.GetService(CoreServiceKeys.SelectionRuntime) is not SelectionRuntime selection)
+            {
+                return;
+            }
+
+            liveCount = selection.GetSelectionCount(viewer, SelectionSetKeys.LivePrimary);
+            formationCount = selection.GetSelectionCount(viewer, SelectionSetKeys.FormationPrimary);
+            group1 = ResolveControlGroupSummary(engine, selection, viewer, 1);
+            group2 = ResolveControlGroupSummary(engine, selection, viewer, 2);
+            group3 = ResolveControlGroupSummary(engine, selection, viewer, 3);
+            group4 = ResolveControlGroupSummary(engine, selection, viewer, 4);
+        }
+
+        private static SelectionGroupSummary ResolveControlGroupSummary(GameEngine engine, SelectionRuntime selection, Entity viewer, int groupIndex)
+        {
+            if (!SelectionControlGroupRuntime.TryDescribeControlGroup(engine.World, selection, viewer, groupIndex, out SelectionContainerDescriptor descriptor))
+            {
+                return SelectionGroupSummary.Empty;
+            }
+
+            string primaryLabel = descriptor.Primary != Entity.Null && engine.World.IsAlive(descriptor.Primary) && engine.World.TryGet(descriptor.Primary, out Name name)
+                ? name.Value
+                : descriptor.MemberCount > 0
+                    ? $"#{descriptor.Primary.Id}"
+                    : string.Empty;
+            return new SelectionGroupSummary(descriptor.MemberCount, primaryLabel);
+        }
+
+        private static SelectionViewMode ResolveSelectionViewMode(GameEngine engine)
+        {
+            return SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor) &&
+                   string.Equals(descriptor.ViewKey, SelectionViewKeys.Formation, StringComparison.Ordinal)
+                ? SelectionViewMode.Formation
+                : SelectionViewMode.Live;
+        }
+
+        private static string ResolveSelectionViewLabel(GameEngine engine, SelectionViewMode mode)
+        {
+            if (!SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor))
+            {
+                return mode == SelectionViewMode.Formation ? "Formation view" : "Live view";
+            }
+
+            return mode == SelectionViewMode.Formation
+                ? $"Formation view via {descriptor.Container.AliasKey}"
+                : $"Live view via {descriptor.Container.AliasKey}";
+        }
+
+        private static int ResolveActiveControlGroup(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue(InteractionShowcaseIds.ActiveControlGroupKey, out object? groupObj) &&
+                   groupObj is int groupIndex
+                ? groupIndex
+                : 0;
         }
 
         private static string ResolveRoster(World world)
@@ -442,8 +611,17 @@ namespace InteractionShowcaseMod.UI
             string ActiveModeId,
             string ActiveModeName,
             string ModeSummary,
+            SelectionViewMode SelectionViewMode,
+            string SelectionViewLabel,
+            int ActiveControlGroup,
             string SelectedLabel,
             string SelectionSummary,
+            int LiveCount,
+            int FormationCount,
+            SelectionGroupSummary Group1,
+            SelectionGroupSummary Group2,
+            SelectionGroupSummary Group3,
+            SelectionGroupSummary Group4,
             string RosterSummary,
             string CoverageSummary,
             string SkillSummary,
@@ -461,5 +639,16 @@ namespace InteractionShowcaseMod.UI
             float RedAnchorHealth,
             float BlueAnchorHealth,
             int EntityInfoUiRevision);
+
+        private readonly record struct SelectionGroupSummary(int Count, string PrimaryLabel)
+        {
+            public static SelectionGroupSummary Empty => new(0, string.Empty);
+        }
+
+        private enum SelectionViewMode : byte
+        {
+            Live = 0,
+            Formation = 1
+        }
     }
 }

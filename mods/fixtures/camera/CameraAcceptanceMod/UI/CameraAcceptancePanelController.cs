@@ -5,6 +5,7 @@ using System.Numerics;
 using Arch.Core;
 using CameraAcceptanceMod.Runtime;
 using CameraAcceptanceMod.Systems;
+using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -1202,20 +1203,12 @@ namespace CameraAcceptanceMod.UI
 
         private static ViewModeManager? ResolveViewModeManager(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) &&
-                managerObj is ViewModeManager manager)
-            {
-                return manager;
-            }
-
-            return null;
+            return CoreInputRuntimeServices.GetViewModeManager(engine);
         }
 
         private static string ResolveActiveModeId(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(ViewModeManager.ActiveModeIdKey, out var modeObj) && modeObj is string modeId
-                ? modeId
-                : "map-default";
+            return CoreInputRuntimeServices.GetActiveViewModeId(engine) ?? "map-default";
         }
 
         private static string ResolveActiveBlendCameraId(GameEngine engine)
