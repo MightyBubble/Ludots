@@ -1,37 +1,42 @@
-# 文档总览
+# 仓库深度材料总览
 
-`docs/` 是 Ludots 文档的唯一正式入口。`main` 分支上的内容即当前真相；历史版本、迁移过程和已废弃设计通过 Git 历史、PR 和 ADR 追溯，不在正文中保留兼容说明。
+`gitbook/` 是 Ludots 的唯一正式文档真相。`docs/` 不再承担正式入口职责，而是保存仓库内的深度设计说明、ADR、审计、RFC 和补充型实现材料。
 
 ## 1 分层结构
 
 | 目录 | 角色 | 是否 SSOT |
 |------|------|-----------|
-| `docs/conventions/` | 开发规范、流程、硬约束 | 是 |
-| `docs/architecture/` | 当前架构设计、模块边界、数据流 | 是 |
-| `docs/reference/` | 事实查表、契约、操作手册 | 是 |
+| `docs/conventions/` | GitBook 正式规范的仓库配套版与深度说明 | 否 |
+| `docs/architecture/` | 深度架构设计、模块边界、数据流与实现细节 | 否 |
+| `docs/reference/` | 长版操作手册、查表和补充材料 | 否 |
 | `docs/adr/` | 架构决策记录（为什么这样定） | 否，记录决策 |
 | `docs/audits/` | 审计、验收、收束与回顾证据 | 否，记录证据 |
 | `docs/rfcs/` | 提案与讨论稿 | 否，记录候选方案 |
 
 ## 2 阅读入口
 
-*   [开发规范](conventions/README.md) —— 编码标准、Feature 工作流、AI 辅助开发规则、环境与构建、文档治理。
-*   [架构文档](architecture/README.md) —— Core、Runtime、Gameplay、Presentation 等当前设计。
-*   [参考资料](reference/README.md) —— CLI 操作、配置合并实践、相机标准、3C 能力清单、外部依赖入口。
+*   [GitBook 首页](../gitbook/README.md) —— 当前正式入口与导航。
+*   [贡献与开发](../gitbook/contributing/README.md) —— 当前正式开发规范。
+*   [架构](../gitbook/architecture/README.md) —— 当前正式架构总览。
+*   [参考资料](../gitbook/reference/README.md) —— 当前正式操作资料与查表信息。
+*   [仓库 conventions 深度材料](conventions/README.md) —— 对应 GitBook 规范的仓库配套版。
+*   [仓库架构材料](architecture/README.md) —— Core、Runtime、Gameplay、Presentation 等长篇设计说明。
+*   [仓库参考资料](reference/README.md) —— CLI、标准规范与查表型深度文档。
 *   [架构决策](adr/README.md) —— 关键决策与收敛原因。
 *   [审计记录](audits/README.md) —— 审计、验收、收束矩阵和阶段性报告。
 *   [RFC 提案](rfcs/README.md) —— 尚未纳入正式规范的提案。
 
 ## 3 使用规则
 
-*   规则性内容只能定义在 `docs/conventions/`。
-*   当前实现只能定义在 `docs/architecture/` 或 `docs/reference/` 的一个位置，不得重复描述。
-*   `docs/audits/` 与 `docs/rfcs/` 不得反向成为规范来源。
+*   正式规则、正式架构和正式操作文档统一定义在 `gitbook/`。
+*   `docs/` 中的内容用于补充实现细节、决策、证据和提案，不反向成为正式规范来源。
+*   当行为变化影响正式说明时，必须同步更新 `gitbook/`，并按需要回写受影响的深度材料。
 *   代码行为变更时，同一提交或同一 PR 必须同步更新对应文档。
 
 ## 4 相关文档
 
-*   文档治理规范：见 [conventions/04_documentation_governance.md](conventions/04_documentation_governance.md)
-*   开发规范总索引：见 [conventions/README.md](conventions/README.md)
-*   架构文档总索引：见 [architecture/README.md](architecture/README.md)
-*   参考资料总索引：见 [reference/README.md](reference/README.md)
+*   GitBook 文档首页：见 [../gitbook/README.md](../gitbook/README.md)
+*   GitBook 文档治理：见 [../gitbook/contributing/documentation-governance.md](../gitbook/contributing/documentation-governance.md)
+*   仓库 conventions 深度材料：见 [conventions/README.md](conventions/README.md)
+*   仓库架构总索引：见 [architecture/README.md](architecture/README.md)
+*   仓库参考资料总索引：见 [reference/README.md](reference/README.md)

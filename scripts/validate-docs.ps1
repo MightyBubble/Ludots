@@ -58,7 +58,7 @@ function Resolve-RepoTarget {
         return $normalizedTarget
     }
 
-    if ($normalizedTarget -match '^(docs|src|assets|mods|scripts|skills|artifacts|external|\.github)/') {
+    if ($normalizedTarget -match '^(gitbook|docs|src|assets|mods|scripts|skills|artifacts|external|\.github)/') {
         return [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $normalizedTarget))
     }
 
@@ -118,7 +118,13 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $scriptDir '..'))
 $findings = New-Object 'System.Collections.Generic.List[object]'
 
-$requiredReadmes = @(
+$requiredEntries = @(
+    '.gitbook.yaml',
+    'gitbook/README.md',
+    'gitbook/SUMMARY.md',
+    'gitbook/contributing/README.md',
+    'gitbook/architecture/README.md',
+    'gitbook/reference/README.md',
     'docs/README.md',
     'docs/conventions/README.md',
     'docs/architecture/README.md',
@@ -129,18 +135,60 @@ $requiredReadmes = @(
 )
 
 $scopedMode = $Paths.Count -gt 0
-$docFiles = @()
+$gitbookFiles = @()
+$docsEntryFiles = @()
 $entryFiles = @()
+$markdownFilesForNaming = @()
 
 if ($scopedMode) {
     $scopedFiles = Resolve-ScopedFiles -RepoRoot $repoRoot -Targets $Paths -Findings $findings
-    $docFiles = $scopedFiles |
-        Where-Object { $_ -like (Join-Path $repoRoot 'docs\*') } |
-        ForEach-Object { Get-Item $_ }
-    $entryFiles = $scopedFiles |
-        Where-Object { $_ -notlike (Join-Path $repoRoot 'docs\*') }
+    $scopedItems = $scopedFiles | ForEach-Object { Get-Item $_ }
+
+    $gitbookFiles = $scopedItems |
+        Where-Object {
+            $_.Extension -eq '.md' -and
+            $_.FullName.StartsWith((Join-Path $repoRoot 'gitbook'), [System.StringComparison]::OrdinalIgnoreCase)
+        }
+
+    $docsEntryFiles = $scopedItems |
+        Where-Object {
+            $_.Extension -eq '.md' -and
+            $_.FullName.StartsWith((Join-Path $repoRoot 'docs'), [System.StringComparison]::OrdinalIgnoreCase)
+        }
+
+    $entryFiles = $scopedItems |
+        Where-Object {
+            $_.Extension -ne '.md' -or
+            (
+                -not $_.FullName.StartsWith((Join-Path $repoRoot 'gitbook'), [System.StringComparison]::OrdinalIgnoreCase) -and
+                -not $_.FullName.StartsWith((Join-Path $repoRoot 'docs'), [System.StringComparison]::OrdinalIgnoreCase)
+            )
+        } |
+        ForEach-Object { $_.FullName }
+
+    $markdownFilesForNaming = @($gitbookFiles) + @($docsEntryFiles)
 } else {
-    $docFiles = Get-ChildItem -Path (Join-Path $repoRoot 'docs') -Recurse -File -Filter '*.md'
+    $gitbookRoot = Join-Path $repoRoot 'gitbook'
+    if (Test-Path $gitbookRoot) {
+        $gitbookFiles = Get-ChildItem -Path $gitbookRoot -Recurse -File -Filter '*.md'
+    }
+
+    $docsEntryFiles = @(
+        'docs/README.md',
+        'docs/conventions/README.md',
+        'docs/conventions/04_documentation_governance.md',
+        'docs/architecture/README.md',
+        'docs/reference/README.md',
+        'docs/audits/README.md',
+        'docs/adr/README.md',
+        'docs/rfcs/README.md'
+    ) | ForEach-Object {
+        $fullPath = Join-Path $repoRoot $_
+        if (Test-Path $fullPath) {
+            Get-Item $fullPath
+        }
+    }
+
     $entryFiles = @(
         'README.md',
         'README_CN.md',
@@ -150,22 +198,24 @@ if ($scopedMode) {
     ) | ForEach-Object {
         Join-Path $repoRoot $_
     } | Where-Object { Test-Path $_ }
+
+    foreach ($required in $requiredEntries) {
+        $fullPath = Join-Path $repoRoot $required
+        if (-not (Test-Path $fullPath)) {
+            Add-Finding -Collection $findings -Rule 'missing-readme' -Source $required -Detail 'required documentation entry is missing'
+        }
+    }
+
+    $markdownFilesForNaming = @($gitbookFiles) + @($docsEntryFiles)
 }
 
 $filesToValidate = @(
-    $docFiles | ForEach-Object { $_.FullName }
+    $gitbookFiles | ForEach-Object { $_.FullName }
+) + @(
+    $docsEntryFiles | ForEach-Object { $_.FullName }
 ) + @(
     $entryFiles | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
 ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-
-if (-not $scopedMode) {
-    foreach ($required in $requiredReadmes) {
-        $fullPath = Join-Path $repoRoot $required
-        if (-not (Test-Path $fullPath)) {
-            Add-Finding -Collection $findings -Rule 'missing-readme' -Source $required -Detail 'required README.md is missing'
-        }
-    }
-}
 
 foreach ($file in $filesToValidate) {
     $relativeSource = $file.Replace($repoRoot + [System.IO.Path]::DirectorySeparatorChar, '').Replace('\', '/')
@@ -202,7 +252,7 @@ foreach ($file in $filesToValidate) {
 
     foreach ($match in Get-BacktickPaths -Content $content) {
         $token = $match.Groups[1].Value.Trim()
-        if ($token -notmatch '^(docs|src|assets|mods|scripts|skills|artifacts|external|\.github)/') {
+        if ($token -notmatch '^(gitbook|docs|src|assets|mods|scripts|skills|artifacts|external|\.github)/') {
             continue
         }
 
@@ -232,6 +282,7 @@ foreach ($file in $filesToValidate) {
 }
 
 $namingRules = @(
+    @{ Prefix = 'gitbook/'; Pattern = '^(README|SUMMARY|[a-z0-9-]+)\.md$'; Rule = 'gitbook-name' },
     @{ Prefix = 'docs/conventions/'; Pattern = '^(README|\d\d_[a-z0-9_]+)\.md$'; Rule = 'conventions-name' },
     @{ Prefix = 'docs/architecture/'; Pattern = '^(README|[a-z0-9_]+)\.md$'; Rule = 'architecture-name' },
     @{ Prefix = 'docs/reference/'; Pattern = '^(README|[a-z0-9_]+)\.md$'; Rule = 'reference-name' },
@@ -240,9 +291,9 @@ $namingRules = @(
     @{ Prefix = 'docs/rfcs/'; Pattern = '^(README|RFC-\d{4}-[a-z0-9-]+)\.md$'; Rule = 'rfcs-name' }
 )
 
-foreach ($docFile in $docFiles) {
-    $relativeSource = $docFile.FullName.Replace($repoRoot + [System.IO.Path]::DirectorySeparatorChar, '').Replace('\', '/')
-    $name = $docFile.Name
+foreach ($markdownFile in $markdownFilesForNaming) {
+    $relativeSource = $markdownFile.FullName.Replace($repoRoot + [System.IO.Path]::DirectorySeparatorChar, '').Replace('\', '/')
+    $name = $markdownFile.Name
 
     foreach ($rule in $namingRules) {
         if ($relativeSource.StartsWith($rule.Prefix) -and ($name -notmatch $rule.Pattern)) {
