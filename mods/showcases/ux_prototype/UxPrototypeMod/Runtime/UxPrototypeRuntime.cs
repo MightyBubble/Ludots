@@ -24,7 +24,6 @@ internal sealed class UxPrototypeRuntime
     private bool _previousDrawTerrain = true;
     private bool _previousDrawPrimitives = true;
     private bool _previousDrawDebugDraw = true;
-    private bool _previousDrawSkiaUi = true;
 
     public UxPrototypeScenarioState State => _state;
 
@@ -109,6 +108,12 @@ internal sealed class UxPrototypeRuntime
 
         if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
         {
+            return;
+        }
+
+        if (engine.GetService(CoreServiceKeys.RenderDebugState) is RenderDebugState renderDebug && !renderDebug.DrawSkiaUi)
+        {
+            ClearPanelIfOwned(engine);
             return;
         }
 
@@ -222,14 +227,13 @@ internal sealed class UxPrototypeRuntime
             _previousDrawTerrain = renderDebug.DrawTerrain;
             _previousDrawPrimitives = renderDebug.DrawPrimitives;
             _previousDrawDebugDraw = renderDebug.DrawDebugDraw;
-            _previousDrawSkiaUi = renderDebug.DrawSkiaUi;
             _renderDebugCaptured = true;
         }
 
         renderDebug.DrawTerrain = true;
         renderDebug.DrawPrimitives = true;
         renderDebug.DrawDebugDraw = false;
-        renderDebug.DrawSkiaUi = true;
+        // DrawSkiaUi control by F12
     }
 
     private void RestoreRenderDebug(GameEngine engine)
@@ -244,7 +248,6 @@ internal sealed class UxPrototypeRuntime
             renderDebug.DrawTerrain = _previousDrawTerrain;
             renderDebug.DrawPrimitives = _previousDrawPrimitives;
             renderDebug.DrawDebugDraw = _previousDrawDebugDraw;
-            renderDebug.DrawSkiaUi = _previousDrawSkiaUi;
         }
 
         _renderDebugCaptured = false;
