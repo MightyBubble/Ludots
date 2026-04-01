@@ -593,10 +593,12 @@ namespace Ludots.Tests.GAS
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
             var effects = new EffectRequestQueue();
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var templateKeys = new EntityTemplateKeyRegistry();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
                 templates,
+                templateKeys,
                 new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
@@ -658,10 +660,12 @@ namespace Ludots.Tests.GAS
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
             var effects = new EffectRequestQueue();
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var templateKeys = new EntityTemplateKeyRegistry();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
                 templates,
+                templateKeys,
                 new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
@@ -724,10 +728,12 @@ namespace Ludots.Tests.GAS
                 new PlayerOwner { PlayerId = 12 },
                 new MapEntity { MapId = new Ludots.Core.Map.MapId("template_spawn_test") });
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
                 templates,
+                templateKeys,
                 new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
@@ -784,10 +790,12 @@ namespace Ludots.Tests.GAS
                 new MapEntity { MapId = new Ludots.Core.Map.MapId("summon_spawn_test") });
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var templateKeys = new EntityTemplateKeyRegistry();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
                 templates,
+                templateKeys,
                 new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
                     new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
                     new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),

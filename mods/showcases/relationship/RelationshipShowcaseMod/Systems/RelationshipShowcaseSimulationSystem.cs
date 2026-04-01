@@ -416,6 +416,10 @@ namespace RelationshipShowcaseMod.Systems
                 TemplateId = tauntEffectId,
             });
             _state.AddLog(string.Format(Config.Logs.Taunt, ReadName(hero)));
+
+            // Taunt is the explicit enemy-focus action in this showcase, so re-evaluate
+            // enemy pressure immediately instead of waiting for the next periodic sweep.
+            ExecuteEnemyPressure();
         }
 
         private void ExecuteRally()

@@ -3,7 +3,7 @@
 ## Header
 - scenario: `relationship-showcase`
 - build: `GameEngine 1.0.0.0`
-- execution_timestamp_utc: `2026-03-25T13:44:07.2187180+00:00`
+- execution_timestamp_utc: `2026-04-01T03:36:13.8958123+00:00`
 - map: `relationship_showcase`
 - clock: `fixed 1/60s`
 
@@ -60,8 +60,8 @@
 
 ## Summary Stats
 - snapshots captured: `7`
-- median headless tick: `0.611ms`
-- max headless tick: `21.613ms`
+- median headless tick: `0.757ms`
+- max headless tick: `28.232ms`
 - final loyalty: `Liu->Guan 65`, `Liu->Zhang 65`
 - final support: `Guan->Zhang 60`
 - final ground rings: `2`
