@@ -27,6 +27,12 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// Step at which this order was inserted (for FIFO within same priority).
         /// </summary>
         public int InsertStep;
+
+        /// <summary>
+        /// Runtime-owned integer slot for execution cursors or other transient state.
+        /// Must not be used to rewrite authored order payload.
+        /// </summary>
+        public int RuntimeInt0;
     }
     
     /// <summary>

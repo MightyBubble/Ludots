@@ -9,6 +9,8 @@
 * [Phase 1 / Phase 2A 审计报告](phase1_phase2a_audit_report.md)
 * [Presentation Hotpath Harness 优化验证](presentation_hotpath_harness_optimization_validation.md)
 * [PR 集成审计](pr_integration_audit.md)
+* [PR92 TimeFlow Core 主线落地计划](pr92_timeflow_core_mainline_delivery.md)
+* [PR73 合并与架构审计](pr73_merge_architecture_audit.md)
 * [最近提交审计与端到端交互验收](recent_commit_audit_and_e2e_showcase.md)
 * [版本收敛处置矩阵](convergence_disposition_matrix.md)
 

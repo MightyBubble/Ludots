@@ -1,0 +1,25 @@
+[
+  {
+    "id": "Effect.Narrative.BlessingHeal",
+    "tags": ["Effect.Narrative.Reward"],
+    "presetType": "Heal",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 35.0 }
+    ]
+  },
+  {
+    "id": "Effect.Narrative.BlessingSpeed",
+    "tags": ["Effect.Narrative.Reward"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 240
+    },
+    "modifiers": [
+      { "attribute": "MoveSpeed", "op": "Add", "value": 60.0 }
+    ]
+  }
+]

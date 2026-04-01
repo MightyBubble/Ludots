@@ -127,6 +127,68 @@ namespace Ludots.Tests.GAS
             Assert.That(buffer.HasActive, Is.False);
         }
 
+        [Test]
+        public void MoveToWorldCmOrderSystem_ListRoute_AdvancesWaypointsWithoutCompletingEarly()
+        {
+            using var world = World.Create();
+            var registry = CreateMoveRegistry();
+
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                OrderBuffer.CreateEmpty());
+
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            buffer.SetActiveDirect(CreateRouteOrder(actor, (0, 0), (120, 0), (240, 80)), priority: 60);
+
+            var system = new MoveToWorldCmOrderSystem(world, registry, MoveToOrderTypeId, defaultSpeedCmPerSec: 600f, stopRadiusCm: 5f);
+            system.Update(0.10f);
+
+            Assert.That(buffer.HasActive, Is.True);
+            Assert.That(buffer.ActiveOrder.Order.Args.Spatial.A0, Is.EqualTo(0));
+            Assert.That(buffer.ActiveOrder.RuntimeInt0, Is.GreaterThanOrEqualTo(1));
+
+            system.Update(0.10f);
+            system.Update(0.10f);
+            system.Update(0.10f);
+            system.Update(0.10f);
+
+            var finalPosition = world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
+            Assert.That(finalPosition.X, Is.EqualTo(240).Within(1));
+            Assert.That(finalPosition.Y, Is.EqualTo(80).Within(1));
+            Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+        }
+
+        [Test]
+        public void MoveToWorldCmOrderSystem_ListRouteNavAgents_EnableSmartStopSuppressionWhileRouteIsActive()
+        {
+            using var world = World.Create();
+            var registry = CreateMoveRegistry();
+
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new Position2D { Value = Fix64Vec2.Zero },
+                new NavAgent2D(),
+                new NavKinematics2D
+                {
+                    MaxSpeedCmPerSec = Fix64.FromInt(300),
+                    MaxAccelCmPerSec2 = Fix64.FromInt(6000),
+                    RadiusCm = Fix64.FromInt(40),
+                    NeighborDistCm = Fix64.FromInt(400),
+                    TimeHorizonSec = Fix64.FromInt(2),
+                    MaxNeighbors = 16
+                },
+                OrderBuffer.CreateEmpty());
+
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            buffer.SetActiveDirect(CreateRouteOrder(actor, (0, 0), (120, 0), (240, 0)), priority: 60);
+
+            var system = new MoveToWorldCmOrderSystem(world, registry, MoveToOrderTypeId, defaultSpeedCmPerSec: 600f, stopRadiusCm: 5f);
+            system.Update(0.1f);
+
+            Assert.That(world.Get<NavAgent2D>(actor).SmartStopSuppressed, Is.EqualTo((byte)1));
+            Assert.That(buffer.HasActive, Is.True);
+        }
+
         private static OrderTypeRegistry CreateMoveRegistry()
         {
             var registry = new OrderTypeRegistry();
@@ -160,6 +222,28 @@ namespace Ludots.Tests.GAS
                     }
                 }
             };
+        }
+
+        private static Order CreateRouteOrder(Entity actor, params (int xcm, int ycm)[] points)
+        {
+            var order = new Order
+            {
+                OrderId = 7,
+                OrderTypeId = MoveToOrderTypeId,
+                PlayerId = 1,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = new OrderArgs()
+            };
+
+            order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
+            order.Args.Spatial.Mode = OrderCollectionMode.List;
+            for (int i = 0; i < points.Length; i++)
+            {
+                order.Args.Spatial.AddPointWorldCm(points[i].xcm, 0, points[i].ycm);
+            }
+
+            return order;
         }
     }
 }

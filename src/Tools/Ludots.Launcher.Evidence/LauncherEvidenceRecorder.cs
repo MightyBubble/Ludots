@@ -10,8 +10,11 @@ using Ludots.Adapter.Web.Services;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Selection;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation2D.Components;
@@ -58,6 +61,9 @@ public static class LauncherEvidenceRecorder
     private static readonly QueryDescription CameraNamedEntityQuery = new QueryDescription()
         .WithAll<Name, WorldPositionCm>();
 
+    private static readonly QueryDescription RoadNamedVisualEntityQuery = new QueryDescription()
+        .WithAll<Name, VisualTransform>();
+
     private static readonly QueryDescription NavDynamicAgentsQuery = new QueryDescription()
         .WithAll<NavAgent2D, Position2D, Velocity2D, NavPlaygroundTeam>()
         .WithNone<NavPlaygroundBlocker>();
@@ -76,6 +82,8 @@ public static class LauncherEvidenceRecorder
     private const int DefaultHeight = 1080;
     private const int CameraImageWidth = 1600;
     private const int CameraImageHeight = 900;
+    private const int RoadImageWidth = 1600;
+    private const int RoadImageHeight = 900;
     private const int NavImageWidth = 1600;
     private const int NavImageHeight = 900;
     private const int NavAcceptanceAgentsPerTeam = 64;
@@ -95,6 +103,30 @@ public static class LauncherEvidenceRecorder
     private const float NavWorldMinY = -9000f;
     private const float NavWorldMaxY = 9000f;
     private static readonly Vector2 CameraProjectionClickWorldCm = new(3200f, 2000f);
+    private static readonly Vector2 RoadSelectionWorldCm = new(-9800f, 0f);
+    private static readonly Vector2 RoadCommandWorldCm = new(0f, 0f);
+    private static readonly Vector2 RoadChunkShiftTargetCm = new(18000f, 0f);
+    private static readonly Vector2 ChunkEastGateTargetCm = new(9000f, 0f);
+    private static readonly Vector2 ChunkRedCapitalTargetCm = new(18000f, 0f);
+    private static readonly string[] RoadBlueColumnNames = ["Blue Vanguard", "Blue North Column", "Blue South Column"];
+    private static readonly Vector2[] RoadSelectionPickOffsetsPx =
+    [
+        Vector2.Zero,
+        new Vector2(-12f, 0f),
+        new Vector2(12f, 0f),
+        new Vector2(0f, -12f),
+        new Vector2(0f, 12f),
+        new Vector2(-18f, -8f),
+        new Vector2(18f, -8f),
+        new Vector2(-18f, 8f),
+        new Vector2(18f, 8f)
+    ];
+    private const float RoadCueMarkerHeightMeters = 0.15f;
+    private const float RoadMovementMinimumCm = 2400f;
+    private const float RoadWorldMinX = -22000f;
+    private const float RoadWorldMaxX = 22000f;
+    private const float RoadWorldMinY = -13000f;
+    private const float RoadWorldMaxY = 13000f;
 
     public static Task<LauncherRecordingResult> RecordAsync(LauncherRecordingRequest request, CancellationToken ct = default)
     {
@@ -105,6 +137,8 @@ public static class LauncherEvidenceRecorder
         return InferScenario(request.Plan) switch
         {
             EvidenceScenario.CameraAcceptanceProjectionClick => Task.FromResult(RecordCameraAcceptanceProjection(request)),
+            EvidenceScenario.RoadNetworkShowcaseCommandAndChunking => Task.FromResult(RecordRoadNetworkShowcase(request)),
+            EvidenceScenario.ChunkStreamingShowcaseCameraWindows => Task.FromResult(RecordChunkStreamingShowcase(request)),
             EvidenceScenario.Navigation2DPlaygroundTimedAvoidance => Task.FromResult(RecordNavigation2DTimedAvoidance(request)),
             _ => throw new InvalidOperationException($"No recording scenario is registered for root mods: {string.Join(", ", request.Plan.RootModIds)}")
         };
@@ -120,6 +154,16 @@ public static class LauncherEvidenceRecorder
         if (plan.RootModIds.Any(id => string.Equals(id, "Navigation2DPlaygroundMod", StringComparison.OrdinalIgnoreCase)))
         {
             return EvidenceScenario.Navigation2DPlaygroundTimedAvoidance;
+        }
+
+        if (plan.RootModIds.Any(id => string.Equals(id, "RoadNetworkShowcaseMod", StringComparison.OrdinalIgnoreCase)))
+        {
+            return EvidenceScenario.RoadNetworkShowcaseCommandAndChunking;
+        }
+
+        if (plan.RootModIds.Any(id => string.Equals(id, "ChunkStreamingShowcaseMod", StringComparison.OrdinalIgnoreCase)))
+        {
+            return EvidenceScenario.ChunkStreamingShowcaseCameraWindows;
         }
 
         return EvidenceScenario.None;
@@ -300,6 +344,29 @@ public static class LauncherEvidenceRecorder
         Tick(runtime, 2, frameTimesMs);
         runtime.InputBackend.SetButton("<Mouse>/LeftButton", false);
         Tick(runtime, 2, frameTimesMs);
+    }
+
+    private static void ClickSecondary(RecordingRuntime runtime, Vector2 screenPosition, List<double> frameTimesMs)
+    {
+        runtime.InputBackend.SetMousePosition(screenPosition);
+        Tick(runtime, 1, frameTimesMs);
+        runtime.InputBackend.SetButton("<Mouse>/RightButton", true);
+        Tick(runtime, 2, frameTimesMs);
+        runtime.InputBackend.SetButton("<Mouse>/RightButton", false);
+        Tick(runtime, 2, frameTimesMs);
+    }
+
+    private static void ApplyCameraTarget(RecordingRuntime runtime, Vector2 targetCm, List<double> frameTimesMs, int settleTicks)
+    {
+        runtime.Engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+        {
+            TargetCm = targetCm
+        });
+
+        if (settleTicks > 0)
+        {
+            Tick(runtime, settleTicks, frameTimesMs);
+        }
     }
 
     private static void AdvanceUntilCameraCueVisible(
@@ -773,6 +840,1057 @@ public static class LauncherEvidenceRecorder
         using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
         using FileStream stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
         data.SaveTo(stream);
+    }
+
+    private static LauncherRecordingResult RecordRoadNetworkShowcase(LauncherRecordingRequest request)
+    {
+        string screensDir = Path.Combine(request.OutputDirectory, "screens");
+        Directory.CreateDirectory(screensDir);
+
+        var timeline = new List<RoadSnapshot>();
+        var captureFrames = new List<CaptureFrame>();
+        var frameTimesMs = new List<double>();
+
+        using var runtime = CreateRuntime(request.Plan, request.BootstrapPath);
+        if (!string.Equals(runtime.Config.StartupMapId, "road_network_showcase_chunked", StringComparison.OrdinalIgnoreCase))
+        {
+            runtime.Engine.LoadMap("road_network_showcase_chunked");
+        }
+
+        Tick(runtime, 10, frameTimesMs);
+        AssertRoadOverlay(runtime.Engine.GetService(CoreServiceKeys.ScreenOverlayBuffer));
+        CaptureRoadSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "000_start", null);
+
+        ClickPrimaryUntilSelected(runtime, "Blue Vanguard", frameTimesMs);
+        Tick(runtime, 6, frameTimesMs);
+        CaptureRoadSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "001_selected", null);
+
+        Vector2 commandScreen = runtime.ProjectWorldCm(RoadCommandWorldCm);
+        ClickSecondary(runtime, commandScreen, frameTimesMs);
+        AdvanceUntilRoadStatus(runtime, frameTimesMs, maxFrames: 36);
+        CaptureRoadSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "002_command_accepted", RoadCommandWorldCm);
+
+        AdvanceUntilRoadMovement(runtime, frameTimesMs, timeline[2].ControlledActorName, timeline[2].ControlledActorWorldCm, maxFrames: 420);
+        CaptureRoadSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "003_column_advancing", RoadCommandWorldCm);
+
+        ApplyCameraTarget(runtime, RoadChunkShiftTargetCm, frameTimesMs, settleTicks: 4);
+        AdvanceUntilRoadChunkShift(runtime, frameTimesMs, timeline[0].ActiveChunkSignature, maxFrames: 48);
+        CaptureRoadSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "004_chunk_shifted", RoadCommandWorldCm);
+
+        WriteTimelineSheet("Road network showcase timeline", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
+
+        RoadAcceptanceResult acceptance = EvaluateRoadAcceptance(timeline);
+        string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
+        string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
+        string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
+        string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
+        string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
+
+        File.WriteAllText(battleReportPath, BuildRoadBattleReport(request, timeline, captureFrames, frameTimesMs, acceptance));
+        File.WriteAllText(tracePath, BuildRoadTraceJsonl(request.Plan.AdapterId, timeline));
+        File.WriteAllText(pathPath, BuildRoadPathMermaid());
+        File.WriteAllText(visibleChecklistPath, BuildRoadVisibleChecklist(timeline));
+        File.WriteAllText(summaryPath, BuildRoadSummaryJson(request, acceptance));
+
+        if (!acceptance.Success)
+        {
+            throw new InvalidOperationException(acceptance.FailureSummary);
+        }
+
+        return new LauncherRecordingResult(
+            request.OutputDirectory,
+            battleReportPath,
+            tracePath,
+            pathPath,
+            summaryPath,
+            visibleChecklistPath,
+            captureFrames.Select(frame => Path.Combine(screensDir, frame.FileName)).Append(Path.Combine(screensDir, "timeline.png")).ToList(),
+            acceptance.NormalizedSignature);
+    }
+
+    private static void CaptureRoadSnapshot(
+        RecordingRuntime runtime,
+        string screensDir,
+        IReadOnlyList<double> frameTimesMs,
+        List<RoadSnapshot> timeline,
+        List<CaptureFrame> captureFrames,
+        string step,
+        Vector2? commandTargetWorldCm)
+    {
+        RoadSnapshot snapshot = SampleRoadSnapshot(runtime, step, frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d, commandTargetWorldCm);
+        timeline.Add(snapshot);
+        string fileName = $"{step}.png";
+        WriteRoadSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
+        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.SelectedNames.Count, 0f, 0f));
+    }
+
+    private static RoadSnapshot SampleRoadSnapshot(RecordingRuntime runtime, string step, double tickMs, Vector2? commandTargetWorldCm)
+    {
+        var namedEntities = new Dictionary<string, Vector2>(StringComparer.OrdinalIgnoreCase);
+        runtime.Engine.World.Query(in CameraNamedEntityQuery, (ref Name name, ref WorldPositionCm position) =>
+        {
+            if (!namedEntities.ContainsKey(name.Value))
+            {
+                namedEntities[name.Value] = position.Value.ToVector2();
+            }
+        });
+
+        var selectedNames = new List<string>();
+        Entity[] selectedEntities = SelectionContextRuntime.SnapshotCurrentSelection(runtime.Engine.World, runtime.Engine.GlobalContext);
+        for (int i = 0; i < selectedEntities.Length; i++)
+        {
+            Entity selected = selectedEntities[i];
+            if (!runtime.Engine.World.IsAlive(selected) || !runtime.Engine.World.Has<Name>(selected))
+            {
+                continue;
+            }
+
+            selectedNames.Add(runtime.Engine.World.Get<Name>(selected).Value);
+        }
+        selectedNames.Sort(StringComparer.OrdinalIgnoreCase);
+
+        PrimitiveDrawBuffer? primitives = runtime.Engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
+        bool cueMarkerPresent = false;
+        Vector2 cueMarkerWorldCm = Vector2.Zero;
+        if (commandTargetWorldCm.HasValue)
+        {
+            cueMarkerPresent = TryFindCueMarkerAt(primitives, commandTargetWorldCm.Value, out cueMarkerWorldCm);
+        }
+
+        var overlayLines = ExtractOverlayText(runtime.Engine.GetService(CoreServiceKeys.ScreenOverlayBuffer));
+        string statusLine = overlayLines.Count > 0 ? overlayLines[^1] : string.Empty;
+
+        int loadedChunkCount = 0;
+        int loadedNodeCount = 0;
+        int chunkSizeCm = 0;
+        var activeChunkKeys = Array.Empty<long>();
+        if (TryGetRoadBoard(runtime.Engine, out NodeGraphBoard? board))
+        {
+            loadedChunkCount = board.LoadedChunksSource.ActiveChunkKeys.Count;
+            loadedNodeCount = board.GraphRuntime.CurrentGraph.NodeCount;
+            chunkSizeCm = board.LoadedChunksSource.ChunkSizeCm;
+            activeChunkKeys = board.LoadedChunksSource.ActiveChunkKeys.OrderBy(key => key).ToArray();
+        }
+
+        RoadSplineBuffer? roads = runtime.Engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+        var splines = new List<RoadSplineCapture>(roads?.Count ?? 0);
+        if (roads != null)
+        {
+            for (int index = 0; index < roads.Count; index++)
+            {
+                splines.Add(new RoadSplineCapture(
+                    roads.StableIds[index],
+                    new Vector3(roads.P0X[index], roads.P0Y[index], roads.P0Z[index]),
+                    new Vector3(roads.P1X[index], roads.P1Y[index], roads.P1Z[index]),
+                    new Vector3(roads.P2X[index], roads.P2Y[index], roads.P2Z[index]),
+                    new Vector3(roads.P3X[index], roads.P3Y[index], roads.P3Z[index]),
+                    roads.Width[index]));
+            }
+        }
+
+        namedEntities.TryGetValue("Blue Vanguard", out Vector2 blueVanguardWorldCm);
+        namedEntities.TryGetValue("Blue North Column", out Vector2 blueNorthWorldCm);
+        namedEntities.TryGetValue("Blue South Column", out Vector2 blueSouthWorldCm);
+        string controlledActorName = ResolveControlledActorName(runtime.Engine, namedEntities);
+        namedEntities.TryGetValue(controlledActorName, out Vector2 controlledActorWorldCm);
+
+        return new RoadSnapshot(
+            Tick: runtime.Engine.GameSession.CurrentTick,
+            Step: step,
+            TickMs: tickMs,
+            ActiveMapId: runtime.Engine.CurrentMapSession?.MapId.ToString() ?? runtime.Config.StartupMapId,
+            CameraTargetCm: runtime.Engine.GameSession.Camera.State.TargetCm,
+            LoadedChunkCount: loadedChunkCount,
+            LoadedNodeCount: loadedNodeCount,
+            ChunkSizeCm: chunkSizeCm,
+            ActiveChunkKeys: activeChunkKeys,
+            ActiveChunkSignature: string.Join(",", activeChunkKeys),
+            RoadSplineCount: roads?.Count ?? 0,
+            NamedEntities: namedEntities,
+            SelectedNames: selectedNames,
+            CueMarkerPresent: cueMarkerPresent,
+            CueMarkerWorldCm: cueMarkerWorldCm,
+            ControlledActorName: controlledActorName,
+            ControlledActorWorldCm: controlledActorWorldCm,
+            BlueVanguardWorldCm: blueVanguardWorldCm,
+            BlueNorthWorldCm: blueNorthWorldCm,
+            BlueSouthWorldCm: blueSouthWorldCm,
+            StatusLine: statusLine,
+            OverlayLines: overlayLines,
+            Splines: splines);
+    }
+
+    private static void AdvanceUntilRoadStatus(RecordingRuntime runtime, List<double> frameTimesMs, int maxFrames)
+    {
+        for (int frame = 0; frame < maxFrames; frame++)
+        {
+            Tick(runtime, 1, frameTimesMs);
+            RoadSnapshot snapshot = SampleRoadSnapshot(runtime, "probe_status", frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d, RoadCommandWorldCm);
+            if (IsAcceptedRoadStatus(snapshot.StatusLine))
+            {
+                return;
+            }
+        }
+    }
+
+    private static void AdvanceUntilRoadMovement(RecordingRuntime runtime, List<double> frameTimesMs, string controlledActorName, Vector2 startWorldCm, int maxFrames)
+    {
+        for (int frame = 0; frame < maxFrames; frame++)
+        {
+            Tick(runtime, 1, frameTimesMs);
+            RoadSnapshot snapshot = SampleRoadSnapshot(runtime, "probe_move", frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d, RoadCommandWorldCm);
+            Vector2 currentWorldCm = string.Equals(snapshot.ControlledActorName, controlledActorName, StringComparison.OrdinalIgnoreCase)
+                ? snapshot.ControlledActorWorldCm
+                : ResolveNamedPosition(snapshot.NamedEntities, controlledActorName);
+            if (currentWorldCm.X - startWorldCm.X >= RoadMovementMinimumCm)
+            {
+                return;
+            }
+        }
+    }
+
+    private static void AdvanceUntilRoadChunkShift(RecordingRuntime runtime, List<double> frameTimesMs, string startChunkSignature, int maxFrames)
+    {
+        for (int frame = 0; frame < maxFrames; frame++)
+        {
+            Tick(runtime, 1, frameTimesMs);
+            RoadSnapshot snapshot = SampleRoadSnapshot(runtime, "probe_chunks", frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d, RoadCommandWorldCm);
+            if (!string.Equals(snapshot.ActiveChunkSignature, startChunkSignature, StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+    }
+
+    private static RoadAcceptanceResult EvaluateRoadAcceptance(IReadOnlyList<RoadSnapshot> timeline)
+    {
+        RoadSnapshot start = timeline[0];
+        RoadSnapshot selected = timeline[1];
+        RoadSnapshot accepted = timeline[2];
+        RoadSnapshot moved = timeline[3];
+        RoadSnapshot shifted = timeline[4];
+
+        var failures = new List<string>();
+        AddAcceptanceCheck(selected.SelectedNames.Contains("Blue Vanguard", StringComparer.OrdinalIgnoreCase),
+            "Left-click should select Blue Vanguard before the road command is issued.", failures);
+        AddAcceptanceCheck(string.Equals(accepted.ControlledActorName, "Blue Vanguard", StringComparison.OrdinalIgnoreCase),
+            $"Road showcase should route local commands through Blue Vanguard, but controlled actor was '{accepted.ControlledActorName}'.", failures);
+        AddAcceptanceCheck(IsAcceptedRoadStatus(accepted.StatusLine),
+            $"Expected accepted road status, but got '{accepted.StatusLine}'.", failures);
+        AddAcceptanceCheck(!accepted.StatusLine.Contains("error 2", StringComparison.OrdinalIgnoreCase),
+            $"Road command still reports error 2: '{accepted.StatusLine}'.", failures);
+        AddAcceptanceCheck(accepted.CueMarkerPresent,
+            "Right-click should emit a visible cue marker at the road command target.", failures);
+        AddAcceptanceCheck(accepted.RoadSplineCount > 0,
+            "Road spline buffer should contain visible showcase road segments.", failures);
+        AddAcceptanceCheck(moved.ControlledActorWorldCm.X - accepted.ControlledActorWorldCm.X >= RoadMovementMinimumCm,
+            $"{accepted.ControlledActorName} should begin moving along the road after acceptance, but only advanced {moved.ControlledActorWorldCm.X - accepted.ControlledActorWorldCm.X:F0}cm.", failures);
+        AddAcceptanceCheck(start.LoadedChunkCount > 0 && start.LoadedNodeCount > 0,
+            "Initial camera settle should stream in at least one road chunk with loaded nodes.", failures);
+        AddAcceptanceCheck(!string.Equals(shifted.ActiveChunkSignature, start.ActiveChunkSignature, StringComparison.Ordinal),
+            "Moving the camera target should change the loaded chunk window.", failures);
+        AddAcceptanceCheck(MathF.Abs(shifted.CameraTargetCm.X - RoadChunkShiftTargetCm.X) <= 1f && MathF.Abs(shifted.CameraTargetCm.Y - RoadChunkShiftTargetCm.Y) <= 1f,
+            $"Camera target should settle at the chunk showcase probe point, but landed at {FormatPoint(shifted.CameraTargetCm)}.", failures);
+
+        string normalizedSignature = string.Join("|", new[]
+        {
+            "road_network_showcase_command_and_chunking",
+            $"selected:{string.Join("+", selected.SelectedNames)}",
+            $"controlled:{accepted.ControlledActorName}",
+            $"status:{accepted.StatusLine}",
+            $"blue:{MathF.Round(accepted.ControlledActorWorldCm.X):F0}->{MathF.Round(moved.ControlledActorWorldCm.X):F0}",
+            $"chunks:{start.ActiveChunkSignature}->{shifted.ActiveChunkSignature}",
+            $"roads:{accepted.RoadSplineCount}",
+            $"cue:{(accepted.CueMarkerPresent ? 1 : 0)}"
+        });
+
+        string verdict = failures.Count == 0
+            ? "Road showcase passes: selection, road command feedback, spline rendering, movement, and chunk-window migration all behaved as designed."
+            : "Road showcase fails: selection, road command acceptance, movement, or chunk streaming diverged from the intended playable demo.";
+        string failureSummary = failures.Count == 0 ? verdict : string.Join(Environment.NewLine, failures);
+
+        return new RoadAcceptanceResult(
+            Success: failures.Count == 0,
+            Verdict: verdict,
+            FailureSummary: failureSummary,
+            FailedChecks: failures,
+            SelectedNames: selected.SelectedNames,
+            ControlledActorName: accepted.ControlledActorName,
+            AcceptedStatus: accepted.StatusLine,
+            StartControlledActorWorldCm: accepted.ControlledActorWorldCm,
+            FinalControlledActorWorldCm: moved.ControlledActorWorldCm,
+            StartChunkSignature: start.ActiveChunkSignature,
+            FinalChunkSignature: shifted.ActiveChunkSignature,
+            CueMarkerVisible: accepted.CueMarkerPresent,
+            NormalizedSignature: normalizedSignature);
+    }
+
+    private static string BuildRoadBattleReport(
+        LauncherRecordingRequest request,
+        IReadOnlyList<RoadSnapshot> timeline,
+        IReadOnlyList<CaptureFrame> captureFrames,
+        IReadOnlyList<double> frameTimesMs,
+        RoadAcceptanceResult acceptance)
+    {
+        double medianTickMs = Median(frameTimesMs.ToArray());
+        double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
+        string evidenceImages = string.Join(", ", captureFrames.Select(frame => $"`screens/{frame.FileName}`").Append("`screens/timeline.png`"));
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# Scenario Card: road-network-showcase-command-and-chunking");
+        sb.AppendLine();
+        sb.AppendLine("## Intent");
+        sb.AppendLine("- Player goal: select a road column, right-click a fort along the road network, see immediate command feedback, and watch chunk streaming react when the camera shifts east.");
+        sb.AppendLine("- Gameplay domain: real launcher bootstrap, real input mapping, real graph-only auto path service, real road spline performer, and real loaded-chunk window updates.");
+        sb.AppendLine();
+        sb.AppendLine("## Determinism Inputs");
+        sb.AppendLine("- Seed: none");
+        sb.AppendLine("- Map: `mods/showcases/road_network/RoadNetworkShowcaseMod/assets/Maps/road_network_showcase_chunked.json`");
+        sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
+        sb.AppendLine($"- Launch command: `{request.CommandText}`");
+        sb.AppendLine($"- Selection point: `{FormatPoint(RoadSelectionWorldCm)}`");
+        sb.AppendLine($"- Command target: `{FormatPoint(RoadCommandWorldCm)}`");
+        sb.AppendLine($"- Chunk probe camera target: `{FormatPoint(RoadChunkShiftTargetCm)}`");
+        sb.AppendLine("- Clock profile: fixed `1/60s`");
+        sb.AppendLine($"- Evidence images: {evidenceImages}");
+        sb.AppendLine();
+        sb.AppendLine("## Timeline");
+        foreach (RoadSnapshot snapshot in timeline)
+        {
+            sb.AppendLine($"- [T+{snapshot.Tick:000}] RoadShowcase.{snapshot.Step} -> status={snapshot.StatusLine} | selected={string.Join(", ", snapshot.SelectedNames)} | controlled={snapshot.ControlledActorName} {FormatPoint(snapshot.ControlledActorWorldCm)} | vanguard={FormatPoint(snapshot.BlueVanguardWorldCm)} | north={FormatPoint(snapshot.BlueNorthWorldCm)} | south={FormatPoint(snapshot.BlueSouthWorldCm)} | chunks={snapshot.LoadedChunkCount} | nodes={snapshot.LoadedNodeCount} | roads={snapshot.RoadSplineCount} | cue={(snapshot.CueMarkerPresent ? "On" : "Off")} | camera={FormatPoint(snapshot.CameraTargetCm)} | tick={snapshot.TickMs:F3}ms");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Outcome");
+        sb.AppendLine($"- success: {(acceptance.Success ? "yes" : "no")}");
+        sb.AppendLine($"- verdict: {acceptance.Verdict}");
+        foreach (string failedCheck in acceptance.FailedChecks)
+        {
+            sb.AppendLine($"- failed-check: {failedCheck}");
+        }
+
+        sb.AppendLine($"- reason: selected=`{string.Join(", ", acceptance.SelectedNames)}` controlled=`{acceptance.ControlledActorName}` status=`{acceptance.AcceptedStatus}` controlled actor `{FormatPoint(acceptance.StartControlledActorWorldCm)}` -> `{FormatPoint(acceptance.FinalControlledActorWorldCm)}` chunk signature `{acceptance.StartChunkSignature}` -> `{acceptance.FinalChunkSignature}` cue={(acceptance.CueMarkerVisible ? "visible" : "hidden")}.");
+        sb.AppendLine();
+        sb.AppendLine("## Summary Stats");
+        sb.AppendLine($"- screenshot captures: `{captureFrames.Count}`");
+        sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
+        sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
+        sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
+        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `EntityClickSelectSystem`, `InputOrderMappingSystem`, `AutoPathService`, `RoadSplineBuffer`, `LoadedChunksSource`");
+        return sb.ToString();
+    }
+
+    private static string BuildRoadTraceJsonl(string adapterId, IReadOnlyList<RoadSnapshot> timeline)
+    {
+        var lines = new List<string>(timeline.Count);
+        for (int index = 0; index < timeline.Count; index++)
+        {
+            RoadSnapshot snapshot = timeline[index];
+            lines.Add(JsonSerializer.Serialize(new
+            {
+                event_id = $"road-{adapterId}-{index + 1:000}",
+                tick = snapshot.Tick,
+                step = snapshot.Step,
+                status_line = snapshot.StatusLine,
+                selected = snapshot.SelectedNames,
+                controlled_actor = snapshot.ControlledActorName,
+                controlled_actor_x = Math.Round(snapshot.ControlledActorWorldCm.X, 2),
+                controlled_actor_y = Math.Round(snapshot.ControlledActorWorldCm.Y, 2),
+                blue_x = Math.Round(snapshot.BlueVanguardWorldCm.X, 2),
+                blue_y = Math.Round(snapshot.BlueVanguardWorldCm.Y, 2),
+                blue_north_x = Math.Round(snapshot.BlueNorthWorldCm.X, 2),
+                blue_north_y = Math.Round(snapshot.BlueNorthWorldCm.Y, 2),
+                blue_south_x = Math.Round(snapshot.BlueSouthWorldCm.X, 2),
+                blue_south_y = Math.Round(snapshot.BlueSouthWorldCm.Y, 2),
+                loaded_chunks = snapshot.LoadedChunkCount,
+                loaded_nodes = snapshot.LoadedNodeCount,
+                road_splines = snapshot.RoadSplineCount,
+                cue_marker = snapshot.CueMarkerPresent,
+                camera_target_x = Math.Round(snapshot.CameraTargetCm.X, 2),
+                camera_target_y = Math.Round(snapshot.CameraTargetCm.Y, 2),
+                tick_ms = Math.Round(snapshot.TickMs, 4),
+                status = "done"
+            }));
+        }
+
+        return string.Join(Environment.NewLine, lines) + Environment.NewLine;
+    }
+
+    private static string BuildRoadPathMermaid()
+    {
+        return string.Join(Environment.NewLine, new[]
+        {
+            "flowchart TD",
+            "    A[Boot launcher runtime for RoadNetworkShowcaseMod] --> B[Settle tactical camera and chunk window]",
+            "    B --> C[Project Blue Vanguard visual pivot and inject left-click]",
+            "    C --> D{Selection contains Blue Vanguard?}",
+            "    D -->|yes| E[Project Central Crossing and inject right-click]",
+            "    E --> F{HUD shows an accepted route selection and cue marker is visible?}",
+            "    F -->|yes| G[Advance simulation until the controlled blue column moves east]",
+            "    G --> H[Apply east camera target and wait for loaded chunk signature to change]",
+            "    H --> I[Write battle-report + trace + path + PNG timeline]",
+            "    D -->|no| X[Fail acceptance: selection bridge diverged]",
+            "    F -->|no| Y[Fail acceptance: road command still invalid or marker missing]"
+        }) + Environment.NewLine;
+    }
+
+    private static string BuildRoadVisibleChecklist(IReadOnlyList<RoadSnapshot> timeline)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Visible Checklist: road-network-showcase-command-and-chunking");
+        sb.AppendLine();
+        sb.AppendLine("- `000_start` should show the initial central loaded chunk window and visible road splines.");
+        sb.AppendLine("- `001_selected` should highlight Blue Vanguard as selected.");
+        sb.AppendLine("- `002_command_accepted` should show a cue marker at Central Crossing and a valid accepted route HUD status instead of `error 2`.");
+        sb.AppendLine("- `003_column_advancing` should show the controlled blue column shifted east along the road.");
+        sb.AppendLine("- `004_chunk_shifted` should show the camera moved east and a different loaded chunk window.");
+        sb.AppendLine();
+        foreach (RoadSnapshot snapshot in timeline)
+        {
+            sb.AppendLine($"- `{snapshot.Step}.png`: status=`{snapshot.StatusLine}` selected=`{string.Join(", ", snapshot.SelectedNames)}` chunks={snapshot.LoadedChunkCount} roads={snapshot.RoadSplineCount} cue={(snapshot.CueMarkerPresent ? "visible" : "hidden")}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildRoadSummaryJson(LauncherRecordingRequest request, RoadAcceptanceResult acceptance)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            scenario = "road_network_showcase_command_and_chunking",
+            adapter = request.Plan.AdapterId,
+            selectors = request.Plan.Selectors,
+            root_mods = request.Plan.RootModIds,
+            selected = acceptance.SelectedNames,
+            controlled_actor = acceptance.ControlledActorName,
+            accepted_status = acceptance.AcceptedStatus,
+            cue_visible = acceptance.CueMarkerVisible,
+            start_chunks = acceptance.StartChunkSignature,
+            final_chunks = acceptance.FinalChunkSignature,
+            normalized_signature = acceptance.NormalizedSignature
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private static void WriteRoadSnapshotImage(RoadSnapshot snapshot, string path)
+    {
+        using var surface = SKSurface.Create(new SKImageInfo(RoadImageWidth, RoadImageHeight));
+        SKCanvas canvas = surface.Canvas;
+        canvas.Clear(new SKColor(10, 14, 20));
+
+        using var gridPaint = new SKPaint { Color = new SKColor(34, 42, 58), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1f };
+        using var chunkFillPaint = new SKPaint { Color = new SKColor(72, 108, 148, 38), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var chunkStrokePaint = new SKPaint { Color = new SKColor(114, 162, 214, 120), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
+        using var roadPaint = new SKPaint { Color = new SKColor(214, 168, 88), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 5f, StrokeCap = SKStrokeCap.Round };
+        using var roadBorderPaint = new SKPaint { Color = new SKColor(248, 222, 146), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 8f, StrokeCap = SKStrokeCap.Round };
+        using var bluePaint = new SKPaint { Color = new SKColor(74, 188, 255), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var redPaint = new SKPaint { Color = new SKColor(255, 100, 96), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var neutralPaint = new SKPaint { Color = new SKColor(238, 206, 96), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var selectedPaint = new SKPaint { Color = new SKColor(255, 255, 255, 220), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 3f };
+        using var cuePaint = new SKPaint { Color = new SKColor(92, 240, 154), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 3f };
+        using var labelPaint = new SKPaint { Color = SKColors.White, IsAntialias = true, TextSize = 22f };
+        using var minorTextPaint = new SKPaint { Color = new SKColor(190, 198, 214), IsAntialias = true, TextSize = 16f };
+
+        DrawWorldGrid(canvas, RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, gridPaint, RoadImageWidth, RoadImageHeight);
+
+        if (snapshot.ChunkSizeCm > 0)
+        {
+            foreach (long chunkKey in snapshot.ActiveChunkKeys)
+            {
+                (int chunkX, int chunkY) = Ludots.Core.Navigation.GraphWorld.GraphChunkKey.Unpack(chunkKey);
+                float minX = chunkX * snapshot.ChunkSizeCm;
+                float minY = chunkY * snapshot.ChunkSizeCm;
+                float maxX = minX + snapshot.ChunkSizeCm;
+                float maxY = minY + snapshot.ChunkSizeCm;
+                SKPoint a = ToScreen(new Vector2(minX, maxY), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+                SKPoint b = ToScreen(new Vector2(maxX, minY), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+                SKRect rect = NormalizeRect(new SKRect(a.X, a.Y, b.X, b.Y));
+                canvas.DrawRect(rect, chunkFillPaint);
+                canvas.DrawRect(rect, chunkStrokePaint);
+            }
+        }
+
+        foreach (RoadSplineCapture spline in snapshot.Splines)
+        {
+            using var pathBuilder = new SKPath();
+            SKPoint p0 = ToScreen(new Vector2(spline.P0.X * 100f, spline.P0.Z * 100f), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+            SKPoint p1 = ToScreen(new Vector2(spline.P1.X * 100f, spline.P1.Z * 100f), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+            SKPoint p2 = ToScreen(new Vector2(spline.P2.X * 100f, spline.P2.Z * 100f), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+            SKPoint p3 = ToScreen(new Vector2(spline.P3.X * 100f, spline.P3.Z * 100f), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+            pathBuilder.MoveTo(p0);
+            pathBuilder.CubicTo(p1, p2, p3);
+            canvas.DrawPath(pathBuilder, roadBorderPaint);
+            canvas.DrawPath(pathBuilder, roadPaint);
+        }
+
+        foreach ((string name, Vector2 worldCm) in snapshot.NamedEntities.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            SKPoint point = ToScreen(worldCm, RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+            bool isBlue = name.Contains("Blue", StringComparison.OrdinalIgnoreCase);
+            bool isRed = name.Contains("Red", StringComparison.OrdinalIgnoreCase);
+            SKPaint fill = isBlue ? bluePaint : isRed ? redPaint : neutralPaint;
+            float radius = name.Contains("Capital", StringComparison.OrdinalIgnoreCase) || name.Contains("Gate", StringComparison.OrdinalIgnoreCase) || name.Contains("Pass", StringComparison.OrdinalIgnoreCase) || name.Contains("Ford", StringComparison.OrdinalIgnoreCase) || name.Contains("Watch", StringComparison.OrdinalIgnoreCase)
+                ? 10f
+                : 7f;
+            canvas.DrawCircle(point.X, point.Y, radius, fill);
+            if (snapshot.SelectedNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+            {
+                canvas.DrawCircle(point.X, point.Y, radius + 5f, selectedPaint);
+            }
+
+            canvas.DrawText(name, point.X + 10f, point.Y - 8f, minorTextPaint);
+        }
+
+        DrawCrosshair(canvas, ToScreen(snapshot.CameraTargetCm, RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight), 12f, chunkStrokePaint);
+        DrawCrosshair(canvas, ToScreen(RoadCommandWorldCm, RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight), 14f, roadPaint);
+        if (snapshot.CueMarkerPresent)
+        {
+            DrawCrosshair(canvas, ToScreen(snapshot.CueMarkerWorldCm, RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight), 18f, cuePaint);
+        }
+
+        canvas.DrawText($"Road Network Showcase | {snapshot.Step} | tick={snapshot.Tick}", 24, 34, labelPaint);
+        canvas.DrawText($"Status={snapshot.StatusLine}", 24, 64, minorTextPaint);
+        canvas.DrawText($"Selected={string.Join(", ", snapshot.SelectedNames)}", 24, 92, minorTextPaint);
+        canvas.DrawText($"Controlled={snapshot.ControlledActorName} {FormatPoint(snapshot.ControlledActorWorldCm)}  Camera={FormatPoint(snapshot.CameraTargetCm)}", 24, 120, minorTextPaint);
+        canvas.DrawText($"BlueVanguard={FormatPoint(snapshot.BlueVanguardWorldCm)}  North={FormatPoint(snapshot.BlueNorthWorldCm)}  South={FormatPoint(snapshot.BlueSouthWorldCm)}", 24, 148, minorTextPaint);
+        canvas.DrawText($"LoadedChunks={snapshot.LoadedChunkCount}  LoadedNodes={snapshot.LoadedNodeCount}  RoadSplines={snapshot.RoadSplineCount}  Tick={snapshot.TickMs:F3}ms", 24, 176, minorTextPaint);
+
+        using SKImage image = surface.Snapshot();
+        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using FileStream stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        data.SaveTo(stream);
+    }
+
+    private static bool TryGetRoadBoard(GameEngine engine, out NodeGraphBoard? board)
+    {
+        board = engine.CurrentMapSession?.PrimaryBoard as NodeGraphBoard;
+        return board != null;
+    }
+
+    private static bool TryFindCueMarkerAt(PrimitiveDrawBuffer? primitives, Vector2 worldCm, out Vector2 cueMarkerWorldCm)
+    {
+        cueMarkerWorldCm = Vector2.Zero;
+        if (primitives == null)
+        {
+            return false;
+        }
+
+        Vector3 cueMarkerVisual = WorldUnits.WorldCmToVisualMeters(
+            new WorldCmInt2((int)MathF.Round(worldCm.X), (int)MathF.Round(worldCm.Y)),
+            yMeters: RoadCueMarkerHeightMeters);
+        foreach (ref readonly PrimitiveDrawItem primitive in primitives.GetSpan())
+        {
+            if (Vector3.Distance(primitive.Position, cueMarkerVisual) <= 0.08f)
+            {
+                WorldCmInt2 marker = WorldUnits.VisualMetersToWorldCm(primitive.Position);
+                cueMarkerWorldCm = new Vector2(marker.X, marker.Y);
+                return true;
+            }
+        }
+
+        foreach (ref readonly PrimitiveDrawItem primitive in primitives.GetSpan())
+        {
+            if (!LooksLikeCueMarker(primitive))
+            {
+                continue;
+            }
+
+            WorldCmInt2 marker = WorldUnits.VisualMetersToWorldCm(primitive.Position);
+            cueMarkerWorldCm = new Vector2(marker.X, marker.Y);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsAcceptedRoadStatus(string statusLine)
+    {
+        if (string.IsNullOrWhiteSpace(statusLine))
+        {
+            return false;
+        }
+
+        if (statusLine.Contains("Road route accepted:", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return statusLine.Contains(" selected ", StringComparison.Ordinal) &&
+               statusLine.Contains("sampled point(s)", StringComparison.Ordinal);
+    }
+
+    private static bool LooksLikeCueMarker(in PrimitiveDrawItem primitive)
+    {
+        if (MathF.Abs(primitive.Position.Y - RoadCueMarkerHeightMeters) > 0.12f)
+        {
+            return false;
+        }
+
+        Vector4 accepted = new(0.28f, 0.94f, 0.60f, 1f);
+        Vector4 rejected = new(1.0f, 0.52f, 0.18f, 1f);
+        return Vector4.DistanceSquared(primitive.Color, accepted) <= 0.08f ||
+               Vector4.DistanceSquared(primitive.Color, rejected) <= 0.08f;
+    }
+
+    private static void AssertRoadOverlay(ScreenOverlayBuffer? overlay)
+    {
+        string dump = string.Join(" || ", ExtractOverlayText(overlay));
+        if (!dump.Contains("Road Network Showcase", StringComparison.Ordinal) ||
+            !dump.Contains("Loaded chunks", StringComparison.Ordinal) ||
+            !dump.Contains("Right-click near a road or fort", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"Road showcase overlay is missing expected guidance text. Dump: {dump}");
+        }
+    }
+
+    private static void ClickPrimaryUntilSelected(RecordingRuntime runtime, string targetName, List<double> frameTimesMs)
+    {
+        if (SampleRoadSnapshot(runtime, "probe_select", frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d, null)
+            .SelectedNames.Contains(targetName, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        Vector2 baseScreen = runtime.TryProjectNamedEntity(targetName, out Vector2 projected)
+            ? projected
+            : runtime.ProjectWorldCm(RoadSelectionWorldCm, yMeters: 0.58f);
+
+        foreach (Vector2 offset in RoadSelectionPickOffsetsPx)
+        {
+            ClickPrimary(runtime, baseScreen + offset, frameTimesMs);
+            Tick(runtime, 2, frameTimesMs);
+            if (SampleRoadSnapshot(runtime, "probe_select", frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d, null)
+                .SelectedNames.Contains(targetName, StringComparer.OrdinalIgnoreCase))
+            {
+                return;
+            }
+        }
+    }
+
+    private static string ResolveControlledActorName(GameEngine engine, IReadOnlyDictionary<string, Vector2> namedEntities)
+    {
+        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
+            localObj is Entity local &&
+            engine.World.IsAlive(local) &&
+            engine.World.Has<Name>(local))
+        {
+            string value = engine.World.Get<Name>(local).Value;
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        foreach (string blueColumnName in RoadBlueColumnNames)
+        {
+            if (namedEntities.ContainsKey(blueColumnName))
+            {
+                return blueColumnName;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static Vector2 ResolveNamedPosition(IReadOnlyDictionary<string, Vector2> namedEntities, string name)
+    {
+        return namedEntities.TryGetValue(name, out Vector2 worldCm) ? worldCm : Vector2.Zero;
+    }
+
+    private static SKRect NormalizeRect(SKRect rect)
+    {
+        float left = Math.Min(rect.Left, rect.Right);
+        float right = Math.Max(rect.Left, rect.Right);
+        float top = Math.Min(rect.Top, rect.Bottom);
+        float bottom = Math.Max(rect.Top, rect.Bottom);
+        return new SKRect(left, top, right, bottom);
+    }
+
+    private static LauncherRecordingResult RecordChunkStreamingShowcase(LauncherRecordingRequest request)
+    {
+        string screensDir = Path.Combine(request.OutputDirectory, "screens");
+        Directory.CreateDirectory(screensDir);
+
+        var timeline = new List<ChunkSnapshot>();
+        var captureFrames = new List<CaptureFrame>();
+        var frameTimesMs = new List<double>();
+
+        using var runtime = CreateRuntime(request.Plan, request.BootstrapPath);
+        if (!string.Equals(runtime.Config.StartupMapId, "chunk_streaming_showcase", StringComparison.OrdinalIgnoreCase))
+        {
+            runtime.Engine.LoadMap("chunk_streaming_showcase");
+        }
+
+        Tick(runtime, 10, frameTimesMs);
+        AssertChunkOverlay(runtime.Engine.GetService(CoreServiceKeys.ScreenOverlayBuffer));
+        CaptureChunkSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "000_overview");
+
+        ApplyCameraTarget(runtime, ChunkEastGateTargetCm, frameTimesMs, settleTicks: 6);
+        AdvanceUntilChunkSignature(runtime, frameTimesMs, timeline[0].ActiveChunkSignature, shouldMatch: false, maxFrames: 48);
+        CaptureChunkSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "001_east_gate");
+
+        ApplyCameraTarget(runtime, ChunkRedCapitalTargetCm, frameTimesMs, settleTicks: 6);
+        AdvanceUntilChunkSignature(runtime, frameTimesMs, timeline[1].ActiveChunkSignature, shouldMatch: false, maxFrames: 48);
+        CaptureChunkSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "002_red_capital");
+
+        ApplyCameraTarget(runtime, Vector2.Zero, frameTimesMs, settleTicks: 6);
+        AdvanceUntilChunkSignature(runtime, frameTimesMs, timeline[0].ActiveChunkSignature, shouldMatch: true, maxFrames: 48);
+        CaptureChunkSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "003_reset_center");
+
+        WriteTimelineSheet("Chunk streaming showcase timeline", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
+
+        ChunkAcceptanceResult acceptance = EvaluateChunkAcceptance(timeline);
+        string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
+        string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
+        string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
+        string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
+        string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
+
+        File.WriteAllText(battleReportPath, BuildChunkBattleReport(request, timeline, frameTimesMs, acceptance));
+        File.WriteAllText(tracePath, BuildChunkTraceJsonl(request.Plan.AdapterId, timeline));
+        File.WriteAllText(pathPath, BuildChunkPathMermaid());
+        File.WriteAllText(visibleChecklistPath, BuildChunkVisibleChecklist(timeline));
+        File.WriteAllText(summaryPath, BuildChunkSummaryJson(request, acceptance));
+
+        if (!acceptance.Success)
+        {
+            throw new InvalidOperationException(acceptance.FailureSummary);
+        }
+
+        return new LauncherRecordingResult(
+            request.OutputDirectory,
+            battleReportPath,
+            tracePath,
+            pathPath,
+            summaryPath,
+            visibleChecklistPath,
+            captureFrames.Select(frame => Path.Combine(screensDir, frame.FileName)).Append(Path.Combine(screensDir, "timeline.png")).ToList(),
+            acceptance.NormalizedSignature);
+    }
+
+    private static void CaptureChunkSnapshot(
+        RecordingRuntime runtime,
+        string screensDir,
+        IReadOnlyList<double> frameTimesMs,
+        List<ChunkSnapshot> timeline,
+        List<CaptureFrame> captureFrames,
+        string step)
+    {
+        ChunkSnapshot snapshot = SampleChunkSnapshot(runtime, step, frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
+        timeline.Add(snapshot);
+        string fileName = $"{step}.png";
+        WriteChunkSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
+        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.RoadSplineCount, 0f, 0f));
+    }
+
+    private static ChunkSnapshot SampleChunkSnapshot(RecordingRuntime runtime, string step, double tickMs)
+    {
+        int loadedChunkCount = 0;
+        int loadedNodeCount = 0;
+        int chunkSizeCm = 0;
+        var activeChunkKeys = Array.Empty<long>();
+        if (TryGetRoadBoard(runtime.Engine, out NodeGraphBoard? board))
+        {
+            loadedChunkCount = board.LoadedChunksSource.ActiveChunkKeys.Count;
+            loadedNodeCount = board.GraphRuntime.CurrentGraph.NodeCount;
+            chunkSizeCm = board.LoadedChunksSource.ChunkSizeCm;
+            activeChunkKeys = board.LoadedChunksSource.ActiveChunkKeys.OrderBy(key => key).ToArray();
+        }
+
+        RoadSplineBuffer? roads = runtime.Engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+        var splines = new List<RoadSplineCapture>(roads?.Count ?? 0);
+        if (roads != null)
+        {
+            for (int index = 0; index < roads.Count; index++)
+            {
+                splines.Add(new RoadSplineCapture(
+                    roads.StableIds[index],
+                    new Vector3(roads.P0X[index], roads.P0Y[index], roads.P0Z[index]),
+                    new Vector3(roads.P1X[index], roads.P1Y[index], roads.P1Z[index]),
+                    new Vector3(roads.P2X[index], roads.P2Y[index], roads.P2Z[index]),
+                    new Vector3(roads.P3X[index], roads.P3Y[index], roads.P3Z[index]),
+                    roads.Width[index]));
+            }
+        }
+
+        var overlayLines = ExtractOverlayText(runtime.Engine.GetService(CoreServiceKeys.ScreenOverlayBuffer));
+        string statusLine = overlayLines.Count > 1 ? overlayLines[1] : string.Empty;
+
+        return new ChunkSnapshot(
+            Tick: runtime.Engine.GameSession.CurrentTick,
+            Step: step,
+            TickMs: tickMs,
+            ActiveMapId: runtime.Engine.CurrentMapSession?.MapId.ToString() ?? runtime.Config.StartupMapId,
+            CameraTargetCm: runtime.Engine.GameSession.Camera.State.TargetCm,
+            LoadedChunkCount: loadedChunkCount,
+            LoadedNodeCount: loadedNodeCount,
+            ChunkSizeCm: chunkSizeCm,
+            ActiveChunkKeys: activeChunkKeys,
+            ActiveChunkSignature: string.Join(",", activeChunkKeys),
+            RoadSplineCount: roads?.Count ?? 0,
+            StatusLine: statusLine,
+            OverlayLines: overlayLines,
+            Splines: splines);
+    }
+
+    private static void AdvanceUntilChunkSignature(RecordingRuntime runtime, List<double> frameTimesMs, string targetChunkSignature, bool shouldMatch, int maxFrames)
+    {
+        for (int frame = 0; frame < maxFrames; frame++)
+        {
+            Tick(runtime, 1, frameTimesMs);
+            ChunkSnapshot snapshot = SampleChunkSnapshot(runtime, "probe_chunk_window", frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
+            bool matches = string.Equals(snapshot.ActiveChunkSignature, targetChunkSignature, StringComparison.Ordinal);
+            if (matches == shouldMatch)
+            {
+                return;
+            }
+        }
+    }
+
+    private static ChunkAcceptanceResult EvaluateChunkAcceptance(IReadOnlyList<ChunkSnapshot> timeline)
+    {
+        ChunkSnapshot start = timeline[0];
+        ChunkSnapshot eastGate = timeline[1];
+        ChunkSnapshot redCapital = timeline[2];
+        ChunkSnapshot reset = timeline[3];
+
+        var failures = new List<string>();
+        AddAcceptanceCheck(start.LoadedChunkCount > 0 && start.LoadedNodeCount > 0,
+            "Chunk showcase should start with a populated central window.", failures);
+        AddAcceptanceCheck(start.RoadSplineCount > 0,
+            "Chunk showcase should render at least one road spline batch in the initial window.", failures);
+        AddAcceptanceCheck(!string.Equals(eastGate.ActiveChunkSignature, start.ActiveChunkSignature, StringComparison.Ordinal),
+            "Focusing East Gate should shift the loaded chunk signature away from the center window.", failures);
+        AddAcceptanceCheck(!string.Equals(redCapital.ActiveChunkSignature, eastGate.ActiveChunkSignature, StringComparison.Ordinal),
+            "Focusing Red Capital should continue shifting the chunk signature farther east.", failures);
+        AddAcceptanceCheck(string.Equals(reset.ActiveChunkSignature, start.ActiveChunkSignature, StringComparison.Ordinal),
+            "Resetting the camera should restore the original central chunk signature.", failures);
+        AddAcceptanceCheck(redCapital.CameraTargetCm.X >= 16000f,
+            $"Chunk showcase camera should enter the far-east chunk window, but landed at {FormatPoint(redCapital.CameraTargetCm)}.", failures);
+
+        string normalizedSignature = string.Join("|", new[]
+        {
+            "chunk_streaming_showcase_camera_windows",
+            $"start:{start.ActiveChunkSignature}",
+            $"east:{eastGate.ActiveChunkSignature}",
+            $"red:{redCapital.ActiveChunkSignature}",
+            $"reset:{reset.ActiveChunkSignature}",
+            $"splines:{start.RoadSplineCount}->{redCapital.RoadSplineCount}"
+        });
+
+        bool success = failures.Count == 0;
+        string failureSummary = success
+            ? string.Empty
+            : $"Chunk streaming showcase acceptance failed:{Environment.NewLine}- {string.Join(Environment.NewLine + "- ", failures)}";
+
+        return new ChunkAcceptanceResult(
+            success,
+            success ? "Chunk window shifts and resets were visible across authored camera jumps." : "Chunk window evidence is incomplete.",
+            failureSummary,
+            failures,
+            start.ActiveChunkSignature,
+            redCapital.ActiveChunkSignature,
+            reset.ActiveChunkSignature,
+            normalizedSignature);
+    }
+
+    private static string BuildChunkBattleReport(
+        LauncherRecordingRequest request,
+        IReadOnlyList<ChunkSnapshot> timeline,
+        IReadOnlyList<double> frameTimesMs,
+        ChunkAcceptanceResult acceptance)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Scenario Card: chunk_streaming_showcase_camera_windows");
+        sb.AppendLine();
+        sb.AppendLine("## Intent");
+        sb.AppendLine("- Validate a standalone chunk showcase mod that demonstrates camera-driven chunk window streaming and road spline batch loading.");
+        sb.AppendLine("- Acceptance focus: center, East Gate, and Red Capital jumps should expose different loaded chunk signatures, then reset back to the original window.");
+        sb.AppendLine();
+        sb.AppendLine("## Runtime");
+        sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
+        sb.AppendLine($"- Root mods: `{string.Join(", ", request.Plan.RootModIds)}`");
+        sb.AppendLine("- Map: `mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod/assets/Maps/chunk_streaming_showcase.json`");
+        sb.AppendLine();
+        sb.AppendLine("## Timeline");
+        foreach (ChunkSnapshot snapshot in timeline)
+        {
+            sb.AppendLine($"- [T+{snapshot.Tick:000}] ChunkShowcase.{snapshot.Step} -> status={snapshot.StatusLine} | camera={FormatPoint(snapshot.CameraTargetCm)} | chunks={snapshot.LoadedChunkCount} | nodes={snapshot.LoadedNodeCount} | roads={snapshot.RoadSplineCount} | tick={snapshot.TickMs:F3}ms");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Outcome");
+        sb.AppendLine($"- success: {(acceptance.Success ? "yes" : "no")}");
+        sb.AppendLine($"- verdict: {acceptance.Verdict}");
+        if (!acceptance.Success)
+        {
+            sb.AppendLine("- failures:");
+            foreach (string failure in acceptance.FailedChecks)
+            {
+                sb.AppendLine($"  - {failure}");
+            }
+        }
+
+        if (frameTimesMs.Count > 0)
+        {
+            sb.AppendLine($"- median tick ms: {Median(frameTimesMs.ToArray()):F3}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildChunkTraceJsonl(string adapterId, IReadOnlyList<ChunkSnapshot> timeline)
+    {
+        var lines = new List<string>(timeline.Count);
+        foreach (ChunkSnapshot snapshot in timeline)
+        {
+            lines.Add(JsonSerializer.Serialize(new
+            {
+                adapter = adapterId,
+                step = snapshot.Step,
+                tick = snapshot.Tick,
+                map = snapshot.ActiveMapId,
+                camera = new { x = Math.Round(snapshot.CameraTargetCm.X, 2), y = Math.Round(snapshot.CameraTargetCm.Y, 2) },
+                chunk_count = snapshot.LoadedChunkCount,
+                node_count = snapshot.LoadedNodeCount,
+                road_spline_count = snapshot.RoadSplineCount,
+                chunk_signature = snapshot.ActiveChunkSignature,
+                status = snapshot.StatusLine
+            }));
+        }
+
+        return string.Join(Environment.NewLine, lines) + Environment.NewLine;
+    }
+
+    private static string BuildChunkPathMermaid()
+    {
+        return string.Join(Environment.NewLine, new[]
+        {
+            "flowchart TD",
+            "    A[Boot launcher runtime for ChunkStreamingShowcaseMod] --> B[Settle tactical camera on center window]",
+            "    B --> C[Capture initial chunk tiles and road splines]",
+            "    C --> D[Jump camera to East Gate]",
+            "    D --> E[Observe different loaded chunk signature]",
+            "    E --> F[Jump camera to Red Capital]",
+            "    F --> G[Observe farther-east chunk signature and spline subset]",
+            "    G --> H[Reset camera to center and restore original chunk window]"
+        }) + Environment.NewLine;
+    }
+
+    private static string BuildChunkVisibleChecklist(IReadOnlyList<ChunkSnapshot> timeline)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Visible Checklist: chunk-streaming-showcase-camera-windows");
+        sb.AppendLine();
+        sb.AppendLine("- `000_overview` should show the central chunk window with the main trunk road and the chunk showcase UI panel.");
+        sb.AppendLine("- `001_east_gate` should show the camera and loaded chunk window shifted east.");
+        sb.AppendLine("- `002_red_capital` should show the far-east window around Red Capital.");
+        sb.AppendLine("- `003_reset_center` should return to the original center signature.");
+        sb.AppendLine();
+        foreach (ChunkSnapshot snapshot in timeline)
+        {
+            sb.AppendLine($"- `{snapshot.Step}.png`: status=`{snapshot.StatusLine}` chunks={snapshot.LoadedChunkCount} nodes={snapshot.LoadedNodeCount} roads={snapshot.RoadSplineCount} camera=`{FormatPoint(snapshot.CameraTargetCm)}`");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildChunkSummaryJson(LauncherRecordingRequest request, ChunkAcceptanceResult acceptance)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            scenario = "chunk_streaming_showcase_camera_windows",
+            adapter = request.Plan.AdapterId,
+            selectors = request.Plan.Selectors,
+            root_mods = request.Plan.RootModIds,
+            start_chunks = acceptance.StartChunkSignature,
+            far_chunks = acceptance.FarChunkSignature,
+            reset_chunks = acceptance.ResetChunkSignature,
+            normalized_signature = acceptance.NormalizedSignature
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private static void WriteChunkSnapshotImage(ChunkSnapshot snapshot, string path)
+    {
+        using var surface = SKSurface.Create(new SKImageInfo(RoadImageWidth, RoadImageHeight));
+        SKCanvas canvas = surface.Canvas;
+        canvas.Clear(new SKColor(10, 14, 20));
+
+        using var gridPaint = new SKPaint { Color = new SKColor(34, 42, 58), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1f };
+        using var chunkFillPaint = new SKPaint { Color = new SKColor(72, 108, 148, 38), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var chunkStrokePaint = new SKPaint { Color = new SKColor(114, 162, 214, 120), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
+        using var roadPaint = new SKPaint { Color = new SKColor(214, 168, 88), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 5f, StrokeCap = SKStrokeCap.Round };
+        using var roadBorderPaint = new SKPaint { Color = new SKColor(248, 222, 146), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 8f, StrokeCap = SKStrokeCap.Round };
+        using var westPaint = new SKPaint { Color = new SKColor(74, 188, 255), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var centerPaint = new SKPaint { Color = new SKColor(238, 206, 96), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var eastPaint = new SKPaint { Color = new SKColor(255, 100, 96), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var redCapitalPaint = new SKPaint { Color = new SKColor(255, 122, 114), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var labelPaint = new SKPaint { Color = SKColors.White, IsAntialias = true, TextSize = 22f };
+        using var minorTextPaint = new SKPaint { Color = new SKColor(190, 198, 214), IsAntialias = true, TextSize = 16f };
+
+        DrawWorldGrid(canvas, RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, gridPaint, RoadImageWidth, RoadImageHeight);
+
+        if (snapshot.ChunkSizeCm > 0)
+        {
+            foreach (long chunkKey in snapshot.ActiveChunkKeys)
+            {
+                (int chunkX, int chunkY) = Ludots.Core.Navigation.GraphWorld.GraphChunkKey.Unpack(chunkKey);
+                float minX = chunkX * snapshot.ChunkSizeCm;
+                float minY = chunkY * snapshot.ChunkSizeCm;
+                float maxX = minX + snapshot.ChunkSizeCm;
+                float maxY = minY + snapshot.ChunkSizeCm;
+                SKPoint a = ToScreen(new Vector2(minX, maxY), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+                SKPoint b = ToScreen(new Vector2(maxX, minY), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+                SKRect rect = NormalizeRect(new SKRect(a.X, a.Y, b.X, b.Y));
+                canvas.DrawRect(rect, chunkFillPaint);
+                canvas.DrawRect(rect, chunkStrokePaint);
+            }
+        }
+
+        foreach (RoadSplineCapture spline in snapshot.Splines)
+        {
+            using var pathBuilder = new SKPath();
+            SKPoint p0 = ToScreen(new Vector2(spline.P0.X * 100f, spline.P0.Z * 100f), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+            SKPoint p1 = ToScreen(new Vector2(spline.P1.X * 100f, spline.P1.Z * 100f), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+            SKPoint p2 = ToScreen(new Vector2(spline.P2.X * 100f, spline.P2.Z * 100f), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+            SKPoint p3 = ToScreen(new Vector2(spline.P3.X * 100f, spline.P3.Z * 100f), RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+            pathBuilder.MoveTo(p0);
+            pathBuilder.CubicTo(p1, p2, p3);
+            canvas.DrawPath(pathBuilder, roadBorderPaint);
+            canvas.DrawPath(pathBuilder, roadPaint);
+        }
+
+        DrawNamedLandmark(canvas, "West Gate", new Vector2(-9000f, 0f), westPaint, minorTextPaint);
+        DrawNamedLandmark(canvas, "Central Crossing", Vector2.Zero, centerPaint, minorTextPaint);
+        DrawNamedLandmark(canvas, "East Gate", ChunkEastGateTargetCm, eastPaint, minorTextPaint);
+        DrawNamedLandmark(canvas, "Red Capital", ChunkRedCapitalTargetCm, redCapitalPaint, minorTextPaint);
+        DrawCrosshair(canvas, ToScreen(snapshot.CameraTargetCm, RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight), 14f, chunkStrokePaint);
+
+        canvas.DrawText($"Chunk Streaming Showcase | {snapshot.Step} | tick={snapshot.Tick}", 24, 34, labelPaint);
+        canvas.DrawText($"Status={snapshot.StatusLine}", 24, 64, minorTextPaint);
+        canvas.DrawText($"Camera={FormatPoint(snapshot.CameraTargetCm)}", 24, 92, minorTextPaint);
+        canvas.DrawText($"LoadedChunks={snapshot.LoadedChunkCount}  LoadedNodes={snapshot.LoadedNodeCount}  RoadSplines={snapshot.RoadSplineCount}  Tick={snapshot.TickMs:F3}ms", 24, 120, minorTextPaint);
+
+        using SKImage image = surface.Snapshot();
+        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using FileStream stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        data.SaveTo(stream);
+    }
+
+    private static void DrawNamedLandmark(SKCanvas canvas, string name, Vector2 worldCm, SKPaint fillPaint, SKPaint textPaint)
+    {
+        SKPoint point = ToScreen(worldCm, RoadWorldMinX, RoadWorldMaxX, RoadWorldMinY, RoadWorldMaxY, RoadImageWidth, RoadImageHeight);
+        canvas.DrawCircle(point.X, point.Y, 9f, fillPaint);
+        canvas.DrawText(name, point.X + 10f, point.Y - 8f, textPaint);
+    }
+
+    private static void AssertChunkOverlay(ScreenOverlayBuffer? overlay)
+    {
+        string dump = string.Join(" || ", ExtractOverlayText(overlay));
+        if (!dump.Contains("Chunk Streaming Showcase", StringComparison.Ordinal) ||
+            !dump.Contains("chunk window", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Chunk showcase overlay is missing expected guidance text. Dump: {dump}");
+        }
     }
 
     private static LauncherRecordingResult RecordNavigation2DTimedAvoidance(LauncherRecordingRequest request)
@@ -1441,6 +2559,8 @@ public static class LauncherEvidenceRecorder
     {
         None,
         CameraAcceptanceProjectionClick,
+        RoadNetworkShowcaseCommandAndChunking,
+        ChunkStreamingShowcaseCameraWindows,
         Navigation2DPlaygroundTimedAvoidance
     }
 
@@ -1471,8 +2591,31 @@ public static class LauncherEvidenceRecorder
 
         public Vector2 ProjectWorldCm(Vector2 worldCm)
         {
+            return ProjectWorldCm(worldCm, yMeters: 0f);
+        }
+
+        public Vector2 ProjectWorldCm(Vector2 worldCm, float yMeters)
+        {
             var world = new WorldCmInt2((int)MathF.Round(worldCm.X), (int)MathF.Round(worldCm.Y));
-            return ScreenProjector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(world, yMeters: 0f));
+            return ScreenProjector.WorldToScreen(WorldUnits.WorldCmToVisualMeters(world, yMeters));
+        }
+
+        public bool TryProjectNamedEntity(string targetName, out Vector2 screenPosition)
+        {
+            Vector2 projected = default;
+            bool found = false;
+            Engine.World.Query(in RoadNamedVisualEntityQuery, (Entity entity, ref Name name, ref VisualTransform transform) =>
+            {
+                if (found || !string.Equals(name.Value, targetName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                projected = ScreenProjector.WorldToScreen(transform.Position);
+                found = true;
+            });
+            screenPosition = projected;
+            return found;
         }
 
         public void Dispose()
@@ -1538,6 +2681,80 @@ public static class LauncherEvidenceRecorder
         bool CueMarkerVisibleMidCapture,
         bool CueMarkerVisibleFinalCapture,
         int FinalTick,
+        string NormalizedSignature);
+
+    private readonly record struct RoadSplineCapture(
+        int StableId,
+        Vector3 P0,
+        Vector3 P1,
+        Vector3 P2,
+        Vector3 P3,
+        float Width);
+
+    private readonly record struct RoadSnapshot(
+        int Tick,
+        string Step,
+        double TickMs,
+        string ActiveMapId,
+        Vector2 CameraTargetCm,
+        int LoadedChunkCount,
+        int LoadedNodeCount,
+        int ChunkSizeCm,
+        IReadOnlyList<long> ActiveChunkKeys,
+        string ActiveChunkSignature,
+        int RoadSplineCount,
+        IReadOnlyDictionary<string, Vector2> NamedEntities,
+        IReadOnlyList<string> SelectedNames,
+        bool CueMarkerPresent,
+        Vector2 CueMarkerWorldCm,
+        string ControlledActorName,
+        Vector2 ControlledActorWorldCm,
+        Vector2 BlueVanguardWorldCm,
+        Vector2 BlueNorthWorldCm,
+        Vector2 BlueSouthWorldCm,
+        string StatusLine,
+        IReadOnlyList<string> OverlayLines,
+        IReadOnlyList<RoadSplineCapture> Splines);
+
+    private sealed record RoadAcceptanceResult(
+        bool Success,
+        string Verdict,
+        string FailureSummary,
+        IReadOnlyList<string> FailedChecks,
+        IReadOnlyList<string> SelectedNames,
+        string ControlledActorName,
+        string AcceptedStatus,
+        Vector2 StartControlledActorWorldCm,
+        Vector2 FinalControlledActorWorldCm,
+        string StartChunkSignature,
+        string FinalChunkSignature,
+        bool CueMarkerVisible,
+        string NormalizedSignature);
+
+    private readonly record struct ChunkSnapshot(
+        int Tick,
+        string Step,
+        double TickMs,
+        string ActiveMapId,
+        Vector2 CameraTargetCm,
+        int LoadedChunkCount,
+        int LoadedNodeCount,
+        int ChunkSizeCm,
+        IReadOnlyList<long> ActiveChunkKeys,
+        string ActiveChunkSignature,
+        int RoadSplineCount,
+        string StatusLine,
+        IReadOnlyList<string> OverlayLines,
+        IReadOnlyList<RoadSplineCapture> Splines);
+
+    private sealed record ChunkAcceptanceResult(
+        bool Success,
+        string Verdict,
+        string FailureSummary,
+        IReadOnlyList<string> FailedChecks,
+        string StartChunkSignature,
+        string FarChunkSignature,
+        string ResetChunkSignature,
         string NormalizedSignature);
 
     private readonly record struct AvoidanceSnapshot(

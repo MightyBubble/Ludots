@@ -32,7 +32,6 @@ namespace Ludots.Core.Navigation.Pathing.Config
         public float MeshBias { get; set; } = 0f;
         public float GraphCostWeight { get; set; } = 1f;
         public float MeshCostWeight { get; set; } = 1f;
-        public PathSelectionMode Fallback { get; set; } = PathSelectionMode.PreferMesh;
     }
 
     public sealed class PathingNavMeshConfig

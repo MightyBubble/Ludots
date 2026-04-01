@@ -60,6 +60,14 @@ namespace Ludots.Core.Input.Selection
             bool confirmDown = input.IsDown(bindings.ConfirmActionId);
             bool confirmPressed = input.PressedThisFrame(bindings.ConfirmActionId);
             bool confirmReleased = input.ReleasedThisFrame(bindings.ConfirmActionId);
+            bool hasPointerButtonState = TryGetPointerButtonState(bindings.ConfirmActionId, out PointerButtonState pointerButtonState);
+            if (hasPointerButtonState)
+            {
+                pointer = pointerButtonState.Pointer;
+                confirmDown = pointerButtonState.IsDown;
+                confirmPressed = pointerButtonState.PressedThisFrame;
+                confirmReleased = pointerButtonState.ReleasedThisFrame;
+            }
             bool selectionSuppressed = IsSelectionSuppressed();
 
             if (selectionSuppressed && confirmPressed)
@@ -102,16 +110,22 @@ namespace Ludots.Core.Input.Selection
 
             if (confirmPressed)
             {
-                drag.Begin(pointer);
+                drag.Begin(hasPointerButtonState && pointerButtonState.HasPressPointer
+                    ? pointerButtonState.PressPointer
+                    : pointer);
             }
             else if (drag.Active && confirmDown)
             {
-                drag.CurrentScreen = pointer;
+                drag.CurrentScreen = hasPointerButtonState && pointerButtonState.HasLastDownPointer
+                    ? pointerButtonState.LastDownPointer
+                    : pointer;
             }
 
             if (confirmReleased && drag.Active)
             {
-                drag.CurrentScreen = pointer;
+                drag.CurrentScreen = hasPointerButtonState && pointerButtonState.HasReleasePointer
+                    ? pointerButtonState.ReleasePointer
+                    : pointer;
 
                 if (drag.ExceedsThreshold(_selection.Config.DragThresholdPixels))
                 {
@@ -181,6 +195,14 @@ namespace Ludots.Core.Input.Selection
             return _globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
                    mappingObj is Ludots.Core.Input.Orders.InputOrderMappingSystem mapping &&
                    mapping.IsAiming;
+        }
+
+        private bool TryGetPointerButtonState(string actionId, out PointerButtonState state)
+        {
+            state = default;
+            return _globals.TryGetValue(CoreServiceKeys.AuthoritativePointerButtons.Name, out var snapshotObj) &&
+                   snapshotObj is AuthoritativePointerButtonSnapshot snapshot &&
+                   snapshot.TryGetState(actionId, out state);
         }
 
         private void EnsureSelectionComponents(Entity owner)

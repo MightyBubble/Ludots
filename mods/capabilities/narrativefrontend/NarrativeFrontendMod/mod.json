@@ -1,0 +1,9 @@
+{
+  "name": "NarrativeFrontendMod",
+  "version": "1.0.0",
+  "description": "Reusable data-driven frontend capability for quest, dialogue, cinematic, and relationship presentation surfaces.",
+  "main": "bin/net8.0/NarrativeFrontendMod.dll",
+  "priority": -90,
+  "author": "OpenAI Codex",
+  "tags": ["narrative", "frontend", "dialogue", "quest", "cinematic", "capability"]
+}

@@ -1,0 +1,20 @@
+{
+  "Id": "chunk_streaming_showcase",
+  "Tags": ["chunk_streaming_showcase", "showcase", "chunked", "road_network"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "NodeGraph",
+      "WidthInTiles": 2,
+      "HeightInTiles": 2,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0
+  },
+  "Entities": []
+}

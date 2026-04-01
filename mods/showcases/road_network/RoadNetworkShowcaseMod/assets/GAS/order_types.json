@@ -1,0 +1,31 @@
+{
+  "orderTypes": {
+    "roadMoveFollow": {
+      "orderTypeId": 171,
+      "label": "Road Move Follow",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": 201,
+      "entityBlackboardKey": -1,
+      "intArg0BlackboardKey": -1,
+      "validationGraphId": 0
+    }
+  },
+  "orderRules": {
+    "roadMoveFollow": {
+      "orderTypeId": 171,
+      "blockedActiveOrderTypeIds": [],
+      "interruptsActiveOrderTypeIds": [
+        102
+      ]
+    }
+  }
+}

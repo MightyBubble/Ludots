@@ -1,0 +1,23 @@
+{
+  "actions": [
+    { "id": "Relationship.NextHero", "name": "Relationship_NextHero", "type": "Button" },
+    { "id": "Relationship.Doctrine", "name": "Relationship_Doctrine", "type": "Button" },
+    { "id": "Relationship.Drill", "name": "Relationship_Drill", "type": "Button" },
+    { "id": "Relationship.Taunt", "name": "Relationship_Taunt", "type": "Button" },
+    { "id": "Relationship.Rally", "name": "Relationship_Rally", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "RelationshipShowcase.Controls",
+      "name": "Relationship Showcase Controls",
+      "priority": 85,
+      "bindings": [
+        { "actionId": "Relationship.NextHero", "path": "<Keyboard>/tab" },
+        { "actionId": "Relationship.Doctrine", "path": "<Keyboard>/1" },
+        { "actionId": "Relationship.Drill", "path": "<Keyboard>/2" },
+        { "actionId": "Relationship.Taunt", "path": "<Keyboard>/3" },
+        { "actionId": "Relationship.Rally", "path": "<Keyboard>/4" }
+      ]
+    }
+  ]
+}

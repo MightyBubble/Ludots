@@ -1,0 +1,105 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+using NarrativeFrontendMod.Runtime;
+
+namespace NarrativeShowcaseMod.Runtime
+{
+    internal sealed class NarrativeShowcaseFrontendConfig
+    {
+        public string OwnerId { get; set; } = "NarrativeShowcase";
+        public string BackdropHex { get; set; } = string.Empty;
+        public NarrativeShowcaseSurfaceConfig PromptRibbon { get; set; } = new();
+        public NarrativeShowcaseSurfaceConfig ObjectiveTracker { get; set; } = new();
+        public NarrativeShowcaseSurfaceConfig HistoryJournal { get; set; } = new();
+        public NarrativeShowcaseSurfaceConfig VariablesPanel { get; set; } = new();
+        public NarrativeShowcaseSurfaceConfig OverlayDialogue { get; set; } = new();
+        public NarrativeShowcaseSurfaceConfig DialogueBubble { get; set; } = new();
+        public NarrativeShowcaseSurfaceConfig SubtitleBubble { get; set; } = new();
+        public NarrativeShowcaseSurfaceConfig ChoiceList { get; set; } = new();
+        public NarrativeShowcaseSurfaceConfig TransmissionOverlay { get; set; } = new();
+        public NarrativeShowcaseHintConfig Hints { get; set; } = new();
+        public NarrativeShowcaseTemplateConfig Templates { get; set; } = new();
+        public NarrativeShowcaseRoutingConfig Routing { get; set; } = new();
+        public NarrativeShowcaseVariableConfig[] Variables { get; set; } = Array.Empty<NarrativeShowcaseVariableConfig>();
+
+        public static NarrativeShowcaseFrontendConfig Load(Stream stream)
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+            };
+
+            NarrativeShowcaseFrontendConfig? config = JsonSerializer.Deserialize<NarrativeShowcaseFrontendConfig>(stream, options);
+            if (config == null)
+            {
+                throw new InvalidOperationException("Failed to deserialize narrative showcase frontend config.");
+            }
+
+            return config;
+        }
+    }
+
+    internal sealed class NarrativeShowcaseSurfaceConfig
+    {
+        public string Anchor { get; set; } = "TopLeft";
+        public float Width { get; set; } = 360f;
+        public float OffsetX { get; set; }
+        public float OffsetY { get; set; }
+        public int ZIndex { get; set; } = 40;
+        public string Eyebrow { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Footer { get; set; } = string.Empty;
+        public string AccentHex { get; set; } = string.Empty;
+        public string BackgroundHex { get; set; } = string.Empty;
+        public string BorderHex { get; set; } = string.Empty;
+        public string ForegroundHex { get; set; } = string.Empty;
+        public string MutedHex { get; set; } = string.Empty;
+
+        public NarrativeFrontendAnchor ResolveAnchor()
+        {
+            return Enum.TryParse(Anchor, ignoreCase: true, out NarrativeFrontendAnchor anchor)
+                ? anchor
+                : NarrativeFrontendAnchor.TopLeft;
+        }
+    }
+
+    internal sealed class NarrativeShowcaseHintConfig
+    {
+        public string PromptTitle { get; set; } = string.Empty;
+        public string ExplorePrompt { get; set; } = string.Empty;
+        public string ChoicePrompt { get; set; } = string.Empty;
+        public string CombatPrompt { get; set; } = string.Empty;
+        public string ReturnPrompt { get; set; } = string.Empty;
+        public string SkipPrompt { get; set; } = string.Empty;
+        public string AutoAdvancePrompt { get; set; } = string.Empty;
+    }
+
+    internal sealed class NarrativeShowcaseTemplateConfig
+    {
+        public string ObjectiveTitleFormat { get; set; } = "{quest}: {stage}";
+        public string VariableCaptionFormat { get; set; } = "{label}: {value}";
+        public string QuestStageChanged { get; set; } = string.Empty;
+        public string DialogueEntered { get; set; } = string.Empty;
+        public string DialogueChoiceCommitted { get; set; } = string.Empty;
+        public string CinematicEntered { get; set; } = string.Empty;
+        public string QuestCompleted { get; set; } = string.Empty;
+        public string Signal { get; set; } = string.Empty;
+        public string BeastSpawned { get; set; } = string.Empty;
+        public string RewardApplied { get; set; } = string.Empty;
+    }
+
+    internal sealed class NarrativeShowcaseRoutingConfig
+    {
+        public string[] TransmissionCinematicIds { get; set; } = Array.Empty<string>();
+        public string[] SubtitleCinematicIds { get; set; } = Array.Empty<string>();
+    }
+
+    internal sealed class NarrativeShowcaseVariableConfig
+    {
+        public string VariableId { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        public string AccentHex { get; set; } = string.Empty;
+    }
+}

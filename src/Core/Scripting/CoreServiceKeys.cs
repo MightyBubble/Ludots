@@ -7,17 +7,22 @@ using Ludots.Core.Engine;
 using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Engine.Physics2D;
+using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Interaction;
@@ -28,6 +33,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Modding;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
@@ -68,6 +74,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GameEngine> Engine = new("Engine");
         public static readonly ServiceKey<GameConfig> GameConfig = new("GameConfig");
         public static readonly ServiceKey<SystemFactoryRegistry> SystemFactoryRegistry = new("SystemFactoryRegistry");
+        public static readonly ServiceKey<TimeFlowService> TimeFlow = new("TimeFlow");
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");
 
         // --- Map ---
@@ -95,6 +102,7 @@ namespace Ludots.Core.Scripting
         // --- Input ---
         public static readonly ServiceKey<PlayerInputHandler> InputHandler = new("InputHandler");
         public static readonly ServiceKey<IInputActionReader> AuthoritativeInput = new("AuthoritativeInput");
+        public static readonly ServiceKey<AuthoritativePointerButtonSnapshot> AuthoritativePointerButtons = new("AuthoritativePointerButtons");
         public static readonly ServiceKey<IInputBackend> InputBackend = new("InputBackend");
 
         // --- Camera & View ---
@@ -107,6 +115,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<VirtualCameraRegistry> VirtualCameraRegistry = new("VirtualCameraRegistry");
         public static readonly ServiceKey<PlatformManagedCameraDriverRegistry> PlatformManagedCameraDriverRegistry = new("PlatformManagedCameraDriverRegistry");
         public static readonly ServiceKey<IPlatformManagedCameraHostService> PlatformManagedCameraHostService = new("PlatformManagedCameraHostService");
+        public static readonly ServiceKey<NarrativeDefinitionRegistry> NarrativeDefinitions = new("NarrativeDefinitions");
+        public static readonly ServiceKey<NarrativeDirector> NarrativeDirector = new("NarrativeDirector");
 
         // --- GAS Core ---
         public static readonly ServiceKey<IClock> Clock = new("Clock");
@@ -117,6 +127,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GasConditionRegistry> GasConditionRegistry = new("GasConditionRegistry");
         public static readonly ServiceKey<TagOps> TagOps = new("TagOps");
         public static readonly ServiceKey<EffectTemplateRegistry> EffectTemplateRegistry = new("EffectTemplateRegistry");
+        public static readonly ServiceKey<TargetDispatchPresetRegistry> TargetDispatchPresetRegistry = new("TargetDispatchPresetRegistry");
         public static readonly ServiceKey<EffectRequestQueue> EffectRequestQueue = new("EffectRequestQueue");
         public static readonly ServiceKey<AbilityDefinitionRegistry> AbilityDefinitionRegistry = new("AbilityDefinitionRegistry");
         public static readonly ServiceKey<AbilityFormSetRegistry> AbilityFormSetRegistry = new("AbilityFormSetRegistry");
@@ -131,6 +142,24 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ItemLayoutRegistry> ItemLayoutRegistry = new("ItemLayoutRegistry");
         public static readonly ServiceKey<ItemDefinitionRegistry> ItemDefinitionRegistry = new("ItemDefinitionRegistry");
         public static readonly ServiceKey<InventoryRuntimeService> InventoryRuntimeService = new("InventoryRuntimeService");
+        public static readonly ServiceKey<RelationshipTypeRegistry> RelationshipTypeRegistry = new("RelationshipTypeRegistry");
+        public static readonly ServiceKey<RelationshipMetricRegistry> RelationshipMetricRegistry = new("RelationshipMetricRegistry");
+        public static readonly ServiceKey<RelationshipFlagRegistry> RelationshipFlagRegistry = new("RelationshipFlagRegistry");
+        public static readonly ServiceKey<RelationshipBandRegistry> RelationshipBandRegistry = new("RelationshipBandRegistry");
+        public static readonly ServiceKey<RelationshipReasonRegistry> RelationshipReasonRegistry = new("RelationshipReasonRegistry");
+        public static readonly ServiceKey<RelationshipChangeBuffer> RelationshipChangeBuffer = new("RelationshipChangeBuffer");
+        public static readonly ServiceKey<RelationshipRuntime> RelationshipRuntime = new("RelationshipRuntime");
+        public static readonly ServiceKey<RelationshipCatalogConfig> RelationshipCatalogConfig = new("RelationshipCatalogConfig");
+        public static readonly ServiceKey<RelationshipCatalogRuntime> RelationshipCatalogRuntime = new("RelationshipCatalogRuntime");
+        public static readonly ServiceKey<TeamEntityLookup> TeamEntityLookup = new("TeamEntityLookup");
+        public static readonly ServiceKey<Entity> RelationshipEventSource = new("RelationshipEvent.Source");
+        public static readonly ServiceKey<Entity> RelationshipEventTarget = new("RelationshipEvent.Target");
+        public static readonly ServiceKey<Entity> RelationshipEventTeam = new("RelationshipEvent.Team");
+        public static readonly ServiceKey<int> RelationshipEventMetricId = new("RelationshipEvent.MetricId");
+        public static readonly ServiceKey<int> RelationshipEventMetricValue = new("RelationshipEvent.MetricValue");
+        public static readonly ServiceKey<int> RelationshipEventTypeId = new("RelationshipEvent.TypeId");
+        public static readonly ServiceKey<int> RelationshipEventReasonId = new("RelationshipEvent.ReasonId");
+        public static readonly ServiceKey<int> RelationshipEventCount = new("RelationshipEvent.Count");
 
         // --- GAS Input / Selection / Orders ---
         public static readonly ServiceKey<InputRequestQueue> InputRequestQueue = new("InputRequestQueue");
@@ -189,6 +218,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TransientMarkerBuffer> TransientMarkerBuffer = new("TransientMarkerBuffer");
         public static readonly ServiceKey<GasPresentationEventBuffer> GasPresentationEventBuffer = new("GasPresentationEventBuffer");
         public static readonly ServiceKey<GroundOverlayBuffer> GroundOverlayBuffer = new("GroundOverlayBuffer");
+        public static readonly ServiceKey<RoadSplineBuffer> RoadSplineBuffer = new("RoadSplineBuffer");
         public static readonly ServiceKey<DebugDrawCommandBuffer> DebugDrawCommandBuffer = new("DebugDrawCommandBuffer");
         public static readonly ServiceKey<ProjectilePresentationBindingRegistry> ProjectilePresentationBindingRegistry = new("ProjectilePresentationBindingRegistry");
 
@@ -204,6 +234,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ILoadedChunks> LoadedChunks = new("LoadedChunks");
 
         // --- Navigation ---
+        public static readonly ServiceKey<LoadedGraphRuntime> LoadedGraphRuntime = new("LoadedGraphRuntime");
         public static readonly ServiceKey<Navigation2DRuntime> Navigation2DRuntime = new("Navigation2DRuntime");
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");
         public static readonly ServiceKey<NavMeshProfileRegistry> NavMeshProfiles = new("NavMeshProfiles");

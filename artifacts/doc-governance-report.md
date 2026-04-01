@@ -1,26 +1,57 @@
 # Documentation Governance Report
 
 Date: 2026-04-01
-Scope: `docs/architecture/*.md`, `docs/reference/cli_runbook.md`, launcher workspace UX surface
-Ruleset: `ludots-doc-governance` checklist + SSOT/user-first remediation goals
+Scope:
+- `docs/architecture/README.md`
+- `docs/architecture/entity_selection_architecture.md`
+- `docs/architecture/gas_layered_architecture.md`
+- `docs/architecture/interaction/README.md`
+- `docs/architecture/launcher_ssot_user_first.md`
+- `docs/architecture/mod_architecture.md`
+- `docs/architecture/mod_runtime_single_source_of_truth.md`
+- `docs/architecture/narrative_frontend_kit.md`
+- `docs/architecture/narrative_quest_dialogue_cinematic.md`
+- `docs/architecture/order_navigation_movement.md`
+- `docs/architecture/startup_entrypoints.md`
+- `docs/architecture/time_flow.md`
+- `docs/reference/README.md`
+- `docs/reference/cli_runbook.md`
+- `docs/rfcs/README.md`
+- `skills/README.md`
+- `skills/registry.json`
+- `scripts/run-mod-launcher.ps1`
+- `src/Tools/Ludots.Editor.Bridge/Program.cs`
+Ruleset: `ludots-doc-governance` checklist plus launcher SSOT and user-first remediation goals
 
 ## Summary
-- Total findings: 0
+
+- Total findings remaining in scope: 0
 - P0: 0
 - P1: 0
 - P2: 0
 - P3: 0
 
 ## Findings
-- No open documentation-governance findings remain in the remediated scope.
-- The launcher SSOT page now exists, startup/runbook language distinguishes current graph from future lock, the canonical launcher URL is aligned with wrapper and bridge behavior, the mod runtime docs now record the single-plan `ModLoadContext` policy, and skills docs no longer blur layer directories with the `skills/contracts/` contract directory.
+
+- Launcher entrypoint docs now align with implementation:
+  - wrapper canonical form is `.\scripts\run-mod-launcher.cmd cli ...`
+  - canonical browser entry is `http://localhost:5299/launcher/index.html`
+  - `/` and `/launcher` redirect to `/launcher/index.html`
+- Startup and runtime docs now describe the current product chain consistently:
+  - launcher graph artifact is the runtime planning authority
+  - `launcher.runtime.json` is the adapter bootstrap carrier
+  - one resolved launch plan loads through one shared `ModLoadContext`
+- Reference and RFC index pages now only point to files that exist in the repository.
+- Skill docs remain aligned with `skills/registry.json`; `skills/contracts/` is documented as support material, not a skill layer.
 
 ## Fix Order
-1. Keep code and docs synchronized as launcher graph fields evolve.
-2. Introduce a distinct lock contract only when code support lands.
-3. Continue moving product UX toward selector/preset intent and keep project-file details in advanced surfaces only.
+
+1. Keep launcher wrapper, bridge routes, and runbook examples synchronized whenever entry URLs or CLI verbs change.
+2. Keep startup documentation aligned with the current graph-backed runtime contract until a separate lock artifact is implemented.
+3. Continue shrinking direct-debug and string-key compatibility paths in code, then backwrite those removals to docs in the same slice.
 
 ## Residual Risks
-- Launcher graph is now both documented and consumed through bootstrap metadata, but a distinct lock contract still does not exist; future lock rollout must update code and docs together.
-- Some advanced CLI commands still expose project hints for professional users; this is expected, but those details should remain out of default creator-facing flows.
-- Direct-debug/test code paths still exist for explicit `modPaths`; those are intentional compatibility paths, but product docs must continue to keep them outside the default user workflow.
+
+- Product startup is graph-backed, but direct-debug compatibility paths still exist for explicit `modPaths`; docs must continue to keep them outside the default creator workflow.
+- A distinct launcher lock artifact still does not exist; when that contract lands, code and docs must evolve together.
+- `docs/rfcs/` currently contains two historical files under `RFC-0059`; indexing is accurate to the repository, but future RFC governance should normalize duplicate identifiers.

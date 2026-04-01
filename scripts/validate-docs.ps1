@@ -1,5 +1,7 @@
-﻿[CmdletBinding()]
-param()
+[CmdletBinding()]
+param(
+    [string[]]$Paths = @()
+)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -56,7 +58,7 @@ function Resolve-RepoTarget {
         return $normalizedTarget
     }
 
-    if ($normalizedTarget -match '^(docs|src|assets|mods|scripts|skills|artifacts|external|\\.github)/') {
+    if ($normalizedTarget -match '^(docs|src|assets|mods|scripts|skills|artifacts|external|\.github)/') {
         return [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $normalizedTarget))
     }
 
@@ -75,8 +77,46 @@ function Get-BacktickPaths {
     return [regex]::Matches($Content, '(?<!`)`([^`\r\n]+)`(?!`)')
 }
 
+function Resolve-ScopedFiles {
+    param(
+        [string]$RepoRoot,
+        [string[]]$Targets,
+        [System.Collections.Generic.List[object]]$Findings
+    )
+
+    $scoped = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($target in $Targets) {
+        if ([string]::IsNullOrWhiteSpace($target)) {
+            continue
+        }
+
+        $resolvedTarget = if ([System.IO.Path]::IsPathRooted($target)) {
+            [System.IO.Path]::GetFullPath($target)
+        } else {
+            [System.IO.Path]::GetFullPath((Join-Path $RepoRoot $target))
+        }
+
+        if (-not (Test-Path $resolvedTarget)) {
+            Add-Finding -Collection $Findings -Rule 'missing-scope-target' -Source $target -Detail 'scoped validation target not found'
+            continue
+        }
+
+        $item = Get-Item $resolvedTarget
+        if ($item.PSIsContainer) {
+            foreach ($file in Get-ChildItem -Path $resolvedTarget -Recurse -File -Filter '*.md') {
+                $scoped.Add($file.FullName) | Out-Null
+            }
+        } else {
+            $scoped.Add($item.FullName) | Out-Null
+        }
+    }
+
+    return $scoped
+}
+
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $scriptDir '..'))
+$findings = New-Object 'System.Collections.Generic.List[object]'
 
 $requiredReadmes = @(
     'docs/README.md',
@@ -88,24 +128,42 @@ $requiredReadmes = @(
     'docs/rfcs/README.md'
 )
 
-$docFiles = Get-ChildItem -Path (Join-Path $repoRoot 'docs') -Recurse -File -Filter '*.md'
-$entryFiles = @(
-    'README.md',
-    'README_CN.md',
-    'AGENTS.md',
-    'CLAUDE.md',
-    '.github/PULL_REQUEST_TEMPLATE.md'
-) | ForEach-Object {
-    Join-Path $repoRoot $_
-} | Where-Object { Test-Path $_ }
+$scopedMode = $Paths.Count -gt 0
+$docFiles = @()
+$entryFiles = @()
 
-$filesToValidate = @($docFiles.FullName) + @($entryFiles)
-$findings = New-Object 'System.Collections.Generic.List[object]'
+if ($scopedMode) {
+    $scopedFiles = Resolve-ScopedFiles -RepoRoot $repoRoot -Targets $Paths -Findings $findings
+    $docFiles = $scopedFiles |
+        Where-Object { $_ -like (Join-Path $repoRoot 'docs\*') } |
+        ForEach-Object { Get-Item $_ }
+    $entryFiles = $scopedFiles |
+        Where-Object { $_ -notlike (Join-Path $repoRoot 'docs\*') }
+} else {
+    $docFiles = Get-ChildItem -Path (Join-Path $repoRoot 'docs') -Recurse -File -Filter '*.md'
+    $entryFiles = @(
+        'README.md',
+        'README_CN.md',
+        'AGENTS.md',
+        'CLAUDE.md',
+        '.github/PULL_REQUEST_TEMPLATE.md'
+    ) | ForEach-Object {
+        Join-Path $repoRoot $_
+    } | Where-Object { Test-Path $_ }
+}
 
-foreach ($required in $requiredReadmes) {
-    $fullPath = Join-Path $repoRoot $required
-    if (-not (Test-Path $fullPath)) {
-        Add-Finding -Collection $findings -Rule 'missing-readme' -Source $required -Detail 'required README.md is missing'
+$filesToValidate = @(
+    $docFiles | ForEach-Object { $_.FullName }
+) + @(
+    $entryFiles | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+if (-not $scopedMode) {
+    foreach ($required in $requiredReadmes) {
+        $fullPath = Join-Path $repoRoot $required
+        if (-not (Test-Path $fullPath)) {
+            Add-Finding -Collection $findings -Rule 'missing-readme' -Source $required -Detail 'required README.md is missing'
+        }
     }
 }
 
@@ -144,7 +202,7 @@ foreach ($file in $filesToValidate) {
 
     foreach ($match in Get-BacktickPaths -Content $content) {
         $token = $match.Groups[1].Value.Trim()
-        if ($token -notmatch '^(docs|src|assets|mods|scripts|skills|artifacts|external|\\.github)/') {
+        if ($token -notmatch '^(docs|src|assets|mods|scripts|skills|artifacts|external|\.github)/') {
             continue
         }
 
@@ -199,5 +257,8 @@ if ($findings.Count -gt 0) {
     exit 1
 }
 
-Write-Host 'Documentation validation passed.' -ForegroundColor Green
-
+if ($scopedMode) {
+    Write-Host 'Documentation validation passed (scoped).' -ForegroundColor Green
+} else {
+    Write-Host 'Documentation validation passed.' -ForegroundColor Green
+}

@@ -1,0 +1,38 @@
+{
+  "Id": "narrative_showcase_hub",
+  "Tags": ["narrative.showcase", "quest.dialogue.cinematic"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 1520,
+    "TargetYCm": 960,
+    "DistanceCm": 3600,
+    "Pitch": 50,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "interaction_arcweaver",
+      "Overrides": {
+        "Name": { "Value": "Arcweaver" },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 1180, "Y": 960 } }
+      }
+    },
+    {
+      "Template": "interaction_stress_anchor_red",
+      "Overrides": {
+        "Name": { "Value": "WardenMirelle" },
+        "Team": { "Id": 3 },
+        "WorldPositionCm": { "Value": { "X": 1370, "Y": 960 } }
+      }
+    },
+    {
+      "Template": "interaction_stress_anchor_blue",
+      "Overrides": {
+        "Name": { "Value": "EmberShrine" },
+        "Team": { "Id": 3 },
+        "WorldPositionCm": { "Value": { "X": 1740, "Y": 960 } }
+      }
+    }
+  ]
+}

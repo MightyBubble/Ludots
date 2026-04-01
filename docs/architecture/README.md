@@ -1,9 +1,8 @@
 # Architecture
 
-This directory is the architecture SSOT entry for Ludots. It documents behavior that exists in the repository today and links each subsystem to its primary design note.
-Some documents also describe target-state migration contracts; those are grouped separately below.
+`docs/architecture/` is the architecture SSOT entry for Ludots. These documents describe behavior that exists in the repository today and can be backed by code, tests, or shipped runtime artifacts.
 
-## Current Behavior
+## Core Runtime
 
 - [Adapter Pattern](adapter_pattern.md)
 - [Camera Character Control](camera_character_control.md)
@@ -19,6 +18,7 @@ Some documents also describe target-state migration contracts; those are grouped
 - [Pacemaker](pacemaker.md)
 - [Runtime Entity Spawn Flow](runtime_entity_spawn_flow.md)
 - [Startup Entrypoints](startup_entrypoints.md)
+- [Time Flow](time_flow.md)
 - [Trigger Guide](trigger_guide.md)
 - [UI Runtime Architecture](ui_runtime_architecture.md)
 
@@ -31,10 +31,14 @@ Some documents also describe target-state migration contracts; those are grouped
 
 - [GAS Combat Infrastructure](gas_combat_infrastructure.md)
 - [GAS Layered Architecture](gas_layered_architecture.md)
+- [Order / Navigation / Movement Architecture](order_navigation_movement.md)
+- [Narrative Quest / Dialogue / Cinematic](narrative_quest_dialogue_cinematic.md)
+- [Narrative Frontend Kit](narrative_frontend_kit.md)
 - [Interaction Architecture](interaction/README.md)
 - [Persistent Static Adapter Sync](persistent_static_adapter_sync.md)
 - [Presentation Performer](presentation_performer.md)
 - [Presentation Snapshot Contract](presentation_snapshot_contract.md)
+- [Entity Selection Architecture](entity_selection_architecture.md)
 
 ## Related References
 
