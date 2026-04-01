@@ -5,6 +5,7 @@ using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Config;
 
@@ -17,6 +18,7 @@ namespace Ludots.Core.Systems
         
         // New Registry
         public DataRegistry<EntityTemplate> TemplateRegistry { get; private set; }
+        public EntityTemplateKeyRegistry EntityTemplateKeys { get; }
         public PresentationAuthoringContext? PresentationAuthoringContext { get; set; }
 
         public MapLoader(World world, WorldMap worldMap, ConfigPipeline pipeline)
@@ -24,6 +26,7 @@ namespace Ludots.Core.Systems
             _world = world;
             _worldMap = worldMap;
             TemplateRegistry = new DataRegistry<EntityTemplate>(pipeline);
+            EntityTemplateKeys = new EntityTemplateKeyRegistry();
         }
 
         public void LoadTemplates()
@@ -31,6 +34,11 @@ namespace Ludots.Core.Systems
             // This loads "Entities/templates.json" from Core and all Mods
             // Merging them with priority
             TemplateRegistry.Load("Entities/templates.json");
+            EntityTemplateKeys.Clear();
+            foreach (var template in TemplateRegistry.GetAll())
+            {
+                EntityTemplateKeys.Register(template.Id);
+            }
         }
 
         public void LoadEntities(MapConfig mapConfig)
@@ -76,7 +84,27 @@ namespace Ludots.Core.Systems
                 }
                 
                 var entity = builder.Build();
+                TryApplyTemplateKey(entity, entityData.Template);
                 _world.Add(entity, mapEntityTag);
+            }
+        }
+
+        private void TryApplyTemplateKey(Entity entity, string templateId)
+        {
+            int templateKeyId = EntityTemplateKeys.GetId(templateId);
+            if (templateKeyId <= 0)
+            {
+                return;
+            }
+
+            var templateKey = new EntityTemplateKeyCm { TemplateKeyId = templateKeyId };
+            if (_world.Has<EntityTemplateKeyCm>(entity))
+            {
+                _world.Set(entity, templateKey);
+            }
+            else
+            {
+                _world.Add(entity, templateKey);
             }
         }
         

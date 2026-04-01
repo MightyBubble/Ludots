@@ -38,9 +38,13 @@ public sealed partial class EntityInfoPanelService
             {
                 RenderComponentOverlay(overlay, slot, x + 12, ref lineY, bottom);
             }
-            else
+            else if (_kinds[slot] == EntityInfoPanelKind.GasInspector)
             {
                 RenderGasOverlay(overlay, slot, x + 12, ref lineY, bottom);
+            }
+            else
+            {
+                RenderInsightOverlay(overlay, slot, x + 12, ref lineY, bottom);
             }
         }
     }
@@ -87,6 +91,32 @@ public sealed partial class EntityInfoPanelService
                 ComposeStableId(slot, 2000 + line),
                 ComposeTextSerial(text, sectionLine ? 13 : 12));
             y += sectionLine ? 18 : 16;
+        }
+    }
+
+    private void RenderInsightOverlay(ScreenOverlayBuffer overlay, int slot, int x, ref int y, int bottom)
+    {
+        string genre = GetInsightGenreLabel(slot);
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            overlay.AddText(x, y, genre, 13, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 3000), ComposeTextSerial(genre, 13));
+            y += 18;
+        }
+
+        int statCount = Math.Min(2, GetInsightStatCount(slot));
+        for (int statIndex = 0; statIndex < statCount && y <= bottom; statIndex++)
+        {
+            string statText = $"{GetInsightStatLabel(slot, statIndex)}: {GetInsightStatValueText(slot, statIndex)}";
+            overlay.AddText(x, y, statText, 12, new Vector4(0.82f, 0.86f, 0.91f, 1f), ComposeStableId(slot, 3010 + statIndex), ComposeTextSerial(statText, 12));
+            y += 16;
+        }
+
+        int tipCount = Math.Min(2, GetInsightTipCount(slot));
+        for (int tipIndex = 0; tipIndex < tipCount && y <= bottom; tipIndex++)
+        {
+            string tipText = GetInsightTipText(slot, tipIndex);
+            overlay.AddText(x, y, tipText, 12, new Vector4(0.93f, 0.82f, 0.67f, 1f), ComposeStableId(slot, 3030 + tipIndex), ComposeTextSerial(tipText, 12));
+            y += 16;
         }
     }
 

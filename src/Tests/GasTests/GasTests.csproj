@@ -15,6 +15,7 @@
     <PackageReference Include="NUnit" Version="4.2.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.3.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.11" />
   </ItemGroup>
 
   <ItemGroup>
@@ -43,22 +44,31 @@
     <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraBootstrapMod\CameraBootstrapMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\camera\CameraProfilesMod\CameraProfilesMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\camera\VirtualCameraShotsMod\VirtualCameraShotsMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\narrativefrontend\NarrativeFrontendMod\NarrativeFrontendMod.csproj" />
     <ProjectReference Include="..\..\..\mods\VersionMismatchMod\VersionMismatchMod.csproj" />
     <ProjectReference Include="..\..\..\mods\FourXDemoMod\FourXDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\TcgDemoMod\TcgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\ArpgDemoMod\ArpgDemoMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIDemoMod\AIDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\camera\CameraShowcaseMod\CameraShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\interaction\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\relationship\RelationshipShowcaseMod\RelationshipShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\narrative\NarrativeShowcaseMod\NarrativeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\ChampionSkillSandboxMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\chunk_streaming\ChunkStreamingShowcaseMod\ChunkStreamingShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\road_network\RoadNetworkShowcaseMod\RoadNetworkShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\ux_prototype\UxPrototypeMod\UxPrototypeMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\item_system\ItemSystemShowcaseMod\ItemSystemShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\win-x64\native\libSkiaSharp.dll"
+          Link="libSkiaSharp.dll"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

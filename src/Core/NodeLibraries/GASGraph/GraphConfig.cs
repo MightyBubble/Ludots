@@ -29,6 +29,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public float Radius { get; set; }
         public int Limit { get; set; }
         public string? Sort { get; set; }
+        public string? RelationshipType { get; set; }
+        public string? Metric { get; set; }
+        public string? Flag { get; set; }
+        public string? Reason { get; set; }
+        public string? PayloadPreset { get; set; }
+        public bool Descending { get; set; }
     }
 }
 

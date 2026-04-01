@@ -379,7 +379,7 @@ public sealed class LauncherService
         var startInfo = new ProcessStartInfo("dotnet", $"\"{resolveResult.Plan.AppAssemblyPath}\" \"{bootstrapPath}\"")
         {
             WorkingDirectory = resolveResult.Plan.AppOutputDirectory,
-            UseShellExecute = true
+            UseShellExecute = false
         };
 
         var process = Process.Start(startInfo);

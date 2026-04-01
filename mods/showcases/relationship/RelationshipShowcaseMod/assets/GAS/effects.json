@@ -1,0 +1,70 @@
+[
+  {
+    "id": "Effect.RelationshipShowcase.BenevolencePulse",
+    "presetType": "Heal",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 18.0 }
+    ]
+  },
+  {
+    "id": "Effect.RelationshipShowcase.TrustedGuard",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 180
+    },
+    "modifiers": [
+      { "attribute": "Shield", "op": "Add", "value": 12.0 }
+    ]
+  },
+  {
+    "id": "Effect.RelationshipShowcase.OathSpark",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 120
+    },
+    "modifiers": [
+      { "attribute": "MoveSpeed", "op": "Add", "value": 30.0 }
+    ]
+  },
+  {
+    "id": "Effect.RelationshipShowcase.TauntGuard",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 150
+    },
+    "modifiers": [
+      { "attribute": "Shield", "op": "Add", "value": 24.0 },
+      { "attribute": "Armor", "op": "Add", "value": 6.0 }
+    ]
+  },
+  {
+    "id": "Effect.RelationshipShowcase.RallyBanner",
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 180
+    },
+    "modifiers": [
+      { "attribute": "MoveSpeed", "op": "Add", "value": 45.0 },
+      { "attribute": "Shield", "op": "Add", "value": 14.0 }
+    ]
+  },
+  {
+    "id": "Effect.RelationshipShowcase.EnemyStrike",
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -12.0 }
+    ]
+  }
+]

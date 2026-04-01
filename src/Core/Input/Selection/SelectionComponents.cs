@@ -16,11 +16,22 @@ namespace Ludots.Core.Input.Selection
 
     public static class SelectionSetKeys
     {
+        public const string ControlGroupPrefix = "selection.group.";
         public const string Ambient = "selection.live.primary";
         public const string LivePrimary = Ambient;
         public const string FormationPrimary = "selection.formation.primary";
         public const string CommandPreview = "selection.command.preview";
         public const string CommandSnapshot = "selection.command.snapshot";
+
+        public static string ControlGroup(int groupIndex)
+        {
+            if ((uint)(groupIndex - 1) >= 9u)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(groupIndex), "Control groups are indexed from 1 to 9.");
+            }
+
+            return $"{ControlGroupPrefix}{groupIndex}";
+        }
     }
 
     public static class SelectionViewKeys

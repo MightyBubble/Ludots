@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
@@ -73,9 +74,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (!hasAbilityBuffer) return false;
             bool hasForm = World.Has<AbilityFormSlotBuffer>(caster);
             AbilityFormSlotBuffer formSlots = hasForm ? World.Get<AbilityFormSlotBuffer>(caster) : default;
+            bool hasItemGranted = World.Has<ItemGrantedSlotBuffer>(caster);
+            ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? World.Get<ItemGrantedSlotBuffer>(caster) : default;
             bool hasGranted = World.Has<GrantedSlotBuffer>(caster);
             GrantedSlotBuffer grantedSlots = hasGranted ? World.Get<GrantedSlotBuffer>(caster) : default;
-            var slot = AbilitySlotResolver.Resolve(in buffer, in formSlots, hasForm, in grantedSlots, hasGranted, slotIndex);
+            var slot = AbilitySlotResolver.Resolve(in buffer, in formSlots, hasForm, in itemGrantedSlots, hasItemGranted, in grantedSlots, hasGranted, slotIndex);
 
             if (slot.AbilityId > 0 && _abilityDefinitions != null && _abilityDefinitions.TryGet(slot.AbilityId, out var def))
             {

@@ -1,0 +1,167 @@
+[
+  {
+    "id": "fourx_governor_profile",
+    "templateIds": ["fourx_governor"],
+    "accentColorHex": "#D8A85D",
+    "surfaceColorHex": "#1A2028",
+    "genreGlyph": "4X",
+    "portraitGlyph": "GV",
+    "genreLabelToken": "genreinfo.genre.4x",
+    "subtitleToken": "genreinfo.profile.governor.subtitle",
+    "bodyToken": "genreinfo.profile.governor.body",
+    "badges": [
+      { "glyph": "C", "textToken": "genreinfo.profile.governor.badge.colony" },
+      { "glyph": "T", "textToken": "genreinfo.profile.governor.badge.trade" }
+    ],
+    "stats": [
+      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "glyph": "AU", "labelToken": "genreinfo.stat.gold", "source": "attribute", "attribute": "Gold", "display": "currentOverBase" },
+      { "glyph": "PR", "labelToken": "genreinfo.stat.production", "source": "attribute", "attribute": "Production", "display": "currentOverBase" },
+      { "glyph": "TK", "labelToken": "genreinfo.stat.tech", "source": "attribute", "attribute": "TechProgress", "display": "currentOverBase" }
+    ],
+    "tips": [
+      { "glyph": "1", "textToken": "genreinfo.profile.governor.tip.1" },
+      { "glyph": "2", "textToken": "genreinfo.profile.governor.tip.2" }
+    ],
+    "actions": [
+      { "ability": "Ability.4X.BuildOutpost", "glyph": "BO", "titleToken": "genreinfo.profile.governor.action.outpost.title", "bodyToken": "genreinfo.profile.governor.action.outpost.body" },
+      { "ability": "Ability.4X.Colonize", "glyph": "CL", "titleToken": "genreinfo.profile.governor.action.colonize.title", "bodyToken": "genreinfo.profile.governor.action.colonize.body" },
+      { "ability": "Ability.4X.TechResearch", "glyph": "TR", "titleToken": "genreinfo.profile.governor.action.tech.title", "bodyToken": "genreinfo.profile.governor.action.tech.body" }
+    ]
+  },
+  {
+    "id": "moba_hero_profile",
+    "templateIds": ["moba_hero"],
+    "accentColorHex": "#5DB0FF",
+    "surfaceColorHex": "#122033",
+    "genreGlyph": "MO",
+    "portraitGlyph": "NX",
+    "genreLabelToken": "genreinfo.genre.moba",
+    "subtitleToken": "genreinfo.profile.hero.subtitle",
+    "bodyToken": "genreinfo.profile.hero.body",
+    "badges": [
+      { "glyph": "CC", "textToken": "genreinfo.profile.hero.badge.control" },
+      { "glyph": "UT", "textToken": "genreinfo.profile.hero.badge.utility" }
+    ],
+    "stats": [
+      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "glyph": "EN", "labelToken": "genreinfo.stat.energy", "source": "attribute", "attribute": "Energy", "display": "currentOverBase" },
+      { "glyph": "AS", "labelToken": "genreinfo.stat.attack_speed", "source": "attribute", "attribute": "AttackSpeed", "display": "current" }
+    ],
+    "tips": [
+      { "glyph": "Q", "textToken": "genreinfo.profile.hero.tip.1" },
+      { "glyph": "R", "textToken": "genreinfo.profile.hero.tip.2" }
+    ],
+    "actions": [
+      { "ability": "Ability.Moba.SkillQ", "glyph": "Q", "titleToken": "genreinfo.profile.hero.action.q.title", "bodyToken": "genreinfo.profile.hero.action.q.body" },
+      { "ability": "Ability.Moba.SkillW", "glyph": "W", "titleToken": "genreinfo.profile.hero.action.w.title", "bodyToken": "genreinfo.profile.hero.action.w.body" },
+      { "ability": "Ability.Moba.SkillR", "glyph": "R", "titleToken": "genreinfo.profile.hero.action.r.title", "bodyToken": "genreinfo.profile.hero.action.r.body" }
+    ]
+  },
+  {
+    "id": "rts_barracks_profile",
+    "templateIds": ["rts_barracks"],
+    "accentColorHex": "#D66F4D",
+    "surfaceColorHex": "#231716",
+    "genreGlyph": "RT",
+    "portraitGlyph": "BK",
+    "genreLabelToken": "genreinfo.genre.rts",
+    "subtitleToken": "genreinfo.profile.barracks.subtitle",
+    "bodyToken": "genreinfo.profile.barracks.body",
+    "badges": [
+      { "glyph": "Q", "textToken": "genreinfo.profile.barracks.badge.queue" },
+      { "glyph": "UP", "textToken": "genreinfo.profile.barracks.badge.upgrade" }
+    ],
+    "stats": [
+      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "glyph": "LY", "labelToken": "genreinfo.stat.lane", "source": "constant", "value": 2, "display": "constant" }
+    ],
+    "tips": [
+      { "glyph": "B", "textToken": "genreinfo.profile.barracks.tip.1" },
+      { "glyph": "S", "textToken": "genreinfo.profile.barracks.tip.2" }
+    ],
+    "actions": [
+      { "ability": "Ability.Rts.TrainMarine", "glyph": "MN", "titleToken": "genreinfo.profile.barracks.action.marine.title", "bodyToken": "genreinfo.profile.barracks.action.marine.body" },
+      { "ability": "Ability.Rts.ResearchStim", "glyph": "ST", "titleToken": "genreinfo.profile.barracks.action.stim.title", "bodyToken": "genreinfo.profile.barracks.action.stim.body" }
+    ]
+  },
+  {
+    "id": "rts_marine_profile",
+    "templateIds": ["rts_marine"],
+    "accentColorHex": "#8FC4FF",
+    "surfaceColorHex": "#162130",
+    "genreGlyph": "RT",
+    "portraitGlyph": "MR",
+    "genreLabelToken": "genreinfo.genre.rts",
+    "subtitleToken": "genreinfo.profile.marine.subtitle",
+    "bodyToken": "genreinfo.profile.marine.body",
+    "badges": [
+      { "glyph": "LN", "textToken": "genreinfo.profile.marine.badge.line" },
+      { "glyph": "DP", "textToken": "genreinfo.profile.marine.badge.dps" }
+    ],
+    "stats": [
+      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "glyph": "AS", "labelToken": "genreinfo.stat.attack_speed", "source": "attribute", "attribute": "AttackSpeed", "display": "current" }
+    ],
+    "tips": [
+      { "glyph": "F", "textToken": "genreinfo.profile.marine.tip.1" },
+      { "glyph": "K", "textToken": "genreinfo.profile.marine.tip.2" }
+    ],
+    "actions": [
+      { "ability": "Ability.Rts.StimPack", "glyph": "ST", "titleToken": "genreinfo.profile.marine.action.stim.title", "bodyToken": "genreinfo.profile.marine.action.stim.body" }
+    ]
+  },
+  {
+    "id": "rts_tank_profile",
+    "templateIds": ["rts_siege_tank"],
+    "accentColorHex": "#D7A95C",
+    "surfaceColorHex": "#201E18",
+    "genreGlyph": "RT",
+    "portraitGlyph": "TK",
+    "genreLabelToken": "genreinfo.genre.rts",
+    "subtitleToken": "genreinfo.profile.tank.subtitle",
+    "bodyToken": "genreinfo.profile.tank.body",
+    "badges": [
+      { "glyph": "AO", "textToken": "genreinfo.profile.tank.badge.aoe" },
+      { "glyph": "SV", "textToken": "genreinfo.profile.tank.badge.siege" }
+    ],
+    "stats": [
+      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "glyph": "SH", "labelToken": "genreinfo.stat.shield", "source": "attribute", "attribute": "Shield", "display": "currentOverBase" }
+    ],
+    "tips": [
+      { "glyph": "A", "textToken": "genreinfo.profile.tank.tip.1" },
+      { "glyph": "P", "textToken": "genreinfo.profile.tank.tip.2" }
+    ],
+    "actions": [
+      { "ability": "Ability.Rts.SiegeModeAoe", "glyph": "AO", "titleToken": "genreinfo.profile.tank.action.aoe.title", "bodyToken": "genreinfo.profile.tank.action.aoe.body" }
+    ]
+  },
+  {
+    "id": "rts_vessel_profile",
+    "templateIds": ["rts_science_vessel"],
+    "accentColorHex": "#7CE2C8",
+    "surfaceColorHex": "#13221E",
+    "genreGlyph": "RT",
+    "portraitGlyph": "SV",
+    "genreLabelToken": "genreinfo.genre.rts",
+    "subtitleToken": "genreinfo.profile.vessel.subtitle",
+    "bodyToken": "genreinfo.profile.vessel.body",
+    "badges": [
+      { "glyph": "AU", "textToken": "genreinfo.profile.vessel.badge.aura" },
+      { "glyph": "SP", "textToken": "genreinfo.profile.vessel.badge.support" }
+    ],
+    "stats": [
+      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "glyph": "EN", "labelToken": "genreinfo.stat.energy", "source": "attribute", "attribute": "Energy", "display": "currentOverBase" }
+    ],
+    "tips": [
+      { "glyph": "H", "textToken": "genreinfo.profile.vessel.tip.1" },
+      { "glyph": "D", "textToken": "genreinfo.profile.vessel.tip.2" }
+    ],
+    "actions": [
+      { "ability": "Ability.Rts.ShieldAura", "glyph": "AU", "titleToken": "genreinfo.profile.vessel.action.aura.title", "bodyToken": "genreinfo.profile.vessel.action.aura.body" },
+      { "ability": "Ability.Rts.Irradiate", "glyph": "IR", "titleToken": "genreinfo.profile.vessel.action.irradiate.title", "bodyToken": "genreinfo.profile.vessel.action.irradiate.body" }
+    ]
+  }
+]
