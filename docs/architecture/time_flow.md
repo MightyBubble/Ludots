@@ -22,7 +22,7 @@ TimeFlow 的目标是在不引入第二套仿真调度器的前提下，为 `sim
 * `mods/showcases/time/`
 * `mods/showcases/timeflow/`
 
-这些上层收敛结论记录在 `docs/audits/pr92_timeflow_core_mainline_delivery.md` 与 `artifacts/techdebt/2026-04-01-pr92-timeflow-mainline-convergence.md`。
+这些上层收敛结论记录在 `docs/audits/pr92_timeflow_core_mainline_delivery.md`。
 
 ## 2 复用挂靠点
 
