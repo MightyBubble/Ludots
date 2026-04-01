@@ -236,7 +236,7 @@ namespace CameraAcceptanceMod.Runtime
             }
 
             bool isHotpathMap = string.Equals(mapId, CameraAcceptanceIds.HotpathMapId, System.StringComparison.OrdinalIgnoreCase);
-            renderDebug.DrawSkiaUi = true;
+            // DrawSkiaUi 由 F12 全局控制，不在此处自动开启
             renderDebug.DrawPrimitives = true;
             renderDebug.DrawTerrain = !isHotpathMap;
             renderDebug.DrawDebugDraw = !isHotpathMap;

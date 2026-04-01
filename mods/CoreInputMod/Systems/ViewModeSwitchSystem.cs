@@ -73,6 +73,13 @@ namespace CoreInputMod.Systems
                 return;
             }
 
+            if (!_globals.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out var debugStateObj) ||
+                debugStateObj is not RenderDebugState debugState ||
+                !debugState.DrawDebugDraw)
+            {
+                return;
+            }
+
             var active = manager.ActiveMode;
             if (active == null)
             {
