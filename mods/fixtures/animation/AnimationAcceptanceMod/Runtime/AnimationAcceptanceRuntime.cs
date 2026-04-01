@@ -71,7 +71,7 @@ namespace AnimationAcceptanceMod.Runtime
                 return;
             }
 
-            // DrawSkiaUi 由 F12 全局控制，不在此处自动开启
+            // DrawSkiaUi control by F12
             renderDebug.DrawPrimitives = true;
         }
 

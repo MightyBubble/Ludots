@@ -233,7 +233,7 @@ internal sealed class UxPrototypeRuntime
         renderDebug.DrawTerrain = true;
         renderDebug.DrawPrimitives = true;
         renderDebug.DrawDebugDraw = false;
-        // DrawSkiaUi 由 F12 全局控制，不在此处自动开启
+        // DrawSkiaUi control by F12
     }
 
     private void RestoreRenderDebug(GameEngine engine)
