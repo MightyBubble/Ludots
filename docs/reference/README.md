@@ -1,11 +1,11 @@
 # 参考资料
 
-本目录收录事实性、查表型、操作型文档。这里描述“当前有哪些契约、命令和标准”，不负责解释完整设计取舍。
+本目录收录仓库内的事实性、查表型、操作型深度文档。正式对外入口已切换到 `gitbook/reference/`，本目录继续承担实现细节、长版手册和补充证据角色。
 
 ## 1 目录
 
 * [CLI 运行与调试手册](cli_runbook.md)
-  * Mod launcher 工作目录、参数、脚本入口与 direct-debug 边界
+  * Mod launcher 工作目录、参数、脚本入口、launcher graph artifact 与 direct-debug 边界
 * [配置数据合并最佳实践](config_data_merge_best_practices.md)
   * ConfigPipeline 扩展点、配置类设计与合并规则
 * [相机标准规范](camera_standards.md)

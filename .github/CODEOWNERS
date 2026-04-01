@@ -1,5 +1,7 @@
-﻿# Ludots documentation governance owners
+# Ludots documentation governance owners
 
+/gitbook/ @MightyBubble
+/.gitbook.yaml @MightyBubble
 /docs/README.md @MightyBubble
 /docs/conventions/ @MightyBubble
 /docs/architecture/ @MightyBubble

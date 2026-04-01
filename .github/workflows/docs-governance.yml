@@ -3,6 +3,8 @@ name: docs-governance
 on:
   pull_request:
     paths:
+      - 'gitbook/**'
+      - '.gitbook.yaml'
       - 'docs/**'
       - 'README.md'
       - 'README_CN.md'
@@ -15,6 +17,8 @@ on:
     branches:
       - main
     paths:
+      - 'gitbook/**'
+      - '.gitbook.yaml'
       - 'docs/**'
       - 'README.md'
       - 'README_CN.md'

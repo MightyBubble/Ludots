@@ -27,7 +27,7 @@
 
 ## 2 使用规则
 
-* RFC 被接受后，必须把正式结论回写到 `docs/conventions/`、`docs/architecture/` 或 `docs/reference/`
+* RFC 被接受后，必须把正式结论回写到 `gitbook/contributing/`、`gitbook/architecture/` 或 `gitbook/reference/`
 * RFC 被拒绝或过期后，应关闭并保留决策结果，不继续被正文引用
 
 ## 3 相关文档

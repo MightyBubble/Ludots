@@ -60,10 +60,12 @@ dotnet run --project .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.cspro
 
 ## 📚 Documentation
 
-*   **[文档总览](docs/README.md)** — 文档分层、正式入口与阅读路径
-*   **[开发规范 (Conventions)](docs/conventions/README.md)** — 编码标准、Feature 开发工作流、AI 辅助开发规范、环境配置、文档治理
-*   [架构文档 (Architecture)](docs/architecture/README.md) — 当前子系统设计与数据流
-*   [参考资料 (Reference)](docs/reference/README.md) — CLI、标准规范与查表型文档
+*   **[GitBook 首页](gitbook/README.md)** — Ludots 正式文档真相与阅读入口
+*   **[贡献与开发](gitbook/contributing/README.md)** — 编码标准、Feature 开发工作流、AI 辅助开发规范、环境配置、文档治理
+*   [架构 (Architecture)](gitbook/architecture/README.md) — 当前正式架构总览
+*   [参考资料 (Reference)](gitbook/reference/README.md) — CLI 与项目地图等正式操作资料
+*   [Publishing & Access](gitbook/reference/publishing-and-access.md) — GitBook Git Sync 接入方式与 GitHub 访问入口
+*   [仓库深度材料](docs/README.md) — ADR、审计、RFC 与长篇设计说明
 
 ## 🤝 Contributing
 

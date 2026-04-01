@@ -60,12 +60,14 @@ dotnet run --project .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.cspro
 
 ## 📚 文档
 
-详细文档位于 `docs/` 目录中。
+正式文档源位于 `gitbook/` 目录中，仓库内 `docs/` 保留为深度材料与证据目录。
 
-*   [文档总览](docs/README.md)
-*   [开发规范](docs/conventions/README.md)
-*   [架构文档](docs/architecture/README.md)
-*   [参考资料](docs/reference/README.md)
+*   [GitBook 首页](gitbook/README.md)
+*   [贡献与开发](gitbook/contributing/README.md)
+*   [架构](gitbook/architecture/README.md)
+*   [参考资料](gitbook/reference/README.md)
+*   [发布与访问](gitbook/reference/publishing-and-access.md)
+*   [仓库深度材料](docs/README.md)
 
 ## 🤝 贡献
 

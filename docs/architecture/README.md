@@ -1,6 +1,6 @@
 # Architecture
 
-`docs/architecture/` is the architecture SSOT entry for Ludots. These documents describe behavior that exists in the repository today and can be backed by code, tests, or shipped runtime artifacts.
+`gitbook/architecture/README.md` is now the formal architecture entry for Ludots. This directory remains the repository-local deep-dive companion and documents behavior that exists in the repository today and can be backed by code, tests, or shipped runtime artifacts.
 
 ## Core Runtime
 
@@ -51,6 +51,7 @@
 
 ## Repository Docs
 
+- [GitBook Architecture](../../gitbook/architecture/README.md)
 - [Docs Overview](../README.md)
 - [Conventions](../conventions/README.md)
 - [Reference Docs](../reference/README.md)
