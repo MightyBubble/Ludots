@@ -423,7 +423,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void OrderSubmitter_QueuedMode_DoesNotExpireByBufferWindow()
+        public void OrderSubmitter_QueuedMode_UsesBufferWindowExpiry()
         {
             using var world = World.Create();
             var actor = world.Create(OrderBuffer.CreateEmpty(), new GameplayTagContainer());
@@ -452,7 +452,7 @@ namespace Ludots.Tests.GAS
 
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             That(buffer.QueuedCount, Is.EqualTo(1));
-            That(buffer.GetQueued(0).ExpireStep, Is.EqualTo(-1));
+            That(buffer.GetQueued(0).ExpireStep, Is.EqualTo(9));
         }
 
         // ════════════════════════════════════════════════════════════════════

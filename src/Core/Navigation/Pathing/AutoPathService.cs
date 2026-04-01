@@ -143,24 +143,12 @@ namespace Ludots.Core.Navigation.Pathing
             var agent = ResolveAgent(request.AgentTypeId);
             if (agent.Selection.Mode == PathSelectionMode.PreferGraph)
             {
-                if (TrySolveGraph(in request, in agent, out result, out _)) return true;
-                if (!ShouldFallbackToMesh(agent.Selection.Fallback))
-                {
-                    return true;
-                }
-
-                if (TrySolveMesh(in request, in agent, out result, out _)) return true;
+                TrySolveGraph(in request, in agent, out result, out _);
                 return true;
             }
             if (agent.Selection.Mode == PathSelectionMode.PreferMesh)
             {
-                if (TrySolveMesh(in request, in agent, out result, out _)) return true;
-                if (!ShouldFallbackToGraph(agent.Selection.Fallback))
-                {
-                    return true;
-                }
-
-                if (TrySolveGraph(in request, in agent, out result, out _)) return true;
+                TrySolveMesh(in request, in agent, out result, out _);
                 return true;
             }
 
@@ -221,12 +209,24 @@ namespace Ludots.Core.Navigation.Pathing
             {
                 if (!graphIndex.TryFindNearest(new WorldCmInt2(request.Start.Xcm, request.Start.Ycm), agent.GraphProjectionMaxRadiusCm, out startNodeId, out _))
                 {
-                    result = new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, expanded: 0, errorCode: 10);
+                    result = new PathResult(
+                        request.RequestId,
+                        request.Actor,
+                        _graphRuntime != null ? PathStatus.NotReady : PathStatus.NoPath,
+                        default,
+                        expanded: 0,
+                        errorCode: 10);
                     return false;
                 }
                 if (!graphIndex.TryFindNearest(new WorldCmInt2(request.Goal.Xcm, request.Goal.Ycm), agent.GraphProjectionMaxRadiusCm, out goalNodeId, out _))
                 {
-                    result = new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, expanded: 0, errorCode: 11);
+                    result = new PathResult(
+                        request.RequestId,
+                        request.Actor,
+                        _graphRuntime != null ? PathStatus.NotReady : PathStatus.NoPath,
+                        default,
+                        expanded: 0,
+                        errorCode: 11);
                     return false;
                 }
             }
@@ -405,16 +405,6 @@ namespace Ludots.Core.Navigation.Pathing
             int next = array.Length == 0 ? 4 : array.Length * 2;
             if (next < required) next = required;
             Array.Resize(ref array, next);
-        }
-
-        private static bool ShouldFallbackToMesh(PathSelectionMode fallback)
-        {
-            return fallback == PathSelectionMode.PreferMesh || fallback == PathSelectionMode.AutoCheapest;
-        }
-
-        private static bool ShouldFallbackToGraph(PathSelectionMode fallback)
-        {
-            return fallback == PathSelectionMode.PreferGraph || fallback == PathSelectionMode.AutoCheapest;
         }
 
         private NodeGraph ResolveGraph()

@@ -132,7 +132,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             int startIndex = consumeFromCurrentIndex
-                ? Math.Clamp(order.Args.Spatial.A0, 0, pointCount - 1)
+                ? ResolveActiveRouteStartIndex(entity: order.Actor, in order, pointCount)
                 : 0;
             int writeCount = 0;
             for (int pointIndex = startIndex; pointIndex < pointCount; pointIndex++)
@@ -155,6 +155,28 @@ namespace Ludots.Core.Input.Orders
 
             EmitPolylineFromOrigin(originWorldCm, writeCount, isPrimary);
             return true;
+        }
+
+        private int ResolveActiveRouteStartIndex(Entity entity, in Order order, int pointCount)
+        {
+            if (pointCount <= 0)
+            {
+                return 0;
+            }
+
+            if (_world.IsAlive(entity) &&
+                _world.Has<OrderBuffer>(entity))
+            {
+                OrderBuffer buffer = _world.Get<OrderBuffer>(entity);
+                if (buffer.HasActive &&
+                    buffer.ActiveOrder.Order.OrderId == order.OrderId &&
+                    buffer.ActiveOrder.Order.OrderTypeId == order.OrderTypeId)
+                {
+                    return Math.Clamp(buffer.ActiveOrder.RuntimeInt0, 0, pointCount - 1);
+                }
+            }
+
+            return 0;
         }
 
         private void EmitSolvedLeg(Entity actor, Vector3 startWorldCm, Vector3 goalWorldCm, bool isPrimary)

@@ -66,12 +66,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
 
+                    int currentWaypointIndex = SyncMoveRuntime(ref buffer.ActiveOrder);
                     SetSmartStopSuppression(entity, buffer.ActiveOrder.Order.Args.Spatial.Mode == OrderCollectionMode.List);
 
-                    if (!TryResolveTarget(in buffer.ActiveOrder.Order, out var target))
+                    if (!TryResolveTarget(in buffer.ActiveOrder.Order, currentWaypointIndex, out var target))
                     {
                         SetSmartStopSuppression(entity, suppressed: false);
                         ClearNavGoal(entity);
+                        ResetMoveRuntime(ref buffer.ActiveOrder);
                         OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypeRegistry);
                         continue;
                     }
@@ -84,12 +86,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
 
-                    if (TryDriveNavigationGoal(entity, ref buffer.ActiveOrder.Order, speedCmPerSec, out bool navCompleted))
+                    if (TryDriveNavigationGoal(entity, in buffer.ActiveOrder.Order, currentWaypointIndex, speedCmPerSec, out bool navCompleted, out int nextWaypointIndex))
                     {
+                        WriteMoveRuntimeIndex(ref buffer.ActiveOrder, nextWaypointIndex);
                         if (navCompleted)
                         {
                             SetSmartStopSuppression(entity, suppressed: false);
                             ClearNavGoal(entity);
+                            ResetMoveRuntime(ref buffer.ActiveOrder);
                             OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypeRegistry);
                         }
 
@@ -98,10 +102,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     ref var position = ref positions[index];
                     var current = position.Value;
-                    if (AdvanceLinearRoute(ref buffer.ActiveOrder.Order, ref current, speedCmPerSec * dt))
+                    bool completed = AdvanceLinearRoute(in buffer.ActiveOrder.Order, currentWaypointIndex, ref current, speedCmPerSec * dt, out nextWaypointIndex);
+                    WriteMoveRuntimeIndex(ref buffer.ActiveOrder, nextWaypointIndex);
+                    if (completed)
                     {
                         SetSmartStopSuppression(entity, suppressed: false);
                         ClearNavGoal(entity);
+                        ResetMoveRuntime(ref buffer.ActiveOrder);
                         OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypeRegistry);
                     }
 
@@ -125,9 +132,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return _defaultSpeedCmPerSec;
         }
 
-        private bool TryDriveNavigationGoal(Entity entity, ref Order order, float speedCmPerSec, out bool completed)
+        private bool TryDriveNavigationGoal(Entity entity, in Order order, int currentWaypointIndex, float speedCmPerSec, out bool completed, out int nextWaypointIndex)
         {
             completed = false;
+            nextWaypointIndex = currentWaypointIndex;
             if (!World.Has<NavAgent2D>(entity) ||
                 !World.Has<Position2D>(entity))
             {
@@ -149,7 +157,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             ref var position = ref World.Get<Position2D>(entity);
             goal.RadiusCm = Fix64.FromFloat(_stopRadiusCm);
 
-            while (TryResolveCurrentTarget(in order, out var target))
+            while (TryResolveCurrentTarget(in order, nextWaypointIndex, out var target))
             {
                 goal.Kind = NavGoalKind2D.Point;
                 goal.TargetCm = target;
@@ -160,7 +168,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     return true;
                 }
 
-                if (!TryAdvanceRoute(ref order))
+                if (!TryAdvanceRoute(in order, ref nextWaypointIndex))
                 {
                     goal.Kind = NavGoalKind2D.None;
                     completed = true;
@@ -201,24 +209,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             navAgent.SmartStopSuppressed = suppressedByte;
         }
 
-        private static bool TryResolveTarget(in Order order, out Fix64Vec2 target)
+        private static bool TryResolveTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)
         {
             target = default;
-            if (!OrderWorldSpatialResolver.TryResolveMoveDestination(in order, out var worldCm))
+            if (!TryResolveCurrentTarget(in order, currentWaypointIndex, out target))
             {
                 return false;
             }
-
-            target = Fix64Vec2.FromFloat(worldCm.X, worldCm.Z);
             return true;
         }
 
-        private bool AdvanceLinearRoute(ref Order order, ref Fix64Vec2 current, float remainingStepCm)
+        private bool AdvanceLinearRoute(in Order order, int currentWaypointIndex, ref Fix64Vec2 current, float remainingStepCm, out int nextWaypointIndex)
         {
+            nextWaypointIndex = currentWaypointIndex;
             int guard = OrderSpatial.MaxPoints + 1;
             while (remainingStepCm > 0f && guard-- > 0)
             {
-                if (!TryResolveCurrentTarget(in order, out Fix64Vec2 target))
+                if (!TryResolveCurrentTarget(in order, nextWaypointIndex, out Fix64Vec2 target))
                 {
                     return true;
                 }
@@ -234,7 +241,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     return false;
                 }
 
-                if (!TryAdvanceRoute(ref order))
+                if (!TryAdvanceRoute(in order, ref nextWaypointIndex))
                 {
                     return true;
                 }
@@ -250,7 +257,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return false;
         }
 
-        private static bool TryResolveCurrentTarget(in Order order, out Fix64Vec2 target)
+        private static bool TryResolveCurrentTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)
         {
             target = default;
             int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
@@ -260,7 +267,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             int pointIndex = order.Args.Spatial.Mode == OrderCollectionMode.List
-                ? Math.Clamp(order.Args.Spatial.A0, 0, pointCount - 1)
+                ? Math.Clamp(currentWaypointIndex, 0, pointCount - 1)
                 : 0;
             if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in order, pointIndex, out var worldCm))
             {
@@ -271,21 +278,55 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return true;
         }
 
-        private static bool TryAdvanceRoute(ref Order order)
+        private static bool TryAdvanceRoute(in Order order, ref int currentWaypointIndex)
         {
             if (order.Args.Spatial.Mode != OrderCollectionMode.List)
             {
                 return false;
             }
 
-            int nextIndex = order.Args.Spatial.A0 + 1;
+            int nextIndex = currentWaypointIndex + 1;
             if (nextIndex >= order.Args.Spatial.PointCount)
             {
                 return false;
             }
 
-            order.Args.Spatial.A0 = nextIndex;
+            currentWaypointIndex = nextIndex;
             return true;
+        }
+
+        private static int SyncMoveRuntime(ref QueuedOrder activeOrder)
+        {
+            if (activeOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
+            {
+                activeOrder.RuntimeInt0 = 0;
+                return 0;
+            }
+
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in activeOrder.Order.Args.Spatial);
+            activeOrder.RuntimeInt0 = pointCount > 0
+                ? Math.Clamp(activeOrder.RuntimeInt0, 0, pointCount - 1)
+                : 0;
+            return activeOrder.RuntimeInt0;
+        }
+
+        private static void WriteMoveRuntimeIndex(ref QueuedOrder activeOrder, int currentWaypointIndex)
+        {
+            if (activeOrder.Order.Args.Spatial.Mode != OrderCollectionMode.List)
+            {
+                activeOrder.RuntimeInt0 = 0;
+                return;
+            }
+
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in activeOrder.Order.Args.Spatial);
+            activeOrder.RuntimeInt0 = pointCount > 0
+                ? Math.Clamp(currentWaypointIndex, 0, pointCount - 1)
+                : 0;
+        }
+
+        private static void ResetMoveRuntime(ref QueuedOrder activeOrder)
+        {
+            activeOrder.RuntimeInt0 = 0;
         }
 
         private static float DistanceCm(Fix64Vec2 current, Fix64Vec2 target)

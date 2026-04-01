@@ -441,7 +441,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AutoPathService_PreferGraphFallback_PreservesGraphFailureWithoutMeshOverride()
+        public void AutoPathService_PreferGraph_PreservesGraphNotReadyWithoutMeshOverride()
         {
             const int chunkSizeCm = 6400;
             RoadNetworkScenarioDefinition scenario = RoadNetworkScenarioDefinition.Create(chunkSizeCm);
@@ -471,7 +471,7 @@ namespace Ludots.Tests.GAS
                 budget: new PathBudget(maxExpanded: 0, maxPoints: 16));
 
             Assert.That(service.TrySolve(in request, out var result), Is.True);
-            Assert.That(result.Status, Is.EqualTo(PathStatus.NoPath));
+            Assert.That(result.Status, Is.EqualTo(PathStatus.NotReady));
         }
 
         [Test]
@@ -1585,8 +1585,7 @@ namespace Ludots.Tests.GAS
                         ProfileId = RoadNetworkShowcaseIds.PathPlannerAgentTypeId,
                         Selection = new PathingSelectionConfig
                         {
-                            Mode = PathSelectionMode.PreferGraph,
-                            Fallback = PathSelectionMode.PreferGraph
+                            Mode = PathSelectionMode.PreferGraph
                         },
                         NodeGraph = new PathingNodeGraphConfig
                         {

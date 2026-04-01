@@ -144,7 +144,8 @@ namespace Ludots.Tests.GAS
             system.Update(0.10f);
 
             Assert.That(buffer.HasActive, Is.True);
-            Assert.That(buffer.ActiveOrder.Order.Args.Spatial.A0, Is.GreaterThanOrEqualTo(1));
+            Assert.That(buffer.ActiveOrder.Order.Args.Spatial.A0, Is.EqualTo(0));
+            Assert.That(buffer.ActiveOrder.RuntimeInt0, Is.GreaterThanOrEqualTo(1));
 
             system.Update(0.10f);
             system.Update(0.10f);

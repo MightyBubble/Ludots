@@ -155,10 +155,10 @@ SelectionRuntime / local controller
 
 规则：
 
-- 执行游标属于运行时状态，例如 `RoadNavPlanRuntime.CurrentWaypointIndex`
-- authored order payload 不能拿来充当执行游标
+- 执行游标属于运行时状态，例如 `RoadNavPlanRuntime.CurrentWaypointIndex` 或 `OrderBuffer.ActiveOrder.RuntimeInt0`
+- authored order payload 不能拿来充当执行游标；运行中的 waypoint index 等瞬态数据必须写入 runtime metadata slot
 - 如果 plan storage 缺失或过期，binding 必须先修复一致性，再由 selection 决定是否终止
-- timeout refresh 必须同时更新 active-order payload 与绑定 runtime
+- timeout refresh 只在 authored 意图本身需要刷新时替换 active-order payload；纯执行游标刷新必须只更新绑定 runtime / runtime metadata
 
 ### 4. 走：把执行意图写入导航层
 
@@ -200,7 +200,7 @@ SelectionRuntime / local controller
 
 - 抵达判断必须对 authored 最终目标生效，不能只对当前 sample 生效
 - timeout 属于 lifecycle policy，不属于 steering output
-- 刷新成功时，保留 active order slot，但必须一致性地替换 payload 与 plan runtime
+- 刷新成功时，保留 active order slot；如果 authored 意图变化则一致性替换 payload 与 plan runtime，否则只更新 plan runtime
 - 刷新失败时，通过 order layer 完成或放弃，不得留下孤儿运行时状态
 
 ## 正确的 `NavAgent2D` 使用方式
