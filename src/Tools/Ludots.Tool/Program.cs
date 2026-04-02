@@ -697,20 +697,18 @@ namespace {modId}
                 Console.WriteLine($"Invalid repo root (missing assets/): {repoRoot}");
                 return 2;
             }
-            string bakeCfgPath = Path.Combine(repoRoot, NavMeshConfigPaths.BakeConfigPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(bakeCfgPath))
+            NavMeshBakeConfig bakeConfig;
+            try
             {
-                Console.WriteLine($"Missing bake config: {bakeCfgPath}");
+                bakeConfig = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load navmesh bake config '{NavMeshConfigPaths.BakeConfigPath}': {ex.Message}");
                 return 2;
             }
 
-            var bakeConfig = JsonSerializer.Deserialize<NavMeshBakeConfig>(File.ReadAllText(bakeCfgPath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new NavMeshBakeConfig();
-            if (bakeConfig.Profiles == null || bakeConfig.Profiles.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.profiles is empty.");
             var profiles = bakeConfig.Profiles;
-            if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0)
-            {
-                bakeConfig.Layers = new List<NavLayerConfig> { new NavLayerConfig { Id = "Ground", Layer = 0 } };
-            }
 
             NavObstacleSet obstacles = new NavObstacleSet();
             string obsRel = NavAssetPaths.GetObstacleRelativePath(mapId);

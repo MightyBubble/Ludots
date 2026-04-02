@@ -18,6 +18,11 @@ ConfigPipeline 会从以下来源加载同一个 `relativePath` 的配置片段�
 *   `<modId>:assets/game.json`
 *   `<modId>:assets/Configs/game.json`
 
+导航配置也应遵循同一规则，而不是单独保留 root-path 特例。例如：
+
+*   `Navigation/pathing.json`
+*   `Navigation/navmesh.json`
+
 代码入口：
 
 *   路径生成：`src/Core/Config/ConfigSourcePaths.cs`

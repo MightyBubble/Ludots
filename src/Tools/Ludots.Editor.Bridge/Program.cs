@@ -583,12 +583,17 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
         var map = VertexMapBinary.Read(vtxmStream);
 
         string repoRoot = FindAssetsRoot();
-        string bakeCfgPath = Path.Combine(repoRoot, NavMeshConfigPaths.BakeConfigPath.Replace('/', Path.DirectorySeparatorChar));
-        if (!File.Exists(bakeCfgPath)) return Results.BadRequest(new { error = $"Missing bake config: {bakeCfgPath}" });
-        var bakeConfig = JsonSerializer.Deserialize<NavMeshBakeConfig>(File.ReadAllText(bakeCfgPath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new NavMeshBakeConfig();
-        if (bakeConfig.Profiles == null || bakeConfig.Profiles.Count == 0) return Results.BadRequest(new { error = "NavMeshBakeConfig.profiles is empty." });
+        NavMeshBakeConfig bakeConfig;
+        try
+        {
+            bakeConfig = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(new { error = $"Failed to load navmesh bake config '{NavMeshConfigPaths.BakeConfigPath}': {ex.Message}" });
+        }
+
         var profiles = bakeConfig.Profiles;
-        if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) bakeConfig.Layers = new List<NavLayerConfig> { new NavLayerConfig { Id = "Ground", Layer = 0 } };
 
         NavObstacleSet obstacles = new NavObstacleSet();
         string obsRel = NavAssetPaths.GetObstacleRelativePath(mapId);

@@ -1876,17 +1876,7 @@ namespace Ludots.Core.Engine
 
         private NavMeshBakeConfig LoadNavMeshBakeConfig()
         {
-            string rel = NavMeshConfigPaths.BakeConfigPath;
-            string uri = ResolveSingleExistingUri(rel);
-            using var stream = VFS.GetStream(uri);
-            var opts = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-            opts.Converters.Add(new JsonStringEnumConverter());
-            var cfg = JsonSerializer.Deserialize<NavMeshBakeConfig>(stream, opts);
-            if (cfg == null) throw new InvalidOperationException($"Failed to deserialize NavMeshBakeConfig from '{uri}'.");
-            return cfg;
+            return new NavMeshBakeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
         }
 
         private string ResolveSingleExistingUri(string relPath)
