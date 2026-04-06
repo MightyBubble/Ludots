@@ -4,6 +4,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.Orders;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
 
@@ -15,6 +16,8 @@ namespace Ludots.Tests.GAS
         private World _world = null!;
         private AbilityDefinitionRegistry _abilities = null!;
         private GroundOverlayBuffer _overlays = null!;
+        private PerformerDefinitionRegistry _performerDefinitions = null!;
+        private PerformerInstanceBuffer _performers = null!;
         private AbilityIndicatorOverlayBridge _bridge = null!;
 
         [SetUp]
@@ -23,7 +26,9 @@ namespace Ludots.Tests.GAS
             _world = World.Create();
             _abilities = new AbilityDefinitionRegistry();
             _overlays = new GroundOverlayBuffer();
-            _bridge = new AbilityIndicatorOverlayBridge(_world, _abilities, _overlays);
+            _performerDefinitions = new PerformerDefinitionRegistry();
+            _performers = new PerformerInstanceBuffer();
+            _bridge = new AbilityIndicatorOverlayBridge(_world, _abilities, _overlays, _performerDefinitions, _performers);
         }
 
         [TearDown]
@@ -138,6 +143,61 @@ namespace Ludots.Tests.GAS
             Assert.That(span[1].Shape, Is.EqualTo(GroundOverlayShape.Ring));
             Assert.That(span[1].Radius, Is.EqualTo(2.5f).Within(0.001f));
             Assert.That(span[1].InnerRadius, Is.EqualTo(1.2f).Within(0.001f));
+        }
+
+        [Test]
+        public void UpdateAiming_WithPreviewPerformer_AllocatesAndTintsGhost()
+        {
+            _performerDefinitions.Register("test.preview", new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Marker3D,
+                MeshOrShapeId = 1,
+                DefaultLifetime = -1f
+            });
+
+            RegisterAbility(1004, new AbilityIndicatorConfig
+            {
+                Shape = TargetShape.Circle,
+                Range = 800f,
+                Radius = 240f,
+                ValidColor = new Vector4(0.2f, 0.8f, 0.5f, 0.35f),
+                InvalidColor = new Vector4(0.95f, 0.25f, 0.2f, 0.35f),
+                Preview = new AbilityIndicatorPreviewConfig
+                {
+                    PerformerId = "test.preview",
+                    ScaleX = 3.5f,
+                    ScaleY = 1.1f,
+                    ScaleZ = 2.8f,
+                    OffsetY = 0.4f,
+                }
+            });
+            var actor = CreateActor(1004);
+
+            _bridge.UpdateAiming(
+                actor,
+                new InputOrderMapping
+                {
+                    ActionId = "SkillQ",
+                    SelectionType = OrderSelectionType.Position,
+                    ArgsTemplate = new OrderArgsTemplate { I0 = 0 }
+                },
+                hasCursorWorldCm: true,
+                cursorWorldCm: new Vector3(250f, 0f, 300f),
+                hoveredEntity: Entity.Null);
+
+            Assert.That(_performers.ActiveCount, Is.EqualTo(1));
+            ref readonly var preview = ref _performers.Get(0);
+            Assert.That(preview.DefId, Is.EqualTo(_performerDefinitions.GetId("test.preview")));
+            Assert.That(preview.WorldPosition.X, Is.EqualTo(2.5f).Within(0.001f));
+            Assert.That(preview.WorldPosition.Y, Is.EqualTo(0.43f).Within(0.001f));
+            Assert.That(_performers.TryGetParamOverride(0, WellKnownPerformerParamKeys.MarkerScaleX, out float scaleX), Is.True);
+            Assert.That(scaleX, Is.EqualTo(3.5f).Within(0.001f));
+            Assert.That(_performers.TryGetParamOverride(0, WellKnownPerformerParamKeys.MarkerColorA, out float alpha), Is.True);
+            Assert.That(alpha, Is.GreaterThanOrEqualTo(0.3f));
+
+            _bridge.ClearPreview();
+
+            Assert.That(_performers.ActiveCount, Is.EqualTo(0));
         }
 
         private Entity CreateActor(int abilityId)

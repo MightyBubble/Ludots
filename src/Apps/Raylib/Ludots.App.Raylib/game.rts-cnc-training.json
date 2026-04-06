@@ -1,0 +1,13 @@
+{
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine - C&C Training Showcase",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/EntityCommandPanelMod",
+    "../../../../../../../mods/RtsDemoMod",
+    "../../../../../../../mods/showcases/rts_training_cnc/RtsCncTrainingShowcaseMod"
+  ]
+}

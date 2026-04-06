@@ -955,7 +955,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(new ManifestationMotion2DSystem(World), SystemGroup.EffectProcessing);
             RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, effectRequestQueue, SpatialQueries), SystemGroup.EffectProcessing);
-            RegisterSystem(new RuntimeEntitySpawnSystem(World, runtimeEntitySpawnQueue, MapLoader.TemplateRegistry, MapLoader.EntityTemplateKeys, presentationAuthoring, effectRequestQueue), SystemGroup.EffectProcessing);
+            RegisterSystem(new RuntimeEntitySpawnSystem(World, runtimeEntitySpawnQueue, MapLoader.TemplateRegistry, MapLoader.EntityTemplateKeys, presentationAuthoring, presentationStableIds, effectRequestQueue), SystemGroup.EffectProcessing);
             const string manifestationObstacleBridgeSystemTypeName = "Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem";
             var manifestationObstacleBridgeType = Type.GetType($"{manifestationObstacleBridgeSystemTypeName}, Ludots.Physics2D", throwOnError: false);
             if (manifestationObstacleBridgeType != null)

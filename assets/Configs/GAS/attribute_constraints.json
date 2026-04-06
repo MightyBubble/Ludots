@@ -2,6 +2,22 @@
   "Health": {
     "clampToBase": true,
     "min": 0
+  },
+  "Minerals": {
+    "clampToBase": true,
+    "min": 0
+  },
+  "Lumber": {
+    "clampToBase": true,
+    "min": 0
+  },
+  "Credits": {
+    "clampToBase": true,
+    "min": 0
+  },
+  "Gas": {
+    "clampToBase": true,
+    "min": 0
   }
 }
 

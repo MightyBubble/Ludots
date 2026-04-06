@@ -7,20 +7,70 @@
     "TargetYCm": 15000,
     "Yaw": 200,
     "Pitch": 55,
-    "DistanceCm": 25000,
+    "DistanceCm": 23500,
     "FovYDeg": 60
   },
   "Boards": [
     { "Name": "default", "SpatialType": "HexGrid", "DataFile": "ra2_shoreline.vtxm" }
   ],
   "Entities": [
-    { "Template": "rts_base", "Overrides": { "WorldPositionCm": { "Value": { "X": 5000, "Y": 25000 } }, "Name": { "Value": "Allied Base" }, "Team": { "Id": 1 } } },
-    { "Template": "rts_barracks", "Overrides": { "WorldPositionCm": { "Value": { "X": 7000, "Y": 24000 } }, "Name": { "Value": "War Factory" } } },
-    { "Template": "rts_tank", "Overrides": { "WorldPositionCm": { "Value": { "X": 9000, "Y": 23000 } }, "Team": { "Id": 1 } } },
-    { "Template": "rts_tank", "Overrides": { "WorldPositionCm": { "Value": { "X": 9500, "Y": 23500 } }, "Team": { "Id": 1 } } },
-    { "Template": "rts_base", "Overrides": { "WorldPositionCm": { "Value": { "X": 30000, "Y": 5000 } }, "Name": { "Value": "Soviet Base" }, "Team": { "Id": 2 } } },
-    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 28000, "Y": 7000 } }, "Team": { "Id": 2 } } },
-    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 28500, "Y": 7500 } }, "Team": { "Id": 2 } } },
-    { "Template": "rts_infantry", "Overrides": { "WorldPositionCm": { "Value": { "X": 29000, "Y": 8000 } }, "Team": { "Id": 2 } } }
+    {
+      "Template": "rts_ra2_conyard",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 6200, "Y": 23500 } },
+        "Name": { "Value": "Allied ConYard" }
+      }
+    },
+    {
+      "Template": "rts_ra2_power_plant",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 8300, "Y": 24400 } },
+        "Name": { "Value": "Power Plant" }
+      }
+    },
+    {
+      "Template": "rts_ra2_war_factory",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 9800, "Y": 22600 } },
+        "Name": { "Value": "War Factory" }
+      }
+    },
+    {
+      "Template": "rts_ra2_bunker",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 12000, "Y": 21400 } },
+        "Name": { "Value": "Frontline Bunker" }
+      }
+    },
+    {
+      "Template": "rts_ra2_rocket_trooper",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 12700, "Y": 21400 } },
+        "Name": { "Value": "Rocket Trooper A" }
+      }
+    },
+    {
+      "Template": "rts_ra2_rocket_trooper",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 13150, "Y": 21950 } },
+        "Name": { "Value": "Rocket Trooper B" }
+      }
+    },
+    {
+      "Template": "rts_ra2_conyard",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 29200, "Y": 5800 } },
+        "Name": { "Value": "Soviet ConYard" },
+        "Team": { "Id": 2 }
+      }
+    },
+    {
+      "Template": "rts_ra2_rhino",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 27200, "Y": 7600 } },
+        "Name": { "Value": "Rhino Patrol" },
+        "Team": { "Id": 2 }
+      }
+    }
   ]
 }

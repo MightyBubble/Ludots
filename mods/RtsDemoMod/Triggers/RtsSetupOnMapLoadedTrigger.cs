@@ -4,9 +4,14 @@ using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
+using RtsDemoMod.Runtime;
 
 namespace RtsDemoMod.Triggers
 {
@@ -30,7 +35,7 @@ namespace RtsDemoMod.Triggers
             if (engine == null) return Task.CompletedTask;
 
             var mapTags = context.Get(CoreServiceKeys.MapTags) ?? new List<string>();
-            if (!HasTag(mapTags, "rts")) return Task.CompletedTask;
+            if (!HasTag(mapTags, "rts") && !HasTag(mapTags, "rts_showcase")) return Task.CompletedTask;
 
             var world = engine.World;
             var q = new QueryDescription().WithAll<Name>();
@@ -40,9 +45,73 @@ namespace RtsDemoMod.Triggers
                 if (!world.Has<GameplayTagContainer>(e)) world.Add(e, new GameplayTagContainer());
                 if (!world.Has<TagCountContainer>(e)) world.Add(e, new TagCountContainer());
                 if (!world.Has<TimedTagBuffer>(e)) world.Add(e, new TimedTagBuffer());
+                if (world.Has<SelectionSelectableTag>(e) && !world.Has<SelectionSelectableState>(e))
+                {
+                    world.Add(e, SelectionSelectableState.EnabledByDefault);
+                }
             });
 
+            RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
+            EnsureLocalSelectionOwner(engine, world);
+            EnsureSelectionViewBinding(engine, world);
+            EnsureDefaultSelection(engine, world);
             return Task.CompletedTask;
+        }
+
+        private static void EnsureLocalSelectionOwner(GameEngine engine, World world)
+        {
+            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (world.IsAlive(owner))
+            {
+                return;
+            }
+
+            owner = world.Create(new PlayerOwner { PlayerId = 1 });
+            engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
+        }
+
+        private static void EnsureSelectionViewBinding(GameEngine engine, World world)
+        {
+            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
+            if (selection == null)
+            {
+                return;
+            }
+
+            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (!world.IsAlive(owner))
+            {
+                return;
+            }
+
+            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.Ambient);
+            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
+            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+        }
+
+        private static void EnsureDefaultSelection(GameEngine engine, World world)
+        {
+            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
+            if (selection == null)
+            {
+                return;
+            }
+
+            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (!world.IsAlive(owner) || SelectionContextRuntime.GetCurrentCount(world, engine.GlobalContext) > 0)
+            {
+                return;
+            }
+
+            Entity target = FindPreferredTarget(world);
+            if (target == Entity.Null || !world.IsAlive(target))
+            {
+                return;
+            }
+
+            Span<Entity> next = stackalloc Entity[1];
+            next[0] = target;
+            selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next);
         }
 
         private static bool HasTag(List<string> tags, string t)
@@ -52,6 +121,103 @@ namespace RtsDemoMod.Triggers
                 if (string.Equals(tags[i], t, StringComparison.OrdinalIgnoreCase)) return true;
             }
             return false;
+        }
+
+        private static Entity FindFirstNamedEntity(World world, string nameToFind)
+        {
+            Entity result = Entity.Null;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (result == Entity.Null &&
+                    string.Equals(name.Value, nameToFind, StringComparison.OrdinalIgnoreCase))
+                {
+                    result = entity;
+                }
+            });
+
+            return result;
+        }
+
+        private static Entity FindPreferredTarget(World world)
+        {
+            Entity result = FindFirstNamedEntityContaining(world, "Barracks");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstNamedEntityContaining(world, "War Factory");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstNamedEntityContaining(world, "Gateway");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstNamedEntityContaining(world, "Peasant");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstNamedEntityContaining(world, "ConYard");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstNamedEntityContaining(world, "Construction Yard");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstNamedEntityContaining(world, "Drone");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            return FindFirstAbilityTarget(world);
+        }
+
+        private static Entity FindFirstNamedEntityContaining(World world, string token)
+        {
+            Entity result = Entity.Null;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (result != Entity.Null ||
+                    string.IsNullOrWhiteSpace(name.Value) ||
+                    name.Value.IndexOf(token, StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    return;
+                }
+
+                result = entity;
+            });
+
+            return result;
+        }
+
+        private static Entity FindFirstAbilityTarget(World world)
+        {
+            Entity result = Entity.Null;
+            var query = new QueryDescription().WithAll<Name, AbilityStateBuffer>();
+            world.Query(in query, (Entity entity, ref Name _, ref AbilityStateBuffer _) =>
+            {
+                if (result == Entity.Null)
+                {
+                    result = entity;
+                }
+            });
+
+            return result;
         }
     }
 }

@@ -43,6 +43,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public UnitCreationConfig UnitCreation { get; set; }
         /// <summary>Displacement parameters (dash / knockback / pull).</summary>
         public DisplacementConfig Displacement { get; set; }
+        /// <summary>Entity relation parameters (garrison, detach, parent-child ownership).</summary>
+        public RelationConfig Relation { get; set; }
 
         // ── Capability blocks ──
 
@@ -207,6 +209,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public int TotalDistanceCm { get; set; }
         public int TotalDurationTicks { get; set; }
         public bool OverrideNavigation { get; set; } = true;
+    }
+
+    /// <summary>Entity relation command configuration.</summary>
+    public sealed class RelationConfig
+    {
+        public string Operation { get; set; } = "SetParent";
+        public string Subject { get; set; } = "Source";
+        public string Parent { get; set; } = "Target";
+        public bool SnapSubjectToParentPosition { get; set; }
     }
 
     /// <summary>

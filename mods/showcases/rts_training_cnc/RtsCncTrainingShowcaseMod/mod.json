@@ -1,0 +1,15 @@
+{
+  "name": "RtsCncTrainingShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused Command & Conquer style training showcase with progressive billing.",
+  "main": "bin/net8.0/RtsCncTrainingShowcaseMod.dll",
+  "priority": 120,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0",
+    "RtsDemoMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "rts", "training", "cnc"]
+}
