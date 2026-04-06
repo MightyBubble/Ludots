@@ -235,7 +235,7 @@ namespace RtsDemoMod.Runtime
                     "camera_reset"),
                 _ => new ToolbarProfile(
                     "RTS Sandbox",
-                    "Select a showcase unit, try one focused command, and use Reset Cam if the board drifts out of view.")
+                    "RMB move, sample War3 build / C&C placement / SC2 Warp paths, and use Reset Cam if the board drifts out of view.")
             };
         }
 

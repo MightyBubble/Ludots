@@ -52,7 +52,7 @@ namespace Ludots.Tests.GAS.Production
             "Credits",
             1,
             900f,
-            200f,
+            100f,
             28,
             1200);
 

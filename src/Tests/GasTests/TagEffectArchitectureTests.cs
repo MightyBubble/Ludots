@@ -336,9 +336,11 @@ namespace Ludots.Tests.GAS
 
             var target = world.Create(new AttributeBuffer());
             var effect = world.Create();
+            const int forceXAttrId = AttributeBuffer.MAX_ATTRS - 2;
+            const int forceYAttrId = AttributeBuffer.MAX_ATTRS - 1;
 
             var ctx = new EffectContext { Source = effect, Target = target };
-            var tpl = new EffectTemplateData { PresetAttribute0 = 5, PresetAttribute1 = 6 };
+            var tpl = new EffectTemplateData { PresetAttribute0 = forceXAttrId, PresetAttribute1 = forceYAttrId };
 
             var mergedParams = new EffectConfigParams();
             mergedParams.TryAddFloat(fxKey, 10f);
@@ -347,8 +349,8 @@ namespace Ludots.Tests.GAS
             BuiltinHandlers.HandleApplyForce(world, effect, ref ctx, in mergedParams, in tpl);
 
             ref var attrBuf = ref world.Get<AttributeBuffer>(target);
-            That(attrBuf.GetCurrent(5), Is.EqualTo(10f));
-            That(attrBuf.GetCurrent(6), Is.EqualTo(-3f));
+            That(attrBuf.GetCurrent(forceXAttrId), Is.EqualTo(10f));
+            That(attrBuf.GetCurrent(forceYAttrId), Is.EqualTo(-3f));
         }
 
         [Test]

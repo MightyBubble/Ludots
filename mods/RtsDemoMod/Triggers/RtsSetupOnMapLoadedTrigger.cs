@@ -103,7 +103,7 @@ namespace RtsDemoMod.Triggers
                 return;
             }
 
-            Entity target = FindPreferredTarget(world);
+            Entity target = FindPreferredTarget(engine, world);
             if (target == Entity.Null || !world.IsAlive(target))
             {
                 return;
@@ -139,9 +139,45 @@ namespace RtsDemoMod.Triggers
             return result;
         }
 
-        private static Entity FindPreferredTarget(World world)
+        private static Entity FindPreferredTarget(GameEngine engine, World world)
         {
-            Entity result = FindFirstNamedEntityContaining(world, "Barracks");
+            if (HasMapTag(engine, "rts_training"))
+            {
+                if (HasMapTag(engine, "war3"))
+                {
+                    Entity war3Producer = FindFirstNamedEntityContaining(world, "Barracks");
+                    if (war3Producer != Entity.Null)
+                    {
+                        return war3Producer;
+                    }
+                }
+
+                if (HasMapTag(engine, "cnc"))
+                {
+                    Entity cncProducer = FindFirstNamedEntityContaining(world, "War Factory");
+                    if (cncProducer != Entity.Null)
+                    {
+                        return cncProducer;
+                    }
+                }
+
+                if (HasMapTag(engine, "sc2"))
+                {
+                    Entity sc2Producer = FindFirstNamedEntityContaining(world, "Gateway");
+                    if (sc2Producer != Entity.Null)
+                    {
+                        return sc2Producer;
+                    }
+                }
+            }
+
+            Entity result = FindFirstNamedEntityContaining(world, "Peasant");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstNamedEntityContaining(world, "Barracks");
             if (result != Entity.Null)
             {
                 return result;
@@ -154,12 +190,6 @@ namespace RtsDemoMod.Triggers
             }
 
             result = FindFirstNamedEntityContaining(world, "Gateway");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstNamedEntityContaining(world, "Peasant");
             if (result != Entity.Null)
             {
                 return result;
@@ -184,6 +214,25 @@ namespace RtsDemoMod.Triggers
             }
 
             return FindFirstAbilityTarget(world);
+        }
+
+        private static bool HasMapTag(GameEngine engine, string tag)
+        {
+            var tags = engine.CurrentMapSession?.MapConfig?.Tags;
+            if (tags == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < tags.Count; i++)
+            {
+                if (string.Equals(tags[i], tag, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static Entity FindFirstNamedEntityContaining(World world, string token)
