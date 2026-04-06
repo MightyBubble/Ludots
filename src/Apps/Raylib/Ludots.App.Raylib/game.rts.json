@@ -5,6 +5,9 @@
   "TargetFps": 60,
   "ModPaths": [
     "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/EntityCommandPanelMod",
+    "../../../../../../../mods/RtsDemoMod",
     "../../../../../../../mods/RtsShowcaseMod"
   ]
 }

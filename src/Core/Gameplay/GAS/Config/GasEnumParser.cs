@@ -26,6 +26,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "LaunchProjectile", EffectPresetType.LaunchProjectile },
             { "CreateUnit", EffectPresetType.CreateUnit },
             { "Displacement", EffectPresetType.Displacement },
+            { "Relation", EffectPresetType.Relation },
         };
 
         /// <summary>
@@ -133,6 +134,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "CreateProjectile", BuiltinHandlerId.CreateProjectile },
             { "CreateUnit", BuiltinHandlerId.CreateUnit },
             { "ApplyDisplacement", BuiltinHandlerId.ApplyDisplacement },
+            { "ApplyRelation", BuiltinHandlerId.ApplyRelation },
         };
 
         /// <summary>
@@ -157,6 +159,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "ForceParams", ComponentFlags.ForceParams },
             { "ProjectileParams", ComponentFlags.ProjectileParams },
             { "UnitCreationParams", ComponentFlags.UnitCreationParams },
+            { "RelationParams", ComponentFlags.RelationParams },
             { "PhaseGraphBindings", ComponentFlags.PhaseGraphBindings },
             { "PhaseListenerSetup", ComponentFlags.PhaseListenerSetup },
         };

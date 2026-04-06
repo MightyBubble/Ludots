@@ -1,24 +1,34 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
 namespace EntityCommandPanelMod.Runtime
 {
-    internal sealed class GasEntityCommandPanelSource : IEntityCommandPanelSource, IEntityCommandPanelActionSource
+    internal sealed class GasEntityCommandPanelSource : IEntityCommandPanelSource, IEntityCommandPanelActionSource, IEntityCommandPanelSupplementalSource
     {
         private readonly GameEngine _engine;
         private readonly Dictionary<int, string[]> _routeLabelCache = new();
+        private readonly AbilityDefinitionRegistry? _abilityDefinitions;
+        private readonly EffectTemplateRegistry? _effectTemplates;
+        private readonly OrderTypeRegistry? _orderTypes;
+        private readonly IClock? _clock;
 
         public GasEntityCommandPanelSource(GameEngine engine)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            _abilityDefinitions = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
+            _effectTemplates = engine.GetService(CoreServiceKeys.EffectTemplateRegistry);
+            _orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry);
+            _clock = engine.GetService(CoreServiceKeys.Clock);
         }
 
         public const string SourceId = "gas.ability-slots";
@@ -26,45 +36,68 @@ namespace EntityCommandPanelMod.Runtime
         public bool TryGetRevision(Entity target, out uint revision)
         {
             revision = 0;
-            if (!_engine.World.IsAlive(target) || !_engine.World.Has<AbilityStateBuffer>(target))
+            if (!_engine.World.IsAlive(target))
             {
                 return false;
             }
 
-            ref var baseSlots = ref _engine.World.Get<AbilityStateBuffer>(target);
-            revision = HashCombine(revision, (uint)baseSlots.Count);
-            for (int i = 0; i < baseSlots.Count; i++)
+            int displayedSlots = 0;
+            if (_engine.World.Has<AbilityStateBuffer>(target))
             {
-                var slot = baseSlots.Get(i);
-                revision = HashSlot(revision, in slot);
-            }
-
-            if (_engine.World.Has<AbilityFormSlotBuffer>(target))
-            {
-                ref var formSlots = ref _engine.World.Get<AbilityFormSlotBuffer>(target);
-                for (int i = 0; i < AbilityFormSlotBuffer.CAPACITY; i++)
+                ref var baseSlots = ref _engine.World.Get<AbilityStateBuffer>(target);
+                displayedSlots = ResolveDisplayedSlotCount(target, in baseSlots);
+                revision = HashCombine(revision, (uint)baseSlots.Count);
+                for (int i = 0; i < baseSlots.Count; i++)
                 {
-                    var slot = formSlots.GetOverride(i);
+                    var slot = baseSlots.Get(i);
                     revision = HashSlot(revision, in slot);
+                }
+
+                if (_engine.World.Has<AbilityFormSlotBuffer>(target))
+                {
+                    ref var formSlots = ref _engine.World.Get<AbilityFormSlotBuffer>(target);
+                    for (int i = 0; i < AbilityFormSlotBuffer.CAPACITY; i++)
+                    {
+                        var slot = formSlots.GetOverride(i);
+                        revision = HashSlot(revision, in slot);
+                    }
+                }
+
+                if (_engine.World.Has<GrantedSlotBuffer>(target))
+                {
+                    ref var grantedSlots = ref _engine.World.Get<GrantedSlotBuffer>(target);
+                    for (int i = 0; i < GrantedSlotBuffer.CAPACITY; i++)
+                    {
+                        var slot = grantedSlots.GetOverride(i);
+                        revision = HashSlot(revision, in slot);
+                    }
+                }
+
+                if (_engine.World.Has<AbilityFormSetRef>(target))
+                {
+                    revision = HashCombine(revision, (uint)_engine.World.Get<AbilityFormSetRef>(target).FormSetId);
                 }
             }
 
-            if (_engine.World.Has<GrantedSlotBuffer>(target))
+            if (_engine.World.Has<AbilityExecInstance>(target))
             {
-                ref var grantedSlots = ref _engine.World.Get<GrantedSlotBuffer>(target);
-                for (int i = 0; i < GrantedSlotBuffer.CAPACITY; i++)
-                {
-                    var slot = grantedSlots.GetOverride(i);
-                    revision = HashSlot(revision, in slot);
-                }
+                ref var exec = ref _engine.World.Get<AbilityExecInstance>(target);
+                revision = HashAbilityExec(revision, in exec);
             }
 
-            if (_engine.World.Has<AbilityFormSetRef>(target))
+            if (_engine.World.Has<ActiveEffectContainer>(target))
             {
-                revision = HashCombine(revision, (uint)_engine.World.Get<AbilityFormSetRef>(target).FormSetId);
+                ref var effects = ref _engine.World.Get<ActiveEffectContainer>(target);
+                revision = HashActiveEffects(revision, in effects);
             }
 
-            ref var actorTags = ref _engine.World.TryGetRef<GameplayTagContainer>(target, out bool hasActorTags);
+            if (_engine.World.Has<OrderBuffer>(target))
+            {
+                ref var orders = ref _engine.World.Get<OrderBuffer>(target);
+                revision = HashOrderBuffer(revision, in orders);
+            }
+
+            bool hasActorTags = _engine.World.TryGet(target, out GameplayTagContainer actorTags);
             if (hasActorTags)
             {
                 revision = HashTagContainer(revision, in actorTags);
@@ -74,7 +107,6 @@ namespace EntityCommandPanelMod.Runtime
             if (inputMapping != null)
             {
                 revision = HashCombine(revision, (uint)inputMapping.InteractionMode);
-                int displayedSlots = ResolveDisplayedSlotCount(target, in baseSlots);
                 for (int slotIndex = 0; slotIndex < displayedSlots; slotIndex++)
                 {
                     string actionId = ResolvePrimarySkillActionId(inputMapping, slotIndex);
@@ -86,6 +118,72 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             return true;
+        }
+
+        public int CopyStatuses(Entity target, Span<EntityCommandPanelStatusView> destination)
+        {
+            if (!_engine.World.IsAlive(target) || destination.IsEmpty)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            if (_engine.World.Has<AbilityExecInstance>(target) &&
+                TryBuildAbilityStatus(target, out EntityCommandPanelStatusView abilityStatus))
+            {
+                destination[count++] = abilityStatus;
+                if (count >= destination.Length)
+                {
+                    return count;
+                }
+            }
+
+            if (_engine.World.Has<ActiveEffectContainer>(target))
+            {
+                ref var effects = ref _engine.World.Get<ActiveEffectContainer>(target);
+                for (int i = 0; i < effects.Count && count < destination.Length; i++)
+                {
+                    if (TryBuildEffectStatus(effects.GetEntity(i), out EntityCommandPanelStatusView effectStatus))
+                    {
+                        destination[count++] = effectStatus;
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        public int CopyQueueItems(Entity target, Span<EntityCommandPanelQueueItemView> destination)
+        {
+            if (!_engine.World.IsAlive(target) || destination.IsEmpty || !_engine.World.Has<OrderBuffer>(target))
+            {
+                return 0;
+            }
+
+            ref var orders = ref _engine.World.Get<OrderBuffer>(target);
+            int count = 0;
+
+            if (orders.HasActive)
+            {
+                destination[count++] = BuildQueueItem(in orders.ActiveOrder, EntityCommandPanelQueueStage.Active);
+                if (count >= destination.Length)
+                {
+                    return count;
+                }
+            }
+
+            for (int i = 0; i < orders.QueuedCount && count < destination.Length; i++)
+            {
+                QueuedOrder queued = orders.GetQueued(i);
+                destination[count++] = BuildQueueItem(in queued, EntityCommandPanelQueueStage.Queued);
+            }
+
+            if (count < destination.Length && orders.HasPending)
+            {
+                destination[count++] = BuildQueueItem(in orders.PendingOrder, EntityCommandPanelQueueStage.Pending);
+            }
+
+            return count;
         }
 
         public int GetGroupCount(Entity target)
@@ -135,10 +233,10 @@ namespace EntityCommandPanelMod.Runtime
 
             string label = kind switch
             {
-                GasPanelGroupKind.Current => "Current",
-                GasPanelGroupKind.Base => "Base",
+                GasPanelGroupKind.Current => "Live Loadout",
+                GasPanelGroupKind.Base => "Base Kit",
                 GasPanelGroupKind.RoutePreview => ResolveRouteLabel(target, routeIndex),
-                GasPanelGroupKind.Granted => "Granted",
+                GasPanelGroupKind.Granted => "Unlocked",
                 _ => string.Empty
             };
 
@@ -156,7 +254,7 @@ namespace EntityCommandPanelMod.Runtime
             ref var baseSlots = ref _engine.World.Get<AbilityStateBuffer>(target);
             ref var formSlots = ref _engine.World.TryGetRef<AbilityFormSlotBuffer>(target, out bool hasFormSlots);
             ref var grantedSlots = ref _engine.World.TryGetRef<GrantedSlotBuffer>(target, out bool hasGrantedSlots);
-            ref var actorTags = ref _engine.World.TryGetRef<GameplayTagContainer>(target, out bool hasActorTags);
+            bool hasActorTags = _engine.World.TryGet(target, out GameplayTagContainer actorTags);
             AbilityDefinitionRegistry? abilityDefinitions = _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
             InputOrderMappingSystem? inputMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
             string interactionModeKey = inputMapping?.InteractionMode.ToString() ?? string.Empty;
@@ -400,6 +498,327 @@ namespace EntityCommandPanelMod.Runtime
             return inputMapping.TryActivateMappedAction(actionId, preferUiAiming: true);
         }
 
+        private bool TryBuildAbilityStatus(Entity target, out EntityCommandPanelStatusView status)
+        {
+            status = default;
+            if (!_engine.World.TryGet(target, out AbilityExecInstance exec))
+            {
+                return false;
+            }
+
+            int totalTicks = ResolveExecTotalTicks(exec.AbilityId, exec.IsToggleDeactivating);
+            if (totalTicks <= 0)
+            {
+                totalTicks = Math.Max(exec.CurrentTick, 1);
+            }
+
+            int remainingTicks = Math.Max(0, totalTicks - exec.CurrentTick);
+            string label = ResolveAbilityExecLabel(exec.AbilityId);
+            string detail = $"{ResolveExecStateLabel(exec.State)} · {remainingTicks} steps left";
+            string accent = ResolveAbilityExecAccent(exec.AbilityId);
+            status = new EntityCommandPanelStatusView(
+                EntityCommandPanelStatusKind.ActiveAbility,
+                ClampPermille(exec.CurrentTick, totalTicks),
+                label,
+                detail,
+                accent);
+            return true;
+        }
+
+        private bool TryBuildEffectStatus(Entity effectEntity, out EntityCommandPanelStatusView status)
+        {
+            status = default;
+            if (!_engine.World.IsAlive(effectEntity) ||
+                !_engine.World.Has<GameplayEffect>(effectEntity) ||
+                !_engine.World.Has<EffectTemplateRef>(effectEntity))
+            {
+                return false;
+            }
+
+            ref readonly var effect = ref _engine.World.Get<GameplayEffect>(effectEntity);
+            if (effect.TotalTicks <= 0 || effect.RemainingTicks <= 0)
+            {
+                return false;
+            }
+
+            int templateId = _engine.World.Get<EffectTemplateRef>(effectEntity).TemplateId;
+            string label = ResolveEffectLabel(templateId);
+            string detail = $"{ResolveEffectPresetLabel(templateId)} - {effect.RemainingTicks}/{effect.TotalTicks} ticks left";
+            status = new EntityCommandPanelStatusView(
+                EntityCommandPanelStatusKind.ActiveEffect,
+                ClampPermille(effect.TotalTicks - effect.RemainingTicks, effect.TotalTicks),
+                label,
+                detail,
+                ResolveEffectAccent(templateId));
+            return true;
+        }
+
+        private EntityCommandPanelQueueItemView BuildQueueItem(in QueuedOrder queuedOrder, EntityCommandPanelQueueStage stage)
+        {
+            string label = ResolveOrderLabel(in queuedOrder.Order);
+            string detail = BuildOrderDetail(in queuedOrder.Order, stage, queuedOrder.ExpireStep);
+            string accent = stage switch
+            {
+                EntityCommandPanelQueueStage.Active => "#58B7FF",
+                EntityCommandPanelQueueStage.Queued => "#F2C36B",
+                EntityCommandPanelQueueStage.Pending => "#F59E0B",
+                _ => "#8FA6BD"
+            };
+
+            return new EntityCommandPanelQueueItemView(stage, label, detail, accent);
+        }
+
+        private int ResolveExecTotalTicks(int abilityId, bool isToggleDeactivating)
+        {
+            if (abilityId <= 0 || _abilityDefinitions == null || !_abilityDefinitions.TryGet(abilityId, out var definition))
+            {
+                return 0;
+            }
+
+            AbilityExecSpec spec = isToggleDeactivating && definition.HasToggleSpec
+                ? definition.ToggleSpec.DeactivateExecSpec
+                : definition.ExecSpec;
+            return ComputeSpecTotalTicks(in spec);
+        }
+
+        private static int ComputeSpecTotalTicks(in AbilityExecSpec spec)
+        {
+            int total = 0;
+            for (int i = 0; i < spec.ItemCount; i++)
+            {
+                int endTick = spec.GetTick(i) + Math.Max(0, spec.GetDurationTicks(i));
+                if (endTick > total)
+                {
+                    total = endTick;
+                }
+            }
+
+            return total;
+        }
+
+        private string ResolveAbilityExecLabel(int abilityId)
+        {
+            if (abilityId > 0 &&
+                _abilityDefinitions != null &&
+                _abilityDefinitions.TryGet(abilityId, out var definition) &&
+                definition.HasPresentation &&
+                definition.Presentation != null)
+            {
+                return definition.Presentation.ResolveDisplayName(ResolveFallbackLabel(abilityId, 0));
+            }
+
+            return ResolveFallbackLabel(abilityId, 0);
+        }
+
+        private string ResolveAbilityExecAccent(int abilityId)
+        {
+            if (abilityId > 0 &&
+                _abilityDefinitions != null &&
+                _abilityDefinitions.TryGet(abilityId, out var definition) &&
+                definition.HasPresentation &&
+                definition.Presentation != null &&
+                !string.IsNullOrWhiteSpace(definition.Presentation.AccentColorHex))
+            {
+                return definition.Presentation.AccentColorHex;
+            }
+
+            return "#58B7FF";
+        }
+
+        private string ResolveEffectLabel(int templateId)
+        {
+            string raw = EffectTemplateIdRegistry.GetName(templateId);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return templateId > 0 ? $"Effect#{templateId}" : "Effect";
+            }
+
+            int lastDot = raw.LastIndexOf('.');
+            return lastDot >= 0 && lastDot + 1 < raw.Length ? raw[(lastDot + 1)..] : raw;
+        }
+
+        private string ResolveEffectPresetLabel(int templateId)
+        {
+            if (_effectTemplates != null && templateId > 0 && _effectTemplates.TryGet(templateId, out var template))
+            {
+                return template.PresetType switch
+                {
+                    EffectPresetType.Buff => "Buff",
+                    EffectPresetType.Relation => "Relation",
+                    EffectPresetType.CreateUnit => "Create Unit",
+                    _ => template.PresetType.ToString()
+                };
+            }
+
+            return "Effect";
+        }
+
+        private string ResolveEffectAccent(int templateId)
+        {
+            if (_effectTemplates != null && templateId > 0 && _effectTemplates.TryGet(templateId, out var template))
+            {
+                return template.PresetType switch
+                {
+                    EffectPresetType.Buff => "#34D399",
+                    EffectPresetType.Relation => "#F59E0B",
+                    EffectPresetType.CreateUnit => "#A78BFA",
+                    _ => "#58B7FF"
+                };
+            }
+
+            return "#58B7FF";
+        }
+
+        private string ResolveOrderLabel(in Order order)
+        {
+            if (TryResolveCastAbilityLabel(in order, out string castAbilityLabel))
+            {
+                return castAbilityLabel;
+            }
+
+            int orderTypeId = order.OrderTypeId;
+            if (_orderTypes != null && orderTypeId > 0 && _orderTypes.TryGet(orderTypeId, out var config))
+            {
+                if (!string.IsNullOrWhiteSpace(config.Label))
+                {
+                    return config.Label;
+                }
+
+                if (!string.IsNullOrWhiteSpace(config.Key))
+                {
+                    return config.Key;
+                }
+            }
+
+            return orderTypeId > 0 ? $"Order#{orderTypeId}" : "Order";
+        }
+
+        private bool TryResolveCastAbilityLabel(in Order order, out string label)
+        {
+            label = string.Empty;
+            if (!_engine.World.IsAlive(order.Actor) ||
+                !_engine.World.Has<AbilityStateBuffer>(order.Actor) ||
+                order.Args.I0 < 0)
+            {
+                return false;
+            }
+
+            if (_orderTypes == null ||
+                !_orderTypes.TryGet(order.OrderTypeId, out var orderConfig) ||
+                !string.Equals(orderConfig.Key, "castAbility", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            ref var slots = ref _engine.World.Get<AbilityStateBuffer>(order.Actor);
+            if ((uint)order.Args.I0 >= AbilityStateBuffer.CAPACITY)
+            {
+                return false;
+            }
+
+            AbilitySlotState slot = slots.Get(order.Args.I0);
+            if (slot.AbilityId <= 0 ||
+                _abilityDefinitions == null ||
+                !_abilityDefinitions.TryGet(slot.AbilityId, out var definition))
+            {
+                return false;
+            }
+
+            string fallbackLabel = ResolveFallbackLabel(slot.AbilityId, slot.TemplateEntityId);
+            label = definition.HasPresentation && definition.Presentation != null
+                ? definition.Presentation.ResolveDisplayName(fallbackLabel)
+                : fallbackLabel;
+            return !string.IsNullOrWhiteSpace(label);
+        }
+
+        private string BuildOrderDetail(in Order order, EntityCommandPanelQueueStage stage, int expireStep)
+        {
+            string stageLabel = stage switch
+            {
+                EntityCommandPanelQueueStage.Active => "Active",
+                EntityCommandPanelQueueStage.Queued => "Queued",
+                EntityCommandPanelQueueStage.Pending => "Pending",
+                _ => "Order"
+            };
+
+            string targetLabel = ResolveOrderTargetLabel(in order);
+            string actionLabel = ResolveOrderActionDetail(in order);
+            if (expireStep > 0 && _clock != null)
+            {
+                int currentStep = _clock.Now(ClockDomainId.Step);
+                int remaining = Math.Max(0, expireStep - currentStep);
+                if (!string.IsNullOrWhiteSpace(actionLabel) && !string.IsNullOrWhiteSpace(targetLabel))
+                {
+                    return $"{stageLabel} - {actionLabel} - {targetLabel} - expires in {remaining} ticks";
+                }
+
+                if (!string.IsNullOrWhiteSpace(actionLabel))
+                {
+                    return $"{stageLabel} - {actionLabel} - expires in {remaining} ticks";
+                }
+
+                if (!string.IsNullOrWhiteSpace(targetLabel))
+                {
+                    return $"{stageLabel} - {targetLabel} - expires in {remaining} ticks";
+                }
+
+                return $"{stageLabel} - expires in {remaining} ticks";
+            }
+
+            if (!string.IsNullOrWhiteSpace(actionLabel) && !string.IsNullOrWhiteSpace(targetLabel))
+            {
+                return $"{stageLabel} - {actionLabel} - {targetLabel}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(actionLabel))
+            {
+                return $"{stageLabel} - {actionLabel}";
+            }
+
+            return string.IsNullOrWhiteSpace(targetLabel)
+                ? stageLabel
+                : $"{stageLabel} - {targetLabel}";
+        }
+
+        private string ResolveOrderTargetLabel(in Order order)
+        {
+            if (_engine.World.IsAlive(order.Target) &&
+                _engine.World.TryGet(order.Target, out Name name) &&
+                !string.IsNullOrWhiteSpace(name.Value))
+            {
+                return name.Value;
+            }
+
+            if (order.Args.Spatial.Kind == OrderSpatialKind.WorldCm)
+            {
+                int x = (int)order.Args.Spatial.WorldCm.X;
+                int z = (int)order.Args.Spatial.WorldCm.Z;
+                return $"@ {x},{z}";
+            }
+
+            return string.Empty;
+        }
+
+        private static string ResolveOrderActionDetail(in Order order)
+        {
+            return order.OrderTypeId == 100 && order.Args.I0 >= 0
+                ? $"slot {order.Args.I0}"
+                : string.Empty;
+        }
+
+        private static string ResolveExecStateLabel(AbilityExecRunState state)
+        {
+            return state switch
+            {
+                AbilityExecRunState.Running => "Executing",
+                AbilityExecRunState.GateWaiting => "Waiting",
+                AbilityExecRunState.Committed => "Committed",
+                AbilityExecRunState.Finished => "Finished",
+                AbilityExecRunState.Interrupted => "Interrupted",
+                _ => "Ability"
+            };
+        }
+
         private bool TryResolveGroup(
             Entity target,
             int groupIndex,
@@ -507,7 +926,7 @@ namespace EntityCommandPanelMod.Runtime
         {
             if (!_engine.World.Has<AbilityFormSetRef>(target))
             {
-                return $"Form {routeIndex + 1}";
+                return $"Preview {routeIndex + 1}";
             }
 
             int formSetId = _engine.World.Get<AbilityFormSetRef>(target).FormSetId;
@@ -522,7 +941,7 @@ namespace EntityCommandPanelMod.Runtime
                 return cached[routeIndex];
             }
 
-            return $"Form {routeIndex + 1}";
+            return $"Preview {routeIndex + 1}";
         }
 
         private string[] BuildRouteLabels(int formSetId)
@@ -544,15 +963,15 @@ namespace EntityCommandPanelMod.Runtime
 
                 if (!string.IsNullOrWhiteSpace(required))
                 {
-                    labels[routeIndex] = $"Form {routeIndex + 1}: {required}";
+                    labels[routeIndex] = $"Preview: {required}";
                 }
                 else if (!string.IsNullOrWhiteSpace(blocked))
                 {
-                    labels[routeIndex] = $"Form {routeIndex + 1}: !{blocked}";
+                    labels[routeIndex] = $"Preview: not {blocked}";
                 }
                 else
                 {
-                    labels[routeIndex] = $"Form {routeIndex + 1}";
+                    labels[routeIndex] = $"Preview {routeIndex + 1}";
                 }
             }
 
@@ -743,6 +1162,95 @@ namespace EntityCommandPanelMod.Runtime
                 "SkillR" => 3,
                 _ => 100
             };
+        }
+
+        private static short ClampPermille(int current, int total)
+        {
+            if (total <= 0)
+            {
+                return 0;
+            }
+
+            int value = (int)Math.Round(current * 1000d / total, MidpointRounding.AwayFromZero);
+            return (short)Math.Clamp(value, 0, 1000);
+        }
+
+        private static uint HashAbilityExec(uint current, in AbilityExecInstance exec)
+        {
+            current = HashCombine(current, (uint)exec.AbilityId);
+            current = HashCombine(current, (uint)exec.AbilitySlot);
+            current = HashCombine(current, (uint)exec.CurrentTick);
+            current = HashCombine(current, (uint)exec.StartAbsoluteTick);
+            current = HashCombine(current, (uint)exec.NextItemIndex);
+            current = HashCombine(current, (uint)exec.State);
+            current = HashCombine(current, (uint)exec.ActiveClockId);
+            return current;
+        }
+
+        private uint HashActiveEffects(uint current, in ActiveEffectContainer effects)
+        {
+            current = HashCombine(current, (uint)effects.Count);
+            for (int i = 0; i < effects.Count; i++)
+            {
+                Entity effectEntity = effects.GetEntity(i);
+                current = HashCombine(current, (uint)effectEntity.Id);
+                current = HashCombine(current, (uint)effectEntity.Version);
+                if (!_engine.World.IsAlive(effectEntity) ||
+                    !_engine.World.Has<GameplayEffect>(effectEntity))
+                {
+                    continue;
+                }
+
+                ref readonly var effect = ref _engine.World.Get<GameplayEffect>(effectEntity);
+                current = HashCombine(current, (uint)effect.TotalTicks);
+                current = HashCombine(current, (uint)effect.RemainingTicks);
+                current = HashCombine(current, (uint)effect.State);
+                if (_engine.World.Has<EffectTemplateRef>(effectEntity))
+                {
+                    current = HashCombine(current, (uint)_engine.World.Get<EffectTemplateRef>(effectEntity).TemplateId);
+                }
+            }
+
+            return current;
+        }
+
+        private static uint HashOrderBuffer(uint current, in OrderBuffer buffer)
+        {
+            current = HashCombine(current, (uint)buffer.ActiveIndex);
+            current = HashCombine(current, (uint)buffer.QueuedCount);
+            current = HashCombine(current, buffer.HasPending ? 1u : 0u);
+            if (buffer.HasActive)
+            {
+                current = HashQueuedOrder(current, in buffer.ActiveOrder);
+            }
+
+            for (int i = 0; i < buffer.QueuedCount; i++)
+            {
+                QueuedOrder queued = buffer.GetQueued(i);
+                current = HashQueuedOrder(current, in queued);
+            }
+
+            if (buffer.HasPending)
+            {
+                current = HashQueuedOrder(current, in buffer.PendingOrder);
+            }
+
+            return current;
+        }
+
+        private static uint HashQueuedOrder(uint current, in QueuedOrder queued)
+        {
+            current = HashCombine(current, (uint)queued.Priority);
+            current = HashCombine(current, (uint)queued.ExpireStep);
+            current = HashCombine(current, (uint)queued.InsertStep);
+            current = HashCombine(current, (uint)queued.Order.OrderId);
+            current = HashCombine(current, (uint)queued.Order.OrderTypeId);
+            current = HashCombine(current, (uint)queued.Order.Target.Id);
+            current = HashCombine(current, (uint)queued.Order.Target.Version);
+            current = HashCombine(current, (uint)queued.Order.Args.Spatial.Kind);
+            current = HashCombine(current, (uint)queued.Order.Args.Spatial.WorldCm.X);
+            current = HashCombine(current, (uint)queued.Order.Args.Spatial.WorldCm.Z);
+            return current;
         }
 
         private static uint HashSlot(uint current, in AbilitySlotState slot)

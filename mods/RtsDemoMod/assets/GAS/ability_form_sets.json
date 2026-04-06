@@ -1,0 +1,47 @@
+[
+  {
+    "id": "rts_war3_worker_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          { "slotIndex": 3, "abilityId": "Ability.Rts.Strategy.War3.BuildGuardTower" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rts_ra2_conyard_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          { "slotIndex": 3, "abilityId": "Ability.Rts.Strategy.Cnc.PlaceRefinery" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rts_shared_ungarrison_forms",
+    "routes": [
+      {
+        "priority": 10,
+        "slotOverrides": [
+          { "slotIndex": 2, "abilityId": "Ability.Rts.Strategy.Shared.UngarrisonAll" }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "rts_sc2_gateway_forms",
+    "routes": [
+      {
+        "requiredAll": ["Tech.Rts.WarpGate"],
+        "priority": 100,
+        "slotOverrides": [
+          { "slotIndex": 0, "abilityId": "Ability.Rts.Strategy.Sc2.WarpZealot" }
+        ]
+      }
+    ]
+  }
+]

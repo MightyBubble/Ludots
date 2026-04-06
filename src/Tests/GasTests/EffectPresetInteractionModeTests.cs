@@ -17,7 +17,7 @@ namespace Ludots.Tests.GAS
     public sealed class EffectPresetInteractionModeTests
     {
         [Test]
-        public void MobaEffects_CoversAllElevenPresetTypes()
+        public void MobaEffects_CoversSharedCombatPresetTypes()
         {
             string repoRoot = FindRepoRoot();
             string effectsPath = Path.Combine(repoRoot, "mods", "MobaDemoMod", "assets", "GAS", "effects.json");

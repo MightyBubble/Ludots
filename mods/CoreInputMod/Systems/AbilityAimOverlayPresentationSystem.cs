@@ -42,12 +42,14 @@ namespace CoreInputMod.Systems
 
             if (!TryGetActiveAiming(out var mappingSystem, out var aimingMapping))
             {
+                _bridge.ClearPreview();
                 return;
             }
 
             Entity actor = _context.GetControlledActor();
             if (!_world.IsAlive(actor))
             {
+                _bridge.ClearPreview();
                 return;
             }
 
@@ -73,6 +75,7 @@ namespace CoreInputMod.Systems
 
         public void Dispose()
         {
+            _bridge?.ClearPreview();
         }
 
         private bool TryGetActiveAiming(out InputOrderMappingSystem mappingSystem, out InputOrderMapping aimingMapping)
