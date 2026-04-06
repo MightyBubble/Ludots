@@ -2,6 +2,8 @@
 
 `skills/` 是 Ludots 共享 agent skill 的仓库内 SSOT。
 
+正式治理规则以 `gitbook/contributing/shared-skill-governance.md` 为准；`docs/conventions/05_shared_skill_governance.md` 仅保留为深度背景材料。
+
 这套结构服务于 Codex、Claude 以及后续接入的其他 agent，规则如下：
 
 - 仓库内分层目录是唯一真相，运行时安装目录只允许由同步脚本生成。

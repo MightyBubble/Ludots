@@ -7,6 +7,7 @@
 - `skills/` 是共享 skill 的源码真相
 - `skills/README.md` 是人类入口
 - `skills/registry.json` 是机器可消费的唯一注册表
+- 正式治理规范入口统一由 `gitbook/contributing/shared-skill-governance.md` 承载；`docs/conventions/05_shared_skill_governance.md` 仅保留为仓库深度材料
 
 ## 2 结构规则
 
@@ -40,6 +41,7 @@ leaf skill 必须具备：
 - 同步：`scripts/sync-skills.ps1`
 - CI：`.github/workflows/skills-governance.yml`
 - Owner：`.github/CODEOWNERS`
+- GitBook 发布入口：优先使用 `gitbook` 分支中的 `gitbook/` 文档根
 
 ## 5 深度材料
 

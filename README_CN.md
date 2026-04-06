@@ -69,6 +69,8 @@ dotnet run --project .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.cspro
 *   [发布与访问](gitbook/reference/publishing-and-access.md)
 *   [仓库深度材料](docs/README.md)
 
+GitBook Git Sync 建议直接选择 `gitbook` 分支；这条分支提供稳定的文档入口，并与通过校验的主线文档保持一致。
+
 ## 🤝 贡献
 
 本项目采用 **AGPL-3.0 许可证**。这意味着如果您在分发（包括通过网络分发）的项目中使用了此代码，您也必须在相同的 AGPL 许可证下开源您的项目。

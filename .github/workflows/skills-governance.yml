@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'skills/**'
+      - 'gitbook/contributing/README.md'
+      - 'gitbook/contributing/shared-skill-governance.md'
       - 'docs/conventions/README.md'
       - 'docs/conventions/05_shared_skill_governance.md'
       - 'AGENTS.md'
@@ -15,8 +17,11 @@ on:
   push:
     branches:
       - main
+      - gitbook
     paths:
       - 'skills/**'
+      - 'gitbook/contributing/README.md'
+      - 'gitbook/contributing/shared-skill-governance.md'
       - 'docs/conventions/README.md'
       - 'docs/conventions/05_shared_skill_governance.md'
       - 'AGENTS.md'

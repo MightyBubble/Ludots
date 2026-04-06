@@ -67,6 +67,8 @@ dotnet run --project .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.cspro
 *   [Publishing & Access](gitbook/reference/publishing-and-access.md) — GitBook Git Sync 接入方式与 GitHub 访问入口
 *   [仓库深度材料](docs/README.md) — ADR、审计、RFC 与长篇设计说明
 
+GitBook Git Sync should target the `gitbook` branch. That branch is the stable documentation entrypoint and is kept aligned with validated mainline docs.
+
 ## 🤝 Contributing
 
 This project is licensed under the **AGPL-3.0 License**. This means if you use this code in a project that is distributed (including over a network), you must also open source your project under the same AGPL license.
