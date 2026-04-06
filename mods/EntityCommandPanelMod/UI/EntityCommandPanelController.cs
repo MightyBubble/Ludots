@@ -22,6 +22,7 @@ namespace EntityCommandPanelMod.UI
         private readonly EntityCommandPanelRuntime _runtime;
         private readonly AbilityDefinitionRegistry? _abilityDefinitions;
         private readonly AbilityPresentationIconFactory _iconFactory = new();
+        private readonly EntityCommandPanelShowcaseArtFactory _showcaseArtFactory = new();
         private readonly Dictionary<int, string> _abilityLabelCache = new();
         private readonly ReactivePage<HostState> _page;
         private uint _lastRevision;
@@ -173,6 +174,17 @@ namespace EntityCommandPanelMod.UI
             float slotSectionHeight = ResolveSlotSectionHeight(state.Size.HeightPx, slotCount);
 
             ResolvePanelPosition(state.Anchor, state.Size, viewportWidth, viewportHeight, out float left, out float top);
+            string showcaseThemeId = ResolveShowcaseThemeId();
+            if (!string.Equals(showcaseThemeId, EntityCommandPanelShowcaseTheme.ClassicId, StringComparison.Ordinal))
+            {
+                var slotSnapshot = new EntityCommandPanelSlotView[slotCount];
+                for (int i = 0; i < slotCount; i++)
+                {
+                    slotSnapshot[i] = slots[i];
+                }
+
+                return BuildShowcasePanel(showcaseThemeId, state, group, groupCount, source, slotSnapshot, left, top);
+            }
 
             return Ui.Card(
                     BuildHeader(state, group, groupCount),
@@ -189,6 +201,516 @@ namespace EntityCommandPanelMod.UI
                 .Overflow(UiOverflow.Hidden)
                 .Absolute(left, top)
                 .ZIndex(40);
+        }
+
+        private UiElementBuilder BuildShowcasePanel(
+            string themeId,
+            EntityCommandPanelInstanceState state,
+            EntityCommandPanelGroupView group,
+            int groupCount,
+            IEntityCommandPanelSource? source,
+            EntityCommandPanelSlotView[] slots,
+            float left,
+            float top)
+        {
+            return themeId switch
+            {
+                var id when string.Equals(id, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.Ordinal) => BuildDota2ShowcasePanel(state, group, groupCount, source, slots, left, top),
+                var id when string.Equals(id, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.Ordinal) => BuildSc2ShowcasePanel(state, group, groupCount, source, slots, left, top),
+                _ => BuildLolShowcasePanel(state, group, groupCount, source, slots, left, top)
+            };
+        }
+
+        private UiElementBuilder BuildLolShowcasePanel(
+            EntityCommandPanelInstanceState state,
+            EntityCommandPanelGroupView group,
+            int groupCount,
+            IEntityCommandPanelSource? source,
+            EntityCommandPanelSlotView[] slots,
+            float left,
+            float top)
+        {
+            string themeId = EntityCommandPanelShowcaseTheme.LolId;
+            string title = _runtime.ResolveEntityTitle(state.TargetEntity);
+            string accent = ResolvePrimaryAccent(slots);
+            string interactionModeKey = ResolveInteractionModeKey();
+            var primarySlots = new UiElementBuilder[4];
+            for (int i = 0; i < primarySlots.Length; i++)
+            {
+                primarySlots[i] = i < slots.Length
+                    ? BuildShowcaseSlotCard(themeId, state.TargetEntity, state.GroupIndex, source, in slots[i], interactionModeKey, 124f, 12f, false)
+                    : BuildShowcasePlaceholderCard(themeId, "-", string.Empty, "Unbound", "#415060", 124f, 12f, false);
+            }
+
+            var utilitySlots = new[]
+            {
+                BuildShowcasePlaceholderCard(themeId, "D", "D", "Flash", "#F1C561", 88f, 10f, false),
+                BuildShowcasePlaceholderCard(themeId, "F", "F", "Heal", "#62C6FF", 88f, 10f, false),
+                BuildShowcasePlaceholderCard(themeId, "1", "1", "Active", "#8B6DF3", 88f, 10f, false),
+                BuildShowcasePlaceholderCard(themeId, "4", "4", "Ward", "#60CDB5", 88f, 10f, false)
+            };
+
+            return Ui.Card(
+                    Ui.Row(
+                            Ui.Image(_showcaseArtFactory.BuildPortraitArt(themeId, title, "Summoner Panel", accent))
+                                .Width(184f)
+                                .Height(160f)
+                                .FlexShrink(0f),
+                            Ui.Column(
+                                    Ui.Row(
+                                            Ui.Column(
+                                                    Ui.Text(title)
+                                                        .FontFamily("Segoe UI Semibold")
+                                                        .FontSize(24f)
+                                                        .Color("#F3E3A4")
+                                                        .TextShadow(0f, 1f, 2f, new UiColor(0x06, 0x09, 0x0E)),
+                                                    Ui.Text($"Theme LoL | {ResolveModeBadge(interactionModeKey)} | {ResolveGroupLine(group, groupCount, state.GroupIndex)}")
+                                                        .FontFamily("Segoe UI")
+                                                        .FontSize(11f)
+                                                        .Color("#C6D3DE"))
+                                                .Gap(4f),
+                                            Ui.Row(
+                                                    BuildShowcaseInfoPill("CAST", ResolveModeBadge(interactionModeKey), "#1A2430", "#ECD28B"),
+                                                    BuildShowcaseInfoPill("HUD", "LoL", "#1A2430", "#D9E6F2"))
+                                                .Gap(8f))
+                                        .Justify(UiJustifyContent.SpaceBetween)
+                                        .Align(UiAlignItems.Center),
+                                    BuildShowcaseBar("Resource", "Mana Ready", 0.84f, "#2C8CE4", "#102035", 564f),
+                                    BuildShowcaseBar("Cooldown Sync", ResolveModeBadge(interactionModeKey), ResolveModeProgress(interactionModeKey), "#D2A755", "#241C0D", 564f),
+                                    Ui.Row(primarySlots).Gap(8f),
+                                    Ui.Row(utilitySlots).Gap(8f))
+                                .Gap(10f)
+                                .FlexGrow(1f))
+                        .Gap(16f))
+                .Id($"entity-command-panel-showcase-lol-{state.Handle.Slot}")
+                .Width(Math.Max(948f, state.Size.WidthPx))
+                .Height(Math.Max(248f, state.Size.HeightPx))
+                .Padding(16f)
+                .Gap(12f)
+                .Radius(22f)
+                .BackgroundGradient(135f, new UiColor(0x0A, 0x0F, 0x16), new UiColor(0x12, 0x18, 0x21), new UiColor(0x08, 0x0C, 0x12))
+                .Border(2f, new UiColor(0x7A, 0x62, 0x33))
+                .BoxShadow(0f, 10f, 22f, new UiColor(0x02, 0x03, 0x06, 180))
+                .Absolute(left, top)
+                .ZIndex(44);
+        }
+
+        private UiElementBuilder BuildDota2ShowcasePanel(
+            EntityCommandPanelInstanceState state,
+            EntityCommandPanelGroupView group,
+            int groupCount,
+            IEntityCommandPanelSource? source,
+            EntityCommandPanelSlotView[] slots,
+            float left,
+            float top)
+        {
+            string themeId = EntityCommandPanelShowcaseTheme.Dota2Id;
+            string title = _runtime.ResolveEntityTitle(state.TargetEntity);
+            string accent = ResolvePrimaryAccent(slots);
+            string interactionModeKey = ResolveInteractionModeKey();
+            var abilitySlots = new UiElementBuilder[6];
+            for (int i = 0; i < abilitySlots.Length; i++)
+            {
+                abilitySlots[i] = i < slots.Length
+                    ? BuildShowcaseSlotCard(themeId, state.TargetEntity, state.GroupIndex, source, in slots[i], interactionModeKey, 116f, 11f, false)
+                    : BuildShowcasePlaceholderCard(themeId, "-", string.Empty, "Unbound", "#6A5647", 116f, 11f, false);
+            }
+
+            var inventorySlots = new[]
+            {
+                BuildShowcasePlaceholderCard(themeId, "T", "T", "Town", "#8C6A4E", 116f, 11f, false),
+                BuildShowcasePlaceholderCard(themeId, "1", "1", "Bottle", "#6C8396", 116f, 11f, false),
+                BuildShowcasePlaceholderCard(themeId, "2", "2", "Blade", "#5E8F78", 116f, 11f, false),
+                BuildShowcasePlaceholderCard(themeId, "3", "3", "Dust", "#8F7C57", 116f, 11f, false),
+                BuildShowcasePlaceholderCard(themeId, "4", "4", "Blink", "#6A69A4", 116f, 11f, false),
+                BuildShowcasePlaceholderCard(themeId, "5", "5", "Ward", "#4F8F79", 116f, 11f, false)
+            };
+
+            return Ui.Card(
+                    Ui.Row(
+                            Ui.Column(
+                                    Ui.Text(title)
+                                        .FontFamily("Georgia")
+                                        .FontSize(24f)
+                                        .Color("#F0D8AE"),
+                                    Ui.Text($"Theme Dota2 | {ResolveGroupLine(group, groupCount, state.GroupIndex)}")
+                                        .FontFamily("Georgia")
+                                        .FontSize(12f)
+                                        .Color("#CFB79B"),
+                                    Ui.Image(_showcaseArtFactory.BuildPortraitArt(themeId, title, "Ability Console", accent))
+                                        .Width(220f)
+                                        .Height(170f)
+                                        .FlexShrink(0f),
+                                    BuildShowcaseBar("Routing", ResolveModeBadge(interactionModeKey), ResolveModeProgress(interactionModeKey), "#A76B44", "#21140E", 220f))
+                                .Gap(10f)
+                                .FlexShrink(0f),
+                            Ui.Column(
+                                    Ui.Row(
+                                            BuildShowcaseInfoPill("CAST", ResolveModeBadge(interactionModeKey), "#2A1D16", "#F0D8AE"),
+                                            BuildShowcaseInfoPill("GROUP", groupCount <= 0 ? "0/0" : $"{state.GroupIndex + 1}/{groupCount}", "#2A1D16", "#D8C5B1"),
+                                            BuildShowcaseInfoPill("HUD", "Dota2", "#2A1D16", "#D6905B"))
+                                        .Gap(8f),
+                                    BuildShowcaseBar("Ability Ready", "Six-Slot Console", 0.92f, "#B76A44", "#21140E", 742f),
+                                    Ui.Row(abilitySlots).Gap(10f),
+                                    Ui.Row(inventorySlots).Gap(10f))
+                                .Gap(12f)
+                                .FlexGrow(1f))
+                        .Gap(18f))
+                .Id($"entity-command-panel-showcase-dota2-{state.Handle.Slot}")
+                .Width(Math.Max(1236f, state.Size.WidthPx))
+                .Height(Math.Max(332f, state.Size.HeightPx))
+                .Padding(18f)
+                .Radius(20f)
+                .BackgroundGradient(145f, new UiColor(0x12, 0x0D, 0x0A), new UiColor(0x21, 0x16, 0x11), new UiColor(0x0C, 0x08, 0x06))
+                .Border(2f, new UiColor(0x7A, 0x59, 0x3C))
+                .BoxShadow(0f, 12f, 28f, new UiColor(0x02, 0x01, 0x00, 190))
+                .Absolute(left, top)
+                .ZIndex(44);
+        }
+
+        private UiElementBuilder BuildSc2ShowcasePanel(
+            EntityCommandPanelInstanceState state,
+            EntityCommandPanelGroupView group,
+            int groupCount,
+            IEntityCommandPanelSource? source,
+            EntityCommandPanelSlotView[] slots,
+            float left,
+            float top)
+        {
+            string themeId = EntityCommandPanelShowcaseTheme.Sc2Id;
+            string title = _runtime.ResolveEntityTitle(state.TargetEntity);
+            string accent = ResolvePrimaryAccent(slots);
+            string interactionModeKey = ResolveInteractionModeKey();
+            var cells = new UiElementBuilder[15];
+            for (int i = 0; i < cells.Length; i++)
+            {
+                if (i < slots.Length)
+                {
+                    cells[i] = BuildShowcaseSlotCard(themeId, state.TargetEntity, state.GroupIndex, source, in slots[i], interactionModeKey, 82f, 9f, false);
+                    continue;
+                }
+
+                cells[i] = i switch
+                {
+                    4 => BuildShowcasePlaceholderCard(themeId, "A", "A", "Attack", "#E88A61", 82f, 9f, false),
+                    5 => BuildShowcasePlaceholderCard(themeId, "M", "M", "Move", "#69B8E8", 82f, 9f, false),
+                    6 => BuildShowcasePlaceholderCard(themeId, "S", "S", "Stop", "#E57957", 82f, 9f, false),
+                    7 => BuildShowcasePlaceholderCard(themeId, "P", "P", "Patrol", "#85D0BE", 82f, 9f, false),
+                    8 => BuildShowcasePlaceholderCard(themeId, "H", "H", "Hold", "#D7C56E", 82f, 9f, false),
+                    9 => BuildShowcasePlaceholderCard(themeId, "C", "C", "Cloak", "#9177F2", 82f, 9f, false),
+                    10 => BuildShowcasePlaceholderCard(themeId, "L", "L", "Lift", "#69D8F8", 82f, 9f, false),
+                    11 => BuildShowcasePlaceholderCard(themeId, "R", "R", "Rally", "#E8D06A", 82f, 9f, false),
+                    12 => BuildShowcasePlaceholderCard(themeId, "B", "B", "Build", "#6BCFB5", 82f, 9f, false),
+                    13 => BuildShowcasePlaceholderCard(themeId, "T", "T", "Tech", "#62A7FF", 82f, 9f, false),
+                    _ => BuildShowcasePlaceholderCard(themeId, "X", "X", "Cancel", "#9EB4C4", 82f, 9f, false)
+                };
+            }
+
+            return Ui.Card(
+                    Ui.Row(
+                            Ui.Column(
+                                    Ui.Image(_showcaseArtFactory.BuildPortraitArt(themeId, title, "Command Card", accent))
+                                        .Width(176f)
+                                        .Height(176f)
+                                        .FlexShrink(0f),
+                                    BuildShowcaseInfoPill("VIEW", "SC2", "#0A1824", "#92DEFF"),
+                                    BuildShowcaseInfoPill("GROUP", groupCount <= 0 ? "0/0" : $"{state.GroupIndex + 1}/{groupCount}", "#0A1824", "#D8EFF9"))
+                                .Gap(8f)
+                                .FlexShrink(0f),
+                            Ui.Column(
+                                    Ui.Row(
+                                            Ui.Column(
+                                                    Ui.Text(title)
+                                                        .FontFamily("Segoe UI Semibold")
+                                                        .FontSize(22f)
+                                                        .Color("#D7F6FF"),
+                                                    Ui.Text($"Theme SC2 | {ResolveGroupLine(group, groupCount, state.GroupIndex)} | {ResolveModeBadge(interactionModeKey)}")
+                                                        .FontFamily("Segoe UI")
+                                                        .FontSize(11f)
+                                                        .Color("#93BED7"))
+                                                .Gap(4f),
+                                            BuildShowcaseBar("Command Sync", ResolveModeBadge(interactionModeKey), ResolveModeProgress(interactionModeKey), "#4CB6E9", "#0D2131", 254f))
+                                        .Justify(UiJustifyContent.SpaceBetween)
+                                        .Align(UiAlignItems.Center),
+                                    Ui.Row(cells[0], cells[1], cells[2], cells[3], cells[4]).Gap(8f),
+                                    Ui.Row(cells[5], cells[6], cells[7], cells[8], cells[9]).Gap(8f),
+                                    Ui.Row(cells[10], cells[11], cells[12], cells[13], cells[14]).Gap(8f))
+                                .Gap(8f)
+                                .FlexGrow(1f))
+                        .Gap(16f))
+                .Id($"entity-command-panel-showcase-sc2-{state.Handle.Slot}")
+                .Width(Math.Max(744f, state.Size.WidthPx))
+                .Height(Math.Max(430f, state.Size.HeightPx))
+                .Padding(16f)
+                .Radius(14f)
+                .BackgroundGradient(135f, new UiColor(0x04, 0x0D, 0x15), new UiColor(0x0D, 0x1B, 0x2A), new UiColor(0x07, 0x10, 0x19))
+                .Border(2f, new UiColor(0x2A, 0x53, 0x70))
+                .BoxShadow(0f, 12f, 26f, new UiColor(0x00, 0x04, 0x09, 190))
+                .Absolute(left, top)
+                .ZIndex(44);
+        }
+
+        private UiElementBuilder BuildShowcaseSlotCard(
+            string themeId,
+            Entity target,
+            int groupIndex,
+            IEntityCommandPanelSource? source,
+            in EntityCommandPanelSlotView slot,
+            string interactionModeKey,
+            float width,
+            float labelFontSize,
+            bool showDetail)
+        {
+            string accent = ResolveAbilityAccent(in slot);
+            string glyph = ResolveAbilityGlyph(in slot, interactionModeKey);
+            string hotkey = ResolveActionKeyLabel(slot.ActionId);
+            string art = _showcaseArtFactory.BuildSlotArt(
+                themeId,
+                glyph,
+                hotkey,
+                accent,
+                slot.CooldownPermille,
+                slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked),
+                slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active),
+                slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty));
+            float artWidth = ResolveShowcaseArtWidth(themeId, width);
+            float artHeight = ResolveShowcaseArtHeight(themeId, artWidth);
+
+            UiElementBuilder card = Ui.Card(
+                    Ui.Image(art)
+                        .Width(artWidth)
+                        .Height(artHeight)
+                        .FlexShrink(0f),
+                    Ui.Text(ResolveAbilityLabel(in slot))
+                        .FontFamily(string.Equals(themeId, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.Ordinal) ? "Georgia" : "Segoe UI")
+                        .FontSize(labelFontSize)
+                        .Bold()
+                        .Color(ResolveThemeTextColor(themeId))
+                        .Width(width - 4f),
+                    showDetail
+                        ? Ui.Text(ResolveDetailLabel(in slot))
+                            .FontSize(Math.Max(9f, labelFontSize - 1f))
+                            .Color(ResolveThemeSubTextColor(themeId))
+                            .Width(width - 4f)
+                        : Ui.Text(slot.CooldownPermille > 0 ? $"Cooldown {slot.CooldownPermille / 10f:0}%" : ResolveFlagSummary(slot.StateFlags))
+                            .FontSize(Math.Max(9f, labelFontSize - 1f))
+                            .Color(ResolveThemeSubTextColor(themeId))
+                            .Width(width - 4f))
+                .Width(width)
+                .Gap(4f)
+                .Padding(0f)
+                .Background(UiColor.Transparent);
+
+            if (source is IEntityCommandPanelActionSource actions &&
+                !slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty))
+            {
+                int slotIndex = slot.SlotIndex;
+                card.OnClick(_ => { actions.ActivateSlot(target, groupIndex, slotIndex); });
+            }
+
+            return card;
+        }
+
+        private UiElementBuilder BuildShowcasePlaceholderCard(
+            string themeId,
+            string glyph,
+            string hotkey,
+            string label,
+            string accentColorHex,
+            float width,
+            float labelFontSize,
+            bool showDetail)
+        {
+            string art = _showcaseArtFactory.BuildSlotArt(themeId, glyph, hotkey, accentColorHex, 0, blocked: false, active: false, empty: false);
+            float artWidth = ResolveShowcaseArtWidth(themeId, width);
+            float artHeight = ResolveShowcaseArtHeight(themeId, artWidth);
+            return Ui.Card(
+                    Ui.Image(art)
+                        .Width(artWidth)
+                        .Height(artHeight)
+                        .FlexShrink(0f),
+                    Ui.Text(label)
+                        .FontFamily(string.Equals(themeId, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.Ordinal) ? "Georgia" : "Segoe UI")
+                        .FontSize(labelFontSize)
+                        .Bold()
+                        .Color(ResolveThemeTextColor(themeId))
+                        .Width(width - 4f),
+                    showDetail
+                        ? Ui.Text("Command")
+                            .FontSize(Math.Max(9f, labelFontSize - 1f))
+                            .Color(ResolveThemeSubTextColor(themeId))
+                            .Width(width - 4f)
+                        : Ui.Text("Showcase")
+                            .FontSize(Math.Max(9f, labelFontSize - 1f))
+                            .Color(ResolveThemeSubTextColor(themeId))
+                            .Width(width - 4f))
+                .Width(width)
+                .Gap(4f)
+                .Padding(0f)
+                .Background(UiColor.Transparent);
+        }
+
+        private static UiElementBuilder BuildShowcaseInfoPill(string label, string value, string background, string color)
+        {
+            return Ui.Column(
+                    Ui.Text(label)
+                        .FontSize(10f)
+                        .Bold()
+                        .Color("#7F95A8"),
+                    Ui.Text(value)
+                        .FontSize(11f)
+                        .Bold()
+                        .Color(color))
+                .Gap(3f)
+                .Padding(8f, 6f)
+                .Radius(10f)
+                .Background(background);
+        }
+
+        private static UiElementBuilder BuildShowcaseBar(string label, string value, float progress, string fillColor, string trackColor, float width)
+        {
+            float clampedWidth = Math.Max(120f, width);
+            float fillWidth = Math.Max(18f, clampedWidth * Math.Clamp(progress, 0.08f, 1f));
+            return Ui.Column(
+                    Ui.Row(
+                            Ui.Text(label)
+                                .FontSize(10f)
+                                .Bold()
+                                .Color("#8AA2B6"),
+                            Ui.Text(value)
+                                .FontSize(10f)
+                                .Bold()
+                                .Color("#E7F4FF"))
+                        .Justify(UiJustifyContent.SpaceBetween),
+                    Ui.Panel(
+                            Ui.Panel()
+                                .Width(fillWidth)
+                                .Height(10f)
+                                .Radius(999f)
+                                .Background(fillColor))
+                        .Width(clampedWidth)
+                        .Height(10f)
+                        .Radius(999f)
+                        .Background(trackColor)
+                        .Overflow(UiOverflow.Hidden))
+                .Gap(4f);
+        }
+
+        private static string ResolveThemeTextColor(string themeId)
+        {
+            if (string.Equals(themeId, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.Ordinal))
+            {
+                return "#F2DDC0";
+            }
+
+            if (string.Equals(themeId, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.Ordinal))
+            {
+                return "#D7F6FF";
+            }
+
+            return "#F5E8B1";
+        }
+
+        private static string ResolveThemeSubTextColor(string themeId)
+        {
+            if (string.Equals(themeId, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.Ordinal))
+            {
+                return "#CBB69E";
+            }
+
+            if (string.Equals(themeId, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.Ordinal))
+            {
+                return "#8FB9D1";
+            }
+
+            return "#C5D3DE";
+        }
+
+        private static string ResolveFlagSummary(EntityCommandSlotStateFlags flags)
+        {
+            if (flags.HasFlag(EntityCommandSlotStateFlags.Active))
+            {
+                return "Active";
+            }
+
+            if (flags.HasFlag(EntityCommandSlotStateFlags.Blocked))
+            {
+                return "Blocked";
+            }
+
+            if (flags.HasFlag(EntityCommandSlotStateFlags.FormOverride))
+            {
+                return "Form Override";
+            }
+
+            if (flags.HasFlag(EntityCommandSlotStateFlags.GrantedOverride))
+            {
+                return "Granted";
+            }
+
+            if (flags.HasFlag(EntityCommandSlotStateFlags.Empty))
+            {
+                return "Empty";
+            }
+
+            return "Ready";
+        }
+
+        private static string ResolveGroupLine(EntityCommandPanelGroupView group, int groupCount, int groupIndex)
+        {
+            string label = string.IsNullOrWhiteSpace(group.GroupLabel) ? "Unavailable" : group.GroupLabel;
+            string counter = groupCount <= 0 ? "0/0" : $"{groupIndex + 1}/{groupCount}";
+            return $"{label} | {counter}";
+        }
+
+        private static float ResolveShowcaseArtWidth(string themeId, float cardWidth)
+        {
+            if (string.Equals(themeId, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.Ordinal))
+            {
+                return Math.Max(70f, Math.Min(cardWidth, 84f));
+            }
+
+            if (string.Equals(themeId, EntityCommandPanelShowcaseTheme.LolId, StringComparison.Ordinal))
+            {
+                return Math.Max(86f, Math.Min(cardWidth, 116f));
+            }
+
+            return Math.Max(88f, Math.Min(cardWidth, 112f));
+        }
+
+        private static float ResolveShowcaseArtHeight(string themeId, float artWidth)
+        {
+            return string.Equals(themeId, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.Ordinal)
+                ? artWidth * 1.08f
+                : artWidth * 1.15625f;
+        }
+
+        private static float ResolveModeProgress(string interactionModeKey)
+        {
+            return interactionModeKey switch
+            {
+                nameof(InteractionModeType.SmartCast) => 0.96f,
+                nameof(InteractionModeType.SmartCastWithIndicator) => 0.72f,
+                nameof(InteractionModeType.PressReleaseAimCast) => 0.58f,
+                nameof(InteractionModeType.AimCast) => 0.51f,
+                _ => 0.42f
+            };
+        }
+
+        private string ResolvePrimaryAccent(IReadOnlyList<EntityCommandPanelSlotView> slots)
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                EntityCommandPanelSlotView slot = slots[i];
+                if (slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty))
+                {
+                    continue;
+                }
+
+                return ResolveAbilityAccent(in slot);
+            }
+
+            return "#59B7FF";
         }
 
         private UiElementBuilder BuildHeader(
@@ -561,6 +1083,17 @@ namespace EntityCommandPanelMod.UI
             }
 
             return nameof(InteractionModeType.TargetFirst);
+        }
+
+        private string ResolveShowcaseThemeId()
+        {
+            if (_engine.GlobalContext.TryGetValue(EntityCommandPanelShowcaseTheme.ContextKey, out object? themeObj) &&
+                themeObj is string themeId)
+            {
+                return EntityCommandPanelShowcaseTheme.Normalize(themeId, EntityCommandPanelShowcaseTheme.ClassicId);
+            }
+
+            return EntityCommandPanelShowcaseTheme.ClassicId;
         }
 
         private static string NormalizeColor(string? value, string fallback)

@@ -243,6 +243,7 @@ namespace EntityCommandPanelMod.Runtime
                 string actionId = ResolvePrimarySkillActionId(inputMapping, slotIndex);
                 string displayLabel = string.Empty;
                 string detailLabel = BuildEmptyDetailLabel(actionId);
+                short cooldownPermille = 0;
                 if (effective.AbilityId > 0 &&
                     abilityDefinitions != null &&
                     abilityDefinitions.TryGet(effective.AbilityId, out var abilityDefinition))
@@ -261,6 +262,8 @@ namespace EntityCommandPanelMod.Runtime
                     {
                         flags |= EntityCommandSlotStateFlags.Active;
                     }
+
+                    cooldownPermille = ResolveCooldownPermille(target, in abilityDefinition);
 
                     string fallbackLabel = ResolveFallbackLabel(effective.AbilityId, effective.TemplateEntityId);
                     string fallbackDetail = BuildDefaultDetailLabel(actionId, abilityInteractionModeKey);
@@ -285,7 +288,7 @@ namespace EntityCommandPanelMod.Runtime
                     effective.AbilityId,
                     effective.TemplateEntityId,
                     flags,
-                    0,
+                    cooldownPermille,
                     0,
                     0,
                     displayLabel,
@@ -305,6 +308,72 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             return interactionModeKey;
+        }
+
+        private short ResolveCooldownPermille(Entity target, in AbilityDefinition abilityDefinition)
+        {
+            if (!_engine.World.IsAlive(target) ||
+                !abilityDefinition.HasActivationBlockTags ||
+                abilityDefinition.ActivationBlockTags.BlockedAny.IsEmpty ||
+                !_engine.World.Has<TimedTagBuffer>(target))
+            {
+                return 0;
+            }
+
+            IClock? clock = _engine.GetService(CoreServiceKeys.Clock);
+            if (clock == null)
+            {
+                return 0;
+            }
+
+            ref var timed = ref _engine.World.Get<TimedTagBuffer>(target);
+            int bestPermille = 0;
+            for (int i = 0; i < timed.Count; i++)
+            {
+                int tagId = timed.GetTagId(i);
+                if (tagId <= 0 || !abilityDefinition.ActivationBlockTags.BlockedAny.HasTag(tagId))
+                {
+                    continue;
+                }
+
+                GasClockId clockId = timed.GetClockId(i);
+                int now = clock.Now(clockId.ToDomainId());
+                int remainingTicks = Math.Max(0, timed.GetExpireAt(i) - now);
+                if (remainingTicks <= 0)
+                {
+                    continue;
+                }
+
+                int totalTicks = ResolveCooldownDurationTicks(in abilityDefinition.ExecSpec, tagId);
+                int permille = totalTicks > 0
+                    ? Math.Clamp((int)Math.Round(remainingTicks * 1000d / totalTicks), 0, 1000)
+                    : 1000;
+                bestPermille = Math.Max(bestPermille, permille);
+            }
+
+            return (short)bestPermille;
+        }
+
+        private static int ResolveCooldownDurationTicks(in AbilityExecSpec execSpec, int tagId)
+        {
+            int durationTicks = 0;
+            for (int itemIndex = 0; itemIndex < execSpec.ItemCount; itemIndex++)
+            {
+                ExecItemKind kind = execSpec.GetKind(itemIndex);
+                if (kind != ExecItemKind.TagClip && kind != ExecItemKind.TagClipTarget)
+                {
+                    continue;
+                }
+
+                if (execSpec.GetTagId(itemIndex) != tagId)
+                {
+                    continue;
+                }
+
+                durationTicks = Math.Max(durationTicks, execSpec.GetDurationTicks(itemIndex));
+            }
+
+            return durationTicks;
         }
 
         public bool ActivateSlot(Entity target, int groupIndex, int slotIndex)

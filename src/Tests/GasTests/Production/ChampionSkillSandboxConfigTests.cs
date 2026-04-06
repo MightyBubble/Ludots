@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Arch.Core;
+using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -320,15 +321,20 @@ namespace Ludots.Tests.GAS.Production
             int buttonCount = toolbar.CopyButtons(buttons);
             Assert.That(buttonCount, Is.EqualTo(5), "Small buffers should safely truncate the toolbar.");
 
-            buttons = new EntityCommandPanelToolbarButtonView[8];
+            buttons = new EntityCommandPanelToolbarButtonView[10];
             buttonCount = toolbar.CopyButtons(buttons);
-            Assert.That(buttonCount, Is.EqualTo(7));
+            Assert.That(buttonCount, Is.EqualTo(10));
             Assert.That(buttons[0].ButtonId, Is.EqualTo("ChampionSkillSandbox.Mode.SmartCast"));
             Assert.That(buttons[0].Active, Is.True);
             Assert.That(buttons[3].ButtonId, Is.EqualTo(FreeCameraToolbarButtonId));
             Assert.That(buttons[3].Active, Is.True);
             Assert.That(buttons[6].ButtonId, Is.EqualTo(ResetCameraToolbarButtonId));
-            Assert.That(toolbar.Subtitle, Does.Contain("RMB Move"));
+            Assert.That(buttons[7].ButtonId, Is.EqualTo(EntityCommandPanelShowcaseTheme.Dota2Id));
+            Assert.That(buttons[8].ButtonId, Is.EqualTo(EntityCommandPanelShowcaseTheme.LolId));
+            Assert.That(buttons[8].Active, Is.True);
+            Assert.That(buttons[9].ButtonId, Is.EqualTo(EntityCommandPanelShowcaseTheme.Sc2Id));
+            Assert.That(toolbar.Subtitle, Does.Contain("Theme LoL"));
+            Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.LolId));
 
             var source = ResolveGasPanelSource(engine);
             Entity ezreal = FindEntityByName(engine.World, "Ezreal Alpha");
@@ -361,6 +367,24 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(slots[0].DetailLabel, Is.EqualTo("Release key, then confirm line shot"));
             source.CopySlots(spellEngineer, 0, slots);
             Assert.That(slots[3].DetailLabel, Is.EqualTo("Hold to channel steerable beam, release to stop"));
+
+            toolbar.Activate(EntityCommandPanelShowcaseTheme.Sc2Id);
+            Tick(engine, 1);
+            toolbar.CopyButtons(buttons);
+            Assert.That(buttons[9].Active, Is.True);
+            Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.Sc2Id));
+
+            toolbar.Activate(EntityCommandPanelShowcaseTheme.Dota2Id);
+            Tick(engine, 1);
+            toolbar.CopyButtons(buttons);
+            Assert.That(buttons[7].Active, Is.True);
+            Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.Dota2Id));
+
+            toolbar.Activate(EntityCommandPanelShowcaseTheme.LolId);
+            Tick(engine, 1);
+            toolbar.CopyButtons(buttons);
+            Assert.That(buttons[8].Active, Is.True);
+            Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.LolId));
 
             InputOrderMapping? command = mapping.GetMapping("Command");
             Assert.That(command, Is.Not.Null);

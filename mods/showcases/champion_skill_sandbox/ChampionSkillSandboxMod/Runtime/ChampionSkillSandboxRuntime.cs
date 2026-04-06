@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod.ViewMode;
+using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
@@ -131,6 +132,11 @@ namespace ChampionSkillSandboxMod.Runtime
             if (!engine.GlobalContext.ContainsKey(ChampionSkillSandboxIds.SelectionViewChoiceKey))
             {
                 engine.GlobalContext[ChampionSkillSandboxIds.SelectionViewChoiceKey] = ChampionSkillSandboxIds.PlayerSelectionToolbarButtonId;
+            }
+
+            if (!engine.GlobalContext.ContainsKey(EntityCommandPanelShowcaseTheme.ContextKey))
+            {
+                engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey] = ChampionSkillSandboxIds.ResolveDefaultShowcaseThemeId();
             }
         }
 
@@ -525,8 +531,8 @@ namespace ChampionSkillSandboxMod.Runtime
                     TargetEntity = initialTarget,
                     SourceId = "gas.ability-slots",
                     InstanceKey = "champion-skill-sandbox.focus",
-                    Anchor = new EntityCommandPanelAnchor(EntityCommandPanelAnchorPreset.BottomCenter, 0f, 18f),
-                    Size = new EntityCommandPanelSize(460f, 276f),
+                    Anchor = ResolvePanelAnchor(engine),
+                    Size = ResolvePanelSize(engine),
                     InitialGroupIndex = 0,
                     StartVisible = visible
                 });
@@ -544,8 +550,31 @@ namespace ChampionSkillSandboxMod.Runtime
                 _lastPanelTarget = target;
             }
 
+            service.SetAnchor(_focusPanelHandle, ResolvePanelAnchor(engine));
+            service.SetSize(_focusPanelHandle, ResolvePanelSize(engine));
             service.SetVisible(_focusPanelHandle, visible);
             SyncSelectionIndicator(engine, visible ? target : Entity.Null);
+        }
+
+        private static EntityCommandPanelAnchor ResolvePanelAnchor(GameEngine engine)
+        {
+            return EntityCommandPanelShowcaseTheme.ResolveSandboxAnchor(ResolveShowcaseTheme(engine));
+        }
+
+        private static EntityCommandPanelSize ResolvePanelSize(GameEngine engine)
+        {
+            return EntityCommandPanelShowcaseTheme.ResolveSandboxSize(ResolveShowcaseTheme(engine));
+        }
+
+        private static string ResolveShowcaseTheme(GameEngine engine)
+        {
+            if (engine.GlobalContext.TryGetValue(EntityCommandPanelShowcaseTheme.ContextKey, out object? themeObj) &&
+                themeObj is string themeId)
+            {
+                return EntityCommandPanelShowcaseTheme.Normalize(themeId, ChampionSkillSandboxIds.ResolveDefaultShowcaseThemeId());
+            }
+
+            return ChampionSkillSandboxIds.ResolveDefaultShowcaseThemeId();
         }
 
         private static Entity ResolvePanelTarget(GameEngine engine)

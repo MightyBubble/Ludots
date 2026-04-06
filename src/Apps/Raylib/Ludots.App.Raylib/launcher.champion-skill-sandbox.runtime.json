@@ -1,0 +1,10 @@
+{
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/capabilities/camera/CameraProfilesMod",
+    "../../../../../../../mods/DiagnosticsOverlayMod",
+    "../../../../../../../mods/EntityCommandPanelMod",
+    "../../../../../../../mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod"
+  ]
+}
