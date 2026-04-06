@@ -845,7 +845,11 @@ namespace Ludots.Tests.GAS.Production
                 $"{BuildEzrealMarkDiagnostics(engine.World, "Target Dummy A")} || {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")} || {BuildGasPresentationDiagnostics(engine)}");
             Assert.That(EntityHasTag(engine.World, "Target Dummy A", "State.Champion.Ezreal.WMark"), Is.False, "Ezreal Q should consume the W mark.");
 
-            Tick(engine, 80, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => !EntityHasTag(engine.World, "Ezreal Alpha", "Cooldown.Champion.Ezreal.W"),
+                maxFrames: 160);
             dummyAimPoint = GetEntityScreen(engine, "Target Dummy A");
             SetMouseWorld(engine, backend, dummyAimPoint, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/w", frameTimesMs);
@@ -891,7 +895,11 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(healthAfterE, Is.EqualTo(healthBeforeE - 26f).Within(0.001f));
             Assert.That(EntityHasTag(engine.World, "Target Dummy A", "State.Champion.Ezreal.WMark"), Is.False, "Ezreal E bolt should consume the W mark.");
 
-            Tick(engine, 80, frameTimesMs);
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => !EntityHasTag(engine.World, "Ezreal Alpha", "Cooldown.Champion.Ezreal.W"),
+                maxFrames: 160);
             dummyAimPoint = GetEntityScreen(engine, "Target Dummy A");
             SetMouseWorld(engine, backend, dummyAimPoint, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/w", frameTimesMs);

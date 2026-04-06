@@ -127,7 +127,7 @@ namespace ChampionSkillSandboxMod
 
         public static string ResolveDefaultShowcaseThemeId()
         {
-            return EntityCommandPanelShowcaseTheme.LolId;
+            return EntityCommandPanelShowcaseTheme.ClassicId;
         }
     }
 }

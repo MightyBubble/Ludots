@@ -331,10 +331,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(buttons[6].ButtonId, Is.EqualTo(ResetCameraToolbarButtonId));
             Assert.That(buttons[7].ButtonId, Is.EqualTo(EntityCommandPanelShowcaseTheme.Dota2Id));
             Assert.That(buttons[8].ButtonId, Is.EqualTo(EntityCommandPanelShowcaseTheme.LolId));
-            Assert.That(buttons[8].Active, Is.True);
+            Assert.That(buttons[8].Active, Is.False);
             Assert.That(buttons[9].ButtonId, Is.EqualTo(EntityCommandPanelShowcaseTheme.Sc2Id));
-            Assert.That(toolbar.Subtitle, Does.Contain("Theme LoL"));
-            Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.LolId));
+            Assert.That(toolbar.Subtitle, Does.Contain("Theme Classic"));
+            Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.ClassicId));
 
             var source = ResolveGasPanelSource(engine);
             Entity ezreal = FindEntityByName(engine.World, "Ezreal Alpha");
