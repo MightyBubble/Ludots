@@ -1,4 +1,5 @@
 using System;
+using EntityCommandPanelMod.UI;
 
 namespace ChampionSkillSandboxMod
 {
@@ -122,6 +123,11 @@ namespace ChampionSkillSandboxMod
             }
 
             return "P1 Live";
+        }
+
+        public static string ResolveDefaultShowcaseThemeId()
+        {
+            return EntityCommandPanelShowcaseTheme.LolId;
         }
     }
 }
