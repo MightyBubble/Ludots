@@ -317,24 +317,15 @@ namespace Ludots.Core.Modding
                 {
                     dllPath = Path.GetFullPath(dllPath);
                     Log.Info(in LogChannels.ModLoader, $"Loading DLL for {manifest.Name} at {dllPath}");
-                    Assembly assembly;
-                    if (TryResolveAlreadyLoadedAssembly(dllPath, out var existingAssembly))
+                    var loadContext = _activePlanLoadContext ?? new ModLoadContext(ResolveSharedAssembly);
+                    if (_activePlanLoadContext == null)
                     {
-                        assembly = existingAssembly;
-                        Log.Info(in LogChannels.ModLoader, $"Reusing already loaded assembly for {manifest.Name} from {existingAssembly.Location}");
+                        _activePlanLoadContext = loadContext;
+                        _loadContexts.Add(loadContext);
                     }
-                    else
-                    {
-                        var loadContext = _activePlanLoadContext ?? new ModLoadContext(ResolveSharedAssembly);
-                        if (_activePlanLoadContext == null)
-                        {
-                            _activePlanLoadContext = loadContext;
-                            _loadContexts.Add(loadContext);
-                        }
 
-                        loadContext.RegisterMainAssemblyPath(dllPath);
-                        assembly = loadContext.LoadFromAssemblyPath(dllPath);
-                    }
+                    loadContext.RegisterMainAssemblyPath(dllPath);
+                    var assembly = loadContext.LoadMainAssembly(dllPath);
                     CacheSharedAssembly(assembly);
 
                     Type[] allTypes;
@@ -462,98 +453,6 @@ namespace Ludots.Core.Modding
 
             results.Sort(StringComparer.OrdinalIgnoreCase);
             return results;
-        }
-
-        private static bool TryResolveAlreadyLoadedAssembly(string dllPath, out Assembly assembly)
-        {
-            assembly = null;
-            string fullPath = Path.GetFullPath(dllPath);
-
-            foreach (var candidate in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                if (candidate == null || candidate.IsDynamic)
-                {
-                    continue;
-                }
-
-                string candidatePath;
-                try
-                {
-                    candidatePath = candidate.Location;
-                }
-                catch
-                {
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(candidatePath) &&
-                    string.Equals(Path.GetFullPath(candidatePath), fullPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    assembly = candidate;
-                    return true;
-                }
-            }
-
-            AssemblyName targetName;
-            try
-            {
-                targetName = AssemblyName.GetAssemblyName(fullPath);
-            }
-            catch
-            {
-                return false;
-            }
-
-            foreach (var candidate in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                if (candidate == null || candidate.IsDynamic)
-                {
-                    continue;
-                }
-
-                if (MatchesAssemblyIdentity(targetName, candidate.GetName()))
-                {
-                    assembly = candidate;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool MatchesAssemblyIdentity(AssemblyName expected, AssemblyName candidate)
-        {
-            if (!string.Equals(expected.Name, candidate.Name, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            if (expected.Version != null &&
-                candidate.Version != null &&
-                expected.Version != candidate.Version)
-            {
-                return false;
-            }
-
-            string expectedCulture = expected.CultureName ?? string.Empty;
-            string candidateCulture = candidate.CultureName ?? string.Empty;
-            if (!string.Equals(expectedCulture, candidateCulture, StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            byte[]? expectedToken = expected.GetPublicKeyToken();
-            byte[]? candidateToken = candidate.GetPublicKeyToken();
-            if (expectedToken != null &&
-                candidateToken != null &&
-                expectedToken.Length > 0 &&
-                candidateToken.Length > 0 &&
-                !expectedToken.SequenceEqual(candidateToken))
-            {
-                return false;
-            }
-
-            return true;
         }
 
         public void UnloadAll()

@@ -115,6 +115,7 @@
 
 - 一个 launcher graph / `ResolvedModLoadPlan` 只应对应一个 `ModLoadContext`。
 - 同一 launch plan 内的代码 Mod 必须共享同一个类型宇宙，避免 capability service、shared runtime state、mod-local service key 因 `AssemblyLoadContext` 分裂而失配。
+- 代码 Mod 的主程序集与托管依赖必须统一走 stream-load；磁盘路径只用于 `AssemblyDependencyResolver` 探测与符号定位，不作为最终装载真相，避免宿主运行期间锁住 `mod.json.main` 指向的 DLL。
 - 不允许产品主链继续依赖“每个 mod 一个独立 ALC，再靠裸字符串或运行时猜测兜底”的模式。
 - host/default ALC 只承担 Core、adapter、tooling 侧共享程序集；plan 内 mod 依赖关系由 plan load context 统一承载。
 
