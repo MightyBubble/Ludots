@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -9,6 +10,7 @@ namespace Ludots.Core.Modding
     internal sealed class ModLoadContext : AssemblyLoadContext
     {
         private readonly List<AssemblyDependencyResolver> _resolvers = new();
+        private readonly Dictionary<string, Assembly> _managedAssembliesByPath = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _registeredMainAssemblyPaths = new(StringComparer.OrdinalIgnoreCase);
         private readonly Func<AssemblyName, Assembly> _sharedAssemblyResolver;
 
@@ -29,6 +31,11 @@ namespace Ludots.Core.Modding
             {
                 _resolvers.Add(new AssemblyDependencyResolver(fullPath));
             }
+        }
+
+        public Assembly LoadMainAssembly(string modMainAssemblyPath)
+        {
+            return LoadManagedAssemblyFromPath(modMainAssemblyPath);
         }
 
         protected override Assembly Load(AssemblyName assemblyName)
@@ -70,7 +77,7 @@ namespace Ludots.Core.Modding
                 var path = _resolvers[i].ResolveAssemblyToPath(assemblyName);
                 if (path != null)
                 {
-                    return LoadFromAssemblyPath(path);
+                    return LoadManagedAssemblyFromPath(path);
                 }
             }
 
@@ -89,6 +96,49 @@ namespace Ludots.Core.Modding
             }
 
             return IntPtr.Zero;
+        }
+
+        private Assembly LoadManagedAssemblyFromPath(string assemblyPath)
+        {
+            if (string.IsNullOrWhiteSpace(assemblyPath))
+            {
+                throw new ArgumentException("Assembly path is required.", nameof(assemblyPath));
+            }
+
+            var fullPath = Path.GetFullPath(assemblyPath);
+            if (_managedAssembliesByPath.TryGetValue(fullPath, out var loadedAssembly))
+            {
+                return loadedAssembly;
+            }
+
+            using var assemblyStream = OpenReadStream(fullPath);
+            using var pdbStream = TryOpenSymbolStream(fullPath);
+            loadedAssembly = pdbStream != null
+                ? LoadFromStream(assemblyStream, pdbStream)
+                : LoadFromStream(assemblyStream);
+
+            _managedAssembliesByPath[fullPath] = loadedAssembly;
+            return loadedAssembly;
+        }
+
+        private static FileStream OpenReadStream(string fullPath)
+        {
+            return new FileStream(
+                fullPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+        }
+
+        private static Stream? TryOpenSymbolStream(string assemblyPath)
+        {
+            var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
+            if (!File.Exists(pdbPath))
+            {
+                return null;
+            }
+
+            return OpenReadStream(pdbPath);
         }
     }
 
