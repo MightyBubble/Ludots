@@ -4,12 +4,10 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
-using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
-using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -52,58 +50,13 @@ namespace Ludots.Core.Presentation.Systems
                 _globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj)
                     ? heightmapObj as IVisualHeightmap
                     : null;
-            IVisualGroundProjector? projector =
-                _globals.TryGetValue(CoreServiceKeys.VisualGroundProjector.Name, out var projectorObj)
-                    ? projectorObj as IVisualGroundProjector
-                    : null;
-            VertexMap? vertexMap =
-                _globals.TryGetValue(CoreServiceKeys.VertexMap.Name, out var vertexObj)
-                    ? vertexObj as VertexMap
-                    : null;
-            if (heightmap is null && projector is null && vertexMap is null)
+            if (heightmap is null)
             {
                 return;
             }
 
             float alpha = ReadInterpolationAlpha();
-            if (heightmap is not null && TrySyncFromHeightmap(heightmap, alpha))
-            {
-                return;
-            }
-
-            if (projector is not null && TrySyncFromProjector(projector, alpha))
-            {
-                return;
-            }
-
-            if (vertexMap is null)
-            {
-                return;
-            }
-
-            _world.Query(in _query, (Entity entity, ref WorldPositionCm current, ref VisualTransform visual) =>
-            {
-                Vector2 worldCm = ResolveWorldCm(entity, current.Value, alpha);
-                var sample = new Vector3(worldCm.X * CmToM, visual.Position.Y, worldCm.Y * CmToM);
-                float rawHeight;
-                try
-                {
-                    rawHeight = vertexMap.GetLogicHeight(sample);
-                }
-                catch
-                {
-                    return;
-                }
-
-                if (float.IsNaN(rawHeight) || float.IsInfinity(rawHeight))
-                {
-                    return;
-                }
-
-                Vector3 position = visual.Position;
-                position.Y = rawHeight * HeightScale;
-                visual.Position = position;
-            });
+            TrySyncFromHeightmap(heightmap, alpha);
         }
 
         public void AfterUpdate(in float dt) { }
@@ -118,51 +71,6 @@ namespace Ludots.Core.Presentation.Systems
                 alpha = state.Enabled ? state.InterpolationAlpha : 1f;
             });
             return alpha;
-        }
-
-        private bool TrySyncFromProjector(IVisualGroundProjector projector, float alpha)
-        {
-            int count = 0;
-            _world.Query(in _query, (Entity entity, ref WorldPositionCm current, ref VisualTransform visual) =>
-            {
-                EnsureProjectionCapacity(count + 1);
-                Vector2 worldCm = ResolveWorldCm(entity, current.Value, alpha);
-                _projectedEntities[count] = entity;
-                _projectedXs[count] = worldCm.X;
-                _projectedYs[count] = worldCm.Y;
-                count++;
-            });
-
-            if (count <= 0 ||
-                !projector.TryProjectHeights(
-                    _projectedXs.AsSpan(0, count),
-                    _projectedYs.AsSpan(0, count),
-                    _projectedHeights.AsSpan(0, count)))
-            {
-                return false;
-            }
-
-            for (int i = 0; i < count; i++)
-            {
-                Entity entity = _projectedEntities[i];
-                if (!_world.IsAlive(entity) || !_world.Has<VisualTransform>(entity))
-                {
-                    continue;
-                }
-
-                float heightCm = _projectedHeights[i];
-                if (float.IsNaN(heightCm) || float.IsInfinity(heightCm))
-                {
-                    continue;
-                }
-
-                ref var visual = ref _world.Get<VisualTransform>(entity);
-                Vector3 position = visual.Position;
-                position.Y = heightCm * CmToM;
-                visual.Position = position;
-            }
-
-            return true;
         }
 
         private bool TrySyncFromHeightmap(IVisualHeightmap heightmap, float alpha)

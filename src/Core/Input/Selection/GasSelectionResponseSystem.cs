@@ -61,17 +61,12 @@ namespace Ludots.Core.Input.Selection
             if (!AuthoritativeGroundPointerHelper.TryRead(input, out var worldCm))
             {
                 if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return;
+                if (!_globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj) || heightmapObj is not IVisualHeightmap heightmap) return;
                 if (!_globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) || worldSizeObj is not WorldSizeSpec worldSize) return;
 
                 var mouse = input.ReadAction<System.Numerics.Vector2>(bindings.PointerPositionActionId);
                 var ray = rayProvider.GetRay(mouse);
-                bool resolvedFromHeightmap =
-                    _globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj) &&
-                    heightmapObj is IVisualHeightmap heightmap &&
-                    GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out worldCm);
-
-                if (!resolvedFromHeightmap &&
-                    !GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm))
+                if (!GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out worldCm))
                 {
                     return;
                 }

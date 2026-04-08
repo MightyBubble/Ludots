@@ -156,8 +156,8 @@ namespace Ludots.Core.Presentation.Terrain
                 return false;
             }
 
-            hit = new VisualGroundHit(worldXCm, worldYCm, heightCm, layerIndex);
-            return true;
+            Vector3 point = ray.Origin + (ray.Direction * t);
+            return TryBuildHit(point, ray.Origin, layerIndex, out hit);
         }
 
         public bool RaycastGroundBatch(
@@ -167,7 +167,14 @@ namespace Ludots.Core.Presentation.Terrain
             ReadOnlySpan<float> directionX,
             ReadOnlySpan<float> directionY,
             ReadOnlySpan<float> directionZ,
-            Span<VisualGroundHit> outHits,
+            Span<float> outWorldXCm,
+            Span<float> outWorldYCm,
+            Span<float> outHeightCm,
+            Span<float> outDistanceMeters,
+            Span<float> outNormalX,
+            Span<float> outNormalY,
+            Span<float> outNormalZ,
+            Span<int> outLayerIndex,
             Span<byte> outHitMask,
             int layerIndex = 0)
         {
@@ -177,7 +184,14 @@ namespace Ludots.Core.Presentation.Terrain
                 directionX.Length != count ||
                 directionY.Length != count ||
                 directionZ.Length != count ||
-                outHits.Length != count ||
+                outWorldXCm.Length != count ||
+                outWorldYCm.Length != count ||
+                outHeightCm.Length != count ||
+                outDistanceMeters.Length != count ||
+                outNormalX.Length != count ||
+                outNormalY.Length != count ||
+                outNormalZ.Length != count ||
+                outLayerIndex.Length != count ||
                 outHitMask.Length != count)
             {
                 throw new ArgumentException("Visual heightmap batch raycast spans must have identical lengths.");
@@ -196,12 +210,26 @@ namespace Ludots.Core.Presentation.Terrain
 
                 if (TryRaycastGround(in ray, out VisualGroundHit hit, layerIndex))
                 {
-                    outHits[i] = hit;
+                    outWorldXCm[i] = hit.WorldXCm;
+                    outWorldYCm[i] = hit.WorldYCm;
+                    outHeightCm[i] = hit.HeightCm;
+                    outDistanceMeters[i] = hit.DistanceMeters;
+                    outNormalX[i] = hit.Normal.X;
+                    outNormalY[i] = hit.Normal.Y;
+                    outNormalZ[i] = hit.Normal.Z;
+                    outLayerIndex[i] = hit.LayerIndex;
                     outHitMask[i] = 1;
                 }
                 else
                 {
-                    outHits[i] = default;
+                    outWorldXCm[i] = float.NaN;
+                    outWorldYCm[i] = float.NaN;
+                    outHeightCm[i] = float.NaN;
+                    outDistanceMeters[i] = float.NaN;
+                    outNormalX[i] = 0f;
+                    outNormalY[i] = 0f;
+                    outNormalZ[i] = 0f;
+                    outLayerIndex[i] = -1;
                     outHitMask[i] = 0;
                 }
             }
@@ -213,6 +241,12 @@ namespace Ludots.Core.Presentation.Terrain
         {
             hit = default;
             Vector3 point = ray.Origin + (ray.Direction * t);
+            return TryBuildHit(point, ray.Origin, layerIndex, out hit);
+        }
+
+        private bool TryBuildHit(Vector3 point, Vector3 origin, int layerIndex, out VisualGroundHit hit)
+        {
+            hit = default;
             float worldXCm = point.X * MToCm;
             float worldYCm = point.Z * MToCm;
             if (!TrySampleHeightCm(worldXCm, worldYCm, out float heightCm, layerIndex))
@@ -220,7 +254,14 @@ namespace Ludots.Core.Presentation.Terrain
                 return false;
             }
 
-            hit = new VisualGroundHit(worldXCm, worldYCm, heightCm, layerIndex);
+            if (!TryComputeNormal(worldXCm, worldYCm, heightCm, layerIndex, out Vector3 normal))
+            {
+                return false;
+            }
+
+            Vector3 hitPosition = new Vector3(worldXCm * 0.01f, heightCm * 0.01f, worldYCm * 0.01f);
+            float distanceMeters = Vector3.Distance(origin, hitPosition);
+            hit = new VisualGroundHit(worldXCm, worldYCm, heightCm, layerIndex, distanceMeters, normal);
             return true;
         }
 
@@ -229,8 +270,8 @@ namespace Ludots.Core.Presentation.Terrain
             float distanceMeters = MathF.Max(0f, endT - startT);
             float dxCm = MathF.Abs(ray.Direction.X * distanceMeters * MToCm);
             float dyCm = MathF.Abs(ray.Direction.Z * distanceMeters * MToCm);
-            float cellWidthCm = _asset.SampleColumns > 1 ? (float)_asset.Bounds.Width / (_asset.SampleColumns - 1) : Math.Max(1f, _asset.Bounds.Width);
-            float cellHeightCm = _asset.SampleRows > 1 ? (float)_asset.Bounds.Height / (_asset.SampleRows - 1) : Math.Max(1f, _asset.Bounds.Height);
+            float cellWidthCm = GetCellWidthCm();
+            float cellHeightCm = GetCellHeightCm();
             float cellSteps = MathF.Max(
                 dxCm / MathF.Max(1f, cellWidthCm),
                 dyCm / MathF.Max(1f, cellHeightCm));
@@ -339,6 +380,66 @@ namespace Ludots.Core.Presentation.Terrain
 
             layer = _asset.Layers[resolvedLayer];
             return true;
+        }
+
+        private bool TryComputeNormal(float worldXCm, float worldYCm, float heightCm, int layerIndex, out Vector3 normal)
+        {
+            normal = Vector3.UnitY;
+
+            WorldAabbCm bounds = _asset.Bounds;
+            float stepXCm = GetCellWidthCm();
+            float stepYCm = GetCellHeightCm();
+
+            float x0 = Math.Clamp(worldXCm - stepXCm, bounds.Left, bounds.Right);
+            float x1 = Math.Clamp(worldXCm + stepXCm, bounds.Left, bounds.Right);
+            float y0 = Math.Clamp(worldYCm - stepYCm, bounds.Top, bounds.Bottom);
+            float y1 = Math.Clamp(worldYCm + stepYCm, bounds.Top, bounds.Bottom);
+
+            float leftHeight = heightCm;
+            float rightHeight = heightCm;
+            float topHeight = heightCm;
+            float bottomHeight = heightCm;
+
+            if (x0 != worldXCm && !TrySampleHeightCm(x0, worldYCm, out leftHeight, layerIndex))
+            {
+                return false;
+            }
+
+            if (x1 != worldXCm && !TrySampleHeightCm(x1, worldYCm, out rightHeight, layerIndex))
+            {
+                return false;
+            }
+
+            if (y0 != worldYCm && !TrySampleHeightCm(worldXCm, y0, out topHeight, layerIndex))
+            {
+                return false;
+            }
+
+            if (y1 != worldYCm && !TrySampleHeightCm(worldXCm, y1, out bottomHeight, layerIndex))
+            {
+                return false;
+            }
+
+            float deltaXMeters = Math.Max(0.01f, (x1 - x0) * 0.01f);
+            float deltaYMeters = Math.Max(0.01f, (y1 - y0) * 0.01f);
+            float dhdx = ((rightHeight - leftHeight) * 0.01f) / deltaXMeters;
+            float dhdy = ((bottomHeight - topHeight) * 0.01f) / deltaYMeters;
+            normal = Vector3.Normalize(new Vector3(-dhdx, 1f, -dhdy));
+            return float.IsFinite(normal.X) && float.IsFinite(normal.Y) && float.IsFinite(normal.Z);
+        }
+
+        private float GetCellWidthCm()
+        {
+            return _asset.SampleColumns > 1
+                ? Math.Max(1f, (float)_asset.Bounds.Width / (_asset.SampleColumns - 1))
+                : Math.Max(1f, _asset.Bounds.Width);
+        }
+
+        private float GetCellHeightCm()
+        {
+            return _asset.SampleRows > 1
+                ? Math.Max(1f, (float)_asset.Bounds.Height / (_asset.SampleRows - 1))
+                : Math.Max(1f, _asset.Bounds.Height);
         }
 
         private bool TryGetRayBoundsInterval(in ScreenRay ray, out float startT, out float endT)
