@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -72,6 +73,13 @@ namespace Ludots.Core.Input.Runtime
             try
             {
                 ScreenRay ray = rayProvider.GetRay(screenPosition);
+                if (globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj) &&
+                    heightmapObj is IVisualHeightmap heightmap &&
+                    GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out worldCm))
+                {
+                    return true;
+                }
+
                 return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm);
             }
             catch (ArgumentOutOfRangeException)

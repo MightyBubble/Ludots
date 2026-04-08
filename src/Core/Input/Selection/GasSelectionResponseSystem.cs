@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -64,7 +65,16 @@ namespace Ludots.Core.Input.Selection
 
                 var mouse = input.ReadAction<System.Numerics.Vector2>(bindings.PointerPositionActionId);
                 var ray = rayProvider.GetRay(mouse);
-                if (!GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm)) return;
+                bool resolvedFromHeightmap =
+                    _globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj) &&
+                    heightmapObj is IVisualHeightmap heightmap &&
+                    GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out worldCm);
+
+                if (!resolvedFromHeightmap &&
+                    !GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm))
+                {
+                    return;
+                }
             }
 
             OnSelectionTriggered?.Invoke(request, worldCm);

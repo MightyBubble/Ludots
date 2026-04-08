@@ -7,6 +7,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -47,6 +48,10 @@ namespace Ludots.Core.Presentation.Systems
 
         public void Update(in float dt)
         {
+            IVisualHeightmap? heightmap =
+                _globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj)
+                    ? heightmapObj as IVisualHeightmap
+                    : null;
             IVisualGroundProjector? projector =
                 _globals.TryGetValue(CoreServiceKeys.VisualGroundProjector.Name, out var projectorObj)
                     ? projectorObj as IVisualGroundProjector
@@ -55,12 +60,17 @@ namespace Ludots.Core.Presentation.Systems
                 _globals.TryGetValue(CoreServiceKeys.VertexMap.Name, out var vertexObj)
                     ? vertexObj as VertexMap
                     : null;
-            if (projector is null && vertexMap is null)
+            if (heightmap is null && projector is null && vertexMap is null)
             {
                 return;
             }
 
             float alpha = ReadInterpolationAlpha();
+            if (heightmap is not null && TrySyncFromHeightmap(heightmap, alpha))
+            {
+                return;
+            }
+
             if (projector is not null && TrySyncFromProjector(projector, alpha))
             {
                 return;
@@ -125,6 +135,51 @@ namespace Ludots.Core.Presentation.Systems
 
             if (count <= 0 ||
                 !projector.TryProjectHeights(
+                    _projectedXs.AsSpan(0, count),
+                    _projectedYs.AsSpan(0, count),
+                    _projectedHeights.AsSpan(0, count)))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                Entity entity = _projectedEntities[i];
+                if (!_world.IsAlive(entity) || !_world.Has<VisualTransform>(entity))
+                {
+                    continue;
+                }
+
+                float heightCm = _projectedHeights[i];
+                if (float.IsNaN(heightCm) || float.IsInfinity(heightCm))
+                {
+                    continue;
+                }
+
+                ref var visual = ref _world.Get<VisualTransform>(entity);
+                Vector3 position = visual.Position;
+                position.Y = heightCm * CmToM;
+                visual.Position = position;
+            }
+
+            return true;
+        }
+
+        private bool TrySyncFromHeightmap(IVisualHeightmap heightmap, float alpha)
+        {
+            int count = 0;
+            _world.Query(in _query, (Entity entity, ref WorldPositionCm current, ref VisualTransform visual) =>
+            {
+                EnsureProjectionCapacity(count + 1);
+                Vector2 worldCm = ResolveWorldCm(entity, current.Value, alpha);
+                _projectedEntities[count] = entity;
+                _projectedXs[count] = worldCm.X;
+                _projectedYs[count] = worldCm.Y;
+                count++;
+            });
+
+            if (count <= 0 ||
+                !heightmap.SampleHeightsCm(
                     _projectedXs.AsSpan(0, count),
                     _projectedYs.AsSpan(0, count),
                     _projectedHeights.AsSpan(0, count)))

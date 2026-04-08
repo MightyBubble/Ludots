@@ -7,6 +7,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
@@ -173,6 +174,13 @@ namespace Ludots.Core.Input.Selection
             }
 
             var ray = rayProvider.GetRay(pointer);
+            if (_globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj) &&
+                heightmapObj is IVisualHeightmap heightmap &&
+                GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out groundWorldCm))
+            {
+                return true;
+            }
+
             if (!GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out groundWorldCm))
             {
                 return false;
