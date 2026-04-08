@@ -53,7 +53,7 @@
 ### 当前分支已证明
 
 - shared selection fan-out：`artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`
-- 现有输入与 order pipeline：`src/Core/Input/Orders/InputOrderMappingSystem.cs`、`src/Core/Input/Selection/AmbientSelectionApplySystem.cs`
+- 现有输入与 order pipeline：`src/Core/Input/Orders/InputOrderMappingSystem.cs`、`src/Core/Input/Selection/CurrentSelectionApplySystem.cs`
 
 ### 当前结论
 

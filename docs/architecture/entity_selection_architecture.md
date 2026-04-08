@@ -119,7 +119,7 @@
 当前选取系统：
 
 - 点击与框选：
-  - `src/Core/Input/Selection/AmbientSelectionApplySystem.cs`
+  - `src/Core/Input/Selection/CurrentSelectionApplySystem.cs`
 - ability 驱动的选择响应：
   - `src/Core/Input/Selection/GasSelectionResponseSystem.cs`
 - Tab 目标循环：

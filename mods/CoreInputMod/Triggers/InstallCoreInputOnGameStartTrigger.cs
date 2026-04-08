@@ -17,7 +17,7 @@ using Ludots.Core.Scripting;
 namespace CoreInputMod.Triggers
 {
     /// <summary>
-    /// Registers generic input systems on game start: AmbientSelectionApply, GasSelectionResponse, GasInputResponse.
+    /// Registers generic input systems on game start: CurrentSelectionApply, GasSelectionResponse, GasInputResponse.
     /// Does not include order sources (move/attack/etc) — those are game-mode specific (MobaDemoMod, RtsDemoMod, etc).
     /// For camera, compose CameraProfilesMod / CameraBootstrapMod / VirtualCameraShotsMod as needed.
     /// Mods can add callbacks via GlobalContext["CoreInputMod.EntitySelectionCallbacks"] and
@@ -62,12 +62,12 @@ namespace CoreInputMod.Triggers
             engine.RegisterSystem(new SelectionMaintenanceSystem(engine.World, selectionRuntime), SystemGroup.InputCollection);
             engine.RegisterSystem(new OrderSelectionLeaseCleanupSystem(engine.World, orderQueue), SystemGroup.Cleanup);
 
-            var ambientSelection = new AmbientSelectionApplySystem(engine.World, engine.GlobalContext, selectionRuntime);
-            ambientSelection.OnEntitySelected = (worldCm, entity) =>
+            var currentSelection = new CurrentSelectionApplySystem(engine.World, engine.GlobalContext, selectionRuntime);
+            currentSelection.OnEntitySelected = (worldCm, entity) =>
             {
                 foreach (var cb in selectionCallbacks) cb(worldCm, entity);
             };
-            engine.RegisterSystem(ambientSelection, SystemGroup.InputCollection);
+            engine.RegisterSystem(currentSelection, SystemGroup.InputCollection);
 
             var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries, selectionRules);
             gasSelection.OnSelectionTriggered = (req, worldCm) =>
@@ -88,7 +88,7 @@ namespace CoreInputMod.Triggers
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
 
-            _ctx.Log("[CoreInputMod] AmbientSelectionApply, GasSelectionResponse, GasInputResponse, SkillBar, SelectionBox, AbilityAimOverlay, SelectedMovePathOverlay, TabTarget, ViewMode registered");
+            _ctx.Log("[CoreInputMod] CurrentSelectionApply, GasSelectionResponse, GasInputResponse, SkillBar, SelectionBox, AbilityAimOverlay, SelectedMovePathOverlay, TabTarget, ViewMode registered");
             return Task.CompletedTask;
         }
     }
