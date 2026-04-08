@@ -49,19 +49,19 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(inputNames, Does.Contain("AuthoritativeInputSnapshotSystem"));
             Assert.That(inputNames, Does.Contain("LocalPlayerEntityResolverSystem"));
             Assert.That(inputNames, Does.Contain("AbilityFormRoutingSystem"));
-            Assert.That(inputNames, Does.Contain("EntityClickSelectSystem"));
+            Assert.That(inputNames, Does.Contain("CurrentSelectionApplySystem"));
             Assert.That(inputNames, Does.Contain("GasSelectionResponseSystem"));
             Assert.That(inputNames, Does.Contain("GasInputResponseSystem"));
             Assert.That(inputNames, Does.Contain("TabTargetCycleSystem"));
             Assert.That(inputNames, Does.Contain("ViewModeSwitchSystem"));
             Assert.That(inputNames, Does.Contain("MobaLocalOrderSourceSystem"));
-            Assert.That(inputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(inputNames.IndexOf("EntityClickSelectSystem")));
+            Assert.That(inputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(inputNames.IndexOf("CurrentSelectionApplySystem")));
             Assert.That(inputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(inputNames.IndexOf("GasSelectionResponseSystem")));
             Assert.That(inputNames.IndexOf("AbilityFormRoutingSystem"), Is.LessThan(inputNames.IndexOf("MobaLocalOrderSourceSystem")));
             Assert.That(inputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(inputNames.IndexOf("MobaLocalOrderSourceSystem")));
 
             Assert.That(presentationNames, Does.Not.Contain("LocalPlayerEntityResolverSystem"));
-            Assert.That(presentationNames, Does.Not.Contain("EntityClickSelectSystem"));
+            Assert.That(presentationNames, Does.Not.Contain("CurrentSelectionApplySystem"));
             Assert.That(presentationNames, Does.Not.Contain("GasSelectionResponseSystem"));
             Assert.That(presentationNames, Does.Not.Contain("GasInputResponseSystem"));
             Assert.That(presentationNames, Does.Not.Contain("TabTargetCycleSystem"));

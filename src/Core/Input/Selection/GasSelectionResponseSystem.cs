@@ -7,12 +7,9 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Interaction;
-using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
-using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Selection
 {
@@ -24,8 +21,6 @@ namespace Ludots.Core.Input.Selection
     /// </summary>
     public sealed class GasSelectionResponseSystem : ISystem<float>
     {
-        private static readonly InteractionActionBindings DefaultBindings = new InteractionActionBindings();
-
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly ISpatialQueryService _spatial;
@@ -49,23 +44,13 @@ namespace Ludots.Core.Input.Selection
 
         public void Update(in float dt)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input) return;
             if (!_globals.TryGetValue(CoreServiceKeys.SelectionRequestQueue.Name, out var reqObj) || reqObj is not SelectionRequestQueue requests) return;
             if (!_globals.TryGetValue(CoreServiceKeys.SelectionResponseBuffer.Name, out var respObj) || respObj is not SelectionResponseBuffer responses) return;
             if (!requests.TryPeek(out var request)) return;
+            if (!PointerInteractionSnapshotReader.TryRead(_globals, out PointerInteractionSnapshot pointer)) return;
 
-            var bindings = ResolveBindings();
-            if (!input.PressedThisFrame(bindings.ConfirmActionId)) return;
-
-            if (!AuthoritativeGroundPointerHelper.TryRead(input, out var worldCm))
-            {
-                if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return;
-                if (!_globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) || worldSizeObj is not WorldSizeSpec worldSize) return;
-
-                var mouse = input.ReadAction<System.Numerics.Vector2>(bindings.PointerPositionActionId);
-                var ray = rayProvider.GetRay(mouse);
-                if (!GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm)) return;
-            }
+            if (!pointer.Confirm.PressedThisFrame || !pointer.HasGroundPoint) return;
+            WorldCmInt2 worldCm = pointer.GroundWorldCm;
 
             OnSelectionTriggered?.Invoke(request, worldCm);
 
@@ -217,16 +202,6 @@ namespace Ludots.Core.Input.Selection
             }
 
             return RelationshipFilterUtil.Passes(filter, originTeamId, team.Id);
-        }
-
-        private InteractionActionBindings ResolveBindings()
-        {
-            if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var obj) && obj is InteractionActionBindings bindings)
-            {
-                return bindings;
-            }
-
-            return DefaultBindings;
         }
 
         private static SelectionRuleRegistry? ResolveRules(Dictionary<string, object> globals)

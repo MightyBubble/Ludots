@@ -113,7 +113,7 @@ charges / refill timer 也不应被写成“本分支必须具备的统一底座
 | 项目 | 优先级 | 原因 | 应复用的现有基础 |
 |------|--------|------|------------------|
 | Response target mutability / richer response-window UI | P1-P2 | 当前 showcase 只证明基础路径 | `ResponseChain`、presentation pipeline |
-| Companion focus / actor routing 细化 | P2 | shared selection fan-out 已有，但 companion 专用工作流未闭环 | `InputOrderMappingSystem`、`EntityClickSelectSystem`、现有 order pipeline |
+| Companion focus / actor routing 细化 | P2 | shared selection fan-out 已有，但 companion 专用工作流未闭环 | `InputOrderMappingSystem`、`CurrentSelectionApplySystem`、现有 order pipeline |
 | Generic environment scan / displacement collision / nav blocker | P2 | showcase 未证明整族场景 | `ContextGroup`、`RuntimeEntitySpawnQueue`、effect / handler pipeline |
 | Minimap click adapter | P3 | 需要 adapter 侧世界坐标转换 | 现有 `OrderArgs.Spatial` |
 

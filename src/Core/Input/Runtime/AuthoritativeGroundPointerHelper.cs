@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -18,7 +20,7 @@ namespace Ludots.Core.Input.Runtime
         public const string ActionId = "__runtime.PointerGroundWorldCm";
 
         public static void Capture(
-            Dictionary<string, object> globals,
+            IReadOnlyDictionary<string, object> globals,
             PlayerInputHandler input,
             AuthoritativeInputAccumulator accumulator)
         {
@@ -26,7 +28,8 @@ namespace Ludots.Core.Input.Runtime
             if (input == null) throw new ArgumentNullException(nameof(input));
             if (accumulator == null) throw new ArgumentNullException(nameof(accumulator));
 
-            if (!TryResolveFromScreen(globals, input.ReadAction<Vector2>("PointerPos"), out WorldCmInt2 worldCm))
+            InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(globals, nameof(AuthoritativeGroundPointerHelper));
+            if (!TryResolveFromScreen(globals, input.ReadAction<Vector2>(bindings.PointerPositionActionId), out WorldCmInt2 worldCm))
             {
                 accumulator.CaptureAction(ActionId, Vector3.Zero, isDown: false, pressedThisFrame: false, releasedThisFrame: false);
                 return;
@@ -56,13 +59,15 @@ namespace Ludots.Core.Input.Runtime
         }
 
         public static bool TryResolveFromScreen(
-            Dictionary<string, object> globals,
+            IReadOnlyDictionary<string, object> globals,
             Vector2 screenPosition,
             out WorldCmInt2 worldCm)
         {
             worldCm = default;
             if (!globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayProviderObj) ||
                 rayProviderObj is not IScreenRayProvider rayProvider ||
+                !globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj) ||
+                heightmapObj is not IVisualHeightmap heightmap ||
                 !globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) ||
                 worldSizeObj is not WorldSizeSpec worldSize)
             {
@@ -72,7 +77,7 @@ namespace Ludots.Core.Input.Runtime
             try
             {
                 ScreenRay ray = rayProvider.GetRay(screenPosition);
-                return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm);
+                return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out worldCm);
             }
             catch (ArgumentOutOfRangeException)
             {

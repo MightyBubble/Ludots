@@ -4,13 +4,10 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Input.Interaction;
-using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
-using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Selection
@@ -19,9 +16,8 @@ namespace Ludots.Core.Input.Selection
     /// Shared selection runtime for single-click and screen-space box selection.
     /// Formal selection writes only to the selector's ambient selection set.
     /// </summary>
-    public sealed class EntityClickSelectSystem : ISystem<float>
+    public sealed class CurrentSelectionApplySystem : ISystem<float>
     {
-        private static readonly InteractionActionBindings DefaultBindings = new();
         private static readonly QueryDescription SelectableQuery = new QueryDescription().WithAll<VisualTransform, CullState, SelectionSelectableTag>();
 
         private readonly World _world;
@@ -32,14 +28,14 @@ namespace Ludots.Core.Input.Selection
 
         public Action<WorldCmInt2, Entity>? OnEntitySelected { get; set; }
 
-        public EntityClickSelectSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
+        public CurrentSelectionApplySystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
         {
             _world = world;
             _globals = globals;
             _selection = selection;
         }
 
-        public EntityClickSelectSystem(World world, Dictionary<string, object> globals)
+        public CurrentSelectionApplySystem(World world, Dictionary<string, object> globals)
         {
             _world = world;
             _globals = globals;
@@ -50,39 +46,25 @@ namespace Ludots.Core.Input.Selection
 
         public void Update(in float dt)
         {
-            if (!TryGetInput(out var input))
+            if (!PointerInteractionSnapshotReader.TryRead(_globals, out PointerInteractionSnapshot pointer))
             {
                 return;
             }
 
-            var bindings = ResolveBindings();
-            Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
-            bool confirmDown = input.IsDown(bindings.ConfirmActionId);
-            bool confirmPressed = input.PressedThisFrame(bindings.ConfirmActionId);
-            bool confirmReleased = input.ReleasedThisFrame(bindings.ConfirmActionId);
-            bool hasPointerButtonState = TryGetPointerButtonState(bindings.ConfirmActionId, out PointerButtonState pointerButtonState);
-            if (hasPointerButtonState)
-            {
-                pointer = pointerButtonState.Pointer;
-                confirmDown = pointerButtonState.IsDown;
-                confirmPressed = pointerButtonState.PressedThisFrame;
-                confirmReleased = pointerButtonState.ReleasedThisFrame;
-            }
             bool selectionSuppressed = IsSelectionSuppressed();
 
-            if (selectionSuppressed && confirmPressed)
+            if (selectionSuppressed && pointer.Confirm.PressedThisFrame)
             {
                 _suppressConfirmRelease = true;
             }
 
-            bool hasGroundPoint = TryResolveGroundPointer(pointer, out var groundWorldCm);
-            Entity hovered = FindNearestEntity(pointer, _selection.Config.ClickPickRadiusPixels);
+            Entity hovered = FindNearestEntity(pointer.Pointer, _selection.Config.ClickPickRadiusPixels);
             UpdateHoveredEntity(hovered);
 
             bool hasOwner = TryGetSelectionOwner(out var owner);
             if (!hasOwner)
             {
-                if (_suppressConfirmRelease && confirmReleased)
+                if (_suppressConfirmRelease && pointer.Confirm.ReleasedThisFrame)
                 {
                     _suppressConfirmRelease = false;
                     return;
@@ -101,84 +83,42 @@ namespace Ludots.Core.Input.Selection
                     drag.Clear();
                 }
 
-                if (_suppressConfirmRelease && confirmReleased)
+                if (_suppressConfirmRelease && pointer.Confirm.ReleasedThisFrame)
                 {
                     _suppressConfirmRelease = false;
                 }
                 return;
             }
 
-            if (confirmPressed)
+            if (pointer.Confirm.PressedThisFrame)
             {
-                drag.Begin(hasPointerButtonState && pointerButtonState.HasPressPointer
-                    ? pointerButtonState.PressPointer
-                    : pointer);
+                drag.Begin(pointer.Confirm.ResolvePressPointerOrCurrent());
             }
-            else if (drag.Active && confirmDown)
+            else if (drag.Active && pointer.Confirm.IsDown)
             {
-                drag.CurrentScreen = hasPointerButtonState && pointerButtonState.HasLastDownPointer
-                    ? pointerButtonState.LastDownPointer
-                    : pointer;
+                drag.CurrentScreen = pointer.Confirm.ResolveDownPointerOrCurrent();
             }
 
-            if (confirmReleased && drag.Active)
+            if (pointer.Confirm.ReleasedThisFrame && drag.Active)
             {
-                drag.CurrentScreen = hasPointerButtonState && pointerButtonState.HasReleasePointer
-                    ? pointerButtonState.ReleasePointer
-                    : pointer;
+                drag.CurrentScreen = pointer.Confirm.ResolveReleasePointerOrCurrent();
 
                 if (drag.ExceedsThreshold(_selection.Config.DragThresholdPixels))
                 {
                     ApplyBoxSelection(owner, in drag);
                 }
-                else if (hasGroundPoint)
+                else if (pointer.HasGroundPoint)
                 {
                     ApplyClickSelection(owner, hovered);
-                    OnEntitySelected?.Invoke(groundWorldCm, hovered);
+                    OnEntitySelected?.Invoke(pointer.GroundWorldCm, hovered);
                 }
 
                 drag.Clear();
             }
-            else if (!confirmDown && drag.Active)
+            else if (!pointer.Confirm.IsDown && drag.Active)
             {
                 drag.Clear();
             }
-        }
-
-        private bool TryGetInput(out IInputActionReader input)
-        {
-            input = default!;
-            return _globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) &&
-                   inputObj is IInputActionReader reader &&
-                   (input = reader) != null;
-        }
-
-        private bool TryResolveGroundPointer(Vector2 pointer, out WorldCmInt2 groundWorldCm)
-        {
-            groundWorldCm = default;
-
-            if (TryGetInput(out var input) && AuthoritativeGroundPointerHelper.TryRead(input, out groundWorldCm))
-            {
-                return true;
-            }
-
-            if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider)
-            {
-                return false;
-            }
-
-            if (!_globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) || worldSizeObj is not WorldSizeSpec worldSize)
-            {
-                return false;
-            }
-
-            var ray = rayProvider.GetRay(pointer);
-            if (!GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out groundWorldCm))
-            {
-                return false;
-            }
-
-            return true;
         }
 
         private bool TryGetSelectionOwner(out Entity owner)
@@ -195,14 +135,6 @@ namespace Ludots.Core.Input.Selection
             return _globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
                    mappingObj is Ludots.Core.Input.Orders.InputOrderMappingSystem mapping &&
                    mapping.IsAiming;
-        }
-
-        private bool TryGetPointerButtonState(string actionId, out PointerButtonState state)
-        {
-            state = default;
-            return _globals.TryGetValue(CoreServiceKeys.AuthoritativePointerButtons.Name, out var snapshotObj) &&
-                   snapshotObj is AuthoritativePointerButtonSnapshot snapshot &&
-                   snapshot.TryGetState(actionId, out state);
         }
 
         private void EnsureSelectionComponents(Entity owner)
@@ -358,16 +290,6 @@ namespace Ludots.Core.Input.Selection
             return worldCmp != 0 ? worldCmp : a.Id.CompareTo(b.Id);
         }
 
-        private InteractionActionBindings ResolveBindings()
-        {
-            if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var obj) && obj is InteractionActionBindings bindings)
-            {
-                return bindings;
-            }
-
-            return DefaultBindings;
-        }
-
         public void BeforeUpdate(in float dt) { }
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }
@@ -380,20 +302,8 @@ namespace Ludots.Core.Input.Selection
                 return runtime;
             }
 
-            var config = globals.TryGetValue(CoreServiceKeys.SelectionConfig.Name, out var configObj) &&
-                         configObj is SelectionRuntimeConfig selectionConfig
-                ? selectionConfig
-                : new SelectionRuntimeConfig();
-            var setKeys = globals.TryGetValue(CoreServiceKeys.SelectionSetKeyRegistry.Name, out var registryObj) &&
-                          registryObj is StringIntRegistry existingRegistry
-                ? existingRegistry
-                : new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-
-            runtime = new SelectionRuntime(world, config, setKeys);
-            globals[CoreServiceKeys.SelectionRuntime.Name] = runtime;
-            globals[CoreServiceKeys.SelectionConfig.Name] = config;
-            globals[CoreServiceKeys.SelectionSetKeyRegistry.Name] = setKeys;
-            return runtime;
+            throw new InvalidOperationException(
+                $"{nameof(CurrentSelectionApplySystem)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered before construction.");
         }
     }
 }

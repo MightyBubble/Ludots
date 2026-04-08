@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 
@@ -36,6 +37,23 @@ namespace Ludots.Core.Presentation.Utils
             return true;
         }
 
+        public static bool TryGetGroundWorldCm(in ScreenRay ray, IVisualHeightmap heightmap, out WorldCmInt2 worldCm)
+        {
+            worldCm = default;
+            if (heightmap == null)
+            {
+                throw new ArgumentNullException(nameof(heightmap));
+            }
+
+            if (!heightmap.TryRaycastGround(in ray, out VisualGroundHit hit))
+            {
+                return false;
+            }
+
+            worldCm = hit.ToWorldCmInt2();
+            return true;
+        }
+
         /// <summary>
         /// 屏幕射线与 Y=0 地面求交，返回交点的视觉空间米坐标 (XZ 平面)。
         /// </summary>
@@ -44,9 +62,19 @@ namespace Ludots.Core.Presentation.Utils
             return TryGetGroundWorldCmBounded(in ray, worldSize.Bounds, out worldCm, out _);
         }
 
+        public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, IVisualHeightmap heightmap, in WorldSizeSpec worldSize, out WorldCmInt2 worldCm)
+        {
+            return TryGetGroundWorldCmBounded(in ray, heightmap, worldSize.Bounds, out worldCm, out _);
+        }
+
         public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, in WorldSizeSpec worldSize, out WorldCmInt2 worldCm, out bool wasClamped)
         {
             return TryGetGroundWorldCmBounded(in ray, worldSize.Bounds, out worldCm, out wasClamped);
+        }
+
+        public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, IVisualHeightmap heightmap, in WorldSizeSpec worldSize, out WorldCmInt2 worldCm, out bool wasClamped)
+        {
+            return TryGetGroundWorldCmBounded(in ray, heightmap, worldSize.Bounds, out worldCm, out wasClamped);
         }
 
         public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, in WorldAabbCm bounds, out WorldCmInt2 worldCm, out bool wasClamped)
@@ -54,6 +82,19 @@ namespace Ludots.Core.Presentation.Utils
             worldCm = default;
             wasClamped = false;
             if (!TryGetGroundWorldCm(in ray, out var rawWorldCm))
+            {
+                return false;
+            }
+
+            worldCm = ClampWorldCmToBounds(rawWorldCm, bounds, out wasClamped);
+            return true;
+        }
+
+        public static bool TryGetGroundWorldCmBounded(in ScreenRay ray, IVisualHeightmap heightmap, in WorldAabbCm bounds, out WorldCmInt2 worldCm, out bool wasClamped)
+        {
+            worldCm = default;
+            wasClamped = false;
+            if (!TryGetGroundWorldCm(in ray, heightmap, out var rawWorldCm))
             {
                 return false;
             }
@@ -88,6 +129,23 @@ namespace Ludots.Core.Presentation.Utils
             if (!float.IsFinite(hit.X) || !float.IsFinite(hit.Z)) return false;
 
             hitMeters = hit;
+            return true;
+        }
+
+        public static bool TryGetGroundVisualMeters(in ScreenRay ray, IVisualHeightmap heightmap, out Vector3 hitMeters)
+        {
+            hitMeters = default;
+            if (heightmap == null)
+            {
+                throw new ArgumentNullException(nameof(heightmap));
+            }
+
+            if (!heightmap.TryRaycastGround(in ray, out VisualGroundHit hit))
+            {
+                return false;
+            }
+
+            hitMeters = hit.ToVisualMeters();
             return true;
         }
     }

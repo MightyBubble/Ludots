@@ -11,8 +11,6 @@ namespace Ludots.Core.Presentation.Systems
 {
     public sealed class ResponseChainHumanOrderSourceSystem : ISystem<float>
     {
-        private static readonly InteractionActionBindings DefaultBindings = new InteractionActionBindings();
-
         private readonly Dictionary<string, object> _globals;
         private readonly ResponseChainUiState _ui;
         private readonly OrderQueue _chainOrders;
@@ -92,12 +90,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private InteractionActionBindings ResolveBindings()
         {
-            if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var obj) && obj is InteractionActionBindings bindings)
-            {
-                return bindings;
-            }
-
-            return DefaultBindings;
+            return InteractionActionBindingsResolver.Require(_globals, nameof(ResponseChainHumanOrderSourceSystem));
         }
 
         public void BeforeUpdate(in float dt) { }

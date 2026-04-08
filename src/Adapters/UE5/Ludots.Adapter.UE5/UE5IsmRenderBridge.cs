@@ -52,11 +52,11 @@ namespace Ludots.Adapter.UE5
     public sealed class UE5IsmRenderBridge
     {
         private const float MetersToUECm = 100f;
-        private const int MaxPrefabDepth = 6;
 
         private readonly Dictionary<long, IsmBucket> _buckets = new();
         private readonly List<IsmBucket> _bucketList = new();
         private readonly List<AllegroDrawItem> _allegroItems = new();
+        private readonly PrefabFinalizedLeafBuffer _prefabLeaves = new();
 
         public IReadOnlyList<IsmBucket> HismBuckets => _bucketList;
         public IReadOnlyList<AllegroDrawItem> AllegroItems => _allegroItems;
@@ -134,7 +134,6 @@ namespace Ludots.Adapter.UE5
                 }
 
                 AddStaticItemRecursive(
-                    meshRegistry,
                     item.MeshAssetId,
                     item.RenderPath,
                     item.StableId,
@@ -142,12 +141,11 @@ namespace Ludots.Adapter.UE5
                     item.Rotation,
                     item.Scale,
                     item.Visibility,
-                    depth: 0);
+                    meshRegistry);
             }
         }
 
         private void AddStaticItemRecursive(
-            MeshAssetRegistry? meshRegistry,
             int meshAssetId,
             VisualRenderPath renderPath,
             int stableId,
@@ -155,60 +153,48 @@ namespace Ludots.Adapter.UE5
             Quaternion rotation,
             Vector3 scale,
             VisualVisibility visibility,
-            int depth)
+            MeshAssetRegistry? meshRegistry)
         {
-            if (depth > MaxPrefabDepth)
+            if (meshRegistry == null)
             {
                 return;
             }
 
-            if (meshRegistry != null &&
-                meshRegistry.TryGetDescriptor(meshAssetId, out var descriptor) &&
-                descriptor.Type == MeshAssetType.Prefab &&
-                descriptor.PrefabParts != null &&
-                descriptor.PrefabParts.Length > 0)
+            _prefabLeaves.Clear();
+            PrefabFinalizationPipeline.FinalizeLeaves(
+                meshRegistry,
+                meshAssetId,
+                stableId,
+                position,
+                rotation,
+                scale,
+                Vector4.One,
+                _prefabLeaves);
+
+            foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
             {
-                for (int i = 0; i < descriptor.PrefabParts.Length; i++)
+                long key = BuildBucketKey(leaf.MeshAssetId, renderPath);
+                if (!_buckets.TryGetValue(key, out var bucket))
                 {
-                    ref var part = ref descriptor.PrefabParts[i];
-                    PrefabTransformUtility.Compose(position, rotation, scale, in part, out Vector3 childPosition, out Quaternion childRotation, out Vector3 childScale);
-                    int childStableId = PrefabTransformUtility.BuildChildStableId(stableId, depth, i, part.MeshAssetId);
-                    AddStaticItemRecursive(
-                        meshRegistry,
-                        part.MeshAssetId,
-                        renderPath,
-                        childStableId,
-                        childPosition,
-                        childRotation,
-                        childScale,
-                        visibility,
-                        depth + 1);
+                    bucket = new IsmBucket(leaf.MeshAssetId, renderPath);
+                    _buckets.Add(key, bucket);
                 }
 
-                return;
-            }
+                if (bucket.Instances.Count == 0)
+                {
+                    _bucketList.Add(bucket);
+                }
 
-            long key = BuildBucketKey(meshAssetId, renderPath);
-            if (!_buckets.TryGetValue(key, out var bucket))
-            {
-                bucket = new IsmBucket(meshAssetId, renderPath);
-                _buckets.Add(key, bucket);
+                bucket.Instances.Add(new StaticDrawItem
+                {
+                    StableId = leaf.StableId,
+                    RenderPath = renderPath,
+                    Translation = ToUEPosition(leaf.Position),
+                    Rotation = ToUERotation(leaf.Rotation),
+                    Scale = ToUEScale(leaf.Scale),
+                    Visibility = visibility,
+                });
             }
-
-            if (bucket.Instances.Count == 0)
-            {
-                _bucketList.Add(bucket);
-            }
-
-            bucket.Instances.Add(new StaticDrawItem
-            {
-                StableId = stableId,
-                RenderPath = renderPath,
-                Translation = ToUEPosition(position),
-                Rotation = ToUERotation(rotation),
-                Scale = ToUEScale(scale),
-                Visibility = visibility,
-            });
         }
 
         private void CollectSkinnedItems(SkinnedVisualBatchBuffer buffer)

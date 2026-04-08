@@ -15,6 +15,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Scripting;
@@ -670,7 +671,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TerrainHeightSyncSystem_PrefersVisualGroundProjector_AndUsesInterpolatedWorldXY()
+        public void TerrainHeightSyncSystem_DoesNotUseLegacyProjector_WhenVisualHeightmapIsMissing()
         {
             using var world = World.Create();
             world.Create(
@@ -704,18 +705,16 @@ namespace Ludots.Tests.Presentation
             using var system = new TerrainHeightSyncSystem(world, globals);
             system.Update(0.016f);
 
-            Assert.That(projector.InvocationCount, Is.EqualTo(1));
-            Assert.That(projector.LastXs[0], Is.EqualTo(100f).Within(0.001f));
-            Assert.That(projector.LastYs[0], Is.EqualTo(500f).Within(0.001f));
+            Assert.That(projector.InvocationCount, Is.EqualTo(0));
 
             VisualTransform visual = world.Get<VisualTransform>(entity);
             Assert.That(visual.Position.X, Is.EqualTo(1f).Within(0.001f));
-            Assert.That(visual.Position.Y, Is.EqualTo(6f).Within(0.001f));
+            Assert.That(visual.Position.Y, Is.EqualTo(0f).Within(0.001f));
             Assert.That(visual.Position.Z, Is.EqualTo(5f).Within(0.001f));
         }
 
         [Test]
-        public void TerrainHeightSyncSystem_FallsBackToVertexMap_WhenProjectorIsMissing()
+        public void TerrainHeightSyncSystem_DoesNotUseVertexMapFallback_WhenVisualHeightmapIsMissing()
         {
             using var world = World.Create();
             var vertexMap = new VertexMap();
@@ -728,7 +727,6 @@ namespace Ludots.Tests.Presentation
             Vector3 p1 = AxialToWorld(q: 1f, r: 0f);
             Vector3 p2 = AxialToWorld(q: 0f, r: 1f);
             Vector3 worldPos = (p0 + p1 + p2) / 3f;
-            float expectedHeight = (0f + 10f + 15f) / 3f;
 
             Entity entity = world.Create(
                 WorldPositionCm.FromCmFloat(worldPos.X * 100f, worldPos.Z * 100f),
@@ -751,11 +749,11 @@ namespace Ludots.Tests.Presentation
             system.Update(0.016f);
 
             VisualTransform visual = world.Get<VisualTransform>(entity);
-            Assert.That(visual.Position.Y, Is.EqualTo(expectedHeight).Within(0.001f));
+            Assert.That(visual.Position.Y, Is.EqualTo(worldPos.Y).Within(0.001f));
         }
 
         [Test]
-        public void TerrainHeightSyncSystem_DoesNotThrow_WhenProjectorUnavailable_AndVertexMapMissing()
+        public void TerrainHeightSyncSystem_UsesVisualHeightmapSingleTruth_WhenRegistered()
         {
             using var world = World.Create();
             Entity entity = world.Create(
@@ -769,19 +767,30 @@ namespace Ludots.Tests.Presentation
                 });
 
             var projector = new UnavailableGroundProjector();
+            var heightmap = new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 1000, 1000),
+                    sampleColumns: 2,
+                    sampleRows: 2,
+                    new short[]
+                    {
+                        0, 100,
+                        100, 200,
+                    }));
             var globals = new Dictionary<string, object>
             {
+                [CoreServiceKeys.VisualHeightmap.Name] = heightmap,
                 [CoreServiceKeys.VisualGroundProjector.Name] = projector,
             };
 
             using var system = new TerrainHeightSyncSystem(world, globals);
 
             Assert.DoesNotThrow(() => system.Update(0.016f));
-            Assert.That(projector.InvocationCount, Is.EqualTo(1));
+            Assert.That(projector.InvocationCount, Is.EqualTo(0));
 
             VisualTransform visual = world.Get<VisualTransform>(entity);
             Assert.That(visual.Position.X, Is.EqualTo(1f).Within(0.001f));
-            Assert.That(visual.Position.Y, Is.EqualTo(2f).Within(0.001f));
+            Assert.That(visual.Position.Y, Is.EqualTo(120f * 0.01f).Within(0.001f));
             Assert.That(visual.Position.Z, Is.EqualTo(5f).Within(0.001f));
         }
 

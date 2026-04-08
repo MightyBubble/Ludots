@@ -14,6 +14,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -135,12 +136,26 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = liveInput,
                 [CoreServiceKeys.AuthoritativeInput.Name] = authoritativeInput,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
                 [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.SelectionRuntime.Name] = selection,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
+            ((AuthoritativePointerButtonSnapshot)globals[CoreServiceKeys.AuthoritativePointerButtons.Name]).SetState(
+                "Confirm",
+                new PointerButtonState(
+                    Vector2.Zero,
+                    Vector2.Zero,
+                    Vector2.Zero,
+                    Vector2.Zero,
+                    isDown: true,
+                    pressedThisFrame: true,
+                    releasedThisFrame: false,
+                    hasPressPointer: true,
+                    hasReleasePointer: false,
+                    hasLastDownPointer: true));
 
             var system = new GasInputResponseSystem(world, globals);
             var requests = (InputRequestQueue)globals[CoreServiceKeys.AbilityInputRequestQueue.Name];
@@ -215,7 +230,9 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
 
             var system = new InputRuntimeSystem(globals, accumulator);
@@ -387,6 +404,20 @@ namespace Ludots.Tests.GAS
                     new Vector3(screenPosition.X, 10f, screenPosition.Y),
                     new Vector3(0f, -1f, 0f));
             }
+        }
+
+        private static IVisualHeightmap CreateFlatHeightmap()
+        {
+            return new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new WorldAabbCm(-100000, -100000, 200000, 200000),
+                    sampleColumns: 2,
+                    sampleRows: 2,
+                    new short[]
+                    {
+                        0, 0,
+                        0, 0,
+                    }));
         }
     }
 }
