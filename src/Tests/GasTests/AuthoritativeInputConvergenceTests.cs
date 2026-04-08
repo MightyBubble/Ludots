@@ -232,6 +232,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
 
             var system = new InputRuntimeSystem(globals, accumulator);

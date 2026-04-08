@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
@@ -27,7 +28,8 @@ namespace Ludots.Core.Input.Runtime
             if (input == null) throw new ArgumentNullException(nameof(input));
             if (accumulator == null) throw new ArgumentNullException(nameof(accumulator));
 
-            if (!TryResolveFromScreen(globals, input.ReadAction<Vector2>("PointerPos"), out WorldCmInt2 worldCm))
+            InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(globals, nameof(AuthoritativeGroundPointerHelper));
+            if (!TryResolveFromScreen(globals, input.ReadAction<Vector2>(bindings.PointerPositionActionId), out WorldCmInt2 worldCm))
             {
                 accumulator.CaptureAction(ActionId, Vector3.Zero, isDown: false, pressedThisFrame: false, releasedThisFrame: false);
                 return;

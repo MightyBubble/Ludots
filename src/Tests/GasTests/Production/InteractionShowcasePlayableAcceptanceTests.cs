@@ -1719,7 +1719,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final live per side: `{finalStress.LiveRed}` red / `{finalStress.LiveBlue}` blue");
             sb.AppendLine($"- peak projectile count: `{finalStress.PeakProjectileCount}`");
             sb.AppendLine($"- final queue depth: `{finalStress.QueueDepth}`");
-            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `ViewModeManager`, `EntityClickSelectSystem`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
+            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `ViewModeManager`, `AmbientSelectionApplySystem`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
             return sb.ToString();
         }
 

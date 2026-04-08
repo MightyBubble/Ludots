@@ -8,9 +8,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation2D.Config;
-using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
-using Ludots.Platform.Abstractions;
 using Navigation2DPlaygroundMod.Input;
 using Navigation2DPlaygroundMod.Runtime;
 
@@ -18,8 +16,6 @@ namespace Navigation2DPlaygroundMod.Systems
 {
     internal sealed class Navigation2DPlaygroundCommandSystem : ISystem<float>
     {
-        private static readonly InteractionActionBindings DefaultBindings = new();
-
         private readonly GameEngine _engine;
         private readonly World _world;
 
@@ -57,7 +53,7 @@ namespace Navigation2DPlaygroundMod.Systems
 
             bool uiCaptured = _engine.GetService(CoreServiceKeys.UiCaptured);
             var bindings = ResolveBindings();
-            if (!uiCaptured && input.PressedThisFrame(bindings.CommandActionId) && TryResolveGroundPointer(input, bindings, out var worldCm))
+            if (!uiCaptured && input.PressedThisFrame(bindings.CommandActionId) && TryResolveGroundPointer(input, out var worldCm))
             {
                 ExecuteCommand(playgroundConfig, worldCm);
             }
@@ -120,29 +116,14 @@ namespace Navigation2DPlaygroundMod.Systems
                 playgroundConfig.CommandGoalRadiusCm);
         }
 
-        private bool TryResolveGroundPointer(IInputActionReader input, InteractionActionBindings bindings, out WorldCmInt2 worldCm)
+        private bool TryResolveGroundPointer(IInputActionReader input, out WorldCmInt2 worldCm)
         {
-            worldCm = default;
-            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) ||
-                rayObj is not IScreenRayProvider rayProvider)
-            {
-                return false;
-            }
-
-            Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
-            var ray = rayProvider.GetRay(pointer);
-            return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, _engine.WorldSizeSpec, out worldCm);
+            return AuthoritativeGroundPointerHelper.TryRead(input, out worldCm);
         }
 
         private InteractionActionBindings ResolveBindings()
         {
-            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var obj) &&
-                obj is InteractionActionBindings bindings)
-            {
-                return bindings;
-            }
-
-            return DefaultBindings;
+            return InteractionActionBindingsResolver.Require(_engine.GlobalContext, nameof(Navigation2DPlaygroundCommandSystem));
         }
 
         private static void HandlePressed(IInputActionReader input, string actionId, Action onPressed)

@@ -1,5 +1,5 @@
+using System;
 using System.Collections.Generic;
-using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -9,10 +9,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Rendering;
-using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
-using Ludots.Core.Spatial;
-using Ludots.Platform.Abstractions;
 
 namespace CoreInputMod.Systems
 {
@@ -20,7 +17,7 @@ namespace CoreInputMod.Systems
     {
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime? _selection;
+        private readonly SelectionRuntime _selection;
 
         public InputInteractionContextAccessor(World world, Dictionary<string, object> globals)
         {
@@ -29,7 +26,8 @@ namespace CoreInputMod.Systems
             _selection = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
                          selectionObj is SelectionRuntime selection
                 ? selection
-                : null;
+                : throw new InvalidOperationException(
+                    $"{nameof(InputInteractionContextAccessor)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered.");
         }
 
         public bool TryGetEntity(string key, out Entity entity)
@@ -62,21 +60,7 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            if (AuthoritativeGroundPointerHelper.TryRead(input, out worldCm))
-            {
-                return true;
-            }
-
-            if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayProviderObj) ||
-                rayProviderObj is not IScreenRayProvider rayProvider ||
-                !_globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) ||
-                worldSizeObj is not WorldSizeSpec worldSize)
-            {
-                return false;
-            }
-
-            var ray = rayProvider.GetRay(input.ReadAction<Vector2>("PointerPos"));
-            return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm);
+            return AuthoritativeGroundPointerHelper.TryRead(input, out worldCm);
         }
 
         public Entity GetControlledActor(int playerId = 1)
@@ -102,7 +86,7 @@ namespace CoreInputMod.Systems
         public bool TryGetSelectedEntity(string setKey, out Entity entity)
         {
             entity = default;
-            if (_selection == null || !TryGetSelectionOwner(out var owner))
+            if (!TryGetSelectionOwner(out var owner))
             {
                 return false;
             }
@@ -113,7 +97,7 @@ namespace CoreInputMod.Systems
         public bool TryGetSelectedContainer(string setKey, out Entity container)
         {
             container = default;
-            if (_selection == null || !TryGetSelectionOwner(out var owner))
+            if (!TryGetSelectionOwner(out var owner))
             {
                 return false;
             }
@@ -124,7 +108,7 @@ namespace CoreInputMod.Systems
         public bool TryGetSelectedEntities(string setKey, List<Entity> entities)
         {
             entities.Clear();
-            if (_selection == null || !TryGetSelectionOwner(out var owner))
+            if (!TryGetSelectionOwner(out var owner))
             {
                 return false;
             }

@@ -17,9 +17,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
-using Ludots.Platform.Abstractions;
 using MobaDemoMod.Triggers;
-using MobaDemoMod.Utils;
 
 namespace MobaDemoMod.Systems
 {
@@ -37,7 +35,7 @@ namespace MobaDemoMod.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly OrderQueue _orders;
         private readonly IModContext _ctx;
-        private readonly SelectionRuntime? _selection;
+        private readonly SelectionRuntime _selection;
         private readonly int _castAbilityOrderTypeId;
         private readonly int _stopOrderTypeId;
         
@@ -67,7 +65,8 @@ namespace MobaDemoMod.Systems
             _selection = _globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
                          selectionObj is SelectionRuntime selection
                 ? selection
-                : null;
+                : throw new InvalidOperationException(
+                    $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered.");
         }
 
         public void Initialize() { }
@@ -85,6 +84,10 @@ namespace MobaDemoMod.Systems
             _inputOrderMapping = new InputOrderMappingSystem(input, config);
             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = _inputOrderMapping;
             _globals[CoreInputMod.Systems.SkillBarOverlaySystem.SkillBarKeyLabelsKey] = new[] { "Q", "W", "E", "R" };
+            var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(MobaLocalOrderSourceSystem));
+            _inputOrderMapping.ConfirmActionId = bindings.ConfirmActionId;
+            _inputOrderMapping.CancelActionId = bindings.CancelActionId;
+            _inputOrderMapping.CommandActionId = bindings.CommandActionId;
             
             // Order type key resolver
             _inputOrderMapping.SetOrderTypeKeyResolver(key => key switch
@@ -137,13 +140,6 @@ namespace MobaDemoMod.Systems
             {
                 _orders.TryEnqueue(order);
             });
-
-            if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var bindingsObj) && bindingsObj is InteractionActionBindings bindings)
-            {
-                _inputOrderMapping.ConfirmActionId = bindings.ConfirmActionId;
-                _inputOrderMapping.CancelActionId = bindings.CancelActionId;
-                _inputOrderMapping.CommandActionId = bindings.CommandActionId;
-            }
 
             // Aiming state -> Performer direct API (for AimCast mode)
             // Uses PresentationCommandBuffer to create/destroy a performer scope.
@@ -221,8 +217,7 @@ namespace MobaDemoMod.Systems
         private bool TryGetSelected(string setKey, out Entity target)
         {
             target = default;
-            if (_selection == null ||
-                !_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
+            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
                 actorObj is not Entity owner ||
                 !_world.IsAlive(owner))
             {
@@ -235,8 +230,7 @@ namespace MobaDemoMod.Systems
         private bool TryGetSelectedContainer(string setKey, out Entity container)
         {
             container = default;
-            if (_selection == null ||
-                !_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
+            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
                 actorObj is not Entity owner ||
                 !_world.IsAlive(owner))
             {
@@ -249,8 +243,7 @@ namespace MobaDemoMod.Systems
         private bool TryGetSelectedEntities(string setKey, List<Entity> entities)
         {
             entities.Clear();
-            if (_selection == null ||
-                !_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
+            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
                 actorObj is not Entity owner ||
                 !_world.IsAlive(owner))
             {
@@ -289,13 +282,8 @@ namespace MobaDemoMod.Systems
         private bool TryGetCommandWorldPoint(out WorldCmInt2 worldCm)
         {
             worldCm = default;
-            if (!_globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayObj) || rayObj is not IScreenRayProvider rayProvider) return false;
             if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input) return false;
-            if (!_globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) || worldSizeObj is not WorldSizeSpec worldSize) return false;
-
-            Vector2 mouse = input.ReadAction<Vector2>("PointerPos");
-            var ray = rayProvider.GetRay(mouse);
-            return GroundRaycast.TryGetGroundWorldCm(in ray, worldSize, out worldCm);
+            return AuthoritativeGroundPointerHelper.TryRead(input, out worldCm);
         }
 
         private InputOrderMappingConfig LoadInputOrderMappings()
