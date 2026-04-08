@@ -81,7 +81,7 @@ namespace Ludots.Core.Input.Interaction
                 state.HasLastDownPointer);
         }
 
-        internal static PointerActionSnapshot CreateFallback(string actionId, Vector2 pointer, IInputActionReader input)
+        internal static PointerActionSnapshot CreateInactive(string actionId, Vector2 pointer)
         {
             return new PointerActionSnapshot(
                 actionId,
@@ -89,9 +89,9 @@ namespace Ludots.Core.Input.Interaction
                 default,
                 default,
                 default,
-                input.IsDown(actionId),
-                input.PressedThisFrame(actionId),
-                input.ReleasedThisFrame(actionId),
+                isDown: false,
+                pressedThisFrame: false,
+                releasedThisFrame: false,
                 hasPressPointer: false,
                 hasReleasePointer: false,
                 hasLastDownPointer: false);
@@ -147,12 +147,20 @@ namespace Ludots.Core.Input.Interaction
             InteractionActionBindings bindings = ResolveBindings(globals);
             Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
 
-            PointerActionSnapshot confirm = ReadActionSnapshot(globals, input, bindings.ConfirmActionId, pointer);
-            PointerActionSnapshot command = ReadActionSnapshot(globals, input, bindings.CommandActionId, pointer);
-            PointerActionSnapshot cancel = ReadActionSnapshot(globals, input, bindings.CancelActionId, pointer);
+            if (!TryReadActionSnapshot(globals, bindings.ConfirmActionId, pointer, out PointerActionSnapshot confirm))
+            {
+                return false;
+            }
+
+            PointerActionSnapshot command = TryReadActionSnapshot(globals, bindings.CommandActionId, pointer, out PointerActionSnapshot commandSnapshot)
+                ? commandSnapshot
+                : PointerActionSnapshot.CreateInactive(bindings.CommandActionId, pointer);
+            PointerActionSnapshot cancel = TryReadActionSnapshot(globals, bindings.CancelActionId, pointer, out PointerActionSnapshot cancelSnapshot)
+                ? cancelSnapshot
+                : PointerActionSnapshot.CreateInactive(bindings.CancelActionId, pointer);
 
             Vector2 interactionPointer = confirm.Pointer;
-            bool hasGroundPoint = TryResolveGroundPoint(globals, input, interactionPointer, out WorldCmInt2 groundWorldCm);
+            bool hasGroundPoint = AuthoritativeGroundPointerHelper.TryRead(input, out WorldCmInt2 groundWorldCm);
 
             snapshot = new PointerInteractionSnapshot(
                 interactionPointer,
@@ -164,34 +172,22 @@ namespace Ludots.Core.Input.Interaction
             return true;
         }
 
-        private static PointerActionSnapshot ReadActionSnapshot(
+        private static bool TryReadActionSnapshot(
             IReadOnlyDictionary<string, object> globals,
-            IInputActionReader input,
             string actionId,
-            Vector2 pointer)
+            Vector2 pointer,
+            out PointerActionSnapshot snapshot)
         {
             if (globals.TryGetValue(CoreServiceKeys.AuthoritativePointerButtons.Name, out var snapshotObj) &&
                 snapshotObj is AuthoritativePointerButtonSnapshot buttonSnapshot &&
                 buttonSnapshot.TryGetState(actionId, out PointerButtonState state))
             {
-                return PointerActionSnapshot.FromState(actionId, state);
-            }
-
-            return PointerActionSnapshot.CreateFallback(actionId, pointer, input);
-        }
-
-        private static bool TryResolveGroundPoint(
-            IReadOnlyDictionary<string, object> globals,
-            IInputActionReader input,
-            Vector2 pointer,
-            out WorldCmInt2 worldCm)
-        {
-            if (AuthoritativeGroundPointerHelper.TryRead(input, out worldCm))
-            {
+                snapshot = PointerActionSnapshot.FromState(actionId, state);
                 return true;
             }
 
-            return AuthoritativeGroundPointerHelper.TryResolveFromScreen(globals, pointer, out worldCm);
+            snapshot = default;
+            return false;
         }
 
         private static InteractionActionBindings ResolveBindings(IReadOnlyDictionary<string, object> globals)

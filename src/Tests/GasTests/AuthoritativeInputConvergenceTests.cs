@@ -136,12 +136,26 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = liveInput,
                 [CoreServiceKeys.AuthoritativeInput.Name] = authoritativeInput,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
                 [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.SelectionRuntime.Name] = selection,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
+            ((AuthoritativePointerButtonSnapshot)globals[CoreServiceKeys.AuthoritativePointerButtons.Name]).SetState(
+                "Confirm",
+                new PointerButtonState(
+                    Vector2.Zero,
+                    Vector2.Zero,
+                    Vector2.Zero,
+                    Vector2.Zero,
+                    isDown: true,
+                    pressedThisFrame: true,
+                    releasedThisFrame: false,
+                    hasPressPointer: true,
+                    hasReleasePointer: false,
+                    hasLastDownPointer: true));
 
             var system = new GasInputResponseSystem(world, globals);
             var requests = (InputRequestQueue)globals[CoreServiceKeys.AbilityInputRequestQueue.Name];
