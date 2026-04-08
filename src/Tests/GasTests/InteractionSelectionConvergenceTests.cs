@@ -88,6 +88,73 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GasSelectionResponseSystem_UsesAuthoritativePointerButtonSnapshot_ForConfirmPointer()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var pointerButtons = new AuthoritativePointerButtonSnapshot();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.InputHandler.Name] = input,
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = pointerButtons,
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
+                [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
+            };
+
+            var origin = world.Create(new Team { Id = 1 });
+            var enemy = world.Create(WorldPositionCm.FromCm(1600, 1200), new Team { Id = 2 }, new SelectionSelectableTag());
+
+            var rules = new SelectionRuleRegistry();
+            rules.Register(77, new SelectionRule
+            {
+                Mode = SelectionRuleMode.SingleNearest,
+                RelationshipFilter = RelationshipFilter.All,
+                RadiusCm = 100,
+                MaxCount = 1,
+            });
+
+            var system = new GasSelectionResponseSystem(world, globals, new StubSpatialQueryService(enemy), rules);
+            var requests = (SelectionRequestQueue)globals[CoreServiceKeys.SelectionRequestQueue.Name];
+            var responses = (SelectionResponseBuffer)globals[CoreServiceKeys.SelectionResponseBuffer.Name];
+            requests.TryEnqueue(new SelectionRequest
+            {
+                RequestId = 42,
+                RequestTagId = 77,
+                Origin = origin,
+            });
+
+            pointerButtons.SetState(
+                "Confirm",
+                new PointerButtonState(
+                    new Vector2(1600f, 1200f),
+                    new Vector2(1600f, 1200f),
+                    default,
+                    new Vector2(1600f, 1200f),
+                    isDown: true,
+                    pressedThisFrame: true,
+                    releasedThisFrame: false,
+                    hasPressPointer: true,
+                    hasReleasePointer: false,
+                    hasLastDownPointer: true));
+
+            input.InjectAction("PointerPos", new Vector3(5200f, 4200f, 0f));
+            input.Update();
+            system.Update(0f);
+
+            That(responses.TryConsume(42, out var response), Is.True);
+            That(response.TryGetWorldPoint(out var worldPoint), Is.True);
+            That(worldPoint, Is.EqualTo(new WorldCmInt2(1600, 1200)));
+            That(response.Count, Is.EqualTo(1));
+            That(response.GetEntity(0), Is.EqualTo(enemy));
+        }
+
+        [Test]
         public void GasInputResponseSystem_UsesSharedInteractionBindings()
         {
             using var world = World.Create();

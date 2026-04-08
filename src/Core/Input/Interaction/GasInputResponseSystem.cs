@@ -2,8 +2,6 @@
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Input;
-using Ludots.Core.Input.Interaction;
-using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 
@@ -16,8 +14,6 @@ namespace Ludots.Core.Input.Interaction
     /// </summary>
     public sealed class GasInputResponseSystem : ISystem<float>
     {
-        private static readonly InteractionActionBindings DefaultBindings = new InteractionActionBindings();
-
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly SelectionRuntime? _selection;
@@ -38,9 +34,9 @@ namespace Ludots.Core.Input.Interaction
 
         public void Update(in float dt)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) || inputObj is not IInputActionReader input) return;
             if (!_globals.TryGetValue(CoreServiceKeys.AbilityInputRequestQueue.Name, out var reqObj) || reqObj is not InputRequestQueue requests) return;
             if (!_globals.TryGetValue(CoreServiceKeys.InputResponseBuffer.Name, out var respObj) || respObj is not InputResponseBuffer responses) return;
+            if (!PointerInteractionSnapshotReader.TryRead(_globals, out PointerInteractionSnapshot pointer)) return;
 
             if (!_hasActive && requests.TryDequeue(out var req))
             {
@@ -50,8 +46,7 @@ namespace Ludots.Core.Input.Interaction
 
             if (!_hasActive) return;
 
-            var bindings = ResolveBindings();
-            if (!input.PressedThisFrame(bindings.ConfirmActionId)) return;
+            if (!pointer.Confirm.PressedThisFrame) return;
 
             Entity target = default;
             if (_selection != null &&
@@ -76,16 +71,6 @@ namespace Ludots.Core.Input.Interaction
 
             _hasActive = false;
             _active = default;
-        }
-
-        private InteractionActionBindings ResolveBindings()
-        {
-            if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var obj) && obj is InteractionActionBindings bindings)
-            {
-                return bindings;
-            }
-
-            return DefaultBindings;
         }
 
         public void BeforeUpdate(in float dt) { }
