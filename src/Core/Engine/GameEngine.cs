@@ -42,6 +42,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Gameplay.GAS.Presentation;
@@ -586,6 +587,8 @@ namespace Ludots.Core.Engine
             var selectionSetKeyRegistry = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var selectionConfig = config.Selection ?? new SelectionRuntimeConfig();
             var selectionRuntime = new SelectionRuntime(World, selectionConfig, selectionSetKeyRegistry);
+            var interactionActionBindings = new InteractionActionBindings();
+            var selectionRuleRegistry = SelectionRuleRegistry.CreateWithDefaults();
             var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue();
             var orderQueue = new OrderQueue();
             var chainOrderQueue = new OrderQueue();
@@ -783,6 +786,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.SelectionRuntime, selectionRuntime);
             SetService(CoreServiceKeys.SelectionConfig, selectionConfig);
             SetService(CoreServiceKeys.SelectionSetKeyRegistry, selectionSetKeyRegistry);
+            SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
+            SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
+            SetService(CoreServiceKeys.VisualHeightmap, new FlatVisualHeightmap());
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
             SetService(CoreServiceKeys.OrderQueue, orderQueue);
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);

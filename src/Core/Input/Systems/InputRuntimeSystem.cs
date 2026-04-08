@@ -68,10 +68,7 @@ namespace Ludots.Core.Input.Systems
 
         private void CapturePointerButtons(PlayerInputHandler input)
         {
-            var bindings = _globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var bindingsObj) &&
-                           bindingsObj is InteractionActionBindings configuredBindings
-                ? configuredBindings
-                : new InteractionActionBindings();
+            var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(InputRuntimeSystem));
             Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
             CapturePointerButton(input, bindings.ConfirmActionId, pointer);
             CapturePointerButton(input, bindings.CommandActionId, pointer);

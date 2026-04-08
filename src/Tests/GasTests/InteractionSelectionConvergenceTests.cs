@@ -768,7 +768,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void EntityClickSelectSystem_ClickAndScreenDrag_UpdateSelectionBuffer_SelectedTag_AndPrimaryEntity()
+        public void AmbientSelectionApplySystem_ClickAndScreenDrag_UpdateSelectionBuffer_SelectedTag_AndPrimaryEntity()
         {
             using var world = World.Create();
 
@@ -787,10 +787,11 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
 
-            var system = new EntityClickSelectSystem(world, globals);
+            var system = new AmbientSelectionApplySystem(world, globals);
 
             Click(system, globals, input, new Vector2(1600f, 1200f));
 
@@ -806,7 +807,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void EntityClickSelectSystem_ClickEmptyGround_ClearsSelection()
+        public void AmbientSelectionApplySystem_ClickEmptyGround_ClearsSelection()
         {
             using var world = World.Create();
 
@@ -823,11 +824,12 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
             SeedAmbientSelection(world, globals, local, first);
 
-            var system = new EntityClickSelectSystem(world, globals);
+            var system = new AmbientSelectionApplySystem(world, globals);
             Click(system, globals, input, new Vector2(5200f, 4200f));
 
             That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.Ambient), Is.EqualTo(0));
@@ -835,7 +837,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void EntityClickSelectSystem_RuntimeDisabledEntity_IsNotSelectable()
+        public void AmbientSelectionApplySystem_RuntimeDisabledEntity_IsNotSelectable()
         {
             using var world = World.Create();
 
@@ -857,9 +859,10 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
-            var system = new EntityClickSelectSystem(world, globals);
+            var system = new AmbientSelectionApplySystem(world, globals);
 
             Click(system, globals, input, new Vector2(1600f, 1200f));
 
@@ -868,7 +871,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void EntityClickSelectSystem_AimConfirmRelease_DoesNotStealSelection()
+        public void AmbientSelectionApplySystem_AimConfirmRelease_DoesNotStealSelection()
         {
             using var world = World.Create();
 
@@ -886,11 +889,12 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
             SeedAmbientSelection(world, globals, local, actor);
 
-            var selectionSystem = new EntityClickSelectSystem(world, globals);
+            var selectionSystem = new AmbientSelectionApplySystem(world, globals);
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
             {
                 InteractionMode = InteractionModeType.AimCast,
@@ -1010,7 +1014,7 @@ namespace Ludots.Tests.GAS
             };
         }
 
-        private static void Click(EntityClickSelectSystem system, Dictionary<string, object> globals, PlayerInputHandler input, Vector2 pointer)
+        private static void Click(AmbientSelectionApplySystem system, Dictionary<string, object> globals, PlayerInputHandler input, Vector2 pointer)
         {
             SetConfirmSnapshot(globals, pointer, pressedThisFrame: true, isDown: true, releasedThisFrame: false);
             SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)pointer.X, (int)pointer.Y));
@@ -1025,7 +1029,7 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
         }
 
-        private static void DragSelect(EntityClickSelectSystem system, Dictionary<string, object> globals, PlayerInputHandler input, Vector2 from, Vector2 to)
+        private static void DragSelect(AmbientSelectionApplySystem system, Dictionary<string, object> globals, PlayerInputHandler input, Vector2 from, Vector2 to)
         {
             SetConfirmSnapshot(globals, from, pressedThisFrame: true, isDown: true, releasedThisFrame: false);
             SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)from.X, (int)from.Y));
@@ -1048,10 +1052,7 @@ namespace Ludots.Tests.GAS
 
         private static void SetConfirmSnapshot(Dictionary<string, object> globals, Vector2 pointer, bool pressedThisFrame, bool isDown, bool releasedThisFrame = false)
         {
-            string actionId = globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out object? bindingsObj) &&
-                              bindingsObj is InteractionActionBindings bindings
-                ? bindings.ConfirmActionId
-                : InteractionActionBindings.DefaultConfirmActionId;
+            string actionId = InteractionActionBindingsResolver.Require(globals, nameof(InteractionSelectionConvergenceTests)).ConfirmActionId;
             SetActionSnapshot(globals, actionId, pointer, pressedThisFrame, isDown, releasedThisFrame);
         }
 

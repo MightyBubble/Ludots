@@ -131,8 +131,6 @@ namespace Ludots.Core.Input.Interaction
 
     public static class PointerInteractionSnapshotReader
     {
-        private static readonly InteractionActionBindings DefaultBindings = new();
-
         public static bool TryRead(IReadOnlyDictionary<string, object> globals, out PointerInteractionSnapshot snapshot)
         {
             if (globals == null) throw new ArgumentNullException(nameof(globals));
@@ -144,7 +142,7 @@ namespace Ludots.Core.Input.Interaction
                 return false;
             }
 
-            InteractionActionBindings bindings = ResolveBindings(globals);
+            InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(globals, nameof(PointerInteractionSnapshotReader));
             Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
 
             if (!TryReadActionSnapshot(globals, bindings.ConfirmActionId, pointer, out PointerActionSnapshot confirm))
@@ -190,15 +188,5 @@ namespace Ludots.Core.Input.Interaction
             return false;
         }
 
-        private static InteractionActionBindings ResolveBindings(IReadOnlyDictionary<string, object> globals)
-        {
-            if (globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var obj) &&
-                obj is InteractionActionBindings bindings)
-            {
-                return bindings;
-            }
-
-            return DefaultBindings;
-        }
     }
 }

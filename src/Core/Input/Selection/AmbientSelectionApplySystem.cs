@@ -16,7 +16,7 @@ namespace Ludots.Core.Input.Selection
     /// Shared selection runtime for single-click and screen-space box selection.
     /// Formal selection writes only to the selector's ambient selection set.
     /// </summary>
-    public sealed class EntityClickSelectSystem : ISystem<float>
+    public sealed class AmbientSelectionApplySystem : ISystem<float>
     {
         private static readonly QueryDescription SelectableQuery = new QueryDescription().WithAll<VisualTransform, CullState, SelectionSelectableTag>();
 
@@ -28,14 +28,14 @@ namespace Ludots.Core.Input.Selection
 
         public Action<WorldCmInt2, Entity>? OnEntitySelected { get; set; }
 
-        public EntityClickSelectSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
+        public AmbientSelectionApplySystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
         {
             _world = world;
             _globals = globals;
             _selection = selection;
         }
 
-        public EntityClickSelectSystem(World world, Dictionary<string, object> globals)
+        public AmbientSelectionApplySystem(World world, Dictionary<string, object> globals)
         {
             _world = world;
             _globals = globals;
@@ -302,20 +302,8 @@ namespace Ludots.Core.Input.Selection
                 return runtime;
             }
 
-            var config = globals.TryGetValue(CoreServiceKeys.SelectionConfig.Name, out var configObj) &&
-                         configObj is SelectionRuntimeConfig selectionConfig
-                ? selectionConfig
-                : new SelectionRuntimeConfig();
-            var setKeys = globals.TryGetValue(CoreServiceKeys.SelectionSetKeyRegistry.Name, out var registryObj) &&
-                          registryObj is StringIntRegistry existingRegistry
-                ? existingRegistry
-                : new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-
-            runtime = new SelectionRuntime(world, config, setKeys);
-            globals[CoreServiceKeys.SelectionRuntime.Name] = runtime;
-            globals[CoreServiceKeys.SelectionConfig.Name] = config;
-            globals[CoreServiceKeys.SelectionSetKeyRegistry.Name] = setKeys;
-            return runtime;
+            throw new InvalidOperationException(
+                $"{nameof(AmbientSelectionApplySystem)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered before construction.");
         }
     }
 }

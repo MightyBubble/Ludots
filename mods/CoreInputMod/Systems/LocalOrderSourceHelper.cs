@@ -124,12 +124,10 @@ namespace CoreInputMod.Systems
             mapping.SetSelectedContainerProvider((string setKey, out Entity container) => _context.TryGetSelectedContainer(setKey, out container));
             mapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) => _context.TryGetSelectedEntities(setKey, entities));
             mapping.SetHoveredEntityProvider((out Entity entity) => _context.TryGetEntity(CoreServiceKeys.HoveredEntity.Name, out entity));
-            if (_globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out var bindingsObj) && bindingsObj is InteractionActionBindings bindings)
-            {
-                mapping.ConfirmActionId = bindings.ConfirmActionId;
-                mapping.CancelActionId = bindings.CancelActionId;
-                mapping.CommandActionId = bindings.CommandActionId;
-            }
+            var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(LocalOrderSourceHelper));
+            mapping.ConfirmActionId = bindings.ConfirmActionId;
+            mapping.CancelActionId = bindings.CancelActionId;
+            mapping.CommandActionId = bindings.CommandActionId;
             mapping.SetOrderSubmitHandler((in Order order) =>
             {
                 _globals[LastOrderDebugKey] = DescribeOrder(in order);
