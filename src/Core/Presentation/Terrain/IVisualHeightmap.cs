@@ -18,7 +18,14 @@ namespace Ludots.Core.Presentation.Terrain
             ReadOnlySpan<float> directionX,
             ReadOnlySpan<float> directionY,
             ReadOnlySpan<float> directionZ,
-            Span<VisualGroundHit> outHits,
+            Span<float> outWorldXCm,
+            Span<float> outWorldYCm,
+            Span<float> outHeightCm,
+            Span<float> outDistanceMeters,
+            Span<float> outNormalX,
+            Span<float> outNormalY,
+            Span<float> outNormalZ,
+            Span<int> outLayerIndex,
             Span<byte> outHitMask,
             int layerIndex = 0);
     }

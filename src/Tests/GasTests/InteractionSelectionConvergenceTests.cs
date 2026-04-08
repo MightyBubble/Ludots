@@ -20,6 +20,7 @@ using Ludots.Core.Input.Selection;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -42,6 +43,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new AnchoredScreenRayProvider(new Vector3(1.5f, 10f, 2.5f)),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
                 [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(),
@@ -130,6 +132,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new ConstantScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
                 [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(16),
@@ -181,6 +184,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new ConstantScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
                 [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(),
@@ -237,6 +241,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new ConstantScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
                 [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(),
@@ -700,6 +705,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
@@ -734,6 +740,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
@@ -766,6 +773,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
@@ -793,6 +801,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
@@ -979,6 +988,20 @@ namespace Ludots.Tests.GAS
         private static WorldSizeSpec CreateWorldSizeSpec()
         {
             return new WorldSizeSpec(new WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100);
+        }
+
+        private static IVisualHeightmap CreateFlatHeightmap()
+        {
+            return new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new WorldAabbCm(-10_000, -10_000, 20_000, 20_000),
+                    sampleColumns: 2,
+                    sampleRows: 2,
+                    new short[]
+                    {
+                        0, 0,
+                        0, 0,
+                    }));
         }
 
         private sealed class NullInputBackend : IInputBackend

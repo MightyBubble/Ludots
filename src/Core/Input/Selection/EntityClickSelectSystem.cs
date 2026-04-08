@@ -173,20 +173,14 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            var ray = rayProvider.GetRay(pointer);
-            if (_globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj) &&
-                heightmapObj is IVisualHeightmap heightmap &&
-                GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out groundWorldCm))
-            {
-                return true;
-            }
-
-            if (!GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out groundWorldCm))
+            if (!_globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj) ||
+                heightmapObj is not IVisualHeightmap heightmap)
             {
                 return false;
             }
 
-            return true;
+            var ray = rayProvider.GetRay(pointer);
+            return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out groundWorldCm);
         }
 
         private bool TryGetSelectionOwner(out Entity owner)

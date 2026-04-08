@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -94,7 +95,46 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void VisualHeightmapRuntime_SupportsBatchSamplingAndRaycast()
+        public void VisualHeightmapBinary_RoundTripsAssetMetadataAndSamples()
+        {
+            var asset = new VisualHeightmapAsset(
+                new WorldAabbCm(-500, 250, 1500, 2000),
+                sampleColumns: 3,
+                sampleRows: 2,
+                new short[]
+                {
+                    10, 20, 30,
+                    40, 50, 60,
+                    70, 80, 90,
+                    100, 110, 120,
+                },
+                new[]
+                {
+                    new VisualHeightmapLayerDefinition(10, "base", sampleOffset: 0, sampleCount: 6),
+                    new VisualHeightmapLayerDefinition(11, "detail", sampleOffset: 6, sampleCount: 6),
+                },
+                VisualHeightmapStorageLayout.RowMajorInt16Centimeters,
+                defaultLayerIndex: 1);
+
+            using var stream = new MemoryStream();
+            VisualHeightmapBinary.Write(stream, asset);
+            stream.Position = 0;
+
+            VisualHeightmapAsset roundTripped = VisualHeightmapBinary.Read(stream);
+
+            Assert.That(roundTripped.Bounds, Is.EqualTo(asset.Bounds));
+            Assert.That(roundTripped.SampleColumns, Is.EqualTo(asset.SampleColumns));
+            Assert.That(roundTripped.SampleRows, Is.EqualTo(asset.SampleRows));
+            Assert.That(roundTripped.StorageLayout, Is.EqualTo(asset.StorageLayout));
+            Assert.That(roundTripped.DefaultLayerIndex, Is.EqualTo(asset.DefaultLayerIndex));
+            Assert.That(roundTripped.Layers.Length, Is.EqualTo(2));
+            Assert.That(roundTripped.Layers[0].Name, Is.EqualTo("base"));
+            Assert.That(roundTripped.Layers[1].Name, Is.EqualTo("detail"));
+            Assert.That(roundTripped.HeightSamplesCm, Is.EqualTo(asset.HeightSamplesCm));
+        }
+
+        [Test]
+        public void VisualHeightmapRuntime_SupportsBatchSamplingAndSoaRaycast()
         {
             var runtime = CreateRuntime();
 
@@ -121,11 +161,43 @@ namespace Ludots.Tests.Presentation
             float[] dx = { 0f, 0f };
             float[] dy = { -1f, -1f };
             float[] dz = { 0f, 0f };
-            var hits = new VisualGroundHit[2];
+            var hitWorldX = new float[2];
+            var hitWorldY = new float[2];
+            var hitHeight = new float[2];
+            var hitDistance = new float[2];
+            var hitNormalX = new float[2];
+            var hitNormalY = new float[2];
+            var hitNormalZ = new float[2];
+            var hitLayer = new int[2];
             byte[] hitMask = new byte[2];
-            Assert.That(runtime.RaycastGroundBatch(ox, oy, oz, dx, dy, dz, hits, hitMask), Is.True);
+            Assert.That(
+                runtime.RaycastGroundBatch(
+                    ox,
+                    oy,
+                    oz,
+                    dx,
+                    dy,
+                    dz,
+                    hitWorldX,
+                    hitWorldY,
+                    hitHeight,
+                    hitDistance,
+                    hitNormalX,
+                    hitNormalY,
+                    hitNormalZ,
+                    hitLayer,
+                    hitMask),
+                Is.True);
             Assert.That(hitMask[0], Is.EqualTo((byte)1));
+            Assert.That(hitWorldX[0], Is.EqualTo(500f).Within(0.001f));
+            Assert.That(hitWorldY[0], Is.EqualTo(500f).Within(0.001f));
+            Assert.That(hitHeight[0], Is.EqualTo(100f).Within(0.001f));
+            Assert.That(hitDistance[0], Is.EqualTo(9f).Within(0.001f));
+            Assert.That(hitNormalY[0], Is.GreaterThan(0.9f));
+            Assert.That(hitLayer[0], Is.EqualTo(0));
             Assert.That(hitMask[1], Is.EqualTo((byte)0));
+            Assert.That(float.IsNaN(hitWorldX[1]), Is.True);
+            Assert.That(hitLayer[1], Is.EqualTo(-1));
         }
 
         [Test]

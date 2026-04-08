@@ -19,7 +19,7 @@ namespace Ludots.Core.Input.Runtime
         public const string ActionId = "__runtime.PointerGroundWorldCm";
 
         public static void Capture(
-            Dictionary<string, object> globals,
+            IReadOnlyDictionary<string, object> globals,
             PlayerInputHandler input,
             AuthoritativeInputAccumulator accumulator)
         {
@@ -57,13 +57,15 @@ namespace Ludots.Core.Input.Runtime
         }
 
         public static bool TryResolveFromScreen(
-            Dictionary<string, object> globals,
+            IReadOnlyDictionary<string, object> globals,
             Vector2 screenPosition,
             out WorldCmInt2 worldCm)
         {
             worldCm = default;
             if (!globals.TryGetValue(CoreServiceKeys.ScreenRayProvider.Name, out var rayProviderObj) ||
                 rayProviderObj is not IScreenRayProvider rayProvider ||
+                !globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj) ||
+                heightmapObj is not IVisualHeightmap heightmap ||
                 !globals.TryGetValue(CoreServiceKeys.WorldSizeSpec.Name, out var worldSizeObj) ||
                 worldSizeObj is not WorldSizeSpec worldSize)
             {
@@ -73,14 +75,7 @@ namespace Ludots.Core.Input.Runtime
             try
             {
                 ScreenRay ray = rayProvider.GetRay(screenPosition);
-                if (globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj) &&
-                    heightmapObj is IVisualHeightmap heightmap &&
-                    GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out worldCm))
-                {
-                    return true;
-                }
-
-                return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out worldCm);
+                return GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, heightmap, worldSize, out worldCm);
             }
             catch (ArgumentOutOfRangeException)
             {
