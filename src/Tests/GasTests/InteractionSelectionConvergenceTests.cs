@@ -42,6 +42,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.ScreenRayProvider.Name] = new AnchoredScreenRayProvider(new Vector3(1.5f, 10f, 2.5f)),
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
@@ -75,7 +76,8 @@ namespace Ludots.Tests.GAS
                 TargetContext = targetContext,
             });
 
-            input.InjectButtonPress("Confirm");
+            SetConfirmSnapshot(globals, new Vector2(150f, 250f), pressedThisFrame: true, isDown: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2(150, 250));
             input.Update();
             system.Update(0f);
 
@@ -143,6 +145,7 @@ namespace Ludots.Tests.GAS
                     hasReleasePointer: false,
                     hasLastDownPointer: true));
 
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2(1600, 1200));
             input.InjectAction("PointerPos", new Vector3(5200f, 4200f, 0f));
             input.Update();
             system.Update(0f);
@@ -166,6 +169,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
                 [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
@@ -179,7 +183,7 @@ namespace Ludots.Tests.GAS
             var responses = (InputResponseBuffer)globals[CoreServiceKeys.InputResponseBuffer.Name];
             requests.TryEnqueue(new InputRequest { RequestId = 9, RequestTagId = 501 });
 
-            input.InjectButtonPress("Confirm");
+            SetConfirmSnapshot(globals, new Vector2(0f, 0f), pressedThisFrame: true, isDown: true);
             input.Update();
             system.Update(0f);
 
@@ -198,6 +202,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.ScreenRayProvider.Name] = new ConstantScreenRayProvider(),
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
@@ -232,7 +237,8 @@ namespace Ludots.Tests.GAS
                 Origin = origin,
             });
 
-            input.InjectButtonPress("Confirm");
+            SetConfirmSnapshot(globals, new Vector2(0f, 0f), pressedThisFrame: true, isDown: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2(1, 1));
             input.Update();
 
             var ex = NUnit.Framework.Assert.Throws<InvalidOperationException>(() => system.Update(0f));
@@ -250,6 +256,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.ScreenRayProvider.Name] = new ConstantScreenRayProvider(),
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
@@ -288,7 +295,8 @@ namespace Ludots.Tests.GAS
                 Origin = origin,
             });
 
-            input.InjectButtonPress("Confirm");
+            SetConfirmSnapshot(globals, new Vector2(0f, 0f), pressedThisFrame: true, isDown: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2(1, 1));
             input.Update();
             system.Update(0f);
 
@@ -307,6 +315,7 @@ namespace Ludots.Tests.GAS
             {
                 [CoreServiceKeys.InputHandler.Name] = input,
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.ScreenRayProvider.Name] = new ConstantScreenRayProvider(),
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
@@ -348,7 +357,8 @@ namespace Ludots.Tests.GAS
                 Origin = origin,
             });
 
-            input.InjectButtonPress("Confirm");
+            SetConfirmSnapshot(globals, new Vector2(0f, 0f), pressedThisFrame: true, isDown: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2(1, 1));
             input.Update();
             system.Update(0f);
 
@@ -771,6 +781,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
@@ -781,13 +792,13 @@ namespace Ludots.Tests.GAS
 
             var system = new EntityClickSelectSystem(world, globals);
 
-            Click(system, input, new Vector2(1600f, 1200f));
+            Click(system, globals, input, new Vector2(1600f, 1200f));
 
             AssertSelection(selectionRuntime, local, first);
             That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out var currentPrimary), Is.True);
             That(currentPrimary, Is.EqualTo(first));
 
-            DragSelect(system, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
+            DragSelect(system, globals, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
 
             AssertSelection(selectionRuntime, local, first, second, third);
             That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out currentPrimary), Is.True);
@@ -806,6 +817,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
@@ -816,7 +828,7 @@ namespace Ludots.Tests.GAS
             SeedAmbientSelection(world, globals, local, first);
 
             var system = new EntityClickSelectSystem(world, globals);
-            Click(system, input, new Vector2(5200f, 4200f));
+            Click(system, globals, input, new Vector2(5200f, 4200f));
 
             That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.Ambient), Is.EqualTo(0));
             That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out _), Is.False);
@@ -839,6 +851,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
@@ -848,7 +861,7 @@ namespace Ludots.Tests.GAS
             var selectionRuntime = CreateSelectionRuntime(world, globals);
             var system = new EntityClickSelectSystem(world, globals);
 
-            Click(system, input, new Vector2(1600f, 1200f));
+            Click(system, globals, input, new Vector2(1600f, 1200f));
 
             That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.Ambient), Is.EqualTo(0));
             That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out _), Is.False);
@@ -867,6 +880,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
                 [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
@@ -917,12 +931,16 @@ namespace Ludots.Tests.GAS
             mapping.Update(0f);
             That(mapping.IsAiming, Is.True);
 
+            SetConfirmSnapshot(globals, new Vector2(2600f, 1600f), pressedThisFrame: true, isDown: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2(2600, 1600));
             input.InjectAction("PointerPos", new Vector3(2600f, 1600f, 0f));
             input.InjectButtonPress("Select");
             input.Update();
             selectionSystem.Update(0f);
             mapping.Update(0f);
 
+            SetConfirmSnapshot(globals, new Vector2(2600f, 1600f), pressedThisFrame: false, isDown: false, releasedThisFrame: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2(2600, 1600));
             input.InjectAction("PointerPos", new Vector3(2600f, 1600f, 0f));
             input.Update();
             selectionSystem.Update(0f);
@@ -983,6 +1001,7 @@ namespace Ludots.Tests.GAS
                     new() { Id = "TabTarget", Name = "TabTarget", Type = InputActionType.Button },
                     new() { Id = "TabTargetReverse", Name = "TabTargetReverse", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Name = "PointerPos", Type = InputActionType.Axis2D },
+                    new() { Id = AuthoritativeGroundPointerHelper.ActionId, Name = AuthoritativeGroundPointerHelper.ActionId, Type = InputActionType.Axis3D },
                 },
                 Contexts = new List<InputContextDef>
                 {
@@ -991,33 +1010,75 @@ namespace Ludots.Tests.GAS
             };
         }
 
-        private static void Click(EntityClickSelectSystem system, PlayerInputHandler input, Vector2 pointer)
+        private static void Click(EntityClickSelectSystem system, Dictionary<string, object> globals, PlayerInputHandler input, Vector2 pointer)
         {
+            SetConfirmSnapshot(globals, pointer, pressedThisFrame: true, isDown: true, releasedThisFrame: false);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)pointer.X, (int)pointer.Y));
             input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
-            input.InjectButtonPress("Select");
             input.Update();
             system.Update(0f);
 
+            SetConfirmSnapshot(globals, pointer, pressedThisFrame: false, isDown: false, releasedThisFrame: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)pointer.X, (int)pointer.Y));
             input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
             input.Update();
             system.Update(0f);
         }
 
-        private static void DragSelect(EntityClickSelectSystem system, PlayerInputHandler input, Vector2 from, Vector2 to)
+        private static void DragSelect(EntityClickSelectSystem system, Dictionary<string, object> globals, PlayerInputHandler input, Vector2 from, Vector2 to)
         {
+            SetConfirmSnapshot(globals, from, pressedThisFrame: true, isDown: true, releasedThisFrame: false);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)from.X, (int)from.Y));
             input.InjectAction("PointerPos", new Vector3(from.X, from.Y, 0f));
-            input.InjectButtonPress("Select");
             input.Update();
             system.Update(0f);
 
+            SetConfirmSnapshot(globals, to, pressedThisFrame: false, isDown: true, releasedThisFrame: false);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)to.X, (int)to.Y));
             input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
-            input.InjectButtonPress("Select");
             input.Update();
             system.Update(0f);
 
+            SetConfirmSnapshot(globals, to, pressedThisFrame: false, isDown: false, releasedThisFrame: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2((int)to.X, (int)to.Y));
             input.InjectAction("PointerPos", new Vector3(to.X, to.Y, 0f));
             input.Update();
             system.Update(0f);
+        }
+
+        private static void SetConfirmSnapshot(Dictionary<string, object> globals, Vector2 pointer, bool pressedThisFrame, bool isDown, bool releasedThisFrame = false)
+        {
+            string actionId = globals.TryGetValue(CoreServiceKeys.InteractionActionBindings.Name, out object? bindingsObj) &&
+                              bindingsObj is InteractionActionBindings bindings
+                ? bindings.ConfirmActionId
+                : InteractionActionBindings.DefaultConfirmActionId;
+            SetActionSnapshot(globals, actionId, pointer, pressedThisFrame, isDown, releasedThisFrame);
+        }
+
+        private static void SetActionSnapshot(Dictionary<string, object> globals, string actionId, Vector2 pointer, bool pressedThisFrame, bool isDown, bool releasedThisFrame = false)
+        {
+            var pointerButtons = globals.TryGetValue(CoreServiceKeys.AuthoritativePointerButtons.Name, out object? snapshotObj) &&
+                                 snapshotObj is AuthoritativePointerButtonSnapshot snapshot
+                ? snapshot
+                : throw new InvalidOperationException("AuthoritativePointerButtons missing from globals.");
+            pointerButtons.SetState(
+                actionId,
+                new PointerButtonState(
+                    pointer,
+                    pointer,
+                    pointer,
+                    pointer,
+                    isDown: isDown,
+                    pressedThisFrame: pressedThisFrame,
+                    releasedThisFrame: releasedThisFrame,
+                    hasPressPointer: pressedThisFrame,
+                    hasReleasePointer: releasedThisFrame,
+                    hasLastDownPointer: isDown || releasedThisFrame));
+        }
+
+        private static void SetAuthoritativeGroundPoint(PlayerInputHandler input, in WorldCmInt2 worldCm)
+        {
+            input.InjectAction(AuthoritativeGroundPointerHelper.ActionId, new Vector3(worldCm.X, 0f, worldCm.Y));
         }
 
         private static void AssertSelection(SelectionRuntime selectionRuntime, Entity owner, params Entity[] expected)
