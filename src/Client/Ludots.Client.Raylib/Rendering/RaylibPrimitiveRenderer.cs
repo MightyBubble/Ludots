@@ -23,7 +23,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly RaylibPrimitiveRenderMode _mode;
         private readonly IVirtualFileSystem? _vfs;
         private readonly string? _diagnosticPath;
-        private const int MaxPrefabDepth = 6;
+        private readonly PrefabFinalizedLeafBuffer _prefabLeaves = new PrefabFinalizedLeafBuffer();
 
         private bool _initialized;
         private Mesh _cubeMesh;
@@ -129,8 +129,7 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Scale * scaleMul,
                     item.Color,
                     camera,
-                    meshes,
-                    0);
+                    meshes);
             }
         }
 
@@ -165,7 +164,7 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Rotation,
                     item.Scale * scaleMul, item.Color,
                     camera,
-                    meshes, 0);
+                    meshes);
             }
         }
 
@@ -200,47 +199,45 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Scale * scaleMul,
                     item.Color,
                     camera,
-                    meshes,
-                    depth: 0);
+                    meshes);
             }
 
             FlushInstancedBatches();
         }
 
-        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int depth)
+        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes)
         {
-            if (depth > MaxPrefabDepth) return;
-            if (!meshes.TryGetDescriptor(meshAssetId, out var desc)) return;
+            _prefabLeaves.Clear();
+            PrefabFinalizationPipeline.FinalizeLeaves(
+                meshes,
+                meshAssetId,
+                stableId: 0,
+                position,
+                rotation,
+                scale,
+                color,
+                _prefabLeaves);
 
-            switch (desc.Type)
+            foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
+            {
+                SubmitFinalizedLeaf(in leaf, camera);
+            }
+        }
+
+        private void SubmitFinalizedLeaf(in PrefabFinalizedLeaf leaf, Camera3D camera)
+        {
+            switch (leaf.Descriptor.Type)
             {
                 case MeshAssetType.Primitive:
-                    SubmitPrimitive(desc.PrimitiveKind, position, rotation, scale, color);
+                    SubmitPrimitive(leaf.Descriptor.PrimitiveKind, leaf.Position, leaf.Rotation, leaf.Scale, leaf.Color);
                     break;
 
                 case MeshAssetType.Model:
-                    DrawModel(meshAssetId, desc, position, rotation, scale, color);
+                    DrawModel(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Rotation, leaf.Scale, leaf.Color);
                     break;
 
                 case MeshAssetType.Billboard:
-                    DrawBillboard(meshAssetId, desc, position, scale, color, camera);
-                    break;
-
-                case MeshAssetType.Prefab:
-                    if (desc.PrefabParts != null)
-                    {
-                        for (int p = 0; p < desc.PrefabParts.Length; p++)
-                        {
-                            ref var part = ref desc.PrefabParts[p];
-                            PrefabTransformUtility.Compose(position, rotation, scale, in part, out Vector3 childPos, out Quaternion childRot, out Vector3 childScale);
-                            var childColor = new Vector4(
-                                color.X * part.ColorTint.X,
-                                color.Y * part.ColorTint.Y,
-                                color.Z * part.ColorTint.Z,
-                                color.W * part.ColorTint.W);
-                            SubmitAssetRecursive(part.MeshAssetId, childPos, childRot, childScale, childColor, camera, meshes, depth + 1);
-                        }
-                    }
+                    DrawBillboard(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Scale, leaf.Color, camera);
                     break;
             }
         }
@@ -319,8 +316,7 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Scale * scaleMul,
                     item.Color,
                     camera,
-                    meshes,
-                    0);
+                    meshes);
             }
         }
 
@@ -352,40 +348,39 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int depth)
+        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes)
         {
-            if (depth > MaxPrefabDepth) return;
-            if (!meshes.TryGetDescriptor(meshAssetId, out var desc)) return;
+            _prefabLeaves.Clear();
+            PrefabFinalizationPipeline.FinalizeLeaves(
+                meshes,
+                meshAssetId,
+                stableId: 0,
+                position,
+                rotation,
+                scale,
+                color,
+                _prefabLeaves);
 
-            switch (desc.Type)
+            foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
+            {
+                DrawFinalizedLeaf(in leaf, camera);
+            }
+        }
+
+        private void DrawFinalizedLeaf(in PrefabFinalizedLeaf leaf, Camera3D camera)
+        {
+            switch (leaf.Descriptor.Type)
             {
                 case MeshAssetType.Primitive:
-                    DrawPrimitive(desc.PrimitiveKind, position, scale, color);
+                    DrawPrimitive(leaf.Descriptor.PrimitiveKind, leaf.Position, leaf.Scale, leaf.Color);
                     break;
 
                 case MeshAssetType.Model:
-                    DrawModel(meshAssetId, desc, position, rotation, scale, color);
+                    DrawModel(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Rotation, leaf.Scale, leaf.Color);
                     break;
 
                 case MeshAssetType.Billboard:
-                    DrawBillboard(meshAssetId, desc, position, scale, color, camera);
-                    break;
-
-                case MeshAssetType.Prefab:
-                    if (desc.PrefabParts != null)
-                    {
-                        for (int p = 0; p < desc.PrefabParts.Length; p++)
-                        {
-                            ref var part = ref desc.PrefabParts[p];
-                            PrefabTransformUtility.Compose(position, rotation, scale, in part, out Vector3 childPos, out Quaternion childRot, out Vector3 childScale);
-                            var childColor = new Vector4(
-                                color.X * part.ColorTint.X,
-                                color.Y * part.ColorTint.Y,
-                                color.Z * part.ColorTint.Z,
-                                color.W * part.ColorTint.W);
-                            DrawAssetRecursive(part.MeshAssetId, childPos, childRot, childScale, childColor, camera, meshes, depth + 1);
-                        }
-                    }
+                    DrawBillboard(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Scale, leaf.Color, camera);
                     break;
             }
         }
