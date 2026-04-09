@@ -70,6 +70,8 @@ namespace Ludots.Adapter.UE5
 
         HostLevelNavigationResult CancelPendingLoad();
 
+        HostLevelNavigationResult CancelPendingReturn();
+
         HostLevelNavigationResult ExitPreview();
     }
 }

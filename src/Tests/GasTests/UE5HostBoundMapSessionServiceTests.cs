@@ -392,6 +392,108 @@ namespace GasTests
         }
 
         [Test]
+        public void UnloadMap_WhenPreviewReturnIsPending_CancelsHostPendingReturn()
+        {
+            using var environment = new HostLoadTestEnvironment();
+            var resolver = new MapBindingResolver(new Dictionary<string, ExplicitHostMapBinding>
+            {
+                [OuterMapId] = CreateBinding("OuterWorld", "/Game/Maps/Outer", HostLevelTransitionMode.DirectOpenLevel),
+                [InnerMapId] = CreateBinding("PreviewWorld", "/Game/Maps/Preview", HostLevelTransitionMode.PreviewMod),
+            });
+            var navigator = new ScriptedNavigator();
+            navigator.QueueLoadResult("/Game/Maps/Outer", HostLevelNavigationResult.Ok(new HostLevelNavigationSnapshot(
+                HostLevelTransitionMode.DirectOpenLevel,
+                HostLevelNavigationState.Active,
+                "/Game/Maps/Outer",
+                "/Game/Maps/Outer",
+                "OuterWorld",
+                string.Empty)));
+            navigator.QueueLoadResult("/Game/Maps/Preview", HostLevelNavigationResult.Ok(new HostLevelNavigationSnapshot(
+                HostLevelTransitionMode.PreviewMod,
+                HostLevelNavigationState.Active,
+                "/Game/Maps/Preview",
+                "/Game/Maps/Preview",
+                "PreviewWorld",
+                string.Empty)));
+            navigator.QueueExitPreviewResult(HostLevelNavigationResult.Ok(new HostLevelNavigationSnapshot(
+                HostLevelTransitionMode.PreviewMod,
+                HostLevelNavigationState.Returning,
+                "/Game/Maps/Preview",
+                "/Game/Maps/Preview",
+                "PreviewWorld",
+                string.Empty)));
+            navigator.SetCancelPendingReturnResult(HostLevelNavigationResult.Ok(HostLevelNavigationSnapshot.Empty));
+
+            using GameEngine engine = environment.CreateEngine(resolver, navigator, out _);
+
+            engine.LoadMap(OuterMapId);
+            engine.PushMap(InnerMapId);
+            engine.PopMap();
+
+            Assert.That(engine.CurrentMapSession?.MapId.Value, Is.EqualTo(OuterMapId));
+            Assert.That(navigator.CancelPendingReturnCalls, Is.EqualTo(0));
+
+            engine.UnloadMap(OuterMapId);
+
+            Assert.That(navigator.CancelPendingReturnCalls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Dispose_WhenPreviewReturnIsPending_CancelsHostPendingReturn()
+        {
+            using var environment = new HostLoadTestEnvironment();
+            var resolver = new MapBindingResolver(new Dictionary<string, ExplicitHostMapBinding>
+            {
+                [OuterMapId] = CreateBinding("OuterWorld", "/Game/Maps/Outer", HostLevelTransitionMode.DirectOpenLevel),
+                [InnerMapId] = CreateBinding("PreviewWorld", "/Game/Maps/Preview", HostLevelTransitionMode.PreviewMod),
+            });
+            var navigator = new ScriptedNavigator();
+            navigator.QueueLoadResult("/Game/Maps/Outer", HostLevelNavigationResult.Ok(new HostLevelNavigationSnapshot(
+                HostLevelTransitionMode.DirectOpenLevel,
+                HostLevelNavigationState.Active,
+                "/Game/Maps/Outer",
+                "/Game/Maps/Outer",
+                "OuterWorld",
+                string.Empty)));
+            navigator.QueueLoadResult("/Game/Maps/Preview", HostLevelNavigationResult.Ok(new HostLevelNavigationSnapshot(
+                HostLevelTransitionMode.PreviewMod,
+                HostLevelNavigationState.Active,
+                "/Game/Maps/Preview",
+                "/Game/Maps/Preview",
+                "PreviewWorld",
+                string.Empty)));
+            navigator.QueueExitPreviewResult(HostLevelNavigationResult.Ok(new HostLevelNavigationSnapshot(
+                HostLevelTransitionMode.PreviewMod,
+                HostLevelNavigationState.Returning,
+                "/Game/Maps/Preview",
+                "/Game/Maps/Preview",
+                "PreviewWorld",
+                string.Empty)));
+            navigator.SetCancelPendingReturnResult(HostLevelNavigationResult.Ok(HostLevelNavigationSnapshot.Empty));
+
+            GameEngine? engine = null;
+            try
+            {
+                engine = environment.CreateEngine(resolver, navigator, out _);
+
+                engine.LoadMap(OuterMapId);
+                engine.PushMap(InnerMapId);
+                engine.PopMap();
+
+                Assert.That(navigator.CancelPendingReturnCalls, Is.EqualTo(0));
+
+                engine.Dispose();
+                engine = null;
+
+                Assert.That(navigator.CancelPendingReturnCalls, Is.EqualTo(1));
+            }
+            finally
+            {
+                engine?.Dispose();
+            }
+        }
+
+        [Test]
         public void Dispose_WhenMapResumeIsPending_CancelsFormalResumeGate()
         {
             using var environment = new HostLoadTestEnvironment();
@@ -652,7 +754,10 @@ namespace GasTests
 
             public int ExitPreviewCalls { get; private set; }
             public int CancelPendingLoadCalls { get; private set; }
+            public int CancelPendingReturnCalls { get; private set; }
             public HostLevelNavigationResult CancelPendingLoadResult { get; private set; } =
+                HostLevelNavigationResult.Ok(HostLevelNavigationSnapshot.Empty);
+            public HostLevelNavigationResult CancelPendingReturnResult { get; private set; } =
                 HostLevelNavigationResult.Ok(HostLevelNavigationSnapshot.Empty);
 
             public void QueueLoadResult(string levelPath, params HostLevelNavigationResult[] results)
@@ -671,6 +776,11 @@ namespace GasTests
             public void SetCancelPendingLoadResult(HostLevelNavigationResult result)
             {
                 CancelPendingLoadResult = result;
+            }
+
+            public void SetCancelPendingReturnResult(HostLevelNavigationResult result)
+            {
+                CancelPendingReturnResult = result;
             }
 
             public void SetSnapshot(HostLevelNavigationSnapshot snapshot)
@@ -703,6 +813,13 @@ namespace GasTests
                 CancelPendingLoadCalls++;
                 Snapshot = CancelPendingLoadResult.Snapshot;
                 return CancelPendingLoadResult;
+            }
+
+            public HostLevelNavigationResult CancelPendingReturn()
+            {
+                CancelPendingReturnCalls++;
+                Snapshot = CancelPendingReturnResult.Snapshot;
+                return CancelPendingReturnResult;
             }
 
             public HostLevelNavigationResult ExitPreview()
