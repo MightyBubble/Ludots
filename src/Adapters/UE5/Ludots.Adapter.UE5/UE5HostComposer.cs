@@ -208,6 +208,9 @@ namespace Ludots.Adapter.UE5
                 () => engine.GetService(UE5AdapterServiceKeys.HostLevelNavigator),
                 snapshot => engine.SetService(UE5AdapterServiceKeys.HostBoundMapSessionState, snapshot));
             engine.SetService(UE5AdapterServiceKeys.HostBoundMapSessionService, hostBoundMapSessionService);
+            engine.RegisterPresentationSystem(new UE5HostBoundMapSessionReconcileSystem(
+                () => engine.CurrentMapSession,
+                hostBoundMapSessionService));
 
             // ── 4. 注入 UE5 适配器 ───────────────────────────────────────
 

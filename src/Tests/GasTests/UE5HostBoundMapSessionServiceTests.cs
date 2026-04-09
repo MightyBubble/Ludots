@@ -114,6 +114,59 @@ namespace GasTests
             Assert.That(snapshot.Binding.LevelPath, Is.EqualTo("/Game/Maps/B"));
         }
 
+        [Test]
+        public void ReconcileSystem_Update_PublishesFocusedMapOwnershipWithoutUiBookkeeping()
+        {
+            MapSession? focusedSession = CreateSession("battle_map");
+            HostBoundMapSessionSnapshot published = HostBoundMapSessionSnapshot.Empty;
+            var service = new UE5HostBoundMapSessionService(
+                resolverAccessor: () => new StubResolver(CreateBinding()),
+                navigatorAccessor: () => new StubNavigator(HostLevelNavigationSnapshot.Empty),
+                publishSnapshot: snapshot => published = snapshot);
+            var system = new UE5HostBoundMapSessionReconcileSystem(() => focusedSession, service);
+
+            system.Update(0f);
+
+            Assert.That(service.Snapshot.FocusedMapId, Is.EqualTo("battle_map"));
+            Assert.That(service.Snapshot.HasExplicitBinding, Is.True);
+            Assert.That(service.Snapshot.IsHostReady, Is.False);
+            Assert.That(service.Snapshot.HasPendingReturn, Is.False);
+            Assert.That(published, Is.EqualTo(service.Snapshot));
+        }
+
+        [Test]
+        public void ReconcileSystem_FocusedMapChange_ResetsOwnedStateOnNextUpdate()
+        {
+            MapSession? focusedSession = CreateSession("battle_map");
+            var resolver = new MapBindingResolver(
+                new Dictionary<string, ExplicitHostMapBinding>
+                {
+                    ["battle_map"] = CreateBinding(levelPath: "/Game/Maps/Battle"),
+                    ["return_map"] = CreateBinding(
+                        hostWorldName: "ReturnWorld",
+                        levelPath: "/Game/Maps/Return"),
+                });
+            var service = new UE5HostBoundMapSessionService(
+                resolverAccessor: () => resolver,
+                navigatorAccessor: () => new StubNavigator(HostLevelNavigationSnapshot.Empty),
+                publishSnapshot: _ => { });
+            var system = new UE5HostBoundMapSessionReconcileSystem(() => focusedSession, service);
+
+            system.Update(0f);
+            service.SetHostReady(true);
+            service.SetPendingReturn(true);
+
+            focusedSession = CreateSession("return_map");
+            system.Update(0f);
+
+            HostBoundMapSessionSnapshot snapshot = service.Snapshot;
+            Assert.That(snapshot.FocusedMapId, Is.EqualTo("return_map"));
+            Assert.That(snapshot.HasExplicitBinding, Is.True);
+            Assert.That(snapshot.IsHostReady, Is.False);
+            Assert.That(snapshot.HasPendingReturn, Is.False);
+            Assert.That(snapshot.Binding.LevelPath, Is.EqualTo("/Game/Maps/Return"));
+        }
+
         private static MapSession CreateSession(string mapId)
         {
             return new MapSession(new MapId(mapId), new MapConfig { Id = mapId });
@@ -163,6 +216,21 @@ namespace GasTests
             {
                 binding = _bindings.Count > 1 ? _bindings.Dequeue() : _bindings.Peek();
                 return true;
+            }
+        }
+
+        private sealed class MapBindingResolver : IExplicitHostMapBindingResolver
+        {
+            private readonly IReadOnlyDictionary<string, ExplicitHostMapBinding> _bindingsByMapId;
+
+            public MapBindingResolver(IReadOnlyDictionary<string, ExplicitHostMapBinding> bindingsByMapId)
+            {
+                _bindingsByMapId = bindingsByMapId;
+            }
+
+            public bool TryResolve(MapSession focusedSession, out ExplicitHostMapBinding binding)
+            {
+                return _bindingsByMapId.TryGetValue(focusedSession.MapId.Value, out binding);
             }
         }
 
