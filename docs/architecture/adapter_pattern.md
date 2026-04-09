@@ -95,3 +95,14 @@ Adapter (Raylib/Web)   → 组装 Skia 实现并注入 UIRoot / UiScene
 `Ludots.UI` 使用 `UiColor`（平台无关 RGBA struct）替代 `SKColor`，使用 `System.Numerics.Matrix3x2` 替代 `SKMatrix`。边界转换由 `Ludots.UI.Skia/UiSkiaExtensions` 提供（`ToSKColor()`、`ToUiColor()`、`ToSKMatrix()`）。
 
 详见 `docs/architecture/ui_runtime_architecture.md`。
+
+## 7 UE5 Host-Bound Map Session Contract
+
+UE5 adapter 内与宿主 world / level ownership 相关的状态，必须遵守单一真相来源：
+
+- focused Ludots map 以 `GameEngine.CurrentMapSession` / `MapSessionManager.FocusedSession` 为准
+- 是否进入 host-bound 路径，只能由 adapter-level 的显式 map binding resolver 决定
+- `MapLoaded`、host-ready、pending-return 是三个独立状态，不得混写成一个产品态
+- 产品 UI 只能观察 `HostBoundMapSessionSnapshot`，不得接管生命周期 bookkeeping
+
+这层 contract 只允许放在 `src/Adapters/UE5/Ludots.Adapter.UE5/`，不能把 menu、preview、scenario 选择等产品逻辑编码进 adapter 基建。

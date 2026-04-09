@@ -13,6 +13,7 @@
 - launcher 已进入 graph-backed SSOT 阶段，运行时由 launcher graph artifact 驱动
 - Core 现已包含 `TimeFlow`、`Items`、`Narrative`、`Relationships` 等正式运行时能力
 - 输入、选择、实体信息面板、路网移动与 narrative frontend 都已有主线实现和 showcase 入口
+- UE5 adapter 的 host-bound map session 只能由 focused map SSOT 与显式 host binding 推导，禁止用菜单态、world 名、tag 或 view mode 充当 ownership 真相
 - `docs/architecture/` 中的长篇页面覆盖了这些能力的深度说明，GitBook 这里负责给出正式导航和判断口径
 
 ## 核心原则

@@ -202,6 +202,13 @@ namespace Ludots.Adapter.UE5
                 ViewportHeight = initialViewportHeight,
             };
 
+            engine.SetService(UE5AdapterServiceKeys.HostBoundMapSessionState, HostBoundMapSessionSnapshot.Empty);
+            var hostBoundMapSessionService = new UE5HostBoundMapSessionService(
+                () => engine.GetService(UE5AdapterServiceKeys.ExplicitHostMapBindingResolver),
+                () => engine.GetService(UE5AdapterServiceKeys.HostLevelNavigator),
+                snapshot => engine.SetService(UE5AdapterServiceKeys.HostBoundMapSessionState, snapshot));
+            engine.SetService(UE5AdapterServiceKeys.HostBoundMapSessionService, hostBoundMapSessionService);
+
             // ── 4. 注入 UE5 适配器 ───────────────────────────────────────
 
             // UI 系统（对标 RaylibHostComposer：SkiaUiRenderer + UIRoot + MarkupUiSystem）
