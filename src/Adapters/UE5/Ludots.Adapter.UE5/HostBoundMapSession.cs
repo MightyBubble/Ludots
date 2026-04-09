@@ -370,6 +370,7 @@ namespace Ludots.Adapter.UE5
 
             public void Cancel()
             {
+                _navigator.CancelPendingReturn();
             }
         }
     }
