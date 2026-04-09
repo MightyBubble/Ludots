@@ -210,9 +210,11 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         {
             for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
             {
-                EnsureChunkLoaded(chunkX, chunkY);
+                EnsureChunkLoaded(chunkX, chunkY, requireRuntimeMesh: true);
             }
         }
+
+        PrewarmChunkNeighborhood(minChunkX, maxChunkX, minChunkY, maxChunkY);
     }
 
     public void PruneUneditedChunksOutsideWindow(int centerChunkX, int centerChunkY, int radius)
@@ -325,7 +327,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         {
             for (int chunkX = prewarmMinChunkX; chunkX <= prewarmMaxChunkX; chunkX++)
             {
-                EnsureChunkLoaded(chunkX, chunkY);
+                EnsureChunkLoaded(chunkX, chunkY, requireRuntimeMesh: false);
             }
         }
     }
@@ -388,13 +390,18 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     {
     }
 
-    private ChunkState EnsureChunkLoaded(int chunkX, int chunkY)
+    private ChunkState EnsureChunkLoaded(int chunkX, int chunkY, bool requireRuntimeMesh = true)
     {
         chunkX = Math.Clamp(chunkX, 0, _asset.ChunkColumns - 1);
         chunkY = Math.Clamp(chunkY, 0, _asset.ChunkRows - 1);
         long key = GraphChunkKey.Pack(chunkX, chunkY);
         if (_chunks.TryGetValue(key, out ChunkState? existing))
         {
+            if (requireRuntimeMesh && existing.RuntimeMesh.VertexCount == 0)
+            {
+                existing.Dirty = true;
+            }
+
             return existing;
         }
 
@@ -407,7 +414,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         PopulateDefaultChunkBaseHeights(state);
         _chunks.Add(key, state);
         _heightmapStore.SetChunk(state.HeightChunk);
-        state.Dirty = true;
+        state.Dirty = requireRuntimeMesh;
         return state;
     }
 
@@ -654,7 +661,38 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
             return;
         }
 
-        throw new InvalidOperationException("Visual terrain editor mesh sampling requires the runtime heightmap chunk neighborhood to be loaded.");
+        throw new InvalidOperationException(BuildMissingRuntimeNeighborhoodMessage(worldXCm, worldYCm));
+    }
+
+    private string BuildMissingRuntimeNeighborhoodMessage(float worldXCm, float worldYCm)
+    {
+        float normalizedX = _asset.SampleColumns > 1
+            ? (_asset.SampleColumns - 1) * Math.Clamp((worldXCm - _asset.Bounds.Left) / Math.Max(1f, _asset.Bounds.Width), 0f, 1f)
+            : 0f;
+        float normalizedY = _asset.SampleRows > 1
+            ? (_asset.SampleRows - 1) * Math.Clamp((worldYCm - _asset.Bounds.Top) / Math.Max(1f, _asset.Bounds.Height), 0f, 1f)
+            : 0f;
+
+        int x0 = _asset.SampleColumns > 1 ? Math.Clamp((int)MathF.Floor(normalizedX), 0, _asset.SampleColumns - 2) : 0;
+        int y0 = _asset.SampleRows > 1 ? Math.Clamp((int)MathF.Floor(normalizedY), 0, _asset.SampleRows - 2) : 0;
+        int x1 = _asset.SampleColumns > 1 ? x0 + 1 : 0;
+        int y1 = _asset.SampleRows > 1 ? y0 + 1 : 0;
+
+        return
+            $"Visual terrain editor mesh sampling requires the runtime heightmap chunk neighborhood to be loaded. " +
+            $"world=({worldXCm:F1},{worldYCm:F1}) sample=({normalizedX:F3},{normalizedY:F3}) " +
+            $"{DescribeRequiredSample("h00", x0, y0)} " +
+            $"{DescribeRequiredSample("h10", x1, y0)} " +
+            $"{DescribeRequiredSample("h01", x0, y1)} " +
+            $"{DescribeRequiredSample("h11", x1, y1)} " +
+            $"loadedChunks={_chunks.Count}.";
+    }
+
+    private string DescribeRequiredSample(string label, int globalX, int globalY)
+    {
+        ResolveChunkSample(globalX, globalY, out int chunkX, out int chunkY, out int localX, out int localY);
+        bool loaded = _heightmapStore.TryGetChunk(chunkX, chunkY, out _);
+        return $"{label}=g({globalX},{globalY}) c({chunkX},{chunkY}) l({localX},{localY}) loaded={loaded};";
     }
 
     private Vector3 ComputeBaseRenderNormal(float worldXCm, float worldYCm, TerrainFieldKind field = TerrainFieldKind.Base)

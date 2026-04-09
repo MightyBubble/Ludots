@@ -476,7 +476,7 @@ internal sealed class VisualTerrainEditorRuntime
         _visibleMinChunkY = minChunkY;
         _visibleMaxChunkY = maxChunkY;
         _document.EnsureChunkWindowLoaded(centerChunkX, centerChunkY, retainedRadius);
-        _document.PruneUneditedChunksOutsideWindow(centerChunkX, centerChunkY, retainedRadius);
+        _document.PruneUneditedChunksOutsideWindow(centerChunkX, centerChunkY, retainedRadius + 1);
         return changed;
     }
 

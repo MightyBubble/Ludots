@@ -12,9 +12,8 @@ namespace Ludots.Core.Presentation.Terrain
     public sealed class ChunkedVisualHeightmapStore
     {
         private readonly Dictionary<long, ChunkedVisualHeightmapChunk> _chunks = new Dictionary<long, ChunkedVisualHeightmapChunk>();
-        private long _lastChunkKey = long.MinValue;
-        private ChunkedVisualHeightmapChunk? _lastChunk;
         private ILoadedChunks? _loadedChunks;
+        [ThreadStatic] private static ThreadCache? s_threadCache;
 
         public ChunkedVisualHeightmapStore(ChunkedVisualHeightmapDescriptor descriptor)
         {
@@ -60,8 +59,11 @@ namespace Ludots.Core.Presentation.Terrain
 
             long key = GraphChunkKey.Pack(chunk.ChunkX, chunk.ChunkY);
             _chunks[key] = chunk;
-            _lastChunkKey = key;
-            _lastChunk = chunk;
+            ThreadCache cache = GetThreadCache();
+            if (ReferenceEquals(cache.Owner, this) && cache.Key == key)
+            {
+                cache.Chunk = chunk;
+            }
         }
 
         public bool RemoveChunk(int chunkX, int chunkY)
@@ -69,10 +71,9 @@ namespace Ludots.Core.Presentation.Terrain
             ValidateChunkCoordinates(chunkX, chunkY);
             long key = GraphChunkKey.Pack(chunkX, chunkY);
             bool removed = _chunks.Remove(key);
-            if (removed && _lastChunkKey == key)
+            if (removed)
             {
-                _lastChunkKey = long.MinValue;
-                _lastChunk = null;
+                InvalidateThreadCache(key);
             }
 
             return removed;
@@ -82,16 +83,18 @@ namespace Ludots.Core.Presentation.Terrain
         {
             ValidateChunkCoordinates(chunkX, chunkY);
             long key = GraphChunkKey.Pack(chunkX, chunkY);
-            if (_lastChunkKey == key && _lastChunk != null)
+            ThreadCache cache = GetThreadCache();
+            if (ReferenceEquals(cache.Owner, this) && cache.Key == key && cache.Chunk != null)
             {
-                chunk = _lastChunk;
+                chunk = cache.Chunk;
                 return true;
             }
 
             if (_chunks.TryGetValue(key, out chunk!))
             {
-                _lastChunkKey = key;
-                _lastChunk = chunk;
+                cache.Owner = this;
+                cache.Key = key;
+                cache.Chunk = chunk;
                 return true;
             }
 
@@ -101,16 +104,18 @@ namespace Ludots.Core.Presentation.Terrain
 
         public bool TryGetChunk(long chunkKey, out ChunkedVisualHeightmapChunk chunk)
         {
-            if (_lastChunkKey == chunkKey && _lastChunk != null)
+            ThreadCache cache = GetThreadCache();
+            if (ReferenceEquals(cache.Owner, this) && cache.Key == chunkKey && cache.Chunk != null)
             {
-                chunk = _lastChunk;
+                chunk = cache.Chunk;
                 return true;
             }
 
             if (_chunks.TryGetValue(chunkKey, out chunk!))
             {
-                _lastChunkKey = chunkKey;
-                _lastChunk = chunk;
+                cache.Owner = this;
+                cache.Key = chunkKey;
+                cache.Chunk = chunk;
                 return true;
             }
 
@@ -120,10 +125,24 @@ namespace Ludots.Core.Presentation.Terrain
 
         private void OnChunkUnloaded(long chunkKey)
         {
-            if (_chunks.Remove(chunkKey) && _lastChunkKey == chunkKey)
+            if (_chunks.Remove(chunkKey))
             {
-                _lastChunkKey = long.MinValue;
-                _lastChunk = null;
+                InvalidateThreadCache(chunkKey);
+            }
+        }
+
+        private static ThreadCache GetThreadCache()
+        {
+            return s_threadCache ??= new ThreadCache();
+        }
+
+        private void InvalidateThreadCache(long chunkKey)
+        {
+            ThreadCache cache = GetThreadCache();
+            if (ReferenceEquals(cache.Owner, this) && cache.Key == chunkKey)
+            {
+                cache.Key = long.MinValue;
+                cache.Chunk = null;
             }
         }
 
@@ -138,6 +157,15 @@ namespace Ludots.Core.Presentation.Terrain
             {
                 throw new ArgumentOutOfRangeException(nameof(chunkY));
             }
+        }
+
+        private sealed class ThreadCache
+        {
+            public ChunkedVisualHeightmapStore? Owner;
+
+            public long Key = long.MinValue;
+
+            public ChunkedVisualHeightmapChunk? Chunk;
         }
     }
 }
