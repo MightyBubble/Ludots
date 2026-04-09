@@ -102,7 +102,9 @@ UE5 adapter 内与宿主 world / level ownership 相关的状态，必须遵守�
 
 - focused Ludots map 以 `GameEngine.CurrentMapSession` / `MapSessionManager.FocusedSession` 为准
 - 是否进入 host-bound 路径，只能由 adapter-level 的显式 map binding resolver 决定
-- `MapLoaded`、host-ready、pending-return 是三个独立状态，不得混写成一个产品态
+- `HasPendingReturn` 必须直接复用 `MapSessionManager` 的正式嵌套 map 语义，不得在 adapter 里另造一套 push/pop bookkeeping
+- `MapLoaded` 不是“开始切 host world”，而是“Ludots map 完成加载”；只要 host world 或其必需 host-bound entities 还没 ready，`MapLoadStatus` 就必须保持 pending，`MapLoaded` 不能提前触发
+- host adapter 可以观察 `MapLoadStatus`，但不能再维护平行的 “host-ready” 真相来源
 - 产品 UI 只能观察 `HostBoundMapSessionSnapshot`，不得接管生命周期 bookkeeping
 
 这层 contract 只允许放在 `src/Adapters/UE5/Ludots.Adapter.UE5/`，不能把 menu、preview、scenario 选择等产品逻辑编码进 adapter 基建。

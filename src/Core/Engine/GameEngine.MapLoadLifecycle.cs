@@ -14,6 +14,7 @@ namespace Ludots.Core.Engine
         public MapSession CurrentMapSession { get; private set; }
 
         private readonly Dictionary<MapId, PendingMapLoadState> _pendingMapLoads = new();
+        private readonly Dictionary<MapId, PendingMapResumeState> _pendingMapResumes = new();
         private readonly Dictionary<MapId, MapLoadStatus> _mapLoadStatuses = new();
 
         private sealed class PendingMapLoadState
@@ -27,6 +28,20 @@ namespace Ludots.Core.Engine
 
             public MapSession Session { get; }
             public MapConfig MapConfig { get; }
+            public IPendingMapLoad PendingLoad { get; }
+        }
+
+        private sealed class PendingMapResumeState
+        {
+            public PendingMapResumeState(MapSession session, MapSession? closedSession, IPendingMapLoad pendingLoad)
+            {
+                Session = session;
+                ClosedSession = closedSession;
+                PendingLoad = pendingLoad;
+            }
+
+            public MapSession Session { get; }
+            public MapSession? ClosedSession { get; }
             public IPendingMapLoad PendingLoad { get; }
         }
 
@@ -51,12 +66,14 @@ namespace Ludots.Core.Engine
                 RemoveService(CoreServiceKeys.MapSession);
                 RemoveService(CoreServiceKeys.MapFeatureFlags);
                 RemoveService(CoreServiceKeys.MapLoadStatus);
+                PublishFocusedMapLoadState();
                 return;
             }
 
             SetService(CoreServiceKeys.MapSession, session);
             SetService(CoreServiceKeys.MapFeatureFlags, MapFeatureFlags.FromTags(session.MapConfig?.Tags));
             SetService(CoreServiceKeys.MapLoadStatus, GetMapLoadStatus(session.MapId));
+            PublishFocusedMapLoadState();
         }
 
         private MapLoadStatus GetMapLoadStatus(MapId mapId)
@@ -66,13 +83,35 @@ namespace Ludots.Core.Engine
                 : MapLoadStatus.ImmediateSuccess;
         }
 
+        private MapLoadStatus GetInitialMapLoadStatus()
+        {
+            return GetService(CoreServiceKeys.MapLoadCompletionGate) != null
+                ? MapLoadStatus.DeferredPending
+                : MapLoadStatus.ImmediateSuccess;
+        }
+
         private void SetMapLoadStatus(MapId mapId, MapLoadStatus status)
         {
             _mapLoadStatuses[mapId] = status;
             if (CurrentMapSession != null && CurrentMapSession.MapId == mapId)
             {
                 SetService(CoreServiceKeys.MapLoadStatus, status);
+                PublishFocusedMapLoadState();
             }
+        }
+
+        private void PublishFocusedMapLoadState()
+        {
+            IFocusedMapLoadStateSink sink = GetService(CoreServiceKeys.FocusedMapLoadStateSink);
+            if (sink == null)
+            {
+                return;
+            }
+
+            sink.OnFocusedMapChanged(new FocusedMapLoadState(
+                CurrentMapSession,
+                CurrentMapSession != null ? GetMapLoadStatus(CurrentMapSession.MapId) : MapLoadStatus.ImmediateSuccess,
+                MapSessions?.HasPendingReturn ?? false));
         }
 
         private ScriptContext CreateMapEventContext(MapSession session)
@@ -139,32 +178,113 @@ namespace Ludots.Core.Engine
             }
         }
 
+        private bool TryStartPendingMapResume(MapSession session, MapSession? closedSession, out MapLoadStatus loadStatus)
+        {
+            loadStatus = MapLoadStatus.ImmediateSuccess;
+
+            IMapLoadCompletionGate gate = GetService(CoreServiceKeys.MapLoadCompletionGate);
+            if (gate == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                IPendingMapLoad pendingLoad = gate.BeginPendingResume(new MapResumeCompletionRequest(this, session, closedSession));
+                if (pendingLoad == null)
+                {
+                    return false;
+                }
+
+                MapLoadCompletionResult initialResult = pendingLoad.Poll();
+                if (initialResult.State == MapLoadCompletionState.Pending)
+                {
+                    _pendingMapResumes[session.MapId] = new PendingMapResumeState(session, closedSession, pendingLoad);
+                    SetMapLoadStatus(session.MapId, MapLoadStatus.DeferredPending);
+                    return true;
+                }
+
+                loadStatus = MapLoadStatus.FromCompletion(initialResult, isDeferred: true);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Log.Error(in LogChannels.Engine, $"Map resume completion gate failed for '{session.MapId.Value}': {ex.Message}");
+                loadStatus = MapLoadStatus.DeferredFailure(ex.Message);
+                return false;
+            }
+        }
+
         private void ProcessPendingMapLoads()
         {
-            if (_pendingMapLoads.Count == 0)
+            if (_pendingMapLoads.Count > 0)
+            {
+                var snapshot = new List<KeyValuePair<MapId, PendingMapLoadState>>(_pendingMapLoads);
+                for (int i = 0; i < snapshot.Count; i++)
+                {
+                    KeyValuePair<MapId, PendingMapLoadState> pair = snapshot[i];
+                    if (!_pendingMapLoads.TryGetValue(pair.Key, out PendingMapLoadState pendingState) || !ReferenceEquals(pendingState, pair.Value))
+                    {
+                        continue;
+                    }
+
+                    if (CurrentMapSession == null || CurrentMapSession.MapId != pair.Key)
+                    {
+                        CancelPendingMapLoad(pair.Key, $"Map load canceled because '{pair.Key.Value}' lost focus before completion.", markFailed: true);
+                        continue;
+                    }
+
+                    MapSession session = MapSessions?.GetSession(pair.Key);
+                    if (session == null)
+                    {
+                        CancelPendingMapLoad(pair.Key, $"Map session '{pair.Key.Value}' disappeared before completion.", markFailed: false);
+                        continue;
+                    }
+
+                    MapLoadCompletionResult result;
+                    try
+                    {
+                        result = pendingState.PendingLoad.Poll();
+                    }
+                    catch (Exception ex)
+                    {
+                        result = MapLoadCompletionResult.Failed(ex.Message);
+                    }
+
+                    if (result.State == MapLoadCompletionState.Pending)
+                    {
+                        continue;
+                    }
+
+                    _pendingMapLoads.Remove(pair.Key);
+                    CompleteMapLoad(session, pendingState.MapConfig, MapLoadStatus.FromCompletion(result, isDeferred: true));
+                }
+            }
+
+            if (_pendingMapResumes.Count == 0)
             {
                 return;
             }
 
-            var snapshot = new List<KeyValuePair<MapId, PendingMapLoadState>>(_pendingMapLoads);
-            for (int i = 0; i < snapshot.Count; i++)
+            var resumeSnapshot = new List<KeyValuePair<MapId, PendingMapResumeState>>(_pendingMapResumes);
+            for (int i = 0; i < resumeSnapshot.Count; i++)
             {
-                KeyValuePair<MapId, PendingMapLoadState> pair = snapshot[i];
-                if (!_pendingMapLoads.TryGetValue(pair.Key, out PendingMapLoadState pendingState) || !ReferenceEquals(pendingState, pair.Value))
+                KeyValuePair<MapId, PendingMapResumeState> pair = resumeSnapshot[i];
+                if (!_pendingMapResumes.TryGetValue(pair.Key, out PendingMapResumeState pendingState) || !ReferenceEquals(pendingState, pair.Value))
                 {
                     continue;
                 }
 
                 if (CurrentMapSession == null || CurrentMapSession.MapId != pair.Key)
                 {
-                    CancelPendingMapLoad(pair.Key, $"Map load canceled because '{pair.Key.Value}' lost focus before completion.", markFailed: true);
+                    CancelPendingMapResume(pair.Key, $"Map resume canceled because '{pair.Key.Value}' lost focus before completion.", markFailed: true);
                     continue;
                 }
 
                 MapSession session = MapSessions?.GetSession(pair.Key);
                 if (session == null)
                 {
-                    CancelPendingMapLoad(pair.Key, $"Map session '{pair.Key.Value}' disappeared before completion.", markFailed: false);
+                    CancelPendingMapResume(pair.Key, $"Map session '{pair.Key.Value}' disappeared before resume completion.", markFailed: false);
                     continue;
                 }
 
@@ -183,8 +303,8 @@ namespace Ludots.Core.Engine
                     continue;
                 }
 
-                _pendingMapLoads.Remove(pair.Key);
-                CompleteMapLoad(session, pendingState.MapConfig, MapLoadStatus.FromCompletion(result, isDeferred: true));
+                _pendingMapResumes.Remove(pair.Key);
+                CompleteMapResume(session, MapLoadStatus.FromCompletion(result, isDeferred: true));
             }
         }
 
@@ -205,11 +325,32 @@ namespace Ludots.Core.Engine
                 {
                     Diagnostics.Log.Warn(in LogChannels.Engine, $"Map '{session.MapId.Value}' completed with failure: {loadStatus.ErrorMessage}");
                 }
+
+                return;
             }
 
             ScriptContext finalCtx = CreateMapEventContext(session);
             Diagnostics.Log.Info(in LogChannels.Engine, $"Firing MapLoaded event for {session.MapId.Value}...");
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapLoaded, finalCtx));
+        }
+
+        private void CompleteMapResume(MapSession session, MapLoadStatus loadStatus)
+        {
+            SetMapLoadStatus(session.MapId, loadStatus);
+            RestoreFocusedMapSession(session);
+
+            if (!loadStatus.Succeeded)
+            {
+                if (loadStatus.Failed)
+                {
+                    Diagnostics.Log.Warn(in LogChannels.Engine, $"Map '{session.MapId.Value}' resume completed with failure: {loadStatus.ErrorMessage}");
+                }
+
+                return;
+            }
+
+            ScriptContext resumeCtx = CreateMapEventContext(session);
+            CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapResumed, resumeCtx));
         }
 
         private void CancelPendingMapLoad(MapId mapId, string reason, bool markFailed)
@@ -228,6 +369,30 @@ namespace Ludots.Core.Engine
             catch (Exception ex)
             {
                 Diagnostics.Log.Warn(in LogChannels.Engine, $"CancelPendingMapLoad failed for '{mapId.Value}': {ex.Message}");
+            }
+
+            if (markFailed)
+            {
+                SetMapLoadStatus(mapId, MapLoadStatus.DeferredFailure(reason));
+            }
+        }
+
+        private void CancelPendingMapResume(MapId mapId, string reason, bool markFailed)
+        {
+            if (!_pendingMapResumes.TryGetValue(mapId, out PendingMapResumeState pendingState))
+            {
+                return;
+            }
+
+            _pendingMapResumes.Remove(mapId);
+
+            try
+            {
+                pendingState.PendingLoad.Cancel();
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Log.Warn(in LogChannels.Engine, $"CancelPendingMapResume failed for '{mapId.Value}': {ex.Message}");
             }
 
             if (markFailed)

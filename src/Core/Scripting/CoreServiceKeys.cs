@@ -86,6 +86,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<MapSession> MapSession = new("MapSession");
         public static readonly ServiceKey<MapSessionManager> MapSessions = new("MapSessions");
         public static readonly ServiceKey<IMapLoadCompletionGate> MapLoadCompletionGate = new("MapLoadCompletionGate");
+        public static readonly ServiceKey<IFocusedMapLoadStateSink> FocusedMapLoadStateSink = new("FocusedMapLoadStateSink");
         public static readonly ServiceKey<BoardIdRegistry> BoardIdRegistry = new("BoardIdRegistry");
         public static readonly ServiceKey<MapContext> MapContext = new("MapContext");
 
