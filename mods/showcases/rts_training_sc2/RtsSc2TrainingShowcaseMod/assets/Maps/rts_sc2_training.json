@@ -1,0 +1,32 @@
+{
+  "Id": "rts_sc2_training",
+  "Tags": ["rts_showcase", "rts_training", "sc2"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 6200,
+    "TargetYCm": 6200,
+    "Yaw": 180,
+    "Pitch": 48,
+    "DistanceCm": 10800,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "sc2_highlands.vtxm" }
+  ],
+  "Entities": [
+    {
+      "Template": "rts_sc2_gateway",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 6200, "Y": 6200 } },
+        "Name": { "Value": "Gateway" }
+      }
+    },
+    {
+      "Template": "rts_sc2_zealot",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 8280, "Y": 6880 } },
+        "Name": { "Value": "Frontline Vanguard" }
+      }
+    }
+  ]
+}

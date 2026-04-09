@@ -405,8 +405,8 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(new AttributeBuffer());
             ref var buf = ref world.Get<AttributeBuffer>(entity);
 
-            int minerals = 5; // attribute index 5
-            int gas = 6;      // attribute index 6
+            const int minerals = AttributeBuffer.MAX_ATTRS - 2;
+            const int gas = AttributeBuffer.MAX_ATTRS - 1;
             buf.SetCurrent(minerals, 200f);
             buf.SetCurrent(gas, 100f);
 

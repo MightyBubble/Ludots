@@ -9,6 +9,8 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 
 namespace CoreInputMod.Systems
@@ -144,7 +146,14 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            bridge = new AbilityIndicatorOverlayBridge(_world, abilities, overlays);
+            _globals.TryGetValue(CoreServiceKeys.PerformerDefinitionRegistry.Name, out var performerDefinitionsObj);
+            _globals.TryGetValue(CoreServiceKeys.PerformerInstanceBuffer.Name, out var performerInstancesObj);
+            bridge = new AbilityIndicatorOverlayBridge(
+                _world,
+                abilities,
+                overlays,
+                performerDefinitionsObj as PerformerDefinitionRegistry,
+                performerInstancesObj as PerformerInstanceBuffer);
             return true;
         }
     }

@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using RtsDemoMod.Runtime;
 using RtsDemoMod.Systems;
 
 namespace RtsDemoMod.Triggers
@@ -43,6 +44,15 @@ namespace RtsDemoMod.Triggers
                 engine.RegisterSystem(new RtsLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.InputCollection);
                 _ctx.Log("[RtsDemoMod] RtsLocalOrderSourceSystem registered");
             }
+
+            engine.RegisterSystem(new RtsPresentationBootstrapSystem(engine), SystemGroup.PostMovement);
+            engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, new RtsQuickSelectToolbarProvider(engine));
+            // Run after effect/spawn processing so relation-driven garrison/build/morph state
+            // becomes visible in the same simulation frame.
+            engine.RegisterSystem(new RtsRelationRuntimeSystem(engine), SystemGroup.EffectProcessing);
+            engine.RegisterPresentationSystem(new RtsSelectionCommandPanelSystem(engine));
+            engine.RegisterPresentationSystem(new RtsSelectionFeedbackPresentationSystem(engine));
+            _ctx.Log("[RtsDemoMod] RTS relation runtime and selection command panel systems registered");
 
             ViewModeRegistrar.RegisterFromVfs(_ctx, engine.GlobalContext, "Rts");
 

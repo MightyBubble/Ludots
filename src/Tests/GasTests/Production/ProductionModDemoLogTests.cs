@@ -16,6 +16,9 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
+using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.UI;
+using Ludots.UI.Skia;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
@@ -490,106 +493,140 @@ namespace Ludots.Tests.GAS.Production
         {
             var sb = new StringBuilder();
             sb.AppendLine("═══════════════════════════════════════════");
-            sb.AppendLine("[RTS] 进入即时战略战场 (3 阵营: 人族/虫族/神族)。");
+            sb.AppendLine("[RTS] 进入即时战略战场 (War3 / C&C / Protoss / Zerg 综合沙盘)。");
             sb.AppendLine("═══════════════════════════════════════════");
 
-            RunWithEngine(new[] { "LudotsCoreMod", "RtsDemoMod" }, "rts_entry", engine =>
+            RunWithEngine(new[] { "LudotsCoreMod", "CoreInputMod", "EntityCommandPanelMod", "RtsDemoMod" }, "rts_entry", engine =>
             {
                 var world = engine.World;
+                IEntityCommandPanelSource panelSource = ResolveGasPanelSource(engine);
 
                 // 找出地图生成的实体
-                var scv = FindEntity(world, "SCV");
+                var peasant = FindEntity(world, "Peasant");
                 var barracks = FindEntity(world, "Barracks");
-                var siegeTank = FindEntity(world, "SiegeTank");
-                var scienceVessel = FindEntity(world, "ScienceVessel");
-
-                // 找一个 Marine (可能有多个同名)
-                Entity marine = Entity.Null;
-                Entity zergling = Entity.Null;
-                Entity zealot = Entity.Null;
-                var nameQ = new QueryDescription().WithAll<Name, Team>();
-                world.Query(in nameQ, (Entity e, ref Name name, ref Team team) =>
-                {
-                    if (marine == Entity.Null && name.Value == "Marine") marine = e;
-                    if (zergling == Entity.Null && name.Value == "Zergling") zergling = e;
-                    if (zealot == Entity.Null && name.Value == "Zealot") zealot = e;
-                });
-                Assert.That(marine, Is.Not.EqualTo(Entity.Null), "Marine should exist");
-                Assert.That(zergling, Is.Not.EqualTo(Entity.Null), "Zergling should exist");
-                Assert.That(zealot, Is.Not.EqualTo(Entity.Null), "Zealot should exist");
+                var footman = FindEntity(world, "Footman");
+                var constructionYard = FindEntity(world, "Construction Yard");
+                var warFactory = FindEntity(world, "War Factory");
+                var battleBunker = FindEntity(world, "Battle Bunker");
+                var rocketTrooper = FindEntity(world, "Rocket Trooper");
+                var gateway = FindEntity(world, "Gateway");
+                var drone = FindEntity(world, "Drone");
 
                 int healthId = EnsureAttr("Health");
                 int mineralsId = EnsureAttr("Minerals");
-                int shieldId = EnsureAttr("Shield");
-                int asId = EnsureAttr("AttackSpeed");
-                int energyId = EnsureAttr("Energy");
+                int lumberId = EnsureAttr("Lumber");
+                int creditsId = EnsureAttr("Credits");
+                int gasId = EnsureAttr("Gas");
+                int warpGateTechTagId = EnsureTag("Tech.Rts.WarpGate");
 
-                LogEntityState(sb, "[RTS]", "初始状态", world, scv, "SCV", new[] { healthId, mineralsId }, new[] { "Health", "Minerals" });
+                LogEntityState(sb, "[RTS]", "初始状态", world, peasant, "Peasant", new[] { healthId, mineralsId, lumberId }, new[] { "Health", "Minerals", "Lumber" });
                 LogEntityState(sb, "[RTS]", "初始状态", world, barracks, "Barracks", new[] { healthId }, new[] { "Health" });
-                LogEntityState(sb, "[RTS]", "初始状态", world, marine, "Marine", new[] { healthId, shieldId, asId }, new[] { "Health", "Shield", "AttackSpeed" });
-                LogEntityState(sb, "[RTS]", "初始状态", world, siegeTank, "SiegeTank", new[] { healthId }, new[] { "Health" });
-                LogEntityState(sb, "[RTS]", "初始状态", world, scienceVessel, "ScienceVessel", new[] { healthId, energyId }, new[] { "Health", "Energy" });
-                LogEntityState(sb, "[RTS]", "初始状态", world, zergling, "Zergling", new[] { healthId }, new[] { "Health" });
-                LogEntityState(sb, "[RTS]", "初始状态", world, zealot, "Zealot", new[] { healthId, shieldId }, new[] { "Health", "Shield" });
+                LogEntityState(sb, "[RTS]", "初始状态", world, footman, "Footman", new[] { healthId }, new[] { "Health" });
+                LogEntityState(sb, "[RTS]", "初始状态", world, constructionYard, "Construction Yard", new[] { creditsId }, new[] { "Credits" });
+                LogEntityState(sb, "[RTS]", "初始状态", world, warFactory, "War Factory", new[] { creditsId }, new[] { "Credits" });
+                LogEntityState(sb, "[RTS]", "初始状态", world, gateway, "Gateway", new[] { mineralsId, gasId }, new[] { "Minerals", "Gas" });
+                LogEntityState(sb, "[RTS]", "初始状态", world, drone, "Drone", new[] { mineralsId }, new[] { "Minerals" });
 
                 // ── 阵营关系 ──
                 sb.AppendLine("[RTS] 阵营关系:");
-                sb.AppendLine($"[RTS]   Terran(1)↔Zerg(2)    = {TeamManager.GetRelationship(1, 2)}");
-                sb.AppendLine($"[RTS]   Terran(1)↔Protoss(3) = {TeamManager.GetRelationship(1, 3)}");
-                sb.AppendLine($"[RTS]   Zerg(2)↔Protoss(3)   = {TeamManager.GetRelationship(2, 3)}");
+                sb.AppendLine($"[RTS]   Alliance(1)↔Axis(2)   = {TeamManager.GetRelationship(1, 2)}");
+                sb.AppendLine($"[RTS]   Alliance(1)↔Protoss(3)= {TeamManager.GetRelationship(1, 3)}");
+                sb.AppendLine($"[RTS]   Axis(2)↔Protoss(3)    = {TeamManager.GetRelationship(2, 3)}");
 
-                // ── SCV Slot 0 (5001): BuildBarracks - Cost -150 Minerals + CreateUnit ──
-                float mineralsBefore = world.Get<AttributeBuffer>(scv).GetCurrent(mineralsId);
-                sb.AppendLine($"[RTS] SCV 施放【建造兵营】(消耗 150 矿, 当前矿 {mineralsBefore:F0})。");
-                CastAbility(engine, scv, scv, slot: 0);
-                Tick(engine, 10);
-                float mineralsAfter = world.Get<AttributeBuffer>(scv).GetCurrent(mineralsId);
-                bool newBarracks = HasNamePrefix(world, "Unit:Unit.Barracks");
-                sb.AppendLine($"[RTS] 矿石: {mineralsBefore:F0} → {mineralsAfter:F0} (消耗 {mineralsBefore - mineralsAfter:F0})。");
-                sb.AppendLine($"[RTS] 新兵营建造结果: {(newBarracks ? "成功" : "未检测到")}。");
+                int lumberMillBefore = CountEntitiesByName(world, "Lumber Mill");
+                float peasantMineralsBefore = world.Get<AttributeBuffer>(peasant).GetCurrent(mineralsId);
+                float peasantLumberBefore = world.Get<AttributeBuffer>(peasant).GetCurrent(lumberId);
+                sb.AppendLine("[RTS] Peasant 施放【伐木场】并进驻施工。");
+                CastAbilityAtWorldPoint(engine, peasant, slot: 0, new Vector2(-1950f, -1150f));
+                Tick(engine, 24);
+                int lumberMillAfter = CountEntitiesByName(world, "Lumber Mill");
+                float peasantMineralsAfter = world.Get<AttributeBuffer>(peasant).GetCurrent(mineralsId);
+                float peasantLumberAfter = world.Get<AttributeBuffer>(peasant).GetCurrent(lumberId);
+                bool peasantAttached = world.Has<ChildOf>(peasant);
+                sb.AppendLine($"[RTS] 伐木场数量: {lumberMillBefore} → {lumberMillAfter}。");
+                sb.AppendLine($"[RTS] Peasant 资源: Minerals {peasantMineralsBefore:F0} → {peasantMineralsAfter:F0}, Lumber {peasantLumberBefore:F0} → {peasantLumberAfter:F0}。");
+                sb.AppendLine($"[RTS] Peasant 施工挂接: {peasantAttached}。");
+                Assert.That(lumberMillAfter, Is.EqualTo(lumberMillBefore + 1));
+                Assert.That(peasantAttached, Is.True);
 
-                // ── Barracks Slot 0 (5002): TrainMarine - Cost -50 Minerals + CreateUnit ──
-                // Barracks has no Minerals attribute, so the cost effect deducts from Barracks
-                sb.AppendLine("[RTS] Barracks 施放【训练陆战队员】(CreateUnit: Unit.Marine)。");
-                CastAbility(engine, barracks, barracks, slot: 0);
-                Tick(engine, 10);
-                bool newMarine = HasNamePrefix(world, "Unit:Unit.Marine");
-                sb.AppendLine($"[RTS] 新陆战队员: {(newMarine ? "检测到" : "未检测到")}。");
+                int footmanBefore = CountEntitiesByName(world, "Footman");
+                sb.AppendLine("[RTS] Barracks 施放【训练步兵】。");
+                CastAbility(engine, barracks, barracks, slot: 2);
+                Tick(engine, 600);
+                int footmanAfter = CountEntitiesByName(world, "Footman");
+                sb.AppendLine($"[RTS] Footman 数量: {footmanBefore} → {footmanAfter}。");
+                Assert.That(footmanAfter, Is.EqualTo(footmanBefore + 1));
 
-                // ── Barracks Slot 1 (5003): ResearchStim - TagClip Researching 120 ticks → GrantedTags Tech.Stim ──
-                sb.AppendLine("[RTS] Barracks 施放【研究兴奋剂】(TagClip: Status.Researching 120ticks → 完成后 GrantedTags: Tech.Stim)。");
-                CastAbility(engine, barracks, barracks, slot: 1);
-                Tick(engine, 5);
-                LogTags(sb, "[RTS]", world, engine, barracks, "Barracks", new[] { "Status.Researching" });
-                sb.AppendLine("[RTS] 等待研究完成 (120 ticks)...");
-                Tick(engine, 150);
-                LogTags(sb, "[RTS]", world, engine, barracks, "Barracks", new[] { "Status.Researching", "Tech.Stim" });
+                float conyardCreditsBefore = world.Get<AttributeBuffer>(constructionYard).GetCurrent(creditsId);
+                int powerPlantBefore = CountEntitiesByName(world, "Power Plant");
+                sb.AppendLine("[RTS] Construction Yard 施放【发电厂】。");
+                CastAbilityAtWorldPoint(engine, constructionYard, slot: 0, new Vector2(1480f, -1280f));
+                Tick(engine, 24);
+                int powerPlantAfter = CountEntitiesByName(world, "Power Plant");
+                float conyardCreditsAfter = world.Get<AttributeBuffer>(constructionYard).GetCurrent(creditsId);
+                sb.AppendLine($"[RTS] 发电厂数量: {powerPlantBefore} → {powerPlantAfter}，Credits {conyardCreditsBefore:F0} → {conyardCreditsAfter:F0}。");
+                Assert.That(powerPlantAfter, Is.EqualTo(powerPlantBefore + 1));
 
-                // ── SiegeTank Slot 0 (5005): SiegeMode AOE - Search hostile → AoeDamage -20HP ──
-                float zerglingHpBefore = world.Get<AttributeBuffer>(zergling).GetCurrent(healthId);
-                sb.AppendLine($"[RTS] SiegeTank 施放【攻城模式 AOE】(Search hostile radius=600 → AoeDamage -20HP)。");
-                CastAbility(engine, siegeTank, zergling, slot: 0);
-                Tick(engine, 10);
-                float zerglingHpAfter = world.Get<AttributeBuffer>(zergling).GetCurrent(healthId);
-                LogEntityState(sb, "[RTS]", "AOE 后", world, zergling, "Zergling", new[] { healthId }, new[] { "Health" });
-                sb.AppendLine($"[RTS] Zergling HP: {zerglingHpBefore:F1} → {zerglingHpAfter:F1}。");
+                int rhinoBefore = CountEntitiesByName(world, "Rhino Tank");
+                float factoryCreditsBefore = world.Get<AttributeBuffer>(warFactory).GetCurrent(creditsId);
+                sb.AppendLine("[RTS] War Factory 施放【训练犀牛】。");
+                CastAbility(engine, warFactory, warFactory, slot: 2);
+                Tick(engine, 1200);
+                int rhinoAfter = CountEntitiesByName(world, "Rhino Tank");
+                float factoryCreditsAfter = world.Get<AttributeBuffer>(warFactory).GetCurrent(creditsId);
+                sb.AppendLine($"[RTS] Rhino 数量: {rhinoBefore} → {rhinoAfter}，Credits {factoryCreditsBefore:F0} → {factoryCreditsAfter:F0}。");
+                Assert.That(rhinoAfter, Is.EqualTo(rhinoBefore + 1));
 
-                // ── ScienceVessel Slot 0 (5006): ShieldAura - PeriodicSearch Friendly → ShieldBuff (stackable) ──
-                sb.AppendLine("[RTS] ScienceVessel 施放【护盾光环】(PeriodicSearch radius=800 Friendly → ShieldBuff stack limit=3)。");
-                CastAbility(engine, scienceVessel, scienceVessel, slot: 0);
-                Tick(engine, 60);
-                float marineShield = world.Get<AttributeBuffer>(marine).GetCurrent(shieldId);
-                LogEntityState(sb, "[RTS]", "光环后", world, marine, "Marine", new[] { healthId, shieldId }, new[] { "Health", "Shield" });
-                sb.AppendLine($"[RTS] Marine Shield (光环 buff) = {marineShield:F1}。");
+                sb.AppendLine("[RTS] Rocket Trooper 施放【进驻】→ Battle Bunker。");
+                CastAbility(engine, rocketTrooper, battleBunker, slot: 1);
+                Tick(engine, 12);
+                bool bunkerAttached = world.Has<ChildOf>(rocketTrooper) && world.Get<ChildOf>(rocketTrooper).Parent == battleBunker;
+                sb.AppendLine($"[RTS] Bunker 挂接成功: {bunkerAttached}。");
+                Assert.That(bunkerAttached, Is.True);
 
-                // ── ScienceVessel Slot 1 (5007): Irradiate - DoT on Zergling ──
-                float zergHpBeforeIrr = world.Get<AttributeBuffer>(zergling).GetCurrent(healthId);
-                sb.AppendLine("[RTS] ScienceVessel 施放【辐射】→ Zergling (DoT -3HP/tick, 150 ticks)。");
-                CastAbility(engine, scienceVessel, zergling, slot: 1);
-                Tick(engine, 30);
-                float zergHpAfterIrr = world.Get<AttributeBuffer>(zergling).GetCurrent(healthId);
-                LogEntityState(sb, "[RTS]", "辐射后", world, zergling, "Zergling", new[] { healthId }, new[] { "Health" });
-                sb.AppendLine($"[RTS] Zergling 辐射伤害 = {zergHpBeforeIrr - zergHpAfterIrr:F1}。");
+                sb.AppendLine("[RTS] Battle Bunker 施放【出驻】。");
+                CastAbility(engine, battleBunker, battleBunker, slot: 2);
+                Tick(engine, 18);
+                bool bunkerReleased = !world.Has<ChildOf>(rocketTrooper) || world.Get<ChildOf>(rocketTrooper).Parent != battleBunker;
+                sb.AppendLine($"[RTS] Rocket Trooper 已脱离: {bunkerReleased}。");
+                Assert.That(bunkerReleased, Is.True);
+
+                sb.AppendLine("[RTS] Gateway 施放【研究折跃门】。");
+                CastAbility(engine, gateway, gateway, slot: 3);
+                TickUntil(
+                    engine,
+                    () => HasEffectiveTag(world, engine, gateway, warpGateTechTagId),
+                    maxFrames: 900,
+                    "Gateway should gain WarpGate tech after research completes.");
+                LogTags(sb, "[RTS]", world, engine, gateway, "Gateway", new[] { "Tech.Rts.WarpGate" });
+                TickUntil(
+                    engine,
+                    () => TryGetSlotDisplayLabel(panelSource, gateway, slotIndex: 0, out string label) &&
+                          string.Equals(label, "折跃狂热者", StringComparison.Ordinal),
+                    maxFrames: 8,
+                    "Gateway slot 0 should refresh to Warp Zealot after research.");
+
+                int zealotBefore = CountEntitiesByName(world, "Zealot");
+                sb.AppendLine("[RTS] Gateway 施放【折跃狂热者】。");
+                CastAbilityAtWorldPoint(engine, gateway, slot: 0, new Vector2(300f, 2380f));
+                TickUntil(
+                    engine,
+                    () => CountEntitiesByName(world, "Zealot") == zealotBefore + 1,
+                    maxFrames: 20,
+                    "Warp Gate slot override should warp a Zealot.");
+                int zealotAfter = CountEntitiesByName(world, "Zealot");
+                sb.AppendLine($"[RTS] Zealot 数量: {zealotBefore} → {zealotAfter}。");
+                Assert.That(zealotAfter, Is.EqualTo(zealotBefore + 1));
+
+                int poolBefore = CountEntitiesByName(world, "Spawning Pool");
+                float droneMineralsBefore = world.Get<AttributeBuffer>(drone).GetCurrent(mineralsId);
+                sb.AppendLine("[RTS] Drone 施放【孵化刺蛇塔前置建筑】(生成 Spawning Pool)。");
+                CastAbilityAtWorldPoint(engine, drone, slot: 0, new Vector2(3250f, 2200f));
+                Tick(engine, 24);
+                int poolAfter = CountEntitiesByName(world, "Spawning Pool");
+                float droneMineralsAfter = world.Get<AttributeBuffer>(drone).GetCurrent(mineralsId);
+                sb.AppendLine($"[RTS] Spawning Pool 数量: {poolBefore} → {poolAfter}，Minerals {droneMineralsBefore:F0} → {droneMineralsAfter:F0}。");
+                Assert.That(poolAfter, Is.EqualTo(poolBefore + 1));
 
                 sb.AppendLine("───────────────────────────────────────────");
                 sb.AppendLine("[RTS] 场景结束，所有断言通过。");
@@ -637,15 +674,46 @@ namespace Ludots.Tests.GAS.Production
 
         private static void CastAbility(GameEngine engine, Entity actor, Entity target, int slot)
         {
-            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue);
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue) as OrderQueue
+                ?? throw new InvalidOperationException("OrderQueue service is missing.");
             int castAbilityOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["castAbility"];
-            orderQueue.TryEnqueue(new Order
+            bool enqueued = orderQueue.TryEnqueue(new Order
             {
                 OrderTypeId = castAbilityOrderTypeId,
+                PlayerId = 1,
                 Actor = actor,
                 Target = target,
-                Args = new OrderArgs { I0 = slot }
+                Args = new OrderArgs { I0 = slot },
+                SubmitMode = OrderSubmitMode.Immediate
             });
+            Assert.That(enqueued, Is.True, "Ability order should enqueue.");
+        }
+
+        private static void CastAbilityAtWorldPoint(GameEngine engine, Entity actor, int slot, Vector2 targetWorldCm)
+        {
+            var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue) as OrderQueue
+                ?? throw new InvalidOperationException("OrderQueue service is missing.");
+            int castAbilityOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["castAbility"];
+
+            Vector2 origin = worldPosition(world: engine.World, entity: actor);
+            var spatial = new OrderSpatial
+            {
+                Kind = OrderSpatialKind.WorldCm,
+                Mode = OrderCollectionMode.List,
+                WorldCm = new Vector3(origin.X, 0f, origin.Y)
+            };
+            spatial.AddPointWorldCm((int)origin.X, 0, (int)origin.Y);
+            spatial.AddPointWorldCm((int)targetWorldCm.X, 0, (int)targetWorldCm.Y);
+
+            bool enqueued = orderQueue.TryEnqueue(new Order
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                PlayerId = 1,
+                Actor = actor,
+                Args = new OrderArgs { I0 = slot, Spatial = spatial },
+                SubmitMode = OrderSubmitMode.Immediate
+            });
+            Assert.That(enqueued, Is.True, "Point-targeted ability order should enqueue.");
         }
 
         private static void Tick(GameEngine engine, int frames)
@@ -663,6 +731,42 @@ namespace Ludots.Tests.GAS.Production
             int id = AttributeRegistry.GetId(name);
             if (id <= 0) id = AttributeRegistry.Register(name);
             return id;
+        }
+
+        private static int EnsureTag(string name)
+        {
+            int id = TagRegistry.GetId(name);
+            if (id <= 0) id = TagRegistry.Register(name);
+            return id;
+        }
+
+        private static void TickUntil(GameEngine engine, Func<bool> condition, int maxFrames, string because)
+        {
+            for (int i = 0; i < maxFrames; i++)
+            {
+                if (condition())
+                {
+                    return;
+                }
+
+                Tick(engine, 1);
+            }
+
+            Assert.That(condition(), Is.True, because);
+        }
+
+        private static int CountEntitiesByName(World world, string entityName)
+        {
+            int count = 0;
+            var q = new QueryDescription().WithAll<Name>();
+            world.Query(in q, (Entity _, ref Name name) =>
+            {
+                if (string.Equals(name.Value, entityName, StringComparison.OrdinalIgnoreCase))
+                {
+                    count++;
+                }
+            });
+            return count;
         }
 
         private static void LogEntityState(StringBuilder sb, string prefix, string phase, World world, Entity entity, string entityName, int[] attrIds, string[] attrNames)
@@ -693,6 +797,51 @@ namespace Ludots.Tests.GAS.Production
                 sb.Append($" {tagNames[i]}={has}");
             }
             sb.AppendLine();
+        }
+
+        private static bool HasEffectiveTag(World world, GameEngine engine, Entity entity, int tagId)
+        {
+            if (!world.Has<GameplayTagContainer>(entity))
+            {
+                return false;
+            }
+
+            var tagOps = engine.GetService(CoreServiceKeys.TagOps)
+                ?? throw new InvalidOperationException("TagOps service is missing.");
+            ref var tags = ref world.Get<GameplayTagContainer>(entity);
+            return tagOps.HasTag(ref tags, tagId, TagSense.Effective);
+        }
+
+        private static IEntityCommandPanelSource ResolveGasPanelSource(GameEngine engine)
+        {
+            var registry = engine.GetService(CoreServiceKeys.EntityCommandPanelSourceRegistry)
+                ?? throw new InvalidOperationException("EntityCommandPanelSourceRegistry service is missing.");
+            Assert.That(registry.TryGet("gas.ability-slots", out IEntityCommandPanelSource source), Is.True);
+            return source;
+        }
+
+        private static bool TryGetSlotDisplayLabel(IEntityCommandPanelSource source, Entity target, int slotIndex, out string label)
+        {
+            label = string.Empty;
+            if (slotIndex < 0)
+            {
+                return false;
+            }
+
+            var slots = new EntityCommandPanelSlotView[8];
+            int slotCount = source.CopySlots(target, 0, slots);
+            for (int i = 0; i < slotCount; i++)
+            {
+                if (slots[i].SlotIndex != slotIndex)
+                {
+                    continue;
+                }
+
+                label = slots[i].DisplayLabel ?? string.Empty;
+                return true;
+            }
+
+            return false;
         }
 
         private static Entity FindEntity(World world, string entityName)
@@ -778,6 +927,22 @@ namespace Ludots.Tests.GAS.Production
             var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.UiCaptured, false);
+            var uiRoot = new UIRoot(new SkiaUiRenderer());
+            uiRoot.Resize(1920f, 1080f);
+            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+            engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
+            engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+        }
+
+        private static Vector2 worldPosition(World world, Entity entity)
+        {
+            if (!world.Has<WorldPositionCm>(entity))
+            {
+                return Vector2.Zero;
+            }
+
+            var position = world.Get<WorldPositionCm>(entity).Value;
+            return new Vector2(position.X.ToFloat(), position.Y.ToFloat());
         }
 
         private sealed class NullInputBackend : IInputBackend

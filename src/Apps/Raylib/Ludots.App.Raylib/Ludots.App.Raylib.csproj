@@ -77,6 +77,15 @@
     <None Include="game.rts.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="game.rts-war3-training.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="game.rts-cnc-training.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="game.rts-sc2-training.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="game.audit.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

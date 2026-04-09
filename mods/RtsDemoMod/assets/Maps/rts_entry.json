@@ -1,17 +1,92 @@
 {
   "Id": "rts_entry",
   "Tags": ["rts"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 55,
+    "DistanceCm": 14000,
+    "FovYDeg": 60
+  },
   "Entities": [
-    { "Template": "rts_scv", "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } } },
-    { "Template": "rts_barracks", "Overrides": { "WorldPositionCm": { "Value": { "X": 400, "Y": 0 } } } },
-    { "Template": "rts_marine", "Overrides": { "WorldPositionCm": { "Value": { "X": 200, "Y": 100 } } } },
-    { "Template": "rts_marine", "Overrides": { "WorldPositionCm": { "Value": { "X": 200, "Y": -100 } } } },
-    { "Template": "rts_siege_tank", "Overrides": { "WorldPositionCm": { "Value": { "X": 600, "Y": 0 } } } },
-    { "Template": "rts_science_vessel", "Overrides": { "WorldPositionCm": { "Value": { "X": 300, "Y": 200 } } } },
-    { "Template": "rts_zergling", "Overrides": { "WorldPositionCm": { "Value": { "X": 2000, "Y": 50 } } } },
-    { "Template": "rts_zergling", "Overrides": { "WorldPositionCm": { "Value": { "X": 2000, "Y": -50 } } } },
-    { "Template": "rts_zergling", "Overrides": { "WorldPositionCm": { "Value": { "X": 2100, "Y": 0 } } } },
-    { "Template": "rts_zealot", "Overrides": { "WorldPositionCm": { "Value": { "X": -2000, "Y": 0 } } } },
-    { "Template": "rts_zealot", "Overrides": { "WorldPositionCm": { "Value": { "X": -2100, "Y": 100 } } } }
+    {
+      "Template": "rts_war3_peasant",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -2600, "Y": -800 } },
+        "Name": { "Value": "Peasant" }
+      }
+    },
+    {
+      "Template": "rts_war3_barracks",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -1650, "Y": -1000 } },
+        "Name": { "Value": "Barracks" }
+      }
+    },
+    {
+      "Template": "rts_war3_guard_tower_site",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -750, "Y": -1250 } },
+        "Name": { "Value": "Guard Tower" }
+      }
+    },
+    {
+      "Template": "rts_war3_footman",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -900, "Y": -820 } },
+        "Name": { "Value": "Footman" }
+      }
+    },
+    {
+      "Template": "rts_ra2_conyard",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 1000, "Y": -700 } },
+        "Name": { "Value": "Construction Yard" }
+      }
+    },
+    {
+      "Template": "rts_ra2_war_factory",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 2200, "Y": -900 } },
+        "Name": { "Value": "War Factory" }
+      }
+    },
+    {
+      "Template": "rts_ra2_bunker",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 3200, "Y": -1150 } },
+        "Name": { "Value": "Battle Bunker" }
+      }
+    },
+    {
+      "Template": "rts_ra2_rocket_trooper",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 3600, "Y": -780 } },
+        "Name": { "Value": "Rocket Trooper" }
+      }
+    },
+    {
+      "Template": "rts_sc2_gateway",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -300, "Y": 1750 } },
+        "Name": { "Value": "Gateway" }
+      }
+    },
+    {
+      "Template": "rts_sc2_probe",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -950, "Y": 1480 } },
+        "Name": { "Value": "Probe" }
+      }
+    },
+    {
+      "Template": "rts_zerg_drone",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 2650, "Y": 1750 } },
+        "Name": { "Value": "Drone" }
+      }
+    }
   ]
 }

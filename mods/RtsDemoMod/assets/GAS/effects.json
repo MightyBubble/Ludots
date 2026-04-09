@@ -1,153 +1,293 @@
 [
   {
-    "id": "Effect.Rts.BuildCost.Barracks",
-    "tags": ["Effect.Rts.Cost"],
-    "presetType": "InstantDamage",
-    "lifetime": "Instant",
-    "modifiers": [
-      { "attribute": "Minerals", "op": "Add", "value": -150 }
-    ]
-  },
-  {
-    "id": "Effect.Rts.BuildBarracks",
-    "tags": ["Effect.Rts.Build"],
-    "presetType": "CreateUnit",
+    "id": "Effect.Rts.Shared.EnterGarrison",
+    "tags": ["Effect.Rts.Shared.Garrison"],
+    "presetType": "Relation",
     "lifetime": "Instant",
     "participatesInResponse": false,
-    "unitCreation": {
-      "unitType": "Unit.Barracks",
-      "count": 1,
-      "offsetRadius": 300
+    "relation": {
+      "operation": "SetParent",
+      "subject": "Source",
+      "parent": "Target",
+      "snapSubjectToParentPosition": true
     }
   },
   {
-    "id": "Effect.Rts.TrainCost.Marine",
-    "tags": ["Effect.Rts.Cost"],
-    "presetType": "InstantDamage",
-    "lifetime": "Instant",
-    "modifiers": [
-      { "attribute": "Minerals", "op": "Add", "value": -50 }
-    ]
-  },
-  {
-    "id": "Effect.Rts.TrainMarine",
-    "tags": ["Effect.Rts.Train"],
-    "presetType": "CreateUnit",
-    "lifetime": "Instant",
-    "participatesInResponse": false,
-    "unitCreation": {
-      "unitType": "Unit.Marine",
-      "count": 1,
-      "offsetRadius": 120
-    }
-  },
-  {
-    "id": "Effect.Rts.ResearchComplete",
-    "tags": ["Effect.Rts.Research"],
-    "presetType": "Buff",
-    "lifetime": "Infinite",
-    "participatesInResponse": false,
-    "grantedTags": [
-      { "tag": "Tech.Stim", "formula": "Fixed", "amount": 1 }
-    ]
-  },
-  {
-    "id": "Effect.Rts.ShieldAura",
-    "tags": ["Effect.Rts.Aura"],
-    "presetType": "PeriodicSearch",
-    "lifetime": "After",
-    "participatesInResponse": false,
-    "duration": {
-      "durationTicks": 6000,
-      "periodTicks": 30
-    },
-    "targetQuery": {
-      "kind": "BuiltinSpatial",
-      "shape": "Circle",
-      "radius": 800
-    },
-    "targetFilter": {
-      "relationFilter": "Friendly",
-      "excludeSource": true,
-      "maxTargets": 16
-    },
-    "targetDispatch": {
-      "payloadEffect": "Effect.Rts.ShieldBuff"
-    }
-  },
-  {
-    "id": "Effect.Rts.ShieldBuff",
-    "tags": ["Effect.Rts.ShieldBuff"],
-    "presetType": "Buff",
-    "lifetime": "After",
-    "participatesInResponse": false,
-    "duration": {
-      "durationTicks": 90
-    },
-    "modifiers": [
-      { "attribute": "Shield", "op": "Add", "value": 10 }
-    ],
-    "stack": {
-      "limit": 3,
-      "policy": "RefreshDuration",
-      "overflowPolicy": "RejectNew"
-    }
-  },
-  {
-    "id": "Effect.Rts.SiegeTankAoe",
-    "tags": ["Effect.Rts.Aoe"],
-    "presetType": "Search",
-    "lifetime": "Instant",
-    "participatesInResponse": true,
-    "targetQuery": {
-      "kind": "BuiltinSpatial",
-      "shape": "Circle",
-      "radius": 600
-    },
-    "targetFilter": {
-      "relationFilter": "Hostile",
-      "excludeSource": true,
-      "maxTargets": 32
-    },
-    "targetDispatch": {
-      "payloadEffect": "Effect.Rts.AoeDamage"
-    }
-  },
-  {
-    "id": "Effect.Rts.AoeDamage",
-    "tags": ["Effect.Rts.AoeDamage"],
-    "presetType": "InstantDamage",
-    "lifetime": "Instant",
-    "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -20 }
-    ]
-  },
-  {
-    "id": "Effect.Rts.StimBuff",
-    "tags": ["Effect.Rts.StimBuff"],
+    "id": "Effect.Rts.Shared.Construction.War3",
+    "tags": ["Effect.Rts.Shared.Construction"],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
       "durationTicks": 180
     },
-    "modifiers": [
-      { "attribute": "AttackSpeed", "op": "Add", "value": 50 },
-      { "attribute": "Health", "op": "Add", "value": -10 }
+    "grantedTags": [
+      { "tag": "State.Rts.Constructing", "formula": "Fixed", "amount": 1 }
     ]
   },
   {
-    "id": "Effect.Rts.Irradiate",
-    "tags": ["Effect.Rts.Irradiate"],
-    "presetType": "DoT",
+    "id": "Effect.Rts.Shared.Construction.Cnc",
+    "tags": ["Effect.Rts.Shared.Construction"],
+    "presetType": "Buff",
     "lifetime": "After",
-    "participatesInResponse": true,
+    "participatesInResponse": false,
     "duration": {
-      "durationTicks": 150,
-      "periodTicks": 15
+      "durationTicks": 45
     },
-    "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -3 }
+    "grantedTags": [
+      { "tag": "State.Rts.Constructing", "formula": "Fixed", "amount": 1 }
     ]
+  },
+  {
+    "id": "Effect.Rts.Shared.Construction.Zerg",
+    "tags": ["Effect.Rts.Shared.Construction"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 210
+    },
+    "grantedTags": [
+      { "tag": "State.Rts.Constructing", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.Shared.WarpIn",
+    "tags": ["Effect.Rts.Shared.Warp"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90
+    },
+    "grantedTags": [
+      { "tag": "State.Rts.Warping", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.War3.CostLumberMill",
+    "tags": ["Effect.Rts.War3.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Minerals", "op": "Add", "value": -160 },
+      { "attribute": "Lumber", "op": "Add", "value": -60 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.War3.CostGuardTower",
+    "tags": ["Effect.Rts.War3.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Minerals", "op": "Add", "value": -140 },
+      { "attribute": "Lumber", "op": "Add", "value": -80 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.War3.CostTrainFootman",
+    "tags": ["Effect.Rts.War3.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Minerals", "op": "Add", "value": -135 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.War3.CreateLumberMillSite",
+    "tags": ["Effect.Rts.War3.Build"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_war3_lumber_mill_site",
+      "count": 1,
+      "offsetRadius": 0,
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.War3"
+    }
+  },
+  {
+    "id": "Effect.Rts.War3.CreateGuardTowerSite",
+    "tags": ["Effect.Rts.War3.Build"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_war3_guard_tower_site",
+      "count": 1,
+      "offsetRadius": 0,
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.War3"
+    }
+  },
+  {
+    "id": "Effect.Rts.War3.TrainFootman",
+    "tags": ["Effect.Rts.War3.Train"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_war3_footman",
+      "count": 1,
+      "offsetRadius": 280
+    }
+  },
+  {
+    "id": "Effect.Rts.Cnc.CostPowerPlant",
+    "tags": ["Effect.Rts.Cnc.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Credits", "op": "Add", "value": -500 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.Cnc.CostRefinery",
+    "tags": ["Effect.Rts.Cnc.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Credits", "op": "Add", "value": -1400 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.Cnc.CostTrainRhino",
+    "tags": ["Effect.Rts.Cnc.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Credits", "op": "Add", "value": -900 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.Cnc.CostTrainRhinoStep",
+    "tags": ["Effect.Rts.Cnc.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Credits", "op": "Add", "value": -100 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.Cnc.PlacePowerPlant",
+    "tags": ["Effect.Rts.Cnc.Build"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_ra2_power_plant",
+      "count": 1,
+      "offsetRadius": 0,
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc"
+    }
+  },
+  {
+    "id": "Effect.Rts.Cnc.PlaceRefinery",
+    "tags": ["Effect.Rts.Cnc.Build"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_ra2_refinery",
+      "count": 1,
+      "offsetRadius": 0,
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc"
+    }
+  },
+  {
+    "id": "Effect.Rts.Cnc.TrainRhino",
+    "tags": ["Effect.Rts.Cnc.Train"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_ra2_rhino",
+      "count": 1,
+      "offsetRadius": 340
+    }
+  },
+  {
+    "id": "Effect.Rts.Sc2.CostTrainZealot",
+    "tags": ["Effect.Rts.Sc2.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Minerals", "op": "Add", "value": -100 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.Sc2.CostResearchWarpGate",
+    "tags": ["Effect.Rts.Sc2.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Minerals", "op": "Add", "value": -50 },
+      { "attribute": "Gas", "op": "Add", "value": -50 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.Sc2.CostWarpZealot",
+    "tags": ["Effect.Rts.Sc2.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Minerals", "op": "Add", "value": -100 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.Sc2.TrainZealot",
+    "tags": ["Effect.Rts.Sc2.Train"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc2_zealot",
+      "count": 1,
+      "offsetRadius": 260
+    }
+  },
+  {
+    "id": "Effect.Rts.Sc2.ResearchWarpGateComplete",
+    "tags": ["Effect.Rts.Sc2.Research"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "grantedTags": [
+      { "tag": "Tech.Rts.WarpGate", "formula": "Fixed", "amount": 1 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.Sc2.WarpZealot",
+    "tags": ["Effect.Rts.Sc2.Warp"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_sc2_zealot",
+      "count": 1,
+      "offsetRadius": 0,
+      "onSpawnEffect": "Effect.Rts.Shared.WarpIn"
+    }
+  },
+  {
+    "id": "Effect.Rts.Zerg.CostMorphSpawningPool",
+    "tags": ["Effect.Rts.Zerg.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "modifiers": [
+      { "attribute": "Minerals", "op": "Add", "value": -200 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.Zerg.MorphSpawningPool",
+    "tags": ["Effect.Rts.Zerg.Build"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_zerg_spawning_pool",
+      "count": 1,
+      "offsetRadius": 0,
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.Zerg"
+    }
   }
 ]
