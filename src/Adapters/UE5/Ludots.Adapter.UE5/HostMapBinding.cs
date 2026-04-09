@@ -20,6 +20,7 @@ namespace Ludots.Adapter.UE5
             null);
 
         public bool HasBinding =>
+            TransitionMode != HostLevelTransitionMode.None ||
             !string.IsNullOrWhiteSpace(HostWorldName) ||
             !string.IsNullOrWhiteSpace(LevelPath);
     }

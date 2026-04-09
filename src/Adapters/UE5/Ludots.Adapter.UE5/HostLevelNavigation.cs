@@ -7,6 +7,7 @@ namespace Ludots.Adapter.UE5
         None = 0,
         PreviewMod = 1,
         DirectOpenLevel = 2,
+        ExternalSession = 3,
     }
 
     public enum HostLevelNavigationState

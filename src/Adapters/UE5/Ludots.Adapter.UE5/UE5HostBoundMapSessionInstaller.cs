@@ -17,6 +17,7 @@ namespace Ludots.Adapter.UE5
             var service = new UE5HostBoundMapSessionService(
                 () => engine.GetService(UE5AdapterServiceKeys.ExplicitHostMapBindingResolver),
                 () => engine.GetService(UE5AdapterServiceKeys.HostLevelNavigator),
+                () => engine.GetService(UE5AdapterServiceKeys.ExternalSessionTransitionHandler),
                 snapshot => engine.SetService(UE5AdapterServiceKeys.HostBoundMapSessionState, snapshot));
             engine.SetService(UE5AdapterServiceKeys.HostBoundMapSessionService, service);
             engine.SetService(CoreServiceKeys.MapLoadCompletionGate, service);

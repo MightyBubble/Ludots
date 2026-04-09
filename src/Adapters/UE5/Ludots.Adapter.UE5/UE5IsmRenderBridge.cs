@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Adapter.UE5
@@ -76,7 +77,9 @@ namespace Ludots.Adapter.UE5
 
             if (snapshot != null)
             {
-                CollectStaticBuckets(engine, snapshot);
+                var visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+                var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
+                CollectStaticBuckets(snapshot, engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry), in finalizationContext);
             }
 
             SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
@@ -121,9 +124,8 @@ namespace Ludots.Adapter.UE5
             _allegroItems.Clear();
         }
 
-        private void CollectStaticBuckets(GameEngine engine, PrimitiveDrawBuffer buffer)
+        private void CollectStaticBuckets(PrimitiveDrawBuffer buffer, MeshAssetRegistry? meshRegistry, in PrefabFinalizationContext finalizationContext)
         {
-            var meshRegistry = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry;
             ReadOnlySpan<PrimitiveDrawItem> span = buffer.GetSpan();
             for (int i = 0; i < span.Length; i++)
             {
@@ -141,7 +143,8 @@ namespace Ludots.Adapter.UE5
                     item.Rotation,
                     item.Scale,
                     item.Visibility,
-                    meshRegistry);
+                    meshRegistry,
+                    in finalizationContext);
             }
         }
 
@@ -153,7 +156,8 @@ namespace Ludots.Adapter.UE5
             Quaternion rotation,
             Vector3 scale,
             VisualVisibility visibility,
-            MeshAssetRegistry? meshRegistry)
+            MeshAssetRegistry? meshRegistry,
+            in PrefabFinalizationContext finalizationContext)
         {
             if (meshRegistry == null)
             {
@@ -169,6 +173,7 @@ namespace Ludots.Adapter.UE5
                 rotation,
                 scale,
                 Vector4.One,
+                finalizationContext,
                 _prefabLeaves);
 
             foreach (ref readonly var leaf in _prefabLeaves.GetSpan())

@@ -144,9 +144,41 @@ namespace Ludots.Core.Presentation.Config
                     LocalRotation = ParseQuaternionWithDefault(p?["localRotation"], Quaternion.Identity),
                     LocalScale = ParseVector3WithDefault(p?["localScale"], Vector3.One),
                     ColorTint = ParseVector4WithDefault(p?["colorTint"], Vector4.One),
+                    Grounding = ParseGrounding(p?["grounding"]),
                 };
             }
             return parts;
+        }
+
+        private static PrefabPartGrounding ParseGrounding(JsonNode node)
+        {
+            if (node == null)
+            {
+                return PrefabPartGrounding.None;
+            }
+
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException("Prefab part grounding must be an object.");
+            }
+
+            string modeText = obj["mode"]?.GetValue<string>() ?? nameof(PrefabPartGroundingMode.None);
+            if (!Enum.TryParse(modeText, ignoreCase: true, out PrefabPartGroundingMode mode))
+            {
+                throw new InvalidOperationException($"Prefab part grounding has invalid mode '{modeText}'.");
+            }
+
+            int layerIndex = obj["layerIndex"]?.GetValue<int>() ?? 0;
+            if (layerIndex < 0)
+            {
+                throw new InvalidOperationException("Prefab part grounding layerIndex cannot be negative.");
+            }
+
+            return new PrefabPartGrounding(
+                mode,
+                obj["verticalOffsetMeters"]?.GetValue<float>() ?? 0f,
+                obj["alignToGroundNormal"]?.GetValue<bool>() ?? false,
+                layerIndex);
         }
 
         private static Vector3 ParseVector3(JsonNode node)

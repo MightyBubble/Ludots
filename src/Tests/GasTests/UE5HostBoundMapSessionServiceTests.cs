@@ -291,6 +291,77 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadMap_WithExternalSessionBinding_WithoutHandler_FailsExplicitly()
+        {
+            using var environment = new HostLoadTestEnvironment();
+            var resolver = new MapBindingResolver(new Dictionary<string, ExplicitHostMapBinding>
+            {
+                [FailedMapId] = CreateBinding(string.Empty, string.Empty, HostLevelTransitionMode.ExternalSession),
+            });
+
+            using GameEngine engine = environment.CreateEngine(resolver, new ScriptedNavigator(), out _);
+            var loadedMaps = CaptureMapEvents(engine, GameEvents.MapLoaded);
+
+            engine.LoadMap(FailedMapId);
+
+            HostBoundMapSessionSnapshot failed = engine.GetService(UE5AdapterServiceKeys.HostBoundMapSessionState);
+            Assert.That(failed.LoadStatus.Failed, Is.True);
+            Assert.That(failed.LoadStatus.ErrorMessage, Does.Contain(nameof(IExternalSessionTransitionHandler)));
+            Assert.That(loadedMaps, Is.Empty);
+            Assert.That(HasSuspendedMapEntity(engine, FailedMapId), Is.True);
+        }
+
+        [Test]
+        public void PushMap_AndPopMap_WithExternalSessionBinding_UseTypedExternalTransitionHooks()
+        {
+            using var environment = new HostLoadTestEnvironment();
+            var resolver = new MapBindingResolver(new Dictionary<string, ExplicitHostMapBinding>
+            {
+                [InnerMapId] = CreateBinding(string.Empty, string.Empty, HostLevelTransitionMode.ExternalSession),
+            });
+            var navigator = new ScriptedNavigator();
+            var externalHandler = new ScriptedExternalSessionTransitionHandler();
+
+            using GameEngine engine = environment.CreateEngine(resolver, navigator, out _, externalHandler);
+            var loadedMaps = CaptureMapEvents(engine, GameEvents.MapLoaded);
+            var resumedMaps = CaptureMapEvents(engine, GameEvents.MapResumed);
+
+            engine.LoadMap(OuterMapId);
+            loadedMaps.Clear();
+
+            engine.PushMap(InnerMapId);
+
+            HostBoundMapSessionSnapshot pendingInner = engine.GetService(UE5AdapterServiceKeys.HostBoundMapSessionState);
+            Assert.That(externalHandler.LaunchCalls, Is.EqualTo(1));
+            Assert.That(engine.CurrentMapSession?.MapId.Value, Is.EqualTo(InnerMapId));
+            Assert.That(pendingInner.IsPending, Is.True);
+            Assert.That(loadedMaps, Is.Empty);
+
+            externalHandler.CompleteLaunch(MapLoadCompletionResult.Ready());
+            engine.Tick(1f / 60f);
+
+            HostBoundMapSessionSnapshot activeInner = engine.GetService(UE5AdapterServiceKeys.HostBoundMapSessionState);
+            Assert.That(activeInner.IsReady, Is.True);
+            Assert.That(loadedMaps, Is.EqualTo(new[] { InnerMapId }));
+            loadedMaps.Clear();
+
+            engine.PopMap();
+
+            HostBoundMapSessionSnapshot pendingOuter = engine.GetService(UE5AdapterServiceKeys.HostBoundMapSessionState);
+            Assert.That(externalHandler.ReturnCalls, Is.EqualTo(1));
+            Assert.That(engine.CurrentMapSession?.MapId.Value, Is.EqualTo(OuterMapId));
+            Assert.That(pendingOuter.IsPending, Is.True);
+            Assert.That(resumedMaps, Is.Empty);
+
+            externalHandler.CompleteReturn(MapLoadCompletionResult.Ready());
+            engine.Tick(1f / 60f);
+
+            HostBoundMapSessionSnapshot resumedOuter = engine.GetService(UE5AdapterServiceKeys.HostBoundMapSessionState);
+            Assert.That(resumedOuter.IsReady, Is.True);
+            Assert.That(resumedMaps, Is.EqualTo(new[] { OuterMapId }));
+        }
+
+        [Test]
         public void UnloadMap_WhenFocusedMapResumeIsPending_CancelsFormalResumeGate()
         {
             using var environment = new HostLoadTestEnvironment();
@@ -410,7 +481,8 @@ namespace GasTests
             public GameEngine CreateEngine(
                 IExplicitHostMapBindingResolver resolver,
                 IHostLevelNavigator navigator,
-                out IHostBoundMapSessionService sessionService)
+                out IHostBoundMapSessionService sessionService,
+                IExternalSessionTransitionHandler externalTransitionHandler = null)
             {
                 var modPaths = RepoModPaths.ResolveExplicit(_repoRoot, new[] { "LudotsCoreMod" });
                 modPaths.Add(_tempModRoot);
@@ -420,6 +492,11 @@ namespace GasTests
                 InstallInput(engine);
                 engine.SetService(UE5AdapterServiceKeys.ExplicitHostMapBindingResolver, resolver);
                 engine.SetService(UE5AdapterServiceKeys.HostLevelNavigator, navigator);
+                if (externalTransitionHandler != null)
+                {
+                    engine.SetService(UE5AdapterServiceKeys.ExternalSessionTransitionHandler, externalTransitionHandler);
+                }
+
                 sessionService = UE5HostBoundMapSessionInstaller.Install(engine);
                 engine.Start();
                 return engine;
@@ -643,6 +720,39 @@ namespace GasTests
             }
         }
 
+        private sealed class ScriptedExternalSessionTransitionHandler : IExternalSessionTransitionHandler
+        {
+            public int LaunchCalls { get; private set; }
+            public int ReturnCalls { get; private set; }
+
+            private readonly MutablePendingMapLoad _launchPendingLoad = new();
+            private readonly MutablePendingMapLoad _returnPendingLoad = new();
+
+            public IPendingMapLoad BeginLaunch(in ExternalSessionLaunchRequest request)
+            {
+                LaunchCalls++;
+                _launchPendingLoad.Reset();
+                return _launchPendingLoad;
+            }
+
+            public IPendingMapLoad BeginReturn(in ExternalSessionReturnRequest request)
+            {
+                ReturnCalls++;
+                _returnPendingLoad.Reset();
+                return _returnPendingLoad;
+            }
+
+            public void CompleteLaunch(MapLoadCompletionResult result)
+            {
+                _launchPendingLoad.SetResult(result);
+            }
+
+            public void CompleteReturn(MapLoadCompletionResult result)
+            {
+                _returnPendingLoad.SetResult(result);
+            }
+        }
+
         private sealed class NullInputBackend : IInputBackend
         {
             public float GetAxis(string devicePath) => 0f;
@@ -692,6 +802,30 @@ namespace GasTests
             public void Cancel()
             {
                 CancelCalls++;
+            }
+        }
+
+        private sealed class MutablePendingMapLoad : IPendingMapLoad
+        {
+            private MapLoadCompletionResult _result = MapLoadCompletionResult.Pending();
+
+            public void Reset()
+            {
+                _result = MapLoadCompletionResult.Pending();
+            }
+
+            public void SetResult(MapLoadCompletionResult result)
+            {
+                _result = result;
+            }
+
+            public MapLoadCompletionResult Poll()
+            {
+                return _result;
+            }
+
+            public void Cancel()
+            {
             }
         }
 

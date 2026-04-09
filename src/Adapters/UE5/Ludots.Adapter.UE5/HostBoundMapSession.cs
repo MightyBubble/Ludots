@@ -32,6 +32,7 @@ namespace Ludots.Adapter.UE5
     {
         private readonly Func<IExplicitHostMapBindingResolver?> _resolverAccessor;
         private readonly Func<IHostLevelNavigator?> _navigatorAccessor;
+        private readonly Func<IExternalSessionTransitionHandler?> _externalTransitionHandlerAccessor;
         private readonly Action<HostBoundMapSessionSnapshot> _publishSnapshot;
 
         private HostBoundMapSessionSnapshot _snapshot;
@@ -39,10 +40,12 @@ namespace Ludots.Adapter.UE5
         public UE5HostBoundMapSessionService(
             Func<IExplicitHostMapBindingResolver?> resolverAccessor,
             Func<IHostLevelNavigator?> navigatorAccessor,
+            Func<IExternalSessionTransitionHandler?> externalTransitionHandlerAccessor,
             Action<HostBoundMapSessionSnapshot> publishSnapshot)
         {
             _resolverAccessor = resolverAccessor ?? throw new ArgumentNullException(nameof(resolverAccessor));
             _navigatorAccessor = navigatorAccessor ?? throw new ArgumentNullException(nameof(navigatorAccessor));
+            _externalTransitionHandlerAccessor = externalTransitionHandlerAccessor ?? throw new ArgumentNullException(nameof(externalTransitionHandlerAccessor));
             _publishSnapshot = publishSnapshot ?? throw new ArgumentNullException(nameof(publishSnapshot));
 
             _snapshot = HostBoundMapSessionSnapshot.Empty;
@@ -91,8 +94,18 @@ namespace Ludots.Adapter.UE5
 
             if (request.IsPush && binding.TransitionMode != HostLevelTransitionMode.PreviewMod)
             {
+                if (binding.TransitionMode == HostLevelTransitionMode.ExternalSession)
+                {
+                    return BeginExternalLaunch(request, binding);
+                }
+
                 return new CompletedPendingMapLoad(MapLoadCompletionResult.Failed(
-                    $"Nested host-bound map '{request.MapId.Value}' must use '{HostLevelTransitionMode.PreviewMod}' so pop can return through the formal host lifecycle."));
+                    $"Nested host-bound map '{request.MapId.Value}' must use '{HostLevelTransitionMode.PreviewMod}' or '{HostLevelTransitionMode.ExternalSession}' so pop can return through the formal host lifecycle."));
+            }
+
+            if (binding.TransitionMode == HostLevelTransitionMode.ExternalSession)
+            {
+                return BeginExternalLaunch(request, binding);
             }
 
             IHostLevelNavigator? navigator = _navigatorAccessor();
@@ -125,7 +138,19 @@ namespace Ludots.Adapter.UE5
             }
 
             IExplicitHostMapBindingResolver? resolver = _resolverAccessor();
-            if (resolver == null || !resolver.TryResolve(closedSession, out ExplicitHostMapBinding closedBinding) || closedBinding.TransitionMode != HostLevelTransitionMode.PreviewMod)
+            if (resolver == null || !resolver.TryResolve(closedSession, out ExplicitHostMapBinding closedBinding))
+            {
+                return null;
+            }
+
+            bool hasResumedBinding = resolver.TryResolve(request.ResumedSession, out ExplicitHostMapBinding resumedBinding) && resumedBinding.HasBinding;
+
+            if (closedBinding.TransitionMode == HostLevelTransitionMode.ExternalSession)
+            {
+                return BeginExternalReturn(request, hasResumedBinding, resumedBinding, closedSession, closedBinding);
+            }
+
+            if (closedBinding.TransitionMode != HostLevelTransitionMode.PreviewMod)
             {
                 return null;
             }
@@ -137,7 +162,6 @@ namespace Ludots.Adapter.UE5
                     $"Resuming map '{request.ResumedSession.MapId.Value}' requires '{nameof(IHostLevelNavigator)}'."));
             }
 
-            bool hasResumedBinding = resolver.TryResolve(request.ResumedSession, out ExplicitHostMapBinding resumedBinding) && resumedBinding.HasBinding;
             HostLevelNavigationSnapshot current = navigator.Snapshot;
             HostLevelNavigationResult navigationResult =
                 current.IsPreviewActive || current.State == HostLevelNavigationState.Returning
@@ -153,6 +177,50 @@ namespace Ludots.Adapter.UE5
             return completion.State == MapLoadCompletionState.Pending
                 ? new PendingHostBoundMapResume(navigator, hasResumedBinding, resumedBinding)
                 : new CompletedPendingMapLoad(completion);
+        }
+
+        private IPendingMapLoad BeginExternalLaunch(in MapLoadCompletionRequest request, in ExplicitHostMapBinding binding)
+        {
+            IExternalSessionTransitionHandler? externalHandler = _externalTransitionHandlerAccessor();
+            if (externalHandler == null)
+            {
+                return new CompletedPendingMapLoad(MapLoadCompletionResult.Failed(
+                    $"Explicit external session map '{request.MapId.Value}' requires '{nameof(IExternalSessionTransitionHandler)}'."));
+            }
+
+            IPendingMapLoad pendingLoad = externalHandler.BeginLaunch(new ExternalSessionLaunchRequest(
+                request.Engine,
+                request.MapId,
+                request.MapConfig,
+                request.Session,
+                binding,
+                request.IsPush));
+            return pendingLoad ?? new CompletedPendingMapLoad(MapLoadCompletionResult.Failed(
+                $"External session launch handler returned null for '{request.MapId.Value}'."));
+        }
+
+        private IPendingMapLoad BeginExternalReturn(
+            in MapResumeCompletionRequest request,
+            bool hasResumedBinding,
+            in ExplicitHostMapBinding resumedBinding,
+            MapSession closedSession,
+            in ExplicitHostMapBinding closedBinding)
+        {
+            IExternalSessionTransitionHandler? externalHandler = _externalTransitionHandlerAccessor();
+            if (externalHandler == null)
+            {
+                return new CompletedPendingMapLoad(MapLoadCompletionResult.Failed(
+                    $"Resuming map '{request.ResumedSession.MapId.Value}' from external session '{closedSession.MapId.Value}' requires '{nameof(IExternalSessionTransitionHandler)}'."));
+            }
+
+            IPendingMapLoad pendingLoad = externalHandler.BeginReturn(new ExternalSessionReturnRequest(
+                request.Engine,
+                request.ResumedSession,
+                hasResumedBinding ? resumedBinding : ExplicitHostMapBinding.Empty,
+                closedSession,
+                closedBinding));
+            return pendingLoad ?? new CompletedPendingMapLoad(MapLoadCompletionResult.Failed(
+                $"External session return handler returned null while resuming '{request.ResumedSession.MapId.Value}'."));
         }
 
         private void Update(HostBoundMapSessionSnapshot next)

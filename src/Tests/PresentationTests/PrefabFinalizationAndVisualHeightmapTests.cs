@@ -95,6 +95,103 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PrefabFinalizationPipeline_GroundsPerPartAgainstVisualHeightmap_AndAlignsToGroundNormal()
+        {
+            var meshes = new MeshAssetRegistry();
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+            int sphereId = meshes.GetId(WellKnownMeshKeys.Sphere);
+            int groundedPrefabId = meshes.Register(
+                "prefab.grounded",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        MeshAssetId = cubeId,
+                        LocalPosition = new Vector3(1f, 99f, 1f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                        Grounding = new PrefabPartGrounding(
+                            PrefabPartGroundingMode.VisualHeightmap,
+                            verticalOffsetMeters: 0.25f),
+                    },
+                    new PrefabPart
+                    {
+                        MeshAssetId = sphereId,
+                        LocalPosition = new Vector3(5f, -12f, 5f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                        Grounding = new PrefabPartGrounding(
+                            PrefabPartGroundingMode.VisualHeightmap,
+                            alignToGroundNormal: true),
+                    }));
+
+            var output = new PrefabFinalizedLeafBuffer();
+            var runtime = CreateRuntime();
+            var context = new PrefabFinalizationContext(runtime);
+
+            PrefabFinalizationPipeline.FinalizeLeaves(
+                meshes,
+                groundedPrefabId,
+                stableId: 100,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                color: Vector4.One,
+                context,
+                output);
+
+            Assert.That(output.Count, Is.EqualTo(2));
+
+            var leaves = output.GetSpan();
+            Assert.That(leaves[0].Position.X, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(leaves[0].Position.Z, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(leaves[0].Position.Y, Is.EqualTo(0.45f).Within(0.001f), "Grounded part must use heightmap truth plus vertical offset.");
+
+            var groundRay = new ScreenRay(new Vector3(5f, 10f, 5f), -Vector3.UnitY);
+            Assert.That(runtime.TryRaycastGround(in groundRay, out VisualGroundHit hit), Is.True);
+            Vector3 alignedUp = Vector3.Transform(Vector3.UnitY, leaves[1].Rotation);
+            Assert.That(leaves[1].Position.Y, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(alignedUp.X, Is.EqualTo(hit.Normal.X).Within(0.001f));
+            Assert.That(alignedUp.Y, Is.EqualTo(hit.Normal.Y).Within(0.001f));
+            Assert.That(alignedUp.Z, Is.EqualTo(hit.Normal.Z).Within(0.001f));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_WhenGroundingRequestsVisualHeightmapWithoutTruth_ThrowsExplicitly()
+        {
+            var meshes = new MeshAssetRegistry();
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+            int groundedPrefabId = meshes.Register(
+                "prefab.requires_heightmap",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        MeshAssetId = cubeId,
+                        LocalPosition = Vector3.Zero,
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                        Grounding = new PrefabPartGrounding(PrefabPartGroundingMode.VisualHeightmap),
+                    }));
+
+            var output = new PrefabFinalizedLeafBuffer();
+
+            Assert.Throws<InvalidOperationException>(() =>
+                PrefabFinalizationPipeline.FinalizeLeaves(
+                    meshes,
+                    groundedPrefabId,
+                    stableId: 12,
+                    position: Vector3.Zero,
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    color: Vector4.One,
+                    output));
+        }
+
+        [Test]
         public void VisualHeightmapBinary_RoundTripsAssetMetadataAndSamples()
         {
             var asset = new VisualHeightmapAsset(

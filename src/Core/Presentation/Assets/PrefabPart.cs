@@ -9,6 +9,7 @@ namespace Ludots.Core.Presentation.Assets
         public Quaternion LocalRotation;
         public Vector3 LocalScale;
         public Vector4 ColorTint;
+        public PrefabPartGrounding Grounding;
 
         public static PrefabPart Default(int meshAssetId)
         {
@@ -19,6 +20,7 @@ namespace Ludots.Core.Presentation.Assets
                 LocalRotation = Quaternion.Identity,
                 LocalScale = Vector3.One,
                 ColorTint = Vector4.One,
+                Grounding = PrefabPartGrounding.None,
             };
         }
     }

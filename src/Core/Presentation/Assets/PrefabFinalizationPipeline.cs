@@ -17,6 +17,31 @@ namespace Ludots.Core.Presentation.Assets
             PrefabFinalizedLeafBuffer output,
             int maxDepth = DefaultMaxDepth)
         {
+            FinalizeLeaves(
+                meshes,
+                meshAssetId,
+                stableId,
+                position,
+                rotation,
+                scale,
+                color,
+                PrefabFinalizationContext.Empty,
+                output,
+                maxDepth);
+        }
+
+        public static void FinalizeLeaves(
+            MeshAssetRegistry meshes,
+            int meshAssetId,
+            int stableId,
+            in Vector3 position,
+            in Quaternion rotation,
+            in Vector3 scale,
+            in Vector4 color,
+            in PrefabFinalizationContext context,
+            PrefabFinalizedLeafBuffer output,
+            int maxDepth = DefaultMaxDepth)
+        {
             if (meshes == null)
             {
                 throw new System.ArgumentNullException(nameof(meshes));
@@ -27,7 +52,7 @@ namespace Ludots.Core.Presentation.Assets
                 throw new System.ArgumentNullException(nameof(output));
             }
 
-            FinalizeLeavesRecursive(meshes, meshAssetId, stableId, position, rotation, scale, color, output, depth: 0, maxDepth);
+            FinalizeLeavesRecursive(meshes, meshAssetId, stableId, position, rotation, scale, color, context, output, depth: 0, maxDepth);
         }
 
         private static void FinalizeLeavesRecursive(
@@ -38,6 +63,7 @@ namespace Ludots.Core.Presentation.Assets
             in Quaternion rotation,
             in Vector3 scale,
             in Vector4 color,
+            in PrefabFinalizationContext context,
             PrefabFinalizedLeafBuffer output,
             int depth,
             int maxDepth)
@@ -56,13 +82,15 @@ namespace Ludots.Core.Presentation.Assets
                     ref var part = ref descriptor.PrefabParts[i];
                     PrefabTransformUtility.Compose(position, rotation, scale, in part, out Vector3 childPosition, out Quaternion childRotation, out Vector3 childScale);
 
+                    int childStableId = PrefabTransformUtility.BuildChildStableId(stableId, depth, i, part.MeshAssetId);
+                    PrefabGroundingUtility.Resolve(in part, in context, ref childPosition, ref childRotation, childStableId);
+
                     var childColor = new Vector4(
                         color.X * part.ColorTint.X,
                         color.Y * part.ColorTint.Y,
                         color.Z * part.ColorTint.Z,
                         color.W * part.ColorTint.W);
 
-                    int childStableId = PrefabTransformUtility.BuildChildStableId(stableId, depth, i, part.MeshAssetId);
                     FinalizeLeavesRecursive(
                         meshes,
                         part.MeshAssetId,
@@ -71,6 +99,7 @@ namespace Ludots.Core.Presentation.Assets
                         childRotation,
                         childScale,
                         childColor,
+                        context,
                         output,
                         depth + 1,
                         maxDepth);

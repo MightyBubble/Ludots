@@ -74,7 +74,13 @@ namespace Ludots.Tests.Presentation
                         "localPosition": [100, 0, 0],
                         "localRotation": [0, 0.70710677, 0, 0.70710677],
                         "localScale": [1, 2, 3],
-                        "colorTint": [1, 0.5, 0.25, 1]
+                        "colorTint": [1, 0.5, 0.25, 1],
+                        "grounding": {
+                          "mode": "VisualHeightmap",
+                          "verticalOffsetMeters": 0.5,
+                          "alignToGroundNormal": true,
+                          "layerIndex": 2
+                        }
                       }
                     ]
                   }
@@ -105,6 +111,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(part.ColorTint, Is.EqualTo(new Vector4(1f, 0.5f, 0.25f, 1f)));
             Assert.That(part.LocalRotation.Y, Is.EqualTo(0.70710677f).Within(0.0001f));
             Assert.That(part.LocalRotation.W, Is.EqualTo(0.70710677f).Within(0.0001f));
+            Assert.That(part.Grounding.Mode, Is.EqualTo(PrefabPartGroundingMode.VisualHeightmap));
+            Assert.That(part.Grounding.VerticalOffsetMeters, Is.EqualTo(0.5f).Within(0.0001f));
+            Assert.That(part.Grounding.AlignToGroundNormal, Is.True);
+            Assert.That(part.Grounding.LayerIndex, Is.EqualTo(2));
         }
     }
 }
