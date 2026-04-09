@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\interaction\InteractionShowcaseMod\InteractionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\EntityCommandPanelMod\EntityCommandPanelMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\entity_command_panel\EntityCommandPanelShowcaseMod\EntityCommandPanelShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\visual_terrain_editor\VisualTerrainEditorMod\VisualTerrainEditorMod.csproj" />
     <ProjectReference Include="..\..\..\mods\FourXDemoMod\FourXDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\MobaDemoMod\MobaDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\RtsDemoMod\RtsDemoMod.csproj" />

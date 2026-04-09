@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using Ludots.Core.Mathematics;
 using Ludots.Platform.Abstractions;
 
@@ -38,6 +39,25 @@ namespace Ludots.Core.Presentation.Terrain
                        worldXCm,
                        worldYCm,
                        out heightCm);
+        }
+
+        public bool TrySampleSurface(float worldXCm, float worldYCm, out float heightCm, out Vector3 normal, int layerIndex = 0)
+        {
+            heightCm = default;
+            normal = Vector3.UnitY;
+            WorldAabbCm bounds = _descriptor.Bounds;
+            return TryResolveLayer(layerIndex, out VisualHeightmapLayerDefinition layer) &&
+                   VisualHeightmapQueries.TrySampleSurface(
+                       this,
+                       in bounds,
+                       _descriptor.GlobalSampleColumns,
+                       _descriptor.GlobalSampleRows,
+                       _descriptor.InterpolationMode,
+                       layer.SampleOffset,
+                       worldXCm,
+                       worldYCm,
+                       out heightCm,
+                       out normal);
         }
 
         public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)

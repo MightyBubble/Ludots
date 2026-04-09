@@ -55,6 +55,45 @@ namespace Ludots.Core.Presentation.Terrain
             return float.IsFinite(heightCm);
         }
 
+        public static bool TrySampleSurface(
+            IVisualHeightmapSampleAccessor accessor,
+            in WorldAabbCm bounds,
+            int sampleColumns,
+            int sampleRows,
+            VisualHeightmapInterpolationMode interpolationMode,
+            int layerSampleOffset,
+            float worldXCm,
+            float worldYCm,
+            out float heightCm,
+            out Vector3 normal)
+        {
+            normal = Vector3.UnitY;
+            if (!TrySampleHeightCm(
+                    accessor,
+                    in bounds,
+                    sampleColumns,
+                    sampleRows,
+                    interpolationMode,
+                    layerSampleOffset,
+                    worldXCm,
+                    worldYCm,
+                    out heightCm))
+            {
+                return false;
+            }
+
+            return TryComputeNormal(
+                accessor,
+                in bounds,
+                sampleColumns,
+                sampleRows,
+                interpolationMode,
+                layerSampleOffset,
+                worldXCm,
+                worldYCm,
+                out normal);
+        }
+
         public static bool TryRaycastGround(
             IVisualHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,

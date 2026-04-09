@@ -15,14 +15,13 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     private const float Tau = MathF.PI * 2f;
     private const float HeightAmplitudeCm = 4_000f;
     private const int VerticesPerQuad = 6;
-    private const float MinSkirtDepthMeters = 6f;
-    private const float SeamOverlapMeters = 1f;
 
     private readonly VisualTerrainAssetDescriptor _asset;
     private readonly VisualTerrainErosionParameters _parameters = new();
     private readonly ChunkedVisualHeightmapStore _heightmapStore;
     private readonly ChunkedVisualHeightmapRuntime _heightmapRuntime;
     private readonly Dictionary<long, ChunkState> _chunks = new();
+    private readonly List<ChunkState> _dirtyChunksScratch = new();
 
     public VisualTerrainEditorDocument(VisualTerrainAssetDescriptor asset)
     {
@@ -77,6 +76,55 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
     public float BrushRadius => BrushRadiusMeters;
 
+    public VisualTerrainErosionSettingsSnapshot CreateErosionSettingsSnapshot()
+    {
+        return new VisualTerrainErosionSettingsSnapshot(
+            _parameters.Scale,
+            _parameters.Strength,
+            _parameters.GullyWeight,
+            _parameters.Detail,
+            _parameters.RidgeRounding,
+            _parameters.CreaseRounding,
+            _parameters.InputRoundingMultiplier,
+            _parameters.OctaveRoundingMultiplier,
+            _parameters.InputOnset,
+            _parameters.OctaveOnset,
+            _parameters.RidgeMapInputOnset,
+            _parameters.RidgeMapOctaveOnset,
+            _parameters.AssumedSlopeValue,
+            _parameters.AssumedSlopeMix,
+            _parameters.CellScale,
+            _parameters.Normalization,
+            _parameters.Octaves,
+            _parameters.Lacunarity,
+            _parameters.Gain);
+    }
+
+    public void ApplyErosionSettingsSnapshot(in VisualTerrainErosionSettingsSnapshot snapshot)
+    {
+        snapshot.Validate();
+        _parameters.Scale = snapshot.Scale;
+        _parameters.Strength = snapshot.Strength;
+        _parameters.GullyWeight = snapshot.GullyWeight;
+        _parameters.Detail = snapshot.Detail;
+        _parameters.RidgeRounding = snapshot.RidgeRounding;
+        _parameters.CreaseRounding = snapshot.CreaseRounding;
+        _parameters.InputRoundingMultiplier = snapshot.InputRoundingMultiplier;
+        _parameters.OctaveRoundingMultiplier = snapshot.OctaveRoundingMultiplier;
+        _parameters.InputOnset = snapshot.InputOnset;
+        _parameters.OctaveOnset = snapshot.OctaveOnset;
+        _parameters.RidgeMapInputOnset = snapshot.RidgeMapInputOnset;
+        _parameters.RidgeMapOctaveOnset = snapshot.RidgeMapOctaveOnset;
+        _parameters.AssumedSlopeValue = snapshot.AssumedSlopeValue;
+        _parameters.AssumedSlopeMix = snapshot.AssumedSlopeMix;
+        _parameters.CellScale = snapshot.CellScale;
+        _parameters.Normalization = snapshot.Normalization;
+        _parameters.Octaves = snapshot.Octaves;
+        _parameters.Lacunarity = snapshot.Lacunarity;
+        _parameters.Gain = snapshot.Gain;
+        MarkAllLoadedChunksDirty();
+    }
+
     public void GetChunkStatus(int chunkX, int chunkY, out bool loaded, out bool edited)
     {
         long key = GraphChunkKey.Pack(chunkX, chunkY);
@@ -110,7 +158,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
     public bool Update()
     {
-        bool changed = false;
+        _dirtyChunksScratch.Clear();
         foreach (ChunkState state in _chunks.Values)
         {
             if (!state.Dirty)
@@ -118,15 +166,24 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
                 continue;
             }
 
-            RecomputeChunk(state);
-            RebuildChunkRuntimeMesh(state);
-            state.Dirty = false;
-            changed = true;
+            _dirtyChunksScratch.Add(state);
         }
 
-        if (!changed)
+        if (_dirtyChunksScratch.Count == 0)
         {
             return false;
+        }
+
+        for (int i = 0; i < _dirtyChunksScratch.Count; i++)
+        {
+            RecomputeChunk(_dirtyChunksScratch[i]);
+        }
+
+        for (int i = 0; i < _dirtyChunksScratch.Count; i++)
+        {
+            ChunkState state = _dirtyChunksScratch[i];
+            RebuildChunkRuntimeMesh(state);
+            state.Dirty = false;
         }
 
         float minHeightCm = float.PositiveInfinity;
@@ -215,6 +272,20 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
                 yield return new SavedChunkData(state.ChunkX, state.ChunkY, state.BaseHeight);
             }
         }
+    }
+
+    public void RestoreEditedChunk(int chunkX, int chunkY, ReadOnlySpan<float> baseHeight)
+    {
+        ChunkState state = EnsureChunkLoaded(chunkX, chunkY);
+        if (baseHeight.Length != state.BaseHeight.Length)
+        {
+            throw new ArgumentException("Saved visual terrain chunk sample count does not match the target chunk shape.", nameof(baseHeight));
+        }
+
+        baseHeight.CopyTo(state.BaseHeight);
+        state.Edited = true;
+        state.Dirty = true;
+        MarkNeighbourhoodDirty(chunkX, chunkY);
     }
 
     public void PaintWorld(int worldXCm, int worldYCm)
@@ -507,150 +578,86 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
                 RenderVertexData p01 = BuildRenderVertex(chunkBounds, u0, v1);
                 RenderVertexData p10 = BuildRenderVertex(chunkBounds, u1, v0);
                 RenderVertexData p11 = BuildRenderVertex(chunkBounds, u1, v1);
-
-                float diagonal00To11 = MathF.Abs(p00.Position.Y - p11.Position.Y);
-                float diagonal01To10 = MathF.Abs(p01.Position.Y - p10.Position.Y);
-                if (diagonal00To11 <= diagonal01To10)
+                if (_asset.InterpolationMode == VisualHeightmapInterpolationMode.TriangleHeightfield)
                 {
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p00);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p01);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p11);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p00);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p11);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p10);
+                    Vector3 normalA = ComputeTriangleNormal(p00.Position, p01.Position, p10.Position);
+                    Vector3 normalB = ComputeTriangleNormal(p11.Position, p10.Position, p01.Position);
+                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p00, normalA));
+                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p01, normalA));
+                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p10, normalA));
+                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p11, normalB));
+                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p10, normalB));
+                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p01, normalB));
                 }
                 else
                 {
                     WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p00);
                     WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p01);
                     WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p10);
+                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p11);
                     WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p10);
                     WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p01);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p11);
                 }
             }
         });
 
         vertexIndex = quadRows * verticesPerRow;
-
-        float skirtDepthMeters = MathF.Max(
-            MinSkirtDepthMeters,
-            ((state.MaxHeightCm - state.MinHeightCm) * 0.01f) + 2f);
-
-        if (state.ChunkX == 0)
-        {
-            AppendSkirtStrip(state.RuntimeMesh, ref vertexIndex, chunkBounds, SkirtEdge.Left, skirtDepthMeters);
-        }
-
-        if (state.ChunkY == 0)
-        {
-            AppendSkirtStrip(state.RuntimeMesh, ref vertexIndex, chunkBounds, SkirtEdge.Top, skirtDepthMeters);
-        }
-
-        AppendSkirtStrip(state.RuntimeMesh, ref vertexIndex, chunkBounds, SkirtEdge.Right, skirtDepthMeters);
-        AppendSkirtStrip(state.RuntimeMesh, ref vertexIndex, chunkBounds, SkirtEdge.Bottom, skirtDepthMeters);
-
         state.RuntimeMesh.Update(vertexIndex);
     }
 
-    private void AppendSkirtStrip(RuntimeMeshAssetData runtimeMesh, ref int vertexIndex, WorldAabbCm chunkBounds, SkirtEdge edge, float skirtDepthMeters)
+    private static Vector3 ComputeTriangleNormal(in Vector3 a, in Vector3 b, in Vector3 c)
     {
-        int segments = edge is SkirtEdge.Left or SkirtEdge.Right
-            ? _asset.RenderRowsPerChunk - 1
-            : _asset.RenderColumnsPerChunk - 1;
-        if (segments <= 0)
-        {
-            return;
-        }
-
-        Vector3 skirtNormal = edge switch
-        {
-            SkirtEdge.Left => new Vector3(-1f, 0.2f, 0f),
-            SkirtEdge.Right => new Vector3(1f, 0.2f, 0f),
-            SkirtEdge.Top => new Vector3(0f, 0.2f, -1f),
-            _ => new Vector3(0f, 0.2f, 1f),
-        };
-        skirtNormal = Vector3.Normalize(skirtNormal);
-
-        for (int segment = 0; segment < segments; segment++)
-        {
-            float t0 = segment / (float)segments;
-            float t1 = (segment + 1) / (float)segments;
-
-            RenderVertexData surfaceA;
-            RenderVertexData surfaceB;
-            switch (edge)
-            {
-                case SkirtEdge.Left:
-                    surfaceA = BuildRenderVertex(chunkBounds, 0f, t0);
-                    surfaceB = BuildRenderVertex(chunkBounds, 0f, t1);
-                    break;
-                case SkirtEdge.Right:
-                    surfaceA = BuildRenderVertex(chunkBounds, 1f, t0);
-                    surfaceB = BuildRenderVertex(chunkBounds, 1f, t1);
-                    break;
-                case SkirtEdge.Top:
-                    surfaceA = BuildRenderVertex(chunkBounds, t0, 0f);
-                    surfaceB = BuildRenderVertex(chunkBounds, t1, 0f);
-                    break;
-                default:
-                    surfaceA = BuildRenderVertex(chunkBounds, t0, 1f);
-                    surfaceB = BuildRenderVertex(chunkBounds, t1, 1f);
-                    break;
-            }
-
-            RenderVertexData skirtA = CreateSkirtVertex(surfaceA, skirtNormal, skirtDepthMeters);
-            RenderVertexData skirtB = CreateSkirtVertex(surfaceB, skirtNormal, skirtDepthMeters);
-
-            WriteRuntimeVertex(runtimeMesh, vertexIndex++, in surfaceA);
-            WriteRuntimeVertex(runtimeMesh, vertexIndex++, in skirtA);
-            WriteRuntimeVertex(runtimeMesh, vertexIndex++, in skirtB);
-            WriteRuntimeVertex(runtimeMesh, vertexIndex++, in surfaceA);
-            WriteRuntimeVertex(runtimeMesh, vertexIndex++, in skirtB);
-            WriteRuntimeVertex(runtimeMesh, vertexIndex++, in surfaceB);
-        }
-    }
-
-    private static RenderVertexData CreateSkirtVertex(in RenderVertexData surface, Vector3 skirtNormal, float skirtDepthMeters)
-    {
-        Vector3 color = Vector3.Clamp(surface.Color * 0.72f, Vector3.Zero, Vector3.One);
-        return new RenderVertexData(
-            new Vector3(surface.Position.X, surface.Position.Y - skirtDepthMeters, surface.Position.Z),
-            skirtNormal,
-            color);
+        Vector3 normal = Vector3.Normalize(Vector3.Cross(b - a, c - a));
+        return normal.Y < 0f ? -normal : normal;
     }
 
     private RenderVertexData BuildRenderVertex(WorldAabbCm chunkBounds, float localU, float localV)
     {
-        float worldXCm = Lerp(chunkBounds.Left, chunkBounds.Right, localU);
-        float worldYCm = Lerp(chunkBounds.Top, chunkBounds.Bottom, localV);
-        float globalU = (worldXCm - _asset.Bounds.Left) / _asset.Bounds.Width;
-        float globalV = (worldYCm - _asset.Bounds.Top) / _asset.Bounds.Height;
-
-        float baseHeight = SampleField(globalU, globalV, TerrainFieldKind.Base);
-        float erodedHeight = SampleField(globalU, globalV, TerrainFieldKind.Eroded);
-        float ridge = SampleField(globalU, globalV, TerrainFieldKind.Ridge);
-        float drainage = SampleField(globalU, globalV, TerrainFieldKind.Drainage);
-        float height = ViewMode == TerrainViewMode.Base ? baseHeight : erodedHeight;
+        float worldXMeters = Lerp(chunkBounds.Left, chunkBounds.Right, localU) * 0.01f;
+        float worldZMeters = Lerp(chunkBounds.Top, chunkBounds.Bottom, localV) * 0.01f;
+        float worldXCm = worldXMeters * 100f;
+        float worldYCm = worldZMeters * 100f;
+        float baseHeight = SampleFieldWorld(worldXCm, worldYCm, TerrainFieldKind.Base);
+        float ridge = SampleFieldWorld(worldXCm, worldYCm, TerrainFieldKind.Ridge);
+        float drainage = SampleFieldWorld(worldXCm, worldYCm, TerrainFieldKind.Drainage);
+        float height;
+        Vector3 normal;
+        if (ViewMode == TerrainViewMode.Base)
+        {
+            height = baseHeight;
+            normal = ComputeBaseRenderNormal(worldXCm, worldYCm);
+        }
+        else
+        {
+            TrySampleRuntimeSurface(worldXCm, worldYCm, out height, out normal);
+        }
 
         Vector3 position = new(
-            (worldXCm - chunkBounds.Left) * 0.01f,
+            worldXMeters,
             HeightToMeters(height, _asset.DefaultHeight01),
-            (worldYCm - chunkBounds.Top) * 0.01f);
-        position.X += ResolveSeamOffset(localU, chunkBounds.Left == _asset.Bounds.Left);
-        position.Z += ResolveSeamOffset(localV, chunkBounds.Top == _asset.Bounds.Top);
-        Vector3 normal = ComputeRenderNormal(worldXCm, worldYCm);
+            worldZMeters);
         Vector3 color = ViewMode switch
         {
             TerrainViewMode.Base => ShadeSurface(baseHeight, normal, ridge, 0f),
-            TerrainViewMode.Eroded => ShadeSurface(erodedHeight, normal, ridge, drainage),
+            TerrainViewMode.Eroded => ShadeSurface(height, normal, ridge, drainage),
             _ => ShadeRidges(ridge, drainage),
         };
 
         return new RenderVertexData(position, normal, color);
     }
 
-    private Vector3 ComputeRenderNormal(float worldXCm, float worldYCm)
+    private void TrySampleRuntimeSurface(float worldXCm, float worldYCm, out float height, out Vector3 normal)
+    {
+        if (_heightmapRuntime.TrySampleSurface(worldXCm, worldYCm, out float runtimeHeightCm, out normal))
+        {
+            height = _asset.DefaultHeight01 + (runtimeHeightCm / HeightAmplitudeCm);
+            return;
+        }
+
+        throw new InvalidOperationException("Visual terrain editor mesh sampling requires the runtime heightmap chunk neighborhood to be loaded.");
+    }
+
+    private Vector3 ComputeBaseRenderNormal(float worldXCm, float worldYCm, TerrainFieldKind field = TerrainFieldKind.Base)
     {
         float sampleStepX = _asset.ChunkWorldWidthCm / (float)Math.Max(1, _asset.RenderColumnsPerChunk - 1);
         float sampleStepY = _asset.ChunkWorldHeightCm / (float)Math.Max(1, _asset.RenderRowsPerChunk - 1);
@@ -659,7 +666,6 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         float vPrev = MathF.Max(_asset.Bounds.Top, worldYCm - sampleStepY);
         float vNext = MathF.Min(_asset.Bounds.Bottom, worldYCm + sampleStepY);
 
-        TerrainFieldKind field = ViewMode == TerrainViewMode.Base ? TerrainFieldKind.Base : TerrainFieldKind.Eroded;
         float hL = HeightToMeters(SampleFieldWorld(uPrev, worldYCm, field), _asset.DefaultHeight01);
         float hR = HeightToMeters(SampleFieldWorld(uNext, worldYCm, field), _asset.DefaultHeight01);
         float hD = HeightToMeters(SampleFieldWorld(worldXCm, vPrev, field), _asset.DefaultHeight01);
@@ -706,26 +712,42 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
     private float SampleFieldWorld(float worldXCm, float worldYCm, TerrainFieldKind field)
     {
-        float u = (worldXCm - _asset.Bounds.Left) / _asset.Bounds.Width;
-        float v = (worldYCm - _asset.Bounds.Top) / _asset.Bounds.Height;
-        return SampleField(u, v, field);
+        float sampleX = _asset.SampleColumns > 1
+            ? (_asset.SampleColumns - 1) * Math.Clamp((worldXCm - _asset.Bounds.Left) / Math.Max(1f, _asset.Bounds.Width), 0f, 1f)
+            : 0f;
+        float sampleY = _asset.SampleRows > 1
+            ? (_asset.SampleRows - 1) * Math.Clamp((worldYCm - _asset.Bounds.Top) / Math.Max(1f, _asset.Bounds.Height), 0f, 1f)
+            : 0f;
+        return SampleField(sampleX, sampleY, field);
     }
 
-    private float SampleField(float u, float v, TerrainFieldKind field)
+    private float SampleField(float sampleX, float sampleY, TerrainFieldKind field)
     {
-        float sampleX = Clamp01(u) * (_asset.SampleColumns - 1);
-        float sampleY = Clamp01(v) * (_asset.SampleRows - 1);
-        int x0 = Math.Clamp((int)MathF.Floor(sampleX), 0, _asset.SampleColumns - 1);
-        int x1 = Math.Min(x0 + 1, _asset.SampleColumns - 1);
-        int y0 = Math.Clamp((int)MathF.Floor(sampleY), 0, _asset.SampleRows - 1);
-        int y1 = Math.Min(y0 + 1, _asset.SampleRows - 1);
-        return Bilinear(
-            SampleFieldAtGlobalSample(x0, y0, field),
-            SampleFieldAtGlobalSample(x1, y0, field),
-            SampleFieldAtGlobalSample(x0, y1, field),
-            SampleFieldAtGlobalSample(x1, y1, field),
-            sampleX - x0,
-            sampleY - y0);
+        int x0 = _asset.SampleColumns > 1 ? Math.Clamp((int)MathF.Floor(sampleX), 0, _asset.SampleColumns - 2) : 0;
+        int y0 = _asset.SampleRows > 1 ? Math.Clamp((int)MathF.Floor(sampleY), 0, _asset.SampleRows - 2) : 0;
+        int x1 = _asset.SampleColumns > 1 ? x0 + 1 : 0;
+        int y1 = _asset.SampleRows > 1 ? y0 + 1 : 0;
+        float tx = _asset.SampleColumns > 1 ? sampleX - x0 : 0f;
+        float ty = _asset.SampleRows > 1 ? sampleY - y0 : 0f;
+
+        float h00 = SampleFieldAtGlobalSample(x0, y0, field);
+        float h10 = SampleFieldAtGlobalSample(x1, y0, field);
+        float h01 = SampleFieldAtGlobalSample(x0, y1, field);
+        float h11 = SampleFieldAtGlobalSample(x1, y1, field);
+        bool degenerateCell = x0 == x1 || y0 == y1;
+        if (_asset.InterpolationMode == VisualHeightmapInterpolationMode.TriangleHeightfield && !degenerateCell)
+        {
+            if (tx + ty <= 1f)
+            {
+                return h00 + ((h10 - h00) * tx) + ((h01 - h00) * ty);
+            }
+
+            return h11 + ((h01 - h11) * (1f - tx)) + ((h10 - h11) * (1f - ty));
+        }
+
+        float hx0 = Lerp(h00, h10, tx);
+        float hx1 = Lerp(h01, h11, tx);
+        return Lerp(hx0, hx1, ty);
     }
 
     private float SampleFieldAtGlobalSample(int globalX, int globalY, TerrainFieldKind field)
@@ -992,13 +1014,6 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         WriteColor(runtimeMesh.Colors, colorOffset, vertex.Color);
     }
 
-    private static float Bilinear(float a, float b, float c, float d, float tx, float ty)
-    {
-        float x0Mix = Lerp(a, b, tx);
-        float x1Mix = Lerp(c, d, tx);
-        return Lerp(x0Mix, x1Mix, ty);
-    }
-
     private static float HeightToMeters(float height, float defaultHeight01)
     {
         return (height - defaultHeight01) * HeightAmplitudeCm * 0.01f;
@@ -1031,21 +1046,6 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     private static Vector3 Clamp01(Vector3 value)
     {
         return Vector3.Clamp(value, Vector3.Zero, Vector3.One);
-    }
-
-    private static float ResolveSeamOffset(float localT, bool expandNegativeEdge)
-    {
-        if (expandNegativeEdge && localT <= 1e-5f)
-        {
-            return -SeamOverlapMeters;
-        }
-
-        if (localT >= 1f - 1e-5f)
-        {
-            return SeamOverlapMeters;
-        }
-
-        return 0f;
     }
 
     private static float PowInv(float value, float power)
@@ -1109,6 +1109,45 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         colors[offset + 3] = 255;
     }
 
+    private static RenderVertexData WithNormal(in RenderVertexData vertex, in Vector3 normal)
+    {
+        return new RenderVertexData(vertex.Position, normal, vertex.Color);
+    }
+
+    internal readonly record struct VisualTerrainErosionSettingsSnapshot(
+        float Scale,
+        float Strength,
+        float GullyWeight,
+        float Detail,
+        float RidgeRounding,
+        float CreaseRounding,
+        float InputRoundingMultiplier,
+        float OctaveRoundingMultiplier,
+        float InputOnset,
+        float OctaveOnset,
+        float RidgeMapInputOnset,
+        float RidgeMapOctaveOnset,
+        float AssumedSlopeValue,
+        float AssumedSlopeMix,
+        float CellScale,
+        float Normalization,
+        int Octaves,
+        float Lacunarity,
+        float Gain)
+    {
+        public void Validate()
+        {
+            if (Scale is < 0.05f or > 0.40f) throw new ArgumentOutOfRangeException(nameof(Scale));
+            if (Strength is < 0.02f or > 0.60f) throw new ArgumentOutOfRangeException(nameof(Strength));
+            if (GullyWeight is < 0f or > 1f) throw new ArgumentOutOfRangeException(nameof(GullyWeight));
+            if (Detail is < 0.5f or > 3f) throw new ArgumentOutOfRangeException(nameof(Detail));
+            if (Octaves is < 1 or > 8) throw new ArgumentOutOfRangeException(nameof(Octaves));
+            if (CellScale <= 0f) throw new ArgumentOutOfRangeException(nameof(CellScale));
+            if (Lacunarity <= 0f) throw new ArgumentOutOfRangeException(nameof(Lacunarity));
+            if (Gain <= 0f) throw new ArgumentOutOfRangeException(nameof(Gain));
+        }
+    }
+
     internal readonly record struct SavedChunkData(int ChunkX, int ChunkY, float[] BaseHeight);
 
     private enum TerrainFieldKind
@@ -1124,14 +1163,6 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     private readonly record struct PhacelleResult(float Cos, float Sin, Vector2 SideDir);
 
     private readonly record struct RenderVertexData(Vector3 Position, Vector3 Normal, Vector3 Color);
-
-    private enum SkirtEdge : byte
-    {
-        Left,
-        Right,
-        Top,
-        Bottom,
-    }
 
     private sealed class ChunkState
     {
