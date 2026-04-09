@@ -178,6 +178,7 @@ Physics2D.Position2D
 
 推荐扩展点：
 
+- 共享 3C profile pack：`mods/capabilities/camera/SharedThreeCProfilesMod/assets/Configs/Camera/virtual_cameras.json`
 - 基础 profile：`mods/capabilities/camera/CameraProfilesMod/assets/Configs/Camera/virtual_cameras.json`
 - 视角模式：`mods/capabilities/camera/CameraProfilesMod/assets/viewmodes.json`
 - shot：`mods/capabilities/camera/VirtualCameraShotsMod/assets/Configs/Camera/virtual_cameras.json`

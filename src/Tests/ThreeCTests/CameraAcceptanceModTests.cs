@@ -50,6 +50,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
         {
             "LudotsCoreMod",
             "CoreInputMod",
+            "SharedThreeCProfilesMod",
             "CameraAcceptanceMod"
         };
 
@@ -915,7 +916,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var start = engine.GameSession.Camera.State.TargetCm;
             float startDistance = engine.GameSession.Camera.State.DistanceCm;
 
-            HoldButton(engine, backend, "<Keyboard>/w", frames: 3);
+            HoldButton(engine, backend, "<Keyboard>/w", frames: 3, minFixedTickAdvance: 1);
             var afterKeyboard = engine.GameSession.Camera.State.TargetCm;
             Assert.That(afterKeyboard, Is.Not.EqualTo(start), "WASD pan should move the RTS camera target.");
 
@@ -1198,10 +1199,15 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames.");
         }
 
-        private static void HoldButton(GameEngine engine, TestInputBackend backend, string path, int frames)
+        private static void HoldButton(GameEngine engine, TestInputBackend backend, string path, int frames, int minFixedTickAdvance = 0)
         {
+            int tickBefore = engine.GameSession.CurrentTick;
             backend.SetButton(path, true);
             Tick(engine, frames);
+            if (minFixedTickAdvance > 0)
+            {
+                TickUntil(engine, () => engine.GameSession.CurrentTick >= tickBefore + minFixedTickAdvance, maxFrames: frames + 4);
+            }
             backend.SetButton(path, false);
             Tick(engine, 1);
         }

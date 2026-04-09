@@ -2,7 +2,7 @@
   {
     "Id": "Camera.Acceptance.Mode.Rts",
     "DisplayName": "RTS/MOBA",
-    "VirtualCameraId": "Camera.Acceptance.Profile.RtsMoba",
+    "VirtualCameraId": "Shared3C.Profile.RtsMoba",
     "FollowTargetKind": "None",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,

@@ -125,6 +125,9 @@ engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
 
 当前推荐的 camera mod 分层：
 
+- `mods/capabilities/camera/SharedThreeCProfilesMod`
+  - 提供 upstream data-only 共享 3C virtual camera profile
+  - 供 launch graph / fixture / showcase 显式依赖
 - `mods/capabilities/camera/CameraProfilesMod`
   - 提供可复用基础 virtual camera profile
   - 提供 `viewmodes.json`
@@ -141,6 +144,7 @@ engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
 编写要求：
 
 - profile 和 shot 都必须落到 `virtual_cameras.json`
+- 可跨多个 Mod 复用的纯声明式 3C profile，优先收口到 `SharedThreeCProfilesMod`
 - 视角模式切换通过 `mods/CoreInputMod/ViewMode/ViewModeManager.cs`
 - 通用选择 / ViewMode / TabTarget 输入绑定收口在 `mods/CoreInputMod/assets/Input/default_input.json`
 - 地图级默认机位只写 `DefaultCamera.VirtualCameraId`

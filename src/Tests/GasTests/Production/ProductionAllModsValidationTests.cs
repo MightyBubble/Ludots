@@ -77,6 +77,12 @@ namespace Ludots.Tests.GAS.Production
                 .SetName("ProdModSmoke_CameraBootstrapMod");
 
             yield return new TestCaseData(new ModCase(
+                    "SharedThreeCProfilesMod",
+                    new[] { "LudotsCoreMod", "SharedThreeCProfilesMod" },
+                    true))
+                .SetName("ProdModSmoke_SharedThreeCProfilesMod");
+
+            yield return new TestCaseData(new ModCase(
                     "CameraProfilesMod",
                     new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod" },
                     true))
@@ -90,13 +96,13 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "CameraAcceptanceMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraAcceptanceMod" },
+                    new[] { "LudotsCoreMod", "CoreInputMod", "SharedThreeCProfilesMod", "CameraAcceptanceMod" },
                     true))
                 .SetName("ProdModSmoke_CameraAcceptanceMod");
 
             yield return new TestCaseData(new ModCase(
                     "CameraAcceptanceHotpathEntryMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraAcceptanceMod", "CameraAcceptanceHotpathEntryMod" },
+                    new[] { "LudotsCoreMod", "CoreInputMod", "SharedThreeCProfilesMod", "CameraAcceptanceMod", "CameraAcceptanceHotpathEntryMod" },
                     true))
                 .SetName("ProdModSmoke_CameraAcceptanceHotpathEntryMod");
 

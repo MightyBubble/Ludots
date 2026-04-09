@@ -24,6 +24,7 @@ namespace Ludots.Tests.Presentation
         {
             "LudotsCoreMod",
             "CoreInputMod",
+            "SharedThreeCProfilesMod",
             "CameraAcceptanceMod"
         };
 

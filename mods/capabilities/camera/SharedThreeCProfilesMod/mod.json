@@ -1,0 +1,9 @@
+{
+  "name": "SharedThreeCProfilesMod",
+  "version": "1.0.0",
+  "description": "Official data-only 3C virtual camera profile pack for shared upstream consumers.",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  }
+}

@@ -15,7 +15,7 @@
 - [x] 轨道相机缩放 / 平移 / 旋转输入
 - [x] 视锥 AABB 裁剪 + 4 级 LOD
 - [x] Screen→World / World→Screen 投影工具
-- [x] Camera capability mod 分层：profile / shot / bootstrap / acceptance
+- [x] Camera capability mod 分层：shared profile pack / profile / shot / bootstrap / acceptance
 
 ### 未实现
 
