@@ -38,9 +38,12 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly StaticMeshAdapterSyncPlanner _persistentStaticLaneSync = new StaticMeshAdapterSyncPlanner();
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
+        private readonly Dictionary<int, CachedRuntimeMesh> _runtimeMeshCache = new Dictionary<int, CachedRuntimeMesh>();
         private readonly Dictionary<int, CachedTexture> _textureCache = new Dictionary<int, CachedTexture>();
         private readonly HashSet<int> _loggedTextureDiagnostics = new HashSet<int>();
         private readonly HashSet<int> _loggedBillboardDrawDiagnostics = new HashSet<int>();
+        private Material _runtimeMeshMaterial;
+        private bool _runtimeMeshMaterialLoaded;
 
         public int LastInstancedInstances { get; private set; }
         public int LastInstancedBatches { get; private set; }
@@ -239,6 +242,10 @@ namespace Ludots.Client.Raylib.Rendering
                 case MeshAssetType.Billboard:
                     DrawBillboard(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Scale, leaf.Color, camera);
                     break;
+
+                case MeshAssetType.RuntimeMesh:
+                    DrawRuntimeMesh(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Rotation, leaf.Scale);
+                    break;
             }
         }
 
@@ -381,6 +388,10 @@ namespace Ludots.Client.Raylib.Rendering
 
                 case MeshAssetType.Billboard:
                     DrawBillboard(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Scale, leaf.Color, camera);
+                    break;
+
+                case MeshAssetType.RuntimeMesh:
+                    DrawRuntimeMesh(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Rotation, leaf.Scale);
                     break;
             }
         }
@@ -637,6 +648,29 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawBillboardRec(camera, cached.Texture, source, billboardPosition, new Vector2(width, height), tint);
         }
 
+        private void DrawRuntimeMesh(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Quaternion rotation, Vector3 scale)
+        {
+            if (!TryGetOrBuildRuntimeMesh(meshAssetId, desc, out var cached))
+            {
+                DrawMissingModelMarker(position, scale);
+                return;
+            }
+
+            EnsureRuntimeMeshMaterial();
+
+            var transform = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(scale) *
+                Matrix4x4.CreateFromQuaternion(PrefabTransformUtility.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateTranslation(position));
+
+            // Runtime terrain/editor meshes are generated on the fly and should match the
+            // terrain renderer path, which renders without backface culling to avoid losing
+            // steep slopes or exposing chunk cracks from winding/camera edge cases.
+            Rl.rlDisableBackfaceCulling();
+            Rl.DrawMesh(cached.Mesh, _runtimeMeshMaterial, transform);
+            Rl.rlEnableBackfaceCulling();
+        }
+
         private bool TryGetOrLoadModel(int meshAssetId, in MeshAssetDescriptor desc, out CachedModel cached)
         {
             if (_modelCache.TryGetValue(meshAssetId, out cached))
@@ -671,6 +705,38 @@ namespace Ludots.Client.Raylib.Rendering
 
             _modelCache[meshAssetId] = cached;
             return false;
+        }
+
+        private bool TryGetOrBuildRuntimeMesh(int meshAssetId, in MeshAssetDescriptor desc, out CachedRuntimeMesh cached)
+        {
+            RuntimeMeshAssetData? runtimeMesh = desc.RuntimeMeshData;
+            if (runtimeMesh == null || runtimeMesh.VertexCount <= 0)
+            {
+                cached = default;
+                return false;
+            }
+
+            if (_runtimeMeshCache.TryGetValue(meshAssetId, out cached) &&
+                cached.Loaded &&
+                cached.Generation == runtimeMesh.Generation)
+            {
+                return true;
+            }
+
+            if (cached.Loaded && cached.Mesh.vertexCount > 0)
+            {
+                Rl.UnloadMesh(cached.Mesh);
+            }
+
+            cached = new CachedRuntimeMesh
+            {
+                Mesh = CreateRuntimeMesh(runtimeMesh),
+                Generation = runtimeMesh.Generation,
+                Loaded = true,
+            };
+
+            _runtimeMeshCache[meshAssetId] = cached;
+            return true;
         }
 
         private bool TryGetOrLoadTexture(int meshAssetId, in MeshAssetDescriptor desc, out CachedTexture cached)
@@ -765,6 +831,38 @@ namespace Ludots.Client.Raylib.Rendering
             float s = MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.3f;
             if (s < 0.05f) s = 0.3f;
             Rl.DrawCube(position, s, s, s, new Color(255, 0, 255, 255));
+        }
+
+        private static Mesh CreateRuntimeMesh(RuntimeMeshAssetData runtimeMesh)
+        {
+            Mesh mesh = new Mesh();
+            mesh.vertexCount = runtimeMesh.VertexCount;
+            mesh.triangleCount = runtimeMesh.VertexCount / 3;
+
+            int vertexFloatCount = runtimeMesh.VertexCount * 3;
+            int colorByteCount = runtimeMesh.VertexCount * 4;
+
+            mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
+            mesh.normals = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
+            mesh.colors = (byte*)Rl.MemAlloc(sizeof(byte) * colorByteCount);
+
+            runtimeMesh.Vertices.AsSpan(0, vertexFloatCount).CopyTo(new Span<float>(mesh.vertices, vertexFloatCount));
+            runtimeMesh.Normals.AsSpan(0, vertexFloatCount).CopyTo(new Span<float>(mesh.normals, vertexFloatCount));
+            runtimeMesh.Colors.AsSpan(0, colorByteCount).CopyTo(new Span<byte>(mesh.colors, colorByteCount));
+
+            Rl.UploadMesh(ref mesh, false);
+            return mesh;
+        }
+
+        private void EnsureRuntimeMeshMaterial()
+        {
+            if (_runtimeMeshMaterialLoaded)
+            {
+                return;
+            }
+
+            _runtimeMeshMaterial = Rl.LoadMaterialDefault();
+            _runtimeMeshMaterialLoaded = true;
         }
 
         private static void DrawWireBox(Vector3 center, Vector3 size, float yawRad, Vector4 color)
@@ -980,12 +1078,27 @@ namespace Ludots.Client.Raylib.Rendering
             }
             _modelCache.Clear();
 
+            foreach (var kvp in _runtimeMeshCache)
+            {
+                if (kvp.Value.Loaded && kvp.Value.Mesh.vertexCount > 0)
+                {
+                    Rl.UnloadMesh(kvp.Value.Mesh);
+                }
+            }
+            _runtimeMeshCache.Clear();
+
             foreach (var kvp in _textureCache)
             {
                 if (kvp.Value.Loaded)
                     Rl.UnloadTexture(kvp.Value.Texture);
             }
             _textureCache.Clear();
+
+            if (_runtimeMeshMaterialLoaded)
+            {
+                Rl.UnloadMaterial(_runtimeMeshMaterial);
+                _runtimeMeshMaterialLoaded = false;
+            }
 
             if (!_initialized) return;
 
@@ -1006,6 +1119,13 @@ namespace Ludots.Client.Raylib.Rendering
             public Texture2D Texture;
             public bool Loaded;
             public float AspectRatio;
+        }
+
+        private struct CachedRuntimeMesh
+        {
+            public Mesh Mesh;
+            public int Generation;
+            public bool Loaded;
         }
 
         private struct Batch
