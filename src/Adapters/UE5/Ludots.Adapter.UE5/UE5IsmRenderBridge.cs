@@ -71,27 +71,29 @@ namespace Ludots.Adapter.UE5
                 return;
             }
 
+            MeshAssetRegistry? meshRegistry = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
+            var visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
+
             PrimitiveDrawBuffer? snapshot =
                 engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer) ??
                 engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
 
             if (snapshot != null)
             {
-                var visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
-                var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
-                CollectStaticBuckets(snapshot, engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry), in finalizationContext);
+                CollectStaticBuckets(snapshot, meshRegistry, in finalizationContext);
             }
 
             SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
             if (skinnedBatch != null)
             {
-                CollectSkinnedItems(skinnedBatch);
+                CollectSkinnedItems(skinnedBatch, meshRegistry, in finalizationContext);
                 return;
             }
 
             if (snapshot != null)
             {
-                CollectSkinnedFallback(snapshot);
+                CollectSkinnedFallback(snapshot, meshRegistry, in finalizationContext);
             }
         }
 
@@ -202,30 +204,30 @@ namespace Ludots.Adapter.UE5
             }
         }
 
-        private void CollectSkinnedItems(SkinnedVisualBatchBuffer buffer)
+        private void CollectSkinnedItems(SkinnedVisualBatchBuffer buffer, MeshAssetRegistry? meshRegistry, in PrefabFinalizationContext finalizationContext)
         {
             ReadOnlySpan<SkinnedVisualBatchItem> span = buffer.GetSpan();
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                _allegroItems.Add(new AllegroDrawItem
-                {
-                    StableId = item.StableId,
-                    MeshAssetId = item.MeshAssetId,
-                    AnimationProfileId = item.AnimationProfileId,
-                    RenderPath = item.RenderPath,
-                    Position = ToUEPosition(item.Position),
-                    Rotation = ToUERotation(item.Rotation),
-                    Scale = ToUEScale(item.Scale),
-                    Color = item.Color,
-                    Animator = item.Animator,
-                    AnimationOverlay = item.AnimationOverlay,
-                    Visibility = item.Visibility,
-                });
+                AddSkinnedItemRecursive(
+                    item.MeshAssetId,
+                    item.StableId,
+                    item.AnimationProfileId,
+                    item.RenderPath,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale,
+                    item.Color,
+                    item.Animator,
+                    item.AnimationOverlay,
+                    item.Visibility,
+                    meshRegistry,
+                    in finalizationContext);
             }
         }
 
-        private void CollectSkinnedFallback(PrimitiveDrawBuffer buffer)
+        private void CollectSkinnedFallback(PrimitiveDrawBuffer buffer, MeshAssetRegistry? meshRegistry, in PrefabFinalizationContext finalizationContext)
         {
             ReadOnlySpan<PrimitiveDrawItem> span = buffer.GetSpan();
             for (int i = 0; i < span.Length; i++)
@@ -236,21 +238,99 @@ namespace Ludots.Adapter.UE5
                     continue;
                 }
 
-                _allegroItems.Add(new AllegroDrawItem
-                {
-                    StableId = item.StableId,
-                    MeshAssetId = item.MeshAssetId,
-                    AnimationProfileId = item.AnimationProfileId,
-                    RenderPath = item.RenderPath,
-                    Position = ToUEPosition(item.Position),
-                    Rotation = ToUERotation(item.Rotation),
-                    Scale = ToUEScale(item.Scale),
-                    Color = item.Color,
-                    Animator = item.Animator,
-                    AnimationOverlay = item.AnimationOverlay,
-                    Visibility = item.Visibility,
-                });
+                AddSkinnedItemRecursive(
+                    item.MeshAssetId,
+                    item.StableId,
+                    item.AnimationProfileId,
+                    item.RenderPath,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale,
+                    item.Color,
+                    item.Animator,
+                    item.AnimationOverlay,
+                    item.Visibility,
+                    meshRegistry,
+                    in finalizationContext);
             }
+        }
+
+        private void AddSkinnedItemRecursive(
+            int meshAssetId,
+            int stableId,
+            int animationProfileId,
+            VisualRenderPath renderPath,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            Vector4 color,
+            AnimatorPackedState animator,
+            AnimationOverlayRequest animationOverlay,
+            VisualVisibility visibility,
+            MeshAssetRegistry? meshRegistry,
+            in PrefabFinalizationContext finalizationContext)
+        {
+            if (meshRegistry == null)
+            {
+                return;
+            }
+
+            _prefabLeaves.Clear();
+            PrefabFinalizationPipeline.FinalizeLeaves(
+                meshRegistry,
+                meshAssetId,
+                stableId,
+                position,
+                rotation,
+                scale,
+                color,
+                finalizationContext,
+                _prefabLeaves);
+
+            foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
+            {
+                AddFinalizedSkinnedLeaf(
+                    leaf.StableId,
+                    leaf.MeshAssetId,
+                    animationProfileId,
+                    renderPath,
+                    leaf.Position,
+                    leaf.Rotation,
+                    leaf.Scale,
+                    leaf.Color,
+                    animator,
+                    animationOverlay,
+                    visibility);
+            }
+        }
+
+        private void AddFinalizedSkinnedLeaf(
+            int stableId,
+            int meshAssetId,
+            int animationProfileId,
+            VisualRenderPath renderPath,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            Vector4 color,
+            AnimatorPackedState animator,
+            AnimationOverlayRequest animationOverlay,
+            VisualVisibility visibility)
+        {
+            _allegroItems.Add(new AllegroDrawItem
+            {
+                StableId = stableId,
+                MeshAssetId = meshAssetId,
+                AnimationProfileId = animationProfileId,
+                RenderPath = renderPath,
+                Position = ToUEPosition(position),
+                Rotation = ToUERotation(rotation),
+                Scale = ToUEScale(scale),
+                Color = color,
+                Animator = animator,
+                AnimationOverlay = animationOverlay,
+                Visibility = visibility,
+            });
         }
 
         private static long BuildBucketKey(int meshAssetId, VisualRenderPath renderPath)
