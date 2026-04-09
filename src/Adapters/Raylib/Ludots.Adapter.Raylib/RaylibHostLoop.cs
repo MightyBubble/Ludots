@@ -34,6 +34,7 @@ namespace Ludots.Adapter.Raylib
 {
     internal static class RaylibHostLoop
     {
+        private const uint FlagWindowResizable = 4;
         private static bool _uiPointerCaptured;
         private static bool _emptyBufferWarned;
 
@@ -51,6 +52,7 @@ namespace Ludots.Adapter.Raylib
             // targetFps = 0 表示不锁帧，< 0 使用默认 60
             int targetFps = config.TargetFps == 0 ? 0 : (config.TargetFps < 0 ? 60 : config.TargetFps);
             bool windowOpened = false;
+            bool windowResizable = config.WindowResizable || config.WindowStartMaximized;
 
             var terrainRenderer = new RaylibTerrainRenderer
             {
@@ -64,10 +66,25 @@ namespace Ludots.Adapter.Raylib
 
             try
             {
+                if (windowResizable)
+                {
+                    Rl.SetConfigFlags(FlagWindowResizable);
+                }
+
                 Rl.InitWindow(screenWidth, screenHeight, title);
                 windowOpened = true;
+                if (config.WindowStartMaximized)
+                {
+                    Rl.MaximizeWindow();
+                }
+
                 Rl.SetExitKey(0);
                 Rl.SetTargetFPS(targetFps);
+
+                screenWidth = Math.Max(1, Rl.GetScreenWidth());
+                screenHeight = Math.Max(1, Rl.GetScreenHeight());
+                config.WindowWidth = screenWidth;
+                config.WindowHeight = screenHeight;
 
                 using var compositeRenderer = new RaylibSkiaRenderer(screenWidth, screenHeight);
                 using var underlayLayer = new SkiaRasterLayer();
@@ -169,12 +186,14 @@ namespace Ludots.Adapter.Raylib
                 {
                     try
                     {
-                        int w = Rl.GetScreenWidth();
-                        int h = Rl.GetScreenHeight();
+                        int w = Math.Max(1, Rl.GetScreenWidth());
+                        int h = Math.Max(1, Rl.GetScreenHeight());
                         if (w != lastW || h != lastH)
                         {
                             lastW = w;
                             lastH = h;
+                            config.WindowWidth = w;
+                            config.WindowHeight = h;
                             compositeRenderer.Resize(w, h);
                             underlayLayer.Resize(w, h);
                             uiLayer.Resize(w, h);

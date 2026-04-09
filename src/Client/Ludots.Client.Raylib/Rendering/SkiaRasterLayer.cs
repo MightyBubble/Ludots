@@ -15,6 +15,9 @@ namespace Ludots.Client.Raylib.Rendering
 
         public void Resize(int width, int height)
         {
+            width = Math.Max(1, width);
+            height = Math.Max(1, height);
+
             if (_surface != null && _width == width && _height == height)
             {
                 return;

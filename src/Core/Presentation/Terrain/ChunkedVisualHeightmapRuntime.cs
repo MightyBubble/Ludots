@@ -4,28 +4,36 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Terrain
 {
-    public sealed class VisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapSampleAccessor
+    /// <summary>
+    /// IVisualHeightmap runtime over a sparse loaded chunk store.
+    /// Missing chunks return false instead of inventing implicit global terrain.
+    /// </summary>
+    public sealed class ChunkedVisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapSampleAccessor
     {
-        private readonly VisualHeightmapAsset _asset;
+        private readonly ChunkedVisualHeightmapDescriptor _descriptor;
+        private readonly ChunkedVisualHeightmapStore _store;
 
-        public VisualHeightmapRuntime(VisualHeightmapAsset asset)
+        public ChunkedVisualHeightmapRuntime(ChunkedVisualHeightmapDescriptor descriptor, ChunkedVisualHeightmapStore store)
         {
-            _asset = asset ?? throw new ArgumentNullException(nameof(asset));
+            _descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
+            _store = store ?? throw new ArgumentNullException(nameof(store));
         }
 
-        public VisualHeightmapAsset Asset => _asset;
+        public ChunkedVisualHeightmapDescriptor Descriptor => _descriptor;
+
+        public ChunkedVisualHeightmapStore Store => _store;
 
         public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
         {
             heightCm = default;
-            WorldAabbCm bounds = _asset.Bounds;
+            WorldAabbCm bounds = _descriptor.Bounds;
             return TryResolveLayer(layerIndex, out VisualHeightmapLayerDefinition layer) &&
                    VisualHeightmapQueries.TrySampleHeightCm(
                        this,
                        in bounds,
-                       _asset.SampleColumns,
-                       _asset.SampleRows,
-                       _asset.InterpolationMode,
+                       _descriptor.GlobalSampleColumns,
+                       _descriptor.GlobalSampleRows,
+                       _descriptor.InterpolationMode,
                        layer.SampleOffset,
                        worldXCm,
                        worldYCm,
@@ -36,7 +44,7 @@ namespace Ludots.Core.Presentation.Terrain
         {
             if (worldXCm.Length != worldYCm.Length || worldXCm.Length != outHeightCm.Length)
             {
-                throw new ArgumentException("Visual heightmap batch sample spans must have identical lengths.");
+                throw new ArgumentException("Chunked visual heightmap batch sample spans must have identical lengths.");
             }
 
             if (!TryResolveLayer(layerIndex, out _))
@@ -57,16 +65,16 @@ namespace Ludots.Core.Presentation.Terrain
         public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
         {
             hit = default;
-            WorldAabbCm bounds = _asset.Bounds;
+            WorldAabbCm bounds = _descriptor.Bounds;
             return TryResolveLayerIndex(layerIndex, out int resolvedLayer) &&
                    VisualHeightmapQueries.TryRaycastGround(
                        this,
                        in bounds,
-                       _asset.SampleColumns,
-                       _asset.SampleRows,
-                       _asset.InterpolationMode,
+                       _descriptor.GlobalSampleColumns,
+                       _descriptor.GlobalSampleRows,
+                       _descriptor.InterpolationMode,
                        resolvedLayer,
-                       _asset.Layers[resolvedLayer].SampleOffset,
+                       _descriptor.Layers[resolvedLayer].SampleOffset,
                        in ray,
                        out hit);
         }
@@ -105,7 +113,7 @@ namespace Ludots.Core.Presentation.Terrain
                 outLayerIndex.Length != count ||
                 outHitMask.Length != count)
             {
-                throw new ArgumentException("Visual heightmap batch raycast spans must have identical lengths.");
+                throw new ArgumentException("Chunked visual heightmap batch raycast spans must have identical lengths.");
             }
 
             if (!TryResolveLayer(layerIndex, out _))
@@ -148,20 +156,38 @@ namespace Ludots.Core.Presentation.Terrain
             return true;
         }
 
-        bool IVisualHeightmapSampleAccessor.TryReadSampleCm(int layerSampleOffset, int sampleX, int sampleY, out float heightCm)
+        bool IVisualHeightmapSampleAccessor.TryReadSampleCm(int layerSampleOffset, int globalSampleX, int globalSampleY, out float heightCm)
         {
             heightCm = default;
-            int index = layerSampleOffset + (sampleY * _asset.SampleColumns) + sampleX;
-            switch (_asset.StorageLayout)
+            if ((uint)globalSampleX >= (uint)_descriptor.GlobalSampleColumns ||
+                (uint)globalSampleY >= (uint)_descriptor.GlobalSampleRows)
             {
-                case VisualHeightmapStorageLayout.RowMajorInt16Centimeters:
+                return false;
+            }
+
+            int chunkStepX = _descriptor.SamplesPerChunkColumn - 1;
+            int chunkStepY = _descriptor.SamplesPerChunkRow - 1;
+            int chunkX = ResolveChunkIndex(globalSampleX, _descriptor.GlobalSampleColumns, _descriptor.ChunkColumns, chunkStepX);
+            int chunkY = ResolveChunkIndex(globalSampleY, _descriptor.GlobalSampleRows, _descriptor.ChunkRows, chunkStepY);
+            int localX = ResolveLocalSampleIndex(globalSampleX, _descriptor.GlobalSampleColumns, chunkX, _descriptor.SamplesPerChunkColumn, chunkStepX);
+            int localY = ResolveLocalSampleIndex(globalSampleY, _descriptor.GlobalSampleRows, chunkY, _descriptor.SamplesPerChunkRow, chunkStepY);
+
+            if (!_store.TryGetChunk(chunkX, chunkY, out ChunkedVisualHeightmapChunk chunk))
+            {
+                return false;
+            }
+
+            int sampleIndex = layerSampleOffset + (localY * _descriptor.SamplesPerChunkColumn) + localX;
+            switch (_descriptor.StorageLayout)
+            {
                 case VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters:
-                    heightCm = _asset.HeightSamplesCm[index];
+                case VisualHeightmapStorageLayout.RowMajorInt16Centimeters:
+                    heightCm = chunk.HeightSamplesCm[sampleIndex];
                     return true;
 
-                case VisualHeightmapStorageLayout.RowMajorUInt16Scaled:
                 case VisualHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled:
-                    heightCm = _asset.SampleScale.Decode(_asset.HeightSamplesRaw[index]);
+                case VisualHeightmapStorageLayout.RowMajorUInt16Scaled:
+                    heightCm = _descriptor.SampleScale.Decode(chunk.HeightSamplesRaw[sampleIndex]);
                     return true;
 
                 default:
@@ -169,22 +195,54 @@ namespace Ludots.Core.Presentation.Terrain
             }
         }
 
-        private bool TryResolveLayerIndex(int layerIndex, out int resolvedLayer)
-        {
-            resolvedLayer = layerIndex >= 0 ? layerIndex : _asset.DefaultLayerIndex;
-            return (uint)resolvedLayer < (uint)_asset.Layers.Length;
-        }
-
         private bool TryResolveLayer(int layerIndex, out VisualHeightmapLayerDefinition layer)
         {
-            if (!TryResolveLayerIndex(layerIndex, out int resolvedLayer))
+            if (!TryResolveLayerIndex(layerIndex, out int resolvedIndex))
             {
                 layer = default;
                 return false;
             }
 
-            layer = _asset.Layers[resolvedLayer];
+            layer = _descriptor.Layers[resolvedIndex];
             return true;
+        }
+
+        private bool TryResolveLayerIndex(int requestedLayerIndex, out int resolvedLayerIndex)
+        {
+            if (requestedLayerIndex < 0)
+            {
+                resolvedLayerIndex = _descriptor.DefaultLayerIndex;
+                return true;
+            }
+
+            if ((uint)requestedLayerIndex >= (uint)_descriptor.Layers.Length)
+            {
+                resolvedLayerIndex = default;
+                return false;
+            }
+
+            resolvedLayerIndex = requestedLayerIndex;
+            return true;
+        }
+
+        private static int ResolveChunkIndex(int globalSampleIndex, int globalSampleCount, int chunkCount, int chunkStep)
+        {
+            if (globalSampleIndex >= globalSampleCount - 1)
+            {
+                return chunkCount - 1;
+            }
+
+            return globalSampleIndex / chunkStep;
+        }
+
+        private static int ResolveLocalSampleIndex(int globalSampleIndex, int globalSampleCount, int chunkIndex, int samplesPerChunk, int chunkStep)
+        {
+            if (globalSampleIndex >= globalSampleCount - 1)
+            {
+                return samplesPerChunk - 1;
+            }
+
+            return globalSampleIndex - (chunkIndex * chunkStep);
         }
     }
 }

@@ -8,7 +8,7 @@ namespace Ludots.Core.Presentation.Terrain
     public static class VisualHeightmapBinary
     {
         private const string Magic = "VHTM";
-        private const int Version = 1;
+        private const int Version = 2;
 
         public static VisualHeightmapAsset Read(Stream stream)
         {
@@ -22,7 +22,7 @@ namespace Ludots.Core.Presentation.Terrain
             }
 
             int version = reader.ReadInt32();
-            if (version != Version)
+            if (version != 1 && version != Version)
             {
                 throw new InvalidDataException($"Unsupported visual heightmap binary version: {version}.");
             }
@@ -37,6 +37,12 @@ namespace Ludots.Core.Presentation.Terrain
             int sampleRows = reader.ReadInt32();
             var storageLayout = (VisualHeightmapStorageLayout)reader.ReadInt32();
             int defaultLayerIndex = reader.ReadInt32();
+            VisualHeightmapInterpolationMode interpolationMode = version >= 2
+                ? (VisualHeightmapInterpolationMode)reader.ReadInt32()
+                : VisualHeightmapInterpolationMode.BilinearHeightfield;
+            VisualHeightSampleScale sampleScale = version >= 2
+                ? new VisualHeightSampleScale(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32())
+                : VisualHeightSampleScale.IdentityCentimeters;
 
             int layerCount = reader.ReadInt32();
             if (layerCount <= 0)
@@ -60,9 +66,29 @@ namespace Ludots.Core.Presentation.Terrain
                 throw new InvalidDataException("Visual heightmap binary sample count cannot be negative.");
             }
 
-            byte[] rawSamples = ReadExact(reader, checked(sampleCount * sizeof(short)));
+            bool usesRawUInt16 = storageLayout == VisualHeightmapStorageLayout.RowMajorUInt16Scaled ||
+                                 storageLayout == VisualHeightmapStorageLayout.ChunkedRowMajorUInt16Scaled;
+            if (usesRawUInt16)
+            {
+                byte[] rawSamples = ReadExact(reader, checked(sampleCount * sizeof(ushort)));
+                var heightSamplesRaw = new ushort[sampleCount];
+                Buffer.BlockCopy(rawSamples, 0, heightSamplesRaw, 0, rawSamples.Length);
+
+                return new VisualHeightmapAsset(
+                    bounds,
+                    sampleColumns,
+                    sampleRows,
+                    heightSamplesRaw,
+                    layers,
+                    sampleScale,
+                    storageLayout,
+                    defaultLayerIndex,
+                    interpolationMode);
+            }
+
+            byte[] rawCmSamples = ReadExact(reader, checked(sampleCount * sizeof(short)));
             var heightSamplesCm = new short[sampleCount];
-            Buffer.BlockCopy(rawSamples, 0, heightSamplesCm, 0, rawSamples.Length);
+            Buffer.BlockCopy(rawCmSamples, 0, heightSamplesCm, 0, rawCmSamples.Length);
 
             return new VisualHeightmapAsset(
                 bounds,
@@ -71,7 +97,8 @@ namespace Ludots.Core.Presentation.Terrain
                 heightSamplesCm,
                 layers,
                 storageLayout,
-                defaultLayerIndex);
+                defaultLayerIndex,
+                interpolationMode);
         }
 
         public static void Write(Stream stream, VisualHeightmapAsset asset)
@@ -90,6 +117,10 @@ namespace Ludots.Core.Presentation.Terrain
             writer.Write(asset.SampleRows);
             writer.Write((int)asset.StorageLayout);
             writer.Write(asset.DefaultLayerIndex);
+            writer.Write((int)asset.InterpolationMode);
+            writer.Write(asset.SampleScale.OffsetCm);
+            writer.Write(asset.SampleScale.UnitsPerSampleNumeratorCm);
+            writer.Write(asset.SampleScale.UnitsPerSampleDenominator);
             writer.Write(asset.Layers.Length);
 
             for (int i = 0; i < asset.Layers.Length; i++)
@@ -101,10 +132,20 @@ namespace Ludots.Core.Presentation.Terrain
                 writer.Write(layer.SampleCount);
             }
 
-            writer.Write(asset.HeightSamplesCm.Length);
-            byte[] rawSamples = new byte[checked(asset.HeightSamplesCm.Length * sizeof(short))];
-            Buffer.BlockCopy(asset.HeightSamplesCm, 0, rawSamples, 0, rawSamples.Length);
-            writer.Write(rawSamples);
+            if (asset.UsesRawUInt16Samples)
+            {
+                writer.Write(asset.HeightSamplesRaw.Length);
+                byte[] rawSamples = new byte[checked(asset.HeightSamplesRaw.Length * sizeof(ushort))];
+                Buffer.BlockCopy(asset.HeightSamplesRaw, 0, rawSamples, 0, rawSamples.Length);
+                writer.Write(rawSamples);
+            }
+            else
+            {
+                writer.Write(asset.HeightSamplesCm.Length);
+                byte[] rawSamples = new byte[checked(asset.HeightSamplesCm.Length * sizeof(short))];
+                Buffer.BlockCopy(asset.HeightSamplesCm, 0, rawSamples, 0, rawSamples.Length);
+                writer.Write(rawSamples);
+            }
         }
 
         private static byte[] ReadExact(BinaryReader reader, int byteCount)
