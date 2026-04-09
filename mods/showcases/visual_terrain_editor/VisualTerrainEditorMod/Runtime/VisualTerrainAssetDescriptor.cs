@@ -17,7 +17,10 @@ internal sealed class VisualTerrainAssetDescriptor
         int renderColumnsPerChunk,
         int renderRowsPerChunk,
         float defaultHeight01,
-        VisualTerrainBindingDescriptor? binding = null)
+        VisualTerrainBindingDescriptor? binding = null,
+        VisualHeightmapStorageLayout storageLayout = VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
+        VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.TriangleHeightfield,
+        VisualHeightSampleScale? sampleScale = null)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -85,6 +88,10 @@ internal sealed class VisualTerrainAssetDescriptor
         RenderRowsPerChunk = renderRowsPerChunk;
         DefaultHeight01 = defaultHeight01;
         Binding = binding ?? VisualTerrainBindingDescriptor.None;
+        StorageLayout = storageLayout;
+        InterpolationMode = interpolationMode;
+        SampleScale = sampleScale ?? VisualHeightSampleScale.IdentityCentimeters;
+        SampleScale.Validate();
     }
 
     public string Id { get; }
@@ -109,6 +116,14 @@ internal sealed class VisualTerrainAssetDescriptor
 
     public VisualTerrainBindingDescriptor Binding { get; }
 
+    public VisualHeightmapStorageLayout StorageLayout { get; }
+
+    public VisualHeightmapInterpolationMode InterpolationMode { get; }
+
+    public VisualHeightSampleScale SampleScale { get; }
+
+    public int DefaultLayerIndex => 0;
+
     public int ChunkCount => checked(ChunkColumns * ChunkRows);
 
     public int ChunkWorldWidthCm => Bounds.Width / ChunkColumns;
@@ -124,9 +139,7 @@ internal sealed class VisualTerrainAssetDescriptor
     public int RenderRows => checked(ChunkRows * (RenderRowsPerChunk - 1) + 1);
 
     public int RuntimeVertexCapacityPerChunk
-        => checked(
-            ((RenderColumnsPerChunk - 1) * (RenderRowsPerChunk - 1) * 6)
-            + (((RenderColumnsPerChunk - 1) + (RenderRowsPerChunk - 1)) * 2 * 6));
+        => checked((RenderColumnsPerChunk - 1) * (RenderRowsPerChunk - 1) * 6);
 
     public int RuntimeVertexCapacity => RuntimeVertexCapacityPerChunk;
 
@@ -138,6 +151,9 @@ internal sealed class VisualTerrainAssetDescriptor
             ChunkRows,
             SamplesPerChunkColumn,
             SamplesPerChunkRow,
-            layerName: "eroded");
+            layerName: "eroded",
+            interpolationMode: InterpolationMode,
+            storageLayout: StorageLayout,
+            sampleScale: SampleScale);
     }
 }

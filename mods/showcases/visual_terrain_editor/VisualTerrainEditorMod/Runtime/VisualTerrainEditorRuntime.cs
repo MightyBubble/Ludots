@@ -475,7 +475,7 @@ internal sealed class VisualTerrainEditorRuntime
         _visibleMaxChunkX = maxChunkX;
         _visibleMinChunkY = minChunkY;
         _visibleMaxChunkY = maxChunkY;
-        _document.EnsureChunkWindowLoaded(centerChunkX, centerChunkY, visibleRadius);
+        _document.EnsureChunkWindowLoaded(centerChunkX, centerChunkY, retainedRadius);
         _document.PruneUneditedChunksOutsideWindow(centerChunkX, centerChunkY, retainedRadius);
         return changed;
     }
@@ -573,12 +573,11 @@ internal sealed class VisualTerrainEditorRuntime
                 string meshKey = $"{TerrainMeshAssetKeyPrefix}.{chunkX}.{chunkY}";
                 int meshAssetId = registry.Register(meshKey, MeshAssetDescriptor.Runtime(id: 0, runtimeMesh));
                 int stableId = stableIds.Allocate();
-                WorldAabbCm bounds = _document.GetChunkBounds(chunkX, chunkY);
                 Entity entity = engine.World.Create(
                     new PresentationStableId { Value = stableId },
                     new VisualTransform
                     {
-                        Position = new Vector3(bounds.Left * 0.01f, 0f, bounds.Top * 0.01f),
+                        Position = Vector3.Zero,
                         Rotation = Quaternion.Identity,
                         Scale = Vector3.One,
                     },
