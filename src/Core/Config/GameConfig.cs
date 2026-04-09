@@ -33,6 +33,8 @@ namespace Ludots.Core.Config
         // Engine-level defaults (these stay in Core's game.json)
         public int WindowWidth { get; set; } = 1280;
         public int WindowHeight { get; set; } = 720;
+        public bool WindowResizable { get; set; }
+        public bool WindowStartMaximized { get; set; }
         public string WindowTitle { get; set; } = "Ludots Engine";
         public int TargetFps { get; set; } = 60;
 

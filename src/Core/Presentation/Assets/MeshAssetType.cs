@@ -6,6 +6,7 @@ namespace Ludots.Core.Presentation.Assets
         Primitive = 1,
         Model = 2,
         Prefab = 3,
-        Billboard = 4
+        Billboard = 4,
+        RuntimeMesh = 5
     }
 }

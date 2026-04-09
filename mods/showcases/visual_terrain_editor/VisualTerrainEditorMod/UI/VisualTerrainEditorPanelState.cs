@@ -1,0 +1,35 @@
+using VisualTerrainEditorMod.Runtime;
+
+namespace VisualTerrainEditorMod.UI;
+
+internal sealed record VisualTerrainEditorPanelState(
+    string AssetId,
+    string AssetName,
+    float ViewportWidth,
+    float ViewportHeight,
+    string SavePath,
+    string StatusText,
+    bool IsDirty,
+    string BindingKind,
+    int ChunkColumns,
+    int ChunkRows,
+    int LoadedChunkCount,
+    int EditedChunkCount,
+    int SampleColumns,
+    int SampleRows,
+    int SamplesPerChunkColumn,
+    int SamplesPerChunkRow,
+    int RenderColumns,
+    int RenderRows,
+    int RenderColumnsPerChunk,
+    int RenderRowsPerChunk,
+    float WorldWidthMeters,
+    float WorldHeightMeters,
+    TerrainViewMode ViewMode,
+    bool LowerBrush,
+    float BrushRadiusMeters,
+    float Scale,
+    float Strength,
+    float GullyWeight,
+    float Detail,
+    int Octaves);

@@ -2,6 +2,8 @@
   "defaultCoreMod": "LudotsCoreMod",
   "windowWidth": 1280,
   "windowHeight": 720,
+  "windowResizable": true,
+  "windowStartMaximized": false,
   "windowTitle": "Ludots Engine",
   "targetFps": 0,
   "simulationBudgetMsPerFrame": 4,

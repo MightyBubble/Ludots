@@ -134,6 +134,36 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void VisualHeightmapBinary_RoundTripsScaledUInt16ImportMetadata()
+        {
+            var asset = new VisualHeightmapAsset(
+                new WorldAabbCm(0, 0, 2000, 1000),
+                sampleColumns: 2,
+                sampleRows: 2,
+                new ushort[] { 0, 100, 200, 300 },
+                new[]
+                {
+                    new VisualHeightmapLayerDefinition(20, "imported", sampleOffset: 0, sampleCount: 4),
+                },
+                new VisualHeightSampleScale(OffsetCm: 50, UnitsPerSampleNumeratorCm: 2, UnitsPerSampleDenominator: 1),
+                VisualHeightmapStorageLayout.RowMajorUInt16Scaled,
+                defaultLayerIndex: 0,
+                interpolationMode: VisualHeightmapInterpolationMode.TriangleHeightfield);
+
+            using var stream = new MemoryStream();
+            VisualHeightmapBinary.Write(stream, asset);
+            stream.Position = 0;
+
+            VisualHeightmapAsset roundTripped = VisualHeightmapBinary.Read(stream);
+
+            Assert.That(roundTripped.StorageLayout, Is.EqualTo(VisualHeightmapStorageLayout.RowMajorUInt16Scaled));
+            Assert.That(roundTripped.InterpolationMode, Is.EqualTo(VisualHeightmapInterpolationMode.TriangleHeightfield));
+            Assert.That(roundTripped.SampleScale, Is.EqualTo(asset.SampleScale));
+            Assert.That(roundTripped.HeightSamplesRaw, Is.EqualTo(asset.HeightSamplesRaw));
+            Assert.That(roundTripped.UsesRawUInt16Samples, Is.True);
+        }
+
+        [Test]
         public void VisualHeightmapRuntime_SupportsBatchSamplingAndSoaRaycast()
         {
             var runtime = CreateRuntime();
@@ -201,6 +231,33 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void VisualHeightmapRuntime_TriangleInterpolation_UsesExactTriangleTruth_ForSamplingAndRaycast()
+        {
+            var runtime = new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new WorldAabbCm(0, 0, 100, 100),
+                    sampleColumns: 2,
+                    sampleRows: 2,
+                    new short[]
+                    {
+                        0, 100,
+                        0, 0,
+                    },
+                    interpolationMode: VisualHeightmapInterpolationMode.TriangleHeightfield));
+
+            Assert.That(runtime.TrySampleHeightCm(75f, 75f, out float heightCm), Is.True);
+            Assert.That(heightCm, Is.EqualTo(25f).Within(0.001f));
+
+            var ray = new ScreenRay(new Vector3(0.75f, 1f, 0.75f), -Vector3.UnitY);
+            Assert.That(runtime.TryRaycastGround(in ray, out VisualGroundHit hit), Is.True);
+            Assert.That(hit.WorldXCm, Is.EqualTo(75f).Within(0.001f));
+            Assert.That(hit.WorldYCm, Is.EqualTo(75f).Within(0.001f));
+            Assert.That(hit.HeightCm, Is.EqualTo(25f).Within(0.001f));
+            Assert.That(hit.DistanceMeters, Is.EqualTo(0.75f).Within(0.001f));
+            Assert.That(hit.Normal.Y, Is.GreaterThan(0.6f));
+        }
+
+        [Test]
         public void TerrainHeightSyncSystem_PrefersVisualHeightmap_AndGroundRaycastUsesSameTruth()
         {
             using var world = World.Create();
@@ -243,6 +300,143 @@ namespace Ludots.Tests.Presentation
             Assert.That(worldCm, Is.EqualTo(new WorldCmInt2(200, 600)));
         }
 
+        [Test]
+        public void ChunkedVisualHeightmapRuntime_MatchesScalarAndBatchAcrossSharedSeam()
+        {
+            var runtime = CreateChunkedRuntime(includeRightChunk: true);
+
+            Assert.That(runtime.TrySampleHeightCm(25f, 50f, out float leftHeightCm), Is.True);
+            Assert.That(leftHeightCm, Is.EqualTo(25f).Within(0.001f));
+            Assert.That(runtime.TrySampleHeightCm(100f, 50f, out float seamHeightCm), Is.True);
+            Assert.That(seamHeightCm, Is.EqualTo(100f).Within(0.001f));
+            Assert.That(runtime.TrySampleHeightCm(175f, 50f, out float rightHeightCm), Is.True);
+            Assert.That(rightHeightCm, Is.EqualTo(175f).Within(0.001f));
+
+            float[] xs = { 25f, 100f, 175f };
+            float[] ys = { 50f, 50f, 50f };
+            float[] heights = new float[3];
+            Assert.That(runtime.SampleHeightsCm(xs, ys, heights), Is.True);
+            Assert.That(heights[0], Is.EqualTo(25f).Within(0.001f));
+            Assert.That(heights[1], Is.EqualTo(100f).Within(0.001f));
+            Assert.That(heights[2], Is.EqualTo(175f).Within(0.001f));
+
+            var seamRay = new ScreenRay(new Vector3(1f, 3f, 0.5f), -Vector3.UnitY);
+            Assert.That(runtime.TryRaycastGround(in seamRay, out VisualGroundHit seamHit), Is.True);
+            Assert.That(seamHit.WorldXCm, Is.EqualTo(100f).Within(0.001f));
+            Assert.That(seamHit.WorldYCm, Is.EqualTo(50f).Within(0.001f));
+            Assert.That(seamHit.HeightCm, Is.EqualTo(100f).Within(0.001f));
+            Assert.That(seamHit.DistanceMeters, Is.EqualTo(2f).Within(0.001f));
+
+            float[] ox = { 0.25f, 1.75f };
+            float[] oy = { 3f, 3f };
+            float[] oz = { 0.5f, 0.5f };
+            float[] dx = { 0f, 0f };
+            float[] dy = { -1f, -1f };
+            float[] dz = { 0f, 0f };
+            var hitWorldX = new float[2];
+            var hitWorldY = new float[2];
+            var hitHeight = new float[2];
+            var hitDistance = new float[2];
+            var hitNormalX = new float[2];
+            var hitNormalY = new float[2];
+            var hitNormalZ = new float[2];
+            var hitLayer = new int[2];
+            byte[] hitMask = new byte[2];
+
+            Assert.That(
+                runtime.RaycastGroundBatch(
+                    ox,
+                    oy,
+                    oz,
+                    dx,
+                    dy,
+                    dz,
+                    hitWorldX,
+                    hitWorldY,
+                    hitHeight,
+                    hitDistance,
+                    hitNormalX,
+                    hitNormalY,
+                    hitNormalZ,
+                    hitLayer,
+                    hitMask),
+                Is.True);
+
+            Assert.That(hitMask[0], Is.EqualTo((byte)1));
+            Assert.That(hitMask[1], Is.EqualTo((byte)1));
+            Assert.That(hitWorldX[0], Is.EqualTo(25f).Within(0.001f));
+            Assert.That(hitHeight[0], Is.EqualTo(25f).Within(0.001f));
+            Assert.That(hitDistance[0], Is.EqualTo(2.75f).Within(0.001f));
+            Assert.That(hitLayer[0], Is.EqualTo(0));
+            Assert.That(hitNormalY[0], Is.GreaterThan(0.7f));
+            Assert.That(hitWorldX[1], Is.EqualTo(175f).Within(0.001f));
+            Assert.That(hitHeight[1], Is.EqualTo(175f).Within(0.001f));
+            Assert.That(hitDistance[1], Is.EqualTo(1.25f).Within(0.001f));
+            Assert.That(hitLayer[1], Is.EqualTo(0));
+            Assert.That(hitNormalY[1], Is.GreaterThan(0.7f));
+        }
+
+        [Test]
+        public void ChunkedVisualHeightmapRuntime_MissingChunksFailScalarQueries_AndBatchMarksMisses()
+        {
+            var runtime = CreateChunkedRuntime(includeRightChunk: false);
+
+            Assert.That(runtime.TrySampleHeightCm(25f, 50f, out float leftHeightCm), Is.True);
+            Assert.That(leftHeightCm, Is.EqualTo(25f).Within(0.001f));
+            Assert.That(runtime.TrySampleHeightCm(150f, 50f, out _), Is.False);
+
+            var missingRay = new ScreenRay(new Vector3(1.5f, 3f, 0.5f), -Vector3.UnitY);
+            Assert.That(runtime.TryRaycastGround(in missingRay, out _), Is.False);
+
+            float[] xs = { 25f, 150f };
+            float[] ys = { 50f, 50f };
+            float[] heights = new float[2];
+            Assert.That(runtime.SampleHeightsCm(xs, ys, heights), Is.True);
+            Assert.That(heights[0], Is.EqualTo(25f).Within(0.001f));
+            Assert.That(float.IsNaN(heights[1]), Is.True);
+
+            float[] ox = { 0.25f, 1.5f };
+            float[] oy = { 3f, 3f };
+            float[] oz = { 0.5f, 0.5f };
+            float[] dx = { 0f, 0f };
+            float[] dy = { -1f, -1f };
+            float[] dz = { 0f, 0f };
+            var hitWorldX = new float[2];
+            var hitWorldY = new float[2];
+            var hitHeight = new float[2];
+            var hitDistance = new float[2];
+            var hitNormalX = new float[2];
+            var hitNormalY = new float[2];
+            var hitNormalZ = new float[2];
+            var hitLayer = new int[2];
+            byte[] hitMask = new byte[2];
+
+            Assert.That(
+                runtime.RaycastGroundBatch(
+                    ox,
+                    oy,
+                    oz,
+                    dx,
+                    dy,
+                    dz,
+                    hitWorldX,
+                    hitWorldY,
+                    hitHeight,
+                    hitDistance,
+                    hitNormalX,
+                    hitNormalY,
+                    hitNormalZ,
+                    hitLayer,
+                    hitMask),
+                Is.True);
+
+            Assert.That(hitMask[0], Is.EqualTo((byte)1));
+            Assert.That(hitMask[1], Is.EqualTo((byte)0));
+            Assert.That(hitHeight[0], Is.EqualTo(25f).Within(0.001f));
+            Assert.That(float.IsNaN(hitHeight[1]), Is.True);
+            Assert.That(hitLayer[1], Is.EqualTo(-1));
+        }
+
         private static VisualHeightmapRuntime CreateRuntime()
         {
             return new VisualHeightmapRuntime(
@@ -255,6 +449,40 @@ namespace Ludots.Tests.Presentation
                         0, 100,
                         100, 200,
                     }));
+        }
+
+        private static ChunkedVisualHeightmapRuntime CreateChunkedRuntime(bool includeRightChunk)
+        {
+            var descriptor = ChunkedVisualHeightmapDescriptor.CreateSingleLayer(
+                new WorldAabbCm(0, 0, 200, 100),
+                chunkColumns: 2,
+                chunkRows: 1,
+                samplesPerChunkColumn: 3,
+                samplesPerChunkRow: 2);
+            var store = new ChunkedVisualHeightmapStore(descriptor);
+
+            store.SetChunk(new ChunkedVisualHeightmapChunk(
+                chunkX: 0,
+                chunkY: 0,
+                new short[]
+                {
+                    0, 50, 100,
+                    0, 50, 100,
+                }));
+
+            if (includeRightChunk)
+            {
+                store.SetChunk(new ChunkedVisualHeightmapChunk(
+                    chunkX: 1,
+                    chunkY: 0,
+                    new short[]
+                    {
+                        100, 150, 200,
+                        100, 150, 200,
+                    }));
+            }
+
+            return new ChunkedVisualHeightmapRuntime(descriptor, store);
         }
 
         private sealed class CountingGroundProjector : IVisualGroundProjector

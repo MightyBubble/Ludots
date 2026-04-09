@@ -318,7 +318,13 @@ namespace Raylib_cs
         public static extern void InitWindow(int width, int height, string title);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SetConfigFlags(uint flags);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void CloseWindow();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void MaximizeWindow();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
