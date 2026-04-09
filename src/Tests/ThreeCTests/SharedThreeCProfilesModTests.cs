@@ -29,10 +29,13 @@ namespace Ludots.Tests.ThreeC
             Assert.That(registry!.TryGet("Shared3C.Profile.RtsMoba", out VirtualCameraDefinition definition), Is.True);
             Assert.That(definition.Id, Is.EqualTo("Shared3C.Profile.RtsMoba"));
             Assert.That(definition.RigKind, Is.EqualTo(CameraRigKind.Orbit));
-            Assert.That(definition.PanMode, Is.EqualTo(CameraPanMode.KeyboardAndEdge));
-            Assert.That(definition.EnableGrabDrag, Is.True);
+            Assert.That(definition.TargetSource, Is.EqualTo(VirtualCameraTargetSource.FollowTarget));
+            Assert.That(definition.PanMode, Is.EqualTo(CameraPanMode.None));
+            Assert.That(definition.FollowMode, Is.EqualTo(CameraFollowMode.AlwaysFollow));
+            Assert.That(definition.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(definition.EnableZoom, Is.False);
             Assert.That(definition.ConfineTargetToWorldBounds, Is.True);
-            Assert.That(definition.AllowUserInput, Is.True);
+            Assert.That(definition.AllowUserInput, Is.False);
         }
 
         private static string FindRepoRoot()

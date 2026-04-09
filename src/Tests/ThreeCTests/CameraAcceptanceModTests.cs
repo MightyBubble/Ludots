@@ -907,30 +907,35 @@ namespace Ludots.Tests.ThreeC.Acceptance
         }
 
         [Test]
-        public void CameraAcceptanceMod_RtsMap_ComposesKeyboardEdgeGrabDragAndZoom()
+        public void CameraAcceptanceMod_RtsMap_UsesSharedProfileToFollowLocalPlayer()
         {
             using var engine = CreateEngine(AcceptanceMods);
             LoadMap(engine, CameraAcceptanceIds.RtsMapId);
+            TickCamera(engine, 3);
 
-            var backend = GetInputBackend(engine);
-            var start = engine.GameSession.Camera.State.TargetCm;
-            float startDistance = engine.GameSession.Camera.State.DistanceCm;
+            var brain = engine.GameSession.Camera.VirtualCameraBrain;
+            Assert.That(brain, Is.Not.Null);
+            Assert.That(brain!.ActiveCameraId, Is.EqualTo(CameraAcceptanceIds.RtsCameraId));
+            Assert.That(brain.ActiveDefinition, Is.Not.Null);
+            Assert.That(brain.ActiveDefinition!.TargetSource, Is.EqualTo(VirtualCameraTargetSource.FollowTarget));
+            Assert.That(brain.ActiveDefinition.FollowMode, Is.EqualTo(CameraFollowMode.AlwaysFollow));
+            Assert.That(brain.ActiveDefinition.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(brain.ActiveDefinition.AllowUserInput, Is.False);
 
-            HoldButton(engine, backend, "<Keyboard>/w", frames: 3, minFixedTickAdvance: 1);
-            var afterKeyboard = engine.GameSession.Camera.State.TargetCm;
-            Assert.That(afterKeyboard, Is.Not.EqualTo(start), "WASD pan should move the RTS camera target.");
+            Entity hero = FindEntityByName(engine.World, CameraAcceptanceIds.HeroName);
+            Assert.That(hero, Is.Not.EqualTo(Entity.Null));
+            Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.True);
+            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(1800f, 1200f)));
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1800f, 1200f)));
 
-            backend.SetMousePosition(new Vector2(1919f, 540f));
-            Tick(engine, 3);
-            var afterEdge = engine.GameSession.Camera.State.TargetCm;
-            Assert.That(afterEdge, Is.Not.EqualTo(afterKeyboard), "Edge pan should move the RTS camera target.");
+            ref var position = ref engine.World.Get<WorldPositionCm>(hero);
+            position = WorldPositionCm.FromCm(2600, 1900);
+            ref var previous = ref engine.World.Get<PreviousWorldPositionCm>(hero);
+            previous.Value = position.Value;
 
-            DragMouse(engine, backend, "<Mouse>/MiddleButton", new Vector2(960f, 540f), new Vector2(1060f, 540f));
-            var afterDrag = engine.GameSession.Camera.State.TargetCm;
-            Assert.That(afterDrag, Is.Not.EqualTo(afterEdge), "Middle-button grab drag should move the RTS camera target.");
-
-            ScrollWheel(engine, backend, 5f);
-            Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.LessThan(startDistance), "Mouse wheel should zoom the RTS camera.");
+            TickCamera(engine, 3);
+            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(2600f, 1900f)));
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(2600f, 1900f)));
         }
 
         [Test]

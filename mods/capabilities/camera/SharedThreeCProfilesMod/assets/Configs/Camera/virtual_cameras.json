@@ -1,9 +1,10 @@
 [
   {
     "id": "Shared3C.Profile.RtsMoba",
-    "displayName": "Shared RTS MOBA Command",
+    "displayName": "Shared RTS MOBA Follow",
     "priority": 100,
     "rigKind": "Orbit",
+    "targetSource": "FollowTarget",
     "distanceCm": 6500,
     "pitch": 58,
     "fovYDeg": 50,
@@ -12,19 +13,15 @@
     "maxDistanceCm": 14000,
     "minPitchDeg": 45,
     "maxPitchDeg": 72,
-    "panMode": "KeyboardAndEdge",
-    "edgePanMarginPx": 10,
-    "edgePanSpeedCmPerSec": 8000,
-    "edgePanRequiresPointerInsideViewport": true,
-    "panCmPerSecond": 8000,
-    "enableGrabDrag": true,
+    "panMode": "None",
     "confineTargetToWorldBounds": true,
     "confinePaddingCm": 1200,
     "rotateMode": "None",
-    "enableZoom": true,
-    "zoomCmPerWheel": 1200,
+    "enableZoom": false,
+    "followMode": "AlwaysFollow",
+    "followTargetKind": "LocalPlayer",
     "defaultBlendDuration": 0.25,
     "blendCurve": "SmoothStep",
-    "allowUserInput": true
+    "allowUserInput": false
   }
 ]
