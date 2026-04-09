@@ -1092,6 +1092,7 @@ namespace Ludots.Core.Engine
                 CreateBoardsForSession(session, mapConfig);
                 if (previousFocused != null)
                 {
+                    CancelPendingMapResume(previousFocused.MapId, $"Map resume canceled because '{mid.Value}' became focused.", markFailed: true);
                     CancelPendingMapLoad(previousFocused.MapId, $"Map load canceled because '{mid.Value}' became focused.", markFailed: true);
                 }
                 MapSessions.PushFocused(mid);   // old focused → Suspended
@@ -1099,7 +1100,7 @@ namespace Ludots.Core.Engine
                 {
                     SetMapEntitiesSuspended(previousFocused.MapId, true);
                 }
-                _mapLoadStatuses[mid] = MapLoadStatus.ImmediateSuccess;
+                _mapLoadStatuses[mid] = GetInitialMapLoadStatus();
                 SetCurrentMapSession(session);
 
                 // Apply primary board spatial config to engine-level services
@@ -1159,6 +1160,7 @@ namespace Ludots.Core.Engine
 
             // Fire MapUnloaded — scoped to this map's triggers
             CancelPendingMapLoad(mid, $"Map '{mapId}' was unloaded before completion.", markFailed: false);
+            CancelPendingMapResume(mid, $"Map '{mapId}' was unloaded before resume completion.", markFailed: false);
 
             var unloadCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
@@ -1174,10 +1176,15 @@ namespace Ludots.Core.Engine
             if (wasFocused && MapSessions.FocusedSession != null)
             {
                 var restored = MapSessions.FocusedSession;
+                _mapLoadStatuses[restored.MapId] = GetInitialMapLoadStatus();
                 RestoreFocusedMapSession(restored);
+                if (TryStartPendingMapResume(restored, session, out var resumeStatus))
+                {
+                    Diagnostics.Log.Info(in LogChannels.Engine, $"MapResumed deferred for '{restored.MapId.Value}'.");
+                    return;
+                }
 
-                var resumeCtx = CreateMapEventContext(restored);
-                CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(restored.MapId, GameEvents.MapResumed, resumeCtx));
+                CompleteMapResume(restored, resumeStatus);
             }
             else if (wasFocused)
             {
@@ -1217,6 +1224,7 @@ namespace Ludots.Core.Engine
             CreateBoardsForSession(session, mapConfig);
             if (outerSession != null)
             {
+                CancelPendingMapResume(outerSession.MapId, $"Map resume canceled because '{inner.Value}' was pushed on top.", markFailed: true);
                 CancelPendingMapLoad(outerSession.MapId, $"Map load canceled because '{inner.Value}' was pushed on top.", markFailed: true);
             }
 
@@ -1226,7 +1234,7 @@ namespace Ludots.Core.Engine
             {
                 SetMapEntitiesSuspended(outerSession.MapId, true);
             }
-            _mapLoadStatuses[inner] = MapLoadStatus.ImmediateSuccess;
+            _mapLoadStatuses[inner] = GetInitialMapLoadStatus();
             SetCurrentMapSession(session);
 
             var primaryBoard = session.PrimaryBoard;
@@ -1299,10 +1307,15 @@ namespace Ludots.Core.Engine
             var outerSession = MapSessions.FocusedSession;
             if (outerSession != null)
             {
+                _mapLoadStatuses[outerSession.MapId] = GetInitialMapLoadStatus();
                 RestoreFocusedMapSession(outerSession);
+                if (TryStartPendingMapResume(outerSession, innerSession, out var resumeStatus))
+                {
+                    Diagnostics.Log.Info(in LogChannels.Engine, $"MapResumed deferred for '{outerSession.MapId.Value}'.");
+                    return;
+                }
 
-                var resumeCtx = CreateMapEventContext(outerSession);
-                CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(outerSession.MapId, GameEvents.MapResumed, resumeCtx));
+                CompleteMapResume(outerSession, resumeStatus);
             }
             else
             {
@@ -1994,6 +2007,15 @@ namespace Ludots.Core.Engine
                 for (int i = 0; i < pendingMapIds.Count; i++)
                 {
                     CancelPendingMapLoad(pendingMapIds[i], $"Engine disposed before '{pendingMapIds[i].Value}' completed.", markFailed: false);
+                }
+            }
+
+            if (_pendingMapResumes.Count > 0)
+            {
+                var pendingResumeMapIds = new List<MapId>(_pendingMapResumes.Keys);
+                for (int i = 0; i < pendingResumeMapIds.Count; i++)
+                {
+                    CancelPendingMapResume(pendingResumeMapIds[i], $"Engine disposed before '{pendingResumeMapIds[i].Value}' resume completed.", markFailed: false);
                 }
             }
 

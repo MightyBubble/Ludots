@@ -13,6 +13,7 @@ namespace Ludots.Adapter.UE5
     {
         Idle = 0,
         Opening = 1,
+        // Active means the host world switch is complete and required host-bound entities are initialized.
         Active = 2,
         Returning = 3,
         Failed = 4,
@@ -65,6 +66,8 @@ namespace Ludots.Adapter.UE5
         HostLevelNavigationSnapshot Snapshot { get; }
 
         HostLevelNavigationResult Load(in HostLevelLoadRequest request);
+
+        HostLevelNavigationResult CancelPendingLoad();
 
         HostLevelNavigationResult ExitPreview();
     }

@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using Ludots.Core.Engine;
 using Ludots.Core.Map;
 
 namespace Ludots.Adapter.UE5
@@ -7,32 +7,28 @@ namespace Ludots.Adapter.UE5
     public readonly record struct HostBoundMapSessionSnapshot(
         string FocusedMapId,
         ExplicitHostMapBinding Binding,
-        bool IsHostReady,
+        MapLoadStatus LoadStatus,
         bool HasPendingReturn,
         HostLevelNavigationSnapshot Navigation)
     {
         public static HostBoundMapSessionSnapshot Empty { get; } = new(
             string.Empty,
             ExplicitHostMapBinding.Empty,
-            false,
+            MapLoadStatus.ImmediateSuccess,
             false,
             HostLevelNavigationSnapshot.Empty);
 
         public bool HasExplicitBinding => Binding.HasBinding;
+        public bool IsReady => LoadStatus.Succeeded;
+        public bool IsPending => LoadStatus.State == MapLoadCompletionState.Pending;
     }
 
     public interface IHostBoundMapSessionService
     {
         HostBoundMapSessionSnapshot Snapshot { get; }
-
-        HostBoundMapSessionSnapshot Reconcile(MapSession? focusedSession);
-
-        HostBoundMapSessionSnapshot SetHostReady(bool isReady);
-
-        HostBoundMapSessionSnapshot SetPendingReturn(bool hasPendingReturn);
     }
 
-    public sealed class UE5HostBoundMapSessionService : IHostBoundMapSessionService
+    public sealed class UE5HostBoundMapSessionService : IHostBoundMapSessionService, IMapLoadCompletionGate, IFocusedMapLoadStateSink
     {
         private readonly Func<IExplicitHostMapBindingResolver?> _resolverAccessor;
         private readonly Func<IHostLevelNavigator?> _navigatorAccessor;
@@ -55,122 +51,258 @@ namespace Ludots.Adapter.UE5
 
         public HostBoundMapSessionSnapshot Snapshot => _snapshot;
 
-        public HostBoundMapSessionSnapshot Reconcile(MapSession? focusedSession)
+        public void OnFocusedMapChanged(in FocusedMapLoadState state)
         {
-            if (focusedSession == null)
+            if (state.Session == null)
             {
-                return Update(HostBoundMapSessionSnapshot.Empty);
+                Update(HostBoundMapSessionSnapshot.Empty);
+                return;
             }
 
             IExplicitHostMapBindingResolver? resolver = _resolverAccessor();
-            if (resolver == null || !resolver.TryResolve(focusedSession, out ExplicitHostMapBinding binding) || !binding.HasBinding)
+            if (resolver == null || !resolver.TryResolve(state.Session, out ExplicitHostMapBinding binding) || !binding.HasBinding)
             {
-                return Update(new HostBoundMapSessionSnapshot(
-                    focusedSession.MapId.Value,
+                Update(new HostBoundMapSessionSnapshot(
+                    state.Session.MapId.Value,
                     ExplicitHostMapBinding.Empty,
-                    false,
-                    false,
+                    state.LoadStatus,
+                    state.HasPendingReturn,
                     HostLevelNavigationSnapshot.Empty));
+                return;
             }
-
-            bool preserveFlags =
-                string.Equals(_snapshot.FocusedMapId, focusedSession.MapId.Value, StringComparison.Ordinal) &&
-                HasSameBinding(_snapshot.Binding, binding);
 
             HostLevelNavigationSnapshot navigation = _navigatorAccessor()?.Snapshot ?? HostLevelNavigationSnapshot.Empty;
 
-            return Update(new HostBoundMapSessionSnapshot(
-                focusedSession.MapId.Value,
+            Update(new HostBoundMapSessionSnapshot(
+                state.Session.MapId.Value,
                 binding,
-                preserveFlags && _snapshot.IsHostReady,
-                preserveFlags && _snapshot.HasPendingReturn,
+                state.LoadStatus,
+                state.HasPendingReturn,
                 navigation));
         }
 
-        public HostBoundMapSessionSnapshot SetHostReady(bool isReady)
+        public IPendingMapLoad BeginPendingLoad(in MapLoadCompletionRequest request)
         {
-            if (!_snapshot.HasExplicitBinding)
+            IExplicitHostMapBindingResolver? resolver = _resolverAccessor();
+            if (resolver == null || !resolver.TryResolve(request.Session, out ExplicitHostMapBinding binding) || !binding.HasBinding)
             {
-                return _snapshot;
+                return null;
             }
 
-            return Update(_snapshot with { IsHostReady = isReady });
-        }
-
-        public HostBoundMapSessionSnapshot SetPendingReturn(bool hasPendingReturn)
-        {
-            if (!_snapshot.HasExplicitBinding)
+            if (request.IsPush && binding.TransitionMode != HostLevelTransitionMode.PreviewMod)
             {
-                return _snapshot;
+                return new CompletedPendingMapLoad(MapLoadCompletionResult.Failed(
+                    $"Nested host-bound map '{request.MapId.Value}' must use '{HostLevelTransitionMode.PreviewMod}' so pop can return through the formal host lifecycle."));
             }
 
-            return Update(_snapshot with { HasPendingReturn = hasPendingReturn });
+            IHostLevelNavigator? navigator = _navigatorAccessor();
+            if (navigator == null)
+            {
+                return new CompletedPendingMapLoad(MapLoadCompletionResult.Failed(
+                    $"Explicit host-bound map '{request.MapId.Value}' requires '{nameof(IHostLevelNavigator)}'."));
+            }
+
+            HostLevelNavigationResult navigationResult = navigator.Load(new HostLevelLoadRequest(
+                request.MapId.Value,
+                binding.LevelPath,
+                binding.TransitionMode,
+                binding.UseStreaming,
+                binding.StreamingLevels,
+                binding.Metadata));
+
+            MapLoadCompletionResult completion = ToCompletionResult(binding, navigationResult.Success, navigationResult.Snapshot, navigationResult.ErrorMessage);
+            return completion.State == MapLoadCompletionState.Pending
+                ? new PendingHostBoundMapLoad(navigator, binding)
+                : new CompletedPendingMapLoad(completion);
         }
 
-        private HostBoundMapSessionSnapshot Update(HostBoundMapSessionSnapshot next)
+        public IPendingMapLoad BeginPendingResume(in MapResumeCompletionRequest request)
+        {
+            MapSession? closedSession = request.ClosedSession;
+            if (closedSession == null)
+            {
+                return null;
+            }
+
+            IExplicitHostMapBindingResolver? resolver = _resolverAccessor();
+            if (resolver == null || !resolver.TryResolve(closedSession, out ExplicitHostMapBinding closedBinding) || closedBinding.TransitionMode != HostLevelTransitionMode.PreviewMod)
+            {
+                return null;
+            }
+
+            IHostLevelNavigator? navigator = _navigatorAccessor();
+            if (navigator == null)
+            {
+                return new CompletedPendingMapLoad(MapLoadCompletionResult.Failed(
+                    $"Resuming map '{request.ResumedSession.MapId.Value}' requires '{nameof(IHostLevelNavigator)}'."));
+            }
+
+            bool hasResumedBinding = resolver.TryResolve(request.ResumedSession, out ExplicitHostMapBinding resumedBinding) && resumedBinding.HasBinding;
+            HostLevelNavigationSnapshot current = navigator.Snapshot;
+            HostLevelNavigationResult navigationResult =
+                current.IsPreviewActive || current.State == HostLevelNavigationState.Returning
+                    ? navigator.ExitPreview()
+                    : HostLevelNavigationResult.Ok(current);
+
+            MapLoadCompletionResult completion = ToResumeCompletionResult(
+                hasResumedBinding,
+                resumedBinding,
+                navigationResult.Success,
+                navigationResult.Snapshot,
+                navigationResult.ErrorMessage);
+            return completion.State == MapLoadCompletionState.Pending
+                ? new PendingHostBoundMapResume(navigator, hasResumedBinding, resumedBinding)
+                : new CompletedPendingMapLoad(completion);
+        }
+
+        private void Update(HostBoundMapSessionSnapshot next)
         {
             _snapshot = next;
             _publishSnapshot(next);
-            return next;
         }
 
-        private static bool HasSameBinding(ExplicitHostMapBinding left, ExplicitHostMapBinding right)
+        private static MapLoadCompletionResult ToCompletionResult(
+            ExplicitHostMapBinding binding,
+            bool loadSucceeded,
+            HostLevelNavigationSnapshot snapshot,
+            string errorMessage)
         {
-            return string.Equals(left.HostWorldName, right.HostWorldName, StringComparison.Ordinal) &&
-                   string.Equals(left.LevelPath, right.LevelPath, StringComparison.Ordinal) &&
-                   left.TransitionMode == right.TransitionMode &&
-                   left.UseStreaming == right.UseStreaming &&
-                   SequenceEquals(left.StreamingLevels, right.StreamingLevels) &&
-                   DictionaryEquals(left.Metadata, right.Metadata);
-        }
-
-        private static bool SequenceEquals(IReadOnlyList<string>? left, IReadOnlyList<string>? right)
-        {
-            if (ReferenceEquals(left, right))
+            if (!loadSucceeded || snapshot.State == HostLevelNavigationState.Failed)
             {
-                return true;
+                string resolvedError = !string.IsNullOrWhiteSpace(errorMessage)
+                    ? errorMessage
+                    : snapshot.LastError;
+                return MapLoadCompletionResult.Failed(string.IsNullOrWhiteSpace(resolvedError)
+                    ? $"Host navigation failed for '{binding.LevelPath}'."
+                    : resolvedError);
             }
 
-            if (left == null || right == null || left.Count != right.Count)
+            if (snapshot.State != HostLevelNavigationState.Active)
+            {
+                return MapLoadCompletionResult.Pending();
+            }
+
+            if (!MatchesBinding(binding, snapshot))
+            {
+                return MapLoadCompletionResult.Pending();
+            }
+
+            return MapLoadCompletionResult.Ready();
+        }
+
+        private static bool MatchesBinding(ExplicitHostMapBinding binding, HostLevelNavigationSnapshot snapshot)
+        {
+            if (!string.IsNullOrWhiteSpace(binding.LevelPath) &&
+                !string.Equals(binding.LevelPath, snapshot.CurrentLevelPath, StringComparison.Ordinal))
             {
                 return false;
             }
 
-            for (int i = 0; i < left.Count; i++)
+            if (!string.IsNullOrWhiteSpace(binding.HostWorldName) &&
+                !string.Equals(binding.HostWorldName, snapshot.CurrentWorldName, StringComparison.Ordinal))
             {
-                if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
-                {
-                    return false;
-                }
+                return false;
             }
 
             return true;
         }
 
-        private static bool DictionaryEquals(
-            IReadOnlyDictionary<string, string>? left,
-            IReadOnlyDictionary<string, string>? right)
+        private static MapLoadCompletionResult ToResumeCompletionResult(
+            bool hasResumedBinding,
+            ExplicitHostMapBinding resumedBinding,
+            bool navigationSucceeded,
+            HostLevelNavigationSnapshot snapshot,
+            string errorMessage)
         {
-            if (ReferenceEquals(left, right))
+            if (!navigationSucceeded || snapshot.State == HostLevelNavigationState.Failed)
             {
-                return true;
+                string resolvedError = !string.IsNullOrWhiteSpace(errorMessage)
+                    ? errorMessage
+                    : snapshot.LastError;
+                return MapLoadCompletionResult.Failed(string.IsNullOrWhiteSpace(resolvedError)
+                    ? "Host return failed."
+                    : resolvedError);
             }
 
-            if (left == null || right == null || left.Count != right.Count)
+            if (hasResumedBinding)
             {
-                return false;
+                return snapshot.State == HostLevelNavigationState.Active && MatchesBinding(resumedBinding, snapshot)
+                    ? MapLoadCompletionResult.Ready()
+                    : MapLoadCompletionResult.Pending();
             }
 
-            foreach (KeyValuePair<string, string> pair in left)
+            return snapshot.IsPreviewActive || snapshot.State == HostLevelNavigationState.Returning
+                ? MapLoadCompletionResult.Pending()
+                : MapLoadCompletionResult.Ready();
+        }
+
+        private sealed class CompletedPendingMapLoad : IPendingMapLoad
+        {
+            private readonly MapLoadCompletionResult _result;
+
+            public CompletedPendingMapLoad(MapLoadCompletionResult result)
             {
-                if (!right.TryGetValue(pair.Key, out string? value) ||
-                    !string.Equals(pair.Value, value, StringComparison.Ordinal))
-                {
-                    return false;
-                }
+                _result = result;
             }
 
-            return true;
+            public MapLoadCompletionResult Poll() => _result;
+
+            public void Cancel()
+            {
+            }
+        }
+
+        private sealed class PendingHostBoundMapLoad : IPendingMapLoad
+        {
+            private readonly IHostLevelNavigator _navigator;
+            private readonly ExplicitHostMapBinding _binding;
+
+            public PendingHostBoundMapLoad(IHostLevelNavigator navigator, ExplicitHostMapBinding binding)
+            {
+                _navigator = navigator;
+                _binding = binding;
+            }
+
+            public MapLoadCompletionResult Poll()
+            {
+                return ToCompletionResult(_binding, loadSucceeded: true, _navigator.Snapshot, string.Empty);
+            }
+
+            public void Cancel()
+            {
+                _navigator.CancelPendingLoad();
+            }
+        }
+
+        private sealed class PendingHostBoundMapResume : IPendingMapLoad
+        {
+            private readonly IHostLevelNavigator _navigator;
+            private readonly bool _hasResumedBinding;
+            private readonly ExplicitHostMapBinding _resumedBinding;
+
+            public PendingHostBoundMapResume(
+                IHostLevelNavigator navigator,
+                bool hasResumedBinding,
+                ExplicitHostMapBinding resumedBinding)
+            {
+                _navigator = navigator;
+                _hasResumedBinding = hasResumedBinding;
+                _resumedBinding = resumedBinding;
+            }
+
+            public MapLoadCompletionResult Poll()
+            {
+                return ToResumeCompletionResult(
+                    _hasResumedBinding,
+                    _resumedBinding,
+                    navigationSucceeded: true,
+                    _navigator.Snapshot,
+                    string.Empty);
+            }
+
+            public void Cancel()
+            {
+            }
         }
     }
 }

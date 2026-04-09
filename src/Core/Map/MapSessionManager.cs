@@ -26,6 +26,8 @@ namespace Ludots.Core.Map
 
         public IReadOnlyDictionary<MapId, MapSession> All => _sessions;
 
+        public bool HasPendingReturn => _focusStack.Count > 1;
+
         public MapSession CreateSession(MapId mapId, MapConfig mapConfig, MapContext parentContext = null)
         {
             if (_sessions.ContainsKey(mapId))

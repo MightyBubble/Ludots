@@ -6,6 +6,7 @@ namespace Ludots.Core.Engine
     public interface IMapLoadCompletionGate
     {
         IPendingMapLoad BeginPendingLoad(in MapLoadCompletionRequest request);
+        IPendingMapLoad BeginPendingResume(in MapResumeCompletionRequest request);
     }
 
     public interface IPendingMapLoad
@@ -20,6 +21,11 @@ namespace Ludots.Core.Engine
         MapConfig MapConfig,
         MapSession Session,
         bool IsPush);
+
+    public readonly record struct MapResumeCompletionRequest(
+        GameEngine Engine,
+        MapSession ResumedSession,
+        MapSession? ClosedSession);
 
     public enum MapLoadCompletionState
     {
