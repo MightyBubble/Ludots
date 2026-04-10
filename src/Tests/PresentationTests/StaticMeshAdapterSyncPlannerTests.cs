@@ -19,6 +19,7 @@ namespace Ludots.Tests.Presentation
                 CreateItem(101, VisualRenderPath.StaticMesh, meshAssetId: 10, materialId: 1, visibility: VisualVisibility.Visible),
                 CreateItem(202, VisualRenderPath.InstancedStaticMesh, meshAssetId: 11, materialId: 2, visibility: VisualVisibility.Hidden),
                 CreateItem(303, VisualRenderPath.SkinnedMesh, meshAssetId: 12, materialId: 3, visibility: VisualVisibility.Visible),
+                CreateItem(404, VisualRenderPath.HierarchicalInstancedStaticMesh, meshAssetId: 13, materialId: 4, mobility: VisualMobility.Movable),
             });
 
             Assert.That(planner.ActiveBindings.Count, Is.EqualTo(2));
@@ -38,6 +39,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(instancedBinding.Item.Visibility, Is.EqualTo(VisualVisibility.Hidden));
 
             Assert.That(planner.TryGetBinding(303, out _), Is.False);
+            Assert.That(planner.TryGetBinding(404, out _), Is.False);
         }
 
         [Test]

@@ -1,0 +1,13 @@
+{
+  "name": "MassFlowNavPlaygroundMod",
+  "version": "1.0.0",
+  "description": "External-reference mass flow navigation playground with 20k agents, formal Ludots UI, and formal Ludots selection.",
+  "main": "bin/net8.0/MassFlowNavPlaygroundMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["navigation", "showcase", "flowfield", "selection", "ui"]
+}

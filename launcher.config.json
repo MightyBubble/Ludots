@@ -34,6 +34,14 @@
       }
     },
     {
+      "name": "mass_flow_nav_playground",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navigation/MassFlowNavPlaygroundMod",
+        "projectPath": "MassFlowNavPlaygroundMod.csproj"
+      }
+    },
+    {
       "name": "champion_skill_stress",
       "target": {
         "type": "path",

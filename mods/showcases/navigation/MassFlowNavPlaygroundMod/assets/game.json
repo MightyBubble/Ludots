@@ -1,0 +1,6 @@
+{
+  "startupMapId": "mass_flow_nav_playground",
+  "Navigation2D": {
+    "Enabled": true
+  }
+}

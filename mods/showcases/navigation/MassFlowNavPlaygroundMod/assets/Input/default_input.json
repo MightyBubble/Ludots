@@ -1,0 +1,17 @@
+{
+  "actions": [
+    { "id": "MassFlowNav.RotateFormationLeft", "name": "MassFlowNav_RotateFormationLeft", "type": "Button" },
+    { "id": "MassFlowNav.RotateFormationRight", "name": "MassFlowNav_RotateFormationRight", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "MassFlowNavPlayground.Controls",
+      "name": "Mass Flow Nav Playground Controls",
+      "priority": 80,
+      "bindings": [
+        { "actionId": "MassFlowNav.RotateFormationLeft", "path": "<Keyboard>/q" },
+        { "actionId": "MassFlowNav.RotateFormationRight", "path": "<Keyboard>/e" }
+      ]
+    }
+  ]
+}

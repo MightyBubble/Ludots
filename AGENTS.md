@@ -19,3 +19,7 @@ Ludots — 基于 Arch ECS 的高性能 C# 游戏框架。六边形架构，一�
 | 架构文档索引 | `gitbook/architecture/README.md` |
 | 共享 Skill 索引 | `skills/README.md` |
 | 共享 Skill 注册表 | `skills/registry.json` |
+
+## 最近踩坑
+
+- 新建独立 playground/mod 时，先确认该 mod 自己的 `assets/game.json` 已显式打开所需核心运行时开关；这次“右键命令成功但单位完全不动”的低级根因，就是新 mod 漏了 `Navigation2D.Enabled = true`，导致命令链在跑、仿真链没注册。

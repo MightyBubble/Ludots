@@ -1,9 +1,11 @@
 using System;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
-using Ludots.Core.Presentation.Utils;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -42,41 +44,88 @@ namespace Ludots.Core.Presentation.Systems
 
         private void EmitWithCullState()
         {
-            var query = World.Query(in _withCullQuery);
-            foreach (var chunk in query)
+            foreach (ref var chunk in World.Query(in _withCullQuery))
             {
-                var transforms = chunk.GetArray<VisualTransform>();
-                var visuals = chunk.GetArray<VisualRuntimeState>();
-                var stableIds = chunk.GetArray<PresentationStableId>();
-                var culls = chunk.GetArray<CullState>();
+                if (chunk.Count <= 0)
+                {
+                    continue;
+                }
+
+                var transforms = chunk.GetSpan<VisualTransform>();
+                var visuals = chunk.GetSpan<VisualRuntimeState>();
+                var stableIds = chunk.GetSpan<PresentationStableId>();
+                var culls = chunk.GetSpan<CullState>();
+                bool hasTemplates = chunk.Has<VisualTemplateRef>();
+                var templates = hasTemplates ? chunk.GetSpan<VisualTemplateRef>() : default;
+                bool hasAnimator = chunk.Has<AnimatorPackedState>();
+                var animators = hasAnimator ? chunk.GetSpan<AnimatorPackedState>() : default;
+                bool hasOverlay = chunk.Has<AnimationOverlayRequest>();
+                var overlays = hasOverlay ? chunk.GetSpan<AnimationOverlayRequest>() : default;
+                bool hasTeams = chunk.Has<Team>();
+                var teams = hasTeams ? chunk.GetSpan<Team>() : default;
+                bool hasOwners = chunk.Has<PlayerOwner>();
+                var owners = hasOwners ? chunk.GetSpan<PlayerOwner>() : default;
+                ref Entity entityFirst = ref chunk.Entity(0);
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    Emit(chunk.Entity(i), stableIds[i].Value, visuals[i], transforms[i], culls[i].IsVisible);
+                    Emit(
+                        Unsafe.Add(ref entityFirst, i),
+                        stableIds[i].Value,
+                        visuals[i],
+                        transforms[i],
+                        culls[i].IsVisible,
+                        hasTemplates ? templates[i].TemplateId : 0,
+                        hasAnimator ? animators[i] : default,
+                        hasOverlay ? overlays[i] : default,
+                        ResolveColor(hasTeams, teams, hasOwners, owners, i));
                 }
             }
         }
 
         private void EmitWithoutCullState()
         {
-            var query = World.Query(in _withoutCullQuery);
-            foreach (var chunk in query)
+            foreach (ref var chunk in World.Query(in _withoutCullQuery))
             {
-                var transforms = chunk.GetArray<VisualTransform>();
-                var visuals = chunk.GetArray<VisualRuntimeState>();
-                var stableIds = chunk.GetArray<PresentationStableId>();
+                if (chunk.Count <= 0)
+                {
+                    continue;
+                }
+
+                var transforms = chunk.GetSpan<VisualTransform>();
+                var visuals = chunk.GetSpan<VisualRuntimeState>();
+                var stableIds = chunk.GetSpan<PresentationStableId>();
+                bool hasTemplates = chunk.Has<VisualTemplateRef>();
+                var templates = hasTemplates ? chunk.GetSpan<VisualTemplateRef>() : default;
+                bool hasAnimator = chunk.Has<AnimatorPackedState>();
+                var animators = hasAnimator ? chunk.GetSpan<AnimatorPackedState>() : default;
+                bool hasOverlay = chunk.Has<AnimationOverlayRequest>();
+                var overlays = hasOverlay ? chunk.GetSpan<AnimationOverlayRequest>() : default;
+                bool hasTeams = chunk.Has<Team>();
+                var teams = hasTeams ? chunk.GetSpan<Team>() : default;
+                bool hasOwners = chunk.Has<PlayerOwner>();
+                var owners = hasOwners ? chunk.GetSpan<PlayerOwner>() : default;
+                ref Entity entityFirst = ref chunk.Entity(0);
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    Emit(chunk.Entity(i), stableIds[i].Value, visuals[i], transforms[i], cullVisible: true);
+                    Emit(
+                        Unsafe.Add(ref entityFirst, i),
+                        stableIds[i].Value,
+                        visuals[i],
+                        transforms[i],
+                        cullVisible: true,
+                        hasTemplates ? templates[i].TemplateId : 0,
+                        hasAnimator ? animators[i] : default,
+                        hasOverlay ? overlays[i] : default,
+                        ResolveColor(hasTeams, teams, hasOwners, owners, i));
                 }
             }
         }
 
         private void ValidateStableIdContract()
         {
-            var query = World.Query(in _missingStableIdQuery);
-            foreach (var chunk in query)
+            foreach (ref var chunk in World.Query(in _missingStableIdQuery))
             {
-                var visuals = chunk.GetArray<VisualRuntimeState>();
+                var visuals = chunk.GetSpan<VisualRuntimeState>();
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     if (visuals[i].HasRenderableAsset)
@@ -89,7 +138,16 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private void Emit(Entity entity, int stableId, in VisualRuntimeState visual, in VisualTransform transform, bool cullVisible)
+        private void Emit(
+            Entity entity,
+            int stableId,
+            in VisualRuntimeState visual,
+            in VisualTransform transform,
+            bool cullVisible,
+            int templateId,
+            in AnimatorPackedState animator,
+            in AnimationOverlayRequest animationOverlay,
+            in Vector4 color)
         {
             if (!visual.HasRenderableAsset)
             {
@@ -104,10 +162,7 @@ namespace Ludots.Core.Presentation.Systems
 
             float baseScale = visual.BaseScale <= 0f ? 1f : visual.BaseScale;
             var scale = transform.Scale * baseScale;
-            int templateId = World.Has<VisualTemplateRef>(entity) ? World.Get<VisualTemplateRef>(entity).TemplateId : 0;
-            bool hasAnimatorComponent = World.Has<AnimatorPackedState>(entity);
-            AnimatorPackedState animator = hasAnimatorComponent ? World.Get<AnimatorPackedState>(entity) : default;
-            AnimationOverlayRequest animationOverlay = World.Has<AnimationOverlayRequest>(entity) ? World.Get<AnimationOverlayRequest>(entity) : default;
+            bool hasAnimatorComponent = visual.HasAnimator;
             PresentationRenderContract.ValidateRuntimeState("EntityVisualEmitSystem", visual, hasAnimatorComponent, animator, animationOverlay);
             VisualVisibility visibility = visual.ResolveVisibility(cullVisible);
 
@@ -118,7 +173,7 @@ namespace Ludots.Core.Presentation.Systems
                 Position = transform.Position,
                 Rotation = transform.Rotation,
                 Scale = scale,
-                Color = TeamColorResolver.Resolve(World, entity),
+                Color = color,
                 StableId = stableId,
                 MaterialId = visual.MaterialId,
                 TemplateId = templateId,
@@ -130,6 +185,31 @@ namespace Ludots.Core.Presentation.Systems
                 AnimationOverlay = animationOverlay,
                 Visibility = visibility,
             });
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector4 ResolveColor(
+            bool hasTeams,
+            Span<Team> teams,
+            bool hasOwners,
+            Span<PlayerOwner> owners,
+            int index)
+        {
+            if (hasTeams)
+            {
+                return teams[index].Id == 1
+                    ? new Vector4(0.2f, 0.9f, 0.2f, 1f)
+                    : new Vector4(0.9f, 0.2f, 0.2f, 1f);
+            }
+
+            if (hasOwners)
+            {
+                return owners[index].PlayerId == 1
+                    ? new Vector4(0.2f, 0.9f, 0.2f, 1f)
+                    : new Vector4(0.9f, 0.2f, 0.2f, 1f);
+            }
+
+            return new Vector4(1f, 1f, 1f, 1f);
         }
     }
 }

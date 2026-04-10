@@ -1,0 +1,22 @@
+{
+  "Id": "mass_flow_nav_playground",
+  "Tags": ["showcase.navigation", "showcase.navigation.mass_flow"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 100,
+      "HeightInTiles": 100,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 5000,
+    "TargetYCm": 5000,
+    "Yaw": 45,
+    "Pitch": 58,
+    "DistanceCm": 14000,
+    "FovYDeg": 42
+  },
+  "Entities": []
+}

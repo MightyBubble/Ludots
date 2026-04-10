@@ -47,6 +47,24 @@
       "buildMode": "auto"
     },
     {
+      "id": "mass_flow_nav_playground_raylib",
+      "name": "Mass Flow Nav Playground Raylib",
+      "selectors": [
+        "$mass_flow_nav_playground"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "mass_flow_nav_playground_web",
+      "name": "Mass Flow Nav Playground Web",
+      "selectors": [
+        "$mass_flow_nav_playground"
+      ],
+      "adapterId": "web",
+      "buildMode": "auto"
+    },
+    {
       "id": "champion_skill_stress_raylib",
       "name": "Champion Skill Stress Raylib",
       "selectors": [

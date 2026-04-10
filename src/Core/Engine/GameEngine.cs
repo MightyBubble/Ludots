@@ -113,7 +113,7 @@ namespace Ludots.Core.Engine
 
     public partial class GameEngine : IDisposable // Implement IDisposable
     {
-        private const int PrimitiveDrawBufferCapacity = 8192;
+        private const int PrimitiveDrawBufferCapacity = 131072;
         private const int VisualSnapshotBufferCapacity = 131072;
         private const int PerformerInstanceBufferCapacity = 4096;
         private const int PathStoreMaxPaths = 512;

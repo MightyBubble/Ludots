@@ -1,0 +1,20 @@
+[
+  {
+    "id": "mass_flow_nav.unit",
+    "renderPath": "HierarchicalInstancedStaticMesh",
+    "meshAssetId": "sphere",
+    "materialId": 0,
+    "baseScale": 0.55,
+    "mobility": "Movable",
+    "visibleByDefault": true
+  },
+  {
+    "id": "mass_flow_nav.obstacle",
+    "renderPath": "HierarchicalInstancedStaticMesh",
+    "meshAssetId": "sphere",
+    "materialId": 0,
+    "baseScale": 1.15,
+    "mobility": "Static",
+    "visibleByDefault": true
+  }
+]

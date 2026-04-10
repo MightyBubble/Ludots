@@ -119,6 +119,26 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
         {
+            if (_mode == RaylibPrimitiveRenderMode.Instanced)
+            {
+                EnsureInitialized();
+
+                foreach (var pair in _persistentStaticLaneSync.ActiveBindings)
+                {
+                    var binding = pair.Value;
+                    var item = binding.Item;
+                    if (!binding.IsVisible)
+                    {
+                        continue;
+                    }
+
+                    SubmitItemInstanced(item, camera, meshes, scaleMul, in finalizationContext);
+                }
+
+                FlushInstancedBatches();
+                return;
+            }
+
             foreach (var pair in _persistentStaticLaneSync.ActiveBindings)
             {
                 var binding = pair.Value;
@@ -149,6 +169,7 @@ namespace Ludots.Client.Raylib.Rendering
             bool skinnedBatchActive,
             in PrefabFinalizationContext finalizationContext)
         {
+            bool batchDynamicInstances = _mode == RaylibPrimitiveRenderMode.Instanced;
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
@@ -167,13 +188,25 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                DrawAssetRecursive(
-                    item.MeshAssetId, item.Position,
-                    item.Rotation,
-                    item.Scale * scaleMul, item.Color,
-                    camera,
-                    meshes,
-                    in finalizationContext);
+                if (batchDynamicInstances)
+                {
+                    SubmitItemInstanced(item, camera, meshes, scaleMul, in finalizationContext);
+                }
+                else
+                {
+                    DrawAssetRecursive(
+                        item.MeshAssetId, item.Position,
+                        item.Rotation,
+                        item.Scale * scaleMul, item.Color,
+                        camera,
+                        meshes,
+                        in finalizationContext);
+                }
+            }
+
+            if (batchDynamicInstances)
+            {
+                FlushInstancedBatches();
             }
         }
 
@@ -181,7 +214,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (!persistentStaticLanesActive ||
                 item.StableId <= 0 ||
-                !StaticMeshLaneKey.Supports(item.RenderPath))
+                !StaticMeshLaneKey.Supports(item))
             {
                 return false;
             }
@@ -201,18 +234,31 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                SubmitAssetRecursive(
-                    item.MeshAssetId,
-                    item.Position,
-                    item.Rotation,
-                    item.Scale * scaleMul,
-                    item.Color,
-                    camera,
-                    meshes,
-                    in finalizationContext);
+                SubmitItemInstanced(item, camera, meshes, scaleMul, in finalizationContext);
             }
 
             FlushInstancedBatches();
+        }
+
+        private void SubmitItemInstanced(in PrimitiveDrawItem item, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
+        {
+            Vector3 scale = item.Scale * scaleMul;
+            if (meshes.TryGetDescriptor(item.MeshAssetId, out var descriptor) &&
+                descriptor.Type == MeshAssetType.Primitive)
+            {
+                SubmitPrimitive(descriptor.PrimitiveKind, item.Position, item.Rotation, scale, item.Color);
+                return;
+            }
+
+            SubmitAssetRecursive(
+                item.MeshAssetId,
+                item.Position,
+                item.Rotation,
+                scale,
+                item.Color,
+                camera,
+                meshes,
+                in finalizationContext);
         }
 
         private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext)

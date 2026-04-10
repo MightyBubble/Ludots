@@ -25,6 +25,12 @@ namespace Ludots.Core.Input.Selection
         private readonly SelectionRuntime _selection;
         private Entity[] _boxSelectionScratch = new Entity[16];
         private bool _suppressConfirmRelease;
+        private Entity _cachedHoveredEntity;
+        private Vector2 _cachedHoveredPointer;
+        private int _hoverRefreshCooldown;
+
+        private const float HoverPointerRefreshDistanceSq = 0.25f;
+        private const int HoverIdleRefreshTicks = 6;
 
         public Action<WorldCmInt2, Entity>? OnEntitySelected { get; set; }
 
@@ -58,7 +64,7 @@ namespace Ludots.Core.Input.Selection
                 _suppressConfirmRelease = true;
             }
 
-            Entity hovered = FindNearestEntity(pointer.Pointer, _selection.Config.ClickPickRadiusPixels);
+            Entity hovered = ResolveHoveredEntity(pointer);
             UpdateHoveredEntity(hovered);
 
             bool hasOwner = TryGetSelectionOwner(out var owner);
@@ -149,6 +155,7 @@ namespace Ludots.Core.Input.Selection
 
         private void UpdateHoveredEntity(Entity hovered)
         {
+            _cachedHoveredEntity = hovered;
             if (_world.IsAlive(hovered))
             {
                 _globals[CoreServiceKeys.HoveredEntity.Name] = hovered;
@@ -183,31 +190,62 @@ namespace Ludots.Core.Input.Selection
             var max = Vector2.Max(drag.StartScreen, drag.CurrentScreen);
 
             int nextCount = 0;
-            _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
+            foreach (ref var chunk in _world.Query(in SelectableQuery))
             {
-                if (!cull.IsVisible ||
-                    !SelectionEligibility.IsSelectableNow(_world, entity))
+                if (chunk.Count <= 0)
                 {
-                    return;
+                    continue;
                 }
 
-                Vector2 screen = projector.WorldToScreen(transform.Position);
-                if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) || float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
+                var transforms = chunk.GetSpan<VisualTransform>();
+                var culls = chunk.GetSpan<CullState>();
+                bool hasSelectableState = chunk.Has<SelectionSelectableState>();
+                var selectableStates = hasSelectableState ? chunk.GetSpan<SelectionSelectableState>() : default;
+                for (int i = 0; i < chunk.Count; i++)
                 {
-                    return;
-                }
+                    if (!culls[i].IsVisible || (hasSelectableState && !selectableStates[i].Enabled))
+                    {
+                        continue;
+                    }
 
-                if (screen.X < min.X || screen.X > max.X || screen.Y < min.Y || screen.Y > max.Y)
-                {
-                    return;
-                }
+                    Vector2 screen = projector.WorldToScreen(transforms[i].Position);
+                    if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) || float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
+                    {
+                        continue;
+                    }
 
-                EnsureScratchCapacity(nextCount + 1);
-                _boxSelectionScratch[nextCount++] = entity;
-            });
+                    if (screen.X < min.X || screen.X > max.X || screen.Y < min.Y || screen.Y > max.Y)
+                    {
+                        continue;
+                    }
+
+                    EnsureScratchCapacity(nextCount + 1);
+                    _boxSelectionScratch[nextCount++] = chunk.Entity(i);
+                }
+            }
 
             SortByEntityId(_boxSelectionScratch, nextCount);
             _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, _boxSelectionScratch.AsSpan(0, nextCount));
+        }
+
+        private Entity ResolveHoveredEntity(in PointerInteractionSnapshot pointer)
+        {
+            bool pointerMoved = Vector2.DistanceSquared(pointer.Pointer, _cachedHoveredPointer) > HoverPointerRefreshDistanceSq;
+            bool pointerActive = pointer.Confirm.PressedThisFrame || pointer.Confirm.IsDown || pointer.Confirm.ReleasedThisFrame;
+            bool cachedAlive = _world.IsAlive(_cachedHoveredEntity);
+
+            if (!pointerMoved &&
+                !pointerActive &&
+                cachedAlive &&
+                _hoverRefreshCooldown > 0)
+            {
+                _hoverRefreshCooldown--;
+                return _cachedHoveredEntity;
+            }
+
+            _cachedHoveredPointer = pointer.Pointer;
+            _hoverRefreshCooldown = HoverIdleRefreshTicks;
+            return FindNearestEntity(pointer.Pointer, _selection.Config.ClickPickRadiusPixels);
         }
 
         private void EnsureScratchCapacity(int required)
@@ -237,33 +275,46 @@ namespace Ludots.Core.Input.Selection
             float bestD2 = float.MaxValue;
             float maxD2 = radiusPixels * radiusPixels;
 
-            _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
+            foreach (ref var chunk in _world.Query(in SelectableQuery))
             {
-                if (!cull.IsVisible || !SelectionEligibility.IsSelectableNow(_world, entity))
+                if (chunk.Count <= 0)
                 {
-                    return;
+                    continue;
                 }
 
-                Vector2 screen = projector.WorldToScreen(transform.Position);
-                if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) || float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
+                var transforms = chunk.GetSpan<VisualTransform>();
+                var culls = chunk.GetSpan<CullState>();
+                bool hasSelectableState = chunk.Has<SelectionSelectableState>();
+                var selectableStates = hasSelectableState ? chunk.GetSpan<SelectionSelectableState>() : default;
+                for (int i = 0; i < chunk.Count; i++)
                 {
-                    return;
-                }
+                    if (!culls[i].IsVisible || (hasSelectableState && !selectableStates[i].Enabled))
+                    {
+                        continue;
+                    }
 
-                float dx = screen.X - pointer.X;
-                float dy = screen.Y - pointer.Y;
-                float d2 = dx * dx + dy * dy;
-                if (d2 > maxD2)
-                {
-                    return;
-                }
+                    Vector2 screen = projector.WorldToScreen(transforms[i].Position);
+                    if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) || float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
+                    {
+                        continue;
+                    }
 
-                if (d2 < bestD2 || (d2 == bestD2 && (best == Entity.Null || Compare(entity, best) < 0)))
-                {
-                    bestD2 = d2;
-                    best = entity;
+                    float dx = screen.X - pointer.X;
+                    float dy = screen.Y - pointer.Y;
+                    float d2 = dx * dx + dy * dy;
+                    if (d2 > maxD2)
+                    {
+                        continue;
+                    }
+
+                    Entity entity = chunk.Entity(i);
+                    if (d2 < bestD2 || (d2 == bestD2 && (best == Entity.Null || Compare(entity, best) < 0)))
+                    {
+                        bestD2 = d2;
+                        best = entity;
+                    }
                 }
-            });
+            }
 
             return best;
         }
