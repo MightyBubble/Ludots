@@ -21,6 +21,7 @@ public sealed class MassNavSimulationRuntime
     public float SelectionSyncMs { get; private set; }
     public float FormationTargetMs { get; private set; }
     public float SimStepMs { get; private set; }
+    public float HardResolveMs { get; private set; }
     public float EntitySyncMs { get; private set; }
     public float PrimitiveEmitMs { get; private set; }
     public MassNavAgentState AgentState { get; } = new();
@@ -49,6 +50,7 @@ public sealed class MassNavSimulationRuntime
     public void ObserveSelectionSync(double sampleMs) => SelectionSyncMs = Smooth(SelectionSyncMs, (float)sampleMs);
     public void ObserveFormationTargets(double sampleMs) => FormationTargetMs = Smooth(FormationTargetMs, (float)sampleMs);
     public void ObserveSimStep(double sampleMs) => SimStepMs = Smooth(SimStepMs, (float)sampleMs);
+    public void ObserveHardResolve(double sampleMs) => HardResolveMs = Smooth(HardResolveMs, (float)sampleMs);
     public void ObserveEntitySync(double sampleMs) => EntitySyncMs = Smooth(EntitySyncMs, (float)sampleMs);
     public void ObservePrimitiveEmit(double sampleMs) => PrimitiveEmitMs = Smooth(PrimitiveEmitMs, (float)sampleMs);
 

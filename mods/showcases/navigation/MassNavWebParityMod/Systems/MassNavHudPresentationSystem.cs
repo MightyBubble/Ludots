@@ -47,7 +47,8 @@ internal sealed class MassNavHudPresentationSystem : ISystem<float>
         overlay.AddText(left, 86, $"agents {_simulation.AgentState.TotalAgents} formations {_simulation.FormationRuntime.ActiveGroupCount}", 16, new Vector4(1f, 0.82f, 0.45f, 1f), stableId: 4, dirtySerial: _simulation.AgentState.TotalAgents + (_simulation.FormationRuntime.ActiveGroupCount << 20));
         overlay.AddText(left, 108, $"primitive {timing?.PrimitiveRenderMs ?? 0f:0.0} ms", 16, new Vector4(1f, 0.56f, 0.46f, 1f), stableId: 5, dirtySerial: (int)MathF.Round((timing?.PrimitiveRenderMs ?? 0f) * 10f));
         overlay.AddText(left, 130, $"instances {timing?.PrimitiveInstancesLastFrame ?? 0} batches {timing?.PrimitiveBatchesLastFrame ?? 0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f), stableId: 6, dirtySerial: (timing?.PrimitiveInstancesLastFrame ?? 0) ^ ((timing?.PrimitiveBatchesLastFrame ?? 0) << 1));
-        overlay.AddText(left, 152, $"sim {_simulation.SimStepMs:0.0} sync {_simulation.EntitySyncMs:0.0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f), stableId: 7, dirtySerial: ((int)MathF.Round(_simulation.SimStepMs * 10f) << 16) ^ (int)MathF.Round(_simulation.EntitySyncMs * 10f));
-        overlay.AddText(left, 174, $"visible {timing?.VisibleEntitiesLastFrame ?? 0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f), stableId: 8, dirtySerial: timing?.VisibleEntitiesLastFrame ?? 0);
+        overlay.AddText(left, 152, $"sim {_simulation.SimStepMs:0.0} resolve {_simulation.HardResolveMs:0.0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f), stableId: 7, dirtySerial: ((int)MathF.Round(_simulation.SimStepMs * 10f) << 16) ^ (int)MathF.Round(_simulation.HardResolveMs * 10f));
+        overlay.AddText(left, 174, $"sync {_simulation.EntitySyncMs:0.0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f), stableId: 8, dirtySerial: (int)MathF.Round(_simulation.EntitySyncMs * 10f));
+        overlay.AddText(left, 196, $"visible {timing?.VisibleEntitiesLastFrame ?? 0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f), stableId: 9, dirtySerial: timing?.VisibleEntitiesLastFrame ?? 0);
     }
 }

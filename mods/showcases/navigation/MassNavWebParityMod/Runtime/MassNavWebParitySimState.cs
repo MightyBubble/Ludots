@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
+using Schedulers;
 
 namespace MassNavWebParityMod.Runtime;
 
@@ -20,6 +21,9 @@ public sealed class MassNavWebParitySimState
     private const float HashCellSizeCm = 250f;
     private const int HashWidth = (int)(FieldWidthCm / HashCellSizeCm);
     private const int HashHeight = (int)(FieldHeightCm / HashCellSizeCm);
+    private const float AgentBodyRadiusCm = 20f;
+    private const float AgentBodyDiameterCm = AgentBodyRadiusCm * 2f;
+    private const float AgentBodyDiameterSq = AgentBodyDiameterCm * AgentBodyDiameterCm;
     private const float MinPositionCm = 50f;
     private const float MaxPositionCm = 9_950f;
 
@@ -38,11 +42,15 @@ public sealed class MassNavWebParitySimState
 
     private float[] _positionsCm = Array.Empty<float>();
     private float[] _velocitiesCm = Array.Empty<float>();
+    private float[] _readPositionsCm = Array.Empty<float>();
+    private float[] _readVelocitiesCm = Array.Empty<float>();
     private byte[] _teams = Array.Empty<byte>();
     private float[] _unitTargetsCm = Array.Empty<float>();
     private byte[] _hasUnitTarget = Array.Empty<byte>();
     private byte[] _selectedFlags = Array.Empty<byte>();
     private int[] _hashNext = Array.Empty<int>();
+    private readonly UnitStepJob[] _stepJobs = CreateStepJobs();
+    private JobHandle[] _stepHandles = Array.Empty<JobHandle>();
 
     private readonly float[] _teamTargetX = new float[2];
     private readonly float[] _teamTargetY = new float[2];
@@ -128,7 +136,7 @@ public sealed class MassNavWebParitySimState
         }
     }
 
-    public void Step(float dt, MassNavFormationRuntime formationRuntime)
+    public void Step(float dt, MassNavFormationRuntime formationRuntime, Action<double>? observeHardResolve = null)
     {
         if (UnitCount <= 0)
         {
@@ -137,7 +145,10 @@ public sealed class MassNavWebParitySimState
 
         float clampedDt = Math.Clamp(dt, 0f, 0.05f);
         _frameCount++;
-        BuildSpatialHash();
+        int scalarCount = UnitCount * 2;
+        Array.Copy(_positionsCm, _readPositionsCm, scalarCount);
+        Array.Copy(_velocitiesCm, _readVelocitiesCm, scalarCount);
+        BuildSpatialHash(_readPositionsCm);
 
         const float speed = 800f;
         const float sepRadiusCm = 200f;
@@ -155,202 +166,55 @@ public sealed class MassNavWebParitySimState
         int hhm1 = HashHeight - 1;
         float invHashCell = 1f / HashCellSizeCm;
 
-        for (int i = 0; i < UnitCount; i++)
+        if (World.SharedJobScheduler == null || UnitCount < 2048)
         {
-            int i2 = i << 1;
-            float px = _positionsCm[i2];
-            float py = _positionsCm[i2 + 1];
-            byte team = _teams[i];
-            bool inFormation = formationRuntime.IsInFormation(i);
-
-            float desiredX = 0f;
-            float desiredY = 0f;
-            float targetX;
-            float targetY;
-            float unitArrivalFactor = 1f;
-
-            if (_hasUnitTarget[i] != 0)
-            {
-                targetX = _unitTargetsCm[i2];
-                targetY = _unitTargetsCm[i2 + 1];
-                float toTargetX = targetX - px;
-                float toTargetY = targetY - py;
-                float targetDistSq = toTargetX * toTargetX + toTargetY * toTargetY;
-                if (targetDistSq > unitTargetStopThresholdSq)
-                {
-                    float invDist = FastInvSqrt(targetDistSq);
-                    desiredX = toTargetX * invDist;
-                    desiredY = toTargetY * invDist;
-
-                    int gx = (int)(px / CellCm);
-                    int gy = (int)(py / CellCm);
-                    float avoidX = 0f;
-                    float avoidY = 0f;
-                    for (int oy = -2; oy <= 2; oy++)
-                    {
-                        int ny = gy + oy;
-                        if ((uint)ny >= (uint)GridHeight)
-                        {
-                            continue;
-                        }
-
-                        int rowOffset = ny * GridWidth;
-                        for (int ox = -2; ox <= 2; ox++)
-                        {
-                            if (ox == 0 && oy == 0)
-                            {
-                                continue;
-                            }
-
-                            int nx = gx + ox;
-                            if ((uint)nx >= (uint)GridWidth)
-                            {
-                                continue;
-                            }
-
-                            if (_cost[rowOffset + nx] > 9_999f)
-                            {
-                                float obstacleDistanceSq = ox * ox + oy * oy;
-                                float invObstacleDistance = FastInvSqrt(obstacleDistanceSq);
-                                float invObstacleDistanceSq = invObstacleDistance * invObstacleDistance;
-                                avoidX += (-ox * invObstacleDistance) * (4f * invObstacleDistanceSq);
-                                avoidY += (-oy * invObstacleDistance) * (4f * invObstacleDistanceSq);
-                            }
-                        }
-                    }
-
-                    desiredX += avoidX * 1.2f;
-                    desiredY += avoidY * 1.2f;
-                    float flowLengthSq = desiredX * desiredX + desiredY * desiredY;
-                    if (flowLengthSq > 0.000001f)
-                    {
-                        float invFlow = FastInvSqrt(flowLengthSq);
-                        desiredX *= invFlow;
-                        desiredY *= invFlow;
-                    }
-                }
-
-                float targetDistance = MathF.Sqrt(targetDistSq);
-                float arriveThreshold = inFormation ? 200f : 300f;
-                if (targetDistance < arriveThreshold)
-                {
-                    unitArrivalFactor = targetDistance / arriveThreshold;
-                }
-            }
-            else
-            {
-                int gx = (int)(px / CellCm);
-                int gy = (int)(py / CellCm);
-                if ((uint)gx < (uint)GridWidth && (uint)gy < (uint)GridHeight)
-                {
-                    int flowOffset = ((gy * GridWidth) + gx) << 1;
-                    if (team == 0)
-                    {
-                        desiredX = _flow0[flowOffset];
-                        desiredY = _flow0[flowOffset + 1];
-                    }
-                    else
-                    {
-                        desiredX = _flow1[flowOffset];
-                        desiredY = _flow1[flowOffset + 1];
-                    }
-                }
-
-                targetX = team == 0 ? tx0 : tx1;
-                targetY = team == 0 ? ty0 : ty1;
-            }
-
-            float directTargetX = targetX - px;
-            float directTargetY = targetY - py;
-            float directTargetSq = directTargetX * directTargetX + directTargetY * directTargetY;
-            float flowScale = 1f;
-            float effectiveArrivalCm = inFormation ? 400f : arrivalRadiusCm;
-            float effectiveArrivalSq = inFormation ? 160_000f : arrivalRadiusSq;
-            if (directTargetSq < effectiveArrivalSq)
-            {
-                flowScale = MathF.Sqrt(directTargetSq) / effectiveArrivalCm;
-            }
-
-            float separationX = 0f;
-            float separationY = 0f;
-            int cellX = (int)(px * invHashCell);
-            int cellY = (int)(py * invHashCell);
-            cellX = cellX < 0 ? 0 : (cellX > hwm1 ? hwm1 : cellX);
-            cellY = cellY < 0 ? 0 : (cellY > hhm1 ? hhm1 : cellY);
-
-            int minY = cellY > 0 ? cellY - 1 : 0;
-            int maxY = cellY < hhm1 ? cellY + 1 : hhm1;
-            int minX = cellX > 0 ? cellX - 1 : 0;
-            int maxX = cellX < hwm1 ? cellX + 1 : hwm1;
-
-            for (int neighborY = minY; neighborY <= maxY; neighborY++)
-            {
-                int rowBase = neighborY * HashWidth;
-                for (int neighborX = minX; neighborX <= maxX; neighborX++)
-                {
-                    int j = _hashHead[rowBase + neighborX];
-                    while (j >= 0)
-                    {
-                        if (j != i)
-                        {
-                            int j2 = j << 1;
-                            float dx = px - _positionsCm[j2];
-                            float dy = py - _positionsCm[j2 + 1];
-                            float d2 = dx * dx + dy * dy;
-                            if (d2 < sepRadiusSq && d2 > 0.0001f)
-                            {
-                                float invD = FastInvSqrt(d2);
-                                float d = d2 * invD;
-                                float force = 1f - (d * invSepRadius);
-                                separationX += dx * invD * force;
-                                separationY += dy * invD * force;
-                            }
-                        }
-
-                        j = _hashNext[j];
-                    }
-                }
-            }
-
-            float obstaclePushX = 0f;
-            float obstaclePushY = 0f;
-            for (int obstacleIndex = 0; obstacleIndex < ObstacleCount; obstacleIndex++)
-            {
-                float dx = px - _obsX[obstacleIndex];
-                float dy = py - _obsY[obstacleIndex];
-                float d2 = dx * dx + dy * dy;
-                if (d2 < _obsPR2[obstacleIndex] && d2 > 0.0001f)
-                {
-                    float invD = FastInvSqrt(d2);
-                    float d = d2 * invD;
-                    float pushRadius = _obsPR[obstacleIndex];
-                    float pushStrength = (pushRadius - d) / pushRadius;
-                    float pushForce = pushStrength * pushStrength * 8f;
-                    obstaclePushX += dx * invD * pushForce;
-                    obstaclePushY += dy * invD * pushForce;
-                }
-            }
-
-            float separationScale = (inFormation ? 2f : 4f) * unitArrivalFactor;
-            float desiredVelocityX = desiredX * speed * flowScale + separationX * separationScale + obstaclePushX * speed;
-            float desiredVelocityY = desiredY * speed * flowScale + separationY * separationScale + obstaclePushY * speed;
-            float desiredVelocitySq = desiredVelocityX * desiredVelocityX + desiredVelocityY * desiredVelocityY;
-            if (desiredVelocitySq > 640_000f)
-            {
-                float scale = speed * FastInvSqrt(desiredVelocitySq);
-                desiredVelocityX *= scale;
-                desiredVelocityY *= scale;
-            }
-
-            float mix = MathF.Min(clampedDt * 5f, 1f);
-            _velocitiesCm[i2] += (desiredVelocityX - _velocitiesCm[i2]) * mix;
-            _velocitiesCm[i2 + 1] += (desiredVelocityY - _velocitiesCm[i2 + 1]) * mix;
-
-            float nextX = px + _velocitiesCm[i2] * clampedDt;
-            float nextY = py + _velocitiesCm[i2 + 1] * clampedDt;
-            _positionsCm[i2] = ClampPosition(nextX);
-            _positionsCm[i2 + 1] = ClampPosition(nextY);
+            StepRange(0, UnitCount, clampedDt, formationRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, tx0, ty0, tx1, ty1, hwm1, hhm1, invHashCell);
+            long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
+            ResolveHardPenetration();
+            observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+            return;
         }
+
+        EnsureJobHandleCapacity(_stepJobs.Length);
+        int workerCount = Math.Min(_stepJobs.Length, UnitCount);
+        int baseCount = UnitCount / workerCount;
+        int remainder = UnitCount % workerCount;
+        int startIndex = 0;
+        for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
+        {
+            int length = baseCount + (workerIndex < remainder ? 1 : 0);
+            var job = _stepJobs[workerIndex];
+            job.Owner = this;
+            job.StartIndex = startIndex;
+            job.EndIndex = startIndex + length;
+            job.Dt = clampedDt;
+            job.FormationRuntime = formationRuntime;
+            job.Speed = speed;
+            job.SepRadiusSq = sepRadiusSq;
+            job.InvSepRadius = invSepRadius;
+            job.ArrivalRadiusCm = arrivalRadiusCm;
+            job.ArrivalRadiusSq = arrivalRadiusSq;
+            job.UnitTargetStopThresholdSq = unitTargetStopThresholdSq;
+            job.Team0TargetX = tx0;
+            job.Team0TargetY = ty0;
+            job.Team1TargetX = tx1;
+            job.Team1TargetY = ty1;
+            job.HashWidthMinusOne = hwm1;
+            job.HashHeightMinusOne = hhm1;
+            job.InvHashCell = invHashCell;
+            _stepHandles[workerIndex] = World.SharedJobScheduler!.Schedule(job);
+            startIndex += length;
+        }
+
+        World.SharedJobScheduler!.Flush();
+        for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
+        {
+            _stepHandles[workerIndex].Complete();
+        }
+
+        long hardResolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
+        ResolveHardPenetration();
+        observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - hardResolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
     }
 
     public void SyncEntities(World world, MassNavAgentState agentState)
@@ -386,6 +250,8 @@ public sealed class MassNavWebParitySimState
         {
             Array.Resize(ref _positionsCm, vectorLength);
             Array.Resize(ref _velocitiesCm, vectorLength);
+            Array.Resize(ref _readPositionsCm, vectorLength);
+            Array.Resize(ref _readVelocitiesCm, vectorLength);
             Array.Resize(ref _unitTargetsCm, vectorLength);
         }
 
@@ -552,7 +418,7 @@ public sealed class MassNavWebParitySimState
         }
     }
 
-    private void BuildSpatialHash()
+    private void BuildSpatialHash(float[] positionsCm)
     {
         Array.Fill(_hashHead, -1);
         float invCell = 1f / HashCellSizeCm;
@@ -561,14 +427,401 @@ public sealed class MassNavWebParitySimState
         for (int i = 0; i < UnitCount; i++)
         {
             int i2 = i << 1;
-            int cellX = (int)(_positionsCm[i2] * invCell);
-            int cellY = (int)(_positionsCm[i2 + 1] * invCell);
+            int cellX = (int)(positionsCm[i2] * invCell);
+            int cellY = (int)(positionsCm[i2 + 1] * invCell);
             cellX = cellX < 0 ? 0 : (cellX > hwm1 ? hwm1 : cellX);
             cellY = cellY < 0 ? 0 : (cellY > hhm1 ? hhm1 : cellY);
             int cell = (cellY * HashWidth) + cellX;
             _hashNext[i] = _hashHead[cell];
             _hashHead[cell] = i;
         }
+    }
+
+    private void StepRange(
+        int startIndex,
+        int endIndex,
+        float clampedDt,
+        MassNavFormationRuntime formationRuntime,
+        float speed,
+        float sepRadiusSq,
+        float invSepRadius,
+        float arrivalRadiusCm,
+        float arrivalRadiusSq,
+        float unitTargetStopThresholdSq,
+        float tx0,
+        float ty0,
+        float tx1,
+        float ty1,
+        int hashWidthMinusOne,
+        int hashHeightMinusOne,
+        float invHashCell)
+    {
+        for (int i = startIndex; i < endIndex; i++)
+        {
+            int i2 = i << 1;
+            float px = _readPositionsCm[i2];
+            float py = _readPositionsCm[i2 + 1];
+            byte team = _teams[i];
+            bool inFormation = formationRuntime.IsInFormation(i);
+
+            float desiredX = 0f;
+            float desiredY = 0f;
+            float targetX;
+            float targetY;
+            float unitArrivalFactor = 1f;
+
+            if (_hasUnitTarget[i] != 0)
+            {
+                targetX = _unitTargetsCm[i2];
+                targetY = _unitTargetsCm[i2 + 1];
+                float toTargetX = targetX - px;
+                float toTargetY = targetY - py;
+                float targetDistSq = toTargetX * toTargetX + toTargetY * toTargetY;
+                if (targetDistSq > unitTargetStopThresholdSq)
+                {
+                    float invDist = FastInvSqrt(targetDistSq);
+                    desiredX = toTargetX * invDist;
+                    desiredY = toTargetY * invDist;
+
+                    int gx = (int)(px / CellCm);
+                    int gy = (int)(py / CellCm);
+                    float avoidX = 0f;
+                    float avoidY = 0f;
+                    for (int oy = -2; oy <= 2; oy++)
+                    {
+                        int ny = gy + oy;
+                        if ((uint)ny >= (uint)GridHeight)
+                        {
+                            continue;
+                        }
+
+                        int rowOffset = ny * GridWidth;
+                        for (int ox = -2; ox <= 2; ox++)
+                        {
+                            if (ox == 0 && oy == 0)
+                            {
+                                continue;
+                            }
+
+                            int nx = gx + ox;
+                            if ((uint)nx >= (uint)GridWidth)
+                            {
+                                continue;
+                            }
+
+                            if (_cost[rowOffset + nx] > 9_999f)
+                            {
+                                float obstacleDistanceSq = ox * ox + oy * oy;
+                                float invObstacleDistance = FastInvSqrt(obstacleDistanceSq);
+                                float invObstacleDistanceSq = invObstacleDistance * invObstacleDistance;
+                                avoidX += (-ox * invObstacleDistance) * (4f * invObstacleDistanceSq);
+                                avoidY += (-oy * invObstacleDistance) * (4f * invObstacleDistanceSq);
+                            }
+                        }
+                    }
+
+                    desiredX += avoidX * 1.2f;
+                    desiredY += avoidY * 1.2f;
+                    float flowLengthSq = desiredX * desiredX + desiredY * desiredY;
+                    if (flowLengthSq > 0.000001f)
+                    {
+                        float invFlow = FastInvSqrt(flowLengthSq);
+                        desiredX *= invFlow;
+                        desiredY *= invFlow;
+                    }
+                }
+
+                float targetDistance = MathF.Sqrt(targetDistSq);
+                float arriveThreshold = inFormation ? 200f : 300f;
+                if (targetDistance < arriveThreshold)
+                {
+                    unitArrivalFactor = targetDistance / arriveThreshold;
+                }
+            }
+            else
+            {
+                int gx = (int)(px / CellCm);
+                int gy = (int)(py / CellCm);
+                if ((uint)gx < (uint)GridWidth && (uint)gy < (uint)GridHeight)
+                {
+                    int flowOffset = ((gy * GridWidth) + gx) << 1;
+                    if (team == 0)
+                    {
+                        desiredX = _flow0[flowOffset];
+                        desiredY = _flow0[flowOffset + 1];
+                    }
+                    else
+                    {
+                        desiredX = _flow1[flowOffset];
+                        desiredY = _flow1[flowOffset + 1];
+                    }
+                }
+
+                targetX = team == 0 ? tx0 : tx1;
+                targetY = team == 0 ? ty0 : ty1;
+            }
+
+            float directTargetX = targetX - px;
+            float directTargetY = targetY - py;
+            float directTargetSq = directTargetX * directTargetX + directTargetY * directTargetY;
+            float flowScale = 1f;
+            float effectiveArrivalCm = inFormation ? 400f : arrivalRadiusCm;
+            float effectiveArrivalSq = inFormation ? 160_000f : arrivalRadiusSq;
+            if (directTargetSq < effectiveArrivalSq)
+            {
+                flowScale = MathF.Sqrt(directTargetSq) / effectiveArrivalCm;
+            }
+
+            float separationX = 0f;
+            float separationY = 0f;
+            int cellX = (int)(px * invHashCell);
+            int cellY = (int)(py * invHashCell);
+            cellX = cellX < 0 ? 0 : (cellX > hashWidthMinusOne ? hashWidthMinusOne : cellX);
+            cellY = cellY < 0 ? 0 : (cellY > hashHeightMinusOne ? hashHeightMinusOne : cellY);
+
+            int minY = cellY > 0 ? cellY - 1 : 0;
+            int maxY = cellY < hashHeightMinusOne ? cellY + 1 : hashHeightMinusOne;
+            int minX = cellX > 0 ? cellX - 1 : 0;
+            int maxX = cellX < hashWidthMinusOne ? cellX + 1 : hashWidthMinusOne;
+
+            for (int neighborY = minY; neighborY <= maxY; neighborY++)
+            {
+                int rowBase = neighborY * HashWidth;
+                for (int neighborX = minX; neighborX <= maxX; neighborX++)
+                {
+                    int j = _hashHead[rowBase + neighborX];
+                    while (j >= 0)
+                    {
+                        if (j != i)
+                        {
+                            int j2 = j << 1;
+                            float dx = px - _readPositionsCm[j2];
+                            float dy = py - _readPositionsCm[j2 + 1];
+                            float d2 = dx * dx + dy * dy;
+                            if (d2 < sepRadiusSq && d2 > 0.0001f)
+                            {
+                                float invD = FastInvSqrt(d2);
+                                float d = d2 * invD;
+                                float force = 1f - (d * invSepRadius);
+                                separationX += dx * invD * force;
+                                separationY += dy * invD * force;
+                            }
+                        }
+
+                        j = _hashNext[j];
+                    }
+                }
+            }
+
+            float obstaclePushX = 0f;
+            float obstaclePushY = 0f;
+            for (int obstacleIndex = 0; obstacleIndex < ObstacleCount; obstacleIndex++)
+            {
+                float dx = px - _obsX[obstacleIndex];
+                float dy = py - _obsY[obstacleIndex];
+                float d2 = dx * dx + dy * dy;
+                if (d2 < _obsPR2[obstacleIndex] && d2 > 0.0001f)
+                {
+                    float invD = FastInvSqrt(d2);
+                    float d = d2 * invD;
+                    float pushRadius = _obsPR[obstacleIndex];
+                    float pushStrength = (pushRadius - d) / pushRadius;
+                    float pushForce = pushStrength * pushStrength * 8f;
+                    obstaclePushX += dx * invD * pushForce;
+                    obstaclePushY += dy * invD * pushForce;
+                }
+            }
+
+            float separationScale = (inFormation ? 2f : 4f) * unitArrivalFactor;
+            float desiredVelocityX = desiredX * speed * flowScale + separationX * separationScale + obstaclePushX * speed;
+            float desiredVelocityY = desiredY * speed * flowScale + separationY * separationScale + obstaclePushY * speed;
+            float desiredVelocitySq = desiredVelocityX * desiredVelocityX + desiredVelocityY * desiredVelocityY;
+            if (desiredVelocitySq > 640_000f)
+            {
+                float scale = speed * FastInvSqrt(desiredVelocitySq);
+                desiredVelocityX *= scale;
+                desiredVelocityY *= scale;
+            }
+
+            float mix = MathF.Min(clampedDt * 5f, 1f);
+            float velocityX = _readVelocitiesCm[i2] + ((desiredVelocityX - _readVelocitiesCm[i2]) * mix);
+            float velocityY = _readVelocitiesCm[i2 + 1] + ((desiredVelocityY - _readVelocitiesCm[i2 + 1]) * mix);
+            _velocitiesCm[i2] = velocityX;
+            _velocitiesCm[i2 + 1] = velocityY;
+
+            float nextX = px + velocityX * clampedDt;
+            float nextY = py + velocityY * clampedDt;
+            _positionsCm[i2] = ClampPosition(nextX);
+            _positionsCm[i2 + 1] = ClampPosition(nextY);
+        }
+    }
+
+    private void ResolveHardPenetration()
+    {
+        if (UnitCount <= 1)
+        {
+            ResolveObstaclePenetration();
+            return;
+        }
+
+        BuildSpatialHash(_positionsCm);
+        float invHashCell = 1f / HashCellSizeCm;
+        int hwm1 = HashWidth - 1;
+        int hhm1 = HashHeight - 1;
+
+        for (int i = 0; i < UnitCount; i++)
+        {
+            int i2 = i << 1;
+            float px = _positionsCm[i2];
+            float py = _positionsCm[i2 + 1];
+            int cellX = (int)(px * invHashCell);
+            int cellY = (int)(py * invHashCell);
+            cellX = cellX < 0 ? 0 : (cellX > hwm1 ? hwm1 : cellX);
+            cellY = cellY < 0 ? 0 : (cellY > hhm1 ? hhm1 : cellY);
+
+            int minY = cellY > 0 ? cellY - 1 : 0;
+            int maxY = cellY < hhm1 ? cellY + 1 : hhm1;
+            int minX = cellX > 0 ? cellX - 1 : 0;
+            int maxX = cellX < hwm1 ? cellX + 1 : hwm1;
+
+            for (int neighborY = minY; neighborY <= maxY; neighborY++)
+            {
+                int rowBase = neighborY * HashWidth;
+                for (int neighborX = minX; neighborX <= maxX; neighborX++)
+                {
+                    int j = _hashHead[rowBase + neighborX];
+                    while (j >= 0)
+                    {
+                        if (j > i)
+                        {
+                            SeparateAgents(i, j);
+                        }
+
+                        j = _hashNext[j];
+                    }
+                }
+            }
+        }
+
+        ResolveObstaclePenetration();
+    }
+
+    private void SeparateAgents(int i, int j)
+    {
+        int i2 = i << 1;
+        int j2 = j << 1;
+        float dx = _positionsCm[i2] - _positionsCm[j2];
+        float dy = _positionsCm[i2 + 1] - _positionsCm[j2 + 1];
+        float d2 = dx * dx + dy * dy;
+        if (d2 >= AgentBodyDiameterSq)
+        {
+            return;
+        }
+
+        float nx;
+        float ny;
+        float overlap;
+        if (d2 > 0.0001f)
+        {
+            float invD = FastInvSqrt(d2);
+            float distance = d2 * invD;
+            nx = dx * invD;
+            ny = dy * invD;
+            overlap = AgentBodyDiameterCm - distance;
+        }
+        else
+        {
+            float angle = ((i * 73856093) ^ (j * 19349663)) & 1023;
+            float radians = angle * (MathF.PI * 2f / 1024f);
+            nx = MathF.Cos(radians);
+            ny = MathF.Sin(radians);
+            overlap = AgentBodyDiameterCm;
+        }
+
+        float correction = overlap * 0.5f;
+        _positionsCm[i2] = ClampPosition(_positionsCm[i2] + nx * correction);
+        _positionsCm[i2 + 1] = ClampPosition(_positionsCm[i2 + 1] + ny * correction);
+        _positionsCm[j2] = ClampPosition(_positionsCm[j2] - nx * correction);
+        _positionsCm[j2 + 1] = ClampPosition(_positionsCm[j2 + 1] - ny * correction);
+
+        float relVelX = _velocitiesCm[i2] - _velocitiesCm[j2];
+        float relVelY = _velocitiesCm[i2 + 1] - _velocitiesCm[j2 + 1];
+        float closingSpeed = relVelX * nx + relVelY * ny;
+        if (closingSpeed < 0f)
+        {
+            float impulse = closingSpeed * 0.5f;
+            _velocitiesCm[i2] -= nx * impulse;
+            _velocitiesCm[i2 + 1] -= ny * impulse;
+            _velocitiesCm[j2] += nx * impulse;
+            _velocitiesCm[j2 + 1] += ny * impulse;
+        }
+    }
+
+    private void ResolveObstaclePenetration()
+    {
+        for (int i = 0; i < UnitCount; i++)
+        {
+            int i2 = i << 1;
+            float px = _positionsCm[i2];
+            float py = _positionsCm[i2 + 1];
+            for (int obstacleIndex = 0; obstacleIndex < ObstacleCount; obstacleIndex++)
+            {
+                float dx = px - _obsX[obstacleIndex];
+                float dy = py - _obsY[obstacleIndex];
+                float minDistance = _obsRadius[obstacleIndex] + AgentBodyRadiusCm;
+                float d2 = dx * dx + dy * dy;
+                if (d2 >= minDistance * minDistance)
+                {
+                    continue;
+                }
+
+                float nx;
+                float ny;
+                if (d2 > 0.0001f)
+                {
+                    float invD = FastInvSqrt(d2);
+                    nx = dx * invD;
+                    ny = dy * invD;
+                }
+                else
+                {
+                    nx = 1f;
+                    ny = 0f;
+                }
+
+                _positionsCm[i2] = ClampPosition(_obsX[obstacleIndex] + nx * minDistance);
+                _positionsCm[i2 + 1] = ClampPosition(_obsY[obstacleIndex] + ny * minDistance);
+                px = _positionsCm[i2];
+                py = _positionsCm[i2 + 1];
+
+                float inwardSpeed = _velocitiesCm[i2] * nx + _velocitiesCm[i2 + 1] * ny;
+                if (inwardSpeed < 0f)
+                {
+                    _velocitiesCm[i2] -= nx * inwardSpeed;
+                    _velocitiesCm[i2 + 1] -= ny * inwardSpeed;
+                }
+            }
+        }
+    }
+
+    private void EnsureJobHandleCapacity(int required)
+    {
+        if (_stepHandles.Length < required)
+        {
+            Array.Resize(ref _stepHandles, required);
+        }
+    }
+
+    private static UnitStepJob[] CreateStepJobs()
+    {
+        int count = Math.Max(1, Environment.ProcessorCount);
+        var jobs = new UnitStepJob[count];
+        for (int i = 0; i < count; i++)
+        {
+            jobs[i] = new UnitStepJob();
+        }
+
+        return jobs;
     }
 
     private bool IsObstacle(float wx, float wy)
@@ -594,5 +847,49 @@ public sealed class MassNavWebParitySimState
     private static float ClampPosition(float value)
     {
         return Math.Clamp(value, MinPositionCm, MaxPositionCm);
+    }
+
+    private sealed class UnitStepJob : IJob
+    {
+        public MassNavWebParitySimState? Owner { get; set; }
+        public int StartIndex { get; set; }
+        public int EndIndex { get; set; }
+        public float Dt { get; set; }
+        public MassNavFormationRuntime? FormationRuntime { get; set; }
+        public float Speed { get; set; }
+        public float SepRadiusSq { get; set; }
+        public float InvSepRadius { get; set; }
+        public float ArrivalRadiusCm { get; set; }
+        public float ArrivalRadiusSq { get; set; }
+        public float UnitTargetStopThresholdSq { get; set; }
+        public float Team0TargetX { get; set; }
+        public float Team0TargetY { get; set; }
+        public float Team1TargetX { get; set; }
+        public float Team1TargetY { get; set; }
+        public int HashWidthMinusOne { get; set; }
+        public int HashHeightMinusOne { get; set; }
+        public float InvHashCell { get; set; }
+
+        public void Execute()
+        {
+            Owner!.StepRange(
+                StartIndex,
+                EndIndex,
+                Dt,
+                FormationRuntime!,
+                Speed,
+                SepRadiusSq,
+                InvSepRadius,
+                ArrivalRadiusCm,
+                ArrivalRadiusSq,
+                UnitTargetStopThresholdSq,
+                Team0TargetX,
+                Team0TargetY,
+                Team1TargetX,
+                Team1TargetY,
+                HashWidthMinusOne,
+                HashHeightMinusOne,
+                InvHashCell);
+        }
     }
 }
