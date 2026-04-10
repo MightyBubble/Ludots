@@ -19,3 +19,8 @@ Ludots — 基于 Arch ECS 的高性能 C# 游戏框架。六边形架构，一�
 | 架构文档索引 | `gitbook/architecture/README.md` |
 | 共享 Skill 索引 | `skills/README.md` |
 | 共享 Skill 注册表 | `skills/registry.json` |
+
+## Short Bug Notes
+
+- Mass-nav bug pattern: do not mix `engine.CurrentMapSession` checks with legacy global `MapId` checks inside the same feature path.
+- Mass-nav bug pattern: when `Navigation2D.Enabled=true`, do not re-register `IntegrationSystem2D` or `Physics2DToWorldPositionSyncSystem` inside the mod runtime.
