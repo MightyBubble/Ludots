@@ -101,6 +101,18 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul);
                 }
 
+                if (_mode == RaylibPrimitiveRenderMode.Instanced)
+                {
+                    DrawHybridInstancedFiltered(
+                        span,
+                        camera,
+                        meshes,
+                        scaleMul,
+                        persistentStaticLanesActive: true,
+                        skinnedBatchActive: skinnedBatch != null);
+                    return;
+                }
+
                 DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: true, skinnedBatchActive: skinnedBatch != null);
                 return;
             }
@@ -190,6 +202,47 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
+                {
+                    continue;
+                }
+
+                SubmitAssetRecursive(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale * scaleMul,
+                    item.Color,
+                    camera,
+                    meshes);
+            }
+
+            FlushInstancedBatches();
+        }
+
+        private void DrawHybridInstancedFiltered(
+            ReadOnlySpan<PrimitiveDrawItem> span,
+            Camera3D camera,
+            MeshAssetRegistry meshes,
+            float scaleMul,
+            bool persistentStaticLanesActive,
+            bool skinnedBatchActive)
+        {
+            EnsureInitialized();
+
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (skinnedBatchActive && item.RenderPath.IsSkinnedLane())
+                {
+                    continue;
+                }
+
+                if (ShouldSkipImmediateDraw(item, persistentStaticLanesActive))
+                {
+                    continue;
+                }
+
                 if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;

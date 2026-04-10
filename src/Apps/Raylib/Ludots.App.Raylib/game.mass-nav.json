@@ -1,0 +1,13 @@
+{
+  "StartupInputContexts": [
+    "Default_Gameplay"
+  ],
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine — Mass Nav Playground",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/showcases/navigation/MassNavPlaygroundMod"
+  ]
+}

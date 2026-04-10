@@ -1,0 +1,16 @@
+{
+  "Id": "mass_nav_playground",
+  "Tags": [
+    "mass_nav_playground"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 4,
+      "HeightInTiles": 4,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "Entities": []
+}

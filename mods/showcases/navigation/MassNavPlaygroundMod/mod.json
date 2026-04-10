@@ -1,0 +1,13 @@
+{
+  "name": "MassNavPlaygroundMod",
+  "version": "1.0.0",
+  "description": "Mass-nav façade playground for large-scale RTS movement.",
+  "main": "bin/net8.0/MassNavPlaygroundMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["navigation", "mass-nav", "playground"]
+}

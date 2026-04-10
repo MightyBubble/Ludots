@@ -1,0 +1,74 @@
+using System;
+using System.Numerics;
+using Arch.Core;
+using Arch.System;
+using Ludots.Core.Engine;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Runtime;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Scripting;
+using MassNavPlaygroundMod.Runtime;
+
+namespace MassNavPlaygroundMod.Systems;
+
+internal sealed class MassNavCommandBridgeSystem : ISystem<float>
+{
+    private const int FormationSpacingCm = 120;
+    private const int GoalRadiusCm = 120;
+
+    private readonly GameEngine _engine;
+    private readonly MassNavSimulationRuntime _simulation;
+
+    public MassNavCommandBridgeSystem(GameEngine engine, MassNavSimulationRuntime simulation)
+    {
+        _engine = engine;
+        _simulation = simulation;
+    }
+
+    public void Initialize() { }
+    public void BeforeUpdate(in float dt) { }
+    public void AfterUpdate(in float dt) { }
+    public void Dispose() { }
+
+    public void Update(in float dt)
+    {
+        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.MapId.Name, out var mapObj) ||
+            mapObj is not string mapId ||
+            !MassNavPlaygroundIds.IsPlaygroundMap(mapId))
+        {
+            return;
+        }
+
+        if (_engine.GetService(CoreServiceKeys.UiCaptured) ||
+            _engine.GetService(CoreServiceKeys.AuthoritativeInput) is not IInputActionReader input)
+        {
+            return;
+        }
+
+        InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
+            _engine.GlobalContext,
+            nameof(MassNavCommandBridgeSystem));
+        if (!input.PressedThisFrame(bindings.CommandActionId) ||
+            !AuthoritativeGroundPointerHelper.TryRead(input, out WorldCmInt2 worldCm))
+        {
+            return;
+        }
+
+        ApplyMoveCommand(new Vector2(worldCm.X, worldCm.Y));
+    }
+
+    private void ApplyMoveCommand(Vector2 centerCm)
+    {
+        ReadOnlySpan<Entity> selected = _simulation.SelectedEntities;
+        if (selected.Length <= 0)
+        {
+            return;
+        }
+
+        int assigned = MassNavCommandRuntime.ApplyGridMove(_engine.World, selected, centerCm, FormationSpacingCm, GoalRadiusCm);
+        if (assigned > 0)
+        {
+            _simulation.MarkStructuralChange();
+        }
+    }
+}
