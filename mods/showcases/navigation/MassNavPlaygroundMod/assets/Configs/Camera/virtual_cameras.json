@@ -1,0 +1,26 @@
+[
+  {
+    "id": "Camera.Profile.MassNavTactical",
+    "displayName": "Camera MassNav Tactical",
+    "priority": 100,
+    "rigKind": "Orbit",
+    "distanceCm": 32000,
+    "pitch": 62,
+    "fovYDeg": 50,
+    "yaw": 180,
+    "minDistanceCm": 8000,
+    "maxDistanceCm": 60000,
+    "minPitchDeg": 45,
+    "maxPitchDeg": 75,
+    "panMode": "Keyboard",
+    "edgePanMarginPx": 0,
+    "edgePanSpeedCmPerSec": 0,
+    "panCmPerSecond": 16000,
+    "enableGrabDrag": true,
+    "rotateMode": "None",
+    "enableZoom": true,
+    "zoomCmPerWheel": 2400,
+    "followMode": "None",
+    "allowUserInput": true
+  }
+]

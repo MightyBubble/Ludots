@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using System.Numerics;
 using Arch.Core;
 using CoreInputMod;
 using Ludots.Core.Engine;
@@ -15,6 +16,10 @@ namespace MassNavPlaygroundMod.Runtime;
 
 internal sealed class MassNavPlaygroundRuntime
 {
+    private const string MassNavCameraProfileId = "Camera.Profile.MassNavTactical";
+    private static readonly Vector2 MassNavCameraTargetCm = Vector2.Zero;
+    private const float MassNavCameraDistanceCm = 32000f;
+
     private static readonly QueryDescription LocalPlayerQuery = new QueryDescription().WithAll<PlayerOwner>();
 
     private readonly IModContext _context;
@@ -134,12 +139,23 @@ internal sealed class MassNavPlaygroundRuntime
 
     private static void EnsureTacticalCamera(GameEngine engine)
     {
+        RequestTacticalCameraReset(engine);
+    }
+
+    internal static void RequestTacticalCameraReset(GameEngine engine)
+    {
         engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
         {
-            Id = "Camera.Profile.Tactical",
+            Id = MassNavCameraProfileId,
             BlendDurationSeconds = 0f,
             ResetRuntimeState = true,
             SnapToFollowTargetWhenAvailable = false
         };
+        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+        {
+            VirtualCameraId = MassNavCameraProfileId,
+            TargetCm = MassNavCameraTargetCm,
+            DistanceCm = MassNavCameraDistanceCm
+        });
     }
 }

@@ -15,6 +15,7 @@ internal sealed class MassNavPlaygroundPanelController
 {
     private ReactivePage<MassNavPanelState>? _page;
     private MassNavPanelState _lastState = MassNavPanelState.Empty;
+    private GameEngine? _engine;
 
     public bool MountOrSync(GameEngine engine, MassNavSimulationRuntime simulation)
     {
@@ -23,6 +24,7 @@ internal sealed class MassNavPlaygroundPanelController
             return false;
         }
 
+        _engine = engine;
         var page = EnsurePage(engine);
         bool changed = false;
         if (!ReferenceEquals(root.Scene, page.Scene))
@@ -57,7 +59,7 @@ internal sealed class MassNavPlaygroundPanelController
         return _page;
     }
 
-    private static UiElementBuilder BuildRoot(ReactiveContext<MassNavPanelState> context)
+    private UiElementBuilder BuildRoot(ReactiveContext<MassNavPanelState> context)
     {
         var state = context.State;
         if (!state.Visible)
@@ -73,6 +75,13 @@ internal sealed class MassNavPlaygroundPanelController
 
         return Ui.Card(
                 Ui.Text("Mass Nav Playground").FontSize(20f).Bold().Color("#F8FBFF"),
+                Ui.Row(
+                        Ui.Button("Reset Camera", _ => RequestCameraReset())
+                            .Background("#274A78")
+                            .Color("#F8FBFF")
+                            .Padding(12f, 8f)
+                            .Radius(10f))
+                    .Justify(UiJustifyContent.Start),
                 Ui.Text("New facade path: selection input -> revision cache -> group move bridge -> nav goals.").FontSize(12f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Agents {state.TotalAgents}  Controllable {state.ControllableAgents}  Blockers {state.Blockers}").FontSize(13f).Color("#C7D4E5"),
                 Ui.Text($"Selected {state.SelectedCount}  Rev {state.SelectionRevision}").FontSize(13f).Color("#A4F07A"),
@@ -91,6 +100,16 @@ internal sealed class MassNavPlaygroundPanelController
             .Background("#111C2A")
             .Absolute(16f, 16f)
             .ZIndex(20);
+    }
+
+    private void RequestCameraReset()
+    {
+        if (_engine == null || !MassNavPlaygroundIds.IsCurrentPlaygroundMap(_engine))
+        {
+            return;
+        }
+
+        MassNavPlaygroundRuntime.RequestTacticalCameraReset(_engine);
     }
 
     private static MassNavPanelState CaptureState(GameEngine engine, MassNavSimulationRuntime simulation)
