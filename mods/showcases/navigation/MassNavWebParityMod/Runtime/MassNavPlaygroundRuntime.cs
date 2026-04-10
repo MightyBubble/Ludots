@@ -1,0 +1,228 @@
+using System.Threading.Tasks;
+using System.Numerics;
+using Arch.Core;
+using CoreInputMod;
+using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Input.Selection;
+using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Scripting;
+using MassNavWebParityMod.Systems;
+using MassNavWebParityMod.UI;
+
+namespace MassNavWebParityMod.Runtime;
+
+internal sealed class MassNavWebParityRuntime
+{
+    private const string MassNavCameraProfileId = "Camera.Profile.MassNavWebParityTactical";
+    private static readonly Vector2 MassNavCameraTargetCm = new(5_000f, 5_000f);
+    private const float MassNavCameraDistanceCm = 7_000f;
+
+    private static readonly QueryDescription LocalPlayerQuery = new QueryDescription().WithAll<PlayerOwner>();
+
+    private readonly IModContext _context;
+    private bool _systemsInstalled;
+    private bool _scenarioSpawned;
+    private RenderDebugSnapshot _savedRenderDebug;
+    private bool _savedRenderDebugValid;
+    private readonly MassNavWebParityPanelController _panelController = new();
+
+    public MassNavWebParityRuntime(IModContext context)
+    {
+        _context = context;
+    }
+
+    public void EnsureSystemsInstalled(GameEngine engine)
+    {
+        if (_systemsInstalled)
+        {
+            return;
+        }
+
+        var simulation = new MassNavSimulationRuntime();
+        engine.SetService(MassNavWebParityKeys.SimulationRuntime, simulation);
+        engine.RegisterSystem(new MassNavSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
+        engine.RegisterSystem(new MassNavWebParityControlSystem(engine, simulation), SystemGroup.InputCollection);
+        engine.RegisterSystem(new MassNavCommandBridgeSystem(engine, simulation), SystemGroup.InputCollection);
+        engine.RegisterSystem(new MassNavFormationSystem(engine, simulation), SystemGroup.InputCollection);
+        var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires PresentationMeshAssetRegistry.");
+        engine.RegisterPresentationSystem(new MassNavPrimitivePresentationSystem(engine, simulation, meshes));
+        engine.RegisterPresentationSystem(new MassNavHudPresentationSystem(engine, simulation));
+        engine.RegisterPresentationSystem(new MassNavPanelPresentationSystem(engine, _panelController, simulation));
+        _systemsInstalled = true;
+        _context.Log("[MassNavWebParityMod] Installed mass-nav fa莽ade runtime skeleton.");
+    }
+
+    public Task HandleMapFocusedAsync(ScriptContext context)
+    {
+        var engine = context.GetEngine();
+        if (engine == null)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (!MassNavWebParityIds.IsPlaygroundMap(context.Get(CoreServiceKeys.MapId).Value))
+        {
+            return Task.CompletedTask;
+        }
+
+        EnsureSystemsInstalled(engine);
+        EnsureLocalPlayerEntity(engine);
+        ConfigureRenderDebug(engine);
+        EnsureTacticalCamera(engine);
+        EnsureScenario(engine);
+        return Task.CompletedTask;
+    }
+
+    public Task HandleMapUnloadedAsync(ScriptContext context)
+    {
+        _scenarioSpawned = false;
+        if (context.GetEngine() is { } engine)
+        {
+            RestoreRenderDebug(engine);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void EnsureScenario(GameEngine engine)
+    {
+        if (_scenarioSpawned &&
+            engine.GetService(MassNavWebParityKeys.SimulationRuntime) is { } existing &&
+            existing.AgentState.TotalAgents > 0)
+        {
+            return;
+        }
+
+        MassNavSimulationRuntime simulation = engine.GetService(MassNavWebParityKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires simulation runtime.");
+        MassNavScenarioBootstrap.SpawnDefaultScenario(engine.World, simulation);
+        _scenarioSpawned = true;
+    }
+
+    private static void EnsureLocalPlayerEntity(GameEngine engine)
+    {
+        SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires SelectionRuntime.");
+
+        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
+            localObj is Entity local &&
+            engine.World.IsAlive(local))
+        {
+            EnsureSelectionOwner(engine.World, local, selection, engine.GlobalContext);
+            return;
+        }
+
+        Entity owner = Entity.Null;
+        engine.World.Query(in LocalPlayerQuery, (Entity entity, ref PlayerOwner playerOwner) =>
+        {
+            if (owner == Entity.Null && playerOwner.PlayerId == 1)
+            {
+                owner = entity;
+            }
+        });
+
+        if (owner == Entity.Null)
+        {
+            owner = engine.World.Create(new PlayerOwner { PlayerId = 1 }, default(SelectionDragState));
+        }
+
+        engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+        EnsureSelectionOwner(engine.World, owner, selection, engine.GlobalContext);
+    }
+
+    private static void EnsureSelectionOwner(World world, Entity owner, SelectionRuntime selection, System.Collections.Generic.Dictionary<string, object> globals)
+    {
+        if (!world.Has<SelectionDragState>(owner))
+        {
+            world.Add(owner, default(SelectionDragState));
+        }
+
+        selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
+        selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
+        globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
+        globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+    }
+
+    private static void EnsureTacticalCamera(GameEngine engine)
+    {
+        RequestTacticalCameraReset(engine);
+    }
+
+    private void ConfigureRenderDebug(GameEngine engine)
+    {
+        if (engine.GetService(CoreServiceKeys.RenderDebugState) is not RenderDebugState renderDebug)
+        {
+            return;
+        }
+
+        if (!_savedRenderDebugValid)
+        {
+            _savedRenderDebug = new RenderDebugSnapshot(
+                renderDebug.DrawTerrain,
+                renderDebug.DrawPrimitives,
+                renderDebug.DrawDebugDraw,
+                renderDebug.DrawSkiaUi,
+                renderDebug.DrawWorldHudBars,
+                renderDebug.DrawWorldHudText,
+                renderDebug.DrawCombatText,
+                renderDebug.AcceptanceScaleMultiplier);
+            _savedRenderDebugValid = true;
+        }
+
+        renderDebug.DrawTerrain = false;
+        renderDebug.DrawDebugDraw = false;
+        renderDebug.DrawPrimitives = true;
+        renderDebug.DrawSkiaUi = true;
+    }
+
+    private void RestoreRenderDebug(GameEngine engine)
+    {
+        if (!_savedRenderDebugValid ||
+            engine.GetService(CoreServiceKeys.RenderDebugState) is not RenderDebugState renderDebug)
+        {
+            return;
+        }
+
+        renderDebug.DrawTerrain = _savedRenderDebug.DrawTerrain;
+        renderDebug.DrawPrimitives = _savedRenderDebug.DrawPrimitives;
+        renderDebug.DrawDebugDraw = _savedRenderDebug.DrawDebugDraw;
+        renderDebug.DrawSkiaUi = _savedRenderDebug.DrawSkiaUi;
+        renderDebug.DrawWorldHudBars = _savedRenderDebug.DrawWorldHudBars;
+        renderDebug.DrawWorldHudText = _savedRenderDebug.DrawWorldHudText;
+        renderDebug.DrawCombatText = _savedRenderDebug.DrawCombatText;
+        renderDebug.AcceptanceScaleMultiplier = _savedRenderDebug.AcceptanceScaleMultiplier;
+        _savedRenderDebugValid = false;
+    }
+
+    internal static void RequestTacticalCameraReset(GameEngine engine)
+    {
+        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
+        {
+            Id = MassNavCameraProfileId,
+            BlendDurationSeconds = 0f,
+            ResetRuntimeState = true,
+            SnapToFollowTargetWhenAvailable = false
+        };
+        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+        {
+            VirtualCameraId = MassNavCameraProfileId,
+            TargetCm = MassNavCameraTargetCm,
+            DistanceCm = MassNavCameraDistanceCm
+        });
+    }
+
+    private readonly record struct RenderDebugSnapshot(
+        bool DrawTerrain,
+        bool DrawPrimitives,
+        bool DrawDebugDraw,
+        bool DrawSkiaUi,
+        bool DrawWorldHudBars,
+        bool DrawWorldHudText,
+        bool DrawCombatText,
+        float AcceptanceScaleMultiplier);
+}

@@ -54,6 +54,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "mass_nav_web_parity_raylib",
+      "name": "Mass Nav Web Parity Raylib",
+      "selectors": [
+        "$mass_nav_web_parity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

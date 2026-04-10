@@ -1,0 +1,16 @@
+{
+  "Id": "mass_nav_web_parity",
+  "Tags": [
+    "mass_nav_web_parity"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 100,
+      "HeightInTiles": 100,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "Entities": []
+}

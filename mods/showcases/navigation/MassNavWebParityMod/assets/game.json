@@ -1,0 +1,10 @@
+{
+  "startupMapId": "mass_nav_web_parity",
+  "windowTitle": "Ludots Engine - Mass Nav Web Parity",
+  "targetFps": 60,
+  "worldWidthInTiles": 100,
+  "worldHeightInTiles": 100,
+  "Navigation2D": {
+    "Enabled": false
+  }
+}

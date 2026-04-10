@@ -56,6 +56,14 @@
         "value": "mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod",
         "projectPath": "ChunkStreamingShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "mass_nav_web_parity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navigation/MassNavWebParityMod",
+        "projectPath": "MassNavWebParityMod.csproj"
+      }
     }
   ],
   "adapters": {
