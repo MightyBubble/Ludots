@@ -18,12 +18,19 @@ public sealed class MassNavWebParitySimState
     public const float VisualMetersPerCm = 0.01f;
 
     private const int MaxObstacles = 64;
-    private const float HashCellSizeCm = 250f;
-    private const int HashWidth = (int)(FieldWidthCm / HashCellSizeCm);
-    private const int HashHeight = (int)(FieldHeightCm / HashCellSizeCm);
+    private const int SeparationHashCellSizeCm = 100;
+    private const int SeparationHashWidth = FieldWidthCm / SeparationHashCellSizeCm;
+    private const int SeparationHashHeight = FieldHeightCm / SeparationHashCellSizeCm;
+    private const int SeparationHashSearchRadius = 2;
+    private const int HardResolveHashCellSizeCm = 50;
+    private const int HardResolveHashWidth = FieldWidthCm / HardResolveHashCellSizeCm;
+    private const int HardResolveHashHeight = FieldHeightCm / HardResolveHashCellSizeCm;
+    private const int HardResolveHashSearchRadius = 1;
     private const float AgentBodyRadiusCm = 20f;
     private const float AgentBodyDiameterCm = AgentBodyRadiusCm * 2f;
     private const float AgentBodyDiameterSq = AgentBodyDiameterCm * AgentBodyDiameterCm;
+    private const float HardResolveCandidateDistanceCm = 100f;
+    private const float HardResolveCandidateDistanceSq = HardResolveCandidateDistanceCm * HardResolveCandidateDistanceCm;
     private const float MinPositionCm = 50f;
     private const float MaxPositionCm = 9_950f;
 
@@ -38,7 +45,12 @@ public sealed class MassNavWebParitySimState
     private readonly float[] _obsR2 = new float[MaxObstacles];
     private readonly float[] _obsPR = new float[MaxObstacles];
     private readonly float[] _obsPR2 = new float[MaxObstacles];
-    private readonly int[] _hashHead = new int[HashWidth * HashHeight];
+    private readonly int[] _separationCellCounts = new int[SeparationHashWidth * SeparationHashHeight];
+    private readonly int[] _separationCellOffsets = new int[SeparationHashWidth * SeparationHashHeight];
+    private readonly int[] _separationCellCursor = new int[SeparationHashWidth * SeparationHashHeight];
+    private readonly int[] _hardResolveCellCounts = new int[HardResolveHashWidth * HardResolveHashHeight];
+    private readonly int[] _hardResolveCellOffsets = new int[HardResolveHashWidth * HardResolveHashHeight];
+    private readonly int[] _hardResolveCellCursor = new int[HardResolveHashWidth * HardResolveHashHeight];
 
     private float[] _positionsCm = Array.Empty<float>();
     private float[] _velocitiesCm = Array.Empty<float>();
@@ -48,13 +60,16 @@ public sealed class MassNavWebParitySimState
     private float[] _unitTargetsCm = Array.Empty<float>();
     private byte[] _hasUnitTarget = Array.Empty<byte>();
     private byte[] _selectedFlags = Array.Empty<byte>();
-    private int[] _hashNext = Array.Empty<int>();
+    private byte[] _hardResolveCandidates = Array.Empty<byte>();
+    private int[] _separationAgents = Array.Empty<int>();
+    private int[] _hardResolveAgents = Array.Empty<int>();
     private readonly UnitStepJob[] _stepJobs = CreateStepJobs();
     private JobHandle[] _stepHandles = Array.Empty<JobHandle>();
 
     private readonly float[] _teamTargetX = new float[2];
     private readonly float[] _teamTargetY = new float[2];
     private int _frameCount;
+    private bool _useCandidateGating;
 
     public int UnitCount { get; private set; }
     public int ObstacleCount { get; private set; }
@@ -148,7 +163,11 @@ public sealed class MassNavWebParitySimState
         int scalarCount = UnitCount * 2;
         Array.Copy(_positionsCm, _readPositionsCm, scalarCount);
         Array.Copy(_velocitiesCm, _readVelocitiesCm, scalarCount);
-        BuildSpatialHash(_readPositionsCm);
+        _useCandidateGating = UnitCount >= 16_000;
+        if (_useCandidateGating)
+        {
+            Array.Clear(_hardResolveCandidates, 0, UnitCount);
+        }
 
         const float speed = 800f;
         const float sepRadiusCm = 200f;
@@ -158,17 +177,19 @@ public sealed class MassNavWebParitySimState
         const float arrivalRadiusSq = arrivalRadiusCm * arrivalRadiusCm;
         const float unitTargetStopThresholdSq = 2_500f;
 
+        BuildSeparationHash(_readPositionsCm);
+
         float tx0 = _teamTargetX[0];
         float ty0 = _teamTargetY[0];
         float tx1 = _teamTargetX[1];
         float ty1 = _teamTargetY[1];
-        int hwm1 = HashWidth - 1;
-        int hhm1 = HashHeight - 1;
-        float invHashCell = 1f / HashCellSizeCm;
+        int hwm1 = SeparationHashWidth - 1;
+        int hhm1 = SeparationHashHeight - 1;
+        float invHashCell = 1f / SeparationHashCellSizeCm;
 
         if (World.SharedJobScheduler == null || UnitCount < 2048)
         {
-            StepRange(0, UnitCount, clampedDt, formationRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, tx0, ty0, tx1, ty1, hwm1, hhm1, invHashCell);
+            StepRange(0, UnitCount, clampedDt, formationRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, tx0, ty0, tx1, ty1, hwm1, hhm1, invHashCell, SeparationHashSearchRadius, _useCandidateGating);
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
             ResolveHardPenetration();
             observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
@@ -202,6 +223,8 @@ public sealed class MassNavWebParitySimState
             job.HashWidthMinusOne = hwm1;
             job.HashHeightMinusOne = hhm1;
             job.InvHashCell = invHashCell;
+            job.HashSearchRadius = SeparationHashSearchRadius;
+            job.UseCandidateGating = _useCandidateGating;
             _stepHandles[workerIndex] = World.SharedJobScheduler!.Schedule(job);
             startIndex += length;
         }
@@ -260,7 +283,9 @@ public sealed class MassNavWebParitySimState
             Array.Resize(ref _teams, unitCount);
             Array.Resize(ref _hasUnitTarget, unitCount);
             Array.Resize(ref _selectedFlags, unitCount);
-            Array.Resize(ref _hashNext, unitCount);
+            Array.Resize(ref _hardResolveCandidates, unitCount);
+            Array.Resize(ref _separationAgents, unitCount);
+            Array.Resize(ref _hardResolveAgents, unitCount);
         }
     }
 
@@ -418,23 +443,75 @@ public sealed class MassNavWebParitySimState
         }
     }
 
-    private void BuildSpatialHash(float[] positionsCm)
+    private void BuildSeparationHash(float[] positionsCm)
     {
-        Array.Fill(_hashHead, -1);
-        float invCell = 1f / HashCellSizeCm;
-        int hwm1 = HashWidth - 1;
-        int hhm1 = HashHeight - 1;
+        BuildBucketHash(
+            positionsCm,
+            SeparationHashWidth,
+            SeparationHashHeight,
+            1f / SeparationHashCellSizeCm,
+            _separationCellCounts,
+            _separationCellOffsets,
+            _separationCellCursor,
+            _separationAgents);
+    }
+
+    private void BuildHardResolveHash(float[] positionsCm)
+    {
+        BuildBucketHash(
+            positionsCm,
+            HardResolveHashWidth,
+            HardResolveHashHeight,
+            1f / HardResolveHashCellSizeCm,
+            _hardResolveCellCounts,
+            _hardResolveCellOffsets,
+            _hardResolveCellCursor,
+            _hardResolveAgents);
+    }
+
+    private void BuildBucketHash(
+        float[] positionsCm,
+        int hashWidth,
+        int hashHeight,
+        float invHashCell,
+        int[] cellCounts,
+        int[] cellOffsets,
+        int[] cellCursor,
+        int[] cellAgents)
+    {
+        Array.Clear(cellCounts, 0, cellCounts.Length);
+        int hashWidthMinusOne = hashWidth - 1;
+        int hashHeightMinusOne = hashHeight - 1;
+
         for (int i = 0; i < UnitCount; i++)
         {
-            int i2 = i << 1;
-            int cellX = (int)(positionsCm[i2] * invCell);
-            int cellY = (int)(positionsCm[i2 + 1] * invCell);
-            cellX = cellX < 0 ? 0 : (cellX > hwm1 ? hwm1 : cellX);
-            cellY = cellY < 0 ? 0 : (cellY > hhm1 ? hhm1 : cellY);
-            int cell = (cellY * HashWidth) + cellX;
-            _hashNext[i] = _hashHead[cell];
-            _hashHead[cell] = i;
+            int cell = GetHashCell(positionsCm, i, invHashCell, hashWidthMinusOne, hashHeightMinusOne, hashWidth);
+            cellCounts[cell]++;
         }
+
+        int offset = 0;
+        for (int cell = 0; cell < cellCounts.Length; cell++)
+        {
+            cellOffsets[cell] = offset;
+            cellCursor[cell] = offset;
+            offset += cellCounts[cell];
+        }
+
+        for (int i = 0; i < UnitCount; i++)
+        {
+            int cell = GetHashCell(positionsCm, i, invHashCell, hashWidthMinusOne, hashHeightMinusOne, hashWidth);
+            cellAgents[cellCursor[cell]++] = i;
+        }
+    }
+
+    private static int GetHashCell(float[] positionsCm, int index, float invHashCell, int hashWidthMinusOne, int hashHeightMinusOne, int hashWidth)
+    {
+        int i2 = index << 1;
+        int cellX = (int)(positionsCm[i2] * invHashCell);
+        int cellY = (int)(positionsCm[i2 + 1] * invHashCell);
+        cellX = cellX < 0 ? 0 : (cellX > hashWidthMinusOne ? hashWidthMinusOne : cellX);
+        cellY = cellY < 0 ? 0 : (cellY > hashHeightMinusOne ? hashHeightMinusOne : cellY);
+        return (cellY * hashWidth) + cellX;
     }
 
     private void StepRange(
@@ -454,7 +531,9 @@ public sealed class MassNavWebParitySimState
         float ty1,
         int hashWidthMinusOne,
         int hashHeightMinusOne,
-        float invHashCell)
+        float invHashCell,
+        int hashSearchRadius,
+        bool useCandidateGating)
     {
         for (int i = startIndex; i < endIndex; i++)
         {
@@ -579,25 +658,33 @@ public sealed class MassNavWebParitySimState
             cellX = cellX < 0 ? 0 : (cellX > hashWidthMinusOne ? hashWidthMinusOne : cellX);
             cellY = cellY < 0 ? 0 : (cellY > hashHeightMinusOne ? hashHeightMinusOne : cellY);
 
-            int minY = cellY > 0 ? cellY - 1 : 0;
-            int maxY = cellY < hashHeightMinusOne ? cellY + 1 : hashHeightMinusOne;
-            int minX = cellX > 0 ? cellX - 1 : 0;
-            int maxX = cellX < hashWidthMinusOne ? cellX + 1 : hashWidthMinusOne;
+            int minY = Math.Max(0, cellY - hashSearchRadius);
+            int maxY = Math.Min(hashHeightMinusOne, cellY + hashSearchRadius);
+            int minX = Math.Max(0, cellX - hashSearchRadius);
+            int maxX = Math.Min(hashWidthMinusOne, cellX + hashSearchRadius);
 
             for (int neighborY = minY; neighborY <= maxY; neighborY++)
             {
-                int rowBase = neighborY * HashWidth;
+                int rowBase = neighborY * SeparationHashWidth;
                 for (int neighborX = minX; neighborX <= maxX; neighborX++)
                 {
-                    int j = _hashHead[rowBase + neighborX];
-                    while (j >= 0)
+                    int cell = rowBase + neighborX;
+                    int start = _separationCellOffsets[cell];
+                    int end = start + _separationCellCounts[cell];
+                    for (int hashIndex = start; hashIndex < end; hashIndex++)
                     {
+                        int j = _separationAgents[hashIndex];
                         if (j != i)
                         {
                             int j2 = j << 1;
                             float dx = px - _readPositionsCm[j2];
                             float dy = py - _readPositionsCm[j2 + 1];
                             float d2 = dx * dx + dy * dy;
+                            if (useCandidateGating && d2 < HardResolveCandidateDistanceSq)
+                            {
+                                _hardResolveCandidates[i] = 1;
+                            }
+
                             if (d2 < sepRadiusSq && d2 > 0.0001f)
                             {
                                 float invD = FastInvSqrt(d2);
@@ -607,8 +694,6 @@ public sealed class MassNavWebParitySimState
                                 separationY += dy * invD * force;
                             }
                         }
-
-                        j = _hashNext[j];
                     }
                 }
             }
@@ -620,6 +705,12 @@ public sealed class MassNavWebParitySimState
                 float dx = px - _obsX[obstacleIndex];
                 float dy = py - _obsY[obstacleIndex];
                 float d2 = dx * dx + dy * dy;
+                float minDistance = _obsRadius[obstacleIndex] + HardResolveCandidateDistanceCm;
+                if (useCandidateGating && d2 < minDistance * minDistance)
+                {
+                    _hardResolveCandidates[i] = 1;
+                }
+
                 if (d2 < _obsPR2[obstacleIndex] && d2 > 0.0001f)
                 {
                     float invD = FastInvSqrt(d2);
@@ -664,13 +755,18 @@ public sealed class MassNavWebParitySimState
             return;
         }
 
-        BuildSpatialHash(_positionsCm);
-        float invHashCell = 1f / HashCellSizeCm;
-        int hwm1 = HashWidth - 1;
-        int hhm1 = HashHeight - 1;
+        BuildHardResolveHash(_positionsCm);
+        float invHashCell = 1f / HardResolveHashCellSizeCm;
+        int hwm1 = HardResolveHashWidth - 1;
+        int hhm1 = HardResolveHashHeight - 1;
 
         for (int i = 0; i < UnitCount; i++)
         {
+            if (_useCandidateGating && _hardResolveCandidates[i] == 0)
+            {
+                continue;
+            }
+
             int i2 = i << 1;
             float px = _positionsCm[i2];
             float py = _positionsCm[i2 + 1];
@@ -679,25 +775,26 @@ public sealed class MassNavWebParitySimState
             cellX = cellX < 0 ? 0 : (cellX > hwm1 ? hwm1 : cellX);
             cellY = cellY < 0 ? 0 : (cellY > hhm1 ? hhm1 : cellY);
 
-            int minY = cellY > 0 ? cellY - 1 : 0;
-            int maxY = cellY < hhm1 ? cellY + 1 : hhm1;
-            int minX = cellX > 0 ? cellX - 1 : 0;
-            int maxX = cellX < hwm1 ? cellX + 1 : hwm1;
+            int minY = Math.Max(0, cellY - HardResolveHashSearchRadius);
+            int maxY = Math.Min(hhm1, cellY + HardResolveHashSearchRadius);
+            int minX = Math.Max(0, cellX - HardResolveHashSearchRadius);
+            int maxX = Math.Min(hwm1, cellX + HardResolveHashSearchRadius);
 
             for (int neighborY = minY; neighborY <= maxY; neighborY++)
             {
-                int rowBase = neighborY * HashWidth;
+                int rowBase = neighborY * HardResolveHashWidth;
                 for (int neighborX = minX; neighborX <= maxX; neighborX++)
                 {
-                    int j = _hashHead[rowBase + neighborX];
-                    while (j >= 0)
+                    int cell = rowBase + neighborX;
+                    int start = _hardResolveCellOffsets[cell];
+                    int end = start + _hardResolveCellCounts[cell];
+                    for (int hashIndex = start; hashIndex < end; hashIndex++)
                     {
+                        int j = _hardResolveAgents[hashIndex];
                         if (j > i)
                         {
                             SeparateAgents(i, j);
                         }
-
-                        j = _hashNext[j];
                     }
                 }
             }
@@ -761,6 +858,11 @@ public sealed class MassNavWebParitySimState
     {
         for (int i = 0; i < UnitCount; i++)
         {
+            if (_useCandidateGating && _hardResolveCandidates[i] == 0)
+            {
+                continue;
+            }
+
             int i2 = i << 1;
             float px = _positionsCm[i2];
             float py = _positionsCm[i2 + 1];
@@ -869,6 +971,8 @@ public sealed class MassNavWebParitySimState
         public int HashWidthMinusOne { get; set; }
         public int HashHeightMinusOne { get; set; }
         public float InvHashCell { get; set; }
+        public int HashSearchRadius { get; set; }
+        public bool UseCandidateGating { get; set; }
 
         public void Execute()
         {
@@ -889,7 +993,9 @@ public sealed class MassNavWebParitySimState
                 Team1TargetY,
                 HashWidthMinusOne,
                 HashHeightMinusOne,
-                InvHashCell);
+                InvHashCell,
+                HashSearchRadius,
+                UseCandidateGating);
         }
     }
 }
