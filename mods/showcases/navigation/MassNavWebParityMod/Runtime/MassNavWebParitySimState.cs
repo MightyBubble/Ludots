@@ -56,11 +56,16 @@ public sealed class MassNavWebParitySimState
     private float[] _velocitiesCm = Array.Empty<float>();
     private float[] _readPositionsCm = Array.Empty<float>();
     private float[] _readVelocitiesCm = Array.Empty<float>();
+    private float[] _unitProgressAnchorCm = Array.Empty<float>();
+    private float[] _unitSettledAnchorCm = Array.Empty<float>();
     private byte[] _teams = Array.Empty<byte>();
     private float[] _unitTargetsCm = Array.Empty<float>();
     private byte[] _hasUnitTarget = Array.Empty<byte>();
     private byte[] _selectedFlags = Array.Empty<byte>();
     private byte[] _hardResolveCandidates = Array.Empty<byte>();
+    private byte[] _unitSettledFlags = Array.Empty<byte>();
+    private byte[] _unitRetryCounts = Array.Empty<byte>();
+    private float[] _unitStuckSeconds = Array.Empty<float>();
     private int[] _separationAgents = Array.Empty<int>();
     private int[] _hardResolveAgents = Array.Empty<int>();
     private readonly UnitStepJob[] _stepJobs = CreateStepJobs();
@@ -73,6 +78,8 @@ public sealed class MassNavWebParitySimState
 
     public int UnitCount { get; private set; }
     public int ObstacleCount { get; private set; }
+    public int SettledUnitCount { get; private set; }
+    public MassNavArrivalTuning ArrivalTuning { get; } = new();
 
     public ReadOnlySpan<float> PositionsCm => _positionsCm.AsSpan(0, UnitCount * 2);
     public ReadOnlySpan<byte> Teams => _teams.AsSpan(0, UnitCount);
@@ -100,6 +107,7 @@ public sealed class MassNavWebParitySimState
         InitializeUnits();
         ComputeFlowFields();
         _frameCount = 0;
+        SettledUnitCount = 0;
     }
 
     public void SetTeamTarget(int teamId, Vector2 targetCm)
@@ -110,7 +118,7 @@ public sealed class MassNavWebParitySimState
         ComputeFlowFields();
     }
 
-    public void SetUnitTarget(int index, float xCm, float yCm)
+    public void SetUnitTarget(int index, float xCm, float yCm, bool resetRecovery = false)
     {
         if ((uint)index >= (uint)UnitCount)
         {
@@ -118,9 +126,14 @@ public sealed class MassNavWebParitySimState
         }
 
         int offset = index << 1;
+        bool wasInactive = _hasUnitTarget[index] == 0;
         _unitTargetsCm[offset] = ClampPosition(xCm);
         _unitTargetsCm[offset + 1] = ClampPosition(yCm);
         _hasUnitTarget[index] = 1;
+        if (resetRecovery || wasInactive)
+        {
+            ResetUnitArrivalState(index, clearRetryCount: true);
+        }
     }
 
     public void ClearUnitTarget(int index)
@@ -130,6 +143,7 @@ public sealed class MassNavWebParitySimState
             return;
         }
 
+        ResetUnitArrivalState(index, clearRetryCount: true);
         _hasUnitTarget[index] = 0;
     }
 
@@ -193,6 +207,7 @@ public sealed class MassNavWebParitySimState
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
             ResolveHardPenetration();
             observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+            UpdateSettledUnitCount();
             return;
         }
 
@@ -238,6 +253,7 @@ public sealed class MassNavWebParitySimState
         long hardResolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
         ResolveHardPenetration();
         observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - hardResolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+        UpdateSettledUnitCount();
     }
 
     public void SyncEntities(World world, MassNavAgentState agentState)
@@ -275,6 +291,8 @@ public sealed class MassNavWebParitySimState
             Array.Resize(ref _velocitiesCm, vectorLength);
             Array.Resize(ref _readPositionsCm, vectorLength);
             Array.Resize(ref _readVelocitiesCm, vectorLength);
+            Array.Resize(ref _unitProgressAnchorCm, vectorLength);
+            Array.Resize(ref _unitSettledAnchorCm, vectorLength);
             Array.Resize(ref _unitTargetsCm, vectorLength);
         }
 
@@ -284,6 +302,9 @@ public sealed class MassNavWebParitySimState
             Array.Resize(ref _hasUnitTarget, unitCount);
             Array.Resize(ref _selectedFlags, unitCount);
             Array.Resize(ref _hardResolveCandidates, unitCount);
+            Array.Resize(ref _unitSettledFlags, unitCount);
+            Array.Resize(ref _unitRetryCounts, unitCount);
+            Array.Resize(ref _unitStuckSeconds, unitCount);
             Array.Resize(ref _separationAgents, unitCount);
             Array.Resize(ref _hardResolveAgents, unitCount);
         }
@@ -303,6 +324,11 @@ public sealed class MassNavWebParitySimState
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
         Array.Clear(_selectedFlags, 0, UnitCount);
+        Array.Clear(_unitProgressAnchorCm, 0, UnitCount * 2);
+        Array.Clear(_unitSettledAnchorCm, 0, UnitCount * 2);
+        Array.Clear(_unitSettledFlags, 0, UnitCount);
+        Array.Clear(_unitRetryCounts, 0, UnitCount);
+        Array.Clear(_unitStuckSeconds, 0, UnitCount);
 
         int half = UnitCount >> 1;
         for (int i = 0; i < UnitCount; i++)
@@ -320,6 +346,11 @@ public sealed class MassNavWebParitySimState
                 _positionsCm[i2] = 8_000f + (_random.NextSingle() * 1_500f);
                 _positionsCm[i2 + 1] = 1_000f + (_random.NextSingle() * 8_000f);
             }
+
+            _unitProgressAnchorCm[i2] = _positionsCm[i2];
+            _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
+            _unitSettledAnchorCm[i2] = _positionsCm[i2];
+            _unitSettledAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
         }
     }
 
@@ -545,9 +576,10 @@ public sealed class MassNavWebParitySimState
 
             float desiredX = 0f;
             float desiredY = 0f;
-            float targetX;
-            float targetY;
+            float targetX = px;
+            float targetY = py;
             float unitArrivalFactor = 1f;
+            bool suppressTargetMotion = false;
 
             if (_hasUnitTarget[i] != 0)
             {
@@ -556,7 +588,33 @@ public sealed class MassNavWebParitySimState
                 float toTargetX = targetX - px;
                 float toTargetY = targetY - py;
                 float targetDistSq = toTargetX * toTargetX + toTargetY * toTargetY;
-                if (targetDistSq > unitTargetStopThresholdSq)
+                if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
+                {
+                    if (ShouldRetryTargetAfterPush(i, px, py, targetDistSq, unitTargetStopThresholdSq))
+                    {
+                        ExitSettledState(i, px, py);
+                    }
+                    else
+                    {
+                        suppressTargetMotion = true;
+                    }
+                }
+
+                if (!suppressTargetMotion && ArrivalTuning.Enabled && targetDistSq > unitTargetStopThresholdSq)
+                {
+                    UpdateUnitStuckTimer(i, px, py, clampedDt);
+                    if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                    {
+                        EnterSettledState(i, px, py);
+                        suppressTargetMotion = true;
+                    }
+                }
+                else if (!suppressTargetMotion)
+                {
+                    ResetUnitProgressAnchor(i, px, py);
+                }
+
+                if (!suppressTargetMotion && targetDistSq > unitTargetStopThresholdSq)
                 {
                     float invDist = FastInvSqrt(targetDistSq);
                     desiredX = toTargetX * invDist;
@@ -616,6 +674,10 @@ public sealed class MassNavWebParitySimState
                 {
                     unitArrivalFactor = targetDistance / arriveThreshold;
                 }
+                else if (suppressTargetMotion)
+                {
+                    unitArrivalFactor = 0f;
+                }
             }
             else
             {
@@ -643,10 +705,10 @@ public sealed class MassNavWebParitySimState
             float directTargetX = targetX - px;
             float directTargetY = targetY - py;
             float directTargetSq = directTargetX * directTargetX + directTargetY * directTargetY;
-            float flowScale = 1f;
+            float flowScale = suppressTargetMotion ? 0f : 1f;
             float effectiveArrivalCm = inFormation ? 400f : arrivalRadiusCm;
             float effectiveArrivalSq = inFormation ? 160_000f : arrivalRadiusSq;
-            if (directTargetSq < effectiveArrivalSq)
+            if (!suppressTargetMotion && directTargetSq < effectiveArrivalSq)
             {
                 flowScale = MathF.Sqrt(directTargetSq) / effectiveArrivalCm;
             }
@@ -745,6 +807,105 @@ public sealed class MassNavWebParitySimState
             _positionsCm[i2] = ClampPosition(nextX);
             _positionsCm[i2 + 1] = ClampPosition(nextY);
         }
+    }
+
+    private void UpdateUnitStuckTimer(int index, float px, float py, float dt)
+    {
+        int i2 = index << 1;
+        float dx = px - _unitProgressAnchorCm[i2];
+        float dy = py - _unitProgressAnchorCm[i2 + 1];
+        float progressDistanceCm = ArrivalTuning.ProgressDistanceCm;
+        if ((dx * dx) + (dy * dy) >= progressDistanceCm * progressDistanceCm)
+        {
+            _unitProgressAnchorCm[i2] = px;
+            _unitProgressAnchorCm[i2 + 1] = py;
+            _unitStuckSeconds[index] = 0f;
+            return;
+        }
+
+        _unitStuckSeconds[index] += dt;
+    }
+
+    private bool ShouldRetryTargetAfterPush(int index, float px, float py, float targetDistSq, float unitTargetStopThresholdSq)
+    {
+        if (_unitRetryCounts[index] >= ArrivalTuning.MaxRetryCount || targetDistSq <= unitTargetStopThresholdSq)
+        {
+            return false;
+        }
+
+        int i2 = index << 1;
+        float dx = px - _unitSettledAnchorCm[i2];
+        float dy = py - _unitSettledAnchorCm[i2 + 1];
+        float wakeDistanceCm = ArrivalTuning.WakePushDistanceCm;
+        return (dx * dx) + (dy * dy) >= wakeDistanceCm * wakeDistanceCm;
+    }
+
+    private void EnterSettledState(int index, float px, float py)
+    {
+        int i2 = index << 1;
+        _unitSettledFlags[index] = 1;
+        _unitSettledAnchorCm[i2] = px;
+        _unitSettledAnchorCm[i2 + 1] = py;
+        _unitProgressAnchorCm[i2] = px;
+        _unitProgressAnchorCm[i2 + 1] = py;
+        _unitStuckSeconds[index] = 0f;
+        _velocitiesCm[i2] = 0f;
+        _velocitiesCm[i2 + 1] = 0f;
+    }
+
+    private void ExitSettledState(int index, float px, float py)
+    {
+        _unitSettledFlags[index] = 0;
+        if (_unitRetryCounts[index] < byte.MaxValue)
+        {
+            _unitRetryCounts[index]++;
+        }
+
+        ResetUnitProgressAnchor(index, px, py);
+    }
+
+    private void ResetUnitArrivalState(int index, bool clearRetryCount)
+    {
+        if ((uint)index >= (uint)UnitCount)
+        {
+            return;
+        }
+
+        int i2 = index << 1;
+        float px = _positionsCm.Length > i2 ? _positionsCm[i2] : 0f;
+        float py = _positionsCm.Length > i2 + 1 ? _positionsCm[i2 + 1] : 0f;
+        _unitStuckSeconds[index] = 0f;
+        _unitSettledFlags[index] = 0;
+        _unitProgressAnchorCm[i2] = px;
+        _unitProgressAnchorCm[i2 + 1] = py;
+        _unitSettledAnchorCm[i2] = px;
+        _unitSettledAnchorCm[i2 + 1] = py;
+        if (clearRetryCount)
+        {
+            _unitRetryCounts[index] = 0;
+        }
+    }
+
+    private void ResetUnitProgressAnchor(int index, float px, float py)
+    {
+        int i2 = index << 1;
+        _unitProgressAnchorCm[i2] = px;
+        _unitProgressAnchorCm[i2 + 1] = py;
+        _unitStuckSeconds[index] = 0f;
+    }
+
+    private void UpdateSettledUnitCount()
+    {
+        int settled = 0;
+        for (int i = 0; i < UnitCount; i++)
+        {
+            if (_unitSettledFlags[i] != 0)
+            {
+                settled++;
+            }
+        }
+
+        SettledUnitCount = settled;
     }
 
     private void ResolveHardPenetration()

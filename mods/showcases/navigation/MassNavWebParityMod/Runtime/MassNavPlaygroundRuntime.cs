@@ -10,6 +10,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
+using Ludots.UI;
 using MassNavWebParityMod.Systems;
 using MassNavWebParityMod.UI;
 
@@ -52,7 +53,7 @@ internal sealed class MassNavWebParityRuntime
             ?? throw new System.InvalidOperationException("MassNavWebParityMod requires PresentationMeshAssetRegistry.");
         engine.RegisterPresentationSystem(new MassNavPrimitivePresentationSystem(engine, simulation, meshes));
         engine.RegisterPresentationSystem(new MassNavHudPresentationSystem(engine, simulation));
-        engine.RegisterPresentationSystem(new MassNavPanelPresentationSystem(engine, _panelController, simulation));
+        engine.RegisterPresentationSystem(new MassNavPanelPresentationSystem(engine, this));
         _systemsInstalled = true;
         _context.Log("[MassNavWebParityMod] Installed mass-nav fa莽ade runtime skeleton.");
     }
@@ -75,6 +76,7 @@ internal sealed class MassNavWebParityRuntime
         ConfigureRenderDebug(engine);
         EnsureTacticalCamera(engine);
         EnsureScenario(engine);
+        RefreshPanel(engine);
         return Task.CompletedTask;
     }
 
@@ -84,9 +86,33 @@ internal sealed class MassNavWebParityRuntime
         if (context.GetEngine() is { } engine)
         {
             RestoreRenderDebug(engine);
+            ClearPanelIfOwned(engine);
         }
 
         return Task.CompletedTask;
+    }
+
+    public void RefreshPanel(GameEngine engine)
+    {
+        if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
+        {
+            return;
+        }
+
+        if (!MassNavWebParityIds.IsCurrentPlaygroundMap(engine))
+        {
+            ClearPanelIfOwned(engine);
+            return;
+        }
+
+        if (engine.GetService(CoreServiceKeys.RenderDebugState) is RenderDebugState renderDebug)
+        {
+            renderDebug.DrawSkiaUi = true;
+        }
+
+        MassNavSimulationRuntime simulation = engine.GetService(MassNavWebParityKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires simulation runtime.");
+        _panelController.MountOrSync(engine, simulation);
     }
 
     private void EnsureScenario(GameEngine engine)
@@ -197,6 +223,16 @@ internal sealed class MassNavWebParityRuntime
         renderDebug.DrawCombatText = _savedRenderDebug.DrawCombatText;
         renderDebug.AcceptanceScaleMultiplier = _savedRenderDebug.AcceptanceScaleMultiplier;
         _savedRenderDebugValid = false;
+    }
+
+    private void ClearPanelIfOwned(GameEngine engine)
+    {
+        if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
+        {
+            return;
+        }
+
+        _panelController.ClearIfOwned(root);
     }
 
     internal static void RequestTacticalCameraReset(GameEngine engine)

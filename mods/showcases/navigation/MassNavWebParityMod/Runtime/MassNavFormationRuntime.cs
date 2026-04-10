@@ -70,7 +70,7 @@ public sealed class MassNavFormationRuntime
         {
             for (int i = 0; i < assignedCount; i++)
             {
-                simulation.SetUnitTarget(memberIndices[i], destinationCm.X, destinationCm.Y);
+                simulation.SetUnitTarget(memberIndices[i], destinationCm.X, destinationCm.Y, resetRecovery: true);
             }
 
             ActiveGroupCount = CountActiveGroups();
@@ -99,7 +99,7 @@ public sealed class MassNavFormationRuntime
         for (int i = 0; i < exactMembers.Length; i++)
         {
             _formationIdsByControllableIndex[exactMembers[i]] = groupId;
-            simulation.SetUnitTarget(exactMembers[i], destinationCm.X, destinationCm.Y);
+            simulation.SetUnitTarget(exactMembers[i], destinationCm.X, destinationCm.Y, resetRecovery: true);
         }
 
         ActiveGroupCount = CountActiveGroups();

@@ -8,14 +8,12 @@ namespace MassNavWebParityMod.Systems;
 internal sealed class MassNavPanelPresentationSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
-    private readonly MassNavWebParityPanelController _controller;
-    private readonly MassNavSimulationRuntime _simulation;
+    private readonly MassNavWebParityRuntime _runtime;
 
-    public MassNavPanelPresentationSystem(GameEngine engine, MassNavWebParityPanelController controller, MassNavSimulationRuntime simulation)
+    public MassNavPanelPresentationSystem(GameEngine engine, MassNavWebParityRuntime runtime)
     {
         _engine = engine;
-        _controller = controller;
-        _simulation = simulation;
+        _runtime = runtime;
     }
 
     public void Initialize() { }
@@ -25,6 +23,6 @@ internal sealed class MassNavPanelPresentationSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        _controller.MountOrSync(_engine, _simulation);
+        _runtime.RefreshPanel(_engine);
     }
 }

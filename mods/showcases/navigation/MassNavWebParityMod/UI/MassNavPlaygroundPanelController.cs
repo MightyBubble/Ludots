@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.Navigation2D;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
@@ -21,6 +23,7 @@ internal sealed class MassNavWebParityPanelController
     private GameEngine? _engine;
     private MassNavSimulationRuntime? _simulation;
     private long _lastPerfCaptureTicks;
+    private string _lastActionText = "Budget/Physics/Nav/Flow/Arrival buttons hot-apply immediately. Agent count and Reset Scene rebuild the scene.";
 
     public bool MountOrSync(GameEngine engine, MassNavSimulationRuntime simulation)
     {
@@ -92,6 +95,23 @@ internal sealed class MassNavWebParityPanelController
         return _page;
     }
 
+    public void ClearIfOwned(UIRoot root)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+
+        if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+        {
+            root.ClearScene();
+        }
+
+        _engine = null;
+        _simulation = null;
+        _lastState = MassNavPanelState.Empty;
+        _lastPerfCaptureTicks = 0;
+        _lastActionText = "Budget/Physics/Nav/Flow/Arrival buttons hot-apply immediately. Agent count and Reset Scene rebuild the scene.";
+        _page?.SetState(_ => MassNavPanelState.Empty);
+    }
+
     private UiElementBuilder BuildRoot(ReactiveContext<MassNavPanelState> context)
     {
         var state = context.State;
@@ -127,10 +147,71 @@ internal sealed class MassNavWebParityPanelController
                 Ui.Text($"Selected {state.SelectedCount}  Rev {state.SelectionRevision}").FontSize(13f).Color("#A4F07A"),
                 Ui.Text($"Team target {state.SelectedTeamId}  Formation {state.FormationLabel}  Groups {state.FormationCount}  Rotation {state.FormationRotationDeg:0.0} deg").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Render FPS {state.RenderFps:0}  Frame {state.RenderFrameMs:0.0} ms  Primitive {state.PrimitiveRenderMs:0.0} ms").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Logic {state.LogicHz} Hz  Budget {state.SimulationBudgetMs} ms  Slice {state.SimulationSliceLimit}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Physics {state.PhysicsHz} Hz / max {state.PhysicsMaxStepsPerFixedTick}  Nav {state.NavigationHz} Hz / max {state.NavigationMaxStepsPerFixedTick}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Flow {(state.FlowEnabled ? "On" : "Off")}  Iter {state.FlowIterations}  Step {state.FlowStepInterval}  Crowd {state.FlowCrowdInterval}  Obs {state.FlowObstacleInterval}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Arrival {(state.ArrivalFallbackEnabled ? "On" : "Off")}  Timeout {state.ArrivalTimeoutMs} ms  Progress {state.ArrivalProgressCm} cm  Wake {state.ArrivalWakePushCm} cm  Retry {state.ArrivalMaxRetries}  Settled {state.ArrivalSettledUnits}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text(state.LastActionText).FontSize(12f).Color("#8FE388").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Select {state.SelectionSyncMs:0.0} ms  Formation {state.FormationTargetMs:0.0} ms  Sim {state.SimStepMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Entity sync {state.EntitySyncMs:0.0} ms  Primitive emit {state.PrimitiveEmitMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Primitive buffer {state.PrimitiveBufferCount}  instances {state.PrimitiveInstances}  batches {state.PrimitiveBatches}  visible {state.VisibleEntities}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Camera target ({state.CameraTargetX:0.0}, {state.CameraTargetY:0.0}) cm  distance {state.CameraDistanceCm:0.0} cm").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text("Frame Budget").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Row(
+                        BuildActionButton("-1 ms", () => AdjustSimulationBudget(-1)),
+                        BuildActionButton("+1 ms", () => AdjustSimulationBudget(1)),
+                        BuildActionButton("-30 slice", () => AdjustSimulationSlices(-30)),
+                        BuildActionButton("+30 slice", () => AdjustSimulationSlices(30)))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Text("Tick Rates").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text("LogicHz follows Engine/clock.json and is read-only at runtime. Physics/Nav Hz below are hot-adjustable.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Row(
+                        BuildActionButton("Phys -5", () => AdjustPhysicsHz(-5)),
+                        BuildActionButton("Phys +5", () => AdjustPhysicsHz(5)),
+                        BuildActionButton("Phys Max-1", () => AdjustPhysicsMaxSteps(-1)),
+                        BuildActionButton("Phys Max+1", () => AdjustPhysicsMaxSteps(1)))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Row(
+                        BuildActionButton("Nav -5", () => AdjustNavigationHz(-5)),
+                        BuildActionButton("Nav +5", () => AdjustNavigationHz(5)),
+                        BuildActionButton("Nav Max-1", () => AdjustNavigationMaxSteps(-1)),
+                        BuildActionButton("Nav Max+1", () => AdjustNavigationMaxSteps(1)))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Text("Flow Budget").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Row(
+                        BuildActionButton(state.FlowEnabled ? "Flow On" : "Flow Off", ToggleFlowEnabled),
+                        BuildActionButton("Iter -512", () => AdjustFlowIterations(-512)),
+                        BuildActionButton("Iter +512", () => AdjustFlowIterations(512)))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Row(
+                        BuildActionButton("Step -1", () => AdjustFlowStepInterval(-1)),
+                        BuildActionButton("Step +1", () => AdjustFlowStepInterval(1)),
+                        BuildActionButton("Crowd -1", () => AdjustFlowCrowdInterval(-1)),
+                        BuildActionButton("Crowd +1", () => AdjustFlowCrowdInterval(1)),
+                        BuildActionButton("Obs -1", () => AdjustFlowObstacleInterval(-1)),
+                        BuildActionButton("Obs +1", () => AdjustFlowObstacleInterval(1)))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Text("Arrival Fallback").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Row(
+                        BuildActionButton(state.ArrivalFallbackEnabled ? "Arrival On" : "Arrival Off", ToggleArrivalFallback),
+                        BuildActionButton("Timeout -250", () => AdjustArrivalTimeoutMs(-250)),
+                        BuildActionButton("Timeout +250", () => AdjustArrivalTimeoutMs(250)))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Row(
+                        BuildActionButton("Progress -10", () => AdjustArrivalProgressCm(-10)),
+                        BuildActionButton("Progress +10", () => AdjustArrivalProgressCm(10)),
+                        BuildActionButton("Wake -10", () => AdjustArrivalWakePushCm(-10)),
+                        BuildActionButton("Wake +10", () => AdjustArrivalWakePushCm(10)),
+                        BuildActionButton("Retry -1", () => AdjustArrivalMaxRetries(-1)),
+                        BuildActionButton("Retry +1", () => AdjustArrivalMaxRetries(1)))
+                    .Wrap()
+                    .Gap(8f),
                 Ui.Text("Scene Scale").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
                         BuildActionButton("-2k", AdjustTotalAgentsDown),
@@ -160,7 +241,7 @@ internal sealed class MassNavWebParityPanelController
                 Ui.Text($"Structural changes/frame {state.StructuralChangesFrame}").FontSize(12f).Color("#F18C7F"),
                 Ui.Text($"Flow reconcile/frame {state.FlowReconcileFrame}").FontSize(12f).Color("#F18C7F"),
                 Ui.Text("Use Ludots box selection to grab any units. Right click with a selection issues a formation move. Right click with no selection redirects the chosen team target. Hold Q/E to rotate selected formations.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal))
-            .Width(420f)
+            .Width(460f)
             .Padding(14f)
             .Gap(8f)
             .Radius(18f)
@@ -181,6 +262,7 @@ internal sealed class MassNavWebParityPanelController
     private void RequestSceneReset()
     {
         _simulation?.RequestSceneReset();
+        SetActionFeedback("Queued reset: scene rebuild requested.");
     }
 
     private void RequestCameraReset()
@@ -191,6 +273,7 @@ internal sealed class MassNavWebParityPanelController
         }
 
         MassNavWebParityRuntime.RequestTacticalCameraReset(_engine);
+        SetActionFeedback("Hot apply: camera reset requested.");
     }
 
     private void AdjustTotalAgentsDown() => AdjustTotalAgents(-2_000);
@@ -217,19 +300,212 @@ internal sealed class MassNavWebParityPanelController
         int maxPerTeam = ResolveMaxAgentsPerTeam(_engine);
         int perTeam = Math.Clamp(Math.Max(0, totalAgents / 2), 0, maxPerTeam);
         _simulation.SetAgentsPerTeam(perTeam);
+        SetActionFeedback($"Queued reset: agents/team = {perTeam}, total target = {perTeam * 2}.");
     }
 
     private void SetSelectedTeam(int teamId)
     {
         _simulation?.SetSelectedTeam(teamId);
+        SetActionFeedback($"Hot apply: selected team = {(teamId <= 0 ? 0 : 1)}.");
     }
 
     private void SetFormationMode(MassNavFormationMode mode)
     {
         _simulation?.SetFormationMode(mode);
+        SetActionFeedback($"Hot apply: formation = {mode}.");
     }
 
-    private static MassNavPanelState CaptureState(GameEngine engine, MassNavSimulationRuntime simulation)
+    private void AdjustSimulationBudget(int delta)
+    {
+        if (_engine == null)
+        {
+            return;
+        }
+
+        _engine.SimulationBudgetMsPerFrame = Math.Clamp(_engine.SimulationBudgetMsPerFrame + delta, 1, 64);
+        SetActionFeedback($"Hot apply: simulation budget = {_engine.SimulationBudgetMsPerFrame} ms/frame.");
+    }
+
+    private void AdjustSimulationSlices(int delta)
+    {
+        if (_engine == null)
+        {
+            return;
+        }
+
+        _engine.SimulationMaxSlicesPerLogicFrame = Math.Clamp(_engine.SimulationMaxSlicesPerLogicFrame + delta, 1, 2048);
+        SetActionFeedback($"Hot apply: simulation slice limit = {_engine.SimulationMaxSlicesPerLogicFrame}.");
+    }
+
+    private void AdjustPhysicsHz(int delta)
+    {
+        if (_engine?.GetService(CoreServiceKeys.Physics2DTickPolicy) is not Physics2DTickPolicy policy)
+        {
+            return;
+        }
+
+        policy.SetTargetHz(Math.Clamp(policy.TargetHz + delta, 0, 240));
+        SetActionFeedback($"Hot apply: physics = {policy.TargetHz} Hz.");
+    }
+
+    private void AdjustPhysicsMaxSteps(int delta)
+    {
+        if (_engine?.GetService(CoreServiceKeys.Physics2DTickPolicy) is not Physics2DTickPolicy policy)
+        {
+            return;
+        }
+
+        policy.SetMaxStepsPerFixedTick(Math.Clamp(policy.MaxStepsPerFixedTick + delta, 1, 32));
+        SetActionFeedback($"Hot apply: physics max steps = {policy.MaxStepsPerFixedTick}.");
+    }
+
+    private void AdjustNavigationHz(int delta)
+    {
+        if (_engine?.GetService(CoreServiceKeys.Navigation2DTickPolicy) is not Navigation2DTickPolicy policy)
+        {
+            return;
+        }
+
+        policy.SetTargetHz(Math.Clamp(policy.TargetHz + delta, 0, 240));
+        SetActionFeedback($"Hot apply: navigation = {policy.TargetHz} Hz.");
+    }
+
+    private void AdjustNavigationMaxSteps(int delta)
+    {
+        if (_engine?.GetService(CoreServiceKeys.Navigation2DTickPolicy) is not Navigation2DTickPolicy policy)
+        {
+            return;
+        }
+
+        policy.SetMaxStepsPerFixedTick(Math.Clamp(policy.MaxStepsPerFixedTick + delta, 1, 32));
+        SetActionFeedback($"Hot apply: navigation max steps = {policy.MaxStepsPerFixedTick}.");
+    }
+
+    private void ToggleFlowEnabled()
+    {
+        if (_simulation == null)
+        {
+            return;
+        }
+
+        _simulation.FlowTuning.Enabled = !_simulation.FlowTuning.Enabled;
+        SetActionFeedback($"Hot apply: flow = {(_simulation.FlowTuning.Enabled ? "On" : "Off")}.");
+    }
+
+    private void AdjustFlowIterations(int delta)
+    {
+        _simulation?.FlowTuning.AdjustIterations(delta);
+        if (_simulation != null)
+        {
+            SetActionFeedback($"Hot apply: flow iterations = {_simulation.FlowTuning.IterationsPerStep}.");
+        }
+    }
+
+    private void AdjustFlowStepInterval(int delta)
+    {
+        _simulation?.FlowTuning.AdjustStepInterval(delta);
+        if (_simulation != null)
+        {
+            SetActionFeedback($"Hot apply: flow step interval = {_simulation.FlowTuning.StepIntervalTicks}.");
+        }
+    }
+
+    private void AdjustFlowCrowdInterval(int delta)
+    {
+        _simulation?.FlowTuning.AdjustCrowdStampInterval(delta);
+        if (_simulation != null)
+        {
+            SetActionFeedback($"Hot apply: flow crowd interval = {_simulation.FlowTuning.CrowdStampIntervalTicks}.");
+        }
+    }
+
+    private void AdjustFlowObstacleInterval(int delta)
+    {
+        _simulation?.FlowTuning.AdjustObstacleStampInterval(delta);
+        if (_simulation != null)
+        {
+            SetActionFeedback($"Hot apply: flow obstacle interval = {_simulation.FlowTuning.ObstacleStampIntervalTicks}.");
+        }
+    }
+
+    private void ToggleArrivalFallback()
+    {
+        if (_simulation == null)
+        {
+            return;
+        }
+
+        _simulation.WebParity.ArrivalTuning.Enabled = !_simulation.WebParity.ArrivalTuning.Enabled;
+        SetActionFeedback($"Hot apply: arrival fallback = {(_simulation.WebParity.ArrivalTuning.Enabled ? "On" : "Off")}.");
+    }
+
+    private void AdjustArrivalTimeoutMs(int delta)
+    {
+        if (_simulation == null)
+        {
+            return;
+        }
+
+        _simulation.WebParity.ArrivalTuning.AdjustTimeoutMs(delta);
+        SetActionFeedback($"Hot apply: arrival timeout = {_simulation.WebParity.ArrivalTuning.TimeoutMs} ms.");
+    }
+
+    private void AdjustArrivalProgressCm(int delta)
+    {
+        if (_simulation == null)
+        {
+            return;
+        }
+
+        _simulation.WebParity.ArrivalTuning.AdjustProgressDistanceCm(delta);
+        SetActionFeedback($"Hot apply: arrival progress = {_simulation.WebParity.ArrivalTuning.ProgressDistanceCm} cm.");
+    }
+
+    private void AdjustArrivalWakePushCm(int delta)
+    {
+        if (_simulation == null)
+        {
+            return;
+        }
+
+        _simulation.WebParity.ArrivalTuning.AdjustWakePushDistanceCm(delta);
+        SetActionFeedback($"Hot apply: arrival wake push = {_simulation.WebParity.ArrivalTuning.WakePushDistanceCm} cm.");
+    }
+
+    private void AdjustArrivalMaxRetries(int delta)
+    {
+        if (_simulation == null)
+        {
+            return;
+        }
+
+        _simulation.WebParity.ArrivalTuning.AdjustMaxRetryCount(delta);
+        SetActionFeedback($"Hot apply: arrival max retries = {_simulation.WebParity.ArrivalTuning.MaxRetryCount}.");
+    }
+
+    private void SetActionFeedback(string text)
+    {
+        _lastActionText = text;
+        PushImmediateState();
+    }
+
+    private void PushImmediateState()
+    {
+        if (_page == null || _engine == null || _simulation == null)
+        {
+            return;
+        }
+
+        MassNavPanelState next = CaptureState(_engine, _simulation);
+        _lastState = next;
+        _page.SetState(_ => next);
+        if (_engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+        {
+            root.IsDirty = true;
+        }
+    }
+
+    private MassNavPanelState CaptureState(GameEngine engine, MassNavSimulationRuntime simulation)
     {
         bool visible = engine.CurrentMapSession != null && MassNavWebParityIds.IsPlaygroundMap(engine.CurrentMapSession.MapId.Value);
         PresentationTimingDiagnostics? timing = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
@@ -247,8 +523,19 @@ internal sealed class MassNavWebParityPanelController
         }
 
         var camera = engine.GameSession.Camera.State;
+        int logicHz = Time.FixedDeltaTime > 0.000001f ? (int)MathF.Round(1f / Time.FixedDeltaTime) : 0;
+        var physicsPolicy = engine.GetService(CoreServiceKeys.Physics2DTickPolicy);
+        var navigationPolicy = engine.GetService(CoreServiceKeys.Navigation2DTickPolicy);
         return new MassNavPanelState(
             Visible: visible,
+            LastActionText: _lastActionText,
+            LogicHz: logicHz,
+            SimulationBudgetMs: engine.SimulationBudgetMsPerFrame,
+            SimulationSliceLimit: engine.SimulationMaxSlicesPerLogicFrame,
+            PhysicsHz: physicsPolicy?.TargetHz ?? 0,
+            PhysicsMaxStepsPerFixedTick: physicsPolicy?.MaxStepsPerFixedTick ?? 0,
+            NavigationHz: navigationPolicy?.TargetHz ?? 0,
+            NavigationMaxStepsPerFixedTick: navigationPolicy?.MaxStepsPerFixedTick ?? 0,
             AgentsPerTeam: simulation.AgentsPerTeam,
             TotalAgents: simulation.AgentState.TotalAgents,
             ControllableAgents: simulation.AgentState.ControllableCount,
@@ -264,6 +551,12 @@ internal sealed class MassNavWebParityPanelController
             FlowStepInterval: simulation.FlowTuning.StepIntervalTicks,
             FlowCrowdInterval: simulation.FlowTuning.CrowdStampIntervalTicks,
             FlowObstacleInterval: simulation.FlowTuning.ObstacleStampIntervalTicks,
+            ArrivalFallbackEnabled: simulation.WebParity.ArrivalTuning.Enabled,
+            ArrivalTimeoutMs: simulation.WebParity.ArrivalTuning.TimeoutMs,
+            ArrivalProgressCm: simulation.WebParity.ArrivalTuning.ProgressDistanceCm,
+            ArrivalWakePushCm: simulation.WebParity.ArrivalTuning.WakePushDistanceCm,
+            ArrivalMaxRetries: simulation.WebParity.ArrivalTuning.MaxRetryCount,
+            ArrivalSettledUnits: simulation.WebParity.SettledUnitCount,
             RenderFps: MathF.Round(timing?.RenderFps ?? 0f),
             RenderFrameMs: MathF.Round(timing?.RenderFrameMs ?? 0f, 1),
             PrimitiveRenderMs: MathF.Round(timing?.PrimitiveRenderMs ?? 0f, 1),

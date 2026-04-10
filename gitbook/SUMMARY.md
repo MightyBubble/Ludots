@@ -17,3 +17,4 @@
   - [Launcher CLI Runbook](reference/cli-runbook.md)
   - [项目地图](reference/project-map.md)
   - [发布与访问](reference/publishing-and-access.md)
+  - [Mass Nav Web Parity Playground 说明](reference/mass-nav-web-parity-playground.md)
