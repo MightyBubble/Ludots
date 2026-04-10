@@ -42,7 +42,9 @@ internal sealed class MassNavPlaygroundRuntime
         var simulation = new MassNavSimulationRuntime();
         engine.SetService(MassNavPlaygroundKeys.SimulationRuntime, simulation);
         engine.RegisterSystem(new MassNavSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
+        engine.RegisterSystem(new MassNavPlaygroundControlSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavCommandBridgeSystem(engine, simulation), SystemGroup.InputCollection);
+        engine.RegisterSystem(new MassNavFormationSystem(engine, simulation), SystemGroup.InputCollection);
         var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
             ?? throw new System.InvalidOperationException("MassNavPlaygroundMod requires PresentationMeshAssetRegistry.");
         engine.RegisterPresentationSystem(new MassNavPrimitivePresentationSystem(engine, simulation, meshes));
@@ -89,7 +91,7 @@ internal sealed class MassNavPlaygroundRuntime
 
         MassNavSimulationRuntime simulation = engine.GetService(MassNavPlaygroundKeys.SimulationRuntime)
             ?? throw new System.InvalidOperationException("MassNavPlaygroundMod requires simulation runtime.");
-        MassNavScenarioBootstrap.SpawnDefaultScenario(engine.World, simulation.AgentState);
+        MassNavScenarioBootstrap.SpawnDefaultScenario(engine.World, simulation.AgentState, simulation.AgentsPerTeam);
         _scenarioSpawned = true;
     }
 

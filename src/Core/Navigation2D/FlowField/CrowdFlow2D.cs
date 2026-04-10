@@ -301,6 +301,34 @@ namespace Ludots.Core.Navigation2D.FlowField
             }
         }
 
+        public void Reset()
+        {
+            foreach (var pair in _tiles)
+            {
+                _surface.ReleaseTile(pair.Key);
+                pair.Value.Reset();
+                _tilePool.Push(pair.Value);
+            }
+
+            _tiles.Clear();
+            _activeTileExpiryTicks.Clear();
+            _candidateTiles.Clear();
+            _selectedTileSet.Clear();
+            _selectedTiles.Clear();
+            _removalScratch.Clear();
+            ClearManualGoalsInternal();
+            _frameGoalCellsSet.Clear();
+            _frameGoalCells.Clear();
+            _hasFrameGoalBounds = false;
+            _framePrepared = false;
+            _forceFullSolve = false;
+            _needsRebuild = true;
+            _traversalCostDirty = true;
+            _hasDemandBounds = false;
+            _frontier.Clear();
+            ResetFrameInstrumentation();
+        }
+
         public bool TrySampleDesiredVelocityCm(in Fix64Vec2 positionCm, Fix64 maxSpeedCmPerSec, out Fix64Vec2 desiredVelocityCmPerSec)
         {
             desiredVelocityCmPerSec = default;

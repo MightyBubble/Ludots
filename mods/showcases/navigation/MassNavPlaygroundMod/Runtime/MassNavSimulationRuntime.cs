@@ -8,6 +8,8 @@ public sealed class MassNavSimulationRuntime
     private Entity[] _selectionScratch = new Entity[256];
     private Entity[] _selectedEntities = Array.Empty<Entity>();
     private uint _selectionRevision;
+    private bool _sceneResetRequested;
+    private int _frameIndex;
 
     public int SelectionSnapshotCountFrame { get; private set; }
     public int StructuralChangesFrame { get; private set; }
@@ -15,13 +17,18 @@ public sealed class MassNavSimulationRuntime
     public float FrameMs { get; private set; }
     public float Fps { get; private set; }
     public MassNavAgentState AgentState { get; } = new();
+    public MassNavFlowTuning FlowTuning { get; } = new();
+    public MassNavFormationRuntime FormationRuntime { get; } = new();
 
     public int SelectedCount => _selectedEntities.Length;
     public uint SelectionRevision => _selectionRevision;
     public ReadOnlySpan<Entity> SelectedEntities => _selectedEntities;
+    public int FrameIndex => _frameIndex;
+    public int AgentsPerTeam { get; private set; } = 10_000;
 
     public void BeginFrame(float dt)
     {
+        _frameIndex++;
         SelectionSnapshotCountFrame = 0;
         StructuralChangesFrame = 0;
         FlowReconcileCountFrame = 0;
@@ -57,6 +64,18 @@ public sealed class MassNavSimulationRuntime
         SelectionSnapshotCountFrame++;
     }
 
+    public void ClearSelection()
+    {
+        if (_selectedEntities.Length == 0)
+        {
+            return;
+        }
+
+        _selectedEntities = Array.Empty<Entity>();
+        _selectionRevision++;
+        SelectionSnapshotCountFrame++;
+    }
+
     public void MarkStructuralChange()
     {
         StructuralChangesFrame++;
@@ -65,5 +84,33 @@ public sealed class MassNavSimulationRuntime
     public void MarkFlowReconcile()
     {
         FlowReconcileCountFrame++;
+    }
+
+    public void SetAgentsPerTeam(int agentsPerTeam)
+    {
+        int next = Math.Max(0, agentsPerTeam);
+        if (AgentsPerTeam == next)
+        {
+            return;
+        }
+
+        AgentsPerTeam = next;
+        RequestSceneReset();
+    }
+
+    public void RequestSceneReset()
+    {
+        _sceneResetRequested = true;
+    }
+
+    public bool ConsumeSceneResetRequest()
+    {
+        if (!_sceneResetRequested)
+        {
+            return false;
+        }
+
+        _sceneResetRequested = false;
+        return true;
     }
 }

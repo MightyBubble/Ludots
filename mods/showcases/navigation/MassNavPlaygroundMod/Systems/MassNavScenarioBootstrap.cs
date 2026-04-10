@@ -13,16 +13,16 @@ namespace MassNavPlaygroundMod.Systems;
 
 internal static class MassNavScenarioBootstrap
 {
-    public static void SpawnDefaultScenario(World world, MassNavAgentState state)
+    public static void SpawnDefaultScenario(World world, MassNavAgentState state, int agentsPerTeam)
     {
         ArgumentNullException.ThrowIfNull(state);
         state.Reset();
 
-        const int totalPerTeam = 10_000;
         const int spacingCm = 120;
         const int startOffsetCm = 9000;
         const int goalOffsetCm = 9000;
         const int goalRadiusCm = 120;
+        int totalPerTeam = Math.Max(0, agentsPerTeam);
 
         GetGridLayout(totalPerTeam, out int cols, out int rows);
         for (int index = 0; index < totalPerTeam; index++)
@@ -61,6 +61,7 @@ internal static class MassNavScenarioBootstrap
                 new MassNavAgentTag(),
                 new MassNavControllable(),
                 new NavAgent2D(),
+                new NavFlowBinding2D { SurfaceId = 0, FlowId = teamId == 0 ? 0 : 1 },
                 new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = goalPosition, RadiusCm = Fix64.FromInt(goalRadiusCm) },
                 kinematics,
                 new Position2D { Value = position },
@@ -78,6 +79,7 @@ internal static class MassNavScenarioBootstrap
             entity = world.Create(
                 new MassNavAgentTag(),
                 new NavAgent2D(),
+                new NavFlowBinding2D { SurfaceId = 0, FlowId = teamId == 0 ? 0 : 1 },
                 new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = goalPosition, RadiusCm = Fix64.FromInt(goalRadiusCm) },
                 kinematics,
                 new Position2D { Value = position },
@@ -96,7 +98,7 @@ internal static class MassNavScenarioBootstrap
     private static void SpawnBlocker(World world, MassNavAgentState state, int x, int y, int radiusCm)
     {
         var position = Fix64Vec2.FromInt(x, y);
-        world.Create(
+        Entity entity = world.Create(
             new MassNavBlocker(),
             new NavAgent2D(),
             new NavObstacle2D(),
@@ -117,7 +119,7 @@ internal static class MassNavScenarioBootstrap
             VisualTransform.Default,
             new CullState { IsVisible = true, LOD = LODLevel.High },
             new MassNavTeam { Id = byte.MaxValue });
-        state.RegisterBlocker();
+        state.RegisterBlocker(entity);
     }
 
     private static void GetGridLayout(int count, out int cols, out int rows)

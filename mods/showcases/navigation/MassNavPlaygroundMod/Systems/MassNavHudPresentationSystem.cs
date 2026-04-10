@@ -39,8 +39,9 @@ internal sealed class MassNavHudPresentationSystem : ISystem<float>
         overlay.AddText(1320, 16, $"fps {timing?.RenderFps ?? 0f:0.0}", 20, new Vector4(0.92f, 0.96f, 1f, 1f));
         overlay.AddText(1320, 42, $"frame {timing?.RenderFrameMs ?? 0f:0.00} ms", 16, new Vector4(0.74f, 0.82f, 0.92f, 1f));
         overlay.AddText(1320, 64, $"selected {_simulation.SelectedCount}", 16, new Vector4(0.56f, 0.96f, 0.48f, 1f));
-        overlay.AddText(1320, 86, $"primitives {_engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)?.Count ?? 0}", 16, new Vector4(1f, 0.82f, 0.45f, 1f));
-        overlay.AddText(1320, 108, $"instances {timing?.PrimitiveInstancesLastFrame ?? 0} batches {timing?.PrimitiveBatchesLastFrame ?? 0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f));
-        overlay.AddText(1320, 130, $"visible {timing?.VisibleEntitiesLastFrame ?? 0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f));
+        overlay.AddText(1320, 86, $"agents {_simulation.AgentState.TotalAgents} formations {_simulation.FormationRuntime.ActiveGroupCount}", 16, new Vector4(1f, 0.82f, 0.45f, 1f));
+        overlay.AddText(1320, 108, $"flow iter {_simulation.FlowTuning.IterationsPerStep} step {_simulation.FlowTuning.StepIntervalTicks}", 16, new Vector4(1f, 0.56f, 0.46f, 1f));
+        overlay.AddText(1320, 130, $"instances {timing?.PrimitiveInstancesLastFrame ?? 0} batches {timing?.PrimitiveBatchesLastFrame ?? 0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f));
+        overlay.AddText(1320, 152, $"visible {timing?.VisibleEntitiesLastFrame ?? 0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f));
     }
 }

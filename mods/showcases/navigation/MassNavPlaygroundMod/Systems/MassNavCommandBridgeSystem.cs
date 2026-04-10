@@ -13,7 +13,6 @@ namespace MassNavPlaygroundMod.Systems;
 
 internal sealed class MassNavCommandBridgeSystem : ISystem<float>
 {
-    private const int FormationSpacingCm = 120;
     private const int GoalRadiusCm = 120;
 
     private readonly GameEngine _engine;
@@ -63,7 +62,7 @@ internal sealed class MassNavCommandBridgeSystem : ISystem<float>
             return;
         }
 
-        int assigned = MassNavCommandRuntime.ApplyGridMove(_engine.World, selected, centerCm, FormationSpacingCm, GoalRadiusCm);
+        int assigned = _simulation.FormationRuntime.AssignSquareFormation(_engine.World, _simulation.AgentState, selected, centerCm, GoalRadiusCm);
         if (assigned > 0)
         {
             _simulation.MarkStructuralChange();

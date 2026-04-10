@@ -44,6 +44,9 @@ namespace Ludots.Core.Physics2D.Systems
         private readonly CommandBuffer _commandBuffer = new();
         private int _flowStreamingTick;
         private int _steeringFrameTick;
+        private int _flowStepTick;
+        private int _flowCrowdStampTick;
+        private int _flowObstacleStampTick;
 
         private const int MaxNeighborsHard = 64;
 
@@ -1564,6 +1567,9 @@ namespace Ludots.Core.Physics2D.Systems
         private void StepFlowFields()
         {
             int tick = unchecked(++_flowStreamingTick);
+            bool shouldStepFlows = ShouldRunFlowTick(_runtime.FlowStepIntervalTicks, ref _flowStepTick);
+            bool shouldStampCrowd = ShouldRunFlowTick(_runtime.FlowCrowdStampIntervalTicks, ref _flowCrowdStampTick);
+            bool shouldStampObstacles = ShouldRunFlowTick(_runtime.FlowObstacleStampIntervalTicks, ref _flowObstacleStampTick);
             for (int f = 0; f < _runtime.FlowCount; f++)
             {
                 _runtime.Flows[f].BeginDemandFrame(tick);
@@ -1629,22 +1635,50 @@ namespace Ludots.Core.Physics2D.Systems
                 }
             }
 
-            for (int f = 0; f < _runtime.FlowCount; f++)
+            if (shouldStepFlows)
             {
-                _runtime.Flows[f].PrepareFrame();
+                for (int f = 0; f < _runtime.FlowCount; f++)
+                {
+                    _runtime.Flows[f].PrepareFrame();
+                }
             }
 
-            _runtime.Surface.ClearObstacleField();
-            _runtime.Surface.ClearCrowdFields();
-            StampFlowObstacles();
-            StampFlowCrowdDensity(positions, velocities);
-            _runtime.Surface.NormalizeAverageVelocityField();
+            bool surfaceDirty = false;
+            if (shouldStampObstacles)
+            {
+                _runtime.Surface.ClearObstacleField();
+                StampFlowObstacles();
+                surfaceDirty = true;
+            }
+
+            if (shouldStampCrowd)
+            {
+                _runtime.Surface.ClearCrowdFields();
+                StampFlowCrowdDensity(positions, velocities);
+                _runtime.Surface.NormalizeAverageVelocityField();
+                surfaceDirty = true;
+            }
 
             for (int f = 0; f < _runtime.FlowCount; f++)
             {
-                _runtime.Flows[f].MarkCrowdFieldsDirty();
-                _runtime.Flows[f].Step(_runtime.FlowIterationsPerTick);
+                if (surfaceDirty)
+                {
+                    _runtime.Flows[f].MarkCrowdFieldsDirty();
+                }
+
+                if (shouldStepFlows)
+                {
+                    _runtime.Flows[f].Step(_runtime.FlowIterationsPerTick);
+                }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ShouldRunFlowTick(int intervalTicks, ref int tick)
+        {
+            int interval = intervalTicks <= 1 ? 1 : intervalTicks;
+            tick = (tick + 1) % interval;
+            return tick == 0;
         }
 
         private void StampFlowObstacles()

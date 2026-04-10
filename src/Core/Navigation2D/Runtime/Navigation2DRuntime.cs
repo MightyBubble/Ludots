@@ -22,6 +22,9 @@ namespace Ludots.Core.Navigation2D.Runtime
         public bool FlowDebugEnabled { get; set; } = false;
         public int FlowDebugMode { get; set; } = 0;
         public int FlowIterationsPerTick { get; set; }
+        public int FlowStepIntervalTicks { get; set; } = 1;
+        public int FlowCrowdStampIntervalTicks { get; set; } = 1;
+        public int FlowObstacleStampIntervalTicks { get; set; } = 1;
 
         public Navigation2DRuntime(Navigation2DConfig config, int gridCellSizeCm, ILoadedChunks? loadedChunks)
         {
@@ -80,6 +83,16 @@ namespace Ludots.Core.Navigation2D.Runtime
             if (loadedChunks != null)
             {
                 _streaming = new CrowdFlowChunkStreaming(loadedChunks, Flows);
+            }
+        }
+
+        public void ResetFlowState()
+        {
+            Surface.ClearObstacleField();
+            Surface.ClearCrowdFields();
+            for (int i = 0; i < Flows.Length; i++)
+            {
+                Flows[i].Reset();
             }
         }
 
