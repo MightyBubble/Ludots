@@ -25,9 +25,7 @@ internal sealed class MassNavHudPresentationSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.MapId.Name, out var mapObj) ||
-            mapObj is not string mapId ||
-            !MassNavPlaygroundIds.IsPlaygroundMap(mapId))
+        if (!MassNavPlaygroundIds.IsCurrentPlaygroundMap(_engine))
         {
             return;
         }
@@ -37,11 +35,12 @@ internal sealed class MassNavHudPresentationSystem : ISystem<float>
             return;
         }
 
-        overlay.AddText(1320, 16, $"fps {_simulation.Fps:0.0}", 20, new Vector4(0.92f, 0.96f, 1f, 1f));
-        overlay.AddText(1320, 42, $"frame {_simulation.FrameMs:0.00} ms", 16, new Vector4(0.74f, 0.82f, 0.92f, 1f));
+        PresentationTimingDiagnostics? timing = _engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+        overlay.AddText(1320, 16, $"fps {timing?.RenderFps ?? 0f:0.0}", 20, new Vector4(0.92f, 0.96f, 1f, 1f));
+        overlay.AddText(1320, 42, $"frame {timing?.RenderFrameMs ?? 0f:0.00} ms", 16, new Vector4(0.74f, 0.82f, 0.92f, 1f));
         overlay.AddText(1320, 64, $"selected {_simulation.SelectedCount}", 16, new Vector4(0.56f, 0.96f, 0.48f, 1f));
-        overlay.AddText(1320, 86, $"selection snapshots/frame {_simulation.SelectionSnapshotCountFrame}", 16, new Vector4(1f, 0.82f, 0.45f, 1f));
-        overlay.AddText(1320, 108, $"structural changes/frame {_simulation.StructuralChangesFrame}", 16, new Vector4(1f, 0.56f, 0.46f, 1f));
-        overlay.AddText(1320, 130, $"flow reconcile/frame {_simulation.FlowReconcileCountFrame}", 16, new Vector4(1f, 0.56f, 0.46f, 1f));
+        overlay.AddText(1320, 86, $"primitives {_engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)?.Count ?? 0}", 16, new Vector4(1f, 0.82f, 0.45f, 1f));
+        overlay.AddText(1320, 108, $"instances {timing?.PrimitiveInstancesLastFrame ?? 0} batches {timing?.PrimitiveBatchesLastFrame ?? 0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f));
+        overlay.AddText(1320, 130, $"visible {timing?.VisibleEntitiesLastFrame ?? 0}", 16, new Vector4(1f, 0.56f, 0.46f, 1f));
     }
 }

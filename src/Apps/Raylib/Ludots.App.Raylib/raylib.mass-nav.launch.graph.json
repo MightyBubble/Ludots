@@ -4,6 +4,7 @@
   "orderedModIds": [
     "LudotsCoreMod",
     "CoreInputMod",
+    "CameraProfilesMod",
     "MassNavPlaygroundMod"
   ],
   "plannedMods": [
@@ -14,6 +15,10 @@
     {
       "id": "CoreInputMod",
       "rootPath": "../../../../../../../mods/CoreInputMod"
+    },
+    {
+      "id": "CameraProfilesMod",
+      "rootPath": "../../../../../../../mods/capabilities/camera/CameraProfilesMod"
     },
     {
       "id": "MassNavPlaygroundMod",

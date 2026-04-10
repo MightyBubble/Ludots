@@ -2,10 +2,10 @@ using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
-using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Scripting;
 using MassNavPlaygroundMod.Systems;
@@ -36,8 +36,6 @@ internal sealed class MassNavPlaygroundRuntime
 
         var simulation = new MassNavSimulationRuntime();
         engine.SetService(MassNavPlaygroundKeys.SimulationRuntime, simulation);
-        engine.RegisterSystem(new Physics2DToWorldPositionSyncSystem(engine.World), SystemGroup.PostMovement);
-        engine.RegisterSystem(new IntegrationSystem2D(engine.World), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavCommandBridgeSystem(engine, simulation), SystemGroup.InputCollection);
         var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
@@ -64,6 +62,7 @@ internal sealed class MassNavPlaygroundRuntime
 
         EnsureSystemsInstalled(engine);
         EnsureLocalPlayerEntity(engine);
+        EnsureTacticalCamera(engine);
         EnsureScenario(engine);
         return Task.CompletedTask;
     }
@@ -131,5 +130,16 @@ internal sealed class MassNavPlaygroundRuntime
         selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
         globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
         globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+    }
+
+    private static void EnsureTacticalCamera(GameEngine engine)
+    {
+        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
+        {
+            Id = "Camera.Profile.Tactical",
+            BlendDurationSeconds = 0f,
+            ResetRuntimeState = true,
+            SnapToFollowTargetWhenAvailable = false
+        };
     }
 }

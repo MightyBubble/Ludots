@@ -43,9 +43,7 @@ internal sealed class MassNavPrimitivePresentationSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.MapId.Name, out var mapObj) ||
-            mapObj is not string mapId ||
-            !MassNavPlaygroundIds.IsPlaygroundMap(mapId))
+        if (!MassNavPlaygroundIds.IsCurrentPlaygroundMap(_engine))
         {
             return;
         }

@@ -1,5 +1,7 @@
 using System;
 using Ludots.Core.Engine;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -74,7 +76,10 @@ internal sealed class MassNavPlaygroundPanelController
                 Ui.Text("New facade path: selection input -> revision cache -> group move bridge -> nav goals.").FontSize(12f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Agents {state.TotalAgents}  Controllable {state.ControllableAgents}  Blockers {state.Blockers}").FontSize(13f).Color("#C7D4E5"),
                 Ui.Text($"Selected {state.SelectedCount}  Rev {state.SelectionRevision}").FontSize(13f).Color("#A4F07A"),
-                Ui.Text($"FPS {state.Fps:0.0}  Frame {state.FrameMs:0.00} ms").FontSize(13f).Color("#F2D483"),
+                Ui.Text($"Render FPS {state.RenderFps:0.0}  Frame {state.RenderFrameMs:0.00} ms  Primitive {state.PrimitiveRenderMs:0.00} ms").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Primitive buffer {state.PrimitiveBufferCount}  instances {state.PrimitiveInstances}  batches {state.PrimitiveBatches}  visible {state.VisibleEntities}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Camera target ({state.CameraTargetX:0.0}, {state.CameraTargetY:0.0}) cm  distance {state.CameraDistanceCm:0.0} cm").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"First agent ({state.FirstAgentX:0.0}, {state.FirstAgentZ:0.0}) m").FontSize(12f).Color("#D6E4F5"),
                 Ui.Text($"Selection snapshots/frame {state.SelectionSnapshotsFrame}").FontSize(12f).Color("#DFAF6C"),
                 Ui.Text($"Structural changes/frame {state.StructuralChangesFrame}").FontSize(12f).Color("#F18C7F"),
                 Ui.Text($"Flow reconcile/frame {state.FlowReconcileFrame}").FontSize(12f).Color("#F18C7F"),
@@ -91,6 +96,21 @@ internal sealed class MassNavPlaygroundPanelController
     private static MassNavPanelState CaptureState(GameEngine engine, MassNavSimulationRuntime simulation)
     {
         bool visible = engine.CurrentMapSession != null && MassNavPlaygroundIds.IsPlaygroundMap(engine.CurrentMapSession.MapId.Value);
+        PresentationTimingDiagnostics? timing = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+        int primitiveBufferCount = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)?.Count ?? 0;
+        float firstAgentX = 0f;
+        float firstAgentZ = 0f;
+        if (simulation.AgentState.ControllableCount > 0)
+        {
+            var first = simulation.AgentState.ControllableAgents[0];
+            if (engine.World.IsAlive(first) && engine.World.TryGet(first, out VisualTransform transform))
+            {
+                firstAgentX = transform.Position.X;
+                firstAgentZ = transform.Position.Z;
+            }
+        }
+
+        var camera = engine.GameSession.Camera.State;
         return new MassNavPanelState(
             Visible: visible,
             TotalAgents: simulation.AgentState.TotalAgents,
@@ -98,8 +118,18 @@ internal sealed class MassNavPlaygroundPanelController
             Blockers: simulation.AgentState.BlockerCount,
             SelectedCount: simulation.SelectedCount,
             SelectionRevision: simulation.SelectionRevision,
-            Fps: simulation.Fps,
-            FrameMs: simulation.FrameMs,
+            RenderFps: timing?.RenderFps ?? 0f,
+            RenderFrameMs: timing?.RenderFrameMs ?? 0f,
+            PrimitiveRenderMs: timing?.PrimitiveRenderMs ?? 0f,
+            PrimitiveBufferCount: primitiveBufferCount,
+            PrimitiveInstances: timing?.PrimitiveInstancesLastFrame ?? 0,
+            PrimitiveBatches: timing?.PrimitiveBatchesLastFrame ?? 0,
+            VisibleEntities: timing?.VisibleEntitiesLastFrame ?? 0,
+            CameraTargetX: camera.TargetCm.X,
+            CameraTargetY: camera.TargetCm.Y,
+            CameraDistanceCm: camera.DistanceCm,
+            FirstAgentX: firstAgentX,
+            FirstAgentZ: firstAgentZ,
             SelectionSnapshotsFrame: simulation.SelectionSnapshotCountFrame,
             StructuralChangesFrame: simulation.StructuralChangesFrame,
             FlowReconcileFrame: simulation.FlowReconcileCountFrame);

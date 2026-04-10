@@ -1,5 +1,7 @@
 {
   "startupMapId": "mass_nav_playground",
+  "windowTitle": "Ludots Engine - Mass Nav Playground",
+  "targetFps": 60,
   "worldWidthInTiles": 512,
   "worldHeightInTiles": 512,
   "Navigation2D": {

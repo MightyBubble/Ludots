@@ -22,6 +22,8 @@ namespace Ludots.Core.Presentation.Hud
         public float TerrainRenderMs { get; private set; }
         public float TerrainChunkBuildMs { get; private set; }
         public float PrimitiveRenderMs { get; private set; }
+        public float RenderFrameMs { get; private set; }
+        public float RenderFps { get; private set; }
 
         public int VisibleEntitiesLastFrame { get; private set; }
         public int ScreenOverlayDirtyLanesLastFrame { get; private set; }
@@ -73,6 +75,12 @@ namespace Ludots.Core.Presentation.Hud
             PrimitiveRenderMs = Smooth(PrimitiveRenderMs, (float)sampleMs);
             PrimitiveInstancesLastFrame = instances;
             PrimitiveBatchesLastFrame = batches;
+        }
+
+        public void ObserveRenderFrame(double sampleMs)
+        {
+            RenderFrameMs = Smooth(RenderFrameMs, (float)sampleMs);
+            RenderFps = RenderFrameMs > 0.001f ? 1000f / RenderFrameMs : 0f;
         }
 
         public void ObserveCompositeSkip(bool skipped)

@@ -203,6 +203,7 @@ namespace Ludots.Adapter.Raylib
 
                         float dt = Rl.GetFrameTime();
                         var renderDebug = ResolveRenderDebugState(engine);
+                        presentationTiming?.ObserveRenderFrame(dt * 1000.0);
                         bool drawTerrain = renderDebug.DrawTerrain;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
                         bool drawDebugDraw = renderDebug.DrawDebugDraw;
