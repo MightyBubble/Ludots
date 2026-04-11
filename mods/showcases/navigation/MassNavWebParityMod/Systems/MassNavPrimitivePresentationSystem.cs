@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using Ludots.Core.Presentation.Camera;
 using MassNavWebParityMod.Runtime;
 
 namespace MassNavWebParityMod.Systems;
@@ -39,21 +40,33 @@ internal sealed class MassNavPrimitivePresentationSystem : ISystem<float>
             return;
         }
 
+        _simulation.ObservePrimitiveTick();
+
         if (_engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer) is not PrimitiveDrawBuffer draw)
         {
             return;
         }
 
         long start = Stopwatch.GetTimestamp();
+        ResolveViewportBounds(out float minX, out float maxX, out float minY, out float maxY);
         ReadOnlySpan<float> positions = _simulation.WebParity.PositionsCm;
         ReadOnlySpan<int> teams = _simulation.WebParity.Teams;
         ReadOnlySpan<byte> selectedFlags = _simulation.WebParity.SelectedFlags;
         int unitCount = _simulation.WebParity.UnitCount;
+        int crowdInViewCount = 0;
+        int crowdSubmittedCount = 0;
         for (int i = 0; i < unitCount; i++)
         {
             int offset = i << 1;
-            float x = positions[offset] * MassNavWebParitySimState.VisualMetersPerCm;
-            float z = positions[offset + 1] * MassNavWebParitySimState.VisualMetersPerCm;
+            float xCm = positions[offset];
+            float yCm = positions[offset + 1];
+            if (xCm >= minX && xCm <= maxX && yCm >= minY && yCm <= maxY)
+            {
+                crowdInViewCount++;
+            }
+
+            float x = xCm * MassNavWebParitySimState.VisualMetersPerCm;
+            float z = yCm * MassNavWebParitySimState.VisualMetersPerCm;
             bool selected = selectedFlags[i] != 0;
             float visualScale = _simulation.WebParity.GetVisualScale(i);
             Vector4 color;
@@ -65,7 +78,7 @@ internal sealed class MassNavPrimitivePresentationSystem : ISystem<float>
             {
                 color = ResolveTeamColor(teams[i]);
             }
-            draw.TryAdd(new PrimitiveDrawItem
+            if (draw.TryAdd(new PrimitiveDrawItem
             {
                 MeshAssetId = _sphereMeshId,
                 Position = new Vector3(x, 0.18f, z),
@@ -73,24 +86,59 @@ internal sealed class MassNavPrimitivePresentationSystem : ISystem<float>
                     ? new Vector3(visualScale + 0.06f, visualScale + 0.06f, visualScale + 0.06f)
                     : new Vector3(visualScale, visualScale, visualScale),
                 Color = color
-            });
+            }))
+            {
+                crowdSubmittedCount++;
+            }
         }
 
+        int obstacleSubmittedCount = 0;
         for (int i = 0; i < _simulation.WebParity.ObstacleCount; i++)
         {
             float x = _simulation.WebParity.GetObstacleX(i) * MassNavWebParitySimState.VisualMetersPerCm;
             float z = _simulation.WebParity.GetObstacleY(i) * MassNavWebParitySimState.VisualMetersPerCm;
             float radius = _simulation.WebParity.GetObstacleRadius(i) * MassNavWebParitySimState.VisualMetersPerCm;
-            draw.TryAdd(new PrimitiveDrawItem
+            if (draw.TryAdd(new PrimitiveDrawItem
             {
                 MeshAssetId = _sphereMeshId,
                 Position = new Vector3(x, 0.15f, z),
                 Scale = new Vector3(radius * 2f, 0.3f, radius * 2f),
                 Color = new Vector4(0.72f, 0.22f, 0.18f, 0.9f)
-            });
+            }))
+            {
+                obstacleSubmittedCount++;
+            }
         }
 
+        _simulation.ObservePrimitiveCoverage(crowdInViewCount, crowdSubmittedCount, obstacleSubmittedCount, draw.DroppedSinceClear);
         _simulation.ObservePrimitiveEmit((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+    }
+
+    private void ResolveViewportBounds(out float minX, out float maxX, out float minY, out float maxY)
+    {
+        if (_engine.GetService(CoreServiceKeys.ViewController) is not IViewController view)
+        {
+            minX = 0f;
+            minY = 0f;
+            maxX = MassNavWebParitySimState.FieldWidthCm;
+            maxY = MassNavWebParitySimState.FieldHeightCm;
+            return;
+        }
+
+        var cameraState = _engine.GameSession.Camera.State;
+        float fovY = cameraState.FovYDeg * (float)(Math.PI / 180.0f);
+        float pitchRad = cameraState.Pitch * (float)(Math.PI / 180.0f);
+        float logicHeight = 2.0f * cameraState.DistanceCm * (float)Math.Tan(fovY / 2.0f);
+        float pitchScale = 1.0f / (float)Math.Max(Math.Sin(pitchRad), 0.1f);
+        logicHeight *= pitchScale;
+        float logicWidth = logicHeight * view.AspectRatio;
+        logicWidth *= 1.5f;
+        logicHeight *= 1.5f;
+
+        minX = cameraState.TargetCm.X - logicWidth / 2f;
+        maxX = cameraState.TargetCm.X + logicWidth / 2f;
+        minY = cameraState.TargetCm.Y - logicHeight / 2f;
+        maxY = cameraState.TargetCm.Y + logicHeight / 2f;
     }
 
     private static Vector4 ResolveTeamColor(int teamId)

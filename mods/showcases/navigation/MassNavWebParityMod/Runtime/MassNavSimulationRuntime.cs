@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Arch.Core;
 
 namespace MassNavWebParityMod.Runtime;
@@ -13,19 +14,45 @@ public sealed class MassNavSimulationRuntime
     private uint _selectionRevision;
     private bool _sceneResetRequested;
     private int _frameIndex;
+    private long _selectionSyncTick;
+    private long _controlTick;
+    private long _commandTick;
+    private long _commandDispatchTick;
+    private long _simTick;
+    private long _primitiveTick;
+    private long _hudTick;
+    private long _panelTick;
 
     public int SelectionSnapshotCountFrame { get; private set; }
+    public int CommandCountFrame { get; private set; }
     public int StructuralChangesFrame { get; private set; }
     public int FlowReconcileCountFrame { get; private set; }
     public float FrameMs { get; private set; }
     public float Fps { get; private set; }
     public float SelectionSyncMs { get; private set; }
+    public float CommandApplyMs { get; private set; }
     public float FormationTargetMs { get; private set; }
+    public float FlowFieldRebuildMs { get; private set; }
+    public float StepPrepMs { get; private set; }
+    public float LocalSteeringMs { get; private set; }
     public float SimStepMs { get; private set; }
     public float HardResolveMs { get; private set; }
     public float EntitySyncMs { get; private set; }
     public float PrimitiveEmitMs { get; private set; }
+    public float SelectionSyncHzObserved { get; private set; }
+    public float ControlHzObserved { get; private set; }
+    public float CommandHzObserved { get; private set; }
+    public float CommandDispatchHzObserved { get; private set; }
+    public float SimHzObserved { get; private set; }
+    public float PrimitiveHzObserved { get; private set; }
+    public float HudHzObserved { get; private set; }
+    public float PanelHzObserved { get; private set; }
+    public int CrowdInViewCount { get; private set; }
+    public int CrowdSubmittedCount { get; private set; }
+    public int ObstacleSubmittedCount { get; private set; }
+    public int PrimitiveDroppedCount { get; private set; }
     public MassNavAgentState AgentState { get; } = new();
+    public MassNavCommandRuntime Commands { get; } = new();
     public MassNavFlowTuning FlowTuning { get; } = new();
     public MassNavFormationRuntime FormationRuntime { get; }
     public MassNavGroupRuntime NavGroupRuntime { get; }
@@ -37,6 +64,7 @@ public sealed class MassNavSimulationRuntime
     public ReadOnlySpan<int> TeamIds => _teamIds;
     public int TeamCount => _teamIds.Length;
     public int FrameIndex => _frameIndex;
+    public int PendingCommandCount => Commands.PendingCommandCount;
     public int AgentsPerTeam { get; private set; } = 2_500;
     public int SelectedTeamId { get; private set; } = 1;
     public MassNavFormationMode FormationMode { get; private set; } = MassNavFormationMode.None;
@@ -51,6 +79,7 @@ public sealed class MassNavSimulationRuntime
     {
         _frameIndex++;
         SelectionSnapshotCountFrame = 0;
+        CommandCountFrame = 0;
         StructuralChangesFrame = 0;
         FlowReconcileCountFrame = 0;
         FrameMs = dt > 0f ? dt * 1000f : 0f;
@@ -58,11 +87,32 @@ public sealed class MassNavSimulationRuntime
     }
 
     public void ObserveSelectionSync(double sampleMs) => SelectionSyncMs = Smooth(SelectionSyncMs, (float)sampleMs);
+    public void ObserveCommandApply(double sampleMs) => CommandApplyMs = Smooth(CommandApplyMs, (float)sampleMs);
     public void ObserveFormationTargets(double sampleMs) => FormationTargetMs = Smooth(FormationTargetMs, (float)sampleMs);
+    public void ObserveFlowFieldRebuild(double sampleMs) => FlowFieldRebuildMs = Smooth(FlowFieldRebuildMs, (float)sampleMs);
+    public void ObserveStepPrep(double sampleMs) => StepPrepMs = Smooth(StepPrepMs, (float)sampleMs);
+    public void ObserveLocalSteering(double sampleMs) => LocalSteeringMs = Smooth(LocalSteeringMs, (float)sampleMs);
     public void ObserveSimStep(double sampleMs) => SimStepMs = Smooth(SimStepMs, (float)sampleMs);
     public void ObserveHardResolve(double sampleMs) => HardResolveMs = Smooth(HardResolveMs, (float)sampleMs);
     public void ObserveEntitySync(double sampleMs) => EntitySyncMs = Smooth(EntitySyncMs, (float)sampleMs);
     public void ObservePrimitiveEmit(double sampleMs) => PrimitiveEmitMs = Smooth(PrimitiveEmitMs, (float)sampleMs);
+
+    public void ObservePrimitiveCoverage(int crowdInViewCount, int crowdSubmittedCount, int obstacleSubmittedCount, int primitiveDroppedCount)
+    {
+        CrowdInViewCount = Math.Max(0, crowdInViewCount);
+        CrowdSubmittedCount = Math.Max(0, crowdSubmittedCount);
+        ObstacleSubmittedCount = Math.Max(0, obstacleSubmittedCount);
+        PrimitiveDroppedCount = Math.Max(0, primitiveDroppedCount);
+    }
+
+    public void ObserveSelectionSyncTick() => SelectionSyncHzObserved = ObserveHz(ref _selectionSyncTick, SelectionSyncHzObserved);
+    public void ObserveControlTick() => ControlHzObserved = ObserveHz(ref _controlTick, ControlHzObserved);
+    public void ObserveCommandTick() => CommandHzObserved = ObserveHz(ref _commandTick, CommandHzObserved);
+    public void ObserveCommandDispatchTick() => CommandDispatchHzObserved = ObserveHz(ref _commandDispatchTick, CommandDispatchHzObserved);
+    public void ObserveSimTick() => SimHzObserved = ObserveHz(ref _simTick, SimHzObserved);
+    public void ObservePrimitiveTick() => PrimitiveHzObserved = ObserveHz(ref _primitiveTick, PrimitiveHzObserved);
+    public void ObserveHudTick() => HudHzObserved = ObserveHz(ref _hudTick, HudHzObserved);
+    public void ObservePanelTick() => PanelHzObserved = ObserveHz(ref _panelTick, PanelHzObserved);
 
     public Span<Entity> EnsureSelectionScratch(int required)
     {
@@ -110,6 +160,11 @@ public sealed class MassNavSimulationRuntime
     public void MarkStructuralChange()
     {
         StructuralChangesFrame++;
+    }
+
+    public void MarkCommandApply()
+    {
+        CommandCountFrame++;
     }
 
     public void MarkFlowReconcile()
@@ -180,5 +235,27 @@ public sealed class MassNavSimulationRuntime
         return current <= 0.001f
             ? sampleMs
             : (current * (1f - TimingWeight)) + (sampleMs * TimingWeight);
+    }
+
+    private static float ObserveHz(ref long lastTick, float current)
+    {
+        long now = Stopwatch.GetTimestamp();
+        if (lastTick == 0)
+        {
+            lastTick = now;
+            return current;
+        }
+
+        double elapsedTicks = now - lastTick;
+        lastTick = now;
+        if (elapsedTicks <= 0d)
+        {
+            return current;
+        }
+
+        float hz = (float)(Stopwatch.Frequency / elapsedTicks);
+        return current <= 0.001f
+            ? hz
+            : (current * (1f - TimingWeight)) + (hz * TimingWeight);
     }
 }

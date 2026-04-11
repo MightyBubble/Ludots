@@ -29,6 +29,8 @@ internal sealed class MassNavFormationSystem : ISystem<float>
             return;
         }
 
+        _simulation.ObserveSimTick();
+
         long start = Stopwatch.GetTimestamp();
         _simulation.NavGroupRuntime.UpdateTargets(
             _simulation.WebParity,
@@ -38,7 +40,12 @@ internal sealed class MassNavFormationSystem : ISystem<float>
         _simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
 
         start = Stopwatch.GetTimestamp();
-        _simulation.WebParity.Step(dt, _simulation.NavGroupRuntime, _simulation.ObserveHardResolve);
+        _simulation.WebParity.Step(
+            dt,
+            _simulation.NavGroupRuntime,
+            _simulation.ObserveStepPrep,
+            _simulation.ObserveLocalSteering,
+            _simulation.ObserveHardResolve);
         _simulation.ObserveSimStep((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
 
         start = Stopwatch.GetTimestamp();

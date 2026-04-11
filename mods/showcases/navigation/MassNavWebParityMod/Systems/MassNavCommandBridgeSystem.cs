@@ -34,6 +34,8 @@ internal sealed class MassNavCommandBridgeSystem : ISystem<float>
             return;
         }
 
+        _simulation.ObserveCommandTick();
+
         if (_engine.GetService(CoreServiceKeys.UiCaptured) ||
             _engine.GetService(CoreServiceKeys.AuthoritativeInput) is not IInputActionReader input)
         {
@@ -49,28 +51,18 @@ internal sealed class MassNavCommandBridgeSystem : ISystem<float>
             return;
         }
 
-        ApplyMoveCommand(new Vector2(worldCm.X, worldCm.Y));
+        EnqueueMoveCommand(new Vector2(worldCm.X, worldCm.Y));
     }
 
-    private void ApplyMoveCommand(Vector2 centerCm)
+    private void EnqueueMoveCommand(Vector2 centerCm)
     {
         ReadOnlySpan<Entity> selected = _simulation.SelectedEntities;
         if (selected.Length <= 0)
         {
-            _simulation.WebParity.SetTeamTarget(_simulation.SelectedTeamId, centerCm);
-            _simulation.MarkStructuralChange();
+            _simulation.Commands.EnqueueTeamMove(_simulation.SelectedTeamId, centerCm);
             return;
         }
 
-        int assigned = _simulation.NavGroupRuntime.IssueSelectionMoveCommand(
-            _simulation.WebParity,
-            _simulation.AgentState,
-            selected,
-            centerCm,
-            _simulation.FormationMode);
-        if (assigned > 0)
-        {
-            _simulation.MarkStructuralChange();
-        }
+        _simulation.Commands.EnqueueSelectionMove(selected, centerCm, _simulation.FormationMode);
     }
 }

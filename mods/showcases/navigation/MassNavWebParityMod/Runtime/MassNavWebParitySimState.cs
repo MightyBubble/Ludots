@@ -28,12 +28,6 @@ public sealed class MassNavWebParitySimState
     private const int HardResolveHashWidth = FieldWidthCm / HardResolveHashCellSizeCm;
     private const int HardResolveHashHeight = FieldHeightCm / HardResolveHashCellSizeCm;
     private const int HardResolveHashSearchRadius = 1;
-    private const float AgentBodyRadiusCm = 20f;
-    private const float AgentBodyDiameterCm = AgentBodyRadiusCm * 2f;
-    private const float AgentBodyDiameterSq = AgentBodyDiameterCm * AgentBodyDiameterCm;
-    private const float HardResolveCandidateDistanceCm = 100f;
-    private const float HardResolveCandidateDistanceSq = HardResolveCandidateDistanceCm * HardResolveCandidateDistanceCm;
-    private const float TeamSlotSpacingCm = 90f;
     private const float MinPositionCm = 50f;
     private const float MaxPositionCm = 9_950f;
 
@@ -85,8 +79,10 @@ public sealed class MassNavWebParitySimState
     public int UnitCount { get; private set; }
     public int ObstacleCount { get; private set; }
     public int SettledUnitCount { get; private set; }
+    public float LastFlowFieldRebuildMs { get; private set; }
     public MassNavArrivalTuning ArrivalTuning { get; } = new();
     public MassNavAvoidanceTuning AvoidanceTuning { get; } = new();
+    public MassNavCrowdSemantics Semantics { get; } = new();
 
     public ReadOnlySpan<float> PositionsCm => _positionsCm.AsSpan(0, UnitCount * 2);
     public ReadOnlySpan<int> Teams => _teams.AsSpan(0, UnitCount);
@@ -101,6 +97,8 @@ public sealed class MassNavWebParitySimState
     public float GetObstacleX(int index) => _obsX[index];
     public float GetObstacleY(int index) => _obsY[index];
     public float GetObstacleRadius(int index) => _obsRadius[index];
+    public float GetObstacleHardBlockRadius(int index) => Semantics.Obstacle.ResolveHardBlockRadiusCm(_obsRadius[index]);
+    public float GetObstacleSoftPushRadius(int index) => _obsPR[index];
     public bool IsObstaclePoint(float xCm, float yCm) => IsObstacle(xCm, yCm);
 
     public void Reset(ReadOnlySpan<int> teamIds, int unitsPerTeam)
@@ -112,7 +110,7 @@ public sealed class MassNavWebParitySimState
         InitializeTeams(teamIds, safeUnitsPerTeam);
         CacheDefaultObstacles();
         InitializeUnits();
-        ComputeFlowFields();
+        RebuildFlowFields();
         _frameCount = 0;
         SettledUnitCount = 0;
     }
@@ -126,11 +124,16 @@ public sealed class MassNavWebParitySimState
 
         float hintX = targetCm.X - team.TargetX;
         float hintY = targetCm.Y - team.TargetY;
-        Vector2 resolved = ResolveNavigableTarget(targetCm.X, targetCm.Y, hintX, hintY, 60f);
+        Vector2 resolved = ResolveNavigableTarget(
+            targetCm.X,
+            targetCm.Y,
+            hintX,
+            hintY,
+            Semantics.TargetProjection.TeamTargetClearanceCm);
         team.TargetX = resolved.X;
         team.TargetY = resolved.Y;
         ResetTeamArrivalState(teamId);
-        ComputeFlowFields();
+        RebuildFlowFields();
     }
 
     public void SetUnitTarget(int index, float xCm, float yCm, bool resetRecovery = false)
@@ -184,7 +187,7 @@ public sealed class MassNavWebParitySimState
     {
         float resolvedX = ClampPosition(xCm);
         float resolvedY = ClampPosition(yCm);
-        float minDistancePadding = AgentBodyRadiusCm + MathF.Max(0f, extraClearanceCm);
+        float minDistancePadding = Semantics.Obstacle.AgentBodyRadiusCm + MathF.Max(0f, extraClearanceCm);
 
         for (int pass = 0; pass < 2; pass++)
         {
@@ -238,13 +241,19 @@ public sealed class MassNavWebParitySimState
         return new Vector2(resolvedX, resolvedY);
     }
 
-    public void Step(float dt, MassNavGroupRuntime navGroupRuntime, Action<double>? observeHardResolve = null)
+    public void Step(
+        float dt,
+        MassNavGroupRuntime navGroupRuntime,
+        Action<double>? observeStepPrep = null,
+        Action<double>? observeLocalSteering = null,
+        Action<double>? observeHardResolve = null)
     {
         if (UnitCount <= 0)
         {
             return;
         }
 
+        long prepStart = System.Diagnostics.Stopwatch.GetTimestamp();
         RefreshTeamRelationshipMatrix();
 
         float clampedDt = Math.Clamp(dt, 0f, 0.05f);
@@ -258,15 +267,17 @@ public sealed class MassNavWebParitySimState
             Array.Clear(_hardResolveCandidates, 0, UnitCount);
         }
 
-        const float speed = 800f;
-        const float sepRadiusCm = 200f;
-        const float sepRadiusSq = sepRadiusCm * sepRadiusCm;
-        const float invSepRadius = 1f / sepRadiusCm;
-        const float arrivalRadiusCm = 1_200f;
-        const float arrivalRadiusSq = arrivalRadiusCm * arrivalRadiusCm;
-        const float unitTargetStopThresholdSq = 2_500f;
+        float speed = Semantics.Steering.SpeedCmPerSecond;
+        float sepRadiusCm = Semantics.Steering.SeparationRadiusCm;
+        float sepRadiusSq = sepRadiusCm * sepRadiusCm;
+        float invSepRadius = 1f / sepRadiusCm;
+        float arrivalRadiusCm = Semantics.Steering.GoalArrivalRadiusCm;
+        float arrivalRadiusSq = arrivalRadiusCm * arrivalRadiusCm;
+        float unitTargetStopThresholdCm = Semantics.Group.UnitTargetStopThresholdCm;
+        float unitTargetStopThresholdSq = unitTargetStopThresholdCm * unitTargetStopThresholdCm;
 
         BuildSeparationHash(_readPositionsCm);
+        observeStepPrep?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - prepStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
 
         int hwm1 = SeparationHashWidth - 1;
         int hhm1 = SeparationHashHeight - 1;
@@ -274,7 +285,9 @@ public sealed class MassNavWebParitySimState
 
         if (World.SharedJobScheduler == null || UnitCount < 2048)
         {
+            long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
             StepRange(0, UnitCount, clampedDt, navGroupRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, SeparationHashSearchRadius, _useCandidateGating);
+            observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
             ResolveHardPenetration();
             observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
@@ -287,6 +300,7 @@ public sealed class MassNavWebParitySimState
         int baseCount = UnitCount / workerCount;
         int remainder = UnitCount % workerCount;
         int startIndex = 0;
+        long threadedSteeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
         for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
         {
             int length = baseCount + (workerIndex < remainder ? 1 : 0);
@@ -316,6 +330,7 @@ public sealed class MassNavWebParitySimState
         {
             _stepHandles[workerIndex].Complete();
         }
+        observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - threadedSteeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
 
         long hardResolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
         ResolveHardPenetration();
@@ -408,7 +423,7 @@ public sealed class MassNavWebParitySimState
                 centerY - dirY * orbitRadiusCm,
                 -dirX,
                 -dirY,
-                60f);
+                Semantics.TargetProjection.TeamTargetClearanceCm);
             var state = new TeamRuntimeState(teamId, unitsPerTeam, spawnCenterX, spawnCenterY, dirX, dirY, tangentX, tangentY)
             {
                 TargetX = target.X,
@@ -434,7 +449,7 @@ public sealed class MassNavWebParitySimState
         Array.Clear(_unitStuckSeconds, 0, UnitCount);
 
         int unitIndex = 0;
-        const float spacingCm = 46f;
+        float spacingCm = Semantics.Group.SpawnSpacingCm;
         for (int teamStateIndex = 0; teamStateIndex < _teamStates.Count; teamStateIndex++)
         {
             TeamRuntimeState team = _teamStates[teamStateIndex];
@@ -485,7 +500,7 @@ public sealed class MassNavWebParitySimState
         _obsY[index] = yCm;
         _obsRadius[index] = radiusCm;
         _obsR2[index] = radiusCm * radiusCm;
-        float pushRadius = radiusCm + 350f;
+        float pushRadius = Semantics.Obstacle.ResolveSoftPushRadiusCm(radiusCm);
         _obsPR[index] = pushRadius;
         _obsPR2[index] = pushRadius * pushRadius;
     }
@@ -507,6 +522,13 @@ public sealed class MassNavWebParitySimState
             TeamRuntimeState team = _teamStates[i];
             ComputeFlow(team.Flow, team.TargetX, team.TargetY);
         }
+    }
+
+    private void RebuildFlowFields()
+    {
+        long start = System.Diagnostics.Stopwatch.GetTimestamp();
+        ComputeFlowFields();
+        LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
     }
 
     private void ComputeFlow(float[] flow, float targetX, float targetY)
@@ -800,8 +822,8 @@ public sealed class MassNavWebParitySimState
                         }
                     }
 
-                    desiredX += avoidX * 1.2f;
-                    desiredY += avoidY * 1.2f;
+                    desiredX += avoidX * Semantics.Steering.FlowObstacleAvoidanceScale;
+                    desiredY += avoidY * Semantics.Steering.FlowObstacleAvoidanceScale;
                     float flowLengthSq = desiredX * desiredX + desiredY * desiredY;
                     if (flowLengthSq > 0.000001f)
                     {
@@ -812,7 +834,9 @@ public sealed class MassNavWebParitySimState
                 }
 
                 float targetDistance = MathF.Sqrt(targetDistSq);
-                float arriveThreshold = inFormation ? 200f : 300f;
+                float arriveThreshold = inFormation
+                    ? Semantics.Group.FormationArriveThresholdCm
+                    : Semantics.Group.LooseArriveThresholdCm;
                 if (targetDistance < arriveThreshold)
                 {
                     unitArrivalFactor = targetDistance / arriveThreshold;
@@ -871,7 +895,9 @@ public sealed class MassNavWebParitySimState
                     float invSlot = FastInvSqrt(slotDistSq);
                     float slotDirX = toSlotX * invSlot;
                     float slotDirY = toSlotY * invSlot;
-                    float slotBlend = slotDistSq < 4_000_000f ? 0.82f : 0.38f;
+                    float slotBlend = slotDistSq < Semantics.Group.NearSlotBlendDistanceSq
+                        ? Semantics.Group.NearSlotBlend
+                        : Semantics.Group.FarSlotBlend;
                     desiredX = (flowX * (1f - slotBlend)) + (slotDirX * slotBlend);
                     desiredY = (flowY * (1f - slotBlend)) + (slotDirY * slotBlend);
                     float desiredLengthSq = desiredX * desiredX + desiredY * desiredY;
@@ -893,8 +919,10 @@ public sealed class MassNavWebParitySimState
             float directTargetY = hasGoalTarget ? targetY - py : 0f;
             float directTargetSq = hasGoalTarget ? directTargetX * directTargetX + directTargetY * directTargetY : 0f;
             float flowScale = suppressTargetMotion ? 0f : 1f;
-            float effectiveArrivalCm = inFormation ? 400f : arrivalRadiusCm;
-            float effectiveArrivalSq = inFormation ? 160_000f : arrivalRadiusSq;
+            float effectiveArrivalCm = inFormation
+                ? Semantics.Group.FormationFlowSlowRadiusCm
+                : arrivalRadiusCm;
+            float effectiveArrivalSq = effectiveArrivalCm * effectiveArrivalCm;
             if (!suppressTargetMotion && hasGoalTarget && directTargetSq < effectiveArrivalSq)
             {
                 flowScale = MathF.Sqrt(directTargetSq) / effectiveArrivalCm;
@@ -929,7 +957,7 @@ public sealed class MassNavWebParitySimState
                             float dx = px - _readPositionsCm[j2];
                             float dy = py - _readPositionsCm[j2 + 1];
                             float d2 = dx * dx + dy * dy;
-                            if (useCandidateGating && d2 < HardResolveCandidateDistanceSq)
+                            if (useCandidateGating && d2 < Semantics.Obstacle.HardResolveCandidateDistanceCm * Semantics.Obstacle.HardResolveCandidateDistanceCm)
                             {
                                 _hardResolveCandidates[i] = 1;
                             }
@@ -955,7 +983,7 @@ public sealed class MassNavWebParitySimState
                 float dx = px - _obsX[obstacleIndex];
                 float dy = py - _obsY[obstacleIndex];
                 float d2 = dx * dx + dy * dy;
-                float minDistance = _obsRadius[obstacleIndex] + HardResolveCandidateDistanceCm;
+                float minDistance = _obsRadius[obstacleIndex] + Semantics.Obstacle.HardResolveCandidateDistanceCm;
                 if (useCandidateGating && d2 < minDistance * minDistance)
                 {
                     _hardResolveCandidates[i] = 1;
@@ -967,24 +995,26 @@ public sealed class MassNavWebParitySimState
                     float d = d2 * invD;
                     float pushRadius = _obsPR[obstacleIndex];
                     float pushStrength = (pushRadius - d) / pushRadius;
-                    float pushForce = pushStrength * pushStrength * 8f;
+                    float pushForce = pushStrength * pushStrength * Semantics.Obstacle.SoftPushForceScale;
                     obstaclePushX += dx * invD * pushForce;
                     obstaclePushY += dy * invD * pushForce;
                 }
             }
 
-            float separationScale = (inFormation ? 2f : 4f) * unitArrivalFactor;
+            float separationScale = (inFormation
+                ? Semantics.Steering.FormationSeparationScale
+                : Semantics.Steering.LooseSeparationScale) * unitArrivalFactor;
             float desiredVelocityX = desiredX * speed * flowScale + separationX * separationScale + obstaclePushX * speed;
             float desiredVelocityY = desiredY * speed * flowScale + separationY * separationScale + obstaclePushY * speed;
             float desiredVelocitySq = desiredVelocityX * desiredVelocityX + desiredVelocityY * desiredVelocityY;
-            if (desiredVelocitySq > 640_000f)
+            if (desiredVelocitySq > speed * speed)
             {
                 float scale = speed * FastInvSqrt(desiredVelocitySq);
                 desiredVelocityX *= scale;
                 desiredVelocityY *= scale;
             }
 
-            float mix = MathF.Min(clampedDt * 5f, 1f);
+            float mix = MathF.Min(clampedDt * Semantics.Steering.VelocityBlendPerSecond, 1f);
             float velocityX = _readVelocitiesCm[i2] + ((desiredVelocityX - _readVelocitiesCm[i2]) * mix);
             float velocityY = _readVelocitiesCm[i2 + 1] + ((desiredVelocityY - _readVelocitiesCm[i2 + 1]) * mix);
             _velocitiesCm[i2] = velocityX;
@@ -1007,14 +1037,14 @@ public sealed class MassNavWebParitySimState
         int col = localIndex % cols;
         float rowCenter = (rows - 1) * 0.5f;
         float colCenter = (cols - 1) * 0.5f;
-        float offsetX = (col - colCenter) * TeamSlotSpacingCm;
-        float offsetY = (row - rowCenter) * TeamSlotSpacingCm;
+        float offsetX = (col - colCenter) * Semantics.Group.TeamSlotSpacingCm;
+        float offsetY = (row - rowCenter) * Semantics.Group.TeamSlotSpacingCm;
         Vector2 resolved = ResolveNavigableTarget(
             team.TargetX + offsetX,
             team.TargetY + offsetY,
             offsetX,
             offsetY,
-            TeamSlotSpacingCm * 0.5f);
+            Semantics.TargetProjection.TeamSlotClearanceCm);
         targetX = resolved.X;
         targetY = resolved.Y;
     }
@@ -1274,7 +1304,7 @@ public sealed class MassNavWebParitySimState
         float dx = _positionsCm[i2] - _positionsCm[j2];
         float dy = _positionsCm[i2 + 1] - _positionsCm[j2 + 1];
         float d2 = dx * dx + dy * dy;
-        if (d2 >= AgentBodyDiameterSq)
+        if (d2 >= Semantics.Obstacle.AgentBodyDiameterSq)
         {
             return;
         }
@@ -1288,7 +1318,7 @@ public sealed class MassNavWebParitySimState
             float distance = d2 * invD;
             nx = dx * invD;
             ny = dy * invD;
-            overlap = AgentBodyDiameterCm - distance;
+            overlap = Semantics.Obstacle.AgentBodyDiameterCm - distance;
         }
         else
         {
@@ -1296,7 +1326,7 @@ public sealed class MassNavWebParitySimState
             float radians = angle * (MathF.PI * 2f / 1024f);
             nx = MathF.Cos(radians);
             ny = MathF.Sin(radians);
-            overlap = AgentBodyDiameterCm;
+            overlap = Semantics.Obstacle.AgentBodyDiameterCm;
         }
 
         MassNavPairAvoidancePolicy policy = ResolveBidirectionalPolicy(_teamRuntimeIndices[i], _teamRuntimeIndices[j], i, j);
@@ -1338,7 +1368,7 @@ public sealed class MassNavWebParitySimState
             {
                 float dx = px - _obsX[obstacleIndex];
                 float dy = py - _obsY[obstacleIndex];
-                float minDistance = _obsRadius[obstacleIndex] + AgentBodyRadiusCm;
+                float minDistance = Semantics.Obstacle.ResolveHardBlockRadiusCm(_obsRadius[obstacleIndex]);
                 float d2 = dx * dx + dy * dy;
                 if (d2 >= minDistance * minDistance)
                 {

@@ -1,55 +1,180 @@
 using System;
 using System.Numerics;
 using Arch.Core;
-using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
 
 namespace MassNavWebParityMod.Runtime;
 
-public static class MassNavCommandRuntime
+public sealed class MassNavCommandRuntime
 {
-    public static int ApplyGridMove(World world, ReadOnlySpan<Entity> selected, Vector2 centerCm, int spacingCm, int goalRadiusCm)
-    {
-        GetGridLayout(selected.Length, out int cols, out int rows);
-        int assigned = 0;
-        for (int i = 0; i < selected.Length; i++)
-        {
-            Entity entity = selected[i];
-            if (!world.IsAlive(entity) || !world.Has<NavGoal2D>(entity))
-            {
-                continue;
-            }
+    private MassNavQueuedCommand[] _commands = new MassNavQueuedCommand[8];
+    private Entity[] _selectionPayload = new Entity[128];
+    private int _commandCount;
+    private int _payloadCount;
 
-            GetGridCell(assigned, cols, out int row, out int col);
-            Vector2 offset = new(
-                GetCenteredOffset(col, cols, spacingCm),
-                GetCenteredOffset(row, rows, spacingCm));
-            ref var goal = ref world.Get<NavGoal2D>(entity);
-            goal.Kind = NavGoalKind2D.Point;
-            goal.TargetCm = Fix64Vec2.FromInt(
-                (int)MathF.Round(centerCm.X + offset.X),
-                (int)MathF.Round(centerCm.Y + offset.Y));
-            goal.RadiusCm = Fix64.FromInt(goalRadiusCm);
-            assigned++;
+    public int PendingCommandCount => _commandCount;
+
+    public void Reset()
+    {
+        _commandCount = 0;
+        _payloadCount = 0;
+    }
+
+    public bool EnqueueTeamMove(int teamId, Vector2 centerCm)
+    {
+        EnsureCommandCapacity(_commandCount + 1);
+        _commands[_commandCount++] = new MassNavQueuedCommand
+        {
+            Kind = MassNavQueuedCommandKind.TeamMove,
+            TeamId = teamId,
+            DestinationX = centerCm.X,
+            DestinationY = centerCm.Y,
+        };
+        return true;
+    }
+
+    public bool EnqueueSelectionMove(ReadOnlySpan<Entity> selected, Vector2 centerCm, MassNavFormationMode formationMode)
+    {
+        if (selected.Length <= 0)
+        {
+            return false;
         }
 
-        return assigned;
+        int payloadStart = ReserveSelectionPayload(selected);
+        EnsureCommandCapacity(_commandCount + 1);
+        _commands[_commandCount++] = new MassNavQueuedCommand
+        {
+            Kind = MassNavQueuedCommandKind.SelectionMove,
+            DestinationX = centerCm.X,
+            DestinationY = centerCm.Y,
+            FormationMode = formationMode,
+            SelectionStart = payloadStart,
+            SelectionLength = selected.Length,
+        };
+        return true;
     }
 
-    private static void GetGridLayout(int count, out int cols, out int rows)
+    public bool EnqueueSelectionRotate(ReadOnlySpan<Entity> selected, float deltaRadians)
     {
-        cols = count <= 0 ? 0 : (int)Math.Ceiling(Math.Sqrt(count));
-        rows = cols <= 0 ? 0 : (int)Math.Ceiling(count / (double)cols);
+        if (selected.Length <= 0 || !(MathF.Abs(deltaRadians) > 1e-5f))
+        {
+            return false;
+        }
+
+        int payloadStart = ReserveSelectionPayload(selected);
+        EnsureCommandCapacity(_commandCount + 1);
+        _commands[_commandCount++] = new MassNavQueuedCommand
+        {
+            Kind = MassNavQueuedCommandKind.SelectionRotate,
+            RotationDeltaRadians = deltaRadians,
+            SelectionStart = payloadStart,
+            SelectionLength = selected.Length,
+        };
+        return true;
     }
 
-    private static void GetGridCell(int index, int cols, out int row, out int col)
+    public int ApplyPending(MassNavSimulationRuntime simulation)
     {
-        row = cols <= 0 ? 0 : index / cols;
-        col = cols <= 0 ? 0 : index % cols;
+        ArgumentNullException.ThrowIfNull(simulation);
+
+        int appliedCount = 0;
+        for (int commandIndex = 0; commandIndex < _commandCount; commandIndex++)
+        {
+            ref readonly MassNavQueuedCommand command = ref _commands[commandIndex];
+            switch (command.Kind)
+            {
+                case MassNavQueuedCommandKind.TeamMove:
+                    simulation.WebParity.SetTeamTarget(command.TeamId, new Vector2(command.DestinationX, command.DestinationY));
+                    simulation.MarkStructuralChange();
+                    simulation.MarkFlowReconcile();
+                    simulation.ObserveFlowFieldRebuild(simulation.WebParity.LastFlowFieldRebuildMs);
+                    simulation.MarkCommandApply();
+                    appliedCount++;
+                    break;
+                case MassNavQueuedCommandKind.SelectionMove:
+                {
+                    ReadOnlySpan<Entity> selected = _selectionPayload.AsSpan(command.SelectionStart, command.SelectionLength);
+                    int assigned = simulation.NavGroupRuntime.IssueSelectionMoveCommand(
+                        simulation.WebParity,
+                        simulation.AgentState,
+                        selected,
+                        new Vector2(command.DestinationX, command.DestinationY),
+                        command.FormationMode);
+                    if (assigned > 0)
+                    {
+                        simulation.MarkStructuralChange();
+                        simulation.MarkCommandApply();
+                        appliedCount++;
+                    }
+
+                    break;
+                }
+                case MassNavQueuedCommandKind.SelectionRotate:
+                {
+                    ReadOnlySpan<Entity> selected = _selectionPayload.AsSpan(command.SelectionStart, command.SelectionLength);
+                    simulation.NavGroupRuntime.RotateSelected(simulation.AgentState, selected, command.RotationDeltaRadians);
+                    simulation.MarkCommandApply();
+                    appliedCount++;
+                    break;
+                }
+            }
+        }
+
+        Reset();
+        return appliedCount;
     }
 
-    private static int GetCenteredOffset(int index, int count, int spacingCm)
+    private int ReserveSelectionPayload(ReadOnlySpan<Entity> selected)
     {
-        return count <= 0 ? 0 : -((count - 1) * spacingCm / 2) + index * spacingCm;
+        int start = _payloadCount;
+        int required = start + selected.Length;
+        if (required > _selectionPayload.Length)
+        {
+            int nextLength = _selectionPayload.Length;
+            while (nextLength < required)
+            {
+                nextLength *= 2;
+            }
+
+            Array.Resize(ref _selectionPayload, nextLength);
+        }
+
+        selected.CopyTo(_selectionPayload.AsSpan(start, selected.Length));
+        _payloadCount = required;
+        return start;
+    }
+
+    private void EnsureCommandCapacity(int required)
+    {
+        if (required <= _commands.Length)
+        {
+            return;
+        }
+
+        int nextLength = _commands.Length;
+        while (nextLength < required)
+        {
+            nextLength *= 2;
+        }
+
+        Array.Resize(ref _commands, nextLength);
+    }
+
+    private enum MassNavQueuedCommandKind : byte
+    {
+        TeamMove = 0,
+        SelectionMove = 1,
+        SelectionRotate = 2,
+    }
+
+    private readonly struct MassNavQueuedCommand
+    {
+        public MassNavQueuedCommandKind Kind { get; init; }
+        public int TeamId { get; init; }
+        public float DestinationX { get; init; }
+        public float DestinationY { get; init; }
+        public float RotationDeltaRadians { get; init; }
+        public MassNavFormationMode FormationMode { get; init; }
+        public int SelectionStart { get; init; }
+        public int SelectionLength { get; init; }
     }
 }

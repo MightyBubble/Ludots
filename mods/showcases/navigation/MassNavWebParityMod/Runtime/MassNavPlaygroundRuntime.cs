@@ -48,7 +48,8 @@ internal sealed class MassNavWebParityRuntime
         engine.RegisterSystem(new MassNavSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavWebParityControlSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavCommandBridgeSystem(engine, simulation), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavFormationSystem(engine, simulation), SystemGroup.InputCollection);
+        engine.RegisterSystem(new MassNavCommandApplySystem(engine, simulation), SystemGroup.PostMovement);
+        engine.RegisterSystem(new MassNavFormationSystem(engine, simulation), SystemGroup.PostMovement);
         var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
             ?? throw new System.InvalidOperationException("MassNavWebParityMod requires PresentationMeshAssetRegistry.");
         engine.RegisterPresentationSystem(new MassNavPrimitivePresentationSystem(engine, simulation, meshes));

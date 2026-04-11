@@ -34,6 +34,8 @@ internal sealed class MassNavWebParityControlSystem : ISystem<float>
             return;
         }
 
+        _simulation.ObserveControlTick();
+
         if (_engine.GetService(CoreServiceKeys.AuthoritativeInput) is IInputActionReader input)
         {
             if (input.PressedThisFrame(MassNavWebParityInputActions.ResetScene))
@@ -54,7 +56,7 @@ internal sealed class MassNavWebParityControlSystem : ISystem<float>
 
             if (MathF.Abs(deltaRadians) > 1e-5f)
             {
-                _simulation.NavGroupRuntime.RotateSelected(_simulation.AgentState, _simulation.SelectedEntities, deltaRadians);
+                _simulation.Commands.EnqueueSelectionRotate(_simulation.SelectedEntities, deltaRadians);
             }
         }
 
@@ -72,6 +74,7 @@ internal sealed class MassNavWebParityControlSystem : ISystem<float>
     {
         ClearSelection();
         _simulation.ClearSelection();
+        _simulation.Commands.Reset();
         _simulation.NavGroupRuntime.Reset();
         _simulation.AgentState.DestroyTracked(_engine.World);
         MassNavScenarioBootstrap.SpawnDefaultScenario(_engine.World, _simulation);

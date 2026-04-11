@@ -5,7 +5,9 @@ using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using Ludots.Core.Systems;
 using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
@@ -23,7 +25,7 @@ internal sealed class MassNavWebParityPanelController
     private GameEngine? _engine;
     private MassNavSimulationRuntime? _simulation;
     private long _lastPerfCaptureTicks;
-    private string _lastActionText = "Budget/Physics/Nav/Flow/Arrival buttons hot-apply immediately. Agent count and Reset Scene rebuild the scene.";
+    private string _lastActionText = "MassNav runtime knobs hot-apply now. Physics/Nav buttons only touch engine policies. Flow is config-only here. Agent count and Reset rebuild the scene.";
 
     public bool MountOrSync(GameEngine engine, MassNavSimulationRuntime simulation)
     {
@@ -54,14 +56,42 @@ internal sealed class MassNavWebParityPanelController
                 RenderFrameMs = _lastState.RenderFrameMs,
                 PrimitiveRenderMs = _lastState.PrimitiveRenderMs,
                 SelectionSyncMs = _lastState.SelectionSyncMs,
+                CommandApplyMs = _lastState.CommandApplyMs,
                 FormationTargetMs = _lastState.FormationTargetMs,
+                FlowFieldRebuildMs = _lastState.FlowFieldRebuildMs,
+                StepPrepMs = _lastState.StepPrepMs,
+                LocalSteeringMs = _lastState.LocalSteeringMs,
                 SimStepMs = _lastState.SimStepMs,
+                HardResolveMs = _lastState.HardResolveMs,
                 EntitySyncMs = _lastState.EntitySyncMs,
                 PrimitiveEmitMs = _lastState.PrimitiveEmitMs,
+                SelectionSyncHzObserved = _lastState.SelectionSyncHzObserved,
+                ControlHzObserved = _lastState.ControlHzObserved,
+                CommandHzObserved = _lastState.CommandHzObserved,
+                CommandDispatchHzObserved = _lastState.CommandDispatchHzObserved,
+                SimHzObserved = _lastState.SimHzObserved,
+                PrimitiveHzObserved = _lastState.PrimitiveHzObserved,
+                HudHzObserved = _lastState.HudHzObserved,
+                PanelHzObserved = _lastState.PanelHzObserved,
+                UiInputMs = _lastState.UiInputMs,
+                UiRenderMs = _lastState.UiRenderMs,
+                UiUploadMs = _lastState.UiUploadMs,
+                ScreenOverlayBuildMs = _lastState.ScreenOverlayBuildMs,
+                ScreenOverlayDrawMs = _lastState.ScreenOverlayDrawMs,
+                CameraCullingMs = _lastState.CameraCullingMs,
+                CameraPresenterMs = _lastState.CameraPresenterMs,
+                WorldHudProjectionMs = _lastState.WorldHudProjectionMs,
+                RenderAccountedMs = _lastState.RenderAccountedMs,
+                RenderUnaccountedMs = _lastState.RenderUnaccountedMs,
                 PrimitiveBufferCount = _lastState.PrimitiveBufferCount,
                 PrimitiveInstances = _lastState.PrimitiveInstances,
                 PrimitiveBatches = _lastState.PrimitiveBatches,
-                VisibleEntities = _lastState.VisibleEntities,
+                PrimitiveDropped = _lastState.PrimitiveDropped,
+                EcsVisibleEntities = _lastState.EcsVisibleEntities,
+                CrowdInViewEntities = _lastState.CrowdInViewEntities,
+                CrowdSubmittedEntities = _lastState.CrowdSubmittedEntities,
+                SubmittedObstacles = _lastState.SubmittedObstacles,
+                CompositeSkipCountLastSecond = _lastState.CompositeSkipCountLastSecond,
                 FirstAgentX = _lastState.FirstAgentX,
                 FirstAgentZ = _lastState.FirstAgentZ,
             };
@@ -108,7 +138,7 @@ internal sealed class MassNavWebParityPanelController
         _simulation = null;
         _lastState = MassNavPanelState.Empty;
         _lastPerfCaptureTicks = 0;
-        _lastActionText = "Budget/Physics/Nav/Flow/Arrival buttons hot-apply immediately. Agent count and Reset Scene rebuild the scene.";
+        _lastActionText = "MassNav runtime knobs hot-apply now. Physics/Nav buttons only touch engine policies. Flow is config-only here. Agent count and Reset rebuild the scene.";
         _page?.SetState(_ => MassNavPanelState.Empty);
     }
 
@@ -142,21 +172,16 @@ internal sealed class MassNavWebParityPanelController
                     .Wrap()
                     .Gap(8f)
                     .Justify(UiJustifyContent.Start),
-                Ui.Text("Web parity baseline: SoA sim -> Ludots selection -> formation targets -> presentation primitives.").FontSize(12f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text("Web parity baseline: SoA sim owns the hot path. Ludots owns selection, command ingress, presentation, and diagnostics.").FontSize(12f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Teams {state.TeamCount}  Agents/team {state.AgentsPerTeam}  Total {state.TotalAgents}  Selectable {state.ControllableAgents}  Obstacles {state.Blockers}").FontSize(13f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Selected {state.SelectedCount}  Rev {state.SelectionRevision}").FontSize(13f).Color("#A4F07A"),
+                Ui.Text($"Selected {state.SelectedCount}  Rev {state.SelectionRevision}  Pending cmds {state.PendingCommandCount}").FontSize(13f).Color("#A4F07A"),
                 Ui.Text($"Team target {state.SelectedTeamId}  Formation {state.FormationLabel}  Groups {state.FormationCount}  Rotation {state.FormationRotationDeg:0.0} deg").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Render FPS {state.RenderFps:0}  Frame {state.RenderFrameMs:0.0} ms  Primitive {state.PrimitiveRenderMs:0.0} ms").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Logic {state.LogicHz} Hz  Budget {state.SimulationBudgetMs} ms  Slice {state.SimulationSliceLimit}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Physics {state.PhysicsHz} Hz / max {state.PhysicsMaxStepsPerFixedTick}  Nav {state.NavigationHz} Hz / max {state.NavigationMaxStepsPerFixedTick}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Flow {(state.FlowEnabled ? "On" : "Off")}  Iter {state.FlowIterations}  Step {state.FlowStepInterval}  Crowd {state.FlowCrowdInterval}  Obs {state.FlowObstacleInterval}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Arrival {(state.ArrivalFallbackEnabled ? "On" : "Off")}  Timeout {state.ArrivalTimeoutMs} ms  Progress {state.ArrivalProgressCm} cm  Wake {state.ArrivalWakePushCm} cm  Retry {state.ArrivalMaxRetries}  Settled {state.ArrivalSettledUnits}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"InputCollection: select {state.SelectionSyncHzObserved:0.0} Hz  control {state.ControlHzObserved:0.0} Hz  capture {state.CommandHzObserved:0.0} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"PostMovement: command {state.CommandDispatchHzObserved:0.0} Hz  sim {state.SimHzObserved:0.0} Hz  Presentation: primitive {state.PrimitiveHzObserved:0.0} Hz  hud {state.HudHzObserved:0.0} Hz  panel {state.PanelHzObserved:0.0} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text(state.LastActionText).FontSize(12f).Color("#8FE388").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Select {state.SelectionSyncMs:0.0} ms  Formation {state.FormationTargetMs:0.0} ms  Sim {state.SimStepMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Entity sync {state.EntitySyncMs:0.0} ms  Primitive emit {state.PrimitiveEmitMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Primitive buffer {state.PrimitiveBufferCount}  instances {state.PrimitiveInstances}  batches {state.PrimitiveBatches}  visible {state.VisibleEntities}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Camera target ({state.CameraTargetX:0.0}, {state.CameraTargetY:0.0}) cm  distance {state.CameraDistanceCm:0.0} cm").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text("Frame Budget").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text("MassNav Runtime").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text($"Immediate knobs: Logic {state.LogicHz} Hz  Budget {state.SimulationBudgetMs} ms  Slice {state.SimulationSliceLimit}  Arrival {(state.ArrivalFallbackEnabled ? "On" : "Off")}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Row(
                         BuildActionButton("-1 ms", () => AdjustSimulationBudget(-1)),
                         BuildActionButton("+1 ms", () => AdjustSimulationBudget(1)),
@@ -164,39 +189,6 @@ internal sealed class MassNavWebParityPanelController
                         BuildActionButton("+30 slice", () => AdjustSimulationSlices(30)))
                     .Wrap()
                     .Gap(8f),
-                Ui.Text("Tick Rates").FontSize(12f).Bold().Color("#F4C77D"),
-                Ui.Text("LogicHz follows Engine/clock.json and is read-only at runtime. Physics/Nav Hz below are hot-adjustable.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Row(
-                        BuildActionButton("Phys -5", () => AdjustPhysicsHz(-5)),
-                        BuildActionButton("Phys +5", () => AdjustPhysicsHz(5)),
-                        BuildActionButton("Phys Max-1", () => AdjustPhysicsMaxSteps(-1)),
-                        BuildActionButton("Phys Max+1", () => AdjustPhysicsMaxSteps(1)))
-                    .Wrap()
-                    .Gap(8f),
-                Ui.Row(
-                        BuildActionButton("Nav -5", () => AdjustNavigationHz(-5)),
-                        BuildActionButton("Nav +5", () => AdjustNavigationHz(5)),
-                        BuildActionButton("Nav Max-1", () => AdjustNavigationMaxSteps(-1)),
-                        BuildActionButton("Nav Max+1", () => AdjustNavigationMaxSteps(1)))
-                    .Wrap()
-                    .Gap(8f),
-                Ui.Text("Flow Budget").FontSize(12f).Bold().Color("#F4C77D"),
-                Ui.Row(
-                        BuildActionButton(state.FlowEnabled ? "Flow On" : "Flow Off", ToggleFlowEnabled),
-                        BuildActionButton("Iter -512", () => AdjustFlowIterations(-512)),
-                        BuildActionButton("Iter +512", () => AdjustFlowIterations(512)))
-                    .Wrap()
-                    .Gap(8f),
-                Ui.Row(
-                        BuildActionButton("Step -1", () => AdjustFlowStepInterval(-1)),
-                        BuildActionButton("Step +1", () => AdjustFlowStepInterval(1)),
-                        BuildActionButton("Crowd -1", () => AdjustFlowCrowdInterval(-1)),
-                        BuildActionButton("Crowd +1", () => AdjustFlowCrowdInterval(1)),
-                        BuildActionButton("Obs -1", () => AdjustFlowObstacleInterval(-1)),
-                        BuildActionButton("Obs +1", () => AdjustFlowObstacleInterval(1)))
-                    .Wrap()
-                    .Gap(8f),
-                Ui.Text("Arrival Fallback").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
                         BuildActionButton(state.ArrivalFallbackEnabled ? "Arrival On" : "Arrival Off", ToggleArrivalFallback),
                         BuildActionButton("Timeout -250", () => AdjustArrivalTimeoutMs(-250)),
@@ -212,7 +204,28 @@ internal sealed class MassNavWebParityPanelController
                         BuildActionButton("Retry +1", () => AdjustArrivalMaxRetries(1)))
                     .Wrap()
                     .Gap(8f),
-                Ui.Text("Scene Scale").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text("Engine Policy Only").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text($"Physics {state.PhysicsHz} Hz / max {state.PhysicsMaxStepsPerFixedTick}  Nav {state.NavigationHz} Hz / max {state.NavigationMaxStepsPerFixedTick}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text("LogicHz follows Engine/clock.json and drives the custom mass-nav sim. Physics/Nav buttons are honest engine-policy hot apply, but this playground's crowd sim does not consume them yet.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Row(
+                        BuildActionButton("Phys -5", () => AdjustPhysicsHz(-5)),
+                        BuildActionButton("Phys +5", () => AdjustPhysicsHz(5)),
+                        BuildActionButton("Phys Max-1", () => AdjustPhysicsMaxSteps(-1)),
+                        BuildActionButton("Phys Max+1", () => AdjustPhysicsMaxSteps(1)))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Row(
+                        BuildActionButton("Nav -5", () => AdjustNavigationHz(-5)),
+                        BuildActionButton("Nav +5", () => AdjustNavigationHz(5)),
+                        BuildActionButton("Nav Max-1", () => AdjustNavigationMaxSteps(-1)),
+                        BuildActionButton("Nav Max+1", () => AdjustNavigationMaxSteps(1)))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Text("Config Snapshot Only").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text($"Flow {(state.FlowEnabled ? "On" : "Off")}  Iter {state.FlowIterations}  Step {state.FlowStepInterval}  Crowd {state.FlowCrowdInterval}  Obs {state.FlowObstacleInterval}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Flow rebuild(last) {state.FlowFieldRebuildMs:0.0} ms  target-driven  rebuild/frame {state.FlowReconcileFrame}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text("Flow knobs stay visible for parity bookkeeping, but they are intentionally read-only here until the custom sim actually consumes them.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text("Scene Rebuild Required").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
                         BuildActionButton("-2k", AdjustTotalAgentsDown),
                         BuildActionButton("5k", () => SetTotalAgents(5_000)),
@@ -222,6 +235,11 @@ internal sealed class MassNavWebParityPanelController
                         BuildActionButton("+2k", AdjustTotalAgentsUp))
                     .Wrap()
                     .Gap(8f),
+                Ui.Text("Semantic Contract").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text(state.ObstacleSemanticsText).FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text(state.TargetSemanticsText).FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text(state.ArrivalSemanticsText).FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text(state.YieldSemanticsText).FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text("Team Target").FontSize(12f).Bold().Color("#F4C77D"),
                 BuildTeamTargetRow(),
                 Ui.Text("Formation").FontSize(12f).Bold().Color("#F4C77D"),
@@ -233,9 +251,18 @@ internal sealed class MassNavWebParityPanelController
                         BuildActionButton("Wedge", () => SetFormationMode(MassNavFormationMode.Wedge)))
                     .Wrap()
                     .Gap(8f),
-                Ui.Text($"Selection snapshots/frame {state.SelectionSnapshotsFrame}").FontSize(12f).Color("#DFAF6C"),
+                Ui.Text("Diagnostics").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text($"Select {state.SelectionSyncMs:0.0} ms  Command {state.CommandApplyMs:0.0} ms  Group {state.FormationTargetMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Prep {state.StepPrepMs:0.0} ms  Steer {state.LocalSteeringMs:0.0} ms  Resolve {state.HardResolveMs:0.0} ms  Sim {state.SimStepMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Entity sync {state.EntitySyncMs:0.0} ms  Primitive emit {state.PrimitiveEmitMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Primitive buffer {state.PrimitiveBufferCount}  instances {state.PrimitiveInstances}  batches {state.PrimitiveBatches}  dropped {state.PrimitiveDropped}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Crowd in view {state.CrowdInViewEntities}  submitted {state.CrowdSubmittedEntities}  obs {state.SubmittedObstacles}  ECS visible {state.EcsVisibleEntities}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Cull {state.CameraCullingMs:0.0} ms  Presenter {state.CameraPresenterMs:0.0} ms  HUD proj {state.WorldHudProjectionMs:0.0} ms").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"UI in {state.UiInputMs:0.0} ms  UI render {state.UiRenderMs:0.0} ms  upload {state.UiUploadMs:0.0} ms  overlay {state.ScreenOverlayBuildMs:0.0}/{state.ScreenOverlayDrawMs:0.0} ms").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Render accounted {state.RenderAccountedMs:0.0} ms  leftover {state.RenderUnaccountedMs:0.0} ms  composite skip {state.CompositeSkipCountLastSecond}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Camera target ({state.CameraTargetX:0.0}, {state.CameraTargetY:0.0}) cm  distance {state.CameraDistanceCm:0.0} cm").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Selection snapshots/frame {state.SelectionSnapshotsFrame}  commands/frame {state.CommandCountFrame}").FontSize(12f).Color("#DFAF6C"),
                 Ui.Text($"Structural changes/frame {state.StructuralChangesFrame}").FontSize(12f).Color("#F18C7F"),
-                Ui.Text($"Flow reconcile/frame {state.FlowReconcileFrame}").FontSize(12f).Color("#F18C7F"),
                 Ui.Text("Use Ludots box selection to grab any units. Right click with a selection issues a formation move. Right click with no selection redirects the chosen team target. Hold Q/E to rotate selected formations.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal))
             .Width(460f)
             .Padding(14f)
@@ -342,7 +369,7 @@ internal sealed class MassNavWebParityPanelController
         }
 
         policy.SetTargetHz(Math.Clamp(policy.TargetHz + delta, 0, 240));
-        SetActionFeedback($"Hot apply: physics = {policy.TargetHz} Hz.");
+        SetActionFeedback($"Engine policy hot apply: physics = {policy.TargetHz} Hz. Current mass-nav custom sim still runs on LogicHz/InputCollection.");
     }
 
     private void AdjustPhysicsMaxSteps(int delta)
@@ -353,7 +380,7 @@ internal sealed class MassNavWebParityPanelController
         }
 
         policy.SetMaxStepsPerFixedTick(Math.Clamp(policy.MaxStepsPerFixedTick + delta, 1, 32));
-        SetActionFeedback($"Hot apply: physics max steps = {policy.MaxStepsPerFixedTick}.");
+        SetActionFeedback($"Engine policy hot apply: physics max steps = {policy.MaxStepsPerFixedTick}. Current mass-nav custom sim is not consuming Physics2D ticks.");
     }
 
     private void AdjustNavigationHz(int delta)
@@ -364,7 +391,7 @@ internal sealed class MassNavWebParityPanelController
         }
 
         policy.SetTargetHz(Math.Clamp(policy.TargetHz + delta, 0, 240));
-        SetActionFeedback($"Hot apply: navigation = {policy.TargetHz} Hz.");
+        SetActionFeedback($"Engine policy hot apply: navigation = {policy.TargetHz} Hz. Current mass-nav custom sim still runs on LogicHz/InputCollection.");
     }
 
     private void AdjustNavigationMaxSteps(int delta)
@@ -375,54 +402,7 @@ internal sealed class MassNavWebParityPanelController
         }
 
         policy.SetMaxStepsPerFixedTick(Math.Clamp(policy.MaxStepsPerFixedTick + delta, 1, 32));
-        SetActionFeedback($"Hot apply: navigation max steps = {policy.MaxStepsPerFixedTick}.");
-    }
-
-    private void ToggleFlowEnabled()
-    {
-        if (_simulation == null)
-        {
-            return;
-        }
-
-        _simulation.FlowTuning.Enabled = !_simulation.FlowTuning.Enabled;
-        SetActionFeedback($"Hot apply: flow = {(_simulation.FlowTuning.Enabled ? "On" : "Off")}.");
-    }
-
-    private void AdjustFlowIterations(int delta)
-    {
-        _simulation?.FlowTuning.AdjustIterations(delta);
-        if (_simulation != null)
-        {
-            SetActionFeedback($"Hot apply: flow iterations = {_simulation.FlowTuning.IterationsPerStep}.");
-        }
-    }
-
-    private void AdjustFlowStepInterval(int delta)
-    {
-        _simulation?.FlowTuning.AdjustStepInterval(delta);
-        if (_simulation != null)
-        {
-            SetActionFeedback($"Hot apply: flow step interval = {_simulation.FlowTuning.StepIntervalTicks}.");
-        }
-    }
-
-    private void AdjustFlowCrowdInterval(int delta)
-    {
-        _simulation?.FlowTuning.AdjustCrowdStampInterval(delta);
-        if (_simulation != null)
-        {
-            SetActionFeedback($"Hot apply: flow crowd interval = {_simulation.FlowTuning.CrowdStampIntervalTicks}.");
-        }
-    }
-
-    private void AdjustFlowObstacleInterval(int delta)
-    {
-        _simulation?.FlowTuning.AdjustObstacleStampInterval(delta);
-        if (_simulation != null)
-        {
-            SetActionFeedback($"Hot apply: flow obstacle interval = {_simulation.FlowTuning.ObstacleStampIntervalTicks}.");
-        }
+        SetActionFeedback($"Engine policy hot apply: navigation max steps = {policy.MaxStepsPerFixedTick}. Current mass-nav custom sim is not consuming Navigation2D ticks.");
     }
 
     private void ToggleArrivalFallback()
@@ -506,7 +486,34 @@ internal sealed class MassNavWebParityPanelController
     {
         bool visible = engine.CurrentMapSession != null && MassNavWebParityIds.IsPlaygroundMap(engine.CurrentMapSession.MapId.Value);
         PresentationTimingDiagnostics? timing = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
-        int primitiveBufferCount = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)?.Count ?? 0;
+        PrimitiveDrawBuffer? primitiveBuffer = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
+        int primitiveBufferCount = primitiveBuffer?.Count ?? 0;
+        int primitiveDropped = primitiveBuffer?.DroppedSinceClear ?? 0;
+        int ecsVisibleEntities = (engine.GetService(CoreServiceKeys.CameraCullingDebugState) as CameraCullingDebugState)?.VisibleEntityCount
+            ?? timing?.VisibleEntitiesLastFrame
+            ?? 0;
+        float renderFrameMs = MathF.Round(timing?.RenderFrameMs ?? 0f, 1);
+        float primitiveRenderMs = MathF.Round(timing?.PrimitiveRenderMs ?? 0f, 1);
+        float uiInputMs = MathF.Round(timing?.UiInputMs ?? 0f, 1);
+        float uiRenderMs = MathF.Round(timing?.UiRenderMs ?? 0f, 1);
+        float uiUploadMs = MathF.Round(timing?.UiUploadMs ?? 0f, 1);
+        float screenOverlayBuildMs = MathF.Round(timing?.ScreenOverlayBuildMs ?? 0f, 1);
+        float screenOverlayDrawMs = MathF.Round(timing?.ScreenOverlayDrawMs ?? 0f, 1);
+        float cameraCullingMs = MathF.Round(timing?.CameraCullingMs ?? 0f, 1);
+        float cameraPresenterMs = MathF.Round(timing?.CameraPresenterMs ?? 0f, 1);
+        float worldHudProjectionMs = MathF.Round(timing?.WorldHudProjectionMs ?? 0f, 1);
+        float renderAccountedMs = MathF.Round(
+            primitiveRenderMs +
+            uiInputMs +
+            uiRenderMs +
+            uiUploadMs +
+            screenOverlayBuildMs +
+            screenOverlayDrawMs +
+            cameraCullingMs +
+            cameraPresenterMs +
+            worldHudProjectionMs,
+            1);
+        float renderUnaccountedMs = MathF.Max(0f, MathF.Round(renderFrameMs - renderAccountedMs, 1));
         float firstAgentX = 0f;
         float firstAgentZ = 0f;
         if (simulation.AgentState.ControllableCount > 0)
@@ -523,6 +530,10 @@ internal sealed class MassNavWebParityPanelController
         int logicHz = Time.FixedDeltaTime > 0.000001f ? (int)MathF.Round(1f / Time.FixedDeltaTime) : 0;
         var physicsPolicy = engine.GetService(CoreServiceKeys.Physics2DTickPolicy);
         var navigationPolicy = engine.GetService(CoreServiceKeys.Navigation2DTickPolicy);
+        string obstacleSemanticsText = $"Obstacle semantics: visible radius = authored obstacle. hard block = visible + body {simulation.WebParity.Semantics.Obstacle.AgentBodyRadiusCm:0} cm. soft push = visible + {simulation.WebParity.Semantics.Obstacle.SoftPushPaddingCm:0} cm.";
+        string targetSemanticsText = $"Target semantics: team target clear {simulation.WebParity.Semantics.TargetProjection.TeamTargetClearanceCm:0} cm. group center clear {simulation.WebParity.Semantics.TargetProjection.GroupCenterClearanceCm:0} cm. team slot clear {simulation.WebParity.Semantics.TargetProjection.TeamSlotClearanceCm:0} cm. loose/group slot clear {simulation.WebParity.Semantics.TargetProjection.LooseTargetClearanceCm:0}/{simulation.WebParity.Semantics.TargetProjection.GroupSlotClearanceCm:0} cm.";
+        string arrivalSemanticsText = $"Arrival semantics: stop threshold {simulation.WebParity.Semantics.Group.UnitTargetStopThresholdCm:0} cm. settle timeout/progress/wake/retry = {simulation.WebParity.ArrivalTuning.TimeoutMs}/{simulation.WebParity.ArrivalTuning.ProgressDistanceCm}/{simulation.WebParity.ArrivalTuning.WakePushDistanceCm}/{simulation.WebParity.ArrivalTuning.MaxRetryCount}. flow slow radius loose/group = {simulation.WebParity.Semantics.Steering.GoalArrivalRadiusCm:0}/{simulation.WebParity.Semantics.Group.FormationFlowSlowRadiusCm:0} cm.";
+        string yieldSemanticsText = $"Yield semantics: nav mass light/heavy = {simulation.WebParity.AvoidanceTuning.LightNavMass:0.##}/{simulation.WebParity.AvoidanceTuning.HeavyNavMass:0.##}. dominant ratio {simulation.WebParity.AvoidanceTuning.DominantMassRatio:0.##}. response friendly/non-friendly/push = {simulation.WebParity.AvoidanceTuning.FriendlyResponseScale:0.##}/{simulation.WebParity.AvoidanceTuning.NonFriendlyResponseScale:0.##}/{simulation.WebParity.AvoidanceTuning.DominantPushResponseScale:0.##}.";
         return new MassNavPanelState(
             Visible: visible,
             LastActionText: _lastActionText,
@@ -541,6 +552,8 @@ internal sealed class MassNavWebParityPanelController
             SelectedTeamId: simulation.SelectedTeamId,
             SelectedCount: simulation.SelectedCount,
             SelectionRevision: simulation.SelectionRevision,
+            PendingCommandCount: simulation.PendingCommandCount,
+            CommandCountFrame: simulation.CommandCountFrame,
             FormationCount: simulation.NavGroupRuntime.ActiveGroupCount,
             FormationLabel: simulation.FormationMode.ToString(),
             FormationRotationDeg: simulation.NavGroupRuntime.SelectedRotationRadians * (180f / MathF.PI),
@@ -556,17 +569,49 @@ internal sealed class MassNavWebParityPanelController
             ArrivalMaxRetries: simulation.WebParity.ArrivalTuning.MaxRetryCount,
             ArrivalSettledUnits: simulation.WebParity.SettledUnitCount,
             RenderFps: MathF.Round(timing?.RenderFps ?? 0f),
-            RenderFrameMs: MathF.Round(timing?.RenderFrameMs ?? 0f, 1),
-            PrimitiveRenderMs: MathF.Round(timing?.PrimitiveRenderMs ?? 0f, 1),
+            RenderFrameMs: renderFrameMs,
+            PrimitiveRenderMs: primitiveRenderMs,
             SelectionSyncMs: MathF.Round(simulation.SelectionSyncMs, 1),
+            CommandApplyMs: MathF.Round(simulation.CommandApplyMs, 1),
             FormationTargetMs: MathF.Round(simulation.FormationTargetMs, 1),
+            FlowFieldRebuildMs: MathF.Round(simulation.FlowFieldRebuildMs > 0.001f ? simulation.FlowFieldRebuildMs : simulation.WebParity.LastFlowFieldRebuildMs, 1),
+            StepPrepMs: MathF.Round(simulation.StepPrepMs, 1),
+            LocalSteeringMs: MathF.Round(simulation.LocalSteeringMs, 1),
             SimStepMs: MathF.Round(simulation.SimStepMs, 1),
+            HardResolveMs: MathF.Round(simulation.HardResolveMs, 1),
             EntitySyncMs: MathF.Round(simulation.EntitySyncMs, 1),
             PrimitiveEmitMs: MathF.Round(simulation.PrimitiveEmitMs, 1),
+            SelectionSyncHzObserved: MathF.Round(simulation.SelectionSyncHzObserved, 1),
+            ControlHzObserved: MathF.Round(simulation.ControlHzObserved, 1),
+            CommandHzObserved: MathF.Round(simulation.CommandHzObserved, 1),
+            CommandDispatchHzObserved: MathF.Round(simulation.CommandDispatchHzObserved, 1),
+            SimHzObserved: MathF.Round(simulation.SimHzObserved, 1),
+            PrimitiveHzObserved: MathF.Round(simulation.PrimitiveHzObserved, 1),
+            HudHzObserved: MathF.Round(simulation.HudHzObserved, 1),
+            PanelHzObserved: MathF.Round(simulation.PanelHzObserved, 1),
+            UiInputMs: uiInputMs,
+            UiRenderMs: uiRenderMs,
+            UiUploadMs: uiUploadMs,
+            ScreenOverlayBuildMs: screenOverlayBuildMs,
+            ScreenOverlayDrawMs: screenOverlayDrawMs,
+            CameraCullingMs: cameraCullingMs,
+            CameraPresenterMs: cameraPresenterMs,
+            WorldHudProjectionMs: worldHudProjectionMs,
+            RenderAccountedMs: renderAccountedMs,
+            RenderUnaccountedMs: renderUnaccountedMs,
             PrimitiveBufferCount: primitiveBufferCount,
             PrimitiveInstances: timing?.PrimitiveInstancesLastFrame ?? 0,
             PrimitiveBatches: timing?.PrimitiveBatchesLastFrame ?? 0,
-            VisibleEntities: timing?.VisibleEntitiesLastFrame ?? 0,
+            PrimitiveDropped: primitiveDropped,
+            EcsVisibleEntities: ecsVisibleEntities,
+            CrowdInViewEntities: simulation.CrowdInViewCount,
+            CrowdSubmittedEntities: simulation.CrowdSubmittedCount,
+            SubmittedObstacles: simulation.ObstacleSubmittedCount,
+            CompositeSkipCountLastSecond: timing?.CompositeSkipCountLastSecond ?? 0,
+            ObstacleSemanticsText: obstacleSemanticsText,
+            TargetSemanticsText: targetSemanticsText,
+            ArrivalSemanticsText: arrivalSemanticsText,
+            YieldSemanticsText: yieldSemanticsText,
             CameraTargetX: camera.TargetCm.X,
             CameraTargetY: camera.TargetCm.Y,
             CameraDistanceCm: camera.DistanceCm,

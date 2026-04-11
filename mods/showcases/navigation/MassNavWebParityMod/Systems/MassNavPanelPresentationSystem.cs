@@ -23,6 +23,12 @@ internal sealed class MassNavPanelPresentationSystem : ISystem<float>
 
     public void Update(in float dt)
     {
+        if (_engine.GetService(MassNavWebParityKeys.SimulationRuntime) is MassNavSimulationRuntime simulation &&
+            MassNavWebParityIds.IsCurrentPlaygroundMap(_engine))
+        {
+            simulation.ObservePanelTick();
+        }
+
         _runtime.RefreshPanel(_engine);
     }
 }

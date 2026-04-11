@@ -81,7 +81,12 @@ public sealed class MassNavGroupRuntime
         }
 
         int teamId = simulation.GetTeam(memberIndices[0]);
-        Vector2 resolvedDestination = simulation.ResolveNavigableTarget(destinationCm.X, destinationCm.Y, 0f, 0f, 60f);
+        Vector2 resolvedDestination = simulation.ResolveNavigableTarget(
+            destinationCm.X,
+            destinationCm.Y,
+            0f,
+            0f,
+            simulation.Semantics.TargetProjection.GroupCenterClearanceCm);
 
         int groupId = AllocateGroupId();
         int[] exactMembers = new int[assignedCount];
@@ -109,7 +114,7 @@ public sealed class MassNavGroupRuntime
                 resolvedDestination.Y + offsetY[i],
                 offsetX[i],
                 offsetY[i],
-                50f);
+                simulation.Semantics.TargetProjection.GroupSlotClearanceCm);
             simulation.SetUnitTarget(exactMembers[i], resolvedTarget.X, resolvedTarget.Y, resetRecovery: true);
         }
 
@@ -228,7 +233,9 @@ public sealed class MassNavGroupRuntime
             float toDestY = group.DestinationY - centerY;
             float distSq = (toDestX * toDestX) + (toDestY * toDestY);
             float distance = MathF.Sqrt(distSq);
-            float pullStrength = distance > 50f ? MathF.Min(distance, 2_000f) : 0f;
+            float pullStrength = distance > simulation.Semantics.Group.PullDeadZoneCm
+                ? MathF.Min(distance, simulation.Semantics.Group.PullClampCm)
+                : 0f;
             float pullX = 0f;
             float pullY = 0f;
             if (pullStrength > 0.001f)
@@ -248,13 +255,13 @@ public sealed class MassNavGroupRuntime
                     rawTargetY,
                     group.OffsetX[i],
                     group.OffsetY[i],
-                    50f);
+                    simulation.Semantics.TargetProjection.GroupSlotClearanceCm);
                 simulation.SetUnitTarget(unitIndex, resolvedTarget.X, resolvedTarget.Y);
             }
 
             group.CenterX = centerX;
             group.CenterY = centerY;
-            group.Arrived = distance < 150f;
+            group.Arrived = distance < simulation.Semantics.Group.ArrivedRadiusCm;
         }
 
         ActiveGroupCount = CountActiveGroups();
@@ -418,7 +425,12 @@ public sealed class MassNavGroupRuntime
 
         if (count == 1)
         {
-            Vector2 singleTarget = simulation.ResolveNavigableTarget(destinationCm.X, destinationCm.Y, 0f, 0f, 50f);
+            Vector2 singleTarget = simulation.ResolveNavigableTarget(
+                destinationCm.X,
+                destinationCm.Y,
+                0f,
+                0f,
+                simulation.Semantics.TargetProjection.LooseTargetClearanceCm);
             simulation.SetUnitTarget(memberIndices[0], singleTarget.X, singleTarget.Y, resetRecovery: true);
             return;
         }
@@ -428,7 +440,12 @@ public sealed class MassNavGroupRuntime
         float[] offsetX = new float[count];
         float[] offsetY = new float[count];
         _formationLayout.BuildOffsets(baseOffsetX, baseOffsetY, offsetX, offsetY, count, MassNavFormationMode.Square, rotationRadians);
-        Vector2 resolvedCenter = simulation.ResolveNavigableTarget(destinationCm.X, destinationCm.Y, 0f, 0f, 60f);
+        Vector2 resolvedCenter = simulation.ResolveNavigableTarget(
+            destinationCm.X,
+            destinationCm.Y,
+            0f,
+            0f,
+            simulation.Semantics.TargetProjection.GroupCenterClearanceCm);
         for (int i = 0; i < count; i++)
         {
             Vector2 resolvedTarget = simulation.ResolveNavigableTarget(
@@ -436,7 +453,7 @@ public sealed class MassNavGroupRuntime
                 resolvedCenter.Y + offsetY[i],
                 offsetX[i],
                 offsetY[i],
-                50f);
+                simulation.Semantics.TargetProjection.LooseTargetClearanceCm);
             simulation.SetUnitTarget(memberIndices[i], resolvedTarget.X, resolvedTarget.Y, resetRecovery: true);
         }
     }
