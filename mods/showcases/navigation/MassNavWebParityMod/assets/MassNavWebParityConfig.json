@@ -1,0 +1,81 @@
+{
+  "mapId": "mass_nav_web_parity",
+  "scenario": {
+    "agentsPerTeam": 2500,
+    "initialSelectedTeamId": 1,
+    "teams": [
+      { "id": 1, "name": "MassNav Team 1" },
+      { "id": 2, "name": "MassNav Team 2" },
+      { "id": 3, "name": "MassNav Team 3" },
+      { "id": 4, "name": "MassNav Team 4" }
+    ]
+  },
+  "teamRelationships": {
+    "defaultRelationship": "Hostile",
+    "relationships": [
+      { "teamA": 3, "teamB": 4, "attitude": "Neutral", "symmetric": true }
+    ]
+  },
+  "flow": {
+    "enabled": false,
+    "iterationsPerStep": 4096,
+    "stepIntervalTicks": 1,
+    "crowdStampIntervalTicks": 1,
+    "obstacleStampIntervalTicks": 1
+  },
+  "arrival": {
+    "enabled": true,
+    "timeoutMs": 1500,
+    "progressDistanceCm": 60,
+    "wakePushDistanceCm": 80,
+    "maxRetryCount": 2
+  },
+  "avoidance": {
+    "lightNavMass": 1.0,
+    "heavyNavMass": 4.0,
+    "lightVisualScale": 0.22,
+    "heavyVisualScale": 0.34,
+    "dominantMassRatio": 2.25,
+    "friendlyResponseScale": 1.1,
+    "nonFriendlyResponseScale": 1.25,
+    "dominantPushResponseScale": 1.6
+  },
+  "semantics": {
+    "obstacle": {
+      "agentBodyRadiusCm": 20.0,
+      "hardResolveCandidateDistanceCm": 100.0,
+      "softPushPaddingCm": 350.0,
+      "softPushForceScale": 8.0
+    },
+    "targetProjection": {
+      "teamTargetClearanceCm": 60.0,
+      "groupCenterClearanceCm": 60.0,
+      "teamSlotClearanceCm": 45.0,
+      "groupSlotClearanceCm": 50.0,
+      "looseTargetClearanceCm": 50.0
+    },
+    "group": {
+      "spawnSpacingCm": 46.0,
+      "teamSlotSpacingCm": 90.0,
+      "pullDeadZoneCm": 50.0,
+      "pullClampCm": 2000.0,
+      "arrivedRadiusCm": 150.0,
+      "formationArriveThresholdCm": 200.0,
+      "looseArriveThresholdCm": 300.0,
+      "unitTargetStopThresholdCm": 50.0,
+      "formationFlowSlowRadiusCm": 400.0,
+      "nearSlotBlend": 0.82,
+      "farSlotBlend": 0.38,
+      "nearSlotBlendDistanceSq": 4000000.0
+    },
+    "steering": {
+      "speedCmPerSecond": 800.0,
+      "separationRadiusCm": 200.0,
+      "goalArrivalRadiusCm": 1200.0,
+      "flowObstacleAvoidanceScale": 1.2,
+      "formationSeparationScale": 2.0,
+      "looseSeparationScale": 4.0,
+      "velocityBlendPerSecond": 5.0
+    }
+  }
+}

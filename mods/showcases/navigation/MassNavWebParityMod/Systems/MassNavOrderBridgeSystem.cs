@@ -108,7 +108,7 @@ internal sealed class MassNavOrderBridgeSystem : ISystem<float>
         {
             OrderBucket bucket = _buckets[bucketIndex];
             if (bucket.Members.Count <= 0 ||
-                !_simulation.NavGroupRuntime.TryGetOrderGroup(bucket.Token, out bool arrived, out _ ) ||
+                !_simulation.NavGroupRuntime.TryGetOrderGroup(bucket.Token, out bool arrived) ||
                 !arrived)
             {
                 continue;

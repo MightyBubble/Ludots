@@ -14,18 +14,24 @@ namespace MassNavWebParityMod.Systems;
 
 internal static class MassNavScenarioBootstrap
 {
-    public static void SpawnDefaultScenario(World world, MassNavSimulationRuntime simulation, TeamEntityLookup? teamLookup = null)
+    public static void SpawnDefaultScenario(World world, MassNavSimulationRuntime simulation, TeamEntityLookup teamLookup)
     {
+        if (teamLookup == null)
+        {
+            throw new ArgumentNullException(nameof(teamLookup));
+        }
+
         simulation.AgentState.Reset();
-        int[] teamIds = ResolveScenarioTeams(world, simulation, teamLookup);
+        ReadOnlySpan<int> teamIds = simulation.TeamIds;
         simulation.ConfigureScenarioTeams(teamIds);
-        ConfigureRelationships(teamIds);
+        ConfigureRelationships(simulation.Config);
         simulation.WebParity.Reset(teamIds, simulation.AgentsPerTeam);
 
         for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
         {
             int teamId = teamIds[teamIndex];
-            teamLookup?.Register(teamId, RelationshipTeamBootstrapper.EnsureTeamEntity(world, teamLookup, teamId, $"MassNav Team {teamId}"));
+            string teamName = simulation.Config.Scenario.Teams[teamIndex].Name;
+            teamLookup.Register(teamId, RelationshipTeamBootstrapper.EnsureTeamEntity(world, teamLookup, teamId, teamName));
         }
 
         for (int i = 0; i < simulation.WebParity.UnitCount; i++)
@@ -77,36 +83,8 @@ internal static class MassNavScenarioBootstrap
         }
     }
 
-    private static int[] ResolveScenarioTeams(World world, MassNavSimulationRuntime simulation, TeamEntityLookup? teamLookup)
+    private static void ConfigureRelationships(MassNavWebParityConfig config)
     {
-        if (teamLookup != null && teamLookup.Count > 0)
-        {
-            var teamIds = new int[teamLookup.Count];
-            int index = 0;
-            foreach (var entry in teamLookup.Entries)
-            {
-                teamIds[index++] = entry.Key;
-            }
-
-            System.Array.Sort(teamIds);
-            return teamIds;
-        }
-
-        if (simulation.TeamCount > 0)
-        {
-            return simulation.TeamIds.ToArray();
-        }
-
-        return new[] { 1, 2, 3, 4 };
-    }
-
-    private static void ConfigureRelationships(ReadOnlySpan<int> teamIds)
-    {
-        TeamManager.Clear();
-        TeamManager.DefaultRelationship = TeamRelationship.Hostile;
-        if (teamIds.Length >= 4)
-        {
-            TeamManager.SetRelationshipSymmetric(teamIds[2], teamIds[3], TeamRelationship.Neutral);
-        }
+        TeamManager.LoadConfig(config.TeamRelationships);
     }
 }

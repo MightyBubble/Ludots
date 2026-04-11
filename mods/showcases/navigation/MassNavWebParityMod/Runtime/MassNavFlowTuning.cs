@@ -3,10 +3,10 @@ namespace MassNavWebParityMod.Runtime;
 public sealed class MassNavFlowTuning
 {
     public bool Enabled { get; set; }
-    public int IterationsPerStep { get; private set; } = 4096;
-    public int StepIntervalTicks { get; private set; } = 1;
-    public int CrowdStampIntervalTicks { get; private set; } = 1;
-    public int ObstacleStampIntervalTicks { get; private set; } = 1;
+    public int IterationsPerStep { get; set; } = 4096;
+    public int StepIntervalTicks { get; set; } = 1;
+    public int CrowdStampIntervalTicks { get; set; } = 1;
+    public int ObstacleStampIntervalTicks { get; set; } = 1;
 
     public void AdjustIterations(int delta)
     {

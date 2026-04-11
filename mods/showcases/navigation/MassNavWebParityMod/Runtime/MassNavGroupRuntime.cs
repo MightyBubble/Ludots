@@ -13,6 +13,7 @@ public sealed class MassNavGroupRuntime
     private readonly Dictionary<int, int> _orderTokenToGroupId = new();
     private readonly List<int> _orderTokensToRemove = new();
     private int[] _groupIdsByControllableIndex = Array.Empty<int>();
+    private int[] _selectionMemberScratch = Array.Empty<int>();
 
     public MassNavGroupRuntime(MassNavFormationRuntime formationLayout)
     {
@@ -57,7 +58,7 @@ public sealed class MassNavGroupRuntime
         float previousRotation = ResolvePreviousRotation(agentState, selected);
 
         int assignedCount = 0;
-        int[] memberIndices = new int[count];
+        Span<int> memberIndices = EnsureSelectionMemberScratch(count);
         for (int i = 0; i < count; i++)
         {
             if (!agentState.TryGetControllableIndex(selected[i], out int unitIndex))
@@ -92,9 +93,7 @@ public sealed class MassNavGroupRuntime
             simulation.Semantics.TargetProjection.GroupCenterClearanceCm);
 
         int groupId = AllocateGroupId();
-        int[] exactMembers = new int[assignedCount];
-        Array.Copy(memberIndices, exactMembers, assignedCount);
-        var group = CreateGroup(exactMembers, teamId, formationMode, previousRotation);
+        var group = CreateGroup(memberIndices[..assignedCount], teamId, formationMode, previousRotation);
         group.DestinationX = resolvedDestination.X;
         group.DestinationY = resolvedDestination.Y;
         _groups[groupId] = group;
@@ -130,11 +129,10 @@ public sealed class MassNavGroupRuntime
             (uint)groupId >= (uint)_groups.Count ||
             _groups[groupId] == null)
         {
-            int[] exactMembers = memberIndices.ToArray();
-            DetachMembersFromOtherGroups(simulation, exactMembers, keepGroupId: -1);
-            EnsureMembershipCapacityForMembers(exactMembers);
+            DetachMembersFromOtherGroups(simulation, memberIndices, keepGroupId: -1);
+            EnsureMembershipCapacityForMembers(memberIndices);
             groupId = AllocateGroupId();
-            var created = CreateGroup(exactMembers, teamId, formationMode, rotationRadians);
+            var created = CreateGroup(memberIndices, teamId, formationMode, rotationRadians);
             created.CommandToken = orderToken;
             created.DestinationX = resolvedDestination.X;
             created.DestinationY = resolvedDestination.Y;
@@ -142,18 +140,18 @@ public sealed class MassNavGroupRuntime
             _orderTokenToGroupId[orderToken] = groupId;
             AssignGroupTargets(simulation, groupId, created, resetRecovery: true);
             ActiveGroupCount = CountActiveGroups();
-            return exactMembers.Length;
+            return memberIndices.Length;
         }
 
         NavGroupState group = _groups[groupId]!;
-        bool rebuildLayout = group.FormationMode != formationMode || !HaveSameMembers(group.MemberIndices, memberIndices);
+        bool rebuildLayout = group.FormationMode != formationMode || !HaveSameMembers(group, memberIndices);
         if (rebuildLayout)
         {
-            int[] exactMembers = memberIndices.ToArray();
-            DetachMembersFromOtherGroups(simulation, exactMembers, groupId);
-            EnsureMembershipCapacityForMembers(exactMembers);
-            ReplaceGroupMembers(simulation, groupId, group, exactMembers, teamId, formationMode, rotationRadians);
+            DetachMembersFromOtherGroups(simulation, memberIndices, groupId);
+            EnsureMembershipCapacityForMembers(memberIndices);
+            ReplaceGroupMembers(simulation, groupId, group, memberIndices, teamId, formationMode, rotationRadians);
         }
+
         group.TeamId = teamId;
         group.CommandToken = orderToken;
         group.DestinationX = resolvedDestination.X;
@@ -161,13 +159,12 @@ public sealed class MassNavGroupRuntime
         _groups[groupId] = group;
         AssignGroupTargets(simulation, groupId, group, resetRecovery: rebuildLayout);
         ActiveGroupCount = CountActiveGroups();
-        return group.MemberIndices.Length;
+        return group.MemberCount;
     }
 
-    public bool TryGetOrderGroup(int orderToken, out bool arrived, out int[] members)
+    public bool TryGetOrderGroup(int orderToken, out bool arrived)
     {
         arrived = false;
-        members = Array.Empty<int>();
         if (!_orderTokenToGroupId.TryGetValue(orderToken, out int groupId) ||
             (uint)groupId >= (uint)_groups.Count ||
             _groups[groupId] == null)
@@ -175,9 +172,7 @@ public sealed class MassNavGroupRuntime
             return false;
         }
 
-        NavGroupState group = _groups[groupId]!;
-        arrived = group.Arrived;
-        members = group.MemberIndices;
+        arrived = _groups[groupId]!.Arrived;
         return true;
     }
 
@@ -191,7 +186,7 @@ public sealed class MassNavGroupRuntime
         }
 
         NavGroupState group = _groups[groupId]!;
-        for (int i = 0; i < group.MemberIndices.Length; i++)
+        for (int i = 0; i < group.MemberCount; i++)
         {
             simulation.ClearUnitTarget(group.MemberIndices[i]);
         }
@@ -226,7 +221,7 @@ public sealed class MassNavGroupRuntime
             }
 
             NavGroupState group = _groups[groupId]!;
-            for (int memberIndex = 0; memberIndex < group.MemberIndices.Length; memberIndex++)
+            for (int memberIndex = 0; memberIndex < group.MemberCount; memberIndex++)
             {
                 simulation.ClearUnitTarget(group.MemberIndices[memberIndex]);
             }
@@ -266,7 +261,13 @@ public sealed class MassNavGroupRuntime
             }
 
             group.RotationRadians += deltaRadians;
-            _formationLayout.RecomputeOffsets(group.OffsetX, group.OffsetY, group.BaseOffsetX, group.BaseOffsetY, group.RotationRadians);
+            _formationLayout.RecomputeOffsets(
+                group.OffsetX,
+                group.OffsetY,
+                group.BaseOffsetX,
+                group.BaseOffsetY,
+                group.MemberCount,
+                group.RotationRadians);
         }
 
         RefreshSelectedRotation(agentState, selected);
@@ -321,7 +322,7 @@ public sealed class MassNavGroupRuntime
             int liveCount = 0;
             float centerX = 0f;
             float centerY = 0f;
-            for (int i = 0; i < group.MemberIndices.Length; i++)
+            for (int i = 0; i < group.MemberCount; i++)
             {
                 int unitIndex = group.MemberIndices[i];
                 if ((uint)unitIndex >= (uint)simulation.UnitCount)
@@ -359,7 +360,7 @@ public sealed class MassNavGroupRuntime
                 pullY = toDestY * invDistance * pullStrength;
             }
 
-            for (int i = 0; i < group.MemberIndices.Length; i++)
+            for (int i = 0; i < group.MemberCount; i++)
             {
                 int unitIndex = group.MemberIndices[i];
                 float rawTargetX = centerX + group.OffsetX[i] + pullX;
@@ -397,7 +398,7 @@ public sealed class MassNavGroupRuntime
         }
     }
 
-    private void EnsureMembershipCapacityForMembers(int[] members)
+    private void EnsureMembershipCapacityForMembers(ReadOnlySpan<int> members)
     {
         int maxIndex = -1;
         for (int i = 0; i < members.Length; i++)
@@ -409,6 +410,22 @@ public sealed class MassNavGroupRuntime
         }
 
         EnsureMembershipCapacity(maxIndex + 1);
+    }
+
+    private Span<int> EnsureSelectionMemberScratch(int count)
+    {
+        if (_selectionMemberScratch.Length < count)
+        {
+            int next = Math.Max(16, _selectionMemberScratch.Length);
+            while (next < count)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref _selectionMemberScratch, next);
+        }
+
+        return _selectionMemberScratch.AsSpan(0, count);
     }
 
     private void DetachMembersFromOtherGroups(MassNavWebParitySimState simulation, ReadOnlySpan<int> members, int keepGroupId)
@@ -479,54 +496,38 @@ public sealed class MassNavGroupRuntime
             return;
         }
 
-        int memberPosition = Array.IndexOf(group.MemberIndices, unitIndex);
+        int memberPosition = IndexOfMember(group, unitIndex);
         if (memberPosition < 0)
         {
             return;
         }
 
-        if (group.MemberIndices.Length <= 1)
+        if (group.MemberCount <= 1)
         {
             DissolveGroup(groupId, group);
             return;
         }
 
-        int nextLength = group.MemberIndices.Length - 1;
-        int[] nextMembers = new int[nextLength];
-        float[] nextBaseX = new float[nextLength];
-        float[] nextBaseY = new float[nextLength];
-        float[] nextOffsetX = new float[nextLength];
-        float[] nextOffsetY = new float[nextLength];
-        for (int source = 0, target = 0; source < group.MemberIndices.Length; source++)
+        int nextCount = group.MemberCount - 1;
+        for (int source = memberPosition + 1; source < group.MemberCount; source++)
         {
-            if (source == memberPosition)
-            {
-                continue;
-            }
-
-            nextMembers[target] = group.MemberIndices[source];
-            nextBaseX[target] = group.BaseOffsetX[source];
-            nextBaseY[target] = group.BaseOffsetY[source];
-            nextOffsetX[target] = group.OffsetX[source];
-            nextOffsetY[target] = group.OffsetY[source];
-            target++;
+            int target = source - 1;
+            group.MemberIndices[target] = group.MemberIndices[source];
         }
 
-        group.MemberIndices = nextMembers;
-        group.BaseOffsetX = nextBaseX;
-        group.BaseOffsetY = nextBaseY;
-        group.OffsetX = nextOffsetX;
-        group.OffsetY = nextOffsetY;
-
-        if (group.MemberIndices.Length <= 1)
+        group.MemberCount = nextCount;
+        if (group.MemberCount <= 1)
         {
-            for (int i = 0; i < group.MemberIndices.Length; i++)
+            for (int i = 0; i < group.MemberCount; i++)
             {
                 simulation.ClearUnitTarget(group.MemberIndices[i]);
             }
 
             DissolveGroup(groupId, group);
+            return;
         }
+
+        RebuildGroupLayout(group);
     }
 
     private void DissolveGroup(int groupId, NavGroupState group)
@@ -536,7 +537,7 @@ public sealed class MassNavGroupRuntime
             _orderTokenToGroupId.Remove(group.CommandToken);
         }
 
-        for (int i = 0; i < group.MemberIndices.Length; i++)
+        for (int i = 0; i < group.MemberCount; i++)
         {
             int unitIndex = group.MemberIndices[i];
             if ((uint)unitIndex < (uint)_groupIdsByControllableIndex.Length)
@@ -560,7 +561,7 @@ public sealed class MassNavGroupRuntime
 
     private void AssignLooseTargets(
         MassNavWebParitySimState simulation,
-        int[] memberIndices,
+        ReadOnlySpan<int> memberIndices,
         int count,
         Vector2 destinationCm,
         float rotationRadians)
@@ -619,30 +620,23 @@ public sealed class MassNavGroupRuntime
         return count;
     }
 
-    private NavGroupState CreateGroup(int[] exactMembers, int teamId, MassNavFormationMode formationMode, float rotationRadians)
+    private NavGroupState CreateGroup(ReadOnlySpan<int> members, int teamId, MassNavFormationMode formationMode, float rotationRadians)
     {
-        float[] baseOffsetX = new float[exactMembers.Length];
-        float[] baseOffsetY = new float[exactMembers.Length];
-        float[] offsetX = new float[exactMembers.Length];
-        float[] offsetY = new float[exactMembers.Length];
-        _formationLayout.BuildOffsets(baseOffsetX, baseOffsetY, offsetX, offsetY, exactMembers.Length, formationMode, rotationRadians);
-        return new NavGroupState(exactMembers, baseOffsetX, baseOffsetY, offsetX, offsetY, teamId)
-        {
-            RotationRadians = rotationRadians,
-            FormationMode = formationMode,
-        };
+        var group = new NavGroupState(Math.Max(1, members.Length), teamId);
+        CopyMembersAndRebuildLayout(group, members, formationMode, rotationRadians);
+        return group;
     }
 
     private void ReplaceGroupMembers(
         MassNavWebParitySimState simulation,
         int groupId,
         NavGroupState group,
-        int[] nextMembers,
+        ReadOnlySpan<int> nextMembers,
         int teamId,
         MassNavFormationMode formationMode,
         float rotationRadians)
     {
-        for (int i = 0; i < group.MemberIndices.Length; i++)
+        for (int i = 0; i < group.MemberCount; i++)
         {
             int unitIndex = group.MemberIndices[i];
             if ((uint)unitIndex < (uint)_groupIdsByControllableIndex.Length &&
@@ -653,20 +647,13 @@ public sealed class MassNavGroupRuntime
             }
         }
 
-        group.MemberIndices = nextMembers;
         group.TeamId = teamId;
-        group.FormationMode = formationMode;
-        group.RotationRadians = rotationRadians;
-        group.BaseOffsetX = new float[nextMembers.Length];
-        group.BaseOffsetY = new float[nextMembers.Length];
-        group.OffsetX = new float[nextMembers.Length];
-        group.OffsetY = new float[nextMembers.Length];
-        _formationLayout.BuildOffsets(group.BaseOffsetX, group.BaseOffsetY, group.OffsetX, group.OffsetY, nextMembers.Length, formationMode, rotationRadians);
+        CopyMembersAndRebuildLayout(group, nextMembers, formationMode, rotationRadians);
     }
 
     private void AssignGroupTargets(MassNavWebParitySimState simulation, int groupId, NavGroupState group, bool resetRecovery)
     {
-        for (int i = 0; i < group.MemberIndices.Length; i++)
+        for (int i = 0; i < group.MemberCount; i++)
         {
             int unitIndex = group.MemberIndices[i];
             _groupIdsByControllableIndex[unitIndex] = groupId;
@@ -680,16 +667,60 @@ public sealed class MassNavGroupRuntime
         }
     }
 
-    private static bool HaveSameMembers(int[] left, ReadOnlySpan<int> right)
+    private void CopyMembersAndRebuildLayout(
+        NavGroupState group,
+        ReadOnlySpan<int> members,
+        MassNavFormationMode formationMode,
+        float rotationRadians)
     {
-        if (left.Length != right.Length)
+        group.EnsureCapacity(Math.Max(1, members.Length));
+        members.CopyTo(group.MemberIndices);
+        group.MemberCount = members.Length;
+        group.FormationMode = formationMode;
+        group.RotationRadians = rotationRadians;
+        RebuildGroupLayout(group);
+    }
+
+    private void RebuildGroupLayout(NavGroupState group)
+    {
+        if (group.MemberCount <= 0)
+        {
+            return;
+        }
+
+        _formationLayout.BuildOffsets(
+            group.BaseOffsetX,
+            group.BaseOffsetY,
+            group.OffsetX,
+            group.OffsetY,
+            group.MemberCount,
+            group.FormationMode,
+            group.RotationRadians);
+    }
+
+    private static int IndexOfMember(NavGroupState group, int unitIndex)
+    {
+        for (int i = 0; i < group.MemberCount; i++)
+        {
+            if (group.MemberIndices[i] == unitIndex)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static bool HaveSameMembers(NavGroupState left, ReadOnlySpan<int> right)
+    {
+        if (left.MemberCount != right.Length)
         {
             return false;
         }
 
-        for (int i = 0; i < left.Length; i++)
+        for (int i = 0; i < left.MemberCount; i++)
         {
-            if (left[i] != right[i])
+            if (left.MemberIndices[i] != right[i])
             {
                 return false;
             }
@@ -700,29 +731,61 @@ public sealed class MassNavGroupRuntime
 
     private sealed class NavGroupState
     {
-        public NavGroupState(int[] memberIndices, float[] baseOffsetX, float[] baseOffsetY, float[] offsetX, float[] offsetY, int teamId)
+        public NavGroupState(int initialCapacity, int teamId)
         {
-            MemberIndices = memberIndices;
-            BaseOffsetX = baseOffsetX;
-            BaseOffsetY = baseOffsetY;
-            OffsetX = offsetX;
-            OffsetY = offsetY;
+            int capacity = Math.Max(1, initialCapacity);
+            MemberIndices = new int[capacity];
+            BaseOffsetX = new float[capacity];
+            BaseOffsetY = new float[capacity];
+            OffsetX = new float[capacity];
+            OffsetY = new float[capacity];
             TeamId = teamId;
         }
 
+        public int MemberCount { get; set; }
         public int TeamId { get; set; }
         public int CommandToken { get; set; }
         public MassNavFormationMode FormationMode { get; set; }
-        public int[] MemberIndices { get; set; }
-        public float[] BaseOffsetX { get; set; }
-        public float[] BaseOffsetY { get; set; }
-        public float[] OffsetX { get; set; }
-        public float[] OffsetY { get; set; }
+        public int[] MemberIndices { get; private set; }
+        public float[] BaseOffsetX { get; private set; }
+        public float[] BaseOffsetY { get; private set; }
+        public float[] OffsetX { get; private set; }
+        public float[] OffsetY { get; private set; }
         public float DestinationX { get; set; }
         public float DestinationY { get; set; }
         public float CenterX { get; set; }
         public float CenterY { get; set; }
         public float RotationRadians { get; set; }
         public bool Arrived { get; set; }
+
+        public void EnsureCapacity(int required)
+        {
+            if (required <= MemberIndices.Length)
+            {
+                return;
+            }
+
+            int next = MemberIndices.Length;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            int[] memberIndices = MemberIndices;
+            float[] baseOffsetX = BaseOffsetX;
+            float[] baseOffsetY = BaseOffsetY;
+            float[] offsetX = OffsetX;
+            float[] offsetY = OffsetY;
+            Array.Resize(ref memberIndices, next);
+            Array.Resize(ref baseOffsetX, next);
+            Array.Resize(ref baseOffsetY, next);
+            Array.Resize(ref offsetX, next);
+            Array.Resize(ref offsetY, next);
+            MemberIndices = memberIndices;
+            BaseOffsetX = baseOffsetX;
+            BaseOffsetY = baseOffsetY;
+            OffsetX = offsetX;
+            OffsetY = offsetY;
+        }
     }
 }

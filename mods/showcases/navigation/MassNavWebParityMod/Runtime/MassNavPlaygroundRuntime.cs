@@ -25,15 +25,17 @@ internal sealed class MassNavWebParityRuntime
     private static readonly QueryDescription LocalPlayerQuery = new QueryDescription().WithAll<PlayerOwner>();
 
     private readonly IModContext _context;
+    private readonly MassNavWebParityConfig _config;
     private bool _systemsInstalled;
     private bool _scenarioSpawned;
     private RenderDebugSnapshot _savedRenderDebug;
     private bool _savedRenderDebugValid;
     private readonly MassNavWebParityPanelController _panelController = new();
 
-    public MassNavWebParityRuntime(IModContext context)
+    public MassNavWebParityRuntime(IModContext context, MassNavWebParityConfig config)
     {
         _context = context;
+        _config = config ?? throw new System.ArgumentNullException(nameof(config));
     }
 
     public void EnsureSystemsInstalled(GameEngine engine)
@@ -43,7 +45,7 @@ internal sealed class MassNavWebParityRuntime
             return;
         }
 
-        var simulation = new MassNavSimulationRuntime();
+        var simulation = new MassNavSimulationRuntime(_config);
         engine.SetService(MassNavWebParityKeys.SimulationRuntime, simulation);
         engine.RegisterSystem(new MassNavAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
@@ -132,7 +134,8 @@ internal sealed class MassNavWebParityRuntime
         MassNavScenarioBootstrap.SpawnDefaultScenario(
             engine.World,
             simulation,
-            engine.GetService(CoreServiceKeys.TeamEntityLookup));
+            engine.GetService(CoreServiceKeys.TeamEntityLookup)
+                ?? throw new System.InvalidOperationException("MassNavWebParityMod requires TeamEntityLookup."));
         _scenarioSpawned = true;
     }
 

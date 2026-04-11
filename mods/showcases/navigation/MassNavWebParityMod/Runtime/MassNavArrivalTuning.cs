@@ -3,10 +3,10 @@ namespace MassNavWebParityMod.Runtime;
 public sealed class MassNavArrivalTuning
 {
     public bool Enabled { get; set; } = true;
-    public int TimeoutMs { get; private set; } = 1500;
-    public int ProgressDistanceCm { get; private set; } = 60;
-    public int WakePushDistanceCm { get; private set; } = 80;
-    public int MaxRetryCount { get; private set; } = 2;
+    public int TimeoutMs { get; set; } = 1500;
+    public int ProgressDistanceCm { get; set; } = 60;
+    public int WakePushDistanceCm { get; set; } = 80;
+    public int MaxRetryCount { get; set; } = 2;
 
     public float TimeoutSeconds => TimeoutMs / 1000f;
 

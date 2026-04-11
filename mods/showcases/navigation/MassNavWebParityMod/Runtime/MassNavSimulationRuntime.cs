@@ -8,9 +8,11 @@ public sealed class MassNavSimulationRuntime
 {
     private const float TimingWeight = 0.18f;
 
-    private int[] _teamIds = new[] { 1, 2, 3, 4 };
+    private readonly int _initialSelectedTeamId;
+    private int[] _teamIds = Array.Empty<int>();
     private Entity[] _selectionScratch = new Entity[256];
-    private Entity[] _selectedEntities = Array.Empty<Entity>();
+    private Entity[] _selectedEntities = new Entity[64];
+    private int _selectedCount;
     private uint _selectionRevision;
     private bool _sceneResetRequested;
     private int _frameIndex;
@@ -52,28 +54,77 @@ public sealed class MassNavSimulationRuntime
     public int CrowdSubmittedCount { get; private set; }
     public int ObstacleSubmittedCount { get; private set; }
     public int PrimitiveDroppedCount { get; private set; }
+    public MassNavWebParityConfig Config { get; }
     public MassNavAgentState AgentState { get; } = new();
     public MassNavCommandRuntime Commands { get; } = new();
-    public MassNavFlowTuning FlowTuning { get; } = new();
+    public MassNavFlowTuning FlowTuning { get; }
     public MassNavFormationRuntime FormationRuntime { get; }
     public MassNavGroupRuntime NavGroupRuntime { get; }
-    public MassNavWebParitySimState WebParity { get; } = new();
+    public MassNavWebParitySimState WebParity { get; }
 
-    public int SelectedCount => _selectedEntities.Length;
+    public int SelectedCount => _selectedCount;
     public uint SelectionRevision => _selectionRevision;
-    public ReadOnlySpan<Entity> SelectedEntities => _selectedEntities;
+    public ReadOnlySpan<Entity> SelectedEntities => _selectedEntities.AsSpan(0, _selectedCount);
     public ReadOnlySpan<int> TeamIds => _teamIds;
     public int TeamCount => _teamIds.Length;
     public int FrameIndex => _frameIndex;
     public int PendingCommandCount => Commands.PendingCommandCount;
-    public int AgentsPerTeam { get; private set; } = 2_500;
-    public int SelectedTeamId { get; private set; } = 1;
+    public int AgentsPerTeam { get; private set; }
+    public int SelectedTeamId { get; private set; }
     public MassNavFormationMode FormationMode { get; private set; } = MassNavFormationMode.None;
 
-    public MassNavSimulationRuntime()
+    public MassNavSimulationRuntime(MassNavWebParityConfig config)
     {
+        Config = config ?? throw new ArgumentNullException(nameof(config));
+        WebParity = new MassNavWebParitySimState();
+        FlowTuning = config.Flow;
         FormationRuntime = new MassNavFormationRuntime();
         NavGroupRuntime = new MassNavGroupRuntime(FormationRuntime);
+        AgentsPerTeam = config.Scenario.AgentsPerTeam;
+        _initialSelectedTeamId = config.Scenario.InitialSelectedTeamId;
+        ConfigureScenarioTeams(CreateTeamIdArray(config.Scenario.Teams));
+        SelectedTeamId = _initialSelectedTeamId;
+        WebParity.ArrivalTuning.Enabled = config.Arrival.Enabled;
+        WebParity.ArrivalTuning.TimeoutMs = config.Arrival.TimeoutMs;
+        WebParity.ArrivalTuning.ProgressDistanceCm = config.Arrival.ProgressDistanceCm;
+        WebParity.ArrivalTuning.WakePushDistanceCm = config.Arrival.WakePushDistanceCm;
+        WebParity.ArrivalTuning.MaxRetryCount = config.Arrival.MaxRetryCount;
+        WebParity.AvoidanceTuning.LightNavMass = config.Avoidance.LightNavMass;
+        WebParity.AvoidanceTuning.HeavyNavMass = config.Avoidance.HeavyNavMass;
+        WebParity.AvoidanceTuning.LightVisualScale = config.Avoidance.LightVisualScale;
+        WebParity.AvoidanceTuning.HeavyVisualScale = config.Avoidance.HeavyVisualScale;
+        WebParity.AvoidanceTuning.DominantMassRatio = config.Avoidance.DominantMassRatio;
+        WebParity.AvoidanceTuning.FriendlyResponseScale = config.Avoidance.FriendlyResponseScale;
+        WebParity.AvoidanceTuning.NonFriendlyResponseScale = config.Avoidance.NonFriendlyResponseScale;
+        WebParity.AvoidanceTuning.DominantPushResponseScale = config.Avoidance.DominantPushResponseScale;
+        WebParity.Semantics.Obstacle.AgentBodyRadiusCm = config.Semantics.Obstacle.AgentBodyRadiusCm;
+        WebParity.Semantics.Obstacle.HardResolveCandidateDistanceCm = config.Semantics.Obstacle.HardResolveCandidateDistanceCm;
+        WebParity.Semantics.Obstacle.SoftPushPaddingCm = config.Semantics.Obstacle.SoftPushPaddingCm;
+        WebParity.Semantics.Obstacle.SoftPushForceScale = config.Semantics.Obstacle.SoftPushForceScale;
+        WebParity.Semantics.TargetProjection.TeamTargetClearanceCm = config.Semantics.TargetProjection.TeamTargetClearanceCm;
+        WebParity.Semantics.TargetProjection.GroupCenterClearanceCm = config.Semantics.TargetProjection.GroupCenterClearanceCm;
+        WebParity.Semantics.TargetProjection.TeamSlotClearanceCm = config.Semantics.TargetProjection.TeamSlotClearanceCm;
+        WebParity.Semantics.TargetProjection.GroupSlotClearanceCm = config.Semantics.TargetProjection.GroupSlotClearanceCm;
+        WebParity.Semantics.TargetProjection.LooseTargetClearanceCm = config.Semantics.TargetProjection.LooseTargetClearanceCm;
+        WebParity.Semantics.Group.SpawnSpacingCm = config.Semantics.Group.SpawnSpacingCm;
+        WebParity.Semantics.Group.TeamSlotSpacingCm = config.Semantics.Group.TeamSlotSpacingCm;
+        WebParity.Semantics.Group.PullDeadZoneCm = config.Semantics.Group.PullDeadZoneCm;
+        WebParity.Semantics.Group.PullClampCm = config.Semantics.Group.PullClampCm;
+        WebParity.Semantics.Group.ArrivedRadiusCm = config.Semantics.Group.ArrivedRadiusCm;
+        WebParity.Semantics.Group.FormationArriveThresholdCm = config.Semantics.Group.FormationArriveThresholdCm;
+        WebParity.Semantics.Group.LooseArriveThresholdCm = config.Semantics.Group.LooseArriveThresholdCm;
+        WebParity.Semantics.Group.UnitTargetStopThresholdCm = config.Semantics.Group.UnitTargetStopThresholdCm;
+        WebParity.Semantics.Group.FormationFlowSlowRadiusCm = config.Semantics.Group.FormationFlowSlowRadiusCm;
+        WebParity.Semantics.Group.NearSlotBlend = config.Semantics.Group.NearSlotBlend;
+        WebParity.Semantics.Group.FarSlotBlend = config.Semantics.Group.FarSlotBlend;
+        WebParity.Semantics.Group.NearSlotBlendDistanceSq = config.Semantics.Group.NearSlotBlendDistanceSq;
+        WebParity.Semantics.Steering.SpeedCmPerSecond = config.Semantics.Steering.SpeedCmPerSecond;
+        WebParity.Semantics.Steering.SeparationRadiusCm = config.Semantics.Steering.SeparationRadiusCm;
+        WebParity.Semantics.Steering.GoalArrivalRadiusCm = config.Semantics.Steering.GoalArrivalRadiusCm;
+        WebParity.Semantics.Steering.FlowObstacleAvoidanceScale = config.Semantics.Steering.FlowObstacleAvoidanceScale;
+        WebParity.Semantics.Steering.FormationSeparationScale = config.Semantics.Steering.FormationSeparationScale;
+        WebParity.Semantics.Steering.LooseSeparationScale = config.Semantics.Steering.LooseSeparationScale;
+        WebParity.Semantics.Steering.VelocityBlendPerSecond = config.Semantics.Steering.VelocityBlendPerSecond;
     }
 
     public void BeginFrame(float dt)
@@ -133,26 +184,33 @@ public sealed class MassNavSimulationRuntime
 
     public void SetSelection(ReadOnlySpan<Entity> entities, uint revision)
     {
-        if (_selectedEntities.Length != entities.Length)
+        if (entities.Length > _selectedEntities.Length)
         {
-            _selectedEntities = new Entity[entities.Length];
+            int next = _selectedEntities.Length;
+            while (next < entities.Length)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref _selectedEntities, next);
         }
 
-        entities.CopyTo(_selectedEntities);
+        entities.CopyTo(_selectedEntities.AsSpan(0, entities.Length));
+        _selectedCount = entities.Length;
         _selectionRevision = revision;
         SelectionSnapshotCountFrame++;
-        WebParity.SetSelectedFlags(AgentState, _selectedEntities);
+        WebParity.SetSelectedFlags(AgentState, _selectedEntities.AsSpan(0, _selectedCount));
     }
 
     public void ClearSelection()
     {
-        if (_selectedEntities.Length == 0)
+        if (_selectedCount == 0)
         {
             WebParity.SetSelectedFlags(AgentState, ReadOnlySpan<Entity>.Empty);
             return;
         }
 
-        _selectedEntities = Array.Empty<Entity>();
+        _selectedCount = 0;
         _selectionRevision++;
         SelectionSnapshotCountFrame++;
         WebParity.SetSelectedFlags(AgentState, ReadOnlySpan<Entity>.Empty);
@@ -197,9 +255,7 @@ public sealed class MassNavSimulationRuntime
     {
         if (teamIds.Length <= 0)
         {
-            _teamIds = Array.Empty<int>();
-            SelectedTeamId = 0;
-            return;
+            throw new InvalidOperationException("MassNavSimulationRuntime requires at least one configured team.");
         }
 
         if (_teamIds.Length != teamIds.Length)
@@ -210,7 +266,12 @@ public sealed class MassNavSimulationRuntime
         teamIds.CopyTo(_teamIds);
         if (Array.IndexOf(_teamIds, SelectedTeamId) < 0)
         {
-            SelectedTeamId = _teamIds[0];
+            if (Array.IndexOf(_teamIds, _initialSelectedTeamId) < 0)
+            {
+                throw new InvalidOperationException("MassNavSimulationRuntime configured teams do not include the initial selected team.");
+            }
+
+            SelectedTeamId = _initialSelectedTeamId;
         }
     }
 
@@ -228,10 +289,15 @@ public sealed class MassNavSimulationRuntime
 
     public void CycleSelectedTeam()
     {
+        if (_teamIds.Length <= 0)
+        {
+            return;
+        }
+
         int index = Array.IndexOf(_teamIds, SelectedTeamId);
         if (index < 0)
         {
-            SelectedTeamId = _teamIds.Length > 0 ? _teamIds[0] : 0;
+            SelectedTeamId = _initialSelectedTeamId;
             return;
         }
 
@@ -291,5 +357,16 @@ public sealed class MassNavSimulationRuntime
         return current <= 0.001f
             ? hz
             : (current * (1f - TimingWeight)) + (hz * TimingWeight);
+    }
+
+    private static int[] CreateTeamIdArray(MassNavScenarioTeamConfig[] teams)
+    {
+        var ids = new int[teams.Length];
+        for (int i = 0; i < teams.Length; i++)
+        {
+            ids[i] = teams[i].Id;
+        }
+
+        return ids;
     }
 }

@@ -45,61 +45,15 @@ internal sealed class MassNavWebParityPanelController
             changed = true;
         }
 
-        MassNavPanelState next = CaptureState(engine, simulation);
         long nowTicks = Stopwatch.GetTimestamp();
         long refreshTicks = (long)(PerfRefreshTicks * (Stopwatch.Frequency / (double)TimeSpan.TicksPerSecond));
         if (_lastPerfCaptureTicks != 0 && nowTicks - _lastPerfCaptureTicks < refreshTicks)
         {
-            next = next with
-            {
-                RenderFps = _lastState.RenderFps,
-                RenderFrameMs = _lastState.RenderFrameMs,
-                PrimitiveRenderMs = _lastState.PrimitiveRenderMs,
-                SelectionSyncMs = _lastState.SelectionSyncMs,
-                CommandApplyMs = _lastState.CommandApplyMs,
-                FormationTargetMs = _lastState.FormationTargetMs,
-                FlowFieldRebuildMs = _lastState.FlowFieldRebuildMs,
-                StepPrepMs = _lastState.StepPrepMs,
-                LocalSteeringMs = _lastState.LocalSteeringMs,
-                SimStepMs = _lastState.SimStepMs,
-                HardResolveMs = _lastState.HardResolveMs,
-                EntitySyncMs = _lastState.EntitySyncMs,
-                PrimitiveEmitMs = _lastState.PrimitiveEmitMs,
-                SelectionSyncHzObserved = _lastState.SelectionSyncHzObserved,
-                ControlHzObserved = _lastState.ControlHzObserved,
-                CommandHzObserved = _lastState.CommandHzObserved,
-                CommandDispatchHzObserved = _lastState.CommandDispatchHzObserved,
-                SimHzObserved = _lastState.SimHzObserved,
-                PrimitiveHzObserved = _lastState.PrimitiveHzObserved,
-                HudHzObserved = _lastState.HudHzObserved,
-                PanelHzObserved = _lastState.PanelHzObserved,
-                UiInputMs = _lastState.UiInputMs,
-                UiRenderMs = _lastState.UiRenderMs,
-                UiUploadMs = _lastState.UiUploadMs,
-                ScreenOverlayBuildMs = _lastState.ScreenOverlayBuildMs,
-                ScreenOverlayDrawMs = _lastState.ScreenOverlayDrawMs,
-                CameraCullingMs = _lastState.CameraCullingMs,
-                CameraPresenterMs = _lastState.CameraPresenterMs,
-                WorldHudProjectionMs = _lastState.WorldHudProjectionMs,
-                RenderAccountedMs = _lastState.RenderAccountedMs,
-                RenderUnaccountedMs = _lastState.RenderUnaccountedMs,
-                PrimitiveBufferCount = _lastState.PrimitiveBufferCount,
-                PrimitiveInstances = _lastState.PrimitiveInstances,
-                PrimitiveBatches = _lastState.PrimitiveBatches,
-                PrimitiveDropped = _lastState.PrimitiveDropped,
-                EcsVisibleEntities = _lastState.EcsVisibleEntities,
-                CrowdInViewEntities = _lastState.CrowdInViewEntities,
-                CrowdSubmittedEntities = _lastState.CrowdSubmittedEntities,
-                SubmittedObstacles = _lastState.SubmittedObstacles,
-                CompositeSkipCountLastSecond = _lastState.CompositeSkipCountLastSecond,
-                FirstAgentX = _lastState.FirstAgentX,
-                FirstAgentZ = _lastState.FirstAgentZ,
-            };
+            return changed;
         }
-        else
-        {
-            _lastPerfCaptureTicks = nowTicks;
-        }
+
+        _lastPerfCaptureTicks = nowTicks;
+        MassNavPanelState next = CaptureState(engine, simulation);
 
         if (!_lastState.Equals(next))
         {
@@ -181,7 +135,7 @@ internal sealed class MassNavWebParityPanelController
                 Ui.Text($"PostMovement: command {state.CommandDispatchHzObserved:0.0} Hz  sim {state.SimHzObserved:0.0} Hz  Presentation: primitive {state.PrimitiveHzObserved:0.0} Hz  hud {state.HudHzObserved:0.0} Hz  panel {state.PanelHzObserved:0.0} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text(state.LastActionText).FontSize(12f).Color("#8FE388").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text("MassNav Runtime").FontSize(12f).Bold().Color("#F4C77D"),
-                Ui.Text($"Immediate knobs: Logic {state.LogicHz} Hz  Budget {state.SimulationBudgetMs} ms  Slice {state.SimulationSliceLimit}  Arrival {(state.ArrivalFallbackEnabled ? "On" : "Off")}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Immediate knobs: Logic {state.LogicHz} Hz  Budget {state.SimulationBudgetMs} ms  Slice {state.SimulationSliceLimit}  Recovery {(state.ArrivalRecoveryEnabled ? "On" : "Off")}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Row(
                         BuildActionButton("-1 ms", () => AdjustSimulationBudget(-1)),
                         BuildActionButton("+1 ms", () => AdjustSimulationBudget(1)),
@@ -190,7 +144,7 @@ internal sealed class MassNavWebParityPanelController
                     .Wrap()
                     .Gap(8f),
                 Ui.Row(
-                        BuildActionButton(state.ArrivalFallbackEnabled ? "Arrival On" : "Arrival Off", ToggleArrivalFallback),
+                        BuildActionButton(state.ArrivalRecoveryEnabled ? "Recovery On" : "Recovery Off", ToggleArrivalRecovery),
                         BuildActionButton("Timeout -250", () => AdjustArrivalTimeoutMs(-250)),
                         BuildActionButton("Timeout +250", () => AdjustArrivalTimeoutMs(250)))
                     .Wrap()
@@ -472,7 +426,7 @@ internal sealed class MassNavWebParityPanelController
         }
     }
 
-    private void ToggleArrivalFallback()
+    private void ToggleArrivalRecovery()
     {
         if (_simulation == null)
         {
@@ -480,7 +434,7 @@ internal sealed class MassNavWebParityPanelController
         }
 
         _simulation.WebParity.ArrivalTuning.Enabled = !_simulation.WebParity.ArrivalTuning.Enabled;
-        SetActionFeedback($"Hot apply: arrival fallback = {(_simulation.WebParity.ArrivalTuning.Enabled ? "On" : "Off")}.");
+        SetActionFeedback($"Hot apply: arrival recovery = {(_simulation.WebParity.ArrivalTuning.Enabled ? "On" : "Off")}.");
     }
 
     private void AdjustArrivalTimeoutMs(int delta)
@@ -542,6 +496,7 @@ internal sealed class MassNavWebParityPanelController
 
         MassNavPanelState next = CaptureState(_engine, _simulation);
         _lastState = next;
+        _lastPerfCaptureTicks = Stopwatch.GetTimestamp();
         _page.SetState(_ => next);
         if (_engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
         {
@@ -629,7 +584,7 @@ internal sealed class MassNavWebParityPanelController
             FlowStepInterval: simulation.FlowTuning.StepIntervalTicks,
             FlowCrowdInterval: simulation.FlowTuning.CrowdStampIntervalTicks,
             FlowObstacleInterval: simulation.FlowTuning.ObstacleStampIntervalTicks,
-            ArrivalFallbackEnabled: simulation.WebParity.ArrivalTuning.Enabled,
+            ArrivalRecoveryEnabled: simulation.WebParity.ArrivalTuning.Enabled,
             ArrivalTimeoutMs: simulation.WebParity.ArrivalTuning.TimeoutMs,
             ArrivalProgressCm: simulation.WebParity.ArrivalTuning.ProgressDistanceCm,
             ArrivalWakePushCm: simulation.WebParity.ArrivalTuning.WakePushDistanceCm,

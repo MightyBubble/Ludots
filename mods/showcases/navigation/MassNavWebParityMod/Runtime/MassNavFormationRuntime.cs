@@ -82,20 +82,32 @@ public sealed class MassNavFormationRuntime
 
         if (MathF.Abs(rotationRadians) > 1e-5f)
         {
-            ApplyRotation(offsetX, offsetY, baseOffsetX, baseOffsetY, rotationRadians);
+            ApplyRotation(offsetX, offsetY, baseOffsetX, baseOffsetY, count, rotationRadians);
         }
     }
 
-    public void RecomputeOffsets(float[] offsetX, float[] offsetY, float[] baseOffsetX, float[] baseOffsetY, float rotationRadians)
+    public void RecomputeOffsets(
+        float[] offsetX,
+        float[] offsetY,
+        float[] baseOffsetX,
+        float[] baseOffsetY,
+        int count,
+        float rotationRadians)
     {
-        ApplyRotation(offsetX, offsetY, baseOffsetX, baseOffsetY, rotationRadians);
+        ApplyRotation(offsetX, offsetY, baseOffsetX, baseOffsetY, count, rotationRadians);
     }
 
-    private static void ApplyRotation(float[] offsetX, float[] offsetY, float[] baseOffsetX, float[] baseOffsetY, float rotationRadians)
+    private static void ApplyRotation(
+        float[] offsetX,
+        float[] offsetY,
+        float[] baseOffsetX,
+        float[] baseOffsetY,
+        int count,
+        float rotationRadians)
     {
         float cos = MathF.Cos(rotationRadians);
         float sin = MathF.Sin(rotationRadians);
-        for (int i = 0; i < baseOffsetX.Length; i++)
+        for (int i = 0; i < count; i++)
         {
             float x = baseOffsetX[i];
             float y = baseOffsetY[i];
