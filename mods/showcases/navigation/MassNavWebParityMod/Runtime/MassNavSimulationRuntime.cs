@@ -8,12 +8,13 @@ public sealed class MassNavSimulationRuntime
 {
     private const float TimingWeight = 0.18f;
 
-    private readonly int[] _teamIds = new[] { 1, 2, 3, 4 };
+    private int[] _teamIds = new[] { 1, 2, 3, 4 };
     private Entity[] _selectionScratch = new Entity[256];
     private Entity[] _selectedEntities = Array.Empty<Entity>();
     private uint _selectionRevision;
     private bool _sceneResetRequested;
     private int _frameIndex;
+    private int _nextSharedOrderId = 1;
     private long _selectionSyncTick;
     private long _controlTick;
     private long _commandTick;
@@ -190,6 +191,39 @@ public sealed class MassNavSimulationRuntime
         {
             SelectedTeamId = teamId;
         }
+    }
+
+    public void ConfigureScenarioTeams(ReadOnlySpan<int> teamIds)
+    {
+        if (teamIds.Length <= 0)
+        {
+            _teamIds = Array.Empty<int>();
+            SelectedTeamId = 0;
+            return;
+        }
+
+        if (_teamIds.Length != teamIds.Length)
+        {
+            _teamIds = new int[teamIds.Length];
+        }
+
+        teamIds.CopyTo(_teamIds);
+        if (Array.IndexOf(_teamIds, SelectedTeamId) < 0)
+        {
+            SelectedTeamId = _teamIds[0];
+        }
+    }
+
+    public int AllocateSharedOrderId()
+    {
+        int next = _nextSharedOrderId++;
+        if (next <= 0)
+        {
+            _nextSharedOrderId = 1;
+            next = _nextSharedOrderId++;
+        }
+
+        return next;
     }
 
     public void CycleSelectedTeam()

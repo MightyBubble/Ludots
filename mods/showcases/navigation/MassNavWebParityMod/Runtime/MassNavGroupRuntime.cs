@@ -10,6 +10,8 @@ public sealed class MassNavGroupRuntime
     private readonly MassNavFormationRuntime _formationLayout;
     private readonly List<NavGroupState?> _groups = new();
     private readonly HashSet<int> _visitedGroupIds = new();
+    private readonly Dictionary<int, int> _orderTokenToGroupId = new();
+    private readonly List<int> _orderTokensToRemove = new();
     private int[] _groupIdsByControllableIndex = Array.Empty<int>();
 
     public MassNavGroupRuntime(MassNavFormationRuntime formationLayout)
@@ -23,6 +25,7 @@ public sealed class MassNavGroupRuntime
     public void Reset()
     {
         _groups.Clear();
+        _orderTokenToGroupId.Clear();
         if (_groupIdsByControllableIndex.Length > 0)
         {
             Array.Fill(_groupIdsByControllableIndex, -1);
@@ -91,36 +94,147 @@ public sealed class MassNavGroupRuntime
         int groupId = AllocateGroupId();
         int[] exactMembers = new int[assignedCount];
         Array.Copy(memberIndices, exactMembers, assignedCount);
-
-        float[] baseOffsetX = new float[assignedCount];
-        float[] baseOffsetY = new float[assignedCount];
-        float[] offsetX = new float[assignedCount];
-        float[] offsetY = new float[assignedCount];
-        _formationLayout.BuildOffsets(baseOffsetX, baseOffsetY, offsetX, offsetY, assignedCount, formationMode, previousRotation);
-
-        var group = new NavGroupState(exactMembers, baseOffsetX, baseOffsetY, offsetX, offsetY, teamId)
-        {
-            DestinationX = resolvedDestination.X,
-            DestinationY = resolvedDestination.Y,
-            RotationRadians = previousRotation,
-        };
+        var group = CreateGroup(exactMembers, teamId, formationMode, previousRotation);
+        group.DestinationX = resolvedDestination.X;
+        group.DestinationY = resolvedDestination.Y;
         _groups[groupId] = group;
-
-        for (int i = 0; i < exactMembers.Length; i++)
-        {
-            _groupIdsByControllableIndex[exactMembers[i]] = groupId;
-            Vector2 resolvedTarget = simulation.ResolveNavigableTarget(
-                resolvedDestination.X + offsetX[i],
-                resolvedDestination.Y + offsetY[i],
-                offsetX[i],
-                offsetY[i],
-                simulation.Semantics.TargetProjection.GroupSlotClearanceCm);
-            simulation.SetUnitTarget(exactMembers[i], resolvedTarget.X, resolvedTarget.Y, resetRecovery: true);
-        }
+        AssignGroupTargets(simulation, groupId, group, resetRecovery: true);
 
         ActiveGroupCount = CountActiveGroups();
         RefreshSelectedRotation(agentState, selected);
         return assignedCount;
+    }
+
+    public int UpsertOrderMoveCommand(
+        MassNavWebParitySimState simulation,
+        int orderToken,
+        ReadOnlySpan<int> memberIndices,
+        int teamId,
+        Vector2 destinationCm,
+        MassNavFormationMode formationMode,
+        float rotationRadians)
+    {
+        if (orderToken <= 0 || memberIndices.Length <= 0)
+        {
+            return 0;
+        }
+
+        Vector2 resolvedDestination = simulation.ResolveNavigableTarget(
+            destinationCm.X,
+            destinationCm.Y,
+            0f,
+            0f,
+            simulation.Semantics.TargetProjection.GroupCenterClearanceCm);
+
+        if (!_orderTokenToGroupId.TryGetValue(orderToken, out int groupId) ||
+            (uint)groupId >= (uint)_groups.Count ||
+            _groups[groupId] == null)
+        {
+            int[] exactMembers = memberIndices.ToArray();
+            DetachMembersFromOtherGroups(simulation, exactMembers, keepGroupId: -1);
+            EnsureMembershipCapacityForMembers(exactMembers);
+            groupId = AllocateGroupId();
+            var created = CreateGroup(exactMembers, teamId, formationMode, rotationRadians);
+            created.CommandToken = orderToken;
+            created.DestinationX = resolvedDestination.X;
+            created.DestinationY = resolvedDestination.Y;
+            _groups[groupId] = created;
+            _orderTokenToGroupId[orderToken] = groupId;
+            AssignGroupTargets(simulation, groupId, created, resetRecovery: true);
+            ActiveGroupCount = CountActiveGroups();
+            return exactMembers.Length;
+        }
+
+        NavGroupState group = _groups[groupId]!;
+        bool rebuildLayout = group.FormationMode != formationMode || !HaveSameMembers(group.MemberIndices, memberIndices);
+        if (rebuildLayout)
+        {
+            int[] exactMembers = memberIndices.ToArray();
+            DetachMembersFromOtherGroups(simulation, exactMembers, groupId);
+            EnsureMembershipCapacityForMembers(exactMembers);
+            ReplaceGroupMembers(simulation, groupId, group, exactMembers, teamId, formationMode, rotationRadians);
+        }
+        group.TeamId = teamId;
+        group.CommandToken = orderToken;
+        group.DestinationX = resolvedDestination.X;
+        group.DestinationY = resolvedDestination.Y;
+        _groups[groupId] = group;
+        AssignGroupTargets(simulation, groupId, group, resetRecovery: rebuildLayout);
+        ActiveGroupCount = CountActiveGroups();
+        return group.MemberIndices.Length;
+    }
+
+    public bool TryGetOrderGroup(int orderToken, out bool arrived, out int[] members)
+    {
+        arrived = false;
+        members = Array.Empty<int>();
+        if (!_orderTokenToGroupId.TryGetValue(orderToken, out int groupId) ||
+            (uint)groupId >= (uint)_groups.Count ||
+            _groups[groupId] == null)
+        {
+            return false;
+        }
+
+        NavGroupState group = _groups[groupId]!;
+        arrived = group.Arrived;
+        members = group.MemberIndices;
+        return true;
+    }
+
+    public void CompleteOrderGroup(MassNavWebParitySimState simulation, int orderToken)
+    {
+        if (!_orderTokenToGroupId.TryGetValue(orderToken, out int groupId) ||
+            (uint)groupId >= (uint)_groups.Count ||
+            _groups[groupId] == null)
+        {
+            return;
+        }
+
+        NavGroupState group = _groups[groupId]!;
+        for (int i = 0; i < group.MemberIndices.Length; i++)
+        {
+            simulation.ClearUnitTarget(group.MemberIndices[i]);
+        }
+
+        DissolveGroup(groupId, group);
+        ActiveGroupCount = CountActiveGroups();
+    }
+
+    public void PruneInactiveOrderGroups(MassNavWebParitySimState simulation, HashSet<int> activeTokens)
+    {
+        _orderTokensToRemove.Clear();
+        foreach ((int token, int groupId) in _orderTokenToGroupId)
+        {
+            if (activeTokens.Contains(token) ||
+                (uint)groupId >= (uint)_groups.Count ||
+                _groups[groupId] == null)
+            {
+                continue;
+            }
+
+            _orderTokensToRemove.Add(token);
+        }
+
+        for (int i = 0; i < _orderTokensToRemove.Count; i++)
+        {
+            int token = _orderTokensToRemove[i];
+            if (!_orderTokenToGroupId.TryGetValue(token, out int groupId) ||
+                (uint)groupId >= (uint)_groups.Count ||
+                _groups[groupId] == null)
+            {
+                continue;
+            }
+
+            NavGroupState group = _groups[groupId]!;
+            for (int memberIndex = 0; memberIndex < group.MemberIndices.Length; memberIndex++)
+            {
+                simulation.ClearUnitTarget(group.MemberIndices[memberIndex]);
+            }
+
+            DissolveGroup(groupId, group);
+        }
+
+        ActiveGroupCount = CountActiveGroups();
     }
 
     public void RotateSelected(MassNavAgentState agentState, ReadOnlySpan<Entity> selected, float deltaRadians)
@@ -283,6 +397,34 @@ public sealed class MassNavGroupRuntime
         }
     }
 
+    private void EnsureMembershipCapacityForMembers(int[] members)
+    {
+        int maxIndex = -1;
+        for (int i = 0; i < members.Length; i++)
+        {
+            if (members[i] > maxIndex)
+            {
+                maxIndex = members[i];
+            }
+        }
+
+        EnsureMembershipCapacity(maxIndex + 1);
+    }
+
+    private void DetachMembersFromOtherGroups(MassNavWebParitySimState simulation, ReadOnlySpan<int> members, int keepGroupId)
+    {
+        for (int i = 0; i < members.Length; i++)
+        {
+            int memberIndex = members[i];
+            if (GetGroupId(memberIndex) == keepGroupId)
+            {
+                continue;
+            }
+
+            RemoveFromExistingGroup(simulation, memberIndex);
+        }
+    }
+
     private float ResolvePreviousRotation(MassNavAgentState agentState, ReadOnlySpan<Entity> selected)
     {
         for (int i = 0; i < selected.Length; i++)
@@ -389,6 +531,11 @@ public sealed class MassNavGroupRuntime
 
     private void DissolveGroup(int groupId, NavGroupState group)
     {
+        if (group.CommandToken > 0)
+        {
+            _orderTokenToGroupId.Remove(group.CommandToken);
+        }
+
         for (int i = 0; i < group.MemberIndices.Length; i++)
         {
             int unitIndex = group.MemberIndices[i];
@@ -472,6 +619,85 @@ public sealed class MassNavGroupRuntime
         return count;
     }
 
+    private NavGroupState CreateGroup(int[] exactMembers, int teamId, MassNavFormationMode formationMode, float rotationRadians)
+    {
+        float[] baseOffsetX = new float[exactMembers.Length];
+        float[] baseOffsetY = new float[exactMembers.Length];
+        float[] offsetX = new float[exactMembers.Length];
+        float[] offsetY = new float[exactMembers.Length];
+        _formationLayout.BuildOffsets(baseOffsetX, baseOffsetY, offsetX, offsetY, exactMembers.Length, formationMode, rotationRadians);
+        return new NavGroupState(exactMembers, baseOffsetX, baseOffsetY, offsetX, offsetY, teamId)
+        {
+            RotationRadians = rotationRadians,
+            FormationMode = formationMode,
+        };
+    }
+
+    private void ReplaceGroupMembers(
+        MassNavWebParitySimState simulation,
+        int groupId,
+        NavGroupState group,
+        int[] nextMembers,
+        int teamId,
+        MassNavFormationMode formationMode,
+        float rotationRadians)
+    {
+        for (int i = 0; i < group.MemberIndices.Length; i++)
+        {
+            int unitIndex = group.MemberIndices[i];
+            if ((uint)unitIndex < (uint)_groupIdsByControllableIndex.Length &&
+                _groupIdsByControllableIndex[unitIndex] == groupId)
+            {
+                _groupIdsByControllableIndex[unitIndex] = -1;
+                simulation.ClearUnitTarget(unitIndex);
+            }
+        }
+
+        group.MemberIndices = nextMembers;
+        group.TeamId = teamId;
+        group.FormationMode = formationMode;
+        group.RotationRadians = rotationRadians;
+        group.BaseOffsetX = new float[nextMembers.Length];
+        group.BaseOffsetY = new float[nextMembers.Length];
+        group.OffsetX = new float[nextMembers.Length];
+        group.OffsetY = new float[nextMembers.Length];
+        _formationLayout.BuildOffsets(group.BaseOffsetX, group.BaseOffsetY, group.OffsetX, group.OffsetY, nextMembers.Length, formationMode, rotationRadians);
+    }
+
+    private void AssignGroupTargets(MassNavWebParitySimState simulation, int groupId, NavGroupState group, bool resetRecovery)
+    {
+        for (int i = 0; i < group.MemberIndices.Length; i++)
+        {
+            int unitIndex = group.MemberIndices[i];
+            _groupIdsByControllableIndex[unitIndex] = groupId;
+            Vector2 resolvedTarget = simulation.ResolveNavigableTarget(
+                group.DestinationX + group.OffsetX[i],
+                group.DestinationY + group.OffsetY[i],
+                group.OffsetX[i],
+                group.OffsetY[i],
+                simulation.Semantics.TargetProjection.GroupSlotClearanceCm);
+            simulation.SetUnitTarget(unitIndex, resolvedTarget.X, resolvedTarget.Y, resetRecovery);
+        }
+    }
+
+    private static bool HaveSameMembers(int[] left, ReadOnlySpan<int> right)
+    {
+        if (left.Length != right.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < left.Length; i++)
+        {
+            if (left[i] != right[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private sealed class NavGroupState
     {
         public NavGroupState(int[] memberIndices, float[] baseOffsetX, float[] baseOffsetY, float[] offsetX, float[] offsetY, int teamId)
@@ -484,7 +710,9 @@ public sealed class MassNavGroupRuntime
             TeamId = teamId;
         }
 
-        public int TeamId { get; }
+        public int TeamId { get; set; }
+        public int CommandToken { get; set; }
+        public MassNavFormationMode FormationMode { get; set; }
         public int[] MemberIndices { get; set; }
         public float[] BaseOffsetX { get; set; }
         public float[] BaseOffsetY { get; set; }

@@ -25,7 +25,7 @@ internal sealed class MassNavWebParityPanelController
     private GameEngine? _engine;
     private MassNavSimulationRuntime? _simulation;
     private long _lastPerfCaptureTicks;
-    private string _lastActionText = "MassNav runtime knobs hot-apply now. Physics/Nav buttons only touch engine policies. Flow is config-only here. Agent count and Reset rebuild the scene.";
+    private string _lastActionText = "MassNav runtime, flow, and arrival knobs hot-apply now. Physics/Nav buttons only touch engine policies. Agent count and Reset rebuild the scene.";
 
     public bool MountOrSync(GameEngine engine, MassNavSimulationRuntime simulation)
     {
@@ -138,7 +138,7 @@ internal sealed class MassNavWebParityPanelController
         _simulation = null;
         _lastState = MassNavPanelState.Empty;
         _lastPerfCaptureTicks = 0;
-        _lastActionText = "MassNav runtime knobs hot-apply now. Physics/Nav buttons only touch engine policies. Flow is config-only here. Agent count and Reset rebuild the scene.";
+        _lastActionText = "MassNav runtime, flow, and arrival knobs hot-apply now. Physics/Nav buttons only touch engine policies. Agent count and Reset rebuild the scene.";
         _page?.SetState(_ => MassNavPanelState.Empty);
     }
 
@@ -221,10 +221,25 @@ internal sealed class MassNavWebParityPanelController
                         BuildActionButton("Nav Max+1", () => AdjustNavigationMaxSteps(1)))
                     .Wrap()
                     .Gap(8f),
-                Ui.Text("Config Snapshot Only").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text("MassNav Flow").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Text($"Flow {(state.FlowEnabled ? "On" : "Off")}  Iter {state.FlowIterations}  Step {state.FlowStepInterval}  Crowd {state.FlowCrowdInterval}  Obs {state.FlowObstacleInterval}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Flow rebuild(last) {state.FlowFieldRebuildMs:0.0} ms  target-driven  rebuild/frame {state.FlowReconcileFrame}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text("Flow knobs stay visible for parity bookkeeping, but they are intentionally read-only here until the custom sim actually consumes them.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text("Flow knobs now drive the custom sim directly: obstacle stamp, crowd stamp, and solve cadence all hot-apply on the next logic step.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Row(
+                        BuildActionButton(state.FlowEnabled ? "Flow On" : "Flow Off", ToggleFlowEnabled),
+                        BuildActionButton("Iter -512", () => AdjustFlowIterations(-512)),
+                        BuildActionButton("Iter +512", () => AdjustFlowIterations(512)))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Row(
+                        BuildActionButton("Step -1", () => AdjustFlowStepInterval(-1)),
+                        BuildActionButton("Step +1", () => AdjustFlowStepInterval(1)),
+                        BuildActionButton("Crowd -1", () => AdjustFlowCrowdInterval(-1)),
+                        BuildActionButton("Crowd +1", () => AdjustFlowCrowdInterval(1)),
+                        BuildActionButton("Obs -1", () => AdjustFlowObstacleInterval(-1)),
+                        BuildActionButton("Obs +1", () => AdjustFlowObstacleInterval(1)))
+                    .Wrap()
+                    .Gap(8f),
                 Ui.Text("Scene Rebuild Required").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
                         BuildActionButton("-2k", AdjustTotalAgentsDown),
@@ -403,6 +418,58 @@ internal sealed class MassNavWebParityPanelController
 
         policy.SetMaxStepsPerFixedTick(Math.Clamp(policy.MaxStepsPerFixedTick + delta, 1, 32));
         SetActionFeedback($"Engine policy hot apply: navigation max steps = {policy.MaxStepsPerFixedTick}. Current mass-nav custom sim is not consuming Navigation2D ticks.");
+    }
+
+    private void ToggleFlowEnabled()
+    {
+        if (_simulation == null)
+        {
+            return;
+        }
+
+        _simulation.FlowTuning.Enabled = !_simulation.FlowTuning.Enabled;
+        _simulation.WebParity.RequestFlowRebuild();
+        SetActionFeedback($"Hot apply: flow dynamic crowd stamp = {(_simulation.FlowTuning.Enabled ? "On" : "Off")}.");
+    }
+
+    private void AdjustFlowIterations(int delta)
+    {
+        _simulation?.FlowTuning.AdjustIterations(delta);
+        if (_simulation != null)
+        {
+            _simulation.WebParity.RequestFlowRebuild();
+            SetActionFeedback($"Hot apply: flow crowd stamp budget = {_simulation.FlowTuning.IterationsPerStep}.");
+        }
+    }
+
+    private void AdjustFlowStepInterval(int delta)
+    {
+        _simulation?.FlowTuning.AdjustStepInterval(delta);
+        if (_simulation != null)
+        {
+            _simulation.WebParity.RequestFlowRebuild();
+            SetActionFeedback($"Hot apply: flow solve interval = {_simulation.FlowTuning.StepIntervalTicks} tick(s).");
+        }
+    }
+
+    private void AdjustFlowCrowdInterval(int delta)
+    {
+        _simulation?.FlowTuning.AdjustCrowdStampInterval(delta);
+        if (_simulation != null)
+        {
+            _simulation.WebParity.RequestFlowRebuild();
+            SetActionFeedback($"Hot apply: flow crowd stamp interval = {_simulation.FlowTuning.CrowdStampIntervalTicks} tick(s).");
+        }
+    }
+
+    private void AdjustFlowObstacleInterval(int delta)
+    {
+        _simulation?.FlowTuning.AdjustObstacleStampInterval(delta);
+        if (_simulation != null)
+        {
+            _simulation.WebParity.RequestFlowRebuild();
+            SetActionFeedback($"Hot apply: flow obstacle stamp interval = {_simulation.FlowTuning.ObstacleStampIntervalTicks} tick(s).");
+        }
     }
 
     private void ToggleArrivalFallback()

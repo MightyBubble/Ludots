@@ -39,6 +39,11 @@ internal sealed class MassNavFormationSystem : ISystem<float>
             _simulation.FrameIndex);
         _simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
 
+        if (_simulation.WebParity.AdvanceFlowPipeline(_simulation.FlowTuning, _simulation.FrameIndex, _simulation.ObserveFlowFieldRebuild))
+        {
+            _simulation.MarkFlowReconcile();
+        }
+
         start = Stopwatch.GetTimestamp();
         _simulation.WebParity.Step(
             dt,

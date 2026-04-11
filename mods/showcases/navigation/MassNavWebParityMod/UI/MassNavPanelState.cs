@@ -89,7 +89,7 @@ internal readonly record struct MassNavPanelState(
 {
     public static MassNavPanelState Empty => new(
         Visible: false,
-        LastActionText: "MassNav runtime knobs hot-apply now. Physics/Nav buttons only touch engine policies. Flow is config-only here. Agent count and Reset rebuild the scene.",
+        LastActionText: "MassNav runtime, flow, and arrival knobs hot-apply now. Physics/Nav buttons only touch engine policies. Agent count and Reset rebuild the scene.",
         LogicHz: 0,
         SimulationBudgetMs: 0,
         SimulationSliceLimit: 0,

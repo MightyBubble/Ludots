@@ -16,3 +16,9 @@ public struct MassNavAgentIndex
 {
     public int Value;
 }
+
+public struct MassNavAgentProfile
+{
+    public float NavMass;
+    public float VisualScale;
+}

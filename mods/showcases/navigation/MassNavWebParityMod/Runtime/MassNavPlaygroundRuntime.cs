@@ -45,10 +45,12 @@ internal sealed class MassNavWebParityRuntime
 
         var simulation = new MassNavSimulationRuntime();
         engine.SetService(MassNavWebParityKeys.SimulationRuntime, simulation);
+        engine.RegisterSystem(new MassNavAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavWebParityControlSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavCommandBridgeSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavCommandApplySystem(engine, simulation), SystemGroup.PostMovement);
+        engine.RegisterSystem(new MassNavOrderBridgeSystem(engine, simulation), SystemGroup.PostMovement);
         engine.RegisterSystem(new MassNavFormationSystem(engine, simulation), SystemGroup.PostMovement);
         var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
             ?? throw new System.InvalidOperationException("MassNavWebParityMod requires PresentationMeshAssetRegistry.");
@@ -127,7 +129,10 @@ internal sealed class MassNavWebParityRuntime
 
         MassNavSimulationRuntime simulation = engine.GetService(MassNavWebParityKeys.SimulationRuntime)
             ?? throw new System.InvalidOperationException("MassNavWebParityMod requires simulation runtime.");
-        MassNavScenarioBootstrap.SpawnDefaultScenario(engine.World, simulation);
+        MassNavScenarioBootstrap.SpawnDefaultScenario(
+            engine.World,
+            simulation,
+            engine.GetService(CoreServiceKeys.TeamEntityLookup));
         _scenarioSpawned = true;
     }
 

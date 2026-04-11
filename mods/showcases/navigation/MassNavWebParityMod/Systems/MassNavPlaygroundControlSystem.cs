@@ -77,7 +77,10 @@ internal sealed class MassNavWebParityControlSystem : ISystem<float>
         _simulation.Commands.Reset();
         _simulation.NavGroupRuntime.Reset();
         _simulation.AgentState.DestroyTracked(_engine.World);
-        MassNavScenarioBootstrap.SpawnDefaultScenario(_engine.World, _simulation);
+        MassNavScenarioBootstrap.SpawnDefaultScenario(
+            _engine.World,
+            _simulation,
+            _engine.GetService(CoreServiceKeys.TeamEntityLookup));
         MassNavWebParityRuntime.RequestTacticalCameraReset(_engine);
         _simulation.MarkStructuralChange();
     }

@@ -33,6 +33,7 @@ public sealed class MassNavWebParitySimState
 
     private readonly Random _random = new();
 
+    private readonly float[] _staticCost = new float[GridWidth * GridHeight];
     private readonly float[] _cost = new float[GridWidth * GridHeight];
     private readonly float[] _obsX = new float[MaxObstacles];
     private readonly float[] _obsY = new float[MaxObstacles];
@@ -75,6 +76,11 @@ public sealed class MassNavWebParitySimState
     private TeamRelationship[] _teamRelationshipMatrix = Array.Empty<TeamRelationship>();
     private int _frameCount;
     private bool _useCandidateGating;
+    private bool _flowDirty = true;
+    private int _lastFlowStepFrame = int.MinValue;
+    private int _lastCrowdStampFrame = int.MinValue;
+    private int _lastObstacleStampFrame = int.MinValue;
+    private int _crowdStampCursor;
 
     public int UnitCount { get; private set; }
     public int ObstacleCount { get; private set; }
@@ -110,7 +116,7 @@ public sealed class MassNavWebParitySimState
         InitializeTeams(teamIds, safeUnitsPerTeam);
         CacheDefaultObstacles();
         InitializeUnits();
-        RebuildFlowFields();
+        ForceFlowRebuild();
         _frameCount = 0;
         SettledUnitCount = 0;
     }
@@ -133,7 +139,28 @@ public sealed class MassNavWebParitySimState
         team.TargetX = resolved.X;
         team.TargetY = resolved.Y;
         ResetTeamArrivalState(teamId);
-        RebuildFlowFields();
+        MarkFlowDirty();
+    }
+
+    public void SetUnitRuntimeProfile(int index, int teamId, float navMass, float visualScale)
+    {
+        if ((uint)index >= (uint)UnitCount)
+        {
+            return;
+        }
+
+        _teams[index] = teamId;
+        if (_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))
+        {
+            _teamRuntimeIndices[index] = teamStateIndex;
+        }
+        _navMasses[index] = MathF.Max(0.001f, navMass);
+        _visualScales[index] = MathF.Max(0.01f, visualScale);
+    }
+
+    public void RequestFlowRebuild()
+    {
+        MarkFlowDirty();
     }
 
     public void SetUnitTarget(int index, float xCm, float yCm, bool resetRecovery = false)
@@ -338,6 +365,39 @@ public sealed class MassNavWebParitySimState
         UpdateSettledUnitCount();
     }
 
+    public bool AdvanceFlowPipeline(MassNavFlowTuning tuning, int frameIndex, Action<double>? observeFlowFieldRebuild = null)
+    {
+        bool refreshObstacles = _flowDirty || ShouldRun(frameIndex, ref _lastObstacleStampFrame, tuning.ObstacleStampIntervalTicks);
+        bool refreshCrowd = _flowDirty || ShouldRun(frameIndex, ref _lastCrowdStampFrame, tuning.CrowdStampIntervalTicks);
+        bool refreshFlow = _flowDirty || ShouldRun(frameIndex, ref _lastFlowStepFrame, tuning.StepIntervalTicks);
+        if (!refreshObstacles && !refreshCrowd && !refreshFlow)
+        {
+            return false;
+        }
+
+        long start = System.Diagnostics.Stopwatch.GetTimestamp();
+        if (refreshObstacles)
+        {
+            RebuildStaticObstacleCost();
+        }
+
+        if (refreshCrowd || refreshObstacles)
+        {
+            RebuildDynamicCost(tuning.Enabled ? tuning.IterationsPerStep : 0);
+            refreshFlow = true;
+        }
+
+        if (refreshFlow)
+        {
+            ComputeFlowFields();
+            _flowDirty = false;
+        }
+
+        LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
+        observeFlowFieldRebuild?.Invoke(LastFlowFieldRebuildMs);
+        return true;
+    }
+
     public void SyncEntities(World world, MassNavAgentState agentState)
     {
         int count = Math.Min(UnitCount, agentState.ControllableCount);
@@ -507,16 +567,6 @@ public sealed class MassNavWebParitySimState
 
     private void ComputeFlowFields()
     {
-        for (int y = 0; y < GridHeight; y++)
-        {
-            for (int x = 0; x < GridWidth; x++)
-            {
-                float wx = (x + 0.5f) * CellCm;
-                float wy = (y + 0.5f) * CellCm;
-                _cost[(y * GridWidth) + x] = IsObstacle(wx, wy) ? 99_999f : 1f;
-            }
-        }
-
         for (int i = 0; i < _teamStates.Count; i++)
         {
             TeamRuntimeState team = _teamStates[i];
@@ -524,11 +574,99 @@ public sealed class MassNavWebParitySimState
         }
     }
 
-    private void RebuildFlowFields()
+    private void ForceFlowRebuild()
     {
+        RebuildStaticObstacleCost();
+        RebuildDynamicCost(crowdStampBudgetUnits: 0);
         long start = System.Diagnostics.Stopwatch.GetTimestamp();
         ComputeFlowFields();
         LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
+        _flowDirty = false;
+        _lastFlowStepFrame = 0;
+        _lastCrowdStampFrame = 0;
+        _lastObstacleStampFrame = 0;
+    }
+
+    private void RebuildStaticObstacleCost()
+    {
+        for (int y = 0; y < GridHeight; y++)
+        {
+            for (int x = 0; x < GridWidth; x++)
+            {
+                float wx = (x + 0.5f) * CellCm;
+                float wy = (y + 0.5f) * CellCm;
+                _staticCost[(y * GridWidth) + x] = IsObstacle(wx, wy) ? 99_999f : 1f;
+            }
+        }
+    }
+
+    private void RebuildDynamicCost(int crowdStampBudgetUnits)
+    {
+        Array.Copy(_staticCost, _cost, _staticCost.Length);
+        if (crowdStampBudgetUnits <= 0 || UnitCount <= 0)
+        {
+            return;
+        }
+
+        int budget = Math.Min(UnitCount, crowdStampBudgetUnits);
+        for (int sample = 0; sample < budget; sample++)
+        {
+            int unitIndex = (_crowdStampCursor + sample) % UnitCount;
+            int i2 = unitIndex << 1;
+            StampCrowdCost(_positionsCm[i2], _positionsCm[i2 + 1]);
+        }
+
+        _crowdStampCursor = (_crowdStampCursor + budget) % Math.Max(1, UnitCount);
+    }
+
+    private void StampCrowdCost(float xCm, float yCm)
+    {
+        int gx = Math.Clamp((int)(xCm / CellCm), 0, GridWidth - 1);
+        int gy = Math.Clamp((int)(yCm / CellCm), 0, GridHeight - 1);
+        for (int oy = -1; oy <= 1; oy++)
+        {
+            int ny = gy + oy;
+            if ((uint)ny >= (uint)GridHeight)
+            {
+                continue;
+            }
+
+            int rowBase = ny * GridWidth;
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int nx = gx + ox;
+                if ((uint)nx >= (uint)GridWidth)
+                {
+                    continue;
+                }
+
+                int idx = rowBase + nx;
+                if (_cost[idx] > 9_999f)
+                {
+                    continue;
+                }
+
+                float penalty = (ox == 0 && oy == 0) ? 8f : 3f;
+                _cost[idx] += penalty;
+            }
+        }
+    }
+
+    private void MarkFlowDirty()
+    {
+        _flowDirty = true;
+    }
+
+    private static bool ShouldRun(int frameIndex, ref int lastFrame, int intervalTicks)
+    {
+        int safeInterval = Math.Max(1, intervalTicks);
+        if (lastFrame == int.MinValue || frameIndex - lastFrame >= safeInterval)
+        {
+            lastFrame = frameIndex;
+            return true;
+        }
+
+        return false;
     }
 
     private void ComputeFlow(float[] flow, float targetX, float targetY)

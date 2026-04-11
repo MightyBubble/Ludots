@@ -4,6 +4,11 @@
   "targetFps": 60,
   "worldWidthInTiles": 100,
   "worldHeightInTiles": 100,
+  "constants": {
+    "orderTypeIds": {
+      "massNavMove": 172
+    }
+  },
   "Navigation2D": {
     "Enabled": false
   }
