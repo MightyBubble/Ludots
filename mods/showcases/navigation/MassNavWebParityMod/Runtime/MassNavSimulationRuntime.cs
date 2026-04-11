@@ -27,7 +27,8 @@ public sealed class MassNavSimulationRuntime
     public float PrimitiveEmitMs { get; private set; }
     public MassNavAgentState AgentState { get; } = new();
     public MassNavFlowTuning FlowTuning { get; } = new();
-    public MassNavFormationRuntime FormationRuntime { get; } = new();
+    public MassNavFormationRuntime FormationRuntime { get; }
+    public MassNavGroupRuntime NavGroupRuntime { get; }
     public MassNavWebParitySimState WebParity { get; } = new();
 
     public int SelectedCount => _selectedEntities.Length;
@@ -39,6 +40,12 @@ public sealed class MassNavSimulationRuntime
     public int AgentsPerTeam { get; private set; } = 2_500;
     public int SelectedTeamId { get; private set; } = 1;
     public MassNavFormationMode FormationMode { get; private set; } = MassNavFormationMode.None;
+
+    public MassNavSimulationRuntime()
+    {
+        FormationRuntime = new MassNavFormationRuntime();
+        NavGroupRuntime = new MassNavGroupRuntime(FormationRuntime);
+    }
 
     public void BeginFrame(float dt)
     {

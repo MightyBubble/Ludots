@@ -54,7 +54,7 @@ internal sealed class MassNavWebParityControlSystem : ISystem<float>
 
             if (MathF.Abs(deltaRadians) > 1e-5f)
             {
-                _simulation.FormationRuntime.RotateSelected(_simulation.AgentState, _simulation.SelectedEntities, deltaRadians);
+                _simulation.NavGroupRuntime.RotateSelected(_simulation.AgentState, _simulation.SelectedEntities, deltaRadians);
             }
         }
 
@@ -64,7 +64,7 @@ internal sealed class MassNavWebParityControlSystem : ISystem<float>
         }
         else
         {
-            _simulation.FormationRuntime.RefreshSelectedRotation(_simulation.AgentState, _simulation.SelectedEntities);
+            _simulation.NavGroupRuntime.RefreshSelectedRotation(_simulation.AgentState, _simulation.SelectedEntities);
         }
     }
 
@@ -72,7 +72,7 @@ internal sealed class MassNavWebParityControlSystem : ISystem<float>
     {
         ClearSelection();
         _simulation.ClearSelection();
-        _simulation.FormationRuntime.Reset();
+        _simulation.NavGroupRuntime.Reset();
         _simulation.AgentState.DestroyTracked(_engine.World);
         MassNavScenarioBootstrap.SpawnDefaultScenario(_engine.World, _simulation);
         MassNavWebParityRuntime.RequestTacticalCameraReset(_engine);

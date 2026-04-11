@@ -62,7 +62,7 @@ internal sealed class MassNavCommandBridgeSystem : ISystem<float>
             return;
         }
 
-        int assigned = _simulation.FormationRuntime.AssignFormation(
+        int assigned = _simulation.NavGroupRuntime.IssueSelectionMoveCommand(
             _simulation.WebParity,
             _simulation.AgentState,
             selected,

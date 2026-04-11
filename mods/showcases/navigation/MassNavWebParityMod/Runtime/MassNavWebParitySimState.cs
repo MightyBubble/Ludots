@@ -238,7 +238,7 @@ public sealed class MassNavWebParitySimState
         return new Vector2(resolvedX, resolvedY);
     }
 
-    public void Step(float dt, MassNavFormationRuntime formationRuntime, Action<double>? observeHardResolve = null)
+    public void Step(float dt, MassNavGroupRuntime navGroupRuntime, Action<double>? observeHardResolve = null)
     {
         if (UnitCount <= 0)
         {
@@ -274,7 +274,7 @@ public sealed class MassNavWebParitySimState
 
         if (World.SharedJobScheduler == null || UnitCount < 2048)
         {
-            StepRange(0, UnitCount, clampedDt, formationRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, SeparationHashSearchRadius, _useCandidateGating);
+            StepRange(0, UnitCount, clampedDt, navGroupRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, SeparationHashSearchRadius, _useCandidateGating);
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
             ResolveHardPenetration();
             observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
@@ -295,7 +295,7 @@ public sealed class MassNavWebParitySimState
             job.StartIndex = startIndex;
             job.EndIndex = startIndex + length;
             job.Dt = clampedDt;
-            job.FormationRuntime = formationRuntime;
+            job.NavGroupRuntime = navGroupRuntime;
             job.Speed = speed;
             job.SepRadiusSq = sepRadiusSq;
             job.InvSepRadius = invSepRadius;
@@ -693,7 +693,7 @@ public sealed class MassNavWebParitySimState
         int startIndex,
         int endIndex,
         float clampedDt,
-        MassNavFormationRuntime formationRuntime,
+        MassNavGroupRuntime navGroupRuntime,
         float speed,
         float sepRadiusSq,
         float invSepRadius,
@@ -713,7 +713,7 @@ public sealed class MassNavWebParitySimState
             float py = _readPositionsCm[i2 + 1];
             int teamStateIndex = _teamRuntimeIndices[i];
             TeamRuntimeState team = _teamStates[teamStateIndex];
-            bool inFormation = formationRuntime.IsInFormation(i);
+            bool inFormation = navGroupRuntime.HasGroup(i);
 
             float desiredX = 0f;
             float desiredY = 0f;
@@ -1425,7 +1425,7 @@ public sealed class MassNavWebParitySimState
         public int StartIndex { get; set; }
         public int EndIndex { get; set; }
         public float Dt { get; set; }
-        public MassNavFormationRuntime? FormationRuntime { get; set; }
+        public MassNavGroupRuntime? NavGroupRuntime { get; set; }
         public float Speed { get; set; }
         public float SepRadiusSq { get; set; }
         public float InvSepRadius { get; set; }
@@ -1444,7 +1444,7 @@ public sealed class MassNavWebParitySimState
                 StartIndex,
                 EndIndex,
                 Dt,
-                FormationRuntime!,
+                NavGroupRuntime!,
                 Speed,
                 SepRadiusSq,
                 InvSepRadius,
