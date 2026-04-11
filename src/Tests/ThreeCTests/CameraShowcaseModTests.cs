@@ -310,8 +310,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
                 ?? throw new InvalidOperationException("SelectionRuntime is missing.");
             Entity local = GetLocalPlayer(engine);
-            Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.Ambient, entities), Is.True);
-            selection.TryBindView(local, SelectionViewKeys.Primary, local, SelectionSetKeys.Ambient);
+            Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.LivePrimary, entities), Is.True);
+            selection.TryBindView(local, SelectionViewKeys.Primary, local, SelectionSetKeys.LivePrimary);
             engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = local;
             engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }

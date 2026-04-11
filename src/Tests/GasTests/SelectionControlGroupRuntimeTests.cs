@@ -55,5 +55,60 @@ namespace Ludots.Tests.GAS
             Assert.That(selection.TryDescribeSelection(viewer, SelectionSetKeys.FormationPrimary, out formationDescriptor), Is.True);
             Assert.That(formationDescriptor.MemberCount, Is.EqualTo(2));
         }
+
+        [Test]
+        public void SelectionRuntime_RejectsBlankAliasAndViewKeys()
+        {
+            using var world = World.Create();
+            Entity viewer = world.Create();
+            Entity target = world.Create();
+
+            var selection = new SelectionRuntime(
+                world,
+                new SelectionRuntimeConfig(),
+                new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal));
+
+            Assert.That(selection.TryGetSelectionEntity(viewer, string.Empty, out _), Is.False);
+            Assert.That(selection.TryGetOrCreateSelectionEntity(viewer, string.Empty, out _), Is.False);
+            Assert.That(selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, new[] { target }), Is.True);
+            Assert.That(selection.TryBindView(viewer, string.Empty, viewer, SelectionSetKeys.LivePrimary), Is.False);
+            Assert.That(selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, string.Empty), Is.False);
+            Assert.That(selection.TryResolveViewContainer(viewer, string.Empty, out _), Is.False);
+        }
+
+        [Test]
+        public void SelectionViewRuntime_RequiresExplicitViewerViewKeyAndBinding()
+        {
+            using var world = World.Create();
+            Entity viewer = world.Create();
+            Entity target = world.Create();
+
+            var selection = new SelectionRuntime(
+                world,
+                new SelectionRuntimeConfig(),
+                new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal));
+            Assert.That(selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, new[] { target }), Is.True);
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.SelectionRuntime.Name] = selection,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
+            };
+
+            Assert.That(SelectionViewRuntime.TryResolveViewedSelection(world, globals, selection, out _, out _, out _), Is.False);
+
+            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
+            Assert.That(SelectionViewRuntime.TryResolveViewedSelection(world, globals, selection, out _, out _, out _), Is.False);
+
+            globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            Assert.That(SelectionViewRuntime.TryResolveViewedSelection(world, globals, selection, out _, out _, out _), Is.False);
+
+            Assert.That(selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary), Is.True);
+            Assert.That(SelectionViewRuntime.TryResolveViewedSelection(world, globals, selection, out Entity resolvedViewer, out string resolvedViewKey, out Entity container), Is.True);
+            Assert.That(resolvedViewer, Is.EqualTo(viewer));
+            Assert.That(resolvedViewKey, Is.EqualTo(SelectionViewKeys.Primary));
+            Assert.That(selection.TryGetPrimary(container, out Entity primary), Is.True);
+            Assert.That(primary, Is.EqualTo(target));
+        }
     }
 }

@@ -20,7 +20,7 @@ namespace Ludots.Core.Input.Selection
             out Entity container)
         {
             viewer = default;
-            viewKey = SelectionViewKeys.Primary;
+            viewKey = string.Empty;
             container = default;
 
             if (globals.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out var viewObj) &&
@@ -29,16 +29,8 @@ namespace Ludots.Core.Input.Selection
             {
                 viewer = viewed;
             }
-            else if (globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                     localObj is Entity local &&
-                     world.IsAlive(local))
-            {
-                globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = local;
-                viewer = local;
-            }
             else
             {
-                globals.Remove(CoreServiceKeys.SelectionViewViewerEntity.Name);
                 return false;
             }
 
@@ -46,19 +38,9 @@ namespace Ludots.Core.Input.Selection
                 setObj is string configuredViewKey &&
                 !string.IsNullOrWhiteSpace(configuredViewKey))
             {
-                viewKey = configuredViewKey;
+                viewKey = configuredViewKey.Trim();
             }
             else
-            {
-                globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
-            }
-
-            if (selection.TryResolveViewContainer(viewer, viewKey, out container))
-            {
-                return true;
-            }
-
-            if (!selection.TryBindView(viewer, viewKey, viewer, SelectionSetKeys.LivePrimary))
             {
                 return false;
             }

@@ -258,11 +258,11 @@ namespace RoadNetworkShowcaseMod.Runtime
             if (engine.GetService(CoreServiceKeys.SelectionRuntime) is SelectionRuntime selection)
             {
                 EnsureSelectionComponents(engine.World, owner, selection, engine.GlobalContext);
-                if (ShouldSeedAmbientSelection(engine.World, selection, owner))
+                if (ShouldSeedPrimaryLiveSelection(engine.World, selection, owner))
                 {
                     Span<Entity> initialSelection = stackalloc Entity[1];
                     initialSelection[0] = owner;
-                    selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, initialSelection);
+                    selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, initialSelection);
                 }
             }
         }
@@ -312,15 +312,15 @@ namespace RoadNetworkShowcaseMod.Runtime
                 world.Add(owner, default(SelectionDragState));
             }
 
-            selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.Ambient, out _);
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.Ambient);
+            selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
+            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
             globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
             globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }
 
-        private static bool ShouldSeedAmbientSelection(World world, SelectionRuntime selection, Entity owner)
+        private static bool ShouldSeedPrimaryLiveSelection(World world, SelectionRuntime selection, Entity owner)
         {
-            if (!selection.TryGetSelectionEntity(owner, SelectionSetKeys.Ambient, out Entity container))
+            if (!selection.TryGetSelectionEntity(owner, SelectionSetKeys.LivePrimary, out Entity container))
             {
                 return true;
             }

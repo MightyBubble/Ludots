@@ -65,7 +65,7 @@ namespace CoreInputMod.Systems
 
         public Entity GetControlledActor(int playerId = 1)
         {
-            if (TryGetSelectedEntity(SelectionSetKeys.Ambient, out var selected) &&
+            if (TryGetSelectedEntity(SelectionSetKeys.LivePrimary, out var selected) &&
                 _world.IsAlive(selected) &&
                 _world.TryGet(selected, out PlayerOwner owner) &&
                 owner.PlayerId == playerId)
