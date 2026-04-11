@@ -68,15 +68,13 @@ public sealed class MassNavFormationRuntime
 
         if (formationMode == MassNavFormationMode.None || assignedCount == 1)
         {
-            for (int i = 0; i < assignedCount; i++)
-            {
-                simulation.SetUnitTarget(memberIndices[i], destinationCm.X, destinationCm.Y, resetRecovery: true);
-            }
-
+            AssignLooseTargets(simulation, memberIndices, assignedCount, destinationCm, previousRotation);
             ActiveGroupCount = CountActiveGroups();
             RefreshSelectedRotation(agentState, selected);
             return assignedCount;
         }
+
+        Vector2 resolvedDestination = simulation.ResolveNavigableTarget(destinationCm.X, destinationCm.Y, 0f, 0f, 60f);
 
         int groupId = AllocateGroupId();
         int[] exactMembers = new int[assignedCount];
@@ -90,8 +88,8 @@ public sealed class MassNavFormationRuntime
 
         var group = new FormationGroup(exactMembers, baseOffsetX, baseOffsetY, offsetX, offsetY)
         {
-            DestinationX = destinationCm.X,
-            DestinationY = destinationCm.Y,
+            DestinationX = resolvedDestination.X,
+            DestinationY = resolvedDestination.Y,
             RotationRadians = previousRotation,
         };
         _groups[groupId] = group;
@@ -99,7 +97,13 @@ public sealed class MassNavFormationRuntime
         for (int i = 0; i < exactMembers.Length; i++)
         {
             _formationIdsByControllableIndex[exactMembers[i]] = groupId;
-            simulation.SetUnitTarget(exactMembers[i], destinationCm.X, destinationCm.Y, resetRecovery: true);
+            Vector2 resolvedTarget = simulation.ResolveNavigableTarget(
+                resolvedDestination.X + offsetX[i],
+                resolvedDestination.Y + offsetY[i],
+                offsetX[i],
+                offsetY[i],
+                50f);
+            simulation.SetUnitTarget(exactMembers[i], resolvedTarget.X, resolvedTarget.Y, resetRecovery: true);
         }
 
         ActiveGroupCount = CountActiveGroups();
@@ -230,9 +234,15 @@ public sealed class MassNavFormationRuntime
             for (int i = 0; i < group.MemberIndices.Length; i++)
             {
                 int unitIndex = group.MemberIndices[i];
-                float targetX = centerX + group.OffsetX[i] + pullX;
-                float targetY = centerY + group.OffsetY[i] + pullY;
-                simulation.SetUnitTarget(unitIndex, targetX, targetY);
+                float rawTargetX = centerX + group.OffsetX[i] + pullX;
+                float rawTargetY = centerY + group.OffsetY[i] + pullY;
+                Vector2 resolvedTarget = simulation.ResolveNavigableTarget(
+                    rawTargetX,
+                    rawTargetY,
+                    group.OffsetX[i],
+                    group.OffsetY[i],
+                    50f);
+                simulation.SetUnitTarget(unitIndex, resolvedTarget.X, resolvedTarget.Y);
             }
 
             group.CenterX = centerX;
@@ -385,6 +395,43 @@ public sealed class MassNavFormationRuntime
         }
 
         return _formationIdsByControllableIndex[unitIndex];
+    }
+
+    private static void AssignLooseTargets(
+        MassNavWebParitySimState simulation,
+        int[] memberIndices,
+        int count,
+        Vector2 destinationCm,
+        float rotationRadians)
+    {
+        if (count <= 0)
+        {
+            return;
+        }
+
+        if (count == 1)
+        {
+            Vector2 singleTarget = simulation.ResolveNavigableTarget(destinationCm.X, destinationCm.Y, 0f, 0f, 50f);
+            simulation.SetUnitTarget(memberIndices[0], singleTarget.X, singleTarget.Y, resetRecovery: true);
+            return;
+        }
+
+        float[] baseOffsetX = new float[count];
+        float[] baseOffsetY = new float[count];
+        float[] offsetX = new float[count];
+        float[] offsetY = new float[count];
+        BuildOffsets(baseOffsetX, baseOffsetY, offsetX, offsetY, count, MassNavFormationMode.Square, rotationRadians);
+        Vector2 resolvedCenter = simulation.ResolveNavigableTarget(destinationCm.X, destinationCm.Y, 0f, 0f, 60f);
+        for (int i = 0; i < count; i++)
+        {
+            Vector2 resolvedTarget = simulation.ResolveNavigableTarget(
+                resolvedCenter.X + offsetX[i],
+                resolvedCenter.Y + offsetY[i],
+                offsetX[i],
+                offsetY[i],
+                50f);
+            simulation.SetUnitTarget(memberIndices[i], resolvedTarget.X, resolvedTarget.Y, resetRecovery: true);
+        }
     }
 
     private static void BuildOffsets(
