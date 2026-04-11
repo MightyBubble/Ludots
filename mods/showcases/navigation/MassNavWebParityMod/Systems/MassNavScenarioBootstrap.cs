@@ -2,6 +2,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
@@ -14,6 +15,8 @@ internal static class MassNavScenarioBootstrap
     public static void SpawnDefaultScenario(World world, MassNavSimulationRuntime simulation)
     {
         simulation.AgentState.Reset();
+        TeamManager.DefaultRelationship = TeamRelationship.Hostile;
+        TeamManager.SetRelationshipSymmetric(3, 4, TeamRelationship.Neutral);
         simulation.WebParity.Reset(simulation.TeamIds, simulation.AgentsPerTeam);
 
         for (int i = 0; i < simulation.WebParity.UnitCount; i++)

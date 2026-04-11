@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using Schedulers;
@@ -61,6 +62,8 @@ public sealed class MassNavWebParitySimState
     private int[] _teams = Array.Empty<int>();
     private int[] _teamRuntimeIndices = Array.Empty<int>();
     private int[] _teamLocalIndices = Array.Empty<int>();
+    private float[] _navMasses = Array.Empty<float>();
+    private float[] _visualScales = Array.Empty<float>();
     private float[] _unitTargetsCm = Array.Empty<float>();
     private byte[] _hasUnitTarget = Array.Empty<byte>();
     private byte[] _selectedFlags = Array.Empty<byte>();
@@ -75,6 +78,7 @@ public sealed class MassNavWebParitySimState
 
     private readonly List<TeamRuntimeState> _teamStates = new();
     private readonly Dictionary<int, int> _teamStateIndexById = new();
+    private TeamRelationship[] _teamRelationshipMatrix = Array.Empty<TeamRelationship>();
     private int _frameCount;
     private bool _useCandidateGating;
 
@@ -82,6 +86,7 @@ public sealed class MassNavWebParitySimState
     public int ObstacleCount { get; private set; }
     public int SettledUnitCount { get; private set; }
     public MassNavArrivalTuning ArrivalTuning { get; } = new();
+    public MassNavAvoidanceTuning AvoidanceTuning { get; } = new();
 
     public ReadOnlySpan<float> PositionsCm => _positionsCm.AsSpan(0, UnitCount * 2);
     public ReadOnlySpan<int> Teams => _teams.AsSpan(0, UnitCount);
@@ -90,6 +95,8 @@ public sealed class MassNavWebParitySimState
     public float GetPositionX(int index) => _positionsCm[index << 1];
     public float GetPositionY(int index) => _positionsCm[(index << 1) + 1];
     public int GetTeam(int index) => _teams[index];
+    public float GetNavMass(int index) => _navMasses[index];
+    public float GetVisualScale(int index) => _visualScales[index];
     public bool IsSelected(int index) => _selectedFlags[index] != 0;
     public float GetObstacleX(int index) => _obsX[index];
     public float GetObstacleY(int index) => _obsY[index];
@@ -238,6 +245,8 @@ public sealed class MassNavWebParitySimState
             return;
         }
 
+        RefreshTeamRelationshipMatrix();
+
         float clampedDt = Math.Clamp(dt, 0f, 0.05f);
         _frameCount++;
         int scalarCount = UnitCount * 2;
@@ -359,6 +368,8 @@ public sealed class MassNavWebParitySimState
             Array.Resize(ref _teams, unitCount);
             Array.Resize(ref _teamRuntimeIndices, unitCount);
             Array.Resize(ref _teamLocalIndices, unitCount);
+            Array.Resize(ref _navMasses, unitCount);
+            Array.Resize(ref _visualScales, unitCount);
             Array.Resize(ref _hasUnitTarget, unitCount);
             Array.Resize(ref _selectedFlags, unitCount);
             Array.Resize(ref _hardResolveCandidates, unitCount);
@@ -406,6 +417,8 @@ public sealed class MassNavWebParitySimState
             _teamStateIndexById[teamId] = _teamStates.Count;
             _teamStates.Add(state);
         }
+
+        _teamRelationshipMatrix = new TeamRelationship[_teamStates.Count * _teamStates.Count];
     }
 
     private void InitializeUnits()
@@ -440,9 +453,12 @@ public sealed class MassNavWebParitySimState
                 float xCm = team.SpawnCenterX + team.TangentX * (lateralOffset + jitterLateral) + team.DirectionX * (depthOffset + jitterDepth);
                 float yCm = team.SpawnCenterY + team.TangentY * (lateralOffset + jitterLateral) + team.DirectionY * (depthOffset + jitterDepth);
                 int i2 = unitIndex << 1;
+                bool heavy = (localIndex % 7) == 0;
                 _teams[unitIndex] = team.TeamId;
                 _teamRuntimeIndices[unitIndex] = teamStateIndex;
                 _teamLocalIndices[unitIndex] = localIndex;
+                _navMasses[unitIndex] = heavy ? AvoidanceTuning.HeavyNavMass : AvoidanceTuning.LightNavMass;
+                _visualScales[unitIndex] = heavy ? AvoidanceTuning.HeavyVisualScale : AvoidanceTuning.LightVisualScale;
                 _positionsCm[i2] = ClampPosition(xCm);
                 _positionsCm[i2 + 1] = ClampPosition(yCm);
                 _unitProgressAnchorCm[i2] = _positionsCm[i2];
@@ -637,6 +653,32 @@ public sealed class MassNavWebParitySimState
         }
     }
 
+    private void RefreshTeamRelationshipMatrix()
+    {
+        int teamCount = _teamStates.Count;
+        if (teamCount <= 0)
+        {
+            return;
+        }
+
+        int required = teamCount * teamCount;
+        if (_teamRelationshipMatrix.Length < required)
+        {
+            _teamRelationshipMatrix = new TeamRelationship[required];
+        }
+
+        for (int a = 0; a < teamCount; a++)
+        {
+            int teamA = _teamStates[a].TeamId;
+            int rowOffset = a * teamCount;
+            for (int b = 0; b < teamCount; b++)
+            {
+                int teamB = _teamStates[b].TeamId;
+                _teamRelationshipMatrix[rowOffset + b] = TeamManager.GetRelationship(teamA, teamB);
+            }
+        }
+    }
+
     private static int GetHashCell(float[] positionsCm, int index, float invHashCell, int hashWidthMinusOne, int hashHeightMinusOne, int hashWidth)
     {
         int i2 = index << 1;
@@ -669,7 +711,8 @@ public sealed class MassNavWebParitySimState
             int i2 = i << 1;
             float px = _readPositionsCm[i2];
             float py = _readPositionsCm[i2 + 1];
-            TeamRuntimeState team = _teamStates[_teamRuntimeIndices[i]];
+            int teamStateIndex = _teamRuntimeIndices[i];
+            TeamRuntimeState team = _teamStates[teamStateIndex];
             bool inFormation = formationRuntime.IsInFormation(i);
 
             float desiredX = 0f;
@@ -878,11 +921,11 @@ public sealed class MassNavWebParitySimState
                     int start = _separationCellOffsets[cell];
                     int end = start + _separationCellCounts[cell];
                     for (int hashIndex = start; hashIndex < end; hashIndex++)
-                    {
-                        int j = _separationAgents[hashIndex];
-                        if (j != i)
                         {
-                            int j2 = j << 1;
+                            int j = _separationAgents[hashIndex];
+                            if (j != i)
+                            {
+                                int j2 = j << 1;
                             float dx = px - _readPositionsCm[j2];
                             float dy = py - _readPositionsCm[j2 + 1];
                             float d2 = dx * dx + dy * dy;
@@ -896,8 +939,9 @@ public sealed class MassNavWebParitySimState
                                 float invD = FastInvSqrt(d2);
                                 float d = d2 * invD;
                                 float force = 1f - (d * invSepRadius);
-                                separationX += dx * invD * force;
-                                separationY += dy * invD * force;
+                                float response = ComputeSeparationResponse(teamStateIndex, _teamRuntimeIndices[j], i, j);
+                                separationX += dx * invD * force * response;
+                                separationY += dy * invD * force * response;
                             }
                         }
                     }
@@ -986,6 +1030,75 @@ public sealed class MassNavWebParitySimState
 
         team = null!;
         return false;
+    }
+
+    private float ComputeSeparationResponse(int selfTeamStateIndex, int otherTeamStateIndex, int selfUnitIndex, int otherUnitIndex)
+    {
+        TeamRelationship selfToOther = GetTeamRelationship(selfTeamStateIndex, otherTeamStateIndex);
+        float selfMass = _navMasses[selfUnitIndex];
+        float otherMass = _navMasses[otherUnitIndex];
+        MassNavPairAvoidancePolicy policy = ResolvePolicy(selfToOther, selfMass, otherMass);
+        return policy switch
+        {
+            MassNavPairAvoidancePolicy.FriendlyCooperativeYield => Math.Clamp((selfMass / MathF.Max(0.001f, otherMass)) * AvoidanceTuning.FriendlyResponseScale, 0.35f, 2.75f),
+            MassNavPairAvoidancePolicy.DominantPush => Math.Clamp((otherMass / MathF.Max(0.001f, selfMass)) * AvoidanceTuning.DominantPushResponseScale, 0.15f, 4.5f),
+            _ => Math.Clamp((otherMass / MathF.Max(0.001f, selfMass)) * AvoidanceTuning.NonFriendlyResponseScale, 0.25f, 3.25f),
+        };
+    }
+
+    private TeamRelationship GetTeamRelationship(int sourceTeamStateIndex, int targetTeamStateIndex)
+    {
+        int teamCount = _teamStates.Count;
+        if ((uint)sourceTeamStateIndex >= (uint)teamCount || (uint)targetTeamStateIndex >= (uint)teamCount)
+        {
+            return TeamRelationship.Hostile;
+        }
+
+        return _teamRelationshipMatrix[(sourceTeamStateIndex * teamCount) + targetTeamStateIndex];
+    }
+
+    private MassNavPairAvoidancePolicy ResolveBidirectionalPolicy(int selfTeamStateIndex, int otherTeamStateIndex, int selfUnitIndex, int otherUnitIndex)
+    {
+        TeamRelationship selfToOther = GetTeamRelationship(selfTeamStateIndex, otherTeamStateIndex);
+        TeamRelationship otherToSelf = GetTeamRelationship(otherTeamStateIndex, selfTeamStateIndex);
+        if (selfToOther == TeamRelationship.Friendly && otherToSelf == TeamRelationship.Friendly)
+        {
+            return MassNavPairAvoidancePolicy.FriendlyCooperativeYield;
+        }
+
+        float selfMass = _navMasses[selfUnitIndex];
+        float otherMass = _navMasses[otherUnitIndex];
+        float minMass = MathF.Max(0.001f, MathF.Min(selfMass, otherMass));
+        float maxMass = MathF.Max(selfMass, otherMass);
+        return (maxMass / minMass) >= AvoidanceTuning.DominantMassRatio
+            ? MassNavPairAvoidancePolicy.DominantPush
+            : MassNavPairAvoidancePolicy.NonFriendlyBlocker;
+    }
+
+    private MassNavPairAvoidancePolicy ResolvePolicy(TeamRelationship relationship, float selfMass, float otherMass)
+    {
+        if (relationship == TeamRelationship.Friendly)
+        {
+            return MassNavPairAvoidancePolicy.FriendlyCooperativeYield;
+        }
+
+        float minMass = MathF.Max(0.001f, MathF.Min(selfMass, otherMass));
+        float maxMass = MathF.Max(selfMass, otherMass);
+        return (maxMass / minMass) >= AvoidanceTuning.DominantMassRatio
+            ? MassNavPairAvoidancePolicy.DominantPush
+            : MassNavPairAvoidancePolicy.NonFriendlyBlocker;
+    }
+
+    private float ComputeCorrectionShare(MassNavPairAvoidancePolicy policy, float selfMass, float otherMass)
+    {
+        float safeSelf = MathF.Max(0.001f, selfMass);
+        float safeOther = MathF.Max(0.001f, otherMass);
+        return policy switch
+        {
+            MassNavPairAvoidancePolicy.FriendlyCooperativeYield => Math.Clamp(safeSelf / (safeSelf + safeOther), 0.18f, 0.82f),
+            MassNavPairAvoidancePolicy.DominantPush => Math.Clamp((safeOther * 1.8f) / (safeSelf + (safeOther * 1.8f)), 0.05f, 0.95f),
+            _ => Math.Clamp((safeOther * 1.2f) / (safeSelf + (safeOther * 1.2f)), 0.08f, 0.92f),
+        };
     }
 
     private void UpdateUnitStuckTimer(int index, float px, float py, float dt)
@@ -1186,22 +1299,26 @@ public sealed class MassNavWebParitySimState
             overlap = AgentBodyDiameterCm;
         }
 
-        float correction = overlap * 0.5f;
-        _positionsCm[i2] = ClampPosition(_positionsCm[i2] + nx * correction);
-        _positionsCm[i2 + 1] = ClampPosition(_positionsCm[i2 + 1] + ny * correction);
-        _positionsCm[j2] = ClampPosition(_positionsCm[j2] - nx * correction);
-        _positionsCm[j2 + 1] = ClampPosition(_positionsCm[j2 + 1] - ny * correction);
+        MassNavPairAvoidancePolicy policy = ResolveBidirectionalPolicy(_teamRuntimeIndices[i], _teamRuntimeIndices[j], i, j);
+        float shareI = ComputeCorrectionShare(policy, _navMasses[i], _navMasses[j]);
+        float shareJ = 1f - shareI;
+        float correctionI = overlap * shareI;
+        float correctionJ = overlap * shareJ;
+        _positionsCm[i2] = ClampPosition(_positionsCm[i2] + nx * correctionI);
+        _positionsCm[i2 + 1] = ClampPosition(_positionsCm[i2 + 1] + ny * correctionI);
+        _positionsCm[j2] = ClampPosition(_positionsCm[j2] - nx * correctionJ);
+        _positionsCm[j2 + 1] = ClampPosition(_positionsCm[j2 + 1] - ny * correctionJ);
 
         float relVelX = _velocitiesCm[i2] - _velocitiesCm[j2];
         float relVelY = _velocitiesCm[i2 + 1] - _velocitiesCm[j2 + 1];
         float closingSpeed = relVelX * nx + relVelY * ny;
         if (closingSpeed < 0f)
         {
-            float impulse = closingSpeed * 0.5f;
-            _velocitiesCm[i2] -= nx * impulse;
-            _velocitiesCm[i2 + 1] -= ny * impulse;
-            _velocitiesCm[j2] += nx * impulse;
-            _velocitiesCm[j2 + 1] += ny * impulse;
+            float impulse = -closingSpeed;
+            _velocitiesCm[i2] += nx * impulse * shareI;
+            _velocitiesCm[i2 + 1] += ny * impulse * shareI;
+            _velocitiesCm[j2] -= nx * impulse * shareJ;
+            _velocitiesCm[j2 + 1] -= ny * impulse * shareJ;
         }
     }
 

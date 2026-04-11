@@ -55,6 +55,7 @@ internal sealed class MassNavPrimitivePresentationSystem : ISystem<float>
             float x = positions[offset] * MassNavWebParitySimState.VisualMetersPerCm;
             float z = positions[offset + 1] * MassNavWebParitySimState.VisualMetersPerCm;
             bool selected = selectedFlags[i] != 0;
+            float visualScale = _simulation.WebParity.GetVisualScale(i);
             Vector4 color;
             if (selected)
             {
@@ -68,7 +69,9 @@ internal sealed class MassNavPrimitivePresentationSystem : ISystem<float>
             {
                 MeshAssetId = _sphereMeshId,
                 Position = new Vector3(x, 0.18f, z),
-                Scale = selected ? new Vector3(0.28f, 0.28f, 0.28f) : new Vector3(0.22f, 0.22f, 0.22f),
+                Scale = selected
+                    ? new Vector3(visualScale + 0.06f, visualScale + 0.06f, visualScale + 0.06f)
+                    : new Vector3(visualScale, visualScale, visualScale),
                 Color = color
             });
         }
