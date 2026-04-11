@@ -46,7 +46,7 @@ internal sealed class MassNavPrimitivePresentationSystem : ISystem<float>
 
         long start = Stopwatch.GetTimestamp();
         ReadOnlySpan<float> positions = _simulation.WebParity.PositionsCm;
-        ReadOnlySpan<byte> teams = _simulation.WebParity.Teams;
+        ReadOnlySpan<int> teams = _simulation.WebParity.Teams;
         ReadOnlySpan<byte> selectedFlags = _simulation.WebParity.SelectedFlags;
         int unitCount = _simulation.WebParity.UnitCount;
         for (int i = 0; i < unitCount; i++)
@@ -60,13 +60,9 @@ internal sealed class MassNavPrimitivePresentationSystem : ISystem<float>
             {
                 color = new Vector4(0.40f, 1.0f, 0.20f, 0.95f);
             }
-            else if (teams[i] == 0)
-            {
-                color = new Vector4(0.12f, 0.82f, 0.94f, 0.85f);
-            }
             else
             {
-                color = new Vector4(1.0f, 0.55f, 0.16f, 0.85f);
+                color = ResolveTeamColor(teams[i]);
             }
             draw.TryAdd(new PrimitiveDrawItem
             {
@@ -92,5 +88,16 @@ internal sealed class MassNavPrimitivePresentationSystem : ISystem<float>
         }
 
         _simulation.ObservePrimitiveEmit((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+    }
+
+    private static Vector4 ResolveTeamColor(int teamId)
+    {
+        return (Math.Abs(teamId) % 4) switch
+        {
+            0 => new Vector4(0.12f, 0.82f, 0.94f, 0.85f),
+            1 => new Vector4(1.0f, 0.55f, 0.16f, 0.85f),
+            2 => new Vector4(0.92f, 0.30f, 0.86f, 0.85f),
+            _ => new Vector4(0.95f, 0.88f, 0.22f, 0.85f),
+        };
     }
 }

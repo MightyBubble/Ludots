@@ -143,7 +143,7 @@ internal sealed class MassNavWebParityPanelController
                     .Gap(8f)
                     .Justify(UiJustifyContent.Start),
                 Ui.Text("Web parity baseline: SoA sim -> Ludots selection -> formation targets -> presentation primitives.").FontSize(12f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Agents/team {state.AgentsPerTeam}  Total {state.TotalAgents}  Selectable {state.ControllableAgents}  Obstacles {state.Blockers}").FontSize(13f).Color("#C7D4E5"),
+                Ui.Text($"Teams {state.TeamCount}  Agents/team {state.AgentsPerTeam}  Total {state.TotalAgents}  Selectable {state.ControllableAgents}  Obstacles {state.Blockers}").FontSize(13f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Selected {state.SelectedCount}  Rev {state.SelectionRevision}").FontSize(13f).Color("#A4F07A"),
                 Ui.Text($"Team target {state.SelectedTeamId}  Formation {state.FormationLabel}  Groups {state.FormationCount}  Rotation {state.FormationRotationDeg:0.0} deg").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Render FPS {state.RenderFps:0}  Frame {state.RenderFrameMs:0.0} ms  Primitive {state.PrimitiveRenderMs:0.0} ms").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
@@ -223,11 +223,7 @@ internal sealed class MassNavWebParityPanelController
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("Team Target").FontSize(12f).Bold().Color("#F4C77D"),
-                Ui.Row(
-                        BuildActionButton("Team 0", () => SetSelectedTeam(0)),
-                        BuildActionButton("Team 1", () => SetSelectedTeam(1)))
-                    .Wrap()
-                    .Gap(8f),
+                BuildTeamTargetRow(),
                 Ui.Text("Formation").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
                         BuildActionButton("None", () => SetFormationMode(MassNavFormationMode.None)),
@@ -286,7 +282,7 @@ internal sealed class MassNavWebParityPanelController
             return;
         }
 
-        int currentTotal = _simulation.AgentsPerTeam * 2;
+        int currentTotal = _simulation.AgentsPerTeam * _simulation.TeamCount;
         SetTotalAgents(currentTotal + delta);
     }
 
@@ -297,16 +293,17 @@ internal sealed class MassNavWebParityPanelController
             return;
         }
 
+        int teamCount = Math.Max(1, _simulation.TeamCount);
         int maxPerTeam = ResolveMaxAgentsPerTeam(_engine);
-        int perTeam = Math.Clamp(Math.Max(0, totalAgents / 2), 0, maxPerTeam);
+        int perTeam = Math.Clamp(Math.Max(0, totalAgents / teamCount), 0, maxPerTeam);
         _simulation.SetAgentsPerTeam(perTeam);
-        SetActionFeedback($"Queued reset: agents/team = {perTeam}, total target = {perTeam * 2}.");
+        SetActionFeedback($"Queued reset: agents/team = {perTeam}, teams = {teamCount}, total target = {perTeam * teamCount}.");
     }
 
     private void SetSelectedTeam(int teamId)
     {
         _simulation?.SetSelectedTeam(teamId);
-        SetActionFeedback($"Hot apply: selected team = {(teamId <= 0 ? 0 : 1)}.");
+        SetActionFeedback($"Hot apply: selected team = {teamId}.");
     }
 
     private void SetFormationMode(MassNavFormationMode mode)
@@ -536,6 +533,7 @@ internal sealed class MassNavWebParityPanelController
             PhysicsMaxStepsPerFixedTick: physicsPolicy?.MaxStepsPerFixedTick ?? 0,
             NavigationHz: navigationPolicy?.TargetHz ?? 0,
             NavigationMaxStepsPerFixedTick: navigationPolicy?.MaxStepsPerFixedTick ?? 0,
+            TeamCount: simulation.TeamCount,
             AgentsPerTeam: simulation.AgentsPerTeam,
             TotalAgents: simulation.AgentState.TotalAgents,
             ControllableAgents: simulation.AgentState.ControllableCount,
@@ -582,5 +580,27 @@ internal sealed class MassNavWebParityPanelController
     private static int ResolveMaxAgentsPerTeam(GameEngine engine)
     {
         return 40_000;
+    }
+
+    private UiElementBuilder BuildTeamTargetRow()
+    {
+        ReadOnlySpan<int> teamIds = _simulation != null
+            ? _simulation.TeamIds
+            : ReadOnlySpan<int>.Empty;
+        if (teamIds.Length == 0)
+        {
+            return Ui.Text("No active teams.").FontSize(12f).Color("#8EA2BD");
+        }
+
+        var buttons = new UiElementBuilder[teamIds.Length];
+        for (int i = 0; i < teamIds.Length; i++)
+        {
+            int teamId = teamIds[i];
+            buttons[i] = BuildActionButton($"Team {teamId}", () => SetSelectedTeam(teamId));
+        }
+
+        return Ui.Row(buttons)
+            .Wrap()
+            .Gap(8f);
     }
 }

@@ -12,11 +12,6 @@ public struct MassNavBlocker
 {
 }
 
-public struct MassNavTeam
-{
-    public byte Id;
-}
-
 public struct MassNavAgentIndex
 {
     public int Value;

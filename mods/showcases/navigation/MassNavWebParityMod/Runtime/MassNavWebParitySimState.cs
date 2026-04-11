@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -37,8 +38,6 @@ public sealed class MassNavWebParitySimState
 
     private readonly Random _random = new();
 
-    private readonly float[] _flow0 = new float[GridWidth * GridHeight * 2];
-    private readonly float[] _flow1 = new float[GridWidth * GridHeight * 2];
     private readonly float[] _cost = new float[GridWidth * GridHeight];
     private readonly float[] _obsX = new float[MaxObstacles];
     private readonly float[] _obsY = new float[MaxObstacles];
@@ -59,7 +58,9 @@ public sealed class MassNavWebParitySimState
     private float[] _readVelocitiesCm = Array.Empty<float>();
     private float[] _unitProgressAnchorCm = Array.Empty<float>();
     private float[] _unitSettledAnchorCm = Array.Empty<float>();
-    private byte[] _teams = Array.Empty<byte>();
+    private int[] _teams = Array.Empty<int>();
+    private int[] _teamRuntimeIndices = Array.Empty<int>();
+    private int[] _teamLocalIndices = Array.Empty<int>();
     private float[] _unitTargetsCm = Array.Empty<float>();
     private byte[] _hasUnitTarget = Array.Empty<byte>();
     private byte[] _selectedFlags = Array.Empty<byte>();
@@ -72,8 +73,8 @@ public sealed class MassNavWebParitySimState
     private readonly UnitStepJob[] _stepJobs = CreateStepJobs();
     private JobHandle[] _stepHandles = Array.Empty<JobHandle>();
 
-    private readonly float[] _teamTargetX = new float[2];
-    private readonly float[] _teamTargetY = new float[2];
+    private readonly List<TeamRuntimeState> _teamStates = new();
+    private readonly Dictionary<int, int> _teamStateIndexById = new();
     private int _frameCount;
     private bool _useCandidateGating;
 
@@ -83,28 +84,25 @@ public sealed class MassNavWebParitySimState
     public MassNavArrivalTuning ArrivalTuning { get; } = new();
 
     public ReadOnlySpan<float> PositionsCm => _positionsCm.AsSpan(0, UnitCount * 2);
-    public ReadOnlySpan<byte> Teams => _teams.AsSpan(0, UnitCount);
+    public ReadOnlySpan<int> Teams => _teams.AsSpan(0, UnitCount);
     public ReadOnlySpan<byte> SelectedFlags => _selectedFlags.AsSpan(0, UnitCount);
-
-    public float Team0TargetX => _teamTargetX[0];
-    public float Team0TargetY => _teamTargetY[0];
-    public float Team1TargetX => _teamTargetX[1];
-    public float Team1TargetY => _teamTargetY[1];
 
     public float GetPositionX(int index) => _positionsCm[index << 1];
     public float GetPositionY(int index) => _positionsCm[(index << 1) + 1];
-    public byte GetTeam(int index) => _teams[index];
+    public int GetTeam(int index) => _teams[index];
     public bool IsSelected(int index) => _selectedFlags[index] != 0;
     public float GetObstacleX(int index) => _obsX[index];
     public float GetObstacleY(int index) => _obsY[index];
     public float GetObstacleRadius(int index) => _obsRadius[index];
     public bool IsObstaclePoint(float xCm, float yCm) => IsObstacle(xCm, yCm);
 
-    public void Reset(int totalUnits)
+    public void Reset(ReadOnlySpan<int> teamIds, int unitsPerTeam)
     {
-        UnitCount = Math.Max(0, totalUnits);
+        int safeUnitsPerTeam = Math.Max(0, unitsPerTeam);
+        int safeTeamCount = Math.Max(0, teamIds.Length);
+        UnitCount = safeUnitsPerTeam * safeTeamCount;
         EnsureCapacity(UnitCount);
-        InitializeTargets();
+        InitializeTeams(teamIds, safeUnitsPerTeam);
         CacheDefaultObstacles();
         InitializeUnits();
         ComputeFlowFields();
@@ -114,13 +112,17 @@ public sealed class MassNavWebParitySimState
 
     public void SetTeamTarget(int teamId, Vector2 targetCm)
     {
-        int team = teamId <= 0 ? 0 : 1;
-        float hintX = targetCm.X - _teamTargetX[team];
-        float hintY = targetCm.Y - _teamTargetY[team];
+        if (!TryGetTeamState(teamId, out TeamRuntimeState team))
+        {
+            return;
+        }
+
+        float hintX = targetCm.X - team.TargetX;
+        float hintY = targetCm.Y - team.TargetY;
         Vector2 resolved = ResolveNavigableTarget(targetCm.X, targetCm.Y, hintX, hintY, 60f);
-        _teamTargetX[team] = resolved.X;
-        _teamTargetY[team] = resolved.Y;
-        ResetTeamArrivalState(team);
+        team.TargetX = resolved.X;
+        team.TargetY = resolved.Y;
+        ResetTeamArrivalState(teamId);
         ComputeFlowFields();
     }
 
@@ -257,17 +259,13 @@ public sealed class MassNavWebParitySimState
 
         BuildSeparationHash(_readPositionsCm);
 
-        float tx0 = _teamTargetX[0];
-        float ty0 = _teamTargetY[0];
-        float tx1 = _teamTargetX[1];
-        float ty1 = _teamTargetY[1];
         int hwm1 = SeparationHashWidth - 1;
         int hhm1 = SeparationHashHeight - 1;
         float invHashCell = 1f / SeparationHashCellSizeCm;
 
         if (World.SharedJobScheduler == null || UnitCount < 2048)
         {
-            StepRange(0, UnitCount, clampedDt, formationRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, tx0, ty0, tx1, ty1, hwm1, hhm1, invHashCell, SeparationHashSearchRadius, _useCandidateGating);
+            StepRange(0, UnitCount, clampedDt, formationRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, SeparationHashSearchRadius, _useCandidateGating);
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
             ResolveHardPenetration();
             observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
@@ -295,10 +293,6 @@ public sealed class MassNavWebParitySimState
             job.ArrivalRadiusCm = arrivalRadiusCm;
             job.ArrivalRadiusSq = arrivalRadiusSq;
             job.UnitTargetStopThresholdSq = unitTargetStopThresholdSq;
-            job.Team0TargetX = tx0;
-            job.Team0TargetY = ty0;
-            job.Team1TargetX = tx1;
-            job.Team1TargetY = ty1;
             job.HashWidthMinusOne = hwm1;
             job.HashHeightMinusOne = hhm1;
             job.InvHashCell = invHashCell;
@@ -363,6 +357,8 @@ public sealed class MassNavWebParitySimState
         if (_teams.Length < unitCount)
         {
             Array.Resize(ref _teams, unitCount);
+            Array.Resize(ref _teamRuntimeIndices, unitCount);
+            Array.Resize(ref _teamLocalIndices, unitCount);
             Array.Resize(ref _hasUnitTarget, unitCount);
             Array.Resize(ref _selectedFlags, unitCount);
             Array.Resize(ref _hardResolveCandidates, unitCount);
@@ -374,12 +370,42 @@ public sealed class MassNavWebParitySimState
         }
     }
 
-    private void InitializeTargets()
+    private void InitializeTeams(ReadOnlySpan<int> teamIds, int unitsPerTeam)
     {
-        _teamTargetX[0] = 9_000f;
-        _teamTargetY[0] = 5_000f;
-        _teamTargetX[1] = 1_000f;
-        _teamTargetY[1] = 5_000f;
+        _teamStates.Clear();
+        _teamStateIndexById.Clear();
+        if (teamIds.Length <= 0)
+        {
+            return;
+        }
+
+        const float centerX = FieldWidthCm * 0.5f;
+        const float centerY = FieldHeightCm * 0.5f;
+        const float orbitRadiusCm = 3_650f;
+        for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
+        {
+            int teamId = teamIds[teamIndex];
+            float angle = MathF.PI + ((MathF.PI * 2f * teamIndex) / teamIds.Length);
+            float dirX = MathF.Cos(angle);
+            float dirY = MathF.Sin(angle);
+            float tangentX = -dirY;
+            float tangentY = dirX;
+            float spawnCenterX = centerX + dirX * orbitRadiusCm;
+            float spawnCenterY = centerY + dirY * orbitRadiusCm;
+            Vector2 target = ResolveNavigableTarget(
+                centerX - dirX * orbitRadiusCm,
+                centerY - dirY * orbitRadiusCm,
+                -dirX,
+                -dirY,
+                60f);
+            var state = new TeamRuntimeState(teamId, unitsPerTeam, spawnCenterX, spawnCenterY, dirX, dirY, tangentX, tangentY)
+            {
+                TargetX = target.X,
+                TargetY = target.Y,
+            };
+            _teamStateIndexById[teamId] = _teamStates.Count;
+            _teamStates.Add(state);
+        }
     }
 
     private void InitializeUnits()
@@ -394,27 +420,36 @@ public sealed class MassNavWebParitySimState
         Array.Clear(_unitRetryCounts, 0, UnitCount);
         Array.Clear(_unitStuckSeconds, 0, UnitCount);
 
-        int half = UnitCount >> 1;
-        for (int i = 0; i < UnitCount; i++)
+        int unitIndex = 0;
+        const float spacingCm = 46f;
+        for (int teamStateIndex = 0; teamStateIndex < _teamStates.Count; teamStateIndex++)
         {
-            bool team0 = i < half;
-            _teams[i] = team0 ? (byte)0 : (byte)1;
-            int i2 = i << 1;
-            if (team0)
+            TeamRuntimeState team = _teamStates[teamStateIndex];
+            int cols = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(team.UnitCount)));
+            int rows = Math.Max(1, (int)Math.Ceiling(team.UnitCount / (double)cols));
+            float colCenter = (cols - 1) * 0.5f;
+            float rowCenter = (rows - 1) * 0.5f;
+            for (int localIndex = 0; localIndex < team.UnitCount; localIndex++, unitIndex++)
             {
-                _positionsCm[i2] = 500f + (_random.NextSingle() * 1_500f);
-                _positionsCm[i2 + 1] = 1_000f + (_random.NextSingle() * 8_000f);
+                int row = localIndex / cols;
+                int col = localIndex % cols;
+                float lateralOffset = (col - colCenter) * spacingCm;
+                float depthOffset = (row - rowCenter) * spacingCm;
+                float jitterLateral = (_random.NextSingle() - 0.5f) * 12f;
+                float jitterDepth = (_random.NextSingle() - 0.5f) * 12f;
+                float xCm = team.SpawnCenterX + team.TangentX * (lateralOffset + jitterLateral) + team.DirectionX * (depthOffset + jitterDepth);
+                float yCm = team.SpawnCenterY + team.TangentY * (lateralOffset + jitterLateral) + team.DirectionY * (depthOffset + jitterDepth);
+                int i2 = unitIndex << 1;
+                _teams[unitIndex] = team.TeamId;
+                _teamRuntimeIndices[unitIndex] = teamStateIndex;
+                _teamLocalIndices[unitIndex] = localIndex;
+                _positionsCm[i2] = ClampPosition(xCm);
+                _positionsCm[i2 + 1] = ClampPosition(yCm);
+                _unitProgressAnchorCm[i2] = _positionsCm[i2];
+                _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
+                _unitSettledAnchorCm[i2] = _positionsCm[i2];
+                _unitSettledAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
             }
-            else
-            {
-                _positionsCm[i2] = 8_000f + (_random.NextSingle() * 1_500f);
-                _positionsCm[i2 + 1] = 1_000f + (_random.NextSingle() * 8_000f);
-            }
-
-            _unitProgressAnchorCm[i2] = _positionsCm[i2];
-            _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
-            _unitSettledAnchorCm[i2] = _positionsCm[i2];
-            _unitSettledAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
         }
     }
 
@@ -451,8 +486,11 @@ public sealed class MassNavWebParitySimState
             }
         }
 
-        ComputeFlow(_flow0, _teamTargetX[0], _teamTargetY[0]);
-        ComputeFlow(_flow1, _teamTargetX[1], _teamTargetY[1]);
+        for (int i = 0; i < _teamStates.Count; i++)
+        {
+            TeamRuntimeState team = _teamStates[i];
+            ComputeFlow(team.Flow, team.TargetX, team.TargetY);
+        }
     }
 
     private void ComputeFlow(float[] flow, float targetX, float targetY)
@@ -620,10 +658,6 @@ public sealed class MassNavWebParitySimState
         float arrivalRadiusCm,
         float arrivalRadiusSq,
         float unitTargetStopThresholdSq,
-        float tx0,
-        float ty0,
-        float tx1,
-        float ty1,
         int hashWidthMinusOne,
         int hashHeightMinusOne,
         float invHashCell,
@@ -635,7 +669,7 @@ public sealed class MassNavWebParitySimState
             int i2 = i << 1;
             float px = _readPositionsCm[i2];
             float py = _readPositionsCm[i2 + 1];
-            byte team = _teams[i];
+            TeamRuntimeState team = _teamStates[_teamRuntimeIndices[i]];
             bool inFormation = formationRuntime.IsInFormation(i);
 
             float desiredX = 0f;
@@ -755,16 +789,8 @@ public sealed class MassNavWebParitySimState
                 if ((uint)gx < (uint)GridWidth && (uint)gy < (uint)GridHeight)
                 {
                     int flowOffset = ((gy * GridWidth) + gx) << 1;
-                    if (team == 0)
-                    {
-                        flowX = _flow0[flowOffset];
-                        flowY = _flow0[flowOffset + 1];
-                    }
-                    else
-                    {
-                        flowX = _flow1[flowOffset];
-                        flowY = _flow1[flowOffset + 1];
-                    }
+                    flowX = team.Flow[flowOffset];
+                    flowY = team.Flow[flowOffset + 1];
                 }
 
                 ComputeTeamSlotTarget(i, team, out targetX, out targetY);
@@ -927,15 +953,10 @@ public sealed class MassNavWebParitySimState
         }
     }
 
-    private void ComputeTeamSlotTarget(int index, byte team, out float targetX, out float targetY)
+    private void ComputeTeamSlotTarget(int index, TeamRuntimeState team, out float targetX, out float targetY)
     {
-        int teamCount = Math.Max(1, UnitCount >> 1);
-        int localIndex = team == 0 ? index : index - teamCount;
-        if (localIndex < 0)
-        {
-            localIndex = 0;
-        }
-
+        int teamCount = Math.Max(1, team.UnitCount);
+        int localIndex = _teamLocalIndices[index];
         int cols = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(teamCount)));
         int rows = Math.Max(1, (int)Math.Ceiling(teamCount / (double)cols));
         int row = localIndex / cols;
@@ -944,16 +965,27 @@ public sealed class MassNavWebParitySimState
         float colCenter = (cols - 1) * 0.5f;
         float offsetX = (col - colCenter) * TeamSlotSpacingCm;
         float offsetY = (row - rowCenter) * TeamSlotSpacingCm;
-        float anchorX = team == 0 ? _teamTargetX[0] : _teamTargetX[1];
-        float anchorY = team == 0 ? _teamTargetY[0] : _teamTargetY[1];
         Vector2 resolved = ResolveNavigableTarget(
-            anchorX + offsetX,
-            anchorY + offsetY,
+            team.TargetX + offsetX,
+            team.TargetY + offsetY,
             offsetX,
             offsetY,
             TeamSlotSpacingCm * 0.5f);
         targetX = resolved.X;
         targetY = resolved.Y;
+    }
+
+    private bool TryGetTeamState(int teamId, out TeamRuntimeState team)
+    {
+        if (_teamStateIndexById.TryGetValue(teamId, out int index) &&
+            (uint)index < (uint)_teamStates.Count)
+        {
+            team = _teamStates[index];
+            return true;
+        }
+
+        team = null!;
+        return false;
     }
 
     private void UpdateUnitStuckTimer(int index, float px, float py, float dt)
@@ -1033,11 +1065,11 @@ public sealed class MassNavWebParitySimState
         }
     }
 
-    private void ResetTeamArrivalState(int team)
+    private void ResetTeamArrivalState(int teamId)
     {
         for (int i = 0; i < UnitCount; i++)
         {
-            if (_teams[i] == team)
+            if (_teams[i] == teamId)
             {
                 ResetUnitArrivalState(i, clearRetryCount: true);
             }
@@ -1283,10 +1315,6 @@ public sealed class MassNavWebParitySimState
         public float ArrivalRadiusCm { get; set; }
         public float ArrivalRadiusSq { get; set; }
         public float UnitTargetStopThresholdSq { get; set; }
-        public float Team0TargetX { get; set; }
-        public float Team0TargetY { get; set; }
-        public float Team1TargetX { get; set; }
-        public float Team1TargetY { get; set; }
         public int HashWidthMinusOne { get; set; }
         public int HashHeightMinusOne { get; set; }
         public float InvHashCell { get; set; }
@@ -1306,15 +1334,47 @@ public sealed class MassNavWebParitySimState
                 ArrivalRadiusCm,
                 ArrivalRadiusSq,
                 UnitTargetStopThresholdSq,
-                Team0TargetX,
-                Team0TargetY,
-                Team1TargetX,
-                Team1TargetY,
                 HashWidthMinusOne,
                 HashHeightMinusOne,
                 InvHashCell,
                 HashSearchRadius,
                 UseCandidateGating);
         }
+    }
+
+    private sealed class TeamRuntimeState
+    {
+        public TeamRuntimeState(
+            int teamId,
+            int unitCount,
+            float spawnCenterX,
+            float spawnCenterY,
+            float directionX,
+            float directionY,
+            float tangentX,
+            float tangentY)
+        {
+            TeamId = teamId;
+            UnitCount = unitCount;
+            SpawnCenterX = spawnCenterX;
+            SpawnCenterY = spawnCenterY;
+            DirectionX = directionX;
+            DirectionY = directionY;
+            TangentX = tangentX;
+            TangentY = tangentY;
+            Flow = new float[GridWidth * GridHeight * 2];
+        }
+
+        public int TeamId { get; }
+        public int UnitCount { get; }
+        public float SpawnCenterX { get; }
+        public float SpawnCenterY { get; }
+        public float DirectionX { get; }
+        public float DirectionY { get; }
+        public float TangentX { get; }
+        public float TangentY { get; }
+        public float TargetX { get; set; }
+        public float TargetY { get; set; }
+        public float[] Flow { get; }
     }
 }

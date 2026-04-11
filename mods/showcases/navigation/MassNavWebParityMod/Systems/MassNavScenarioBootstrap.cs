@@ -1,6 +1,7 @@
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
@@ -13,11 +14,11 @@ internal static class MassNavScenarioBootstrap
     public static void SpawnDefaultScenario(World world, MassNavSimulationRuntime simulation)
     {
         simulation.AgentState.Reset();
-        simulation.WebParity.Reset(simulation.AgentsPerTeam * 2);
+        simulation.WebParity.Reset(simulation.TeamIds, simulation.AgentsPerTeam);
 
         for (int i = 0; i < simulation.WebParity.UnitCount; i++)
         {
-            byte teamId = simulation.WebParity.GetTeam(i);
+            int teamId = simulation.WebParity.GetTeam(i);
             float xCm = simulation.WebParity.GetPositionX(i);
             float yCm = simulation.WebParity.GetPositionY(i);
             var worldPosition = Fix64Vec2.FromInt((int)xCm, (int)yCm);
@@ -25,7 +26,7 @@ internal static class MassNavScenarioBootstrap
                 new MassNavAgentTag(),
                 new MassNavControllable(),
                 new MassNavAgentIndex { Value = i },
-                new MassNavTeam { Id = teamId },
+                new Team { Id = teamId },
                 new WorldPositionCm { Value = worldPosition },
                 new PreviousWorldPositionCm { Value = worldPosition },
                 new VisualTransform
@@ -47,7 +48,6 @@ internal static class MassNavScenarioBootstrap
             var worldPosition = Fix64Vec2.FromInt((int)xCm, (int)yCm);
             Entity entity = world.Create(
                 new MassNavBlocker(),
-                new MassNavTeam { Id = byte.MaxValue },
                 new WorldPositionCm { Value = worldPosition },
                 new PreviousWorldPositionCm { Value = worldPosition },
                 new VisualTransform

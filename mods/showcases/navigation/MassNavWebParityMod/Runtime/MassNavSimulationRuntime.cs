@@ -7,6 +7,7 @@ public sealed class MassNavSimulationRuntime
 {
     private const float TimingWeight = 0.18f;
 
+    private readonly int[] _teamIds = new[] { 1, 2, 3, 4 };
     private Entity[] _selectionScratch = new Entity[256];
     private Entity[] _selectedEntities = Array.Empty<Entity>();
     private uint _selectionRevision;
@@ -32,9 +33,11 @@ public sealed class MassNavSimulationRuntime
     public int SelectedCount => _selectedEntities.Length;
     public uint SelectionRevision => _selectionRevision;
     public ReadOnlySpan<Entity> SelectedEntities => _selectedEntities;
+    public ReadOnlySpan<int> TeamIds => _teamIds;
+    public int TeamCount => _teamIds.Length;
     public int FrameIndex => _frameIndex;
-    public int AgentsPerTeam { get; private set; } = 5_000;
-    public int SelectedTeamId { get; private set; }
+    public int AgentsPerTeam { get; private set; } = 2_500;
+    public int SelectedTeamId { get; private set; } = 1;
     public MassNavFormationMode FormationMode { get; private set; } = MassNavFormationMode.None;
 
     public void BeginFrame(float dt)
@@ -121,12 +124,22 @@ public sealed class MassNavSimulationRuntime
 
     public void SetSelectedTeam(int teamId)
     {
-        SelectedTeamId = teamId <= 0 ? 0 : 1;
+        if (Array.IndexOf(_teamIds, teamId) >= 0)
+        {
+            SelectedTeamId = teamId;
+        }
     }
 
     public void CycleSelectedTeam()
     {
-        SelectedTeamId = SelectedTeamId == 0 ? 1 : 0;
+        int index = Array.IndexOf(_teamIds, SelectedTeamId);
+        if (index < 0)
+        {
+            SelectedTeamId = _teamIds.Length > 0 ? _teamIds[0] : 0;
+            return;
+        }
+
+        SelectedTeamId = _teamIds[(index + 1) % _teamIds.Length];
     }
 
     public void SetFormationMode(MassNavFormationMode mode)
