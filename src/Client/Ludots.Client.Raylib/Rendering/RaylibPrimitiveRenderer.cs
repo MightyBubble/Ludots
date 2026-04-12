@@ -45,6 +45,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly Dictionary<int, CachedTexture> _textureCache = new Dictionary<int, CachedTexture>();
         private readonly HashSet<int> _loggedTextureDiagnostics = new HashSet<int>();
         private readonly HashSet<int> _loggedBillboardDrawDiagnostics = new HashSet<int>();
+        private PrimitiveDrawItem[] _persistentStaticSnapshotScratch = Array.Empty<PrimitiveDrawItem>();
         private Material _runtimeMeshMaterial;
         private bool _runtimeMeshMaterialLoaded;
         private IntPtr _instancedScratch = IntPtr.Zero;
@@ -93,11 +94,10 @@ namespace Ludots.Client.Raylib.Rendering
             LastPersistentRemoves = 0;
 
             var span = draw.GetSpan();
-            bool usePersistentStaticLanes = snapshot != null && snapshot.Count > 0;
+            bool usePersistentStaticLanes = SyncPersistentStaticSnapshot(snapshot);
             bool hasSkinnedBatch = skinnedBatch != null && skinnedBatch.Count > 0;
             if (usePersistentStaticLanes)
             {
-                _persistentStaticLaneSync.Sync(snapshot);
                 LastPersistentCreates = _persistentStaticLaneSync.LastCreateCount;
                 LastPersistentUpdates = _persistentStaticLaneSync.LastUpdateCount;
                 LastPersistentRemoves = _persistentStaticLaneSync.LastRemoveCount;
@@ -127,6 +127,52 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: hasSkinnedBatch);
+        }
+
+        private bool SyncPersistentStaticSnapshot(PrimitiveDrawBuffer? snapshot)
+        {
+            if (snapshot == null || snapshot.Count <= 0)
+            {
+                _persistentStaticLaneSync.Sync(ReadOnlySpan<PrimitiveDrawItem>.Empty);
+                return false;
+            }
+
+            ReadOnlySpan<PrimitiveDrawItem> snapshotSpan = snapshot.GetSpan();
+            int staticCount = 0;
+            for (int i = 0; i < snapshotSpan.Length; i++)
+            {
+                ref readonly PrimitiveDrawItem item = ref snapshotSpan[i];
+                if (item.Mobility == VisualMobility.Static && StaticMeshLaneKey.Supports(item))
+                {
+                    staticCount++;
+                }
+            }
+
+            if (staticCount <= 0)
+            {
+                _persistentStaticLaneSync.Sync(ReadOnlySpan<PrimitiveDrawItem>.Empty);
+                return false;
+            }
+
+            if (_persistentStaticSnapshotScratch.Length < staticCount)
+            {
+                Array.Resize(ref _persistentStaticSnapshotScratch, staticCount);
+            }
+
+            int writeIndex = 0;
+            for (int i = 0; i < snapshotSpan.Length; i++)
+            {
+                ref readonly PrimitiveDrawItem item = ref snapshotSpan[i];
+                if (item.Mobility != VisualMobility.Static || !StaticMeshLaneKey.Supports(item))
+                {
+                    continue;
+                }
+
+                _persistentStaticSnapshotScratch[writeIndex++] = item;
+            }
+
+            _persistentStaticLaneSync.Sync(_persistentStaticSnapshotScratch.AsSpan(0, staticCount));
+            return true;
         }
 
         private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
