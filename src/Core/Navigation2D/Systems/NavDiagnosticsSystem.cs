@@ -18,6 +18,7 @@ namespace Ludots.Core.Navigation2D.Systems
         private readonly NavDiagnosticsSnapshot _snapshot;
         private readonly SimulationTimingSnapshot _timingSnapshot;
         private readonly Navigation2DContractCatalog _catalog;
+        private readonly Navigation2DRuntime _runtime;
         private readonly PresentationTimingDiagnostics? _presentationTiming;
         private long _lastAllocatedBytes;
 
@@ -25,11 +26,13 @@ namespace Ludots.Core.Navigation2D.Systems
             World world,
             NavDiagnosticsSnapshot snapshot,
             SimulationTimingSnapshot timingSnapshot,
+            Navigation2DRuntime runtime,
             Navigation2DContractCatalog catalog,
             PresentationTimingDiagnostics? presentationTiming) : base(world)
         {
             _snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
             _timingSnapshot = timingSnapshot ?? throw new ArgumentNullException(nameof(timingSnapshot));
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _presentationTiming = presentationTiming;
         }
@@ -108,6 +111,9 @@ namespace Ludots.Core.Navigation2D.Systems
             _snapshot.PreciseOrcaAgents = preciseOrcaAgents;
             _snapshot.CrowdFlowAgents = crowdFlowAgents;
             _snapshot.HybridAgents = hybridAgents;
+            _snapshot.ActiveFlowDomains = _runtime.FlowDomains?.ActiveLeaseCount ?? 0;
+            _snapshot.AssignedFlowDomains = _runtime.FlowDomains?.ActiveAssignmentCount ?? 0;
+            _snapshot.UnassignedFlowDomainRequests = _runtime.FlowDomains?.UnassignedRequestCountFrame ?? 0;
             _snapshot.FixedHz = _timingSnapshot.FixedHz > 0 ? _timingSnapshot.FixedHz : navPerf.FixedHz;
             _snapshot.NavigationHz = _timingSnapshot.NavigationHz > 0 ? _timingSnapshot.NavigationHz : navPerf.NavigationHz;
             _snapshot.NavigationStepsLastFixedTick = _timingSnapshot.NavigationStepsLastFixedTick > 0
@@ -116,6 +122,11 @@ namespace Ludots.Core.Navigation2D.Systems
             _snapshot.PhysicsHz = _timingSnapshot.PhysicsHz;
             _snapshot.PhysicsStepsLastFixedTick = _timingSnapshot.PhysicsStepsLastFixedTick;
             _snapshot.NavigationMs = _timingSnapshot.NavigationMs > 0d ? _timingSnapshot.NavigationMs : navPerf.NavigationUpdateMs;
+            _snapshot.NavigationSyncMs = _timingSnapshot.NavigationSyncMs;
+            _snapshot.NavigationCellMapMs = _timingSnapshot.NavigationCellMapMs;
+            _snapshot.NavigationFlowMs = _timingSnapshot.NavigationFlowMs;
+            _snapshot.NavigationSmartStopMs = _timingSnapshot.NavigationSmartStopMs;
+            _snapshot.NavigationSteeringMs = _timingSnapshot.NavigationSteeringMs;
             _snapshot.PhysicsMs = _timingSnapshot.PhysicsMs;
             _snapshot.PresentationMs = presentationMs;
             _snapshot.FrameMs = _snapshot.NavigationMs + _snapshot.PhysicsMs + presentationMs;
@@ -124,6 +135,7 @@ namespace Ludots.Core.Navigation2D.Systems
             _lastAllocatedBytes = allocatedBytes;
             _snapshot.HeapBytes = GC.GetTotalMemory(forceFullCollection: false);
             _snapshot.ActiveRuleSummary = BuildRuleSummary(activeRules);
+            _snapshot.FlowDomainSummary = _runtime.FlowDomains?.BuildSummary() ?? "disabled";
         }
 
         private string BuildRuleSummary(Dictionary<int, int> activeRules)

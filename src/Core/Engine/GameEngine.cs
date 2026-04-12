@@ -948,9 +948,10 @@ namespace Ludots.Core.Engine
                     {
                         RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavGroupMaintenanceSystem(World, navGroupRuntimeService), SystemGroup.PostMovement);
                         RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavGroupCommandApplySystem(World, navigation2dContractCatalog), SystemGroup.PostMovement);
+                        RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavGroupFlowDomainAssignmentSystem(World, navigation2dRuntime), SystemGroup.PostMovement);
                         RegisterSystem(new Ludots.Core.Navigation2D.Systems.Navigation2DKinematicMotionSystem(World), SystemGroup.PostMovement);
                         RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavGroupLifecycleSystem(World), SystemGroup.PostMovement);
-                        RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavDiagnosticsSystem(World, navDiagnosticsSnapshot, simulationTimingSnapshot, navigation2dContractCatalog, GetService(CoreServiceKeys.PresentationTimingDiagnostics)), SystemGroup.PostMovement);
+                        RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavDiagnosticsSystem(World, navDiagnosticsSnapshot, simulationTimingSnapshot, navigation2dRuntime, navigation2dContractCatalog, GetService(CoreServiceKeys.PresentationTimingDiagnostics)), SystemGroup.PostMovement);
                         RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
                     }
                 }
