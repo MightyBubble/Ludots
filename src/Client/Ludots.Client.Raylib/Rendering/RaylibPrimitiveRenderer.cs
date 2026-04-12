@@ -285,6 +285,14 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes)
         {
+            if (meshes.TryGetDescriptor(meshAssetId, out var descriptor) &&
+                descriptor.Type != MeshAssetType.None &&
+                descriptor.Type != MeshAssetType.Prefab)
+            {
+                SubmitDirectDescriptor(meshAssetId, descriptor, position, rotation, scale, color, camera);
+                return;
+            }
+
             _prefabLeaves.Clear();
             PrefabFinalizationPipeline.FinalizeLeaves(
                 meshes,
@@ -299,6 +307,28 @@ namespace Ludots.Client.Raylib.Rendering
             foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
             {
                 SubmitFinalizedLeaf(in leaf, camera);
+            }
+        }
+
+        private void SubmitDirectDescriptor(int meshAssetId, in MeshAssetDescriptor descriptor, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera)
+        {
+            switch (descriptor.Type)
+            {
+                case MeshAssetType.Primitive:
+                    SubmitPrimitive(descriptor.PrimitiveKind, position, rotation, scale, color);
+                    break;
+
+                case MeshAssetType.Model:
+                    DrawModel(meshAssetId, descriptor, position, rotation, scale, color);
+                    break;
+
+                case MeshAssetType.Billboard:
+                    DrawBillboard(meshAssetId, descriptor, position, scale, color, camera);
+                    break;
+
+                case MeshAssetType.RuntimeMesh:
+                    DrawRuntimeMesh(meshAssetId, descriptor, position, rotation, scale);
+                    break;
             }
         }
 
@@ -432,6 +462,14 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes)
         {
+            if (meshes.TryGetDescriptor(meshAssetId, out var descriptor) &&
+                descriptor.Type != MeshAssetType.None &&
+                descriptor.Type != MeshAssetType.Prefab)
+            {
+                DrawDirectDescriptor(meshAssetId, descriptor, position, rotation, scale, color, camera);
+                return;
+            }
+
             _prefabLeaves.Clear();
             PrefabFinalizationPipeline.FinalizeLeaves(
                 meshes,
@@ -446,6 +484,28 @@ namespace Ludots.Client.Raylib.Rendering
             foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
             {
                 DrawFinalizedLeaf(in leaf, camera);
+            }
+        }
+
+        private void DrawDirectDescriptor(int meshAssetId, in MeshAssetDescriptor descriptor, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera)
+        {
+            switch (descriptor.Type)
+            {
+                case MeshAssetType.Primitive:
+                    DrawPrimitive(descriptor.PrimitiveKind, position, scale, color);
+                    break;
+
+                case MeshAssetType.Model:
+                    DrawModel(meshAssetId, descriptor, position, rotation, scale, color);
+                    break;
+
+                case MeshAssetType.Billboard:
+                    DrawBillboard(meshAssetId, descriptor, position, scale, color, camera);
+                    break;
+
+                case MeshAssetType.RuntimeMesh:
+                    DrawRuntimeMesh(meshAssetId, descriptor, position, rotation, scale);
+                    break;
             }
         }
 

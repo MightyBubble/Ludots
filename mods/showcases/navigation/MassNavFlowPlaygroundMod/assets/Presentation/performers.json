@@ -11,9 +11,7 @@
     "defaultScale": 1.0,
     "defaultLifetime": -1,
     "bindings": [
-      { "paramKey": 1, "source": "visualscale", "sourceId": 0 },
-      { "paramKey": 2, "source": "visualscale", "sourceId": 1 },
-      { "paramKey": 3, "source": "visualscale", "sourceId": 2 },
+      { "paramKey": 0, "source": "visualscale", "sourceId": 0 },
       { "paramKey": 4, "source": "entitycolor", "sourceId": 0 },
       { "paramKey": 5, "source": "entitycolor", "sourceId": 1 },
       { "paramKey": 6, "source": "entitycolor", "sourceId": 2 },
@@ -32,9 +30,7 @@
     "defaultScale": 1.0,
     "defaultLifetime": -1,
     "bindings": [
-      { "paramKey": 1, "source": "visualscale", "sourceId": 0 },
-      { "paramKey": 2, "source": "visualscale", "sourceId": 1 },
-      { "paramKey": 3, "source": "visualscale", "sourceId": 2 }
+      { "paramKey": 0, "source": "visualscale", "sourceId": 0 }
     ]
   }
 ]

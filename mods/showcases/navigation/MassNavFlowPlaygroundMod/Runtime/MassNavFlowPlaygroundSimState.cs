@@ -6,12 +6,19 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
+using MassNavFlowPlaygroundMod.Systems;
 using Schedulers;
 
 namespace MassNavFlowPlaygroundMod.Runtime;
 
 public sealed class MassNavFlowPlaygroundSimState
 {
+    private static readonly QueryDescription WorldPositionSyncQuery = new QueryDescription()
+        .WithAll<MassNavAgentIndex, WorldPositionCm>();
+
+    private static readonly QueryDescription SelectionTintSyncQuery = new QueryDescription()
+        .WithAll<MassNavAgentIndex, PresentationTint>();
+
     public const int FieldWidthCm = 10_000;
     public const int FieldHeightCm = 10_000;
     public const int CellCm = 100;
@@ -399,37 +406,23 @@ public sealed class MassNavFlowPlaygroundSimState
         return true;
     }
 
-    public void SyncEntities(World world, MassNavAgentState agentState)
+    public void SyncWorldPositions(World world)
     {
-        int count = Math.Min(UnitCount, agentState.ControllableCount);
-        for (int i = 0; i < count; i++)
+        var job = new SyncWorldPositionsJob
         {
-            Entity entity = agentState.ControllableAgents[i];
-            if (!world.IsAlive(entity))
-            {
-                continue;
-            }
+            PositionsCm = _positionsCm,
+        };
+        world.InlineQuery<SyncWorldPositionsJob, MassNavAgentIndex, WorldPositionCm>(in WorldPositionSyncQuery, ref job);
+    }
 
-            int i2 = i << 1;
-            float xCm = _positionsCm[i2];
-            float yCm = _positionsCm[i2 + 1];
-            ref VisualTransform transform = ref world.Get<VisualTransform>(entity);
-            transform.Position = new Vector3(xCm * VisualMetersPerCm, 0.25f, yCm * VisualMetersPerCm);
-            transform.Scale = new Vector3(_visualScales[i], _visualScales[i], _visualScales[i]);
-
-            Fix64Vec2 worldValue = Fix64Vec2.FromInt((int)MathF.Round(xCm), (int)MathF.Round(yCm));
-            ref WorldPositionCm worldPosition = ref world.Get<WorldPositionCm>(entity);
-            worldPosition.Value = worldValue;
-
-            ref PreviousWorldPositionCm previousPosition = ref world.Get<PreviousWorldPositionCm>(entity);
-            previousPosition.Value = worldValue;
-
-            if (world.Has<PresentationTint>(entity))
-            {
-                ref PresentationTint tint = ref world.Get<PresentationTint>(entity);
-                tint.Value = MassNavFlowPlaygroundMod.Systems.MassNavPresentationPalette.ResolveUnitColor(_teams[i], _selectedFlags[i] != 0);
-            }
-        }
+    public void SyncSelectionTints(World world)
+    {
+        var job = new SyncSelectionTintsJob
+        {
+            Teams = _teams,
+            SelectedFlags = _selectedFlags,
+        };
+        world.InlineQuery<SyncSelectionTintsJob, MassNavAgentIndex, PresentationTint>(in SelectionTintSyncQuery, ref job);
     }
 
     private void EnsureCapacity(int unitCount)
@@ -1594,6 +1587,36 @@ public sealed class MassNavFlowPlaygroundSimState
     private static float ClampPosition(float value)
     {
         return Math.Clamp(value, MinPositionCm, MaxPositionCm);
+    }
+
+    private static int QuantizeWorldCm(float valueCm)
+    {
+        return (int)(valueCm + 0.5f);
+    }
+
+    private struct SyncWorldPositionsJob : IForEach<MassNavAgentIndex, WorldPositionCm>
+    {
+        public float[] PositionsCm;
+
+        public void Update(ref MassNavAgentIndex agentIndex, ref WorldPositionCm worldPosition)
+        {
+            int offset = agentIndex.Value << 1;
+            worldPosition.Value = Fix64Vec2.FromInt(
+                QuantizeWorldCm(PositionsCm[offset]),
+                QuantizeWorldCm(PositionsCm[offset + 1]));
+        }
+    }
+
+    private struct SyncSelectionTintsJob : IForEach<MassNavAgentIndex, PresentationTint>
+    {
+        public int[] Teams;
+        public byte[] SelectedFlags;
+
+        public void Update(ref MassNavAgentIndex agentIndex, ref PresentationTint tint)
+        {
+            int index = agentIndex.Value;
+            tint.Value = MassNavPresentationPalette.ResolveUnitColor(Teams[index], SelectedFlags[index] != 0);
+        }
     }
 
     private sealed class UnitStepJob : IJob

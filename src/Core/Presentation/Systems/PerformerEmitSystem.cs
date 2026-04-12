@@ -60,6 +60,11 @@ namespace Ludots.Core.Presentation.Systems
             .WithNone<CullState>();
         private readonly QueryDescription _vtWithCullQuery = new QueryDescription()
             .WithAll<VisualTransform, CullState>();
+        private readonly QueryDescription _vtTemplateNoCullQuery = new QueryDescription()
+            .WithAll<VisualTransform, VisualTemplateRef>()
+            .WithNone<CullState>();
+        private readonly QueryDescription _vtTemplateWithCullQuery = new QueryDescription()
+            .WithAll<VisualTransform, VisualTemplateRef, CullState>();
 
         // Pre-allocated Graph VM registers
         private readonly float[] _floatRegs = new float[GraphVmLimits.MaxFloatRegisters];
@@ -68,6 +73,12 @@ namespace Ludots.Core.Presentation.Systems
         private readonly Entity[] _entityRegs = new Entity[GraphVmLimits.MaxEntityRegisters];
         private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
         private readonly GasGraphOpHandlerTable _handlers = GasGraphOpHandlerTable.Instance;
+        private Entity _cachedEntityColorOwner;
+        private Vector4 _cachedEntityColor;
+        private bool _hasCachedEntityColor;
+        private Entity _cachedVisualScaleOwner;
+        private Vector3 _cachedVisualScale;
+        private bool _hasCachedVisualScale;
 
         public PerformerEmitSystem(
             World world,
@@ -100,6 +111,9 @@ namespace Ludots.Core.Presentation.Systems
 
         public override void Update(in float dt)
         {
+            _hasCachedEntityColor = false;
+            _hasCachedVisualScale = false;
+
             // ── Part 1: Instance-scoped performers ──
             _instances.ProcessActive(dt, (int handle, ref PerformerInstance inst) =>
             {
@@ -256,6 +270,33 @@ namespace Ludots.Core.Presentation.Systems
                 && def.VisibilityCondition.Inline == InlineConditionKind.OwnerCullVisible;
 
             bool hasTemplateFilter = def.RequiredTemplateId > 0;
+            if (hasTemplateFilter)
+            {
+                QueryDescription templateQuery = requireCullCheck ? _vtTemplateWithCullQuery : _vtTemplateNoCullQuery;
+                var qf = World.Query(in templateQuery);
+                foreach (var chunk in qf)
+                {
+                    var transforms = chunk.GetArray<VisualTransform>();
+                    var templates = chunk.GetArray<VisualTemplateRef>();
+                    var culls = requireCullCheck ? chunk.GetArray<CullState>() : null;
+                    for (int i = 0; i < chunk.Count; i++)
+                    {
+                        if (requireCullCheck && culls != null && !culls[i].IsVisible) continue;
+                        if (templates[i].TemplateId != def.RequiredTemplateId) continue;
+
+                        Entity entity = chunk.Entity(i);
+                        if (!skipVisibilityEval && !EvaluateVisibility(def, entity))
+                        {
+                            continue;
+                        }
+
+                        Vector3 pos = transforms[i].Position + def.PositionOffset;
+                        EmitForVisualKind(-1, definitionId, def, entity, pos, 1f);
+                    }
+                }
+
+                return;
+            }
 
             var q = World.Query(in query);
             foreach (var chunk in q)
@@ -265,24 +306,14 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     if (requireCullCheck && culls != null && !culls[i].IsVisible) continue;
-
-                    // Template filter
-                    if (hasTemplateFilter)
+                    Entity entity = chunk.Entity(i);
+                    if (!skipVisibilityEval && !EvaluateVisibility(def, entity))
                     {
-                        var entity = chunk.Entity(i);
-                        if (!World.Has<VisualTemplateRef>(entity) ||
-                            World.Get<VisualTemplateRef>(entity).TemplateId != def.RequiredTemplateId)
-                            continue;
-                    }
-
-                    if (!skipVisibilityEval)
-                    {
-                        var entity = chunk.Entity(i);
-                        if (!EvaluateVisibility(def, entity)) continue;
+                        continue;
                     }
 
                     Vector3 pos = transforms[i].Position + def.PositionOffset;
-                    EmitForVisualKind(-1, definitionId, def, chunk.Entity(i), pos, 1f);
+                    EmitForVisualKind(-1, definitionId, def, entity, pos, 1f);
                 }
             }
         }
@@ -384,6 +415,8 @@ namespace Ludots.Core.Presentation.Systems
                     return ResolveFacingRadians(owner);
                 case ValueSourceKind.FacingDegrees:
                     return ResolveFacingDegrees(owner);
+                case ValueSourceKind.VisualScale:
+                    return ResolveVisualScaleChannel(owner, vr.SourceId);
                 default:
                     return 0f;
             }
@@ -391,8 +424,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private float ResolveEntityColorChannel(Entity owner, int channelIndex)
         {
-            if (_entityColorResolver == null) return 1f;
-            var c = _entityColorResolver(World, owner);
+            Vector4 c = ResolveEntityColor(owner);
             return channelIndex switch
             {
                 0 => c.X,
@@ -401,6 +433,23 @@ namespace Ludots.Core.Presentation.Systems
                 3 => c.W,
                 _ => 1f,
             };
+        }
+
+        private Vector4 ResolveEntityColor(Entity owner)
+        {
+            if (_entityColorResolver == null)
+            {
+                return Vector4.One;
+            }
+
+            if (!_hasCachedEntityColor || _cachedEntityColorOwner != owner)
+            {
+                _cachedEntityColor = _entityColorResolver(World, owner);
+                _cachedEntityColorOwner = owner;
+                _hasCachedEntityColor = true;
+            }
+
+            return _cachedEntityColor;
         }
 
         private float ResolveFacingRadians(Entity owner)
@@ -416,6 +465,38 @@ namespace Ludots.Core.Presentation.Systems
         private float ResolveFacingDegrees(Entity owner)
         {
             return ResolveFacingRadians(owner) * (180f / MathF.PI);
+        }
+
+        private float ResolveVisualScaleChannel(Entity owner, int axisIndex)
+        {
+            Vector3 scale = ResolveVisualScale(owner);
+            return axisIndex switch
+            {
+                0 => scale.X,
+                1 => scale.Y,
+                2 => scale.Z,
+                _ => 1f,
+            };
+        }
+
+        private Vector3 ResolveVisualScale(Entity owner)
+        {
+            if (!_hasCachedVisualScale || _cachedVisualScaleOwner != owner)
+            {
+                if (!World.IsAlive(owner) || !World.Has<VisualTransform>(owner))
+                {
+                    _cachedVisualScale = Vector3.One;
+                }
+                else
+                {
+                    _cachedVisualScale = World.Get<VisualTransform>(owner).Scale;
+                }
+
+                _cachedVisualScaleOwner = owner;
+                _hasCachedVisualScale = true;
+            }
+
+            return _cachedVisualScale;
         }
 
         private float ResolveAttributeRatio(Entity owner, int attributeId)
@@ -479,8 +560,8 @@ namespace Ludots.Core.Presentation.Systems
                 Scale = new Vector3(sx, sy, sz),
                 Color = color,
                 StableId = stableId,
-                RenderPath = VisualRenderPath.StaticMesh,
-                Mobility = VisualMobility.Movable,
+                RenderPath = def.RenderPath,
+                Mobility = def.Mobility,
                 Flags = VisualRuntimeFlags.Visible,
                 Visibility = VisualVisibility.Visible,
             });
