@@ -92,9 +92,7 @@ namespace Ludots.Tests.Navigation2D
             DragSelect(engine, inputBackend, selectionMin, selectionMax, frameTimesMs);
             TickUntil(engine, frameTimesMs, () => GetSelectedEntities(engine).Count == AcceptanceAgentsPerTeam, maxTicks: 12);
 
-            Entity local = GetLocalPlayer(engine);
-            ref var selection = ref engine.World.Get<SelectionBuffer>(local);
-            Assert.That(selection.Count, Is.EqualTo(AcceptanceAgentsPerTeam), BuildSelectionDiagnostics(engine, mapping, selectionMin, selectionMax));
+            Assert.That(GetSelectedEntities(engine).Count, Is.EqualTo(AcceptanceAgentsPerTeam), BuildSelectionDiagnostics(engine, mapping, selectionMin, selectionMax));
             Assert.That(ReadActiveModeId(engine), Is.EqualTo(CommandModeId));
 
             string selectedSceneText = ExtractUiSceneText(uiRoot.Scene!);
@@ -450,12 +448,11 @@ namespace Ludots.Tests.Navigation2D
 
         private static IReadOnlyList<Entity> GetSelectedEntities(GameEngine engine)
         {
-            Entity local = GetLocalPlayer(engine);
-            ref var selection = ref engine.World.Get<SelectionBuffer>(local);
-            var entities = new List<Entity>(selection.Count);
-            for (int i = 0; i < selection.Count; i++)
+            Entity[] selection = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            var entities = new List<Entity>(selection.Length);
+            for (int i = 0; i < selection.Length; i++)
             {
-                Entity entity = selection.Get(i);
+                Entity entity = selection[i];
                 if (engine.World.IsAlive(entity))
                 {
                     entities.Add(entity);
@@ -723,7 +720,7 @@ namespace Ludots.Tests.Navigation2D
             sb.AppendLine();
             sb.AppendLine("## Expected Outcomes");
             sb.AppendLine("- Primary success condition: panel, selection, command, spawn, and camera mode switching all execute through the real runtime pipeline.");
-            sb.AppendLine("- Failure branch condition: UI remounts instead of staying reactive, selection does not fill the shared `SelectionBuffer`, right-click does not update `NavGoal2D`, or spawn counts do not change.");
+            sb.AppendLine("- Failure branch condition: UI remounts instead of staying reactive, selection SSOT does not update, right-click does not update `NavGoal2D`, or spawn counts do not change.");
             sb.AppendLine("- Key metrics: selected entity count, live agents, blocker count, active mode id, active camera id, primary selected goal, headless tick cost.");
             sb.AppendLine();
             sb.AppendLine("## Evidence Artifacts");
@@ -756,7 +753,7 @@ namespace Ludots.Tests.Navigation2D
                 "flowchart TD",
                 "    A[Boot GameEngine with CoreInputMod + Navigation2DPlaygroundMod] --> B[Mount UIRoot reactive panel]",
                 "    B --> C[Drag box over team-0 crowd]",
-                "    C --> D[SelectionBuffer + SelectedTag updated]",
+                "    C --> D[Selection SSOT updated]",
                 "    D --> E[Right click move target]",
                 "    E --> F[Selected NavGoal2D updated in formation]",
                 "    F --> G[Hotkey switch to spawn tool]",

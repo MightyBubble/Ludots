@@ -181,7 +181,13 @@ namespace Navigation2DPlaygroundMod.Systems
             Navigation2DPlaygroundState.SpawnBatch = ClampSpawnBatch(playgroundConfig, Navigation2DPlaygroundState.SpawnBatch);
 
             var scenario = Navigation2DPlaygroundScenarioSpawner.GetScenario(playgroundConfig, Navigation2DPlaygroundState.CurrentScenarioIndex);
-            var summary = Navigation2DPlaygroundScenarioSpawner.SpawnScenario(world, scenario, Navigation2DPlaygroundState.AgentsPerTeam);
+            var summary = Navigation2DPlaygroundScenarioSpawner.SpawnScenario(
+                world,
+                engine.GetService(CoreServiceKeys.Navigation2DContractCatalog)
+                    ?? throw new InvalidOperationException("Navigation2D playground requires Navigation2DContractCatalog."),
+                playgroundConfig,
+                scenario,
+                Navigation2DPlaygroundState.AgentsPerTeam);
             PublishScenarioServices(
                 engine,
                 playgroundConfig,
@@ -231,7 +237,12 @@ namespace Navigation2DPlaygroundMod.Systems
         private static int GetMaxAgentsPerTeam(GameEngine engine, int teamCount)
         {
             GameConfig? gameConfig = engine.GetService(CoreServiceKeys.GameConfig);
-            int maxAgents = (gameConfig?.Navigation2D ?? new Navigation2DConfig()).CloneValidated().MaxAgents;
+            if (gameConfig == null)
+            {
+                throw new InvalidOperationException("Navigation2D playground requires GameConfig.");
+            }
+
+            int maxAgents = gameConfig.Navigation2D.CloneValidated().MaxAgents;
             return Math.Max(0, maxAgents / Math.Max(1, teamCount));
         }
 

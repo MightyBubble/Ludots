@@ -844,7 +844,11 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationScreenHudBuffer, screenHudBuffer);
             SetService(CoreServiceKeys.ScreenOverlayBuffer, new ScreenOverlayBuffer());
             SetService(CoreServiceKeys.RenderDebugState, new RenderDebugState());
+            var navDiagnosticsSnapshot = new NavDiagnosticsSnapshot();
+            var simulationTimingSnapshot = new SimulationTimingSnapshot();
             SetService(CoreServiceKeys.PresentationTimingDiagnostics, new PresentationTimingDiagnostics());
+            SetService(CoreServiceKeys.NavDiagnosticsSnapshot, navDiagnosticsSnapshot);
+            SetService(CoreServiceKeys.SimulationTimingSnapshot, simulationTimingSnapshot);
             SetService(CoreServiceKeys.TransientMarkerBuffer, transientMarkerBuffer);
             SetService(CoreServiceKeys.GasPresentationEventBuffer, gasPresentationEvents);
             SetService(CoreServiceKeys.GroundOverlayBuffer, groundOverlayBuffer);
@@ -888,10 +892,16 @@ namespace Ludots.Core.Engine
             RegisterSystem(_worldToGridSyncSystem, SystemGroup.PostMovement);
             RegisterSystem(_spatialPartitionUpdateSystem, SystemGroup.PostMovement);
 
+            Navigation2DContractCatalog? navigation2dContractCatalog = null;
             if (config.Navigation2D.Enabled)
             {
                 var navigation2dRuntime = new Navigation2DRuntime(config.Navigation2D, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: null);
+                navigation2dContractCatalog = new Navigation2DContractCatalog(config.Navigation2D);
+                var navGroupRuntimeService = new NavGroupRuntimeService(World);
                 SetService(CoreServiceKeys.Navigation2DRuntime, navigation2dRuntime);
+                SetService(CoreServiceKeys.Navigation2DContractCatalog, navigation2dContractCatalog);
+                SetService(CoreServiceKeys.NavGroupRuntimeService, navGroupRuntimeService);
+                Navigation2DContractCatalogScope.SetCurrent(navigation2dContractCatalog);
 
                 const string nav2dSystemTypeName = "Ludots.Core.Physics2D.Systems.Navigation2DSimulationSystem2D";
                 const string physics2dSystemTypeName = "Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem";
@@ -917,15 +927,17 @@ namespace Ludots.Core.Engine
                         throw new InvalidOperationException("Navigation2D.Enabled=true requires Physics2DSimulationSystem and Physics2DToWorldPositionSyncSystem to be loadable.");
                     }
 
-                    RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavOrderAgentBootstrapSystem(World), SystemGroup.InputCollection);
+                    RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavContractValidationSystem(World, navigation2dContractCatalog, this), SystemGroup.InputCollection);
+                    RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavActorMaterializationSystem(World, navigation2dContractCatalog), SystemGroup.InputCollection);
+                    RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavPhysicsModeActivationSystem(World, _physics2DController), SystemGroup.InputCollection);
 
-                    var nav2dSystemObj = Activator.CreateInstance(nav2dSystemType, World, navigation2dRuntime, clock, navigation2dTickPolicy);
+                    var nav2dSystemObj = Activator.CreateInstance(nav2dSystemType, World, navigation2dRuntime, clock, navigation2dTickPolicy, simulationTimingSnapshot);
                     if (nav2dSystemObj is ISystem<float> nav2dSystem)
                     {
                         RegisterSystem(nav2dSystem, SystemGroup.InputCollection);
                     }
 
-                    var physics2dSystemObj = Activator.CreateInstance(physics2dSystemType, World, clock, physics2dTickPolicy);
+                    var physics2dSystemObj = Activator.CreateInstance(physics2dSystemType, World, clock, physics2dTickPolicy, simulationTimingSnapshot);
                     if (physics2dSystemObj is ISystem<float> physics2dSystem)
                     {
                         RegisterSystem(physics2dSystem, SystemGroup.InputCollection);
@@ -934,9 +946,18 @@ namespace Ludots.Core.Engine
                     var worldSyncSystemObj = Activator.CreateInstance(worldSyncSystemType, World);
                     if (worldSyncSystemObj is ISystem<float> worldSyncSystem)
                     {
+                        RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavGroupMaintenanceSystem(World, navGroupRuntimeService), SystemGroup.PostMovement);
+                        RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavGroupCommandApplySystem(World, navigation2dContractCatalog), SystemGroup.PostMovement);
+                        RegisterSystem(new Ludots.Core.Navigation2D.Systems.Navigation2DKinematicMotionSystem(World), SystemGroup.PostMovement);
+                        RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavGroupLifecycleSystem(World), SystemGroup.PostMovement);
+                        RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavDiagnosticsSystem(World, navDiagnosticsSnapshot, simulationTimingSnapshot, navigation2dContractCatalog, GetService(CoreServiceKeys.PresentationTimingDiagnostics)), SystemGroup.PostMovement);
                         RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
                     }
                 }
+            }
+            else
+            {
+                Navigation2DContractCatalogScope.SetCurrent(null);
             }
             
             // Phase 2: AbilityActivation
@@ -975,7 +996,7 @@ namespace Ludots.Core.Engine
                     throw new InvalidOperationException($"Failed to create manifestation obstacle bridge system '{manifestationObstacleBridgeSystemTypeName}'.");
                 }
             }
-            RegisterSystem(new DisplacementRuntimeSystem(World), SystemGroup.EffectProcessing);
+            RegisterSystem(new DisplacementRuntimeSystem(World, navigation2dContractCatalog), SystemGroup.EffectProcessing);
             
             // Phase 4: AttributeCalculation
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);

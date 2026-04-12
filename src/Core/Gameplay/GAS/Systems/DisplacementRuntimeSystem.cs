@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -6,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
+using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Physics;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -20,11 +23,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     {
         private static readonly QueryDescription _query = new QueryDescription().WithAll<DisplacementState>();
         private readonly List<Entity> _toDestroy = new();
+        private readonly CommandBuffer _commandBuffer = new();
         private readonly int _navMoveTagId;
+        private readonly Navigation2DContractCatalog? _catalog;
 
-        public DisplacementRuntimeSystem(World world) : base(world)
+        public DisplacementRuntimeSystem(World world, Navigation2DContractCatalog? catalog = null) : base(world)
         {
             _navMoveTagId = TagRegistry.Register("Ability.Nav.Move");
+            _catalog = catalog;
         }
 
         public override void Update(in float dt)
@@ -76,6 +82,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     World.Destroy(_toDestroy[i]);
                 }
+            }
+
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
             }
         }
 
@@ -132,6 +143,38 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ref var forceInput = ref World.Get<ForceInput2D>(target);
                 forceInput.Force = Fix64Vec2.Zero;
             }
+
+            if (World.Has<NavActor>(target))
+            {
+                int overrideTicks = disp.RemainingTicks;
+                if (_catalog != null && World.Has<NavKnockbackPolicyRef>(target))
+                {
+                    int policyId = World.Get<NavKnockbackPolicyRef>(target).PolicyId;
+                    if (_catalog.TryGetKnockbackPolicy(policyId, out NavKnockbackPolicyDefinition policy))
+                    {
+                        overrideTicks = Math.Max(overrideTicks, policy.OverrideTicks);
+                    }
+                }
+
+                var physicalOverride = World.Has<NavPhysicalOverride>(target)
+                    ? World.Get<NavPhysicalOverride>(target)
+                    : default;
+                if (!physicalOverride.Active)
+                {
+                    physicalOverride.IsActive = 1;
+                    physicalOverride.SavedPhysicsMode = World.Get<NavActor>(target).PhysicsMode;
+                }
+
+                physicalOverride.RemainingTicks = Math.Max(physicalOverride.RemainingTicks, overrideTicks);
+                if (World.Has<NavPhysicalOverride>(target))
+                {
+                    World.Set(target, physicalOverride);
+                }
+                else
+                {
+                    _commandBuffer.Add(target, physicalOverride);
+                }
+            }
         }
 
         private void RestoreNavigationOverride(ref DisplacementState disp)
@@ -160,6 +203,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     tags.AddTag(_navMoveTagId);
                 }
+            }
+
+            if (World.Has<NavPhysicalOverride>(target))
+            {
+                ref var physicalOverride = ref World.Get<NavPhysicalOverride>(target);
+                physicalOverride.IsActive = 0;
+                physicalOverride.RemainingTicks = 0;
             }
         }
 

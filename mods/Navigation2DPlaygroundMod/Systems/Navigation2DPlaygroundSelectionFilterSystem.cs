@@ -65,7 +65,7 @@ namespace Navigation2DPlaygroundMod.Systems
             return _world.IsAlive(entity) &&
                    _world.Has<NavPlaygroundControllable>(entity) &&
                    _world.Has<NavPlaygroundTeam>(entity) &&
-                   _world.Has<NavGoal2D>(entity) &&
+                   _world.Has<NavActor>(entity) &&
                    _world.Get<NavPlaygroundTeam>(entity).Id == 0 &&
                    !_world.Has<NavPlaygroundBlocker>(entity);
         }

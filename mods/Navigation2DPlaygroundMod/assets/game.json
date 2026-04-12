@@ -35,6 +35,9 @@
       "CommandFormationSpacingCm": 140,
       "DynamicSpawnSpacingCm": 120,
       "DynamicBlockerRadiusCm": 140,
+      "AgentNavProfileId": "rts_default",
+      "AgentCrowdProfileId": "crowd_default",
+      "AgentKnockbackPolicyId": "knockback_default",
       "Scenarios": [
         {
           "Id": "pass_through",

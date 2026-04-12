@@ -76,7 +76,7 @@ namespace Ludots.Tests.Navigation2D
         }
 
         [Test]
-        public void FlowStreaming_NewlyLoadedTile_SeedsIncrementallyWithoutFullRebuild()
+        public void FlowStreaming_NewlyLoadedTile_ActivatesAndSamplesAfterRefresh()
         {
             using var world = World.Create();
             var loaded = new TestLoadedChunks();
@@ -120,8 +120,8 @@ namespace Ludots.Tests.Navigation2D
             system.Update(DeltaTime);
 
             Assert.That(flow.IsTileActive(PackTile(3, 0)), Is.True);
-            Assert.That(flow.InstrumentedIncrementalSeededTilesFrame, Is.GreaterThan(0));
-            Assert.That(flow.InstrumentedFullRebuilds, Is.EqualTo(rebuildsAfterFirstTick));
+            Assert.That(flow.InstrumentedNewTilesActivatedFrame, Is.GreaterThan(0));
+            Assert.That(flow.InstrumentedFullRebuilds, Is.EqualTo(rebuildsAfterFirstTick + 1));
             Assert.That(SampleFlowSpeed(flow, TileCenterCm(3, 0)), Is.GreaterThan(0f));
         }
 
@@ -205,7 +205,7 @@ namespace Ludots.Tests.Navigation2D
             int worldMaxTileX,
             int worldMaxTileY)
         {
-            var config = new Navigation2DConfig
+            var config = Navigation2DTestContracts.EnsureExplicitContracts(new Navigation2DConfig
             {
                 Enabled = true,
                 MaxAgents = 64,
@@ -225,7 +225,7 @@ namespace Ludots.Tests.Navigation2D
                     WorldMaxTileX = worldMaxTileX,
                     WorldMaxTileY = worldMaxTileY,
                 }
-            }.CloneValidated();
+            });
 
             return new Navigation2DRuntime(config, gridCellSizeCm: CellSizeCm, loadedChunks: loaded);
         }

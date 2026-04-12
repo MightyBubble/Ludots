@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Avoidance;
 using Ludots.Core.Navigation2D.Components;
@@ -184,26 +186,30 @@ namespace Ludots.Core.Physics2D.Systems
             float dt = deltaTime > 1e-6f ? deltaTime : 1e-6f;
             float invDt = 1f / dt;
             var steering = _runtime.Config.Steering;
+            var crowdRelationshipPolicy = _runtime.ContractCatalog.CrowdRelationship;
 
-            if (steering.Mode == Navigation2DAvoidanceMode.Orca && steering.Orca.Enabled)
+            if (steering.Mode == Navigation2DAvoidanceMode.Orca && steering.Orca.Enabled && !steering.Sonar.Enabled)
             {
                 var job = new OrcaSteeringChunkJob
                 {
                     Runtime = _runtime,
                     DeltaTime = dt,
-                    InvDeltaTime = invDt
+                    InvDeltaTime = invDt,
+                    CrowdRelationshipPolicy = crowdRelationshipPolicy,
                 };
                 ExecuteSteeringJob(in job);
                 return;
             }
 
-            if (steering.Mode == Navigation2DAvoidanceMode.Hybrid && steering.Orca.Enabled && steering.Hybrid.Enabled)
+            if (steering.Orca.Enabled && steering.Sonar.Enabled)
             {
                 var job = new HybridSteeringChunkJob
                 {
                     Runtime = _runtime,
                     DeltaTime = dt,
-                    InvDeltaTime = invDt
+                    InvDeltaTime = invDt,
+                    GlobalMode = steering.Mode,
+                    CrowdRelationshipPolicy = crowdRelationshipPolicy,
                 };
                 ExecuteSteeringJob(in job);
                 return;
@@ -212,7 +218,8 @@ namespace Ludots.Core.Physics2D.Systems
             var sonarJob = new SonarSteeringChunkJob
             {
                 Runtime = _runtime,
-                InvDeltaTime = invDt
+                InvDeltaTime = invDt,
+                CrowdRelationshipPolicy = crowdRelationshipPolicy,
             };
             ExecuteSteeringJob(in sonarJob);
         }
@@ -298,6 +305,16 @@ namespace Ludots.Core.Physics2D.Systems
                 {
                     flowBindings = chunk.GetSpan<NavFlowBinding2D>();
                 }
+                bool hasSolverMode = chunk.Has<NavSolverModeComponent>();
+                Span<NavSolverModeComponent> solverModes = hasSolverMode ? chunk.GetSpan<NavSolverModeComponent>() : default;
+                bool hasActor = chunk.Has<NavActor>();
+                Span<NavActor> actors = hasActor ? chunk.GetSpan<NavActor>() : default;
+                bool hasTeam = chunk.Has<Team>();
+                Span<Team> teams = hasTeam ? chunk.GetSpan<Team>() : default;
+                bool hasTeamIdentity = chunk.Has<TeamIdentity>();
+                Span<TeamIdentity> teamIdentities = hasTeamIdentity ? chunk.GetSpan<TeamIdentity>() : default;
+                bool hasCrowdAgent = chunk.Has<NavCrowdAgent2D>();
+                Span<NavCrowdAgent2D> crowdAgents = hasCrowdAgent ? chunk.GetSpan<NavCrowdAgent2D>() : default;
 
                 var agentSoA = Runtime.AgentSoA;
                 var entityToAgentIndex = agentSoA.EntityToAgentIndex.AsSpan();
@@ -360,11 +377,17 @@ namespace Ludots.Core.Physics2D.Systems
                         kin.TimeHorizonSec.ToFloat(),
                         ClampMaxNeighbors(kin.MaxNeighbors),
                         hasFlowBinding ? flowBindings[entityIndex].FlowId : -1,
+                        ResolveSolverMode(hasSolverMode, solverModes, hasActor, actors, entityIndex),
                         hasPointGoal,
                         goalPosition,
                         goalRadius,
                         goalDistance,
-                        smartStopSuppressed);
+                        smartStopSuppressed,
+                        ResolveTeamId(hasTeam, teams, hasTeamIdentity, teamIdentities, entityIndex),
+                        hasCrowdAgent,
+                        hasCrowdAgent ? crowdAgents[entityIndex].NavMass.ToFloat() : 1f,
+                        hasCrowdAgent ? crowdAgents[entityIndex].YieldWeight.ToFloat() : 1f,
+                        hasCrowdAgent ? crowdAgents[entityIndex].PushClass : NavPushClass.Cooperative);
                 }
             }
         }
@@ -529,6 +552,187 @@ namespace Ludots.Core.Physics2D.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector2 ApplyCrowdResolveToPreferredVelocity(
+            in Vector2 preferredVelocity,
+            in Vector2 position,
+            int selfIndex,
+            float radius,
+            float maxSpeed,
+            float deltaTime,
+            ReadOnlySpan<int> neighborIndices,
+            ReadOnlySpan<float> neighborDistanceSq,
+            ReadOnlySpan<Vector2> positions,
+            ReadOnlySpan<Vector2> velocities,
+            ReadOnlySpan<float> radii,
+            ReadOnlySpan<int> teamIds,
+            ReadOnlySpan<byte> crowdEnabled,
+            ReadOnlySpan<float> crowdMasses,
+            ReadOnlySpan<float> crowdYieldWeights,
+            ReadOnlySpan<byte> crowdPushClasses,
+            in NavCrowdRelationshipPolicy relationshipPolicy)
+        {
+            if (maxSpeed <= 0f ||
+                (uint)selfIndex >= (uint)crowdEnabled.Length ||
+                crowdEnabled[selfIndex] == 0 ||
+                neighborIndices.Length <= 0)
+            {
+                return ClampToMaxSpeed(preferredVelocity, maxSpeed);
+            }
+
+            int selfTeamId = selfIndex < teamIds.Length ? teamIds[selfIndex] : 0;
+            float selfMass = selfIndex < crowdMasses.Length ? MathF.Max(0.01f, crowdMasses[selfIndex]) : 1f;
+            float selfYieldWeight = selfIndex < crowdYieldWeights.Length ? MathF.Max(0.01f, crowdYieldWeights[selfIndex]) : 1f;
+            NavPushClass selfPushClass = selfIndex < crowdPushClasses.Length ? (NavPushClass)crowdPushClasses[selfIndex] : NavPushClass.Cooperative;
+            float dominantPushRatio = MathF.Max(1.05f, relationshipPolicy.DominantPushMassRatio.ToFloat());
+            float minResolveSpeed = maxSpeed * 0.12f;
+            float invDt = deltaTime > 1e-5f ? 1f / deltaTime : 0f;
+            Vector2 resolve = Vector2.Zero;
+            Vector2 forwardBoost = Vector2.Zero;
+            Vector2 preferredDirection = preferredVelocity.LengthSquared() > 1e-6f
+                ? Vector2.Normalize(preferredVelocity)
+                : Vector2.Zero;
+
+            for (int n = 0; n < neighborIndices.Length; n++)
+            {
+                int neighborIndex = neighborIndices[n];
+                if ((uint)neighborIndex >= (uint)positions.Length ||
+                    (uint)neighborIndex >= (uint)crowdEnabled.Length ||
+                    crowdEnabled[neighborIndex] == 0)
+                {
+                    continue;
+                }
+
+                float combinedRadius = radius + radii[neighborIndex];
+                float softRange = combinedRadius + MathF.Min(120f, combinedRadius * 0.6f);
+                float distanceSq = neighborDistanceSq.Length > n ? neighborDistanceSq[n] : Vector2.DistanceSquared(position, positions[neighborIndex]);
+                if (distanceSq > softRange * softRange)
+                {
+                    continue;
+                }
+
+                Vector2 offset = position - positions[neighborIndex];
+                float distance = distanceSq > 1e-8f ? MathF.Sqrt(distanceSq) : 0f;
+                Vector2 away = distance > 1e-4f ? offset / distance : ComputeFallbackSeparationDirection(preferredVelocity);
+                int neighborTeamId = neighborIndex < teamIds.Length ? teamIds[neighborIndex] : 0;
+                float neighborMass = neighborIndex < crowdMasses.Length ? MathF.Max(0.01f, crowdMasses[neighborIndex]) : 1f;
+                float neighborYieldWeight = neighborIndex < crowdYieldWeights.Length ? MathF.Max(0.01f, crowdYieldWeights[neighborIndex]) : 1f;
+                NavPushClass neighborPushClass = neighborIndex < crowdPushClasses.Length ? (NavPushClass)crowdPushClasses[neighborIndex] : NavPushClass.Cooperative;
+
+                TeamRelationship relationship = TeamManager.GetRelationship(selfTeamId, neighborTeamId);
+                float dominanceRatio = neighborMass > 1e-5f ? selfMass / neighborMass : selfMass;
+                bool selfDominant = dominanceRatio >= dominantPushRatio &&
+                    (selfPushClass == NavPushClass.Dominant || neighborPushClass != NavPushClass.Dominant);
+                bool neighborDominant = dominanceRatio <= (1f / dominantPushRatio) &&
+                    (neighborPushClass == NavPushClass.Dominant || selfPushClass != NavPushClass.Dominant);
+
+                float yieldFactor = ResolveCrowdYieldFactor(
+                    relationship,
+                    selfMass,
+                    selfYieldWeight,
+                    neighborMass,
+                    neighborYieldWeight,
+                    selfDominant,
+                    neighborDominant,
+                    relationshipPolicy);
+                if (yieldFactor <= 1e-4f)
+                {
+                    continue;
+                }
+
+                float proximity = Saturate((softRange - distance) / MathF.Max(softRange, 1f));
+                float overlap = MathF.Max(0f, combinedRadius - distance);
+                float overlapUrgency = overlap > 0f ? 1f + (overlap / MathF.Max(combinedRadius, 1f)) : 0.35f;
+                float approachSpeed = MathF.Max(0f, Vector2.Dot(preferredVelocity - velocities[neighborIndex], -away));
+                float resolveSpeed = MathF.Max(minResolveSpeed, MathF.Max(overlap * invDt, approachSpeed * 0.45f));
+                float sideStepStrength = relationship == TeamRelationship.Friendly ? 0.22f : 0.08f;
+                Vector2 tangent = new(-away.Y, away.X);
+                if (preferredDirection.LengthSquared() > 1e-6f && Vector2.Dot(tangent, preferredDirection) < 0f)
+                {
+                    tangent = -tangent;
+                }
+
+                resolve += away * (resolveSpeed * yieldFactor * proximity * overlapUrgency);
+                resolve += tangent * (maxSpeed * sideStepStrength * yieldFactor * proximity);
+
+                if (selfDominant && preferredDirection.LengthSquared() > 1e-6f)
+                {
+                    forwardBoost += preferredDirection * (maxSpeed * 0.18f * proximity);
+                }
+            }
+
+            return ClampToMaxSpeed(preferredVelocity + resolve + forwardBoost, maxSpeed);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float ResolveCrowdYieldFactor(
+            TeamRelationship relationship,
+            float selfMass,
+            float selfYieldWeight,
+            float neighborMass,
+            float neighborYieldWeight,
+            bool selfDominant,
+            bool neighborDominant,
+            in NavCrowdRelationshipPolicy relationshipPolicy)
+        {
+            if (neighborDominant)
+            {
+                return relationship switch
+                {
+                    TeamRelationship.Friendly => MathF.Max(0f, relationshipPolicy.FriendlyYieldFactor.ToFloat()) * 1.15f,
+                    TeamRelationship.Hostile => MathF.Max(0f, relationshipPolicy.HostileYieldFactor.ToFloat()) * 1.6f,
+                    _ => MathF.Max(0f, relationshipPolicy.NeutralYieldFactor.ToFloat()) * 1.45f,
+                };
+            }
+
+            if (selfDominant)
+            {
+                return relationship switch
+                {
+                    TeamRelationship.Friendly => MathF.Max(0f, relationshipPolicy.FriendlyYieldFactor.ToFloat()) * 0.45f,
+                    TeamRelationship.Hostile => MathF.Max(0f, relationshipPolicy.HostileYieldFactor.ToFloat()) * 0.12f,
+                    _ => MathF.Max(0f, relationshipPolicy.NeutralYieldFactor.ToFloat()) * 0.18f,
+                };
+            }
+
+            return relationship switch
+            {
+                TeamRelationship.Friendly => MathF.Max(0f, relationshipPolicy.FriendlyYieldFactor.ToFloat()) *
+                    ComputeFriendlyYieldShare(selfMass, selfYieldWeight, neighborMass, neighborYieldWeight),
+                TeamRelationship.Hostile => MathF.Max(0f, relationshipPolicy.HostileYieldFactor.ToFloat()) *
+                    ComputeBlockerYieldShare(selfMass, selfYieldWeight, neighborMass, neighborYieldWeight),
+                _ => MathF.Max(0f, relationshipPolicy.NeutralYieldFactor.ToFloat()) *
+                    ComputeBlockerYieldShare(selfMass, selfYieldWeight, neighborMass, neighborYieldWeight),
+            };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float ComputeFriendlyYieldShare(float selfMass, float selfYieldWeight, float neighborMass, float neighborYieldWeight)
+        {
+            float selfTerm = MathF.Max(0.01f, selfYieldWeight / MathF.Max(0.01f, selfMass));
+            float neighborTerm = MathF.Max(0.01f, neighborYieldWeight / MathF.Max(0.01f, neighborMass));
+            return selfTerm / (selfTerm + neighborTerm);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float ComputeBlockerYieldShare(float selfMass, float selfYieldWeight, float neighborMass, float neighborYieldWeight)
+        {
+            float selfTerm = MathF.Max(0.01f, selfMass * selfYieldWeight);
+            float neighborTerm = MathF.Max(0.01f, neighborMass * neighborYieldWeight);
+            return neighborTerm / (selfTerm + neighborTerm);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float Saturate(float value)
+        {
+            if (value <= 0f)
+            {
+                return 0f;
+            }
+
+            return value >= 1f ? 1f : value;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Vector2 ComputeFallbackSeparationDirection(in Vector2 preferredVelocity)
         {
             if (preferredVelocity.LengthSquared() <= 1e-6f)
@@ -669,7 +873,6 @@ namespace Ludots.Core.Physics2D.Systems
             desiredVelocity = Vector2.Zero;
             if (world.CachedSteeringValid[agentIndex] == 0)
             {
-                world.RecordSteeringCacheLookup(false);
                 return false;
             }
 
@@ -678,7 +881,6 @@ namespace Ludots.Core.Physics2D.Systems
                 !IsWithinTolerance(world.CachedSteeringVelocities[agentIndex], velocity, config.VelocityToleranceCmPerSec) ||
                 !IsWithinTolerance(world.CachedSteeringPreferredVelocities[agentIndex], preferredVelocity, config.PreferredVelocityToleranceCmPerSec))
             {
-                world.RecordSteeringCacheLookup(false);
                 return false;
             }
 
@@ -747,6 +949,7 @@ namespace Ludots.Core.Physics2D.Systems
             public Navigation2DRuntime Runtime;
             public float DeltaTime;
             public float InvDeltaTime;
+            public NavCrowdRelationshipPolicy CrowdRelationshipPolicy;
 
             public void Execute(ref Chunk chunk)
             {
@@ -783,6 +986,11 @@ namespace Ludots.Core.Physics2D.Systems
                 var goalPositions = agentSoA.GoalPositions.AsSpan();
                 var hasPointGoals = agentSoA.HasPointGoals.AsSpan();
                 var smartStopFlags = agentSoA.SmartStopFlags.AsSpan();
+                var teamIds = agentSoA.TeamIds.AsSpan();
+                var crowdEnabled = agentSoA.CrowdEnabled.AsSpan();
+                var crowdMasses = agentSoA.CrowdMasses.AsSpan();
+                var crowdYieldWeights = agentSoA.CrowdYieldWeights.AsSpan();
+                var crowdPushClasses = agentSoA.CrowdPushClasses.AsSpan();
                 var separationConfig = config.Separation;
 
                 Span<int> neighborIdxScratch = stackalloc int[MaxNeighborsHard];
@@ -841,11 +1049,16 @@ namespace Ludots.Core.Physics2D.Systems
 
                     Vector2 newVel = Vector2.Zero;
                     bool reused = false;
-                    bool cacheLookupPerformed = useStableWorldCache;
+                    bool cacheLookupPerformed = false;
+                    bool speculativeStableLookupMiss = false;
                     if (useStableWorldCache && TryReuseStableWorldTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, out newVel))
                     {
                         reused = true;
                         cacheLookupPerformed = true;
+                    }
+                    else if (useStableWorldCache)
+                    {
+                        speculativeStableLookupMiss = true;
                     }
 
                     int neighborCount = 0;
@@ -880,12 +1093,35 @@ namespace Ludots.Core.Physics2D.Systems
                             positions,
                             radii,
                             separationConfig);
+                        preferred = ApplyCrowdResolveToPreferredVelocity(
+                            preferred,
+                            pos,
+                            i,
+                            radius,
+                            maxSpeed,
+                            DeltaTime,
+                            neighborIdxScratch.Slice(0, neighborCount),
+                            neighborDistanceScratch.Slice(0, neighborCount),
+                            positions,
+                            velocities,
+                            radii,
+                            teamIds,
+                            crowdEnabled,
+                            crowdMasses,
+                            crowdYieldWeights,
+                            crowdPushClasses,
+                            CrowdRelationshipPolicy);
                     }
 
                     if (!reused)
                     {
                         if (neighborCount <= 0)
                         {
+                            if (speculativeStableLookupMiss)
+                            {
+                                agentSoA.RecordSteeringCacheLookup(false);
+                            }
+
                             newVel = ClampToMaxSpeed(preferred, maxSpeed);
                         }
                         else if (!cacheLookupPerformed && useCache && TryReuseTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, neighborCount, neighborSignature, out newVel))
@@ -925,6 +1161,7 @@ namespace Ludots.Core.Physics2D.Systems
         {
             public Navigation2DRuntime Runtime;
             public float InvDeltaTime;
+            public NavCrowdRelationshipPolicy CrowdRelationshipPolicy;
 
             public void Execute(ref Chunk chunk)
             {
@@ -961,6 +1198,11 @@ namespace Ludots.Core.Physics2D.Systems
                 var goalPositions = agentSoA.GoalPositions.AsSpan();
                 var hasPointGoals = agentSoA.HasPointGoals.AsSpan();
                 var smartStopFlags = agentSoA.SmartStopFlags.AsSpan();
+                var teamIds = agentSoA.TeamIds.AsSpan();
+                var crowdEnabled = agentSoA.CrowdEnabled.AsSpan();
+                var crowdMasses = agentSoA.CrowdMasses.AsSpan();
+                var crowdYieldWeights = agentSoA.CrowdYieldWeights.AsSpan();
+                var crowdPushClasses = agentSoA.CrowdPushClasses.AsSpan();
                 var separationConfig = config.Separation;
                 var sonarSolveConfig = SonarSolver2D.SolveConfig.FromConfig(config.Sonar, config.Orca.FallbackToPreferredVelocity);
 
@@ -1019,11 +1261,16 @@ namespace Ludots.Core.Physics2D.Systems
 
                     Vector2 newVel = Vector2.Zero;
                     bool reused = false;
-                    bool cacheLookupPerformed = useStableWorldCache;
+                    bool cacheLookupPerformed = false;
+                    bool speculativeStableLookupMiss = false;
                     if (useStableWorldCache && TryReuseStableWorldTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, out newVel))
                     {
                         reused = true;
                         cacheLookupPerformed = true;
+                    }
+                    else if (useStableWorldCache)
+                    {
+                        speculativeStableLookupMiss = true;
                     }
 
                     int neighborCount = 0;
@@ -1058,12 +1305,35 @@ namespace Ludots.Core.Physics2D.Systems
                             positions,
                             radii,
                             separationConfig);
+                        preferred = ApplyCrowdResolveToPreferredVelocity(
+                            preferred,
+                            pos,
+                            i,
+                            radius,
+                            maxSpeed,
+                            0f,
+                            neighborIdxScratch.Slice(0, neighborCount),
+                            neighborDistanceScratch.Slice(0, neighborCount),
+                            positions,
+                            velocities,
+                            radii,
+                            teamIds,
+                            crowdEnabled,
+                            crowdMasses,
+                            crowdYieldWeights,
+                            crowdPushClasses,
+                            CrowdRelationshipPolicy);
                     }
 
                     if (!reused)
                     {
                         if (neighborCount <= 0)
                         {
+                            if (speculativeStableLookupMiss)
+                            {
+                                agentSoA.RecordSteeringCacheLookup(false);
+                            }
+
                             newVel = ClampToMaxSpeed(preferred, maxSpeed);
                         }
                         else if (!cacheLookupPerformed && useCache && TryReuseTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, neighborCount, neighborSignature, out newVel))
@@ -1103,6 +1373,8 @@ namespace Ludots.Core.Physics2D.Systems
             public Navigation2DRuntime Runtime;
             public float DeltaTime;
             public float InvDeltaTime;
+            public Navigation2DAvoidanceMode GlobalMode;
+            public NavCrowdRelationshipPolicy CrowdRelationshipPolicy;
 
             public void Execute(ref Chunk chunk)
             {
@@ -1137,9 +1409,15 @@ namespace Ludots.Core.Physics2D.Systems
                 var neighborDistances = agentSoA.NeighborDistances.AsSpan();
                 var timeHorizons = agentSoA.TimeHorizons.AsSpan();
                 var maxNeighborCounts = agentSoA.MaxNeighborCounts.AsSpan();
+                var solverModes = agentSoA.SolverModes.AsSpan();
                 var goalPositions = agentSoA.GoalPositions.AsSpan();
                 var hasPointGoals = agentSoA.HasPointGoals.AsSpan();
                 var smartStopFlags = agentSoA.SmartStopFlags.AsSpan();
+                var teamIds = agentSoA.TeamIds.AsSpan();
+                var crowdEnabled = agentSoA.CrowdEnabled.AsSpan();
+                var crowdMasses = agentSoA.CrowdMasses.AsSpan();
+                var crowdYieldWeights = agentSoA.CrowdYieldWeights.AsSpan();
+                var crowdPushClasses = agentSoA.CrowdPushClasses.AsSpan();
                 var separationConfig = config.Separation;
                 var sonarSolveConfig = SonarSolver2D.SolveConfig.FromConfig(config.Sonar, config.Orca.FallbackToPreferredVelocity);
 
@@ -1200,11 +1478,16 @@ namespace Ludots.Core.Physics2D.Systems
 
                     Vector2 newVel = Vector2.Zero;
                     bool reused = false;
-                    bool cacheLookupPerformed = useStableWorldCache;
+                    bool cacheLookupPerformed = false;
+                    bool speculativeStableLookupMiss = false;
                     if (useStableWorldCache && TryReuseStableWorldTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, out newVel))
                     {
                         reused = true;
                         cacheLookupPerformed = true;
+                    }
+                    else if (useStableWorldCache)
+                    {
+                        speculativeStableLookupMiss = true;
                     }
 
                     int neighborCount = 0;
@@ -1239,19 +1522,42 @@ namespace Ludots.Core.Physics2D.Systems
                             positions,
                             radii,
                             separationConfig);
+                        preferred = ApplyCrowdResolveToPreferredVelocity(
+                            preferred,
+                            pos,
+                            i,
+                            radius,
+                            maxSpeed,
+                            DeltaTime,
+                            neighborIdxScratch.Slice(0, neighborCount),
+                            neighborDistanceScratch.Slice(0, neighborCount),
+                            positions,
+                            velocities,
+                            radii,
+                            teamIds,
+                            crowdEnabled,
+                            crowdMasses,
+                            crowdYieldWeights,
+                            crowdPushClasses,
+                            CrowdRelationshipPolicy);
                     }
 
                     if (!reused)
                     {
                         if (neighborCount <= 0)
                         {
+                            if (speculativeStableLookupMiss)
+                            {
+                                agentSoA.RecordSteeringCacheLookup(false);
+                            }
+
                             newVel = ClampToMaxSpeed(preferred, maxSpeed);
                         }
                         else if (!cacheLookupPerformed && useCache && TryReuseTemporalCoherenceCache(agentSoA, temporalCoherence, i, pos, vel, preferred, neighborCount, neighborSignature, out newVel))
                         {
                             reused = true;
                         }
-                        else if (ShouldUseOrcaHybrid(hybridConfig, velocities, vel, preferred, neighborIdxScratch.Slice(0, neighborCount)))
+                        else if (ShouldUseOrcaSolver(GlobalMode, (NavSolverMode)solverModes[i], hybridConfig, velocities, vel, preferred, neighborIdxScratch.Slice(0, neighborCount)))
                         {
                             newVel = OrcaSolver2D.ComputeDesiredVelocity(
                                 position: pos,
@@ -1400,13 +1706,35 @@ namespace Ludots.Core.Physics2D.Systems
             }
         }
 
-        private static bool ShouldUseOrcaHybrid(
+        private static bool ShouldUseOrcaSolver(
+            Navigation2DAvoidanceMode globalMode,
+            NavSolverMode solverMode,
             Navigation2DHybridAvoidanceConfig config,
             ReadOnlySpan<Vector2> velocities,
             Vector2 selfVelocity,
             Vector2 preferredVelocity,
             ReadOnlySpan<int> neighborIndices)
         {
+            if (solverMode == NavSolverMode.PreciseOrca)
+            {
+                return true;
+            }
+
+            if (solverMode == NavSolverMode.CrowdFlow)
+            {
+                return false;
+            }
+
+            if (globalMode == Navigation2DAvoidanceMode.Orca)
+            {
+                return true;
+            }
+
+            if (globalMode == Navigation2DAvoidanceMode.Sonar)
+            {
+                return false;
+            }
+
             if (neighborIndices.Length >= config.DenseNeighborThreshold)
             {
                 return true;
@@ -1446,6 +1774,37 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             return false;
+        }
+
+        private static NavSolverMode ResolveSolverMode(bool hasSolverMode, Span<NavSolverModeComponent> solverModes, bool hasActor, Span<NavActor> actors, int index)
+        {
+            if (hasSolverMode)
+            {
+                return solverModes[index].SolverMode;
+            }
+
+            if (hasActor)
+            {
+                return actors[index].DefaultSolverMode;
+            }
+
+            return NavSolverMode.Hybrid;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int ResolveTeamId(bool hasTeam, Span<Team> teams, bool hasTeamIdentity, Span<TeamIdentity> teamIdentities, int index)
+        {
+            if (hasTeam)
+            {
+                return teams[index].Id;
+            }
+
+            if (hasTeamIdentity)
+            {
+                return teamIdentities[index].TeamId;
+            }
+
+            return 0;
         }
 
         private void EnsureSteeringOutputs()
@@ -1500,6 +1859,16 @@ namespace Ludots.Core.Physics2D.Systems
                 {
                     flowBindings = chunk.GetSpan<NavFlowBinding2D>();
                 }
+                bool hasSolverMode = chunk.Has<NavSolverModeComponent>();
+                Span<NavSolverModeComponent> solverModes = hasSolverMode ? chunk.GetSpan<NavSolverModeComponent>() : default;
+                bool hasActor = chunk.Has<NavActor>();
+                Span<NavActor> actors = hasActor ? chunk.GetSpan<NavActor>() : default;
+                bool hasTeam = chunk.Has<Team>();
+                Span<Team> teams = hasTeam ? chunk.GetSpan<Team>() : default;
+                bool hasTeamIdentity = chunk.Has<TeamIdentity>();
+                Span<TeamIdentity> teamIdentities = hasTeamIdentity ? chunk.GetSpan<TeamIdentity>() : default;
+                bool hasCrowdAgent = chunk.Has<NavCrowdAgent2D>();
+                Span<NavCrowdAgent2D> crowdAgents = hasCrowdAgent ? chunk.GetSpan<NavCrowdAgent2D>() : default;
 
                 ref var entityFirst = ref chunk.Entity(0);
                 foreach (var index in chunk)
@@ -1547,11 +1916,17 @@ namespace Ludots.Core.Physics2D.Systems
                         kin.TimeHorizonSec.ToFloat(),
                         ClampMaxNeighbors(kin.MaxNeighbors),
                         hasFlowBinding ? flowBindings[index].FlowId : -1,
+                        ResolveSolverMode(hasSolverMode, solverModes, hasActor, actors, index),
                         hasPointGoal,
                         goalPosition,
                         goalRadius,
                         goalDistance,
-                        smartStopSuppressed))
+                        smartStopSuppressed,
+                        ResolveTeamId(hasTeam, teams, hasTeamIdentity, teamIdentities, index),
+                        hasCrowdAgent,
+                        hasCrowdAgent ? crowdAgents[index].NavMass.ToFloat() : 1f,
+                        hasCrowdAgent ? crowdAgents[index].YieldWeight.ToFloat() : 1f,
+                        hasCrowdAgent ? crowdAgents[index].PushClass : NavPushClass.Cooperative))
                     {
                         return _runtime.AgentSoA.EndSync();
                     }

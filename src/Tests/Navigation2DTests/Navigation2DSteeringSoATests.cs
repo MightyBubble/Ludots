@@ -424,7 +424,7 @@ namespace Ludots.Tests.Navigation2D
 
         private static Navigation2DRuntime CreateRuntime(Navigation2DAvoidanceMode mode, bool smartStopEnabled)
         {
-            var config = new Navigation2DConfig
+            var config = Navigation2DTestContracts.EnsureExplicitContracts(new Navigation2DConfig
             {
                 Enabled = true,
                 MaxAgents = 16,
@@ -470,7 +470,7 @@ namespace Ludots.Tests.Navigation2D
                         StoppedSpeedThresholdCmPerSec = 5,
                     }
                 }
-            };
+            });
 
             return new Navigation2DRuntime(config, gridCellSizeCm: 100, loadedChunks: null);
         }

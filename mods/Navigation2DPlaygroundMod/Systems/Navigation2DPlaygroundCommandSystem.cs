@@ -8,6 +8,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation2D.Config;
+using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Scripting;
 using Navigation2DPlaygroundMod.Input;
 using Navigation2DPlaygroundMod.Runtime;
@@ -70,6 +71,8 @@ namespace Navigation2DPlaygroundMod.Systems
                 case Navigation2DPlaygroundToolMode.SpawnTeam0:
                     Navigation2DPlaygroundScenarioSpawner.SpawnDynamicBatch(
                         _world,
+                        RequireNavigationContractCatalog(),
+                        playgroundConfig,
                         teamId: 0,
                         centerCm: pointCm,
                         count: Navigation2DPlaygroundState.SpawnBatch,
@@ -80,6 +83,8 @@ namespace Navigation2DPlaygroundMod.Systems
                 case Navigation2DPlaygroundToolMode.SpawnTeam1:
                     Navigation2DPlaygroundScenarioSpawner.SpawnDynamicBatch(
                         _world,
+                        RequireNavigationContractCatalog(),
+                        playgroundConfig,
                         teamId: 1,
                         centerCm: pointCm,
                         count: Navigation2DPlaygroundState.SpawnBatch,
@@ -110,10 +115,28 @@ namespace Navigation2DPlaygroundMod.Systems
 
             Navigation2DPlaygroundScenarioSpawner.ApplyMoveFormation(
                 _world,
+                _engine.GetService(CoreServiceKeys.NavGroupRuntimeService)
+                    ?? throw new InvalidOperationException("NavGroupRuntimeService is required for Navigation2DPlaygroundCommandSystem."),
+                ResolveCommandOwner(),
                 selected.AsSpan(),
                 pointCm,
                 playgroundConfig.CommandFormationSpacingCm,
                 playgroundConfig.CommandGoalRadiusCm);
+        }
+
+        private Entity ResolveCommandOwner()
+        {
+            return _engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var ownerObj) &&
+                   ownerObj is Entity owner &&
+                   _world.IsAlive(owner)
+                ? owner
+                : Entity.Null;
+        }
+
+        private Navigation2DContractCatalog RequireNavigationContractCatalog()
+        {
+            return _engine.GetService(CoreServiceKeys.Navigation2DContractCatalog)
+                ?? throw new InvalidOperationException("Navigation2DPlaygroundCommandSystem requires Navigation2DContractCatalog.");
         }
 
         private bool TryResolveGroundPointer(IInputActionReader input, out WorldCmInt2 worldCm)

@@ -1,11 +1,17 @@
+using Arch.Core;
+using Ludots.Core.Components;
 using System;
 using System.IO;
 using System.Collections.Generic;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Modding;
+using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.Runtime;
+using Ludots.Core.Navigation2D.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -82,6 +88,9 @@ namespace Ludots.Tests.Navigation2D
       ""CommandFormationSpacingCm"": 180,
       ""DynamicSpawnSpacingCm"": 160,
       ""DynamicBlockerRadiusCm"": 150,
+      ""AgentNavProfileId"": ""rts_default"",
+      ""AgentCrowdProfileId"": ""crowd_default"",
+      ""AgentKnockbackPolicyId"": ""knockback_default"",
       ""Scenarios"": [
         {
           ""Id"": ""queue"",
@@ -142,6 +151,74 @@ namespace Ludots.Tests.Navigation2D
         ""NeighborPositionQuantizationCm"": 10,
         ""NeighborVelocityQuantizationCmPerSec"": 12
       }
+    },
+    ""Contracts"": {
+      ""NavProfiles"": [
+        {
+          ""Id"": ""rts_default"",
+          ""MaxSpeedCmPerSec"": 820,
+          ""MaxAccelCmPerSec2"": 6200,
+          ""RadiusCm"": 42,
+          ""NeighborDistCm"": 410,
+          ""TimeHorizonSec"": 2.1,
+          ""MaxNeighbors"": 18,
+          ""GoalRadiusCm"": 140
+        }
+      ],
+      ""CrowdProfiles"": [
+        {
+          ""Id"": ""crowd_default"",
+          ""GeometryRadiusCm"": 42,
+          ""NavMass"": 1.1,
+          ""YieldWeight"": 0.9,
+          ""PushClass"": ""Cooperative"",
+          ""SolverPreference"": ""Hybrid"",
+          ""RetryLimit"": 3,
+          ""TimeoutTicks"": 95,
+          ""AbandonTicks"": 250
+        }
+      ],
+      ""KnockbackPolicies"": [
+        {
+          ""Id"": ""knockback_default"",
+          ""OverrideTicks"": 18,
+          ""ClearNavGoalWhileActive"": true
+        }
+      ],
+      ""GroupSolver"": {
+        ""Enabled"": true,
+        ""PreciseOrcaMaxGroupSize"": 24,
+        ""CrowdFlowMinGroupSize"": 96,
+        ""Rules"": [
+          {
+            ""Id"": ""precise_orca"",
+            ""MinGroupSize"": 0,
+            ""MaxGroupSize"": 24,
+            ""SolverMode"": ""PreciseOrca"",
+            ""Reason"": ""group_size_small""
+          },
+          {
+            ""Id"": ""hybrid_mid"",
+            ""MinGroupSize"": 25,
+            ""MaxGroupSize"": 95,
+            ""SolverMode"": ""Hybrid"",
+            ""Reason"": ""group_size_mid""
+          },
+          {
+            ""Id"": ""crowd_flow"",
+            ""MinGroupSize"": 96,
+            ""MaxGroupSize"": 2147483647,
+            ""SolverMode"": ""CrowdFlow"",
+            ""Reason"": ""group_size_large""
+          }
+        ]
+      },
+      ""CrowdRelationship"": {
+        ""FriendlyYieldFactor"": 1.0,
+        ""NeutralYieldFactor"": 0.4,
+        ""HostileYieldFactor"": 0.22,
+        ""DominantPushMassRatio"": 2.4
+      }
     }
   }
 }");
@@ -170,6 +247,9 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(gameConfig.Navigation2D.Playground.CommandFormationSpacingCm, Is.EqualTo(180));
             Assert.That(gameConfig.Navigation2D.Playground.DynamicSpawnSpacingCm, Is.EqualTo(160));
             Assert.That(gameConfig.Navigation2D.Playground.DynamicBlockerRadiusCm, Is.EqualTo(150));
+            Assert.That(gameConfig.Navigation2D.Playground.AgentNavProfileId, Is.EqualTo("rts_default"));
+            Assert.That(gameConfig.Navigation2D.Playground.AgentCrowdProfileId, Is.EqualTo("crowd_default"));
+            Assert.That(gameConfig.Navigation2D.Playground.AgentKnockbackPolicyId, Is.EqualTo("knockback_default"));
             Assert.That(gameConfig.Navigation2D.Playground.Scenarios.Count, Is.EqualTo(2));
             Assert.That(gameConfig.Navigation2D.Playground.Scenarios[0].Kind, Is.EqualTo(Navigation2DPlaygroundScenarioKind.GoalQueue));
             Assert.That(gameConfig.Navigation2D.Playground.Scenarios[0].TeamCount, Is.EqualTo(1));
@@ -242,6 +322,13 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(runtime.Config.Steering.TemporalCoherence.Enabled, Is.True);
             Assert.That(runtime.Config.Steering.TemporalCoherence.MaxReuseTicks, Is.EqualTo(9));
             Assert.That(runtime.Config.Steering.TemporalCoherence.NeighborVelocityQuantizationCmPerSec, Is.EqualTo(12));
+            var catalog = new Navigation2DContractCatalog(gameConfig.Navigation2D);
+            Assert.That(catalog.RequireNavProfileId("rts_default"), Is.GreaterThan(0));
+            Assert.That(catalog.RequireCrowdProfileId("crowd_default"), Is.GreaterThan(0));
+            Assert.That(catalog.RequireKnockbackPolicyId("knockback_default"), Is.GreaterThan(0));
+            Assert.That(catalog.ResolveGroupSolverRule(8).SolverMode, Is.EqualTo(NavSolverMode.PreciseOrca));
+            Assert.That(catalog.ResolveGroupSolverRule(64).SolverMode, Is.EqualTo(NavSolverMode.Hybrid));
+            Assert.That(catalog.ResolveGroupSolverRule(128).SolverMode, Is.EqualTo(NavSolverMode.CrowdFlow));
         }
 
         [Test]
@@ -280,6 +367,62 @@ namespace Ludots.Tests.Navigation2D
             }
         }
 
+        [Test]
+        public void Navigation2DContractCatalog_RejectsMissingExplicitContracts()
+        {
+            var config = new Navigation2DConfig
+            {
+                Enabled = true,
+                Contracts = new Navigation2DContractsConfig(),
+            };
+
+            var exception = Assert.Throws<InvalidOperationException>(() => new Navigation2DContractCatalog(config));
+            Assert.That(exception?.Message, Does.Contain("explicit entry"));
+        }
+
+        [Test]
+        public void Navigation2DRuntime_RejectsNullConfig()
+        {
+            Assert.Throws<ArgumentNullException>(() => new Navigation2DRuntime(null!, gridCellSizeCm: 100, loadedChunks: null));
+        }
+
+        [Test]
+        public void NavContractValidationSystem_FailsFastWhenNavigationEnvironmentIsMissing()
+        {
+            using var engine = CreateNavigationEngine(loadMap: false);
+            Navigation2DContractCatalog catalog = engine.GetService(CoreServiceKeys.Navigation2DContractCatalog)
+                ?? throw new InvalidOperationException("Navigation2DContractCatalog should be available.");
+
+            engine.World.Create(
+                CreateExplicitNavActor(),
+                new NavProfileRef { ProfileId = catalog.RequireNavProfileId("rts_default") },
+                new NavCrowdProfileRef { ProfileId = catalog.RequireCrowdProfileId("crowd_default") },
+                new Team { Id = 1 },
+                new WorldPositionCm { Value = Fix64Vec2.Zero });
+
+            var validator = new NavContractValidationSystem(engine.World, catalog, engine);
+            var exception = Assert.Throws<InvalidOperationException>(() => validator.Update(1f / 60f));
+            Assert.That(exception?.Message, Does.Contain("missing navigation environment"));
+        }
+
+        [Test]
+        public void NavContractValidationSystem_FailsFastWhenCrowdActorIsMissingCrowdProfileRef()
+        {
+            using var engine = CreateNavigationEngine(loadMap: true);
+            Navigation2DContractCatalog catalog = engine.GetService(CoreServiceKeys.Navigation2DContractCatalog)
+                ?? throw new InvalidOperationException("Navigation2DContractCatalog should be available.");
+
+            engine.World.Create(
+                CreateExplicitNavActor(),
+                new NavProfileRef { ProfileId = catalog.RequireNavProfileId("rts_default") },
+                new Team { Id = 1 },
+                new WorldPositionCm { Value = Fix64Vec2.Zero });
+
+            var validator = new NavContractValidationSystem(engine.World, catalog, engine);
+            var exception = Assert.Throws<InvalidOperationException>(() => validator.Update(1f / 60f));
+            Assert.That(exception?.Message, Does.Contain("NavCrowdResolve requires NavCrowdProfileRef"));
+        }
+
         private static string FindRepoRoot()
         {
             string current = TestContext.CurrentContext.TestDirectory;
@@ -302,6 +445,41 @@ namespace Ludots.Tests.Navigation2D
             }
 
             throw new DirectoryNotFoundException("Unable to locate repository root from test directory.");
+        }
+
+        private static GameEngine CreateNavigationEngine(bool loadMap)
+        {
+            string repoRoot = FindRepoRoot();
+            string assetsRoot = Path.Combine(repoRoot, "assets");
+            string modsRoot = Path.Combine(repoRoot, "mods");
+
+            var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(
+                new List<string>
+                {
+                    Path.Combine(modsRoot, "LudotsCoreMod"),
+                    Path.Combine(modsRoot, "CoreInputMod"),
+                    Path.Combine(modsRoot, "Navigation2DPlaygroundMod")
+                },
+                assetsRoot);
+
+            if (loadMap)
+            {
+                engine.Start();
+                engine.LoadMap(engine.MergedConfig.StartupMapId);
+            }
+
+            return engine;
+        }
+
+        private static NavActor CreateExplicitNavActor()
+        {
+            return new NavActor
+            {
+                IsEnabled = 1,
+                PhysicsMode = NavPhysicsMode.NavCrowdResolve,
+                DefaultSolverMode = NavSolverMode.Hybrid,
+            };
         }
     }
 }

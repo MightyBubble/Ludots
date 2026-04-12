@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Arch.LowLevel;
+using Ludots.Core.Navigation2D.Components;
 
 namespace Ludots.Core.Navigation2D.Runtime
 {
@@ -40,6 +41,12 @@ namespace Ludots.Core.Navigation2D.Runtime
         public UnsafeList<float> TimeHorizons;
         public UnsafeList<int> MaxNeighborCounts;
         public UnsafeList<int> FlowIds;
+        public UnsafeList<byte> SolverModes;
+        public UnsafeList<int> TeamIds;
+        public UnsafeList<byte> CrowdEnabled;
+        public UnsafeList<float> CrowdMasses;
+        public UnsafeList<float> CrowdYieldWeights;
+        public UnsafeList<byte> CrowdPushClasses;
         public UnsafeList<Vector2> CachedSteeringDesiredVelocities;
         public UnsafeList<Vector2> CachedSteeringPreferredVelocities;
         public UnsafeList<Vector2> CachedSteeringVelocities;
@@ -104,6 +111,12 @@ namespace Ludots.Core.Navigation2D.Runtime
             TimeHorizons = new UnsafeList<float>(settings.MaxAgents);
             MaxNeighborCounts = new UnsafeList<int>(settings.MaxAgents);
             FlowIds = new UnsafeList<int>(settings.MaxAgents);
+            SolverModes = new UnsafeList<byte>(settings.MaxAgents);
+            TeamIds = new UnsafeList<int>(settings.MaxAgents);
+            CrowdEnabled = new UnsafeList<byte>(settings.MaxAgents);
+            CrowdMasses = new UnsafeList<float>(settings.MaxAgents);
+            CrowdYieldWeights = new UnsafeList<float>(settings.MaxAgents);
+            CrowdPushClasses = new UnsafeList<byte>(settings.MaxAgents);
             CachedSteeringDesiredVelocities = new UnsafeList<Vector2>(settings.MaxAgents);
             CachedSteeringPreferredVelocities = new UnsafeList<Vector2>(settings.MaxAgents);
             CachedSteeringVelocities = new UnsafeList<Vector2>(settings.MaxAgents);
@@ -235,14 +248,21 @@ namespace Ludots.Core.Navigation2D.Runtime
             float timeHorizon,
             int maxNeighbors,
             int flowId,
+            NavSolverMode solverMode,
             bool hasPointGoal,
             in Vector2 goalPosition,
             float goalRadius,
             float goalDistance,
-            bool smartStopSuppressed)
+            bool smartStopSuppressed,
+            int teamId,
+            bool crowdEnabled,
+            float crowdMass,
+            float crowdYieldWeight,
+            NavPushClass crowdPushClass)
         {
             byte hasPointGoalByte = hasPointGoal ? (byte)1 : (byte)0;
             byte smartStopSuppressedByte = smartStopSuppressed ? (byte)1 : (byte)0;
+            byte crowdEnabledByte = crowdEnabled ? (byte)1 : (byte)0;
 
             if (Positions[agentIndex] != position)
             {
@@ -264,6 +284,12 @@ namespace Ludots.Core.Navigation2D.Runtime
                 TimeHorizons[agentIndex] != timeHorizon ||
                 MaxNeighborCounts[agentIndex] != maxNeighbors ||
                 FlowIds[agentIndex] != flowId ||
+                SolverModes[agentIndex] != (byte)solverMode ||
+                TeamIds[agentIndex] != teamId ||
+                CrowdEnabled[agentIndex] != crowdEnabledByte ||
+                CrowdMasses[agentIndex] != crowdMass ||
+                CrowdYieldWeights[agentIndex] != crowdYieldWeight ||
+                CrowdPushClasses[agentIndex] != (byte)crowdPushClass ||
                 GoalPositions[agentIndex] != goalPosition ||
                 GoalRadii[agentIndex] != goalRadius ||
                 GoalDistances[agentIndex] != goalDistance ||
@@ -281,6 +307,12 @@ namespace Ludots.Core.Navigation2D.Runtime
             TimeHorizons[agentIndex] = timeHorizon;
             MaxNeighborCounts[agentIndex] = maxNeighbors;
             FlowIds[agentIndex] = flowId;
+            SolverModes[agentIndex] = (byte)solverMode;
+            TeamIds[agentIndex] = teamId;
+            CrowdEnabled[agentIndex] = crowdEnabledByte;
+            CrowdMasses[agentIndex] = crowdMass;
+            CrowdYieldWeights[agentIndex] = crowdYieldWeight;
+            CrowdPushClasses[agentIndex] = (byte)crowdPushClass;
             GoalPositions[agentIndex] = goalPosition;
             GoalRadii[agentIndex] = goalRadius;
             GoalDistances[agentIndex] = goalDistance;
@@ -288,8 +320,8 @@ namespace Ludots.Core.Navigation2D.Runtime
             SmartStopSuppressed[agentIndex] = smartStopSuppressedByte;
         }
 
-        public bool SyncAgent(
-            int entityId,
+        public void UpdateExistingAgent(
+            int agentIndex,
             in Vector2 position,
             in Vector2 velocity,
             float radius,
@@ -305,6 +337,53 @@ namespace Ludots.Core.Navigation2D.Runtime
             float goalDistance,
             bool smartStopSuppressed)
         {
+            UpdateExistingAgent(
+                agentIndex,
+                position,
+                velocity,
+                radius,
+                maxSpeed,
+                maxAccel,
+                neighborDistance,
+                timeHorizon,
+                maxNeighbors,
+                flowId,
+                NavSolverMode.Hybrid,
+                hasPointGoal,
+                goalPosition,
+                goalRadius,
+                goalDistance,
+                smartStopSuppressed,
+                teamId: 0,
+                crowdEnabled: false,
+                crowdMass: 1f,
+                crowdYieldWeight: 1f,
+                crowdPushClass: NavPushClass.Cooperative);
+        }
+
+        public bool SyncAgent(
+            int entityId,
+            in Vector2 position,
+            in Vector2 velocity,
+            float radius,
+            float maxSpeed,
+            float maxAccel,
+            float neighborDistance,
+            float timeHorizon,
+            int maxNeighbors,
+            int flowId,
+            NavSolverMode solverMode,
+            bool hasPointGoal,
+            in Vector2 goalPosition,
+            float goalRadius,
+            float goalDistance,
+            bool smartStopSuppressed,
+            int teamId,
+            bool crowdEnabled,
+            float crowdMass,
+            float crowdYieldWeight,
+            NavPushClass crowdPushClass)
+        {
             if (entityId < 0)
             {
                 return false;
@@ -312,6 +391,7 @@ namespace Ludots.Core.Navigation2D.Runtime
 
             byte hasPointGoalByte = hasPointGoal ? (byte)1 : (byte)0;
             byte smartStopSuppressedByte = smartStopSuppressed ? (byte)1 : (byte)0;
+            byte crowdEnabledByte = crowdEnabled ? (byte)1 : (byte)0;
             if (!TryGetAgentIndex(entityId, out int agentIndex))
             {
                 if (Count >= Settings.MaxAgents)
@@ -335,6 +415,12 @@ namespace Ludots.Core.Navigation2D.Runtime
                 TimeHorizons.Add(timeHorizon);
                 MaxNeighborCounts.Add(maxNeighbors);
                 FlowIds.Add(flowId);
+                SolverModes.Add((byte)solverMode);
+                TeamIds.Add(teamId);
+                CrowdEnabled.Add(crowdEnabledByte);
+                CrowdMasses.Add(crowdMass);
+                CrowdYieldWeights.Add(crowdYieldWeight);
+                CrowdPushClasses.Add((byte)crowdPushClass);
                 GoalPositions.Add(goalPosition);
                 GoalRadii.Add(goalRadius);
                 GoalDistances.Add(goalDistance);
@@ -378,6 +464,12 @@ namespace Ludots.Core.Navigation2D.Runtime
                 TimeHorizons[agentIndex] != timeHorizon ||
                 MaxNeighborCounts[agentIndex] != maxNeighbors ||
                 FlowIds[agentIndex] != flowId ||
+                SolverModes[agentIndex] != (byte)solverMode ||
+                TeamIds[agentIndex] != teamId ||
+                CrowdEnabled[agentIndex] != crowdEnabledByte ||
+                CrowdMasses[agentIndex] != crowdMass ||
+                CrowdYieldWeights[agentIndex] != crowdYieldWeight ||
+                CrowdPushClasses[agentIndex] != (byte)crowdPushClass ||
                 GoalPositions[agentIndex] != goalPosition ||
                 GoalRadii[agentIndex] != goalRadius ||
                 GoalDistances[agentIndex] != goalDistance ||
@@ -395,12 +487,99 @@ namespace Ludots.Core.Navigation2D.Runtime
             TimeHorizons[agentIndex] = timeHorizon;
             MaxNeighborCounts[agentIndex] = maxNeighbors;
             FlowIds[agentIndex] = flowId;
+            SolverModes[agentIndex] = (byte)solverMode;
+            TeamIds[agentIndex] = teamId;
+            CrowdEnabled[agentIndex] = crowdEnabledByte;
+            CrowdMasses[agentIndex] = crowdMass;
+            CrowdYieldWeights[agentIndex] = crowdYieldWeight;
+            CrowdPushClasses[agentIndex] = (byte)crowdPushClass;
             GoalPositions[agentIndex] = goalPosition;
             GoalRadii[agentIndex] = goalRadius;
             GoalDistances[agentIndex] = goalDistance;
             HasPointGoals[agentIndex] = hasPointGoalByte;
             SmartStopSuppressed[agentIndex] = smartStopSuppressedByte;
             return true;
+        }
+
+        public bool SyncAgent(
+            int entityId,
+            in Vector2 position,
+            in Vector2 velocity,
+            float radius,
+            float maxSpeed,
+            float maxAccel,
+            float neighborDistance,
+            float timeHorizon,
+            int maxNeighbors,
+            int flowId,
+            bool hasPointGoal,
+            in Vector2 goalPosition,
+            float goalRadius,
+            float goalDistance,
+            bool smartStopSuppressed)
+        {
+            return SyncAgent(
+                entityId,
+                position,
+                velocity,
+                radius,
+                maxSpeed,
+                maxAccel,
+                neighborDistance,
+                timeHorizon,
+                maxNeighbors,
+                flowId,
+                NavSolverMode.Hybrid,
+                hasPointGoal,
+                goalPosition,
+                goalRadius,
+                goalDistance,
+                smartStopSuppressed,
+                teamId: 0,
+                crowdEnabled: false,
+                crowdMass: 1f,
+                crowdYieldWeight: 1f,
+                crowdPushClass: NavPushClass.Cooperative);
+        }
+
+        public bool SyncAgent(
+            int entityId,
+            in Vector2 position,
+            in Vector2 velocity,
+            float radius,
+            float maxSpeed,
+            float maxAccel,
+            float neighborDistance,
+            float timeHorizon,
+            int maxNeighbors,
+            int flowId,
+            bool hasPointGoal,
+            in Vector2 goalPosition,
+            float goalRadius,
+            float goalDistance)
+        {
+            return SyncAgent(
+                entityId,
+                position,
+                velocity,
+                radius,
+                maxSpeed,
+                maxAccel,
+                neighborDistance,
+                timeHorizon,
+                maxNeighbors,
+                flowId,
+                NavSolverMode.Hybrid,
+                hasPointGoal,
+                goalPosition,
+                goalRadius,
+                goalDistance,
+                smartStopSuppressed: false,
+                teamId: 0,
+                crowdEnabled: false,
+                crowdMass: 1f,
+                crowdYieldWeight: 1f,
+                crowdPushClass: NavPushClass.Cooperative);
         }
 
         public Navigation2DWorldSyncResult EndSync()
@@ -451,6 +630,12 @@ namespace Ludots.Core.Navigation2D.Runtime
             TimeHorizons.Clear();
             MaxNeighborCounts.Clear();
             FlowIds.Clear();
+            SolverModes.Clear();
+            TeamIds.Clear();
+            CrowdEnabled.Clear();
+            CrowdMasses.Clear();
+            CrowdYieldWeights.Clear();
+            CrowdPushClasses.Clear();
             GoalPositions.Clear();
             GoalRadii.Clear();
             GoalDistances.Clear();
@@ -498,6 +683,12 @@ namespace Ludots.Core.Navigation2D.Runtime
             TimeHorizons.Dispose();
             MaxNeighborCounts.Dispose();
             FlowIds.Dispose();
+            SolverModes.Dispose();
+            TeamIds.Dispose();
+            CrowdEnabled.Dispose();
+            CrowdMasses.Dispose();
+            CrowdYieldWeights.Dispose();
+            CrowdPushClasses.Dispose();
             GoalPositions.Dispose();
             GoalRadii.Dispose();
             GoalDistances.Dispose();
@@ -557,6 +748,12 @@ namespace Ludots.Core.Navigation2D.Runtime
                 TimeHorizons[index] = TimeHorizons[lastIndex];
                 MaxNeighborCounts[index] = MaxNeighborCounts[lastIndex];
                 FlowIds[index] = FlowIds[lastIndex];
+                SolverModes[index] = SolverModes[lastIndex];
+                TeamIds[index] = TeamIds[lastIndex];
+                CrowdEnabled[index] = CrowdEnabled[lastIndex];
+                CrowdMasses[index] = CrowdMasses[lastIndex];
+                CrowdYieldWeights[index] = CrowdYieldWeights[lastIndex];
+                CrowdPushClasses[index] = CrowdPushClasses[lastIndex];
                 GoalPositions[index] = GoalPositions[lastIndex];
                 GoalRadii[index] = GoalRadii[lastIndex];
                 GoalDistances[index] = GoalDistances[lastIndex];
@@ -589,6 +786,12 @@ namespace Ludots.Core.Navigation2D.Runtime
             TimeHorizons.RemoveAt(lastIndex);
             MaxNeighborCounts.RemoveAt(lastIndex);
             FlowIds.RemoveAt(lastIndex);
+            SolverModes.RemoveAt(lastIndex);
+            TeamIds.RemoveAt(lastIndex);
+            CrowdEnabled.RemoveAt(lastIndex);
+            CrowdMasses.RemoveAt(lastIndex);
+            CrowdYieldWeights.RemoveAt(lastIndex);
+            CrowdPushClasses.RemoveAt(lastIndex);
             GoalPositions.RemoveAt(lastIndex);
             GoalRadii.RemoveAt(lastIndex);
             GoalDistances.RemoveAt(lastIndex);

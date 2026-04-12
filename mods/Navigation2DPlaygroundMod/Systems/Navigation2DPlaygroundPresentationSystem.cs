@@ -3,6 +3,8 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.Navigation2D;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
@@ -253,6 +255,10 @@ namespace Navigation2DPlaygroundMod.Systems
             long spatialDirtyAgents = 0;
             long spatialCellMigrations = 0;
             bool uiDirty = _engine.GetService(CoreServiceKeys.UIRoot) is UIRoot uiRoot && uiRoot.IsDirty;
+            int navTargetHz = 0;
+            int navMaxStepsPerFixedTick = 0;
+            int physicsTargetHz = 0;
+            int physicsMaxStepsPerFixedTick = 0;
 
             float frameMs = deltaTime > 1e-6f ? deltaTime * 1000f : 0f;
             if (_smoothedFrameMs <= 0f)
@@ -314,13 +320,25 @@ namespace Navigation2DPlaygroundMod.Systems
             int flowDebugLines = _engine.GetService(Navigation2DPlaygroundKeys.FlowDebugLines);
             string scenarioId = _engine.GetService(Navigation2DPlaygroundKeys.ScenarioId) ?? "unknown";
             string scenarioName = _engine.GetService(Navigation2DPlaygroundKeys.ScenarioName) ?? "Unknown";
+            var diagnostics = _engine.GetService(CoreServiceKeys.NavDiagnosticsSnapshot);
+            if (_engine.GetService(CoreServiceKeys.Navigation2DTickPolicy) is Navigation2DTickPolicy navTickPolicy)
+            {
+                navTargetHz = navTickPolicy.TargetHz;
+                navMaxStepsPerFixedTick = navTickPolicy.MaxStepsPerFixedTick;
+            }
+
+            if (_engine.GetService(CoreServiceKeys.Physics2DTickPolicy) is Physics2DTickPolicy physicsTickPolicy)
+            {
+                physicsTargetHz = physicsTickPolicy.TargetHz;
+                physicsMaxStepsPerFixedTick = physicsTickPolicy.MaxStepsPerFixedTick;
+            }
 
             int selectedCount = Navigation2DPlaygroundSelectionView.SnapshotSelectedEntities(_engine.World, _engine.GlobalContext).Length;
 
             int x = 16;
             int y = 540;
             int w = 860;
-            int h = 192;
+            int h = 224;
             Vector4 background = new(0.04f, 0.05f, 0.08f, 0.68f);
             Vector4 border = new(0.35f, 0.75f, 1f, 0.5f);
             Vector4 title = new(0.9f, 0.95f, 1f, 1f);
@@ -337,7 +355,13 @@ namespace Navigation2DPlaygroundMod.Systems
             overlay.AddText(x + 10, y + 130, $"FlowEnabled={flowEnabled}  FlowDebug={flowDebug}  Mode={flowMode}  Iter={flowIterations}  ActiveTiles={flowActiveTiles}  LoadedTiles={flowLoadedTiles}  DbgLines={flowDebugLines}", 14, text);
             overlay.AddText(x + 10, y + 150, $"FlowWindow={flowWindowWidth}x{flowWindowHeight}  Selected={flowSelectedTiles}  Retained={flowRetainedTiles}  New={flowNewTiles}  Evict={flowEvictedTiles}", 14, text);
             overlay.AddText(x + 10, y + 170, $"Spatial={spatialMode}  Rebuilds={spatialRebuilds}  Incremental={spatialIncrementalUpdates}  Dirty={spatialDirtyAgents}  CellMigrations={spatialCellMigrations}", 14, text);
-            overlay.AddText(x + 10, y + 186, "Panel is primary UI. Overlay remains telemetry-only for headless evidence and perf reads.", 13, hint);
+            overlay.AddText(x + 10, y + 190, diagnostics == null
+                ? "Diag=n/a"
+                : $"Diag Groups={diagnostics.ActiveGroups} Arrived={diagnostics.ArrivedGroups} Retry={diagnostics.RetryCount} Timeout={diagnostics.TimeoutCount} Abandon={diagnostics.AbandonCount}  Solver[orca={diagnostics.PreciseOrcaAgents} crowd={diagnostics.CrowdFlowAgents} hybrid={diagnostics.HybridAgents}]  Rules={diagnostics.ActiveRuleSummary}  Alloc={diagnostics.FrameAllocBytes / 1024f:F1}KB Heap={diagnostics.HeapBytes / (1024f * 1024f):F1}MB", 14, text);
+            overlay.AddText(x + 10, y + 210, diagnostics == null
+                ? "Perf=n/a"
+                : $"Perf FixedHz={diagnostics.FixedHz}  NavHz={diagnostics.NavigationHz}({diagnostics.NavigationStepsLastFixedTick}) tgt={navTargetHz}/{navMaxStepsPerFixedTick}  PhysHz={diagnostics.PhysicsHz}({diagnostics.PhysicsStepsLastFixedTick}) tgt={physicsTargetHz}/{physicsMaxStepsPerFixedTick}  Nav={diagnostics.NavigationMs:F2}ms  Physics={diagnostics.PhysicsMs:F2}ms  Present={diagnostics.PresentationMs:F2}ms  Frame={diagnostics.FrameMs:F2}ms", 14, text);
+            overlay.AddText(x + 10, y + 226, "Panel is primary UI. Overlay remains telemetry-only for headless evidence, FPS, alloc, and hot-budget reads.", 13, hint);
         }
 
         private static bool ContainsEntity(ReadOnlySpan<Entity> selected, Entity entity)

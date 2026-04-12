@@ -152,7 +152,8 @@ namespace Ludots.Tests.Navigation2D
         private static BenchmarkHarness CreateHarness(Navigation2DAvoidanceMode mode, NavBenchmarkScenario scenario)
         {
             var world = World.Create();
-            var runtime = new Navigation2DRuntime(CreateConfig(mode, maxAgents: AgentCount + 1024), gridCellSizeCm: GridCellSizeCm, loadedChunks: null)
+            var config = Navigation2DTestContracts.EnsureExplicitContracts(CreateConfig(mode, maxAgents: AgentCount + 1024));
+            var runtime = new Navigation2DRuntime(config, gridCellSizeCm: GridCellSizeCm, loadedChunks: null)
             {
                 FlowIterationsPerTick = 0,
                 FlowEnabled = false

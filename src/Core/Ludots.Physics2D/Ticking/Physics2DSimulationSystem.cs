@@ -4,6 +4,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Physics2D;
+using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
 
@@ -25,6 +26,7 @@ namespace Ludots.Core.Physics2D.Ticking
         private readonly World _world;
         private readonly IClock _clock;
         private readonly Physics2DTickPolicy _tickPolicy;
+        private readonly SimulationTimingSnapshot? _timingSnapshot;
         private Entity _statsEntity;
         private Entity _runtimeStateEntity;
         private QueryDescription _activePairsQuery;
@@ -47,11 +49,12 @@ namespace Ludots.Core.Physics2D.Ticking
         private int _physicsHz;
         private DiscreteRateTickDistributor? _distributor;
 
-        public Physics2DSimulationSystem(World world, IClock clock, Physics2DTickPolicy tickPolicy)
+        public Physics2DSimulationSystem(World world, IClock clock, Physics2DTickPolicy tickPolicy, SimulationTimingSnapshot? timingSnapshot = null)
         {
             _world = world;
             _clock = clock;
             _tickPolicy = tickPolicy;
+            _timingSnapshot = timingSnapshot;
 
             Build = new BuildPhysicsWorldSystem2D(world);
             Spatial = new AdaptiveSpatialSystem2D(world, Build);
@@ -148,6 +151,14 @@ namespace Ludots.Core.Physics2D.Ticking
                 ContactPairs = contactPairs
             };
             _world.Set(_statsEntity, stats);
+
+            if (_timingSnapshot != null)
+            {
+                _timingSnapshot.FixedHz = fixedHz;
+                _timingSnapshot.PhysicsHz = _tickPolicy.TargetHz;
+                _timingSnapshot.PhysicsStepsLastFixedTick = stepsToRun;
+                _timingSnapshot.PhysicsMs = _stopwatch.Elapsed.TotalMilliseconds;
+            }
         }
 
         public void AfterUpdate(in float t)

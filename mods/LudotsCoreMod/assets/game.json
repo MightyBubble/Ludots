@@ -4,6 +4,76 @@
   "presentation": {
     "performerInstanceCapacity": 2048
   },
+  "Navigation2D": {
+    "Contracts": {
+      "NavProfiles": [
+        {
+          "Id": "rts_default",
+          "MaxSpeedCmPerSec": 800,
+          "MaxAccelCmPerSec2": 6000,
+          "RadiusCm": 40,
+          "NeighborDistCm": 400,
+          "TimeHorizonSec": 2.0,
+          "MaxNeighbors": 16,
+          "GoalRadiusCm": 120
+        }
+      ],
+      "CrowdProfiles": [
+        {
+          "Id": "crowd_default",
+          "GeometryRadiusCm": 40,
+          "NavMass": 1.0,
+          "YieldWeight": 1.0,
+          "PushClass": "Cooperative",
+          "SolverPreference": "Hybrid",
+          "RetryLimit": 2,
+          "TimeoutTicks": 90,
+          "AbandonTicks": 240
+        }
+      ],
+      "KnockbackPolicies": [
+        {
+          "Id": "knockback_default",
+          "OverrideTicks": 15,
+          "ClearNavGoalWhileActive": true
+        }
+      ],
+      "GroupSolver": {
+        "Enabled": true,
+        "PreciseOrcaMaxGroupSize": 32,
+        "CrowdFlowMinGroupSize": 128,
+        "Rules": [
+          {
+            "Id": "precise_orca",
+            "MinGroupSize": 0,
+            "MaxGroupSize": 32,
+            "SolverMode": "PreciseOrca",
+            "Reason": "group_size_small"
+          },
+          {
+            "Id": "hybrid_mid",
+            "MinGroupSize": 33,
+            "MaxGroupSize": 127,
+            "SolverMode": "Hybrid",
+            "Reason": "group_size_mid"
+          },
+          {
+            "Id": "crowd_flow",
+            "MinGroupSize": 128,
+            "MaxGroupSize": 2147483647,
+            "SolverMode": "CrowdFlow",
+            "Reason": "group_size_large"
+          }
+        ]
+      },
+      "CrowdRelationship": {
+        "FriendlyYieldFactor": 1.0,
+        "NeutralYieldFactor": 0.35,
+        "HostileYieldFactor": 0.2,
+        "DominantPushMassRatio": 2.0
+      }
+    }
+  },
   "constants": {
     "orderTypeIds": {
       "castAbility": 100,

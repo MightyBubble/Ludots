@@ -37,7 +37,7 @@ namespace Ludots.Core.Input.Selection
             _world = world;
             _globals = globals;
             _spatial = spatial;
-            _rules = rules ?? ResolveRules(globals) ?? SelectionRuleRegistry.CreateWithDefaults();
+            _rules = rules ?? ResolveRules(globals);
         }
 
         public void Initialize() { }
@@ -204,14 +204,15 @@ namespace Ludots.Core.Input.Selection
             return RelationshipFilterUtil.Passes(filter, originTeamId, team.Id);
         }
 
-        private static SelectionRuleRegistry? ResolveRules(Dictionary<string, object> globals)
+        private static SelectionRuleRegistry ResolveRules(Dictionary<string, object> globals)
         {
             if (globals.TryGetValue(CoreServiceKeys.SelectionRuleRegistry.Name, out var obj) && obj is SelectionRuleRegistry rules)
             {
                 return rules;
             }
 
-            return null;
+            throw new InvalidOperationException(
+                $"{nameof(GasSelectionResponseSystem)} requires {CoreServiceKeys.SelectionRuleRegistry.Name} to be registered.");
         }
 
         public void BeforeUpdate(in float dt) { }

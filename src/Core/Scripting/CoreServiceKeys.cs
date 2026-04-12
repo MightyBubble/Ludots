@@ -238,6 +238,10 @@ namespace Ludots.Core.Scripting
         // --- Navigation ---
         public static readonly ServiceKey<LoadedGraphRuntime> LoadedGraphRuntime = new("LoadedGraphRuntime");
         public static readonly ServiceKey<Navigation2DRuntime> Navigation2DRuntime = new("Navigation2DRuntime");
+        public static readonly ServiceKey<Navigation2DContractCatalog> Navigation2DContractCatalog = new("Navigation2DContractCatalog");
+        public static readonly ServiceKey<NavGroupRuntimeService> NavGroupRuntimeService = new("NavGroupRuntimeService");
+        public static readonly ServiceKey<NavDiagnosticsSnapshot> NavDiagnosticsSnapshot = new("NavDiagnosticsSnapshot");
+        public static readonly ServiceKey<SimulationTimingSnapshot> SimulationTimingSnapshot = new("SimulationTimingSnapshot");
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");
         public static readonly ServiceKey<NavMeshProfileRegistry> NavMeshProfiles = new("NavMeshProfiles");
         public static readonly ServiceKey<NavQueryServiceRegistry> NavQueryServices = new("NavQueryServices");

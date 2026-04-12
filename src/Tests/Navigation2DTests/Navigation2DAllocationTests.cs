@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Runtime;
@@ -19,7 +20,16 @@ namespace Ludots.Tests.Navigation2D
         public void Navigation2DSteering_AllocatesZero()
         {
             using var world = World.Create();
-            using var runtime = new Navigation2DRuntime(maxAgents: 4096, gridCellSizeCm: 100, loadedChunks: null);
+            Navigation2DConfig config = Navigation2DTestContracts.EnsureExplicitContracts(
+                new Navigation2DConfig
+                {
+                    Enabled = true,
+                    MaxAgents = 4096,
+                });
+            using var runtime = new Navigation2DRuntime(
+                config,
+                gridCellSizeCm: 100,
+                loadedChunks: null);
             var sys = new Navigation2DSteeringSystem2D(world, runtime);
 
             world.Create(new NavFlowGoal2D

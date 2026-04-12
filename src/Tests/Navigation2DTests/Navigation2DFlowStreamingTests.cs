@@ -259,7 +259,7 @@ namespace Ludots.Tests.Navigation2D
 
         private static Navigation2DRuntime CreateRuntime(TestLoadedChunks? loaded, int activationRadiusTiles, int maxActiveTiles, int unloadGraceTicks, float maxPotentialCells)
         {
-            var config = new Navigation2DConfig
+            var config = Navigation2DTestContracts.EnsureExplicitContracts(new Navigation2DConfig
             {
                 Enabled = true,
                 MaxAgents = 32,
@@ -272,7 +272,7 @@ namespace Ludots.Tests.Navigation2D
                     UnloadGraceTicks = unloadGraceTicks,
                     MaxPotentialCells = maxPotentialCells,
                 }
-            }.CloneValidated();
+            });
 
             return new Navigation2DRuntime(config, gridCellSizeCm: CellSizeCm, loadedChunks: loaded);
         }

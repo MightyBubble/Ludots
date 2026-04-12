@@ -136,9 +136,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             completed = false;
             nextWaypointIndex = currentWaypointIndex;
+            bool isFormalNavActor = World.Has<NavActor>(entity);
             if (!World.Has<NavAgent2D>(entity) ||
                 !World.Has<Position2D>(entity))
             {
+                if (isFormalNavActor)
+                {
+                    throw new InvalidOperationException($"MoveToWorldCmOrderSystem found NavActor entity {entity.Id} without materialized navigation components.");
+                }
+
                 return false;
             }
 

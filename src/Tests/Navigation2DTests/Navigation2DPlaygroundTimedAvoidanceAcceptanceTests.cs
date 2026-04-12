@@ -121,11 +121,13 @@ namespace Ludots.Tests.Navigation2D
                 string traceJsonl = BuildTraceJsonl(timeline);
                 string pathMmd = BuildPathMermaid();
                 string visibleChecklist = BuildVisibleChecklist(captureFrames);
+                string diagnosticsDump = BuildDiagnosticsDump(engine, frameTimesMs);
 
                 File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), battleReport);
                 File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), traceJsonl);
                 File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), pathMmd);
                 File.WriteAllText(Path.Combine(artifactDir, "visible-checklist.md"), visibleChecklist);
+                File.WriteAllText(Path.Combine(artifactDir, "diagnostics.txt"), diagnosticsDump);
                 WriteTimelineSheet(captureFrames, Path.Combine(screensDir, "timeline.png"));
 
                 Assert.That(acceptance.Success, Is.True, acceptance.FailureSummary);
@@ -145,7 +147,13 @@ namespace Ludots.Tests.Navigation2D
             engine.World.Destroy(in _scenarioEntitiesQuery);
             engine.World.Destroy(in _flowGoalQuery);
             var scenario = Navigation2DPlaygroundScenarioSpawner.GetScenario(playgroundConfig, Navigation2DPlaygroundState.CurrentScenarioIndex);
-            var summary = Navigation2DPlaygroundScenarioSpawner.SpawnScenario(engine.World, scenario, agentsPerTeam);
+            var summary = Navigation2DPlaygroundScenarioSpawner.SpawnScenario(
+                engine.World,
+                engine.GetService(CoreServiceKeys.Navigation2DContractCatalog)
+                    ?? throw new InvalidOperationException("Navigation2D playground acceptance requires Navigation2DContractCatalog."),
+                playgroundConfig,
+                scenario,
+                agentsPerTeam);
             Navigation2DPlaygroundControlSystem.PublishScenarioServices(engine, playgroundConfig, summary, agentsPerTeam, Navigation2DPlaygroundState.CurrentScenarioIndex);
         }
 
@@ -404,6 +412,7 @@ namespace Ludots.Tests.Navigation2D
             sb.AppendLine("2. Force the `Pass Through` scenario and deterministic agent count through the existing playground state + reset input.");
             sb.AppendLine("3. Simulate long enough to capture approach, collision, crossing, and post-clear separation.");
             sb.AppendLine("4. Render screenshot frames and fail if the run never forms a real encounter or never finishes the pass-through.");
+            sb.AppendLine("5. Dump final diagnostics so nav/physics/presentation timing can be audited without rerunning the scene.");
             sb.AppendLine();
             sb.AppendLine("## Key Events");
             sb.AppendLine($"- first meaningful contact tick: `{FormatTick(acceptance.FirstContactTick)}`");
@@ -411,6 +420,7 @@ namespace Ludots.Tests.Navigation2D
             sb.AppendLine($"- first mutual cross tick: `{FormatTick(acceptance.FirstCrossTick)}`");
             sb.AppendLine($"- majority crossed tick: `{FormatTick(acceptance.MajorityCrossTick)}`");
             sb.AppendLine($"- center cleared tick: `{FormatTick(acceptance.ClearTick)}`");
+            sb.AppendLine("- diagnostics dump: `artifacts/acceptance/navigation2d-playground-pass-through-full-run/diagnostics.txt`");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
             foreach (AvoidanceSnapshot snapshot in timeline.Where(t => t.Tick == 0 || t.Tick % CaptureStrideTicks == 0 || t.Tick == FinalTick))
@@ -437,6 +447,48 @@ namespace Ludots.Tests.Navigation2D
             sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
             sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
             sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `CoreInputMod`, `Navigation2DPlaygroundState`, `ScreenOverlayBuffer`, `Navigation2DRuntime`");
+            return sb.ToString();
+        }
+
+        private static string BuildDiagnosticsDump(GameEngine engine, IReadOnlyList<double> frameTimesMs)
+        {
+            var diagnostics = engine.GetService(CoreServiceKeys.NavDiagnosticsSnapshot);
+            var sb = new StringBuilder();
+            sb.AppendLine("Navigation2D Timed Avoidance Diagnostics");
+            sb.AppendLine($"scenario={engine.GetService(Navigation2DPlaygroundKeys.ScenarioName) ?? "Unknown"}");
+            sb.AppendLine($"agents_per_team={engine.GetService(Navigation2DPlaygroundKeys.AgentsPerTeam)}");
+            sb.AppendLine($"live_agents={engine.GetService(Navigation2DPlaygroundKeys.LiveAgentsTotal)}");
+            sb.AppendLine($"frame_samples={frameTimesMs.Count}");
+            sb.AppendLine($"frame_ms_median={Median(frameTimesMs.ToArray()):F4}");
+            sb.AppendLine($"frame_ms_max={(frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max()):F4}");
+
+            if (diagnostics == null)
+            {
+                sb.AppendLine("diagnostics=unavailable");
+                return sb.ToString();
+            }
+
+            sb.AppendLine($"active_agents={diagnostics.ActiveAgents}");
+            sb.AppendLine($"active_groups={diagnostics.ActiveGroups}");
+            sb.AppendLine($"arrived_groups={diagnostics.ArrivedGroups}");
+            sb.AppendLine($"retry={diagnostics.RetryCount}");
+            sb.AppendLine($"timeout={diagnostics.TimeoutCount}");
+            sb.AppendLine($"abandon={diagnostics.AbandonCount}");
+            sb.AppendLine($"solver_orca={diagnostics.PreciseOrcaAgents}");
+            sb.AppendLine($"solver_crowd={diagnostics.CrowdFlowAgents}");
+            sb.AppendLine($"solver_hybrid={diagnostics.HybridAgents}");
+            sb.AppendLine($"rules={diagnostics.ActiveRuleSummary}");
+            sb.AppendLine($"fixed_hz={diagnostics.FixedHz}");
+            sb.AppendLine($"nav_hz={diagnostics.NavigationHz}");
+            sb.AppendLine($"nav_steps_last_fixed={diagnostics.NavigationStepsLastFixedTick}");
+            sb.AppendLine($"physics_hz={diagnostics.PhysicsHz}");
+            sb.AppendLine($"physics_steps_last_fixed={diagnostics.PhysicsStepsLastFixedTick}");
+            sb.AppendLine($"nav_ms={diagnostics.NavigationMs:F4}");
+            sb.AppendLine($"physics_ms={diagnostics.PhysicsMs:F4}");
+            sb.AppendLine($"presentation_ms={diagnostics.PresentationMs:F4}");
+            sb.AppendLine($"frame_ms={diagnostics.FrameMs:F4}");
+            sb.AppendLine($"frame_alloc_bytes={diagnostics.FrameAllocBytes}");
+            sb.AppendLine($"heap_bytes={diagnostics.HeapBytes}");
             return sb.ToString();
         }
 

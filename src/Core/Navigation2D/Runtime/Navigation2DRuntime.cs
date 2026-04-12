@@ -16,6 +16,7 @@ namespace Ludots.Core.Navigation2D.Runtime
         private CrowdFlowChunkStreaming? _streaming;
 
         public Navigation2DConfig Config { get; }
+        public Navigation2DContractCatalog ContractCatalog { get; }
         public Fix64 WorldGridCellSizeCm { get; }
 
         public bool FlowEnabled { get; set; } = false;
@@ -25,7 +26,13 @@ namespace Ludots.Core.Navigation2D.Runtime
 
         public Navigation2DRuntime(Navigation2DConfig config, int gridCellSizeCm, ILoadedChunks? loadedChunks)
         {
-            Config = (config ?? new Navigation2DConfig()).CloneValidated();
+            if (config == null)
+            {
+                throw new ArgumentNullException(nameof(config));
+            }
+
+            Config = config.CloneValidated();
+            ContractCatalog = new Navigation2DContractCatalog(Config);
             WorldGridCellSizeCm = Fix64.FromInt(gridCellSizeCm);
 
             var steeringCellSize = Config.Spatial.CellSizeCm > 0
@@ -47,11 +54,6 @@ namespace Ludots.Core.Navigation2D.Runtime
 
             FlowIterationsPerTick = Config.FlowIterationsPerTick;
             BindLoadedChunks(loadedChunks);
-        }
-
-        public Navigation2DRuntime(int maxAgents, int gridCellSizeCm, ILoadedChunks? loadedChunks)
-            : this(new Navigation2DConfig { Enabled = true, MaxAgents = maxAgents }, gridCellSizeCm, loadedChunks)
-        {
         }
 
         public int FlowCount => Flows.Length;

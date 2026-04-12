@@ -4,6 +4,8 @@ using Arch.Core;
 using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.Navigation2D;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Scripting;
@@ -106,9 +108,15 @@ namespace Navigation2DPlaygroundMod.UI
                     Ui.Text($"Scenario: {state.ScenarioIndexLabel}  {state.ScenarioName}").FontSize(13f).Color("#D0D8E6"),
                     Ui.Text($"Mode: {state.ActiveModeId}  Tool: {state.ToolModeLabel}").FontSize(13f).Color("#8EA2BD"),
                     Ui.Text($"Selected: {state.SelectedCount}  Spawn Batch: {state.SpawnBatch}").FontSize(13f).Color("#8EA2BD"),
-                    Ui.Text($"Agents/team: {state.AgentsPerTeam}  Live: {state.LiveAgents}  Blockers: {state.Blockers}").FontSize(13f).Color("#8EA2BD"),
+                    Ui.Text($"Agents/team: {state.AgentsPerTeam}  Live: {state.LiveAgents}  Groups: {state.ActiveGroups}  Blockers: {state.Blockers}").FontSize(13f).Color("#8EA2BD"),
                     Ui.Text($"Nav: Steering={state.SteeringMode}  Spatial={state.SpatialMode}").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                     Ui.Text($"Flow: enabled={state.FlowEnabled} debug={state.FlowDebugEnabled} mode={state.FlowDebugMode} iter={state.FlowIterations}").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text($"Solver: {state.SolverSummary}").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text($"Rules: {state.RuleSummary}").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text($"Hz: fixed={state.FixedHz} nav={state.NavigationHz}({state.NavigationSteps}) phys={state.PhysicsHz}({state.PhysicsSteps})").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text($"Budget: navHz={state.NavTargetHz} navSteps={state.NavMaxStepsPerFixedTick} physHz={state.PhysicsTargetHz} physSteps={state.PhysicsMaxStepsPerFixedTick}").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text($"Lifecycle: arrived={state.ArrivedGroups} retry={state.RetryCount} timeout={state.TimeoutCount} abandon={state.AbandonCount}").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text($"Perf: {state.PerfSummary}").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                     Ui.Text("Scenario").FontSize(12f).Bold().Color("#F4C77D"),
                     Ui.Row(
                         BuildActionButton("Prev", false, PreviousScenario),
@@ -116,6 +124,7 @@ namespace Navigation2DPlaygroundMod.UI
                         BuildActionButton("Reset", false, ResetScenario))
                         .Wrap()
                         .Gap(8f),
+                    Ui.Text("Prev/Next/Reset and team scale are reset-only. Flow toggles/debug/iterations are hot-applied.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                     Ui.Text("Scale").FontSize(12f).Bold().Color("#F4C77D"),
                     Ui.Row(
                         BuildActionButton("- Team", false, () => AdjustAgentsPerTeam(-Navigation2DPlaygroundControlSystem.GetPlaygroundConfig(RequireEngine()).AgentsPerTeamStep)),
@@ -142,9 +151,22 @@ namespace Navigation2DPlaygroundMod.UI
                     Ui.Row(
                         BuildActionButton(state.FlowEnabled ? "Flow On" : "Flow Off", state.FlowEnabled, ToggleFlowEnabled),
                         BuildActionButton(state.FlowDebugEnabled ? "Debug On" : "Debug Off", state.FlowDebugEnabled, ToggleFlowDebug),
-                        BuildActionButton($"Mode {state.FlowDebugMode}", false, CycleFlowDebugMode))
+                        BuildActionButton($"Mode {state.FlowDebugMode}", false, CycleFlowDebugMode),
+                        BuildActionButton("- Iter", false, () => AdjustFlowIterations(-512)),
+                        BuildActionButton("+ Iter", false, () => AdjustFlowIterations(512)))
                         .Wrap()
                         .Gap(8f),
+                    Ui.Text("Budget").FontSize(12f).Bold().Color("#F4C77D"),
+                    Ui.Row(
+                        BuildActionButton("- NavHz", false, () => AdjustNavHz(-1)),
+                        BuildActionButton("+ NavHz", false, () => AdjustNavHz(1)),
+                        BuildActionButton("- NavSteps", false, () => AdjustNavSteps(-1)),
+                        BuildActionButton("+ NavSteps", false, () => AdjustNavSteps(1)),
+                        BuildActionButton("- PhysHz", false, () => AdjustPhysicsHz(-5)),
+                        BuildActionButton("+ PhysHz", false, () => AdjustPhysicsHz(5)))
+                        .Wrap()
+                        .Gap(8f),
+                    Ui.Text("Flow/debug/iterations and nav/physics budget buttons are hot-applied. Scenario/team scale and scenario switching remain reset-only.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                     BuildSelectedIdsSection(state.SelectedIds),
                     Ui.Text("Play").FontSize(12f).Bold().Color("#F4C77D"),
                     Ui.Text("Left click to select. Drag a box to multi-select. Right click issues the active tool. F1/F2 swap camera modes. G/H/J/U/Y/K/L/N/M/R keep the keyboard debug path alive.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal))
@@ -231,6 +253,9 @@ namespace Navigation2DPlaygroundMod.UI
 
             string[] selectedIds = ResolveSelectedIds(engine);
             var navRuntime = engine.GetService(CoreServiceKeys.Navigation2DRuntime);
+            var diagnostics = engine.GetService(CoreServiceKeys.NavDiagnosticsSnapshot);
+            var navTickPolicy = engine.GetService(CoreServiceKeys.Navigation2DTickPolicy);
+            var physicsTickPolicy = engine.GetService(CoreServiceKeys.Physics2DTickPolicy);
 
             return new Navigation2DPlaygroundPanelState(
                 MapId: mapId,
@@ -250,7 +275,28 @@ namespace Navigation2DPlaygroundMod.UI
                 FlowDebugMode: navRuntime?.FlowDebugMode ?? 0,
                 FlowIterations: navRuntime?.FlowIterationsPerTick ?? 0,
                 SteeringMode: navRuntime?.Config.Steering.Mode.ToString() ?? "Unavailable",
-                SpatialMode: navRuntime?.Config.Spatial.UpdateMode.ToString() ?? "Unavailable");
+                SpatialMode: navRuntime?.Config.Spatial.UpdateMode.ToString() ?? "Unavailable",
+                ActiveGroups: diagnostics?.ActiveGroups ?? 0,
+                SolverSummary: diagnostics == null
+                    ? "n/a"
+                    : $"orca={diagnostics.PreciseOrcaAgents} crowd={diagnostics.CrowdFlowAgents} hybrid={diagnostics.HybridAgents}",
+                RuleSummary: diagnostics?.ActiveRuleSummary ?? "n/a",
+                FixedHz: diagnostics?.FixedHz ?? 0,
+                NavigationHz: diagnostics?.NavigationHz ?? 0,
+                NavigationSteps: diagnostics?.NavigationStepsLastFixedTick ?? 0,
+                PhysicsHz: diagnostics?.PhysicsHz ?? 0,
+                PhysicsSteps: diagnostics?.PhysicsStepsLastFixedTick ?? 0,
+                NavTargetHz: navTickPolicy?.TargetHz ?? 0,
+                NavMaxStepsPerFixedTick: navTickPolicy?.MaxStepsPerFixedTick ?? 0,
+                PhysicsTargetHz: physicsTickPolicy?.TargetHz ?? 0,
+                PhysicsMaxStepsPerFixedTick: physicsTickPolicy?.MaxStepsPerFixedTick ?? 0,
+                ArrivedGroups: diagnostics?.ArrivedGroups ?? 0,
+                RetryCount: diagnostics?.RetryCount ?? 0,
+                TimeoutCount: diagnostics?.TimeoutCount ?? 0,
+                AbandonCount: diagnostics?.AbandonCount ?? 0,
+                PerfSummary: diagnostics == null
+                    ? "n/a"
+                    : $"nav={diagnostics.NavigationMs:F2}ms phys={diagnostics.PhysicsMs:F2}ms present={diagnostics.PresentationMs:F2}ms frame={diagnostics.FrameMs:F2}ms alloc={diagnostics.FrameAllocBytes / 1024f:F1}KB heap={diagnostics.HeapBytes / (1024f * 1024f):F1}MB");
         }
 
         private void PreviousScenario()
@@ -329,6 +375,55 @@ namespace Navigation2DPlaygroundMod.UI
             }
         }
 
+        private void AdjustFlowIterations(int delta)
+        {
+            GameEngine engine = RequireEngine();
+            if (engine.GetService(CoreServiceKeys.Navigation2DRuntime) is Navigation2DRuntime navRuntime)
+            {
+                navRuntime.FlowIterationsPerTick = Math.Clamp(navRuntime.FlowIterationsPerTick + delta, 0, 131072);
+                SyncMountedRoot();
+            }
+        }
+
+        private void AdjustNavHz(int delta)
+        {
+            GameEngine engine = RequireEngine();
+            if (engine.GetService(CoreServiceKeys.Navigation2DTickPolicy) is Navigation2DTickPolicy tickPolicy)
+            {
+                tickPolicy.SetTargetHz(Math.Max(0, tickPolicy.TargetHz + delta));
+                SyncMountedRoot();
+            }
+        }
+
+        private void AdjustNavSteps(int delta)
+        {
+            GameEngine engine = RequireEngine();
+            if (engine.GetService(CoreServiceKeys.Navigation2DTickPolicy) is Navigation2DTickPolicy tickPolicy)
+            {
+                tickPolicy.SetMaxStepsPerFixedTick(Math.Max(1, tickPolicy.MaxStepsPerFixedTick + delta));
+                SyncMountedRoot();
+            }
+        }
+
+        private void AdjustPhysicsHz(int delta)
+        {
+            GameEngine engine = RequireEngine();
+            if (engine.GetService(CoreServiceKeys.Physics2DController) is Physics2DController controller)
+            {
+                int next = Math.Max(0, controller.TargetHz + delta);
+                if (next == 0)
+                {
+                    controller.Disable();
+                }
+                else
+                {
+                    controller.Enable(next);
+                }
+
+                SyncMountedRoot();
+            }
+        }
+
         private void SyncMountedRoot()
         {
             GameEngine engine = RequireEngine();
@@ -371,7 +466,24 @@ namespace Navigation2DPlaygroundMod.UI
                 left.FlowDebugMode != right.FlowDebugMode ||
                 left.FlowIterations != right.FlowIterations ||
                 !string.Equals(left.SteeringMode, right.SteeringMode, StringComparison.Ordinal) ||
-                !string.Equals(left.SpatialMode, right.SpatialMode, StringComparison.Ordinal))
+                !string.Equals(left.SpatialMode, right.SpatialMode, StringComparison.Ordinal) ||
+                left.ActiveGroups != right.ActiveGroups ||
+                !string.Equals(left.SolverSummary, right.SolverSummary, StringComparison.Ordinal) ||
+                !string.Equals(left.RuleSummary, right.RuleSummary, StringComparison.Ordinal) ||
+                left.FixedHz != right.FixedHz ||
+                left.NavigationHz != right.NavigationHz ||
+                left.NavigationSteps != right.NavigationSteps ||
+                left.PhysicsHz != right.PhysicsHz ||
+                left.PhysicsSteps != right.PhysicsSteps ||
+                left.NavTargetHz != right.NavTargetHz ||
+                left.NavMaxStepsPerFixedTick != right.NavMaxStepsPerFixedTick ||
+                left.PhysicsTargetHz != right.PhysicsTargetHz ||
+                left.PhysicsMaxStepsPerFixedTick != right.PhysicsMaxStepsPerFixedTick ||
+                left.ArrivedGroups != right.ArrivedGroups ||
+                left.RetryCount != right.RetryCount ||
+                left.TimeoutCount != right.TimeoutCount ||
+                left.AbandonCount != right.AbandonCount ||
+                !string.Equals(left.PerfSummary, right.PerfSummary, StringComparison.Ordinal))
             {
                 return false;
             }
@@ -457,7 +569,24 @@ namespace Navigation2DPlaygroundMod.UI
             int FlowDebugMode,
             int FlowIterations,
             string SteeringMode,
-            string SpatialMode)
+            string SpatialMode,
+            int ActiveGroups,
+            string SolverSummary,
+            string RuleSummary,
+            int FixedHz,
+            int NavigationHz,
+            int NavigationSteps,
+            int PhysicsHz,
+            int PhysicsSteps,
+            int NavTargetHz,
+            int NavMaxStepsPerFixedTick,
+            int PhysicsTargetHz,
+            int PhysicsMaxStepsPerFixedTick,
+            int ArrivedGroups,
+            int RetryCount,
+            int TimeoutCount,
+            int AbandonCount,
+            string PerfSummary)
         {
             public static Navigation2DPlaygroundPanelState Empty { get; } = new(
                 MapId: string.Empty,
@@ -477,7 +606,24 @@ namespace Navigation2DPlaygroundMod.UI
                 FlowDebugMode: 0,
                 FlowIterations: 0,
                 SteeringMode: "Unavailable",
-                SpatialMode: "Unavailable");
+                SpatialMode: "Unavailable",
+                ActiveGroups: 0,
+                SolverSummary: "n/a",
+                RuleSummary: "n/a",
+                FixedHz: 0,
+                NavigationHz: 0,
+                NavigationSteps: 0,
+                PhysicsHz: 0,
+                PhysicsSteps: 0,
+                NavTargetHz: 0,
+                NavMaxStepsPerFixedTick: 0,
+                PhysicsTargetHz: 0,
+                PhysicsMaxStepsPerFixedTick: 0,
+                ArrivedGroups: 0,
+                RetryCount: 0,
+                TimeoutCount: 0,
+                AbandonCount: 0,
+                PerfSummary: "n/a");
         }
     }
 }

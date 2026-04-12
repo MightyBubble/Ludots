@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
@@ -18,7 +19,7 @@ namespace CoreInputMod.Systems
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime? _selection;
+        private readonly SelectionRuntime _selection;
 
         public SelectionBoxOverlaySystem(World world, Dictionary<string, object> globals)
         {
@@ -27,7 +28,8 @@ namespace CoreInputMod.Systems
             _selection = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
                          selectionObj is SelectionRuntime selection
                 ? selection
-                : null;
+                : throw new InvalidOperationException(
+                    $"{nameof(SelectionBoxOverlaySystem)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered.");
         }
 
         public void Initialize() { }
@@ -50,7 +52,7 @@ namespace CoreInputMod.Systems
             }
 
             ref var drag = ref _world.Get<SelectionDragState>(local);
-            float threshold = _selection?.Config.DragThresholdPixels ?? 8f;
+            float threshold = _selection.Config.DragThresholdPixels;
             if (!drag.Active || !drag.ExceedsThreshold(threshold))
             {
                 return;

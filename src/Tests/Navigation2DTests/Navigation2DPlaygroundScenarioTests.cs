@@ -6,9 +6,11 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.Runtime;
+using Ludots.Core.Navigation2D.Systems;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
 using Navigation2DPlaygroundMod.Systems;
@@ -31,16 +33,16 @@ namespace Ludots.Tests.Navigation2D
             .WithNone<NavPlaygroundBlocker>();
 
         [Test]
-        public void CloneValidated_ProvidesMultiScenarioPlaygroundCatalog()
+        public void PlaygroundGameConfig_DeclaresExplicitScenarioCatalogAndContractIds()
         {
-            var config = new Navigation2DConfig().CloneValidated();
+            string repoRoot = FindRepoRoot();
+            string gameJson = File.ReadAllText(Path.Combine(repoRoot, "mods", "Navigation2DPlaygroundMod", "assets", "game.json"));
 
-            Assert.That(config.Playground.Scenarios.Count, Is.GreaterThanOrEqualTo(6));
-            Assert.That(config.Playground.Scenarios.Exists(s => s.Kind == Navigation2DPlaygroundScenarioKind.PassThrough), Is.True);
-            Assert.That(config.Playground.Scenarios.Exists(s => s.Kind == Navigation2DPlaygroundScenarioKind.Bottleneck), Is.True);
-            Assert.That(config.Playground.Scenarios.Exists(s => s.Kind == Navigation2DPlaygroundScenarioKind.LaneMerge), Is.True);
-            Assert.That(config.Playground.Scenarios.Exists(s => s.Kind == Navigation2DPlaygroundScenarioKind.CircleSwap), Is.True);
-            Assert.That(config.Playground.Scenarios.Exists(s => s.Kind == Navigation2DPlaygroundScenarioKind.GoalQueue), Is.True);
+            Assert.That(gameJson, Does.Contain("\"AgentNavProfileId\": \"rts_default\""));
+            Assert.That(gameJson, Does.Contain("\"AgentCrowdProfileId\": \"crowd_default\""));
+            Assert.That(gameJson, Does.Contain("\"AgentKnockbackPolicyId\": \"knockback_default\""));
+            Assert.That(gameJson, Does.Contain("\"Id\": \"pass_through\""));
+            Assert.That(gameJson, Does.Contain("\"Id\": \"goal_queue\""));
         }
 
         [Test]
@@ -68,59 +70,7 @@ namespace Ludots.Tests.Navigation2D
             Assert.That(viewModesJson, Does.Contain("\"Navigation2D.Playground.Mode.Follow\""));
             Assert.That(virtualCameraJson, Does.Contain("\"Navigation2D.Playground.Camera.Follow\""));
 
-            var config = new Navigation2DConfig
-            {
-                Enabled = true,
-                MaxAgents = 50000,
-                FlowIterationsPerTick = 2048,
-                Spatial = new Navigation2DSpatialPartitionConfig
-                {
-                    UpdateMode = Navigation2DSpatialUpdateMode.Adaptive,
-                    RebuildCellMigrationsThreshold = 128,
-                    RebuildAccumulatedCellMigrationsThreshold = 1024,
-                },
-                Steering = new Navigation2DSteeringConfig
-                {
-                    Mode = Navigation2DAvoidanceMode.Hybrid,
-                    QueryBudget = new Navigation2DQueryBudgetConfig
-                    {
-                        MaxNeighborsPerAgent = 8,
-                        MaxCandidateChecksPerAgent = 24,
-                    },
-                    Orca = new Navigation2DOrcaConfig
-                    {
-                        Enabled = true,
-                        FallbackToPreferredVelocity = true,
-                    },
-                    Sonar = new Navigation2DSonarConfig
-                    {
-                        Enabled = true,
-                        MaxSteerAngleDeg = 280,
-                        BackwardPenaltyAngleDeg = 230,
-                        IgnoreBehindMovingAgents = true,
-                        BlockedStop = false,
-                        PredictionTimeScale = 0.9f,
-                    },
-                    Hybrid = new Navigation2DHybridAvoidanceConfig
-                    {
-                        Enabled = true,
-                        DenseNeighborThreshold = 6,
-                        MinSpeedForOrcaCmPerSec = 120,
-                        MinOpposingNeighborsForOrca = 1,
-                        OpposingVelocityDotThreshold = -0.25f,
-                    },
-                    SmartStop = new Navigation2DSmartStopConfig
-                    {
-                        Enabled = true,
-                        QueryRadiusCm = 100,
-                        MaxNeighbors = 6,
-                        SelfGoalDistanceLimitCm = 180,
-                        GoalToleranceCm = 80,
-                        ArrivedSlackCm = 20,
-                        StoppedSpeedThresholdCmPerSec = 5,
-                    }
-                }
-            }.CloneValidated();
+            var config = BuildExplicitNavigationConfig().CloneValidated();
 
             const int agentsPerTeam = 96;
             const float deltaTime = 1f / 60f;
@@ -139,9 +89,10 @@ namespace Ludots.Tests.Navigation2D
                 using var runtime = new Navigation2DRuntime(config, gridCellSizeCm: 100, loadedChunks: null);
                 runtime.FlowEnabled = true;
                 var steering = new Navigation2DSteeringSystem2D(world, runtime);
-                var integration = new IntegrationSystem2D(world);
+                var kinematicMotion = new Navigation2DKinematicMotionSystem(world);
 
-                var summary = Navigation2DPlaygroundScenarioSpawner.SpawnScenario(world, scenario, agentsPerTeam);
+                var summary = Navigation2DPlaygroundScenarioSpawner.SpawnScenario(world, runtime.ContractCatalog, playground, scenario, agentsPerTeam);
+                MaterializeSpawnedNavActors(world, runtime.ContractCatalog, deltaTime);
                 int dynamicCount = world.CountEntities(in _dynamicAgentsQuery);
                 int blockerCount = world.CountEntities(in _blockerQuery);
                 Assert.That(dynamicCount, Is.EqualTo(summary.DynamicAgents));
@@ -155,7 +106,7 @@ namespace Ludots.Tests.Navigation2D
                 for (int step = 0; step < simulationSteps; step++)
                 {
                     steering.Update(deltaTime);
-                    integration.Update(deltaTime);
+                    kinematicMotion.Update(deltaTime);
                 }
 
                 int movingDesiredAgents = CountMovingDesiredAgents(world);
@@ -217,6 +168,40 @@ namespace Ludots.Tests.Navigation2D
             return moving;
         }
 
+        private static void MaterializeSpawnedNavActors(World world, Navigation2DContractCatalog catalog, float deltaTime)
+        {
+            var query = new QueryDescription().WithAll<NavActor, NavProfileRef, WorldPositionCm>();
+            foreach (ref var chunk in world.Query(in query))
+            {
+                ref Entity entityFirst = ref chunk.Entity(0);
+                var navProfileRefs = chunk.GetSpan<NavProfileRef>();
+                bool hasCrowdProfileRef = chunk.Has<NavCrowdProfileRef>();
+                Span<NavCrowdProfileRef> crowdProfileRefs = hasCrowdProfileRef ? chunk.GetSpan<NavCrowdProfileRef>() : default;
+                bool hasKnockbackPolicyRef = chunk.Has<NavKnockbackPolicyRef>();
+                Span<NavKnockbackPolicyRef> knockbackPolicyRefs = hasKnockbackPolicyRef ? chunk.GetSpan<NavKnockbackPolicyRef>() : default;
+
+                foreach (int index in chunk)
+                {
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    if (world.Has<NavActorRuntimeState>(entity))
+                    {
+                        continue;
+                    }
+
+                    world.Add(entity, new NavActorRuntimeState
+                    {
+                        IsValidated = 1,
+                        AppliedNavProfileId = navProfileRefs[index].ProfileId,
+                        AppliedCrowdProfileId = hasCrowdProfileRef ? crowdProfileRefs[index].ProfileId : 0,
+                        AppliedKnockbackPolicyId = hasKnockbackPolicyRef ? knockbackPolicyRefs[index].PolicyId : 0,
+                    });
+                }
+            }
+
+            var materialization = new NavActorMaterializationSystem(world, catalog);
+            materialization.Update(deltaTime);
+        }
+
         private static float ComputeAverageSpeed(World world, int maxSamples)
         {
             int sampled = 0;
@@ -237,6 +222,236 @@ namespace Ludots.Tests.Navigation2D
             }
 
             return sampled == 0 ? 0f : totalSpeed / sampled;
+        }
+
+        private static Navigation2DConfig BuildExplicitNavigationConfig()
+        {
+            return new Navigation2DConfig
+            {
+                Enabled = true,
+                MaxAgents = 50000,
+                FlowIterationsPerTick = 2048,
+                Spatial = new Navigation2DSpatialPartitionConfig
+                {
+                    UpdateMode = Navigation2DSpatialUpdateMode.Adaptive,
+                    RebuildCellMigrationsThreshold = 128,
+                    RebuildAccumulatedCellMigrationsThreshold = 1024,
+                },
+                Steering = new Navigation2DSteeringConfig
+                {
+                    Mode = Navigation2DAvoidanceMode.Hybrid,
+                    QueryBudget = new Navigation2DQueryBudgetConfig
+                    {
+                        MaxNeighborsPerAgent = 8,
+                        MaxCandidateChecksPerAgent = 24,
+                    },
+                    Orca = new Navigation2DOrcaConfig
+                    {
+                        Enabled = true,
+                        FallbackToPreferredVelocity = true,
+                    },
+                    Sonar = new Navigation2DSonarConfig
+                    {
+                        Enabled = true,
+                        MaxSteerAngleDeg = 280,
+                        BackwardPenaltyAngleDeg = 230,
+                        IgnoreBehindMovingAgents = true,
+                        BlockedStop = false,
+                        PredictionTimeScale = 0.9f,
+                    },
+                    Hybrid = new Navigation2DHybridAvoidanceConfig
+                    {
+                        Enabled = true,
+                        DenseNeighborThreshold = 6,
+                        MinSpeedForOrcaCmPerSec = 120,
+                        MinOpposingNeighborsForOrca = 1,
+                        OpposingVelocityDotThreshold = -0.25f,
+                    },
+                    SmartStop = new Navigation2DSmartStopConfig
+                    {
+                        Enabled = true,
+                        QueryRadiusCm = 100,
+                        MaxNeighbors = 6,
+                        SelfGoalDistanceLimitCm = 180,
+                        GoalToleranceCm = 80,
+                        ArrivedSlackCm = 20,
+                        StoppedSpeedThresholdCmPerSec = 5,
+                    }
+                },
+                Playground = new Navigation2DPlaygroundConfig
+                {
+                    DefaultAgentsPerTeam = 64,
+                    AgentsPerTeamStep = 64,
+                    DefaultScenarioIndex = 0,
+                    DefaultSpawnBatch = 16,
+                    SpawnBatchStep = 16,
+                    CommandGoalRadiusCm = 120,
+                    CommandFormationSpacingCm = 140,
+                    DynamicSpawnSpacingCm = 120,
+                    DynamicBlockerRadiusCm = 140,
+                    AgentNavProfileId = "rts_default",
+                    AgentCrowdProfileId = "crowd_default",
+                    AgentKnockbackPolicyId = "knockback_default",
+                    Scenarios = new List<Navigation2DPlaygroundScenarioConfig>
+                    {
+                        new()
+                        {
+                            Id = "pass_through",
+                            Name = "Pass Through",
+                            Kind = Navigation2DPlaygroundScenarioKind.PassThrough,
+                            TeamCount = 2,
+                            FormationSpacingCm = 120,
+                            StartOffsetCm = 9000,
+                            GoalOffsetCm = 9000,
+                            GoalRadiusCm = 120,
+                        },
+                        new()
+                        {
+                            Id = "orthogonal_cross",
+                            Name = "Orthogonal Cross",
+                            Kind = Navigation2DPlaygroundScenarioKind.OrthogonalCross,
+                            TeamCount = 2,
+                            FormationSpacingCm = 120,
+                            StartOffsetCm = 8200,
+                            GoalOffsetCm = 8200,
+                            GoalRadiusCm = 120,
+                        },
+                        new()
+                        {
+                            Id = "bottleneck",
+                            Name = "Bottleneck",
+                            Kind = Navigation2DPlaygroundScenarioKind.Bottleneck,
+                            TeamCount = 2,
+                            FormationSpacingCm = 120,
+                            StartOffsetCm = 9200,
+                            GoalOffsetCm = 9200,
+                            CorridorHalfWidthCm = 320,
+                            GoalRadiusCm = 120,
+                            BlockerRadiusCm = 150,
+                            BlockerCount = 20,
+                            BlockerSpacingCm = 280,
+                        },
+                        new()
+                        {
+                            Id = "lane_merge",
+                            Name = "Lane Merge",
+                            Kind = Navigation2DPlaygroundScenarioKind.LaneMerge,
+                            TeamCount = 2,
+                            FormationSpacingCm = 120,
+                            StartOffsetCm = 8800,
+                            GoalOffsetCm = 9200,
+                            LaneOffsetCm = 2400,
+                            GoalRadiusCm = 150,
+                        },
+                        new()
+                        {
+                            Id = "circle_swap",
+                            Name = "Circle Swap",
+                            Kind = Navigation2DPlaygroundScenarioKind.CircleSwap,
+                            TeamCount = 2,
+                            FormationSpacingCm = 120,
+                            RingRadiusCm = 5400,
+                            GoalRadiusCm = 160,
+                        },
+                        new()
+                        {
+                            Id = "goal_queue",
+                            Name = "Goal Queue",
+                            Kind = Navigation2DPlaygroundScenarioKind.GoalQueue,
+                            TeamCount = 1,
+                            FormationSpacingCm = 120,
+                            StartOffsetCm = 9200,
+                            GoalOffsetCm = 7200,
+                            GoalRadiusCm = 220,
+                            CorridorHalfWidthCm = 220,
+                            BlockerRadiusCm = 130,
+                            BlockerCount = 18,
+                            BlockerSpacingCm = 260,
+                        }
+                    }
+                },
+                Contracts = new Navigation2DContractsConfig
+                {
+                    NavProfiles = new List<Navigation2DNavProfileConfig>
+                    {
+                        new()
+                        {
+                            Id = "rts_default",
+                            MaxSpeedCmPerSec = 800,
+                            MaxAccelCmPerSec2 = 6000,
+                            RadiusCm = 40,
+                            NeighborDistCm = 400,
+                            TimeHorizonSec = 2f,
+                            MaxNeighbors = 16,
+                            GoalRadiusCm = 120,
+                        }
+                    },
+                    CrowdProfiles = new List<Navigation2DCrowdProfileConfig>
+                    {
+                        new()
+                        {
+                            Id = "crowd_default",
+                            GeometryRadiusCm = 40,
+                            NavMass = 1f,
+                            YieldWeight = 1f,
+                            PushClass = NavPushClass.Cooperative,
+                            SolverPreference = NavSolverMode.Hybrid,
+                            RetryLimit = 2,
+                            TimeoutTicks = 90,
+                            AbandonTicks = 240,
+                        }
+                    },
+                    KnockbackPolicies = new List<Navigation2DKnockbackPolicyConfig>
+                    {
+                        new()
+                        {
+                            Id = "knockback_default",
+                            OverrideTicks = 15,
+                            ClearNavGoalWhileActive = true,
+                        }
+                    },
+                    GroupSolver = new Navigation2DNavGroupSolverConfig
+                    {
+                        Enabled = true,
+                        PreciseOrcaMaxGroupSize = 32,
+                        CrowdFlowMinGroupSize = 128,
+                        Rules = new List<Navigation2DNavSolverRuleConfig>
+                        {
+                            new()
+                            {
+                                Id = "precise_orca",
+                                MinGroupSize = 0,
+                                MaxGroupSize = 32,
+                                SolverMode = NavSolverMode.PreciseOrca,
+                                Reason = "group_size_small",
+                            },
+                            new()
+                            {
+                                Id = "hybrid_mid",
+                                MinGroupSize = 33,
+                                MaxGroupSize = 127,
+                                SolverMode = NavSolverMode.Hybrid,
+                                Reason = "group_size_mid",
+                            },
+                            new()
+                            {
+                                Id = "crowd_flow",
+                                MinGroupSize = 128,
+                                MaxGroupSize = int.MaxValue,
+                                SolverMode = NavSolverMode.CrowdFlow,
+                                Reason = "group_size_large",
+                            }
+                        }
+                    },
+                    CrowdRelationship = new Navigation2DCrowdRelationshipPolicyConfig
+                    {
+                        FriendlyYieldFactor = 1f,
+                        NeutralYieldFactor = 0.35f,
+                        HostileYieldFactor = 0.2f,
+                        DominantPushMassRatio = 2f,
+                    }
+                }
+            };
         }
 
         private static string BuildBattleReport(int scenarioCount, int agentsPerTeam, int totalDynamicAgents, int totalBlockers, StringBuilder timeline)

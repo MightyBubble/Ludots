@@ -14,6 +14,8 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Layers;
 using Ludots.Core.Modding;
+using Ludots.Core.Navigation2D.Components;
+using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Physics;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Components;
@@ -49,6 +51,10 @@ namespace Ludots.Core.Config
             Register("OrderBuffer", SetOrderBuffer);
             Register<SelectionSelectableTag>("SelectionSelectableTag");
             Register("SelectionSelectableState", SetSelectionSelectableState);
+            Register("NavActor", SetNavActor);
+            Register("NavProfileRef", SetNavProfileRef);
+            Register("NavCrowdProfileRef", SetNavCrowdProfileRef);
+            Register("NavKnockbackPolicyRef", SetNavKnockbackPolicyRef);
             Register<BlackboardSpatialBuffer>("BlackboardSpatialBuffer");
             Register<BlackboardEntityBuffer>("BlackboardEntityBuffer");
             Register<BlackboardIntBuffer>("BlackboardIntBuffer");
@@ -131,6 +137,74 @@ namespace Ludots.Core.Config
             }
 
             entity.Add(state);
+        }
+
+        private static void SetNavActor(Entity entity, JsonNode data)
+        {
+            var actor = new NavActor
+            {
+                IsEnabled = 1,
+                PhysicsMode = NavPhysicsMode.NavCrowdResolve,
+                DefaultSolverMode = NavSolverMode.Hybrid,
+            };
+            if (data is JsonObject obj)
+            {
+                if (TryReadEnum(obj, out NavPhysicsMode physicsMode, "physicsMode", "PhysicsMode"))
+                {
+                    actor.PhysicsMode = physicsMode;
+                }
+
+                if (TryReadEnum(obj, out NavSolverMode solverMode, "defaultSolverMode", "DefaultSolverMode"))
+                {
+                    actor.DefaultSolverMode = solverMode;
+                }
+
+                if ((obj.TryGetPropertyValue("enabled", out var enabledNode) ||
+                     obj.TryGetPropertyValue("Enabled", out enabledNode)) &&
+                    enabledNode != null)
+                {
+                    actor.IsEnabled = ParseBooleanByte(enabledNode, defaultValue: 1);
+                }
+            }
+            else if (data.GetValueKind() == JsonValueKind.True || data.GetValueKind() == JsonValueKind.False)
+            {
+                actor.IsEnabled = ParseBooleanByte(data, defaultValue: 1);
+            }
+
+            entity.Add(actor);
+        }
+
+        private static void SetNavProfileRef(Entity entity, JsonNode data)
+        {
+            entity.Add(new NavProfileRef
+            {
+                ProfileId = ResolveNavigationContractId(
+                    data,
+                    nameResolver: static catalog => catalog.NavProfileIds,
+                    componentName: "NavProfileRef")
+            });
+        }
+
+        private static void SetNavCrowdProfileRef(Entity entity, JsonNode data)
+        {
+            entity.Add(new NavCrowdProfileRef
+            {
+                ProfileId = ResolveNavigationContractId(
+                    data,
+                    nameResolver: static catalog => catalog.CrowdProfileIds,
+                    componentName: "NavCrowdProfileRef")
+            });
+        }
+
+        private static void SetNavKnockbackPolicyRef(Entity entity, JsonNode data)
+        {
+            entity.Add(new NavKnockbackPolicyRef
+            {
+                PolicyId = ResolveNavigationContractId(
+                    data,
+                    nameResolver: static catalog => catalog.KnockbackPolicyIds,
+                    componentName: "NavKnockbackPolicyRef")
+            });
         }
 
         private static void SetAbilityStateBuffer(Entity entity, JsonNode data)
@@ -461,6 +535,77 @@ namespace Ludots.Core.Config
                 JsonValueKind.Number => node.GetValue<int>() != 0 ? (byte)1 : (byte)0,
                 _ => defaultValue,
             };
+        }
+
+        private static int ResolveNavigationContractId(
+            JsonNode data,
+            Func<Navigation2DContractCatalog, Ludots.Core.Registry.StringIntRegistry> nameResolver,
+            string componentName)
+        {
+            if (data == null)
+            {
+                throw new InvalidOperationException($"{componentName} requires a non-null payload.");
+            }
+
+            if (data.GetValueKind() == JsonValueKind.Number)
+            {
+                return data.GetValue<int>();
+            }
+
+            string? name = null;
+            if (data.GetValueKind() == JsonValueKind.String)
+            {
+                name = data.GetValue<string>();
+            }
+            else if (data is JsonObject obj)
+            {
+                name =
+                    obj["id"]?.GetValue<string>() ??
+                    obj["Id"]?.GetValue<string>() ??
+                    obj["profile"]?.GetValue<string>() ??
+                    obj["Profile"]?.GetValue<string>();
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new InvalidOperationException($"{componentName} requires a non-empty profile id.");
+            }
+
+            var catalog = Navigation2DContractCatalogScope.RequireCurrent();
+            int id = nameResolver(catalog).GetId(name.Trim());
+            if (id <= 0)
+            {
+                throw new InvalidOperationException($"Unknown {componentName} id '{name}'.");
+            }
+
+            return id;
+        }
+
+        private static bool TryReadEnum<TEnum>(JsonObject obj, out TEnum value, params string[] names)
+            where TEnum : struct
+        {
+            for (int i = 0; i < names.Length; i++)
+            {
+                if (obj.TryGetPropertyValue(names[i], out var node) && node != null)
+                {
+                    if (node.GetValueKind() == JsonValueKind.String)
+                    {
+                        string? raw = node.GetValue<string>();
+                        if (!string.IsNullOrWhiteSpace(raw) && Enum.TryParse(raw, ignoreCase: true, out value))
+                        {
+                            return true;
+                        }
+                    }
+                    else if (node.GetValueKind() == JsonValueKind.Number)
+                    {
+                        value = (TEnum)Enum.ToObject(typeof(TEnum), node.GetValue<int>());
+                        return true;
+                    }
+                }
+            }
+
+            value = default;
+            return false;
         }
 
         private static bool TryReadIntProperty(JsonObject obj, out int value, params string[] names)
