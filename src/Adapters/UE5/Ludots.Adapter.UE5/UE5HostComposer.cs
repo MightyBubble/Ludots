@@ -201,8 +201,13 @@ namespace Ludots.Adapter.UE5
                 ViewportWidth  = initialViewportWidth,
                 ViewportHeight = initialViewportHeight,
             };
+            var hostCameraDiagnosticsSnapshot = UE5HostCameraDiagnosticsSnapshot.Empty;
+            var hostCameraDiagnosticsCommands = new UE5HostCameraDiagnosticsCommandState();
 
             UE5HostBoundMapSessionInstaller.Install(engine);
+            engine.SetService(UE5AdapterServiceKeys.SharedCameraState, sharedState);
+            engine.SetService(UE5AdapterServiceKeys.HostCameraDiagnosticsSnapshot, hostCameraDiagnosticsSnapshot);
+            engine.SetService(UE5AdapterServiceKeys.HostCameraDiagnosticsCommands, hostCameraDiagnosticsCommands);
 
             // ── 4. 注入 UE5 适配器 ───────────────────────────────────────
 
