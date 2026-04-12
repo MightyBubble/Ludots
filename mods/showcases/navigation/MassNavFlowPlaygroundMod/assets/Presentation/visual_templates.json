@@ -1,0 +1,18 @@
+[
+  {
+    "id": "mass_nav_flow_playground.nav_unit",
+    "meshAssetId": "Cube",
+    "renderPath": "InstancedStaticMesh",
+    "mobility": "Movable",
+    "baseScale": 1.0,
+    "visibleByDefault": true
+  },
+  {
+    "id": "mass_nav_flow_playground.nav_blocker",
+    "meshAssetId": "Sphere",
+    "renderPath": "InstancedStaticMesh",
+    "mobility": "Static",
+    "baseScale": 1.0,
+    "visibleByDefault": true
+  }
+]

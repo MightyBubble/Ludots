@@ -1,0 +1,40 @@
+[
+  {
+    "id": "mass_nav_flow_playground.nav_unit_body",
+    "visualKind": "Marker3D",
+    "entityScope": "AllWithVisualTransform",
+    "requiredTemplate": "mass_nav_flow_playground.nav_unit",
+    "meshOrShapeId": "Cube",
+    "renderPath": "InstancedStaticMesh",
+    "mobility": "Movable",
+    "defaultColor": [1.0, 1.0, 1.0, 1.0],
+    "defaultScale": 1.0,
+    "defaultLifetime": -1,
+    "bindings": [
+      { "paramKey": 1, "source": "visualscale", "sourceId": 0 },
+      { "paramKey": 2, "source": "visualscale", "sourceId": 1 },
+      { "paramKey": 3, "source": "visualscale", "sourceId": 2 },
+      { "paramKey": 4, "source": "entitycolor", "sourceId": 0 },
+      { "paramKey": 5, "source": "entitycolor", "sourceId": 1 },
+      { "paramKey": 6, "source": "entitycolor", "sourceId": 2 },
+      { "paramKey": 7, "source": "entitycolor", "sourceId": 3 }
+    ]
+  },
+  {
+    "id": "mass_nav_flow_playground.nav_blocker_body",
+    "visualKind": "Marker3D",
+    "entityScope": "AllWithVisualTransform",
+    "requiredTemplate": "mass_nav_flow_playground.nav_blocker",
+    "meshOrShapeId": "Sphere",
+    "renderPath": "InstancedStaticMesh",
+    "mobility": "Static",
+    "defaultColor": [0.18, 0.2, 0.24, 1.0],
+    "defaultScale": 1.0,
+    "defaultLifetime": -1,
+    "bindings": [
+      { "paramKey": 1, "source": "visualscale", "sourceId": 0 },
+      { "paramKey": 2, "source": "visualscale", "sourceId": 1 },
+      { "paramKey": 3, "source": "visualscale", "sourceId": 2 }
+    ]
+  }
+]

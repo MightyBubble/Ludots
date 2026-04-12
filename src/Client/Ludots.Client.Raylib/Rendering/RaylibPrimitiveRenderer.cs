@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Assets;
@@ -20,6 +21,8 @@ namespace Ludots.Client.Raylib.Rendering
 
     public sealed unsafe class RaylibPrimitiveRenderer : IDisposable
     {
+        private const int MaxInstancesPerDrawCall = 4096;
+
         private readonly RaylibPrimitiveRenderMode _mode;
         private readonly IVirtualFileSystem? _vfs;
         private readonly string? _diagnosticPath;
@@ -44,6 +47,8 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly HashSet<int> _loggedBillboardDrawDiagnostics = new HashSet<int>();
         private Material _runtimeMeshMaterial;
         private bool _runtimeMeshMaterialLoaded;
+        private IntPtr _instancedScratch = IntPtr.Zero;
+        private int _instancedScratchCapacity;
 
         public int LastInstancedInstances { get; private set; }
         public int LastInstancedBatches { get; private set; }
@@ -88,7 +93,8 @@ namespace Ludots.Client.Raylib.Rendering
             LastPersistentRemoves = 0;
 
             var span = draw.GetSpan();
-            bool usePersistentStaticLanes = snapshot != null;
+            bool usePersistentStaticLanes = snapshot != null && snapshot.Count > 0;
+            bool hasSkinnedBatch = skinnedBatch != null && skinnedBatch.Count > 0;
             if (usePersistentStaticLanes)
             {
                 _persistentStaticLaneSync.Sync(snapshot);
@@ -96,22 +102,31 @@ namespace Ludots.Client.Raylib.Rendering
                 LastPersistentUpdates = _persistentStaticLaneSync.LastUpdateCount;
                 LastPersistentRemoves = _persistentStaticLaneSync.LastRemoveCount;
                 DrawPersistentStaticLanes(camera, meshes, scaleMul);
-                if (skinnedBatch != null)
+                if (hasSkinnedBatch)
                 {
-                    DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul);
+                    DrawSkinnedBatch(skinnedBatch!, camera, meshes, scaleMul);
                 }
 
-                DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: true, skinnedBatchActive: skinnedBatch != null);
+                DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: true, skinnedBatchActive: hasSkinnedBatch);
+                if (_mode == RaylibPrimitiveRenderMode.Instanced)
+                {
+                    FlushInstancedBatches();
+                }
                 return;
             }
 
-            if (_mode == RaylibPrimitiveRenderMode.Instanced)
+            if (_mode == RaylibPrimitiveRenderMode.Instanced && !hasSkinnedBatch)
             {
                 DrawHybridInstanced(span, camera, meshes, scaleMul);
                 return;
             }
 
-            DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: false);
+            if (hasSkinnedBatch)
+            {
+                DrawSkinnedBatch(skinnedBatch!, camera, meshes, scaleMul);
+            }
+
+            DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: hasSkinnedBatch);
         }
 
         private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
@@ -125,14 +140,28 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                DrawAssetRecursive(
-                    item.MeshAssetId,
-                    item.Position,
-                    item.Rotation,
-                    item.Scale * scaleMul,
-                    item.Color,
-                    camera,
-                    meshes);
+                if (_mode == RaylibPrimitiveRenderMode.Instanced)
+                {
+                    SubmitAssetRecursive(
+                        item.MeshAssetId,
+                        item.Position,
+                        item.Rotation,
+                        item.Scale * scaleMul,
+                        item.Color,
+                        camera,
+                        meshes);
+                }
+                else
+                {
+                    DrawAssetRecursive(
+                        item.MeshAssetId,
+                        item.Position,
+                        item.Rotation,
+                        item.Scale * scaleMul,
+                        item.Color,
+                        camera,
+                        meshes);
+                }
             }
         }
 
@@ -967,6 +996,10 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void FlushInstancedBatches()
         {
+            // Persistent static-lane draws can enqueue instanced batches before any path
+            // that explicitly initializes the shared primitive meshes/material.
+            EnsureInitialized();
+
             int totalInstances = 0;
             int batches = 0;
 
@@ -986,17 +1019,56 @@ namespace Ludots.Client.Raylib.Rendering
 
                 SetTintUniform(b.ColorKey);
 
-                fixed (RaylibMatrix* p = b.Transforms)
+                for (int offset = 0; offset < b.Count; offset += MaxInstancesPerDrawCall)
                 {
-                    Rl.DrawMeshInstanced(mesh, _material, p, b.Count);
+                    int chunkCount = Math.Min(MaxInstancesPerDrawCall, b.Count - offset);
+                    RaylibMatrix* scratch = PrepareInstancedScratch(b.Transforms, offset, chunkCount);
+                    Rl.DrawMeshInstanced(mesh, _material, scratch, chunkCount);
+                    totalInstances += chunkCount;
+                    batchCount++;
                 }
-
-                totalInstances += b.Count;
-                batchCount++;
 
                 b.Count = 0;
                 batches[i] = b;
             }
+        }
+
+        private RaylibMatrix* PrepareInstancedScratch(RaylibMatrix[] source, int offset, int count)
+        {
+            EnsureInstancedScratchCapacity(count);
+
+            fixed (RaylibMatrix* sourcePtr = source)
+            {
+                Buffer.MemoryCopy(
+                    sourcePtr + offset,
+                    (void*)_instancedScratch,
+                    (long)(_instancedScratchCapacity * sizeof(RaylibMatrix)),
+                    (long)(count * sizeof(RaylibMatrix)));
+            }
+
+            return (RaylibMatrix*)_instancedScratch;
+        }
+
+        private void EnsureInstancedScratchCapacity(int requiredCount)
+        {
+            if (requiredCount <= _instancedScratchCapacity)
+            {
+                return;
+            }
+
+            int newCapacity = Math.Max(64, _instancedScratchCapacity);
+            while (newCapacity < requiredCount)
+            {
+                newCapacity *= 2;
+            }
+
+            if (_instancedScratch != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(_instancedScratch);
+            }
+
+            _instancedScratch = Marshal.AllocHGlobal(newCapacity * sizeof(RaylibMatrix));
+            _instancedScratchCapacity = newCapacity;
         }
 
         private void SetTintUniform(uint colorKey)
@@ -1100,12 +1172,22 @@ namespace Ludots.Client.Raylib.Rendering
                 _runtimeMeshMaterialLoaded = false;
             }
 
+            if (_instancedScratch != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(_instancedScratch);
+                _instancedScratch = IntPtr.Zero;
+                _instancedScratchCapacity = 0;
+            }
+
             if (!_initialized) return;
 
             if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
             if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
             Rl.UnloadMaterial(_material);
-            Rl.UnloadShader(_shader);
+            if (_material.shader.id != _shader.id)
+            {
+                Rl.UnloadShader(_shader);
+            }
         }
 
         private struct CachedModel
