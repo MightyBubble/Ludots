@@ -113,27 +113,6 @@ namespace Ludots.Core.Navigation2D.Config
         public int WorldMaxTileY { get; set; } = 511;
     }
 
-    public sealed class Navigation2DFlowDomainProfileConfig
-    {
-        public string Id { get; set; } = string.Empty;
-        public int ActivationRadiusTiles { get; set; } = 1;
-        public int MaxActiveTilesPerFlow { get; set; } = 64;
-        public int UnloadGraceTicks { get; set; } = 4;
-        public float MaxPotentialCells { get; set; } = 512f;
-        public int DomainWidthTiles { get; set; } = 9;
-        public int DomainHeightTiles { get; set; } = 9;
-        public int RecenterThresholdTiles { get; set; } = 2;
-        public int HoldTicks { get; set; } = 30;
-    }
-
-    public sealed class Navigation2DFlowDomainPoolConfig
-    {
-        public bool Enabled { get; set; } = false;
-        public int DomainCount { get; set; } = 2;
-        public string DefaultProfileId { get; set; } = string.Empty;
-        public List<Navigation2DFlowDomainProfileConfig> Profiles { get; set; } = new();
-    }
-
     public sealed class Navigation2DFlowCrowdDensityConfig
     {
         public float Min { get; set; } = 0.32f;
@@ -295,7 +274,6 @@ namespace Ludots.Core.Navigation2D.Config
         public Navigation2DSpatialPartitionConfig Spatial { get; set; } = new();
         public Navigation2DPlaygroundConfig Playground { get; set; } = new();
         public Navigation2DFlowStreamingConfig FlowStreaming { get; set; } = new();
-        public Navigation2DFlowDomainPoolConfig FlowDomains { get; set; } = new();
         public Navigation2DFlowCrowdConfig FlowCrowd { get; set; } = new();
         public Navigation2DContractsConfig Contracts { get; set; } = new();
 
@@ -305,7 +283,6 @@ namespace Ludots.Core.Navigation2D.Config
             var spatial = Spatial;
             var playground = Playground;
             var flowStreaming = FlowStreaming;
-            var flowDomains = FlowDomains;
             var flowCrowd = FlowCrowd;
             var contracts = Contracts;
 
@@ -395,7 +372,6 @@ namespace Ludots.Core.Navigation2D.Config
                     WorldMaxTileX = Math.Max(flowStreaming?.WorldMinTileX ?? -512, flowStreaming?.WorldMaxTileX ?? 511),
                     WorldMaxTileY = Math.Max(flowStreaming?.WorldMinTileY ?? -512, flowStreaming?.WorldMaxTileY ?? 511),
                 },
-                FlowDomains = CloneFlowDomainPoolValidated(flowDomains),
                 FlowCrowd = new Navigation2DFlowCrowdConfig
                 {
                     Enabled = flowCrowd?.Enabled ?? true,
@@ -556,43 +532,6 @@ namespace Ludots.Core.Navigation2D.Config
                 NeutralYieldFactor = ClampAtLeast(policy?.NeutralYieldFactor ?? 0.35f, 0f),
                 HostileYieldFactor = ClampAtLeast(policy?.HostileYieldFactor ?? 0.2f, 0f),
                 DominantPushMassRatio = ClampAtLeast(policy?.DominantPushMassRatio ?? 2f, 0.01f),
-            };
-        }
-
-        private static Navigation2DFlowDomainPoolConfig CloneFlowDomainPoolValidated(Navigation2DFlowDomainPoolConfig? pool)
-        {
-            var profiles = new List<Navigation2DFlowDomainProfileConfig>();
-            var sourceProfiles = pool?.Profiles;
-            if (sourceProfiles != null)
-            {
-                for (int i = 0; i < sourceProfiles.Count; i++)
-                {
-                    profiles.Add(CloneFlowDomainProfileValidated(sourceProfiles[i]));
-                }
-            }
-
-            return new Navigation2DFlowDomainPoolConfig
-            {
-                Enabled = pool?.Enabled ?? false,
-                DomainCount = ClampAtLeast(pool?.DomainCount ?? 2, 1),
-                DefaultProfileId = pool?.DefaultProfileId?.Trim() ?? string.Empty,
-                Profiles = profiles,
-            };
-        }
-
-        private static Navigation2DFlowDomainProfileConfig CloneFlowDomainProfileValidated(Navigation2DFlowDomainProfileConfig? profile)
-        {
-            return new Navigation2DFlowDomainProfileConfig
-            {
-                Id = profile?.Id?.Trim() ?? string.Empty,
-                ActivationRadiusTiles = ClampAtLeast(profile?.ActivationRadiusTiles ?? 1, 0),
-                MaxActiveTilesPerFlow = ClampAtLeast(profile?.MaxActiveTilesPerFlow ?? 64, 1),
-                UnloadGraceTicks = ClampAtLeast(profile?.UnloadGraceTicks ?? 4, 0),
-                MaxPotentialCells = ClampAtLeast(profile?.MaxPotentialCells ?? 512f, 1f),
-                DomainWidthTiles = ClampAtLeast(profile?.DomainWidthTiles ?? 9, 1),
-                DomainHeightTiles = ClampAtLeast(profile?.DomainHeightTiles ?? 9, 1),
-                RecenterThresholdTiles = ClampAtLeast(profile?.RecenterThresholdTiles ?? 2, 0),
-                HoldTicks = ClampAtLeast(profile?.HoldTicks ?? 30, 0),
             };
         }
         private static Navigation2DPlaygroundConfig ClonePlaygroundValidated(Navigation2DPlaygroundConfig? playground)

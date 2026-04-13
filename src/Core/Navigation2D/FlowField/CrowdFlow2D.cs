@@ -260,29 +260,6 @@ namespace Ludots.Core.Navigation2D.FlowField
             _traversalCostDirty = true;
         }
 
-        public void ResetActiveTiles()
-        {
-            ClearFrontier();
-            _activeTileExpiryTicks.Clear();
-            _candidateTiles.Clear();
-            _selectedTileSet.Clear();
-            _selectedTiles.Clear();
-            _removalScratch.Clear();
-
-            foreach (var kvp in _tiles)
-            {
-                _surface.ReleaseTile(kvp.Key);
-                kvp.Value.Reset();
-                _tilePool.Push(kvp.Value);
-            }
-
-            _tiles.Clear();
-            _needsRebuild = true;
-            _traversalCostDirty = true;
-            _framePrepared = false;
-            _forceFullSolve = true;
-        }
-
         public void OnTileUnloaded(long tileKey)
         {
             _loadedTiles.Remove(tileKey);

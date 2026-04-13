@@ -28,24 +28,6 @@
       "WorldMaxTileX": 511,
       "WorldMaxTileY": 511
     },
-    "FlowDomains": {
-      "Enabled": false,
-      "DomainCount": 3,
-      "DefaultProfileId": "battle_hotspot",
-      "Profiles": [
-        {
-          "Id": "battle_hotspot",
-          "ActivationRadiusTiles": 1,
-          "MaxActiveTilesPerFlow": 96,
-          "UnloadGraceTicks": 2,
-          "MaxPotentialCells": 512,
-          "DomainWidthTiles": 12,
-          "DomainHeightTiles": 10,
-          "RecenterThresholdTiles": 2,
-          "HoldTicks": 8
-        }
-      ]
-    },
     "Steering": {
       "Mode": "Hybrid",
       "QueryBudget": {
