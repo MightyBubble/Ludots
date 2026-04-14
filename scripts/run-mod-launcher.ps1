@@ -12,8 +12,15 @@ if ($null -eq $ArgsList) {
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Resolve-Path (Join-Path $scriptDir "..")
+$dotnetHostScript = Join-Path $scriptDir "dotnet-host.ps1"
 $bridgeHealthUrl = "http://localhost:5299/health"
 $launcherUrl = "http://localhost:5299/launcher/index.html"
+
+if (-not (Test-Path $dotnetHostScript)) {
+    throw "dotnet host helper not found: $dotnetHostScript"
+}
+
+. $dotnetHostScript
 function Wait-BridgeReady {
     param(
         [string]$Url,
@@ -44,11 +51,9 @@ if ($ArgsList.Length -gt 0 -and $ArgsList[0] -eq "cli") {
         $cliArgs = $ArgsList[1..($ArgsList.Length - 1)]
     }
 
-    dotnet run --project ..\src\Tools\Ludots.Launcher.Cli\Ludots.Launcher.Cli.csproj -c Release -- @cliArgs
-    if ($LASTEXITCODE -ne 0) {
-        exit $LASTEXITCODE
-    }
-
+    $cliProject = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\Ludots.Launcher.Cli.csproj"
+    $exitCode = Invoke-DotnetProject -ProjectPath $cliProject -WorkingDirectory $repoRoot -Arguments $cliArgs
+    if ($exitCode -ne 0) { exit $exitCode }
     exit 0
 }
 
@@ -78,10 +83,8 @@ try {
 }
 
 if (-not $bridgeReady) {
-    Start-Process `
-        -FilePath "dotnet" `
-        -ArgumentList @("run", "--project", (Join-Path $repoRoot "src\Tools\Ludots.Editor.Bridge\Ludots.Editor.Bridge.csproj"), "-c", "Release") `
-        -WorkingDirectory $repoRoot | Out-Null
+    $bridgeProject = Join-Path $repoRoot "src\Tools\Ludots.Editor.Bridge\Ludots.Editor.Bridge.csproj"
+    Start-DotnetProject -ProjectPath $bridgeProject -WorkingDirectory $repoRoot | Out-Null
 
     Wait-BridgeReady -Url $bridgeHealthUrl -TimeoutSeconds 60
 }

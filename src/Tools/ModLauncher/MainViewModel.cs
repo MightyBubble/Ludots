@@ -459,7 +459,7 @@ namespace Ludots.ModLauncher
 
         private int RunDotnetBuild(string csprojPath, string workingDirectory, string additionalArgs)
         {
-            var startInfo = new ProcessStartInfo("dotnet", $"build \"{csprojPath}\" {additionalArgs}".Trim())
+            var startInfo = new ProcessStartInfo(ResolveDotnetCommand(), $"build \"{csprojPath}\" {additionalArgs}".Trim())
             {
                 WorkingDirectory = workingDirectory,
                 RedirectStandardOutput = true,
@@ -499,9 +499,21 @@ namespace Ludots.ModLauncher
         private int RunCompileGraphs(string modId)
         {
             var toolProject = Path.Combine(_rootDir, "src", "Tools", "Ludots.Tool", "Ludots.Tool.csproj");
-            var args = $"run --project \"{toolProject}\" -- graph compile --mod \"{modId}\" --assetsRoot \"{_rootDir}\"";
+            var buildExitCode = RunDotnetBuild(toolProject, _rootDir, "-c Release -nologo -clp:ErrorsOnly");
+            if (buildExitCode != 0)
+            {
+                return buildExitCode;
+            }
 
-            var startInfo = new ProcessStartInfo("dotnet", args)
+            var toolDll = Path.Combine(_rootDir, "src", "Tools", "Ludots.Tool", "bin", "Release", "net8.0", "Ludots.Tool.dll");
+            if (!File.Exists(toolDll))
+            {
+                Application.Current.Dispatcher.Invoke(() => BuildLog += $"ERROR: Ludots.Tool output missing: {toolDll}\n");
+                return 1;
+            }
+
+            var args = $"exec --roll-forward Major \"{toolDll}\" graph compile --mod \"{modId}\" --assetsRoot \"{_rootDir}\"";
+            var startInfo = new ProcessStartInfo(ResolveDotnetCommand(), args)
             {
                 WorkingDirectory = _rootDir,
                 RedirectStandardOutput = true,
@@ -536,6 +548,21 @@ namespace Ludots.ModLauncher
                 process.WaitForExit();
                 return process.ExitCode;
             }
+        }
+
+        private static string ResolveDotnetCommand()
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (!string.IsNullOrWhiteSpace(localAppData))
+            {
+                var bundledDotnet = Path.Combine(localAppData, "X28L", "sdk", "Game", "Plugins", "UnrealMono", "dotnet", "sdk", "dotnet.bat");
+                if (File.Exists(bundledDotnet))
+                {
+                    return bundledDotnet;
+                }
+            }
+
+            return "dotnet";
         }
 
         private List<ModViewModel> ResolveBuildOrderForActiveMods(out string error)

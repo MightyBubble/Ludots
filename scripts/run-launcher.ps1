@@ -7,6 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) ".."
+$dotnetHostScript = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "dotnet-host.ps1"
 $bridgeProj = Join-Path $repoRoot 'src\Tools\Ludots.Editor.Bridge\Ludots.Editor.Bridge.csproj'
 $launcherDir = Join-Path $repoRoot 'src\Tools\Ludots.Launcher.React'
 $tmpDir = Join-Path $repoRoot '.tmp'
@@ -14,6 +15,9 @@ $pidFile = Join-Path $tmpDir 'launcher-processes.json'
 
 if (-not (Test-Path $bridgeProj)) { throw "Bridge project not found: $bridgeProj" }
 if (-not (Test-Path $launcherDir)) { throw "Launcher React dir not found: $launcherDir" }
+if (-not (Test-Path $dotnetHostScript)) { throw "dotnet host helper not found: $dotnetHostScript" }
+
+. $dotnetHostScript
 
 if (-not $NoInstall) {
     $nodeModules = Join-Path $launcherDir 'node_modules'
@@ -35,7 +39,7 @@ if ($Headless) {
     $launcherLog = Join-Path $tmpDir 'launcher-react.log'
     $launcherErr = Join-Path $tmpDir 'launcher-react.err.log'
 
-    $bridge = Start-Process -PassThru -FilePath dotnet -WorkingDirectory $repoRoot -ArgumentList @('run', '--project', $bridgeProj) -WindowStyle Hidden -RedirectStandardOutput $bridgeLog -RedirectStandardError $bridgeErr
+    $bridge = Start-DotnetProject -PassThru -ProjectPath $bridgeProj -WorkingDirectory $repoRoot -WindowStyle Hidden -RedirectStandardOutput $bridgeLog -RedirectStandardError $bridgeErr
     $launcher = Start-Process -PassThru -FilePath cmd.exe -WorkingDirectory $launcherDir -ArgumentList @('/c', 'npm', 'run', 'dev') -WindowStyle Hidden -RedirectStandardOutput $launcherLog -RedirectStandardError $launcherErr
 
     @{ bridgePid = $bridge.Id; launcherPid = $launcher.Id } | ConvertTo-Json | Set-Content -Encoding UTF8 -Path $pidFile
@@ -53,7 +57,7 @@ if ($Headless) {
     exit 0
 }
 
-$bridgeCmd = "cd /d `"$repoRoot`"; dotnet run --project `"$bridgeProj`""
+$bridgeCmd = "cd /d `"$repoRoot`"; . `"$dotnetHostScript`"; Invoke-DotnetProject -ProjectPath `"$bridgeProj`" -WorkingDirectory `"$repoRoot`""
 $launcherCmd = "cd /d `"$launcherDir`"; npm run dev"
 
 Start-Process -FilePath powershell -ArgumentList @('-NoExit', '-Command', $bridgeCmd) -WorkingDirectory $repoRoot | Out-Null
