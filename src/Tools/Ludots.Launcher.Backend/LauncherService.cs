@@ -321,8 +321,7 @@ public sealed class LauncherService
             }
         }
 
-        var dotnetBuild = await RunProcessAsync(
-            "dotnet",
+        var dotnetBuild = await RunDotnetAsync(
             $"build \"{profile.AppProjectPath}\" -c Release",
             _repoRoot,
             timeoutMs: 300_000);
@@ -409,7 +408,9 @@ public sealed class LauncherService
 
         var bootstrapPath = WriteRuntimeBootstrap(resolveResult.Plan);
         ReplacePreviousActiveProcess(resolveResult.Plan);
-        var startInfo = new ProcessStartInfo("dotnet", $"\"{resolveResult.Plan.AppAssemblyPath}\" \"{bootstrapPath}\"")
+        var startInfo = new ProcessStartInfo(
+            ResolveDotnetCommand(),
+            $"exec --roll-forward Major \"{resolveResult.Plan.AppAssemblyPath}\" \"{bootstrapPath}\"")
         {
             WorkingDirectory = resolveResult.Plan.AppOutputDirectory,
             UseShellExecute = false
@@ -446,7 +447,7 @@ public sealed class LauncherService
         var entry = ResolveUniqueModEntry(modId, catalog.ById);
         var solutionPath = Path.Combine(entry.Info.RootPath, $"{entry.Info.Id}.sln");
 
-        var create = await RunProcessAsync("dotnet", $"new sln -n {entry.Info.Id} --force", entry.Info.RootPath, timeoutMs: 30_000);
+        var create = await RunDotnetAsync($"new sln -n {entry.Info.Id} --force", entry.Info.RootPath, timeoutMs: 30_000);
         if (create.ExitCode != 0)
         {
             throw new InvalidOperationException(create.Output);
@@ -455,7 +456,7 @@ public sealed class LauncherService
         var projectPath = EnsureProjectFile(entry, config);
         if (File.Exists(projectPath))
         {
-            await RunProcessAsync("dotnet", $"sln \"{solutionPath}\" add \"{projectPath}\"", entry.Info.RootPath, timeoutMs: 30_000);
+            await RunDotnetAsync($"sln \"{solutionPath}\" add \"{projectPath}\"", entry.Info.RootPath, timeoutMs: 30_000);
         }
 
         foreach (var dependencyId in entry.Manifest.Dependencies.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase))
@@ -464,14 +465,14 @@ public sealed class LauncherService
             var dependencyProjectPath = ResolveBuildProjectPath(config, dependency.Info.RootPath, dependency.Info.Id, dependency.Info.ProjectPath);
             if (!string.IsNullOrWhiteSpace(dependencyProjectPath) && File.Exists(dependencyProjectPath))
             {
-                await RunProcessAsync("dotnet", $"sln \"{solutionPath}\" add \"{dependencyProjectPath}\"", entry.Info.RootPath, timeoutMs: 30_000);
+                await RunDotnetAsync($"sln \"{solutionPath}\" add \"{dependencyProjectPath}\"", entry.Info.RootPath, timeoutMs: 30_000);
             }
         }
 
         var coreProjectPath = Path.Combine(_repoRoot, "src", "Core", "Ludots.Core.csproj");
         if (File.Exists(coreProjectPath))
         {
-            await RunProcessAsync("dotnet", $"sln \"{solutionPath}\" add \"{coreProjectPath}\"", entry.Info.RootPath, timeoutMs: 30_000);
+            await RunDotnetAsync($"sln \"{solutionPath}\" add \"{coreProjectPath}\"", entry.Info.RootPath, timeoutMs: 30_000);
         }
 
         return solutionPath;
@@ -484,14 +485,13 @@ public sealed class LauncherService
             throw new ArgumentException("Mod id is required.", nameof(modId));
         }
 
-        var toolProjectPath = Path.Combine(_repoRoot, "src", "Tools", "Ludots.Tool", "Ludots.Tool.csproj");
-        var args = new StringBuilder($"run --project \"{toolProjectPath}\" -- mod init --id {modId} --template {template}");
+        var args = new StringBuilder($"mod init --id \"{modId}\" --template \"{template}\"");
         if (!string.IsNullOrWhiteSpace(targetDirectory))
         {
             args.Append($" --dir \"{targetDirectory}\"");
         }
 
-        var result = await RunProcessAsync("dotnet", args.ToString(), _repoRoot, timeoutMs: 120_000);
+        var result = await RunLudotsToolAsync(args.ToString(), timeoutMs: 120_000);
         if (result.ExitCode != 0)
         {
             throw new InvalidOperationException(result.Output);
@@ -1293,8 +1293,7 @@ public sealed class LauncherService
         var projectPath = EnsureProjectFile(entry, config);
         var output = new StringBuilder();
         var projectDirectory = Path.GetDirectoryName(projectPath) ?? entry.Info.RootPath;
-        var build = await RunProcessAsync(
-            "dotnet",
+        var build = await RunDotnetAsync(
             $"build \"{projectPath}\" /p:ProduceReferenceAssembly=true -c Release",
             projectDirectory,
             timeoutMs: 300_000);
@@ -1307,10 +1306,8 @@ public sealed class LauncherService
         var referenceExportPath = ExportReferenceAssembly(entry.Info, projectDirectory);
         output.AppendLine($"Exported ref: {referenceExportPath}");
 
-        var graphCompile = await RunProcessAsync(
-            "dotnet",
-            $"run --project \"{Path.Combine(_repoRoot, "src", "Tools", "Ludots.Tool", "Ludots.Tool.csproj")}\" -- graph compile --modPath \"{entry.Info.RootPath}\" --assetsRoot \"{_repoRoot}\"",
-            _repoRoot,
+        var graphCompile = await RunLudotsToolAsync(
+            $"graph compile --modPath \"{entry.Info.RootPath}\" --assetsRoot \"{_repoRoot}\"",
             timeoutMs: 300_000);
         output.AppendLine(graphCompile.Output);
         if (graphCompile.ExitCode != 0)
@@ -1840,6 +1837,92 @@ public sealed class LauncherService
         var stderr = await stderrTask;
         var output = string.Join(Environment.NewLine, new[] { stdout, stderr }.Where(text => !string.IsNullOrWhiteSpace(text)));
         return (process.ExitCode, output);
+    }
+
+    private static string ResolveDotnetCommand()
+    {
+        if (IsDotnetExecutable(Environment.ProcessPath))
+        {
+            return Environment.ProcessPath!;
+        }
+
+        try
+        {
+            var currentProcessPath = Process.GetCurrentProcess().MainModule?.FileName;
+            if (IsDotnetExecutable(currentProcessPath))
+            {
+                return currentProcessPath!;
+            }
+        }
+        catch
+        {
+        }
+
+        return "dotnet";
+    }
+
+    private static bool IsDotnetExecutable(string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return false;
+        }
+
+        var fileName = Path.GetFileName(filePath);
+        return string.Equals(fileName, "dotnet", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(fileName, "dotnet.exe", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static Task<(int ExitCode, string Output)> RunDotnetAsync(string arguments, string workingDirectory, int timeoutMs)
+    {
+        return RunProcessAsync(ResolveDotnetCommand(), arguments, workingDirectory, timeoutMs);
+    }
+
+    private string GetLudotsToolProjectPath()
+    {
+        return Path.Combine(_repoRoot, "src", "Tools", "Ludots.Tool", "Ludots.Tool.csproj");
+    }
+
+    private string GetLudotsToolAssemblyPath()
+    {
+        return Path.Combine(_repoRoot, "src", "Tools", "Ludots.Tool", "bin", "Release", "net8.0", "Ludots.Tool.dll");
+    }
+
+    private async Task<(int ExitCode, string Output)> RunLudotsToolAsync(string arguments, int timeoutMs)
+    {
+        var toolProjectPath = GetLudotsToolProjectPath();
+        var output = new StringBuilder();
+        var build = await RunDotnetAsync(
+            $"build \"{toolProjectPath}\" -c Release -nologo -clp:ErrorsOnly",
+            _repoRoot,
+            timeoutMs);
+        if (!string.IsNullOrWhiteSpace(build.Output))
+        {
+            output.AppendLine(build.Output);
+        }
+
+        if (build.ExitCode != 0)
+        {
+            return (build.ExitCode, output.ToString());
+        }
+
+        var toolAssemblyPath = GetLudotsToolAssemblyPath();
+        if (!File.Exists(toolAssemblyPath))
+        {
+            output.AppendLine($"Ludots.Tool.dll missing after build: {toolAssemblyPath}");
+            return (1, output.ToString());
+        }
+
+        var run = await RunDotnetAsync(
+            $"exec --roll-forward Major \"{toolAssemblyPath}\" {arguments}",
+            _repoRoot,
+            timeoutMs);
+        if (!string.IsNullOrWhiteSpace(run.Output))
+        {
+            output.AppendLine(run.Output);
+        }
+
+        return (run.ExitCode, output.ToString());
     }
 
     private static Task<(int ExitCode, string Output)> RunNodePackageCommandAsync(string arguments, string workingDirectory, int timeoutMs)
