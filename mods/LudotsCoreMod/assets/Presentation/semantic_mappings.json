@@ -2,11 +2,6 @@
   {
     "id": "team.relationship",
     "labelToken": "presentation.semantic.relationship.label",
-    "runtimeValues": {
-      "0": "team.relationship.neutral",
-      "1": "team.relationship.friendly",
-      "2": "team.relationship.hostile"
-    },
     "values": {
       "team.relationship.neutral": "presentation.semantic.relationship.neutral",
       "team.relationship.friendly": "presentation.semantic.relationship.friendly",

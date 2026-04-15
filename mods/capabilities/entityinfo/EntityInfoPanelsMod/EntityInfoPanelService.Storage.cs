@@ -66,7 +66,7 @@ public sealed partial class EntityInfoPanelService
         {
             _insightStatCurrentValues[statBase + i] = 0f;
             _insightStatBaseValues[statBase + i] = 0f;
-            _insightSemanticFieldRuntimeValues[statBase + i] = 0;
+            _insightSemanticFieldValueKeys[statBase + i] = string.Empty;
         }
 
         int actionBase = slot * MaxInsightActionsPerPanel;
@@ -171,15 +171,15 @@ public sealed partial class EntityInfoPanelService
         return true;
     }
 
-    private bool SetInsightSemanticFieldValue(int slot, int fieldIndex, int value)
+    private bool SetInsightSemanticFieldValueKey(int slot, int fieldIndex, string valueKey)
     {
         int index = InsightStatIndex(slot, fieldIndex);
-        if (_insightSemanticFieldRuntimeValues[index] == value)
+        if (string.Equals(_insightSemanticFieldValueKeys[index], valueKey, StringComparison.Ordinal))
         {
             return false;
         }
 
-        _insightSemanticFieldRuntimeValues[index] = value;
+        _insightSemanticFieldValueKeys[index] = valueKey;
         return true;
     }
 

@@ -5,7 +5,6 @@
     "accentColorHex": "#D8A85D",
     "surfaceColorHex": "#1A2028",
     "genreGlyph": "4X",
-    "portraitGlyph": "GV",
     "portraitImageAsset": "genreinfo.portrait.governor",
     "genreLabelToken": "genreinfo.genre.4x",
     "subtitleToken": "genreinfo.profile.governor.subtitle",
@@ -21,7 +20,7 @@
       { "semanticKey": "stat.tech_progress", "glyph": "TK", "source": "attribute", "attribute": "TechProgress", "display": "currentOverBase" }
     ],
     "semanticFields": [
-      { "glyph": "REL", "mappingId": "team.relationship", "entityRelation": "selfTeamRelationship" }
+      { "glyph": "REL", "mappingId": "team.relationship", "semanticSource": "team.relationship.self" }
     ],
     "tips": [
       { "glyph": "1", "textToken": "genreinfo.profile.governor.tip.1" },
@@ -39,7 +38,6 @@
     "accentColorHex": "#5DB0FF",
     "surfaceColorHex": "#122033",
     "genreGlyph": "MO",
-    "portraitGlyph": "NX",
     "portraitImageAsset": "genreinfo.portrait.hero",
     "genreLabelToken": "genreinfo.genre.moba",
     "subtitleToken": "genreinfo.profile.hero.subtitle",
@@ -54,7 +52,7 @@
       { "semanticKey": "stat.attack_speed", "glyph": "AS", "source": "attribute", "attribute": "AttackSpeed", "display": "current" }
     ],
     "semanticFields": [
-      { "glyph": "REL", "mappingId": "team.relationship", "entityRelation": "selfTeamRelationship" }
+      { "glyph": "REL", "mappingId": "team.relationship", "semanticSource": "team.relationship.self" }
     ],
     "tips": [
       { "glyph": "Q", "textToken": "genreinfo.profile.hero.tip.1" },
@@ -72,7 +70,6 @@
     "accentColorHex": "#D66F4D",
     "surfaceColorHex": "#231716",
     "genreGlyph": "RT",
-    "portraitGlyph": "BK",
     "portraitImageAsset": "genreinfo.portrait.barracks",
     "genreLabelToken": "genreinfo.genre.rts",
     "subtitleToken": "genreinfo.profile.barracks.subtitle",
@@ -86,7 +83,7 @@
       { "semanticKey": "stat.lane_count", "glyph": "LY", "source": "constant", "value": 2, "display": "constant" }
     ],
     "semanticFields": [
-      { "glyph": "REL", "mappingId": "team.relationship", "entityRelation": "selfTeamRelationship" }
+      { "glyph": "REL", "mappingId": "team.relationship", "semanticSource": "team.relationship.self" }
     ],
     "tips": [
       { "glyph": "B", "textToken": "genreinfo.profile.barracks.tip.1" },
@@ -103,7 +100,6 @@
     "accentColorHex": "#8FC4FF",
     "surfaceColorHex": "#162130",
     "genreGlyph": "RT",
-    "portraitGlyph": "MR",
     "portraitImageAsset": "genreinfo.portrait.marine",
     "genreLabelToken": "genreinfo.genre.rts",
     "subtitleToken": "genreinfo.profile.marine.subtitle",
@@ -117,7 +113,7 @@
       { "semanticKey": "stat.attack_speed", "glyph": "AS", "source": "attribute", "attribute": "AttackSpeed", "display": "current" }
     ],
     "semanticFields": [
-      { "glyph": "REL", "mappingId": "team.relationship", "entityRelation": "selfTeamRelationship" }
+      { "glyph": "REL", "mappingId": "team.relationship", "semanticSource": "team.relationship.self" }
     ],
     "tips": [
       { "glyph": "F", "textToken": "genreinfo.profile.marine.tip.1" },
@@ -133,7 +129,6 @@
     "accentColorHex": "#D7A95C",
     "surfaceColorHex": "#201E18",
     "genreGlyph": "RT",
-    "portraitGlyph": "TK",
     "portraitImageAsset": "genreinfo.portrait.tank",
     "genreLabelToken": "genreinfo.genre.rts",
     "subtitleToken": "genreinfo.profile.tank.subtitle",
@@ -147,7 +142,7 @@
       { "semanticKey": "stat.shield", "glyph": "SH", "source": "attribute", "attribute": "Shield", "display": "currentOverBase" }
     ],
     "semanticFields": [
-      { "glyph": "REL", "mappingId": "team.relationship", "entityRelation": "selfTeamRelationship" }
+      { "glyph": "REL", "mappingId": "team.relationship", "semanticSource": "team.relationship.self" }
     ],
     "tips": [
       { "glyph": "A", "textToken": "genreinfo.profile.tank.tip.1" },
@@ -163,7 +158,6 @@
     "accentColorHex": "#7CE2C8",
     "surfaceColorHex": "#13221E",
     "genreGlyph": "RT",
-    "portraitGlyph": "SV",
     "portraitImageAsset": "genreinfo.portrait.vessel",
     "genreLabelToken": "genreinfo.genre.rts",
     "subtitleToken": "genreinfo.profile.vessel.subtitle",
@@ -177,7 +171,7 @@
       { "semanticKey": "stat.energy", "glyph": "EN", "source": "attribute", "attribute": "Energy", "display": "currentOverBase" }
     ],
     "semanticFields": [
-      { "glyph": "REL", "mappingId": "team.relationship", "entityRelation": "selfTeamRelationship" }
+      { "glyph": "REL", "mappingId": "team.relationship", "semanticSource": "team.relationship.self" }
     ],
     "tips": [
       { "glyph": "H", "textToken": "genreinfo.profile.vessel.tip.1" },

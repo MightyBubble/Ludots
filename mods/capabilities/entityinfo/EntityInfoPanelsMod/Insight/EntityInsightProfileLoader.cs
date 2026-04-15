@@ -64,8 +64,7 @@ public sealed class EntityInsightProfileLoader
                 AccentColorHex = ReadRequiredString(node, "accentColorHex"),
                 SurfaceColorHex = ReadRequiredString(node, "surfaceColorHex"),
                 GenreGlyph = ReadRequiredString(node, "genreGlyph"),
-                PortraitImageAssetId = ResolveOptionalImageAssetId(imageRegistry, node, "portraitImageAsset", profileId),
-                PortraitGlyph = ReadOptionalString(node, "portraitGlyph"),
+                PortraitImageAssetId = ResolveRequiredImageAssetId(imageRegistry, node, "portraitImageAsset", profileId),
                 GenreLabelTokenId = ResolveRequiredTokenId(textCatalog, node, "genreLabelToken", profileId),
                 SubtitleTokenId = ResolveRequiredTokenId(textCatalog, node, "subtitleToken", profileId),
                 BodyTokenId = ResolveRequiredTokenId(textCatalog, node, "bodyToken", profileId),
@@ -210,18 +209,18 @@ public sealed class EntityInsightProfileLoader
                 throw new InvalidOperationException($"Entity insight profile '{profileId}' semanticFields[{i}] must be an object.");
             }
 
-            string relation = ReadRequiredString(fieldNode, "entityRelation");
-            EntityInsightEntityRelationKind entityRelation = relation switch
+            string source = ReadRequiredString(fieldNode, "semanticSource");
+            EntityInsightSemanticValueSourceKind semanticValueSource = source switch
             {
-                "selfTeamRelationship" => EntityInsightEntityRelationKind.SelfTeamRelationship,
-                _ => throw new InvalidOperationException($"Entity insight profile '{profileId}' semanticFields[{i}] uses unsupported entityRelation '{relation}'.")
+                "team.relationship.self" => EntityInsightSemanticValueSourceKind.TeamRelationshipSelf,
+                _ => throw new InvalidOperationException($"Entity insight profile '{profileId}' semanticFields[{i}] uses unsupported semanticSource '{source}'.")
             };
 
             fields[i] = new EntityInsightSemanticFieldProfile
             {
                 Glyph = ReadRequiredString(fieldNode, "glyph"),
                 MappingId = ReadRequiredString(fieldNode, "mappingId"),
-                EntityRelation = entityRelation,
+                SemanticValueSource = semanticValueSource,
             };
         }
 
@@ -299,18 +298,14 @@ public sealed class EntityInsightProfileLoader
         return tokenId;
     }
 
-    private static int ResolveOptionalImageAssetId(
+    private static int ResolveRequiredImageAssetId(
         PresentationImageRegistry imageRegistry,
         JsonObject node,
         string propertyName,
         string scope)
     {
-        string assetKey = ReadOptionalString(node, propertyName);
-        if (string.IsNullOrWhiteSpace(assetKey))
-        {
-            return 0;
-        }
-
+        RejectLegacyPortraitGlyph(node, scope);
+        string assetKey = ReadRequiredString(node, propertyName);
         int imageAssetId = imageRegistry.GetId(assetKey);
         if (imageAssetId <= 0)
         {
@@ -318,6 +313,15 @@ public sealed class EntityInsightProfileLoader
         }
 
         return imageAssetId;
+    }
+
+    private static void RejectLegacyPortraitGlyph(JsonObject node, string scope)
+    {
+        if (node.ContainsKey("portraitGlyph"))
+        {
+            throw new InvalidOperationException(
+                $"Entity insight scope '{scope}' uses legacy 'portraitGlyph'. Define 'portraitImageAsset' only.");
+        }
     }
 
     private static string ReadRequiredString(JsonObject node, string propertyName)

@@ -242,14 +242,14 @@ public sealed partial class EntityInfoPanelService
         return $"Entity #{entity.Id}";
     }
 
-    private static string ResolveMissingSubtitle(EntityInfoPanelTarget target)
+    private string ResolveMissingSubtitle(EntityInfoPanelTarget target)
     {
         return target.Kind switch
         {
-            EntityInfoPanelTargetKind.FixedEntity => "Fixed target unavailable.",
-            EntityInfoPanelTargetKind.GlobalEntityKey when !string.IsNullOrWhiteSpace(target.Key) => $"Waiting for `{target.Key}`.",
-            EntityInfoPanelTargetKind.CurrentSelectionView => "Waiting for active selection view.",
-            _ => "Target unavailable.",
+            EntityInfoPanelTargetKind.FixedEntity => GetTargetFixedUnavailableText(),
+            EntityInfoPanelTargetKind.GlobalEntityKey => GetTargetGlobalWaitingText(),
+            EntityInfoPanelTargetKind.CurrentSelectionView => GetEntityCollectionWaitingBodyText(),
+            _ => GetTargetUnavailableText(),
         };
     }
 

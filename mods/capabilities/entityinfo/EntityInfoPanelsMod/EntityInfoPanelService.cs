@@ -70,7 +70,7 @@ public sealed partial class EntityInfoPanelService
     private readonly float[] _insightStatCurrentValues = new float[PanelCapacity * MaxInsightStatsPerPanel];
     private readonly float[] _insightStatBaseValues = new float[PanelCapacity * MaxInsightStatsPerPanel];
     private readonly byte[] _insightSemanticFieldCounts = new byte[PanelCapacity];
-    private readonly int[] _insightSemanticFieldRuntimeValues = new int[PanelCapacity * MaxInsightStatsPerPanel];
+    private readonly string[] _insightSemanticFieldValueKeys = new string[PanelCapacity * MaxInsightStatsPerPanel];
     private readonly int[] _insightActionCounts = new int[PanelCapacity];
     private readonly byte[] _insightActionFlags = new byte[PanelCapacity * MaxInsightActionsPerPanel];
 

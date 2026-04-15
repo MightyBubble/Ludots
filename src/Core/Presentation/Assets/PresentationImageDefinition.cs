@@ -7,9 +7,6 @@ namespace Ludots.Core.Presentation.Assets
         public int ImageAssetId;
         public PresentationImageAssetKind AssetKind;
         public PresentationImageLocatorDefinition[] Locators = Array.Empty<PresentationImageLocatorDefinition>();
-        public string? FallbackGlyph;
-        public string? FallbackAccentColorHex;
-        public string? FallbackSurfaceColorHex;
 
         public bool TryResolveLocator(string backendId, out PresentationImageLocatorDefinition locator)
         {
@@ -26,23 +23,6 @@ namespace Ludots.Core.Presentation.Assets
             }
 
             locator = default;
-            return false;
-        }
-
-        public bool TryResolveGlyphFallback(out PresentationImageGlyphFallbackDefinition fallback)
-        {
-            if (!string.IsNullOrWhiteSpace(FallbackGlyph) &&
-                !string.IsNullOrWhiteSpace(FallbackAccentColorHex) &&
-                !string.IsNullOrWhiteSpace(FallbackSurfaceColorHex))
-            {
-                fallback = new PresentationImageGlyphFallbackDefinition(
-                    FallbackGlyph,
-                    FallbackAccentColorHex,
-                    FallbackSurfaceColorHex);
-                return true;
-            }
-
-            fallback = default;
             return false;
         }
     }

@@ -48,18 +48,6 @@ namespace Ludots.Core.Presentation.Assets
             return true;
         }
 
-        public bool TryResolveGlyphFallback(int imageAssetId, out PresentationImageGlyphFallbackDefinition fallback)
-        {
-            if (_registry.TryGet(imageAssetId, out PresentationImageDefinition definition) &&
-                definition.TryResolveGlyphFallback(out fallback))
-            {
-                return true;
-            }
-
-            fallback = default;
-            return false;
-        }
-
         private string ResolveAssetRef(string assetRef)
         {
             if (string.IsNullOrWhiteSpace(assetRef))

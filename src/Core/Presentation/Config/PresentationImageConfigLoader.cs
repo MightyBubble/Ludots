@@ -68,25 +68,14 @@ namespace Ludots.Core.Presentation.Config
 
             ValidateUniqueBackends(key, locators);
 
-            string? fallbackGlyph = ReadOptionalString(node, "fallbackGlyph");
-            string? fallbackAccentColorHex = ReadOptionalString(node, "fallbackAccentColorHex");
-            string? fallbackSurfaceColorHex = ReadOptionalString(node, "fallbackSurfaceColorHex");
-            if (fallbackGlyph != null || fallbackAccentColorHex != null || fallbackSurfaceColorHex != null)
-            {
-                if (fallbackGlyph == null || fallbackAccentColorHex == null || fallbackSurfaceColorHex == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Presentation image asset '{key}' glyph migration fallback must define fallbackGlyph, fallbackAccentColorHex, and fallbackSurfaceColorHex together.");
-                }
-            }
+            RejectLegacyFallbackField(node, key, "fallbackGlyph");
+            RejectLegacyFallbackField(node, key, "fallbackAccentColorHex");
+            RejectLegacyFallbackField(node, key, "fallbackSurfaceColorHex");
 
             return new PresentationImageDefinition
             {
                 AssetKind = assetKind,
                 Locators = locators,
-                FallbackGlyph = fallbackGlyph,
-                FallbackAccentColorHex = fallbackAccentColorHex,
-                FallbackSurfaceColorHex = fallbackSurfaceColorHex,
             };
         }
 
@@ -94,6 +83,15 @@ namespace Ludots.Core.Presentation.Config
         {
             string value = node[propertyName]?.GetValue<string>() ?? string.Empty;
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
+
+        private static void RejectLegacyFallbackField(JsonObject node, string key, string propertyName)
+        {
+            if (node[propertyName] is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation image asset '{key}' uses legacy '{propertyName}'. Define only backend locators.");
+            }
         }
 
         private static void ValidateUniqueBackends(string key, PresentationImageLocatorDefinition[] locators)

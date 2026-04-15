@@ -125,33 +125,10 @@ namespace Ludots.Core.Presentation.Config
                     values.Add(key, tokenId);
                 }
 
-                Dictionary<int, string>? runtimeValueKeys = null;
-                if (node["runtimeValues"] is JsonObject runtimeValuesNode && runtimeValuesNode.Count > 0)
+                if (node["runtimeValues"] is JsonNode)
                 {
-                    runtimeValueKeys = new Dictionary<int, string>();
-                    foreach (KeyValuePair<string, JsonNode?> pair in runtimeValuesNode)
-                    {
-                        if (!int.TryParse(pair.Key, out int runtimeValue))
-                        {
-                            throw new InvalidOperationException(
-                                $"Presentation semantic mapping '{mappingId}' runtime value key '{pair.Key}' must parse as an integer.");
-                        }
-
-                        string mappedValueKey = pair.Value?.GetValue<string>() ?? string.Empty;
-                        if (string.IsNullOrWhiteSpace(mappedValueKey))
-                        {
-                            throw new InvalidOperationException(
-                                $"Presentation semantic mapping '{mappingId}' runtime value '{runtimeValue}' must map to a non-empty value key.");
-                        }
-
-                        if (!values.ContainsKey(mappedValueKey))
-                        {
-                            throw new InvalidOperationException(
-                                $"Presentation semantic mapping '{mappingId}' runtime value '{runtimeValue}' references undefined value key '{mappedValueKey}'.");
-                        }
-
-                        runtimeValueKeys.Add(runtimeValue, mappedValueKey);
-                    }
+                    throw new InvalidOperationException(
+                        $"Presentation semantic mapping '{mappingId}' uses unsupported 'runtimeValues'. Runtime adapters must resolve semantic value keys before rendering.");
                 }
 
                 mappings.Add(
@@ -159,8 +136,7 @@ namespace Ludots.Core.Presentation.Config
                     new PresentationSemanticValueMappingDefinition(
                         mappingId,
                         ResolveRequiredTokenId(node, "labelToken", mappingId),
-                        values,
-                        runtimeValueKeys));
+                        values));
             }
 
             return mappings;

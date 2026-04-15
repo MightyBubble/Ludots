@@ -644,11 +644,6 @@ namespace Ludots.Tests.Presentation
   {
     ""id"": ""team.relationship"",
     ""labelToken"": ""semantic.relationship.label"",
-    ""runtimeValues"": {
-      ""0"": ""team.relationship.neutral"",
-      ""1"": ""team.relationship.friendly"",
-      ""2"": ""team.relationship.hostile""
-    },
     ""values"": {
       ""team.relationship.friendly"": ""semantic.relationship.friendly"",
       ""team.relationship.hostile"": ""semantic.relationship.hostile"",
@@ -678,8 +673,11 @@ namespace Ludots.Tests.Presentation
                 resolver.FormatAttributeValueRequired("unit.health", PresentationAttributeValueDisplayKind.CurrentOverBase, 75f, 100f),
                 Is.EqualTo("75/100 HP"));
             Assert.That(resolver.ResolveMappingLabelRequired(WellKnownPresentationSemanticMappingKeys.TeamRelationship), Is.EqualTo("Relationship"));
-            Assert.That(resolver.ResolveMappedRuntimeValueRequired(WellKnownPresentationSemanticMappingKeys.TeamRelationship, 1), Is.EqualTo("Friendly"));
-            Assert.That(resolver.ResolveTeamRelationshipValueRequired(Ludots.Core.Gameplay.Teams.TeamRelationship.Friendly), Is.EqualTo("Friendly"));
+            Assert.That(
+                resolver.ResolveMappedValueRequired(
+                    WellKnownPresentationSemanticMappingKeys.TeamRelationship,
+                    WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly),
+                Is.EqualTo("Friendly"));
         }
 
         [Test]
@@ -744,9 +742,6 @@ namespace Ludots.Tests.Presentation
   {
     ""id"": ""portrait.commander"",
     ""assetKind"": ""Portrait2D"",
-    ""fallbackGlyph"": ""CM"",
-    ""fallbackAccentColorHex"": ""#58B7FF"",
-    ""fallbackSurfaceColorHex"": ""#0F1721"",
     ""locators"": [
       { ""backendId"": ""raylib"", ""assetRef"": ""Core:assets/Presentation/portraits/commander.svg"" }
     ]
@@ -767,10 +762,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(imageAssetId, Is.GreaterThan(0));
             Assert.That(registry.TryGet(imageAssetId, out var image), Is.True);
             Assert.That(image.AssetKind, Is.EqualTo(PresentationImageAssetKind.Portrait2D));
-            Assert.That(image.TryResolveGlyphFallback(out var fallback), Is.True);
-            Assert.That(fallback.Glyph, Is.EqualTo("CM"));
-            Assert.That(fallback.AccentColorHex, Is.EqualTo("#58B7FF"));
-            Assert.That(fallback.SurfaceColorHex, Is.EqualTo("#0F1721"));
 
             var resolver = new PresentationImageSourceResolver(registry, vfs, "raylib");
             string resolved = resolver.ResolveRequiredSource(imageAssetId);
@@ -779,7 +770,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PresentationImageConfigLoader_Fails_WhenGlyphFallbackContractIsPartial()
+        public void PresentationImageConfigLoader_Fails_WhenLegacyFallbackFieldIsPresent()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[
@@ -802,7 +793,7 @@ namespace Ludots.Tests.Presentation
             var loader = new PresentationImageConfigLoader(pipeline, registry);
 
             var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
-            Assert.That(ex!.Message, Does.Contain("glyph migration fallback must define"));
+            Assert.That(ex!.Message, Does.Contain("legacy 'fallbackGlyph'"));
         }
 
         [Test]

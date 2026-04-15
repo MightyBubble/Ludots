@@ -415,12 +415,6 @@ public sealed class EntityInfoPanelServiceTests
                             [WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly] = textCatalog.GetTokenId("semantic.relationship.friendly"),
                             [WellKnownPresentationSemanticMappingKeys.TeamRelationshipHostile] = textCatalog.GetTokenId("semantic.relationship.hostile"),
                             [WellKnownPresentationSemanticMappingKeys.TeamRelationshipNeutral] = textCatalog.GetTokenId("semantic.relationship.neutral"),
-                        },
-                        new Dictionary<int, string>
-                        {
-                            [0] = WellKnownPresentationSemanticMappingKeys.TeamRelationshipNeutral,
-                            [1] = WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly,
-                            [2] = WellKnownPresentationSemanticMappingKeys.TeamRelationshipHostile,
                         })
                 });
 
@@ -471,7 +465,7 @@ public sealed class EntityInfoPanelServiceTests
                     {
                         Glyph = "R",
                         MappingId = WellKnownPresentationSemanticMappingKeys.TeamRelationship,
-                        EntityRelation = EntityInsightEntityRelationKind.SelfTeamRelationship,
+                        SemanticValueSource = EntityInsightSemanticValueSourceKind.TeamRelationshipSelf,
                     }
                 },
                 Tips = Array.Empty<EntityInsightTipProfile>(),
@@ -532,9 +526,9 @@ public sealed class EntityInfoPanelServiceTests
     }
 
     [Test]
-    public void Refresh_InsightBrief_UsesImageAssetGlyphFallback_DuringMigration_WhenBackendLocatorIsMissing()
+    public void Refresh_InsightBrief_FailsFast_WhenPortraitAssetCannotResolveCurrentBackend()
     {
-        string root = Path.Combine(Path.GetTempPath(), "Ludots_EntityInfo_ImageFallback", Guid.NewGuid().ToString("N"));
+        string root = Path.Combine(Path.GetTempPath(), "Ludots_EntityInfo_PortraitContract", Guid.NewGuid().ToString("N"));
         try
         {
             Directory.CreateDirectory(root);
@@ -551,10 +545,7 @@ public sealed class EntityInfoPanelServiceTests
                     Locators = new[]
                     {
                         new PresentationImageLocatorDefinition("web", "https://example.invalid/portrait.svg"),
-                    },
-                    FallbackGlyph = "AF",
-                    FallbackAccentColorHex = "#58B7FF",
-                    FallbackSurfaceColorHex = "#0F1721",
+                    }
                 });
 
             var profile = new EntityInsightProfile
@@ -565,7 +556,6 @@ public sealed class EntityInfoPanelServiceTests
                 SurfaceColorHex = "#000000",
                 GenreGlyph = "C",
                 PortraitImageAssetId = portraitImageAssetId,
-                PortraitGlyph = "LEGACY",
                 GenreLabelTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.actions"),
                 SubtitleTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.tips"),
                 BodyTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.collection.title"),
@@ -610,10 +600,8 @@ public sealed class EntityInfoPanelServiceTests
 
             service.Refresh(world, new Dictionary<string, object>());
 
-            string portraitUri = service.GetInsightPortraitIconUri(handle.Slot);
-            Assert.That(portraitUri, Does.StartWith("data:image/svg+xml"));
-            Assert.That(Uri.UnescapeDataString(portraitUri), Does.Contain(">AF<"));
-            Assert.That(Uri.UnescapeDataString(portraitUri), Does.Not.Contain("LEGACY"));
+            var ex = Assert.Throws<InvalidOperationException>(() => service.GetInsightPortraitIconUri(handle.Slot));
+            Assert.That(ex!.Message, Does.Contain("does not define a locator for backend 'raylib'"));
         }
         finally
         {
@@ -622,7 +610,7 @@ public sealed class EntityInfoPanelServiceTests
     }
 
     [Test]
-    public void Refresh_InsightBrief_FallsBackToPortraitGlyph_DuringMigration_WhenImageAssetIsMissing()
+    public void BuildInsightPortraitIconUri_FailsFast_WhenImageResolverIsMissing()
     {
         int templateKeyId = new EntityTemplateKeyRegistry().Register("tests.hero.migration");
         var profile = new EntityInsightProfile
@@ -632,8 +620,7 @@ public sealed class EntityInfoPanelServiceTests
             AccentColorHex = "#58B7FF",
             SurfaceColorHex = "#0F1721",
             GenreGlyph = "C",
-            PortraitImageAssetId = 0,
-            PortraitGlyph = "MG",
+            PortraitImageAssetId = 42,
             GenreLabelTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.actions"),
             SubtitleTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.tips"),
             BodyTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.collection.title"),
@@ -663,23 +650,8 @@ public sealed class EntityInfoPanelServiceTests
             SharedEntityInfoLocaleSelection,
             semanticCatalog,
             imageSourceResolver: null);
-
-        using var world = World.Create();
-        Entity entity = world.Create(
-            new Name { Value = "Migration Unit" },
-            new EntityTemplateKeyCm { TemplateKeyId = templateKeyId });
-
-        EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
-            EntityInfoPanelKind.InsightBrief,
-            EntityInfoPanelSurface.Ui,
-            EntityInfoPanelTarget.Fixed(entity),
-            new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopLeft, 0f, 0f, 320f, 240f),
-            EntityInfoGasDetailFlags.None,
-            true));
-
-        service.Refresh(world, new Dictionary<string, object>());
-
-        Assert.That(service.GetInsightPortraitIconUri(handle.Slot), Does.StartWith("data:image/svg+xml"));
+        var ex = Assert.Throws<InvalidOperationException>(() => service.BuildInsightPortraitIconUri(profile));
+        Assert.That(ex!.Message, Does.Contain("requires a configured presentation image source resolver"));
     }
 
     private static PresentationSemanticCatalog CreateMigrationSemanticCatalog()
@@ -823,6 +795,12 @@ public sealed class EntityInfoPanelServiceTests
   { ""id"": ""entityinfo.collection.rows"", ""argCount"": 2 },
   { ""id"": ""entityinfo.collection.no_attributes"", ""argCount"": 0 },
   { ""id"": ""entityinfo.collection.more_attributes"", ""argCount"": 1 },
+  { ""id"": ""entityinfo.panel.component.title"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.panel.gas.title"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.panel.collection.title_text"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.target.fixed_unavailable"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.target.global_waiting"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.target.unavailable"", ""argCount"": 0 },
   { ""id"": ""entityinfo.section.actions"", ""argCount"": 0 },
   { ""id"": ""entityinfo.section.tips"", ""argCount"": 0 },
   { ""id"": ""entityinfo.actionstate.ready"", ""argCount"": 0 },
@@ -859,6 +837,12 @@ public sealed class EntityInfoPanelServiceTests
       ""entityinfo.collection.rows"": ""rows {0}-{1}"",
       ""entityinfo.collection.no_attributes"": ""No semantic attributes"",
       ""entityinfo.collection.more_attributes"": ""+{0} semantic attributes"",
+      ""entityinfo.panel.component.title"": ""Entity Component Inspector"",
+      ""entityinfo.panel.gas.title"": ""Entity GAS Inspector"",
+      ""entityinfo.panel.collection.title_text"": ""Entity Collection Inspector"",
+      ""entityinfo.target.fixed_unavailable"": ""Fixed target unavailable."",
+      ""entityinfo.target.global_waiting"": ""Waiting for configured target key."",
+      ""entityinfo.target.unavailable"": ""Target unavailable."",
       ""entityinfo.section.actions"": ""Action lens"",
       ""entityinfo.section.tips"": ""Designer tips"",
       ""entityinfo.actionstate.ready"": ""Ready"",

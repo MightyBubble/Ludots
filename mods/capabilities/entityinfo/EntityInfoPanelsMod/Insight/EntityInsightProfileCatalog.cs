@@ -17,9 +17,9 @@ public enum EntityInsightValueDisplayMode : byte
     Constant = 2,
 }
 
-public enum EntityInsightEntityRelationKind : byte
+public enum EntityInsightSemanticValueSourceKind : byte
 {
-    SelfTeamRelationship = 0,
+    TeamRelationshipSelf = 0,
 }
 
 [Flags]
@@ -51,7 +51,7 @@ public sealed class EntityInsightSemanticFieldProfile
 {
     public required string Glyph { get; init; }
     public required string MappingId { get; init; }
-    public required EntityInsightEntityRelationKind EntityRelation { get; init; }
+    public required EntityInsightSemanticValueSourceKind SemanticValueSource { get; init; }
 }
 
 public sealed class EntityInsightTipProfile
@@ -75,8 +75,7 @@ public sealed class EntityInsightProfile
     public required string AccentColorHex { get; init; }
     public required string SurfaceColorHex { get; init; }
     public required string GenreGlyph { get; init; }
-    public int PortraitImageAssetId { get; init; }
-    public string? PortraitGlyph { get; init; }
+    public required int PortraitImageAssetId { get; init; }
     public required int GenreLabelTokenId { get; init; }
     public required int SubtitleTokenId { get; init; }
     public required int BodyTokenId { get; init; }

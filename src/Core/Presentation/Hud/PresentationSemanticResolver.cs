@@ -1,6 +1,4 @@
 using System;
-using Ludots.Core.Gameplay.Teams;
-
 namespace Ludots.Core.Presentation.Hud
 {
     public sealed class PresentationSemanticResolver
@@ -123,35 +121,6 @@ namespace Ludots.Core.Presentation.Hud
             }
 
             return ResolveRequiredToken(tokenId);
-        }
-
-        public string ResolveMappedRuntimeValueRequired(string mappingId, int runtimeValue)
-        {
-            PresentationSemanticValueMappingDefinition mapping = GetRequiredMapping(mappingId);
-            if (!mapping.TryResolveRuntimeValueKey(runtimeValue, out string valueKey) || string.IsNullOrWhiteSpace(valueKey))
-            {
-                throw new InvalidOperationException(
-                    $"Presentation semantic mapping '{mappingId}' does not define runtime value '{runtimeValue}'.");
-            }
-
-            return ResolveMappedValueRequired(mappingId, valueKey);
-        }
-
-        public string ResolveMappedRuntimeValueKeyRequired(string mappingId, int runtimeValue)
-        {
-            PresentationSemanticValueMappingDefinition mapping = GetRequiredMapping(mappingId);
-            if (!mapping.TryResolveRuntimeValueKey(runtimeValue, out string valueKey) || string.IsNullOrWhiteSpace(valueKey))
-            {
-                throw new InvalidOperationException(
-                    $"Presentation semantic mapping '{mappingId}' does not define runtime value '{runtimeValue}'.");
-            }
-
-            return valueKey;
-        }
-
-        public string ResolveTeamRelationshipValueRequired(TeamRelationship relationship)
-        {
-            return ResolveMappedRuntimeValueRequired(WellKnownPresentationSemanticMappingKeys.TeamRelationship, (int)relationship);
         }
 
         private PresentationSemanticAttributeDefinition GetRequiredAttribute(string semanticKey)

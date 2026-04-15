@@ -7,7 +7,6 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
@@ -28,6 +27,12 @@ public sealed partial class EntityInfoPanelService
     private const string EntityCollectionRowsToken = "entityinfo.collection.rows";
     private const string EntityCollectionNoAttributesToken = "entityinfo.collection.no_attributes";
     private const string EntityCollectionMoreAttributesToken = "entityinfo.collection.more_attributes";
+    private const string ComponentInspectorTitleToken = "entityinfo.panel.component.title";
+    private const string GasInspectorTitleToken = "entityinfo.panel.gas.title";
+    private const string CollectionInspectorTitleToken = "entityinfo.panel.collection.title_text";
+    private const string TargetFixedUnavailableToken = "entityinfo.target.fixed_unavailable";
+    private const string TargetGlobalWaitingToken = "entityinfo.target.global_waiting";
+    private const string TargetUnavailableToken = "entityinfo.target.unavailable";
 
     public bool TryGetInsightProfile(int slot, out EntityInsightProfile profile)
     {
@@ -62,38 +67,12 @@ public sealed partial class EntityInfoPanelService
     public string BuildInsightPortraitIconUri(EntityInsightProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
-        if (profile.PortraitImageAssetId > 0 && _imageSourceResolver != null && _imageSourceResolver.TryResolveSource(profile.PortraitImageAssetId, out string source))
-        {
-            return source;
-        }
-
-        if (profile.PortraitImageAssetId > 0 &&
-            _imageSourceResolver != null &&
-            _imageSourceResolver.TryResolveGlyphFallback(profile.PortraitImageAssetId, out PresentationImageGlyphFallbackDefinition assetFallback))
-        {
-            return BuildInsightGlyphIconUri(
-                assetFallback.Glyph,
-                assetFallback.AccentColorHex,
-                assetFallback.SurfaceColorHex,
-                emphatic: true);
-        }
-
-        if (!string.IsNullOrWhiteSpace(profile.PortraitGlyph))
-        {
-            return BuildInsightGlyphIconUri(profile.PortraitGlyph, profile.AccentColorHex, profile.SurfaceColorHex, emphatic: true);
-        }
-
-        if (profile.PortraitImageAssetId > 0 && _imageSourceResolver == null)
+        if (_imageSourceResolver == null)
         {
             throw new InvalidOperationException("Entity insight portrait resolution requires a configured presentation image source resolver.");
         }
 
-        if (profile.PortraitImageAssetId > 0)
-        {
-            return _imageSourceResolver!.ResolveRequiredSource(profile.PortraitImageAssetId);
-        }
-
-        throw new InvalidOperationException($"Entity insight profile '{profile.Id}' must define either 'portraitImageAsset' or migration 'portraitGlyph'.");
+        return _imageSourceResolver.ResolveRequiredSource(profile.PortraitImageAssetId);
     }
 
     public string BuildInsightGenreIconUri(EntityInsightProfile profile) => _insightIconFactory.Build(profile.GenreGlyph, profile.AccentColorHex, profile.SurfaceColorHex);
@@ -147,8 +126,8 @@ public sealed partial class EntityInfoPanelService
         if (semanticFieldsToInclude > 0)
         {
             EntityInsightSemanticFieldProfile field = profile.SemanticFields[0];
-            int runtimeValue = ResolveSemanticFieldRuntimeValue(world, entity, field);
-            segments[segmentCount++] = $"{_semanticResolver.ResolveMappingLabelRequired(field.MappingId)} {_semanticResolver.ResolveMappedRuntimeValueRequired(field.MappingId, runtimeValue)}";
+            string valueKey = ResolveSemanticFieldValueKey(world, entity, field);
+            segments[segmentCount++] = $"{_semanticResolver.ResolveMappingLabelRequired(field.MappingId)} {_semanticResolver.ResolveMappedValueRequired(field.MappingId, valueKey)}";
         }
 
         if (segmentCount == 0)
@@ -164,6 +143,12 @@ public sealed partial class EntityInfoPanelService
     public string GetEntityCollectionWaitingBodyText() => ResolveTextTokenKey(EntityCollectionWaitingBodyToken);
     public string GetEntityCollectionNoCategoriesText() => ResolveTextTokenKey(EntityCollectionNoCategoriesToken);
     public string GetEntityCollectionPrimaryText() => ResolveTextTokenKey(EntityCollectionPrimaryToken);
+    public string GetComponentInspectorTitleText() => ResolveTextTokenKey(ComponentInspectorTitleToken);
+    public string GetGasInspectorTitleText() => ResolveTextTokenKey(GasInspectorTitleToken);
+    public string GetCollectionInspectorTitleText() => ResolveTextTokenKey(CollectionInspectorTitleToken);
+    public string GetTargetFixedUnavailableText() => ResolveTextTokenKey(TargetFixedUnavailableToken);
+    public string GetTargetGlobalWaitingText() => ResolveTextTokenKey(TargetGlobalWaitingToken);
+    public string GetTargetUnavailableText() => ResolveTextTokenKey(TargetUnavailableToken);
     public string BuildEntityCollectionSubtitle(string viewKey, string aliasKey, int count) =>
         $"{viewKey} -> {aliasKey} | {count} {ResolveTextTokenKey(EntityCollectionEntitiesToken)}";
 
@@ -314,10 +299,10 @@ public sealed partial class EntityInfoPanelService
             throw new InvalidOperationException($"Entity insight semantic field index '{fieldIndex}' is out of range for slot '{slot}'.");
         }
 
-        int value = _insightSemanticFieldRuntimeValues[InsightStatIndex(slot, fieldIndex)];
-        return _semanticResolver.ResolveMappedRuntimeValueRequired(
+        string valueKey = _insightSemanticFieldValueKeys[InsightStatIndex(slot, fieldIndex)];
+        return _semanticResolver.ResolveMappedValueRequired(
             profile.SemanticFields[fieldIndex].MappingId,
-            value);
+            valueKey);
     }
 
     public string GetInsightSemanticFieldIconUri(int slot, int fieldIndex)
@@ -443,13 +428,24 @@ public sealed partial class EntityInfoPanelService
         return profile;
     }
 
-    private int ResolveSemanticFieldRuntimeValue(World world, Entity entity, EntityInsightSemanticFieldProfile field)
+    private string ResolveSemanticFieldValueKey(World world, Entity entity, EntityInsightSemanticFieldProfile field)
     {
         int entityTeamId = world.TryGet(entity, out Team team) ? team.Id : 0;
-        return field.EntityRelation switch
+        return field.SemanticValueSource switch
         {
-            EntityInsightEntityRelationKind.SelfTeamRelationship => (int)TeamManager.GetRelationship(entityTeamId, entityTeamId),
-            _ => throw new InvalidOperationException($"Unsupported entity relation kind '{field.EntityRelation}'."),
+            EntityInsightSemanticValueSourceKind.TeamRelationshipSelf => ResolveTeamRelationshipValueKey(TeamManager.GetRelationship(entityTeamId, entityTeamId)),
+            _ => throw new InvalidOperationException($"Unsupported semantic value source '{field.SemanticValueSource}'."),
+        };
+    }
+
+    private static string ResolveTeamRelationshipValueKey(TeamRelationship relationship)
+    {
+        return relationship switch
+        {
+            TeamRelationship.Neutral => WellKnownPresentationSemanticMappingKeys.TeamRelationshipNeutral,
+            TeamRelationship.Friendly => WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly,
+            TeamRelationship.Hostile => WellKnownPresentationSemanticMappingKeys.TeamRelationshipHostile,
+            _ => throw new InvalidOperationException($"Unsupported team relationship '{relationship}'."),
         };
     }
 
@@ -552,22 +548,16 @@ public sealed partial class EntityInfoPanelService
     {
         bool dirty = false;
         int count = Math.Min(profile.SemanticFields.Length, MaxInsightStatsPerPanel);
-        int entityTeamId = world.TryGet(entity, out Team team) ? team.Id : 0;
         for (int fieldIndex = 0; fieldIndex < count; fieldIndex++)
         {
             EntityInsightSemanticFieldProfile field = profile.SemanticFields[fieldIndex];
-            int value = field.EntityRelation switch
-            {
-                EntityInsightEntityRelationKind.SelfTeamRelationship => (int)TeamManager.GetRelationship(entityTeamId, entityTeamId),
-                _ => 0,
-            };
-
-            dirty |= SetInsightSemanticFieldValue(slot, fieldIndex, value);
+            string valueKey = ResolveSemanticFieldValueKey(world, entity, field);
+            dirty |= SetInsightSemanticFieldValueKey(slot, fieldIndex, valueKey);
         }
 
         for (int fieldIndex = count; fieldIndex < MaxInsightStatsPerPanel; fieldIndex++)
         {
-            dirty |= SetInsightSemanticFieldValue(slot, fieldIndex, 0);
+            dirty |= SetInsightSemanticFieldValueKey(slot, fieldIndex, string.Empty);
         }
 
         dirty |= SetInsightSemanticFieldCount(slot, count);

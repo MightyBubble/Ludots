@@ -17,5 +17,11 @@
   { "id": "entityinfo.collection.categories", "argCount": 0 },
   { "id": "entityinfo.collection.rows", "argCount": 2 },
   { "id": "entityinfo.collection.no_attributes", "argCount": 0 },
-  { "id": "entityinfo.collection.more_attributes", "argCount": 1 }
+  { "id": "entityinfo.collection.more_attributes", "argCount": 1 },
+  { "id": "entityinfo.panel.component.title", "argCount": 0 },
+  { "id": "entityinfo.panel.gas.title", "argCount": 0 },
+  { "id": "entityinfo.panel.collection.title_text", "argCount": 0 },
+  { "id": "entityinfo.target.fixed_unavailable", "argCount": 0 },
+  { "id": "entityinfo.target.global_waiting", "argCount": 0 },
+  { "id": "entityinfo.target.unavailable", "argCount": 0 }
 ]
