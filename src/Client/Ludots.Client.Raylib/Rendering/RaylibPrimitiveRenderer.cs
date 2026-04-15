@@ -51,6 +51,14 @@ namespace Ludots.Client.Raylib.Rendering
         public int LastPersistentCreates { get; private set; }
         public int LastPersistentUpdates { get; private set; }
         public int LastPersistentRemoves { get; private set; }
+        public int LastMeshVisualCount { get; private set; }
+        public int LastDecalVisualCount { get; private set; }
+        public int LastVfxVisualCount { get; private set; }
+        public int LastSurfaceVisualCount { get; private set; }
+        public int TotalMeshVisualCount { get; private set; }
+        public int TotalDecalVisualCount { get; private set; }
+        public int TotalVfxVisualCount { get; private set; }
+        public int TotalSurfaceVisualCount { get; private set; }
 
         public RaylibPrimitiveRenderer(
             RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
@@ -88,6 +96,10 @@ namespace Ludots.Client.Raylib.Rendering
             LastPersistentCreates = 0;
             LastPersistentUpdates = 0;
             LastPersistentRemoves = 0;
+            LastMeshVisualCount = 0;
+            LastDecalVisualCount = 0;
+            LastVfxVisualCount = 0;
+            LastSurfaceVisualCount = 0;
             var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
 
             var span = draw.GetSpan();
@@ -237,25 +249,25 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void SubmitFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera)
         {
-            EnsureMeshVisualSupported(in visual, consumerName: nameof(RaylibPrimitiveRenderer));
+            TrackVisualKind(visual.Kind);
 
-            switch (visual.MeshDescriptor.Type)
+            switch (visual.Kind)
             {
-                case MeshAssetType.Primitive:
-                    SubmitPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
+                case PrefabVisualPartKind.Mesh:
+                    SubmitMeshVisual(in visual, camera);
                     break;
-
-                case MeshAssetType.Model:
-                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
+                case PrefabVisualPartKind.Decal:
+                    DrawDecalVisual(in visual);
                     break;
-
-                case MeshAssetType.Billboard:
-                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
+                case PrefabVisualPartKind.Vfx:
+                    DrawVfxVisual(in visual);
                     break;
-
-                case MeshAssetType.RuntimeMesh:
-                    DrawRuntimeMesh(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale);
+                case PrefabVisualPartKind.Surface:
+                    DrawSurfaceVisual(in visual, camera);
                     break;
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} does not recognize finalized visual kind '{visual.Kind}' (stableId={visual.StableId}).");
             }
         }
 
@@ -388,37 +400,191 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void DrawFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera)
         {
-            EnsureMeshVisualSupported(in visual, consumerName: nameof(RaylibPrimitiveRenderer));
+            TrackVisualKind(visual.Kind);
 
+            switch (visual.Kind)
+            {
+                case PrefabVisualPartKind.Mesh:
+                    DrawMeshVisual(in visual, camera);
+                    break;
+                case PrefabVisualPartKind.Decal:
+                    DrawDecalVisual(in visual);
+                    break;
+                case PrefabVisualPartKind.Vfx:
+                    DrawVfxVisual(in visual);
+                    break;
+                case PrefabVisualPartKind.Surface:
+                    DrawSurfaceVisual(in visual, camera);
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} does not recognize finalized visual kind '{visual.Kind}' (stableId={visual.StableId}).");
+            }
+        }
+
+        public string BuildVisualKindDiagnosticSummary()
+        {
+            return $"prefab-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount})";
+        }
+
+        private void SubmitMeshVisual(in PrefabFinalizedVisual visual, Camera3D camera)
+        {
+            switch (visual.MeshDescriptor.Type)
+            {
+                case MeshAssetType.Primitive:
+                    SubmitPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
+                    break;
+                case MeshAssetType.Model:
+                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
+                    break;
+                case MeshAssetType.Billboard:
+                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
+                    break;
+                case MeshAssetType.RuntimeMesh:
+                    DrawRuntimeMesh(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale);
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} does not support mesh descriptor type '{visual.MeshDescriptor.Type}' for stableId={visual.StableId}.");
+            }
+        }
+
+        private void DrawMeshVisual(in PrefabFinalizedVisual visual, Camera3D camera)
+        {
             switch (visual.MeshDescriptor.Type)
             {
                 case MeshAssetType.Primitive:
                     DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Scale, visual.Color);
                     break;
-
                 case MeshAssetType.Model:
                     DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
                     break;
-
                 case MeshAssetType.Billboard:
                     DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
                     break;
-
                 case MeshAssetType.RuntimeMesh:
                     DrawRuntimeMesh(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale);
                     break;
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} does not support mesh descriptor type '{visual.MeshDescriptor.Type}' for stableId={visual.StableId}.");
             }
         }
 
-        private static void EnsureMeshVisualSupported(in PrefabFinalizedVisual visual, string consumerName)
+        private void DrawDecalVisual(in PrefabFinalizedVisual visual)
         {
-            if (visual.Kind == PrefabVisualPartKind.Mesh)
+            Vector2 size = ResolveDecalSize(in visual);
+            Quaternion rotation = PrefabTransformUtility.NormalizeOrIdentity(visual.Rotation);
+            Vector4 materialAccent = BlendSemanticColor(visual.Color, visual.MaterialId, 0.45f);
+            Vector4 edgeColor = MultiplyColor(materialAccent, 1.18f, 1.18f, 0.92f, 0.92f);
+            Vector4 crossColor = MultiplyColor(materialAccent, 0.86f, 1.05f, 1.18f, 0.78f);
+            float lift = MathF.Max(0.01f, MathF.Max(MathF.Abs(visual.Scale.Y), 0.05f) * 0.04f);
+            Vector3 center = visual.Position + Vector3.Transform(Vector3.UnitY * lift, rotation);
+            float halfWidth = MathF.Max(0.05f, size.X * 0.5f);
+            float halfDepth = MathF.Max(0.05f, size.Y * 0.5f);
+
+            Span<Vector3> corners = stackalloc Vector3[4];
+            corners[0] = TransformLocal(center, rotation, new Vector3(-halfWidth, 0f, -halfDepth));
+            corners[1] = TransformLocal(center, rotation, new Vector3(halfWidth, 0f, -halfDepth));
+            corners[2] = TransformLocal(center, rotation, new Vector3(halfWidth, 0f, halfDepth));
+            corners[3] = TransformLocal(center, rotation, new Vector3(-halfWidth, 0f, halfDepth));
+
+            Color edge = ToRaylibColor(edgeColor);
+            Rl.DrawLine3D(corners[0], corners[1], edge);
+            Rl.DrawLine3D(corners[1], corners[2], edge);
+            Rl.DrawLine3D(corners[2], corners[3], edge);
+            Rl.DrawLine3D(corners[3], corners[0], edge);
+
+            Color cross = ToRaylibColor(crossColor);
+            Rl.DrawLine3D(corners[0], corners[2], cross);
+            Rl.DrawLine3D(corners[1], corners[3], cross);
+
+            Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
+            Vector3 markerTop = center + (up * MathF.Max(0.04f, MathF.Min(size.X, size.Y) * 0.08f));
+            Rl.DrawLine3D(center, markerTop, edge);
+        }
+
+        private void DrawVfxVisual(in PrefabFinalizedVisual visual)
+        {
+            Quaternion rotation = PrefabTransformUtility.NormalizeOrIdentity(visual.Rotation);
+            float baseExtent = MathF.Max(0.12f, MathF.Max(MathF.Abs(visual.Scale.X), MathF.Max(MathF.Abs(visual.Scale.Y), MathF.Abs(visual.Scale.Z))) * 0.45f);
+            float radius = visual.VfxSpawnMode == PrefabVfxSpawnMode.Loop
+                ? baseExtent * 1.15f
+                : baseExtent * 0.9f;
+            Vector4 pulseColor = BlendSemanticColor(visual.Color, visual.EffectAssetId, 0.6f);
+            Vector4 shellColor = LerpColor(pulseColor, new Vector4(1f, 1f, 1f, pulseColor.W), 0.35f);
+
+            DrawPrototypeSphere(visual.Position, radius * 0.28f, pulseColor);
+            DrawRotatedRing(visual.Position, rotation, radius, 12, MultiplyColor(shellColor, 1f, 1f, 1f, 0.72f));
+            DrawRotatedRing(visual.Position, rotation * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI * 0.5f), radius * 0.82f, 10, MultiplyColor(shellColor, 0.92f, 1f, 1.1f, 0.64f));
+
+            Vector3 right = Vector3.Normalize(Vector3.Transform(Vector3.UnitX, rotation));
+            Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
+            Vector3 forward = Vector3.Normalize(Vector3.Transform(-Vector3.UnitZ, rotation));
+            Color beamColor = ToRaylibColor(MultiplyColor(pulseColor, 1.1f, 1.08f, 1.18f, 0.88f));
+            Rl.DrawLine3D(visual.Position - (right * radius), visual.Position + (right * radius), beamColor);
+            Rl.DrawLine3D(visual.Position - (up * radius * 0.8f), visual.Position + (up * radius * 0.8f), beamColor);
+            Rl.DrawLine3D(visual.Position - (forward * radius * 0.9f), visual.Position + (forward * radius * 0.9f), beamColor);
+        }
+
+        private void DrawSurfaceVisual(in PrefabFinalizedVisual visual, Camera3D camera)
+        {
+            Vector4 surfaceColor = BlendSemanticColor(visual.Color, visual.MaterialId, 0.38f);
+            Vector4 overlayColor = MultiplyColor(surfaceColor, 1.18f, 1.08f, 0.86f, 0.96f);
+
+            switch (visual.MeshDescriptor.Type)
             {
-                return;
+                case MeshAssetType.Primitive:
+                    DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Scale, surfaceColor);
+                    break;
+                case MeshAssetType.Model:
+                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, surfaceColor);
+                    break;
+                case MeshAssetType.Billboard:
+                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, surfaceColor, camera);
+                    break;
+                case MeshAssetType.RuntimeMesh:
+                    DrawRuntimeMesh(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale);
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} does not support surface mesh descriptor type '{visual.MeshDescriptor.Type}' for stableId={visual.StableId}.");
             }
 
-            throw new InvalidOperationException(
-                $"{consumerName} does not support finalized visual kind '{visual.Kind}' (stableId={visual.StableId}).");
+            DrawWireBox(visual.Position, ResolveSurfaceOverlaySize(in visual), PrefabTransformUtility.NormalizeOrIdentity(visual.Rotation), overlayColor);
+
+            if (visual.TerrainFacing)
+            {
+                Quaternion rotation = PrefabTransformUtility.NormalizeOrIdentity(visual.Rotation);
+                Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
+                float normalLength = MathF.Max(0.12f, MathF.Max(MathF.Abs(visual.Scale.X), MathF.Abs(visual.Scale.Z)) * 0.4f);
+                Rl.DrawLine3D(visual.Position, visual.Position + (up * normalLength), ToRaylibColor(MultiplyColor(overlayColor, 1f, 1f, 1f, 0.8f)));
+            }
+        }
+
+        private void TrackVisualKind(PrefabVisualPartKind kind)
+        {
+            switch (kind)
+            {
+                case PrefabVisualPartKind.Mesh:
+                    LastMeshVisualCount++;
+                    TotalMeshVisualCount++;
+                    break;
+                case PrefabVisualPartKind.Decal:
+                    LastDecalVisualCount++;
+                    TotalDecalVisualCount++;
+                    break;
+                case PrefabVisualPartKind.Vfx:
+                    LastVfxVisualCount++;
+                    TotalVfxVisualCount++;
+                    break;
+                case PrefabVisualPartKind.Surface:
+                    LastSurfaceVisualCount++;
+                    TotalSurfaceVisualCount++;
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unsupported finalized visual kind '{kind}'.");
+            }
         }
 
         private void DrawPrimitive(PrimitiveMeshKind kind, Vector3 position, Vector3 scale, Vector4 color)
@@ -601,6 +767,11 @@ namespace Ludots.Client.Raylib.Rendering
         private static void DrawPrototypeSphere(Vector3 center, float radius, Vector4 color)
         {
             Rl.DrawSphere(center, radius, ToRaylibColor(color));
+        }
+
+        private static Vector3 TransformLocal(Vector3 origin, Quaternion rotation, Vector3 local)
+        {
+            return origin + Vector3.Transform(local, PrefabTransformUtility.NormalizeOrIdentity(rotation));
         }
 
         private static Vector3 TransformLocal(Vector3 origin, float yawRad, Vector3 local)
@@ -923,9 +1094,116 @@ namespace Ludots.Client.Raylib.Rendering
             DrawWireEdge(corners, 6, 7, ToRaylibColor(MultiplyColor(color, 1.2f, 1.2f, 0.8f, 1f)));
         }
 
+        private static void DrawWireBox(Vector3 center, Vector3 size, Quaternion rotation, Vector4 color)
+        {
+            Vector3 half = new Vector3(
+                MathF.Max(0.01f, MathF.Abs(size.X)) * 0.5f,
+                MathF.Max(0.01f, MathF.Abs(size.Y)) * 0.5f,
+                MathF.Max(0.01f, MathF.Abs(size.Z)) * 0.5f);
+            Quaternion normalized = PrefabTransformUtility.NormalizeOrIdentity(rotation);
+            Span<Vector3> corners = stackalloc Vector3[8];
+            corners[0] = TransformLocal(center, normalized, new Vector3(-half.X, -half.Y, -half.Z));
+            corners[1] = TransformLocal(center, normalized, new Vector3(half.X, -half.Y, -half.Z));
+            corners[2] = TransformLocal(center, normalized, new Vector3(half.X, -half.Y, half.Z));
+            corners[3] = TransformLocal(center, normalized, new Vector3(-half.X, -half.Y, half.Z));
+            corners[4] = TransformLocal(center, normalized, new Vector3(-half.X, half.Y, -half.Z));
+            corners[5] = TransformLocal(center, normalized, new Vector3(half.X, half.Y, -half.Z));
+            corners[6] = TransformLocal(center, normalized, new Vector3(half.X, half.Y, half.Z));
+            corners[7] = TransformLocal(center, normalized, new Vector3(-half.X, half.Y, half.Z));
+
+            var lineColor = ToRaylibColor(color);
+            DrawWireEdge(corners, 0, 1, lineColor);
+            DrawWireEdge(corners, 1, 2, lineColor);
+            DrawWireEdge(corners, 2, 3, lineColor);
+            DrawWireEdge(corners, 3, 0, lineColor);
+            DrawWireEdge(corners, 4, 5, lineColor);
+            DrawWireEdge(corners, 5, 6, lineColor);
+            DrawWireEdge(corners, 6, 7, lineColor);
+            DrawWireEdge(corners, 7, 4, lineColor);
+            DrawWireEdge(corners, 0, 4, lineColor);
+            DrawWireEdge(corners, 1, 5, lineColor);
+            DrawWireEdge(corners, 2, 6, lineColor);
+            DrawWireEdge(corners, 3, 7, lineColor);
+            DrawWireEdge(corners, 6, 7, ToRaylibColor(MultiplyColor(color, 1.2f, 1.2f, 0.8f, 1f)));
+        }
+
         private static void DrawWireEdge(ReadOnlySpan<Vector3> corners, int start, int end, Color color)
         {
             Rl.DrawLine3D(corners[start], corners[end], color);
+        }
+
+        private static void DrawRotatedRing(Vector3 center, Quaternion rotation, float radius, int segments, Vector4 color)
+        {
+            if (segments < 3 || radius <= 0f)
+            {
+                return;
+            }
+
+            Quaternion normalized = PrefabTransformUtility.NormalizeOrIdentity(rotation);
+            Color ringColor = ToRaylibColor(color);
+            float step = MathF.Tau / segments;
+            Vector3 previous = TransformLocal(center, normalized, new Vector3(radius, 0f, 0f));
+            for (int index = 1; index <= segments; index++)
+            {
+                float angle = index * step;
+                Vector3 current = TransformLocal(
+                    center,
+                    normalized,
+                    new Vector3(MathF.Cos(angle) * radius, 0f, MathF.Sin(angle) * radius));
+                Rl.DrawLine3D(previous, current, ringColor);
+                previous = current;
+            }
+        }
+
+        private static Vector2 ResolveDecalSize(in PrefabFinalizedVisual visual)
+        {
+            float width = MathF.Max(0.1f, MathF.Abs(visual.Size.X));
+            float depth = MathF.Max(0.1f, MathF.Abs(visual.Size.Y));
+            float scaleX = MathF.Max(0.1f, MathF.Abs(visual.Scale.X));
+            float scaleZ = MathF.Max(0.1f, MathF.Abs(visual.Scale.Z));
+            return new Vector2(width * scaleX, depth * scaleZ);
+        }
+
+        private static Vector3 ResolveSurfaceOverlaySize(in PrefabFinalizedVisual visual)
+        {
+            float x = MathF.Max(0.12f, MathF.Abs(visual.Scale.X));
+            float y = MathF.Max(0.04f, MathF.Abs(visual.Scale.Y));
+            float z = MathF.Max(0.12f, MathF.Abs(visual.Scale.Z));
+            if (visual.MeshDescriptor.Type == MeshAssetType.Billboard)
+            {
+                z = MathF.Max(z, 0.04f);
+            }
+
+            return new Vector3(x, y, z);
+        }
+
+        private static Vector4 BlendSemanticColor(Vector4 baseColor, int semanticId, float semanticWeight)
+        {
+            Vector4 semanticColor = ResolveSemanticColor(semanticId, baseColor.W);
+            Vector4 tinted = LerpColor(baseColor, semanticColor, semanticWeight);
+            tinted.W = Math.Max(baseColor.W, semanticColor.W * 0.8f);
+            return tinted;
+        }
+
+        private static Vector4 ResolveSemanticColor(int semanticId, float alpha)
+        {
+            uint seed = semanticId == 0
+                ? 0x9E3779B9u
+                : Hash((uint)semanticId);
+            float r = 0.28f + (((seed >> 0) & 0xFF) / 255f) * 0.62f;
+            float g = 0.28f + (((seed >> 8) & 0xFF) / 255f) * 0.62f;
+            float b = 0.28f + (((seed >> 16) & 0xFF) / 255f) * 0.62f;
+            return new Vector4(r, g, b, Math.Clamp(alpha, 0.35f, 1f));
+        }
+
+        private static uint Hash(uint value)
+        {
+            value ^= value >> 16;
+            value *= 0x7FEB352Du;
+            value ^= value >> 15;
+            value *= 0x846CA68Bu;
+            value ^= value >> 16;
+            return value;
         }
 
         private static void ToAxisAngleDegrees(Quaternion rotation, out Vector3 axis, out float angleDegrees)

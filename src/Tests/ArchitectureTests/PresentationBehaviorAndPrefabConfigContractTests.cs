@@ -8,6 +8,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using System.Linq;
 
 namespace Ludots.Tests.Architecture
 {
@@ -99,6 +100,42 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(engine.GetService(CoreServiceKeys.PresentationBehaviorRegistry), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.PresentationBehaviorResolver), Is.Not.Null);
+        }
+
+        [Test]
+        public void LudotsCoreCueMarkerPrefab_UsesFullTypedVisualContract()
+        {
+            string repoRoot = FindRepoRoot();
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"));
+
+            var prefabs = engine.GetService(CoreServiceKeys.PresentationPrefabRegistry) as PrefabRegistry
+                ?? throw new InvalidOperationException("PresentationPrefabRegistry missing.");
+            var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry
+                ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
+
+            int cuePrefabId = prefabs.GetId("cue_marker");
+            Assert.That(cuePrefabId, Is.GreaterThan(0), "cue_marker prefab must stay registered in LudotsCoreMod.");
+            Assert.That(prefabs.TryGet(cuePrefabId, out PrefabDefinition cuePrefab), Is.True);
+            int cueMeshAssetId = meshes.GetId("cue_marker");
+            Assert.That(cueMeshAssetId, Is.GreaterThan(0), "cue_marker mesh asset must resolve to the prefab contract asset.");
+
+            var output = new PrefabFinalizedVisualBuffer();
+            PrefabFinalizationPipeline.FinalizeVisuals(
+                meshes,
+                cueMeshAssetId,
+                stableId: 7,
+                position: default,
+                rotation: System.Numerics.Quaternion.Identity,
+                scale: System.Numerics.Vector3.One * cuePrefab.BaseScale,
+                color: System.Numerics.Vector4.One,
+                output);
+
+            PrefabVisualPartKind[] kinds = output.GetSpan().ToArray().Select(static visual => visual.Kind).ToArray();
+            Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Mesh));
+            Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Decal));
+            Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Vfx));
+            Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Surface));
         }
 
         private static string FindRepoRoot()
