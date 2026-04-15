@@ -103,7 +103,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void LudotsCoreCueMarkerPrefab_UsesFullTypedVisualContract()
+        public void LudotsCoreCueMarkerPrefab_RemainsSharedMeshOnlyContract()
         {
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
@@ -128,6 +128,48 @@ namespace Ludots.Tests.Architecture
                 position: default,
                 rotation: System.Numerics.Quaternion.Identity,
                 scale: System.Numerics.Vector3.One * cuePrefab.BaseScale,
+                color: System.Numerics.Vector4.One,
+                output);
+
+            PrefabVisualPartKind[] kinds = output.GetSpan().ToArray().Select(static visual => visual.Kind).ToArray();
+            Assert.That(kinds, Is.EqualTo(new[] { PrefabVisualPartKind.Mesh }));
+        }
+
+        [Test]
+        public void CameraAcceptanceTypedCueMarkerPrefab_UsesFullTypedVisualContract()
+        {
+            string repoRoot = FindRepoRoot();
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(
+                new List<string>
+                {
+                    Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+                    Path.Combine(repoRoot, "mods", "CoreInputMod"),
+                    Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
+                    Path.Combine(repoRoot, "mods", "capabilities", "camera", "SharedThreeCProfilesMod"),
+                    Path.Combine(repoRoot, "mods", "fixtures", "camera", "CameraAcceptanceMod"),
+                },
+                Path.Combine(repoRoot, "assets"));
+
+            var prefabs = engine.GetService(CoreServiceKeys.PresentationPrefabRegistry) as PrefabRegistry
+                ?? throw new InvalidOperationException("PresentationPrefabRegistry missing.");
+            var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry
+                ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
+
+            int typedCuePrefabId = prefabs.GetId("camera_acceptance_typed_cue_marker");
+            Assert.That(typedCuePrefabId, Is.GreaterThan(0), "camera_acceptance_typed_cue_marker prefab must stay registered in CameraAcceptanceMod.");
+            Assert.That(prefabs.TryGet(typedCuePrefabId, out PrefabDefinition typedCuePrefab), Is.True);
+            int typedCueMeshAssetId = meshes.GetId("camera_acceptance_typed_cue_marker");
+            Assert.That(typedCueMeshAssetId, Is.GreaterThan(0), "camera_acceptance_typed_cue_marker mesh asset must resolve to the prefab contract asset.");
+
+            var output = new PrefabFinalizedVisualBuffer();
+            PrefabFinalizationPipeline.FinalizeVisuals(
+                meshes,
+                typedCueMeshAssetId,
+                stableId: 9,
+                position: default,
+                rotation: System.Numerics.Quaternion.Identity,
+                scale: System.Numerics.Vector3.One * typedCuePrefab.BaseScale,
                 color: System.Numerics.Vector4.One,
                 output);
 

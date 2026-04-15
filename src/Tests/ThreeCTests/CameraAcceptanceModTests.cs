@@ -121,13 +121,13 @@ namespace Ludots.Tests.ThreeC.Acceptance
             }
 
             Assert.That(evidence.LastMeshCount, Is.GreaterThan(0),
-                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report mesh visuals on the screenshot frame.");
+                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report mesh visuals for the camera acceptance typed cue marker.");
             Assert.That(evidence.LastDecalCount, Is.GreaterThan(0),
-                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report decal visuals on the screenshot frame.");
+                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report decal visuals for the camera acceptance typed cue marker.");
             Assert.That(evidence.LastVfxCount, Is.GreaterThan(0),
-                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report vfx visuals on the screenshot frame.");
+                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report vfx visuals for the camera acceptance typed cue marker.");
             Assert.That(evidence.LastSurfaceCount, Is.GreaterThan(0),
-                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report surface visuals on the screenshot frame.");
+                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report surface visuals for the camera acceptance typed cue marker.");
         }
 
         [Test]

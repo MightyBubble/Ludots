@@ -261,6 +261,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(visuals[1].Kind, Is.EqualTo(PrefabVisualPartKind.Decal));
             Assert.That(visuals[1].MaterialId, Is.EqualTo(22));
             Assert.That(visuals[1].Size, Is.EqualTo(new Vector2(4f, 5f)));
+            Assert.That(visuals[1].AlignToSurface, Is.True);
 
             Assert.That(visuals[2].Kind, Is.EqualTo(PrefabVisualPartKind.Vfx));
             Assert.That(visuals[2].EffectAssetId, Is.EqualTo(33));

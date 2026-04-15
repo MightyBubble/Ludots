@@ -16,6 +16,7 @@ namespace Ludots.Core.Presentation.Assets
             int materialId,
             int effectAssetId,
             in Vector2 size,
+            bool alignToSurface,
             in Vector2 tiling,
             PrefabVfxSpawnMode vfxSpawnMode,
             bool terrainFacing)
@@ -31,6 +32,7 @@ namespace Ludots.Core.Presentation.Assets
             MaterialId = materialId;
             EffectAssetId = effectAssetId;
             Size = size;
+            AlignToSurface = alignToSurface;
             Tiling = tiling;
             VfxSpawnMode = vfxSpawnMode;
             TerrainFacing = terrainFacing;
@@ -57,6 +59,8 @@ namespace Ludots.Core.Presentation.Assets
         public int EffectAssetId { get; }
 
         public Vector2 Size { get; }
+
+        public bool AlignToSurface { get; }
 
         public Vector2 Tiling { get; }
 
@@ -85,6 +89,7 @@ namespace Ludots.Core.Presentation.Assets
                 materialId: 0,
                 effectAssetId: 0,
                 size: Vector2.Zero,
+                alignToSurface: false,
                 tiling: Vector2.Zero,
                 vfxSpawnMode: PrefabVfxSpawnMode.Once,
                 terrainFacing: false);
@@ -97,7 +102,8 @@ namespace Ludots.Core.Presentation.Assets
             in Vector3 scale,
             in Vector4 color,
             int materialId,
-            in Vector2 size)
+            in Vector2 size,
+            bool alignToSurface)
         {
             return new PrefabFinalizedVisual(
                 PrefabVisualPartKind.Decal,
@@ -111,6 +117,7 @@ namespace Ludots.Core.Presentation.Assets
                 materialId,
                 effectAssetId: 0,
                 size,
+                alignToSurface,
                 tiling: Vector2.Zero,
                 vfxSpawnMode: PrefabVfxSpawnMode.Once,
                 terrainFacing: false);
@@ -137,6 +144,7 @@ namespace Ludots.Core.Presentation.Assets
                 materialId: 0,
                 effectAssetId,
                 size: Vector2.Zero,
+                alignToSurface: false,
                 tiling: Vector2.Zero,
                 vfxSpawnMode: spawnMode,
                 terrainFacing: false);
@@ -166,6 +174,7 @@ namespace Ludots.Core.Presentation.Assets
                 materialId,
                 effectAssetId: 0,
                 size: Vector2.Zero,
+                alignToSurface: false,
                 tiling,
                 vfxSpawnMode: PrefabVfxSpawnMode.Once,
                 terrainFacing);

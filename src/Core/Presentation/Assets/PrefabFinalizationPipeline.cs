@@ -306,7 +306,8 @@ namespace Ludots.Core.Presentation.Assets
                         scale,
                         color,
                         part.MaterialId,
-                        part.Size));
+                        part.Size,
+                        part.AlignToSurface));
                     return;
 
                 case PrefabVisualPartKind.Vfx:
