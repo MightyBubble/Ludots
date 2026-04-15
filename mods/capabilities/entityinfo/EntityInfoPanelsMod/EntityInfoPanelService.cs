@@ -6,7 +6,6 @@ using EntityInfoPanelsMod.Insight;
 using Ludots.Core.Modding;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Gameplay.GAS;
-using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
@@ -26,7 +25,7 @@ public sealed partial class EntityInfoPanelService
     private readonly EntityInsightProfileCatalog _insightCatalog;
     private readonly EntityInsightTextResolver _insightTextResolver;
     private readonly PresentationSemanticResolver _semanticResolver;
-    private readonly PresentationImageSourceResolver? _imageSourceResolver;
+    private readonly EntityInsightRuntimeAdapter _insightRuntimeAdapter;
     private readonly EntityInsightIconFactory _insightIconFactory = new();
     private readonly AbilityDefinitionRegistry? _abilityDefinitions;
     private readonly TagOps _tagOps;
@@ -71,6 +70,7 @@ public sealed partial class EntityInfoPanelService
     private readonly float[] _insightStatBaseValues = new float[PanelCapacity * MaxInsightStatsPerPanel];
     private readonly byte[] _insightSemanticFieldCounts = new byte[PanelCapacity];
     private readonly string[] _insightSemanticFieldValueKeys = new string[PanelCapacity * MaxInsightStatsPerPanel];
+    private readonly float[] _insightSemanticFieldNumericValues = new float[PanelCapacity * MaxInsightStatsPerPanel];
     private readonly int[] _insightActionCounts = new int[PanelCapacity];
     private readonly byte[] _insightActionFlags = new byte[PanelCapacity * MaxInsightActionsPerPanel];
 
@@ -89,24 +89,28 @@ public sealed partial class EntityInfoPanelService
     private Dictionary<string, object>? _sampledGlobals;
 
     public EntityInfoPanelService(
-        EntityInsightProfileCatalog? insightCatalog = null,
-        PresentationTextCatalog? presentationTextCatalog = null,
-        PresentationTextLocaleSelection? localeSelection = null,
-        PresentationSemanticCatalog? semanticCatalog = null,
-        PresentationImageSourceResolver? imageSourceResolver = null,
-        AbilityDefinitionRegistry? abilityDefinitions = null,
-        TagOps? tagOps = null)
+        EntityInsightProfileCatalog insightCatalog,
+        PresentationTextCatalog presentationTextCatalog,
+        PresentationTextLocaleSelection localeSelection,
+        PresentationSemanticCatalog semanticCatalog,
+        EntityInsightRuntimeAdapter insightRuntimeAdapter,
+        TagOps tagOps,
+        AbilityDefinitionRegistry? abilityDefinitions = null)
     {
-        PresentationTextCatalog effectiveCatalog = presentationTextCatalog ?? PresentationTextCatalog.Empty;
-        PresentationTextLocaleSelection effectiveLocaleSelection = localeSelection ?? new PresentationTextLocaleSelection(effectiveCatalog);
+        ArgumentNullException.ThrowIfNull(insightCatalog);
+        ArgumentNullException.ThrowIfNull(presentationTextCatalog);
+        ArgumentNullException.ThrowIfNull(localeSelection);
+        ArgumentNullException.ThrowIfNull(semanticCatalog);
+        ArgumentNullException.ThrowIfNull(insightRuntimeAdapter);
+        ArgumentNullException.ThrowIfNull(tagOps);
 
-        _insightCatalog = insightCatalog ?? EntityInsightProfileCatalog.Empty;
-        _insightTextResolver = new EntityInsightTextResolver(effectiveCatalog, effectiveLocaleSelection);
-        _semanticResolver = new PresentationSemanticResolver(effectiveCatalog, effectiveLocaleSelection, semanticCatalog ?? PresentationSemanticCatalog.Empty);
-        _imageSourceResolver = imageSourceResolver;
+        _insightCatalog = insightCatalog;
+        _insightTextResolver = new EntityInsightTextResolver(presentationTextCatalog, localeSelection);
+        _semanticResolver = new PresentationSemanticResolver(presentationTextCatalog, localeSelection, semanticCatalog);
+        _insightRuntimeAdapter = insightRuntimeAdapter;
         _abilityDefinitions = abilityDefinitions;
-        _tagOps = tagOps ?? new TagOps();
-        _lastLocaleId = effectiveLocaleSelection.ActiveLocaleId;
+        _tagOps = tagOps;
+        _lastLocaleId = localeSelection.ActiveLocaleId;
     }
 
     public int UiRevision => _uiRevision;
@@ -305,6 +309,10 @@ public sealed partial class EntityInfoPanelService
         }
 
         string name = ResolveEntityDisplayName(_sampledWorld, entity);
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            name = ResolveEntityFallbackText(entity);
+        }
         string attributesSummary = BuildEntityAttributePreview(_sampledWorld, entity);
         row = new EntityCollectionPanelRow(
             index,

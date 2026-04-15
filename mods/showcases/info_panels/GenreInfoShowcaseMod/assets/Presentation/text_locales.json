@@ -16,6 +16,8 @@
       "genreinfo.cards.primary": "PRIMARY",
       "genreinfo.cards.window": "Window",
       "genreinfo.controls.current": "Current view",
+      "genreinfo.locale.english": "EN",
+      "genreinfo.locale.chinese": "中文",
       "genreinfo.controls.hint": "Recall G1-G4 for 4X, MOBA, RTS squad, and barracks presets. Save G1-G4 snapshots the current viewed selection and mirrors it into formation view.",
       "genreinfo.controls.save_prefix": "Save",
       "genreinfo.controls.title": "Selection dock + control groups",

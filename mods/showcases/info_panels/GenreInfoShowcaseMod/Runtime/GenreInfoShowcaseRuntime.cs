@@ -9,6 +9,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
@@ -53,6 +54,9 @@ namespace GenreInfoShowcaseMod.Runtime
         };
 
         private static readonly string[] Group4Names = { "Field Barracks" };
+        private const string ShowcaseRelationshipType = "ShowcaseAffinity";
+        private const string ShowcaseRelationshipMetric = "Affinity";
+        private const string ShowcaseRelationshipReason = "GenreInfoShowcase.Seed";
 
         private readonly GenreInfoShowcasePanelController _panelController;
 
@@ -218,6 +222,7 @@ namespace GenreInfoShowcaseMod.Runtime
             }
 
             ApplyShowcaseEntityState(engine.World);
+            SeedShowcaseRelationships(engine);
             SeedSelectionGroups(engine);
             RecallControlGroup(engine, 3);
             ShowLiveSelection(engine);
@@ -295,6 +300,58 @@ namespace GenreInfoShowcaseMod.Runtime
             else
             {
                 world.Add(entity, tags);
+            }
+        }
+
+        private static void SeedShowcaseRelationships(GameEngine engine)
+        {
+            RelationshipRuntime runtime = engine.GetService(CoreServiceKeys.RelationshipRuntime)
+                ?? throw new InvalidOperationException("GenreInfoShowcase requires RelationshipRuntime.");
+            RelationshipTypeRegistry types = engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+                ?? throw new InvalidOperationException("GenreInfoShowcase requires RelationshipTypeRegistry.");
+            RelationshipMetricRegistry metrics = engine.GetService(CoreServiceKeys.RelationshipMetricRegistry)
+                ?? throw new InvalidOperationException("GenreInfoShowcase requires RelationshipMetricRegistry.");
+            RelationshipReasonRegistry reasons = engine.GetService(CoreServiceKeys.RelationshipReasonRegistry)
+                ?? throw new InvalidOperationException("GenreInfoShowcase requires RelationshipReasonRegistry.");
+
+            int typeId = types.GetId(ShowcaseRelationshipType);
+            int metricId = metrics.GetId(ShowcaseRelationshipMetric);
+            if (!reasons.TryGetId(ShowcaseRelationshipReason, out int reasonId) || reasonId <= 0)
+            {
+                throw new InvalidOperationException($"GenreInfoShowcase requires relationship reason '{ShowcaseRelationshipReason}' to be registered.");
+            }
+
+            Entity viewer = EnsureSelectionViewer(engine);
+            SetAffinity(engine.World, runtime, typeId, metricId, reasonId, viewer, "Governor Aurelia", 100);
+            SetAffinity(engine.World, runtime, typeId, metricId, reasonId, viewer, "Captain Nyx", 0);
+            SetAffinity(engine.World, runtime, typeId, metricId, reasonId, viewer, "Field Barracks", 100);
+
+            for (int i = 1; i <= 18; i++)
+            {
+                SetAffinity(engine.World, runtime, typeId, metricId, reasonId, viewer, $"Marine {i:00}", 100);
+            }
+
+            for (int i = 1; i <= 4; i++)
+            {
+                SetAffinity(engine.World, runtime, typeId, metricId, reasonId, viewer, $"Siege Tank {i:00}", -100);
+                SetAffinity(engine.World, runtime, typeId, metricId, reasonId, viewer, $"Sky Vessel {i:00}", 0);
+            }
+        }
+
+        private static void SetAffinity(
+            World world,
+            RelationshipRuntime runtime,
+            int typeId,
+            int metricId,
+            int reasonId,
+            Entity source,
+            string targetName,
+            int value)
+        {
+            Entity target = FindNamedEntity(world, targetName);
+            if (target != Entity.Null)
+            {
+                runtime.SetMetric(source, target, typeId, metricId, value, reasonId);
             }
         }
 

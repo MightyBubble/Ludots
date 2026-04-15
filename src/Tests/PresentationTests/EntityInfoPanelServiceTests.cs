@@ -9,13 +9,15 @@ using EntityInfoPanelsMod.Insight;
 using Ludots.Core.Config;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
@@ -319,11 +321,10 @@ public sealed class EntityInfoPanelServiceTests
     }
 
     [Test]
-    public void Refresh_InsightBrief_UsesSemanticContractsAndPortraitImageAssets()
+    public void Refresh_InsightBrief_UsesSemanticContractsAndEntityImageBindings()
     {
         string root = Path.Combine(Path.GetTempPath(), "Ludots_EntityInfoInsight", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
-        TeamManager.Clear();
 
         try
         {
@@ -407,14 +408,14 @@ public sealed class EntityInfoPanelServiceTests
                 },
                 new Dictionary<string, PresentationSemanticValueMappingDefinition>(StringComparer.Ordinal)
                 {
-                    [WellKnownPresentationSemanticMappingKeys.TeamRelationship] = new PresentationSemanticValueMappingDefinition(
-                        WellKnownPresentationSemanticMappingKeys.TeamRelationship,
+                    ["tests.relationship.affinity"] = new PresentationSemanticValueMappingDefinition(
+                        "tests.relationship.affinity",
                         textCatalog.GetTokenId("semantic.relationship.label"),
                         new Dictionary<string, int>(StringComparer.Ordinal)
                         {
-                            [WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly] = textCatalog.GetTokenId("semantic.relationship.friendly"),
-                            [WellKnownPresentationSemanticMappingKeys.TeamRelationshipHostile] = textCatalog.GetTokenId("semantic.relationship.hostile"),
-                            [WellKnownPresentationSemanticMappingKeys.TeamRelationshipNeutral] = textCatalog.GetTokenId("semantic.relationship.neutral"),
+                            ["100"] = textCatalog.GetTokenId("semantic.relationship.friendly"),
+                            ["-100"] = textCatalog.GetTokenId("semantic.relationship.hostile"),
+                            ["0"] = textCatalog.GetTokenId("semantic.relationship.neutral"),
                         })
                 });
 
@@ -443,7 +444,12 @@ public sealed class EntityInfoPanelServiceTests
                 AccentColorHex = "#58B7FF",
                 SurfaceColorHex = "#0F1721",
                 GenreGlyph = "C",
-                PortraitImageAssetId = portraitImageAssetId,
+                ImageSource = new EntityInsightImageSourceProfile
+                {
+                    Scope = EntityInsightImageSourceScopeKind.Entity,
+                    Role = PresentationImageRole.Portrait,
+                    State = PresentationImageState.Default,
+                },
                 GenreLabelTokenId = textCatalog.GetTokenId("entityinfo.genre.commander"),
                 SubtitleTokenId = textCatalog.GetTokenId("entityinfo.subtitle.commander"),
                 BodyTokenId = textCatalog.GetTokenId("entityinfo.body.commander"),
@@ -464,8 +470,13 @@ public sealed class EntityInfoPanelServiceTests
                     new EntityInsightSemanticFieldProfile
                     {
                         Glyph = "R",
-                        MappingId = WellKnownPresentationSemanticMappingKeys.TeamRelationship,
-                        SemanticValueSource = EntityInsightSemanticValueSourceKind.TeamRelationshipSelf,
+                        MappingId = "tests.relationship.affinity",
+                        SemanticValueSource = EntityInsightSemanticValueSourceKind.RelationshipMetric,
+                        RenderKind = EntityInsightSemanticFieldRenderKind.Mapping,
+                        RelationshipTypeId = "tests.social",
+                        RelationshipMetricId = "affinity",
+                        SourceSubject = EntityInsightRelationshipSubjectKind.Self,
+                        TargetSubject = EntityInsightRelationshipSubjectKind.Self,
                     }
                 },
                 Tips = Array.Empty<EntityInsightTipProfile>(),
@@ -480,19 +491,42 @@ public sealed class EntityInfoPanelServiceTests
             var attributes = new AttributeBuffer();
             attributes.SetBase(healthId, 100f);
             attributes.SetCurrent(healthId, 75f);
+            var imageBinding = new PresentationImageBinding();
+            imageBinding.Set(PresentationImageRole.Portrait, PresentationImageState.Default, portraitImageAssetId);
 
             Entity entity = world.Create(
                 new Name { Value = "Arcweaver Commander" },
-                new Team { Id = 7 },
                 new EntityTemplateKeyCm { TemplateKeyId = templateKeyId },
+                imageBinding,
                 attributes);
+
+            var relationshipTypes = new RelationshipTypeRegistry();
+            var relationshipMetrics = new RelationshipMetricRegistry();
+            var relationshipFlags = new RelationshipFlagRegistry();
+            var relationshipRuntime = new RelationshipRuntime(
+                world,
+                relationshipTypes,
+                relationshipMetrics,
+                relationshipFlags,
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer());
+            int relationshipTypeId = relationshipTypes.Register("tests.social");
+            int affinityMetricId = relationshipMetrics.Register("affinity");
+            relationshipRuntime.SetMetric(entity, entity, relationshipTypeId, affinityMetricId, 100);
 
             var service = new EntityInfoPanelService(
                 insightCatalog,
                 textCatalog,
                 localeSelection,
                 semanticCatalog,
-                imageResolver);
+                new EntityInsightRuntimeAdapter(
+                    imageResolver,
+                    new PresentationImageBindingResolver(imageResolver),
+                    relationshipRuntime,
+                    relationshipTypes,
+                    relationshipMetrics,
+                    relationshipFlags),
+                new TagOps());
 
             EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
                 EntityInfoPanelKind.InsightBrief,
@@ -520,7 +554,6 @@ public sealed class EntityInfoPanelServiceTests
         }
         finally
         {
-            TeamManager.Clear();
             try { Directory.Delete(root, recursive: true); } catch { }
         }
     }
@@ -555,7 +588,13 @@ public sealed class EntityInfoPanelServiceTests
                 AccentColorHex = "#FF0000",
                 SurfaceColorHex = "#000000",
                 GenreGlyph = "C",
-                PortraitImageAssetId = portraitImageAssetId,
+                ImageSource = new EntityInsightImageSourceProfile
+                {
+                    Scope = EntityInsightImageSourceScopeKind.Profile,
+                    Role = PresentationImageRole.Portrait,
+                    State = PresentationImageState.Default,
+                    ProfileImageAssetId = portraitImageAssetId,
+                },
                 GenreLabelTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.actions"),
                 SubtitleTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.tips"),
                 BodyTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.collection.title"),
@@ -583,7 +622,8 @@ public sealed class EntityInfoPanelServiceTests
                 SharedEntityInfoTextCatalog,
                 SharedEntityInfoLocaleSelection,
                 semanticCatalog,
-                new PresentationImageSourceResolver(imageRegistry, vfs, "raylib"));
+                new EntityInsightRuntimeAdapter(new PresentationImageSourceResolver(imageRegistry, vfs, "raylib")),
+                new TagOps());
 
             using var world = World.Create();
             Entity entity = world.Create(
@@ -610,7 +650,7 @@ public sealed class EntityInfoPanelServiceTests
     }
 
     [Test]
-    public void BuildInsightPortraitIconUri_FailsFast_WhenImageResolverIsMissing()
+    public void BuildInsightPortraitIconUri_FailsFast_WhenEntityImageBindingResolverIsMissing()
     {
         int templateKeyId = new EntityTemplateKeyRegistry().Register("tests.hero.migration");
         var profile = new EntityInsightProfile
@@ -620,7 +660,12 @@ public sealed class EntityInfoPanelServiceTests
             AccentColorHex = "#58B7FF",
             SurfaceColorHex = "#0F1721",
             GenreGlyph = "C",
-            PortraitImageAssetId = 42,
+            ImageSource = new EntityInsightImageSourceProfile
+            {
+                Scope = EntityInsightImageSourceScopeKind.Entity,
+                Role = PresentationImageRole.Portrait,
+                State = PresentationImageState.Default,
+            },
             GenreLabelTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.actions"),
             SubtitleTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.tips"),
             BodyTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.collection.title"),
@@ -649,9 +694,60 @@ public sealed class EntityInfoPanelServiceTests
             SharedEntityInfoTextCatalog,
             SharedEntityInfoLocaleSelection,
             semanticCatalog,
-            imageSourceResolver: null);
-        var ex = Assert.Throws<InvalidOperationException>(() => service.BuildInsightPortraitIconUri(profile));
-        Assert.That(ex!.Message, Does.Contain("requires a configured presentation image source resolver"));
+            insightRuntimeAdapter: new EntityInsightRuntimeAdapter(imageSourceResolver: null),
+            tagOps: new TagOps());
+
+        using var world = World.Create();
+        Entity entity = world.Create(new EntityTemplateKeyCm { TemplateKeyId = templateKeyId });
+
+        var ex = Assert.Throws<InvalidOperationException>(() => service.BuildInsightPortraitIconUri(world, entity, profile));
+        Assert.That(ex!.Message, Does.Contain("requires a configured PresentationImageBindingResolver"));
+    }
+
+    [Test]
+    public void RuntimeAdapter_ResolvesRelationshipMetricValues_FromGenericRelationshipRuntime()
+    {
+        using var world = World.Create();
+        Entity source = world.Create();
+        Entity target = world.Create();
+        var relationshipTypes = new RelationshipTypeRegistry();
+        var relationshipMetrics = new RelationshipMetricRegistry();
+        var relationshipFlags = new RelationshipFlagRegistry();
+        var relationshipRuntime = new RelationshipRuntime(
+            world,
+            relationshipTypes,
+            relationshipMetrics,
+            relationshipFlags,
+            new RelationshipBandRegistry(),
+            new RelationshipChangeBuffer());
+        int typeId = relationshipTypes.Register("tests.social");
+        int metricId = relationshipMetrics.Register("affinity");
+        relationshipRuntime.SetMetric(source, target, typeId, metricId, -100);
+
+        var adapter = new EntityInsightRuntimeAdapter(
+            imageSourceResolver: null,
+            imageBindingResolver: null,
+            relationshipRuntime,
+            relationshipTypes,
+            relationshipMetrics,
+            relationshipFlags);
+        var field = new EntityInsightSemanticFieldProfile
+        {
+            Glyph = "REL",
+            MappingId = "tests.relationship.affinity",
+            SemanticValueSource = EntityInsightSemanticValueSourceKind.RelationshipMetric,
+            RenderKind = EntityInsightSemanticFieldRenderKind.Mapping,
+            RelationshipTypeId = "tests.social",
+            RelationshipMetricId = "affinity",
+            SourceSubject = EntityInsightRelationshipSubjectKind.Self,
+            TargetSubject = EntityInsightRelationshipSubjectKind.SelectionPrimary,
+        };
+
+        EntityInsightRuntimeAdapter.EntityInsightSemanticFieldRuntimeValue value =
+            adapter.ResolveSemanticFieldValueRequired(world, source, field, target);
+
+        Assert.That(value.MappedValueKey, Is.EqualTo("-100"));
+        Assert.That(value.NumericValue, Is.EqualTo(-100f));
     }
 
     private static PresentationSemanticCatalog CreateMigrationSemanticCatalog()
@@ -716,16 +812,23 @@ public sealed class EntityInfoPanelServiceTests
     private static EntityInfoPanelService CreateService()
     {
         return new EntityInfoPanelService(
+            insightCatalog: EntityInsightProfileCatalog.Empty,
             presentationTextCatalog: SharedEntityInfoTextCatalog,
-            localeSelection: SharedEntityInfoLocaleSelection);
+            localeSelection: SharedEntityInfoLocaleSelection,
+            semanticCatalog: CreateMigrationSemanticCatalog(),
+            insightRuntimeAdapter: new EntityInsightRuntimeAdapter(imageSourceResolver: null),
+            tagOps: new TagOps());
     }
 
     private static EntityInfoPanelService CreateService(PresentationSemanticCatalog semanticCatalog)
     {
         return new EntityInfoPanelService(
+            insightCatalog: EntityInsightProfileCatalog.Empty,
             presentationTextCatalog: SharedEntityInfoTextCatalog,
             localeSelection: SharedEntityInfoLocaleSelection,
-            semanticCatalog: semanticCatalog);
+            semanticCatalog: semanticCatalog,
+            insightRuntimeAdapter: new EntityInsightRuntimeAdapter(imageSourceResolver: null),
+            tagOps: new TagOps());
     }
 
     private static PresentationSemanticCatalog CreateSelectionSemanticCatalog(int healthId, int manaId)
@@ -793,8 +896,14 @@ public sealed class EntityInfoPanelServiceTests
   { ""id"": ""entityinfo.collection.entities"", ""argCount"": 0 },
   { ""id"": ""entityinfo.collection.categories"", ""argCount"": 0 },
   { ""id"": ""entityinfo.collection.rows"", ""argCount"": 2 },
+  { ""id"": ""entityinfo.collection.subtitle"", ""argCount"": 4 },
+  { ""id"": ""entityinfo.collection.category_count"", ""argCount"": 2 },
   { ""id"": ""entityinfo.collection.no_attributes"", ""argCount"": 0 },
   { ""id"": ""entityinfo.collection.more_attributes"", ""argCount"": 1 },
+  { ""id"": ""selection.live.primary"", ""argCount"": 0 },
+  { ""id"": ""selection.formation.primary"", ""argCount"": 0 },
+  { ""id"": ""selection.view.primary"", ""argCount"": 0 },
+  { ""id"": ""selection.view.formation"", ""argCount"": 0 },
   { ""id"": ""entityinfo.panel.component.title"", ""argCount"": 0 },
   { ""id"": ""entityinfo.panel.gas.title"", ""argCount"": 0 },
   { ""id"": ""entityinfo.panel.collection.title_text"", ""argCount"": 0 },
@@ -835,8 +944,14 @@ public sealed class EntityInfoPanelServiceTests
       ""entityinfo.collection.entities"": ""entities"",
       ""entityinfo.collection.categories"": ""categories"",
       ""entityinfo.collection.rows"": ""rows {0}-{1}"",
+      ""entityinfo.collection.subtitle"": ""{0} -> {1} | {2} {3}"",
+      ""entityinfo.collection.category_count"": ""{0} {1}"",
       ""entityinfo.collection.no_attributes"": ""No semantic attributes"",
       ""entityinfo.collection.more_attributes"": ""+{0} semantic attributes"",
+      ""selection.live.primary"": ""Live selection"",
+      ""selection.formation.primary"": ""Formation selection"",
+      ""selection.view.primary"": ""Primary view"",
+      ""selection.view.formation"": ""Formation view"",
       ""entityinfo.panel.component.title"": ""Entity Component Inspector"",
       ""entityinfo.panel.gas.title"": ""Entity GAS Inspector"",
       ""entityinfo.panel.collection.title_text"": ""Entity Collection Inspector"",

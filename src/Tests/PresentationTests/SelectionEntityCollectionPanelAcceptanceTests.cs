@@ -113,7 +113,8 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
         string sceneText = ExtractUiSceneText(scene);
         Assert.That(sceneText, Does.Contain("Current viewed selection"));
         Assert.That(sceneText, Does.Contain("Spearman x24 *"));
-        Assert.That(sceneText, Does.Contain("selection.view.formation -> selection.formation.primary | 72 entities"));
+        Assert.That(sceneText, Does.Contain("Formation view -> Formation selection | 72 entities"));
+        Assert.That(sceneText, Does.Contain("3 categories | rows 1-6"));
         Assert.That(sceneText, Does.Contain("G1 72u Spearman"));
         Assert.That(sceneText, Does.Contain("Shield 10/40"));
         Assert.That(sceneText, Does.Not.Contain("No semantic attributes"));

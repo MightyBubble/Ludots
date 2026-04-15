@@ -13,6 +13,8 @@
   { "id": "genreinfo.cards.primary", "argCount": 0 },
   { "id": "genreinfo.cards.window", "argCount": 0 },
   { "id": "genreinfo.controls.current", "argCount": 0 },
+  { "id": "genreinfo.locale.english", "argCount": 0 },
+  { "id": "genreinfo.locale.chinese", "argCount": 0 },
   { "id": "genreinfo.controls.hint", "argCount": 0 },
   { "id": "genreinfo.controls.save_prefix", "argCount": 0 },
   { "id": "genreinfo.controls.title", "argCount": 0 },

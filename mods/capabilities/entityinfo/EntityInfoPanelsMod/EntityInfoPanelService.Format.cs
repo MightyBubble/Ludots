@@ -203,7 +203,7 @@ public sealed partial class EntityInfoPanelService
         return fields;
     }
 
-    private static string DescribeEffect(World world, Entity effectEntity)
+    private string DescribeEffect(World world, Entity effectEntity)
     {
         string templateName = "effect";
         if (world.TryGet(effectEntity, out EffectTemplateRef templateRef))
@@ -232,14 +232,19 @@ public sealed partial class EntityInfoPanelService
             : $"{templateName} | src={source} | {state}{stack}";
     }
 
-    private static string ResolveEntityLabel(World world, Entity entity)
+    private string ResolveEntityLabel(World world, Entity entity)
     {
         if (world.TryGet(entity, out Name name) && !string.IsNullOrWhiteSpace(name.Value))
         {
-            return $"{name.Value} #{entity.Id}";
+            return name.Value;
         }
 
-        return $"Entity #{entity.Id}";
+        return ResolveEntityFallbackText(entity);
+    }
+
+    private string ResolveEntityFallbackText(Entity entity)
+    {
+        return FormatTextTokenKey(InsightEntityNameToken, CreateNumericArg(entity.Id));
     }
 
     private string ResolveMissingSubtitle(EntityInfoPanelTarget target)
@@ -260,7 +265,7 @@ public sealed partial class EntityInfoPanelService
             return name.Value;
         }
 
-        return $"Entity #{entity.Id}";
+        return string.Empty;
     }
 
     private string BuildEntityAttributePreview(World world, Entity entity)
@@ -326,7 +331,7 @@ public sealed partial class EntityInfoPanelService
         displayName = (displayName ?? string.Empty).Trim();
         if (displayName.Length == 0)
         {
-            return entityId > 0 ? $"Entity #{entityId}" : string.Empty;
+            return entityId > 0 ? entityId.ToString(CultureInfo.InvariantCulture) : string.Empty;
         }
 
         int end = displayName.Length;
@@ -355,7 +360,7 @@ public sealed partial class EntityInfoPanelService
         {
             null => "null",
             string text => text,
-            Entity entity => entity == Entity.Null ? "Entity.Null" : $"Entity #{entity.Id}",
+            Entity entity => entity == Entity.Null ? "0" : entity.Id.ToString(CultureInfo.InvariantCulture),
             MapId mapId => mapId.Value,
             Vector2 vector2 => $"({FormatNumber(vector2.X)}, {FormatNumber(vector2.Y)})",
             Vector3 vector3 => FormatVector3(vector3),

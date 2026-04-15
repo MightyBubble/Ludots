@@ -139,7 +139,7 @@ namespace Ludots.Tests.Presentation
             int markerId = performers.Register("performer.cast_marker", new PerformerDefinition { VisualKind = PerformerVisualKind.Marker3D });
             int barId = performers.Register("performer.health_bar", new PerformerDefinition { VisualKind = PerformerVisualKind.WorldBar });
 
-            var context = new PresentationAuthoringContext(visualTemplates, performers, animators, stableIds);
+            var context = new PresentationAuthoringContext(visualTemplates, new PresentationImageRegistry(), performers, animators, stableIds);
             JsonNode authoring = JsonNode.Parse(
                 """
                 {
@@ -248,7 +248,7 @@ namespace Ludots.Tests.Presentation
                     VisibleByDefault = true,
                 });
 
-            var context = new PresentationAuthoringContext(visualTemplates, performers, animators, stableIds);
+            var context = new PresentationAuthoringContext(visualTemplates, new PresentationImageRegistry(), performers, animators, stableIds);
             JsonNode authoring = JsonNode.Parse(
                 """
                 {

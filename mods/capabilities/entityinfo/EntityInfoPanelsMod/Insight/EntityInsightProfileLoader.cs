@@ -5,6 +5,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod.Insight;
@@ -21,12 +22,14 @@ public sealed class EntityInsightProfileLoader
     }
 
     public EntityInsightProfileCatalog Load(
-        ConfigCatalog? catalog,
-        ConfigConflictReport? report,
+        ConfigCatalog catalog,
+        ConfigConflictReport report,
         EntityTemplateKeyRegistry templateKeys,
         PresentationTextCatalog textCatalog,
         PresentationImageRegistry imageRegistry)
     {
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(report);
         ArgumentNullException.ThrowIfNull(templateKeys);
         ArgumentNullException.ThrowIfNull(textCatalog);
         ArgumentNullException.ThrowIfNull(imageRegistry);
@@ -64,7 +67,7 @@ public sealed class EntityInsightProfileLoader
                 AccentColorHex = ReadRequiredString(node, "accentColorHex"),
                 SurfaceColorHex = ReadRequiredString(node, "surfaceColorHex"),
                 GenreGlyph = ReadRequiredString(node, "genreGlyph"),
-                PortraitImageAssetId = ResolveRequiredImageAssetId(imageRegistry, node, "portraitImageAsset", profileId),
+                ImageSource = ReadRequiredImageSource(imageRegistry, node, profileId),
                 GenreLabelTokenId = ResolveRequiredTokenId(textCatalog, node, "genreLabelToken", profileId),
                 SubtitleTokenId = ResolveRequiredTokenId(textCatalog, node, "subtitleToken", profileId),
                 BodyTokenId = ResolveRequiredTokenId(textCatalog, node, "bodyToken", profileId),
@@ -212,16 +215,32 @@ public sealed class EntityInsightProfileLoader
             string source = ReadRequiredString(fieldNode, "semanticSource");
             EntityInsightSemanticValueSourceKind semanticValueSource = source switch
             {
-                "team.relationship.self" => EntityInsightSemanticValueSourceKind.TeamRelationshipSelf,
+                "relationship.metric" => EntityInsightSemanticValueSourceKind.RelationshipMetric,
+                "relationship.flag" => EntityInsightSemanticValueSourceKind.RelationshipFlag,
                 _ => throw new InvalidOperationException($"Entity insight profile '{profileId}' semanticFields[{i}] uses unsupported semanticSource '{source}'.")
             };
 
             fields[i] = new EntityInsightSemanticFieldProfile
             {
                 Glyph = ReadRequiredString(fieldNode, "glyph"),
-                MappingId = ReadRequiredString(fieldNode, "mappingId"),
+                RenderKind = ReadRequiredRenderKind(fieldNode, $"{profileId}.semanticFields[{i}]"),
+                MappingId = ReadOptionalString(fieldNode, "mappingId"),
                 SemanticValueSource = semanticValueSource,
+                RelationshipTypeId = ReadRequiredString(fieldNode, "relationshipType"),
+                RelationshipMetricId = semanticValueSource == EntityInsightSemanticValueSourceKind.RelationshipMetric
+                    ? ReadRequiredString(fieldNode, "relationshipMetric")
+                    : string.Empty,
+                RelationshipFlagId = semanticValueSource == EntityInsightSemanticValueSourceKind.RelationshipFlag
+                    ? ReadRequiredString(fieldNode, "relationshipFlag")
+                    : string.Empty,
+                TrueValueKey = ReadOptionalString(fieldNode, "trueValueKey"),
+                FalseValueKey = ReadOptionalString(fieldNode, "falseValueKey"),
+                ValueSemanticKey = ReadOptionalString(fieldNode, "valueSemanticKey"),
+                SourceSubject = ReadRequiredRelationshipSubject(fieldNode, "sourceSubject", $"{profileId}.semanticFields[{i}]"),
+                TargetSubject = ReadRequiredRelationshipSubject(fieldNode, "targetSubject", $"{profileId}.semanticFields[{i}]"),
             };
+
+            ValidateSemanticField(fields[i], $"{profileId}.semanticFields[{i}]");
         }
 
         return fields;
@@ -298,21 +317,58 @@ public sealed class EntityInsightProfileLoader
         return tokenId;
     }
 
-    private static int ResolveRequiredImageAssetId(
+    private static EntityInsightImageSourceProfile ReadRequiredImageSource(
         PresentationImageRegistry imageRegistry,
         JsonObject node,
-        string propertyName,
         string scope)
     {
         RejectLegacyPortraitGlyph(node, scope);
-        string assetKey = ReadRequiredString(node, propertyName);
-        int imageAssetId = imageRegistry.GetId(assetKey);
-        if (imageAssetId <= 0)
+
+        if (node["imageSource"] is not JsonObject imageSourceNode)
         {
-            throw new InvalidOperationException($"Entity insight scope '{scope}' references unknown image asset '{assetKey}'.");
+            throw new InvalidOperationException($"Entity insight scope '{scope}' must define required object 'imageSource'.");
         }
 
-        return imageAssetId;
+        string roleText = ReadRequiredString(imageSourceNode, "role");
+        if (!Enum.TryParse(roleText, ignoreCase: true, out PresentationImageRole role))
+        {
+            throw new InvalidOperationException($"Entity insight scope '{scope}' uses invalid imageSource.role '{roleText}'.");
+        }
+
+        string scopeText = ReadRequiredString(imageSourceNode, "scope");
+        EntityInsightImageSourceScopeKind sourceScope = scopeText switch
+        {
+            "entity" => EntityInsightImageSourceScopeKind.Entity,
+            "profile" => EntityInsightImageSourceScopeKind.Profile,
+            _ => throw new InvalidOperationException($"Entity insight scope '{scope}' uses invalid imageSource.scope '{scopeText}'."),
+        };
+
+        PresentationImageState state = PresentationImageState.Default;
+        string stateText = ReadOptionalString(imageSourceNode, "state");
+        if (!string.IsNullOrWhiteSpace(stateText) &&
+            !Enum.TryParse(stateText, ignoreCase: true, out state))
+        {
+            throw new InvalidOperationException($"Entity insight scope '{scope}' uses invalid imageSource.state '{stateText}'.");
+        }
+
+        int profileImageAssetId = 0;
+        if (sourceScope == EntityInsightImageSourceScopeKind.Profile)
+        {
+            string assetKey = ReadRequiredString(imageSourceNode, "imageAsset");
+            profileImageAssetId = imageRegistry.GetId(assetKey);
+            if (profileImageAssetId <= 0)
+            {
+                throw new InvalidOperationException($"Entity insight scope '{scope}' references unknown image asset '{assetKey}'.");
+            }
+        }
+
+        return new EntityInsightImageSourceProfile
+        {
+            Role = role,
+            State = state,
+            Scope = sourceScope,
+            ProfileImageAssetId = profileImageAssetId,
+        };
     }
 
     private static void RejectLegacyPortraitGlyph(JsonObject node, string scope)
@@ -320,7 +376,7 @@ public sealed class EntityInsightProfileLoader
         if (node.ContainsKey("portraitGlyph"))
         {
             throw new InvalidOperationException(
-                $"Entity insight scope '{scope}' uses legacy 'portraitGlyph'. Define 'portraitImageAsset' only.");
+                $"Entity insight scope '{scope}' uses legacy 'portraitGlyph'. Define 'imageSource' only.");
         }
     }
 
@@ -339,5 +395,62 @@ public sealed class EntityInsightProfileLoader
     {
         string value = node[propertyName]?.GetValue<string>() ?? string.Empty;
         return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+    }
+
+    private static EntityInsightRelationshipSubjectKind ReadRequiredRelationshipSubject(JsonObject node, string propertyName, string scope)
+    {
+        string text = ReadRequiredString(node, propertyName);
+        return text switch
+        {
+            "self" => EntityInsightRelationshipSubjectKind.Self,
+            "selection.primary" => EntityInsightRelationshipSubjectKind.SelectionPrimary,
+            "selection.viewer" => EntityInsightRelationshipSubjectKind.SelectionViewer,
+            _ => throw new InvalidOperationException($"Entity insight scope '{scope}' uses unsupported {propertyName} '{text}'."),
+        };
+    }
+
+    private static EntityInsightSemanticFieldRenderKind ReadRequiredRenderKind(JsonObject node, string scope)
+    {
+        string text = ReadRequiredString(node, "render");
+        return text switch
+        {
+            "mapping" => EntityInsightSemanticFieldRenderKind.Mapping,
+            "numeric" => EntityInsightSemanticFieldRenderKind.Numeric,
+            _ => throw new InvalidOperationException($"Entity insight scope '{scope}' uses unsupported render '{text}'."),
+        };
+    }
+
+    private static void ValidateSemanticField(EntityInsightSemanticFieldProfile field, string scope)
+    {
+        switch (field.RenderKind)
+        {
+            case EntityInsightSemanticFieldRenderKind.Mapping:
+                if (string.IsNullOrWhiteSpace(field.MappingId))
+                {
+                    throw new InvalidOperationException($"Entity insight scope '{scope}' render=mapping requires non-empty mappingId.");
+                }
+
+                if (field.SemanticValueSource == EntityInsightSemanticValueSourceKind.RelationshipFlag &&
+                    (string.IsNullOrWhiteSpace(field.TrueValueKey) || string.IsNullOrWhiteSpace(field.FalseValueKey)))
+                {
+                    throw new InvalidOperationException($"Entity insight scope '{scope}' flag mapping requires trueValueKey and falseValueKey.");
+                }
+                break;
+
+            case EntityInsightSemanticFieldRenderKind.Numeric:
+                if (field.SemanticValueSource != EntityInsightSemanticValueSourceKind.RelationshipMetric)
+                {
+                    throw new InvalidOperationException($"Entity insight scope '{scope}' render=numeric only supports semanticSource=relationship.metric.");
+                }
+
+                if (string.IsNullOrWhiteSpace(field.ValueSemanticKey))
+                {
+                    throw new InvalidOperationException($"Entity insight scope '{scope}' render=numeric requires valueSemanticKey.");
+                }
+                break;
+
+            default:
+                throw new InvalidOperationException($"Entity insight scope '{scope}' uses unsupported render kind '{field.RenderKind}'.");
+        }
     }
 }

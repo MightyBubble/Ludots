@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Input.Selection;
@@ -100,35 +99,16 @@ public sealed partial class EntityInfoPanelService
 
     private void RenderEntityCollectionOverlay(ScreenOverlayBuffer overlay, int slot, int x, ref int y, int bottom)
     {
-        string summary = $"[{_entityCollectionViewKeys[slot]} -> {_entityCollectionAliasKeys[slot]}] count={_entityCollectionCounts[slot]}";
-        overlay.AddText(x, y, summary, 13, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 3000), ComposeTextSerial(summary, 13));
-        y += 18;
-
-        int categoryCount = Math.Min(4, _entityCollectionCategoryCounts[slot]);
-        if (categoryCount > 0)
+        int totalCount = _entityCollectionCounts[slot];
+        int previewRowCount = Math.Min(totalCount, Math.Max(0, (bottom - y - 18) / 18));
+        if (previewRowCount > 0)
         {
-            var labels = new List<string>(categoryCount);
-            for (int i = 0; i < categoryCount; i++)
-            {
-                if (!TryGetEntityCollectionCategory(slot, i, out EntityCollectionCategorySummary category))
-                {
-                    continue;
-                }
-
-                labels.Add(category.ContainsPrimary
-                    ? $"{category.Label} x{category.Count}*"
-                    : $"{category.Label} x{category.Count}");
-            }
-
-            if (labels.Count > 0)
-            {
-                string categoryLine = string.Join(" | ", labels);
-                overlay.AddText(x, y, categoryLine, 12, new Vector4(0.82f, 0.86f, 0.91f, 1f), ComposeStableId(slot, 3001), ComposeTextSerial(categoryLine, 12));
-                y += 16;
-            }
+            string summaryText = BuildEntityCollectionSummaryText(slot, 0, previewRowCount, totalCount, previewRowCount);
+            overlay.AddText(x, y, summaryText, 12, new Vector4(0.82f, 0.86f, 0.91f, 1f), ComposeStableId(slot, 3001), ComposeTextSerial(summaryText, 12));
+            y += 16;
         }
 
-        int maxRows = Math.Min(_entityCollectionCounts[slot], Math.Max(0, (bottom - y) / 18));
+        int maxRows = Math.Min(totalCount, Math.Max(0, (bottom - y) / 18));
         for (int i = 0; i < maxRows && y <= bottom; i++)
         {
             if (!TryGetEntityCollectionRow(slot, i, out EntityCollectionPanelRow row))

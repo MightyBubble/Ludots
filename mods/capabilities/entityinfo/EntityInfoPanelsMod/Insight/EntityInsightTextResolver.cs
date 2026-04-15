@@ -72,7 +72,7 @@ public sealed class EntityInsightTextResolver
         return ResolveRequiredTokenId(tokenId);
     }
 
-    public string FormatRequiredTokenKey(string tokenKey, params PresentationTextArg[] args)
+    public int GetRequiredTokenId(string tokenKey)
     {
         if (string.IsNullOrWhiteSpace(tokenKey))
         {
@@ -85,6 +85,11 @@ public sealed class EntityInsightTextResolver
             throw new InvalidOperationException($"Entity insight text token '{tokenKey}' is not registered.");
         }
 
-        return FormatRequiredTokenId(tokenId, args);
+        return tokenId;
+    }
+
+    public string FormatRequiredTokenKey(string tokenKey, params PresentationTextArg[] args)
+    {
+        return FormatRequiredTokenId(GetRequiredTokenId(tokenKey), args);
     }
 }
