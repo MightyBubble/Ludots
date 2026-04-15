@@ -15,5 +15,7 @@
   { "id": "entityinfo.collection.primary", "argCount": 0 },
   { "id": "entityinfo.collection.entities", "argCount": 0 },
   { "id": "entityinfo.collection.categories", "argCount": 0 },
-  { "id": "entityinfo.collection.rows", "argCount": 2 }
+  { "id": "entityinfo.collection.rows", "argCount": 2 },
+  { "id": "entityinfo.collection.no_attributes", "argCount": 0 },
+  { "id": "entityinfo.collection.more_attributes", "argCount": 1 }
 ]

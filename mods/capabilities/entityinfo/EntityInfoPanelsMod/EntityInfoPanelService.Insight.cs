@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
@@ -25,6 +26,8 @@ public sealed partial class EntityInfoPanelService
     private const string EntityCollectionEntitiesToken = "entityinfo.collection.entities";
     private const string EntityCollectionCategoriesToken = "entityinfo.collection.categories";
     private const string EntityCollectionRowsToken = "entityinfo.collection.rows";
+    private const string EntityCollectionNoAttributesToken = "entityinfo.collection.no_attributes";
+    private const string EntityCollectionMoreAttributesToken = "entityinfo.collection.more_attributes";
 
     public bool TryGetInsightProfile(int slot, out EntityInsightProfile profile)
     {
@@ -59,12 +62,38 @@ public sealed partial class EntityInfoPanelService
     public string BuildInsightPortraitIconUri(EntityInsightProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
-        if (_imageSourceResolver == null)
+        if (profile.PortraitImageAssetId > 0 && _imageSourceResolver != null && _imageSourceResolver.TryResolveSource(profile.PortraitImageAssetId, out string source))
+        {
+            return source;
+        }
+
+        if (profile.PortraitImageAssetId > 0 &&
+            _imageSourceResolver != null &&
+            _imageSourceResolver.TryResolveGlyphFallback(profile.PortraitImageAssetId, out PresentationImageGlyphFallbackDefinition assetFallback))
+        {
+            return BuildInsightGlyphIconUri(
+                assetFallback.Glyph,
+                assetFallback.AccentColorHex,
+                assetFallback.SurfaceColorHex,
+                emphatic: true);
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.PortraitGlyph))
+        {
+            return BuildInsightGlyphIconUri(profile.PortraitGlyph, profile.AccentColorHex, profile.SurfaceColorHex, emphatic: true);
+        }
+
+        if (profile.PortraitImageAssetId > 0 && _imageSourceResolver == null)
         {
             throw new InvalidOperationException("Entity insight portrait resolution requires a configured presentation image source resolver.");
         }
 
-        return _imageSourceResolver.ResolveRequiredSource(profile.PortraitImageAssetId);
+        if (profile.PortraitImageAssetId > 0)
+        {
+            return _imageSourceResolver!.ResolveRequiredSource(profile.PortraitImageAssetId);
+        }
+
+        throw new InvalidOperationException($"Entity insight profile '{profile.Id}' must define either 'portraitImageAsset' or migration 'portraitGlyph'.");
     }
 
     public string BuildInsightGenreIconUri(EntityInsightProfile profile) => _insightIconFactory.Build(profile.GenreGlyph, profile.AccentColorHex, profile.SurfaceColorHex);
@@ -119,7 +148,7 @@ public sealed partial class EntityInfoPanelService
         {
             EntityInsightSemanticFieldProfile field = profile.SemanticFields[0];
             int runtimeValue = ResolveSemanticFieldRuntimeValue(world, entity, field);
-            segments[segmentCount++] = $"{_semanticResolver.ResolveMappingLabelRequired(field.MappingId)} {_semanticResolver.ResolveMappedValueRequired(field.MappingId, field.GetValueKey(runtimeValue))}";
+            segments[segmentCount++] = $"{_semanticResolver.ResolveMappingLabelRequired(field.MappingId)} {_semanticResolver.ResolveMappedRuntimeValueRequired(field.MappingId, runtimeValue)}";
         }
 
         if (segmentCount == 0)
@@ -286,9 +315,9 @@ public sealed partial class EntityInfoPanelService
         }
 
         int value = _insightSemanticFieldRuntimeValues[InsightStatIndex(slot, fieldIndex)];
-        return _semanticResolver.ResolveMappedValueRequired(
+        return _semanticResolver.ResolveMappedRuntimeValueRequired(
             profile.SemanticFields[fieldIndex].MappingId,
-            profile.SemanticFields[fieldIndex].GetValueKey(value));
+            value);
     }
 
     public string GetInsightSemanticFieldIconUri(int slot, int fieldIndex)

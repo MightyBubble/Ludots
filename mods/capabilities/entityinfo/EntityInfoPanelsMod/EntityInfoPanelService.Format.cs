@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
 
@@ -262,11 +263,11 @@ public sealed partial class EntityInfoPanelService
         return $"Entity #{entity.Id}";
     }
 
-    private static string BuildEntityAttributePreview(World world, Entity entity)
+    private string BuildEntityAttributePreview(World world, Entity entity)
     {
         if (!world.TryGet(entity, out AttributeBuffer attributes))
         {
-            return "(no attributes)";
+            return ResolveTextTokenKey(EntityCollectionNoAttributesToken);
         }
 
         int appended = 0;
@@ -281,15 +282,20 @@ public sealed partial class EntityInfoPanelService
                 continue;
             }
 
-            string attrName = AttributeRegistry.GetName(attrId);
-            if (string.IsNullOrWhiteSpace(attrName))
+            if (!_semanticResolver.TryResolveAttributeLabelById(attrId, out string label) ||
+                !_semanticResolver.TryFormatAttributeById(
+                    attrId,
+                    PresentationAttributeValueDisplayKind.CurrentOverBase,
+                    currentValue,
+                    baseValue,
+                    out string value))
             {
-                attrName = $"attr:{attrId}";
+                continue;
             }
 
             if (appended < MaxEntityCollectionPreviewAttributes)
             {
-                string segment = $"{attrName} {FormatNumber(currentValue)}/{FormatNumber(baseValue)}";
+                string segment = $"{label} {value}";
                 preview = appended == 0 ? segment : $"{preview} | {segment}";
                 appended++;
             }
@@ -301,11 +307,11 @@ public sealed partial class EntityInfoPanelService
 
         if (appended == 0)
         {
-            return "(no attributes)";
+            return ResolveTextTokenKey(EntityCollectionNoAttributesToken);
         }
 
         return hidden > 0
-            ? $"{preview} | +{hidden} more"
+            ? $"{preview} | {FormatTextTokenKey(EntityCollectionMoreAttributesToken, CreateNumericArg(hidden))}"
             : preview;
     }
 

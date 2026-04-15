@@ -18,7 +18,9 @@
       "entityinfo.collection.primary": "PRIMARY",
       "entityinfo.collection.entities": "entities",
       "entityinfo.collection.categories": "categories",
-      "entityinfo.collection.rows": "rows {0}-{1}"
+      "entityinfo.collection.rows": "rows {0}-{1}",
+      "entityinfo.collection.no_attributes": "No semantic attributes",
+      "entityinfo.collection.more_attributes": "+{0} semantic attributes"
     },
     "zh-CN": {
       "entityinfo.action.close": "关闭",
@@ -37,7 +39,9 @@
       "entityinfo.collection.primary": "主目标",
       "entityinfo.collection.entities": "个实体",
       "entityinfo.collection.categories": "个分类",
-      "entityinfo.collection.rows": "行 {0}-{1}"
+      "entityinfo.collection.rows": "行 {0}-{1}",
+      "entityinfo.collection.no_attributes": "无语义属性",
+      "entityinfo.collection.more_attributes": "+{0} 个语义属性"
     }
   }
 }

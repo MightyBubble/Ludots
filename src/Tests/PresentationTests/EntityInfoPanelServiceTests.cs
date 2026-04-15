@@ -283,7 +283,7 @@ public sealed class EntityInfoPanelServiceTests
             [CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary,
         };
 
-        var service = CreateService();
+        var service = CreateService(CreateSelectionSemanticCatalog(healthId, manaId));
         EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
             EntityInfoPanelKind.EntityCollectionInspector,
             EntityInfoPanelSurface.Ui,
@@ -302,12 +302,12 @@ public sealed class EntityInfoPanelServiceTests
         Assert.That(firstRow.EntityId, Is.EqualTo(first.Id));
         Assert.That(firstRow.Name, Is.EqualTo("Arcweaver 01"));
         Assert.That(firstRow.IsPrimary, Is.True);
-        Assert.That(firstRow.AttributesSummary, Does.Contain("Selection.Health 75/100"));
-        Assert.That(firstRow.AttributesSummary, Does.Contain("Selection.Mana 32/80"));
+        Assert.That(firstRow.AttributesSummary, Does.Contain("Selection Health 75/100"));
+        Assert.That(firstRow.AttributesSummary, Does.Contain("Selection Mana 32/80"));
         Assert.That(service.TryGetEntityCollectionRow(handle.Slot, 1, out EntityCollectionPanelRow secondRow), Is.True);
         Assert.That(secondRow.EntityId, Is.EqualTo(second.Id));
         Assert.That(secondRow.Name, Is.EqualTo("Arcweaver 02"));
-        Assert.That(secondRow.AttributesSummary, Is.EqualTo("(no attributes)"));
+        Assert.That(secondRow.AttributesSummary, Is.EqualTo("No semantic attributes"));
         Assert.That(service.GetEntityCollectionCategoryCount(handle.Slot), Is.EqualTo(2));
         Assert.That(service.TryGetEntityCollectionCategory(handle.Slot, 0, out EntityCollectionCategorySummary firstCategory), Is.True);
         Assert.That(firstCategory.Label, Is.EqualTo("Arcweaver"));
@@ -415,6 +415,12 @@ public sealed class EntityInfoPanelServiceTests
                             [WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly] = textCatalog.GetTokenId("semantic.relationship.friendly"),
                             [WellKnownPresentationSemanticMappingKeys.TeamRelationshipHostile] = textCatalog.GetTokenId("semantic.relationship.hostile"),
                             [WellKnownPresentationSemanticMappingKeys.TeamRelationshipNeutral] = textCatalog.GetTokenId("semantic.relationship.neutral"),
+                        },
+                        new Dictionary<int, string>
+                        {
+                            [0] = WellKnownPresentationSemanticMappingKeys.TeamRelationshipNeutral,
+                            [1] = WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly,
+                            [2] = WellKnownPresentationSemanticMappingKeys.TeamRelationshipHostile,
                         })
                 });
 
@@ -525,6 +531,178 @@ public sealed class EntityInfoPanelServiceTests
         }
     }
 
+    [Test]
+    public void Refresh_InsightBrief_UsesImageAssetGlyphFallback_DuringMigration_WhenBackendLocatorIsMissing()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "Ludots_EntityInfo_ImageFallback", Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(root);
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", Path.Combine(root, "Core"));
+
+            int templateKeyId = new EntityTemplateKeyRegistry().Register("tests.hero.assetfallback");
+            var imageRegistry = new PresentationImageRegistry();
+            int portraitImageAssetId = imageRegistry.Register(
+                "portrait.assetfallback",
+                new PresentationImageDefinition
+                {
+                    AssetKind = PresentationImageAssetKind.Portrait2D,
+                    Locators = new[]
+                    {
+                        new PresentationImageLocatorDefinition("web", "https://example.invalid/portrait.svg"),
+                    },
+                    FallbackGlyph = "AF",
+                    FallbackAccentColorHex = "#58B7FF",
+                    FallbackSurfaceColorHex = "#0F1721",
+                });
+
+            var profile = new EntityInsightProfile
+            {
+                Id = "tests.assetfallback",
+                TemplateKeyIds = new[] { templateKeyId },
+                AccentColorHex = "#FF0000",
+                SurfaceColorHex = "#000000",
+                GenreGlyph = "C",
+                PortraitImageAssetId = portraitImageAssetId,
+                PortraitGlyph = "LEGACY",
+                GenreLabelTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.actions"),
+                SubtitleTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.tips"),
+                BodyTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.collection.title"),
+                Badges = Array.Empty<EntityInsightBadgeProfile>(),
+                Stats = new[]
+                {
+                    new EntityInsightStatProfile
+                    {
+                        SemanticKey = "migration.constant",
+                        Glyph = "M",
+                        AttributeId = AttributeRegistry.InvalidId,
+                        SourceKind = EntityInsightStatSourceKind.Constant,
+                        DisplayMode = EntityInsightValueDisplayMode.Constant,
+                        ConstantValue = 1f,
+                    }
+                },
+                SemanticFields = Array.Empty<EntityInsightSemanticFieldProfile>(),
+                Tips = Array.Empty<EntityInsightTipProfile>(),
+                Actions = Array.Empty<EntityInsightActionProfile>(),
+            };
+
+            var semanticCatalog = CreateMigrationSemanticCatalog();
+            var service = new EntityInfoPanelService(
+                new EntityInsightProfileCatalog(new[] { profile }, new Dictionary<int, int> { [templateKeyId] = 0 }),
+                SharedEntityInfoTextCatalog,
+                SharedEntityInfoLocaleSelection,
+                semanticCatalog,
+                new PresentationImageSourceResolver(imageRegistry, vfs, "raylib"));
+
+            using var world = World.Create();
+            Entity entity = world.Create(
+                new Name { Value = "Asset Fallback Unit" },
+                new EntityTemplateKeyCm { TemplateKeyId = templateKeyId });
+
+            EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
+                EntityInfoPanelKind.InsightBrief,
+                EntityInfoPanelSurface.Ui,
+                EntityInfoPanelTarget.Fixed(entity),
+                new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopLeft, 0f, 0f, 320f, 240f),
+                EntityInfoGasDetailFlags.None,
+                true));
+
+            service.Refresh(world, new Dictionary<string, object>());
+
+            string portraitUri = service.GetInsightPortraitIconUri(handle.Slot);
+            Assert.That(portraitUri, Does.StartWith("data:image/svg+xml"));
+            Assert.That(Uri.UnescapeDataString(portraitUri), Does.Contain(">AF<"));
+            Assert.That(Uri.UnescapeDataString(portraitUri), Does.Not.Contain("LEGACY"));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Test]
+    public void Refresh_InsightBrief_FallsBackToPortraitGlyph_DuringMigration_WhenImageAssetIsMissing()
+    {
+        int templateKeyId = new EntityTemplateKeyRegistry().Register("tests.hero.migration");
+        var profile = new EntityInsightProfile
+        {
+            Id = "tests.migration",
+            TemplateKeyIds = new[] { templateKeyId },
+            AccentColorHex = "#58B7FF",
+            SurfaceColorHex = "#0F1721",
+            GenreGlyph = "C",
+            PortraitImageAssetId = 0,
+            PortraitGlyph = "MG",
+            GenreLabelTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.actions"),
+            SubtitleTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.section.tips"),
+            BodyTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.collection.title"),
+            Badges = Array.Empty<EntityInsightBadgeProfile>(),
+            Stats = new[]
+            {
+                new EntityInsightStatProfile
+                {
+                    SemanticKey = "migration.constant",
+                    Glyph = "M",
+                    AttributeId = AttributeRegistry.InvalidId,
+                    SourceKind = EntityInsightStatSourceKind.Constant,
+                    DisplayMode = EntityInsightValueDisplayMode.Constant,
+                    ConstantValue = 1f,
+                }
+            },
+            SemanticFields = Array.Empty<EntityInsightSemanticFieldProfile>(),
+            Tips = Array.Empty<EntityInsightTipProfile>(),
+            Actions = Array.Empty<EntityInsightActionProfile>(),
+        };
+
+        var semanticCatalog = CreateMigrationSemanticCatalog();
+
+        var service = new EntityInfoPanelService(
+            new EntityInsightProfileCatalog(new[] { profile }, new Dictionary<int, int> { [templateKeyId] = 0 }),
+            SharedEntityInfoTextCatalog,
+            SharedEntityInfoLocaleSelection,
+            semanticCatalog,
+            imageSourceResolver: null);
+
+        using var world = World.Create();
+        Entity entity = world.Create(
+            new Name { Value = "Migration Unit" },
+            new EntityTemplateKeyCm { TemplateKeyId = templateKeyId });
+
+        EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
+            EntityInfoPanelKind.InsightBrief,
+            EntityInfoPanelSurface.Ui,
+            EntityInfoPanelTarget.Fixed(entity),
+            new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopLeft, 0f, 0f, 320f, 240f),
+            EntityInfoGasDetailFlags.None,
+            true));
+
+        service.Refresh(world, new Dictionary<string, object>());
+
+        Assert.That(service.GetInsightPortraitIconUri(handle.Slot), Does.StartWith("data:image/svg+xml"));
+    }
+
+    private static PresentationSemanticCatalog CreateMigrationSemanticCatalog()
+    {
+        return new PresentationSemanticCatalog(
+            new Dictionary<string, PresentationSemanticAttributeDefinition>(StringComparer.Ordinal)
+            {
+                ["migration.constant"] = new PresentationSemanticAttributeDefinition
+                {
+                    SemanticKey = "migration.constant",
+                    AttributeId = AttributeRegistry.InvalidId,
+                    AttributeKey = string.Empty,
+                    LabelTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.collection.primary"),
+                    CurrentFormatTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.gas.sources_on"),
+                    CurrentOverBaseFormatTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.collection.rows"),
+                    ConstantFormatTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.gas.sources_off"),
+                    UnitTokenId = 0,
+                }
+            },
+            new Dictionary<int, PresentationSemanticAttributeDefinition>(),
+            new Dictionary<string, PresentationSemanticValueMappingDefinition>(StringComparer.Ordinal));
+    }
+
     private static string[] GetOverlayStrings(ScreenOverlayBuffer overlay, ReadOnlySpan<ScreenOverlayItem> items)
     {
         var lines = new List<string>(items.Length);
@@ -570,6 +748,48 @@ public sealed class EntityInfoPanelServiceTests
             localeSelection: SharedEntityInfoLocaleSelection);
     }
 
+    private static EntityInfoPanelService CreateService(PresentationSemanticCatalog semanticCatalog)
+    {
+        return new EntityInfoPanelService(
+            presentationTextCatalog: SharedEntityInfoTextCatalog,
+            localeSelection: SharedEntityInfoLocaleSelection,
+            semanticCatalog: semanticCatalog);
+    }
+
+    private static PresentationSemanticCatalog CreateSelectionSemanticCatalog(int healthId, int manaId)
+    {
+        var attributesByKey = new Dictionary<string, PresentationSemanticAttributeDefinition>(StringComparer.Ordinal);
+        var attributesById = new Dictionary<int, PresentationSemanticAttributeDefinition>();
+        AddSelectionSemanticAttribute(attributesByKey, attributesById, "selection.health", healthId, "entityinfo.test.selection.health");
+        AddSelectionSemanticAttribute(attributesByKey, attributesById, "selection.mana", manaId, "entityinfo.test.selection.mana");
+        return new PresentationSemanticCatalog(
+            attributesByKey,
+            attributesById,
+            new Dictionary<string, PresentationSemanticValueMappingDefinition>(StringComparer.Ordinal));
+    }
+
+    private static void AddSelectionSemanticAttribute(
+        Dictionary<string, PresentationSemanticAttributeDefinition> attributesByKey,
+        Dictionary<int, PresentationSemanticAttributeDefinition> attributesById,
+        string semanticKey,
+        int attributeId,
+        string labelTokenKey)
+    {
+        var definition = new PresentationSemanticAttributeDefinition
+        {
+            SemanticKey = semanticKey,
+            AttributeId = attributeId,
+            AttributeKey = AttributeRegistry.GetName(attributeId),
+            LabelTokenId = SharedEntityInfoTextCatalog.GetTokenId(labelTokenKey),
+            CurrentFormatTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.test.attribute.current"),
+            CurrentOverBaseFormatTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.test.attribute.current_over_base"),
+            ConstantFormatTokenId = SharedEntityInfoTextCatalog.GetTokenId("entityinfo.test.attribute.constant"),
+            UnitTokenId = 0,
+        };
+        attributesByKey.Add(semanticKey, definition);
+        attributesById.Add(attributeId, definition);
+    }
+
     private static PresentationTextCatalog CreateEntityInfoTextCatalog()
     {
         string root = Path.Combine(Path.GetTempPath(), "Ludots_EntityInfoPanelService_Text", Guid.NewGuid().ToString("N"));
@@ -601,12 +821,19 @@ public sealed class EntityInfoPanelServiceTests
   { ""id"": ""entityinfo.collection.entities"", ""argCount"": 0 },
   { ""id"": ""entityinfo.collection.categories"", ""argCount"": 0 },
   { ""id"": ""entityinfo.collection.rows"", ""argCount"": 2 },
+  { ""id"": ""entityinfo.collection.no_attributes"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.collection.more_attributes"", ""argCount"": 1 },
   { ""id"": ""entityinfo.section.actions"", ""argCount"": 0 },
   { ""id"": ""entityinfo.section.tips"", ""argCount"": 0 },
   { ""id"": ""entityinfo.actionstate.ready"", ""argCount"": 0 },
   { ""id"": ""entityinfo.actionstate.blocked"", ""argCount"": 0 },
   { ""id"": ""entityinfo.actionstate.active"", ""argCount"": 0 },
-  { ""id"": ""entityinfo.actionstate.unavailable"", ""argCount"": 0 }
+  { ""id"": ""entityinfo.actionstate.unavailable"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.test.selection.health"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.test.selection.mana"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.test.attribute.current"", ""argCount"": 1 },
+  { ""id"": ""entityinfo.test.attribute.current_over_base"", ""argCount"": 2 },
+  { ""id"": ""entityinfo.test.attribute.constant"", ""argCount"": 1 }
 ]", root);
             WriteConfigFile("Core", "Presentation/text_locales.json",
                 @"{
@@ -630,12 +857,19 @@ public sealed class EntityInfoPanelServiceTests
       ""entityinfo.collection.entities"": ""entities"",
       ""entityinfo.collection.categories"": ""categories"",
       ""entityinfo.collection.rows"": ""rows {0}-{1}"",
+      ""entityinfo.collection.no_attributes"": ""No semantic attributes"",
+      ""entityinfo.collection.more_attributes"": ""+{0} semantic attributes"",
       ""entityinfo.section.actions"": ""Action lens"",
       ""entityinfo.section.tips"": ""Designer tips"",
       ""entityinfo.actionstate.ready"": ""Ready"",
       ""entityinfo.actionstate.blocked"": ""Blocked"",
       ""entityinfo.actionstate.active"": ""Active"",
-      ""entityinfo.actionstate.unavailable"": ""Unavailable""
+      ""entityinfo.actionstate.unavailable"": ""Unavailable"",
+      ""entityinfo.test.selection.health"": ""Selection Health"",
+      ""entityinfo.test.selection.mana"": ""Selection Mana"",
+      ""entityinfo.test.attribute.current"": ""{0}"",
+      ""entityinfo.test.attribute.current_over_base"": ""{0}/{1}"",
+      ""entityinfo.test.attribute.constant"": ""{0}""
     }
   }
 }", root);

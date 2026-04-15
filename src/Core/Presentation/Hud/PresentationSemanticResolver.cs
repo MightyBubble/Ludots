@@ -34,6 +34,44 @@ namespace Ludots.Core.Presentation.Hud
             float baseValue)
         {
             PresentationSemanticAttributeDefinition definition = GetRequiredAttribute(semanticKey);
+            return FormatAttributeValueRequired(definition, displayKind, currentValue, baseValue);
+        }
+
+        public bool TryFormatAttributeById(
+            int attributeId,
+            PresentationAttributeValueDisplayKind displayKind,
+            float currentValue,
+            float baseValue,
+            out string formattedValue)
+        {
+            formattedValue = string.Empty;
+            if (!_semanticCatalog.TryGetAttribute(attributeId, out PresentationSemanticAttributeDefinition definition))
+            {
+                return false;
+            }
+
+            formattedValue = FormatAttributeValueRequired(definition, displayKind, currentValue, baseValue);
+            return true;
+        }
+
+        public bool TryResolveAttributeLabelById(int attributeId, out string label)
+        {
+            label = string.Empty;
+            if (!_semanticCatalog.TryGetAttribute(attributeId, out PresentationSemanticAttributeDefinition definition))
+            {
+                return false;
+            }
+
+            label = ResolveRequiredToken(definition.LabelTokenId);
+            return true;
+        }
+
+        private string FormatAttributeValueRequired(
+            PresentationSemanticAttributeDefinition definition,
+            PresentationAttributeValueDisplayKind displayKind,
+            float currentValue,
+            float baseValue)
+        {
             int formatTokenId = displayKind switch
             {
                 PresentationAttributeValueDisplayKind.Current => definition.CurrentFormatTokenId,
@@ -87,16 +125,33 @@ namespace Ludots.Core.Presentation.Hud
             return ResolveRequiredToken(tokenId);
         }
 
+        public string ResolveMappedRuntimeValueRequired(string mappingId, int runtimeValue)
+        {
+            PresentationSemanticValueMappingDefinition mapping = GetRequiredMapping(mappingId);
+            if (!mapping.TryResolveRuntimeValueKey(runtimeValue, out string valueKey) || string.IsNullOrWhiteSpace(valueKey))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation semantic mapping '{mappingId}' does not define runtime value '{runtimeValue}'.");
+            }
+
+            return ResolveMappedValueRequired(mappingId, valueKey);
+        }
+
+        public string ResolveMappedRuntimeValueKeyRequired(string mappingId, int runtimeValue)
+        {
+            PresentationSemanticValueMappingDefinition mapping = GetRequiredMapping(mappingId);
+            if (!mapping.TryResolveRuntimeValueKey(runtimeValue, out string valueKey) || string.IsNullOrWhiteSpace(valueKey))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation semantic mapping '{mappingId}' does not define runtime value '{runtimeValue}'.");
+            }
+
+            return valueKey;
+        }
+
         public string ResolveTeamRelationshipValueRequired(TeamRelationship relationship)
         {
-            string valueKey = relationship switch
-            {
-                TeamRelationship.Friendly => WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly,
-                TeamRelationship.Hostile => WellKnownPresentationSemanticMappingKeys.TeamRelationshipHostile,
-                _ => WellKnownPresentationSemanticMappingKeys.TeamRelationshipNeutral,
-            };
-
-            return ResolveMappedValueRequired(WellKnownPresentationSemanticMappingKeys.TeamRelationship, valueKey);
+            return ResolveMappedRuntimeValueRequired(WellKnownPresentationSemanticMappingKeys.TeamRelationship, (int)relationship);
         }
 
         private PresentationSemanticAttributeDefinition GetRequiredAttribute(string semanticKey)

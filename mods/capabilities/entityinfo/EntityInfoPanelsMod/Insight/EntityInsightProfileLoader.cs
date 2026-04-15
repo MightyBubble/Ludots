@@ -64,7 +64,8 @@ public sealed class EntityInsightProfileLoader
                 AccentColorHex = ReadRequiredString(node, "accentColorHex"),
                 SurfaceColorHex = ReadRequiredString(node, "surfaceColorHex"),
                 GenreGlyph = ReadRequiredString(node, "genreGlyph"),
-                PortraitImageAssetId = ResolveRequiredImageAssetId(imageRegistry, node, "portraitImageAsset", profileId),
+                PortraitImageAssetId = ResolveOptionalImageAssetId(imageRegistry, node, "portraitImageAsset", profileId),
+                PortraitGlyph = ReadOptionalString(node, "portraitGlyph"),
                 GenreLabelTokenId = ResolveRequiredTokenId(textCatalog, node, "genreLabelToken", profileId),
                 SubtitleTokenId = ResolveRequiredTokenId(textCatalog, node, "subtitleToken", profileId),
                 BodyTokenId = ResolveRequiredTokenId(textCatalog, node, "bodyToken", profileId),
@@ -298,13 +299,18 @@ public sealed class EntityInsightProfileLoader
         return tokenId;
     }
 
-    private static int ResolveRequiredImageAssetId(
+    private static int ResolveOptionalImageAssetId(
         PresentationImageRegistry imageRegistry,
         JsonObject node,
         string propertyName,
         string scope)
     {
-        string assetKey = ReadRequiredString(node, propertyName);
+        string assetKey = ReadOptionalString(node, propertyName);
+        if (string.IsNullOrWhiteSpace(assetKey))
+        {
+            return 0;
+        }
+
         int imageAssetId = imageRegistry.GetId(assetKey);
         if (imageAssetId <= 0)
         {
@@ -323,5 +329,11 @@ public sealed class EntityInsightProfileLoader
         }
 
         return value;
+    }
+
+    private static string ReadOptionalString(JsonObject node, string propertyName)
+    {
+        string value = node[propertyName]?.GetValue<string>() ?? string.Empty;
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
     }
 }

@@ -68,11 +68,32 @@ namespace Ludots.Core.Presentation.Config
 
             ValidateUniqueBackends(key, locators);
 
+            string? fallbackGlyph = ReadOptionalString(node, "fallbackGlyph");
+            string? fallbackAccentColorHex = ReadOptionalString(node, "fallbackAccentColorHex");
+            string? fallbackSurfaceColorHex = ReadOptionalString(node, "fallbackSurfaceColorHex");
+            if (fallbackGlyph != null || fallbackAccentColorHex != null || fallbackSurfaceColorHex != null)
+            {
+                if (fallbackGlyph == null || fallbackAccentColorHex == null || fallbackSurfaceColorHex == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation image asset '{key}' glyph migration fallback must define fallbackGlyph, fallbackAccentColorHex, and fallbackSurfaceColorHex together.");
+                }
+            }
+
             return new PresentationImageDefinition
             {
                 AssetKind = assetKind,
                 Locators = locators,
+                FallbackGlyph = fallbackGlyph,
+                FallbackAccentColorHex = fallbackAccentColorHex,
+                FallbackSurfaceColorHex = fallbackSurfaceColorHex,
             };
+        }
+
+        private static string? ReadOptionalString(JsonObject node, string propertyName)
+        {
+            string value = node[propertyName]?.GetValue<string>() ?? string.Empty;
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
         private static void ValidateUniqueBackends(string key, PresentationImageLocatorDefinition[] locators)

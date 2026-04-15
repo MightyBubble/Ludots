@@ -36,6 +36,30 @@ namespace Ludots.Core.Presentation.Assets
             return ResolveAssetRef(locator.AssetRef);
         }
 
+        public bool TryResolveSource(int imageAssetId, out string source)
+        {
+            source = string.Empty;
+            if (!_registry.TryResolveLocator(imageAssetId, _backendId, out PresentationImageLocatorDefinition locator))
+            {
+                return false;
+            }
+
+            source = ResolveAssetRef(locator.AssetRef);
+            return true;
+        }
+
+        public bool TryResolveGlyphFallback(int imageAssetId, out PresentationImageGlyphFallbackDefinition fallback)
+        {
+            if (_registry.TryGet(imageAssetId, out PresentationImageDefinition definition) &&
+                definition.TryResolveGlyphFallback(out fallback))
+            {
+                return true;
+            }
+
+            fallback = default;
+            return false;
+        }
+
         private string ResolveAssetRef(string assetRef)
         {
             if (string.IsNullOrWhiteSpace(assetRef))

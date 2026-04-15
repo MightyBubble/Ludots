@@ -52,21 +52,6 @@ public sealed class EntityInsightSemanticFieldProfile
     public required string Glyph { get; init; }
     public required string MappingId { get; init; }
     public required EntityInsightEntityRelationKind EntityRelation { get; init; }
-
-    public string GetValueKey(int runtimeValue)
-    {
-        if (MappingId == WellKnownPresentationSemanticMappingKeys.TeamRelationship)
-        {
-            return runtimeValue switch
-            {
-                (int)Ludots.Core.Gameplay.Teams.TeamRelationship.Friendly => WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly,
-                (int)Ludots.Core.Gameplay.Teams.TeamRelationship.Hostile => WellKnownPresentationSemanticMappingKeys.TeamRelationshipHostile,
-                _ => WellKnownPresentationSemanticMappingKeys.TeamRelationshipNeutral,
-            };
-        }
-
-        return runtimeValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
-    }
 }
 
 public sealed class EntityInsightTipProfile
@@ -90,7 +75,8 @@ public sealed class EntityInsightProfile
     public required string AccentColorHex { get; init; }
     public required string SurfaceColorHex { get; init; }
     public required string GenreGlyph { get; init; }
-    public required int PortraitImageAssetId { get; init; }
+    public int PortraitImageAssetId { get; init; }
+    public string? PortraitGlyph { get; init; }
     public required int GenreLabelTokenId { get; init; }
     public required int SubtitleTokenId { get; init; }
     public required int BodyTokenId { get; init; }
