@@ -1,0 +1,56 @@
+[
+  {
+    "id": "genreinfo.portrait.governor",
+    "assetKind": "Portrait2D",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/governor.svg" },
+      { "backendId": "web", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/governor.svg" },
+      { "backendId": "ue5", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/governor.svg" }
+    ]
+  },
+  {
+    "id": "genreinfo.portrait.hero",
+    "assetKind": "Portrait2D",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/hero.svg" },
+      { "backendId": "web", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/hero.svg" },
+      { "backendId": "ue5", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/hero.svg" }
+    ]
+  },
+  {
+    "id": "genreinfo.portrait.barracks",
+    "assetKind": "Portrait2D",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/barracks.svg" },
+      { "backendId": "web", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/barracks.svg" },
+      { "backendId": "ue5", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/barracks.svg" }
+    ]
+  },
+  {
+    "id": "genreinfo.portrait.marine",
+    "assetKind": "Portrait2D",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/marine.svg" },
+      { "backendId": "web", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/marine.svg" },
+      { "backendId": "ue5", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/marine.svg" }
+    ]
+  },
+  {
+    "id": "genreinfo.portrait.tank",
+    "assetKind": "Portrait2D",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/tank.svg" },
+      { "backendId": "web", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/tank.svg" },
+      { "backendId": "ue5", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/tank.svg" }
+    ]
+  },
+  {
+    "id": "genreinfo.portrait.vessel",
+    "assetKind": "Portrait2D",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/vessel.svg" },
+      { "backendId": "web", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/vessel.svg" },
+      { "backendId": "ue5", "assetRef": "GenreInfoShowcaseMod:assets/Presentation/portraits/vessel.svg" }
+    ]
+  }
+]

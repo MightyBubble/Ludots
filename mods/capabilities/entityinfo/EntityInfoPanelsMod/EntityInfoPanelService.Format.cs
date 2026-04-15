@@ -312,9 +312,15 @@ public sealed partial class EntityInfoPanelService
     private static string ResolveEntityCollectionCategoryLabel(World world, Entity entity)
     {
         string displayName = ResolveEntityDisplayName(world, entity).Trim();
+        return NormalizeEntityCollectionCategoryLabel(displayName, entity.Id);
+    }
+
+    public static string NormalizeEntityCollectionCategoryLabel(string displayName, int entityId = 0)
+    {
+        displayName = (displayName ?? string.Empty).Trim();
         if (displayName.Length == 0)
         {
-            return $"Entity #{entity.Id}";
+            return entityId > 0 ? $"Entity #{entityId}" : string.Empty;
         }
 
         int end = displayName.Length;

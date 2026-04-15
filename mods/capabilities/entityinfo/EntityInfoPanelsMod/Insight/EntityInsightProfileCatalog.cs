@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod.Insight;
 
@@ -14,6 +15,11 @@ public enum EntityInsightValueDisplayMode : byte
     Current = 0,
     CurrentOverBase = 1,
     Constant = 2,
+}
+
+public enum EntityInsightEntityRelationKind : byte
+{
+    SelfTeamRelationship = 0,
 }
 
 [Flags]
@@ -33,12 +39,34 @@ public sealed class EntityInsightBadgeProfile
 
 public sealed class EntityInsightStatProfile
 {
+    public required string SemanticKey { get; init; }
     public required string Glyph { get; init; }
-    public required int LabelTokenId { get; init; }
+    public required int AttributeId { get; init; }
     public required EntityInsightStatSourceKind SourceKind { get; init; }
     public required EntityInsightValueDisplayMode DisplayMode { get; init; }
-    public int AttributeId { get; init; }
     public float ConstantValue { get; init; }
+}
+
+public sealed class EntityInsightSemanticFieldProfile
+{
+    public required string Glyph { get; init; }
+    public required string MappingId { get; init; }
+    public required EntityInsightEntityRelationKind EntityRelation { get; init; }
+
+    public string GetValueKey(int runtimeValue)
+    {
+        if (MappingId == WellKnownPresentationSemanticMappingKeys.TeamRelationship)
+        {
+            return runtimeValue switch
+            {
+                (int)Ludots.Core.Gameplay.Teams.TeamRelationship.Friendly => WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly,
+                (int)Ludots.Core.Gameplay.Teams.TeamRelationship.Hostile => WellKnownPresentationSemanticMappingKeys.TeamRelationshipHostile,
+                _ => WellKnownPresentationSemanticMappingKeys.TeamRelationshipNeutral,
+            };
+        }
+
+        return runtimeValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
 }
 
 public sealed class EntityInsightTipProfile
@@ -62,12 +90,13 @@ public sealed class EntityInsightProfile
     public required string AccentColorHex { get; init; }
     public required string SurfaceColorHex { get; init; }
     public required string GenreGlyph { get; init; }
-    public required string PortraitGlyph { get; init; }
+    public required int PortraitImageAssetId { get; init; }
     public required int GenreLabelTokenId { get; init; }
     public required int SubtitleTokenId { get; init; }
     public required int BodyTokenId { get; init; }
     public required EntityInsightBadgeProfile[] Badges { get; init; }
     public required EntityInsightStatProfile[] Stats { get; init; }
+    public required EntityInsightSemanticFieldProfile[] SemanticFields { get; init; }
     public required EntityInsightTipProfile[] Tips { get; init; }
     public required EntityInsightActionProfile[] Actions { get; init; }
 }

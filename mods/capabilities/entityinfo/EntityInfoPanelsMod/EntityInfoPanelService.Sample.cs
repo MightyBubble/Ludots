@@ -329,11 +329,11 @@ public sealed partial class EntityInfoPanelService
             aliasKey = descriptor.Container.AliasKey;
             count = descriptor.Container.MemberCount;
             revision = descriptor.Container.Revision;
-            dirty |= SetString(_subtitles, slot, $"{viewKey} -> {aliasKey} | {count} entities");
+            dirty |= SetString(_subtitles, slot, BuildEntityCollectionSubtitle(viewKey, aliasKey, count));
         }
         else
         {
-            dirty |= SetString(_subtitles, slot, "No active selection view.");
+            dirty |= SetString(_subtitles, slot, GetEntityCollectionWaitingBodyText());
         }
 
         if (_resolvedTargets[slot] != primary)

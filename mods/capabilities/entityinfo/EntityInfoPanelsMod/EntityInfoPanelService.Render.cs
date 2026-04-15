@@ -166,6 +166,14 @@ public sealed partial class EntityInfoPanelService
             y += 16;
         }
 
+        int fieldCount = Math.Min(1, GetInsightSemanticFieldCount(slot));
+        for (int fieldIndex = 0; fieldIndex < fieldCount && y <= bottom; fieldIndex++)
+        {
+            string fieldText = $"{GetInsightSemanticFieldLabel(slot, fieldIndex)}: {GetInsightSemanticFieldValueText(slot, fieldIndex)}";
+            overlay.AddText(x, y, fieldText, 12, new Vector4(0.93f, 0.82f, 0.67f, 1f), ComposeStableId(slot, 3020 + fieldIndex), ComposeTextSerial(fieldText, 12));
+            y += 16;
+        }
+
         int tipCount = Math.Min(2, GetInsightTipCount(slot));
         for (int tipIndex = 0; tipIndex < tipCount && y <= bottom; tipIndex++)
         {

@@ -111,7 +111,7 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
         string sceneText = ExtractUiSceneText(scene);
         Assert.That(sceneText, Does.Contain("Current viewed selection"));
         Assert.That(sceneText, Does.Contain("Spearman x24 *"));
-        Assert.That(sceneText, Does.Contain("FORM 72"));
+        Assert.That(sceneText, Does.Contain("selection.view.formation -> selection.formation.primary | 72 entities"));
         Assert.That(sceneText, Does.Contain("G1 72u Spearman"));
         Assert.That(sceneText, Does.Contain("Acceptance.Selection.Health"));
 
@@ -191,6 +191,7 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
         InstallInput(engine);
         engine.SetService(CoreServiceKeys.UiTextMeasurer, new SkiaTextMeasurer());
         engine.SetService(CoreServiceKeys.UiImageSizeProvider, new SkiaImageSizeProvider());
+        engine.SetService(CoreServiceKeys.PresentationBackendId, "raylib");
         engine.Start();
         return engine;
     }

@@ -7,7 +7,7 @@ using EntityInfoPanelsMod.UI;
 using GenreInfoShowcaseMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
@@ -543,59 +543,22 @@ namespace GenreInfoShowcaseMod.UI
                 ? entityName.Value
                 : $"Entity #{entity.Id}";
 
-            if (service.TryGetEntityInsightProfile(world, entity, out EntityInsightProfile profile))
+            if (!service.TryGetEntityInsightProfile(world, entity, out EntityInsightProfile profile))
             {
-                return new SelectionCardData(
-                    entity.Id,
-                    name,
-                    ResolveCategoryLabel(name),
-                    profile.AccentColorHex,
-                    service.BuildInsightPortraitIconUri(profile),
-                    service.BuildInsightGenreIconUri(profile),
-                    service.ResolveTextTokenId(profile.GenreLabelTokenId),
-                    TrimText(service.ResolveTextTokenId(profile.BodyTokenId), 92),
-                    BuildQuickStats(world, entity, profile, service),
-                    isPrimary);
+                throw new InvalidOperationException($"Entity '{name}' does not have a required insight profile.");
             }
 
-            string glyph = string.IsNullOrWhiteSpace(name) ? "?" : name[..1];
             return new SelectionCardData(
                 entity.Id,
                 name,
-                ResolveCategoryLabel(name),
-                "#5C7FA0",
-                service.BuildInsightGlyphIconUri(glyph, "#5C7FA0", "#12202C", emphatic: isPrimary),
-                service.BuildInsightGlyphIconUri("?", "#5C7FA0", "#12202C"),
-                textResolver.ResolveRequiredTokenKey("genreinfo.selection.unknown"),
-                textResolver.ResolveRequiredTokenKey("genreinfo.selection.no_profile"),
-                textResolver.ResolveRequiredTokenKey("genreinfo.selection.no_stats"),
+                EntityInfoPanelService.NormalizeEntityCollectionCategoryLabel(name, entity.Id),
+                profile.AccentColorHex,
+                service.BuildInsightPortraitIconUri(profile),
+                service.BuildInsightGenreIconUri(profile),
+                service.ResolveTextTokenId(profile.GenreLabelTokenId),
+                TrimText(service.ResolveTextTokenId(profile.BodyTokenId), 92),
+                service.BuildInsightSummary(world, entity, profile, maxStats: 2),
                 isPrimary);
-        }
-
-        private static string BuildQuickStats(World world, Entity entity, EntityInsightProfile profile, EntityInfoPanelService service)
-        {
-            if (!world.TryGet(entity, out AttributeBuffer attributes))
-            {
-                return service.ResolveTextTokenKey("genreinfo.selection.no_stats");
-            }
-
-            var parts = new List<string>(2);
-            int limit = Math.Min(2, profile.Stats.Length);
-            for (int i = 0; i < limit; i++)
-            {
-                EntityInsightStatProfile stat = profile.Stats[i];
-                string label = service.ResolveTextTokenId(stat.LabelTokenId);
-                float current = stat.SourceKind == EntityInsightStatSourceKind.Attribute ? attributes.GetCurrent(stat.AttributeId) : stat.ConstantValue;
-                float baseValue = stat.SourceKind == EntityInsightStatSourceKind.Attribute ? attributes.GetBase(stat.AttributeId) : stat.ConstantValue;
-                string value = stat.DisplayMode == EntityInsightValueDisplayMode.CurrentOverBase
-                    ? $"{FormatNumber(current)}/{FormatNumber(baseValue)}"
-                    : FormatNumber(current);
-                parts.Add($"{label} {value}");
-            }
-
-            return parts.Count == 0
-                ? service.ResolveTextTokenKey("genreinfo.selection.no_stats")
-                : string.Join(" | ", parts);
         }
 
         private static List<SelectionCategorySummary> ResolveCategories(List<SelectionCardData> cards)
@@ -684,23 +647,6 @@ namespace GenreInfoShowcaseMod.UI
                 : 0;
         }
 
-        private static string ResolveCategoryLabel(string name)
-        {
-            string trimmed = name.Trim();
-            int end = trimmed.Length;
-            while (end > 0 && char.IsDigit(trimmed[end - 1]))
-            {
-                end--;
-            }
-
-            while (end > 0 && (trimmed[end - 1] == ' ' || trimmed[end - 1] == '-' || trimmed[end - 1] == '_'))
-            {
-                end--;
-            }
-
-            return end <= 0 ? trimmed : trimmed[..end];
-        }
-
         private static string TrimText(string value, int maxLength)
         {
             if (string.IsNullOrWhiteSpace(value) || value.Length <= maxLength)
@@ -711,37 +657,9 @@ namespace GenreInfoShowcaseMod.UI
             return value[..Math.Max(0, maxLength - 1)] + "…";
         }
 
-        private static string FormatNumber(float value)
-        {
-            return MathF.Abs(value - MathF.Round(value)) < 0.001f
-                ? MathF.Round(value).ToString("0")
-                : value.ToString("0.#");
-        }
-
         private static UiColor ParseHexColor(string? value, UiColor fallback)
         {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return fallback;
-            }
-
-            string hex = value.Trim().TrimStart('#');
-            if (hex.Length != 6)
-            {
-                return fallback;
-            }
-
-            try
-            {
-                byte r = Convert.ToByte(hex[..2], 16);
-                byte g = Convert.ToByte(hex.Substring(2, 2), 16);
-                byte b = Convert.ToByte(hex.Substring(4, 2), 16);
-                return new UiColor(r, g, b);
-            }
-            catch
-            {
-                return fallback;
-            }
+            return UiColor.TryParse(value, out UiColor color) ? color : fallback;
         }
 
         private sealed record GenreInfoShowcasePanelState(string MapId, string Signature);

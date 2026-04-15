@@ -114,8 +114,13 @@ public static class EntityInfoPanelUiComposer
     {
         EntityInfoPanelHandle handle = service.GetHandle(slot);
         string accentHex = service.GetInsightAccentColor(slot);
-        UiColor accent = ParseHexColor(accentHex, new UiColor(0x58, 0xB7, 0xFF));
-        UiColor surface = ParseHexColor(service.GetInsightSurfaceColor(slot), new UiColor(0x0F, 0x17, 0x21));
+        UiColor accent = UiColor.TryParse(accentHex, out UiColor accentColor)
+            ? accentColor
+            : throw new InvalidOperationException($"Invalid insight accent color '{accentHex}'.");
+        string surfaceHex = service.GetInsightSurfaceColor(slot);
+        UiColor surface = UiColor.TryParse(surfaceHex, out UiColor surfaceColor)
+            ? surfaceColor
+            : throw new InvalidOperationException($"Invalid insight surface color '{surfaceHex}'.");
         string closeText = service.ResolveTextTokenKey("entityinfo.action.close");
 
         var badges = new UiElementBuilder[service.GetInsightBadgeCount(slot)];
@@ -139,6 +144,23 @@ public static class EntityInfoPanelUiComposer
                             Ui.Column(
                                     Ui.Text(service.GetInsightStatLabel(slot, i)).FontSize(10.5f).Color("#9CB2C6"),
                                     Ui.Text(service.GetInsightStatValueText(slot, i)).FontSize(14f).Bold().Color("#F7FBFF"))
+                                .Gap(3f))
+                        .Gap(8f))
+                .Padding(10f)
+                .Radius(14f)
+                .Background("#101B26");
+        }
+
+        int semanticFieldCount = service.GetInsightSemanticFieldCount(slot);
+        var semanticFields = new UiElementBuilder[semanticFieldCount];
+        for (int i = 0; i < semanticFields.Length; i++)
+        {
+            semanticFields[i] = Ui.Card(
+                    Ui.Row(
+                            Ui.Image(service.GetInsightSemanticFieldIconUri(slot, i)).Width(28f).Height(28f).FlexShrink(0f),
+                            Ui.Column(
+                                    Ui.Text(service.GetInsightSemanticFieldLabel(slot, i)).FontSize(10.5f).Color("#9CB2C6"),
+                                    Ui.Text(service.GetInsightSemanticFieldValueText(slot, i)).FontSize(14f).Bold().Color("#F7FBFF"))
                                 .Gap(3f))
                         .Gap(8f))
                 .Padding(10f)
@@ -220,6 +242,7 @@ public static class EntityInfoPanelUiComposer
         return Ui.Card(
                 heroHeader,
                 Ui.Row(stats).Wrap().Gap(10f),
+                semanticFields.Length == 0 ? Ui.Column() : Ui.Row(semanticFields).Wrap().Gap(10f),
                 Ui.Card(tips).Gap(8f).Padding(12f).Radius(16f).Background("#0D1822"),
                 Ui.ScrollView(actions).Gap(8f).FlexGrow(1f))
             .Id($"entity-info-insight-{slot}")
@@ -340,8 +363,8 @@ public static class EntityInfoPanelUiComposer
         if (count <= 0)
         {
             return Ui.Column(
-                    Ui.Text("Current viewed selection").FontSize(12f).Bold().Color("#F6E2AF"),
-                    Ui.Text("Waiting for active selection view.")
+                    Ui.Text(service.GetEntityCollectionEmptyTitleText()).FontSize(12f).Bold().Color("#F6E2AF"),
+                    Ui.Text(service.GetEntityCollectionWaitingBodyText())
                         .FontSize(11f)
                         .Color("#9FB4C9")
                         .WhiteSpace(UiWhiteSpace.Normal))
@@ -377,8 +400,8 @@ public static class EntityInfoPanelUiComposer
         }
 
         return Ui.Column(
-                Ui.Text("Current viewed selection").FontSize(12f).Bold().Color("#F6E2AF"),
-                Ui.Text($"{service.GetEntityCollectionViewKey(slot)} -> {service.GetEntityCollectionAliasKey(slot)} | {count} entities | {service.GetEntityCollectionCategoryCount(slot)} categories | rows {FormatVisibleRange(window)}")
+                Ui.Text(service.GetEntityCollectionTitleText()).FontSize(12f).Bold().Color("#F6E2AF"),
+                Ui.Text(service.BuildEntityCollectionSummaryText(slot, window.StartIndex, window.EndIndexExclusive, window.TotalCount, window.VisibleCount))
                     .Id($"{hostId}-summary")
                     .FontSize(11f)
                     .Color("#9FB4C9")
@@ -400,7 +423,7 @@ public static class EntityInfoPanelUiComposer
         int categoryCount = service.GetEntityCollectionCategoryCount(slot);
         if (categoryCount <= 0)
         {
-            return Ui.Text("No category buckets yet.")
+            return Ui.Text(service.GetEntityCollectionNoCategoriesText())
                 .FontSize(10f)
                 .Color("#6F869B");
         }
@@ -431,7 +454,7 @@ public static class EntityInfoPanelUiComposer
         {
             int entityIndex = startIndex + column;
             tiles[column] = service.TryGetEntityCollectionRow(slot, entityIndex, out EntityCollectionPanelRow row)
-                ? BuildEntityCollectionTile(slot, row)
+                ? BuildEntityCollectionTile(service, slot, row)
                 : Ui.Panel().Width(EntityCollectionTileWidth).Height(EntityCollectionTileHeight);
         }
 
@@ -440,14 +463,14 @@ public static class EntityInfoPanelUiComposer
             .Height(EntityCollectionGridRowHeight);
     }
 
-    private static UiElementBuilder BuildEntityCollectionTile(int slot, EntityCollectionPanelRow row)
+    private static UiElementBuilder BuildEntityCollectionTile(EntityInfoPanelService service, int slot, EntityCollectionPanelRow row)
     {
         return Ui.Card(
                 Ui.Row(
                         Ui.Text($"{row.Index + 1:000}").FontSize(10f).Color("#60758A"),
                         Ui.Text($"#{row.EntityId}").FontSize(11f).Bold().Color("#F6E2AF"),
                         row.IsPrimary
-                            ? Ui.Text("PRIMARY")
+                            ? Ui.Text(service.GetEntityCollectionPrimaryText())
                                 .FontSize(9f)
                                 .Bold()
                                 .Color("#08131D")
@@ -485,47 +508,5 @@ public static class EntityInfoPanelUiComposer
             .Color(active ? "#F6E2AF" : "#C8D5E2");
     }
 
-    private static string FormatVisibleRange(UiVirtualWindow window)
-    {
-        if (window.TotalCount <= 0 || window.VisibleCount <= 0)
-        {
-            return "0-0";
-        }
-
-        return $"{window.StartIndex + 1}-{window.EndIndexExclusive}";
-    }
-
     private static string GetEntityCollectionGridHostId(int slot) => $"entity-info-collection-grid-{slot:00}";
-
-    private static UiColor ParseHexColor(string value, UiColor fallback)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return fallback;
-        }
-
-        string trimmed = value.Trim();
-        if (trimmed.StartsWith('#'))
-        {
-            trimmed = trimmed[1..];
-        }
-
-        if (trimmed.Length == 3)
-        {
-            trimmed = string.Concat(
-                trimmed[0], trimmed[0],
-                trimmed[1], trimmed[1],
-                trimmed[2], trimmed[2]);
-        }
-
-        if (trimmed.Length < 6 ||
-            !byte.TryParse(trimmed[..2], System.Globalization.NumberStyles.HexNumber, null, out byte r) ||
-            !byte.TryParse(trimmed.Substring(2, 2), System.Globalization.NumberStyles.HexNumber, null, out byte g) ||
-            !byte.TryParse(trimmed.Substring(4, 2), System.Globalization.NumberStyles.HexNumber, null, out byte b))
-        {
-            return fallback;
-        }
-
-        return new UiColor(r, g, b);
-    }
 }

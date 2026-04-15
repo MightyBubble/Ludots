@@ -451,6 +451,36 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void InstanceScoped_Marker3D_CanInheritOwnerRotation()
+        {
+            Quaternion ownerRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.75f);
+            var entity = _world.Create(new VisualTransform { Position = new Vector3(1, 2, 3), Rotation = ownerRotation });
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Marker3D,
+                MeshOrShapeId = 2,
+                DefaultScale = 1f,
+                Bindings = new[]
+                {
+                    new PerformerParamBinding
+                    {
+                        ParamKey = WellKnownPerformerParamKeys.MarkerUseOwnerRotation,
+                        Value = ValueRef.FromConstant(1f)
+                    }
+                }
+            };
+            int defId = _defs.Register("test_marker_owner_rotation", def);
+            _instances.TryAllocate(defId, entity, 0, out _);
+
+            _system.Update(0.016f);
+
+            var span = _primitives.GetSpan();
+            Assert.That(span.Length, Is.EqualTo(1));
+            float similarity = MathF.Abs(Quaternion.Dot(Quaternion.Normalize(span[0].Rotation), Quaternion.Normalize(ownerRotation)));
+            Assert.That(similarity, Is.GreaterThanOrEqualTo(0.9999f));
+        }
+
+        [Test]
         public void WorldAnchored_InstanceScoped_Marker3D_EmitsAtWorldAnchor()
         {
             var def = new PerformerDefinition
@@ -1054,6 +1084,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(WellKnownPerformerParamKeys.MarkerColorG, Is.EqualTo(5));
             Assert.That(WellKnownPerformerParamKeys.MarkerColorB, Is.EqualTo(6));
             Assert.That(WellKnownPerformerParamKeys.MarkerColorA, Is.EqualTo(7));
+            Assert.That(WellKnownPerformerParamKeys.MarkerUseOwnerRotation, Is.EqualTo(8));
         }
     }
 }

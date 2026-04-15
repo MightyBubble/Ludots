@@ -1,7 +1,6 @@
 using GenreInfoShowcaseMod.Runtime;
 using GenreInfoShowcaseMod.Triggers;
 using Ludots.Core.Modding;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Scripting;
 
 namespace GenreInfoShowcaseMod
@@ -11,7 +10,6 @@ namespace GenreInfoShowcaseMod
         public void OnLoad(IModContext context)
         {
             context.Log("[GenreInfoShowcaseMod] Loaded");
-            RegisterInsightAttributes();
 
             var runtime = new GenreInfoShowcaseRuntime();
             context.OnEvent(GameEvents.GameStart, new InstallGenreInfoShowcaseOnGameStartTrigger(context, runtime).ExecuteAsync);
@@ -22,18 +20,6 @@ namespace GenreInfoShowcaseMod
 
         public void OnUnload()
         {
-        }
-
-        private static void RegisterInsightAttributes()
-        {
-            AttributeRegistry.Register("Health");
-            AttributeRegistry.Register("Gold");
-            AttributeRegistry.Register("Production");
-            AttributeRegistry.Register("TechProgress");
-            AttributeRegistry.Register("FoodProduction");
-            AttributeRegistry.Register("Energy");
-            AttributeRegistry.Register("AttackSpeed");
-            AttributeRegistry.Register("Shield");
         }
     }
 }

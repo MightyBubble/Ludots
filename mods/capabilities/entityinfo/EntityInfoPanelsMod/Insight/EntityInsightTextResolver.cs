@@ -25,10 +25,29 @@ public sealed class EntityInsightTextResolver
             throw new InvalidOperationException("Entity insight text token id must be positive.");
         }
 
+        return FormatRequiredTokenId(tokenId);
+    }
+
+    public string FormatRequiredTokenId(int tokenId, params PresentationTextArg[] args)
+    {
+        if (tokenId <= 0)
+        {
+            throw new InvalidOperationException("Entity insight text token id must be positive.");
+        }
+
+        var packet = PresentationTextPacket.FromToken(tokenId);
+        if (args != null)
+        {
+            for (int i = 0; i < args.Length; i++)
+            {
+                packet.SetArg(i, args[i]);
+            }
+        }
+
         if (!PresentationTextFormatter.TryFormat(
                 _catalog,
                 _localeSelection.ActiveLocaleId,
-                PresentationTextPacket.FromToken(tokenId),
+                in packet,
                 out string text))
         {
             throw new InvalidOperationException($"Entity insight text token id '{tokenId}' is not available for locale '{_localeSelection.ActiveLocaleKey}'.");
@@ -51,5 +70,21 @@ public sealed class EntityInsightTextResolver
         }
 
         return ResolveRequiredTokenId(tokenId);
+    }
+
+    public string FormatRequiredTokenKey(string tokenKey, params PresentationTextArg[] args)
+    {
+        if (string.IsNullOrWhiteSpace(tokenKey))
+        {
+            throw new InvalidOperationException("Entity insight text token key must not be empty.");
+        }
+
+        int tokenId = _catalog.GetTokenId(tokenKey);
+        if (tokenId <= 0)
+        {
+            throw new InvalidOperationException($"Entity insight text token '{tokenKey}' is not registered.");
+        }
+
+        return FormatRequiredTokenId(tokenId, args);
     }
 }

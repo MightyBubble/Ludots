@@ -100,6 +100,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IEntityCommandPanelToolbarProvider> EntityCommandPanelToolbarProvider = new("EntityCommandPanelToolbarProvider");
         public static readonly ServiceKey<object> UiTextMeasurer = new("UiTextMeasurer");
         public static readonly ServiceKey<object> UiImageSizeProvider = new("UiImageSizeProvider");
+        public static readonly ServiceKey<string> PresentationBackendId = new("PresentationBackendId");
 
         // --- Input ---
         public static readonly ServiceKey<PlayerInputHandler> InputHandler = new("InputHandler");
@@ -201,6 +202,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<VisualTemplateRegistry> PresentationVisualTemplateRegistry = new("PresentationVisualTemplateRegistry");
         public static readonly ServiceKey<AnimatorControllerRegistry> AnimatorControllerRegistry = new("AnimatorControllerRegistry");
         public static readonly ServiceKey<AnimationClipRegistry> AnimationClipRegistry = new("AnimationClipRegistry");
+        public static readonly ServiceKey<PresentationImageRegistry> PresentationImageRegistry = new("PresentationImageRegistry");
         public static readonly ServiceKey<AnimationProfileRegistry> AnimationProfileRegistry = new("AnimationProfileRegistry");
         public static readonly ServiceKey<PresentationStableIdAllocator> PresentationStableIdAllocator = new("PresentationStableIdAllocator");
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationPrimitiveDrawBuffer = new("PresentationPrimitiveDrawBuffer");
@@ -211,6 +213,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<WorldHudStringTable> PresentationWorldHudStrings = new("PresentationWorldHudStrings");
         public static readonly ServiceKey<PresentationTextCatalog> PresentationTextCatalog = new("PresentationTextCatalog");
         public static readonly ServiceKey<PresentationTextLocaleSelection> PresentationTextLocaleSelection = new("PresentationTextLocaleSelection");
+        public static readonly ServiceKey<PresentationSemanticCatalog> PresentationSemanticCatalog = new("PresentationSemanticCatalog");
         public static readonly ServiceKey<ScreenHudBatchBuffer> PresentationScreenHudBuffer = new("PresentationScreenHudBuffer");
         public static readonly ServiceKey<ScreenOverlayBuffer> ScreenOverlayBuffer = new("ScreenOverlayBuffer");
         public static readonly ServiceKey<RenderDebugState> RenderDebugState = new("RenderDebugState");

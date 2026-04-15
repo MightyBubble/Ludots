@@ -1,12 +1,22 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.IO;
 using Arch.Core;
 using EntityInfoPanelsMod;
+using EntityInfoPanelsMod.Insight;
+using Ludots.Core.Config;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Presentation.Hud;
@@ -18,6 +28,8 @@ namespace Ludots.Tests.Presentation;
 public sealed class EntityInfoPanelServiceTests
 {
     private const string SelectedEntityKey = "Tests.EntityInfo.Selected";
+    private static readonly PresentationTextCatalog SharedEntityInfoTextCatalog = CreateEntityInfoTextCatalog();
+    private static readonly PresentationTextLocaleSelection SharedEntityInfoLocaleSelection = new(SharedEntityInfoTextCatalog);
 
     [Test]
     public void Refresh_TracksMultipleInstances_AndBumpsUiRevisionForLayoutOnlyChanges()
@@ -47,7 +59,7 @@ public sealed class EntityInfoPanelServiceTests
             staticTags,
             effectiveTags);
 
-        var service = new EntityInfoPanelService();
+        var service = CreateService();
         var globals = new Dictionary<string, object>
         {
             [SelectedEntityKey] = entity
@@ -168,7 +180,7 @@ public sealed class EntityInfoPanelServiceTests
         Assert.That(activeEffects.Add(effect), Is.True);
         world.Set(target, activeEffects);
 
-        var service = new EntityInfoPanelService();
+        var service = CreateService();
         var globals = new Dictionary<string, object>();
         EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
             EntityInfoPanelKind.GasInspector,
@@ -211,7 +223,7 @@ public sealed class EntityInfoPanelServiceTests
         using var world = World.Create();
         Entity entity = world.Create(new Name { Value = "Commander" });
 
-        var service = new EntityInfoPanelService();
+        var service = CreateService();
         var globals = new Dictionary<string, object>();
 
         EntityInfoPanelHandle firstHandle = service.Open(new EntityInfoPanelRequest(
@@ -271,7 +283,7 @@ public sealed class EntityInfoPanelServiceTests
             [CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary,
         };
 
-        var service = new EntityInfoPanelService();
+        var service = CreateService();
         EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
             EntityInfoPanelKind.EntityCollectionInspector,
             EntityInfoPanelSurface.Ui,
@@ -306,6 +318,213 @@ public sealed class EntityInfoPanelServiceTests
         Assert.That(secondCategory.Count, Is.EqualTo(1));
     }
 
+    [Test]
+    public void Refresh_InsightBrief_UsesSemanticContractsAndPortraitImageAssets()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "Ludots_EntityInfoInsight", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        TeamManager.Clear();
+
+        try
+        {
+            WriteConfigFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" }
+]", root);
+            WriteConfigFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""entityinfo.genre.commander"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.subtitle.commander"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.body.commander"", ""argCount"": 0 },
+  { ""id"": ""semantic.health.label"", ""argCount"": 0 },
+  { ""id"": ""semantic.health.current"", ""argCount"": 1 },
+  { ""id"": ""semantic.health.current_over_base"", ""argCount"": 2 },
+  { ""id"": ""semantic.health.constant"", ""argCount"": 1 },
+  { ""id"": ""semantic.unit.hp"", ""argCount"": 0 },
+  { ""id"": ""semantic.relationship.label"", ""argCount"": 0 },
+  { ""id"": ""semantic.relationship.friendly"", ""argCount"": 0 },
+  { ""id"": ""semantic.relationship.hostile"", ""argCount"": 0 },
+  { ""id"": ""semantic.relationship.neutral"", ""argCount"": 0 }
+]", root);
+            WriteConfigFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""en-US"",
+  ""locales"": {
+    ""en-US"": {
+      ""entityinfo.genre.commander"": ""Commander Class"",
+      ""entityinfo.subtitle.commander"": ""Elite commander"",
+      ""entityinfo.body.commander"": ""Leads the frontline."",
+      ""semantic.health.label"": ""Health"",
+      ""semantic.health.current"": ""{0}"",
+      ""semantic.health.current_over_base"": ""{0}/{1}"",
+      ""semantic.health.constant"": ""{0}"",
+      ""semantic.unit.hp"": ""HP"",
+      ""semantic.relationship.label"": ""Relationship"",
+      ""semantic.relationship.friendly"": ""Friendly"",
+      ""semantic.relationship.hostile"": ""Hostile"",
+      ""semantic.relationship.neutral"": ""Neutral""
+    }
+  }
+}", root);
+
+            var (vfs, _, pipeline, catalog) = BuildPipeline(root);
+            var textLoader = new PresentationTextCatalogLoader(pipeline);
+            PresentationTextCatalog textCatalog = textLoader.Load(catalog);
+            var localeSelection = new PresentationTextLocaleSelection(textCatalog);
+
+            int healthId = AttributeRegistry.Register("Tests.EntityInfo.Insight.Health");
+            int templateKeyId = new EntityTemplateKeyRegistry().Register("tests.hero.commander");
+
+            var semanticCatalog = new PresentationSemanticCatalog(
+                new Dictionary<string, PresentationSemanticAttributeDefinition>(StringComparer.Ordinal)
+                {
+                    ["unit.health"] = new PresentationSemanticAttributeDefinition
+                    {
+                        SemanticKey = "unit.health",
+                        AttributeId = healthId,
+                        AttributeKey = "Tests.EntityInfo.Insight.Health",
+                        LabelTokenId = textCatalog.GetTokenId("semantic.health.label"),
+                        CurrentFormatTokenId = textCatalog.GetTokenId("semantic.health.current"),
+                        CurrentOverBaseFormatTokenId = textCatalog.GetTokenId("semantic.health.current_over_base"),
+                        ConstantFormatTokenId = textCatalog.GetTokenId("semantic.health.constant"),
+                        UnitTokenId = textCatalog.GetTokenId("semantic.unit.hp"),
+                    }
+                },
+                new Dictionary<int, PresentationSemanticAttributeDefinition>
+                {
+                    [healthId] = new PresentationSemanticAttributeDefinition
+                    {
+                        SemanticKey = "unit.health",
+                        AttributeId = healthId,
+                        AttributeKey = "Tests.EntityInfo.Insight.Health",
+                        LabelTokenId = textCatalog.GetTokenId("semantic.health.label"),
+                        CurrentFormatTokenId = textCatalog.GetTokenId("semantic.health.current"),
+                        CurrentOverBaseFormatTokenId = textCatalog.GetTokenId("semantic.health.current_over_base"),
+                        ConstantFormatTokenId = textCatalog.GetTokenId("semantic.health.constant"),
+                        UnitTokenId = textCatalog.GetTokenId("semantic.unit.hp"),
+                    }
+                },
+                new Dictionary<string, PresentationSemanticValueMappingDefinition>(StringComparer.Ordinal)
+                {
+                    [WellKnownPresentationSemanticMappingKeys.TeamRelationship] = new PresentationSemanticValueMappingDefinition(
+                        WellKnownPresentationSemanticMappingKeys.TeamRelationship,
+                        textCatalog.GetTokenId("semantic.relationship.label"),
+                        new Dictionary<string, int>(StringComparer.Ordinal)
+                        {
+                            [WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly] = textCatalog.GetTokenId("semantic.relationship.friendly"),
+                            [WellKnownPresentationSemanticMappingKeys.TeamRelationshipHostile] = textCatalog.GetTokenId("semantic.relationship.hostile"),
+                            [WellKnownPresentationSemanticMappingKeys.TeamRelationshipNeutral] = textCatalog.GetTokenId("semantic.relationship.neutral"),
+                        })
+                });
+
+            string portraitDir = Path.Combine(root, "Core", "assets", "Presentation", "portraits");
+            Directory.CreateDirectory(portraitDir);
+            string portraitPath = Path.Combine(portraitDir, "commander.svg");
+            File.WriteAllText(portraitPath, "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 8 8\"><circle cx=\"4\" cy=\"4\" r=\"4\" fill=\"#AABBCC\"/></svg>");
+
+            var imageRegistry = new PresentationImageRegistry();
+            int portraitImageAssetId = imageRegistry.Register(
+                "portrait.commander",
+                new PresentationImageDefinition
+                {
+                    AssetKind = PresentationImageAssetKind.Portrait2D,
+                    Locators = new[]
+                    {
+                        new PresentationImageLocatorDefinition("raylib", "Core:assets/Presentation/portraits/commander.svg")
+                    }
+                });
+            var imageResolver = new PresentationImageSourceResolver(imageRegistry, vfs, "raylib");
+
+            var profile = new EntityInsightProfile
+            {
+                Id = "tests.commander",
+                TemplateKeyIds = new[] { templateKeyId },
+                AccentColorHex = "#58B7FF",
+                SurfaceColorHex = "#0F1721",
+                GenreGlyph = "C",
+                PortraitImageAssetId = portraitImageAssetId,
+                GenreLabelTokenId = textCatalog.GetTokenId("entityinfo.genre.commander"),
+                SubtitleTokenId = textCatalog.GetTokenId("entityinfo.subtitle.commander"),
+                BodyTokenId = textCatalog.GetTokenId("entityinfo.body.commander"),
+                Badges = Array.Empty<EntityInsightBadgeProfile>(),
+                Stats = new[]
+                {
+                    new EntityInsightStatProfile
+                    {
+                        SemanticKey = "unit.health",
+                        Glyph = "H",
+                        AttributeId = healthId,
+                        SourceKind = EntityInsightStatSourceKind.Attribute,
+                        DisplayMode = EntityInsightValueDisplayMode.CurrentOverBase,
+                    }
+                },
+                SemanticFields = new[]
+                {
+                    new EntityInsightSemanticFieldProfile
+                    {
+                        Glyph = "R",
+                        MappingId = WellKnownPresentationSemanticMappingKeys.TeamRelationship,
+                        EntityRelation = EntityInsightEntityRelationKind.SelfTeamRelationship,
+                    }
+                },
+                Tips = Array.Empty<EntityInsightTipProfile>(),
+                Actions = Array.Empty<EntityInsightActionProfile>(),
+            };
+
+            var insightCatalog = new EntityInsightProfileCatalog(
+                new[] { profile },
+                new Dictionary<int, int> { [templateKeyId] = 0 });
+
+            using var world = World.Create();
+            var attributes = new AttributeBuffer();
+            attributes.SetBase(healthId, 100f);
+            attributes.SetCurrent(healthId, 75f);
+
+            Entity entity = world.Create(
+                new Name { Value = "Arcweaver Commander" },
+                new Team { Id = 7 },
+                new EntityTemplateKeyCm { TemplateKeyId = templateKeyId },
+                attributes);
+
+            var service = new EntityInfoPanelService(
+                insightCatalog,
+                textCatalog,
+                localeSelection,
+                semanticCatalog,
+                imageResolver);
+
+            EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
+                EntityInfoPanelKind.InsightBrief,
+                EntityInfoPanelSurface.Ui,
+                EntityInfoPanelTarget.Fixed(entity),
+                new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopLeft, 12f, 16f, 420f, 300f),
+                EntityInfoGasDetailFlags.None,
+                true));
+
+            service.Refresh(world, new Dictionary<string, object>());
+
+            Assert.That(service.GetTitle(handle.Slot), Is.EqualTo("Arcweaver Commander"));
+            Assert.That(service.GetSubtitle(handle.Slot), Is.EqualTo("Elite commander"));
+            Assert.That(service.GetInsightGenreLabel(handle.Slot), Is.EqualTo("Commander Class"));
+            Assert.That(service.GetInsightBody(handle.Slot), Is.EqualTo("Leads the frontline."));
+            Assert.That(service.GetInsightPortraitIconUri(handle.Slot), Is.EqualTo(Path.GetFullPath(portraitPath)));
+            Assert.That(service.GetInsightPortraitIconUri(handle.Slot), Does.Not.StartWith("data:"));
+            Assert.That(service.GetInsightStatCount(handle.Slot), Is.EqualTo(1));
+            Assert.That(service.GetInsightStatLabel(handle.Slot, 0), Is.EqualTo("Health"));
+            Assert.That(service.GetInsightStatLabelForProfile(profile.Stats[0]), Is.EqualTo("Health"));
+            Assert.That(service.GetInsightStatValueText(handle.Slot, 0), Is.EqualTo("75/100 HP"));
+            Assert.That(service.GetInsightSemanticFieldCount(handle.Slot), Is.EqualTo(1));
+            Assert.That(service.GetInsightSemanticFieldLabel(handle.Slot, 0), Is.EqualTo("Relationship"));
+            Assert.That(service.GetInsightSemanticFieldValueText(handle.Slot, 0), Is.EqualTo("Friendly"));
+        }
+        finally
+        {
+            TeamManager.Clear();
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
     private static string[] GetOverlayStrings(ScreenOverlayBuffer overlay, ReadOnlySpan<ScreenOverlayItem> items)
     {
         var lines = new List<string>(items.Length);
@@ -325,5 +544,108 @@ public sealed class EntityInfoPanelServiceTests
         }
 
         return lines.ToArray();
+    }
+
+    private static (VirtualFileSystem vfs, ModLoader modLoader, ConfigPipeline pipeline, ConfigCatalog catalog) BuildPipeline(string root)
+    {
+        var vfs = new VirtualFileSystem();
+        vfs.Mount("Core", Path.Combine(root, "Core"));
+        var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+        var pipeline = new ConfigPipeline(vfs, modLoader);
+        var catalog = ConfigCatalogLoader.Load(pipeline);
+        return (vfs, modLoader, pipeline, catalog);
+    }
+
+    private static void WriteConfigFile(string modId, string relativePath, string content, string root)
+    {
+        string dir = Path.Combine(root, modId, "Configs", Path.GetDirectoryName(relativePath) ?? string.Empty);
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
+    }
+
+    private static EntityInfoPanelService CreateService()
+    {
+        return new EntityInfoPanelService(
+            presentationTextCatalog: SharedEntityInfoTextCatalog,
+            localeSelection: SharedEntityInfoLocaleSelection);
+    }
+
+    private static PresentationTextCatalog CreateEntityInfoTextCatalog()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "Ludots_EntityInfoPanelService_Text", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            WriteConfigFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" }
+]", root);
+            WriteConfigFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""entityinfo.action.close"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.component.expand_all"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.component.collapse_all"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.component.show_prefix"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.component.hide_prefix"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.gas.sources_on"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.gas.sources_off"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.gas.modifiers_on"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.gas.modifiers_off"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.collection.title"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.collection.empty_title"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.collection.waiting_body"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.collection.no_categories"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.collection.primary"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.collection.entities"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.collection.categories"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.collection.rows"", ""argCount"": 2 },
+  { ""id"": ""entityinfo.section.actions"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.section.tips"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.actionstate.ready"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.actionstate.blocked"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.actionstate.active"", ""argCount"": 0 },
+  { ""id"": ""entityinfo.actionstate.unavailable"", ""argCount"": 0 }
+]", root);
+            WriteConfigFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""en-US"",
+  ""locales"": {
+    ""en-US"": {
+      ""entityinfo.action.close"": ""Close"",
+      ""entityinfo.component.expand_all"": ""Expand All"",
+      ""entityinfo.component.collapse_all"": ""Collapse All"",
+      ""entityinfo.component.show_prefix"": ""Show"",
+      ""entityinfo.component.hide_prefix"": ""Hide"",
+      ""entityinfo.gas.sources_on"": ""Sources ON"",
+      ""entityinfo.gas.sources_off"": ""Sources OFF"",
+      ""entityinfo.gas.modifiers_on"": ""Modifiers ON"",
+      ""entityinfo.gas.modifiers_off"": ""Modifiers OFF"",
+      ""entityinfo.collection.title"": ""Current viewed selection"",
+      ""entityinfo.collection.empty_title"": ""Current viewed selection"",
+      ""entityinfo.collection.waiting_body"": ""Waiting for active selection view."",
+      ""entityinfo.collection.no_categories"": ""No category buckets yet."",
+      ""entityinfo.collection.primary"": ""PRIMARY"",
+      ""entityinfo.collection.entities"": ""entities"",
+      ""entityinfo.collection.categories"": ""categories"",
+      ""entityinfo.collection.rows"": ""rows {0}-{1}"",
+      ""entityinfo.section.actions"": ""Action lens"",
+      ""entityinfo.section.tips"": ""Designer tips"",
+      ""entityinfo.actionstate.ready"": ""Ready"",
+      ""entityinfo.actionstate.blocked"": ""Blocked"",
+      ""entityinfo.actionstate.active"": ""Active"",
+      ""entityinfo.actionstate.unavailable"": ""Unavailable""
+    }
+  }
+}", root);
+
+            var (_, _, pipeline, catalog) = BuildPipeline(root);
+            return new PresentationTextCatalogLoader(pipeline).Load(catalog);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
     }
 }

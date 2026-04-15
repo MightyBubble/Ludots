@@ -10,7 +10,15 @@
       "entityinfo.gas.sources_on": "Sources ON",
       "entityinfo.gas.sources_off": "Sources OFF",
       "entityinfo.gas.modifiers_on": "Modifiers ON",
-      "entityinfo.gas.modifiers_off": "Modifiers OFF"
+      "entityinfo.gas.modifiers_off": "Modifiers OFF",
+      "entityinfo.collection.title": "Current viewed selection",
+      "entityinfo.collection.empty_title": "Current viewed selection",
+      "entityinfo.collection.waiting_body": "Waiting for active selection view.",
+      "entityinfo.collection.no_categories": "No category buckets yet.",
+      "entityinfo.collection.primary": "PRIMARY",
+      "entityinfo.collection.entities": "entities",
+      "entityinfo.collection.categories": "categories",
+      "entityinfo.collection.rows": "rows {0}-{1}"
     },
     "zh-CN": {
       "entityinfo.action.close": "关闭",
@@ -21,7 +29,15 @@
       "entityinfo.gas.sources_on": "来源 开",
       "entityinfo.gas.sources_off": "来源 关",
       "entityinfo.gas.modifiers_on": "修饰器 开",
-      "entityinfo.gas.modifiers_off": "修饰器 关"
+      "entityinfo.gas.modifiers_off": "修饰器 关",
+      "entityinfo.collection.title": "当前查看中的选中集",
+      "entityinfo.collection.empty_title": "当前查看中的选中集",
+      "entityinfo.collection.waiting_body": "等待活动中的选中视图。",
+      "entityinfo.collection.no_categories": "当前还没有分类桶。",
+      "entityinfo.collection.primary": "主目标",
+      "entityinfo.collection.entities": "个实体",
+      "entityinfo.collection.categories": "个分类",
+      "entityinfo.collection.rows": "行 {0}-{1}"
     }
   }
 }

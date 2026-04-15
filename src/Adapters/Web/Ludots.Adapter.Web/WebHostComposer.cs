@@ -48,6 +48,7 @@ namespace Ludots.Adapter.Web
             }
 
             engine.SetService(CoreServiceKeys.LogBackend, effectiveBackend);
+            engine.SetService(CoreServiceKeys.PresentationBackendId, "web");
 
             var renderer = new SkiaUiRenderer();
             IUiTextMeasurer textMeasurer = new SkiaTextMeasurer();

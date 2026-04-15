@@ -4,7 +4,9 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
@@ -582,6 +584,210 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(PresentationTextFormatter.TryFormat(textCatalog, textCatalog.DefaultLocaleId, in packet, out string text), Is.True);
             Assert.That(text, Is.EqualTo("{99}"));
+        }
+
+        [Test]
+        public void PresentationSemanticCatalogLoader_LoadsAttributesAndMappings_AndFormatsSemanticValues()
+        {
+            int healthId = AttributeRegistry.Register("Tests.Presentation.Semantic.Health");
+
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" },
+  { ""Path"": ""Presentation/semantic_attributes.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/semantic_mappings.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
+]");
+            WriteFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""semantic.health.label"", ""argCount"": 0 },
+  { ""id"": ""semantic.health.current"", ""argCount"": 1 },
+  { ""id"": ""semantic.health.current_over_base"", ""argCount"": 2 },
+  { ""id"": ""semantic.health.constant"", ""argCount"": 1 },
+  { ""id"": ""semantic.unit.hp"", ""argCount"": 0 },
+  { ""id"": ""semantic.relationship.label"", ""argCount"": 0 },
+  { ""id"": ""semantic.relationship.friendly"", ""argCount"": 0 },
+  { ""id"": ""semantic.relationship.hostile"", ""argCount"": 0 },
+  { ""id"": ""semantic.relationship.neutral"", ""argCount"": 0 }
+]");
+            WriteFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""en-US"",
+  ""locales"": {
+    ""en-US"": {
+      ""semantic.health.label"": ""Health"",
+      ""semantic.health.current"": ""{0}"",
+      ""semantic.health.current_over_base"": ""{0}/{1}"",
+      ""semantic.health.constant"": ""{0}"",
+      ""semantic.unit.hp"": ""HP"",
+      ""semantic.relationship.label"": ""Relationship"",
+      ""semantic.relationship.friendly"": ""Friendly"",
+      ""semantic.relationship.hostile"": ""Hostile"",
+      ""semantic.relationship.neutral"": ""Neutral""
+    }
+  }
+}");
+            WriteFile("Core", "Presentation/semantic_attributes.json",
+                @"[
+  {
+    ""id"": ""unit.health"",
+    ""attribute"": ""Tests.Presentation.Semantic.Health"",
+    ""labelToken"": ""semantic.health.label"",
+    ""currentFormatToken"": ""semantic.health.current"",
+    ""currentOverBaseFormatToken"": ""semantic.health.current_over_base"",
+    ""constantFormatToken"": ""semantic.health.constant"",
+    ""unitToken"": ""semantic.unit.hp""
+  }
+]");
+            WriteFile("Core", "Presentation/semantic_mappings.json",
+                @"[
+  {
+    ""id"": ""team.relationship"",
+    ""labelToken"": ""semantic.relationship.label"",
+    ""values"": {
+      ""team.relationship.friendly"": ""semantic.relationship.friendly"",
+      ""team.relationship.hostile"": ""semantic.relationship.hostile"",
+      ""team.relationship.neutral"": ""semantic.relationship.neutral""
+    }
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var textLoader = new PresentationTextCatalogLoader(pipeline);
+            PresentationTextCatalog textCatalog = textLoader.Load(catalog);
+            var localeSelection = new PresentationTextLocaleSelection(textCatalog);
+            var semanticLoader = new PresentationSemanticCatalogLoader(pipeline, textCatalog);
+            PresentationSemanticCatalog semanticCatalog = semanticLoader.Load(catalog);
+            var resolver = new PresentationSemanticResolver(textCatalog, localeSelection, semanticCatalog);
+
+            Assert.That(semanticCatalog.TryGetAttribute("unit.health", out var attribute), Is.True);
+            Assert.That(attribute.AttributeId, Is.EqualTo(healthId));
+            Assert.That(semanticCatalog.TryGetAttribute(healthId, out var byIdAttribute), Is.True);
+            Assert.That(byIdAttribute.SemanticKey, Is.EqualTo("unit.health"));
+            Assert.That(semanticCatalog.TryGetMapping(WellKnownPresentationSemanticMappingKeys.TeamRelationship, out var mapping), Is.True);
+            Assert.That(mapping.TryGetValueTokenId(WellKnownPresentationSemanticMappingKeys.TeamRelationshipFriendly, out int friendlyTokenId), Is.True);
+            Assert.That(textCatalog.GetTokenKey(friendlyTokenId), Is.EqualTo("semantic.relationship.friendly"));
+
+            Assert.That(resolver.ResolveAttributeLabelRequired("unit.health"), Is.EqualTo("Health"));
+            Assert.That(
+                resolver.FormatAttributeValueRequired("unit.health", PresentationAttributeValueDisplayKind.CurrentOverBase, 75f, 100f),
+                Is.EqualTo("75/100 HP"));
+            Assert.That(resolver.ResolveMappingLabelRequired(WellKnownPresentationSemanticMappingKeys.TeamRelationship), Is.EqualTo("Relationship"));
+            Assert.That(resolver.ResolveTeamRelationshipValueRequired(Ludots.Core.Gameplay.Teams.TeamRelationship.Friendly), Is.EqualTo("Friendly"));
+        }
+
+        [Test]
+        public void PresentationSemanticCatalogLoader_ResolvesAttributesRegisteredFromGameConstants()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/text_tokens.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/text_locales.json"", ""Policy"": ""DeepObject"" },
+  { ""Path"": ""Presentation/semantic_attributes.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
+]");
+            WriteFile("Core", "Presentation/text_tokens.json",
+                @"[
+  { ""id"": ""semantic.health.label"", ""argCount"": 0 },
+  { ""id"": ""semantic.health.current"", ""argCount"": 1 },
+  { ""id"": ""semantic.health.current_over_base"", ""argCount"": 2 },
+  { ""id"": ""semantic.health.constant"", ""argCount"": 1 }
+]");
+            WriteFile("Core", "Presentation/text_locales.json",
+                @"{
+  ""defaultLocale"": ""en-US"",
+  ""locales"": {
+    ""en-US"": {
+      ""semantic.health.label"": ""Health"",
+      ""semantic.health.current"": ""{0}"",
+      ""semantic.health.current_over_base"": ""{0}/{1}"",
+      ""semantic.health.constant"": ""{0}""
+    }
+  }
+}");
+            WriteFile("Core", "Presentation/semantic_attributes.json",
+                @"[
+  {
+    ""id"": ""unit.health"",
+    ""attribute"": ""Tests.Presentation.Semantic.FromConfig"",
+    ""labelToken"": ""semantic.health.label"",
+    ""currentFormatToken"": ""semantic.health.current"",
+    ""currentOverBaseFormatToken"": ""semantic.health.current_over_base"",
+    ""constantFormatToken"": ""semantic.health.constant""
+  }
+]");
+
+            int healthId = AttributeRegistry.Register("Tests.Presentation.Semantic.FromConfig");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
+            var semanticCatalog = new PresentationSemanticCatalogLoader(pipeline, textCatalog).Load(catalog);
+
+            Assert.That(semanticCatalog.TryGetAttribute("unit.health", out var attribute), Is.True);
+            Assert.That(attribute.AttributeId, Is.EqualTo(healthId));
+        }
+
+        [Test]
+        public void PresentationImageConfigLoader_LoadsImageAssets_AndResolvesVfsLocatorToAbsolutePath()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/image_assets.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
+]");
+            WriteFile("Core", "Presentation/image_assets.json",
+                @"[
+  {
+    ""id"": ""portrait.commander"",
+    ""assetKind"": ""Portrait2D"",
+    ""locators"": [
+      { ""backendId"": ""raylib"", ""assetRef"": ""Core:assets/Presentation/portraits/commander.svg"" }
+    ]
+  }
+]");
+
+            string portraitDir = Path.Combine(_root, "Core", "assets", "Presentation", "portraits");
+            Directory.CreateDirectory(portraitDir);
+            string portraitPath = Path.Combine(portraitDir, "commander.svg");
+            File.WriteAllText(portraitPath, "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 8 8\"><rect width=\"8\" height=\"8\" fill=\"#123456\"/></svg>");
+
+            var (vfs, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PresentationImageRegistry();
+            var loader = new PresentationImageConfigLoader(pipeline, registry);
+            loader.Load(catalog);
+
+            int imageAssetId = registry.GetId("portrait.commander");
+            Assert.That(imageAssetId, Is.GreaterThan(0));
+            Assert.That(registry.TryGet(imageAssetId, out var image), Is.True);
+            Assert.That(image.AssetKind, Is.EqualTo(PresentationImageAssetKind.Portrait2D));
+
+            var resolver = new PresentationImageSourceResolver(registry, vfs, "raylib");
+            string resolved = resolver.ResolveRequiredSource(imageAssetId);
+            Assert.That(resolved, Is.EqualTo(Path.GetFullPath(portraitPath)));
+            Assert.That(File.Exists(resolved), Is.True);
+        }
+
+        [Test]
+        public void PresentationImageConfigLoader_Fails_WhenAssetKindIsMissing()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/image_assets.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
+]");
+            WriteFile("Core", "Presentation/image_assets.json",
+                @"[
+  {
+    ""id"": ""portrait.commander"",
+    ""locators"": [
+      { ""backendId"": ""raylib"", ""assetRef"": ""Core:assets/Presentation/portraits/commander.svg"" }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PresentationImageRegistry();
+            var loader = new PresentationImageConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("missing required 'assetKind'"));
         }
 
         [Test]

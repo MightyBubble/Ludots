@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using Arch.Core;
 using EntityInfoPanelsMod.Insight;
+using Ludots.Core.Modding;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
@@ -23,6 +25,8 @@ public sealed partial class EntityInfoPanelService
 
     private readonly EntityInsightProfileCatalog _insightCatalog;
     private readonly EntityInsightTextResolver _insightTextResolver;
+    private readonly PresentationSemanticResolver _semanticResolver;
+    private readonly PresentationImageSourceResolver? _imageSourceResolver;
     private readonly EntityInsightIconFactory _insightIconFactory = new();
     private readonly AbilityDefinitionRegistry? _abilityDefinitions;
     private readonly TagOps _tagOps;
@@ -65,6 +69,8 @@ public sealed partial class EntityInfoPanelService
     private readonly int[] _insightStatCounts = new int[PanelCapacity];
     private readonly float[] _insightStatCurrentValues = new float[PanelCapacity * MaxInsightStatsPerPanel];
     private readonly float[] _insightStatBaseValues = new float[PanelCapacity * MaxInsightStatsPerPanel];
+    private readonly byte[] _insightSemanticFieldCounts = new byte[PanelCapacity];
+    private readonly int[] _insightSemanticFieldRuntimeValues = new int[PanelCapacity * MaxInsightStatsPerPanel];
     private readonly int[] _insightActionCounts = new int[PanelCapacity];
     private readonly byte[] _insightActionFlags = new byte[PanelCapacity * MaxInsightActionsPerPanel];
 
@@ -86,6 +92,8 @@ public sealed partial class EntityInfoPanelService
         EntityInsightProfileCatalog? insightCatalog = null,
         PresentationTextCatalog? presentationTextCatalog = null,
         PresentationTextLocaleSelection? localeSelection = null,
+        PresentationSemanticCatalog? semanticCatalog = null,
+        PresentationImageSourceResolver? imageSourceResolver = null,
         AbilityDefinitionRegistry? abilityDefinitions = null,
         TagOps? tagOps = null)
     {
@@ -94,6 +102,8 @@ public sealed partial class EntityInfoPanelService
 
         _insightCatalog = insightCatalog ?? EntityInsightProfileCatalog.Empty;
         _insightTextResolver = new EntityInsightTextResolver(effectiveCatalog, effectiveLocaleSelection);
+        _semanticResolver = new PresentationSemanticResolver(effectiveCatalog, effectiveLocaleSelection, semanticCatalog ?? PresentationSemanticCatalog.Empty);
+        _imageSourceResolver = imageSourceResolver;
         _abilityDefinitions = abilityDefinitions;
         _tagOps = tagOps ?? new TagOps();
         _lastLocaleId = effectiveLocaleSelection.ActiveLocaleId;
