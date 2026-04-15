@@ -13,6 +13,9 @@ namespace Ludots.Core.Presentation.Assets
         [ThreadStatic]
         private static PrefabGroundingBatchContext? s_groundingBatchContext;
 
+        [ThreadStatic]
+        private static PrefabFinalizedVisualBuffer? s_visualOutput;
+
         public static void FinalizeLeaves(
             MeshAssetRegistry meshes,
             int meshAssetId,
@@ -60,9 +63,89 @@ namespace Ludots.Core.Presentation.Assets
             }
 
             output.Clear();
+            PrefabFinalizedVisualBuffer visualOutput = s_visualOutput ??= new PrefabFinalizedVisualBuffer();
+            FinalizeVisuals(
+                meshes,
+                meshAssetId,
+                stableId,
+                position,
+                rotation,
+                scale,
+                color,
+                context,
+                visualOutput,
+                maxDepth);
+
+            ReadOnlySpan<PrefabFinalizedVisual> visuals = visualOutput.GetSpan();
+            for (int i = 0; i < visuals.Length; i++)
+            {
+                ref readonly PrefabFinalizedVisual visual = ref visuals[i];
+                if (visual.Kind != PrefabVisualPartKind.Mesh)
+                {
+                    continue;
+                }
+
+                output.Add(new PrefabFinalizedLeaf(
+                    visual.MeshAssetId,
+                    visual.MeshDescriptor,
+                    visual.StableId,
+                    visual.Position,
+                    visual.Rotation,
+                    visual.Scale,
+                    visual.Color));
+            }
+        }
+
+        public static void FinalizeVisuals(
+            MeshAssetRegistry meshes,
+            int meshAssetId,
+            int stableId,
+            in Vector3 position,
+            in Quaternion rotation,
+            in Vector3 scale,
+            in Vector4 color,
+            PrefabFinalizedVisualBuffer output,
+            int maxDepth = DefaultMaxDepth)
+        {
+            FinalizeVisuals(
+                meshes,
+                meshAssetId,
+                stableId,
+                position,
+                rotation,
+                scale,
+                color,
+                PrefabFinalizationContext.Empty,
+                output,
+                maxDepth);
+        }
+
+        public static void FinalizeVisuals(
+            MeshAssetRegistry meshes,
+            int meshAssetId,
+            int stableId,
+            in Vector3 position,
+            in Quaternion rotation,
+            in Vector3 scale,
+            in Vector4 color,
+            in PrefabFinalizationContext context,
+            PrefabFinalizedVisualBuffer output,
+            int maxDepth = DefaultMaxDepth)
+        {
+            if (meshes == null)
+            {
+                throw new ArgumentNullException(nameof(meshes));
+            }
+
+            if (output == null)
+            {
+                throw new ArgumentNullException(nameof(output));
+            }
+
+            output.Clear();
             PrefabGroundingBatchBuffer groundingRequests = s_groundingRequests ??= new PrefabGroundingBatchBuffer();
             PrefabGroundingBatchContext groundingBatchContext = s_groundingBatchContext ??= new PrefabGroundingBatchContext();
-            FinalizeLeavesRecursive(
+            FinalizeVisualsRecursive(
                 meshes,
                 meshAssetId,
                 stableId,
@@ -78,7 +161,7 @@ namespace Ludots.Core.Presentation.Assets
                 maxDepth);
         }
 
-        private static void FinalizeLeavesRecursive(
+        private static void FinalizeVisualsRecursive(
             MeshAssetRegistry meshes,
             int meshAssetId,
             int stableId,
@@ -89,13 +172,20 @@ namespace Ludots.Core.Presentation.Assets
             in PrefabFinalizationContext context,
             PrefabGroundingBatchBuffer groundingRequests,
             PrefabGroundingBatchContext groundingBatchContext,
-            PrefabFinalizedLeafBuffer output,
+            PrefabFinalizedVisualBuffer output,
             int depth,
             int maxDepth)
         {
-            if (depth > maxDepth || !meshes.TryGetDescriptor(meshAssetId, out var descriptor))
+            if (depth > maxDepth)
             {
-                return;
+                throw new InvalidOperationException(
+                    $"Prefab finalization exceeded maxDepth={maxDepth} at meshAssetId={meshAssetId} stableId={stableId}.");
+            }
+
+            if (!meshes.TryGetDescriptor(meshAssetId, out var descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"Prefab finalization references unknown meshAssetId={meshAssetId} at stableId={stableId}.");
             }
 
             if (descriptor.Type == MeshAssetType.Prefab &&
@@ -159,9 +249,10 @@ namespace Ludots.Core.Presentation.Assets
                 for (int i = 0; i < childCount; i++)
                 {
                     ref var part = ref descriptor.PrefabParts[i];
-                    FinalizeLeavesRecursive(
+                    EmitOrRecursePart(
                         meshes,
-                        part.MeshAssetId,
+                        descriptor,
+                        in part,
                         childStableIds[i],
                         childPositions[i],
                         childRotations[i],
@@ -178,7 +269,7 @@ namespace Ludots.Core.Presentation.Assets
                 return;
             }
 
-            output.Add(new PrefabFinalizedLeaf(
+            output.Add(PrefabFinalizedVisual.Mesh(
                 meshAssetId,
                 descriptor,
                 stableId,
@@ -186,6 +277,128 @@ namespace Ludots.Core.Presentation.Assets
                 rotation,
                 scale,
                 color));
+        }
+
+        private static void EmitOrRecursePart(
+            MeshAssetRegistry meshes,
+            in MeshAssetDescriptor parentDescriptor,
+            in PrefabPart part,
+            int stableId,
+            in Vector3 position,
+            in Quaternion rotation,
+            in Vector3 scale,
+            in Vector4 color,
+            in PrefabFinalizationContext context,
+            PrefabGroundingBatchBuffer groundingRequests,
+            PrefabGroundingBatchContext groundingBatchContext,
+            PrefabFinalizedVisualBuffer output,
+            int depth,
+            int maxDepth)
+        {
+            switch (part.Kind)
+            {
+                case PrefabVisualPartKind.Decal:
+                    ValidatePartContract(part, stableId);
+                    output.Add(PrefabFinalizedVisual.Decal(
+                        stableId,
+                        position,
+                        rotation,
+                        scale,
+                        color,
+                        part.MaterialId,
+                        part.Size));
+                    return;
+
+                case PrefabVisualPartKind.Vfx:
+                    ValidatePartContract(part, stableId);
+                    output.Add(PrefabFinalizedVisual.Vfx(
+                        stableId,
+                        position,
+                        rotation,
+                        scale,
+                        color,
+                        part.EffectAssetId,
+                        part.VfxSpawnMode));
+                    return;
+
+                case PrefabVisualPartKind.Surface:
+                    ValidatePartContract(part, stableId);
+                    if (!meshes.TryGetDescriptor(part.MeshAssetId, out MeshAssetDescriptor surfaceDescriptor))
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab surface part stableId={stableId} references unknown meshAssetId={part.MeshAssetId}.");
+                    }
+
+                    output.Add(PrefabFinalizedVisual.Surface(
+                        stableId,
+                        position,
+                        rotation,
+                        scale,
+                        color,
+                        part.MeshAssetId,
+                        surfaceDescriptor,
+                        part.MaterialId,
+                        part.Tiling,
+                        part.TerrainFacing));
+                    return;
+
+                case PrefabVisualPartKind.Mesh:
+                default:
+                    FinalizeVisualsRecursive(
+                        meshes,
+                        part.MeshAssetId,
+                        stableId,
+                        position,
+                        rotation,
+                        scale,
+                        color,
+                        context,
+                        groundingRequests,
+                        groundingBatchContext,
+                        output,
+                        depth,
+                        maxDepth);
+                    return;
+            }
+        }
+
+        private static void ValidatePartContract(in PrefabPart part, int stableId)
+        {
+            switch (part.Kind)
+            {
+                case PrefabVisualPartKind.Decal:
+                    if (part.MaterialId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab decal part stableId={stableId} must declare a positive materialId.");
+                    }
+
+                    return;
+
+                case PrefabVisualPartKind.Vfx:
+                    if (part.EffectAssetId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab VFX part stableId={stableId} must declare a positive effectAssetId.");
+                    }
+
+                    return;
+
+                case PrefabVisualPartKind.Surface:
+                    if (part.MeshAssetId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab surface part stableId={stableId} must declare a positive meshAssetId.");
+                    }
+
+                    if (part.MaterialId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab surface part stableId={stableId} must declare a positive materialId.");
+                    }
+
+                    return;
+            }
         }
     }
 }

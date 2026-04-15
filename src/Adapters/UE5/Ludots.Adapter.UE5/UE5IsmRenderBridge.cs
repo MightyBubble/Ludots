@@ -57,7 +57,7 @@ namespace Ludots.Adapter.UE5
         private readonly Dictionary<long, IsmBucket> _buckets = new();
         private readonly List<IsmBucket> _bucketList = new();
         private readonly List<AllegroDrawItem> _allegroItems = new();
-        private readonly PrefabFinalizedLeafBuffer _prefabLeaves = new();
+        private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new();
 
         public IReadOnlyList<IsmBucket> HismBuckets => _bucketList;
         public IReadOnlyList<AllegroDrawItem> AllegroItems => _allegroItems;
@@ -166,8 +166,8 @@ namespace Ludots.Adapter.UE5
                 return;
             }
 
-            _prefabLeaves.Clear();
-            PrefabFinalizationPipeline.FinalizeLeaves(
+            _prefabVisuals.Clear();
+            PrefabFinalizationPipeline.FinalizeVisuals(
                 meshRegistry,
                 meshAssetId,
                 stableId,
@@ -176,31 +176,11 @@ namespace Ludots.Adapter.UE5
                 scale,
                 Vector4.One,
                 finalizationContext,
-                _prefabLeaves);
+                _prefabVisuals);
 
-            foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
+            foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
-                long key = BuildBucketKey(leaf.MeshAssetId, renderPath);
-                if (!_buckets.TryGetValue(key, out var bucket))
-                {
-                    bucket = new IsmBucket(leaf.MeshAssetId, renderPath);
-                    _buckets.Add(key, bucket);
-                }
-
-                if (bucket.Instances.Count == 0)
-                {
-                    _bucketList.Add(bucket);
-                }
-
-                bucket.Instances.Add(new StaticDrawItem
-                {
-                    StableId = leaf.StableId,
-                    RenderPath = renderPath,
-                    Translation = ToUEPosition(leaf.Position),
-                    Rotation = ToUERotation(leaf.Rotation),
-                    Scale = ToUEScale(leaf.Scale),
-                    Visibility = visibility,
-                });
+                AddFinalizedStaticVisual(in visual, renderPath, visibility);
             }
         }
 
@@ -275,8 +255,8 @@ namespace Ludots.Adapter.UE5
                 return;
             }
 
-            _prefabLeaves.Clear();
-            PrefabFinalizationPipeline.FinalizeLeaves(
+            _prefabVisuals.Clear();
+            PrefabFinalizationPipeline.FinalizeVisuals(
                 meshRegistry,
                 meshAssetId,
                 stableId,
@@ -285,52 +265,85 @@ namespace Ludots.Adapter.UE5
                 scale,
                 color,
                 finalizationContext,
-                _prefabLeaves);
+                _prefabVisuals);
 
-            foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
+            foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
-                AddFinalizedSkinnedLeaf(
-                    leaf.StableId,
-                    leaf.MeshAssetId,
+                AddFinalizedSkinnedVisual(
+                    in visual,
                     animationProfileId,
                     renderPath,
-                    leaf.Position,
-                    leaf.Rotation,
-                    leaf.Scale,
-                    leaf.Color,
                     animator,
                     animationOverlay,
                     visibility);
             }
         }
 
-        private void AddFinalizedSkinnedLeaf(
-            int stableId,
-            int meshAssetId,
+        private void AddFinalizedStaticVisual(
+            in PrefabFinalizedVisual visual,
+            VisualRenderPath renderPath,
+            VisualVisibility visibility)
+        {
+            EnsureMeshVisualSupported(in visual, renderPath, consumerName: nameof(UE5IsmRenderBridge));
+
+            long key = BuildBucketKey(visual.MeshAssetId, renderPath);
+            if (!_buckets.TryGetValue(key, out var bucket))
+            {
+                bucket = new IsmBucket(visual.MeshAssetId, renderPath);
+                _buckets.Add(key, bucket);
+            }
+
+            if (bucket.Instances.Count == 0)
+            {
+                _bucketList.Add(bucket);
+            }
+
+            bucket.Instances.Add(new StaticDrawItem
+            {
+                StableId = visual.StableId,
+                RenderPath = renderPath,
+                Translation = ToUEPosition(visual.Position),
+                Rotation = ToUERotation(visual.Rotation),
+                Scale = ToUEScale(visual.Scale),
+                Visibility = visibility,
+            });
+        }
+
+        private void AddFinalizedSkinnedVisual(
+            in PrefabFinalizedVisual visual,
             int animationProfileId,
             VisualRenderPath renderPath,
-            Vector3 position,
-            Quaternion rotation,
-            Vector3 scale,
-            Vector4 color,
             AnimatorPackedState animator,
             AnimationOverlayRequest animationOverlay,
             VisualVisibility visibility)
         {
+            EnsureMeshVisualSupported(in visual, renderPath, consumerName: nameof(UE5IsmRenderBridge));
+
             _allegroItems.Add(new AllegroDrawItem
             {
-                StableId = stableId,
-                MeshAssetId = meshAssetId,
+                StableId = visual.StableId,
+                MeshAssetId = visual.MeshAssetId,
                 AnimationProfileId = animationProfileId,
                 RenderPath = renderPath,
-                Position = ToUEPosition(position),
-                Rotation = ToUERotation(rotation),
-                Scale = ToUEScale(scale),
-                Color = color,
+                Position = ToUEPosition(visual.Position),
+                Rotation = ToUERotation(visual.Rotation),
+                Scale = ToUEScale(visual.Scale),
+                Color = visual.Color,
                 Animator = animator,
                 AnimationOverlay = animationOverlay,
                 Visibility = visibility,
             });
+        }
+
+        private static void EnsureMeshVisualSupported(in PrefabFinalizedVisual visual, VisualRenderPath renderPath, string consumerName)
+        {
+            if (visual.Kind == PrefabVisualPartKind.Mesh)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"{consumerName} does not support finalized visual kind '{visual.Kind}' on render path '{renderPath}' (stableId={visual.StableId}).");
         }
 
         private static long BuildBucketKey(int meshAssetId, VisualRenderPath renderPath)

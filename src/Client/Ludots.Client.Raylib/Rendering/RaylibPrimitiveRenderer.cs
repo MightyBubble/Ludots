@@ -24,7 +24,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly RaylibPrimitiveRenderMode _mode;
         private readonly IVirtualFileSystem? _vfs;
         private readonly string? _diagnosticPath;
-        private readonly PrefabFinalizedLeafBuffer _prefabLeaves = new PrefabFinalizedLeafBuffer();
+        private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new PrefabFinalizedVisualBuffer();
 
         private bool _initialized;
         private Mesh _cubeMesh;
@@ -217,8 +217,8 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext)
         {
-            _prefabLeaves.Clear();
-            PrefabFinalizationPipeline.FinalizeLeaves(
+            _prefabVisuals.Clear();
+            PrefabFinalizationPipeline.FinalizeVisuals(
                 meshes,
                 meshAssetId,
                 stableId: 0,
@@ -227,32 +227,34 @@ namespace Ludots.Client.Raylib.Rendering
                 scale,
                 color,
                 finalizationContext,
-                _prefabLeaves);
+                _prefabVisuals);
 
-            foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
+            foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
-                SubmitFinalizedLeaf(in leaf, camera);
+                SubmitFinalizedVisual(in visual, camera);
             }
         }
 
-        private void SubmitFinalizedLeaf(in PrefabFinalizedLeaf leaf, Camera3D camera)
+        private void SubmitFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera)
         {
-            switch (leaf.Descriptor.Type)
+            EnsureMeshVisualSupported(in visual, consumerName: nameof(RaylibPrimitiveRenderer));
+
+            switch (visual.MeshDescriptor.Type)
             {
                 case MeshAssetType.Primitive:
-                    SubmitPrimitive(leaf.Descriptor.PrimitiveKind, leaf.Position, leaf.Rotation, leaf.Scale, leaf.Color);
+                    SubmitPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
                     break;
 
                 case MeshAssetType.Model:
-                    DrawModel(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Rotation, leaf.Scale, leaf.Color);
+                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
                     break;
 
                 case MeshAssetType.Billboard:
-                    DrawBillboard(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Scale, leaf.Color, camera);
+                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
                     break;
 
                 case MeshAssetType.RuntimeMesh:
-                    DrawRuntimeMesh(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Rotation, leaf.Scale);
+                    DrawRuntimeMesh(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale);
                     break;
             }
         }
@@ -366,8 +368,8 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext)
         {
-            _prefabLeaves.Clear();
-            PrefabFinalizationPipeline.FinalizeLeaves(
+            _prefabVisuals.Clear();
+            PrefabFinalizationPipeline.FinalizeVisuals(
                 meshes,
                 meshAssetId,
                 stableId: 0,
@@ -376,34 +378,47 @@ namespace Ludots.Client.Raylib.Rendering
                 scale,
                 color,
                 finalizationContext,
-                _prefabLeaves);
+                _prefabVisuals);
 
-            foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
+            foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
-                DrawFinalizedLeaf(in leaf, camera);
+                DrawFinalizedVisual(in visual, camera);
             }
         }
 
-        private void DrawFinalizedLeaf(in PrefabFinalizedLeaf leaf, Camera3D camera)
+        private void DrawFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera)
         {
-            switch (leaf.Descriptor.Type)
+            EnsureMeshVisualSupported(in visual, consumerName: nameof(RaylibPrimitiveRenderer));
+
+            switch (visual.MeshDescriptor.Type)
             {
                 case MeshAssetType.Primitive:
-                    DrawPrimitive(leaf.Descriptor.PrimitiveKind, leaf.Position, leaf.Scale, leaf.Color);
+                    DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Scale, visual.Color);
                     break;
 
                 case MeshAssetType.Model:
-                    DrawModel(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Rotation, leaf.Scale, leaf.Color);
+                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
                     break;
 
                 case MeshAssetType.Billboard:
-                    DrawBillboard(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Scale, leaf.Color, camera);
+                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
                     break;
 
                 case MeshAssetType.RuntimeMesh:
-                    DrawRuntimeMesh(leaf.MeshAssetId, leaf.Descriptor, leaf.Position, leaf.Rotation, leaf.Scale);
+                    DrawRuntimeMesh(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale);
                     break;
             }
+        }
+
+        private static void EnsureMeshVisualSupported(in PrefabFinalizedVisual visual, string consumerName)
+        {
+            if (visual.Kind == PrefabVisualPartKind.Mesh)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"{consumerName} does not support finalized visual kind '{visual.Kind}' (stableId={visual.StableId}).");
         }
 
         private void DrawPrimitive(PrimitiveMeshKind kind, Vector3 position, Vector3 scale, Vector4 color)

@@ -4,6 +4,8 @@ namespace Ludots.Core.Presentation.Assets
 {
     public readonly struct PrefabFinalizedLeaf
     {
+        private readonly PrefabFinalizedVisual _visual;
+
         public PrefabFinalizedLeaf(
             int meshAssetId,
             in MeshAssetDescriptor descriptor,
@@ -20,6 +22,7 @@ namespace Ludots.Core.Presentation.Assets
             Rotation = rotation;
             Scale = scale;
             Color = color;
+            _visual = PrefabFinalizedVisual.Mesh(meshAssetId, descriptor, stableId, position, rotation, scale, color);
         }
 
         public int MeshAssetId { get; }
@@ -35,5 +38,7 @@ namespace Ludots.Core.Presentation.Assets
         public Vector3 Scale { get; }
 
         public Vector4 Color { get; }
+
+        public PrefabFinalizedVisual ToVisual() => _visual;
     }
 }
