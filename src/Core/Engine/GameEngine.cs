@@ -788,7 +788,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.SelectionSetKeyRegistry, selectionSetKeyRegistry);
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
-            SetService(CoreServiceKeys.VisualHeightmap, new FlatVisualHeightmap());
+            RemoveService(CoreServiceKeys.VisualHeightmap);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
             SetService(CoreServiceKeys.OrderQueue, orderQueue);
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);
@@ -1086,9 +1086,11 @@ namespace Ludots.Core.Engine
             if (mapConfig != null)
             {
                 var previousFocused = MapSessions.FocusedSession;
+                IVisualHeightmap? visualHeightmap = MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
+                session.VisualHeightmap = visualHeightmap;
                 CreateBoardsForSession(session, mapConfig);
                 if (previousFocused != null)
                 {
@@ -1211,9 +1213,12 @@ namespace Ludots.Core.Engine
                 return;
             }
 
+            IVisualHeightmap? visualHeightmap = MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
+
             // Create inner session with parent context from outer
             MapContext parentCtx = outerSession?.Context;
             var session = MapSessions.CreateSession(inner, mapConfig, parentCtx);
+            session.VisualHeightmap = visualHeightmap;
 
             // Pass through data to inner context
             if (passthrough != null)

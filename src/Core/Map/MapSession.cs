@@ -5,6 +5,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Map
@@ -19,6 +20,7 @@ namespace Ludots.Core.Map
         public MapConfig MapConfig { get; }
         public MapSessionState State { get; set; }
         public MapContext Context { get; }
+        public IVisualHeightmap? VisualHeightmap { get; set; }
 
         private readonly Dictionary<string, IBoard> _boards = new Dictionary<string, IBoard>(StringComparer.OrdinalIgnoreCase);
         private readonly List<Trigger> _triggers = new List<Trigger>();

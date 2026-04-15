@@ -192,6 +192,148 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PrefabFinalizationPipeline_WhenPrefabDoesNotRequestGrounding_AllowsMissingVisualHeightmapTruth()
+        {
+            var meshes = new MeshAssetRegistry();
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+            int prefabId = meshes.Register(
+                "prefab.no_grounding",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        MeshAssetId = cubeId,
+                        LocalPosition = new Vector3(2f, 3f, 4f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = new Vector3(1.5f, 2f, 2.5f),
+                        ColorTint = new Vector4(0.5f, 0.75f, 1f, 1f),
+                    }));
+
+            var output = new PrefabFinalizedLeafBuffer();
+
+            Assert.DoesNotThrow(() =>
+                PrefabFinalizationPipeline.FinalizeLeaves(
+                    meshes,
+                    prefabId,
+                    stableId: 13,
+                    position: new Vector3(10f, 20f, 30f),
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    color: Vector4.One,
+                    output));
+
+            Assert.That(output.Count, Is.EqualTo(1));
+            Assert.That(output.GetSpan()[0].Position, Is.EqualTo(new Vector3(12f, 23f, 34f)));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_BatchesGroundedSiblingResolution_ByLayerAndMode()
+        {
+            var meshes = new MeshAssetRegistry();
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+            int prefabId = meshes.Register(
+                "prefab.batch_grounded",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        MeshAssetId = cubeId,
+                        LocalPosition = new Vector3(1f, 0f, 1f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                        Grounding = new PrefabPartGrounding(PrefabPartGroundingMode.VisualHeightmap, verticalOffsetMeters: 0.1f),
+                    },
+                    new PrefabPart
+                    {
+                        MeshAssetId = cubeId,
+                        LocalPosition = new Vector3(2f, 0f, 2f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                        Grounding = new PrefabPartGrounding(PrefabPartGroundingMode.VisualHeightmap, verticalOffsetMeters: 0.2f),
+                    },
+                    new PrefabPart
+                    {
+                        MeshAssetId = cubeId,
+                        LocalPosition = new Vector3(3f, 0f, 3f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                        Grounding = new PrefabPartGrounding(PrefabPartGroundingMode.VisualHeightmap, alignToGroundNormal: true),
+                    }));
+
+            var output = new PrefabFinalizedLeafBuffer();
+            var runtime = new CountingVisualHeightmap(CreateRuntime());
+
+            PrefabFinalizationPipeline.FinalizeLeaves(
+                meshes,
+                prefabId,
+                stableId: 88,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                color: Vector4.One,
+                new PrefabFinalizationContext(runtime),
+                output);
+
+            Assert.That(output.Count, Is.EqualTo(3));
+            Assert.That(runtime.SampleBatchCalls, Is.EqualTo(1));
+            Assert.That(runtime.RaycastBatchCalls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_GroundsPrefabNodeBeforeFinalizingNestedLeaves()
+        {
+            var meshes = new MeshAssetRegistry();
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+
+            int childPrefabId = meshes.Register(
+                "prefab.nested_child",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        MeshAssetId = cubeId,
+                        LocalPosition = new Vector3(0f, 2f, 0f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                    }));
+
+            int rootPrefabId = meshes.Register(
+                "prefab.nested_root",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        MeshAssetId = childPrefabId,
+                        LocalPosition = new Vector3(1f, 99f, 1f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                        Grounding = new PrefabPartGrounding(
+                            PrefabPartGroundingMode.VisualHeightmap,
+                            verticalOffsetMeters: 0.25f),
+                    }));
+
+            var output = new PrefabFinalizedLeafBuffer();
+            PrefabFinalizationPipeline.FinalizeLeaves(
+                meshes,
+                rootPrefabId,
+                stableId: 123,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                color: Vector4.One,
+                new PrefabFinalizationContext(CreateRuntime()),
+                output);
+
+            Assert.That(output.Count, Is.EqualTo(1));
+            Assert.That(output.GetSpan()[0].Position, Is.EqualTo(new Vector3(1f, 2.45f, 1f)));
+        }
+
+        [Test]
         public void VisualHeightmapBinary_RoundTripsAssetMetadataAndSamples()
         {
             var asset = new VisualHeightmapAsset(
@@ -590,6 +732,70 @@ namespace Ludots.Tests.Presentation
             {
                 InvocationCount++;
                 return false;
+            }
+        }
+
+        private sealed class CountingVisualHeightmap : IVisualHeightmap
+        {
+            private readonly IVisualHeightmap _inner;
+
+            public CountingVisualHeightmap(IVisualHeightmap inner)
+            {
+                _inner = inner;
+            }
+
+            public int SampleBatchCalls { get; private set; }
+
+            public int RaycastBatchCalls { get; private set; }
+
+            public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
+                => _inner.TrySampleHeightCm(worldXCm, worldYCm, out heightCm, layerIndex);
+
+            public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)
+            {
+                SampleBatchCalls++;
+                return _inner.SampleHeightsCm(worldXCm, worldYCm, outHeightCm, layerIndex);
+            }
+
+            public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
+                => _inner.TryRaycastGround(in ray, out hit, layerIndex);
+
+            public bool RaycastGroundBatch(
+                ReadOnlySpan<float> originXMeters,
+                ReadOnlySpan<float> originYMeters,
+                ReadOnlySpan<float> originZMeters,
+                ReadOnlySpan<float> directionX,
+                ReadOnlySpan<float> directionY,
+                ReadOnlySpan<float> directionZ,
+                Span<float> outWorldXCm,
+                Span<float> outWorldYCm,
+                Span<float> outHeightCm,
+                Span<float> outDistanceMeters,
+                Span<float> outNormalX,
+                Span<float> outNormalY,
+                Span<float> outNormalZ,
+                Span<int> outLayerIndex,
+                Span<byte> outHitMask,
+                int layerIndex = 0)
+            {
+                RaycastBatchCalls++;
+                return _inner.RaycastGroundBatch(
+                    originXMeters,
+                    originYMeters,
+                    originZMeters,
+                    directionX,
+                    directionY,
+                    directionZ,
+                    outWorldXCm,
+                    outWorldYCm,
+                    outHeightCm,
+                    outDistanceMeters,
+                    outNormalX,
+                    outNormalY,
+                    outNormalZ,
+                    outLayerIndex,
+                    outHitMask,
+                    layerIndex);
             }
         }
     }

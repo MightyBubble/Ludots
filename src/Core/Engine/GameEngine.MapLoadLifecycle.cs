@@ -66,6 +66,7 @@ namespace Ludots.Core.Engine
                 RemoveService(CoreServiceKeys.MapSession);
                 RemoveService(CoreServiceKeys.MapFeatureFlags);
                 RemoveService(CoreServiceKeys.MapLoadStatus);
+                RemoveService(CoreServiceKeys.VisualHeightmap);
                 PublishFocusedMapLoadState();
                 return;
             }
@@ -73,6 +74,14 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.MapSession, session);
             SetService(CoreServiceKeys.MapFeatureFlags, MapFeatureFlags.FromTags(session.MapConfig?.Tags));
             SetService(CoreServiceKeys.MapLoadStatus, GetMapLoadStatus(session.MapId));
+            if (session.VisualHeightmap != null)
+            {
+                SetService(CoreServiceKeys.VisualHeightmap, session.VisualHeightmap);
+            }
+            else
+            {
+                RemoveService(CoreServiceKeys.VisualHeightmap);
+            }
             PublishFocusedMapLoadState();
         }
 

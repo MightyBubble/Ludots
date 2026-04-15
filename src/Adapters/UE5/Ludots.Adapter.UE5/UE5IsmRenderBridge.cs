@@ -72,7 +72,7 @@ namespace Ludots.Adapter.UE5
             }
 
             MeshAssetRegistry? meshRegistry = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
-            var visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
             var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
 
             PrimitiveDrawBuffer? snapshot =
