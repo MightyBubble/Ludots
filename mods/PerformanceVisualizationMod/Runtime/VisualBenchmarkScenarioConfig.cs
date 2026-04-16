@@ -7,7 +7,8 @@ namespace PerformanceVisualizationMod.Runtime
         int Rows,
         int Columns,
         int SpacingCm,
-        int CameraDistanceCm)
+        int CameraDistanceCm,
+        bool AttachHealthAttributes)
     {
         public static readonly VisualBenchmarkScenarioConfig Small = new(
             Key: "small",
@@ -16,7 +17,8 @@ namespace PerformanceVisualizationMod.Runtime
             Rows: 32,
             Columns: 64,
             SpacingCm: 240,
-            CameraDistanceCm: 22000);
+            CameraDistanceCm: 22000,
+            AttachHealthAttributes: true);
 
         public static readonly VisualBenchmarkScenarioConfig Medium = new(
             Key: "medium",
@@ -25,7 +27,8 @@ namespace PerformanceVisualizationMod.Runtime
             Rows: 64,
             Columns: 128,
             SpacingCm: 210,
-            CameraDistanceCm: 34000);
+            CameraDistanceCm: 34000,
+            AttachHealthAttributes: true);
 
         public static readonly VisualBenchmarkScenarioConfig Large = new(
             Key: "large",
@@ -34,7 +37,8 @@ namespace PerformanceVisualizationMod.Runtime
             Rows: 128,
             Columns: 256,
             SpacingCm: 180,
-            CameraDistanceCm: 62000);
+            CameraDistanceCm: 62000,
+            AttachHealthAttributes: false);
 
         public static readonly VisualBenchmarkScenarioConfig[] All =
         {

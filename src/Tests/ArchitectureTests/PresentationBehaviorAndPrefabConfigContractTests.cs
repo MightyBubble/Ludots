@@ -136,7 +136,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void CameraAcceptanceTypedCueMarkerPrefab_UsesFullTypedVisualContract()
+        public void CameraAcceptanceProjectionCueFixturePrefab_UsesFullMultiPartVisualContract()
         {
             string repoRoot = FindRepoRoot();
             using var engine = new GameEngine();
@@ -156,20 +156,20 @@ namespace Ludots.Tests.Architecture
             var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry
                 ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
 
-            int typedCuePrefabId = prefabs.GetId("camera_acceptance_typed_cue_marker");
-            Assert.That(typedCuePrefabId, Is.GreaterThan(0), "camera_acceptance_typed_cue_marker prefab must stay registered in CameraAcceptanceMod.");
-            Assert.That(prefabs.TryGet(typedCuePrefabId, out PrefabDefinition typedCuePrefab), Is.True);
-            int typedCueMeshAssetId = meshes.GetId("camera_acceptance_typed_cue_marker");
-            Assert.That(typedCueMeshAssetId, Is.GreaterThan(0), "camera_acceptance_typed_cue_marker mesh asset must resolve to the prefab contract asset.");
+            int fixturePrefabId = prefabs.GetId("camera_acceptance_projection_cue_fixture_prefab");
+            Assert.That(fixturePrefabId, Is.GreaterThan(0), "camera_acceptance_projection_cue_fixture_prefab must stay registered in CameraAcceptanceMod.");
+            Assert.That(prefabs.TryGet(fixturePrefabId, out PrefabDefinition fixturePrefab), Is.True);
+            int fixtureMeshAssetId = meshes.GetId("camera_acceptance_projection_cue_fixture_prefab");
+            Assert.That(fixtureMeshAssetId, Is.GreaterThan(0), "camera_acceptance_projection_cue_fixture_prefab mesh asset must resolve to the prefab contract asset.");
 
             var output = new PrefabFinalizedVisualBuffer();
             PrefabFinalizationPipeline.FinalizeVisuals(
                 meshes,
-                typedCueMeshAssetId,
+                fixtureMeshAssetId,
                 stableId: 9,
                 position: default,
                 rotation: System.Numerics.Quaternion.Identity,
-                scale: System.Numerics.Vector3.One * typedCuePrefab.BaseScale,
+                scale: System.Numerics.Vector3.One * fixturePrefab.BaseScale,
                 color: System.Numerics.Vector4.One,
                 output);
 

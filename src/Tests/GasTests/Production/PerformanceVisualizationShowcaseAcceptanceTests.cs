@@ -62,6 +62,27 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(CountScenarioEntities(engine), Is.EqualTo(0), "Clear should destroy all benchmark entities scoped to the current map.");
         }
 
+        [Test]
+        public void VisualBenchmarkShowcase_Run32K_PreservesPureVisualStressSemantics()
+        {
+            using var engine = CreateEngine();
+            LoadMap(engine, VisualBenchmarkIds.MapId, frames: 10);
+
+            object runtime = ResolveRuntime(engine);
+            Assert.That(ReadBoolProperty(runtime, "IsActive"), Is.True);
+
+            Assert.That(InvokeBool(runtime, "TryRunScenario", engine, "large"), Is.True);
+            Tick(engine, 40);
+
+            int largeCount = CountScenarioEntities(engine);
+            var worldHud = RequireWorldHud(engine);
+            int barCount = CountWorldHudItems(worldHud, WorldHudItemKind.Bar);
+
+            Assert.That(largeCount, Is.EqualTo(32768), "32K showcase lane should fully realize the requested visual entity count.");
+            Assert.That(barCount, Is.EqualTo(0), "32K showcase lane is pure visual stress and must not spawn performer HUD bars.");
+            Assert.That(worldHud.DroppedSinceClear, Is.EqualTo(0), "Pure visual lane should not overflow the world HUD buffer.");
+        }
+
         private static object ResolveRuntime(GameEngine engine)
         {
             if (!engine.GlobalContext.TryGetValue(VisualBenchmarkIds.RuntimeServiceKey, out object? runtimeObj) ||

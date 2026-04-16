@@ -5,6 +5,7 @@
 ## 鏍稿績涓婚
 
 - [杩愯鏃舵€昏](runtime-overview.md)
+- [Presentation Terminology](presentation-terminology.md)
 - [Presentation / Performer 褰撳墠鏋舵瀯](presentation-performer-current-architecture.md)
 - [Presentation Pipeline Showcase UAT Design](presentation-pipeline-showcase-uat.md)
 - [Mod 鏋舵瀯](mod-architecture.md)

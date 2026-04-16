@@ -31,7 +31,7 @@ namespace CameraAcceptanceMod.Runtime
 
         private CameraAcceptancePanelController? _panelController;
         private bool _selectionCallbacksInstalled;
-        private const string TypedCueMarkerPrefabKey = "camera_acceptance_typed_cue_marker";
+        private const string ProjectionCueFixturePrefabKey = "camera_acceptance_projection_cue_fixture_prefab";
         private int _cueMarkerPrefabId;
         private string _lastConfiguredMapId = string.Empty;
 
@@ -365,10 +365,10 @@ namespace CameraAcceptanceMod.Runtime
                 throw new System.InvalidOperationException("PresentationPrefabRegistry is required for projection verification.");
             }
 
-            _cueMarkerPrefabId = prefabs.GetId(TypedCueMarkerPrefabKey);
+            _cueMarkerPrefabId = prefabs.GetId(ProjectionCueFixturePrefabKey);
             if (_cueMarkerPrefabId == 0)
             {
-                throw new System.InvalidOperationException($"Prefab '{TypedCueMarkerPrefabKey}' is required for projection verification.");
+                throw new System.InvalidOperationException($"Prefab '{ProjectionCueFixturePrefabKey}' is required for projection verification.");
             }
 
             return _cueMarkerPrefabId;
