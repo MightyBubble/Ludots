@@ -23,8 +23,9 @@ using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Systems;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Projectiles;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
@@ -703,40 +704,33 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void ChampionSkillSandbox_ProjectileBindingsAndSkillCueConfigs_AreRegistered()
+        public void ChampionSkillSandbox_ProjectilePresentationAndSkillCueConfigs_AreRegistered()
         {
             using var engine = CreateEngine();
 
             var effects = engine.GetService(CoreServiceKeys.EffectTemplateRegistry)
                 ?? throw new InvalidOperationException("EffectTemplateRegistry missing.");
-            var projectileBindings = engine.GetService(CoreServiceKeys.ProjectilePresentationBindingRegistry)
-                ?? throw new InvalidOperationException("ProjectilePresentationBindingRegistry missing.");
             var performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
                 ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
 
             AssertProjectileUsesDirectPrimitiveFeedback(
                 effects,
-                projectileBindings,
                 projectileEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBolt",
                 hitEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBoltHit");
             AssertProjectileUsesDirectPrimitiveFeedback(
                 effects,
-                projectileBindings,
                 projectileEffectKey: "Effect.Champion.Ezreal.EssenceFlux",
                 hitEffectKey: "Effect.Champion.Ezreal.EssenceFluxHit");
             AssertProjectileUsesDirectPrimitiveFeedback(
                 effects,
-                projectileBindings,
                 projectileEffectKey: "Effect.Champion.Ezreal.MysticShot",
                 hitEffectKey: "Effect.Champion.Ezreal.MysticShotHit");
             AssertProjectileUsesDirectPrimitiveFeedback(
                 effects,
-                projectileBindings,
                 projectileEffectKey: "Effect.Champion.Ezreal.TrueshotBarrage",
                 hitEffectKey: "Effect.Champion.Ezreal.TrueshotBarrageHit");
             AssertProjectileEffect(
                 effects,
-                projectileBindings,
                 performers,
                 projectileEffectKey: "Effect.Champion.Jayce.Cannon.ShockBlast",
                 bindingEffectKey: "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
@@ -744,7 +738,6 @@ namespace Ludots.Tests.GAS.Production
                 projectilePerformerKey: "champion_skill_sandbox.projectile.jayce_q");
             AssertProjectileEffect(
                 effects,
-                projectileBindings,
                 performers,
                 projectileEffectKey: "Effect.ChampionStress.FireMage.Fireball",
                 bindingEffectKey: "Effect.ChampionStress.FireMage.FireballResolve",
@@ -752,7 +745,6 @@ namespace Ludots.Tests.GAS.Production
                 projectilePerformerKey: "champion_skill_sandbox.projectile.stress_fireball");
             AssertProjectileEffect(
                 effects,
-                projectileBindings,
                 performers,
                 projectileEffectKey: "Effect.ChampionStress.LaserMage.Laser",
                 bindingEffectKey: "Effect.ChampionStress.LaserMage.LaserResolve",
@@ -1170,7 +1162,6 @@ namespace Ludots.Tests.GAS.Production
 
         private static void AssertProjectileEffect(
             EffectTemplateRegistry effects,
-            ProjectilePresentationBindingRegistry projectileBindings,
             PerformerDefinitionRegistry performers,
             string projectileEffectKey,
             string bindingEffectKey,
@@ -1195,15 +1186,23 @@ namespace Ludots.Tests.GAS.Production
                     Is.EqualTo(EffectTemplateIdRegistry.GetId(hitEffectKey)));
             }
 
-            Assert.That(projectileBindings.TryGet(bindingEffectId, out var binding), Is.True);
-            Assert.That(binding.ImpactEffectTemplateId, Is.EqualTo(bindingEffectId));
-            Assert.That(binding.StartupPerformers.Count, Is.EqualTo(1));
-            Assert.That(binding.StartupPerformers.Get(0), Is.EqualTo(projectilePerformerId));
+            Assert.That(performers.TryGet(projectilePerformerId, out var performer), Is.True);
+            AssertProjectileLifecycleRule(
+                performer,
+                projectilePerformerId,
+                PresentationEventKind.ProjectileSpawned,
+                bindingEffectId,
+                PresentationCommandKind.CreatePerformer);
+            AssertProjectileLifecycleRule(
+                performer,
+                projectilePerformerId,
+                PresentationEventKind.EntityDestroyed,
+                keyId: -1,
+                PresentationCommandKind.DestroyPerformerScope);
         }
 
         private static void AssertProjectileUsesDirectPrimitiveFeedback(
             EffectTemplateRegistry effects,
-            ProjectilePresentationBindingRegistry projectileBindings,
             string projectileEffectKey,
             string hitEffectKey)
         {
@@ -1216,10 +1215,38 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(projectileEffect.PresetType, Is.EqualTo(EffectPresetType.LaunchProjectile));
             Assert.That(projectileEffect.Projectile.PresentationEffectTemplateId, Is.EqualTo(projectileEffectId));
             Assert.That(projectileEffect.Projectile.HitEffectTemplateId, Is.EqualTo(hitEffectId));
-            Assert.That(
-                projectileBindings.TryGet(projectileEffectId, out _),
-                Is.False,
-                $"{projectileEffectKey} should use champion sandbox direct primitive feedback instead of startup performers.");
+        }
+
+        private static void AssertProjectileLifecycleRule(
+            PerformerDefinition performer,
+            int performerId,
+            PresentationEventKind eventKind,
+            int keyId,
+            PresentationCommandKind commandKind)
+        {
+            for (int i = 0; i < performer.Rules.Length; i++)
+            {
+                var rule = performer.Rules[i];
+                if (rule.Event.Kind != eventKind || rule.Command.CommandKind != commandKind)
+                {
+                    continue;
+                }
+
+                if (keyId >= 0)
+                {
+                    Assert.That(rule.Event.KeyId, Is.EqualTo(keyId));
+                    Assert.That(rule.Command.PerformerDefinitionId, Is.EqualTo(performerId));
+                    Assert.That(rule.Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
+                }
+                else
+                {
+                    Assert.That(rule.Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
+                }
+
+                return;
+            }
+
+            Assert.Fail($"Expected performer lifecycle rule kind={eventKind}, command={commandKind}.");
         }
 
         private static void AssertEzrealProjectileEffect(

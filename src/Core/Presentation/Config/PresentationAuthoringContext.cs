@@ -4,25 +4,21 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
 
 namespace Ludots.Core.Presentation.Config
 {
     public sealed class PresentationAuthoringContext
     {
         private readonly VisualTemplateRegistry _visualTemplates;
-        private readonly PerformerDefinitionRegistry _performers;
         private readonly AnimatorControllerRegistry _animators;
         private readonly PresentationStableIdAllocator _stableIds;
 
         public PresentationAuthoringContext(
             VisualTemplateRegistry visualTemplates,
-            PerformerDefinitionRegistry performers,
             AnimatorControllerRegistry animators,
             PresentationStableIdAllocator stableIds)
         {
             _visualTemplates = visualTemplates ?? throw new ArgumentNullException(nameof(visualTemplates));
-            _performers = performers ?? throw new ArgumentNullException(nameof(performers));
             _animators = animators ?? throw new ArgumentNullException(nameof(animators));
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
         }
@@ -47,8 +43,8 @@ namespace Ludots.Core.Presentation.Config
 
             if (obj.TryGetPropertyValue("startupPerformerIds", out var startupNode) && startupNode is JsonArray startupArray && startupArray.Count > 0)
             {
-                ApplyStartupPerformers(entity, startupArray);
-                stableId = stableId != 0 ? stableId : EnsureStableId(entity);
+                throw new InvalidOperationException(
+                    "Presentation authoring no longer supports 'startupPerformerIds'. Migrate to performer lifecycle rules.");
             }
 
             if (obj.TryGetPropertyValue("animator", out var animatorNode) && animatorNode != null)
@@ -71,31 +67,6 @@ namespace Ludots.Core.Presentation.Config
                 Upsert(entity, default(AnimationOverlayRequest));
                 Upsert(entity, default(AnimatorFeedbackBuffer));
             }
-        }
-
-        private void ApplyStartupPerformers(Entity entity, JsonArray startupArray)
-        {
-            if (startupArray.Count > PresentationStartupPerformers.MaxCount)
-            {
-                throw new InvalidOperationException(
-                    $"Presentation startup performer count {startupArray.Count} exceeds max {PresentationStartupPerformers.MaxCount}.");
-            }
-
-            var performers = default(PresentationStartupPerformers);
-            performers.Count = (byte)startupArray.Count;
-
-            for (int i = 0; i < startupArray.Count; i++)
-            {
-                string performerKey = startupArray[i]?.GetValue<string>() ?? string.Empty;
-                int performerId = _performers.GetId(performerKey);
-                if (performerId <= 0)
-                    throw new InvalidOperationException($"Presentation authoring references unknown startup performer '{performerKey}'.");
-
-                performers.Set(i, performerId);
-            }
-
-            Upsert(entity, performers);
-            Upsert(entity, new PresentationStartupState { Initialized = false });
         }
 
         private void ApplyAnimator(Entity entity, JsonNode animatorNode)

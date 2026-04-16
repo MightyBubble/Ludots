@@ -132,22 +132,66 @@ namespace Ludots.Core.Presentation.Config
             for (int j = 0; j < arr.Count; j++)
             {
                 var p = arr[j];
+                string? kindText = p?["kind"]?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(kindText))
+                {
+                    throw new InvalidOperationException($"Prefab part at index {j} must declare an explicit kind.");
+                }
+
+                if (!Enum.TryParse(kindText, ignoreCase: true, out PrefabVisualPartKind kind))
+                {
+                    throw new InvalidOperationException($"Prefab part has invalid kind '{kindText}'.");
+                }
+
                 string meshRef = p?["meshAssetId"]?.GetValue<string>();
                 int meshId = 0;
                 if (!string.IsNullOrWhiteSpace(meshRef))
                     meshId = _meshRegistry.GetId(meshRef);
 
-                parts[j] = new PrefabPart
+                PrefabPart part = kind switch
                 {
-                    MeshAssetId = meshId,
-                    LocalPosition = ParseVector3(p?["localPosition"]),
-                    LocalRotation = ParseQuaternionWithDefault(p?["localRotation"], Quaternion.Identity),
-                    LocalScale = ParseVector3WithDefault(p?["localScale"], Vector3.One),
-                    ColorTint = ParseVector4WithDefault(p?["colorTint"], Vector4.One),
-                    Grounding = ParseGrounding(p?["grounding"]),
+                    PrefabVisualPartKind.Decal => PrefabPart.Decal(
+                        p?["materialId"]?.GetValue<int>() ?? 0,
+                        ParseVector2WithDefault(p?["size"], Vector2.One)),
+                    PrefabVisualPartKind.Vfx => PrefabPart.Vfx(
+                        p?["effectAssetId"]?.GetValue<int>() ?? 0,
+                        ParseSpawnMode(p?["spawnMode"]?.GetValue<string>())),
+                    PrefabVisualPartKind.Surface => PrefabPart.Surface(
+                        meshId,
+                        p?["materialId"]?.GetValue<int>() ?? 0,
+                        ParseVector2WithDefault(p?["tiling"], Vector2.One)),
+                    _ => PrefabPart.Default(meshId),
                 };
+
+                part.MeshAssetId = meshId;
+                part.LocalPosition = ParseVector3(p?["localPosition"]);
+                part.LocalRotation = ParseQuaternionWithDefault(p?["localRotation"], Quaternion.Identity);
+                part.LocalScale = ParseVector3WithDefault(p?["localScale"], Vector3.One);
+                part.ColorTint = ParseVector4WithDefault(p?["colorTint"], Vector4.One);
+                part.Grounding = ParseGrounding(p?["grounding"]);
+                part.MaterialId = p?["materialId"]?.GetValue<int>() ?? part.MaterialId;
+                part.EffectAssetId = p?["effectAssetId"]?.GetValue<int>() ?? part.EffectAssetId;
+                part.Size = ParseVector2WithDefault(p?["size"], part.Size == Vector2.Zero ? Vector2.One : part.Size);
+                part.Tiling = ParseVector2WithDefault(p?["tiling"], part.Tiling == Vector2.Zero ? Vector2.One : part.Tiling);
+                part.AlignToSurface = p?["alignToSurface"]?.GetValue<bool>() ?? part.AlignToSurface;
+                part.TerrainFacing = p?["terrainFacing"]?.GetValue<bool>() ?? part.TerrainFacing;
+
+                parts[j] = part;
             }
             return parts;
+        }
+
+        private static PrefabVfxSpawnMode ParseSpawnMode(string? spawnModeText)
+        {
+            string resolved = string.IsNullOrWhiteSpace(spawnModeText)
+                ? nameof(PrefabVfxSpawnMode.Once)
+                : spawnModeText;
+            if (!Enum.TryParse(resolved, ignoreCase: true, out PrefabVfxSpawnMode spawnMode))
+            {
+                throw new InvalidOperationException($"Prefab part VFX spawnMode has invalid value '{resolved}'.");
+            }
+
+            return spawnMode;
         }
 
         private static PrefabPartGrounding ParseGrounding(JsonNode node)
@@ -186,6 +230,18 @@ namespace Ludots.Core.Presentation.Config
             if (node is JsonArray arr && arr.Count >= 3)
                 return new Vector3(arr[0]?.GetValue<float>() ?? 0f, arr[1]?.GetValue<float>() ?? 0f, arr[2]?.GetValue<float>() ?? 0f);
             return Vector3.Zero;
+        }
+
+        private static Vector2 ParseVector2WithDefault(JsonNode node, Vector2 defaultValue)
+        {
+            if (node is JsonArray arr && arr.Count >= 2)
+            {
+                return new Vector2(
+                    arr[0]?.GetValue<float>() ?? defaultValue.X,
+                    arr[1]?.GetValue<float>() ?? defaultValue.Y);
+            }
+
+            return defaultValue;
         }
 
         private static Vector3 ParseVector3WithDefault(JsonNode node, Vector3 defaultValue)

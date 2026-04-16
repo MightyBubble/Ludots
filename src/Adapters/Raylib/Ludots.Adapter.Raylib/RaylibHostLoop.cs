@@ -18,6 +18,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
@@ -288,7 +289,7 @@ namespace Ludots.Adapter.Raylib
                             long primitiveStart = Stopwatch.GetTimestamp();
                             PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
                             SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-                            var visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
                             primitiveRenderer.Draw(draw, activeCamera, snapshot, skinnedBatch, meshes, renderDebug.AcceptanceScaleMultiplier, visualHeightmap);
                             presentationTiming?.ObservePrimitiveRender(
                                 ElapsedMs(primitiveStart),
@@ -453,6 +454,7 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(
                                 diagnosticPath,
                                 $"screenshot frame={frameIndex} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
+                            AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
                             AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
 
                             Rl.TakeScreenshot(screenshotFileName!);

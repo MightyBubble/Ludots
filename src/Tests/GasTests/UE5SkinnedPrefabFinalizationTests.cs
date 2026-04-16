@@ -85,6 +85,71 @@ public sealed class UE5SkinnedPrefabFinalizationTests
         AssertGroundedSkinnedLeaves(bridge.AllegroItems, cubeId, sphereId, stableRootId: 41, animatorControllerId: 91);
     }
 
+    [Test]
+    public void UE5IsmRenderBridge_WhenGroundedPrefabHasNoVisualHeightmapTruth_ThrowsExplicitly()
+    {
+        var meshes = new MeshAssetRegistry();
+        int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+        int sphereId = meshes.GetId(WellKnownMeshKeys.Sphere);
+        int prefabId = RegisterGroundedPrefab(meshes, cubeId, sphereId);
+
+        using var engine = new GameEngine();
+        engine.SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshes);
+
+        var batch = new SkinnedVisualBatchBuffer();
+        Assert.That(batch.TryAdd(new SkinnedVisualBatchItem
+        {
+            StableId = 51,
+            MeshAssetId = prefabId,
+            AnimationProfileId = 9,
+            RenderPath = VisualRenderPath.SkinnedMesh,
+            Position = Vector3.Zero,
+            Rotation = Quaternion.Identity,
+            Scale = Vector3.One,
+            Color = Vector4.One,
+            Animator = AnimatorPackedState.Create(controllerId: 11),
+            Visibility = VisualVisibility.Visible,
+        }), Is.True);
+        engine.SetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer, batch);
+
+        var bridge = new UE5IsmRenderBridge();
+        var ex = Assert.Throws<InvalidOperationException>(() => bridge.CollectBuckets(engine));
+        Assert.That(ex!.Message, Does.Contain("visual grounding"));
+        Assert.That(ex.Message, Does.Contain("unavailable"));
+    }
+
+    [Test]
+    public void UE5IsmRenderBridge_WhenPrefabFinalizesToTypedNonMeshVisual_ThrowsExplicitly()
+    {
+        var meshes = new MeshAssetRegistry();
+        int prefabId = meshes.Register(
+            "prefab.ue5.decal_only",
+            MeshAssetDescriptor.Prefab(
+                0,
+                PrefabPart.Decal(materialId: 17, size: new Vector2(2f, 3f))));
+
+        using var engine = new GameEngine();
+        engine.SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshes);
+
+        var snapshot = new PrimitiveDrawBuffer();
+        Assert.That(snapshot.TryAdd(new PrimitiveDrawItem
+        {
+            StableId = 77,
+            MeshAssetId = prefabId,
+            RenderPath = VisualRenderPath.StaticMesh,
+            Position = Vector3.Zero,
+            Rotation = Quaternion.Identity,
+            Scale = Vector3.One,
+            Color = Vector4.One,
+            Visibility = VisualVisibility.Visible,
+        }), Is.True);
+        engine.SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, snapshot);
+
+        var bridge = new UE5IsmRenderBridge();
+        var ex = Assert.Throws<InvalidOperationException>(() => bridge.CollectBuckets(engine));
+        Assert.That(ex!.Message, Does.Contain("does not support finalized visual kind 'Decal'"));
+    }
+
     private static int RegisterGroundedPrefab(MeshAssetRegistry meshes, int cubeId, int sphereId)
     {
         return meshes.Register(

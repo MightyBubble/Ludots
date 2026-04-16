@@ -5,6 +5,7 @@
     "baseScale": 0.2,
     "parts": [
       {
+        "kind": "Mesh",
         "meshAssetId": "cube",
         "localPosition": [0, 0, 0],
         "localScale": [0.2, 0.2, 0.2],

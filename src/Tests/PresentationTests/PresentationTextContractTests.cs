@@ -306,7 +306,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_ParsesNewFilterFields()
+        public void PerformerDefinitionConfigLoader_RejectsLegacyFilterFields()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
@@ -322,17 +322,10 @@ namespace Ludots.Tests.Presentation
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
             var registry = new PerformerDefinitionRegistry();
-            var loader = new PerformerDefinitionConfigLoader(
-                pipeline,
-                registry,
-                resolveTemplateId: key => string.Equals(key, "moba_hero", StringComparison.Ordinal) ? 42 : 0);
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
-            loader.Load(catalog);
-
-            int defId = registry.GetId("filtered_bar");
-            Assert.That(defId, Is.GreaterThan(0));
-            Assert.That(registry.TryGet(defId, out var def), Is.True);
-            Assert.That(def.RequiredTemplateId, Is.EqualTo(42));
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("entityScope"));
         }
 
         [Test]

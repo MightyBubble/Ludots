@@ -5,7 +5,7 @@ namespace PerformanceVisualizationMod.Maps
 {
     public class VisualBenchmarkMap : MapDefinition
     {
-        public override MapId Id => VisualBenchmarkMapIds.VisualBenchmark;
+        public override MapId Id => VisualBenchmarkIds.VisualBenchmarkMap;
         public override IReadOnlyList<MapTag> Tags => new[] { new MapTag("Benchmark"), new MapTag("Visual") };
     }
 }

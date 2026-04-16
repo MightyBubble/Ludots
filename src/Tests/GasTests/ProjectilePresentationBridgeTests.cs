@@ -9,8 +9,9 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
-using Ludots.Core.Presentation.Projectiles;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -21,19 +22,49 @@ namespace Ludots.Tests.GAS
     public class ProjectilePresentationBridgeTests
     {
         [Test]
-        public void ProjectilePresentationBindingLoader_ResolvesImpactEffectAndStartupPerformers()
+        public void PerformerDefinitionConfigLoader_ResolvesProjectileSpawnedRuleKeys_AndSelfReferences()
         {
             string root = CreateTempRoot();
             try
             {
+                Directory.CreateDirectory(Path.Combine(root, "Configs"));
                 Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
                 File.WriteAllText(
-                    Path.Combine(root, "Configs", "Presentation", "projectile_cues.json"),
+                    Path.Combine(root, "Configs", "config_catalog.json"),
+                    """
+                    [
+                      { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" }
+                    ]
+                    """);
+                File.WriteAllText(
+                    Path.Combine(root, "Configs", "Presentation", "performers.json"),
                     """
                     [
                       {
-                        "id": "Effect.Test.ProjectileHit",
-                        "startupPerformerIds": ["test.projectile.performer"]
+                        "id": "test.projectile.performer",
+                        "visualKind": "Marker3D",
+                        "rules": [
+                          {
+                            "event": {
+                              "kind": "ProjectileSpawned",
+                              "key": "Effect.Test.ProjectileHit"
+                            },
+                            "command": {
+                              "commandKind": "CreatePerformer",
+                              "scopeSource": "EventPayloadA",
+                              "performerDefinitionId": "test.projectile.performer"
+                            }
+                          },
+                          {
+                            "event": {
+                              "kind": "EntityDestroyed"
+                            },
+                            "command": {
+                              "commandKind": "DestroyPerformerScope",
+                              "scopeSource": "EventPayloadA"
+                            }
+                          }
+                        ]
                       }
                     ]
                     """);
@@ -42,26 +73,32 @@ namespace Ludots.Tests.GAS
                 int impactEffectId = EffectTemplateIdRegistry.Register("Effect.Test.ProjectileHit");
 
                 var performers = new PerformerDefinitionRegistry();
-                int performerId = performers.Register("test.projectile.performer", new PerformerDefinition());
 
                 var vfs = new VirtualFileSystem();
                 vfs.Mount("Core", root);
                 var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
                 var pipeline = new ConfigPipeline(vfs, modLoader);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
 
-                var bindings = new ProjectilePresentationBindingRegistry();
-                var loader = new ProjectilePresentationBindingConfigLoader(
+                var loader = new PerformerDefinitionConfigLoader(
                     pipeline,
-                    bindings,
-                    EffectTemplateIdRegistry.GetId,
-                    performers.GetId);
+                    performers,
+                    resolveEffectTemplateId: EffectTemplateIdRegistry.GetId);
 
-                loader.Load(relativePath: "Presentation/projectile_cues.json");
+                loader.Load(catalog);
 
-                That(bindings.TryGet(impactEffectId, out var binding), Is.True);
-                That(binding.ImpactEffectTemplateId, Is.EqualTo(impactEffectId));
-                That(binding.StartupPerformers.Count, Is.EqualTo(1));
-                That(binding.StartupPerformers.Get(0), Is.EqualTo(performerId));
+                int performerId = performers.GetId("test.projectile.performer");
+                That(performerId, Is.GreaterThan(0));
+                That(performers.TryGet(performerId, out var definition), Is.True);
+                That(definition.Rules.Length, Is.EqualTo(2));
+                That(definition.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.ProjectileSpawned));
+                That(definition.Rules[0].Event.KeyId, Is.EqualTo(impactEffectId));
+                That(definition.Rules[0].Command.CommandKind, Is.EqualTo(PresentationCommandKind.CreatePerformer));
+                That(definition.Rules[0].Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
+                That(definition.Rules[0].Command.PerformerDefinitionId, Is.EqualTo(performerId));
+                That(definition.Rules[1].Event.Kind, Is.EqualTo(PresentationEventKind.EntityDestroyed));
+                That(definition.Rules[1].Command.CommandKind, Is.EqualTo(PresentationCommandKind.DestroyPerformerScope));
+                That(definition.Rules[1].Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
             }
             finally
             {
@@ -71,17 +108,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ProjectilePresentationBootstrapSystem_AppliesStartupPerformersAndStableId()
+        public void ProjectilePresentationBootstrapSystem_EnsuresMinimalProjectilePresentationContract()
         {
             using var world = World.Create();
             int impactEffectId = 42;
-
-            var startupPerformers = default(PresentationStartupPerformers);
-            startupPerformers.Count = 1;
-            startupPerformers.Set(0, 777);
-
-            var bindings = new ProjectilePresentationBindingRegistry();
-            bindings.Register(impactEffectId, new ProjectilePresentationBinding(impactEffectId, in startupPerformers));
 
             Entity projectile = world.Create(
                 new ProjectileState
@@ -93,7 +123,6 @@ namespace Ludots.Tests.GAS
 
             using var system = new ProjectilePresentationBootstrapSystem(
                 world,
-                bindings,
                 new PresentationStableIdAllocator());
 
             system.Update(0f);
@@ -103,13 +132,6 @@ namespace Ludots.Tests.GAS
             That(world.Get<PresentationStableId>(projectile).Value, Is.GreaterThan(0));
             That(world.Has<VisualTransform>(projectile), Is.True);
             That(world.Has<CullState>(projectile), Is.True);
-            That(world.Has<PresentationStartupPerformers>(projectile), Is.True);
-            That(world.Has<PresentationStartupState>(projectile), Is.True);
-
-            var applied = world.Get<PresentationStartupPerformers>(projectile);
-            That(applied.Count, Is.EqualTo(1));
-            That(applied.Get(0), Is.EqualTo(777));
-            That(world.Get<PresentationStartupState>(projectile).Initialized, Is.False);
         }
 
         private static string CreateTempRoot()

@@ -30,6 +30,8 @@ namespace Ludots.Core.Map.Board
         /// <summary>Path to binary data file (.vtxm, .graph) — optional.</summary>
         public string DataFile { get; set; }
 
+        public string VisualHeightmapAsset { get; set; }
+
         /// <summary>Whether navigation is enabled for this board.</summary>
         public bool NavigationEnabled { get; set; }
 
@@ -48,6 +50,7 @@ namespace Ludots.Core.Map.Board
                 HexEdgeLengthCm = HexEdgeLengthCm,
                 ChunkSizeCells = ChunkSizeCells,
                 DataFile = DataFile,
+                VisualHeightmapAsset = VisualHeightmapAsset,
                 NavigationEnabled = NavigationEnabled
             };
         }

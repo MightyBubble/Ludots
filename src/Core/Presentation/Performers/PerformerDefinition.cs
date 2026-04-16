@@ -44,14 +44,10 @@ namespace Ludots.Core.Presentation.Performers
         /// matching entities directly each frame instead of using PerformerInstanceBuffer.
         /// Instance-scoped fields (Rules, DefaultLifetime) are ignored for entity-scoped definitions.
         /// </summary>
-        public EntityScopeFilter EntityScope;
-
         /// <summary>
         /// When &gt; 0, only emit for entities whose <see cref="Components.VisualTemplateRef.TemplateId"/>
         /// matches this value. Zero = no template filter (emit for all matching entities, the default).
         /// </summary>
-        public int RequiredTemplateId;
-
         // ── Time-based modulation (instance-scoped only) ──
 
         /// <summary>

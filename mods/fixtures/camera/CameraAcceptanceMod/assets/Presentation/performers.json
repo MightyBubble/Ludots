@@ -1,10 +1,10 @@
-[
+﻿[
   {
     "id": "entity_health_bar",
-    "entityScope": "None"
+    "__delete": true
   },
   {
     "id": "entity_world_text",
-    "entityScope": "None"
+    "__delete": true
   }
 ]

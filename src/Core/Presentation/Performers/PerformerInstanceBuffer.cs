@@ -98,30 +98,41 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>
         /// Release a single instance by handle.
         /// </summary>
-        public void Release(int handle)
+        public bool Release(int handle)
         {
-            if (handle < 0 || handle >= _highWaterMark) return;
-            if (!_slots[handle].Active) return; // guard against double-free
+            if (handle < 0 || handle >= _highWaterMark) return false;
+            if (!_slots[handle].Active) return false; // guard against double-free
             _slots[handle].Active = false;
             ClearAllOverrides(handle);
             PushFree(handle);
+            return true;
         }
 
         /// <summary>
         /// Release all instances belonging to the given scope. This is an internal
         /// built-in behavior — callers do not need to write rules for cascade destroy.
         /// </summary>
-        public void ReleaseScope(int scopeId)
+        public int ReleaseScope(int scopeId)
         {
+            return ReleaseScope(scopeId, null);
+        }
+
+        public int ReleaseScope(int scopeId, Action<int, PerformerInstance>? onReleased)
+        {
+            int released = 0;
             for (int i = 0; i < _highWaterMark; i++)
             {
                 if (_slots[i].Active && _slots[i].ScopeId == scopeId)
                 {
+                    onReleased?.Invoke(i, _slots[i]);
                     _slots[i].Active = false;
                     ClearAllOverrides(i);
                     PushFree(i);
+                    released++;
                 }
             }
+
+            return released;
         }
 
         private void PushFree(int handle)
@@ -141,6 +152,18 @@ namespace Ludots.Core.Presentation.Performers
         public bool IsActive(int handle)
         {
             return handle >= 0 && handle < _highWaterMark && _slots[handle].Active;
+        }
+
+        public bool TryGetActive(int handle, out PerformerInstance instance)
+        {
+            if (IsActive(handle))
+            {
+                instance = _slots[handle];
+                return true;
+            }
+
+            instance = default;
+            return false;
         }
 
         /// <summary>
@@ -252,6 +275,11 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public int ReleaseDeadEntityAnchors(World world)
         {
+            return ReleaseDeadEntityAnchors(world, null);
+        }
+
+        public int ReleaseDeadEntityAnchors(World world, Action<int, PerformerInstance>? onReleased)
+        {
             int released = 0;
             for (int i = 0; i < _highWaterMark; i++)
             {
@@ -261,6 +289,7 @@ namespace Ludots.Core.Presentation.Performers
                 if (world.IsAlive(_slots[i].Owner))
                     continue;
 
+                onReleased?.Invoke(i, _slots[i]);
                 _slots[i].Active = false;
                 ClearAllOverrides(i);
                 PushFree(i);

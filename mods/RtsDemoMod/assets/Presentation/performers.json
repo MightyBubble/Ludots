@@ -1,45 +1,165 @@
-[
-  {
-    "_comment": "RTS actor ground ring: always-on entity-scoped overlay so units/buildings remain readable on the grid.",
-    "id": "rts_actor_ring",
-    "visualKind": "GroundOverlay",
-    "entityScope": "AllWithVisualTransform",
-    "meshOrShapeId": "Ring",
-    "defaultColor": [0.22, 0.54, 0.96, 0.18],
-    "defaultScale": 1.5,
-    "defaultLifetime": -1,
-    "maxVisibilityDistanceCm": 30000,
-    "positionOffset": [0, 0.05, 0],
-    "visibility": { "inline": "OwnerCullVisible" },
-    "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.84 },
-      { "paramKey": 8, "source": "entityColor", "sourceId": 0 },
-      { "paramKey": 9, "source": "entityColor", "sourceId": 1 },
-      { "paramKey": 10, "source": "entityColor", "sourceId": 2 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.08 }
-    ]
-  },
-  {
-    "_comment": "RTS actor marker: simple readable body proxy for RtsDemoMod when no showcase-only performer pack is loaded.",
-    "id": "rts_actor_marker",
-    "visualKind": "Marker3D",
-    "entityScope": "AllWithVisualTransform",
-    "meshOrShapeId": "Cube",
-    "defaultColor": [0.92, 0.96, 1.0, 0.98],
-    "defaultScale": 1.05,
-    "defaultLifetime": -1,
-    "maxVisibilityDistanceCm": 30000,
-    "positionOffset": [0, 0.55, 0],
-    "visibility": { "inline": "OwnerCullVisible" },
-    "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 1.18 },
-      { "paramKey": 2, "source": "constant", "constantValue": 1.38 },
-      { "paramKey": 3, "source": "constant", "constantValue": 1.18 },
-      { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
-      { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
-      { "paramKey": 6, "source": "entityColor", "sourceId": 2 },
-      { "paramKey": 7, "source": "constant", "constantValue": 1.0 }
-    ]
-  }
+﻿[
+    {
+        "_comment":  "RTS actor ground ring: always-on entity-scoped overlay so units/buildings remain readable on the grid.",
+        "id":  "rts_actor_ring",
+        "visualKind":  "GroundOverlay",
+        "meshOrShapeId":  "Ring",
+        "defaultColor":  [
+                             0.22,
+                             0.54,
+                             0.96,
+                             0.18
+                         ],
+        "defaultScale":  1.5,
+        "defaultLifetime":  -1,
+        "maxVisibilityDistanceCm":  30000,
+        "positionOffset":  [
+                               0,
+                               0.05,
+                               0
+                           ],
+        "visibility":  {
+                           "inline":  "OwnerCullVisible"
+                       },
+        "bindings":  [
+                         {
+                             "paramKey":  1,
+                             "source":  "constant",
+                             "constantValue":  0.84
+                         },
+                         {
+                             "paramKey":  8,
+                             "source":  "entityColor",
+                             "sourceId":  0
+                         },
+                         {
+                             "paramKey":  9,
+                             "source":  "entityColor",
+                             "sourceId":  1
+                         },
+                         {
+                             "paramKey":  10,
+                             "source":  "entityColor",
+                             "sourceId":  2
+                         },
+                         {
+                             "paramKey":  11,
+                             "source":  "constant",
+                             "constantValue":  1.0
+                         },
+                         {
+                             "paramKey":  12,
+                             "source":  "constant",
+                             "constantValue":  0.08
+                         }
+                     ],
+        "rules":  [
+                      {
+                          "event":  {
+                                        "kind":  "EntitySpawned"
+                                    },
+                          "command":  {
+                                          "commandKind":  "CreatePerformer",
+                                          "scopeSource":  "EventPayloadA",
+                                          "performerDefinitionId":  "rts_actor_ring"
+                                      },
+                          "condition":  {
+                                            "inline":  "SourceHasVisualTransform"
+                                        }
+                      },
+                      {
+                          "event":  {
+                                        "kind":  "EntityDestroyed"
+                                    },
+                          "command":  {
+                                          "commandKind":  "DestroyPerformerScope",
+                                          "scopeSource":  "EventPayloadA"
+                                      }
+                      }
+                  ]
+    },
+    {
+        "_comment":  "RTS actor marker: simple readable body proxy for RtsDemoMod when no showcase-only performer pack is loaded.",
+        "id":  "rts_actor_marker",
+        "visualKind":  "Marker3D",
+        "meshOrShapeId":  "Cube",
+        "defaultColor":  [
+                             0.92,
+                             0.96,
+                             1.0,
+                             0.98
+                         ],
+        "defaultScale":  1.05,
+        "defaultLifetime":  -1,
+        "maxVisibilityDistanceCm":  30000,
+        "positionOffset":  [
+                               0,
+                               0.55,
+                               0
+                           ],
+        "visibility":  {
+                           "inline":  "OwnerCullVisible"
+                       },
+        "bindings":  [
+                         {
+                             "paramKey":  1,
+                             "source":  "constant",
+                             "constantValue":  1.18
+                         },
+                         {
+                             "paramKey":  2,
+                             "source":  "constant",
+                             "constantValue":  1.38
+                         },
+                         {
+                             "paramKey":  3,
+                             "source":  "constant",
+                             "constantValue":  1.18
+                         },
+                         {
+                             "paramKey":  4,
+                             "source":  "entityColor",
+                             "sourceId":  0
+                         },
+                         {
+                             "paramKey":  5,
+                             "source":  "entityColor",
+                             "sourceId":  1
+                         },
+                         {
+                             "paramKey":  6,
+                             "source":  "entityColor",
+                             "sourceId":  2
+                         },
+                         {
+                             "paramKey":  7,
+                             "source":  "constant",
+                             "constantValue":  1.0
+                         }
+                     ],
+        "rules":  [
+                      {
+                          "event":  {
+                                        "kind":  "EntitySpawned"
+                                    },
+                          "command":  {
+                                          "commandKind":  "CreatePerformer",
+                                          "scopeSource":  "EventPayloadA",
+                                          "performerDefinitionId":  "rts_actor_marker"
+                                      },
+                          "condition":  {
+                                            "inline":  "SourceHasVisualTransform"
+                                        }
+                      },
+                      {
+                          "event":  {
+                                        "kind":  "EntityDestroyed"
+                                    },
+                          "command":  {
+                                          "commandKind":  "DestroyPerformerScope",
+                                          "scopeSource":  "EventPayloadA"
+                                      }
+                      }
+                  ]
+    }
 ]

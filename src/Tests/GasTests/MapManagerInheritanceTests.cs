@@ -90,6 +90,69 @@ namespace GasTests
             }
         }
 
+        [Test]
+        public void LoadMap_WhenChildOmitsVisualHeightmapAsset_InheritsParentDeclaration()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "parent", """
+                {
+                  "id": "parent",
+                  "visualHeightmapAsset": "terrain/parent.vhtm"
+                }
+                """);
+
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "parent"
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("child");
+
+                Assert.That(cfg, Is.Not.Null);
+                Assert.That(cfg!.VisualHeightmapAsset, Is.EqualTo("terrain/parent.vhtm"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardDeclaresVisualHeightmapAsset_UsesBoardScopedContract()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "board_map", """
+                {
+                  "id": "board_map",
+                  "boards": [
+                    {
+                      "name": "default",
+                      "visualHeightmapAsset": "terrain/board.vhtm"
+                    }
+                  ]
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("board_map");
+
+                Assert.That(cfg, Is.Not.Null);
+                Assert.That(cfg!.Boards.Count, Is.EqualTo(1));
+                Assert.That(cfg.Boards[0].VisualHeightmapAsset, Is.EqualTo("terrain/board.vhtm"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
         private static MapManager CreateMapManager(string coreRoot)
         {
             var vfs = new VirtualFileSystem();

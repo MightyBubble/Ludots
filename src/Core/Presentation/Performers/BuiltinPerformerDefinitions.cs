@@ -25,7 +25,6 @@ namespace Ludots.Core.Presentation.Performers
             RegisterCastCommittedMarker(registry, sphereId);
             RegisterCastFailedMarker(registry, sphereId);
             RegisterFloatingCombatText(registry, resolveTextTokenId);
-            RegisterEntityHealthBar(registry);
         }
 
         private static void RegisterCastCommittedMarker(PerformerDefinitionRegistry registry, int sphereId)
@@ -136,19 +135,6 @@ namespace Ludots.Core.Presentation.Performers
                         }
                     }
                 },
-            });
-        }
-
-        private static void RegisterEntityHealthBar(PerformerDefinitionRegistry registry)
-        {
-            registry.Register(WellKnownPerformerKeys.EntityHealthBar, new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
-                VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
-                DefaultColor = new Vector4(0f, 1f, 0f, 1f),
-                DefaultScale = 1f,
-                PositionOffset = new Vector3(0f, 1.5f, 0f),
             });
         }
     }

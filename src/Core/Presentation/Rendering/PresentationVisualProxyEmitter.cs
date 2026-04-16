@@ -47,6 +47,7 @@ namespace Ludots.Core.Presentation.Rendering
                 Animator = proxy.Animator,
                 AnimationOverlay = proxy.AnimationOverlay,
                 Visibility = proxy.Visibility,
+                LOD = proxy.LOD,
             };
 
             if (_snapshotBuffer != null && !_snapshotBuffer.TryAdd(primitive))
@@ -72,6 +73,7 @@ namespace Ludots.Core.Presentation.Rendering
                     Animator = proxy.Animator,
                     AnimationOverlay = proxy.AnimationOverlay,
                     Visibility = proxy.Visibility,
+                    LOD = proxy.LOD,
                 }))
             {
                 throw new InvalidOperationException(

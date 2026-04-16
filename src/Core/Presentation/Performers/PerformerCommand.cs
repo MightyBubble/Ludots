@@ -27,6 +27,11 @@ namespace Ludots.Core.Presentation.Performers
         public int ScopeId;
 
         /// <summary>
+        /// Selects where the scope id comes from when this command is emitted.
+        /// </summary>
+        public PerformerCommandScopeSource ScopeSource;
+
+        /// <summary>
         /// The parameter key for SetPerformerParam.
         /// </summary>
         public int ParamKey;

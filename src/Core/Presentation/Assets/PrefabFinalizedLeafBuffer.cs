@@ -25,6 +25,16 @@ namespace Ludots.Core.Presentation.Assets
             _items[Count++] = leaf;
         }
 
+        public void Replace(int index, in PrefabFinalizedLeaf leaf)
+        {
+            if ((uint)index >= (uint)Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            _items[index] = leaf;
+        }
+
         public ReadOnlySpan<PrefabFinalizedLeaf> GetSpan()
         {
             return _items.AsSpan(0, Count);

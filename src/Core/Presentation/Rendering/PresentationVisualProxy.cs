@@ -21,5 +21,6 @@ namespace Ludots.Core.Presentation.Rendering
         public AnimatorPackedState Animator;
         public AnimationOverlayRequest AnimationOverlay;
         public VisualVisibility Visibility;
+        public LODLevel LOD;
     }
 }
