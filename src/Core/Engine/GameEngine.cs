@@ -670,7 +670,7 @@ namespace Ludots.Core.Engine
                 projectilePresentationBindings,
                 EffectTemplateIdRegistry.GetId,
                 performerDefinitions.GetId).Load(ConfigCatalog, ConfigConflictReport);
-            var presentationAuthoring = new PresentationAuthoringContext(visualTemplates, performerDefinitions, animatorControllers, presentationStableIds);
+            var presentationAuthoring = new PresentationAuthoringContext(visualTemplates, presentationImages, performerDefinitions, animatorControllers, presentationStableIds);
             MapLoader.PresentationAuthoringContext = presentationAuthoring;
 
             System.Diagnostics.Debug.Assert(
