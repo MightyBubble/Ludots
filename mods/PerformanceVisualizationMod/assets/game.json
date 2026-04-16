@@ -1,0 +1,6 @@
+{
+  "startupMapId": "entry",
+  "presentation": {
+    "performerInstanceCapacity": 8192
+  }
+}

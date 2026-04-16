@@ -1,0 +1,458 @@
+using System;
+using System.Numerics;
+using System.Threading.Tasks;
+using Arch.Core;
+using Ludots.Core.Components;
+using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Map;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Scripting;
+using Ludots.UI;
+using PerformanceVisualizationMod.UI;
+
+namespace PerformanceVisualizationMod.Runtime
+{
+    public sealed class VisualBenchmarkRuntime
+    {
+        private const int SpawnBatchSize = 2048;
+        private const int DestroyBatchSize = 2048;
+
+        private static readonly QueryDescription ScenarioEntitiesQuery = new QueryDescription()
+            .WithAll<MapEntity, Name, VisualRuntimeState, PresentationStableId, AttributeBuffer>();
+
+        private static readonly QueryDescription VisibleScenarioEntitiesQuery = new QueryDescription()
+            .WithAll<MapEntity, Name, VisualRuntimeState, PresentationStableId, AttributeBuffer, CullState>();
+
+        private readonly IModContext _context;
+        private readonly VisualBenchmarkPanelController _panelController;
+        private string? _activeMapId;
+        private string _status = "Ready. Choose a benchmark profile to spawn map-scoped visuals.";
+        private VisualBenchmarkScenarioConfig _scenario = VisualBenchmarkScenarioConfig.Small;
+        private VisualBenchmarkScenarioConfig _requestedScenario = VisualBenchmarkScenarioConfig.Small;
+        private BenchmarkPipelinePhase _pipelinePhase;
+        private bool _hasRequestedScenario;
+        private bool _clearRequested;
+        private int _spawnCursor;
+        private int _spawnedCount;
+        private int _lastVisibleCount;
+        private int _lastHudCount;
+        private int _lastHudDropped;
+        private int _healthAttributeId;
+
+        public VisualBenchmarkRuntime(IModContext context)
+        {
+            _context = context;
+            _panelController = new VisualBenchmarkPanelController(this);
+        }
+
+        public bool IsActive => VisualBenchmarkIds.IsShowcaseMap(_activeMapId);
+        public string Status => _status;
+
+        private enum BenchmarkPipelinePhase : byte
+        {
+            Idle = 0,
+            Clearing = 1,
+            Spawning = 2,
+        }
+
+        public Task HandleMapFocusedAsync(ScriptContext context)
+        {
+            if (context.GetEngine() is not GameEngine engine)
+            {
+                return Task.CompletedTask;
+            }
+
+            string? mapId = engine.CurrentMapSession?.MapId.Value;
+            if (!VisualBenchmarkIds.IsShowcaseMap(mapId))
+            {
+                Unbind(engine);
+                return Task.CompletedTask;
+            }
+
+            _activeMapId = mapId;
+            EnsureAttributeIds();
+            ConfigureCamera(engine, _scenario);
+            RefreshPanel(engine);
+            return Task.CompletedTask;
+        }
+
+        public Task HandleMapUnloadedAsync(ScriptContext context)
+        {
+            if (context.GetEngine() is not GameEngine engine)
+            {
+                return Task.CompletedTask;
+            }
+
+            string mapId = context.Get(CoreServiceKeys.MapId).Value;
+            if (VisualBenchmarkIds.IsShowcaseMap(mapId))
+            {
+                Unbind(engine);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public void RefreshPanel(GameEngine engine)
+        {
+            if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
+            {
+                return;
+            }
+
+            if (!IsActive)
+            {
+                _panelController.ClearIfOwned(root);
+                return;
+            }
+
+            SampleMetrics(engine);
+            _panelController.MountOrSync(root, engine, BuildPanelState(engine));
+        }
+
+        public void Advance(GameEngine engine)
+        {
+            if (engine == null || !IsActive || engine.CurrentMapSession == null)
+            {
+                return;
+            }
+
+            if (_clearRequested)
+            {
+                if (GetScenarioEntityCount(engine) > 0)
+                {
+                    int marked = MarkScenarioEntitiesForDestroy(engine, DestroyBatchSize);
+                    _pipelinePhase = BenchmarkPipelinePhase.Clearing;
+                    _status = $"Clearing benchmark actors in batches ({marked:N0} this frame).";
+                    return;
+                }
+
+                _clearRequested = false;
+                _pipelinePhase = BenchmarkPipelinePhase.Idle;
+                _spawnCursor = 0;
+                _spawnedCount = 0;
+                _status = "Scenario cleared. Map-scoped benchmark actors destroyed.";
+                return;
+            }
+
+            if (_pipelinePhase == BenchmarkPipelinePhase.Clearing)
+            {
+                if (GetScenarioEntityCount(engine) > 0)
+                {
+                    int marked = MarkScenarioEntitiesForDestroy(engine, DestroyBatchSize);
+                    _status = $"Clearing previous scenario for {_requestedScenario.Label} ({marked:N0} queued this frame).";
+                    return;
+                }
+
+                if (_hasRequestedScenario)
+                {
+                    _pipelinePhase = BenchmarkPipelinePhase.Spawning;
+                    _spawnCursor = 0;
+                    _status = $"Previous scenario drained. Starting {_requestedScenario.Label}.";
+                }
+                else
+                {
+                    _pipelinePhase = BenchmarkPipelinePhase.Idle;
+                    _status = "Scenario cleared. Map-scoped benchmark actors destroyed.";
+                    return;
+                }
+            }
+
+            if (!_hasRequestedScenario)
+            {
+                return;
+            }
+
+            if (_pipelinePhase == BenchmarkPipelinePhase.Spawning && _spawnCursor < _requestedScenario.EntityCount)
+            {
+                int spawned = SpawnScenarioBatch(engine, _requestedScenario, _spawnCursor, SpawnBatchSize);
+                _spawnCursor += spawned;
+                _scenario = _requestedScenario;
+                _status = $"Spawning {_requestedScenario.Label}: {_spawnCursor:N0}/{_requestedScenario.EntityCount:N0}.";
+
+                if (_spawnCursor >= _requestedScenario.EntityCount)
+                {
+                    _hasRequestedScenario = false;
+                    _pipelinePhase = BenchmarkPipelinePhase.Idle;
+                    _status = $"Spawned {_requestedScenario.EntityCount:N0} map-scoped visual actors with performer-driven health bars.";
+                    _context.Log($"[PerformanceVisualizationMod] {_status}");
+                }
+            }
+        }
+
+        public bool TryRunScenario(GameEngine engine, string scenarioKey)
+        {
+            if (engine == null || !IsActive || engine.CurrentMapSession == null)
+            {
+                return false;
+            }
+
+            _requestedScenario = VisualBenchmarkScenarioConfig.FromKey(scenarioKey);
+            _hasRequestedScenario = true;
+            _clearRequested = false;
+            _spawnCursor = 0;
+            _pipelinePhase = GetScenarioEntityCount(engine) > 0
+                ? BenchmarkPipelinePhase.Clearing
+                : BenchmarkPipelinePhase.Spawning;
+            _status = $"Queued {_requestedScenario.Label}. Runtime will migrate the showcase in formal lifecycle batches.";
+            ConfigureCamera(engine, _requestedScenario);
+            return true;
+        }
+
+        public bool TryClearScenario(GameEngine engine)
+        {
+            if (engine == null || !IsActive)
+            {
+                return false;
+            }
+
+            _hasRequestedScenario = false;
+            _clearRequested = true;
+            _spawnCursor = 0;
+            _pipelinePhase = GetScenarioEntityCount(engine) > 0
+                ? BenchmarkPipelinePhase.Clearing
+                : BenchmarkPipelinePhase.Idle;
+            _status = "Queued scenario clear. Runtime will drain map-scoped benchmark actors through lifecycle destroy events.";
+            return true;
+        }
+
+        public bool TryResetCamera(GameEngine engine)
+        {
+            if (engine == null || !IsActive)
+            {
+                return false;
+            }
+
+            ConfigureCamera(engine, _scenario);
+            _status = $"Camera reset for {_scenario.Label}.";
+            return true;
+        }
+
+        internal VisualBenchmarkPanelState BuildPanelState(GameEngine engine)
+        {
+            Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+            return new VisualBenchmarkPanelState(
+                Title: "Visual Benchmark Showcase",
+                Status: _status,
+                Scenario: $"Scenario: {_scenario.Label} | Spawned: {_spawnedCount:N0}",
+                Metrics: $"Entities: {_spawnedCount:N0} | Visible: {_lastVisibleCount:N0} | WorldHUD Bars: {_lastHudCount:N0} | Dropped: {_lastHudDropped:N0}",
+                Camera: $"Camera target ({cameraTarget.X:0},{cameraTarget.Y:0}) | Distance {engine.GameSession.Camera.State.DistanceCm:0}",
+                Hint: $"Pipeline: {_pipelinePhase} | Run 2K/8K to validate the formal performer HUD path. Run 32K for visual-instance stress while HUD remains cull-gated.",
+                Actions: new[]
+                {
+                    VisualBenchmarkScenarioConfig.Small.Label,
+                    VisualBenchmarkScenarioConfig.Medium.Label,
+                    VisualBenchmarkScenarioConfig.Large.Label,
+                    "Clear scenario",
+                });
+        }
+
+        private void EnsureAttributeIds()
+        {
+            if (_healthAttributeId == 0)
+            {
+                _healthAttributeId = AttributeRegistry.Register("Health");
+            }
+        }
+
+        private void SampleMetrics(GameEngine engine)
+        {
+            _spawnedCount = 0;
+            _lastVisibleCount = 0;
+
+            MapId currentMapId = engine.CurrentMapSession?.MapId ?? default;
+            engine.World.Query(in ScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __, ref AttributeBuffer ___) =>
+            {
+                if (!MatchesScenarioEntity(mapEntity, name, currentMapId))
+                {
+                    return;
+                }
+
+                _spawnedCount++;
+            });
+
+            engine.World.Query(in VisibleScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __, ref AttributeBuffer ___, ref CullState cull) =>
+            {
+                if (!MatchesScenarioEntity(mapEntity, name, currentMapId) || !cull.IsVisible)
+                {
+                    return;
+                }
+
+                _lastVisibleCount++;
+            });
+
+            WorldHudBatchBuffer? hud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            _lastHudCount = hud?.Count ?? 0;
+            _lastHudDropped = hud?.DroppedSinceClear ?? 0;
+        }
+
+        private void ConfigureCamera(GameEngine engine, VisualBenchmarkScenarioConfig scenario)
+        {
+            engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
+            {
+                Id = "TopDown"
+            });
+
+            engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+            {
+                VirtualCameraId = "TopDown",
+                TargetCm = Vector2.Zero,
+                DistanceCm = scenario.CameraDistanceCm,
+                Pitch = 60f
+            });
+        }
+
+        private int SpawnScenarioBatch(GameEngine engine, VisualBenchmarkScenarioConfig scenario, int startIndex, int batchSize)
+        {
+            EnsureAttributeIds();
+
+            World world = engine.World;
+            int meshId = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)?.GetId(WellKnownMeshKeys.Cube) ?? 0;
+            if (meshId <= 0)
+            {
+                throw new InvalidOperationException("Cube mesh asset id is required for benchmark visuals.");
+            }
+
+            var stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
+                ?? throw new InvalidOperationException("PresentationStableIdAllocator service is missing.");
+
+            MapId mapId = engine.CurrentMapSession?.MapId ?? default;
+            int centerOffsetX = (scenario.Columns - 1) * scenario.SpacingCm / 2;
+            int centerOffsetY = (scenario.Rows - 1) * scenario.SpacingCm / 2;
+            int endExclusive = Math.Min(startIndex + batchSize, scenario.EntityCount);
+
+            var archetype = new ComponentType[]
+            {
+                typeof(MapEntity),
+                typeof(Name),
+                typeof(Position),
+                typeof(WorldPositionCm),
+                typeof(PreviousWorldPositionCm),
+                typeof(VisualTransform),
+                typeof(PresentationStableId),
+                typeof(VisualRuntimeState),
+                typeof(CullState),
+                typeof(AttributeBuffer),
+            };
+
+            for (int i = startIndex; i < endExclusive; i++)
+            {
+                int row = i / scenario.Columns;
+                int col = i % scenario.Columns;
+                int xCm = (col * scenario.SpacingCm) - centerOffsetX;
+                int yCm = (row * scenario.SpacingCm) - centerOffsetY;
+
+                Entity entity = world.Create(archetype);
+                world.Set(entity, new MapEntity { MapId = mapId });
+                world.Set(entity, new Name { Value = $"{VisualBenchmarkIds.ScenarioLabel}.{i:000000}" });
+                world.Set(entity, new Position { GridPos = new IntVector2(xCm / 100, yCm / 100) });
+
+                var worldPos = WorldPositionCm.FromCm(xCm, yCm);
+                world.Set(entity, worldPos);
+                world.Set(entity, new PreviousWorldPositionCm { Value = worldPos.Value });
+                world.Set(entity, VisualTransform.Default);
+                world.Set(entity, new PresentationStableId { Value = stableIds.Allocate() });
+                world.Set(entity, VisualRuntimeState.Create(
+                    meshAssetId: meshId,
+                    materialId: 1,
+                    baseScale: 0.85f,
+                    renderPath: VisualRenderPath.StaticMesh,
+                    mobility: VisualMobility.Static));
+                world.Set(entity, new CullState
+                {
+                    IsVisible = true,
+                    LOD = LODLevel.High,
+                });
+
+                ref var attributes = ref world.Get<AttributeBuffer>(entity);
+                attributes.SetBase(_healthAttributeId, 100f);
+                attributes.SetCurrent(_healthAttributeId, 40f + (i % 60));
+            }
+
+            return endExclusive - startIndex;
+        }
+
+        private int MarkScenarioEntitiesForDestroy(GameEngine engine, int batchSize)
+        {
+            MapId currentMapId = engine.CurrentMapSession?.MapId ?? default;
+            if (string.IsNullOrWhiteSpace(currentMapId.Value))
+            {
+                return 0;
+            }
+
+            int marked = 0;
+            engine.World.Query(in ScenarioEntitiesQuery, (Entity entity, ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __, ref AttributeBuffer ___) =>
+            {
+                if (marked >= batchSize || !MatchesScenarioEntity(mapEntity, name, currentMapId))
+                {
+                    return;
+                }
+
+                if (engine.World.Has<PresentationLifecycleState>(entity))
+                {
+                    var lifecycle = engine.World.Get<PresentationLifecycleState>(entity);
+                    if (lifecycle.PendingDestroy)
+                    {
+                        return;
+                    }
+
+                    lifecycle.PendingDestroy = true;
+                    engine.World.Set(entity, lifecycle);
+                }
+                else
+                {
+                    engine.World.Add(entity, new PresentationLifecycleState { PendingDestroy = true });
+                }
+                marked++;
+            });
+
+            return marked;
+        }
+
+        private void Unbind(GameEngine engine)
+        {
+            _activeMapId = null;
+            _hasRequestedScenario = false;
+            _clearRequested = false;
+            _spawnCursor = 0;
+            _pipelinePhase = BenchmarkPipelinePhase.Idle;
+            _spawnedCount = 0;
+            _lastVisibleCount = 0;
+            _lastHudCount = 0;
+            _lastHudDropped = 0;
+            _status = "Ready. Choose a benchmark profile to spawn map-scoped visuals.";
+
+            if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+            {
+                _panelController.ClearIfOwned(root);
+            }
+        }
+
+        private static bool MatchesScenarioEntity(in MapEntity mapEntity, in Name name, in MapId currentMapId)
+        {
+            return mapEntity.MapId == currentMapId &&
+                   name.Value != null &&
+                   name.Value.StartsWith(VisualBenchmarkIds.ScenarioLabel, StringComparison.Ordinal);
+        }
+
+        private int GetScenarioEntityCount(GameEngine engine)
+        {
+            MapId currentMapId = engine.CurrentMapSession?.MapId ?? default;
+            int count = 0;
+            engine.World.Query(in ScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __, ref AttributeBuffer ___) =>
+            {
+                if (MatchesScenarioEntity(mapEntity, name, currentMapId))
+                {
+                    count++;
+                }
+            });
+            return count;
+        }
+    }
+}
