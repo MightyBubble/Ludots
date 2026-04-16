@@ -5,7 +5,9 @@ using Arch.System;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation;
 
@@ -22,8 +24,9 @@ namespace Ludots.Core.Presentation.Systems
     {
         private readonly PrefabRegistry _prefabs;
         private readonly PresentationCommandBuffer _commands;
-        private readonly PresentationVisualProxyEmitter _proxyEmitter;
+        private readonly PresentationEventStream _events;
         private readonly TransientMarkerBuffer _markers;
+        private readonly PresentationRequestBuffer _requests;
         private readonly PerformerInstanceBuffer _instances;
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly PerformerDefinitionRegistry _definitions;
@@ -32,20 +35,19 @@ namespace Ludots.Core.Presentation.Systems
             World world,
             PrefabRegistry prefabs,
             PresentationCommandBuffer commands,
-            PrimitiveDrawBuffer draw,
+            PresentationEventStream events,
             TransientMarkerBuffer markers,
+            PresentationRequestBuffer requests,
             PerformerInstanceBuffer instances,
             PresentationStableIdAllocator stableIds,
-            PerformerDefinitionRegistry definitions,
-            PrimitiveDrawBuffer? snapshotBuffer = null,
-            PresentationVisualProxyBuffer? proxyBuffer = null,
-            SkinnedVisualBatchBuffer? skinnedBatchBuffer = null)
+            PerformerDefinitionRegistry definitions)
             : base(world)
         {
             _prefabs = prefabs ?? throw new ArgumentNullException(nameof(prefabs));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
-            _proxyEmitter = new PresentationVisualProxyEmitter(draw ?? throw new ArgumentNullException(nameof(draw)), snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
+            _events = events ?? throw new ArgumentNullException(nameof(events));
             _markers = markers ?? throw new ArgumentNullException(nameof(markers));
+            _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _instances = instances ?? throw new ArgumentNullException(nameof(instances));
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
@@ -53,7 +55,7 @@ namespace Ludots.Core.Presentation.Systems
 
         public override void Update(in float dt)
         {
-            _instances.ReleaseDeadEntityAnchors(World);
+            _instances.ReleaseDeadEntityAnchors(World, EmitDestroyedEvent);
 
             // 1. Process all commands
             var cmdSpan = _commands.GetSpan();
@@ -71,11 +73,14 @@ namespace Ludots.Core.Presentation.Systems
                         break;
 
                     case PresentationCommandKind.DestroyPerformer:
-                        _instances.Release(cmd.IdA);
+                        if (_instances.TryGetActive(cmd.IdA, out var instance) && _instances.Release(cmd.IdA))
+                        {
+                            EmitDestroyedEvent(cmd.IdA, instance);
+                        }
                         break;
 
                     case PresentationCommandKind.DestroyPerformerScope:
-                        _instances.ReleaseScope(cmd.IdA);
+                        _instances.ReleaseScope(cmd.IdB != 0 ? cmd.IdB : cmd.IdA, EmitDestroyedEvent);
                         break;
 
                     case PresentationCommandKind.SetPerformerParam:
@@ -88,13 +93,15 @@ namespace Ludots.Core.Presentation.Systems
             }
             _commands.Clear();
 
-            // 2. Tick transient markers and emit to PrimitiveDrawBuffer
-            _markers.TickAndEmit(_proxyEmitter, dt, World);
+            _markers.TickAndRequest(_requests, dt, World);
         }
 
         private void HandlePlayOneShot(in PresentationCommand cmd)
         {
-            if (!_prefabs.TryGet(cmd.IdA, out var prefab)) return;
+            if (!_prefabs.TryGet(cmd.IdA, out var prefab))
+            {
+                throw new InvalidOperationException($"PlayOneShotPerformer references unknown prefab id={cmd.IdA}.");
+            }
 
             var color = cmd.Param0.W == 0 ? new Vector4(0f, 1f, 1f, 1f) : cmd.Param0;
             float lifetime = cmd.Param1 > 0f ? cmd.Param1 : 0.35f;
@@ -103,11 +110,17 @@ namespace Ludots.Core.Presentation.Systems
             bool follow = World.IsAlive(cmd.Target) && World.Has<VisualTransform>(cmd.Target);
             if (follow)
             {
-                _markers.TryAddAnchored(prefab.MeshAssetId, scale, color, lifetime, cmd.Target, new Vector3(0f, 0.2f, 0f));
+                if (!_markers.TryAddAnchoredPrefab(cmd.IdA, scale, color, lifetime, cmd.Target, new Vector3(0f, 0.2f, 0f)))
+                {
+                    throw new InvalidOperationException("TransientMarkerBuffer is full while creating anchored one-shot prefab instance.");
+                }
             }
             else
             {
-                _markers.TryAdd(prefab.MeshAssetId, cmd.Position, scale, color, lifetime);
+                if (!_markers.TryAddPrefab(cmd.IdA, cmd.Position, scale, color, lifetime))
+                {
+                    throw new InvalidOperationException("TransientMarkerBuffer is full while creating one-shot prefab instance.");
+                }
             }
         }
 
@@ -131,7 +144,7 @@ namespace Ludots.Core.Presentation.Systems
                     cmd.AnchorKind,
                     cmd.Position,
                     _stableIds.Allocate(),
-                    out _))
+                    out int handle))
             {
                 string performerKey = _definitions.GetName(cmd.IdA);
                 string ownerText = cmd.Source == Entity.Null
@@ -140,6 +153,8 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException(
                     $"PerformerInstanceBuffer is full while creating performer '{performerKey}' (defId={cmd.IdA}, scopeId={cmd.IdB}, owner={ownerText}, active={_instances.ActiveCount}, capacity={_instances.Capacity}).");
             }
+
+            EmitCreatedEvent(handle, _instances.Get(handle));
         }
 
         private bool ShouldSkipDuplicatePersistentScopedCreate(in PresentationCommand cmd, PerformerDefinition definition)
@@ -155,6 +170,40 @@ namespace Ludots.Core.Presentation.Systems
                 cmd.IdB,
                 cmd.AnchorKind,
                 cmd.Position);
+        }
+
+        private void EmitCreatedEvent(int handle, in PerformerInstance instance)
+        {
+            if (!_events.TryAdd(new PresentationEvent
+                {
+                    Kind = PresentationEventKind.PerformerCreated,
+                    KeyId = instance.DefId,
+                    Source = instance.Owner,
+                    Target = instance.Owner,
+                    PayloadA = handle,
+                    PayloadB = instance.ScopeId,
+                    Magnitude = instance.StableId,
+                }))
+            {
+                throw new InvalidOperationException("PresentationEventStream is full while publishing PerformerCreated.");
+            }
+        }
+
+        private void EmitDestroyedEvent(int handle, PerformerInstance instance)
+        {
+            if (!_events.TryAdd(new PresentationEvent
+                {
+                    Kind = PresentationEventKind.PerformerDestroyed,
+                    KeyId = instance.DefId,
+                    Source = instance.Owner,
+                    Target = instance.Owner,
+                    PayloadA = handle,
+                    PayloadB = instance.ScopeId,
+                    Magnitude = instance.StableId,
+                }))
+            {
+                throw new InvalidOperationException("PresentationEventStream is full while publishing PerformerDestroyed.");
+            }
         }
     }
 }

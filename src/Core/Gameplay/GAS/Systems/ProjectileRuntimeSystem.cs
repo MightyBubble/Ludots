@@ -5,6 +5,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Spatial;
@@ -45,6 +46,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 if (World.IsAlive(_toDestroy[i]))
                 {
+                    if (World.Has<PresentationStableId>(_toDestroy[i]))
+                    {
+                        var lifecycle = World.Has<PresentationLifecycleState>(_toDestroy[i])
+                            ? World.Get<PresentationLifecycleState>(_toDestroy[i])
+                            : default;
+                        lifecycle.PendingDestroy = true;
+                        if (World.Has<PresentationLifecycleState>(_toDestroy[i]))
+                        {
+                            World.Set(_toDestroy[i], lifecycle);
+                        }
+                        else
+                        {
+                            World.Add(_toDestroy[i], lifecycle);
+                        }
+                        continue;
+                    }
+
                     World.Destroy(_toDestroy[i]);
                 }
             }

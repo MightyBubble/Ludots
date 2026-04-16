@@ -2,6 +2,7 @@ using System;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
 
@@ -9,7 +10,7 @@ namespace Ludots.Core.Presentation.Systems
 {
     public sealed class EntityVisualEmitSystem : BaseSystem<World, float>
     {
-        private readonly PresentationVisualProxyEmitter _proxyEmitter;
+        private readonly PresentationRequestBuffer _requests;
 
         private readonly QueryDescription _withCullQuery = new QueryDescription()
             .WithAll<VisualTransform, VisualRuntimeState, PresentationStableId, CullState>();
@@ -24,13 +25,10 @@ namespace Ludots.Core.Presentation.Systems
 
         public EntityVisualEmitSystem(
             World world,
-            PrimitiveDrawBuffer drawBuffer,
-            PrimitiveDrawBuffer? snapshotBuffer = null,
-            PresentationVisualProxyBuffer? proxyBuffer = null,
-            SkinnedVisualBatchBuffer? skinnedBatchBuffer = null)
+            PresentationRequestBuffer requests)
             : base(world)
         {
-            _proxyEmitter = new PresentationVisualProxyEmitter(drawBuffer, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
+            _requests = requests ?? throw new ArgumentNullException(nameof(requests));
         }
 
         public override void Update(in float dt)
@@ -51,7 +49,7 @@ namespace Ludots.Core.Presentation.Systems
                 var culls = chunk.GetArray<CullState>();
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    Emit(chunk.Entity(i), stableIds[i].Value, visuals[i], transforms[i], culls[i].IsVisible);
+                    Emit(chunk.Entity(i), stableIds[i].Value, visuals[i], transforms[i], culls[i].IsVisible, culls[i].LOD);
                 }
             }
         }
@@ -66,7 +64,7 @@ namespace Ludots.Core.Presentation.Systems
                 var stableIds = chunk.GetArray<PresentationStableId>();
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    Emit(chunk.Entity(i), stableIds[i].Value, visuals[i], transforms[i], cullVisible: true);
+                    Emit(chunk.Entity(i), stableIds[i].Value, visuals[i], transforms[i], cullVisible: true, LODLevel.High);
                 }
             }
         }
@@ -89,7 +87,7 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private void Emit(Entity entity, int stableId, in VisualRuntimeState visual, in VisualTransform transform, bool cullVisible)
+        private void Emit(Entity entity, int stableId, in VisualRuntimeState visual, in VisualTransform transform, bool cullVisible, LODLevel lod)
         {
             if (!visual.HasRenderableAsset)
             {
@@ -111,7 +109,7 @@ namespace Ludots.Core.Presentation.Systems
             PresentationRenderContract.ValidateRuntimeState("EntityVisualEmitSystem", visual, hasAnimatorComponent, animator, animationOverlay);
             VisualVisibility visibility = visual.ResolveVisibility(cullVisible);
 
-            _proxyEmitter.Emit(new PresentationVisualProxy
+            var proxy = new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Entity,
                 MeshAssetId = visual.MeshAssetId,
@@ -129,7 +127,9 @@ namespace Ludots.Core.Presentation.Systems
                 Animator = animator,
                 AnimationOverlay = animationOverlay,
                 Visibility = visibility,
-            });
+                LOD = lod,
+            };
+            _requests.Add(PresentationRequest.FromVisualProxy(entity, proxy));
         }
     }
 }

@@ -5,6 +5,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
@@ -104,7 +105,26 @@ namespace Ludots.Core.Map
             for (int i = 0; i < toDestroy.Count; i++)
             {
                 if (world.IsAlive(toDestroy[i]))
+                {
+                    if (world.Has<PresentationStableId>(toDestroy[i]))
+                    {
+                        var lifecycle = world.Has<PresentationLifecycleState>(toDestroy[i])
+                            ? world.Get<PresentationLifecycleState>(toDestroy[i])
+                            : default;
+                        lifecycle.PendingDestroy = true;
+                        if (world.Has<PresentationLifecycleState>(toDestroy[i]))
+                        {
+                            world.Set(toDestroy[i], lifecycle);
+                        }
+                        else
+                        {
+                            world.Add(toDestroy[i], lifecycle);
+                        }
+                        continue;
+                    }
+
                     world.Destroy(toDestroy[i]);
+                }
             }
 
             Log.Info(in LogChannels.Map, $"Destroyed {toDestroy.Count} map entities (MapId={MapId}).");

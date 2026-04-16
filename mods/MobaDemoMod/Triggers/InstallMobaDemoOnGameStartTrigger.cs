@@ -125,7 +125,7 @@ namespace MobaDemoMod.Triggers
                         var p = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: mk.YOffsetMeters);
                         var scale = new Vector3(mk.Scale[0], mk.Scale[1], mk.Scale[2]);
                         var color = new Vector4(mk.Color[0], mk.Color[1], mk.Color[2], mk.Color[3]);
-                        capturedMarkerBuffer.TryAdd(sphereMeshId, p, scale, color, mk.LifetimeSeconds);
+                        capturedMarkerBuffer.TryAddMesh(sphereMeshId, p, scale, color, mk.LifetimeSeconds);
                     }
                 });
             }

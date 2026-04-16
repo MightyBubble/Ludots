@@ -4,7 +4,7 @@
 - scenario name: projection_map skinned vs static lane contract
 - build/version: local PresentationTests
 - seed/map/clock: deterministic fixture / camera_acceptance_projection / 5 ticks @ 60 Hz
-- execution timestamp: 2026-03-14T01:56:55.2994325Z
+- execution timestamp: 2026-04-16T04:29:30.9242949Z
 
 ## Timeline
 - [T+005] Hero#1.Spawn -> lane SkinnedMesh | Animator controller 1 bound | result = skinned runtime contract valid

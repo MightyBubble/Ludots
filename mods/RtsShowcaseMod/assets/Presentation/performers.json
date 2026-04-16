@@ -1,17 +1,58 @@
-[
-  {
-    "_comment": "RTS unit cube marker — renders all entities with VisualTransform",
-    "id": "rts_unit_marker",
-    "visualKind": "Marker3D",
-    "entityScope": "AllWithVisualTransform",
-    "meshOrShapeId": "cube",
-    "defaultScale": 1.0,
-    "positionOffset": [0, 0.5, 0],
-    "bindings": [
-      { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
-      { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
-      { "paramKey": 6, "source": "entityColor", "sourceId": 2 },
-      { "paramKey": 7, "source": "entityColor", "sourceId": 3 }
-    ]
-  }
-]
+﻿{
+    "_comment":  "RTS unit cube marker 鈥?renders all entities with VisualTransform",
+    "id":  "rts_unit_marker",
+    "visualKind":  "Marker3D",
+    "meshOrShapeId":  "cube",
+    "defaultScale":  1.0,
+    "positionOffset":  [
+                           0,
+                           0.5,
+                           0
+                       ],
+    "bindings":  [
+                     {
+                         "paramKey":  4,
+                         "source":  "entityColor",
+                         "sourceId":  0
+                     },
+                     {
+                         "paramKey":  5,
+                         "source":  "entityColor",
+                         "sourceId":  1
+                     },
+                     {
+                         "paramKey":  6,
+                         "source":  "entityColor",
+                         "sourceId":  2
+                     },
+                     {
+                         "paramKey":  7,
+                         "source":  "entityColor",
+                         "sourceId":  3
+                     }
+                 ],
+    "rules":  [
+                  {
+                      "event":  {
+                                    "kind":  "EntitySpawned"
+                                },
+                      "command":  {
+                                      "commandKind":  "CreatePerformer",
+                                      "scopeSource":  "EventPayloadA",
+                                      "performerDefinitionId":  "rts_unit_marker"
+                                  },
+                      "condition":  {
+                                        "inline":  "SourceHasVisualTransform"
+                                    }
+                  },
+                  {
+                      "event":  {
+                                    "kind":  "EntityDestroyed"
+                                },
+                      "command":  {
+                                      "commandKind":  "DestroyPerformerScope",
+                                      "scopeSource":  "EventPayloadA"
+                                  }
+                  }
+              ]
+}

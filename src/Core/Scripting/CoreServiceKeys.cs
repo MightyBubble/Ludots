@@ -48,7 +48,7 @@ using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
-using Ludots.Core.Presentation.Projectiles;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
@@ -209,6 +209,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationVisualSnapshotBuffer = new("PresentationVisualSnapshotBuffer");
         public static readonly ServiceKey<PresentationVisualProxyBuffer> PresentationVisualProxyBuffer = new("PresentationVisualProxyBuffer");
         public static readonly ServiceKey<SkinnedVisualBatchBuffer> PresentationSkinnedVisualBatchBuffer = new("PresentationSkinnedVisualBatchBuffer");
+        public static readonly ServiceKey<PresentationRequestBuffer> PresentationRequestBuffer = new("PresentationRequestBuffer");
         public static readonly ServiceKey<WorldHudBatchBuffer> PresentationWorldHudBuffer = new("PresentationWorldHudBuffer");
         public static readonly ServiceKey<WorldHudStringTable> PresentationWorldHudStrings = new("PresentationWorldHudStrings");
         public static readonly ServiceKey<PresentationTextCatalog> PresentationTextCatalog = new("PresentationTextCatalog");
@@ -225,8 +226,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GroundOverlayBuffer> GroundOverlayBuffer = new("GroundOverlayBuffer");
         public static readonly ServiceKey<RoadSplineBuffer> RoadSplineBuffer = new("RoadSplineBuffer");
         public static readonly ServiceKey<DebugDrawCommandBuffer> DebugDrawCommandBuffer = new("DebugDrawCommandBuffer");
-        public static readonly ServiceKey<ProjectilePresentationBindingRegistry> ProjectilePresentationBindingRegistry = new("ProjectilePresentationBindingRegistry");
-
         // --- Performers ---
         public static readonly ServiceKey<PerformerDefinitionRegistry> PerformerDefinitionRegistry = new("PerformerDefinitionRegistry");
         public static readonly ServiceKey<PerformerInstanceBuffer> PerformerInstanceBuffer = new("PerformerInstanceBuffer");

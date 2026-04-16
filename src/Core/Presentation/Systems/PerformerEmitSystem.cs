@@ -3,34 +3,23 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
-using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Systems
 {
     /// <summary>
-    /// Unified performer output system. Handles two modes:
-    ///
-    /// 1. Instance-scoped: iterate PerformerInstanceBuffer, tick elapsed,
-    ///    evaluate visibility, resolve bindings, apply time modulation, emit.
-    ///
-    /// 2. Entity-scoped: iterate ECS entities matching EntityScopeFilter,
-    ///    evaluate visibility, resolve bindings, emit. No instances needed.
-    ///
-    /// Resolution priority: Override > Binding > Default.
-    /// Parameters are NEVER cached — always resolved fresh for data sync safety.
-    /// </summary>
-    /// <summary>
-    /// Delegate for resolving a per-entity color (e.g. team color, faction color).
-    /// Injected by the composition root. When null, <see cref="ValueSourceKind.EntityColor"/> returns white.
+    /// Emits presentation requests for active performer instances.
+    /// Performer instances are the single runtime truth for persistent presentation.
     /// </summary>
     public delegate Vector4 EntityColorResolver(World world, Entity entity);
 
@@ -38,30 +27,12 @@ namespace Ludots.Core.Presentation.Systems
     {
         private readonly PerformerInstanceBuffer _instances;
         private readonly PerformerDefinitionRegistry _definitions;
-        private readonly GroundOverlayBuffer _groundOverlays;
-        private readonly RoadSplineBuffer _roadSplines;
-        private readonly PresentationVisualProxyEmitter _proxyEmitter;
-        private readonly WorldHudBatchBuffer _worldHud;
+        private readonly PresentationRequestBuffer _requests;
         private readonly GraphProgramRegistry _programs;
         private readonly IGraphRuntimeApi _graphApi;
         private readonly Dictionary<string, object> _globals;
         private readonly EntityColorResolver _entityColorResolver;
-        private int _entityHealthBarDefinitionId = int.MinValue;
-        private int _entityWorldTextDefinitionId = int.MinValue;
 
-        // Entity-scoped queries
-        private readonly QueryDescription _attrNoCullQuery = new QueryDescription()
-            .WithAll<VisualTransform, AttributeBuffer>()
-            .WithNone<CullState>();
-        private readonly QueryDescription _attrWithCullQuery = new QueryDescription()
-            .WithAll<VisualTransform, AttributeBuffer, CullState>();
-        private readonly QueryDescription _vtNoCullQuery = new QueryDescription()
-            .WithAll<VisualTransform>()
-            .WithNone<CullState>();
-        private readonly QueryDescription _vtWithCullQuery = new QueryDescription()
-            .WithAll<VisualTransform, CullState>();
-
-        // Pre-allocated Graph VM registers
         private readonly float[] _floatRegs = new float[GraphVmLimits.MaxFloatRegisters];
         private readonly int[] _intRegs = new int[GraphVmLimits.MaxIntRegisters];
         private readonly byte[] _boolRegs = new byte[GraphVmLimits.MaxBoolRegisters];
@@ -73,25 +44,16 @@ namespace Ludots.Core.Presentation.Systems
             World world,
             PerformerInstanceBuffer instances,
             PerformerDefinitionRegistry definitions,
-            GroundOverlayBuffer groundOverlays,
-            PrimitiveDrawBuffer primitives,
-            WorldHudBatchBuffer worldHud,
+            PresentationRequestBuffer requests,
             GraphProgramRegistry programs,
             IGraphRuntimeApi graphApi,
             Dictionary<string, object> globals,
-            EntityColorResolver entityColorResolver = null,
-            PrimitiveDrawBuffer? snapshotBuffer = null,
-            PresentationVisualProxyBuffer? proxyBuffer = null,
-            SkinnedVisualBatchBuffer? skinnedBatchBuffer = null,
-            RoadSplineBuffer? roadSplines = null)
+            EntityColorResolver entityColorResolver = null)
             : base(world)
         {
             _instances = instances;
             _definitions = definitions;
-            _groundOverlays = groundOverlays;
-            _roadSplines = roadSplines ?? new RoadSplineBuffer();
-            _proxyEmitter = new PresentationVisualProxyEmitter(primitives, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
-            _worldHud = worldHud;
+            _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _programs = programs;
             _graphApi = graphApi;
             _globals = globals;
@@ -100,11 +62,12 @@ namespace Ludots.Core.Presentation.Systems
 
         public override void Update(in float dt)
         {
-            // ── Part 1: Instance-scoped performers ──
             _instances.ProcessActive(dt, (int handle, ref PerformerInstance inst) =>
             {
-                if (!_definitions.TryGet(inst.DefId, out var def)) return;
-                if (def.EntityScope != EntityScopeFilter.None) return; // skip entity-scoped
+                if (!_definitions.TryGet(inst.DefId, out var def))
+                {
+                    return;
+                }
 
                 if (inst.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(inst.Owner))
                 {
@@ -112,214 +75,65 @@ namespace Ludots.Core.Presentation.Systems
                     return;
                 }
 
-                // Auto-expire duration-based performers
                 if (def.DefaultLifetime > 0f && inst.Elapsed >= def.DefaultLifetime)
                 {
                     _instances.Release(handle);
                     return;
                 }
 
-                // Evaluate visibility
-                if (!EvaluateVisibility(def, inst.Owner)) return;
+                if (!EvaluateVisibility(def, inst.Owner))
+                {
+                    return;
+                }
 
-                // Compute position with offset and Y-drift
                 Vector3 pos = ResolveAnchorPosition(in inst) + def.PositionOffset;
                 pos.Y += def.PositionYDriftPerSecond * inst.Elapsed;
 
-                // Compute alpha modulation
                 float alphaMod = 1f;
                 if (def.AlphaFadeOverLifetime && def.DefaultLifetime > 0f)
+                {
                     alphaMod = Math.Clamp(1f - inst.Elapsed / def.DefaultLifetime, 0f, 1f);
+                }
 
-                EmitForVisualKind(handle, inst.DefId, def, inst.Owner, pos, alphaMod);
+                EmitForVisualKind(handle, inst.DefId, def, inst.Owner, pos, alphaMod, ResolveOwnerLod(inst.Owner));
             });
-
-            // ── Part 2: Entity-scoped performers ──
-            var ids = _definitions.RegisteredIds;
-            for (int di = 0; di < ids.Count; di++)
-            {
-                if (!_definitions.TryGet(ids[di], out var def)) continue;
-                if (def.EntityScope == EntityScopeFilter.None) continue;
-                if (ShouldSkipEntityScopedDefinition(ids[di], def)) continue;
-
-                EmitEntityScoped(ids[di], def);
-            }
         }
 
-        // ── Entity-Scoped Emission ──
-
-        private void EmitEntityScoped(int definitionId, PerformerDefinition def)
-        {
-            switch (def.EntityScope)
-            {
-                case EntityScopeFilter.AllWithAttributes:
-                    EmitEntityScopedWithAttr(definitionId, def, _attrNoCullQuery, requireCullCheck: false);
-                    EmitEntityScopedWithAttr(definitionId, def, _attrWithCullQuery, requireCullCheck: true);
-                    break;
-
-                case EntityScopeFilter.AllWithVisualTransform:
-                    EmitEntityScopedVT(definitionId, def, _vtNoCullQuery, requireCullCheck: false);
-                    EmitEntityScopedVT(definitionId, def, _vtWithCullQuery, requireCullCheck: true);
-                    break;
-            }
-        }
-
-        private bool ShouldSkipEntityScopedDefinition(int definitionId, PerformerDefinition def)
-        {
-            if (!TryGetRenderDebugState(out RenderDebugState renderDebug))
-            {
-                return false;
-            }
-
-            if (def.VisualKind == PerformerVisualKind.WorldBar &&
-                definitionId == ResolveWellKnownDefinitionId(ref _entityHealthBarDefinitionId, WellKnownPerformerKeys.EntityHealthBar))
-            {
-                return !renderDebug.DrawWorldHudBars;
-            }
-
-            if (def.VisualKind == PerformerVisualKind.WorldText &&
-                definitionId == ResolveWellKnownDefinitionId(ref _entityWorldTextDefinitionId, WellKnownPerformerKeys.EntityWorldText))
-            {
-                return !renderDebug.DrawWorldHudText;
-            }
-
-            return false;
-        }
-
-        private int ResolveWellKnownDefinitionId(ref int cache, string key)
-        {
-            if (cache != int.MinValue)
-            {
-                return cache;
-            }
-
-            cache = _definitions.GetId(key);
-            return cache;
-        }
-
-        private bool TryGetRenderDebugState(out RenderDebugState state)
-        {
-            if (_globals.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out object? value) &&
-                value is RenderDebugState renderDebug)
-            {
-                state = renderDebug;
-                return true;
-            }
-
-            state = null!;
-            return false;
-        }
-
-        private void EmitEntityScopedWithAttr(int definitionId, PerformerDefinition def, QueryDescription query, bool requireCullCheck)
-        {
-            // When requireCullCheck is true, the chunk already contains only entities WITH CullState.
-            // If the definition's visibility condition is OwnerCullVisible, the chunk-level cull check
-            // is semantically equivalent — skip the redundant per-entity ECS random-access lookup.
-            bool skipVisibilityEval = requireCullCheck
-                && def.VisibilityCondition.Inline == InlineConditionKind.OwnerCullVisible;
-
-            bool hasTemplateFilter = def.RequiredTemplateId > 0;
-
-            var q = World.Query(in query);
-            foreach (var chunk in q)
-            {
-                var transforms = chunk.GetArray<VisualTransform>();
-                var culls = requireCullCheck ? chunk.GetArray<CullState>() : null;
-                for (int i = 0; i < chunk.Count; i++)
-                {
-                    if (requireCullCheck && culls != null && !culls[i].IsVisible) continue;
-
-                    // Template filter — runtime check via World.Has/Get
-                    if (hasTemplateFilter)
-                    {
-                        var entity = chunk.Entity(i);
-                        if (!World.Has<VisualTemplateRef>(entity) ||
-                            World.Get<VisualTemplateRef>(entity).TemplateId != def.RequiredTemplateId)
-                            continue;
-                    }
-
-                    if (!skipVisibilityEval)
-                    {
-                        var entity = chunk.Entity(i);
-                        if (!EvaluateVisibility(def, entity)) continue;
-                    }
-
-                    Vector3 pos = transforms[i].Position + def.PositionOffset;
-                    EmitForVisualKind(-1, definitionId, def, chunk.Entity(i), pos, 1f);
-                }
-            }
-        }
-
-        private void EmitEntityScopedVT(int definitionId, PerformerDefinition def, QueryDescription query, bool requireCullCheck)
-        {
-            bool skipVisibilityEval = requireCullCheck
-                && def.VisibilityCondition.Inline == InlineConditionKind.OwnerCullVisible;
-
-            bool hasTemplateFilter = def.RequiredTemplateId > 0;
-
-            var q = World.Query(in query);
-            foreach (var chunk in q)
-            {
-                var transforms = chunk.GetArray<VisualTransform>();
-                var culls = requireCullCheck ? chunk.GetArray<CullState>() : null;
-                for (int i = 0; i < chunk.Count; i++)
-                {
-                    if (requireCullCheck && culls != null && !culls[i].IsVisible) continue;
-
-                    // Template filter
-                    if (hasTemplateFilter)
-                    {
-                        var entity = chunk.Entity(i);
-                        if (!World.Has<VisualTemplateRef>(entity) ||
-                            World.Get<VisualTemplateRef>(entity).TemplateId != def.RequiredTemplateId)
-                            continue;
-                    }
-
-                    if (!skipVisibilityEval)
-                    {
-                        var entity = chunk.Entity(i);
-                        if (!EvaluateVisibility(def, entity)) continue;
-                    }
-
-                    Vector3 pos = transforms[i].Position + def.PositionOffset;
-                    EmitForVisualKind(-1, definitionId, def, chunk.Entity(i), pos, 1f);
-                }
-            }
-        }
-
-        // ── Unified Emit by VisualKind ──
-
-        private void EmitForVisualKind(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
+        private void EmitForVisualKind(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod, LODLevel lod)
         {
             switch (def.VisualKind)
             {
                 case PerformerVisualKind.GroundOverlay:
-                    EmitGroundOverlay(handle, def, owner, pos, alphaMod);
+                    EmitGroundOverlay(handle, def, owner, pos, alphaMod, lod);
                     break;
                 case PerformerVisualKind.Marker3D:
-                    EmitMarker3D(handle, def, owner, pos, alphaMod);
+                    EmitMarker3D(handle, def, owner, pos, alphaMod, lod);
                     break;
                 case PerformerVisualKind.WorldBar:
-                    EmitWorldBar(handle, definitionId, def, owner, pos, alphaMod);
+                    EmitWorldBar(handle, definitionId, def, owner, pos, alphaMod, lod);
                     break;
                 case PerformerVisualKind.WorldText:
-                    EmitWorldText(handle, definitionId, def, owner, pos, alphaMod);
+                    EmitWorldText(handle, definitionId, def, owner, pos, alphaMod, lod);
                     break;
                 case PerformerVisualKind.RoadSpline:
-                    EmitRoadSpline(handle, definitionId, def, owner, pos, alphaMod);
+                    EmitRoadSpline(handle, definitionId, def, owner, pos, alphaMod, lod);
                     break;
             }
         }
-
-        // ── Visibility ──
 
         private bool EvaluateVisibility(PerformerDefinition def, Entity owner)
         {
             ref readonly var cond = ref def.VisibilityCondition;
             if (cond.Inline != InlineConditionKind.None)
+            {
                 return EvaluateInlineVisibility(cond.Inline, owner);
+            }
+
             if (cond.GraphProgramId > 0)
+            {
                 return EvaluateGraphBool(cond.GraphProgramId, owner, owner);
+            }
+
             return true;
         }
 
@@ -327,7 +141,8 @@ namespace Ludots.Core.Presentation.Systems
         {
             switch (kind)
             {
-                case InlineConditionKind.None: return true;
+                case InlineConditionKind.None:
+                    return true;
                 case InlineConditionKind.SourceIsLocalPlayer:
                 case InlineConditionKind.TargetIsLocalPlayer:
                     return IsLocalPlayer(owner);
@@ -335,28 +150,37 @@ namespace Ludots.Core.Presentation.Systems
                 case InlineConditionKind.TargetIsAlive:
                     return World.IsAlive(owner);
                 case InlineConditionKind.OwnerCullVisible:
-                    if (!World.IsAlive(owner)) return false;
-                    if (!World.Has<CullState>(owner)) return true;
+                    if (!World.IsAlive(owner))
+                    {
+                        return false;
+                    }
+
+                    if (!World.Has<CullState>(owner))
+                    {
+                        return true;
+                    }
+
                     return World.Get<CullState>(owner).IsVisible;
-                default: return true;
+                default:
+                    return true;
             }
         }
 
-        // ── Parameter Resolution ──
-
         private float ResolveParam(int handle, PerformerDefinition def, Entity owner, int paramKey, float defaultValue)
         {
-            // 1. Imperative override (highest priority)
             if (handle >= 0 && _instances.TryGetParamOverride(handle, paramKey, out float ov))
+            {
                 return ov;
+            }
 
-            // 2. Declarative binding — O(1) indexed lookup
             var idx = def.BindingIndex;
             if (paramKey >= 0 && paramKey < idx.Length)
             {
                 int bi = idx[paramKey];
                 if (bi >= 0)
+                {
                     return ResolveValueRef(in def.Bindings[bi].Value, owner);
+                }
             }
 
             return defaultValue;
@@ -370,7 +194,10 @@ namespace Ludots.Core.Presentation.Systems
                     return vr.ConstantValue;
                 case ValueSourceKind.Attribute:
                     if (_graphApi != null && _graphApi.TryGetAttributeCurrent(owner, vr.SourceId, out float attrVal))
+                    {
                         return attrVal;
+                    }
+
                     return 0f;
                 case ValueSourceKind.AttributeRatio:
                     return ResolveAttributeRatio(owner, vr.SourceId);
@@ -391,7 +218,11 @@ namespace Ludots.Core.Presentation.Systems
 
         private float ResolveEntityColorChannel(Entity owner, int channelIndex)
         {
-            if (_entityColorResolver == null) return 1f;
+            if (_entityColorResolver == null)
+            {
+                return 1f;
+            }
+
             var c = _entityColorResolver(World, owner);
             return channelIndex switch
             {
@@ -420,30 +251,40 @@ namespace Ludots.Core.Presentation.Systems
 
         private float ResolveAttributeRatio(Entity owner, int attributeId)
         {
-            if (!World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner)) return 1f;
+            if (!World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner))
+            {
+                return 1f;
+            }
+
             ref var attr = ref World.Get<AttributeBuffer>(owner);
             float current = attr.GetCurrent(attributeId);
             float max = attr.GetBase(attributeId);
-            if (max <= 0f) max = 1f;
+            if (max <= 0f)
+            {
+                max = 1f;
+            }
+
             return Math.Clamp(current / max, 0f, 1f);
         }
 
         private float ResolveAttributeBase(Entity owner, int attributeId)
         {
-            if (!World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner)) return 0f;
+            if (!World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner))
+            {
+                return 0f;
+            }
+
             ref var attr = ref World.Get<AttributeBuffer>(owner);
             float max = attr.GetBase(attributeId);
             return max <= 0f ? 1f : max;
         }
 
-        // ── Emit per VisualKind ──
-
-        private void EmitGroundOverlay(int handle, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
+        private void EmitGroundOverlay(int handle, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod, LODLevel lod)
         {
             var fc = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
             fc.W *= alphaMod;
 
-            _groundOverlays.TryAdd(new GroundOverlayItem
+            var item = new GroundOverlayItem
             {
                 Shape = (GroundOverlayShape)def.MeshOrShapeId,
                 Center = pos,
@@ -456,13 +297,13 @@ namespace Ludots.Core.Presentation.Systems
                 BorderWidth = ResolveParam(handle, def, owner, 12, 0.02f),
                 Length = ResolveParam(handle, def, owner, 13, 0f),
                 Width = ResolveParam(handle, def, owner, 14, 0f),
-            });
+            };
+            _requests.Add(PresentationRequest.FromGroundOverlay(owner, item, lod));
         }
 
-        private void EmitMarker3D(int handle, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
+        private void EmitMarker3D(int handle, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod, LODLevel lod)
         {
             float scaleUniform = ResolveParam(handle, def, owner, 0, def.DefaultScale);
-            // ParamKey 1/2/3: per-axis scale override. Falls back to uniform scale.
             float sx = ResolveParam(handle, def, owner, 1, scaleUniform);
             float sy = ResolveParam(handle, def, owner, 2, scaleUniform);
             float sz = ResolveParam(handle, def, owner, 3, scaleUniform);
@@ -470,7 +311,7 @@ namespace Ludots.Core.Presentation.Systems
             color.W *= alphaMod;
             int stableId = ResolveMarkerStableId(handle, def.Id, owner);
 
-            _proxyEmitter.Emit(new PresentationVisualProxy
+            var proxy = new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Performer,
                 MeshAssetId = def.MeshOrShapeId,
@@ -482,11 +323,13 @@ namespace Ludots.Core.Presentation.Systems
                 RenderPath = VisualRenderPath.StaticMesh,
                 Mobility = VisualMobility.Movable,
                 Flags = VisualRuntimeFlags.Visible,
-                Visibility = VisualVisibility.Visible,
-            });
+                Visibility = lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible,
+                LOD = lod,
+            };
+            _requests.Add(PresentationRequest.FromVisualProxy(owner, proxy));
         }
 
-        private void EmitRoadSpline(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
+        private void EmitRoadSpline(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod, LODLevel lod)
         {
             Vector3 control0 = pos + new Vector3(
                 ResolveParam(handle, def, owner, 0, 0f),
@@ -511,7 +354,19 @@ namespace Ludots.Core.Presentation.Systems
             border.W *= alphaMod;
 
             int stableId = ResolveRoadSplineStableId(handle, definitionId, owner);
-            _roadSplines.TryAdd(stableId, pos, control0, control1, end, width, fill, border, borderWidth, style);
+            _requests.Add(PresentationRequest.FromRoadSpline(owner, new RoadSplineRequest
+            {
+                StableId = stableId,
+                P0 = pos,
+                P1 = control0,
+                P2 = control1,
+                P3 = end,
+                Width = width,
+                FillColor = fill,
+                BorderColor = border,
+                BorderWidth = borderWidth,
+                Style = style,
+            }, lod));
         }
 
         private int ResolveMarkerStableId(int handle, int definitionId, Entity owner)
@@ -531,7 +386,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             throw new InvalidOperationException(
-                $"Entity-scoped Marker3D performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
+                $"Performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
         }
 
         private int ResolveRoadSplineStableId(int handle, int definitionId, Entity owner)
@@ -551,11 +406,16 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             throw new InvalidOperationException(
-                $"Entity-scoped RoadSpline performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
+                $"Performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
         }
 
-        private void EmitWorldBar(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
+        private void EmitWorldBar(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod, LODLevel lod)
         {
+            if (TryGetRenderDebugState(out var debug) && !debug.DrawWorldHudBars)
+            {
+                return;
+            }
+
             var fg = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
             fg.W *= alphaMod;
             var bg = ResolveColor(handle, def, owner, 8, 9, 10, 11, new Vector4(0.2f, 0.2f, 0.2f, 1f));
@@ -566,7 +426,7 @@ namespace Ludots.Core.Presentation.Systems
             int stableId = ResolveHudStableId(handle, definitionId, owner, WorldHudItemKind.Bar);
             int dirtySerial = HudItemIdentity.ComposeBarDirtySerial(width, height, value, bg, fg);
 
-            _worldHud.TryAdd(new WorldHudItem
+            var item = new WorldHudItem
             {
                 StableId = stableId,
                 DirtySerial = dirtySerial,
@@ -577,11 +437,17 @@ namespace Ludots.Core.Presentation.Systems
                 Height = height,
                 Color0 = bg,
                 Color1 = fg,
-            });
+            };
+            _requests.Add(PresentationRequest.FromWorldHud(owner, item, lod));
         }
 
-        private void EmitWorldText(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
+        private void EmitWorldText(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod, LODLevel lod)
         {
+            if (TryGetRenderDebugState(out var debug) && !debug.DrawWorldHudText)
+            {
+                return;
+            }
+
             var color = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
             color.W *= alphaMod;
             float value0 = ResolveParam(handle, def, owner, 0, 0f);
@@ -604,7 +470,7 @@ namespace Ludots.Core.Presentation.Systems
                 color,
                 packet);
 
-            _worldHud.TryAdd(new WorldHudItem
+            var item = new WorldHudItem
             {
                 StableId = stableId,
                 DirtySerial = dirtySerial,
@@ -613,11 +479,12 @@ namespace Ludots.Core.Presentation.Systems
                 Value0 = value0,
                 Value1 = value1,
                 Id0 = legacyStringId,
-                Id1 = (int)legacyMode, // WorldHudValueMode legacy adapter contract
+                Id1 = (int)legacyMode,
                 FontSize = (int)ResolveParam(handle, def, owner, 3, def.DefaultFontSize),
                 Color0 = color,
                 Text = packet,
-            });
+            };
+            _requests.Add(PresentationRequest.FromWorldHud(owner, item, lod));
         }
 
         private int ResolveHudStableId(int handle, int definitionId, Entity owner, WorldHudItemKind kind)
@@ -637,8 +504,6 @@ namespace Ludots.Core.Presentation.Systems
                 : 0;
         }
 
-        // ── Helpers ──
-
         private Vector4 ResolveColor(int handle, PerformerDefinition def, Entity owner, int rKey, int gKey, int bKey, int aKey, Vector4 defaultColor)
         {
             return new Vector4(
@@ -651,7 +516,10 @@ namespace Ludots.Core.Presentation.Systems
         private Vector3 ResolveOwnerPosition(Entity owner)
         {
             if (World.IsAlive(owner) && World.Has<VisualTransform>(owner))
+            {
                 return World.Get<VisualTransform>(owner).Position;
+            }
+
             return Vector3.Zero;
         }
 
@@ -662,24 +530,58 @@ namespace Ludots.Core.Presentation.Systems
                 : ResolveOwnerPosition(instance.Owner);
         }
 
+        private LODLevel ResolveOwnerLod(Entity owner)
+        {
+            if (!World.IsAlive(owner) || !World.Has<CullState>(owner))
+            {
+                return LODLevel.High;
+            }
+
+            return World.Get<CullState>(owner).LOD;
+        }
+
         private bool IsLocalPlayer(Entity entity)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var obj)) return false;
+            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var obj))
+            {
+                return false;
+            }
+
             return obj is Entity lp && lp == entity;
+        }
+
+        private bool TryGetRenderDebugState(out RenderDebugState debug)
+        {
+            if (_globals != null &&
+                _globals.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out var obj) &&
+                obj is RenderDebugState state)
+            {
+                debug = state;
+                return true;
+            }
+
+            debug = null;
+            return false;
         }
 
         private bool EvaluateGraphBool(int graphProgramId, Entity source, Entity target)
         {
-            if (!_programs.TryGetProgram(graphProgramId, out var program)) return false;
-            if (program.Length == 0) return false;
+            if (!_programs.TryGetProgram(graphProgramId, out var program) || program.Length == 0)
+            {
+                return false;
+            }
+
             ExecuteGraph(source, target, program);
             return _boolRegs[0] != 0;
         }
 
         private float EvaluateGraphFloat(int graphProgramId, Entity owner)
         {
-            if (!_programs.TryGetProgram(graphProgramId, out var program)) return 0f;
-            if (program.Length == 0) return 0f;
+            if (!_programs.TryGetProgram(graphProgramId, out var program) || program.Length == 0)
+            {
+                return 0f;
+            }
+
             ExecuteGraph(owner, owner, program);
             return _floatRegs[0];
         }

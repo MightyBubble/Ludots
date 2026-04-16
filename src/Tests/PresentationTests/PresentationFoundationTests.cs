@@ -5,14 +5,17 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
@@ -111,13 +114,12 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PresentationAuthoringContext_Apply_AssignsStableIdVisualAnimatorAndStartupPerformers()
+        public void PresentationAuthoringContext_Apply_AssignsStableIdVisualAndAnimatorState()
         {
             using var world = World.Create();
             var entity = world.Create();
 
             var visualTemplates = new VisualTemplateRegistry();
-            var performers = new PerformerDefinitionRegistry();
             var animators = new AnimatorControllerRegistry();
             var stableIds = new PresentationStableIdAllocator();
 
@@ -136,16 +138,12 @@ namespace Ludots.Tests.Presentation
                     VisibleByDefault = true,
                 });
 
-            int markerId = performers.Register("performer.cast_marker", new PerformerDefinition { VisualKind = PerformerVisualKind.Marker3D });
-            int barId = performers.Register("performer.health_bar", new PerformerDefinition { VisualKind = PerformerVisualKind.WorldBar });
-
-            var context = new PresentationAuthoringContext(visualTemplates, performers, animators, stableIds);
+            var context = new PresentationAuthoringContext(visualTemplates, animators, stableIds);
             JsonNode authoring = JsonNode.Parse(
                 """
                 {
                   "visualTemplateId": "hero.template",
                   "visible": false,
-                  "startupPerformerIds": ["performer.cast_marker", "performer.health_bar"],
                   "animator": {
                     "primaryStateIndex": 12,
                     "secondaryStateIndex": 3,
@@ -167,8 +165,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(entity.Has<AnimatorParameterBuffer>(), Is.True);
             Assert.That(entity.Has<AnimationOverlayRequest>(), Is.True);
             Assert.That(entity.Has<AnimatorFeedbackBuffer>(), Is.True);
-            Assert.That(entity.Has<PresentationStartupPerformers>(), Is.True);
-            Assert.That(entity.Has<PresentationStartupState>(), Is.True);
 
             int stableId = entity.Get<PresentationStableId>().Value;
             Assert.That(stableId, Is.GreaterThan(0));
@@ -203,12 +199,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(overlay.OverlayClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
             Assert.That(entity.Get<AnimatorFeedbackBuffer>().Count, Is.EqualTo(0));
 
-            var startupPerformers = entity.Get<PresentationStartupPerformers>();
-            Assert.That(startupPerformers.Count, Is.EqualTo(2));
-            Assert.That(startupPerformers.Get(0), Is.EqualTo(markerId));
-            Assert.That(startupPerformers.Get(1), Is.EqualTo(barId));
-            Assert.That(entity.Get<PresentationStartupState>().Initialized, Is.False);
-
             context.Apply(
                 entity,
                 JsonNode.Parse(
@@ -226,13 +216,34 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PresentationAuthoringContext_Apply_RejectsStartupPerformerIds()
+        {
+            using var world = World.Create();
+            var entity = world.Create();
+
+            var visualTemplates = new VisualTemplateRegistry();
+            var animators = new AnimatorControllerRegistry();
+            var stableIds = new PresentationStableIdAllocator();
+            var context = new PresentationAuthoringContext(visualTemplates, animators, stableIds);
+
+            JsonNode authoring = JsonNode.Parse(
+                """
+                {
+                  "startupPerformerIds": ["performer.cast_marker"]
+                }
+                """)!;
+
+            var ex = Assert.Throws<InvalidOperationException>(() => context.Apply(entity, authoring));
+            Assert.That(ex!.Message, Does.Contain("startupPerformerIds"));
+        }
+
+        [Test]
         public void PresentationAuthoringContext_ApplyAnimator_RejectsStaticRenderPath()
         {
             using var world = World.Create();
             var entity = world.Create();
 
             var visualTemplates = new VisualTemplateRegistry();
-            var performers = new PerformerDefinitionRegistry();
             var animators = new AnimatorControllerRegistry();
             var stableIds = new PresentationStableIdAllocator();
 
@@ -248,7 +259,7 @@ namespace Ludots.Tests.Presentation
                     VisibleByDefault = true,
                 });
 
-            var context = new PresentationAuthoringContext(visualTemplates, performers, animators, stableIds);
+            var context = new PresentationAuthoringContext(visualTemplates, animators, stableIds);
             JsonNode authoring = JsonNode.Parse(
                 """
                 {
@@ -284,8 +295,8 @@ namespace Ludots.Tests.Presentation
                 BaseClip = AnimatorBuiltinClipState.Create(AnimatorBuiltinClipId.LocomotionCycle, 0.5f, 1f),
             });
 
-            var drawBuffer = new PrimitiveDrawBuffer();
-            using var system = new EntityVisualEmitSystem(world, drawBuffer);
+            var requests = new PresentationRequestBuffer();
+            using var system = new EntityVisualEmitSystem(world, requests);
 
             Assert.That(
                 () => system.Update(0.016f),
@@ -436,6 +447,7 @@ namespace Ludots.Tests.Presentation
             var snapshotBuffer = new PrimitiveDrawBuffer();
             var proxyBuffer = new PresentationVisualProxyBuffer();
             var skinnedBatchBuffer = new SkinnedVisualBatchBuffer();
+            var requests = new PresentationRequestBuffer();
 
             world.Create(
                 new PresentationStableId { Value = 501 },
@@ -459,15 +471,29 @@ namespace Ludots.Tests.Presentation
                     BaseClip = AnimatorBuiltinClipState.Create(AnimatorBuiltinClipId.LocomotionCycle, 0.25f, 0.8f),
                 });
 
-            using (var entityEmit = new EntityVisualEmitSystem(world, drawBuffer, snapshotBuffer, proxyBuffer, skinnedBatchBuffer))
+            using (var entityEmit = new EntityVisualEmitSystem(world, requests))
             {
                 entityEmit.Update(0.016f);
             }
 
             var markers = new TransientMarkerBuffer();
-            Assert.That(markers.TryAdd(99, new Vector3(3f, 0.25f, 4f), Vector3.One, Vector4.One, 0.2f), Is.True);
-            var emitter = new PresentationVisualProxyEmitter(drawBuffer, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
-            markers.TickAndEmit(emitter, 0.016f, world);
+            Assert.That(markers.TryAddMesh(99, new Vector3(3f, 0.25f, 4f), Vector3.One, Vector4.One, 0.2f), Is.True);
+            markers.TickAndRequest(requests, 0.016f, world);
+            Assert.That(requests.Count, Is.EqualTo(2));
+
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                drawBuffer,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshotBuffer,
+                proxyBuffer,
+                skinnedBatchBuffer);
+            flush.Update(0.016f);
 
             Assert.That(proxyBuffer.Count, Is.EqualTo(2));
             Assert.That(skinnedBatchBuffer.Count, Is.EqualTo(1));
@@ -480,15 +506,18 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerEmitSystem_EntityScopedMarker_ComposesPositiveStableId()
+        public void PerformerEmitSystem_InstanceScopedMarker_UsesAllocatedStableId()
         {
             using var world = World.Create();
             var instances = new PerformerInstanceBuffer();
             var definitions = new PerformerDefinitionRegistry();
-            var groundOverlays = new GroundOverlayBuffer();
+            var requests = new PresentationRequestBuffer();
             var drawBuffer = new PrimitiveDrawBuffer();
             var snapshotBuffer = new PrimitiveDrawBuffer();
             var worldHud = new WorldHudBatchBuffer();
+            var groundOverlays = new GroundOverlayBuffer();
+            var proxyBuffer = new PresentationVisualProxyBuffer();
+            var skinnedBatchBuffer = new SkinnedVisualBatchBuffer();
             var programs = new GraphProgramRegistry();
             var globals = new Dictionary<string, object>();
 
@@ -497,12 +526,11 @@ namespace Ludots.Tests.Presentation
                 new PerformerDefinition
                 {
                     VisualKind = PerformerVisualKind.Marker3D,
-                    EntityScope = EntityScopeFilter.AllWithVisualTransform,
                     MeshOrShapeId = 77,
                     DefaultScale = 1f,
                 });
 
-            world.Create(
+            Entity owner = world.Create(
                 new PresentationStableId { Value = 501 },
                 new VisualTransform
                 {
@@ -510,26 +538,47 @@ namespace Ludots.Tests.Presentation
                     Rotation = Quaternion.Identity,
                     Scale = Vector3.One,
                 });
+            Assert.That(
+                instances.TryAllocate(
+                    definitionId,
+                    owner,
+                    scopeId: 9001,
+                    PresentationAnchorKind.Entity,
+                    Vector3.Zero,
+                    stableId: 7001,
+                    out _),
+                Is.True);
 
             using var system = new PerformerEmitSystem(
                 world,
                 instances,
                 definitions,
-                groundOverlays,
-                drawBuffer,
-                worldHud,
+                requests,
                 programs,
                 graphApi: null!,
-                globals,
-                snapshotBuffer: snapshotBuffer);
+                globals);
 
             system.Update(0.016f);
+            Assert.That(requests.Count, Is.EqualTo(1));
+
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                drawBuffer,
+                groundOverlays,
+                worldHud,
+                new RoadSplineBuffer(),
+                snapshotBuffer,
+                proxyBuffer,
+                skinnedBatchBuffer);
+            flush.Update(0.016f);
 
             Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
             ref readonly var item = ref snapshotBuffer.GetSpan()[0];
             Assert.That(item.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh));
-            Assert.That(item.StableId, Is.EqualTo(
-                PerformerVisualIdentity.ComposeStableId(501, PerformerVisualKind.Marker3D, definitionId)));
+            Assert.That(item.StableId, Is.EqualTo(7001));
             Assert.That(item.StableId, Is.GreaterThan(0));
         }
 
@@ -596,38 +645,41 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PresentationStartupPerformerSystem_UsesStableIdScope_AndRunsOnlyOnce()
+        public void PresentationEntityLifecycleSystem_PublishesSpawnAndDestroyFacts_AndFinalizesEntity()
         {
             using var world = World.Create();
-            var entity = world.Create();
-            var commands = new PresentationCommandBuffer();
-            var startup = default(PresentationStartupPerformers);
-            startup.Count = 2;
-            startup.Set(0, 11);
-            startup.Set(1, 22);
+            var events = new PresentationEventStream();
+            Entity entity = world.Create(
+                new PresentationStableId { Value = 99 },
+                new EntityTemplateKeyCm { TemplateKeyId = 1234 });
 
-            entity.Add(new PresentationStableId { Value = 99 });
-            entity.Add(startup);
-            entity.Add(new PresentationStartupState { Initialized = false });
+            using var lifecycle = new PresentationEntityLifecycleSystem(world, events);
+            using var finalize = new PresentationEntityFinalizeDestroySystem(world);
 
-            using var system = new PresentationStartupPerformerSystem(world, commands);
-            system.Update(0.016f);
+            lifecycle.Update(0.016f);
 
-            var firstPass = commands.GetSpan();
-            Assert.That(firstPass.Length, Is.EqualTo(2));
-            Assert.That(firstPass[0].Kind, Is.EqualTo(PresentationCommandKind.CreatePerformer));
-            Assert.That(firstPass[0].AnchorKind, Is.EqualTo(PresentationAnchorKind.Entity));
-            Assert.That(firstPass[0].IdA, Is.EqualTo(11));
-            Assert.That(firstPass[0].IdB, Is.EqualTo(99));
-            Assert.That(firstPass[0].Source, Is.EqualTo(entity));
-            Assert.That(firstPass[1].IdA, Is.EqualTo(22));
-            Assert.That(firstPass[1].IdB, Is.EqualTo(99));
-            Assert.That(entity.Get<PresentationStartupState>().Initialized, Is.True);
+            var firstPass = events.GetSpan();
+            Assert.That(firstPass.Length, Is.EqualTo(1));
+            Assert.That(firstPass[0].Kind, Is.EqualTo(PresentationEventKind.EntitySpawned));
+            Assert.That(firstPass[0].KeyId, Is.EqualTo(1234));
+            Assert.That(firstPass[0].PayloadA, Is.EqualTo(99));
+            Assert.That(world.Has<PresentationLifecycleState>(entity), Is.True);
 
-            commands.Clear();
-            system.Update(0.016f);
+            events.Clear();
+            var state = world.Get<PresentationLifecycleState>(entity);
+            state.PendingDestroy = true;
+            world.Set(entity, state);
 
-            Assert.That(commands.Count, Is.EqualTo(0), "Startup performers should only be emitted on the first update.");
+            lifecycle.Update(0.016f);
+
+            var secondPass = events.GetSpan();
+            Assert.That(secondPass.Length, Is.EqualTo(1));
+            Assert.That(secondPass[0].Kind, Is.EqualTo(PresentationEventKind.EntityDestroyed));
+            Assert.That(secondPass[0].KeyId, Is.EqualTo(1234));
+            Assert.That(secondPass[0].PayloadA, Is.EqualTo(99));
+
+            finalize.Update(0.016f);
+            Assert.That(world.IsAlive(entity), Is.False);
         }
 
         [Test]
@@ -652,10 +704,22 @@ namespace Ludots.Tests.Presentation
             using var sync = new WorldToVisualSyncSystem(world);
             var drawBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
             var snapshotBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
-            using var emit = new EntityVisualEmitSystem(world, drawBuffer, snapshotBuffer);
+            var requests = new PresentationRequestBuffer();
+            using var emit = new EntityVisualEmitSystem(world, requests);
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                drawBuffer,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshotBuffer);
 
             sync.Update(0.016f);
             emit.Update(0.016f);
+            flush.Update(0.016f);
 
             Assert.That(drawBuffer.Count, Is.EqualTo(1));
             Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
@@ -800,6 +864,7 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             var drawBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
             var snapshotBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
+            var requests = new PresentationRequestBuffer();
 
             Quaternion visibleRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.25f);
             Quaternion hiddenRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, 0.5f);
@@ -850,10 +915,21 @@ namespace Ludots.Tests.Presentation
                     materialId: 22,
                     baseScale: 0.5f,
                     renderPath: VisualRenderPath.InstancedStaticMesh),
-                new CullState { IsVisible = false });
+                new CullState { IsVisible = false, LOD = LODLevel.Culled });
 
-            using var system = new EntityVisualEmitSystem(world, drawBuffer, snapshotBuffer);
+            using var system = new EntityVisualEmitSystem(world, requests);
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                drawBuffer,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshotBuffer);
             system.Update(0.016f);
+            flush.Update(0.016f);
 
             Assert.That(drawBuffer.Count, Is.EqualTo(1), "Legacy draw buffer should still contain only currently drawable visuals.");
             Assert.That(snapshotBuffer.Count, Is.EqualTo(3), "Adapter-facing snapshot must retain hidden and culled visuals with explicit visibility.");
@@ -875,6 +951,7 @@ namespace Ludots.Tests.Presentation
             AssertQuaternionEquivalent(snapshotsByStableId[202].Rotation, hiddenRotation);
 
             Assert.That(snapshotsByStableId[303].Visibility, Is.EqualTo(VisualVisibility.Culled));
+            Assert.That(snapshotsByStableId[303].LOD, Is.EqualTo(LODLevel.Culled));
             Assert.That(snapshotsByStableId[303].TemplateId, Is.EqualTo(3003));
             Assert.That(snapshotsByStableId[303].Scale, Is.EqualTo(new Vector3(1.5f, 1f, 0.5f)));
             AssertQuaternionEquivalent(snapshotsByStableId[303].Rotation, culledRotation);
@@ -889,8 +966,7 @@ namespace Ludots.Tests.Presentation
         public void EntityVisualEmitSystem_Throws_WhenRenderableVisualIsMissingPresentationStableId()
         {
             using var world = World.Create();
-            var drawBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
-            var snapshotBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
+            var requests = new PresentationRequestBuffer();
 
             world.Create(
                 new VisualTransform
@@ -905,7 +981,7 @@ namespace Ludots.Tests.Presentation
                     baseScale: 1f,
                     renderPath: VisualRenderPath.StaticMesh));
 
-            using var system = new EntityVisualEmitSystem(world, drawBuffer, snapshotBuffer);
+            using var system = new EntityVisualEmitSystem(world, requests);
 
             var ex = Assert.Throws<InvalidOperationException>(() => system.Update(0.016f));
             Assert.That(ex!.Message, Does.Contain("PresentationStableId"));
@@ -917,6 +993,7 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             var drawBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
             var snapshotBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer(capacity: 1);
+            var requests = new PresentationRequestBuffer();
 
             world.Create(
                 new PresentationStableId { Value = 1 },
@@ -946,9 +1023,20 @@ namespace Ludots.Tests.Presentation
                     baseScale: 1f,
                     renderPath: VisualRenderPath.StaticMesh));
 
-            using var system = new EntityVisualEmitSystem(world, drawBuffer, snapshotBuffer);
+            using var system = new EntityVisualEmitSystem(world, requests);
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                drawBuffer,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshotBuffer);
 
-            var ex = Assert.Throws<InvalidOperationException>(() => system.Update(0.016f));
+            system.Update(0.016f);
+            var ex = Assert.Throws<InvalidOperationException>(() => flush.Update(0.016f));
             Assert.That(ex!.Message, Does.Contain("overflowed"));
         }
 
@@ -961,3 +1049,4 @@ namespace Ludots.Tests.Presentation
         }
     }
 }
+

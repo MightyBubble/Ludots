@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -218,6 +219,12 @@ namespace Ludots.Core.Presentation.Systems
                 case InlineConditionKind.OwnerCullVisible:
                     return IsOwnerCullVisible(evt.Source);
 
+                case InlineConditionKind.SourceHasAttributes:
+                    return World.IsAlive(evt.Source) && World.Has<AttributeBuffer>(evt.Source);
+
+                case InlineConditionKind.SourceHasVisualTransform:
+                    return World.IsAlive(evt.Source) && World.Has<VisualTransform>(evt.Source);
+
                 default:
                     return true;
             }
@@ -280,6 +287,14 @@ namespace Ludots.Core.Presentation.Systems
 
         private void EmitCommand(in PerformerCommand cmd, in PresentationEvent evt)
         {
+            int scopeId = cmd.ScopeSource switch
+            {
+                PerformerCommandScopeSource.EventPayloadA => evt.PayloadA,
+                PerformerCommandScopeSource.EventPayloadB => evt.PayloadB,
+                PerformerCommandScopeSource.EventKeyId => evt.KeyId,
+                _ => cmd.ScopeId,
+            };
+
             _commands.TryAdd(new PresentationCommand
             {
                 LogicTickStamp = evt.LogicTickStamp,
@@ -287,7 +302,7 @@ namespace Ludots.Core.Presentation.Systems
                 IdA = cmd.CommandKind == PresentationCommandKind.CreatePerformer
                     ? cmd.PerformerDefinitionId
                     : 0,
-                IdB = cmd.ScopeId,
+                IdB = scopeId,
                 Source = evt.Source,
                 Target = evt.Target,
                 Param1 = cmd.ParamGraphProgramId > 0
