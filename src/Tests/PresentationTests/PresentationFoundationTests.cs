@@ -582,6 +582,77 @@ namespace Ludots.Tests.Presentation
             Assert.That(item.StableId, Is.GreaterThan(0));
         }
 
+        [Test]
+        public void PresentationRequestFlushSystem_PrefabRequest_PreservesPrefabRootProxyWithoutSilentLeafFiltering()
+        {
+            using var world = World.Create();
+            var requests = new PresentationRequestBuffer();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
+            var proxyBuffer = new PresentationVisualProxyBuffer();
+            var skinnedBatchBuffer = new SkinnedVisualBatchBuffer();
+            var prefabs = new PrefabRegistry();
+            var meshes = new MeshAssetRegistry();
+
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+            int typedPrefabMeshId = meshes.Register(
+                "test.prefab.typed_root",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    PrefabPart.Default(cubeId),
+                    PrefabPart.Decal(materialId: 17, size: new Vector2(2f, 3f)),
+                    PrefabPart.Vfx(effectAssetId: 23, spawnMode: PrefabVfxSpawnMode.Loop),
+                    PrefabPart.Surface(cubeId, materialId: 31, tiling: new Vector2(2f, 2f))));
+            int prefabId = prefabs.Register(
+                "test.prefab.typed_root",
+                new PrefabDefinition
+                {
+                    MeshAssetId = typedPrefabMeshId,
+                    BaseScale = 1f,
+                });
+
+            requests.Add(PresentationRequest.FromPrefab(
+                Entity.Null,
+                prefabId,
+                stableId: 7001,
+                position: new Vector3(3f, 0.5f, 4f),
+                rotation: Quaternion.Identity,
+                scale: new Vector3(1.25f, 1.25f, 1.25f),
+                color: new Vector4(0.25f, 0.8f, 1f, 0.9f),
+                lod: LODLevel.High,
+                context: PrefabFinalizationContext.Empty));
+
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                prefabs,
+                meshes,
+                drawBuffer,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshotBuffer,
+                proxyBuffer,
+                skinnedBatchBuffer);
+            flush.Update(0.016f);
+
+            Assert.That(proxyBuffer.Count, Is.EqualTo(1),
+                "Prefab requests should survive flush as one prefab-root proxy instead of being pre-filtered into mesh-only leaves.");
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1),
+                "Adapter-facing snapshot should retain the prefab root asset so downstream adapter finalization preserves typed visual semantics.");
+
+            ref readonly var proxy = ref proxyBuffer.GetSpan()[0];
+            ref readonly var snapshot = ref snapshotBuffer.GetSpan()[0];
+            Assert.That(proxy.MeshAssetId, Is.EqualTo(typedPrefabMeshId));
+            Assert.That(snapshot.MeshAssetId, Is.EqualTo(typedPrefabMeshId));
+            Assert.That(proxy.StableId, Is.EqualTo(7001));
+            Assert.That(snapshot.StableId, Is.EqualTo(7001));
+            Assert.That(proxy.Position, Is.EqualTo(new Vector3(3f, 0.5f, 4f)));
+            Assert.That(snapshot.Position, Is.EqualTo(new Vector3(3f, 0.5f, 4f)));
+            Assert.That(proxy.Scale, Is.EqualTo(new Vector3(1.25f, 1.25f, 1.25f)));
+            Assert.That(snapshot.Scale, Is.EqualTo(new Vector3(1.25f, 1.25f, 1.25f)));
+        }
+
         private static string FindRepoRoot()
         {
             string current = TestContext.CurrentContext.WorkDirectory;

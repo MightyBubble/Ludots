@@ -17,7 +17,6 @@ namespace Ludots.Core.Presentation.Requests
         private readonly GroundOverlayBuffer _groundOverlays;
         private readonly WorldHudBatchBuffer _worldHud;
         private readonly RoadSplineBuffer _roadSplines;
-        private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new();
 
         public PresentationRequestFlushSystem(
             World world,
@@ -96,43 +95,21 @@ namespace Ludots.Core.Presentation.Requests
                 throw new InvalidOperationException($"Presentation prefab request references unknown prefabId={request.PrefabId}.");
             }
 
-            PrefabFinalizationPipeline.FinalizeVisuals(
-                _meshes,
-                prefab.MeshAssetId,
-                request.StableId,
-                request.Position,
-                request.Rotation,
-                request.Scale * prefab.BaseScale,
-                request.Color,
-                request.PrefabContext,
-                _prefabVisuals);
-
-            ReadOnlySpan<PrefabFinalizedVisual> visuals = _prefabVisuals.GetSpan();
-            for (int i = 0; i < visuals.Length; i++)
+            EmitVisualProxy(new PresentationVisualProxy
             {
-                ref readonly PrefabFinalizedVisual visual = ref visuals[i];
-                if (visual.Kind != PrefabVisualPartKind.Mesh && visual.Kind != PrefabVisualPartKind.Surface)
-                {
-                    continue;
-                }
-
-                EmitVisualProxy(new PresentationVisualProxy
-                {
-                    ProxyKind = PresentationVisualProxyKind.Performer,
-                    MeshAssetId = visual.MeshAssetId,
-                    Position = visual.Position,
-                    Rotation = visual.Rotation,
-                    Scale = visual.Scale,
-                    Color = visual.Color,
-                    StableId = visual.StableId,
-                    MaterialId = visual.MaterialId,
-                    RenderPath = VisualRenderPath.StaticMesh,
-                    Mobility = VisualMobility.Movable,
-                    Flags = VisualRuntimeFlags.Visible,
-                    Visibility = request.LOD == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible,
-                    LOD = request.LOD,
-                });
-            }
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                MeshAssetId = prefab.MeshAssetId,
+                Position = request.Position,
+                Rotation = request.Rotation,
+                Scale = request.Scale * prefab.BaseScale,
+                Color = request.Color,
+                StableId = request.StableId,
+                RenderPath = VisualRenderPath.StaticMesh,
+                Mobility = VisualMobility.Movable,
+                Flags = VisualRuntimeFlags.Visible,
+                Visibility = request.LOD == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible,
+                LOD = request.LOD,
+            });
         }
 
         private void EmitVisualProxy(in PresentationVisualProxy proxy)
