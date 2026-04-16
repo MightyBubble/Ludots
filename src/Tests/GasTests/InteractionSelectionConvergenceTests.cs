@@ -871,6 +871,209 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CurrentSelectionApplySystem_ClickUsesFootprintPolygonInsteadOfProjectedOriginOnly()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var entity = world.Create(
+                WorldPositionCm.FromCm(1600, 1200),
+                new VisualTransform { Position = new Vector3(16f, 0f, 12f) },
+                new CullState { IsVisible = true },
+                new SelectionSelectableTag(),
+                new SpatialBounds { Kind = SpatialBoundsKind.Footprint2D },
+                CreateRectFootprint(0, 0, 300, 200));
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            var system = new CurrentSelectionApplySystem(world, globals);
+
+            Click(system, globals, input, new Vector2(1800f, 1200f));
+
+            AssertSelection(selectionRuntime, local, entity);
+        }
+
+        [Test]
+        public void CurrentSelectionApplySystem_DragSelectUsesFootprintIntersection()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var entity = world.Create(
+                WorldPositionCm.FromCm(3000, 1500),
+                new VisualTransform { Position = new Vector3(30f, 0f, 15f) },
+                new CullState { IsVisible = true },
+                new SelectionSelectableTag(),
+                new SpatialBounds { Kind = SpatialBoundsKind.Footprint2D, LocalCenterXCm = -250 },
+                CreateRectFootprint(0, 0, 600, 300));
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            var system = new CurrentSelectionApplySystem(world, globals);
+
+            DragSelect(system, globals, input, new Vector2(2500f, 1300f), new Vector2(2850f, 1700f));
+
+            AssertSelection(selectionRuntime, local, entity);
+        }
+
+        [Test]
+        public void CurrentSelectionApplySystem_Box3DProjectedBoundsAreSelectable()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var entity = world.Create(
+                WorldPositionCm.FromCm(1600, 1200),
+                new VisualTransform { Position = new Vector3(16f, 0f, 12f) },
+                new CullState { IsVisible = true },
+                new SelectionSelectableTag(),
+                new SpatialBounds { Kind = SpatialBoundsKind.Box3D, LocalCenterYCm = 100 },
+                new SpatialBox3D { HalfSizeXCm = 150, HalfSizeYCm = 100, HalfSizeZCm = 150 });
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            var system = new CurrentSelectionApplySystem(world, globals);
+
+            Click(system, globals, input, new Vector2(1700f, 1200f));
+
+            AssertSelection(selectionRuntime, local, entity);
+        }
+
+        [Test]
+        public void CurrentSelectionApplySystem_ClickWithoutGroundPoint_StillSelectsHoveredEntity()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var entity = world.Create(
+                WorldPositionCm.FromCm(1600, 1200),
+                new VisualTransform { Position = new Vector3(16f, 0f, 12f) },
+                new CullState { IsVisible = true },
+                new SelectionSelectableTag(),
+                new SpatialBounds { Kind = SpatialBoundsKind.Footprint2D },
+                CreateRectFootprint(0, 0, 300, 200));
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            var system = new CurrentSelectionApplySystem(world, globals);
+
+            SetConfirmSnapshot(globals, new Vector2(1800f, 1200f), pressedThisFrame: true, isDown: true);
+            input.InjectAction("PointerPos", new Vector3(1800f, 1200f, 0f));
+            input.Update();
+            system.Update(0f);
+
+            SetConfirmSnapshot(globals, new Vector2(1800f, 1200f), pressedThisFrame: false, isDown: false, releasedThisFrame: true);
+            input.InjectAction("PointerPos", new Vector3(1800f, 1200f, 0f));
+            input.Update();
+            system.Update(0f);
+
+            AssertSelection(selectionRuntime, local, entity);
+        }
+
+        [Test]
+        public void CurrentSelectionApplySystem_AdditiveModifierAddsWithoutReplacing()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var first = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            var second = world.Create(WorldPositionCm.FromCm(2600, 1600), new VisualTransform { Position = new Vector3(26f, 0f, 16f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            var system = new CurrentSelectionApplySystem(world, globals);
+
+            Click(system, globals, input, new Vector2(1600f, 1200f));
+            input.InjectAction(SelectionModifierActionIds.Additive, Vector3.One);
+            Click(system, globals, input, new Vector2(2600f, 1600f));
+
+            AssertSelection(selectionRuntime, local, first, second);
+        }
+
+        [Test]
+        public void CurrentSelectionApplySystem_ToggleModifierRemovesExistingSelectionMember()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var first = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            var second = world.Create(WorldPositionCm.FromCm(2600, 1600), new VisualTransform { Position = new Vector3(26f, 0f, 16f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            SeedAmbientSelection(world, globals, local, first, second);
+            var system = new CurrentSelectionApplySystem(world, globals);
+
+            input.InjectAction(SelectionModifierActionIds.Toggle, Vector3.One);
+            Click(system, globals, input, new Vector2(1600f, 1200f));
+
+            AssertSelection(selectionRuntime, local, second);
+        }
+
+        [Test]
         public void CurrentSelectionApplySystem_AimConfirmRelease_DoesNotStealSelection()
         {
             using var world = World.Create();
@@ -1117,6 +1320,19 @@ namespace Ludots.Tests.GAS
         private static WorldSizeSpec CreateWorldSizeSpec()
         {
             return new WorldSizeSpec(new WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100);
+        }
+
+        private static SpatialFootprint2D CreateRectFootprint(int centerXCm, int centerZCm, int widthCm, int depthCm)
+        {
+            int halfWidth = widthCm / 2;
+            int halfDepth = depthCm / 2;
+            var footprint = new SpatialFootprint2D();
+            footprint.SetPolygonVertexCount(0, 4);
+            footprint.SetVertex(0, 0, new WorldCmInt2(centerXCm - halfWidth, centerZCm - halfDepth));
+            footprint.SetVertex(0, 1, new WorldCmInt2(centerXCm + halfWidth, centerZCm - halfDepth));
+            footprint.SetVertex(0, 2, new WorldCmInt2(centerXCm + halfWidth, centerZCm + halfDepth));
+            footprint.SetVertex(0, 3, new WorldCmInt2(centerXCm - halfWidth, centerZCm + halfDepth));
+            return footprint;
         }
 
         private static IVisualHeightmap CreateFlatHeightmap()
