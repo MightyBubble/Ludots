@@ -156,13 +156,21 @@ namespace Ludots.Core.Input.Selection
         public Vector2 StartScreen;
         public Vector2 CurrentScreen;
         public byte IsActive;
+        public byte AcquisitionModeValue;
 
         public readonly bool Active => IsActive != 0;
 
-        public void Begin(Vector2 screenPosition)
+        public SelectionAcquisitionMode AcquisitionMode
+        {
+            readonly get => (SelectionAcquisitionMode)AcquisitionModeValue;
+            set => AcquisitionModeValue = (byte)value;
+        }
+
+        public void Begin(Vector2 screenPosition, SelectionAcquisitionMode acquisitionMode)
         {
             StartScreen = screenPosition;
             CurrentScreen = screenPosition;
+            AcquisitionMode = acquisitionMode;
             IsActive = 1;
         }
 
@@ -170,6 +178,7 @@ namespace Ludots.Core.Input.Selection
         {
             StartScreen = default;
             CurrentScreen = default;
+            AcquisitionModeValue = 0;
             IsActive = 0;
         }
 
