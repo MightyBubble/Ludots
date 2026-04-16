@@ -1,0 +1,15 @@
+{
+  "types": [
+    { "id": "ShowcaseAffinity", "isSymmetric": false }
+  ],
+  "metrics": [
+    { "id": "Affinity", "minValue": -100, "maxValue": 100, "defaultValue": 0 }
+  ],
+  "flags": [],
+  "bands": [],
+  "reasons": [
+    { "id": "GenreInfoShowcase.Seed" }
+  ],
+  "callbacks": [],
+  "synergies": []
+}

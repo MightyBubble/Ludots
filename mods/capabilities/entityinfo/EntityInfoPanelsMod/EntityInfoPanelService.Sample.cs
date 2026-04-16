@@ -116,7 +116,7 @@ public sealed partial class EntityInfoPanelService
                 string subtitle = resolved != Entity.Null && world.IsAlive(resolved)
                     ? ResolveEntityLabel(world, resolved)
                     : ResolveMissingSubtitle(_targets[slot]);
-                dirty |= SetString(_titles, slot, "Entity Component Inspector");
+                dirty |= SetString(_titles, slot, GetComponentInspectorTitleText());
                 dirty |= SetString(_subtitles, slot, subtitle);
                 dirty |= SampleComponentInspector(slot, world, resolved);
                 break;
@@ -126,14 +126,14 @@ public sealed partial class EntityInfoPanelService
                 string subtitle = resolved != Entity.Null && world.IsAlive(resolved)
                     ? ResolveEntityLabel(world, resolved)
                     : ResolveMissingSubtitle(_targets[slot]);
-                dirty |= SetString(_titles, slot, "Entity GAS Inspector");
+                dirty |= SetString(_titles, slot, GetGasInspectorTitleText());
                 dirty |= SetString(_subtitles, slot, subtitle);
                 dirty |= SampleGasInspector(slot, world, resolved);
                 break;
             }
             case EntityInfoPanelKind.EntityCollectionInspector:
             {
-                dirty |= SetString(_titles, slot, "Entity Collection Inspector");
+                dirty |= SetString(_titles, slot, GetCollectionInspectorTitleText());
                 dirty |= SampleEntityCollectionInspector(slot, world, globals);
                 break;
             }
@@ -212,7 +212,7 @@ public sealed partial class EntityInfoPanelService
 
         if (entity == Entity.Null || !world.IsAlive(entity))
         {
-            dirty |= SetGasLine(slot, lineCount++, "Target unavailable.");
+            dirty |= SetGasLine(slot, lineCount++, GetTargetUnavailableText());
             dirty |= TrimGasLines(slot, lineCount);
             return dirty;
         }
@@ -329,11 +329,11 @@ public sealed partial class EntityInfoPanelService
             aliasKey = descriptor.Container.AliasKey;
             count = descriptor.Container.MemberCount;
             revision = descriptor.Container.Revision;
-            dirty |= SetString(_subtitles, slot, $"{viewKey} -> {aliasKey} | {count} entities");
+            dirty |= SetString(_subtitles, slot, BuildEntityCollectionSubtitle(viewKey, aliasKey, count));
         }
         else
         {
-            dirty |= SetString(_subtitles, slot, "No active selection view.");
+            dirty |= SetString(_subtitles, slot, GetEntityCollectionWaitingBodyText());
         }
 
         if (_resolvedTargets[slot] != primary)

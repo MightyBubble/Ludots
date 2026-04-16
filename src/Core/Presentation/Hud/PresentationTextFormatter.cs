@@ -20,25 +20,33 @@ namespace Ludots.Core.Presentation.Hud
                 return false;
             }
 
-            text = Format(template, in packet);
+            text = Format(catalog, localeId, template, in packet);
             return true;
         }
 
-        public static string Format(PresentationTextTemplate template, in PresentationTextPacket packet)
+        public static string Format(
+            PresentationTextCatalog catalog,
+            int localeId,
+            PresentationTextTemplate template,
+            in PresentationTextPacket packet)
         {
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
             if (template == null) throw new ArgumentNullException(nameof(template));
 
             var builder = new StringBuilder(Math.Max(template.Source.Length, packet.ArgCount * 8));
-            AppendFormatted(builder, template, in packet);
+            AppendFormatted(builder, catalog, localeId, template, in packet);
             return builder.ToString();
         }
 
         public static void AppendFormatted(
             StringBuilder builder,
+            PresentationTextCatalog catalog,
+            int localeId,
             PresentationTextTemplate template,
             in PresentationTextPacket packet)
         {
             if (builder == null) throw new ArgumentNullException(nameof(builder));
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
             if (template == null) throw new ArgumentNullException(nameof(template));
 
             ReadOnlySpan<PresentationTextTemplatePart> parts = template.GetParts();
@@ -57,11 +65,11 @@ namespace Ludots.Core.Presentation.Hud
                 }
 
                 PresentationTextArg arg = packet.GetArg(part.ArgIndex);
-                AppendArg(builder, in arg);
+                AppendArg(builder, catalog, localeId, in arg);
             }
         }
 
-        private static void AppendArg(StringBuilder builder, in PresentationTextArg arg)
+        private static void AppendArg(StringBuilder builder, PresentationTextCatalog catalog, int localeId, in PresentationTextArg arg)
         {
             switch (arg.Type)
             {
@@ -72,6 +80,19 @@ namespace Ludots.Core.Presentation.Hud
                 case PresentationTextArgType.Float32:
                     AppendFloat(builder, arg.AsFloat32(), arg.Format);
                     break;
+
+                case PresentationTextArgType.Token:
+                    if (catalog.TryGetTemplate(localeId, arg.AsTokenId(), out var nestedTemplate))
+                    {
+                        AppendFormatted(builder, catalog, localeId, nestedTemplate, PresentationTextPacket.FromToken(arg.AsTokenId()));
+                        break;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"Presentation text token arg '{arg.AsTokenId()}' is not available for locale '{localeId}'.");
+
+                default:
+                    throw new InvalidOperationException($"Unsupported presentation text arg type '{arg.Type}'.");
             }
         }
 

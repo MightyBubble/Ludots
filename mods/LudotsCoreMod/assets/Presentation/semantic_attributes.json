@@ -1,0 +1,65 @@
+[
+  {
+    "id": "stat.health",
+    "attribute": "Health",
+    "labelToken": "presentation.semantic.stat.health",
+    "currentFormatToken": "hud.attribute.current",
+    "currentOverBaseFormatToken": "hud.attribute.current_over_base",
+    "constantFormatToken": "hud.attribute.constant"
+  },
+  {
+    "id": "stat.energy",
+    "attribute": "Energy",
+    "labelToken": "presentation.semantic.stat.energy",
+    "currentFormatToken": "hud.attribute.current",
+    "currentOverBaseFormatToken": "hud.attribute.current_over_base",
+    "constantFormatToken": "hud.attribute.constant"
+  },
+  {
+    "id": "stat.attack_speed",
+    "attribute": "AttackSpeed",
+    "labelToken": "presentation.semantic.stat.attack_speed",
+    "currentFormatToken": "hud.attribute.current",
+    "currentOverBaseFormatToken": "hud.attribute.current_over_base",
+    "constantFormatToken": "hud.attribute.constant"
+  },
+  {
+    "id": "stat.gold",
+    "attribute": "Gold",
+    "labelToken": "presentation.semantic.stat.gold",
+    "currentFormatToken": "hud.attribute.current",
+    "currentOverBaseFormatToken": "hud.attribute.current_over_base",
+    "constantFormatToken": "hud.attribute.constant"
+  },
+  {
+    "id": "stat.production",
+    "attribute": "Production",
+    "labelToken": "presentation.semantic.stat.production",
+    "currentFormatToken": "hud.attribute.current",
+    "currentOverBaseFormatToken": "hud.attribute.current_over_base",
+    "constantFormatToken": "hud.attribute.constant"
+  },
+  {
+    "id": "stat.tech_progress",
+    "attribute": "TechProgress",
+    "labelToken": "presentation.semantic.stat.tech_progress",
+    "currentFormatToken": "hud.attribute.current",
+    "currentOverBaseFormatToken": "hud.attribute.current_over_base",
+    "constantFormatToken": "hud.attribute.constant"
+  },
+  {
+    "id": "stat.shield",
+    "attribute": "Shield",
+    "labelToken": "presentation.semantic.stat.shield",
+    "currentFormatToken": "hud.attribute.current",
+    "currentOverBaseFormatToken": "hud.attribute.current_over_base",
+    "constantFormatToken": "hud.attribute.constant"
+  },
+  {
+    "id": "stat.lane_count",
+    "labelToken": "presentation.semantic.stat.lane_count",
+    "currentFormatToken": "hud.attribute.current",
+    "currentOverBaseFormatToken": "hud.attribute.current_over_base",
+    "constantFormatToken": "hud.attribute.constant"
+  }
+]

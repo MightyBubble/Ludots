@@ -469,13 +469,14 @@ namespace Ludots.Core.Presentation.Systems
             var color = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
             color.W *= alphaMod;
             int stableId = ResolveMarkerStableId(handle, def.Id, owner);
+            Quaternion rotation = ResolveMarkerRotation(handle, def, owner);
 
             _proxyEmitter.Emit(new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Performer,
                 MeshAssetId = def.MeshOrShapeId,
                 Position = pos,
-                Rotation = Quaternion.Identity,
+                Rotation = rotation,
                 Scale = new Vector3(sx, sy, sz),
                 Color = color,
                 StableId = stableId,
@@ -484,6 +485,22 @@ namespace Ludots.Core.Presentation.Systems
                 Flags = VisualRuntimeFlags.Visible,
                 Visibility = VisualVisibility.Visible,
             });
+        }
+
+        private Quaternion ResolveMarkerRotation(int handle, PerformerDefinition def, Entity owner)
+        {
+            float useOwnerRotation = ResolveParam(handle, def, owner, WellKnownPerformerParamKeys.MarkerUseOwnerRotation, 0f);
+            if (useOwnerRotation <= 0f)
+            {
+                return Quaternion.Identity;
+            }
+
+            if (World.IsAlive(owner) && World.Has<VisualTransform>(owner))
+            {
+                return World.Get<VisualTransform>(owner).Rotation;
+            }
+
+            return Quaternion.Identity;
         }
 
         private void EmitRoadSpline(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)

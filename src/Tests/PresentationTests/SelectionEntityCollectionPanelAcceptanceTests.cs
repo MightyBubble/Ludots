@@ -59,8 +59,10 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
             ?? throw new InvalidOperationException("SelectionRuntime service is missing.");
 
         const int selectionCount = 72;
-        int healthId = AttributeRegistry.Register("Acceptance.Selection.Health");
-        int manaId = AttributeRegistry.Register("Acceptance.Selection.Mana");
+        int healthId = AttributeRegistry.GetId("Health");
+        int shieldId = AttributeRegistry.GetId("Shield");
+        Assert.That(healthId, Is.GreaterThanOrEqualTo(0), "Health attribute must be registered by the showcase contract.");
+        Assert.That(shieldId, Is.GreaterThanOrEqualTo(0), "Shield attribute must be registered by the showcase contract.");
         var selected = new Entity[selectionCount];
         for (int i = 0; i < selectionCount; i++)
         {
@@ -73,8 +75,8 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
             var attributes = new AttributeBuffer();
             attributes.SetBase(healthId, 100f + i);
             attributes.SetCurrent(healthId, 60f + i);
-            attributes.SetBase(manaId, 80f);
-            attributes.SetCurrent(manaId, 20f + (i % 25));
+            attributes.SetBase(shieldId, 40f);
+            attributes.SetCurrent(shieldId, 10f + (i % 20));
             selected[i] = engine.World.Create(
                 new Name { Value = unitName },
                 attributes);
@@ -111,9 +113,11 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
         string sceneText = ExtractUiSceneText(scene);
         Assert.That(sceneText, Does.Contain("Current viewed selection"));
         Assert.That(sceneText, Does.Contain("Spearman x24 *"));
-        Assert.That(sceneText, Does.Contain("FORM 72"));
+        Assert.That(sceneText, Does.Contain("Formation view -> Formation selection | 72 entities"));
+        Assert.That(sceneText, Does.Contain("3 categories | rows 1-6"));
         Assert.That(sceneText, Does.Contain("G1 72u Spearman"));
-        Assert.That(sceneText, Does.Contain("Acceptance.Selection.Health"));
+        Assert.That(sceneText, Does.Contain("Shield 10/40"));
+        Assert.That(sceneText, Does.Not.Contain("No semantic attributes"));
 
         float x = host.LayoutRect.X + (host.LayoutRect.Width * 0.5f);
         float y = host.LayoutRect.Y + (host.LayoutRect.Height * 0.5f);
@@ -191,6 +195,7 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
         InstallInput(engine);
         engine.SetService(CoreServiceKeys.UiTextMeasurer, new SkiaTextMeasurer());
         engine.SetService(CoreServiceKeys.UiImageSizeProvider, new SkiaImageSizeProvider());
+        engine.SetService(CoreServiceKeys.PresentationBackendId, "raylib");
         engine.Start();
         return engine;
     }

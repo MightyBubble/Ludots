@@ -1,0 +1,11 @@
+[
+  {
+    "id": "genreinfo.relationship.metric",
+    "labelToken": "genreinfo.relationship.label",
+    "values": {
+      "-100": "genreinfo.relationship.hostile",
+      "0": "genreinfo.relationship.neutral",
+      "100": "genreinfo.relationship.friendly"
+    }
+  }
+]

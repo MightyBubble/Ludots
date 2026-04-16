@@ -104,5 +104,7 @@ namespace Ludots.Core.Presentation.Performers
         public const int MarkerColorB = 6;
         /// <summary>Marker color alpha channel.</summary>
         public const int MarkerColorA = 7;
+        /// <summary>Inherit owner VisualTransform rotation when non-zero.</summary>
+        public const int MarkerUseOwnerRotation = 8;
     }
 }

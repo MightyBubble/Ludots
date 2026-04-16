@@ -44,6 +44,7 @@ namespace Ludots.Adapter.Raylib
             }
 
             engine.SetService(CoreServiceKeys.LogBackend, effectiveBackend);
+            engine.SetService(CoreServiceKeys.PresentationBackendId, "raylib");
 
             var renderer = new SkiaUiRenderer();
             IUiTextMeasurer textMeasurer = new SkiaTextMeasurer();

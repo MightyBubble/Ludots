@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
 
@@ -202,7 +203,7 @@ public sealed partial class EntityInfoPanelService
         return fields;
     }
 
-    private static string DescribeEffect(World world, Entity effectEntity)
+    private string DescribeEffect(World world, Entity effectEntity)
     {
         string templateName = "effect";
         if (world.TryGet(effectEntity, out EffectTemplateRef templateRef))
@@ -231,24 +232,29 @@ public sealed partial class EntityInfoPanelService
             : $"{templateName} | src={source} | {state}{stack}";
     }
 
-    private static string ResolveEntityLabel(World world, Entity entity)
+    private string ResolveEntityLabel(World world, Entity entity)
     {
         if (world.TryGet(entity, out Name name) && !string.IsNullOrWhiteSpace(name.Value))
         {
-            return $"{name.Value} #{entity.Id}";
+            return name.Value;
         }
 
-        return $"Entity #{entity.Id}";
+        return ResolveEntityFallbackText(entity);
     }
 
-    private static string ResolveMissingSubtitle(EntityInfoPanelTarget target)
+    private string ResolveEntityFallbackText(Entity entity)
+    {
+        return FormatTextTokenKey(InsightEntityNameToken, CreateNumericArg(entity.Id));
+    }
+
+    private string ResolveMissingSubtitle(EntityInfoPanelTarget target)
     {
         return target.Kind switch
         {
-            EntityInfoPanelTargetKind.FixedEntity => "Fixed target unavailable.",
-            EntityInfoPanelTargetKind.GlobalEntityKey when !string.IsNullOrWhiteSpace(target.Key) => $"Waiting for `{target.Key}`.",
-            EntityInfoPanelTargetKind.CurrentSelectionView => "Waiting for active selection view.",
-            _ => "Target unavailable.",
+            EntityInfoPanelTargetKind.FixedEntity => GetTargetFixedUnavailableText(),
+            EntityInfoPanelTargetKind.GlobalEntityKey => GetTargetGlobalWaitingText(),
+            EntityInfoPanelTargetKind.CurrentSelectionView => GetEntityCollectionWaitingBodyText(),
+            _ => GetTargetUnavailableText(),
         };
     }
 
@@ -259,14 +265,14 @@ public sealed partial class EntityInfoPanelService
             return name.Value;
         }
 
-        return $"Entity #{entity.Id}";
+        return string.Empty;
     }
 
-    private static string BuildEntityAttributePreview(World world, Entity entity)
+    private string BuildEntityAttributePreview(World world, Entity entity)
     {
         if (!world.TryGet(entity, out AttributeBuffer attributes))
         {
-            return "(no attributes)";
+            return ResolveTextTokenKey(EntityCollectionNoAttributesToken);
         }
 
         int appended = 0;
@@ -281,15 +287,20 @@ public sealed partial class EntityInfoPanelService
                 continue;
             }
 
-            string attrName = AttributeRegistry.GetName(attrId);
-            if (string.IsNullOrWhiteSpace(attrName))
+            if (!_semanticResolver.TryResolveAttributeLabelById(attrId, out string label) ||
+                !_semanticResolver.TryFormatAttributeById(
+                    attrId,
+                    PresentationAttributeValueDisplayKind.CurrentOverBase,
+                    currentValue,
+                    baseValue,
+                    out string value))
             {
-                attrName = $"attr:{attrId}";
+                continue;
             }
 
             if (appended < MaxEntityCollectionPreviewAttributes)
             {
-                string segment = $"{attrName} {FormatNumber(currentValue)}/{FormatNumber(baseValue)}";
+                string segment = $"{label} {value}";
                 preview = appended == 0 ? segment : $"{preview} | {segment}";
                 appended++;
             }
@@ -301,20 +312,26 @@ public sealed partial class EntityInfoPanelService
 
         if (appended == 0)
         {
-            return "(no attributes)";
+            return ResolveTextTokenKey(EntityCollectionNoAttributesToken);
         }
 
         return hidden > 0
-            ? $"{preview} | +{hidden} more"
+            ? $"{preview} | {FormatTextTokenKey(EntityCollectionMoreAttributesToken, CreateNumericArg(hidden))}"
             : preview;
     }
 
     private static string ResolveEntityCollectionCategoryLabel(World world, Entity entity)
     {
         string displayName = ResolveEntityDisplayName(world, entity).Trim();
+        return NormalizeEntityCollectionCategoryLabel(displayName, entity.Id);
+    }
+
+    public static string NormalizeEntityCollectionCategoryLabel(string displayName, int entityId = 0)
+    {
+        displayName = (displayName ?? string.Empty).Trim();
         if (displayName.Length == 0)
         {
-            return $"Entity #{entity.Id}";
+            return entityId > 0 ? entityId.ToString(CultureInfo.InvariantCulture) : string.Empty;
         }
 
         int end = displayName.Length;
@@ -343,7 +360,7 @@ public sealed partial class EntityInfoPanelService
         {
             null => "null",
             string text => text,
-            Entity entity => entity == Entity.Null ? "Entity.Null" : $"Entity #{entity.Id}",
+            Entity entity => entity == Entity.Null ? "0" : entity.Id.ToString(CultureInfo.InvariantCulture),
             MapId mapId => mapId.Value,
             Vector2 vector2 => $"({FormatNumber(vector2.X)}, {FormatNumber(vector2.Y)})",
             Vector3 vector3 => FormatVector3(vector3),

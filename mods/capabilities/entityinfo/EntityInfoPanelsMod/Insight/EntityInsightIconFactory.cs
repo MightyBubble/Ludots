@@ -9,9 +9,9 @@ public sealed class EntityInsightIconFactory
 
     public string Build(string glyph, string accentColorHex, string surfaceColorHex, bool emphatic = false)
     {
-        string normalizedGlyph = string.IsNullOrWhiteSpace(glyph) ? "?" : glyph.Trim();
-        string normalizedAccent = NormalizeHex(accentColorHex, "#58B7FF");
-        string normalizedSurface = NormalizeHex(surfaceColorHex, "#0F1721");
+        string normalizedGlyph = NormalizeGlyphRequired(glyph);
+        string normalizedAccent = NormalizeHexRequired(accentColorHex, nameof(accentColorHex));
+        string normalizedSurface = NormalizeHexRequired(surfaceColorHex, nameof(surfaceColorHex));
         string cacheKey = $"{normalizedGlyph}|{normalizedAccent}|{normalizedSurface}|{(emphatic ? 1 : 0)}";
         if (_cache.TryGetValue(cacheKey, out string? cached))
         {
@@ -42,11 +42,22 @@ public sealed class EntityInsightIconFactory
         };
     }
 
-    private static string NormalizeHex(string? value, string fallback)
+    private static string NormalizeGlyphRequired(string? glyph)
+    {
+        string normalized = (glyph ?? string.Empty).Trim();
+        if (normalized.Length == 0)
+        {
+            throw new InvalidOperationException("Entity insight glyph must not be empty.");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeHexRequired(string? value, string parameterName)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            return fallback;
+            throw new InvalidOperationException($"Entity insight color '{parameterName}' must not be empty.");
         }
 
         string trimmed = value.Trim();
@@ -65,7 +76,7 @@ public sealed class EntityInsightIconFactory
 
         if (trimmed.Length < 6)
         {
-            return fallback;
+            throw new InvalidOperationException($"Entity insight color '{parameterName}' must be a 3- or 6-digit hex value.");
         }
 
         string rgb = trimmed[..6];
@@ -77,7 +88,7 @@ public sealed class EntityInsightIconFactory
                          (ch >= 'a' && ch <= 'f');
             if (!isHex)
             {
-                return fallback;
+                throw new InvalidOperationException($"Entity insight color '{parameterName}' contains non-hex characters.");
             }
         }
 

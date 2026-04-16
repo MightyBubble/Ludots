@@ -44,11 +44,43 @@ namespace Ludots.Core.Presentation.Camera
                 camera = CameraViewportUtil.StateToRenderState(state);
             }
 
+            if (!IsRenderableCamera(camera))
+            {
+                return new Vector2(float.NaN, float.NaN);
+            }
+
             return CameraViewportUtil.WorldToScreen(
                 worldPosition,
                 camera,
                 _view.Resolution,
                 _view.AspectRatio);
+        }
+
+        private static bool IsRenderableCamera(in CameraRenderState3D state)
+        {
+            if (!float.IsFinite(state.FovYDeg) || state.FovYDeg <= 1f || state.FovYDeg >= 179f)
+            {
+                return false;
+            }
+
+            if (!IsFiniteVector(state.Position) || !IsFiniteVector(state.Target) || !IsFiniteVector(state.Up))
+            {
+                return false;
+            }
+
+            if (Vector3.DistanceSquared(state.Position, state.Target) < 1e-6f)
+            {
+                return false;
+            }
+
+            return state.Up.LengthSquared() >= 1e-6f;
+        }
+
+        private static bool IsFiniteVector(in Vector3 value)
+        {
+            return float.IsFinite(value.X)
+                && float.IsFinite(value.Y)
+                && float.IsFinite(value.Z);
         }
     }
 }

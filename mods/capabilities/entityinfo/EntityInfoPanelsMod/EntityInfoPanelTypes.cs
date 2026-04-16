@@ -85,6 +85,14 @@ public readonly record struct EntityCollectionCategorySummary(
     int Count,
     bool ContainsPrimary);
 
+public readonly record struct EntityCollectionSummary(
+    string ViewKey,
+    string AliasKey,
+    int EntityCount,
+    int CategoryCount,
+    int VisibleRowStart,
+    int VisibleRowEnd);
+
 public readonly record struct EntityInfoPanelRequest(
     EntityInfoPanelKind Kind,
     EntityInfoPanelSurface Surface,

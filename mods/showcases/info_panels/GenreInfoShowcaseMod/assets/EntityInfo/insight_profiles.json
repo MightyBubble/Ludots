@@ -5,7 +5,11 @@
     "accentColorHex": "#D8A85D",
     "surfaceColorHex": "#1A2028",
     "genreGlyph": "4X",
-    "portraitGlyph": "GV",
+    "imageSource": {
+      "scope": "entity",
+      "role": "Portrait",
+      "state": "Default"
+    },
     "genreLabelToken": "genreinfo.genre.4x",
     "subtitleToken": "genreinfo.profile.governor.subtitle",
     "bodyToken": "genreinfo.profile.governor.body",
@@ -14,10 +18,22 @@
       { "glyph": "T", "textToken": "genreinfo.profile.governor.badge.trade" }
     ],
     "stats": [
-      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
-      { "glyph": "AU", "labelToken": "genreinfo.stat.gold", "source": "attribute", "attribute": "Gold", "display": "currentOverBase" },
-      { "glyph": "PR", "labelToken": "genreinfo.stat.production", "source": "attribute", "attribute": "Production", "display": "currentOverBase" },
-      { "glyph": "TK", "labelToken": "genreinfo.stat.tech", "source": "attribute", "attribute": "TechProgress", "display": "currentOverBase" }
+      { "semanticKey": "stat.health", "glyph": "HP", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "semanticKey": "stat.gold", "glyph": "AU", "source": "attribute", "attribute": "Gold", "display": "currentOverBase" },
+      { "semanticKey": "stat.production", "glyph": "PR", "source": "attribute", "attribute": "Production", "display": "currentOverBase" },
+      { "semanticKey": "stat.tech_progress", "glyph": "TK", "source": "attribute", "attribute": "TechProgress", "display": "currentOverBase" }
+    ],
+    "semanticFields": [
+      {
+        "glyph": "REL",
+        "render": "mapping",
+        "mappingId": "genreinfo.relationship.metric",
+        "semanticSource": "relationship.metric",
+        "relationshipType": "ShowcaseAffinity",
+        "relationshipMetric": "Affinity",
+        "sourceSubject": "selection.viewer",
+        "targetSubject": "self"
+      }
     ],
     "tips": [
       { "glyph": "1", "textToken": "genreinfo.profile.governor.tip.1" },
@@ -35,7 +51,11 @@
     "accentColorHex": "#5DB0FF",
     "surfaceColorHex": "#122033",
     "genreGlyph": "MO",
-    "portraitGlyph": "NX",
+    "imageSource": {
+      "scope": "entity",
+      "role": "Portrait",
+      "state": "Default"
+    },
     "genreLabelToken": "genreinfo.genre.moba",
     "subtitleToken": "genreinfo.profile.hero.subtitle",
     "bodyToken": "genreinfo.profile.hero.body",
@@ -44,9 +64,21 @@
       { "glyph": "UT", "textToken": "genreinfo.profile.hero.badge.utility" }
     ],
     "stats": [
-      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
-      { "glyph": "EN", "labelToken": "genreinfo.stat.energy", "source": "attribute", "attribute": "Energy", "display": "currentOverBase" },
-      { "glyph": "AS", "labelToken": "genreinfo.stat.attack_speed", "source": "attribute", "attribute": "AttackSpeed", "display": "current" }
+      { "semanticKey": "stat.health", "glyph": "HP", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "semanticKey": "stat.energy", "glyph": "EN", "source": "attribute", "attribute": "Energy", "display": "currentOverBase" },
+      { "semanticKey": "stat.attack_speed", "glyph": "AS", "source": "attribute", "attribute": "AttackSpeed", "display": "current" }
+    ],
+    "semanticFields": [
+      {
+        "glyph": "REL",
+        "render": "mapping",
+        "mappingId": "genreinfo.relationship.metric",
+        "semanticSource": "relationship.metric",
+        "relationshipType": "ShowcaseAffinity",
+        "relationshipMetric": "Affinity",
+        "sourceSubject": "selection.viewer",
+        "targetSubject": "self"
+      }
     ],
     "tips": [
       { "glyph": "Q", "textToken": "genreinfo.profile.hero.tip.1" },
@@ -64,7 +96,11 @@
     "accentColorHex": "#D66F4D",
     "surfaceColorHex": "#231716",
     "genreGlyph": "RT",
-    "portraitGlyph": "BK",
+    "imageSource": {
+      "scope": "entity",
+      "role": "Portrait",
+      "state": "Default"
+    },
     "genreLabelToken": "genreinfo.genre.rts",
     "subtitleToken": "genreinfo.profile.barracks.subtitle",
     "bodyToken": "genreinfo.profile.barracks.body",
@@ -73,8 +109,20 @@
       { "glyph": "UP", "textToken": "genreinfo.profile.barracks.badge.upgrade" }
     ],
     "stats": [
-      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
-      { "glyph": "LY", "labelToken": "genreinfo.stat.lane", "source": "constant", "value": 2, "display": "constant" }
+      { "semanticKey": "stat.health", "glyph": "HP", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "semanticKey": "stat.lane_count", "glyph": "LY", "source": "constant", "value": 2, "display": "constant" }
+    ],
+    "semanticFields": [
+      {
+        "glyph": "REL",
+        "render": "mapping",
+        "mappingId": "genreinfo.relationship.metric",
+        "semanticSource": "relationship.metric",
+        "relationshipType": "ShowcaseAffinity",
+        "relationshipMetric": "Affinity",
+        "sourceSubject": "selection.viewer",
+        "targetSubject": "self"
+      }
     ],
     "tips": [
       { "glyph": "B", "textToken": "genreinfo.profile.barracks.tip.1" },
@@ -91,7 +139,11 @@
     "accentColorHex": "#8FC4FF",
     "surfaceColorHex": "#162130",
     "genreGlyph": "RT",
-    "portraitGlyph": "MR",
+    "imageSource": {
+      "scope": "entity",
+      "role": "Portrait",
+      "state": "Default"
+    },
     "genreLabelToken": "genreinfo.genre.rts",
     "subtitleToken": "genreinfo.profile.marine.subtitle",
     "bodyToken": "genreinfo.profile.marine.body",
@@ -100,8 +152,20 @@
       { "glyph": "DP", "textToken": "genreinfo.profile.marine.badge.dps" }
     ],
     "stats": [
-      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
-      { "glyph": "AS", "labelToken": "genreinfo.stat.attack_speed", "source": "attribute", "attribute": "AttackSpeed", "display": "current" }
+      { "semanticKey": "stat.health", "glyph": "HP", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "semanticKey": "stat.attack_speed", "glyph": "AS", "source": "attribute", "attribute": "AttackSpeed", "display": "current" }
+    ],
+    "semanticFields": [
+      {
+        "glyph": "REL",
+        "render": "mapping",
+        "mappingId": "genreinfo.relationship.metric",
+        "semanticSource": "relationship.metric",
+        "relationshipType": "ShowcaseAffinity",
+        "relationshipMetric": "Affinity",
+        "sourceSubject": "selection.viewer",
+        "targetSubject": "self"
+      }
     ],
     "tips": [
       { "glyph": "F", "textToken": "genreinfo.profile.marine.tip.1" },
@@ -117,7 +181,11 @@
     "accentColorHex": "#D7A95C",
     "surfaceColorHex": "#201E18",
     "genreGlyph": "RT",
-    "portraitGlyph": "TK",
+    "imageSource": {
+      "scope": "entity",
+      "role": "Portrait",
+      "state": "Default"
+    },
     "genreLabelToken": "genreinfo.genre.rts",
     "subtitleToken": "genreinfo.profile.tank.subtitle",
     "bodyToken": "genreinfo.profile.tank.body",
@@ -126,8 +194,20 @@
       { "glyph": "SV", "textToken": "genreinfo.profile.tank.badge.siege" }
     ],
     "stats": [
-      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
-      { "glyph": "SH", "labelToken": "genreinfo.stat.shield", "source": "attribute", "attribute": "Shield", "display": "currentOverBase" }
+      { "semanticKey": "stat.health", "glyph": "HP", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "semanticKey": "stat.shield", "glyph": "SH", "source": "attribute", "attribute": "Shield", "display": "currentOverBase" }
+    ],
+    "semanticFields": [
+      {
+        "glyph": "REL",
+        "render": "mapping",
+        "mappingId": "genreinfo.relationship.metric",
+        "semanticSource": "relationship.metric",
+        "relationshipType": "ShowcaseAffinity",
+        "relationshipMetric": "Affinity",
+        "sourceSubject": "selection.viewer",
+        "targetSubject": "self"
+      }
     ],
     "tips": [
       { "glyph": "A", "textToken": "genreinfo.profile.tank.tip.1" },
@@ -143,7 +223,11 @@
     "accentColorHex": "#7CE2C8",
     "surfaceColorHex": "#13221E",
     "genreGlyph": "RT",
-    "portraitGlyph": "SV",
+    "imageSource": {
+      "scope": "entity",
+      "role": "Portrait",
+      "state": "Default"
+    },
     "genreLabelToken": "genreinfo.genre.rts",
     "subtitleToken": "genreinfo.profile.vessel.subtitle",
     "bodyToken": "genreinfo.profile.vessel.body",
@@ -152,8 +236,20 @@
       { "glyph": "SP", "textToken": "genreinfo.profile.vessel.badge.support" }
     ],
     "stats": [
-      { "glyph": "HP", "labelToken": "genreinfo.stat.health", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
-      { "glyph": "EN", "labelToken": "genreinfo.stat.energy", "source": "attribute", "attribute": "Energy", "display": "currentOverBase" }
+      { "semanticKey": "stat.health", "glyph": "HP", "source": "attribute", "attribute": "Health", "display": "currentOverBase" },
+      { "semanticKey": "stat.energy", "glyph": "EN", "source": "attribute", "attribute": "Energy", "display": "currentOverBase" }
+    ],
+    "semanticFields": [
+      {
+        "glyph": "REL",
+        "render": "mapping",
+        "mappingId": "genreinfo.relationship.metric",
+        "semanticSource": "relationship.metric",
+        "relationshipType": "ShowcaseAffinity",
+        "relationshipMetric": "Affinity",
+        "sourceSubject": "selection.viewer",
+        "targetSubject": "self"
+      }
     ],
     "tips": [
       { "glyph": "H", "textToken": "genreinfo.profile.vessel.tip.1" },

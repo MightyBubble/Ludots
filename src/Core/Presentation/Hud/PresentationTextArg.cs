@@ -29,8 +29,19 @@ namespace Ludots.Core.Presentation.Hud
             };
         }
 
+        public static PresentationTextArg FromToken(int tokenId)
+        {
+            return new PresentationTextArg
+            {
+                Type = PresentationTextArgType.Token,
+                Raw32 = tokenId,
+            };
+        }
+
         public int AsInt32() => Raw32;
 
         public float AsFloat32() => BitConverter.Int32BitsToSingle(Raw32);
+
+        public int AsTokenId() => Raw32;
     }
 }

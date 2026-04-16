@@ -194,6 +194,7 @@ namespace Ludots.Adapter.UE5
             }
 
             engine.SetService(CoreServiceKeys.LogBackend, effectiveBackend);
+            engine.SetService(CoreServiceKeys.PresentationBackendId, "ue5");
 
             // ── 3. 共享状态容器 ──────────────────────────────────────────
             var sharedState = new UE5SharedCameraState

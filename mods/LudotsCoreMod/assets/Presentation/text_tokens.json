@@ -18,5 +18,53 @@
   {
     "id": "hud.entity.id",
     "argCount": 1
+  },
+  {
+    "id": "presentation.semantic.stat.health",
+    "argCount": 0
+  },
+  {
+    "id": "presentation.semantic.stat.energy",
+    "argCount": 0
+  },
+  {
+    "id": "presentation.semantic.stat.attack_speed",
+    "argCount": 0
+  },
+  {
+    "id": "presentation.semantic.stat.gold",
+    "argCount": 0
+  },
+  {
+    "id": "presentation.semantic.stat.production",
+    "argCount": 0
+  },
+  {
+    "id": "presentation.semantic.stat.tech_progress",
+    "argCount": 0
+  },
+  {
+    "id": "presentation.semantic.stat.shield",
+    "argCount": 0
+  },
+  {
+    "id": "presentation.semantic.stat.lane_count",
+    "argCount": 0
+  },
+  {
+    "id": "presentation.semantic.relationship.label",
+    "argCount": 0
+  },
+  {
+    "id": "presentation.semantic.relationship.neutral",
+    "argCount": 0
+  },
+  {
+    "id": "presentation.semantic.relationship.friendly",
+    "argCount": 0
+  },
+  {
+    "id": "presentation.semantic.relationship.hostile",
+    "argCount": 0
   }
 ]

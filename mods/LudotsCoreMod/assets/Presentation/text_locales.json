@@ -6,14 +6,38 @@
       "hud.attribute.current_over_base": "{0}/{1}",
       "hud.attribute.constant": "{0}",
       "hud.combat.delta": "{0}",
-      "hud.entity.id": "#{0}"
+      "hud.entity.id": "#{0}",
+      "presentation.semantic.stat.health": "Health",
+      "presentation.semantic.stat.energy": "Energy",
+      "presentation.semantic.stat.attack_speed": "Attack Speed",
+      "presentation.semantic.stat.gold": "Gold",
+      "presentation.semantic.stat.production": "Production",
+      "presentation.semantic.stat.tech_progress": "Tech",
+      "presentation.semantic.stat.shield": "Shield",
+      "presentation.semantic.stat.lane_count": "Lane Count",
+      "presentation.semantic.relationship.label": "Relationship",
+      "presentation.semantic.relationship.neutral": "Neutral",
+      "presentation.semantic.relationship.friendly": "Friendly",
+      "presentation.semantic.relationship.hostile": "Hostile"
     },
     "zh-CN": {
       "hud.attribute.current": "{0}",
       "hud.attribute.current_over_base": "{0}/{1}",
       "hud.attribute.constant": "{0}",
       "hud.combat.delta": "{0}",
-      "hud.entity.id": "#{0}"
+      "hud.entity.id": "#{0}",
+      "presentation.semantic.stat.health": "生命",
+      "presentation.semantic.stat.energy": "能量",
+      "presentation.semantic.stat.attack_speed": "攻速",
+      "presentation.semantic.stat.gold": "金币",
+      "presentation.semantic.stat.production": "产能",
+      "presentation.semantic.stat.tech_progress": "科技",
+      "presentation.semantic.stat.shield": "护盾",
+      "presentation.semantic.stat.lane_count": "航道数",
+      "presentation.semantic.relationship.label": "关系",
+      "presentation.semantic.relationship.neutral": "中立",
+      "presentation.semantic.relationship.friendly": "友好",
+      "presentation.semantic.relationship.hostile": "敌对"
     }
   }
 }

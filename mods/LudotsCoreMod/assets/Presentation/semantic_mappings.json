@@ -1,0 +1,11 @@
+[
+  {
+    "id": "team.relationship",
+    "labelToken": "presentation.semantic.relationship.label",
+    "values": {
+      "team.relationship.neutral": "presentation.semantic.relationship.neutral",
+      "team.relationship.friendly": "presentation.semantic.relationship.friendly",
+      "team.relationship.hostile": "presentation.semantic.relationship.hostile"
+    }
+  }
+]

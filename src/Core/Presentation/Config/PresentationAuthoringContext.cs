@@ -11,17 +11,20 @@ namespace Ludots.Core.Presentation.Config
     public sealed class PresentationAuthoringContext
     {
         private readonly VisualTemplateRegistry _visualTemplates;
+        private readonly PresentationImageRegistry _images;
         private readonly PerformerDefinitionRegistry _performers;
         private readonly AnimatorControllerRegistry _animators;
         private readonly PresentationStableIdAllocator _stableIds;
 
         public PresentationAuthoringContext(
             VisualTemplateRegistry visualTemplates,
+            PresentationImageRegistry images,
             PerformerDefinitionRegistry performers,
             AnimatorControllerRegistry animators,
             PresentationStableIdAllocator stableIds)
         {
             _visualTemplates = visualTemplates ?? throw new ArgumentNullException(nameof(visualTemplates));
+            _images = images ?? throw new ArgumentNullException(nameof(images));
             _performers = performers ?? throw new ArgumentNullException(nameof(performers));
             _animators = animators ?? throw new ArgumentNullException(nameof(animators));
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
@@ -43,6 +46,11 @@ namespace Ludots.Core.Presentation.Config
                 bool? visibleOverride = obj["visible"]?.GetValue<bool>();
                 ApplyVisual(entity, templateId, in template, visibleOverride);
                 stableId = EnsureStableId(entity);
+            }
+
+            if (obj.TryGetPropertyValue("imageBindings", out var imageBindingsNode) && imageBindingsNode is JsonArray imageBindingsArray)
+            {
+                ApplyImageBindings(entity, imageBindingsArray);
             }
 
             if (obj.TryGetPropertyValue("startupPerformerIds", out var startupNode) && startupNode is JsonArray startupArray && startupArray.Count > 0)
@@ -187,6 +195,59 @@ namespace Ludots.Core.Presentation.Config
                 packed,
                 entity.Get<AnimationOverlayRequest>());
             entity.Set(visual);
+        }
+
+        private void ApplyImageBindings(Entity entity, JsonArray bindingsArray)
+        {
+            if (bindingsArray.Count == 0)
+            {
+                throw new InvalidOperationException("Presentation imageBindings must define at least one binding.");
+            }
+
+            PresentationImageBinding bindings = entity.Has<PresentationImageBinding>()
+                ? entity.Get<PresentationImageBinding>()
+                : default;
+
+            for (int i = 0; i < bindingsArray.Count; i++)
+            {
+                if (bindingsArray[i] is not JsonObject bindingNode)
+                {
+                    throw new InvalidOperationException($"Presentation imageBindings[{i}] must be an object.");
+                }
+
+                string roleText = bindingNode["role"]?.GetValue<string>() ?? string.Empty;
+                if (!Enum.TryParse(roleText, ignoreCase: true, out PresentationImageRole role))
+                {
+                    throw new InvalidOperationException($"Presentation imageBindings[{i}] uses invalid role '{roleText}'.");
+                }
+
+                string stateText = bindingNode["state"]?.GetValue<string>() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(stateText))
+                {
+                    throw new InvalidOperationException($"Presentation imageBindings[{i}] must define non-empty 'state'.");
+                }
+
+                if (!Enum.TryParse(stateText, ignoreCase: true, out PresentationImageState state))
+                {
+                    throw new InvalidOperationException($"Presentation imageBindings[{i}] uses invalid state '{stateText}'.");
+                }
+
+                string imageAssetKey = bindingNode["imageAsset"]?.GetValue<string>() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(imageAssetKey))
+                {
+                    throw new InvalidOperationException($"Presentation imageBindings[{i}] must define non-empty 'imageAsset'.");
+                }
+
+                int imageAssetId = _images.GetId(imageAssetKey);
+                if (imageAssetId <= 0)
+                {
+                    throw new InvalidOperationException($"Presentation imageBindings[{i}] references unknown image asset '{imageAssetKey}'.");
+                }
+
+                bindings.Set(role, state, imageAssetId);
+            }
+
+            Upsert(entity, bindings);
         }
 
         private int EnsureStableId(Entity entity)

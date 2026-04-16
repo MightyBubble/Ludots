@@ -7,7 +7,7 @@ using EntityInfoPanelsMod.UI;
 using GenreInfoShowcaseMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
@@ -80,9 +80,10 @@ namespace GenreInfoShowcaseMod.UI
             }
 
             EntityInfoPanelService? infoService = _engine.GetService(EntityInfoPanelServiceKeys.Service);
-            PresentationTextCatalog textCatalog = _engine.GetService(CoreServiceKeys.PresentationTextCatalog) ?? PresentationTextCatalog.Empty;
+            PresentationTextCatalog textCatalog = _engine.GetService(CoreServiceKeys.PresentationTextCatalog)
+                ?? throw new InvalidOperationException("GenreInfoShowcase requires PresentationTextCatalog.");
             PresentationTextLocaleSelection localeSelection = _engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection)
-                ?? new PresentationTextLocaleSelection(textCatalog);
+                ?? throw new InvalidOperationException("GenreInfoShowcase requires PresentationTextLocaleSelection.");
             var textResolver = new EntityInsightTextResolver(textCatalog, localeSelection);
             SelectionDockSnapshot dock = ResolveSelectionDock(_engine, infoService, textResolver);
 
@@ -126,8 +127,8 @@ namespace GenreInfoShowcaseMod.UI
                         .Color("#B7C9DA")
                         .WhiteSpace(UiWhiteSpace.Normal),
                     Ui.Row(
-                            BuildLocaleButton("EN", "en-US", activeLocaleKey, GenreInfoShowcaseIds.LocaleEnglishButtonId),
-                            BuildLocaleButton("中文", "zh-CN", activeLocaleKey, GenreInfoShowcaseIds.LocaleChineseButtonId))
+                            BuildLocaleButton(textResolver.ResolveRequiredTokenKey("genreinfo.locale.english"), "en-US", activeLocaleKey, GenreInfoShowcaseIds.LocaleEnglishButtonId),
+                            BuildLocaleButton(textResolver.ResolveRequiredTokenKey("genreinfo.locale.chinese"), "zh-CN", activeLocaleKey, GenreInfoShowcaseIds.LocaleChineseButtonId))
                         .Gap(8f))
                 .Gap(10f)
                 .Padding(16f)
@@ -219,7 +220,7 @@ namespace GenreInfoShowcaseMod.UI
                     .Width(42f)
                     .Height(42f)
                     .Radius(999f)
-                    .Border(2f, card.IsPrimary ? ParseHexColor(card.AccentHex, new UiColor(0xF0, 0xC3, 0x6B)) : new UiColor(0x2B, 0x41, 0x58));
+                    .Border(2f, card.IsPrimary ? ParseHexColorRequired(card.AccentHex) : new UiColor(0x2B, 0x41, 0x58));
             }
 
             return Ui.Row(avatars)
@@ -250,7 +251,7 @@ namespace GenreInfoShowcaseMod.UI
                         .Align(UiAlignItems.Start))
                 .Padding(12f)
                 .Radius(18f)
-                .Border(1f, ParseHexColor(card.AccentHex, new UiColor(0x58, 0xB7, 0xFF)))
+                .Border(1f, ParseHexColorRequired(card.AccentHex))
                 .Background("#112131");
         }
 
@@ -377,7 +378,7 @@ namespace GenreInfoShowcaseMod.UI
                 .Padding(10f)
                 .Radius(14f)
                 .Background(card.IsPrimary ? "#173145" : "#121E29")
-                .Border(1f, card.IsPrimary ? ParseHexColor(card.AccentHex, new UiColor(0x58, 0xB7, 0xFF)) : new UiColor(0x2B, 0x41, 0x58));
+                .Border(1f, card.IsPrimary ? ParseHexColorRequired(card.AccentHex) : new UiColor(0x2B, 0x41, 0x58));
         }
 
         private UiElementBuilder BuildLocaleButton(string label, string localeKey, string activeLocaleKey, string elementId)
@@ -459,7 +460,7 @@ namespace GenreInfoShowcaseMod.UI
         private static GenreInfoShowcasePanelState BuildState(GameEngine engine, string mapId)
         {
             PresentationTextLocaleSelection localeSelection = engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection)
-                ?? new PresentationTextLocaleSelection(PresentationTextCatalog.Empty);
+                ?? throw new InvalidOperationException("GenreInfoShowcase requires PresentationTextLocaleSelection.");
             string signature = $"{localeSelection.ActiveLocaleId}|{ResolveActiveControlGroup(engine)}|{engine.GetService(EntityInfoPanelServiceKeys.Service)?.UiRevision ?? 0}";
 
             if (SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor))
@@ -541,61 +542,24 @@ namespace GenreInfoShowcaseMod.UI
         {
             string name = world.TryGet(entity, out Name entityName) && !string.IsNullOrWhiteSpace(entityName.Value)
                 ? entityName.Value
-                : $"Entity #{entity.Id}";
+                : textResolver.FormatRequiredTokenKey("entityinfo.insight.entity_name", PresentationTextArg.FromInt32(entity.Id));
 
-            if (service.TryGetEntityInsightProfile(world, entity, out EntityInsightProfile profile))
+            if (!service.TryGetEntityInsightProfile(world, entity, out EntityInsightProfile profile))
             {
-                return new SelectionCardData(
-                    entity.Id,
-                    name,
-                    ResolveCategoryLabel(name),
-                    profile.AccentColorHex,
-                    service.BuildInsightPortraitIconUri(profile),
-                    service.BuildInsightGenreIconUri(profile),
-                    service.ResolveTextTokenId(profile.GenreLabelTokenId),
-                    TrimText(service.ResolveTextTokenId(profile.BodyTokenId), 92),
-                    BuildQuickStats(world, entity, profile, service),
-                    isPrimary);
+                throw new InvalidOperationException($"Entity '{name}' does not have a required insight profile.");
             }
 
-            string glyph = string.IsNullOrWhiteSpace(name) ? "?" : name[..1];
             return new SelectionCardData(
                 entity.Id,
                 name,
-                ResolveCategoryLabel(name),
-                "#5C7FA0",
-                service.BuildInsightGlyphIconUri(glyph, "#5C7FA0", "#12202C", emphatic: isPrimary),
-                service.BuildInsightGlyphIconUri("?", "#5C7FA0", "#12202C"),
-                textResolver.ResolveRequiredTokenKey("genreinfo.selection.unknown"),
-                textResolver.ResolveRequiredTokenKey("genreinfo.selection.no_profile"),
-                textResolver.ResolveRequiredTokenKey("genreinfo.selection.no_stats"),
+                EntityInfoPanelService.NormalizeEntityCollectionCategoryLabel(name, entity.Id),
+                profile.AccentColorHex,
+                service.BuildInsightPortraitIconUri(world, entity, profile),
+                service.BuildInsightGenreIconUri(profile),
+                service.ResolveTextTokenId(profile.GenreLabelTokenId),
+                TrimText(service.ResolveTextTokenId(profile.BodyTokenId), 92),
+                service.BuildInsightSummary(world, entity, profile, maxStats: 2),
                 isPrimary);
-        }
-
-        private static string BuildQuickStats(World world, Entity entity, EntityInsightProfile profile, EntityInfoPanelService service)
-        {
-            if (!world.TryGet(entity, out AttributeBuffer attributes))
-            {
-                return service.ResolveTextTokenKey("genreinfo.selection.no_stats");
-            }
-
-            var parts = new List<string>(2);
-            int limit = Math.Min(2, profile.Stats.Length);
-            for (int i = 0; i < limit; i++)
-            {
-                EntityInsightStatProfile stat = profile.Stats[i];
-                string label = service.ResolveTextTokenId(stat.LabelTokenId);
-                float current = stat.SourceKind == EntityInsightStatSourceKind.Attribute ? attributes.GetCurrent(stat.AttributeId) : stat.ConstantValue;
-                float baseValue = stat.SourceKind == EntityInsightStatSourceKind.Attribute ? attributes.GetBase(stat.AttributeId) : stat.ConstantValue;
-                string value = stat.DisplayMode == EntityInsightValueDisplayMode.CurrentOverBase
-                    ? $"{FormatNumber(current)}/{FormatNumber(baseValue)}"
-                    : FormatNumber(current);
-                parts.Add($"{label} {value}");
-            }
-
-            return parts.Count == 0
-                ? service.ResolveTextTokenKey("genreinfo.selection.no_stats")
-                : string.Join(" | ", parts);
         }
 
         private static List<SelectionCategorySummary> ResolveCategories(List<SelectionCardData> cards)
@@ -656,7 +620,8 @@ namespace GenreInfoShowcaseMod.UI
             string prefix = mode == SelectionViewMode.Formation
                 ? textResolver.ResolveRequiredTokenKey("genreinfo.view.formation")
                 : textResolver.ResolveRequiredTokenKey("genreinfo.view.live");
-            return $"{prefix} -> {descriptor.Container.AliasKey}";
+            string alias = textResolver.ResolveRequiredTokenKey(descriptor.Container.AliasKey);
+            return $"{prefix} -> {alias}";
         }
 
         private static SelectionGroupSummary ResolveControlGroupSummary(GameEngine engine, int groupIndex)
@@ -684,23 +649,6 @@ namespace GenreInfoShowcaseMod.UI
                 : 0;
         }
 
-        private static string ResolveCategoryLabel(string name)
-        {
-            string trimmed = name.Trim();
-            int end = trimmed.Length;
-            while (end > 0 && char.IsDigit(trimmed[end - 1]))
-            {
-                end--;
-            }
-
-            while (end > 0 && (trimmed[end - 1] == ' ' || trimmed[end - 1] == '-' || trimmed[end - 1] == '_'))
-            {
-                end--;
-            }
-
-            return end <= 0 ? trimmed : trimmed[..end];
-        }
-
         private static string TrimText(string value, int maxLength)
         {
             if (string.IsNullOrWhiteSpace(value) || value.Length <= maxLength)
@@ -708,40 +656,17 @@ namespace GenreInfoShowcaseMod.UI
                 return value;
             }
 
-            return value[..Math.Max(0, maxLength - 1)] + "…";
+            return value[..Math.Max(0, maxLength - 3)] + "...";
         }
 
-        private static string FormatNumber(float value)
+        private static UiColor ParseHexColorRequired(string value)
         {
-            return MathF.Abs(value - MathF.Round(value)) < 0.001f
-                ? MathF.Round(value).ToString("0")
-                : value.ToString("0.#");
-        }
-
-        private static UiColor ParseHexColor(string? value, UiColor fallback)
-        {
-            if (string.IsNullOrWhiteSpace(value))
+            if (UiColor.TryParse(value, out UiColor color))
             {
-                return fallback;
+                return color;
             }
 
-            string hex = value.Trim().TrimStart('#');
-            if (hex.Length != 6)
-            {
-                return fallback;
-            }
-
-            try
-            {
-                byte r = Convert.ToByte(hex[..2], 16);
-                byte g = Convert.ToByte(hex.Substring(2, 2), 16);
-                byte b = Convert.ToByte(hex.Substring(4, 2), 16);
-                return new UiColor(r, g, b);
-            }
-            catch
-            {
-                return fallback;
-            }
+            throw new InvalidOperationException($"GenreInfoShowcase requires a valid accent color but received '{value}'.");
         }
 
         private sealed record GenreInfoShowcasePanelState(string MapId, string Signature);
@@ -786,3 +711,4 @@ namespace GenreInfoShowcaseMod.UI
         }
     }
 }
+

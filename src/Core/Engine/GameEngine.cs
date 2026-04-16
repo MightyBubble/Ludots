@@ -352,6 +352,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
             SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
+            RegisterConfiguredAttributes(MergedConfig);
 
             // 4. Setup ECS & Session using merged config values
             InitializeWorld(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
@@ -417,6 +418,7 @@ namespace Ludots.Core.Engine
 
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+            RegisterConfiguredAttributes(MergedConfig);
 
             bool reloadAi = string.IsNullOrWhiteSpace(group)
                          || string.Equals(group, "AI", StringComparison.OrdinalIgnoreCase)
@@ -611,6 +613,7 @@ namespace Ludots.Core.Engine
             var visualTemplates = new VisualTemplateRegistry();
             var animatorControllers = new AnimatorControllerRegistry();
             var animationClips = new AnimationClipRegistry();
+            var presentationImages = new PresentationImageRegistry();
             var animationProfiles = new AnimationProfileRegistry();
             var presentationStableIds = new PresentationStableIdAllocator();
             var primitiveDrawBuffer = new PrimitiveDrawBuffer(PrimitiveDrawBufferCapacity);
@@ -629,10 +632,12 @@ namespace Ludots.Core.Engine
             new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load(ConfigCatalog, ConfigConflictReport);
             new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load(ConfigCatalog, ConfigConflictReport);
             new AnimationClipConfigLoader(ConfigPipeline, animationClips).Load(ConfigCatalog, ConfigConflictReport);
+            new PresentationImageConfigLoader(ConfigPipeline, presentationImages).Load(ConfigCatalog, ConfigConflictReport);
             new AnimationProfileConfigLoader(ConfigPipeline, animationProfiles, animatorControllers, animationClips).Load(ConfigCatalog, ConfigConflictReport);
             new VisualTemplateConfigLoader(ConfigPipeline, visualTemplates, meshAssets, animatorControllers, animationProfiles).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
+            var presentationSemanticCatalog = new PresentationSemanticCatalogLoader(ConfigPipeline, presentationTextCatalog).Load(ConfigCatalog, ConfigConflictReport);
             BuiltinPerformerDefinitions.Register(performerDefinitions, meshAssets, presentationTextCatalog.GetTokenId);
             var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, presentationCommandBuffer, performerDefinitions, graphProgramRegistry, performerGraphApi, GlobalContext);
             var performerRuntimeSystem = new PerformerRuntimeSystem(
@@ -665,7 +670,7 @@ namespace Ludots.Core.Engine
                 projectilePresentationBindings,
                 EffectTemplateIdRegistry.GetId,
                 performerDefinitions.GetId).Load(ConfigCatalog, ConfigConflictReport);
-            var presentationAuthoring = new PresentationAuthoringContext(visualTemplates, performerDefinitions, animatorControllers, presentationStableIds);
+            var presentationAuthoring = new PresentationAuthoringContext(visualTemplates, presentationImages, performerDefinitions, animatorControllers, presentationStableIds);
             MapLoader.PresentationAuthoringContext = presentationAuthoring;
 
             System.Diagnostics.Debug.Assert(
@@ -822,6 +827,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationVisualTemplateRegistry, visualTemplates);
             SetService(CoreServiceKeys.AnimatorControllerRegistry, animatorControllers);
             SetService(CoreServiceKeys.AnimationClipRegistry, animationClips);
+            SetService(CoreServiceKeys.PresentationImageRegistry, presentationImages);
             SetService(CoreServiceKeys.AnimationProfileRegistry, animationProfiles);
             SetService(CoreServiceKeys.PresentationStableIdAllocator, presentationStableIds);
             _primitiveDrawBuffer = primitiveDrawBuffer;
@@ -840,6 +846,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationWorldHudStrings, worldHudStrings);
             SetService(CoreServiceKeys.PresentationTextCatalog, presentationTextCatalog);
             SetService(CoreServiceKeys.PresentationTextLocaleSelection, presentationTextLocaleSelection);
+            SetService(CoreServiceKeys.PresentationSemanticCatalog, presentationSemanticCatalog);
             var screenHudBuffer = new ScreenHudBatchBuffer();
             SetService(CoreServiceKeys.PresentationScreenHudBuffer, screenHudBuffer);
             SetService(CoreServiceKeys.ScreenOverlayBuffer, new ScreenOverlayBuffer());
@@ -2107,6 +2114,26 @@ namespace Ludots.Core.Engine
             }
             // Clear GAS presentation events AFTER all presentation systems have consumed them
             _gasPresentationEvents?.Clear();
+        }
+
+        private static void RegisterConfiguredAttributes(GameConfig config)
+        {
+            if (config?.Constants?.Attributes == null || config.Constants.Attributes.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var pair in config.Constants.Attributes)
+            {
+                string attributeName = pair.Value;
+                if (string.IsNullOrWhiteSpace(attributeName))
+                {
+                    throw new InvalidOperationException(
+                        $"game.json constants.attributes entry '{pair.Key}' must resolve to a non-empty attribute name.");
+                }
+
+                Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register(attributeName);
+            }
         }
 
         private void EnsureCameraRuntimeConfigured()

@@ -58,6 +58,7 @@ public sealed partial class EntityInfoPanelService
     {
         _insightProfileIndices[slot] = 0;
         _insightStatCounts[slot] = 0;
+        _insightSemanticFieldCounts[slot] = 0;
         _insightActionCounts[slot] = 0;
 
         int statBase = slot * MaxInsightStatsPerPanel;
@@ -65,6 +66,8 @@ public sealed partial class EntityInfoPanelService
         {
             _insightStatCurrentValues[statBase + i] = 0f;
             _insightStatBaseValues[statBase + i] = 0f;
+            _insightSemanticFieldValueKeys[statBase + i] = string.Empty;
+            _insightSemanticFieldNumericValues[statBase + i] = 0f;
         }
 
         int actionBase = slot * MaxInsightActionsPerPanel;
@@ -146,6 +149,18 @@ public sealed partial class EntityInfoPanelService
         return SetInt(_insightActionCounts, slot, count);
     }
 
+    private bool SetInsightSemanticFieldCount(int slot, int count)
+    {
+        byte value = (byte)count;
+        if (_insightSemanticFieldCounts[slot] == value)
+        {
+            return false;
+        }
+
+        _insightSemanticFieldCounts[slot] = value;
+        return true;
+    }
+
     private bool SetInsightStatValue(float[] array, int index, float value)
     {
         if (Math.Abs(array[index] - value) <= 0.0001f)
@@ -155,6 +170,23 @@ public sealed partial class EntityInfoPanelService
 
         array[index] = value;
         return true;
+    }
+
+    private bool SetInsightSemanticFieldValueKey(int slot, int fieldIndex, string valueKey)
+    {
+        int index = InsightStatIndex(slot, fieldIndex);
+        if (string.Equals(_insightSemanticFieldValueKeys[index], valueKey, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        _insightSemanticFieldValueKeys[index] = valueKey;
+        return true;
+    }
+
+    private bool SetInsightSemanticFieldNumericValue(int slot, int fieldIndex, float value)
+    {
+        return SetInsightStatValue(_insightSemanticFieldNumericValues, InsightStatIndex(slot, fieldIndex), value);
     }
 
     private bool SetInsightActionFlags(int slot, int actionIndex, EntityInsightActionRuntimeFlags flags)

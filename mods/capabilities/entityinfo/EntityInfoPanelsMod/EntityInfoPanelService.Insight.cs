@@ -3,8 +3,11 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using EntityInfoPanelsMod.Insight;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Input.Selection;
+using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod;
 
@@ -14,6 +17,29 @@ public sealed partial class EntityInfoPanelService
     private const string ActionStateBlockedToken = "entityinfo.actionstate.blocked";
     private const string ActionStateActiveToken = "entityinfo.actionstate.active";
     private const string ActionStateUnavailableToken = "entityinfo.actionstate.unavailable";
+    private const string EntityCollectionTitleToken = "entityinfo.collection.title";
+    private const string EntityCollectionEmptyTitleToken = "entityinfo.collection.empty_title";
+    private const string EntityCollectionWaitingBodyToken = "entityinfo.collection.waiting_body";
+    private const string EntityCollectionNoCategoriesToken = "entityinfo.collection.no_categories";
+    private const string EntityCollectionPrimaryToken = "entityinfo.collection.primary";
+    private const string EntityCollectionEntitiesToken = "entityinfo.collection.entities";
+    private const string EntityCollectionCategoriesToken = "entityinfo.collection.categories";
+    private const string EntityCollectionCategoryCountToken = "entityinfo.collection.category_count";
+    private const string EntityCollectionRowsToken = "entityinfo.collection.rows";
+    private const string EntityCollectionSubtitleToken = "entityinfo.collection.subtitle";
+    private const string EntityCollectionCountsToken = "entityinfo.collection.counts";
+    private const string EntityCollectionNoAttributesToken = "entityinfo.collection.no_attributes";
+    private const string EntityCollectionMoreAttributesToken = "entityinfo.collection.more_attributes";
+    private const string ComponentInspectorTitleToken = "entityinfo.panel.component.title";
+    private const string GasInspectorTitleToken = "entityinfo.panel.gas.title";
+    private const string CollectionInspectorTitleToken = "entityinfo.panel.collection.title_text";
+    private const string TargetFixedUnavailableToken = "entityinfo.target.fixed_unavailable";
+    private const string TargetGlobalWaitingToken = "entityinfo.target.global_waiting";
+    private const string TargetUnavailableToken = "entityinfo.target.unavailable";
+    private const string InsightTitleToken = "entityinfo.insight.title";
+    private const string InsightEntityNameToken = "entityinfo.insight.entity_name";
+    private const string InsightMissingProfileToken = "entityinfo.insight.missing_profile";
+    private const string InsightMissingTemplateKeyToken = "entityinfo.insight.missing_template_key";
 
     public bool TryGetInsightProfile(int slot, out EntityInsightProfile profile)
     {
@@ -42,51 +68,176 @@ public sealed partial class EntityInfoPanelService
     }
 
     public string ResolveTextTokenKey(string tokenKey) => _insightTextResolver.ResolveRequiredTokenKey(tokenKey);
+    public int ResolveTextTokenKeyId(string tokenKey) => _insightTextResolver.GetRequiredTokenId(tokenKey);
     public string ResolveTextTokenId(int tokenId) => _insightTextResolver.ResolveRequiredTokenId(tokenId);
-    public string BuildInsightPortraitIconUri(EntityInsightProfile profile) => _insightIconFactory.Build(profile.PortraitGlyph, profile.AccentColorHex, profile.SurfaceColorHex, emphatic: true);
+    public string FormatTextTokenKey(string tokenKey, params PresentationTextArg[] args) => _insightTextResolver.FormatRequiredTokenKey(tokenKey, args);
+    public string FormatTextTokenId(int tokenId, params PresentationTextArg[] args) => _insightTextResolver.FormatRequiredTokenId(tokenId, args);
+    public string BuildInsightPortraitIconUri(World world, Entity entity, EntityInsightProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        return _insightRuntimeAdapter.ResolveImageSourceRequired(world, entity, profile);
+    }
+
     public string BuildInsightGenreIconUri(EntityInsightProfile profile) => _insightIconFactory.Build(profile.GenreGlyph, profile.AccentColorHex, profile.SurfaceColorHex);
     public string BuildInsightGlyphIconUri(string glyph, string accentHex, string surfaceHex, bool emphatic = false) => _insightIconFactory.Build(glyph, accentHex, surfaceHex, emphatic);
+    public string BuildInsightSummary(World world, Entity entity, EntityInsightProfile profile, int maxStats)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        if (entity == Entity.Null || !world.IsAlive(entity))
+        {
+            throw new InvalidOperationException("Entity insight summary requires a live entity.");
+        }
+
+        int statsToInclude = Math.Min(Math.Max(0, maxStats), profile.Stats.Length);
+        int semanticFieldsToInclude = Math.Min(1, profile.SemanticFields.Length);
+        int capacity = statsToInclude + semanticFieldsToInclude;
+        if (capacity == 0)
+        {
+            return string.Empty;
+        }
+
+        string segment0 = string.Empty;
+        string segment1 = string.Empty;
+        string segment2 = string.Empty;
+        string segment3 = string.Empty;
+        string segment4 = string.Empty;
+        int segmentCount = 0;
+        AttributeBuffer attributes = world.TryGet(entity, out AttributeBuffer runtimeAttributes) ? runtimeAttributes : default;
+        for (int i = 0; i < statsToInclude; i++)
+        {
+            EntityInsightStatProfile stat = profile.Stats[i];
+            float currentValue;
+            float baseValue;
+            if (stat.SourceKind == EntityInsightStatSourceKind.Attribute)
+            {
+                currentValue = attributes.GetCurrent(stat.AttributeId);
+                baseValue = attributes.GetBase(stat.AttributeId);
+            }
+            else
+            {
+                currentValue = stat.ConstantValue;
+                baseValue = stat.ConstantValue;
+            }
+
+            PresentationAttributeValueDisplayKind displayKind = stat.DisplayMode switch
+            {
+                EntityInsightValueDisplayMode.Current => PresentationAttributeValueDisplayKind.Current,
+                EntityInsightValueDisplayMode.CurrentOverBase => PresentationAttributeValueDisplayKind.CurrentOverBase,
+                _ => PresentationAttributeValueDisplayKind.Constant,
+            };
+
+            SetSummarySegment(ref segment0, ref segment1, ref segment2, ref segment3, ref segment4, segmentCount++, $"{GetInsightStatLabelForProfile(stat)} {_semanticResolver.FormatAttributeValueRequired(stat.SemanticKey, displayKind, currentValue, baseValue)}");
+        }
+
+        if (semanticFieldsToInclude > 0)
+        {
+            EntityInsightSemanticFieldProfile field = profile.SemanticFields[0];
+            Entity selectionPrimary = ResolveSelectionPrimaryRequired(world, field);
+            Entity selectionViewer = ResolveSelectionViewerRequired(world, field);
+            EntityInsightRuntimeAdapter.EntityInsightSemanticFieldRuntimeValue runtimeValue =
+                _insightRuntimeAdapter.ResolveSemanticFieldValueRequired(world, entity, field, selectionPrimary, selectionViewer);
+            SetSummarySegment(ref segment0, ref segment1, ref segment2, ref segment3, ref segment4, segmentCount++, FormatSemanticFieldValue(field, runtimeValue));
+        }
+
+        return JoinSummarySegments(segment0, segment1, segment2, segment3, segment4, segmentCount);
+    }
+
+    public string GetEntityCollectionTitleText() => ResolveTextTokenKey(EntityCollectionTitleToken);
+    public string GetEntityCollectionEmptyTitleText() => ResolveTextTokenKey(EntityCollectionEmptyTitleToken);
+    public string GetEntityCollectionWaitingBodyText() => ResolveTextTokenKey(EntityCollectionWaitingBodyToken);
+    public string GetEntityCollectionNoCategoriesText() => ResolveTextTokenKey(EntityCollectionNoCategoriesToken);
+    public string GetEntityCollectionPrimaryText() => ResolveTextTokenKey(EntityCollectionPrimaryToken);
+    public string GetComponentInspectorTitleText() => ResolveTextTokenKey(ComponentInspectorTitleToken);
+    public string GetGasInspectorTitleText() => ResolveTextTokenKey(GasInspectorTitleToken);
+    public string GetCollectionInspectorTitleText() => ResolveTextTokenKey(CollectionInspectorTitleToken);
+    public string GetTargetFixedUnavailableText() => ResolveTextTokenKey(TargetFixedUnavailableToken);
+    public string GetTargetGlobalWaitingText() => ResolveTextTokenKey(TargetGlobalWaitingToken);
+    public string GetTargetUnavailableText() => ResolveTextTokenKey(TargetUnavailableToken);
+    public string BuildEntityCollectionSubtitle(string viewKey, string aliasKey, int count)
+    {
+        return FormatTextTokenKey(
+            EntityCollectionSubtitleToken,
+            PresentationTextArg.FromToken(ResolveTextTokenKeyId(viewKey)),
+            PresentationTextArg.FromToken(ResolveTextTokenKeyId(aliasKey)),
+            CreateNumericArg(count),
+            PresentationTextArg.FromToken(ResolveTextTokenKeyId(EntityCollectionEntitiesToken)));
+    }
+
+    public string BuildEntityCollectionRowsText(int startInclusive, int endExclusive, int totalCount, int visibleCount)
+    {
+        int start = totalCount <= 0 || visibleCount <= 0 ? 0 : startInclusive + 1;
+        int end = totalCount <= 0 || visibleCount <= 0 ? 0 : endExclusive;
+        return FormatTextTokenKey(
+            EntityCollectionRowsToken,
+            CreateNumericArg(start),
+            CreateNumericArg(end));
+    }
+
+    public EntityCollectionSummary GetEntityCollectionSummary(int slot, int startInclusive, int endExclusive, int totalCount, int visibleCount)
+    {
+        int start = totalCount <= 0 || visibleCount <= 0 ? 0 : startInclusive + 1;
+        int end = totalCount <= 0 || visibleCount <= 0 ? 0 : endExclusive;
+        return new EntityCollectionSummary(
+            GetEntityCollectionViewKey(slot),
+            GetEntityCollectionAliasKey(slot),
+            GetEntityCollectionCount(slot),
+            GetEntityCollectionCategoryCount(slot),
+            start,
+            end);
+    }
+
+    public string BuildEntityCollectionSummaryText(int slot, int startInclusive, int endExclusive, int totalCount, int visibleCount)
+    {
+        EntityCollectionSummary summary = GetEntityCollectionSummary(slot, startInclusive, endExclusive, totalCount, visibleCount);
+        string categories = FormatTextTokenKey(
+            EntityCollectionCategoryCountToken,
+            CreateNumericArg(summary.CategoryCount),
+            PresentationTextArg.FromToken(ResolveTextTokenKeyId(EntityCollectionCategoriesToken)));
+        string rows = FormatTextTokenKey(
+            EntityCollectionRowsToken,
+            CreateNumericArg(summary.VisibleRowStart),
+            CreateNumericArg(summary.VisibleRowEnd));
+
+        return string.Concat(categories, " | ", rows);
+    }
 
     public string GetInsightAccentColor(int slot)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile)
-            ? profile.AccentColorHex
-            : "#58B7FF";
+        return GetRequiredInsightProfile(slot).AccentColorHex;
     }
 
     public string GetInsightSurfaceColor(int slot)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile)
-            ? profile.SurfaceColorHex
-            : "#0F1721";
+        return GetRequiredInsightProfile(slot).SurfaceColorHex;
     }
 
     public string GetInsightGenreLabel(int slot)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile)
-            ? ResolveTextTokenId(profile.GenreLabelTokenId)
-            : string.Empty;
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        return ResolveTextTokenId(profile.GenreLabelTokenId);
     }
 
     public string GetInsightBody(int slot)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile)
-            ? ResolveTextTokenId(profile.BodyTokenId)
-            : string.Empty;
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        return ResolveTextTokenId(profile.BodyTokenId);
     }
 
     public string GetInsightPortraitIconUri(int slot)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile)
-            ? BuildInsightPortraitIconUri(profile)
-            : string.Empty;
+        Entity entity = _resolvedTargets[slot];
+        if (_sampledWorld == null || entity == Entity.Null)
+        {
+            throw new InvalidOperationException($"Entity insight portrait resolution requires a sampled world and resolved target for slot '{slot}'.");
+        }
+
+        return BuildInsightPortraitIconUri(_sampledWorld, entity, GetRequiredInsightProfile(slot));
     }
 
     public string GetInsightGenreIconUri(int slot)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile)
-            ? BuildInsightGenreIconUri(profile)
-            : string.Empty;
+        return BuildInsightGenreIconUri(GetRequiredInsightProfile(slot));
     }
 
     public int GetInsightBadgeCount(int slot)
@@ -116,37 +267,107 @@ public sealed partial class EntityInfoPanelService
 
     public string GetInsightStatLabel(int slot, int statIndex)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile) &&
-               (uint)statIndex < (uint)profile.Stats.Length
-            ? ResolveTextTokenId(profile.Stats[statIndex].LabelTokenId)
-            : string.Empty;
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        if ((uint)statIndex >= (uint)profile.Stats.Length)
+        {
+            throw new InvalidOperationException($"Entity insight stat index '{statIndex}' is out of range for slot '{slot}'.");
+        }
+
+        return _semanticResolver.ResolveAttributeLabelRequired(profile.Stats[statIndex].SemanticKey);
+    }
+
+    public string GetInsightStatLabelForProfile(EntityInsightStatProfile stat)
+    {
+        ArgumentNullException.ThrowIfNull(stat);
+        return _semanticResolver.ResolveAttributeLabelRequired(stat.SemanticKey);
     }
 
     public string GetInsightStatValueText(int slot, int statIndex)
     {
-        if (!TryGetInsightProfile(slot, out EntityInsightProfile profile) ||
-            (uint)statIndex >= (uint)profile.Stats.Length)
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        if ((uint)statIndex >= (uint)profile.Stats.Length)
         {
-            return string.Empty;
+            throw new InvalidOperationException($"Entity insight stat index '{statIndex}' is out of range for slot '{slot}'.");
         }
 
         int index = InsightStatIndex(slot, statIndex);
         float currentValue = _insightStatCurrentValues[index];
         float baseValue = _insightStatBaseValues[index];
-        return profile.Stats[statIndex].DisplayMode switch
+        PresentationAttributeValueDisplayKind displayKind = profile.Stats[statIndex].DisplayMode switch
         {
-            EntityInsightValueDisplayMode.Current => FormatNumber(currentValue),
-            EntityInsightValueDisplayMode.CurrentOverBase => $"{FormatNumber(currentValue)}/{FormatNumber(baseValue)}",
-            _ => FormatNumber(currentValue)
+            EntityInsightValueDisplayMode.Current => PresentationAttributeValueDisplayKind.Current,
+            EntityInsightValueDisplayMode.CurrentOverBase => PresentationAttributeValueDisplayKind.CurrentOverBase,
+            _ => PresentationAttributeValueDisplayKind.Constant,
         };
+
+        return _semanticResolver.FormatAttributeValueRequired(
+            profile.Stats[statIndex].SemanticKey,
+            displayKind,
+            currentValue,
+            baseValue);
     }
 
     public string GetInsightStatIconUri(int slot, int statIndex)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile) &&
-               (uint)statIndex < (uint)profile.Stats.Length
-            ? BuildInsightGlyphIconUri(profile.Stats[statIndex].Glyph, profile.AccentColorHex, profile.SurfaceColorHex)
-            : string.Empty;
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        if ((uint)statIndex >= (uint)profile.Stats.Length)
+        {
+            throw new InvalidOperationException($"Entity insight stat index '{statIndex}' is out of range for slot '{slot}'.");
+        }
+
+        return BuildInsightGlyphIconUri(profile.Stats[statIndex].Glyph, profile.AccentColorHex, profile.SurfaceColorHex);
+    }
+
+    public int GetInsightSemanticFieldCount(int slot) => _insightSemanticFieldCounts[slot];
+
+    public string GetInsightSemanticFieldLabel(int slot, int fieldIndex)
+    {
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        if ((uint)fieldIndex >= (uint)profile.SemanticFields.Length)
+        {
+            throw new InvalidOperationException($"Entity insight semantic field index '{fieldIndex}' is out of range for slot '{slot}'.");
+        }
+
+        EntityInsightSemanticFieldProfile field = profile.SemanticFields[fieldIndex];
+        return field.RenderKind switch
+        {
+            EntityInsightSemanticFieldRenderKind.Mapping => _semanticResolver.ResolveMappingLabelRequired(field.MappingId),
+            EntityInsightSemanticFieldRenderKind.Numeric => _semanticResolver.ResolveAttributeLabelRequired(field.ValueSemanticKey),
+            _ => throw new InvalidOperationException($"Unsupported semantic field render kind '{field.RenderKind}'."),
+        };
+    }
+
+    public string GetInsightSemanticFieldValueText(int slot, int fieldIndex)
+    {
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        if ((uint)fieldIndex >= (uint)profile.SemanticFields.Length)
+        {
+            throw new InvalidOperationException($"Entity insight semantic field index '{fieldIndex}' is out of range for slot '{slot}'.");
+        }
+
+        EntityInsightSemanticFieldProfile field = profile.SemanticFields[fieldIndex];
+        int index = InsightStatIndex(slot, fieldIndex);
+        return field.RenderKind switch
+        {
+            EntityInsightSemanticFieldRenderKind.Mapping => _semanticResolver.ResolveMappedValueRequired(field.MappingId, _insightSemanticFieldValueKeys[index]),
+            EntityInsightSemanticFieldRenderKind.Numeric => _semanticResolver.FormatAttributeValueRequired(
+                field.ValueSemanticKey,
+                PresentationAttributeValueDisplayKind.Constant,
+                _insightSemanticFieldNumericValues[index],
+                _insightSemanticFieldNumericValues[index]),
+            _ => throw new InvalidOperationException($"Unsupported semantic field render kind '{field.RenderKind}'."),
+        };
+    }
+
+    public string GetInsightSemanticFieldIconUri(int slot, int fieldIndex)
+    {
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        if ((uint)fieldIndex >= (uint)profile.SemanticFields.Length)
+        {
+            throw new InvalidOperationException($"Entity insight semantic field index '{fieldIndex}' is out of range for slot '{slot}'.");
+        }
+
+        return BuildInsightGlyphIconUri(profile.SemanticFields[fieldIndex].Glyph, profile.AccentColorHex, profile.SurfaceColorHex);
     }
 
     public int GetInsightTipCount(int slot)
@@ -158,44 +379,56 @@ public sealed partial class EntityInfoPanelService
 
     public string GetInsightTipText(int slot, int tipIndex)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile) &&
-               (uint)tipIndex < (uint)profile.Tips.Length
-            ? ResolveTextTokenId(profile.Tips[tipIndex].TextTokenId)
-            : string.Empty;
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        if ((uint)tipIndex >= (uint)profile.Tips.Length)
+        {
+            throw new InvalidOperationException($"Entity insight tip index '{tipIndex}' is out of range for slot '{slot}'.");
+        }
+
+        return ResolveTextTokenId(profile.Tips[tipIndex].TextTokenId);
     }
 
     public string GetInsightTipIconUri(int slot, int tipIndex)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile) &&
-               (uint)tipIndex < (uint)profile.Tips.Length
-            ? BuildInsightGlyphIconUri(profile.Tips[tipIndex].Glyph, profile.AccentColorHex, profile.SurfaceColorHex)
-            : string.Empty;
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        if ((uint)tipIndex >= (uint)profile.Tips.Length)
+        {
+            throw new InvalidOperationException($"Entity insight tip index '{tipIndex}' is out of range for slot '{slot}'.");
+        }
+
+        return BuildInsightGlyphIconUri(profile.Tips[tipIndex].Glyph, profile.AccentColorHex, profile.SurfaceColorHex);
     }
 
     public int GetInsightActionCount(int slot) => _insightActionCounts[slot];
 
     public string GetInsightActionTitle(int slot, int actionIndex)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile) &&
-               (uint)actionIndex < (uint)profile.Actions.Length
-            ? ResolveTextTokenId(profile.Actions[actionIndex].TitleTokenId)
-            : string.Empty;
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        if ((uint)actionIndex >= (uint)profile.Actions.Length)
+        {
+            throw new InvalidOperationException($"Entity insight action index '{actionIndex}' is out of range for slot '{slot}'.");
+        }
+
+        return ResolveTextTokenId(profile.Actions[actionIndex].TitleTokenId);
     }
 
     public string GetInsightActionBody(int slot, int actionIndex)
     {
-        return TryGetInsightProfile(slot, out EntityInsightProfile profile) &&
-               (uint)actionIndex < (uint)profile.Actions.Length
-            ? ResolveTextTokenId(profile.Actions[actionIndex].BodyTokenId)
-            : string.Empty;
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        if ((uint)actionIndex >= (uint)profile.Actions.Length)
+        {
+            throw new InvalidOperationException($"Entity insight action index '{actionIndex}' is out of range for slot '{slot}'.");
+        }
+
+        return ResolveTextTokenId(profile.Actions[actionIndex].BodyTokenId);
     }
 
     public string GetInsightActionIconUri(int slot, int actionIndex)
     {
-        if (!TryGetInsightProfile(slot, out EntityInsightProfile profile) ||
-            (uint)actionIndex >= (uint)profile.Actions.Length)
+        EntityInsightProfile profile = GetRequiredInsightProfile(slot);
+        if ((uint)actionIndex >= (uint)profile.Actions.Length)
         {
-            return string.Empty;
+            throw new InvalidOperationException($"Entity insight action index '{actionIndex}' is out of range for slot '{slot}'.");
         }
 
         EntityInsightActionRuntimeFlags flags = GetInsightActionRuntimeFlags(slot, actionIndex);
@@ -239,6 +472,18 @@ public sealed partial class EntityInfoPanelService
         return ResolveTextTokenKey(ActionStateUnavailableToken);
     }
 
+    private EntityInsightProfile GetRequiredInsightProfile(int slot)
+    {
+        if (!TryGetInsightProfile(slot, out EntityInsightProfile profile))
+        {
+            throw new InvalidOperationException($"Entity insight profile is required for slot '{slot}'.");
+        }
+
+        return profile;
+    }
+
+    private static PresentationTextArg CreateNumericArg(int value) => PresentationTextArg.FromInt32(value);
+
     private EntityInsightActionRuntimeFlags GetInsightActionRuntimeFlags(int slot, int actionIndex)
     {
         if ((uint)actionIndex >= (uint)MaxInsightActionsPerPanel)
@@ -255,10 +500,11 @@ public sealed partial class EntityInfoPanelService
 
         if (entity == Entity.Null || !world.IsAlive(entity))
         {
-            dirty |= SetString(_titles, slot, "Entity Insight");
+            dirty |= SetString(_titles, slot, ResolveTextTokenKey(InsightTitleToken));
             dirty |= SetString(_subtitles, slot, ResolveMissingSubtitle(_targets[slot]));
             dirty |= SetInsightProfileIndex(slot, 0);
             dirty |= SetInsightStatCount(slot, 0);
+            dirty |= SetInsightSemanticFieldCount(slot, 0);
             dirty |= SetInsightActionCount(slot, 0);
             ClearInsightState(slot);
             return dirty;
@@ -266,7 +512,7 @@ public sealed partial class EntityInfoPanelService
 
         string title = world.TryGet(entity, out Name name) && !string.IsNullOrWhiteSpace(name.Value)
             ? name.Value
-            : $"Entity #{entity.Id}";
+            : FormatTextTokenKey(InsightEntityNameToken, CreateNumericArg(entity.Id));
         dirty |= SetString(_titles, slot, title);
 
         if (!world.TryGet(entity, out EntityTemplateKeyCm templateKey) ||
@@ -274,11 +520,12 @@ public sealed partial class EntityInfoPanelService
             !_insightCatalog.TryGetProfileByIndex(profileIndex, out EntityInsightProfile profile))
         {
             string templateSubtitle = world.TryGet(entity, out EntityTemplateKeyCm resolvedTemplateKey)
-                ? $"Template `{resolvedTemplateKey.TemplateKeyId}` has no insight profile."
-                : "Template key is unavailable for this entity.";
+                ? FormatTextTokenKey(InsightMissingProfileToken, CreateNumericArg(resolvedTemplateKey.TemplateKeyId))
+                : ResolveTextTokenKey(InsightMissingTemplateKeyToken);
             dirty |= SetString(_subtitles, slot, templateSubtitle);
             dirty |= SetInsightProfileIndex(slot, 0);
             dirty |= SetInsightStatCount(slot, 0);
+            dirty |= SetInsightSemanticFieldCount(slot, 0);
             dirty |= SetInsightActionCount(slot, 0);
             ClearInsightState(slot);
             return dirty;
@@ -287,6 +534,7 @@ public sealed partial class EntityInfoPanelService
         dirty |= SetString(_subtitles, slot, ResolveTextTokenId(profile.SubtitleTokenId));
         dirty |= SetInsightProfileIndex(slot, profileIndex + 1);
         dirty |= SampleInsightStats(slot, world, entity, profile);
+        dirty |= SampleInsightSemanticFields(slot, world, entity, profile);
         dirty |= SampleInsightActions(slot, world, entity, profile);
         return dirty;
     }
@@ -327,6 +575,45 @@ public sealed partial class EntityInfoPanelService
 
         dirty |= SetInsightStatCount(slot, count);
         return dirty;
+    }
+
+    private bool SampleInsightSemanticFields(int slot, World world, Entity entity, EntityInsightProfile profile)
+    {
+        bool dirty = false;
+        int count = Math.Min(profile.SemanticFields.Length, MaxInsightStatsPerPanel);
+        for (int fieldIndex = 0; fieldIndex < count; fieldIndex++)
+        {
+            EntityInsightSemanticFieldProfile field = profile.SemanticFields[fieldIndex];
+            Entity selectionPrimary = ResolveSelectionPrimaryRequired(world, field);
+            Entity selectionViewer = ResolveSelectionViewerRequired(world, field);
+            EntityInsightRuntimeAdapter.EntityInsightSemanticFieldRuntimeValue runtimeValue =
+                _insightRuntimeAdapter.ResolveSemanticFieldValueRequired(world, entity, field, selectionPrimary, selectionViewer);
+            dirty |= SetInsightSemanticFieldValueKey(slot, fieldIndex, runtimeValue.MappedValueKey);
+            dirty |= SetInsightSemanticFieldNumericValue(slot, fieldIndex, runtimeValue.NumericValue);
+        }
+
+        for (int fieldIndex = count; fieldIndex < MaxInsightStatsPerPanel; fieldIndex++)
+        {
+            dirty |= SetInsightSemanticFieldValueKey(slot, fieldIndex, string.Empty);
+            dirty |= SetInsightSemanticFieldNumericValue(slot, fieldIndex, 0f);
+        }
+
+        dirty |= SetInsightSemanticFieldCount(slot, count);
+        return dirty;
+    }
+
+    private string FormatSemanticFieldValue(
+        EntityInsightSemanticFieldProfile field,
+        EntityInsightRuntimeAdapter.EntityInsightSemanticFieldRuntimeValue runtimeValue)
+    {
+        return field.RenderKind switch
+        {
+            EntityInsightSemanticFieldRenderKind.Mapping =>
+                $"{_semanticResolver.ResolveMappingLabelRequired(field.MappingId)} {_semanticResolver.ResolveMappedValueRequired(field.MappingId, runtimeValue.MappedValueKey)}",
+            EntityInsightSemanticFieldRenderKind.Numeric =>
+                $"{_semanticResolver.ResolveAttributeLabelRequired(field.ValueSemanticKey)} {_semanticResolver.FormatAttributeValueRequired(field.ValueSemanticKey, PresentationAttributeValueDisplayKind.Constant, runtimeValue.NumericValue, runtimeValue.NumericValue)}",
+            _ => throw new InvalidOperationException($"Unsupported semantic field render kind '{field.RenderKind}'."),
+        };
     }
 
     private bool SampleInsightActions(int slot, World world, Entity entity, EntityInsightProfile profile)
@@ -412,5 +699,98 @@ public sealed partial class EntityInfoPanelService
         GameplayTagContainer resolvedTags = tags;
         return !resolvedTags.ContainsAll(in requiredAll) ||
                resolvedTags.Intersects(in blockedAny);
+    }
+
+    private Entity ResolveSelectionPrimaryRequired(World world, EntityInsightSemanticFieldProfile field)
+    {
+        if (field.SourceSubject != EntityInsightRelationshipSubjectKind.SelectionPrimary &&
+            field.TargetSubject != EntityInsightRelationshipSubjectKind.SelectionPrimary)
+        {
+            return Entity.Null;
+        }
+
+        if (_sampledGlobals == null)
+        {
+            throw new InvalidOperationException("Entity insight semantic field resolution requires sampled globals when the selection primary subject is referenced.");
+        }
+
+        if (!SelectionContextRuntime.TryGetCurrentPrimary(world, _sampledGlobals, out Entity selectionPrimary))
+        {
+            throw new InvalidOperationException("Entity insight semantic field resolution requires a current selection primary.");
+        }
+
+        return selectionPrimary;
+    }
+
+    private Entity ResolveSelectionViewerRequired(World world, EntityInsightSemanticFieldProfile field)
+    {
+        if (field.SourceSubject != EntityInsightRelationshipSubjectKind.SelectionViewer &&
+            field.TargetSubject != EntityInsightRelationshipSubjectKind.SelectionViewer)
+        {
+            return Entity.Null;
+        }
+
+        if (_sampledGlobals == null)
+        {
+            throw new InvalidOperationException("Entity insight semantic field resolution requires sampled globals when the selection viewer subject is referenced.");
+        }
+
+        if (!SelectionContextRuntime.TryDescribeCurrentView(world, _sampledGlobals, out SelectionViewDescriptor descriptor))
+        {
+            throw new InvalidOperationException("Entity insight semantic field resolution requires a current selection viewer.");
+        }
+
+        return descriptor.Viewer;
+    }
+
+    private static void SetSummarySegment(
+        ref string segment0,
+        ref string segment1,
+        ref string segment2,
+        ref string segment3,
+        ref string segment4,
+        int index,
+        string value)
+    {
+        switch (index)
+        {
+            case 0:
+                segment0 = value;
+                break;
+            case 1:
+                segment1 = value;
+                break;
+            case 2:
+                segment2 = value;
+                break;
+            case 3:
+                segment3 = value;
+                break;
+            case 4:
+                segment4 = value;
+                break;
+            default:
+                throw new InvalidOperationException($"Entity insight summary supports at most 5 segments but received index '{index}'.");
+        }
+    }
+
+    private static string JoinSummarySegments(
+        string segment0,
+        string segment1,
+        string segment2,
+        string segment3,
+        string segment4,
+        int count)
+    {
+        return count switch
+        {
+            <= 0 => string.Empty,
+            1 => segment0,
+            2 => string.Concat(segment0, " | ", segment1),
+            3 => string.Concat(segment0, " | ", segment1, " | ", segment2),
+            4 => string.Concat(segment0, " | ", segment1, " | ", segment2, " | ", segment3),
+            5 => string.Concat(segment0, " | ", segment1, " | ", segment2, " | ", segment3, " | ", segment4),
+            _ => throw new InvalidOperationException($"Entity insight summary supports at most 5 segments but received count '{count}'."),
+        };
     }
 }

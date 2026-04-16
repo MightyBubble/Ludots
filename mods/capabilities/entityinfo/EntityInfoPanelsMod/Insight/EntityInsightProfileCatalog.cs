@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 
 namespace EntityInfoPanelsMod.Insight;
 
@@ -14,6 +16,12 @@ public enum EntityInsightValueDisplayMode : byte
     Current = 0,
     CurrentOverBase = 1,
     Constant = 2,
+}
+
+public enum EntityInsightSemanticValueSourceKind : byte
+{
+    RelationshipMetric = 0,
+    RelationshipFlag = 1,
 }
 
 [Flags]
@@ -33,12 +41,55 @@ public sealed class EntityInsightBadgeProfile
 
 public sealed class EntityInsightStatProfile
 {
+    public required string SemanticKey { get; init; }
     public required string Glyph { get; init; }
-    public required int LabelTokenId { get; init; }
+    public required int AttributeId { get; init; }
     public required EntityInsightStatSourceKind SourceKind { get; init; }
     public required EntityInsightValueDisplayMode DisplayMode { get; init; }
-    public int AttributeId { get; init; }
     public float ConstantValue { get; init; }
+}
+
+public sealed class EntityInsightSemanticFieldProfile
+{
+    public required string Glyph { get; init; }
+    public string MappingId { get; init; } = string.Empty;
+    public required EntityInsightSemanticValueSourceKind SemanticValueSource { get; init; }
+    public required EntityInsightSemanticFieldRenderKind RenderKind { get; init; }
+    public string RelationshipTypeId { get; init; } = string.Empty;
+    public string RelationshipMetricId { get; init; } = string.Empty;
+    public string RelationshipFlagId { get; init; } = string.Empty;
+    public string TrueValueKey { get; init; } = string.Empty;
+    public string FalseValueKey { get; init; } = string.Empty;
+    public string ValueSemanticKey { get; init; } = string.Empty;
+    public EntityInsightRelationshipSubjectKind SourceSubject { get; init; } = EntityInsightRelationshipSubjectKind.Self;
+    public EntityInsightRelationshipSubjectKind TargetSubject { get; init; } = EntityInsightRelationshipSubjectKind.SelectionPrimary;
+}
+
+public enum EntityInsightSemanticFieldRenderKind : byte
+{
+    Mapping = 0,
+    Numeric = 1,
+}
+
+public enum EntityInsightRelationshipSubjectKind : byte
+{
+    Self = 0,
+    SelectionPrimary = 1,
+    SelectionViewer = 2,
+}
+
+public enum EntityInsightImageSourceScopeKind : byte
+{
+    Entity = 0,
+    Profile = 1,
+}
+
+public sealed class EntityInsightImageSourceProfile
+{
+    public required PresentationImageRole Role { get; init; }
+    public PresentationImageState State { get; init; }
+    public required EntityInsightImageSourceScopeKind Scope { get; init; }
+    public int ProfileImageAssetId { get; init; }
 }
 
 public sealed class EntityInsightTipProfile
@@ -62,12 +113,13 @@ public sealed class EntityInsightProfile
     public required string AccentColorHex { get; init; }
     public required string SurfaceColorHex { get; init; }
     public required string GenreGlyph { get; init; }
-    public required string PortraitGlyph { get; init; }
+    public required EntityInsightImageSourceProfile ImageSource { get; init; }
     public required int GenreLabelTokenId { get; init; }
     public required int SubtitleTokenId { get; init; }
     public required int BodyTokenId { get; init; }
     public required EntityInsightBadgeProfile[] Badges { get; init; }
     public required EntityInsightStatProfile[] Stats { get; init; }
+    public required EntityInsightSemanticFieldProfile[] SemanticFields { get; init; }
     public required EntityInsightTipProfile[] Tips { get; init; }
     public required EntityInsightActionProfile[] Actions { get; init; }
 }
