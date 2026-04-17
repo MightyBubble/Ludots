@@ -47,6 +47,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -196,6 +197,7 @@ namespace Ludots.Core.Scripting
         // --- Presentation ---
         public static readonly ServiceKey<PresentationEventStream> PresentationEventStream = new("PresentationEventStream");
         public static readonly ServiceKey<PresentationCommandBuffer> PresentationCommandBuffer = new("PresentationCommandBuffer");
+        public static readonly ServiceKey<PerformCommandBuffer> PerformCommandBuffer = new("PerformCommandBuffer");
         public static readonly ServiceKey<PrefabRegistry> PresentationPrefabRegistry = new("PresentationPrefabRegistry");
         public static readonly ServiceKey<MeshAssetRegistry> PresentationMeshAssetRegistry = new("PresentationMeshAssetRegistry");
         public static readonly ServiceKey<PresentationBehaviorRegistry> PresentationBehaviorRegistry = new("PresentationBehaviorRegistry");

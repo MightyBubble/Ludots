@@ -4,6 +4,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Perform;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -58,6 +59,7 @@ namespace Ludots.Core.Presentation.Config
         {
             Upsert(entity, new VisualTemplateRef { TemplateId = templateId });
             Upsert(entity, template.ToRuntimeState(visibleOverride));
+            UpsertModelPerformerBinding(entity, templateId, in template);
 
             if (template.AnimatorControllerId > 0)
             {
@@ -67,6 +69,27 @@ namespace Ludots.Core.Presentation.Config
                 Upsert(entity, default(AnimationOverlayRequest));
                 Upsert(entity, default(AnimatorFeedbackBuffer));
             }
+        }
+
+        private void UpsertModelPerformerBinding(Entity entity, int templateId, in VisualTemplateDefinition template)
+        {
+            if (template.MeshAssetId <= 0 ||
+                template.RenderPath == VisualRenderPath.None ||
+                template.RenderPath.IsSkinnedLane() ||
+                template.AnimatorControllerId > 0)
+            {
+                if (entity.Has<ModelPerformBinding>())
+                {
+                    entity.Remove<ModelPerformBinding>();
+                }
+
+                return;
+            }
+
+            Upsert(entity, new ModelPerformBinding
+            {
+                TemplateId = templateId,
+            });
         }
 
         private void ApplyAnimator(Entity entity, JsonNode animatorNode)

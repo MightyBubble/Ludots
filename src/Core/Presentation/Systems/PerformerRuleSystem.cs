@@ -6,9 +6,9 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 
@@ -28,7 +28,7 @@ namespace Ludots.Core.Presentation.Systems
     public sealed class PerformerRuleSystem : BaseSystem<World, float>
     {
         private readonly PresentationEventStream _events;
-        private readonly PresentationCommandBuffer _commands;
+        private readonly PerformCommandBuffer _commands;
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly GraphProgramRegistry _programs;
         private readonly IGraphRuntimeApi _graphApi;
@@ -61,7 +61,7 @@ namespace Ludots.Core.Presentation.Systems
         public PerformerRuleSystem(
             World world,
             PresentationEventStream events,
-            PresentationCommandBuffer commands,
+            PerformCommandBuffer commands,
             PerformerDefinitionRegistry definitions,
             GraphProgramRegistry programs,
             IGraphRuntimeApi graphApi,
@@ -295,20 +295,21 @@ namespace Ludots.Core.Presentation.Systems
                 _ => cmd.ScopeId,
             };
 
-            _commands.TryAdd(new PresentationCommand
+            _commands.TryAdd(new PerformCommand
             {
-                LogicTickStamp = evt.LogicTickStamp,
-                Kind = cmd.CommandKind,
-                IdA = cmd.CommandKind == PresentationCommandKind.CreatePerformer
-                    ? cmd.PerformerDefinitionId
-                    : 0,
-                IdB = scopeId,
+                CommandKind = cmd.CommandKind,
+                PerformerDefinitionId = cmd.PerformerDefinitionId,
+                ScopeId = scopeId,
+                ScopeSource = PerformerCommandScopeSource.Fixed,
+                AnchorKind = Commands.PresentationAnchorKind.Entity,
                 Source = evt.Source,
                 Target = evt.Target,
-                Param1 = cmd.ParamGraphProgramId > 0
+                Position = default,
+                ParamValue = cmd.ParamGraphProgramId > 0
                     ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
                     : cmd.ParamValue,
-                Param2 = cmd.ParamKey,
+                ParamKey = cmd.ParamKey,
+                ParamGraphProgramId = 0,
             });
         }
 

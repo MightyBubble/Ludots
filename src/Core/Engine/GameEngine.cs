@@ -42,6 +42,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Rendering;
@@ -605,6 +606,7 @@ namespace Ludots.Core.Engine
             var presentationEventStream = new PresentationEventStream();
             var presentationBridgeSystem = new PresentationBridgeSystem(World, EventBus, presentationEventStream, GameSession, gasPresentationEvents);
             var presentationCommandBuffer = new PresentationCommandBuffer();
+            var performCommandBuffer = new PerformCommandBuffer();
             var presentationPrefabs = new PrefabRegistry();
             var meshAssets = new MeshAssetRegistry();
             var visualTemplates = new VisualTemplateRegistry();
@@ -636,13 +638,13 @@ namespace Ludots.Core.Engine
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
             BuiltinPerformerDefinitions.Register(performerDefinitions, meshAssets, presentationTextCatalog.GetTokenId);
-            var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, presentationCommandBuffer, performerDefinitions, graphProgramRegistry, performerGraphApi, GlobalContext);
+            var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performCommandBuffer, performerDefinitions, graphProgramRegistry, performerGraphApi, GlobalContext);
             var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(World, presentationEventStream);
             var presentationEntityFinalizeDestroySystem = new PresentationEntityFinalizeDestroySystem(World);
             var performerRuntimeSystem = new PerformerRuntimeSystem(
                 World,
                 presentationPrefabs,
-                presentationCommandBuffer,
+                performCommandBuffer,
                 presentationEventStream,
                 transientMarkerBuffer,
                 presentationRequestBuffer,
@@ -823,6 +825,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AuthoritativePointerButtons, authoritativePointerButtons);
             SetService(CoreServiceKeys.PresentationEventStream, presentationEventStream);
             SetService(CoreServiceKeys.PresentationCommandBuffer, presentationCommandBuffer);
+            SetService(CoreServiceKeys.PerformCommandBuffer, performCommandBuffer);
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
             SetService(CoreServiceKeys.PresentationBehaviorRegistry, presentationBehaviors);

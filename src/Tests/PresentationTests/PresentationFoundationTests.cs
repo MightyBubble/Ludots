@@ -14,12 +14,15 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -165,6 +168,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(entity.Has<AnimatorParameterBuffer>(), Is.True);
             Assert.That(entity.Has<AnimationOverlayRequest>(), Is.True);
             Assert.That(entity.Has<AnimatorFeedbackBuffer>(), Is.True);
+            Assert.That(entity.Has<ModelPerformBinding>(), Is.False, "Skinned model ownership remains legacy until animator ownership migrates.");
 
             int stableId = entity.Get<PresentationStableId>().Value;
             Assert.That(stableId, Is.GreaterThan(0));
@@ -506,6 +510,143 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PresentationAuthoringContext_Apply_StaticTemplate_BindsEntityToModelPerformer()
+        {
+            using var world = World.Create();
+            var entity = world.Create();
+
+            var visualTemplates = new VisualTemplateRegistry();
+            var animators = new AnimatorControllerRegistry();
+            var stableIds = new PresentationStableIdAllocator();
+
+            int templateId = visualTemplates.Register(
+                "crate.template",
+                new VisualTemplateDefinition
+                {
+                    MeshAssetId = 17,
+                    MaterialId = 23,
+                    BaseScale = 1.1f,
+                    RenderPath = VisualRenderPath.StaticMesh,
+                    Mobility = VisualMobility.Movable,
+                    VisibleByDefault = true,
+                });
+
+            var context = new PresentationAuthoringContext(visualTemplates, animators, stableIds);
+            JsonNode authoring = JsonNode.Parse(
+                """
+                {
+                  "visualTemplateId": "crate.template"
+                }
+                """)!;
+
+            context.Apply(entity, authoring);
+
+            Assert.That(entity.Has<ModelPerformBinding>(), Is.True);
+            var binding = entity.Get<ModelPerformBinding>();
+            Assert.That(binding.TemplateId, Is.EqualTo(templateId));
+        }
+
+        [Test]
+        public void PerformerEmitSystem_ModelBinding_EmitsPrimaryStaticModel_AndEntityVisualEmitSystemSkipsDuplicate()
+        {
+            using var world = World.Create();
+            var requests = new PresentationRequestBuffer();
+            var instances = new PerformerInstanceBuffer();
+            var definitions = new PerformerDefinitionRegistry();
+            var programs = new GraphProgramRegistry();
+            var globals = new Dictionary<string, object>();
+
+            int templateId = 42;
+            world.Create(
+                new PresentationStableId { Value = 501 },
+                new VisualTemplateRef { TemplateId = templateId },
+                new ModelPerformBinding { TemplateId = templateId },
+                new VisualTransform
+                {
+                    Position = new Vector3(1f, 0f, 2f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One * 2f,
+                },
+                VisualRuntimeState.Create(
+                    meshAssetId: 7,
+                    materialId: 9,
+                    baseScale: 1.5f,
+                    renderPath: VisualRenderPath.StaticMesh));
+
+            using (var legacyEmit = new EntityVisualEmitSystem(world, requests))
+            {
+                legacyEmit.Update(0.016f);
+            }
+
+            Assert.That(requests.Count, Is.EqualTo(0), "Legacy entity emit must stop duplicating model-bound entities once performer owns the static model slice.");
+
+            using var performerEmit = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                programs,
+                graphApi: null!,
+                globals);
+
+            performerEmit.Update(0.016f);
+
+            Assert.That(requests.Count, Is.EqualTo(1));
+            ref readonly var request = ref requests.GetSpan()[0];
+            Assert.That(request.Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
+            Assert.That(request.VisualProxy.ProxyKind, Is.EqualTo(PresentationVisualProxyKind.Performer));
+            Assert.That(request.VisualProxy.MeshAssetId, Is.EqualTo(7));
+            Assert.That(request.VisualProxy.TemplateId, Is.EqualTo(templateId));
+            Assert.That(request.VisualProxy.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh));
+            Assert.That(request.VisualProxy.Scale, Is.EqualTo(new Vector3(3f, 3f, 3f)));
+            Assert.That(request.VisualProxy.StableId, Is.EqualTo(PerformerVisualIdentity.ComposeStableId(501, PerformerVisualKind.Model, templateId)));
+        }
+
+        [Test]
+        public void PerformerEmitSystem_ModelBinding_DoesNotStealSkinnedAnimatorLane()
+        {
+            using var world = World.Create();
+            var requests = new PresentationRequestBuffer();
+            var instances = new PerformerInstanceBuffer();
+            var definitions = new PerformerDefinitionRegistry();
+            var programs = new GraphProgramRegistry();
+            var globals = new Dictionary<string, object>();
+
+            int templateId = 73;
+            world.Create(
+                new PresentationStableId { Value = 701 },
+                new VisualTemplateRef { TemplateId = templateId },
+                new ModelPerformBinding { TemplateId = templateId },
+                new VisualTransform
+                {
+                    Position = new Vector3(1f, 0f, 2f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                VisualRuntimeState.Create(
+                    meshAssetId: 7,
+                    materialId: 9,
+                    baseScale: 1f,
+                    renderPath: VisualRenderPath.SkinnedMesh,
+                    animatorControllerId: 3,
+                    animationProfileId: 9),
+                AnimatorPackedState.Create(3),
+                new AnimationOverlayRequest());
+
+            using var performerEmit = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                programs,
+                graphApi: null!,
+                globals);
+
+            performerEmit.Update(0.016f);
+            Assert.That(requests.Count, Is.EqualTo(0), "Model performer slice must not take skinned/animator ownership.");
+        }
+
+        [Test]
         public void PerformerEmitSystem_InstanceScopedMarker_UsesAllocatedStableId()
         {
             using var world = World.Create();
@@ -580,6 +721,154 @@ namespace Ludots.Tests.Presentation
             Assert.That(item.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh));
             Assert.That(item.StableId, Is.EqualTo(7001));
             Assert.That(item.StableId, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void WorldHudPerformBehavior_ProjectsOwnerAudienceAndSuppressesHostileAudience()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                Entity owner = world.Create(
+                    new Team { Id = 10 },
+                    new PlayerOwner { PlayerId = 10 },
+                    new CullState { IsVisible = true, LOD = LODLevel.High });
+                Entity ownerAudience = world.Create(
+                    new Team { Id = 10 },
+                    new PlayerOwner { PlayerId = 10 });
+                Entity hostileAudience = world.Create(
+                    new Team { Id = 20 },
+                    new PlayerOwner { PlayerId = 20 });
+
+                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
+
+                var behavior = new WorldHudPerformBehavior();
+                var ownerGlobals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = ownerAudience,
+                };
+                var hostileGlobals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
+                };
+
+                bool ownerVisible = behavior.TryResolveProjection(world, ownerGlobals, owner, LODLevel.High, out PerformPhaseResult ownerPhase);
+                bool hostileVisible = behavior.TryResolveProjection(world, hostileGlobals, owner, LODLevel.High, out PerformPhaseResult hostilePhase);
+
+                Assert.That(ownerVisible, Is.True);
+                Assert.That(ownerPhase.IsOwnedByAudience, Is.True);
+                Assert.That(ownerPhase.ShouldPresent, Is.True);
+                Assert.That(ownerPhase.AllowWorldHudProjection, Is.True);
+
+                Assert.That(hostileVisible, Is.False);
+                Assert.That(hostilePhase.IsHostile, Is.True);
+                Assert.That(hostilePhase.ShouldPresent, Is.True, "Phase result remains valid for the viewer.");
+                Assert.That(hostilePhase.AllowWorldHudProjection, Is.False, "Projection policy must already be resolved in PerformPhaseResult.");
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
+        }
+
+        [Test]
+        public void PerformerEmitSystem_WorldBar_UsesWorldHudPerformBehaviorProjection()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                var instances = new PerformerInstanceBuffer();
+                var definitions = new PerformerDefinitionRegistry();
+                var requests = new PresentationRequestBuffer();
+                var programs = new GraphProgramRegistry();
+
+                int definitionId = definitions.Register(
+                    "performer.entity.worldbar",
+                    new PerformerDefinition
+                    {
+                        VisualKind = PerformerVisualKind.WorldBar,
+                        DefaultScale = 1f,
+                    });
+
+                Entity owner = world.Create(
+                    new PresentationStableId { Value = 601 },
+                    new VisualTransform
+                    {
+                        Position = new Vector3(1f, 2f, 3f),
+                        Rotation = Quaternion.Identity,
+                        Scale = Vector3.One,
+                    },
+                    new Team { Id = 10 },
+                    new PlayerOwner { PlayerId = 10 },
+                    new CullState { IsVisible = true, LOD = LODLevel.High });
+
+                Entity ownerAudience = world.Create(
+                    new Team { Id = 10 },
+                    new PlayerOwner { PlayerId = 10 });
+                Entity hostileAudience = world.Create(
+                    new Team { Id = 20 },
+                    new PlayerOwner { PlayerId = 20 });
+
+                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
+
+                Assert.That(
+                    instances.TryAllocate(
+                        definitionId,
+                        owner,
+                        scopeId: 9101,
+                        PresentationAnchorKind.Entity,
+                        Vector3.Zero,
+                        stableId: 8101,
+                        out _),
+                    Is.True);
+
+                var ownerGlobals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = ownerAudience,
+                };
+
+                using (var ownerSystem = new PerformerEmitSystem(
+                           world,
+                           instances,
+                           definitions,
+                           requests,
+                           programs,
+                           graphApi: null!,
+                           ownerGlobals))
+                {
+                    ownerSystem.Update(0.016f);
+                }
+
+                Assert.That(requests.Count, Is.EqualTo(1), "Owner audience should receive projected world HUD output.");
+                requests.Clear();
+
+                var hostileGlobals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
+                };
+
+                using (var hostileSystem = new PerformerEmitSystem(
+                           world,
+                           instances,
+                           definitions,
+                           requests,
+                           programs,
+                           graphApi: null!,
+                           hostileGlobals))
+                {
+                    hostileSystem.Update(0.016f);
+                }
+
+                Assert.That(requests.Count, Is.EqualTo(0), "Hostile audience should be suppressed by the first world HUD behavior projection slice.");
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
         }
 
         [Test]

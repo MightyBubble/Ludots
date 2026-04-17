@@ -2,6 +2,7 @@ using System;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
@@ -90,6 +91,11 @@ namespace Ludots.Core.Presentation.Systems
         private void Emit(Entity entity, int stableId, in VisualRuntimeState visual, in VisualTransform transform, bool cullVisible, LODLevel lod)
         {
             if (!visual.HasRenderableAsset)
+            {
+                return;
+            }
+
+            if (World.Has<ModelPerformBinding>(entity) && !visual.RenderPath.IsSkinnedLane() && !visual.HasAnimator)
             {
                 return;
             }

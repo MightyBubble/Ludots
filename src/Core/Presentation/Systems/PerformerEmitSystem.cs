@@ -10,6 +10,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
@@ -32,6 +33,10 @@ namespace Ludots.Core.Presentation.Systems
         private readonly IGraphRuntimeApi _graphApi;
         private readonly Dictionary<string, object> _globals;
         private readonly EntityColorResolver _entityColorResolver;
+        private readonly WorldHudPerformBehavior _worldHudBehavior = new();
+        private readonly ModelPerformBehavior _modelBehavior = new();
+        private readonly QueryDescription _entityScopedModelQuery = new QueryDescription()
+            .WithAll<ModelPerformBinding, VisualTransform, VisualRuntimeState, PresentationStableId, VisualTemplateRef>();
 
         private readonly float[] _floatRegs = new float[GraphVmLimits.MaxFloatRegisters];
         private readonly int[] _intRegs = new int[GraphVmLimits.MaxIntRegisters];
@@ -62,6 +67,7 @@ namespace Ludots.Core.Presentation.Systems
 
         public override void Update(in float dt)
         {
+            EmitEntityScopedModels();
             _instances.ProcessActive(dt, (int handle, ref PerformerInstance inst) =>
             {
                 if (!_definitions.TryGet(inst.DefId, out var def))
@@ -99,10 +105,47 @@ namespace Ludots.Core.Presentation.Systems
             });
         }
 
+        private void EmitEntityScopedModels()
+        {
+            var query = World.Query(in _entityScopedModelQuery);
+            foreach (var chunk in query)
+            {
+                var bindings = chunk.GetArray<ModelPerformBinding>();
+                var transforms = chunk.GetArray<VisualTransform>();
+                var visuals = chunk.GetArray<VisualRuntimeState>();
+                var stableIds = chunk.GetArray<PresentationStableId>();
+                var templates = chunk.GetArray<VisualTemplateRef>();
+                for (int i = 0; i < chunk.Count; i++)
+                {
+                    Entity owner = chunk.Entity(i);
+                    ref readonly var binding = ref bindings[i];
+                    if (binding.TemplateId <= 0 || binding.TemplateId != templates[i].TemplateId)
+                    {
+                        continue;
+                    }
+
+                    if (_modelBehavior.TryCreateRequest(
+                            World,
+                            owner,
+                            binding.TemplateId,
+                            visuals[i],
+                            transforms[i],
+                            stableIds[i].Value,
+                            ResolveOwnerLod(owner),
+                            out PresentationRequest request))
+                    {
+                        _requests.Add(request);
+                    }
+                }
+            }
+        }
+
         private void EmitForVisualKind(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod, LODLevel lod)
         {
             switch (def.VisualKind)
             {
+                case PerformerVisualKind.Model:
+                    break;
                 case PerformerVisualKind.GroundOverlay:
                     EmitGroundOverlay(handle, def, owner, pos, alphaMod, lod);
                     break;
@@ -416,6 +459,11 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
+            if (!_worldHudBehavior.TryResolveProjection(World, _globals, owner, lod, out PerformPhaseResult phaseResult))
+            {
+                return;
+            }
+
             var fg = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
             fg.W *= alphaMod;
             var bg = ResolveColor(handle, def, owner, 8, 9, 10, 11, new Vector4(0.2f, 0.2f, 0.2f, 1f));
@@ -438,12 +486,17 @@ namespace Ludots.Core.Presentation.Systems
                 Color0 = bg,
                 Color1 = fg,
             };
-            _requests.Add(PresentationRequest.FromWorldHud(owner, item, lod));
+            _requests.Add(PresentationRequest.FromWorldHud(owner, item, phaseResult.LOD));
         }
 
         private void EmitWorldText(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod, LODLevel lod)
         {
             if (TryGetRenderDebugState(out var debug) && !debug.DrawWorldHudText)
+            {
+                return;
+            }
+
+            if (!_worldHudBehavior.TryResolveProjection(World, _globals, owner, lod, out PerformPhaseResult phaseResult))
             {
                 return;
             }
@@ -484,7 +537,7 @@ namespace Ludots.Core.Presentation.Systems
                 Color0 = color,
                 Text = packet,
             };
-            _requests.Add(PresentationRequest.FromWorldHud(owner, item, lod));
+            _requests.Add(PresentationRequest.FromWorldHud(owner, item, phaseResult.LOD));
         }
 
         private int ResolveHudStableId(int handle, int definitionId, Entity owner, WorldHudItemKind kind)

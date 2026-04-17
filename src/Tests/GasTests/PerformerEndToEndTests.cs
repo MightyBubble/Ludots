@@ -16,6 +16,7 @@ using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -32,7 +33,7 @@ namespace Ludots.Tests.Presentation
         private GasPresentationEventBuffer _gasEvents;
         private GameplayEventBus _eventBus;
         private PresentationEventStream _presEvents;
-        private PresentationCommandBuffer _commands;
+        private PerformCommandBuffer _commands;
         private PerformerDefinitionRegistry _defs;
         private PerformerInstanceBuffer _instances;
         private GraphProgramRegistry _programs;
@@ -59,7 +60,7 @@ namespace Ludots.Tests.Presentation
             _gasEvents = new GasPresentationEventBuffer();
             _eventBus = new GameplayEventBus();
             _presEvents = new PresentationEventStream();
-            _commands = new PresentationCommandBuffer();
+            _commands = new PerformCommandBuffer();
             _defs = new PerformerDefinitionRegistry();
             _instances = new PerformerInstanceBuffer();
             _programs = new GraphProgramRegistry();
@@ -77,6 +78,49 @@ namespace Ludots.Tests.Presentation
                 _defs,
                 new MeshAssetRegistry(),
                 key => string.Equals(key, WellKnownHudTextKeys.CombatDelta, StringComparison.Ordinal) ? 1 : 0);
+            int healthBarDefId = _defs.GetOrRegisterId(WellKnownPerformerKeys.EntityHealthBar);
+            _defs.Register(WellKnownPerformerKeys.EntityHealthBar, new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.WorldBar,
+                VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
+                DefaultColor = new Vector4(0f, 1f, 0f, 1f),
+                DefaultScale = 1f,
+                PositionOffset = new Vector3(0f, 1.5f, 0f),
+                Bindings = new[]
+                {
+                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarFillRatio, Value = ValueRef.FromAttributeRatio(_healthAttrId) },
+                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarWidth, Value = ValueRef.FromConstant(50f) },
+                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarHeight, Value = ValueRef.FromConstant(8f) },
+                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarBackgroundR, Value = ValueRef.FromConstant(0.2f) },
+                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarBackgroundG, Value = ValueRef.FromConstant(0f) },
+                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarBackgroundB, Value = ValueRef.FromConstant(0f) },
+                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarBackgroundA, Value = ValueRef.FromConstant(0.85f) },
+                },
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.EntitySpawned, KeyId = -1 },
+                        Condition = new ConditionRef { Inline = InlineConditionKind.SourceHasAttributes },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            PerformerDefinitionId = healthBarDefId,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                        }
+                    },
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.EntityDestroyed, KeyId = -1 },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PresentationCommandKind.DestroyPerformerScope,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                        }
+                    }
+                },
+            });
 
             var session = new GameSession();
             var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
@@ -296,7 +340,9 @@ namespace Ludots.Tests.Presentation
             attrBuf.SetCurrent(_healthAttrId, 100f);
             CreatePresentableEntity(new Vector3(10f, 0f, 10f), attrBuf, hasAttributes: true);
 
+            Assert.That(_presEvents.Count, Is.EqualTo(0));
             TickPipeline(0.016f);
+            Assert.That(_commands.Count, Is.GreaterThanOrEqualTo(0));
 
             bool foundBar = false;
             var hudSpan = _hud.GetSpan();
@@ -399,20 +445,23 @@ namespace Ludots.Tests.Presentation
             var owner = CreatePresentableEntity(new Vector3(5f, 0f, 5f));
             int scopeId = 42;
 
-            _commands.TryAdd(new PresentationCommand
+            _commands.TryAdd(new PerformCommand
             {
-                Kind = PresentationCommandKind.CreatePerformer,
-                IdA = overlayDefId,
-                IdB = scopeId,
+                CommandKind = PresentationCommandKind.CreatePerformer,
+                PerformerDefinitionId = overlayDefId,
+                ScopeId = scopeId,
+                ScopeSource = PerformerCommandScopeSource.Fixed,
+                AnchorKind = PresentationAnchorKind.Entity,
                 Source = owner,
             });
             TickPipeline(0.016f);
             Assert.That(_overlays.GetSpan().Length, Is.GreaterThan(0));
 
-            _commands.TryAdd(new PresentationCommand
+            _commands.TryAdd(new PerformCommand
             {
-                Kind = PresentationCommandKind.DestroyPerformerScope,
-                IdA = scopeId,
+                CommandKind = PresentationCommandKind.DestroyPerformerScope,
+                PerformerDefinitionId = scopeId,
+                ScopeId = scopeId,
             });
             TickPipeline(0.016f);
 
