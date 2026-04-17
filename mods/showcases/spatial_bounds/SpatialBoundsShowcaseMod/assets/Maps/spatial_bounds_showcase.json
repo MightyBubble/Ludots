@@ -1,0 +1,57 @@
+{
+  "Id": "spatial_bounds_showcase",
+  "Tags": ["showcase", "spatial_bounds", "selection", "input"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 1750,
+    "TargetYCm": 1050,
+    "DistanceCm": 4300,
+    "Pitch": 54,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "spatial_bounds_point_pin",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 800, "Y": 620 } }
+      }
+    },
+    {
+      "Template": "spatial_bounds_rect_footprint",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 1380, "Y": 620 } }
+      }
+    },
+    {
+      "Template": "spatial_bounds_diamond_footprint",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 2080, "Y": 620 } },
+        "FacingDirection": { "AngleRad": 0.7853982 }
+      }
+    },
+    {
+      "Template": "spatial_bounds_multi_footprint",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 1080, "Y": 1420 } }
+      }
+    },
+    {
+      "Template": "spatial_bounds_box_tower",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 1760, "Y": 1420 } }
+      }
+    },
+    {
+      "Template": "spatial_bounds_overlap_pad",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 2440, "Y": 1280 } }
+      }
+    },
+    {
+      "Template": "spatial_bounds_overlap_point",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 2440, "Y": 1280 } }
+      }
+    }
+  ]
+}

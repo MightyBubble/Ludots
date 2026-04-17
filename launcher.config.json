@@ -42,6 +42,14 @@
       }
     },
     {
+      "name": "spatial_bounds_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/spatial_bounds/SpatialBoundsShowcaseMod",
+        "projectPath": "SpatialBoundsShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "road_network_showcase",
       "target": {
         "type": "path",

@@ -25,10 +25,10 @@ namespace PerformanceVisualizationMod.Runtime
         private const int DestroyBatchSize = 2048;
 
         private static readonly QueryDescription ScenarioEntitiesQuery = new QueryDescription()
-            .WithAll<MapEntity, Name, VisualRuntimeState, PresentationStableId, AttributeBuffer>();
+            .WithAll<MapEntity, Name, VisualRuntimeState, PresentationStableId>();
 
         private static readonly QueryDescription VisibleScenarioEntitiesQuery = new QueryDescription()
-            .WithAll<MapEntity, Name, VisualRuntimeState, PresentationStableId, AttributeBuffer, CullState>();
+            .WithAll<MapEntity, Name, VisualRuntimeState, PresentationStableId, CullState>();
 
         private readonly IModContext _context;
         private readonly VisualBenchmarkPanelController _panelController;
@@ -77,7 +77,6 @@ namespace PerformanceVisualizationMod.Runtime
             }
 
             _activeMapId = mapId;
-            EnsureAttributeIds();
             ConfigureCamera(engine, _scenario);
             RefreshPanel(engine);
             return Task.CompletedTask;
@@ -180,7 +179,9 @@ namespace PerformanceVisualizationMod.Runtime
                 {
                     _hasRequestedScenario = false;
                     _pipelinePhase = BenchmarkPipelinePhase.Idle;
-                    _status = $"Spawned {_requestedScenario.EntityCount:N0} map-scoped visual actors with performer-driven health bars.";
+                    _status = _requestedScenario.AttachHealthAttributes
+                        ? $"Spawned {_requestedScenario.EntityCount:N0} map-scoped visual actors with performer-driven health bars."
+                        : $"Spawned {_requestedScenario.EntityCount:N0} map-scoped visual actors for pure visual stress.";
                     _context.Log($"[PerformanceVisualizationMod] {_status}");
                 }
             }
@@ -243,7 +244,7 @@ namespace PerformanceVisualizationMod.Runtime
                 Scenario: $"Scenario: {_scenario.Label} | Spawned: {_spawnedCount:N0}",
                 Metrics: $"Entities: {_spawnedCount:N0} | Visible: {_lastVisibleCount:N0} | WorldHUD Bars: {_lastHudCount:N0} | Dropped: {_lastHudDropped:N0}",
                 Camera: $"Camera target ({cameraTarget.X:0},{cameraTarget.Y:0}) | Distance {engine.GameSession.Camera.State.DistanceCm:0}",
-                Hint: $"Pipeline: {_pipelinePhase} | Run 2K/8K to validate the formal performer HUD path. Run 32K for visual-instance stress while HUD remains cull-gated.",
+                Hint: $"Pipeline: {_pipelinePhase} | Run 2K/8K to validate the formal performer HUD path. Run 32K for pure visual-instance stress with no HUD performers.",
                 Actions: new[]
                 {
                     VisualBenchmarkScenarioConfig.Small.Label,
@@ -267,7 +268,7 @@ namespace PerformanceVisualizationMod.Runtime
             _lastVisibleCount = 0;
 
             MapId currentMapId = engine.CurrentMapSession?.MapId ?? default;
-            engine.World.Query(in ScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __, ref AttributeBuffer ___) =>
+            engine.World.Query(in ScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __) =>
             {
                 if (!MatchesScenarioEntity(mapEntity, name, currentMapId))
                 {
@@ -277,7 +278,7 @@ namespace PerformanceVisualizationMod.Runtime
                 _spawnedCount++;
             });
 
-            engine.World.Query(in VisibleScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __, ref AttributeBuffer ___, ref CullState cull) =>
+            engine.World.Query(in VisibleScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __, ref CullState cull) =>
             {
                 if (!MatchesScenarioEntity(mapEntity, name, currentMapId) || !cull.IsVisible)
                 {
@@ -310,7 +311,10 @@ namespace PerformanceVisualizationMod.Runtime
 
         private int SpawnScenarioBatch(GameEngine engine, VisualBenchmarkScenarioConfig scenario, int startIndex, int batchSize)
         {
-            EnsureAttributeIds();
+            if (scenario.AttachHealthAttributes)
+            {
+                EnsureAttributeIds();
+            }
 
             World world = engine.World;
             int meshId = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)?.GetId(WellKnownMeshKeys.Cube) ?? 0;
@@ -338,7 +342,6 @@ namespace PerformanceVisualizationMod.Runtime
                 typeof(PresentationStableId),
                 typeof(VisualRuntimeState),
                 typeof(CullState),
-                typeof(AttributeBuffer),
             };
 
             for (int i = startIndex; i < endExclusive; i++)
@@ -370,9 +373,13 @@ namespace PerformanceVisualizationMod.Runtime
                     LOD = LODLevel.High,
                 });
 
-                ref var attributes = ref world.Get<AttributeBuffer>(entity);
-                attributes.SetBase(_healthAttributeId, 100f);
-                attributes.SetCurrent(_healthAttributeId, 40f + (i % 60));
+                if (scenario.AttachHealthAttributes)
+                {
+                    world.Add(entity, new AttributeBuffer());
+                    ref var attributes = ref world.Get<AttributeBuffer>(entity);
+                    attributes.SetBase(_healthAttributeId, 100f);
+                    attributes.SetCurrent(_healthAttributeId, 40f + (i % 60));
+                }
             }
 
             return endExclusive - startIndex;
@@ -387,7 +394,7 @@ namespace PerformanceVisualizationMod.Runtime
             }
 
             int marked = 0;
-            engine.World.Query(in ScenarioEntitiesQuery, (Entity entity, ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __, ref AttributeBuffer ___) =>
+            engine.World.Query(in ScenarioEntitiesQuery, (Entity entity, ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __) =>
             {
                 if (marked >= batchSize || !MatchesScenarioEntity(mapEntity, name, currentMapId))
                 {
@@ -445,7 +452,7 @@ namespace PerformanceVisualizationMod.Runtime
         {
             MapId currentMapId = engine.CurrentMapSession?.MapId ?? default;
             int count = 0;
-            engine.World.Query(in ScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __, ref AttributeBuffer ___) =>
+            engine.World.Query(in ScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __) =>
             {
                 if (MatchesScenarioEntity(mapEntity, name, currentMapId))
                 {

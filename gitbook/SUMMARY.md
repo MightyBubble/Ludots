@@ -11,6 +11,7 @@
   - [鍏变韩 Skill 娌荤悊](contributing/shared-skill-governance.md)
 - [鏋舵瀯](architecture/README.md)
   - [杩愯鏃舵€昏](architecture/runtime-overview.md)
+  - [Presentation Terminology](architecture/presentation-terminology.md)
   - [Presentation / Performer 褰撳墠鏋舵瀯](architecture/presentation-performer-current-architecture.md)
   - [Presentation Pipeline Showcase UAT Design](architecture/presentation-pipeline-showcase-uat.md)
   - [Surface Source Performer UAT Plan](architecture/surface-source-performer-uat-plan.md)

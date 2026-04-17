@@ -23,5 +23,8 @@ namespace Ludots.Core.Presentation.Performers
 
         /// <summary>Ground-following cubic spline ribbon for roads, lanes, and route highlights.</summary>
         RoadSpline = 5,
+
+        /// <summary>Primary model projection emitted through performer ownership.</summary>
+        Model = 6,
     }
 }

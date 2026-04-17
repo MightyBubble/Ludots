@@ -27,6 +27,12 @@ These paths are explicitly out of scope and must fail audit:
 - Adapter-side parsing of performer semantics.
 - Fallback to legacy fields or legacy loaders.
 
+Terminology guard for this document:
+
+- `Prefab`, `Performer`, `Presentation behavior`, and `Presentation request` are shared Core terms.
+- Acceptance-only ids or sample asset names are fixture names, not shared asset categories.
+- A fixture name must never be used as a synonym for a shared asset kind.
+
 ## 2. Showcase Mod Shape
 
 Recommended fixture:

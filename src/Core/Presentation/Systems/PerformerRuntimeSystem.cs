@@ -3,9 +3,9 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -14,7 +14,7 @@ using Ludots.Core.Presentation;
 namespace Ludots.Core.Presentation.Systems
 {
     /// <summary>
-    /// Consumes PresentationCommands and manages performer lifecycle.
+    /// Consumes perform-domain commands and manages performer lifecycle.
     ///
     /// Handles both one-shot performers (PlayOneShotPerformer → TransientMarker)
     /// and the new persistent performer commands (CreatePerformer / DestroyPerformer /
@@ -23,7 +23,7 @@ namespace Ludots.Core.Presentation.Systems
     public sealed class PerformerRuntimeSystem : BaseSystem<World, float>
     {
         private readonly PrefabRegistry _prefabs;
-        private readonly PresentationCommandBuffer _commands;
+        private readonly PerformCommandBuffer _commands;
         private readonly PresentationEventStream _events;
         private readonly TransientMarkerBuffer _markers;
         private readonly PresentationRequestBuffer _requests;
@@ -34,7 +34,7 @@ namespace Ludots.Core.Presentation.Systems
         public PerformerRuntimeSystem(
             World world,
             PrefabRegistry prefabs,
-            PresentationCommandBuffer commands,
+            PerformCommandBuffer commands,
             PresentationEventStream events,
             TransientMarkerBuffer markers,
             PresentationRequestBuffer requests,
@@ -62,31 +62,27 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < cmdSpan.Length; i++)
             {
                 ref readonly var cmd = ref cmdSpan[i];
-                switch (cmd.Kind)
+                switch (cmd.CommandKind)
                 {
-                    case PresentationCommandKind.PlayOneShotPerformer:
-                        HandlePlayOneShot(in cmd);
-                        break;
-
-                    case PresentationCommandKind.CreatePerformer:
+                    case Commands.PresentationCommandKind.CreatePerformer:
                         HandleCreatePerformer(in cmd);
                         break;
 
-                    case PresentationCommandKind.DestroyPerformer:
-                        if (_instances.TryGetActive(cmd.IdA, out var instance) && _instances.Release(cmd.IdA))
+                    case Commands.PresentationCommandKind.DestroyPerformer:
+                        if (_instances.TryGetActive(cmd.PerformerHandle, out var instance) && _instances.Release(cmd.PerformerHandle))
                         {
-                            EmitDestroyedEvent(cmd.IdA, instance);
+                            EmitDestroyedEvent(cmd.PerformerHandle, instance);
                         }
                         break;
 
-                    case PresentationCommandKind.DestroyPerformerScope:
-                        _instances.ReleaseScope(cmd.IdB != 0 ? cmd.IdB : cmd.IdA, EmitDestroyedEvent);
+                    case Commands.PresentationCommandKind.DestroyPerformerScope:
+                        _instances.ReleaseScope(cmd.ScopeId != 0 ? cmd.ScopeId : cmd.PerformerDefinitionId, EmitDestroyedEvent);
                         break;
 
-                    case PresentationCommandKind.SetPerformerParam:
-                        if (_instances.IsActive(cmd.IdA))
+                    case Commands.PresentationCommandKind.SetPerformerParam:
+                        if (_instances.IsActive(cmd.PerformerHandle))
                         {
-                            _instances.SetParamOverride(cmd.IdA, cmd.IdB, cmd.Param1);
+                            _instances.SetParamOverride(cmd.PerformerHandle, cmd.ParamKey, cmd.ParamValue);
                         }
                         break;
                 }
@@ -96,40 +92,11 @@ namespace Ludots.Core.Presentation.Systems
             _markers.TickAndRequest(_requests, dt, World);
         }
 
-        private void HandlePlayOneShot(in PresentationCommand cmd)
+        private void HandleCreatePerformer(in PerformCommand cmd)
         {
-            if (!_prefabs.TryGet(cmd.IdA, out var prefab))
+            if (!_definitions.TryGet(cmd.PerformerDefinitionId, out var definition))
             {
-                throw new InvalidOperationException($"PlayOneShotPerformer references unknown prefab id={cmd.IdA}.");
-            }
-
-            var color = cmd.Param0.W == 0 ? new Vector4(0f, 1f, 1f, 1f) : cmd.Param0;
-            float lifetime = cmd.Param1 > 0f ? cmd.Param1 : 0.35f;
-            var scale = new Vector3(prefab.BaseScale);
-
-            bool follow = World.IsAlive(cmd.Target) && World.Has<VisualTransform>(cmd.Target);
-            if (follow)
-            {
-                if (!_markers.TryAddAnchoredPrefab(cmd.IdA, scale, color, lifetime, cmd.Target, new Vector3(0f, 0.2f, 0f)))
-                {
-                    throw new InvalidOperationException("TransientMarkerBuffer is full while creating anchored one-shot prefab instance.");
-                }
-            }
-            else
-            {
-                if (!_markers.TryAddPrefab(cmd.IdA, cmd.Position, scale, color, lifetime))
-                {
-                    throw new InvalidOperationException("TransientMarkerBuffer is full while creating one-shot prefab instance.");
-                }
-            }
-        }
-
-        private void HandleCreatePerformer(in PresentationCommand cmd)
-        {
-            // IdA = PerformerDefinitionId, IdB = ScopeId, Source = Owner
-            if (!_definitions.TryGet(cmd.IdA, out var definition))
-            {
-                throw new InvalidOperationException($"Performer definition id={cmd.IdA} is not registered.");
+                throw new InvalidOperationException($"Performer definition id={cmd.PerformerDefinitionId} is not registered.");
             }
 
             if (ShouldSkipDuplicatePersistentScopedCreate(in cmd, definition))
@@ -138,36 +105,36 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             if (!_instances.TryAllocate(
-                    cmd.IdA,
+                    cmd.PerformerDefinitionId,
                     cmd.Source,
-                    cmd.IdB,
+                    cmd.ScopeId,
                     cmd.AnchorKind,
                     cmd.Position,
                     _stableIds.Allocate(),
                     out int handle))
             {
-                string performerKey = _definitions.GetName(cmd.IdA);
+                string performerKey = _definitions.GetName(cmd.PerformerDefinitionId);
                 string ownerText = cmd.Source == Entity.Null
                     ? "Entity.Null"
                     : $"Entity(Id={cmd.Source.Id},World={cmd.Source.WorldId},Ver={cmd.Source.Version})";
                 throw new InvalidOperationException(
-                    $"PerformerInstanceBuffer is full while creating performer '{performerKey}' (defId={cmd.IdA}, scopeId={cmd.IdB}, owner={ownerText}, active={_instances.ActiveCount}, capacity={_instances.Capacity}).");
+                    $"PerformerInstanceBuffer is full while creating performer '{performerKey}' (defId={cmd.PerformerDefinitionId}, scopeId={cmd.ScopeId}, owner={ownerText}, active={_instances.ActiveCount}, capacity={_instances.Capacity}).");
             }
 
             EmitCreatedEvent(handle, _instances.Get(handle));
         }
 
-        private bool ShouldSkipDuplicatePersistentScopedCreate(in PresentationCommand cmd, PerformerDefinition definition)
+        private bool ShouldSkipDuplicatePersistentScopedCreate(in PerformCommand cmd, PerformerDefinition definition)
         {
-            if (definition.DefaultLifetime > 0f || cmd.IdB <= 0)
+            if (definition.DefaultLifetime > 0f || cmd.ScopeId <= 0)
             {
                 return false;
             }
 
             return _instances.HasActiveScopedInstance(
-                cmd.IdA,
+                cmd.PerformerDefinitionId,
                 cmd.Source,
-                cmd.IdB,
+                cmd.ScopeId,
                 cmd.AnchorKind,
                 cmd.Position);
         }

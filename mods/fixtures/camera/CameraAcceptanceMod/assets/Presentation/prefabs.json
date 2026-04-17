@@ -1,6 +1,6 @@
 [
   {
-    "id": "camera_acceptance_typed_cue_marker",
+    "id": "camera_acceptance_projection_cue_fixture_prefab",
     "meshAssetId": "cube",
     "baseScale": 0.2,
     "parts": [
