@@ -44,7 +44,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly GameEngine _engine;
         private readonly PrimitiveDrawBuffer? _primitives;
         private readonly ScreenOverlayBuffer? _overlay;
-        private readonly PresentationCommandBuffer? _commands;
+        private readonly PerformerCommandBuffer? _commands;
         private readonly SurfaceSourcePayloadRegistry? _surfacePayloads;
         private readonly PerformerDefinitionRegistry? _performers;
         private readonly int _cubeMeshId;
@@ -59,7 +59,7 @@ namespace RoadNetworkShowcaseMod.Systems
             _runtime = runtime;
             _primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             _overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
-            _commands = engine.GetService(CoreServiceKeys.PresentationCommandBuffer);
+            _commands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer);
             _surfacePayloads = engine.GetService(CoreServiceKeys.SurfaceSourcePayloadRegistry);
             _performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
             MeshAssetRegistry? meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
@@ -131,7 +131,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 return;
             }
 
-            PresentationCommandBuffer commandBuffer = _commands;
+            PerformerCommandBuffer commandBuffer = _commands;
 
             if (_roadSurfacePerformerDefinitionId <= 0)
             {
@@ -149,11 +149,11 @@ namespace RoadNetworkShowcaseMod.Systems
                 int scopeId = ComposeRoadSurfaceScopeId(chunkKey);
                 if (!_activeSurfaceScopes.ContainsKey(chunkKey))
                 {
-                    if (!commandBuffer.TryAdd(new PresentationCommand
+                    if (!commandBuffer.TryAdd(new PerformerCommand
                         {
-                            Kind = PresentationCommandKind.CreatePerformer,
-                            IdA = _roadSurfacePerformerDefinitionId,
-                            IdB = scopeId,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = _roadSurfacePerformerDefinitionId,
+                            ScopeTag = scopeId,
                             Source = Entity.Null,
                             AnchorKind = PresentationAnchorKind.WorldPosition,
                             Position = ResolveChunkCenter(chunkKey, _runtime.ActiveBoard.LoadedChunksSource.ChunkSizeCm),
@@ -185,10 +185,10 @@ namespace RoadNetworkShowcaseMod.Systems
                 chunksToRemove ??= new List<long>();
                 chunksToRemove.Add(chunkKey);
                 _surfacePayloads.Remove(scopeId);
-                if (!commandBuffer.TryAdd(new PresentationCommand
+                if (!commandBuffer.TryAdd(new PerformerCommand
                     {
-                        Kind = PresentationCommandKind.DestroyPerformerScope,
-                        IdA = scopeId,
+                        CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                        ScopeTag = scopeId,
                     }))
                 {
                     throw new InvalidOperationException("RoadNetwork showcase failed to queue DestroyPerformerScope for authoritative road surface.");

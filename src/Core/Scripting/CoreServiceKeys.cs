@@ -197,8 +197,7 @@ namespace Ludots.Core.Scripting
 
         // --- Presentation ---
         public static readonly ServiceKey<PresentationEventStream> PresentationEventStream = new("PresentationEventStream");
-        public static readonly ServiceKey<PresentationCommandBuffer> PresentationCommandBuffer = new("PresentationCommandBuffer");
-        public static readonly ServiceKey<PerformCommandBuffer> PerformCommandBuffer = new("PerformCommandBuffer");
+        public static readonly ServiceKey<PerformerCommandBuffer> PerformerCommandBuffer = new("PerformerCommandBuffer");
         public static readonly ServiceKey<PrefabRegistry> PresentationPrefabRegistry = new("PresentationPrefabRegistry");
         public static readonly ServiceKey<MeshAssetRegistry> PresentationMeshAssetRegistry = new("PresentationMeshAssetRegistry");
         public static readonly ServiceKey<PresentationMaterialRegistry> PresentationMaterialRegistry = new("PresentationMaterialRegistry");

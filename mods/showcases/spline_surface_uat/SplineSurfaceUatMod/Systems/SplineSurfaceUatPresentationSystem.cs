@@ -16,7 +16,7 @@ namespace SplineSurfaceUatMod.Systems
     {
         private readonly GameEngine _engine;
         private readonly SplineSurfaceUatRuntime _runtime;
-        private readonly PresentationCommandBuffer? _commands;
+        private readonly PerformerCommandBuffer? _commands;
         private readonly SurfaceSourcePayloadRegistry? _payloads;
         private readonly PerformerDefinitionRegistry? _performers;
         private readonly PresentationMaterialRegistry? _materials;
@@ -30,7 +30,7 @@ namespace SplineSurfaceUatMod.Systems
         {
             _engine = engine;
             _runtime = runtime;
-            _commands = engine.GetService(CoreServiceKeys.PresentationCommandBuffer);
+            _commands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer);
             _payloads = engine.GetService(CoreServiceKeys.SurfaceSourcePayloadRegistry);
             _performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
             _materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
@@ -107,11 +107,11 @@ namespace SplineSurfaceUatMod.Systems
                 throw new InvalidOperationException("Spline surface UAT performer definitions must be registered before presentation bind.");
             }
 
-            if (!_commands!.TryAdd(new PresentationCommand
+            if (!_commands!.TryAdd(new PerformerCommand
                 {
-                    Kind = PresentationCommandKind.CreatePerformer,
-                    IdA = performerDefinitionId,
-                    IdB = scopeId,
+                    CommandKind = PerformerCommandKind.CreatePerformer,
+                    PerformerDefinitionId = performerDefinitionId,
+                    ScopeTag = scopeId,
                     Source = Entity.Null,
                     AnchorKind = PresentationAnchorKind.WorldPosition,
                     Position = worldAnchor,
@@ -133,10 +133,10 @@ namespace SplineSurfaceUatMod.Systems
         private void RemoveSurface(int scopeId)
         {
             _payloads!.Remove(scopeId);
-            if (!_commands!.TryAdd(new PresentationCommand
+            if (!_commands!.TryAdd(new PerformerCommand
                 {
-                    Kind = PresentationCommandKind.DestroyPerformerScope,
-                    IdA = scopeId,
+                    CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                    ScopeTag = scopeId,
                 }))
             {
                 throw new InvalidOperationException($"Spline surface UAT failed to destroy performer scope {scopeId}.");

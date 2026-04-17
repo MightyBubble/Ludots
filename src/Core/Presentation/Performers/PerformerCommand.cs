@@ -1,50 +1,31 @@
+using System.Numerics;
+using Arch.Core;
 using Ludots.Core.Presentation.Commands;
 
 namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
-    /// The action part of a <see cref="PerformerRule"/>. When the rule fires,
-    /// the PerformerRuleSystem translates this into a <see cref="PresentationCommand"/>
-    /// and writes it to the <see cref="PresentationCommandBuffer"/>.
+    /// The action part of a <see cref="PerformerRule"/> and the single runtime command DTO
+    /// consumed by the performer pipeline.
     /// </summary>
     public struct PerformerCommand
     {
-        /// <summary>
-        /// The PresentationCommandKind to produce.
-        /// Maps directly to CreatePerformer / DestroyPerformer / DestroyPerformerScope / SetPerformerParam.
-        /// </summary>
-        public PresentationCommandKind CommandKind;
-
-        /// <summary>
-        /// The PerformerDefinition ID to instantiate (used with CreatePerformer).
-        /// </summary>
+        public PerformerCommandKind CommandKind;
         public int PerformerDefinitionId;
-
-        /// <summary>
-        /// The Scope ID for grouping (used with CreatePerformer / DestroyPerformerScope).
-        /// Instances sharing a ScopeId can be destroyed together with a single command.
-        /// </summary>
-        public int ScopeId;
-
-        /// <summary>
-        /// Selects where the scope id comes from when this command is emitted.
-        /// </summary>
+        public int PerformerHandle;
+        public int ParentHandle;
+        public int ScopeTag;
         public PerformerCommandScopeSource ScopeSource;
-
-        /// <summary>
-        /// The parameter key for SetPerformerParam.
-        /// </summary>
+        public PresentationAnchorKind AnchorKind;
+        public Entity Source;
+        public Entity Target;
+        public Vector3 Position;
         public int ParamKey;
-
-        /// <summary>
-        /// Static parameter value for SetPerformerParam.
-        /// </summary>
+        public ParamLane ParamLane;
         public float ParamValue;
-
-        /// <summary>
-        /// When > 0, execute this Graph program to compute the parameter value
-        /// dynamically instead of using <see cref="ParamValue"/>.
-        /// </summary>
+        public int IntValue;
+        public Vector4 VectorValue;
         public int ParamGraphProgramId;
+        public int TargetBehaviorSlot;
     }
 }

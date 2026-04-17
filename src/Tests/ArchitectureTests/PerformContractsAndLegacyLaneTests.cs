@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Perform;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using NUnit.Framework;
 
@@ -13,132 +13,76 @@ namespace Ludots.Tests.Architecture
     [TestFixture]
     public sealed class PerformContractsAndLegacyLaneTests
     {
-        private static readonly string[] MandatoryPerformContractNames =
+        private static readonly string[] ForbiddenPerformerCommandTokens =
         {
-            "PerformAudienceContext",
-            "PerformPhaseInput",
-            "PerformPhaseResult",
-            "PerformPhaseResolver",
-        };
-
-        private static readonly string[] ForbiddenPhaseDependencyTokens =
-        {
-            "SelectionRequestQueue",
-            "SelectionResponseBuffer",
-            "SelectionRuntime",
-            "SelectionView",
-            "PresentationRequest",
-            "PresentationRequestBuffer",
-            "PresentationRequestFlushSystem",
-            "Flush",
+            "PresentationCommand",
+            "PresentationCommandKind",
+            "PresentationCommandBuffer",
+            "PerformCommand",
+            "PerformCommandBuffer",
         };
 
         [Test]
-        public void PerformContracts_KeepExistingBaseContracts_AndDefineSingleNextStepForMandatoryPhaseContracts()
+        public void PerformerCommand_IsTheOnlyCommandChainSsot()
         {
-            Type[] existingContractTypes =
+            Assembly assembly = typeof(PerformerCommand).Assembly;
+            Type?[] requiredTypes =
             {
-                typeof(PerformBehaviorDefinition),
-                typeof(PerformBehaviorInstance),
-                typeof(PerformBehaviorKind),
-                typeof(PerformCommand),
-                typeof(PerformRule),
+                assembly.GetType("Ludots.Core.Presentation.Performers.PerformerCommand", throwOnError: false),
+                assembly.GetType("Ludots.Core.Presentation.Performers.PerformerCommandKind", throwOnError: false),
+                assembly.GetType("Ludots.Core.Presentation.Performers.PerformerCommandBuffer", throwOnError: false),
             };
-
-            Assert.That(
-                existingContractTypes.Select(static type => type.Namespace).Distinct().ToArray(),
-                Is.EqualTo(new[] { "Ludots.Core.Presentation.Perform" }));
-
-            Assembly assembly = typeof(PerformRule).Assembly;
-            string[] missingMandatoryContracts = MandatoryPerformContractNames
-                .Where(name => assembly.GetType($"Ludots.Core.Presentation.Perform.{name}", throwOnError: false) == null)
+            string[] missingTypes = requiredTypes
+                .Where(static type => type == null)
+                .Select((_, index) => index switch
+                {
+                    0 => "PerformerCommand",
+                    1 => "PerformerCommandKind",
+                    _ => "PerformerCommandBuffer",
+                })
                 .ToArray();
 
-            if (missingMandatoryContracts.Length == MandatoryPerformContractNames.Length)
-            {
-                Assert.Pass("Mandatory phase contracts are not landed yet; additive first-wave compatibility remains intact.");
-            }
-
             Assert.That(
-                missingMandatoryContracts,
+                missingTypes,
                 Is.Empty,
-                "Once phase-contract migration starts, the full mandatory minimal phase contract set must land together.");
+                "T3 command-chain rewrite requires PerformerCommand, PerformerCommandKind, and PerformerCommandBuffer to land together.");
         }
 
         [Test]
-        public void PerformContracts_DoNotExposeLegacyVisibilityAlias()
+        public void LegacyCommandTypes_AreRemovedFromCore()
         {
-            Assembly assembly = typeof(PerformRule).Assembly;
-            Type? legacyAlias = assembly.GetType("Ludots.Core.Presentation.Perform.PerformVisibilityInput", throwOnError: false);
-            Assert.That(legacyAlias, Is.Null, "PerformVisibilityInput must not exist. The SSOT contract is PerformAudienceContext + PerformPhaseInput + PerformPhaseResult.");
+            Assembly assembly = typeof(PerformerCommand).Assembly;
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Commands.PresentationCommand", throwOnError: false), Is.Null);
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Commands.PresentationCommandKind", throwOnError: false), Is.Null);
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Commands.PresentationCommandBuffer", throwOnError: false), Is.Null);
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Perform.PerformCommand", throwOnError: false), Is.Null);
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Perform.PerformCommandBuffer", throwOnError: false), Is.Null);
         }
 
         [Test]
-        public void MandatoryPhaseContracts_AreDefinedInPerformNamespaceOnly()
+        public void PerformerCommandContract_ExposesT3Fields()
         {
-            Assembly assembly = typeof(PerformRule).Assembly;
-            Type?[] contractTypes = MandatoryPerformContractNames
-                .Select(name => assembly.GetType($"Ludots.Core.Presentation.Perform.{name}", throwOnError: false))
-                .ToArray();
+            FieldInfo[] fields = typeof(PerformerCommand).GetFields(BindingFlags.Instance | BindingFlags.Public);
+            string[] fieldNames = fields.Select(static field => field.Name).ToArray();
 
-            if (contractTypes.All(static type => type == null))
+            Assert.That(fieldNames, Does.Contain("CommandKind"));
+            Assert.That(fieldNames, Does.Contain("PerformerDefinitionId"));
+            Assert.That(fieldNames, Does.Contain("ParentHandle"));
+            Assert.That(fieldNames, Does.Contain("ScopeTag"));
+            Assert.That(fieldNames, Does.Contain("ParamKey"));
+            Assert.That(fieldNames, Does.Contain("ParamLane"));
+            Assert.That(fieldNames, Does.Contain("ParamValue"));
+            Assert.That(fieldNames, Does.Contain("IntValue"));
+            Assert.That(fieldNames, Does.Contain("VectorValue"));
+            Assert.That(fieldNames, Does.Contain("TargetBehaviorSlot"));
+
+            foreach (string forbiddenToken in ForbiddenPerformerCommandTokens)
             {
-                Assert.Pass("Mandatory phase contracts are not landed yet; namespace enforcement will apply when they appear.");
+                Assert.That(fieldNames, Does.Not.Contain(forbiddenToken));
             }
 
-            string[] namespaces = contractTypes
-                .Where(static type => type != null)
-                .Select(static type => type!.Namespace ?? string.Empty)
-                .Distinct()
-                .ToArray();
-
-            Assert.That(namespaces, Is.EqualTo(new[] { "Ludots.Core.Presentation.Perform" }));
-        }
-
-        [Test]
-        public void MandatoryPhaseContracts_DoNotDependOnSelectionOrRequestFlush()
-        {
-            Assembly assembly = typeof(PerformRule).Assembly;
-            Type?[] contractTypes = MandatoryPerformContractNames
-                .Select(name => assembly.GetType($"Ludots.Core.Presentation.Perform.{name}", throwOnError: false))
-                .ToArray();
-
-            foreach (Type? contractType in contractTypes)
-            {
-                Assert.That(contractType, Is.Not.Null, "Mandatory phase contract migration must land as a complete set.");
-
-                List<string> offenders = EnumerateForbiddenMemberDependencies(contractType!)
-                    .Where(token => ForbiddenPhaseDependencyTokens.Any(forbidden =>
-                        token.Contains(forbidden, StringComparison.OrdinalIgnoreCase)))
-                    .ToList();
-
-                Assert.That(
-                    offenders,
-                    Is.Empty,
-                    $"{contractType!.Name} must not depend on selection state or request flush contracts.");
-            }
-        }
-
-        [Test]
-        public void PerformPhaseResolver_SourceDoesNotReferenceSelectionOrRequestFlush()
-        {
-            string repoRoot = FindRepoRoot();
-            string sourcePath = Path.Combine(repoRoot, "src", "Core", "Presentation", "Perform", "PerformPhaseResolver.cs");
-
-            if (!File.Exists(sourcePath))
-            {
-                Assert.Pass("PerformPhaseResolver source is not landed yet; source guard becomes active when the file appears.");
-            }
-
-            string source = File.ReadAllText(sourcePath);
-
-            foreach (string forbiddenToken in ForbiddenPhaseDependencyTokens)
-            {
-                Assert.That(
-                    source,
-                    Does.Not.Contain(forbiddenToken),
-                    $"PerformPhaseResolver must not couple to selection/request flush token '{forbiddenToken}'.");
-            }
+            Assert.That(typeof(PerformerCommand).GetField("ScopeId", BindingFlags.Instance | BindingFlags.Public), Is.Null);
+            Assert.That(typeof(PerformerCommand).GetField("BehaviorSlot", BindingFlags.Instance | BindingFlags.Public), Is.Null);
         }
 
         [Test]
@@ -177,7 +121,7 @@ namespace Ludots.Tests.Architecture
             FieldInfo? scopeField = performerInstance.GetField("ScopeId", BindingFlags.Instance | BindingFlags.Public);
             Assert.That(scopeField, Is.Not.Null, "Performer runtime should continue using ScopeId for grouping.");
 
-            Assembly assembly = typeof(PerformRule).Assembly;
+            Assembly assembly = typeof(PerformerCommand).Assembly;
             Type? legacyPartType = assembly.GetType("Ludots.Core.Presentation.Performers.PerformerPart", throwOnError: false);
             Assert.That(legacyPartType, Is.Null, "Runtime must not introduce a dedicated PerformerPart type.");
         }
@@ -191,13 +135,7 @@ namespace Ludots.Tests.Architecture
             {
                 "PerformerRule",
                 "PerformerCommand",
-                "PerformRule",
-                "PerformCommand",
-                "PerformBehavior",
-                "PerformAudienceContext",
-                "PerformPhaseInput",
-                "PerformPhaseResult",
-                "PerformPhaseResolver",
+                "PerformerCommandBuffer",
                 "PresentationBehaviorDefinition",
             };
 
@@ -229,15 +167,6 @@ namespace Ludots.Tests.Architecture
 
             string source = File.ReadAllText(sourcePath);
 
-            string normalized = source.Replace("using Ludots.Core.Presentation.Perform;", string.Empty, StringComparison.Ordinal);
-
-            Assert.That(normalized, Does.Not.Contain("PerformAudienceContext"));
-            Assert.That(normalized, Does.Not.Contain("PerformPhaseInput"));
-            Assert.That(normalized, Does.Not.Contain("PerformPhaseResult"));
-            Assert.That(normalized, Does.Not.Contain("PerformPhaseResolver"));
-            Assert.That(source, Does.Not.Contain("PerformBehavior"));
-            Assert.That(source, Does.Not.Contain("PerformCommand"));
-            Assert.That(source, Does.Not.Contain("PerformRule"));
             Assert.That(source, Does.Not.Contain("PerformerInstance"));
         }
 

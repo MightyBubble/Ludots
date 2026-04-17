@@ -9,12 +9,11 @@ using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Perform;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -137,7 +136,7 @@ namespace Ludots.Tests.Presentation
     {
         private World _world;
         private PresentationEventStream _events;
-        private PerformCommandBuffer _commands;
+        private PerformerCommandBuffer _commands;
         private PerformerDefinitionRegistry _defs;
         private GraphProgramRegistry _programs;
         private PerformerRuleSystem _system;
@@ -147,7 +146,7 @@ namespace Ludots.Tests.Presentation
         {
             _world = World.Create();
             _events = new PresentationEventStream();
-            _commands = new PerformCommandBuffer();
+            _commands = new PerformerCommandBuffer();
             _defs = new PerformerDefinitionRegistry();
             _programs = new GraphProgramRegistry();
             var api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null);
@@ -180,9 +179,9 @@ namespace Ludots.Tests.Presentation
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = 1,
-                            ScopeId = -1,
+                            ScopeTag = -1,
                         }
                     }
                 }
@@ -202,7 +201,7 @@ namespace Ludots.Tests.Presentation
 
             var cmds = _commands.GetSpan();
             Assert.That(cmds.Length, Is.EqualTo(1));
-            Assert.That(cmds[0].CommandKind, Is.EqualTo(PresentationCommandKind.CreatePerformer));
+            Assert.That(cmds[0].CommandKind, Is.EqualTo(PerformerCommandKind.CreatePerformer));
             Assert.That(cmds[0].PerformerDefinitionId, Is.EqualTo(1));
         }
 
@@ -220,9 +219,9 @@ namespace Ludots.Tests.Presentation
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = 1,
-                            ScopeId = -1,
+                            ScopeTag = -1,
                         }
                     }
                 }
@@ -259,7 +258,7 @@ namespace Ludots.Tests.Presentation
     public class PerformerRuntimeSystemTests
     {
         private World _world;
-        private PerformCommandBuffer _commands;
+        private PerformerCommandBuffer _commands;
         private PresentationEventStream _events;
         private PerformerInstanceBuffer _instances;
         private PerformerDefinitionRegistry _definitions;
@@ -270,7 +269,7 @@ namespace Ludots.Tests.Presentation
         public void Setup()
         {
             _world = World.Create();
-            _commands = new PerformCommandBuffer();
+            _commands = new PerformerCommandBuffer();
             _events = new PresentationEventStream();
             _instances = new PerformerInstanceBuffer();
             _definitions = new PerformerDefinitionRegistry();
@@ -301,11 +300,11 @@ namespace Ludots.Tests.Presentation
                 VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = 1f,
             });
-            _commands.TryAdd(new PerformCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                CommandKind = PresentationCommandKind.CreatePerformer,
+                CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = _definitions.GetId("test.runtime.basic"),
-                ScopeId = 5,
+                ScopeTag = 5,
                 ScopeSource = PerformerCommandScopeSource.Fixed,
                 AnchorKind = PresentationAnchorKind.Entity,
                 Source = owner,
@@ -325,11 +324,11 @@ namespace Ludots.Tests.Presentation
                 VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = -1f,
             });
-            _commands.TryAdd(new PerformCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                CommandKind = PresentationCommandKind.CreatePerformer,
+                CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = _definitions.GetId("test.runtime.scope"),
-                ScopeId = 7,
+                ScopeTag = 7,
                 ScopeSource = PerformerCommandScopeSource.Fixed,
                 AnchorKind = PresentationAnchorKind.Entity,
                 Source = owner,
@@ -337,11 +336,11 @@ namespace Ludots.Tests.Presentation
             TickAndFlush(0.016f);
             _commands.Clear();
 
-            _commands.TryAdd(new PerformCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                CommandKind = PresentationCommandKind.DestroyPerformerScope,
+                CommandKind = PerformerCommandKind.DestroyPerformerScope,
                 PerformerDefinitionId = 7,
-                ScopeId = 7,
+                ScopeTag = 7,
             });
             TickAndFlush(0.016f);
 
@@ -362,11 +361,11 @@ namespace Ludots.Tests.Presentation
             _world.Destroy(firstOwner);
 
             var secondOwner = _world.Create();
-            _commands.TryAdd(new PerformCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                CommandKind = PresentationCommandKind.CreatePerformer,
+                CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = defId,
-                ScopeId = 2,
+                ScopeTag = 2,
                 ScopeSource = PerformerCommandScopeSource.Fixed,
                 AnchorKind = PresentationAnchorKind.Entity,
                 Source = secondOwner,
@@ -391,20 +390,20 @@ namespace Ludots.Tests.Presentation
             int defId = _definitions.GetId("test.runtime.persistent_scope");
             var owner = _world.Create();
 
-            _commands.TryAdd(new PerformCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                CommandKind = PresentationCommandKind.CreatePerformer,
+                CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = defId,
-                ScopeId = 77,
+                ScopeTag = 77,
                 ScopeSource = PerformerCommandScopeSource.Fixed,
                 AnchorKind = PresentationAnchorKind.Entity,
                 Source = owner,
             });
-            _commands.TryAdd(new PerformCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                CommandKind = PresentationCommandKind.CreatePerformer,
+                CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = defId,
-                ScopeId = 77,
+                ScopeTag = 77,
                 ScopeSource = PerformerCommandScopeSource.Fixed,
                 AnchorKind = PresentationAnchorKind.Entity,
                 Source = owner,
@@ -1000,7 +999,7 @@ namespace Ludots.Tests.Presentation
     {
         private World _world;
         private PresentationEventStream _events;
-        private PerformCommandBuffer _commands;
+        private PerformerCommandBuffer _commands;
         private PerformerDefinitionRegistry _defs;
         private GraphProgramRegistry _programs;
         private PerformerRuleSystem _system;
@@ -1010,7 +1009,7 @@ namespace Ludots.Tests.Presentation
         {
             _world = World.Create();
             _events = new PresentationEventStream();
-            _commands = new PerformCommandBuffer();
+            _commands = new PerformerCommandBuffer();
             _defs = new PerformerDefinitionRegistry();
             _programs = new GraphProgramRegistry();
             var api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null);
@@ -1038,7 +1037,7 @@ namespace Ludots.Tests.Presentation
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = 77,
                             ScopeSource = PerformerCommandScopeSource.EventPayloadA,
                         }
@@ -1074,7 +1073,7 @@ namespace Ludots.Tests.Presentation
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = 77,
                             ScopeSource = PerformerCommandScopeSource.EventPayloadA,
                         }
@@ -1095,9 +1094,9 @@ namespace Ludots.Tests.Presentation
 
             var span = _commands.GetSpan();
             Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].CommandKind, Is.EqualTo(PresentationCommandKind.CreatePerformer));
+            Assert.That(span[0].CommandKind, Is.EqualTo(PerformerCommandKind.CreatePerformer));
             Assert.That(span[0].PerformerDefinitionId, Is.EqualTo(77));
-            Assert.That(span[0].ScopeId, Is.EqualTo(456));
+            Assert.That(span[0].ScopeTag, Is.EqualTo(456));
             Assert.That(span[0].Source, Is.EqualTo(owner));
         }
     }

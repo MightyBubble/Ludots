@@ -82,8 +82,8 @@ namespace MobaDemoMod.Triggers
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markerObj) && markerObj is TransientMarkerBuffer tmb)
                 markerBuffer = tmb;
 
-            PresentationCommandBuffer cmdBuffer = null;
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var cmdObj) && cmdObj is PresentationCommandBuffer pcb)
+            PerformerCommandBuffer cmdBuffer = null;
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PerformerCommandBuffer.Name, out var cmdObj) && cmdObj is PerformerCommandBuffer pcb)
                 cmdBuffer = pcb;
 
             if (CoreInputRuntimeServices.TryGetEntitySelectionCallbacks(engine, out List<System.Action<WorldCmInt2, Entity>> selectionCallbacks))
@@ -94,18 +94,18 @@ namespace MobaDemoMod.Triggers
                 selectionCallbacks.Add((worldCm, entity) =>
                 {
                     if (capturedCmdBuffer == null) return;
-                    capturedCmdBuffer.TryAdd(new PresentationCommand
+                    capturedCmdBuffer.TryAdd(new PerformerCommand
                     {
-                        Kind = PresentationCommandKind.DestroyPerformerScope,
-                        IdA = mobaConfig.Presentation.SelectionScopeId
+                        CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                        ScopeTag = mobaConfig.Presentation.SelectionScopeId
                     });
                     if (engine.World.IsAlive(entity))
                     {
-                        capturedCmdBuffer.TryAdd(new PresentationCommand
+                        capturedCmdBuffer.TryAdd(new PerformerCommand
                         {
-                            Kind = PresentationCommandKind.CreatePerformer,
-                            IdA = selectionIndicatorDefId,
-                            IdB = mobaConfig.Presentation.SelectionScopeId,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = selectionIndicatorDefId,
+                            ScopeTag = mobaConfig.Presentation.SelectionScopeId,
                             Source = entity
                         });
                     }

@@ -9,7 +9,6 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
@@ -93,11 +92,11 @@ namespace Ludots.Tests.GAS
                 That(definition.Rules.Length, Is.EqualTo(2));
                 That(definition.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.ProjectileSpawned));
                 That(definition.Rules[0].Event.KeyId, Is.EqualTo(impactEffectId));
-                That(definition.Rules[0].Command.CommandKind, Is.EqualTo(PresentationCommandKind.CreatePerformer));
+                That(definition.Rules[0].Command.CommandKind, Is.EqualTo(PerformerCommandKind.CreatePerformer));
                 That(definition.Rules[0].Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
                 That(definition.Rules[0].Command.PerformerDefinitionId, Is.EqualTo(performerId));
                 That(definition.Rules[1].Event.Kind, Is.EqualTo(PresentationEventKind.EntityDestroyed));
-                That(definition.Rules[1].Command.CommandKind, Is.EqualTo(PresentationCommandKind.DestroyPerformerScope));
+                That(definition.Rules[1].Command.CommandKind, Is.EqualTo(PerformerCommandKind.DestroyPerformerScope));
                 That(definition.Rules[1].Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
             }
             finally

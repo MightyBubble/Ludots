@@ -1,10 +1,10 @@
 using System;
 
-namespace Ludots.Core.Presentation.Commands
+namespace Ludots.Core.Presentation.Performers
 {
-    public sealed class PresentationCommandBuffer
+    public sealed class PerformerCommandBuffer
     {
-        private readonly PresentationCommand[] _buffer;
+        private readonly PerformerCommand[] _buffer;
         private int _count;
 
         public int Count => _count;
@@ -12,13 +12,17 @@ namespace Ludots.Core.Presentation.Commands
         public int DroppedSinceClear { get; private set; }
         public int DroppedTotal { get; private set; }
 
-        public PresentationCommandBuffer(int capacity = 8192)
+        public PerformerCommandBuffer(int capacity = 8192)
         {
-            if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
-            _buffer = new PresentationCommand[capacity];
+            if (capacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            }
+
+            _buffer = new PerformerCommand[capacity];
         }
 
-        public bool TryAdd(in PresentationCommand command)
+        public bool TryAdd(in PerformerCommand command)
         {
             if (_count >= _buffer.Length)
             {
@@ -31,7 +35,7 @@ namespace Ludots.Core.Presentation.Commands
             return true;
         }
 
-        public ReadOnlySpan<PresentationCommand> GetSpan() => new ReadOnlySpan<PresentationCommand>(_buffer, 0, _count);
+        public ReadOnlySpan<PerformerCommand> GetSpan() => new(_buffer, 0, _count);
 
         public void Clear()
         {

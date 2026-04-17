@@ -63,7 +63,7 @@ namespace Ludots.Core.Scripting
         public const string AttributeSinkRegistry = "AttributeSinkRegistry";
         public const string AttributeBindingRegistry = "AttributeBindingRegistry";
         public const string PresentationEventStream = "PresentationEventStream";
-        public const string PresentationCommandBuffer = "PresentationCommandBuffer";
+        public const string PerformerCommandBuffer = "PerformerCommandBuffer";
         public const string PresentationPrefabRegistry = "PresentationPrefabRegistry";
         public const string PresentationMeshAssetRegistry = "PresentationMeshAssetRegistry";
         public const string PresentationPrimitiveDrawBuffer = "PresentationPrimitiveDrawBuffer";

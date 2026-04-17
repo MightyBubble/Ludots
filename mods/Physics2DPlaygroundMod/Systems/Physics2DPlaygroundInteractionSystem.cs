@@ -18,8 +18,8 @@ using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Ticking;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -185,20 +185,18 @@ namespace Physics2DPlaygroundMod.Systems
 
         private void EmitCueMarker(in WorldCmInt2 worldCm)
         {
-            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var commandsObj) ||
-                commandsObj is not PresentationCommandBuffer commands)
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markersObj) ||
+                markersObj is not TransientMarkerBuffer markers)
             {
-                throw new InvalidOperationException("Physics2DPlayground requires PresentationCommandBuffer for interaction cues.");
+                throw new InvalidOperationException("Physics2DPlayground requires TransientMarkerBuffer for interaction cues.");
             }
 
-            commands.TryAdd(new PresentationCommand
-            {
-                Kind = PresentationCommandKind.PlayOneShotPerformer,
-                IdA = ResolveCueMarkerPrefabId(),
-                Position = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0.15f),
-                Param0 = new Vector4(0.2f, 0.9f, 1f, 1f),
-                Param1 = 0.3f
-            });
+            markers.TryAddPrefab(
+                ResolveCueMarkerPrefabId(),
+                WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0.15f),
+                new Vector3(0.3f),
+                new Vector4(0.2f, 0.9f, 1f, 1f),
+                0.3f);
         }
 
         private int ResolveCueMarkerPrefabId()

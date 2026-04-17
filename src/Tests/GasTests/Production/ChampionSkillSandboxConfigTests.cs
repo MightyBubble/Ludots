@@ -23,7 +23,6 @@ using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Systems;
 using Ludots.Core.Presentation.Performers;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
@@ -1192,13 +1191,13 @@ namespace Ludots.Tests.GAS.Production
                 projectilePerformerId,
                 PresentationEventKind.ProjectileSpawned,
                 bindingEffectId,
-                PresentationCommandKind.CreatePerformer);
+                PerformerCommandKind.CreatePerformer);
             AssertProjectileLifecycleRule(
                 performer,
                 projectilePerformerId,
                 PresentationEventKind.EntityDestroyed,
                 keyId: -1,
-                PresentationCommandKind.DestroyPerformerScope);
+                PerformerCommandKind.DestroyPerformerScope);
         }
 
         private static void AssertProjectileUsesDirectPrimitiveFeedback(
@@ -1222,7 +1221,7 @@ namespace Ludots.Tests.GAS.Production
             int performerId,
             PresentationEventKind eventKind,
             int keyId,
-            PresentationCommandKind commandKind)
+            PerformerCommandKind commandKind)
         {
             for (int i = 0; i < performer.Rules.Length; i++)
             {

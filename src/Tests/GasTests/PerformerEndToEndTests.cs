@@ -16,7 +16,6 @@ using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -33,7 +32,7 @@ namespace Ludots.Tests.Presentation
         private GasPresentationEventBuffer _gasEvents;
         private GameplayEventBus _eventBus;
         private PresentationEventStream _presEvents;
-        private PerformCommandBuffer _commands;
+        private PerformerCommandBuffer _commands;
         private PerformerDefinitionRegistry _defs;
         private PerformerInstanceBuffer _instances;
         private GraphProgramRegistry _programs;
@@ -60,7 +59,7 @@ namespace Ludots.Tests.Presentation
             _gasEvents = new GasPresentationEventBuffer();
             _eventBus = new GameplayEventBus();
             _presEvents = new PresentationEventStream();
-            _commands = new PerformCommandBuffer();
+            _commands = new PerformerCommandBuffer();
             _defs = new PerformerDefinitionRegistry();
             _instances = new PerformerInstanceBuffer();
             _programs = new GraphProgramRegistry();
@@ -104,7 +103,7 @@ namespace Ludots.Tests.Presentation
                         Condition = new ConditionRef { Inline = InlineConditionKind.SourceHasAttributes },
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = healthBarDefId,
                             ScopeSource = PerformerCommandScopeSource.EventPayloadA,
                         }
@@ -115,7 +114,7 @@ namespace Ludots.Tests.Presentation
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.DestroyPerformerScope,
+                            CommandKind = PerformerCommandKind.DestroyPerformerScope,
                             ScopeSource = PerformerCommandScopeSource.EventPayloadA,
                         }
                     }
@@ -443,13 +442,13 @@ namespace Ludots.Tests.Presentation
             });
 
             var owner = CreatePresentableEntity(new Vector3(5f, 0f, 5f));
-            int scopeId = 42;
+            int scopeTag = 42;
 
-            _commands.TryAdd(new PerformCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                CommandKind = PresentationCommandKind.CreatePerformer,
+                CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = overlayDefId,
-                ScopeId = scopeId,
+                ScopeTag = scopeTag,
                 ScopeSource = PerformerCommandScopeSource.Fixed,
                 AnchorKind = PresentationAnchorKind.Entity,
                 Source = owner,
@@ -457,11 +456,10 @@ namespace Ludots.Tests.Presentation
             TickPipeline(0.016f);
             Assert.That(_overlays.GetSpan().Length, Is.GreaterThan(0));
 
-            _commands.TryAdd(new PerformCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                CommandKind = PresentationCommandKind.DestroyPerformerScope,
-                PerformerDefinitionId = scopeId,
-                ScopeId = scopeId,
+                CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                ScopeTag = scopeTag,
             });
             TickPipeline(0.016f);
 
@@ -551,7 +549,7 @@ namespace Ludots.Tests.Presentation
                         Condition = new ConditionRef { Inline = InlineConditionKind.SourceHasAttributes },
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = defId,
                             ScopeSource = PerformerCommandScopeSource.EventPayloadA,
                         }
@@ -562,7 +560,7 @@ namespace Ludots.Tests.Presentation
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.DestroyPerformerScope,
+                            CommandKind = PerformerCommandKind.DestroyPerformerScope,
                             ScopeSource = PerformerCommandScopeSource.EventPayloadA,
                         }
                     }

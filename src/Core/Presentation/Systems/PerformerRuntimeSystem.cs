@@ -5,7 +5,6 @@ using Arch.System;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -14,16 +13,14 @@ using Ludots.Core.Presentation;
 namespace Ludots.Core.Presentation.Systems
 {
     /// <summary>
-    /// Consumes perform-domain commands and manages performer lifecycle.
+    /// Consumes performer commands and manages performer lifecycle.
     ///
-    /// Handles both one-shot performers (PlayOneShotPerformer → TransientMarker)
-    /// and the new persistent performer commands (CreatePerformer / DestroyPerformer /
-    /// DestroyPerformerScope / SetPerformerParam → PerformerInstanceBuffer).
+    /// Handles persistent performer commands.
     /// </summary>
     public sealed class PerformerRuntimeSystem : BaseSystem<World, float>
     {
         private readonly PrefabRegistry _prefabs;
-        private readonly PerformCommandBuffer _commands;
+        private readonly PerformerCommandBuffer _commands;
         private readonly PresentationEventStream _events;
         private readonly TransientMarkerBuffer _markers;
         private readonly PresentationRequestBuffer _requests;
@@ -34,7 +31,7 @@ namespace Ludots.Core.Presentation.Systems
         public PerformerRuntimeSystem(
             World world,
             PrefabRegistry prefabs,
-            PerformCommandBuffer commands,
+            PerformerCommandBuffer commands,
             PresentationEventStream events,
             TransientMarkerBuffer markers,
             PresentationRequestBuffer requests,
@@ -64,22 +61,22 @@ namespace Ludots.Core.Presentation.Systems
                 ref readonly var cmd = ref cmdSpan[i];
                 switch (cmd.CommandKind)
                 {
-                    case Commands.PresentationCommandKind.CreatePerformer:
+                    case PerformerCommandKind.CreatePerformer:
                         HandleCreatePerformer(in cmd);
                         break;
 
-                    case Commands.PresentationCommandKind.DestroyPerformer:
+                    case PerformerCommandKind.DestroyPerformer:
                         if (_instances.TryGetActive(cmd.PerformerHandle, out var instance) && _instances.Release(cmd.PerformerHandle))
                         {
                             EmitDestroyedEvent(cmd.PerformerHandle, instance);
                         }
                         break;
 
-                    case Commands.PresentationCommandKind.DestroyPerformerScope:
-                        _instances.ReleaseScope(cmd.ScopeId != 0 ? cmd.ScopeId : cmd.PerformerDefinitionId, EmitDestroyedEvent);
+                    case PerformerCommandKind.DestroyPerformerScope:
+                        _instances.ReleaseScope(cmd.ScopeTag != 0 ? cmd.ScopeTag : cmd.PerformerDefinitionId, EmitDestroyedEvent);
                         break;
 
-                    case Commands.PresentationCommandKind.SetPerformerParam:
+                    case PerformerCommandKind.SetParam:
                         if (_instances.IsActive(cmd.PerformerHandle))
                         {
                             _instances.SetParamOverride(cmd.PerformerHandle, cmd.ParamKey, cmd.ParamValue);
@@ -92,7 +89,7 @@ namespace Ludots.Core.Presentation.Systems
             _markers.TickAndRequest(_requests, dt, World);
         }
 
-        private void HandleCreatePerformer(in PerformCommand cmd)
+        private void HandleCreatePerformer(in PerformerCommand cmd)
         {
             if (!_definitions.TryGet(cmd.PerformerDefinitionId, out var definition))
             {
@@ -107,7 +104,7 @@ namespace Ludots.Core.Presentation.Systems
             if (!_instances.TryAllocate(
                     cmd.PerformerDefinitionId,
                     cmd.Source,
-                    cmd.ScopeId,
+                    cmd.ScopeTag,
                     cmd.AnchorKind,
                     cmd.Position,
                     _stableIds.Allocate(),
@@ -118,15 +115,15 @@ namespace Ludots.Core.Presentation.Systems
                     ? "Entity.Null"
                     : $"Entity(Id={cmd.Source.Id},World={cmd.Source.WorldId},Ver={cmd.Source.Version})";
                 throw new InvalidOperationException(
-                    $"PerformerInstanceBuffer is full while creating performer '{performerKey}' (defId={cmd.PerformerDefinitionId}, scopeId={cmd.ScopeId}, owner={ownerText}, active={_instances.ActiveCount}, capacity={_instances.Capacity}).");
+                    $"PerformerInstanceBuffer is full while creating performer '{performerKey}' (defId={cmd.PerformerDefinitionId}, scopeTag={cmd.ScopeTag}, owner={ownerText}, active={_instances.ActiveCount}, capacity={_instances.Capacity}).");
             }
 
             EmitCreatedEvent(handle, _instances.Get(handle));
         }
 
-        private bool ShouldSkipDuplicatePersistentScopedCreate(in PerformCommand cmd, PerformerDefinition definition)
+        private bool ShouldSkipDuplicatePersistentScopedCreate(in PerformerCommand cmd, PerformerDefinition definition)
         {
-            if (definition.DefaultLifetime > 0f || cmd.ScopeId <= 0)
+            if (definition.DefaultLifetime > 0f || cmd.ScopeTag <= 0)
             {
                 return false;
             }
@@ -134,7 +131,7 @@ namespace Ludots.Core.Presentation.Systems
             return _instances.HasActiveScopedInstance(
                 cmd.PerformerDefinitionId,
                 cmd.Source,
-                cmd.ScopeId,
+                cmd.ScopeTag,
                 cmd.AnchorKind,
                 cmd.Position);
         }

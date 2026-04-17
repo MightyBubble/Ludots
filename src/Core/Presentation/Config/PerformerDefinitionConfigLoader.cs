@@ -2,7 +2,6 @@ using System;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
@@ -359,16 +358,23 @@ namespace Ludots.Core.Presentation.Config
 
             string perfRef = node["performerDefinitionId"]?.GetValue<string>();
             int perfId = string.IsNullOrWhiteSpace(perfRef) ? 0 : _registry.GetId(perfRef);
+            JsonNode scopeNode = node["scopeTag"] ?? node["scopeId"];
+            JsonNode kindNode = node["kind"] ?? node["commandKind"];
 
             return new PerformerCommand
             {
-                CommandKind = ParseEnum(node["commandKind"]?.GetValue<string>(), PresentationCommandKind.None),
+                CommandKind = ParseEnum(kindNode?.GetValue<string>(), PerformerCommandKind.None),
                 PerformerDefinitionId = perfId,
-                ScopeId = node["scopeId"]?.GetValue<int>() ?? -1,
+                ParentHandle = node["parentHandle"]?.GetValue<int>() ?? -1,
+                ScopeTag = scopeNode?.GetValue<int>() ?? -1,
                 ScopeSource = ParseEnum(node["scopeSource"]?.GetValue<string>(), PerformerCommandScopeSource.Fixed),
                 ParamKey = node["paramKey"]?.GetValue<int>() ?? 0,
+                ParamLane = ParseEnum(node["paramLane"]?.GetValue<string>() ?? node["lane"]?.GetValue<string>(), ParamLane.Float),
                 ParamValue = node["paramValue"]?.GetValue<float>() ?? 0f,
+                IntValue = node["intValue"]?.GetValue<int>() ?? 0,
+                VectorValue = ParseVector4(node["vectorValue"]),
                 ParamGraphProgramId = node["paramGraphProgramId"]?.GetValue<int>() ?? 0,
+                TargetBehaviorSlot = node["targetBehaviorSlot"]?.GetValue<int>() ?? node["behaviorSlot"]?.GetValue<int>() ?? -1,
             };
         }
 
@@ -477,6 +483,20 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return Vector3.Zero;
+        }
+
+        private static Vector4 ParseVector4(JsonNode node)
+        {
+            if (node is JsonArray arr && arr.Count >= 4)
+            {
+                return new Vector4(
+                    arr[0]?.GetValue<float>() ?? 0f,
+                    arr[1]?.GetValue<float>() ?? 0f,
+                    arr[2]?.GetValue<float>() ?? 0f,
+                    arr[3]?.GetValue<float>() ?? 0f);
+            }
+
+            return Vector4.Zero;
         }
 
         private static Vector4 ParseColor(JsonNode node)

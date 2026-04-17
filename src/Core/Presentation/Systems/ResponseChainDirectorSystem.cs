@@ -5,9 +5,9 @@ using Arch.System;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Primitives;
+using Ludots.Core.Presentation.Rendering;
  
 namespace Ludots.Core.Presentation.Systems
 {
@@ -16,16 +16,16 @@ namespace Ludots.Core.Presentation.Systems
         private readonly OrderRequestQueue _orderRequests;
         private readonly ResponseChainTelemetryBuffer _telemetry;
         private readonly ResponseChainUiState _ui;
-        private readonly PresentationCommandBuffer _commands;
+        private readonly TransientMarkerBuffer _markers;
         private readonly int _cueMarkerPrefabId;
  
-        public ResponseChainDirectorSystem(World world, OrderRequestQueue orderRequests, ResponseChainTelemetryBuffer telemetry, ResponseChainUiState ui, PresentationCommandBuffer commands, PrefabRegistry prefabs)
+        public ResponseChainDirectorSystem(World world, OrderRequestQueue orderRequests, ResponseChainTelemetryBuffer telemetry, ResponseChainUiState ui, TransientMarkerBuffer markers, PrefabRegistry prefabs)
             : base(world)
         {
             _orderRequests = orderRequests;
             _telemetry = telemetry;
             _ui = ui;
-            _commands = commands;
+            _markers = markers;
             _cueMarkerPrefabId = prefabs.GetId(WellKnownPrefabKeys.CueMarker);
         }
 
@@ -65,16 +65,14 @@ namespace Ludots.Core.Presentation.Systems
                     };
                 }
  
-                _commands.TryAdd(new PresentationCommand
+                bool follow = evt.Target != Entity.Null && World.IsAlive(evt.Target) && World.Has<VisualTransform>(evt.Target);
+                bool added = follow
+                    ? _markers.TryAddAnchoredPrefab(_cueMarkerPrefabId, Vector3.One, color, 0.35f, evt.Target, new Vector3(0f, 0.2f, 0f))
+                    : _markers.TryAddPrefab(_cueMarkerPrefabId, pos, Vector3.One, color, 0.35f);
+                if (!added)
                 {
-                    LogicTickStamp = 0,
-                    Kind = PresentationCommandKind.PlayOneShotPerformer,
-                    IdA = _cueMarkerPrefabId,
-                    Source = evt.Source,
-                    Target = evt.Target,
-                    Position = pos,
-                    Param0 = color
-                });
+                    throw new InvalidOperationException("TransientMarkerBuffer is full while emitting response-chain cue marker.");
+                }
             }
 
             _telemetry.Clear();

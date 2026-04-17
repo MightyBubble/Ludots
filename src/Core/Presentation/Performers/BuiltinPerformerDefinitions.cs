@@ -1,7 +1,6 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 
@@ -52,9 +51,9 @@ namespace Ludots.Core.Presentation.Performers
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = id,
-                            ScopeId = -1,
+                            ScopeTag = -1,
                         }
                     }
                 },
@@ -86,9 +85,9 @@ namespace Ludots.Core.Presentation.Performers
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = id,
-                            ScopeId = -1,
+                            ScopeTag = -1,
                         }
                     }
                 },
@@ -129,9 +128,9 @@ namespace Ludots.Core.Presentation.Performers
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = id,
-                            ScopeId = -1,
+                            ScopeTag = -1,
                         }
                     }
                 },

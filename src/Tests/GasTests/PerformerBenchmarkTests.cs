@@ -12,11 +12,9 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -37,7 +35,7 @@ namespace Ludots.Tests.Presentation
         private GasPresentationEventBuffer _gasEvents;
         private GameplayEventBus _eventBus;
         private PresentationEventStream _presEvents;
-        private PerformCommandBuffer _commands;
+        private PerformerCommandBuffer _commands;
         private PerformerDefinitionRegistry _defs;
         private PerformerInstanceBuffer _instances;
         private GraphProgramRegistry _programs;
@@ -63,7 +61,7 @@ namespace Ludots.Tests.Presentation
             _gasEvents = new GasPresentationEventBuffer(16384);
             _eventBus = new GameplayEventBus();
             _presEvents = new PresentationEventStream(16384);
-            _commands = new PerformCommandBuffer(16384);
+            _commands = new PerformerCommandBuffer(16384);
             _defs = new PerformerDefinitionRegistry();
             _instances = new PerformerInstanceBuffer(8192);
             _programs = new GraphProgramRegistry();
@@ -155,9 +153,9 @@ namespace Ludots.Tests.Presentation
                             Condition = ConditionRef.AlwaysTrue,
                             Command = new PerformerCommand
                             {
-                                CommandKind = PresentationCommandKind.CreatePerformer,
+                                CommandKind = PerformerCommandKind.CreatePerformer,
                                 PerformerDefinitionId = defId,
-                                ScopeId = -1,
+                                ScopeTag = -1,
                             }
                         }
                     }
@@ -497,7 +495,7 @@ namespace Ludots.Tests.Presentation
             {
                 var defs = new PerformerDefinitionRegistry();
                 var events = new PresentationEventStream(16384);
-            var commands = new PerformCommandBuffer(16384);
+            var commands = new PerformerCommandBuffer(16384);
                 var programs = new GraphProgramRegistry();
                 var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
                 using var system = new PerformerRuleSystem(_world, events, commands, defs, programs, graphApi, _globals);
@@ -516,9 +514,9 @@ namespace Ludots.Tests.Presentation
                                 Condition = ConditionRef.AlwaysTrue,
                                 Command = new PerformerCommand
                                 {
-                                    CommandKind = PresentationCommandKind.CreatePerformer,
+                                    CommandKind = PerformerCommandKind.CreatePerformer,
                                     PerformerDefinitionId = defId,
-                                    ScopeId = -1,
+                                    ScopeTag = -1,
                                 }
                             }
                         }

@@ -606,8 +606,7 @@ namespace Ludots.Core.Engine
             var gasPresentationEvents = new GasPresentationEventBuffer();
             var presentationEventStream = new PresentationEventStream();
             var presentationBridgeSystem = new PresentationBridgeSystem(World, EventBus, presentationEventStream, GameSession, gasPresentationEvents);
-            var presentationCommandBuffer = new PresentationCommandBuffer();
-            var performCommandBuffer = new PerformCommandBuffer();
+            var performerCommandBuffer = new PerformerCommandBuffer();
             var presentationPrefabs = new PrefabRegistry();
             var meshAssets = new MeshAssetRegistry();
             var materialAssets = new PresentationMaterialRegistry();
@@ -642,13 +641,13 @@ namespace Ludots.Core.Engine
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
             BuiltinPerformerDefinitions.Register(performerDefinitions, meshAssets, presentationTextCatalog.GetTokenId);
-            var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performCommandBuffer, performerDefinitions, graphProgramRegistry, performerGraphApi, GlobalContext);
+            var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performerCommandBuffer, performerDefinitions, graphProgramRegistry, performerGraphApi, GlobalContext);
             var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(World, presentationEventStream);
             var presentationEntityFinalizeDestroySystem = new PresentationEntityFinalizeDestroySystem(World);
             var performerRuntimeSystem = new PerformerRuntimeSystem(
                 World,
                 presentationPrefabs,
-                performCommandBuffer,
+                performerCommandBuffer,
                 presentationEventStream,
                 transientMarkerBuffer,
                 presentationRequestBuffer,
@@ -831,8 +830,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AuthoritativeInput, authoritativeInput);
             SetService(CoreServiceKeys.AuthoritativePointerButtons, authoritativePointerButtons);
             SetService(CoreServiceKeys.PresentationEventStream, presentationEventStream);
-            SetService(CoreServiceKeys.PresentationCommandBuffer, presentationCommandBuffer);
-            SetService(CoreServiceKeys.PerformCommandBuffer, performCommandBuffer);
+            SetService(CoreServiceKeys.PerformerCommandBuffer, performerCommandBuffer);
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
             SetService(CoreServiceKeys.PresentationMaterialRegistry, materialAssets);
@@ -1034,18 +1032,12 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new TerrainHeightSyncSystem(World, GlobalContext));
             RegisterPresentationSystem(presentationEntityLifecycleSystem);
             RegisterPresentationSystem(new EntityVisualEmitSystem(World, presentationRequestBuffer));
-            RegisterPresentationSystem(new ResponseChainDirectorSystem(World, orderRequestQueue, responseChainTelemetry, responseChainUiState, presentationCommandBuffer, presentationPrefabs));
+            RegisterPresentationSystem(new ResponseChainDirectorSystem(World, orderRequestQueue, responseChainTelemetry, responseChainUiState, transientMarkerBuffer, presentationPrefabs));
             RegisterPresentationSystem(new ResponseChainHumanOrderSourceSystem(GlobalContext, responseChainUiState, chainOrderQueue));
             RegisterPresentationSystem(new ResponseChainAiOrderSourceSystem(responseChainUiState, chainOrderQueue, cfgChainPass));
             RegisterPresentationSystem(new ResponseChainUiSyncSystem(GlobalContext, responseChainUiState, orderTypeRegistry));
             // PerformerRuleSystem reads events and produces commands.
             RegisterPresentationSystem(performerRuleSystem);
-            RegisterPresentationSystem(new PresentationCommandBridgeSystem(
-                World,
-                presentationCommandBuffer,
-                performCommandBuffer,
-                presentationPrefabs,
-                transientMarkerBuffer));
             // PerformerRuntimeSystem consumes commands, manages instance lifecycle.
             RegisterPresentationSystem(performerRuntimeSystem);
             // PerformerEmitSystem ticks instances, evaluates visibility/bindings, outputs to draw buffers.

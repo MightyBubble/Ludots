@@ -142,8 +142,8 @@ namespace MobaDemoMod.Systems
             });
 
             // Aiming state -> Performer direct API (for AimCast mode)
-            // Uses PresentationCommandBuffer to create/destroy a performer scope.
-            if (_globals.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var cmdObj) && cmdObj is PresentationCommandBuffer commands)
+            // Uses PerformerCommandBuffer to create/destroy a performer scope.
+            if (_globals.TryGetValue(CoreServiceKeys.PerformerCommandBuffer.Name, out var cmdObj) && cmdObj is PerformerCommandBuffer commands)
             {
                 var mc = (MobaConfig)_globals[InstallMobaDemoOnGameStartTrigger.MobaConfigKey];
                 var perfReg = _globals.TryGetValue(CoreServiceKeys.PerformerDefinitionRegistry.Name, out var prObj) && prObj is PerformerDefinitionRegistry pr ? pr : null;
@@ -154,21 +154,21 @@ namespace MobaDemoMod.Systems
                     int scopeId = mapping.ActionId.GetHashCode();
                     if (isAiming)
                     {
-                        commands.TryAdd(new PresentationCommand
+                        commands.TryAdd(new PerformerCommand
                         {
-                            Kind = PresentationCommandKind.CreatePerformer,
-                            IdA = rangeCircleDefId,
-                            IdB = scopeId,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = rangeCircleDefId,
+                            ScopeTag = scopeId,
                             Source = GetControlledActor()
                         });
                     }
                     else
                     {
                         // Destroy the entire aiming scope
-                        commands.TryAdd(new PresentationCommand
+                        commands.TryAdd(new PerformerCommand
                         {
-                            Kind = PresentationCommandKind.DestroyPerformerScope,
-                            IdA = scopeId
+                            CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                            ScopeTag = scopeId
                         });
                     }
                 });

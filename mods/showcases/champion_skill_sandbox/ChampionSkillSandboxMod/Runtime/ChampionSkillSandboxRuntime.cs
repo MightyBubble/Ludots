@@ -839,7 +839,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            PresentationCommandBuffer? commands = engine.GetService(CoreServiceKeys.PresentationCommandBuffer);
+            PerformerCommandBuffer? commands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer);
             PerformerDefinitionRegistry? performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
             if (commands == null || performers == null)
             {
@@ -853,26 +853,26 @@ namespace ChampionSkillSandboxMod.Runtime
                     $"Performer '{ChampionSkillSandboxIds.SelectionIndicatorPerformerKey}' is required by ChampionSkillSandboxMod.");
             }
 
-            commands.TryAdd(new PresentationCommand
+            commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.CreatePerformer,
-                IdA = definitionId,
-                IdB = ChampionSkillSandboxIds.SelectionIndicatorScopeId,
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = definitionId,
+                ScopeTag = ChampionSkillSandboxIds.SelectionIndicatorScopeId,
                 Source = target,
             });
         }
 
         private void DestroySelectionIndicator(GameEngine engine)
         {
-            if (engine.GetService(CoreServiceKeys.PresentationCommandBuffer) is not PresentationCommandBuffer commands)
+            if (engine.GetService(CoreServiceKeys.PerformerCommandBuffer) is not PerformerCommandBuffer commands)
             {
                 return;
             }
 
-            commands.TryAdd(new PresentationCommand
+            commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.DestroyPerformerScope,
-                IdA = ChampionSkillSandboxIds.SelectionIndicatorScopeId,
+                CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                ScopeTag = ChampionSkillSandboxIds.SelectionIndicatorScopeId,
             });
         }
 
@@ -952,29 +952,29 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private void DestroyHoverIndicator(GameEngine engine)
         {
-            if (engine.GetService(CoreServiceKeys.PresentationCommandBuffer) is not PresentationCommandBuffer commands)
+            if (engine.GetService(CoreServiceKeys.PerformerCommandBuffer) is not PerformerCommandBuffer commands)
             {
                 return;
             }
 
-            commands.TryAdd(new PresentationCommand
+            commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.DestroyPerformerScope,
-                IdA = ChampionSkillSandboxIds.HoverIndicatorScopeId,
+                CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                ScopeTag = ChampionSkillSandboxIds.HoverIndicatorScopeId,
             });
         }
 
         private void DestroyAimHoverIndicator(GameEngine engine)
         {
-            if (engine.GetService(CoreServiceKeys.PresentationCommandBuffer) is not PresentationCommandBuffer commands)
+            if (engine.GetService(CoreServiceKeys.PerformerCommandBuffer) is not PerformerCommandBuffer commands)
             {
                 return;
             }
 
-            commands.TryAdd(new PresentationCommand
+            commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.DestroyPerformerScope,
-                IdA = ChampionSkillSandboxIds.AimHoverIndicatorScopeId,
+                CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                ScopeTag = ChampionSkillSandboxIds.AimHoverIndicatorScopeId,
             });
         }
 
@@ -997,7 +997,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            PresentationCommandBuffer? commands = engine.GetService(CoreServiceKeys.PresentationCommandBuffer);
+            PerformerCommandBuffer? commands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer);
             PerformerDefinitionRegistry? performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
             if (commands == null || performers == null)
             {
@@ -1011,26 +1011,26 @@ namespace ChampionSkillSandboxMod.Runtime
                     $"Performer '{performerKey}' is required by ChampionSkillSandboxMod.");
             }
 
-            commands.TryAdd(new PresentationCommand
+            commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.CreatePerformer,
-                IdA = definitionId,
-                IdB = scopeId,
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = definitionId,
+                ScopeTag = scopeId,
                 Source = target,
             });
         }
 
         private static void DestroyIndicator(GameEngine engine, int scopeId)
         {
-            if (engine.GetService(CoreServiceKeys.PresentationCommandBuffer) is not PresentationCommandBuffer commands)
+            if (engine.GetService(CoreServiceKeys.PerformerCommandBuffer) is not PerformerCommandBuffer commands)
             {
                 return;
             }
 
-            commands.TryAdd(new PresentationCommand
+            commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.DestroyPerformerScope,
-                IdA = scopeId,
+                CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                ScopeTag = scopeId,
             });
         }
     }

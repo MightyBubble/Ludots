@@ -8,7 +8,6 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 
@@ -17,7 +16,7 @@ namespace Ludots.Core.Presentation.Systems
     /// <summary>
     /// Matches <see cref="PresentationEvent"/>s against <see cref="PerformerRule"/>s
     /// from registered <see cref="PerformerDefinition"/>s. When an event matches and
-    /// the condition evaluates to true, a <see cref="PresentationCommand"/> is produced.
+    /// the condition evaluates to true, a <see cref="PerformerCommand"/> is produced.
     ///
     /// Replaces PresentationControlSystem's event-to-command mapping with a fully
     /// declarative, configuration-driven rule engine.
@@ -28,7 +27,7 @@ namespace Ludots.Core.Presentation.Systems
     public sealed class PerformerRuleSystem : BaseSystem<World, float>
     {
         private readonly PresentationEventStream _events;
-        private readonly PerformCommandBuffer _commands;
+        private readonly PerformerCommandBuffer _commands;
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly GraphProgramRegistry _programs;
         private readonly IGraphRuntimeApi _graphApi;
@@ -61,7 +60,7 @@ namespace Ludots.Core.Presentation.Systems
         public PerformerRuleSystem(
             World world,
             PresentationEventStream events,
-            PerformCommandBuffer commands,
+            PerformerCommandBuffer commands,
             PerformerDefinitionRegistry definitions,
             GraphProgramRegistry programs,
             IGraphRuntimeApi graphApi,
@@ -292,25 +291,22 @@ namespace Ludots.Core.Presentation.Systems
                 PerformerCommandScopeSource.EventPayloadA => evt.PayloadA,
                 PerformerCommandScopeSource.EventPayloadB => evt.PayloadB,
                 PerformerCommandScopeSource.EventKeyId => evt.KeyId,
-                _ => cmd.ScopeId,
+                _ => cmd.ScopeTag,
             };
 
-            _commands.TryAdd(new PerformCommand
-            {
-                CommandKind = cmd.CommandKind,
-                PerformerDefinitionId = cmd.PerformerDefinitionId,
-                ScopeId = scopeId,
-                ScopeSource = PerformerCommandScopeSource.Fixed,
-                AnchorKind = Commands.PresentationAnchorKind.Entity,
-                Source = evt.Source,
-                Target = evt.Target,
-                Position = default,
-                ParamValue = cmd.ParamGraphProgramId > 0
-                    ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
-                    : cmd.ParamValue,
-                ParamKey = cmd.ParamKey,
-                ParamGraphProgramId = 0,
-            });
+            var emitted = cmd;
+            emitted.ScopeTag = scopeId;
+            emitted.ScopeSource = PerformerCommandScopeSource.Fixed;
+            emitted.AnchorKind = Commands.PresentationAnchorKind.Entity;
+            emitted.Source = evt.Source;
+            emitted.Target = evt.Target;
+            emitted.Position = default;
+            emitted.ParamValue = cmd.ParamGraphProgramId > 0
+                ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
+                : cmd.ParamValue;
+            emitted.ParamGraphProgramId = 0;
+
+            _commands.TryAdd(in emitted);
         }
 
         /// <summary>

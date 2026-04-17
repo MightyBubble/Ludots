@@ -13,7 +13,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -270,20 +270,18 @@ namespace CameraAcceptanceMod.Runtime
 
         private void EmitCueMarker(GameEngine engine, in WorldCmInt2 worldCm)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var commandsObj) ||
-                commandsObj is not PresentationCommandBuffer commands)
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markersObj) ||
+                markersObj is not TransientMarkerBuffer markers)
             {
-                throw new System.InvalidOperationException("PresentationCommandBuffer is required for projection verification.");
+                throw new System.InvalidOperationException("TransientMarkerBuffer is required for projection verification.");
             }
 
-            commands.TryAdd(new PresentationCommand
-            {
-                Kind = PresentationCommandKind.PlayOneShotPerformer,
-                IdA = ResolveCueMarkerPrefabId(engine),
-                Position = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0.15f),
-                Param0 = new Vector4(0.15f, 0.88f, 1f, 1f),
-                Param1 = 0.45f
-            });
+            markers.TryAddPrefab(
+                ResolveCueMarkerPrefabId(engine),
+                WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0.15f),
+                new Vector3(0.45f),
+                new Vector4(0.15f, 0.88f, 1f, 1f),
+                0.45f);
         }
 
         private static void EnqueueProjectionSpawnBatch(GameEngine engine, in WorldCmInt2 worldCm)

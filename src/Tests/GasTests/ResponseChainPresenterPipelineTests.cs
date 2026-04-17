@@ -12,9 +12,9 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Primitives;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
@@ -116,7 +116,7 @@ namespace Ludots.Tests.GAS
             var orderRequests = new OrderRequestQueue();
             var telemetry = new ResponseChainTelemetryBuffer();
             var ui = new ResponseChainUiState();
-            var commands = new PresentationCommandBuffer();
+            var markers = new TransientMarkerBuffer();
             var prefabs = new PrefabRegistry();
             prefabs.Register(WellKnownPrefabKeys.CueMarker, default);
 
@@ -130,7 +130,7 @@ namespace Ludots.Tests.GAS
 
             That(orderRequests.TryEnqueue(request), Is.True);
 
-            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, commands, prefabs);
+            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, prefabs);
             system.Update(0f);
 
             That(ui.Visible, Is.True);
@@ -161,12 +161,12 @@ namespace Ludots.Tests.GAS
             var orderRequests = new OrderRequestQueue();
             var telemetry = new ResponseChainTelemetryBuffer();
             var ui = new ResponseChainUiState();
-            var commands = new PresentationCommandBuffer();
+            var markers = new TransientMarkerBuffer();
             var prefabs = new PrefabRegistry();
             prefabs.Register(WellKnownPrefabKeys.CueMarker, default);
 
             var actor = world.Create();
-            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, commands, prefabs);
+            var system = new ResponseChainDirectorSystem(world, orderRequests, telemetry, ui, markers, prefabs);
 
             var first = default(OrderRequest);
             first.PlayerId = 1;
