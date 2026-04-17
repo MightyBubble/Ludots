@@ -1,0 +1,23 @@
+{
+  "Id": "spline_surface_uat",
+  "Tags": ["showcase", "uat", "surface_source", "procedural_mesh"],
+  "VisualHeightmapAsset": "assets/terrain/spline_surface_uat_flat.vhtm",
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "NodeGraph",
+      "WidthInTiles": 2,
+      "HeightInTiles": 2,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 6500,
+    "Pitch": 58
+  },
+  "Entities": []
+}

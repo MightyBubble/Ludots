@@ -18,7 +18,10 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>World-space bar (health bar, cast bar).</summary>
         WorldBar = 3,
 
+        /// <summary>Structured authoring entry point for chunk-baked procedural surfaces.</summary>
+        SurfaceSource = 4,
+
         /// <summary>Ground-following cubic spline ribbon for roads, lanes, and route highlights.</summary>
-        RoadSpline = 4,
+        RoadSpline = 5,
     }
 }

@@ -7,7 +7,7 @@ namespace Ludots.Core.Presentation.Assets
         public PrimitiveMeshKind PrimitiveKind;
         public string[] SourceUris;
         public PrefabPart[] PrefabParts;
-        public RuntimeMeshAssetData RuntimeMeshData;
+        public ProceduralMeshAssetData ProceduralMeshData;
 
         public static MeshAssetDescriptor Primitive(int id, PrimitiveMeshKind kind)
         {
@@ -49,13 +49,13 @@ namespace Ludots.Core.Presentation.Assets
             };
         }
 
-        public static MeshAssetDescriptor Runtime(int id, RuntimeMeshAssetData runtimeMesh)
+        public static MeshAssetDescriptor Procedural(int id, ProceduralMeshAssetData proceduralMesh)
         {
             return new MeshAssetDescriptor
             {
                 Id = id,
-                Type = MeshAssetType.RuntimeMesh,
-                RuntimeMeshData = runtimeMesh,
+                Type = MeshAssetType.ProceduralMesh,
+                ProceduralMeshData = proceduralMesh,
             };
         }
     }

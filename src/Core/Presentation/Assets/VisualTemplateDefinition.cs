@@ -7,6 +7,7 @@ namespace Ludots.Core.Presentation.Assets
         public int TemplateId;
         public int MeshAssetId;
         public int MaterialId;
+        public VisualLodProfile? LodProfile;
         public int AnimatorControllerId;
         public int AnimationProfileId;
         public float BaseScale;
@@ -20,6 +21,7 @@ namespace Ludots.Core.Presentation.Assets
             return VisualRuntimeState.Create(
                 MeshAssetId,
                 MaterialId,
+                LodProfile,
                 BaseScale,
                 RenderPath,
                 Mobility,

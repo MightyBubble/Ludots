@@ -3,7 +3,7 @@
     "id": "relationship.hero.peach_garden",
     "renderPath": "SkinnedMesh",
     "meshAssetId": "sphere",
-    "materialId": 0,
+    "materialId": "default_surface",
     "baseScale": 2.3,
     "mobility": "Movable",
     "visibleByDefault": true,
@@ -13,7 +13,7 @@
     "id": "relationship.enemy.turban",
     "renderPath": "StaticMesh",
     "meshAssetId": "cube",
-    "materialId": 0,
+    "materialId": "default_surface",
     "baseScale": 1.9,
     "mobility": "Movable",
     "visibleByDefault": true

@@ -13,6 +13,7 @@
   - [杩愯鏃舵€昏](architecture/runtime-overview.md)
   - [Presentation / Performer 褰撳墠鏋舵瀯](architecture/presentation-performer-current-architecture.md)
   - [Presentation Pipeline Showcase UAT Design](architecture/presentation-pipeline-showcase-uat.md)
+  - [Surface Source Performer UAT Plan](architecture/surface-source-performer-uat-plan.md)
   - [Mod 鏋舵瀯](architecture/mod-architecture.md)
   - [GAS 鍒嗗眰鏋舵瀯](architecture/gas-layered-architecture.md)
 - [鍙傝€冭祫鏂橾(reference/README.md)

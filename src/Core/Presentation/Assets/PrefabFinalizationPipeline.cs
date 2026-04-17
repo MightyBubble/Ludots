@@ -80,7 +80,7 @@ namespace Ludots.Core.Presentation.Assets
             for (int i = 0; i < visuals.Length; i++)
             {
                 ref readonly PrefabFinalizedVisual visual = ref visuals[i];
-                if (visual.Kind != PrefabVisualPartKind.Mesh)
+                if (visual.Kind != PrefabVisualPartKind.Mesh && visual.Kind != PrefabVisualPartKind.ProceduralMesh)
                 {
                     continue;
                 }
@@ -92,7 +92,10 @@ namespace Ludots.Core.Presentation.Assets
                     visual.Position,
                     visual.Rotation,
                     visual.Scale,
-                    visual.Color));
+                    visual.Color,
+                    visual.MaterialId,
+                    visual.MaterialBindings,
+                    visual.LocalBounds));
             }
         }
 
@@ -269,14 +272,15 @@ namespace Ludots.Core.Presentation.Assets
                 return;
             }
 
-            output.Add(PrefabFinalizedVisual.Mesh(
+            EmitFinalizedMeshVisual(
                 meshAssetId,
                 descriptor,
                 stableId,
                 position,
                 rotation,
                 scale,
-                color));
+                color,
+                output);
         }
 
         private static void EmitOrRecursePart(
@@ -340,7 +344,28 @@ namespace Ludots.Core.Presentation.Assets
                         surfaceDescriptor,
                         part.MaterialId,
                         part.Tiling,
-                        part.TerrainFacing));
+                        part.TerrainFacing,
+                        ResolveLocalBounds(in surfaceDescriptor)));
+                    return;
+
+                case PrefabVisualPartKind.ProceduralMesh:
+                    ValidatePartContract(part, stableId);
+                    if (!meshes.TryGetDescriptor(part.MeshAssetId, out MeshAssetDescriptor proceduralDescriptor))
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab procedural mesh part stableId={stableId} references unknown meshAssetId={part.MeshAssetId}.");
+                    }
+
+                    EmitFinalizedMeshVisual(
+                        part.MeshAssetId,
+                        proceduralDescriptor,
+                        stableId,
+                        position,
+                        rotation,
+                        scale,
+                        color,
+                        output,
+                        part.MaterialId);
                     return;
 
                 case PrefabVisualPartKind.Mesh:
@@ -399,7 +424,97 @@ namespace Ludots.Core.Presentation.Assets
                     }
 
                     return;
+
+                case PrefabVisualPartKind.ProceduralMesh:
+                    if (part.MeshAssetId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab procedural mesh part stableId={stableId} must declare a positive meshAssetId.");
+                    }
+
+                    return;
             }
+        }
+
+        private static void EmitFinalizedMeshVisual(
+            int meshAssetId,
+            in MeshAssetDescriptor descriptor,
+            int stableId,
+            in Vector3 position,
+            in Quaternion rotation,
+            in Vector3 scale,
+            in Vector4 color,
+            PrefabFinalizedVisualBuffer output,
+            int instanceMaterialOverrideId = 0)
+        {
+            if (descriptor.Type == MeshAssetType.ProceduralMesh)
+            {
+                ProceduralMeshAssetData? procedural = descriptor.ProceduralMeshData;
+                if (procedural == null)
+                {
+                    throw new InvalidOperationException($"Procedural mesh assetId={meshAssetId} is missing ProceduralMeshData.");
+                }
+
+                PrefabMaterialBinding[] bindings = BuildMaterialBindings(meshAssetId, procedural, instanceMaterialOverrideId);
+                output.Add(PrefabFinalizedVisual.ProceduralMesh(
+                    meshAssetId,
+                    descriptor,
+                    stableId,
+                    position,
+                    rotation,
+                    scale,
+                    color,
+                    bindings,
+                    procedural.LocalBounds));
+                return;
+            }
+
+            output.Add(PrefabFinalizedVisual.Mesh(
+                meshAssetId,
+                descriptor,
+                stableId,
+                position,
+                rotation,
+                scale,
+                color,
+                instanceMaterialOverrideId,
+                materialBindings: null,
+                localBounds: ResolveLocalBounds(in descriptor)));
+        }
+
+        private static PrefabMaterialBinding[] BuildMaterialBindings(int meshAssetId, ProceduralMeshAssetData procedural, int instanceMaterialOverrideId)
+        {
+            if (procedural.SubmeshCount <= 0)
+            {
+                throw new InvalidOperationException($"Procedural mesh assetId={meshAssetId} must commit at least one submesh.");
+            }
+
+            if (instanceMaterialOverrideId > 0 && procedural.SubmeshCount > 1)
+            {
+                throw new InvalidOperationException(
+                    $"Procedural mesh assetId={meshAssetId} uses {procedural.SubmeshCount} submeshes and cannot receive an instance material override.");
+            }
+
+            var bindings = new PrefabMaterialBinding[procedural.SubmeshCount];
+            for (int i = 0; i < procedural.SubmeshCount; i++)
+            {
+                int materialId = instanceMaterialOverrideId > 0
+                    ? instanceMaterialOverrideId
+                    : procedural.Submeshes[i].MaterialAssetId;
+                bindings[i] = new PrefabMaterialBinding(i, materialId);
+            }
+
+            return bindings;
+        }
+
+        private static ProceduralMeshBounds ResolveLocalBounds(in MeshAssetDescriptor descriptor)
+        {
+            if (descriptor.Type == MeshAssetType.ProceduralMesh && descriptor.ProceduralMeshData != null)
+            {
+                return descriptor.ProceduralMeshData.LocalBounds;
+            }
+
+            return new ProceduralMeshBounds(Vector3.Zero, Vector3.One * 0.5f);
         }
     }
 }

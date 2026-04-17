@@ -83,6 +83,11 @@ namespace Ludots.Core.Presentation.Requests
                         EmitRoadSpline(in request.RoadSpline);
                         break;
 
+                    case PresentationRequestKind.SurfaceSource:
+                        // SurfaceSource requests are consumed by the dedicated performer-surface runtime
+                        // before the legacy request flush reaches adapter-facing buffers.
+                        break;
+
                     default:
                         throw new InvalidOperationException($"Unknown PresentationRequestKind '{request.Kind}'.");
                 }

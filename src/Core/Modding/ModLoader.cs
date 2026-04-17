@@ -316,16 +316,28 @@ namespace Ludots.Core.Modding
             try
                 {
                     dllPath = Path.GetFullPath(dllPath);
-                    Log.Info(in LogChannels.ModLoader, $"Loading DLL for {manifest.Name} at {dllPath}");
-                    var loadContext = _activePlanLoadContext ?? new ModLoadContext(ResolveSharedAssembly);
-                    if (_activePlanLoadContext == null)
+                    Assembly assembly;
+                    if (TryResolvePreloadedAssembly(manifest.Name, out Assembly? preloadedAssembly))
                     {
-                        _activePlanLoadContext = loadContext;
-                        _loadContexts.Add(loadContext);
+                        assembly = preloadedAssembly;
+                        CacheSharedAssembly(assembly);
+                        Log.Info(in LogChannels.ModLoader, $"Reusing preloaded assembly for {manifest.Name}: {assembly.Location}");
+                    }
+                    else
+                    {
+                        Log.Info(in LogChannels.ModLoader, $"Loading DLL for {manifest.Name} at {dllPath}");
+                        var loadContext = _activePlanLoadContext ?? new ModLoadContext(ResolveSharedAssembly);
+                        if (_activePlanLoadContext == null)
+                        {
+                            _activePlanLoadContext = loadContext;
+                            _loadContexts.Add(loadContext);
+                        }
+
+                        loadContext.RegisterMainAssemblyPath(dllPath);
+                        assembly = loadContext.LoadMainAssembly(dllPath);
+                        CacheSharedAssembly(assembly);
                     }
 
-                    loadContext.RegisterMainAssemblyPath(dllPath);
-                    var assembly = loadContext.LoadMainAssembly(dllPath);
                     CacheSharedAssembly(assembly);
 
                     Type[] allTypes;
@@ -390,6 +402,20 @@ namespace Ludots.Core.Modding
             {
                 Log.Error(in LogChannels.ModLoader, $"Failed to load DLL for {manifest.Name}: {ex}");
             }
+        }
+
+        private static bool TryResolvePreloadedAssembly(string assemblySimpleName, out Assembly? assembly)
+        {
+            assembly = null;
+            if (string.IsNullOrWhiteSpace(assemblySimpleName))
+            {
+                return false;
+            }
+
+            assembly = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(candidate =>
+                string.Equals(candidate.GetName().Name, assemblySimpleName, StringComparison.OrdinalIgnoreCase));
+
+            return assembly != null;
         }
 
         private Assembly ResolveSharedAssembly(AssemblyName assemblyName)

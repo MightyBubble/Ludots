@@ -359,6 +359,62 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PerformerDefinitionConfigLoader_ParsesSurfaceSourceBlock()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile(
+                "Core",
+                "Presentation/performers.json",
+                """
+                [
+                  {
+                    "id": "road_surface_chunk",
+                    "visualKind": "SurfaceSource",
+                    "surface": {
+                      "kind": "SplineRibbon",
+                      "profileId": "road_surface",
+                      "geometrySource": {
+                        "controlPointSource": { "kind": "constant", "id": "road_network_chunk_segments" },
+                        "widthSource": { "kind": "constant", "id": "road_network_chunk_width" },
+                        "segmentationPolicy": "Bezier12"
+                      },
+                      "chunkBake": {
+                        "enabled": true,
+                        "ownership": "PerChunk",
+                        "chunkInfluencePolicy": "OwnerChunkOnly",
+                        "rebakePolicy": "OnPayloadVersionChange",
+                        "usageHint": "Static"
+                      },
+                      "materialSet": {
+                        "primaryMaterialId": "default_surface",
+                        "allowInstanceOverride": false
+                      },
+                      "lodProfileId": "default_surface_lod",
+                      "grounding": { "mode": "VisualHeight" },
+                      "boundsPolicy": "Auto"
+                    }
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog, new ConfigConflictReport());
+
+            int id = registry.GetId("road_surface_chunk");
+            Assert.That(id, Is.GreaterThan(0));
+            Assert.That(registry.TryGet(id, out PerformerDefinition definition), Is.True);
+            Assert.That(definition.VisualKind, Is.EqualTo(PerformerVisualKind.SurfaceSource));
+            Assert.That(definition.Surface, Is.Not.Null);
+            Assert.That(definition.Surface!.Kind, Is.EqualTo(PerformerSurfaceKind.SplineRibbon));
+            Assert.That(definition.Surface.ChunkBake.Ownership, Is.EqualTo(PerformerSurfaceChunkOwnership.PerChunk));
+            Assert.That(definition.Surface.MaterialSet.PrimaryMaterialId, Is.EqualTo("default_surface"));
+        }
+
+        [Test]
         public void WorldHudStringTable_BridgesStaticTokens_WithoutCollidingWithLegacyRegistrations()
         {
             WriteFile("Core", "config_catalog.json",

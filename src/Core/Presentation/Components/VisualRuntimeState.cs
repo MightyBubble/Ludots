@@ -1,9 +1,12 @@
+using Ludots.Core.Presentation.Assets;
+
 namespace Ludots.Core.Presentation.Components
 {
     public struct VisualRuntimeState
     {
         public int MeshAssetId;
         public int MaterialId;
+        public VisualLodProfile? LodProfile;
         public int AnimatorControllerId;
         public int AnimationProfileId;
         public float BaseScale;
@@ -29,6 +32,7 @@ namespace Ludots.Core.Presentation.Components
         public static VisualRuntimeState Create(
             int meshAssetId,
             int materialId,
+            VisualLodProfile? lodProfile,
             float baseScale,
             VisualRenderPath renderPath,
             VisualMobility mobility = VisualMobility.Movable,
@@ -46,6 +50,7 @@ namespace Ludots.Core.Presentation.Components
             {
                 MeshAssetId = meshAssetId,
                 MaterialId = materialId,
+                LodProfile = lodProfile,
                 AnimatorControllerId = animatorControllerId,
                 AnimationProfileId = animationProfileId,
                 BaseScale = baseScale <= 0f ? 1f : baseScale,
@@ -53,6 +58,28 @@ namespace Ludots.Core.Presentation.Components
                 Mobility = mobility,
                 Flags = flags,
             };
+        }
+
+        public static VisualRuntimeState Create(
+            int meshAssetId,
+            int materialId,
+            float baseScale,
+            VisualRenderPath renderPath,
+            VisualMobility mobility = VisualMobility.Movable,
+            bool visible = true,
+            int animatorControllerId = 0,
+            int animationProfileId = 0)
+        {
+            return Create(
+                meshAssetId,
+                materialId,
+                lodProfile: null,
+                baseScale,
+                renderPath,
+                mobility,
+                visible,
+                animatorControllerId,
+                animationProfileId);
         }
     }
 }

@@ -47,6 +47,7 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Gameplay.GAS.Presentation;
+using Ludots.Core.Presentation.Surfaces;
 // Indicators directory removed — unified into Performers
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -607,6 +608,7 @@ namespace Ludots.Core.Engine
             var presentationCommandBuffer = new PresentationCommandBuffer();
             var presentationPrefabs = new PrefabRegistry();
             var meshAssets = new MeshAssetRegistry();
+            var materialAssets = new PresentationMaterialRegistry();
             var visualTemplates = new VisualTemplateRegistry();
             var animatorControllers = new AnimatorControllerRegistry();
             var animationClips = new AnimationClipRegistry();
@@ -624,6 +626,8 @@ namespace Ludots.Core.Engine
             var performerDefinitions = new PerformerDefinitionRegistry();
             var presentationConfig = config.Presentation ?? new PresentationRuntimeConfig();
             var performerInstances = new PerformerInstanceBuffer(presentationConfig.GetEffectivePerformerInstanceCapacity());
+            var surfacePayloads = new SurfaceSourcePayloadRegistry();
+            var surfaceRuntime = new SurfaceSourceRuntimeRegistry();
             var presentationBehaviors = new PresentationBehaviorRegistry();
             var performerGraphApi = new GasGraphRuntimeApi(World, spatialQueries: null, coords: null, eventBus: null);
             new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load(ConfigCatalog, ConfigConflictReport);
@@ -632,7 +636,7 @@ namespace Ludots.Core.Engine
             new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load(ConfigCatalog, ConfigConflictReport);
             new AnimationClipConfigLoader(ConfigPipeline, animationClips).Load(ConfigCatalog, ConfigConflictReport);
             new AnimationProfileConfigLoader(ConfigPipeline, animationProfiles, animatorControllers, animationClips).Load(ConfigCatalog, ConfigConflictReport);
-            new VisualTemplateConfigLoader(ConfigPipeline, visualTemplates, meshAssets, animatorControllers, animationProfiles).Load(ConfigCatalog, ConfigConflictReport);
+            new VisualTemplateConfigLoader(ConfigPipeline, visualTemplates, meshAssets, materialAssets, animatorControllers, animationProfiles).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
             BuiltinPerformerDefinitions.Register(performerDefinitions, meshAssets, presentationTextCatalog.GetTokenId);
@@ -651,6 +655,9 @@ namespace Ludots.Core.Engine
                 performerDefinitions);
             var performerEmitSystem = new PerformerEmitSystem(World, performerInstances, performerDefinitions, presentationRequestBuffer, graphProgramRegistry, performerGraphApi, GlobalContext,
                 entityColorResolver: (world, entity) => Ludots.Core.Presentation.Utils.TeamColorResolver.Resolve(world, entity));
+            var surfaceSourceFlushSystem = new SurfaceSourceFlushSystem(World, presentationRequestBuffer, surfacePayloads, surfaceRuntime);
+            var surfaceSourceLifecycleSystem = new SurfaceSourceLifecycleSystem(World, surfaceRuntime);
+            var chunkSurfaceBakeSystem = new ChunkSurfaceBakeSystem(World, surfaceRuntime, meshAssets, materialAssets);
             var presentationRequestFlushSystem = new PresentationRequestFlushSystem(
                 World,
                 presentationRequestBuffer,
@@ -825,6 +832,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationCommandBuffer, presentationCommandBuffer);
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
+            SetService(CoreServiceKeys.PresentationMaterialRegistry, materialAssets);
             SetService(CoreServiceKeys.PresentationBehaviorRegistry, presentationBehaviors);
             SetService(CoreServiceKeys.PresentationBehaviorResolver, presentationBehaviorResolver);
             SetService(CoreServiceKeys.PresentationVisualTemplateRegistry, visualTemplates);
@@ -861,6 +869,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.RoadSplineBuffer, roadSplineBuffer);
             SetService(CoreServiceKeys.PerformerDefinitionRegistry, performerDefinitions);
             SetService(CoreServiceKeys.PerformerInstanceBuffer, performerInstances);
+            SetService(CoreServiceKeys.SurfaceSourcePayloadRegistry, surfacePayloads);
+            SetService(CoreServiceKeys.SurfaceSourceRuntimeRegistry, surfaceRuntime);
             var platformManagedCameraDrivers = new PlatformManagedCameraDriverRegistry();
             SetService(CoreServiceKeys.PlatformManagedCameraDriverRegistry, platformManagedCameraDrivers);
             GameSession.Camera.SetPlatformManagedCameraDriverRegistry(platformManagedCameraDrivers);
@@ -1032,6 +1042,9 @@ namespace Ludots.Core.Engine
             // PerformerEmitSystem ticks instances, evaluates visibility/bindings, outputs to draw buffers.
             // Also handles entity-scoped definitions (replaces WorldHudCollectorSystem).
             RegisterPresentationSystem(performerEmitSystem);
+            RegisterPresentationSystem(surfaceSourceFlushSystem);
+            RegisterPresentationSystem(surfaceSourceLifecycleSystem);
+            RegisterPresentationSystem(chunkSurfaceBakeSystem);
             RegisterPresentationSystem(presentationEntityFinalizeDestroySystem);
             RegisterPresentationSystem(presentationRequestFlushSystem);
         }

@@ -342,6 +342,24 @@ namespace Ludots.Adapter.UE5
                 return;
             }
 
+            if (visual.Kind == PrefabVisualPartKind.ProceduralMesh)
+            {
+                if (visual.MeshDescriptor.Type != MeshAssetType.ProceduralMesh || visual.MeshDescriptor.ProceduralMeshData == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{consumerName} received procedural finalized visual stableId={visual.StableId} without procedural resource payload.");
+                }
+
+                ProceduralMeshAssetData mesh = visual.MeshDescriptor.ProceduralMeshData;
+                if (mesh.UsageHint != ProceduralMeshUsageHint.Static && renderPath.IsStaticInstanceLane())
+                {
+                    throw new InvalidOperationException(
+                        $"{consumerName} cannot place non-static procedural mesh stableId={visual.StableId} into static instance lane '{renderPath}'.");
+                }
+
+                return;
+            }
+
             throw new InvalidOperationException(
                 $"{consumerName} does not support finalized visual kind '{visual.Kind}' on render path '{renderPath}' (stableId={visual.StableId}).");
         }

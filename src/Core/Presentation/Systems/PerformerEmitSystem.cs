@@ -115,6 +115,9 @@ namespace Ludots.Core.Presentation.Systems
                 case PerformerVisualKind.WorldText:
                     EmitWorldText(handle, definitionId, def, owner, pos, alphaMod, lod);
                     break;
+                case PerformerVisualKind.SurfaceSource:
+                    EmitSurfaceSource(handle, definitionId, def, owner, pos, lod);
+                    break;
                 case PerformerVisualKind.RoadSpline:
                     EmitRoadSpline(handle, definitionId, def, owner, pos, alphaMod, lod);
                     break;
@@ -369,6 +372,28 @@ namespace Ludots.Core.Presentation.Systems
             }, lod));
         }
 
+        private void EmitSurfaceSource(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, LODLevel lod)
+        {
+            if (def.Surface == null)
+            {
+                throw new InvalidOperationException(
+                    $"Performer '{_definitions.GetName(definitionId)}' is '{PerformerVisualKind.SurfaceSource}' but has no surface authoring block.");
+            }
+
+            int stableId = ResolveSurfaceSourceStableId(handle, definitionId, owner);
+            int scopeId = ResolveSurfaceScopeId(handle, owner, stableId);
+            _requests.Add(PresentationRequest.FromSurfaceSource(owner, new SurfaceSourceRequest
+            {
+                StableId = stableId,
+                PerformerDefinitionId = definitionId,
+                ScopeId = scopeId,
+                SurfaceKind = def.Surface.Kind,
+                Authoring = def.Surface,
+                AnchorPosition = pos,
+                LodSeed = lod,
+            }, lod));
+        }
+
         private int ResolveMarkerStableId(int handle, int definitionId, Entity owner)
         {
             if (handle >= 0 && _instances.IsActive(handle))
@@ -407,6 +432,49 @@ namespace Ludots.Core.Presentation.Systems
 
             throw new InvalidOperationException(
                 $"Performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
+        }
+
+        private int ResolveSurfaceSourceStableId(int handle, int definitionId, Entity owner)
+        {
+            if (handle >= 0 && _instances.IsActive(handle))
+            {
+                return _instances.Get(handle).StableId;
+            }
+
+            if (World.IsAlive(owner) && World.Has<PresentationStableId>(owner))
+            {
+                int ownerStableId = World.Get<PresentationStableId>(owner).Value;
+                if (ownerStableId > 0)
+                {
+                    return PerformerVisualIdentity.ComposeStableId(ownerStableId, PerformerVisualKind.SurfaceSource, definitionId);
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
+        }
+
+        private int ResolveSurfaceScopeId(int handle, Entity owner, int fallbackStableId)
+        {
+            if (handle >= 0 && _instances.IsActive(handle))
+            {
+                int scopeId = _instances.Get(handle).ScopeId;
+                if (scopeId > 0)
+                {
+                    return scopeId;
+                }
+            }
+
+            if (World.IsAlive(owner) && World.Has<PresentationStableId>(owner))
+            {
+                int ownerStableId = World.Get<PresentationStableId>(owner).Value;
+                if (ownerStableId > 0)
+                {
+                    return ownerStableId;
+                }
+            }
+
+            return fallbackStableId;
         }
 
         private void EmitWorldBar(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod, LODLevel lod)

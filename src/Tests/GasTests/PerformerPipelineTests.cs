@@ -514,6 +514,54 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void InstanceScoped_SurfaceSource_EmitsSurfaceSourceRequest()
+        {
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.SurfaceSource,
+                Surface = new SurfaceAuthoringBlock
+                {
+                    Kind = PerformerSurfaceKind.SplineRibbon,
+                    ProfileId = "road_surface",
+                    GeometrySource = new PerformerSurfaceGeometrySource
+                    {
+                        ControlPointSource = new PerformerSurfaceValueSource
+                        {
+                            Kind = PerformerSurfaceValueSourceKind.Constant,
+                            Id = "road_network_chunk_segments",
+                        },
+                        WidthSource = new PerformerSurfaceValueSource
+                        {
+                            Kind = PerformerSurfaceValueSourceKind.Constant,
+                            Id = "road_network_chunk_width",
+                        },
+                        SegmentationPolicy = "Bezier12",
+                    },
+                    ChunkBake = new PerformerSurfaceChunkBakePolicy(),
+                    MaterialSet = new PerformerSurfaceMaterialSet
+                    {
+                        PrimaryMaterialId = "default_surface",
+                    },
+                },
+            };
+
+            int defId = _defs.Register("test_surface_source", def);
+            _instances.TryAllocate(defId, default, 9001, PresentationAnchorKind.WorldPosition, new Vector3(12f, 0f, 18f), 777, out _);
+
+            _requests.Clear();
+            _system.Update(0.016f);
+
+            ReadOnlySpan<PresentationRequest> span = _requests.GetSpan();
+            Assert.That(span.Length, Is.EqualTo(1));
+            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.SurfaceSource));
+            Assert.That(span[0].SurfaceSource.StableId, Is.EqualTo(777));
+            Assert.That(span[0].SurfaceSource.ScopeId, Is.EqualTo(9001));
+            Assert.That(span[0].SurfaceSource.SurfaceKind, Is.EqualTo(PerformerSurfaceKind.SplineRibbon));
+            Assert.That(span[0].SurfaceSource.Authoring.MaterialSet.PrimaryMaterialId, Is.EqualTo("default_surface"));
+            Assert.That(span[0].SurfaceSource.AnchorPosition.X, Is.EqualTo(12f).Within(0.01f));
+        }
+
+        [Test]
         public void InstanceScoped_AutoExpires_AfterLifetime()
         {
             var entity = _world.Create(new VisualTransform { Position = Vector3.Zero });

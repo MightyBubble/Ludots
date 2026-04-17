@@ -11,6 +11,7 @@ namespace Ludots.Core.Presentation.Config
         private readonly ConfigPipeline _configs;
         private readonly VisualTemplateRegistry _templates;
         private readonly MeshAssetRegistry _meshes;
+        private readonly PresentationMaterialRegistry _materials;
         private readonly AnimatorControllerRegistry _animators;
         private readonly AnimationProfileRegistry _profiles;
 
@@ -18,12 +19,14 @@ namespace Ludots.Core.Presentation.Config
             ConfigPipeline configs,
             VisualTemplateRegistry templates,
             MeshAssetRegistry meshes,
+            PresentationMaterialRegistry materials,
             AnimatorControllerRegistry animators,
             AnimationProfileRegistry profiles)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _templates = templates ?? throw new ArgumentNullException(nameof(templates));
             _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
+            _materials = materials ?? throw new ArgumentNullException(nameof(materials));
             _animators = animators ?? throw new ArgumentNullException(nameof(animators));
             _profiles = profiles ?? throw new ArgumentNullException(nameof(profiles));
         }
@@ -94,11 +97,14 @@ namespace Ludots.Core.Presentation.Config
             }
 
             PresentationRenderContract.ValidateTemplate($"Visual template '{key}'", renderPath, animatorControllerId, animationProfileId);
+            int materialId = ResolveMaterialId(node["materialId"], key);
+            VisualLodProfile? lodProfile = ParseLodProfile(node["lod"], key, materialId);
 
             return new VisualTemplateDefinition
             {
                 MeshAssetId = meshAssetId,
-                MaterialId = node["materialId"]?.GetValue<int>() ?? 0,
+                MaterialId = materialId,
+                LodProfile = lodProfile,
                 AnimatorControllerId = animatorControllerId,
                 AnimationProfileId = animationProfileId,
                 BaseScale = node["baseScale"]?.GetValue<float>() ?? 1f,
@@ -106,6 +112,75 @@ namespace Ludots.Core.Presentation.Config
                 Mobility = mobility,
                 VisibleByDefault = node["visibleByDefault"]?.GetValue<bool>() ?? true,
             };
+        }
+
+        private int ResolveMaterialId(JsonNode? node, string templateKey)
+        {
+            if (node == null)
+            {
+                return _materials.GetId(PresentationMaterialRegistry.DefaultSurfaceKey);
+            }
+
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    if (numericId <= 0 || !_materials.TryGet(numericId, out _))
+                    {
+                        throw new InvalidOperationException($"Visual template '{templateKey}' references unknown material id '{numericId}'.");
+                    }
+
+                    return numericId;
+                }
+
+                string materialKey = value.GetValue<string>();
+                int materialId = _materials.GetId(materialKey);
+                if (materialId <= 0)
+                {
+                    throw new InvalidOperationException($"Visual template '{templateKey}' references unknown material '{materialKey}'.");
+                }
+
+                return materialId;
+            }
+
+            throw new InvalidOperationException($"Visual template '{templateKey}' has invalid materialId payload.");
+        }
+
+        private VisualLodProfile? ParseLodProfile(JsonNode? node, string templateKey, int defaultMaterialId)
+        {
+            if (node is not JsonObject obj)
+            {
+                return null;
+            }
+
+            return new VisualLodProfile(
+                ParseLodEntry(obj["high"], "high", templateKey, defaultMaterialId),
+                ParseLodEntry(obj["medium"], "medium", templateKey, defaultMaterialId),
+                ParseLodEntry(obj["low"], "low", templateKey, defaultMaterialId));
+        }
+
+        private VisualLodEntry ParseLodEntry(JsonNode? node, string lodName, string templateKey, int defaultMaterialId)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"Visual template '{templateKey}' lod.{lodName} must be an object.");
+            }
+
+            string meshKey = obj["meshAssetId"]?.GetValue<string>() ?? string.Empty;
+            int meshAssetId = _meshes.GetId(meshKey);
+            if (meshAssetId <= 0)
+            {
+                throw new InvalidOperationException($"Visual template '{templateKey}' lod.{lodName} references unknown mesh '{meshKey}'.");
+            }
+
+            int materialOverrideId = obj.TryGetPropertyValue("materialOverrideId", out JsonNode? materialNode)
+                ? ResolveMaterialId(materialNode, templateKey)
+                : defaultMaterialId;
+            return new VisualLodEntry(
+                meshAssetId,
+                materialOverrideId,
+                obj["maxDistanceCm"]?.GetValue<float>() ?? throw new InvalidOperationException($"Visual template '{templateKey}' lod.{lodName} is missing maxDistanceCm."),
+                obj["minScreenCoverage01"]?.GetValue<float>() ?? 0f);
         }
 
         private int ResolveAnimatorControllerId(string animatorKey, string templateKey)

@@ -37,6 +37,12 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public PerformerParamBinding[] Bindings = System.Array.Empty<PerformerParamBinding>();
 
+        /// <summary>
+        /// Structured authoring contract for performer-driven procedural surfaces.
+        /// Only valid when <see cref="VisualKind"/> is <see cref="PerformerVisualKind.SurfaceSource"/>.
+        /// </summary>
+        public SurfaceAuthoringBlock? Surface;
+
         // ── Entity-scoped mode ──
 
         /// <summary>

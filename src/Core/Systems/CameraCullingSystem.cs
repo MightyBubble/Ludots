@@ -4,10 +4,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Map.Hex;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Systems
@@ -20,6 +24,8 @@ namespace Ludots.Core.Systems
         private readonly CameraManager _cameraManager;
         private readonly ISpatialQueryService _spatial;
         private readonly IViewController _view;
+        private readonly MeshAssetRegistry? _meshes;
+        private readonly ILoadedChunks? _loadedChunks;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private Entity[] _buffer = new Entity[4096];
         private HashSet<Entity> _prevVisible = new HashSet<Entity>();
@@ -40,11 +46,31 @@ namespace Ludots.Core.Systems
             CameraManager cameraManager,
             ISpatialQueryService spatial,
             IViewController view,
+            PresentationTimingDiagnostics? timingDiagnostics) : this(
+                world,
+                cameraManager,
+                spatial,
+                view,
+                meshes: null,
+                loadedChunks: null,
+                timingDiagnostics)
+        {
+        }
+
+        public CameraCullingSystem(
+            World world,
+            CameraManager cameraManager,
+            ISpatialQueryService spatial,
+            IViewController view,
+            MeshAssetRegistry? meshes = null,
+            ILoadedChunks? loadedChunks = null,
             PresentationTimingDiagnostics? timingDiagnostics = null) : base(world) 
         {
             _cameraManager = cameraManager;
             _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
             _view = view ?? throw new ArgumentNullException(nameof(view));
+            _meshes = meshes;
+            _loadedChunks = loadedChunks;
             _timingDiagnostics = timingDiagnostics;
         }
 
@@ -89,7 +115,8 @@ namespace Ludots.Core.Systems
             if (iw < 0) iw = 0;
             if (ih < 0) ih = 0;
 
-            var r = _spatial.QueryAabb(new Ludots.Core.Mathematics.WorldAabbCm(ix, iy, iw, ih), _buffer);
+            WorldAabbCm queryBounds = new WorldAabbCm(ix, iy, iw, ih);
+            var r = _spatial.QueryAabb(queryBounds, _buffer);
             if (r.Dropped > 0 && _buffer.Length < 262144)
             {
                 int next = _buffer.Length * 2;
@@ -121,10 +148,24 @@ namespace Ludots.Core.Systems
                 var wp = World.Get<WorldPositionCm>(e).Value;
                 float px = wp.X.ToFloat();
                 float py = wp.Y.ToFloat();
-                bool inViewport = (px >= minX && px <= maxX && py >= minY && py <= maxY);
 
                 ref var cull = ref World.Get<CullState>(e);
-                if (!inViewport) { cull.LOD = LODLevel.Culled; cull.IsVisible = false; continue; }
+                if (!PassesLoadedChunkGate(px, py) ||
+                    !TryComputeScreenCoverageAndViewportIntersection(e, px, py, target, distanceCm, queryBounds, out float coverage01, out bool inViewport))
+                {
+                    cull.LOD = LODLevel.Culled;
+                    cull.IsVisible = false;
+                    cull.ScreenCoverage01 = 0f;
+                    continue;
+                }
+
+                if (!inViewport)
+                {
+                    cull.LOD = LODLevel.Culled;
+                    cull.IsVisible = false;
+                    cull.ScreenCoverage01 = 0f;
+                    continue;
+                }
 
                 // 2. Distance Check (Logic Space)
                 float dx = px - tx;
@@ -132,30 +173,15 @@ namespace Ludots.Core.Systems
                 float distSq = dx*dx + dy*dy;
                 
                 cull.DistanceToCameraSq = distSq;
+                cull.ScreenCoverage01 = coverage01;
 
                 // 3. LOD Selection
-                if (distSq < highSq)
+                LODLevel resolvedLod = ResolveLod(distSq, coverage01, highSq, medSq, lowSq2, in visual);
+                cull.LOD = resolvedLod;
+                cull.IsVisible = resolvedLod != LODLevel.Culled;
+                if (cull.IsVisible)
                 {
-                    cull.LOD = LODLevel.High;
-                    cull.IsVisible = true;
                     _nextVisible.Add(e);
-                }
-                else if (distSq < medSq)
-                {
-                    cull.LOD = LODLevel.Medium;
-                    cull.IsVisible = true;
-                    _nextVisible.Add(e);
-                }
-                else if (distSq < lowSq2)
-                {
-                    cull.LOD = LODLevel.Low;
-                    cull.IsVisible = true;
-                    _nextVisible.Add(e);
-                }
-                else
-                {
-                    cull.LOD = LODLevel.Culled;
-                    cull.IsVisible = false;
                 }
             }
 
@@ -182,6 +208,126 @@ namespace Ludots.Core.Systems
             DebugState.CameraTargetCm = new System.Numerics.Vector2(target.X, target.Y);
             DebugState.VisibleEntityCount = _prevVisible.Count;
             _timingDiagnostics?.ObserveCameraCulling((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency, _prevVisible.Count);
+        }
+
+        private bool PassesLoadedChunkGate(float worldXCm, float worldYCm)
+        {
+            if (_loadedChunks == null || _loadedChunks.ActiveChunkKeys.Count == 0)
+            {
+                return true;
+            }
+
+            int cellX = (int)MathF.Floor(worldXCm / HexCoordinates.EdgeLengthCm);
+            int cellY = (int)MathF.Floor(worldYCm / HexCoordinates.EdgeLengthCm);
+            int chunkX = cellX >> 6;
+            int chunkY = cellY >> 6;
+            long key = HexCoordinates.GetChunkKey(chunkX, chunkY);
+            return _loadedChunks.IsLoaded(key);
+        }
+
+        private bool TryComputeScreenCoverageAndViewportIntersection(
+            Entity entity,
+            float px,
+            float py,
+            Vector2 target,
+            float distanceCm,
+            in WorldAabbCm queryBounds,
+            out float screenCoverage01,
+            out bool intersectsViewport)
+        {
+            PresentationLocalBounds localBounds = ResolveBounds(entity);
+            Vector3 center = World.Has<VisualTransform>(entity)
+                ? World.Get<VisualTransform>(entity).Position
+                : new Vector3(px * 0.01f, 0f, py * 0.01f);
+            Vector3 scale = World.Has<VisualTransform>(entity)
+                ? World.Get<VisualTransform>(entity).Scale
+                : Vector3.One;
+
+            float halfWidthCm = MathF.Max(10f, localBounds.Extents.X * MathF.Abs(scale.X) * 100f);
+            float halfDepthCm = MathF.Max(10f, localBounds.Extents.Z * MathF.Abs(scale.Z) * 100f);
+            float minX = (center.X * 100f) + (localBounds.Center.X * scale.X * 100f) - halfWidthCm;
+            float maxX = minX + (halfWidthCm * 2f);
+            float minY = (center.Z * 100f) + (localBounds.Center.Z * scale.Z * 100f) - halfDepthCm;
+            float maxY = minY + (halfDepthCm * 2f);
+
+            intersectsViewport = maxX >= queryBounds.Left &&
+                                 minX <= queryBounds.Right &&
+                                 maxY >= queryBounds.Top &&
+                                 minY <= queryBounds.Bottom;
+
+            float approxRadiusCm = MathF.Max(halfWidthCm, halfDepthCm);
+            float distanceToCameraCm = MathF.Max(1f, MathF.Sqrt(((px - target.X) * (px - target.X)) + ((py - target.Y) * (py - target.Y)) + (distanceCm * distanceCm * 0.04f)));
+            screenCoverage01 = Math.Clamp((approxRadiusCm * 2f) / MathF.Max(distanceToCameraCm, 1f), 0f, 1f);
+            return true;
+        }
+
+        private PresentationLocalBounds ResolveBounds(Entity entity)
+        {
+            if (World.Has<PresentationLocalBounds>(entity))
+            {
+                return World.Get<PresentationLocalBounds>(entity);
+            }
+
+            if (_meshes != null && World.Has<VisualRuntimeState>(entity))
+            {
+                VisualRuntimeState visual = World.Get<VisualRuntimeState>(entity);
+                int meshAssetId = visual.MeshAssetId;
+                if (visual.LodProfile.HasValue)
+                {
+                    meshAssetId = visual.LodProfile.Value.High.MeshAssetId;
+                }
+
+                if (_meshes.TryGetDescriptor(meshAssetId, out MeshAssetDescriptor descriptor))
+                {
+                    if (descriptor.Type == MeshAssetType.ProceduralMesh && descriptor.ProceduralMeshData != null)
+                    {
+                        return PresentationLocalBounds.Create(descriptor.ProceduralMeshData.LocalBounds.Center, descriptor.ProceduralMeshData.LocalBounds.Extents);
+                    }
+                }
+            }
+
+            return PresentationLocalBounds.Create(Vector3.Zero, new Vector3(0.5f, 0.5f, 0.5f));
+        }
+
+        private static LODLevel ResolveLod(float distSq, float coverage01, float highSq, float medSq, float lowSq2, in VisualRuntimeState visual)
+        {
+            if (visual.LodProfile.HasValue)
+            {
+                VisualLodProfile profile = visual.LodProfile.Value;
+                if (distSq <= (profile.High.MaxDistanceCm * profile.High.MaxDistanceCm) && coverage01 >= profile.High.MinScreenCoverage01)
+                {
+                    return LODLevel.High;
+                }
+
+                if (distSq <= (profile.Medium.MaxDistanceCm * profile.Medium.MaxDistanceCm) && coverage01 >= profile.Medium.MinScreenCoverage01)
+                {
+                    return LODLevel.Medium;
+                }
+
+                if (distSq <= (profile.Low.MaxDistanceCm * profile.Low.MaxDistanceCm) && coverage01 >= profile.Low.MinScreenCoverage01)
+                {
+                    return LODLevel.Low;
+                }
+
+                return LODLevel.Culled;
+            }
+
+            if (distSq < highSq)
+            {
+                return LODLevel.High;
+            }
+
+            if (distSq < medSq)
+            {
+                return LODLevel.Medium;
+            }
+
+            if (distSq < lowSq2)
+            {
+                return LODLevel.Low;
+            }
+
+            return LODLevel.Culled;
         }
 
         private float ReadPresentationAlpha()

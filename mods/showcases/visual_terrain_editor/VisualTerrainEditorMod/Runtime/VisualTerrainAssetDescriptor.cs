@@ -139,6 +139,9 @@ internal sealed class VisualTerrainAssetDescriptor
     public int RenderRows => checked(ChunkRows * (RenderRowsPerChunk - 1) + 1);
 
     public int RuntimeVertexCapacityPerChunk
+        => checked(RenderColumnsPerChunk * RenderRowsPerChunk);
+
+    public int RuntimeIndexCapacityPerChunk
         => checked((RenderColumnsPerChunk - 1) * (RenderRowsPerChunk - 1) * 6);
 
     public int RuntimeVertexCapacity => RuntimeVertexCapacityPerChunk;

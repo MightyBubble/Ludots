@@ -554,7 +554,7 @@ internal sealed class VisualTerrainEditorRuntime
         {
             for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
             {
-                if (!_document.TryGetChunkRuntimeMesh(chunkX, chunkY, out RuntimeMeshAssetData runtimeMesh))
+                if (!_document.TryGetChunkProceduralMesh(chunkX, chunkY, out ProceduralMeshAssetData proceduralMesh))
                 {
                     continue;
                 }
@@ -571,7 +571,7 @@ internal sealed class VisualTerrainEditorRuntime
                 }
 
                 string meshKey = $"{TerrainMeshAssetKeyPrefix}.{chunkX}.{chunkY}";
-                int meshAssetId = registry.Register(meshKey, MeshAssetDescriptor.Runtime(id: 0, runtimeMesh));
+                int meshAssetId = registry.Register(meshKey, MeshAssetDescriptor.Procedural(id: 0, proceduralMesh));
                 int stableId = stableIds.Allocate();
                 Entity entity = engine.World.Create(
                     new PresentationStableId { Value = stableId },
@@ -583,7 +583,7 @@ internal sealed class VisualTerrainEditorRuntime
                     },
                     VisualRuntimeState.Create(
                         meshAssetId,
-                        materialId: 0,
+                        materialId: 1,
                         baseScale: 1f,
                         renderPath: VisualRenderPath.StaticMesh,
                         mobility: VisualMobility.Static));

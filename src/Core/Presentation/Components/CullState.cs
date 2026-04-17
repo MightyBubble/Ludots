@@ -17,5 +17,6 @@ namespace Ludots.Core.Presentation.Components
         public bool IsVisible;
         public LODLevel LOD;
         public float DistanceToCameraSq;
+        public float ScreenCoverage01;
     }
 }

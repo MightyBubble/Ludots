@@ -23,6 +23,7 @@ namespace Ludots.Core.Presentation.Requests
         public GroundOverlayItem GroundOverlay;
         public WorldHudItem WorldHud;
         public RoadSplineRequest RoadSpline;
+        public SurfaceSourceRequest SurfaceSource;
 
         public static PresentationRequest FromVisualProxy(Entity owner, in PresentationVisualProxy proxy)
         {
@@ -90,6 +91,18 @@ namespace Ludots.Core.Presentation.Requests
                 Kind = PresentationRequestKind.RoadSpline,
                 Owner = owner,
                 RoadSpline = spline,
+                LOD = lod,
+            };
+        }
+
+        public static PresentationRequest FromSurfaceSource(Entity owner, in SurfaceSourceRequest surfaceSource, LODLevel lod)
+        {
+            return new PresentationRequest
+            {
+                Kind = PresentationRequestKind.SurfaceSource,
+                Owner = owner,
+                StableId = surfaceSource.StableId,
+                SurfaceSource = surfaceSource,
                 LOD = lod,
             };
         }

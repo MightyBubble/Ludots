@@ -14,6 +14,8 @@ namespace Ludots.Core.Presentation.Assets
             int meshAssetId,
             in MeshAssetDescriptor meshDescriptor,
             int materialId,
+            PrefabMaterialBinding[]? materialBindings,
+            in ProceduralMeshBounds localBounds,
             int effectAssetId,
             in Vector2 size,
             bool alignToSurface,
@@ -30,6 +32,8 @@ namespace Ludots.Core.Presentation.Assets
             MeshAssetId = meshAssetId;
             MeshDescriptor = meshDescriptor;
             MaterialId = materialId;
+            MaterialBindings = materialBindings;
+            LocalBounds = localBounds;
             EffectAssetId = effectAssetId;
             Size = size;
             AlignToSurface = alignToSurface;
@@ -56,6 +60,10 @@ namespace Ludots.Core.Presentation.Assets
 
         public int MaterialId { get; }
 
+        public PrefabMaterialBinding[]? MaterialBindings { get; }
+
+        public ProceduralMeshBounds LocalBounds { get; }
+
         public int EffectAssetId { get; }
 
         public Vector2 Size { get; }
@@ -75,7 +83,10 @@ namespace Ludots.Core.Presentation.Assets
             in Vector3 position,
             in Quaternion rotation,
             in Vector3 scale,
-            in Vector4 color)
+            in Vector4 color,
+            int materialId = 0,
+            PrefabMaterialBinding[]? materialBindings = null,
+            in ProceduralMeshBounds localBounds = default)
         {
             return new PrefabFinalizedVisual(
                 PrefabVisualPartKind.Mesh,
@@ -86,7 +97,9 @@ namespace Ludots.Core.Presentation.Assets
                 color,
                 meshAssetId,
                 meshDescriptor,
-                materialId: 0,
+                materialId,
+                materialBindings,
+                localBounds,
                 effectAssetId: 0,
                 size: Vector2.Zero,
                 alignToSurface: false,
@@ -115,6 +128,8 @@ namespace Ludots.Core.Presentation.Assets
                 meshAssetId: 0,
                 meshDescriptor: default,
                 materialId,
+                materialBindings: null,
+                localBounds: default,
                 effectAssetId: 0,
                 size,
                 alignToSurface,
@@ -142,6 +157,8 @@ namespace Ludots.Core.Presentation.Assets
                 meshAssetId: 0,
                 meshDescriptor: default,
                 materialId: 0,
+                materialBindings: null,
+                localBounds: default,
                 effectAssetId,
                 size: Vector2.Zero,
                 alignToSurface: false,
@@ -160,7 +177,8 @@ namespace Ludots.Core.Presentation.Assets
             in MeshAssetDescriptor meshDescriptor,
             int materialId,
             in Vector2 tiling,
-            bool terrainFacing)
+            bool terrainFacing,
+            in ProceduralMeshBounds localBounds = default)
         {
             return new PrefabFinalizedVisual(
                 PrefabVisualPartKind.Surface,
@@ -172,12 +190,48 @@ namespace Ludots.Core.Presentation.Assets
                 meshAssetId,
                 meshDescriptor,
                 materialId,
+                materialBindings: null,
+                localBounds,
                 effectAssetId: 0,
                 size: Vector2.Zero,
                 alignToSurface: false,
                 tiling,
                 vfxSpawnMode: PrefabVfxSpawnMode.Once,
                 terrainFacing);
+        }
+
+        public static PrefabFinalizedVisual ProceduralMesh(
+            int meshAssetId,
+            in MeshAssetDescriptor meshDescriptor,
+            int stableId,
+            in Vector3 position,
+            in Quaternion rotation,
+            in Vector3 scale,
+            in Vector4 color,
+            PrefabMaterialBinding[] materialBindings,
+            in ProceduralMeshBounds localBounds)
+        {
+            int materialId = materialBindings != null && materialBindings.Length == 1
+                ? materialBindings[0].MaterialAssetId
+                : 0;
+            return new PrefabFinalizedVisual(
+                PrefabVisualPartKind.ProceduralMesh,
+                stableId,
+                position,
+                rotation,
+                scale,
+                color,
+                meshAssetId,
+                meshDescriptor,
+                materialId,
+                materialBindings,
+                localBounds,
+                effectAssetId: 0,
+                size: Vector2.Zero,
+                alignToSurface: false,
+                tiling: Vector2.Zero,
+                vfxSpawnMode: PrefabVfxSpawnMode.Once,
+                terrainFacing: false);
         }
     }
 }

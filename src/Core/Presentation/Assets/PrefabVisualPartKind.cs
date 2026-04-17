@@ -6,5 +6,6 @@ namespace Ludots.Core.Presentation.Assets
         Decal = 1,
         Vfx = 2,
         Surface = 3,
+        ProceduralMesh = 4,
     }
 }

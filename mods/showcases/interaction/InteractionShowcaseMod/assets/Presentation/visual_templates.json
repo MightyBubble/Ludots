@@ -3,7 +3,7 @@
     "id": "interaction.character.hero_showcase",
     "renderPath": "SkinnedMesh",
     "meshAssetId": "sphere",
-    "materialId": 0,
+    "materialId": "default_surface",
     "baseScale": 2.2,
     "mobility": "Movable",
     "visibleByDefault": true,
@@ -13,7 +13,7 @@
     "id": "interaction.prop.dummy_showcase",
     "renderPath": "StaticMesh",
     "meshAssetId": "cube",
-    "materialId": 0,
+    "materialId": "default_surface",
     "baseScale": 1.8,
     "mobility": "Movable",
     "visibleByDefault": true

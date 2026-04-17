@@ -23,6 +23,7 @@ namespace Ludots.Client.Raylib.Rendering
     {
         private readonly RaylibPrimitiveRenderMode _mode;
         private readonly IVirtualFileSystem? _vfs;
+        private readonly PresentationMaterialRegistry? _materials;
         private readonly string? _diagnosticPath;
         private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new PrefabFinalizedVisualBuffer();
 
@@ -39,12 +40,12 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly StaticMeshAdapterSyncPlanner _persistentStaticLaneSync = new StaticMeshAdapterSyncPlanner();
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
-        private readonly Dictionary<int, CachedRuntimeMesh> _runtimeMeshCache = new Dictionary<int, CachedRuntimeMesh>();
+        private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
         private readonly Dictionary<int, CachedTexture> _textureCache = new Dictionary<int, CachedTexture>();
         private readonly HashSet<int> _loggedTextureDiagnostics = new HashSet<int>();
         private readonly HashSet<int> _loggedBillboardDrawDiagnostics = new HashSet<int>();
-        private Material _runtimeMeshMaterial;
-        private bool _runtimeMeshMaterialLoaded;
+        private Material _proceduralMeshMaterial;
+        private bool _proceduralMeshMaterialLoaded;
 
         public int LastInstancedInstances { get; private set; }
         public int LastInstancedBatches { get; private set; }
@@ -62,10 +63,12 @@ namespace Ludots.Client.Raylib.Rendering
 
         public RaylibPrimitiveRenderer(
             RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
-            IVirtualFileSystem? vfs = null)
+            IVirtualFileSystem? vfs = null,
+            PresentationMaterialRegistry? materials = null)
         {
             _mode = mode;
             _vfs = vfs;
+            _materials = materials;
             _diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
         }
 
@@ -256,6 +259,9 @@ namespace Ludots.Client.Raylib.Rendering
                 case PrefabVisualPartKind.Mesh:
                     SubmitMeshVisual(in visual, camera);
                     break;
+                case PrefabVisualPartKind.ProceduralMesh:
+                    DrawProceduralMesh(in visual);
+                    break;
                 case PrefabVisualPartKind.Decal:
                     DrawDecalVisual(in visual);
                     break;
@@ -407,6 +413,9 @@ namespace Ludots.Client.Raylib.Rendering
                 case PrefabVisualPartKind.Mesh:
                     DrawMeshVisual(in visual, camera);
                     break;
+                case PrefabVisualPartKind.ProceduralMesh:
+                    DrawProceduralMesh(in visual);
+                    break;
                 case PrefabVisualPartKind.Decal:
                     DrawDecalVisual(in visual);
                     break;
@@ -440,8 +449,8 @@ namespace Ludots.Client.Raylib.Rendering
                 case MeshAssetType.Billboard:
                     DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
                     break;
-                case MeshAssetType.RuntimeMesh:
-                    DrawRuntimeMesh(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale);
+                case MeshAssetType.ProceduralMesh:
+                    DrawProceduralMesh(in visual);
                     break;
                 default:
                     throw new InvalidOperationException(
@@ -462,8 +471,8 @@ namespace Ludots.Client.Raylib.Rendering
                 case MeshAssetType.Billboard:
                     DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
                     break;
-                case MeshAssetType.RuntimeMesh:
-                    DrawRuntimeMesh(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale);
+                case MeshAssetType.ProceduralMesh:
+                    DrawProceduralMesh(in visual);
                     break;
                 default:
                     throw new InvalidOperationException(
@@ -543,8 +552,8 @@ namespace Ludots.Client.Raylib.Rendering
                 case MeshAssetType.Billboard:
                     DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, surfaceColor, camera);
                     break;
-                case MeshAssetType.RuntimeMesh:
-                    DrawRuntimeMesh(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale);
+                case MeshAssetType.ProceduralMesh:
+                    DrawProceduralMesh(in visual);
                     break;
                 default:
                     throw new InvalidOperationException(
@@ -581,6 +590,10 @@ namespace Ludots.Client.Raylib.Rendering
                 case PrefabVisualPartKind.Surface:
                     LastSurfaceVisualCount++;
                     TotalSurfaceVisualCount++;
+                    break;
+                case PrefabVisualPartKind.ProceduralMesh:
+                    LastMeshVisualCount++;
+                    TotalMeshVisualCount++;
                     break;
                 default:
                     throw new InvalidOperationException($"Unsupported finalized visual kind '{kind}'.");
@@ -844,27 +857,80 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawBillboardRec(camera, cached.Texture, source, billboardPosition, new Vector2(width, height), tint);
         }
 
-        private void DrawRuntimeMesh(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Quaternion rotation, Vector3 scale)
+        private void DrawProceduralMesh(in PrefabFinalizedVisual visual)
         {
-            if (!TryGetOrBuildRuntimeMesh(meshAssetId, desc, out var cached))
+            if (!TryGetOrBuildProceduralMesh(visual.MeshAssetId, visual.MeshDescriptor, out var cached))
             {
-                DrawMissingModelMarker(position, scale);
-                return;
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot draw finalized procedural visual stableId={visual.StableId} because meshAssetId={visual.MeshAssetId} has no committed procedural payload.");
             }
 
-            EnsureRuntimeMeshMaterial();
+            ValidateProceduralMaterialContract(in visual, cached.SubmeshCount);
+            EnsureProceduralMeshMaterial();
 
             var transform = RaylibMatrix.FromSystemNumerics(
-                Matrix4x4.CreateScale(scale) *
-                Matrix4x4.CreateFromQuaternion(PrefabTransformUtility.NormalizeOrIdentity(rotation)) *
-                Matrix4x4.CreateTranslation(position));
+                Matrix4x4.CreateScale(visual.Scale) *
+                Matrix4x4.CreateFromQuaternion(PrefabTransformUtility.NormalizeOrIdentity(visual.Rotation)) *
+                Matrix4x4.CreateTranslation(visual.Position));
 
-            // Runtime terrain/editor meshes are generated on the fly and should match the
-            // terrain renderer path, which renders without backface culling to avoid losing
-            // steep slopes or exposing chunk cracks from winding/camera edge cases.
             Rl.rlDisableBackfaceCulling();
-            Rl.DrawMesh(cached.Mesh, _runtimeMeshMaterial, transform);
+            if (cached.SubmeshMeshes == null || cached.SubmeshMeshes.Length == 0)
+            {
+                Rl.DrawMesh(cached.Mesh, _proceduralMeshMaterial, transform);
+            }
+            else
+            {
+                for (int i = 0; i < cached.SubmeshMeshes.Length; i++)
+                {
+                    Rl.DrawMesh(cached.SubmeshMeshes[i], _proceduralMeshMaterial, transform);
+                }
+            }
             Rl.rlEnableBackfaceCulling();
+        }
+
+        private void ValidateProceduralMaterialContract(in PrefabFinalizedVisual visual, int cachedSubmeshCount)
+        {
+            if (visual.MeshDescriptor.Type != MeshAssetType.ProceduralMesh || visual.MeshDescriptor.ProceduralMeshData == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} received procedural visual stableId={visual.StableId} without procedural mesh payload.");
+            }
+
+            PrefabMaterialBinding[]? bindings = visual.MaterialBindings;
+            ProceduralMeshAssetData procedural = visual.MeshDescriptor.ProceduralMeshData;
+            if (bindings == null || bindings.Length != procedural.SubmeshCount || cachedSubmeshCount != procedural.SubmeshCount)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} requires finalized procedural visual stableId={visual.StableId} to provide one material binding per committed submesh.");
+            }
+
+            if (_materials == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} requires {nameof(PresentationMaterialRegistry)} to validate procedural mesh material bindings.");
+            }
+
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                PrefabMaterialBinding binding = bindings[i];
+                if (binding.SubmeshIndex != i)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} requires procedural material bindings to stay aligned with submesh order (stableId={visual.StableId}, expectedSubmesh={i}, actualSubmesh={binding.SubmeshIndex}).");
+                }
+
+                if (!_materials.TryGet(binding.MaterialAssetId, out MaterialAssetDescriptor descriptor))
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} received procedural visual stableId={visual.StableId} with unknown materialId={binding.MaterialAssetId} for submesh {binding.SubmeshIndex}.");
+                }
+
+                if (descriptor.Domain != MaterialAssetDomain.Surface)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} only supports surface-domain procedural mesh materials (stableId={visual.StableId}, materialId={binding.MaterialAssetId}, domain={descriptor.Domain}).");
+                }
+            }
         }
 
         private bool TryGetOrLoadModel(int meshAssetId, in MeshAssetDescriptor desc, out CachedModel cached)
@@ -903,35 +969,36 @@ namespace Ludots.Client.Raylib.Rendering
             return false;
         }
 
-        private bool TryGetOrBuildRuntimeMesh(int meshAssetId, in MeshAssetDescriptor desc, out CachedRuntimeMesh cached)
+        private bool TryGetOrBuildProceduralMesh(int meshAssetId, in MeshAssetDescriptor desc, out CachedProceduralMesh cached)
         {
-            RuntimeMeshAssetData? runtimeMesh = desc.RuntimeMeshData;
-            if (runtimeMesh == null || runtimeMesh.VertexCount <= 0)
+            ProceduralMeshAssetData? proceduralMesh = desc.ProceduralMeshData;
+            if (proceduralMesh == null || proceduralMesh.VertexCount <= 0)
             {
                 cached = default;
                 return false;
             }
 
-            if (_runtimeMeshCache.TryGetValue(meshAssetId, out cached) &&
+            if (_proceduralMeshCache.TryGetValue(meshAssetId, out cached) &&
                 cached.Loaded &&
-                cached.Generation == runtimeMesh.Generation)
+                cached.Generation == proceduralMesh.Generation)
             {
                 return true;
             }
 
-            if (cached.Loaded && cached.Mesh.vertexCount > 0)
-            {
-                Rl.UnloadMesh(cached.Mesh);
-            }
+            UnloadProceduralMeshCache(in cached);
 
-            cached = new CachedRuntimeMesh
+            cached = new CachedProceduralMesh
             {
-                Mesh = CreateRuntimeMesh(runtimeMesh),
-                Generation = runtimeMesh.Generation,
+                Mesh = CreateProceduralMesh(proceduralMesh),
+                SubmeshMeshes = proceduralMesh.SubmeshCount > 1
+                    ? CreateProceduralSubmeshMeshes(proceduralMesh)
+                    : null,
+                Generation = proceduralMesh.Generation,
+                SubmeshCount = proceduralMesh.SubmeshCount,
                 Loaded = true,
             };
 
-            _runtimeMeshCache[meshAssetId] = cached;
+            _proceduralMeshCache[meshAssetId] = cached;
             return true;
         }
 
@@ -1029,36 +1096,99 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawCube(position, s, s, s, new Color(255, 0, 255, 255));
         }
 
-        private static Mesh CreateRuntimeMesh(RuntimeMeshAssetData runtimeMesh)
+        private static Mesh CreateProceduralMesh(ProceduralMeshAssetData proceduralMesh)
+        {
+            return CreateProceduralMeshSlice(proceduralMesh, indexStart: 0, indexCount: proceduralMesh.IndexCount);
+        }
+
+        private static Mesh[] CreateProceduralSubmeshMeshes(ProceduralMeshAssetData proceduralMesh)
+        {
+            var submeshMeshes = new Mesh[proceduralMesh.SubmeshCount];
+            for (int i = 0; i < submeshMeshes.Length; i++)
+            {
+                ProceduralSubmeshDescriptor submesh = proceduralMesh.Submeshes[i];
+                submeshMeshes[i] = CreateProceduralMeshSlice(proceduralMesh, submesh.IndexStart, submesh.IndexCount);
+            }
+
+            return submeshMeshes;
+        }
+
+        private static Mesh CreateProceduralMeshSlice(ProceduralMeshAssetData proceduralMesh, int indexStart, int indexCount)
         {
             Mesh mesh = new Mesh();
-            mesh.vertexCount = runtimeMesh.VertexCount;
-            mesh.triangleCount = runtimeMesh.VertexCount / 3;
+            mesh.vertexCount = proceduralMesh.VertexCount;
+            mesh.triangleCount = indexCount / 3;
 
-            int vertexFloatCount = runtimeMesh.VertexCount * 3;
-            int colorByteCount = runtimeMesh.VertexCount * 4;
+            int vertexFloatCount = proceduralMesh.VertexCount * 3;
+            int tangentFloatCount = proceduralMesh.VertexCount * 4;
+            int uvFloatCount = proceduralMesh.VertexCount * 2;
+            int colorByteCount = proceduralMesh.Colors32?.Length >= proceduralMesh.VertexCount * 4
+                ? proceduralMesh.VertexCount * 4
+                : 0;
 
             mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
             mesh.normals = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
-            mesh.colors = (byte*)Rl.MemAlloc(sizeof(byte) * colorByteCount);
+            mesh.tangents = (float*)Rl.MemAlloc(sizeof(float) * tangentFloatCount);
+            mesh.texcoords = (float*)Rl.MemAlloc(sizeof(float) * uvFloatCount);
+            mesh.indices = (ushort*)Rl.MemAlloc(sizeof(ushort) * indexCount);
+            if (colorByteCount > 0)
+            {
+                mesh.colors = (byte*)Rl.MemAlloc(sizeof(byte) * colorByteCount);
+            }
 
-            runtimeMesh.Vertices.AsSpan(0, vertexFloatCount).CopyTo(new Span<float>(mesh.vertices, vertexFloatCount));
-            runtimeMesh.Normals.AsSpan(0, vertexFloatCount).CopyTo(new Span<float>(mesh.normals, vertexFloatCount));
-            runtimeMesh.Colors.AsSpan(0, colorByteCount).CopyTo(new Span<byte>(mesh.colors, colorByteCount));
+            proceduralMesh.Positions.AsSpan(0, vertexFloatCount).CopyTo(new Span<float>(mesh.vertices, vertexFloatCount));
+            proceduralMesh.Normals.AsSpan(0, vertexFloatCount).CopyTo(new Span<float>(mesh.normals, vertexFloatCount));
+            proceduralMesh.Tangents.AsSpan(0, tangentFloatCount).CopyTo(new Span<float>(mesh.tangents, tangentFloatCount));
+            proceduralMesh.Uv0.AsSpan(0, uvFloatCount).CopyTo(new Span<float>(mesh.texcoords, uvFloatCount));
+            for (int i = 0; i < indexCount; i++)
+            {
+                mesh.indices[i] = checked((ushort)proceduralMesh.Indices[indexStart + i]);
+            }
+
+            if (colorByteCount > 0 && proceduralMesh.Colors32 != null)
+            {
+                proceduralMesh.Colors32.AsSpan(0, colorByteCount).CopyTo(new Span<byte>(mesh.colors, colorByteCount));
+            }
 
             Rl.UploadMesh(ref mesh, false);
             return mesh;
         }
 
-        private void EnsureRuntimeMeshMaterial()
+        private static void UnloadProceduralMeshCache(in CachedProceduralMesh cached)
         {
-            if (_runtimeMeshMaterialLoaded)
+            if (!cached.Loaded)
             {
                 return;
             }
 
-            _runtimeMeshMaterial = Rl.LoadMaterialDefault();
-            _runtimeMeshMaterialLoaded = true;
+            if (cached.Mesh.vertexCount > 0)
+            {
+                Rl.UnloadMesh(cached.Mesh);
+            }
+
+            if (cached.SubmeshMeshes == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < cached.SubmeshMeshes.Length; i++)
+            {
+                if (cached.SubmeshMeshes[i].vertexCount > 0)
+                {
+                    Rl.UnloadMesh(cached.SubmeshMeshes[i]);
+                }
+            }
+        }
+
+        private void EnsureProceduralMeshMaterial()
+        {
+            if (_proceduralMeshMaterialLoaded)
+            {
+                return;
+            }
+
+            _proceduralMeshMaterial = Rl.LoadMaterialDefault();
+            _proceduralMeshMaterialLoaded = true;
         }
 
         private static void DrawWireBox(Vector3 center, Vector3 size, float yawRad, Vector4 color)
@@ -1381,14 +1511,12 @@ namespace Ludots.Client.Raylib.Rendering
             }
             _modelCache.Clear();
 
-            foreach (var kvp in _runtimeMeshCache)
+            foreach (var kvp in _proceduralMeshCache)
             {
-                if (kvp.Value.Loaded && kvp.Value.Mesh.vertexCount > 0)
-                {
-                    Rl.UnloadMesh(kvp.Value.Mesh);
-                }
+                CachedProceduralMesh cached = kvp.Value;
+                UnloadProceduralMeshCache(in cached);
             }
-            _runtimeMeshCache.Clear();
+            _proceduralMeshCache.Clear();
 
             foreach (var kvp in _textureCache)
             {
@@ -1397,10 +1525,10 @@ namespace Ludots.Client.Raylib.Rendering
             }
             _textureCache.Clear();
 
-            if (_runtimeMeshMaterialLoaded)
+            if (_proceduralMeshMaterialLoaded)
             {
-                Rl.UnloadMaterial(_runtimeMeshMaterial);
-                _runtimeMeshMaterialLoaded = false;
+                Rl.UnloadMaterial(_proceduralMeshMaterial);
+                _proceduralMeshMaterialLoaded = false;
             }
 
             if (!_initialized) return;
@@ -1424,10 +1552,12 @@ namespace Ludots.Client.Raylib.Rendering
             public float AspectRatio;
         }
 
-        private struct CachedRuntimeMesh
+        private struct CachedProceduralMesh
         {
             public Mesh Mesh;
+            public Mesh[]? SubmeshMeshes;
             public int Generation;
+            public int SubmeshCount;
             public bool Loaded;
         }
 

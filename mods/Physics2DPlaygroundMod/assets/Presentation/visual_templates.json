@@ -3,7 +3,7 @@
     "id": "physics2d.playground.box",
     "renderPath": "StaticMesh",
     "meshAssetId": "cube",
-    "materialId": 0,
+    "materialId": "default_surface",
     "baseScale": 1.0,
     "mobility": "Movable",
     "visibleByDefault": true
@@ -12,7 +12,7 @@
     "id": "physics2d.playground.sphere",
     "renderPath": "StaticMesh",
     "meshAssetId": "sphere",
-    "materialId": 0,
+    "materialId": "default_surface",
     "baseScale": 1.0,
     "mobility": "Movable",
     "visibleByDefault": true

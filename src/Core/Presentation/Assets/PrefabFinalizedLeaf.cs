@@ -13,7 +13,10 @@ namespace Ludots.Core.Presentation.Assets
             in Vector3 position,
             in Quaternion rotation,
             in Vector3 scale,
-            in Vector4 color)
+            in Vector4 color,
+            int materialId = 0,
+            PrefabMaterialBinding[]? materialBindings = null,
+            in ProceduralMeshBounds localBounds = default)
         {
             MeshAssetId = meshAssetId;
             Descriptor = descriptor;
@@ -22,7 +25,9 @@ namespace Ludots.Core.Presentation.Assets
             Rotation = rotation;
             Scale = scale;
             Color = color;
-            _visual = PrefabFinalizedVisual.Mesh(meshAssetId, descriptor, stableId, position, rotation, scale, color);
+            _visual = descriptor.Type == MeshAssetType.ProceduralMesh
+                ? PrefabFinalizedVisual.ProceduralMesh(meshAssetId, descriptor, stableId, position, rotation, scale, color, materialBindings ?? System.Array.Empty<PrefabMaterialBinding>(), localBounds)
+                : PrefabFinalizedVisual.Mesh(meshAssetId, descriptor, stableId, position, rotation, scale, color, materialId, materialBindings, localBounds);
         }
 
         public int MeshAssetId { get; }

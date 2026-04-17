@@ -275,6 +275,152 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void ProceduralMeshAssetData_Commit_RequiresNormalsTangentsUvBoundsAndTriangleIndices()
+        {
+            var mesh = new ProceduralMeshAssetData(
+                maxVertexCount: 4,
+                maxIndexCount: 6,
+                maxSubmeshCount: 1,
+                includeUv1: false,
+                includeColors32: false);
+
+            mesh.Positions[0] = 0f;
+            mesh.Positions[1] = 0f;
+            mesh.Positions[2] = 0f;
+            mesh.Positions[3] = 1f;
+            mesh.Positions[4] = 0f;
+            mesh.Positions[5] = 0f;
+            mesh.Positions[6] = 0f;
+            mesh.Positions[7] = 0f;
+            mesh.Positions[8] = 1f;
+            mesh.Indices[0] = 0;
+            mesh.Indices[1] = 1;
+            mesh.Indices[2] = 2;
+
+            Assert.Throws<InvalidOperationException>(() =>
+                mesh.Commit(
+                    vertexCount: 3,
+                    indexCount: 3,
+                    new[] { new ProceduralSubmeshDescriptor(0, 3, materialAssetId: 1) },
+                    new ProceduralMeshBounds(Vector3.Zero, new Vector3(0.5f, 0.5f, 0.5f)),
+                    ProceduralMeshUsageHint.Static));
+
+            for (int i = 0; i < 9; i++)
+            {
+                mesh.Normals[i] = i % 3 == 1 ? 1f : 0f;
+            }
+
+            for (int i = 0; i < 12; i++)
+            {
+                mesh.Tangents[i] = i % 4 == 0 ? 1f : 0f;
+            }
+
+            for (int i = 0; i < 6; i++)
+            {
+                mesh.Uv0[i] = 0.5f;
+            }
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                mesh.Commit(
+                    vertexCount: 3,
+                    indexCount: 4,
+                    new[] { new ProceduralSubmeshDescriptor(0, 3, materialAssetId: 1) },
+                    new ProceduralMeshBounds(Vector3.Zero, new Vector3(0.5f, 0.5f, 0.5f)),
+                    ProceduralMeshUsageHint.Static));
+
+            Assert.Throws<InvalidOperationException>(() =>
+                mesh.Commit(
+                    vertexCount: 3,
+                    indexCount: 3,
+                    new[] { new ProceduralSubmeshDescriptor(0, 3, materialAssetId: 1) },
+                    new ProceduralMeshBounds(Vector3.Zero, Vector3.Zero),
+                    ProceduralMeshUsageHint.Static));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_ProceduralMeshVisual_CarriesBoundsAndMaterialBindings()
+        {
+            var meshes = new MeshAssetRegistry();
+            var procedural = BuildTriangleProceduralMesh(
+                materialIds: new[] { 11, 12 },
+                splitIntoTwoSubmeshes: true);
+            int proceduralId = meshes.Register("mesh.procedural", MeshAssetDescriptor.Procedural(0, procedural));
+            int prefabId = meshes.Register(
+                "prefab.procedural",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        Kind = PrefabVisualPartKind.ProceduralMesh,
+                        MeshAssetId = proceduralId,
+                        LocalPosition = new Vector3(1f, 2f, 3f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = new Vector3(2f, 2f, 2f),
+                        ColorTint = new Vector4(0.5f, 0.75f, 1f, 1f),
+                    }));
+
+            var output = new PrefabFinalizedVisualBuffer();
+            PrefabFinalizationPipeline.FinalizeVisuals(
+                meshes,
+                prefabId,
+                stableId: 77,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                color: Vector4.One,
+                output);
+
+            Assert.That(output.Count, Is.EqualTo(1));
+            ref readonly PrefabFinalizedVisual visual = ref output.GetSpan()[0];
+            Assert.That(visual.Kind, Is.EqualTo(PrefabVisualPartKind.ProceduralMesh));
+            Assert.That(visual.MeshAssetId, Is.EqualTo(proceduralId));
+            Assert.That(visual.MaterialBindings, Is.Not.Null);
+            Assert.That(visual.MaterialBindings!.Length, Is.EqualTo(2));
+            Assert.That(visual.MaterialBindings[0].MaterialAssetId, Is.EqualTo(11));
+            Assert.That(visual.MaterialBindings[1].MaterialAssetId, Is.EqualTo(12));
+            Assert.That(visual.LocalBounds.Center, Is.EqualTo(procedural.LocalBounds.Center));
+            Assert.That(visual.LocalBounds.Extents, Is.EqualTo(procedural.LocalBounds.Extents));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_ProceduralMeshRejectsMultiSubmeshInstanceMaterialOverride()
+        {
+            var meshes = new MeshAssetRegistry();
+            var procedural = BuildTriangleProceduralMesh(
+                materialIds: new[] { 21, 22 },
+                splitIntoTwoSubmeshes: true);
+            int proceduralId = meshes.Register("mesh.procedural.multi", MeshAssetDescriptor.Procedural(0, procedural));
+            int prefabId = meshes.Register(
+                "prefab.procedural.override",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        Kind = PrefabVisualPartKind.ProceduralMesh,
+                        MeshAssetId = proceduralId,
+                        MaterialId = 99,
+                        LocalPosition = Vector3.Zero,
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                    }));
+
+            var output = new PrefabFinalizedVisualBuffer();
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                PrefabFinalizationPipeline.FinalizeVisuals(
+                    meshes,
+                    prefabId,
+                    stableId: 80,
+                    position: Vector3.Zero,
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    color: Vector4.One,
+                    output));
+
+            Assert.That(ex!.Message, Does.Contain("cannot receive an instance material override"));
+        }
+
+        [Test]
         public void PresentationBehaviorResolver_ResolvesStateToTypedVisualOutputs()
         {
             var meshes = new MeshAssetRegistry();
@@ -827,6 +973,81 @@ namespace Ludots.Tests.Presentation
                         0, 100,
                         100, 200,
                     }));
+        }
+
+        private static ProceduralMeshAssetData BuildTriangleProceduralMesh(int[] materialIds, bool splitIntoTwoSubmeshes)
+        {
+            int submeshCount = splitIntoTwoSubmeshes ? materialIds.Length : 1;
+            var mesh = new ProceduralMeshAssetData(
+                maxVertexCount: 4,
+                maxIndexCount: 6,
+                maxSubmeshCount: submeshCount,
+                includeUv1: false,
+                includeColors32: true);
+
+            Vector3[] positions =
+            {
+                new(0f, 0f, 0f),
+                new(1f, 0f, 0f),
+                new(0f, 0f, 1f),
+                new(1f, 0f, 1f),
+            };
+
+            for (int i = 0; i < positions.Length; i++)
+            {
+                int posOffset = i * 3;
+                mesh.Positions[posOffset + 0] = positions[i].X;
+                mesh.Positions[posOffset + 1] = positions[i].Y;
+                mesh.Positions[posOffset + 2] = positions[i].Z;
+                mesh.Normals[posOffset + 0] = 0f;
+                mesh.Normals[posOffset + 1] = 1f;
+                mesh.Normals[posOffset + 2] = 0f;
+
+                int tangentOffset = i * 4;
+                mesh.Tangents[tangentOffset + 0] = 1f;
+                mesh.Tangents[tangentOffset + 1] = 0f;
+                mesh.Tangents[tangentOffset + 2] = 0f;
+                mesh.Tangents[tangentOffset + 3] = 1f;
+
+                int uvOffset = i * 2;
+                mesh.Uv0[uvOffset + 0] = i % 2;
+                mesh.Uv0[uvOffset + 1] = i / 2;
+
+                if (mesh.Colors32 != null)
+                {
+                    int colorOffset = i * 4;
+                    mesh.Colors32[colorOffset + 0] = 255;
+                    mesh.Colors32[colorOffset + 1] = 255;
+                    mesh.Colors32[colorOffset + 2] = 255;
+                    mesh.Colors32[colorOffset + 3] = 255;
+                }
+            }
+
+            mesh.Indices[0] = 0;
+            mesh.Indices[1] = 2;
+            mesh.Indices[2] = 1;
+            mesh.Indices[3] = 1;
+            mesh.Indices[4] = 2;
+            mesh.Indices[5] = 3;
+
+            ProceduralSubmeshDescriptor[] submeshes = splitIntoTwoSubmeshes
+                ? new[]
+                {
+                    new ProceduralSubmeshDescriptor(0, 3, materialIds[0]),
+                    new ProceduralSubmeshDescriptor(3, 3, materialIds[1]),
+                }
+                : new[]
+                {
+                    new ProceduralSubmeshDescriptor(0, 6, materialIds[0]),
+                };
+
+            mesh.Commit(
+                vertexCount: 4,
+                indexCount: 6,
+                submeshes,
+                new ProceduralMeshBounds(new Vector3(0.5f, 0f, 0.5f), new Vector3(0.5f, 0.1f, 0.5f)),
+                ProceduralMeshUsageHint.Static);
+            return mesh;
         }
 
         private static ChunkedVisualHeightmapRuntime CreateChunkedRuntime(bool includeRightChunk)

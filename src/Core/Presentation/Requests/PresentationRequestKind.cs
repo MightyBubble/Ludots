@@ -7,5 +7,6 @@ namespace Ludots.Core.Presentation.Requests
         GroundOverlay = 3,
         WorldHud = 4,
         RoadSpline = 5,
+        SurfaceSource = 6,
     }
 }

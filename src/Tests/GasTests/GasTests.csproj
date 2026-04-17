@@ -62,6 +62,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\minimap\MinimapShowcaseMod\MinimapShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\chunk_streaming\ChunkStreamingShowcaseMod\ChunkStreamingShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\road_network\RoadNetworkShowcaseMod\RoadNetworkShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\spline_surface_uat\SplineSurfaceUatMod\SplineSurfaceUatMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\ux_prototype\UxPrototypeMod\UxPrototypeMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\item_system\ItemSystemShowcaseMod\ItemSystemShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\rts_training_war3\RtsWar3TrainingShowcaseMod\RtsWar3TrainingShowcaseMod.csproj" />

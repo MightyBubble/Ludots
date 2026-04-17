@@ -3,7 +3,7 @@
     "id": "core.character.hero_skinned",
     "renderPath": "SkinnedMesh",
     "meshAssetId": "sphere",
-    "materialId": 0,
+    "materialId": "default_surface",
     "baseScale": 0.9,
     "mobility": "Movable",
     "visibleByDefault": true,
@@ -13,7 +13,7 @@
     "id": "core.prop.dummy_static",
     "renderPath": "StaticMesh",
     "meshAssetId": "cube",
-    "materialId": 0,
+    "materialId": "default_surface",
     "baseScale": 0.8,
     "mobility": "Movable",
     "visibleByDefault": true
@@ -22,7 +22,7 @@
     "id": "core.foliage.tree_pine_hism",
     "renderPath": "HierarchicalInstancedStaticMesh",
     "meshAssetId": "sphere",
-    "materialId": 0,
+    "materialId": "default_surface",
     "baseScale": 1.2,
     "mobility": "Static",
     "visibleByDefault": true

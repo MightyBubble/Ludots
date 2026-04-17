@@ -106,7 +106,117 @@ namespace Ludots.Core.Presentation.Config
                 Bindings = ParseBindings(node["bindings"]),
             };
 
+            if (def.VisualKind == PerformerVisualKind.SurfaceSource)
+            {
+                def.Surface = ParseSurface(node["surface"], key);
+            }
+            else if (node["surface"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Performer '{key}' declares a surface block but visualKind '{def.VisualKind}' is not '{PerformerVisualKind.SurfaceSource}'.");
+            }
+
             return (key, def);
+        }
+
+        private SurfaceAuthoringBlock ParseSurface(JsonNode? node, string key)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException(
+                    $"Performer '{key}' uses visualKind '{PerformerVisualKind.SurfaceSource}' but is missing required object field 'surface'.");
+            }
+
+            return new SurfaceAuthoringBlock
+            {
+                Kind = ParseEnum(obj["kind"]?.GetValue<string>(), PerformerSurfaceKind.SplineRibbon),
+                ProfileId = obj["profileId"]?.GetValue<string>() ?? string.Empty,
+                GeometrySource = ParseSurfaceGeometrySource(obj["geometrySource"], key),
+                ChunkBake = ParseChunkBakePolicy(obj["chunkBake"], key),
+                MaterialSet = ParseMaterialSet(obj["materialSet"], key),
+                LodProfileId = obj["lodProfileId"]?.GetValue<string>() ?? string.Empty,
+                Grounding = ParseGroundingPolicy(obj["grounding"]),
+                BoundsPolicy = obj["boundsPolicy"]?.GetValue<string>() ?? string.Empty,
+            };
+        }
+
+        private PerformerSurfaceGeometrySource ParseSurfaceGeometrySource(JsonNode? node, string key)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"SurfaceSource performer '{key}' must declare object field 'surface.geometrySource'.");
+            }
+
+            return new PerformerSurfaceGeometrySource
+            {
+                ControlPointSource = ParseSurfaceValueSource(obj["controlPointSource"]),
+                WidthSource = ParseSurfaceValueSource(obj["widthSource"]),
+                FlowDirectionSource = ParseSurfaceValueSource(obj["flowDirectionSource"]),
+                SegmentationPolicy = obj["segmentationPolicy"]?.GetValue<string>() ?? string.Empty,
+                BoundaryPointSource = ParseSurfaceValueSource(obj["boundaryPointSource"]),
+                TriangulationPolicy = obj["triangulationPolicy"]?.GetValue<string>() ?? string.Empty,
+                MeshPayloadSource = ParseSurfaceValueSource(obj["meshPayloadSource"]),
+            };
+        }
+
+        private PerformerSurfaceChunkBakePolicy ParseChunkBakePolicy(JsonNode? node, string key)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"SurfaceSource performer '{key}' must declare object field 'surface.chunkBake'.");
+            }
+
+            return new PerformerSurfaceChunkBakePolicy
+            {
+                Enabled = obj["enabled"]?.GetValue<bool>() ?? true,
+                Ownership = ParseEnum(obj["ownership"]?.GetValue<string>(), PerformerSurfaceChunkOwnership.PerChunk),
+                ChunkInfluencePolicy = obj["chunkInfluencePolicy"]?.GetValue<string>() ?? string.Empty,
+                RebakePolicy = obj["rebakePolicy"]?.GetValue<string>() ?? string.Empty,
+                UsageHint = ParseEnum(obj["usageHint"]?.GetValue<string>(), Assets.ProceduralMeshUsageHint.Static),
+            };
+        }
+
+        private PerformerSurfaceMaterialSet ParseMaterialSet(JsonNode? node, string key)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"SurfaceSource performer '{key}' must declare object field 'surface.materialSet'.");
+            }
+
+            return new PerformerSurfaceMaterialSet
+            {
+                PrimaryMaterialId = obj["primaryMaterialId"]?.GetValue<string>() ?? string.Empty,
+                SecondaryMaterialId = obj["secondaryMaterialId"]?.GetValue<string>() ?? string.Empty,
+                AllowInstanceOverride = obj["allowInstanceOverride"]?.GetValue<bool>() ?? false,
+            };
+        }
+
+        private PerformerSurfaceGroundingPolicy ParseGroundingPolicy(JsonNode? node)
+        {
+            if (node is not JsonObject obj)
+            {
+                return new PerformerSurfaceGroundingPolicy();
+            }
+
+            return new PerformerSurfaceGroundingPolicy
+            {
+                Mode = obj["mode"]?.GetValue<string>() ?? string.Empty,
+            };
+        }
+
+        private PerformerSurfaceValueSource? ParseSurfaceValueSource(JsonNode? node)
+        {
+            if (node is not JsonObject obj)
+            {
+                return null;
+            }
+
+            return new PerformerSurfaceValueSource
+            {
+                Kind = ParseEnum(obj["kind"]?.GetValue<string>(), PerformerSurfaceValueSourceKind.Constant),
+                Id = obj["id"]?.GetValue<string>() ?? string.Empty,
+                GraphProgramId = obj["graphProgramId"]?.GetValue<int>() ?? 0,
+            };
         }
 
         private static void RejectLegacyFields(JsonNode node, string key)

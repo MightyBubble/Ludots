@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -108,17 +109,18 @@ namespace Ludots.Core.Presentation.Systems
             AnimationOverlayRequest animationOverlay = World.Has<AnimationOverlayRequest>(entity) ? World.Get<AnimationOverlayRequest>(entity) : default;
             PresentationRenderContract.ValidateRuntimeState("EntityVisualEmitSystem", visual, hasAnimatorComponent, animator, animationOverlay);
             VisualVisibility visibility = visual.ResolveVisibility(cullVisible);
+            ResolveRenderAsset(visual, lod, out int meshAssetId, out int materialId);
 
             var proxy = new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Entity,
-                MeshAssetId = visual.MeshAssetId,
+                MeshAssetId = meshAssetId,
                 Position = transform.Position,
                 Rotation = transform.Rotation,
                 Scale = scale,
                 Color = TeamColorResolver.Resolve(World, entity),
                 StableId = stableId,
-                MaterialId = visual.MaterialId,
+                MaterialId = materialId,
                 TemplateId = templateId,
                 AnimationProfileId = visual.AnimationProfileId,
                 RenderPath = visual.RenderPath,
@@ -130,6 +132,24 @@ namespace Ludots.Core.Presentation.Systems
                 LOD = lod,
             };
             _requests.Add(PresentationRequest.FromVisualProxy(entity, proxy));
+        }
+
+        private static void ResolveRenderAsset(in VisualRuntimeState visual, LODLevel lod, out int meshAssetId, out int materialId)
+        {
+            meshAssetId = visual.MeshAssetId;
+            materialId = visual.MaterialId;
+
+            if (!visual.LodProfile.HasValue || lod == LODLevel.Culled)
+            {
+                return;
+            }
+
+            VisualLodEntry entry = visual.LodProfile.Value.Resolve(lod);
+            meshAssetId = entry.MeshAssetId;
+            if (entry.MaterialOverrideId > 0)
+            {
+                materialId = entry.MaterialOverrideId;
+            }
         }
     }
 }
