@@ -33,8 +33,8 @@ T3 PerformerCommand 扩展（7 种 CommandKind）
 
 T12 GlobalEventBridgeSystem（日夜/区域/天气）── 可与 T9 并行
 T16 VisualRenderPayload 提取（渲染三重镜像整合）── 可与 T11 并行
-T17 遗留代码清理（删除 EntityVisualEmitSystem / BuiltinPerformerDefinitions / Perform 命名空间 / Prefab 系统）── T15 之后
-T18 UE5 适配 ── T17 之后
+T17 遗留代码清理（阶段性删除 BuiltinPerformerDefinitions / PerformerVisualKind / Perform 命名空间；EntityVisualEmitSystem / Prefab / VisualTemplate 仍为现役遗留通道）── T15 之后
+T18 UE5 适配 ── T17 剩余遗留通道完成后
 ```
 
 ## 看板任务列表
@@ -43,7 +43,7 @@ T18 UE5 适配 ── T17 之后
 
 | ID | 任务 | 产出文件 | 验收标准 | 状态 |
 |----|------|---------|---------|------|
-| T1 | BehaviorSlot + AssetKind + SplineConfig 类型定义 | `Performers/BehaviorSlot.cs`, `Performers/AssetKind.cs` | `dotnet build` 通过；BehaviorKind 8 种、AssetKind 8 种、所有 Config struct 字段与架构文档一致 | **通过** |
+| T1 | BehaviorSlot + AssetKind + SplineConfig 类型定义 | `Performers/BehaviorSlot.cs`, `Performers/AssetKind.cs` | `dotnet build` 通过；BehaviorKind 8 种、AssetKind 9 种（含 `GroundOverlay=9`）、所有 Config struct 字段与架构文档一致 | **通过** |
 | T2 | PerformerParamBlackboard 多类型三 lane | `Performers/PerformerParamBlackboard.cs` | 单元测试：SetFloat/SetInt/SetVector + ResolveFloat 父→子继承链 + ClearAll | **通过** |
 | T3 | PerformerCommand 重写 | `Performers/PerformerCommand.cs` | 独立 PerformerCommandKind 枚举（7 种）；多类型 SetParam 字段；`dotnet build` 通过 | **通过** |
 
@@ -96,7 +96,7 @@ T18 UE5 适配 ── T17 之后
 
 | ID | 严重度 | 描述 |
 |----|--------|------|
-| T6-F1 | HIGH | ConfigLoader 中存在 8 处 fallback 别名（详见下方完整清单），每个 JSON 字段只应有一个规范名 |
+| T6-F1 | HIGH | ConfigLoader 中存在 8 处别名解析（详见下方完整清单），每个 JSON 字段只应有一个规范名，多名称输入必须拒绝 |
 | T6-F2 | HIGH | PerformerScopeTagRegistry 被滥用为通用 string→int 注册表（line 978, 1002），resolver 返回 0 时应 throw 或保持 0 |
 | T6-F3 | HIGH | 缺少 ConfigLoader 专项单元测试（children 展开、extends 继承、behavior 解析、无效字段、循环继承） |
 
@@ -119,7 +119,7 @@ T18 UE5 适配 ── T17 之后
 
 #### JSON 迁移范围
 
-现有 mod JSON 文件中 `sourceId` 用于 ValueRef 绑定（graph/entityColor），这是该上下文的规范名，不需要迁移。仅 `ResolveAttributeId` 中的 `sourceId` 别名需要删除（attribute 上下文应使用 `attributeId` 或 `attributeName`）。其余别名（`tag`、`value`、`splinePathId` 等）目前无 mod JSON 使用，删除别名即可，无需迁移。
+现有 mod JSON 文件中 `sourceId` 用于 ValueRef 绑定（graph/entityColor），这是该上下文的规范名，不需要迁移。仅 `ResolveAttributeId` 中的 `sourceId` 别名需要删除（attribute 上下文应使用 `attributeId` 或 `attributeName`）。其余别名（`tag`、`value`、`splinePathId` 等）目前无 mod JSON 使用，删除别名即可，无需迁移；后续若输入旧字段名，应直接拒绝加载。
 
 #### 跨里程碑别名治理规则
 
@@ -141,15 +141,15 @@ T18 UE5 适配 ── T17 之后
 |----|------|------|---------|---------|------|
 | T9 | PerformerBehaviorSystem | T7, T8 | `Systems/PerformerBehaviorSystem.cs` | 单元测试：AttributeBinding 读属性→写 param + 阈值映射；TagBinding tag on/off→param；Material param→materialId 查表；Sound 请求发射/停止 | L |
 | T10 | Animator 参数统一 | T7 | 修改 `Systems/AnimatorRuntimeSystem.cs` | 单元测试：Animator 从 blackboard 读 speed/trigger；AnimatorFeedback 写回 blackboard；删除 AnimatorParameterBuffer 后 build 通过 | M |
-| T11 | PerformerEmitSystem 重写 | T9 | `Systems/PerformerEmitSystem.cs` | ~200 行；只处理 AssetBinding emit；单元测试：Mesh/SkinnedMesh/Decal/VFX/Spline/WorldHud/WorldText 各 AssetKind 发射正确的 proxy | L |
+| T11 | PerformerEmitSystem 重写 | T9 | `Systems/PerformerEmitSystem.cs` | ~200 行；只处理 AssetBinding emit；单元测试：Mesh/SkinnedMesh/Decal/VFX/Spline/WorldHud/WorldText/GroundOverlay 各 AssetKind 发射正确的 proxy | L |
 | T12 | GlobalEventBridgeSystem | T3 | `Systems/GlobalEventBridgeSystem.cs` | 单元测试：日夜/区域/天气事件正确发射到 PresentationEventStream | S |
 
 ### Wave 5 — Raylib UAT（依赖 Wave 4）
 
 | ID | 任务 | 依赖 | 产出文件 | 验收标准 | 预估 |
 |----|------|------|---------|---------|------|
-| T13 | Raylib UAT Layer 1 — 逐 AssetKind | T11 | `Tests/PresentationTests/PerformerAssetKindTests.cs` | 7 个 AssetKind 各一个渲染验证测试通过（详见 performer-raylib-uat.md §1-5） | M |
-| T14 | Raylib UAT Layer 2 — 逐 BehaviorKind | T9, T10 | `Tests/PresentationTests/PerformerBehaviorKindTests.cs` | 9 个 BehaviorKind 各一个驱动验证测试通过（详见 performer-raylib-uat.md §6-11） | M |
+| T13 | Raylib UAT Layer 1 — 逐 AssetKind | T11 | `Tests/PresentationTests/PerformerAssetKindTests.cs` | 9 个 AssetKind 各一个渲染验证测试通过（详见 performer-raylib-uat.md §1-5） | M |
+| T14 | Raylib UAT Layer 2 — 逐 BehaviorKind | T9, T10 | `Tests/PresentationTests/PerformerBehaviorKindTests.cs` | 8 个 BehaviorKind 各一个驱动验证测试通过（详见 performer-raylib-uat.md §6-11） | M |
 | T15 | Raylib UAT Layer 3 — 铁匠铺完整 | T13, T14 | `Tests/PresentationTests/BlacksmithPerformerUatTests.cs`, `mods/fixtures/blacksmith/` | 9 个铁匠铺场景全部通过（详见 performer-raylib-uat.md §13） | L |
 
 ### Wave 6 — 整合与清理（依赖 Wave 5）
@@ -157,8 +157,8 @@ T18 UE5 适配 ── T17 之后
 | ID | 任务 | 依赖 | 产出文件 | 验收标准 | 预估 |
 |----|------|------|---------|---------|------|
 | T16 | VisualRenderPayload 提取 | T11 | 修改 `Rendering/PresentationVisualProxy.cs` 等 | 提取 13 字段公共 struct；ProxyEmitter 改为 payload 整体赋值；`dotnet build` + 现有测试通过 | M |
-| T17 | 遗留代码清理 | T15 | 删除 ~20 个文件 | 删除 EntityVisualEmitSystem / BuiltinPerformerDefinitions / EntityScopeFilter / PerformerVisualKind / Perform 命名空间 / Prefab 系统 / VisualTemplate 系统；`dotnet build` + 全量测试通过 | L |
-| T18 | UE5 适配 | T17 | 修改 UE5 adapter | 6 种 AssetKind 到 UE5 渲染的映射；跑铁匠铺 UAT JSON 通过 | XL |
+| T17 | 遗留代码清理 | T15 | 删除旧 Perform/VisualKind 文件，保留剩余清理清单 | 已删除 `BuiltinPerformerDefinitions` / `PerformerVisualKind` / `PerformerVisualIdentity` / `Presentation.Perform` 命名空间旧文件；`EntityVisualEmitSystem` / `Prefab*` / `VisualTemplate*` / `PresentationBehavior*` 仍被现役地图、Prefab 测试、Projection/Physics2D/Camera showcase 使用，不能在本波假报完成；`dotnet build` + 聚焦测试通过 | L |
+| T18 | UE5 适配 | T17 剩余清理完成后 | 修改 UE5 adapter | 9 种 AssetKind 到 UE5 渲染的映射；跑铁匠铺 UAT JSON 通过 | XL |
 
 ## Codex 开发 → 验收流程
 
@@ -183,5 +183,5 @@ T18 UE5 适配 ── T17 之后
 | M2 实例树可运行 | T4-T7 全部通过 | Wave 1-3 |
 | M3 行为系统可运行 | T8-T12 全部通过 | Wave 1-4 |
 | M4 Raylib UAT 全绿 | T13-T15 全部通过 | Wave 1-5 |
-| M5 清理完成 | T16-T17 全部通过 | Wave 1-6 |
+| M5 清理阶段完成 | T16 通过，T17 已完成安全删除子集且剩余现役遗留通道有清单 | Wave 1-6 |
 | M6 UE5 适配完成 | T18 通过 | 全部 |

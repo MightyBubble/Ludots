@@ -1,11 +1,15 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -14,10 +18,12 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -271,7 +277,7 @@ namespace Ludots.Tests.Presentation
             _defs = new PerformerDefinitionRegistry();
             _programs = new GraphProgramRegistry();
             var api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null);
-            _system = new PerformerRuleSystem(_world, _events, _commands, _defs, _programs, api, new System.Collections.Generic.Dictionary<string, object>());
+            _system = new PerformerRuleSystem(_world, _events, _commands, _defs, instances: null, _programs, api, new System.Collections.Generic.Dictionary<string, object>());
         }
 
         [TearDown]
@@ -291,7 +297,6 @@ namespace Ludots.Tests.Presentation
         {
             var def = new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 Rules = new[]
                 {
                     new PerformerRule
@@ -331,7 +336,6 @@ namespace Ludots.Tests.Presentation
         {
             var def = new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 Rules = new[]
                 {
                     new PerformerRule
@@ -394,10 +398,9 @@ namespace Ludots.Tests.Presentation
             _events = new PresentationEventStream();
             _instances = new PerformerInstanceBuffer();
             _definitions = new PerformerDefinitionRegistry();
-            var prefabs = new Ludots.Core.Presentation.Assets.PrefabRegistry();
             var markers = new TransientMarkerBuffer();
             _requests = new PresentationRequestBuffer();
-            _system = new PerformerRuntimeSystem(_world, prefabs, _commands, _events, markers, _requests, _instances, new Ludots.Core.Presentation.PresentationStableIdAllocator(), _definitions);
+            _system = new PerformerRuntimeSystem(_world, _commands, _events, markers, _requests, _instances, new Ludots.Core.Presentation.PresentationStableIdAllocator(), _definitions);
         }
 
         [TearDown]
@@ -418,7 +421,6 @@ namespace Ludots.Tests.Presentation
             var owner = _world.Create();
             _definitions.Register("test.runtime.basic", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = 1f,
             });
             _commands.TryAdd(new PerformerCommand
@@ -442,7 +444,6 @@ namespace Ludots.Tests.Presentation
             var owner = _world.Create();
             _definitions.Register("test.runtime.scope", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = -1f,
             });
             _commands.TryAdd(new PerformerCommand
@@ -473,7 +474,6 @@ namespace Ludots.Tests.Presentation
         {
             _definitions.Register("test.runtime.dead_owner", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = -1f,
             });
             int defId = _definitions.GetId("test.runtime.dead_owner");
@@ -505,7 +505,6 @@ namespace Ludots.Tests.Presentation
         {
             _definitions.Register("test.runtime.persistent_scope", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = -1f,
             });
             int defId = _definitions.GetId("test.runtime.persistent_scope");
@@ -541,7 +540,6 @@ namespace Ludots.Tests.Presentation
             var owner = _world.Create();
             int parentDefId = _definitions.Register("test.runtime.parent", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = -1f,
                 ParamDefaults = new[]
                 {
@@ -550,7 +548,6 @@ namespace Ludots.Tests.Presentation
             });
             int childDefId = _definitions.Register("test.runtime.child", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = -1f,
                 ParamDefaults = new[]
                 {
@@ -596,7 +593,6 @@ namespace Ludots.Tests.Presentation
             var owner = _world.Create();
             int defId = _definitions.Register("test.runtime.param_lanes", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = -1f,
             });
 
@@ -648,7 +644,6 @@ namespace Ludots.Tests.Presentation
             var owner = _world.Create();
             int defId = _definitions.Register("test.runtime.behaviors", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = -1f,
                 Behaviors = new[]
                 {
@@ -799,17 +794,13 @@ namespace Ludots.Tests.Presentation
     }
 
     [TestFixture]
-    public class BuiltinPerformerDefinitionTests
+    public class CorePerformerDefinitionTests
     {
         [Test]
-        public void Register_AllBuiltinIds_Present()
+        public void LoadFromJson_AllCoreBuiltinIds_Present()
         {
-            var meshes = new MeshAssetRegistry();
             var registry = new PerformerDefinitionRegistry();
-            BuiltinPerformerDefinitions.Register(
-                registry,
-                meshes,
-                key => string.Equals(key, WellKnownHudTextKeys.CombatDelta, StringComparison.Ordinal) ? 1 : 0);
+            LoadCorePerformerDefinitions(registry);
 
             Assert.That(registry.TryGet(registry.GetId(WellKnownPerformerKeys.CastCommittedMarker), out _), Is.True);
             Assert.That(registry.TryGet(registry.GetId(WellKnownPerformerKeys.CastFailedMarker), out _), Is.True);
@@ -820,12 +811,8 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void FloatingCombatText_HasYDriftAndAlphaFade()
         {
-            var meshes = new MeshAssetRegistry();
             var registry = new PerformerDefinitionRegistry();
-            BuiltinPerformerDefinitions.Register(
-                registry,
-                meshes,
-                key => string.Equals(key, WellKnownHudTextKeys.CombatDelta, StringComparison.Ordinal) ? 1 : 0);
+            LoadCorePerformerDefinitions(registry);
             registry.TryGet(registry.GetId(WellKnownPerformerKeys.FloatingCombatText), out var def);
 
             Assert.That(def.PositionYDriftPerSecond, Is.GreaterThan(0f));
@@ -836,14 +823,58 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void EntityHealthBar_IsConfigDefined_NotBuiltin()
         {
-            var meshes = new MeshAssetRegistry();
             var registry = new PerformerDefinitionRegistry();
-            BuiltinPerformerDefinitions.Register(
-                registry,
-                meshes,
-                key => string.Equals(key, WellKnownHudTextKeys.CombatDelta, StringComparison.Ordinal) ? 1 : 0);
+            LoadCorePerformerDefinitions(registry);
 
-            Assert.That(registry.GetId(WellKnownPerformerKeys.EntityHealthBar), Is.EqualTo(0));
+            Assert.That(registry.GetId(WellKnownPerformerKeys.EntityHealthBar), Is.GreaterThan(0));
+        }
+
+        private static void LoadCorePerformerDefinitions(PerformerDefinitionRegistry registry)
+        {
+            string repoRoot = FindRepoRoot();
+            int healthAttrId = AttributeRegistry.Register("Health");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", Path.Combine(repoRoot, "assets"));
+
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            vfs.Mount("LudotsCoreMod", Path.Combine(repoRoot, "mods", "LudotsCoreMod"));
+            modLoader.LoadedModIds.Add("LudotsCoreMod");
+
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var meshes = new MeshAssetRegistry();
+            var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
+
+            new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveAttributeName: name => string.Equals(name, "Health", StringComparison.Ordinal) ? healthAttrId : 0,
+                resolveMeshId: meshes.GetId,
+                resolveTextTokenId: textCatalog.GetTokenId,
+                resolveBehaviorAssetId: (kind, key) => kind switch
+                {
+                    AssetKind.Mesh => meshes.GetId(key),
+                    AssetKind.WorldText => textCatalog.GetTokenId(key),
+                    _ => 0,
+                }).Load(catalog);
+        }
+
+        private static string FindRepoRoot()
+        {
+            string current = TestContext.CurrentContext.WorkDirectory;
+            while (!string.IsNullOrEmpty(current))
+            {
+                if (Directory.Exists(Path.Combine(current, "mods")) &&
+                    File.Exists(Path.Combine(current, "AGENTS.md")))
+                {
+                    return current;
+                }
+
+                current = Path.GetDirectoryName(current)!;
+            }
+
+            throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
     }
 
@@ -866,7 +897,7 @@ namespace Ludots.Tests.Presentation
             _defs = new PerformerDefinitionRegistry();
             _programs = new GraphProgramRegistry();
             var api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null);
-            _system = new PerformerRuleSystem(_world, _events, _commands, _defs, _programs, api, new System.Collections.Generic.Dictionary<string, object>());
+            _system = new PerformerRuleSystem(_world, _events, _commands, _defs, instances: null, _programs, api, new System.Collections.Generic.Dictionary<string, object>());
         }
 
         [TearDown]
@@ -881,7 +912,6 @@ namespace Ludots.Tests.Presentation
         {
             _defs.Register("test.lifecycle.mismatch", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.WorldBar,
                 Rules = new[]
                 {
                     new PerformerRule
@@ -917,7 +947,6 @@ namespace Ludots.Tests.Presentation
         {
             _defs.Register("test.lifecycle.match", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.WorldBar,
                 Rules = new[]
                 {
                     new PerformerRule
@@ -958,7 +987,6 @@ namespace Ludots.Tests.Presentation
         {
             _defs.Register("test.lifecycle.child", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.WorldBar,
                 Rules = new[]
                 {
                     new PerformerRule

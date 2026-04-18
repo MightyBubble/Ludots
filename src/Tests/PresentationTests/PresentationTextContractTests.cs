@@ -268,7 +268,18 @@ namespace Ludots.Tests.Presentation
                 @"[
   {
     ""id"": ""entity_world_text"",
-    ""visualKind"": ""WorldText"",
+    ""behaviors"": [
+      {
+        ""slot"": 0,
+        ""kind"": ""AssetBinding"",
+        ""activeByDefault"": true,
+        ""assetBinding"": {
+          ""assetKind"": ""WorldText"",
+          ""assetId"": ""hud.current_over_base"",
+          ""localScale"": [1, 1, 1]
+        }
+      }
+    ],
     ""bindings"": [
       { ""paramKey"": 15, ""source"": ""textToken"", ""textToken"": ""hud.current_over_base"" },
       { ""paramKey"": 16, ""source"": ""constant"", ""constantValue"": 1 }

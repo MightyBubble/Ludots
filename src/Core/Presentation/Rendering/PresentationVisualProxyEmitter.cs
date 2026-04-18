@@ -32,21 +32,9 @@ namespace Ludots.Core.Presentation.Rendering
 
             var primitive = new PrimitiveDrawItem
             {
-                MeshAssetId = proxy.MeshAssetId,
-                Position = proxy.Position,
-                Rotation = proxy.Rotation,
-                Scale = proxy.Scale,
-                Color = proxy.Color,
-                StableId = proxy.StableId,
-                MaterialId = proxy.MaterialId,
-                TemplateId = proxy.TemplateId,
-                AnimationProfileId = proxy.AnimationProfileId,
-                RenderPath = proxy.RenderPath,
+                Payload = proxy.Payload,
                 Mobility = proxy.Mobility,
                 Flags = proxy.Flags,
-                Animator = proxy.Animator,
-                AnimationOverlay = proxy.AnimationOverlay,
-                Visibility = proxy.Visibility,
                 LOD = proxy.LOD,
             };
 
@@ -60,19 +48,7 @@ namespace Ludots.Core.Presentation.Rendering
                 _skinnedBatchBuffer != null &&
                 !_skinnedBatchBuffer.TryAdd(new SkinnedVisualBatchItem
                 {
-                    StableId = proxy.StableId,
-                    MeshAssetId = proxy.MeshAssetId,
-                    MaterialId = proxy.MaterialId,
-                    TemplateId = proxy.TemplateId,
-                    AnimationProfileId = proxy.AnimationProfileId,
-                    RenderPath = proxy.RenderPath,
-                    Position = proxy.Position,
-                    Rotation = proxy.Rotation,
-                    Scale = proxy.Scale,
-                    Color = proxy.Color,
-                    Animator = proxy.Animator,
-                    AnimationOverlay = proxy.AnimationOverlay,
-                    Visibility = proxy.Visibility,
+                    Payload = proxy.Payload,
                     LOD = proxy.LOD,
                 }))
             {

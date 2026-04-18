@@ -1,24 +1,29 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -78,17 +83,14 @@ namespace Ludots.Tests.Presentation
 
             _healthAttrId = AttributeRegistry.Register("Health");
 
-            BuiltinPerformerDefinitions.Register(
-                _defs,
-                new MeshAssetRegistry(),
-                key => string.Equals(key, WellKnownHudTextKeys.CombatDelta, StringComparison.Ordinal) ? 1 : 0);
+            LoadCorePerformerDefinitions(_defs, _healthAttrId);
             _healthBarDefId = RegisterHealthBarDefinition(_defs, _healthAttrId);
 
             var session = new GameSession();
             var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
             _bridge = new PresentationBridgeSystem(_world, _eventBus, _presEvents, session, _gasEvents);
-            _ruleSystem = new PerformerRuleSystem(_world, _presEvents, _commands, _defs, _programs, graphApi, _globals);
-            _runtimeSystem = new PerformerRuntimeSystem(_world, new PrefabRegistry(), _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
+            _ruleSystem = new PerformerRuleSystem(_world, _presEvents, _commands, _defs, _instances, _programs, graphApi, _globals);
+            _runtimeSystem = new PerformerRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
             _behaviorSystem = new PerformerBehaviorSystem(_world, _instances, _defs, _presEvents, _soundRequests);
             _emitSystem = new PerformerEmitSystem(_world, _instances, _defs, _requests, _globals);
             _flush = new PresentationRequestFlushSystem(_world, _requests, new PrefabRegistry(), new MeshAssetRegistry(), _primitives, _overlays, _hud, _roadSplines);
@@ -151,7 +153,6 @@ namespace Ludots.Tests.Presentation
                 int defId = _defs.GetOrRegisterId($"bench.rule.{i}");
                 _defs.Register($"bench.rule.{i}", new PerformerDefinition
                 {
-                    VisualKind = PerformerVisualKind.Marker3D,
                     Rules = new[]
                     {
                         new PerformerRule
@@ -492,14 +493,13 @@ namespace Ludots.Tests.Presentation
             var commands = new PerformerCommandBuffer(16384);
                 var programs = new GraphProgramRegistry();
                 var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
-                using var system = new PerformerRuleSystem(_world, events, commands, defs, programs, graphApi, _globals);
+            using var system = new PerformerRuleSystem(_world, events, commands, defs, instances: null, programs, graphApi, _globals);
 
                 for (int d = 0; d < defCount; d++)
                 {
                     int defId = defs.GetOrRegisterId($"bench.scale.{d}");
                     defs.Register($"bench.scale.{d}", new PerformerDefinition
                     {
-                        VisualKind = PerformerVisualKind.Marker3D,
                         Rules = new[]
                         {
                             new PerformerRule
@@ -634,12 +634,56 @@ namespace Ludots.Tests.Presentation
                         }
                     }
                 },
-                VisualKind = PerformerVisualKind.WorldBar,
                 VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
                 DefaultColor = new Vector4(0f, 1f, 0f, 1f),
-                DefaultScale = 1f,
                 PositionOffset = new Vector3(0f, 1.5f, 0f),
             });
+        }
+
+        private static void LoadCorePerformerDefinitions(PerformerDefinitionRegistry defs, int healthAttrId)
+        {
+            string repoRoot = FindRepoRoot();
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", Path.Combine(repoRoot, "assets"));
+
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            vfs.Mount("LudotsCoreMod", Path.Combine(repoRoot, "mods", "LudotsCoreMod"));
+            modLoader.LoadedModIds.Add("LudotsCoreMod");
+
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var meshes = new MeshAssetRegistry();
+            var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
+
+            new PerformerDefinitionConfigLoader(
+                pipeline,
+                defs,
+                resolveAttributeName: name => string.Equals(name, "Health", StringComparison.Ordinal) ? healthAttrId : 0,
+                resolveMeshId: meshes.GetId,
+                resolveTextTokenId: textCatalog.GetTokenId,
+                resolveBehaviorAssetId: (kind, key) => kind switch
+                {
+                    AssetKind.Mesh => meshes.GetId(key),
+                    AssetKind.WorldText => textCatalog.GetTokenId(key),
+                    _ => 0,
+                }).Load(catalog);
+        }
+
+        private static string FindRepoRoot()
+        {
+            string current = TestContext.CurrentContext.WorkDirectory;
+            while (!string.IsNullOrEmpty(current))
+            {
+                if (Directory.Exists(Path.Combine(current, "mods")) &&
+                    File.Exists(Path.Combine(current, "AGENTS.md")))
+                {
+                    return current;
+                }
+
+                current = Path.GetDirectoryName(current)!;
+            }
+
+            throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
     }
 }

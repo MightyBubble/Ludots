@@ -130,6 +130,7 @@ public enum AssetKind : byte
     Mesh = 1, SkinnedMesh = 2, Decal = 3, VFX = 4, Sound = 5, Spline = 6,
     WorldHud = 7,    // 血条、名字板等世界空间 HUD
     WorldText = 8,   // 浮动战斗文字
+    GroundOverlay = 9, // 地面指示器（Circle/Cone/Line/Ring）
 }
 ```
 
@@ -139,7 +140,7 @@ public enum AssetKind : byte
 // ── Asset Binding：绑定一个可渲染资产 ──
 public struct AssetBindingConfig
 {
-    public AssetKind AssetKind;          // Mesh / SkinnedMesh / Decal / VFX / Sound / Spline
+    public AssetKind AssetKind;          // Mesh / SkinnedMesh / Decal / VFX / Sound / Spline / WorldHud / WorldText / GroundOverlay
     public int AssetId;                  // MeshAssetRegistry 中的 ID
     public int MaterialId;               // 默认材质
     public VisualRenderPath RenderPath;  // 渲染通道（从 VisualRuntimeState 迁入）
@@ -608,7 +609,7 @@ Performer 的 LOD 与 entity 仿真 LOD（`entity-simulation-layering.md`）协�
 | 血条/名字板 | 是 | AssetKind 扩展 `WorldHud`，PerformerEmitSystem 发射到 HudBuffer |
 | 浮动战斗文字 | 是 | 一次性 performer（DefaultLifetime > 0），AssetKind = WorldText |
 | 投射物视觉 | 是 | 投射物 entity 的 performer，AssetBinding(Mesh/VFX) + Spline(Patrol) |
-| 地面指示器 | 是 | AssetKind = Decal，GroundingMode = AlignToSurface |
+| 地面指示器 | 是 | AssetKind = GroundOverlay，GroundingMode = AlignToSurface |
 | 摄像机抖动/色调 | 否 | 走独立的 CameraEffectSystem，不属于 performer 职责 |
 
 ### 9.8 插值

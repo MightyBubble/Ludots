@@ -4,6 +4,8 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.Orders;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
@@ -150,8 +152,33 @@ namespace Ludots.Tests.GAS
         {
             _performerDefinitions.Register("test.preview", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
-                MeshOrShapeId = 1,
+                Behaviors = new[]
+                {
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            MaterialId = 0,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalRotation = Quaternion.Identity,
+                            LocalScale = Vector3.One,
+                            ScaleParamKey = -1,
+                            ColorParamKey = -1,
+                            MaterialParamKey = -1,
+                            AssetSwapParamKey = -1,
+                            VisibilityParamKey = -1,
+                            Grounding = GroundingMode.None,
+                            GroundingOffset = 0f,
+                        }
+                    }
+                },
                 DefaultLifetime = -1f
             });
 

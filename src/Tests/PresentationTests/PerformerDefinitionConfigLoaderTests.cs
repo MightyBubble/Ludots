@@ -7,6 +7,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
@@ -52,14 +53,13 @@ namespace Ludots.Tests.Presentation
             WritePerformers(
                 """
                 [
-                  { "id": "child_a", "visualKind": "Marker3D" },
+                  { "id": "child_a" },
                   {
                     "id": "base_unit",
-                    "visualKind": "Marker3D",
                     "rules": [
                       {
                         "event": { "kind": "GameplayEvent", "keyId": "Event.Base" },
-                        "command": { "kind": "DestroyPerformerScope", "scopeTag": "base" }
+                        "command": { "kind": "SetParam", "paramKey": 300, "paramLane": "Int", "valueSource": "EventKeyId" }
                       }
                     ],
                     "bindings": [
@@ -103,7 +103,6 @@ namespace Ludots.Tests.Presentation
                   {
                     "id": "knight",
                     "extends": "base_unit",
-                    "visualKind": "Marker3D",
                     "bindings": [
                       { "paramKey": 1, "source": "constant", "constantValue": 9 }
                     ],
@@ -154,8 +153,12 @@ namespace Ludots.Tests.Presentation
             Assert.That(knight.Children[0].ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("structure")));
             Assert.That(knight.Rules.Length, Is.EqualTo(2));
             Assert.That(knight.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.GameplayEvent));
-            Assert.That(knight.Rules[0].Command.ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("base")));
+            Assert.That(knight.Rules[0].Command.CommandKind, Is.EqualTo(PerformerCommandKind.SetParam));
+            Assert.That(knight.Rules[0].Command.ParamKey, Is.EqualTo(300));
+            Assert.That(knight.Rules[0].Command.ParamLane, Is.EqualTo(ParamLane.Int));
+            Assert.That(knight.Rules[0].Command.ValueSource, Is.EqualTo(PerformerCommandValueSource.EventKeyId));
             Assert.That(knight.Rules[1].Event.Kind, Is.EqualTo(PresentationEventKind.PerformerCreated));
+            Assert.That(knight.Rules[1].Event.KeyId, Is.EqualTo(knightId));
             Assert.That(knight.Rules[1].Command.PerformerDefinitionId, Is.EqualTo(registry.GetId("child_a")));
             Assert.That(knight.Bindings.Length, Is.EqualTo(1));
             Assert.That(knight.Bindings[0].Value.ConstantValue, Is.EqualTo(9f));
@@ -184,10 +187,9 @@ namespace Ludots.Tests.Presentation
             WritePerformers(
                 """
                 [
-                  { "id": "child_a", "visualKind": "Marker3D" },
+                  { "id": "child_a" },
                   {
                     "id": "root",
-                    "visualKind": "Marker3D",
                     "children": [
                       { "definitionId": "child_a", "scopeTag": "structure" }
                     ]
@@ -204,6 +206,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(registry.GetId("root"), out var root), Is.True);
             Assert.That(root.Rules.Length, Is.EqualTo(1));
             Assert.That(root.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.PerformerCreated));
+            Assert.That(root.Rules[0].Event.KeyId, Is.EqualTo(registry.GetId("root")));
             Assert.That(root.Rules[0].Command.CommandKind, Is.EqualTo(PerformerCommandKind.CreatePerformer));
             Assert.That(root.Rules[0].Command.PerformerDefinitionId, Is.EqualTo(registry.GetId("child_a")));
             Assert.That(root.Rules[0].Command.ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("structure")));
@@ -218,7 +221,6 @@ namespace Ludots.Tests.Presentation
                 [
                   {
                     "id": "base_unit",
-                    "visualKind": "Marker3D",
                     "rules": [
                       {
                         "event": { "kind": "GameplayEvent", "keyId": "Event.Base" },
@@ -236,7 +238,6 @@ namespace Ludots.Tests.Presentation
                   {
                     "id": "knight",
                     "extends": "base_unit",
-                    "visualKind": "Marker3D",
                     "rules": [
                       {
                         "event": { "kind": "GameplayEvent", "keyId": "Event.Child" },
@@ -287,7 +288,6 @@ namespace Ludots.Tests.Presentation
                   },
                   {
                     "id": "good_performer",
-                    "visualKind": "Marker3D",
                     "rules": [
                       {
                         "event": { "kind": "TagEffectiveChanged", "keyId": "Status.Working" },
@@ -310,15 +310,57 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_WorldTextDefaultTextIdAndAssetId_ResolveThroughTextTokenRegistry()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "floating_text",
+                    "defaultTextId": "hud.combat.delta",
+                    "legacyWorldTextMode": "AttributeCurrent",
+                    "behaviors": [
+                      {
+                        "slot": 0,
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "WorldText",
+                          "assetId": "hud.combat.delta"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: key => key == "hud.combat.delta" ? 777 : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("floating_text"), out var definition), Is.True);
+            Assert.That(definition.DefaultTextId, Is.EqualTo(777));
+            Assert.That(definition.LegacyWorldTextMode, Is.EqualTo(WorldHudValueMode.AttributeCurrent));
+            Assert.That(definition.Behaviors[0].AssetBinding.AssetKind, Is.EqualTo(AssetKind.WorldText));
+            Assert.That(definition.Behaviors[0].AssetBinding.AssetId, Is.EqualTo(777));
+        }
+
+        [Test]
         public void Load_SkipsDefinitionWithInheritanceCycle_AndKeepsIndependentDefinitions()
         {
             WriteCatalog();
             WritePerformers(
                 """
                 [
-                  { "id": "cycle_a", "extends": "cycle_b", "visualKind": "Marker3D" },
-                  { "id": "cycle_b", "extends": "cycle_a", "visualKind": "Marker3D" },
-                  { "id": "ok_root", "visualKind": "Marker3D" }
+                  { "id": "cycle_a", "extends": "cycle_b" },
+                  { "id": "cycle_b", "extends": "cycle_a" },
+                  { "id": "ok_root" }
                 ]
                 """);
 
@@ -361,7 +403,6 @@ namespace Ludots.Tests.Presentation
                   },
                   {
                     "id": "canonical",
-                    "visualKind": "Marker3D",
                     "bindings": [
                       { "paramKey": 1, "source": "textToken", "textToken": "hud.current_over_base" }
                     ],

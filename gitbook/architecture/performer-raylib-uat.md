@@ -44,7 +44,7 @@ Raylib 全部测通后，再去 UE5 写适配。
 | 用例 | JSON 输入 | 运行时反馈 | 验收标准 |
 |------|----------|----------|---------|
 | 缺少 Animator behavior | 只有 AssetBinding(SkinnedMesh)，无 Animator | 控制台警告 `[Performer] SkinnedMesh without Animator behavior, will render in bind pose` | 不崩溃，渲染 bind pose |
-| 无效 animatorControllerId | `"animatorControllerId": "bad_id"` | 控制台警告 | 不崩溃，fallback 到 bind pose |
+| 无效 animatorControllerId | `"animatorControllerId": "bad_id"` | 控制台警告 | 不崩溃，保持 bind pose，不进入未声明状态 |
 
 ---
 
@@ -62,6 +62,25 @@ Raylib 全部测通后，再去 UE5 写适配。
 | 用例 | JSON 输入 | 运行时反馈 | 验收标准 |
 |------|----------|----------|---------|
 | Decal + SnapToGround | `"grounding": "AlignToSurface"` | 贴花对齐地面法线 | 与 SnapToGround 行为不同（有旋转对齐） |
+
+---
+
+## 3A AssetBinding — GroundOverlay
+
+### 3A.1 玩家体验 UAT
+
+| 用例 | 输入 | 预期输出 | 验收标准 |
+|------|------|---------|---------|
+| 圆形地面指示器 | performer(AssetBinding: GroundOverlay, assetId: Circle, Grounding: AlignToSurface) | 地面出现圆形范围圈 | 与地表贴合，无浮空/穿地，形状与参数一致 |
+| 扇形地面指示器 | performer(AssetBinding: GroundOverlay, assetId: Cone, Grounding: AlignToSurface) | 地面出现扇形范围圈 | 朝向、开角与宽度参数正确 |
+| 线形地面指示器 | performer(AssetBinding: GroundOverlay, assetId: Line, Grounding: AlignToSurface) | 地面出现线形范围提示 | 起点/终点方向正确，不退化为其他形状 |
+
+### 3A.2 Mod 作者配置 UAT
+
+| 用例 | JSON 输入 | 运行时反馈 | 验收标准 |
+|------|----------|----------|---------|
+| 最小配置 | `{"slot":0,"kind":"AssetBinding","assetBinding":{"assetKind":"GroundOverlay","assetId":"Circle","grounding":"AlignToSurface"}}` | 地面出现圆形指示器 | 使用 `GroundOverlay` 作为规范 AssetKind，不再接受 `Decal` 代写地面指示器 |
+| 无效 shape id | `"assetId": "Hexagon"` | 加载时错误或运行时显式拒绝 | 不崩溃，不渲染，不偷偷改成其他形状 |
 
 ---
 
@@ -169,7 +188,7 @@ Raylib 全部测通后，再去 UE5 写适配。
 | 用例 | JSON 输入 | 运行时反馈 | 验收标准 |
 |------|----------|----------|---------|
 | 空 swapTable | `"swapTable": []` | 始终使用 baseMaterialId | 正常工作 |
-| 无效 materialId | swapTable 中引用不存在的材质 | 控制台警告 | fallback 到 baseMaterialId |
+| 无效 materialId | swapTable 中引用不存在的材质 | 控制台警告 | 显式使用 `baseMaterialId` |
 
 ---
 
@@ -206,7 +225,7 @@ Raylib 全部测通后，再去 UE5 写适配。
 
 | 用例 | JSON 输入 | 运行时反馈 | 验收标准 |
 |------|----------|----------|---------|
-| 无效 boneId | `"boneId": "nonexistent_bone"` | 控制台警告 `[Performer] Attachment: bone 'nonexistent_bone' not found` | 不崩溃，fallback 到父 performer 位置 |
+| 无效 boneId | `"boneId": "nonexistent_bone"` | 控制台警告 `[Performer] Attachment: bone 'nonexistent_bone' not found` | 不崩溃，跳过挂载结果，不产生未声明位置 |
 
 ---
 
@@ -253,7 +272,7 @@ Raylib 全部测通后，再去 UE5 写适配。
 | 用例 | JSON 操作 | 运行时反馈 | 验收标准 |
 |------|----------|----------|---------|
 | 添加第 3 个工房 | children 中增加 workshop_3 | 第 3 个工房出现在指定偏移 | 无需改代码 |
-| 修改巡逻路线 | 更换 splinePathId | 工人沿新路线巡逻 | 热重载后生效 |
+| 修改巡逻路线 | 更换 splineAssetId | 工人沿新路线巡逻 | 热重载后生效 |
 | 添加新阈值 | thresholds 增加 0.5 档位 | 新增 "半损" 状态 | 无需改代码 |
 | 替换烟囱 VFX | 更换 assetId | 新特效播放 | 无需改代码 |
 
@@ -284,4 +303,7 @@ mods/fixtures/blacksmith/
    - VFX → Niagara System
    - Sound → Audio Component
    - Spline → Spline Mesh Component
+   - WorldHud → Widget/Screen-Space Bridge
+   - WorldText → World Text Bridge
+   - GroundOverlay → Ground Overlay / Decal Projector Bridge
 3. UE5 跑同一套 §13 UAT JSON，验证 adapter parity

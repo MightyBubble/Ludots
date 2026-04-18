@@ -7,6 +7,12 @@ namespace Ludots.Core.Presentation.Performers
     /// </summary>
     public struct PerformerRule
     {
+        /// <summary>
+        /// Owning performer definition id. Filled by the loader/registry so runtime rule
+        /// evaluation can target only matching performer instances.
+        /// </summary>
+        public int OwnerDefinitionId;
+
         /// <summary>Which events this rule reacts to.</summary>
         public EventFilter Event;
 

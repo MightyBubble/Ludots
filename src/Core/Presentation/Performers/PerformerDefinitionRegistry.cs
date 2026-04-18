@@ -36,6 +36,7 @@ namespace Ludots.Core.Presentation.Performers
             int id = _ids.Register(key);
             EnsureCapacity(id);
             definition.Id = id;
+            StampRuleOwners(definition, id);
             definition.BuildBindingIndex();
             _items[id] = definition;
             if (!_has[id])
@@ -97,6 +98,20 @@ namespace Ludots.Core.Presentation.Performers
             int newLen = Math.Max(_items.Length * 2, id + 1);
             Array.Resize(ref _items, newLen);
             Array.Resize(ref _has, newLen);
+        }
+
+        private static void StampRuleOwners(PerformerDefinition definition, int id)
+        {
+            PerformerRule[] rules = definition.Rules;
+            if (rules == null || rules.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < rules.Length; i++)
+            {
+                rules[i].OwnerDefinitionId = id;
+            }
         }
     }
 }

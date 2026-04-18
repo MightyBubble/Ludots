@@ -9,6 +9,8 @@ using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Config;
+using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
@@ -16,6 +18,7 @@ using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -76,10 +79,7 @@ namespace Ludots.Tests.Presentation
 
             _healthAttrId = AttributeRegistry.Register("Health");
 
-            BuiltinPerformerDefinitions.Register(
-                _defs,
-                new MeshAssetRegistry(),
-                key => string.Equals(key, WellKnownHudTextKeys.CombatDelta, StringComparison.Ordinal) ? 1 : 0);
+            LoadCorePerformerDefinitions(_defs, _healthAttrId);
             int healthBarDefId = _defs.GetOrRegisterId(WellKnownPerformerKeys.EntityHealthBar);
             _defs.Register(WellKnownPerformerKeys.EntityHealthBar, CreateWorldBarDefinition(
                 _healthAttrId,
@@ -118,8 +118,8 @@ namespace Ludots.Tests.Presentation
             _bridge = new PresentationBridgeSystem(_world, _eventBus, _presEvents, session, _gasEvents);
             _entityLifecycle = new PresentationEntityLifecycleSystem(_world, _presEvents);
             _finalizeDestroy = new PresentationEntityFinalizeDestroySystem(_world);
-            _ruleSystem = new PerformerRuleSystem(_world, _presEvents, _commands, _defs, _programs, graphApi, _globals);
-            _runtimeSystem = new PerformerRuntimeSystem(_world, new PrefabRegistry(), _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
+            _ruleSystem = new PerformerRuleSystem(_world, _presEvents, _commands, _defs, _instances, _programs, graphApi, _globals);
+            _runtimeSystem = new PerformerRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
             _behaviorSystem = new PerformerBehaviorSystem(_world, _instances, _defs, _presEvents, _soundRequests);
             _emitSystem = new PerformerEmitSystem(_world, _instances, _defs, _requests, _globals);
             _flush = new PresentationRequestFlushSystem(_world, _requests, new PrefabRegistry(), new MeshAssetRegistry(), _primitives, _overlays, _hud, _roadSplines);
@@ -178,6 +178,41 @@ namespace Ludots.Tests.Presentation
             }
 
             return entity;
+        }
+
+        private int CountActiveInstancesInScope(int scopeId)
+        {
+            int count = 0;
+            for (int handle = 0; handle < _instances.Capacity; handle++)
+            {
+                if (!_instances.IsActive(handle))
+                {
+                    continue;
+                }
+
+                ref readonly PerformerInstance instance = ref _instances.Get(handle);
+                if (instance.ScopeId == scopeId)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private int CountHudBars()
+        {
+            int count = 0;
+            var hudSpan = _hud.GetSpan();
+            for (int i = 0; i < hudSpan.Length; i++)
+            {
+                if (hudSpan[i].Kind == WorldHudItemKind.Bar)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private Vector3 GetFirstHudTextPosition()
@@ -402,27 +437,19 @@ namespace Ludots.Tests.Presentation
             attrBuf.SetBase(_healthAttrId, 100f);
             attrBuf.SetCurrent(_healthAttrId, 50f);
             var entity = CreatePresentableEntity(new Vector3(4f, 0f, 4f), attrBuf, hasAttributes: true);
+            int scopeId = _world.Get<PresentationStableId>(entity).Value;
 
             TickPipeline(0.016f);
-            Assert.That(_instances.ActiveCount, Is.EqualTo(1));
+            Assert.That(CountActiveInstancesInScope(scopeId), Is.GreaterThan(0));
+            Assert.That(CountHudBars(), Is.GreaterThan(0));
 
             ref var lifecycle = ref _world.Get<PresentationLifecycleState>(entity);
             lifecycle.PendingDestroy = true;
 
             TickPipeline(0.016f);
 
-            Assert.That(_instances.ActiveCount, Is.EqualTo(0));
-            int barCount = 0;
-            var hudSpan = _hud.GetSpan();
-            for (int i = 0; i < hudSpan.Length; i++)
-            {
-                if (hudSpan[i].Kind == WorldHudItemKind.Bar)
-                {
-                    barCount++;
-                }
-            }
-
-            Assert.That(barCount, Is.EqualTo(0));
+            Assert.That(CountActiveInstancesInScope(scopeId), Is.EqualTo(0));
+            Assert.That(CountHudBars(), Is.EqualTo(0));
         }
 
         [Test]
@@ -440,8 +467,6 @@ namespace Ludots.Tests.Presentation
                         AssetBinding = CreateMeshAssetBinding(assetId: 2, new Vector3(5f, 5f, 5f)),
                     }
                 },
-                VisualKind = PerformerVisualKind.Marker3D,
-                DefaultScale = 5f,
                 DefaultColor = new Vector4(0.3f, 0.7f, 1f, 0.5f),
             });
 
@@ -621,10 +646,8 @@ namespace Ludots.Tests.Presentation
                         AssetBinding = CreateWorldHudAssetBinding(width, height, WellKnownPerformerParamKeys.BarFillRatio),
                     }
                 },
-                VisualKind = PerformerVisualKind.WorldBar,
                 VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
                 DefaultColor = color,
-                DefaultScale = 1f,
                 PositionOffset = positionOffset,
                 Rules = rules,
             };
@@ -671,6 +694,52 @@ namespace Ludots.Tests.Presentation
                 Grounding = GroundingMode.None,
                 GroundingOffset = 0f,
             };
+        }
+
+        private static void LoadCorePerformerDefinitions(PerformerDefinitionRegistry defs, int healthAttrId)
+        {
+            string repoRoot = FindRepoRoot();
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", Path.Combine(repoRoot, "assets"));
+
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            vfs.Mount("LudotsCoreMod", Path.Combine(repoRoot, "mods", "LudotsCoreMod"));
+            modLoader.LoadedModIds.Add("LudotsCoreMod");
+
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var meshes = new MeshAssetRegistry();
+            var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
+
+            new PerformerDefinitionConfigLoader(
+                pipeline,
+                defs,
+                resolveAttributeName: name => string.Equals(name, "Health", StringComparison.Ordinal) ? healthAttrId : 0,
+                resolveMeshId: meshes.GetId,
+                resolveTextTokenId: textCatalog.GetTokenId,
+                resolveBehaviorAssetId: (kind, key) => kind switch
+                {
+                    AssetKind.Mesh => meshes.GetId(key),
+                    AssetKind.WorldText => textCatalog.GetTokenId(key),
+                    _ => 0,
+                }).Load(catalog);
+        }
+
+        private static string FindRepoRoot()
+        {
+            string current = TestContext.CurrentContext.WorkDirectory;
+            while (!string.IsNullOrEmpty(current))
+            {
+                if (Directory.Exists(Path.Combine(current, "mods")) &&
+                    File.Exists(Path.Combine(current, "AGENTS.md")))
+                {
+                    return current;
+                }
+
+                current = Path.GetDirectoryName(current)!;
+            }
+
+            throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
     }
 }

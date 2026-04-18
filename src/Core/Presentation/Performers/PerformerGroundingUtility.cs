@@ -65,12 +65,17 @@ namespace Ludots.Core.Presentation.Performers
                         heightmap);
 
                 case TransformSource.BoneAttached:
-                    return new PerformerResolvedTransform
-                    {
-                        Position = instance.WorldPosition,
-                        Rotation = NormalizeOrIdentity(instance.WorldRotation),
-                        Scale = NormalizeScale(assetBinding.LocalScale),
-                    };
+                    basePosition = instance.WorldPosition;
+                    baseRotation = NormalizeOrIdentity(instance.WorldRotation);
+                    baseScale = NormalizeScale(instance.WorldScale);
+                    return ApplyLocalAndGrounding(
+                        basePosition,
+                        baseRotation,
+                        baseScale,
+                        assetBinding,
+                        inheritScale: true,
+                        instance.TransformSource,
+                        heightmap);
 
                 case TransformSource.WorldFixed:
                     return ApplyGrounding(

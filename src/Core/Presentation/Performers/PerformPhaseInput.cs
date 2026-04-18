@@ -3,7 +3,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Presentation.Components;
 
-namespace Ludots.Core.Presentation.Perform
+namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
     /// Minimal upstream phase input contract for performer-facing projection decisions.

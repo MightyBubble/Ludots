@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using NUnit.Framework;
 
@@ -74,6 +75,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(fieldNames, Does.Contain("ParamValue"));
             Assert.That(fieldNames, Does.Contain("IntValue"));
             Assert.That(fieldNames, Does.Contain("VectorValue"));
+            Assert.That(fieldNames, Does.Contain("ValueSource"));
             Assert.That(fieldNames, Does.Contain("TargetBehaviorSlot"));
 
             foreach (string forbiddenToken in ForbiddenPerformerCommandTokens)
@@ -179,6 +181,16 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void PerformerCommandValueSourceContract_MatchesArchitectureValues()
+        {
+            Assert.That((byte)PerformerCommandValueSource.Fixed, Is.EqualTo(0));
+            Assert.That((byte)PerformerCommandValueSource.EventKeyId, Is.EqualTo(1));
+            Assert.That((byte)PerformerCommandValueSource.EventPayloadA, Is.EqualTo(2));
+            Assert.That((byte)PerformerCommandValueSource.EventPayloadB, Is.EqualTo(3));
+            Assert.That((byte)PerformerCommandValueSource.EventMagnitude, Is.EqualTo(4));
+        }
+
+        [Test]
         public void PresentationRequest_RemainsAdapterNeutralOutputGate()
         {
             FieldInfo[] fields = typeof(PresentationRequest).GetFields(BindingFlags.Instance | BindingFlags.Public);
@@ -208,6 +220,70 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(offendingNames, Is.Empty, "PresentationRequest must stay an adapter-neutral output packet.");
             Assert.That(offendingTypes, Is.Empty, "PresentationRequest must not store orchestration or phase contracts.");
+        }
+
+        [Test]
+        public void VisualRenderPayloadContract_ExposesOnlySharedThirteenFields()
+        {
+            string[] fieldNames = typeof(VisualRenderPayload)
+                .GetFields(BindingFlags.Instance | BindingFlags.Public)
+                .Select(static field => field.Name)
+                .OrderBy(static name => name, StringComparer.Ordinal)
+                .ToArray();
+
+            string[] expected =
+            {
+                "AnimationOverlay",
+                "AnimationProfileId",
+                "Animator",
+                "Color",
+                "MaterialId",
+                "MeshAssetId",
+                "Position",
+                "RenderPath",
+                "Rotation",
+                "Scale",
+                "StableId",
+                "TemplateId",
+                "Visibility",
+            };
+
+            Assert.That(fieldNames, Is.EqualTo(expected));
+            Assert.That(typeof(PresentationVisualProxy).GetField("LOD", BindingFlags.Instance | BindingFlags.Public), Is.Not.Null);
+            Assert.That(typeof(PrimitiveDrawItem).GetField("LOD", BindingFlags.Instance | BindingFlags.Public), Is.Not.Null);
+            Assert.That(typeof(SkinnedVisualBatchItem).GetField("LOD", BindingFlags.Instance | BindingFlags.Public), Is.Not.Null);
+        }
+
+        [Test]
+        public void VisualRenderPayloadContainers_StoreSharedStateOnlyThroughPayload()
+        {
+            string[] sharedPayloadFields = typeof(VisualRenderPayload)
+                .GetFields(BindingFlags.Instance | BindingFlags.Public)
+                .Select(static field => field.Name)
+                .ToArray();
+
+            AssertPayloadContainer(typeof(PresentationVisualProxy), sharedPayloadFields, "ProxyKind", "Payload", "Mobility", "Flags", "LOD");
+            AssertPayloadContainer(typeof(PrimitiveDrawItem), sharedPayloadFields, "Payload", "Mobility", "Flags", "LOD");
+            AssertPayloadContainer(typeof(SkinnedVisualBatchItem), sharedPayloadFields, "Payload", "LOD");
+        }
+
+        [Test]
+        public void PresentationVisualProxyEmitter_AssignsPayloadAsWhole()
+        {
+            string repoRoot = FindRepoRoot();
+            string sourcePath = Path.Combine(repoRoot, "src", "Core", "Presentation", "Rendering", "PresentationVisualProxyEmitter.cs");
+            string source = File.ReadAllText(sourcePath);
+
+            Assert.That(source, Does.Contain("Payload = proxy.Payload"));
+        }
+
+        [Test]
+        public void LegacyPerformerVisualKindAndBuiltinDefinitions_AreRemovedFromCore()
+        {
+            Assembly assembly = typeof(PerformerCommand).Assembly;
+
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Performers.PerformerVisualKind", throwOnError: false), Is.Null);
+            Assert.That(assembly.GetType("Ludots.Core.Presentation.Performers.BuiltinPerformerDefinitions", throwOnError: false), Is.Null);
         }
 
         [Test]
@@ -255,6 +331,29 @@ namespace Ludots.Tests.Architecture
                     yield return parameter.ParameterType.FullName ?? parameter.ParameterType.Name;
                 }
             }
+        }
+
+        private static void AssertPayloadContainer(Type containerType, string[] sharedPayloadFields, params string[] expectedPublicFields)
+        {
+            string[] fieldNames = containerType
+                .GetFields(BindingFlags.Instance | BindingFlags.Public)
+                .Select(static field => field.Name)
+                .OrderBy(static name => name, StringComparer.Ordinal)
+                .ToArray();
+
+            Assert.That(
+                fieldNames,
+                Is.EqualTo(expectedPublicFields.OrderBy(static name => name, StringComparer.Ordinal).ToArray()),
+                $"{containerType.Name} should expose only its payload wrapper fields.");
+
+            string[] duplicatedSharedFields = fieldNames
+                .Where(name => sharedPayloadFields.Contains(name, StringComparer.Ordinal))
+                .ToArray();
+
+            Assert.That(
+                duplicatedSharedFields,
+                Is.Empty,
+                $"{containerType.Name} must not reintroduce duplicated VisualRenderPayload fields outside Payload.");
         }
 
         private static string FindRepoRoot()

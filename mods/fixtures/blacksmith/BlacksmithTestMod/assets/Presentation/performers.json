@@ -1,0 +1,283 @@
+[
+  {
+    "id": "blacksmith_root",
+    "children": [
+      { "definitionId": "blacksmith_workshop_1", "scopeTag": "structure" },
+      { "definitionId": "blacksmith_workshop_2", "scopeTag": "structure" },
+      { "definitionId": "blacksmith_furnace", "scopeTag": "structure" }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "blacksmith" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "blacksmith_root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "TagEffectiveChanged", "keyId": "working" },
+        "condition": { "inline": "TagGained" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "blacksmith_smoke",
+          "scopeTag": "working"
+        }
+      },
+      {
+        "event": { "kind": "TagEffectiveChanged", "keyId": "working" },
+        "condition": { "inline": "TagGained" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "blacksmith_worker",
+          "scopeTag": "working"
+        }
+      },
+      {
+        "event": { "kind": "TagEffectiveChanged", "keyId": "working" },
+        "condition": { "inline": "TagLost" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeTag": "working"
+        }
+      },
+      {
+        "event": { "kind": "GlobalDayNight" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": 200,
+          "paramLane": "Float",
+          "paramValue": 1.0
+        }
+      },
+      {
+        "event": { "kind": "GlobalRegionChanged" },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": 300,
+          "paramLane": "Float",
+          "valueSource": "EventKeyId"
+        }
+      },
+      {
+        "event": { "kind": "AttributeValueChanged", "keyId": 9100 },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": 101,
+          "paramLane": "Int",
+          "intValue": 1001
+        }
+      },
+      {
+        "event": { "kind": "AttributeValueChanged", "keyId": 9101 },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": 101,
+          "paramLane": "Int",
+          "intValue": 1002
+        }
+      },
+      {
+        "event": { "kind": "AttributeValueChanged", "keyId": 9102 },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": 101,
+          "paramLane": "Int",
+          "intValue": 1003
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": 100, "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": 101, "lane": "Int", "intValue": 1001 },
+      { "paramKey": 200, "lane": "Float", "floatValue": 0.0 },
+      { "paramKey": 300, "lane": "Float", "floatValue": 0.0 }
+    ]
+  },
+  {
+    "id": "blacksmith_workshop_base",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": 1001,
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "assetSwapParamKey": 101,
+          "materialParamKey": 300,
+          "localScale": [1, 1, 1]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Material",
+        "activeByDefault": true,
+        "material": {
+          "baseMaterialId": 5001,
+          "materialSwapParamKey": 300,
+          "swapTable": [
+            { "paramValue": 0.0, "materialId": 5001 },
+            { "paramValue": 1.0, "materialId": 5002 }
+          ]
+        }
+      },
+      {
+        "slot": 2,
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": 1,
+          "targetParamKey": 100,
+          "mode": "AttributeRatio",
+          "thresholds": [
+            { "threshold": 0.0, "outputParamKey": 101, "outputValue": 1003 },
+            { "threshold": 0.66, "outputParamKey": 101, "outputValue": 1002 }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_workshop_1",
+    "extends": "blacksmith_workshop_base",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": 1001,
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "assetSwapParamKey": 101,
+          "materialParamKey": 300,
+          "localOffset": [2.0, 0.0, 0.0],
+          "localScale": [1, 1, 1]
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_workshop_2",
+    "extends": "blacksmith_workshop_base",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": 1001,
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "assetSwapParamKey": 101,
+          "materialParamKey": 300,
+          "localOffset": [-2.0, 0.0, 0.0],
+          "localScale": [1, 1, 1]
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_furnace",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": 1100,
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0.0, 0.0, 3.0],
+          "localScale": [1, 1, 1]
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_smoke",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": 1200,
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [0.0, 5.0, 0.0],
+          "localScale": [1, 1, 1]
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_worker",
+    "paramDefaults": [
+      { "paramKey": 10, "lane": "Float", "floatValue": 1.0 }
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": 1300,
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localOffset": [0.0, 0.0, -2.0],
+          "localScale": [1, 1, 1]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": 1,
+          "animationProfileId": 1,
+          "speedParamKey": 10,
+          "stateParamKey": 20
+        }
+      },
+      {
+        "slot": 2,
+        "kind": "Sound",
+        "activeByDefault": true,
+        "sound": {
+          "soundAssetId": 1400,
+          "loop": true,
+          "volume": 1.0
+        }
+      },
+      {
+        "slot": 3,
+        "kind": "Spline",
+        "activeByDefault": true,
+        "spline": {
+          "splineAssetId": 1500,
+          "usage": "Patrol",
+          "speedParamKey": 10,
+          "progressParamKey": 11,
+          "loop": true
+        }
+      }
+    ]
+  }
+]

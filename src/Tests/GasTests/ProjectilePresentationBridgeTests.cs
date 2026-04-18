@@ -41,7 +41,20 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "test.projectile.performer",
-                        "visualKind": "Marker3D",
+                        "behaviors": [
+                          {
+                            "slot": 0,
+                            "kind": "AssetBinding",
+                            "activeByDefault": true,
+                            "assetBinding": {
+                              "assetKind": "Mesh",
+                              "assetId": 1,
+                              "renderPath": "StaticMesh",
+                              "mobility": "Movable",
+                              "localScale": [1, 1, 1]
+                            }
+                          }
+                        ],
                         "rules": [
                           {
                             "event": {

@@ -42,7 +42,6 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Config;
-using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Rendering;
@@ -645,13 +644,11 @@ namespace Ludots.Core.Engine
             new VisualTemplateConfigLoader(ConfigPipeline, visualTemplates, meshAssets, materialAssets, animatorControllers, animationProfiles).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
-            BuiltinPerformerDefinitions.Register(performerDefinitions, meshAssets, presentationTextCatalog.GetTokenId);
-            var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performerCommandBuffer, performerDefinitions, graphProgramRegistry, performerGraphApi, GlobalContext);
+            var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performerCommandBuffer, performerDefinitions, performerInstances, graphProgramRegistry, performerGraphApi, GlobalContext);
             var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(World, presentationEventStream);
             var presentationEntityFinalizeDestroySystem = new PresentationEntityFinalizeDestroySystem(World);
             var performerRuntimeSystem = new PerformerRuntimeSystem(
                 World,
-                presentationPrefabs,
                 performerCommandBuffer,
                 presentationEventStream,
                 transientMarkerBuffer,
@@ -703,6 +700,7 @@ namespace Ludots.Core.Engine
                     AssetKind.Decal => meshAssets.GetId(key),
                     AssetKind.VFX => EffectTemplateIdRegistry.GetId(key),
                     AssetKind.WorldText => presentationTextCatalog.GetTokenId(key),
+                    AssetKind.GroundOverlay => ResolveGroundOverlayShapeId(key),
                     _ => 0,
                 }).Load(ConfigCatalog, ConfigConflictReport);
             var presentationAuthoring = new PresentationAuthoringContext(visualTemplates, animatorControllers, presentationStableIds);
@@ -1055,6 +1053,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationFrameSetup, presentationFrameSetup);
             
             RegisterPresentationSystem(new ProjectilePresentationBootstrapSystem(World, presentationStableIds));
+            RegisterPresentationSystem(new PresentationStableIdBootstrapSystem(World, presentationStableIds));
             // WorldToVisualSyncSystem: 插值 WorldPositionCm → VisualTransform（必须在 PresentationFrameSetup 之后）
             RegisterPresentationSystem(new WorldToVisualSyncSystem(World));
             // TerrainHeightSyncSystem: 采样地形高度写入 VisualTransform.Y，使实体贴附地表
@@ -1741,6 +1740,17 @@ namespace Ludots.Core.Engine
                 if (type != null) return type;
             }
             return null;
+        }
+
+        private static int ResolveGroundOverlayShapeId(string key)
+        {
+            if (Enum.TryParse<Ludots.Core.Presentation.Rendering.GroundOverlayShape>(key, ignoreCase: true, out var shape))
+            {
+                return (int)shape;
+            }
+
+            throw new InvalidOperationException(
+                $"Unknown GroundOverlay shape '{key}'. Expected Circle, Cone, Line, or Ring.");
         }
 
         private void LoadNavForMap(string mapId, MapConfig mapConfig)

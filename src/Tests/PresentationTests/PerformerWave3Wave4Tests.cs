@@ -13,6 +13,8 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -35,7 +37,6 @@ namespace Ludots.Tests.Presentation
 
             using var runtime = new PerformerRuntimeSystem(
                 world,
-                new PrefabRegistry(),
                 commands,
                 events,
                 new TransientMarkerBuffer(),
@@ -95,7 +96,6 @@ namespace Ludots.Tests.Presentation
             int defId = definitions.Register("child", new PerformerDefinition());
             using var runtime = new PerformerRuntimeSystem(
                 world,
-                new PrefabRegistry(),
                 commands,
                 new PresentationEventStream(),
                 new TransientMarkerBuffer(),
@@ -137,7 +137,6 @@ namespace Ludots.Tests.Presentation
 
             using var runtime = new PerformerRuntimeSystem(
                 world,
-                new PrefabRegistry(),
                 commands,
                 new PresentationEventStream(),
                 new TransientMarkerBuffer(),
@@ -191,7 +190,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerRuntimeSystem_DestroyPerformerScope_DoesNotFallbackToDefinitionIdWhenScopeTagIsZero()
+        public void PerformerRuntimeSystem_DestroyPerformerScope_RejectsNonPositiveScopeTags()
         {
             using var world = World.Create();
             var commands = new PerformerCommandBuffer();
@@ -202,7 +201,6 @@ namespace Ludots.Tests.Presentation
 
             using var runtime = new PerformerRuntimeSystem(
                 world,
-                new PrefabRegistry(),
                 commands,
                 events,
                 new TransientMarkerBuffer(),
@@ -223,6 +221,18 @@ namespace Ludots.Tests.Presentation
             runtime.Update(0.016f);
             events.Clear();
 
+            var createUnscoped = new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = defId,
+                ScopeTag = 0,
+                Source = world.Create(),
+                AnchorKind = PresentationAnchorKind.Entity,
+            };
+            Assert.That(commands.TryAdd(in createUnscoped), Is.True);
+            runtime.Update(0.016f);
+            events.Clear();
+
             var destroyWithZeroScope = new PerformerCommand
             {
                 CommandKind = PerformerCommandKind.DestroyPerformerScope,
@@ -230,10 +240,150 @@ namespace Ludots.Tests.Presentation
                 ScopeTag = 0,
             };
             Assert.That(commands.TryAdd(in destroyWithZeroScope), Is.True);
+
+            Assert.That(
+                () => runtime.Update(0.016f),
+                Throws.TypeOf<InvalidOperationException>().With.Message.Contains("positive scopeTag"));
+            Assert.That(events.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void PerformerRuleSystem_GlobalRegionChanged_BroadcastsToMatchingDefinitionInstances()
+        {
+            using var world = World.Create();
+            var events = new PresentationEventStream();
+            var commands = new PerformerCommandBuffer();
+            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register("region_actor", new PerformerDefinition
+            {
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.GlobalRegionChanged, KeyId = -1 },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.SetParam,
+                            ParamKey = 300,
+                            ParamLane = ParamLane.Int,
+                            ValueSource = PerformerCommandValueSource.EventKeyId,
+                        },
+                    },
+                ],
+            });
+
+            Entity ownerA = world.Create();
+            Entity ownerB = world.Create();
+            Entity otherOwner = world.Create();
+            Assert.That(instances.TryAllocate(defId, ownerA, scopeId: 1, out int handleA), Is.True);
+            Assert.That(instances.TryAllocate(defId, ownerB, scopeId: 1, out int handleB), Is.True);
+            Assert.That(instances.TryAllocate(defId + 100, otherOwner, scopeId: 1, out _), Is.True);
+
+            using var system = new PerformerRuleSystem(
+                world,
+                events,
+                commands,
+                definitions,
+                instances,
+                new GraphProgramRegistry(),
+                new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null),
+                new Dictionary<string, object>());
+
+            Assert.That(events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.GlobalRegionChanged,
+                KeyId = 42,
+                Source = Entity.Null,
+                Target = Entity.Null,
+            }), Is.True);
+
+            system.Update(0.016f);
+
+            ReadOnlySpan<PerformerCommand> emitted = commands.GetSpan();
+            Assert.That(emitted.Length, Is.EqualTo(2));
+            Assert.That(emitted[0].PerformerHandle, Is.EqualTo(handleA));
+            Assert.That(emitted[0].IntValue, Is.EqualTo(42));
+            Assert.That(emitted[0].ValueSource, Is.EqualTo(PerformerCommandValueSource.Fixed));
+            Assert.That(emitted[1].PerformerHandle, Is.EqualTo(handleB));
+            Assert.That(emitted[1].IntValue, Is.EqualTo(42));
+            Assert.That(events.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void PerformerRuleSystem_ValueSourceEventKeyId_WritesFloatAndIntBlackboardLanes()
+        {
+            using var world = World.Create();
+            var commands = new PerformerCommandBuffer();
+            var events = new PresentationEventStream();
+            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register("region_params", new PerformerDefinition
+            {
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.GlobalRegionChanged, KeyId = -1 },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.SetParam,
+                            ParamKey = 300,
+                            ParamLane = ParamLane.Int,
+                            ValueSource = PerformerCommandValueSource.EventKeyId,
+                        },
+                    },
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.GlobalRegionChanged, KeyId = -1 },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.SetParam,
+                            ParamKey = 301,
+                            ParamLane = ParamLane.Float,
+                            ValueSource = PerformerCommandValueSource.EventKeyId,
+                        },
+                    },
+                ],
+            });
+            Entity owner = world.Create();
+            Assert.That(instances.TryAllocate(defId, owner, scopeId: 1, out int handle), Is.True);
+
+            using var rules = new PerformerRuleSystem(
+                world,
+                events,
+                commands,
+                definitions,
+                instances,
+                new GraphProgramRegistry(),
+                new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null),
+                new Dictionary<string, object>());
+            using var runtime = new PerformerRuntimeSystem(
+                world,
+                commands,
+                events,
+                new TransientMarkerBuffer(),
+                new PresentationRequestBuffer(),
+                instances,
+                new PresentationStableIdAllocator(),
+                definitions);
+
+            Assert.That(events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.GlobalRegionChanged,
+                KeyId = 17,
+                Source = Entity.Null,
+                Target = Entity.Null,
+            }), Is.True);
+
+            rules.Update(0.016f);
             runtime.Update(0.016f);
 
-            Assert.That(instances.IsActive(0), Is.True);
-            Assert.That(events.Count, Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(handle, 300, -1), Is.EqualTo(17));
+            Assert.That(instances.ResolveFloat(handle, 301, -1f), Is.EqualTo(17f).Within(0.001f));
         }
 
         [Test]

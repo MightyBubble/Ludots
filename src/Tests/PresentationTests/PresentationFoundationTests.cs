@@ -14,7 +14,6 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -613,8 +612,6 @@ namespace Ludots.Tests.Presentation
                             },
                         },
                     ],
-                    VisualKind = PerformerVisualKind.Marker3D,
-                    DefaultScale = 1f,
                 });
 
             Entity owner = world.Create(
@@ -758,7 +755,6 @@ namespace Ludots.Tests.Presentation
                                 },
                             },
                         ],
-                        VisualKind = PerformerVisualKind.WorldBar,
                     });
 
                 Entity owner = world.Create(

@@ -4,7 +4,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Presentation.Components;
 
-namespace Ludots.Core.Presentation.Perform
+namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
     /// Sole translator from raw visibility, ownership, and relationship hints into perform phase contracts.

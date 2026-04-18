@@ -10,5 +10,6 @@ namespace Ludots.Core.Presentation.Performers
         Spline = 6,
         WorldHud = 7,
         WorldText = 8,
+        GroundOverlay = 9,
     }
 }

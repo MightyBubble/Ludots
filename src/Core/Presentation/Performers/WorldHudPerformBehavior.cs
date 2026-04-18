@@ -4,7 +4,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 
-namespace Ludots.Core.Presentation.Perform
+namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
     /// First extracted behavior helper for world HUD projection.

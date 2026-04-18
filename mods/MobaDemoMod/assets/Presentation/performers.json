@@ -1,22 +1,45 @@
 [
   {
     "id": "moba_unit_marker",
-    "visualKind": "Marker3D",
-    "meshOrShapeId": "cube",
-    "defaultScale": 0.35,
     "maxVisibilityDistanceCm": 8000,
-    "positionOffset": [0, 0.25, 0],
-    "visibility": { "inline": "OwnerCullVisible" },
+    "positionOffset": [
+      0,
+      0.25,
+      0
+    ],
+    "visibility": {
+      "inline": "OwnerCullVisible"
+    },
     "bindings": [
-      { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
-      { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
-      { "paramKey": 6, "source": "entityColor", "sourceId": 2 },
-      { "paramKey": 7, "source": "entityColor", "sourceId": 3 }
+      {
+        "paramKey": 4,
+        "source": "entityColor",
+        "sourceId": 0
+      },
+      {
+        "paramKey": 5,
+        "source": "entityColor",
+        "sourceId": 1
+      },
+      {
+        "paramKey": 6,
+        "source": "entityColor",
+        "sourceId": 2
+      },
+      {
+        "paramKey": 7,
+        "source": "entityColor",
+        "sourceId": 3
+      }
     ],
     "rules": [
       {
-        "event": { "kind": "EntitySpawned" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "moba_unit_marker",
@@ -24,44 +47,146 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed" },
+        "event": {
+          "kind": "EntityDestroyed"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.35,
+            0.35,
+            0.35
+          ]
         }
       }
     ]
   },
   {
     "id": "moba_selection_indicator",
-    "visualKind": "Marker3D",
-    "meshOrShapeId": "sphere",
-    "defaultColor": [1, 1, 0, 1],
-    "defaultScale": 0.18,
+    "defaultColor": [
+      1,
+      1,
+      0,
+      1
+    ],
     "defaultLifetime": -1,
-    "positionOffset": [0, 0.85, 0]
+    "positionOffset": [
+      0,
+      0.85,
+      0
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.18,
+            0.18,
+            0.18
+          ]
+        }
+      }
+    ]
   },
   {
     "id": "moba_area_marker",
-    "visualKind": "Marker3D",
-    "meshOrShapeId": "sphere",
-    "defaultColor": [0.8, 0.2, 1.0, 0.75],
+    "defaultColor": [
+      0.8,
+      0.2,
+      1.0,
+      0.75
+    ],
     "defaultLifetime": 0.35,
     "alphaFadeOverLifetime": true,
-    "positionOffset": [0, 0.1, 0],
+    "positionOffset": [
+      0,
+      0.1,
+      0
+    ],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 1.2 },
-      { "paramKey": 2, "source": "constant", "constantValue": 0.08 },
-      { "paramKey": 3, "source": "constant", "constantValue": 1.2 }
+      {
+        "paramKey": 1,
+        "source": "constant",
+        "constantValue": 1.2
+      },
+      {
+        "paramKey": 2,
+        "source": "constant",
+        "constantValue": 0.08
+      },
+      {
+        "paramKey": 3,
+        "source": "constant",
+        "constantValue": 1.2
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      }
     ]
   },
   {
     "id": "moba_ability_range",
-    "visualKind": "GroundOverlay",
-    "meshOrShapeId": "circle",
-    "defaultColor": [0.3, 0.7, 1.0, 0.2],
-    "defaultScale": 6.0,
+    "defaultColor": [
+      0.3,
+      0.7,
+      1.0,
+      0.2
+    ],
     "defaultLifetime": -1,
-    "visibility": { "inline": "OwnerCullVisible" }
+    "visibility": {
+      "inline": "OwnerCullVisible"
+    },
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "mobility": "Movable",
+          "localScale": [
+            6.0,
+            6.0,
+            6.0
+          ]
+        }
+      }
+    ]
   }
 ]

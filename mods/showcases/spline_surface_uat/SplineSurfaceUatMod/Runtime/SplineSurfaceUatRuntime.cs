@@ -30,6 +30,11 @@ namespace SplineSurfaceUatMod.Runtime
         public bool IsActive => string.Equals(_activeMapId, SplineSurfaceUatIds.MapId, System.StringComparison.OrdinalIgnoreCase);
         public string LastStatus { get; private set; } = "Reset camera to pull road, river, lake, and raw procedural mesh back into view.";
 
+        public bool IsActiveFor(GameEngine engine)
+        {
+            return string.Equals(engine?.CurrentMapSession?.MapId.Value, SplineSurfaceUatIds.MapId, System.StringComparison.OrdinalIgnoreCase);
+        }
+
         public Task HandleMapFocusedAsync(ScriptContext context)
         {
             if (context.GetEngine() is not GameEngine engine)
@@ -63,7 +68,7 @@ namespace SplineSurfaceUatMod.Runtime
 
         public bool TryResetCamera(GameEngine engine)
         {
-            if (engine == null || !IsActive)
+            if (engine == null || !IsActiveFor(engine))
             {
                 return false;
             }
@@ -76,7 +81,7 @@ namespace SplineSurfaceUatMod.Runtime
 
         public bool TryFocusSurface(GameEngine engine, SplineSurfaceFocusTarget target)
         {
-            if (engine == null || !IsActive)
+            if (engine == null || !IsActiveFor(engine))
             {
                 return false;
             }
@@ -116,7 +121,7 @@ namespace SplineSurfaceUatMod.Runtime
 
         public void SyncPanel(GameEngine engine)
         {
-            if (engine == null || !IsActive)
+            if (engine == null || !IsActiveFor(engine))
             {
                 return;
             }

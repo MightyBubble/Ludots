@@ -32,6 +32,7 @@ namespace Ludots.Core.Presentation.Performers
         public float ParamValue;
         public int IntValue;
         public Vector4 VectorValue;
+        public PerformerCommandValueSource ValueSource;
         public int ParamGraphProgramId;
         public int TargetBehaviorSlot;
     }

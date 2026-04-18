@@ -51,7 +51,7 @@ namespace SplineSurfaceUatMod.Systems
                 return;
             }
 
-            if (!_runtime.IsActive)
+            if (!_runtime.IsActiveFor(_engine))
             {
                 if (_bound)
                 {

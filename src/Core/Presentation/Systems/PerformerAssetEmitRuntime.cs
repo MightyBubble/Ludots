@@ -4,7 +4,6 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Perform;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
@@ -74,6 +73,10 @@ namespace Ludots.Core.Presentation.Systems
 
                 case AssetKind.WorldText:
                     EmitWorldTextAsset(handle, definitionId, in instance, in definition, in asset, lod, position, alpha);
+                    return;
+
+                case AssetKind.GroundOverlay:
+                    EmitGroundOverlayAsset(handle, definitionId, in instance, in definition, slotIndex, in asset, lod, position, alpha);
                     return;
 
                 default:
@@ -255,6 +258,31 @@ namespace Ludots.Core.Presentation.Systems
             }, phaseResult.LOD));
         }
 
+        private void EmitGroundOverlayAsset(int handle, int definitionId, in PerformerInstance instance, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        {
+            Vector3 scale = ResolveScale(handle, in instance, in asset);
+            float radius = MathF.Max(scale.X, 0.001f);
+            float innerRadius = Math.Clamp(scale.Y, 0f, radius);
+            float length = MathF.Max(scale.X, 0.001f);
+            float width = MathF.Max(scale.Y, 0.001f);
+            GroundOverlayShape shape = ResolveGroundOverlayShape(asset.AssetId);
+            Vector4 color = ApplyAlpha(ResolveColor(handle, in asset, definition.DefaultColor), alpha);
+
+            _requests.Add(PresentationRequest.FromGroundOverlay(instance.Owner, new GroundOverlayItem
+            {
+                Shape = shape,
+                Center = position,
+                Radius = radius,
+                InnerRadius = shape == GroundOverlayShape.Ring ? innerRadius : 0f,
+                Rotation = ResolveYaw(instance.WorldRotation),
+                Length = shape == GroundOverlayShape.Line ? length : 0f,
+                Width = shape == GroundOverlayShape.Line ? width : 0f,
+                FillColor = color,
+                BorderColor = color,
+                BorderWidth = MathF.Max(scale.Z, 0f),
+            }, lod));
+        }
+
         private bool ResolveAssetVisibility(int handle, in AssetBindingConfig asset)
         {
             return asset.VisibilityParamKey < 0 || _instances.ResolveInt(handle, asset.VisibilityParamKey, 1) != 0;
@@ -364,6 +392,25 @@ namespace Ludots.Core.Presentation.Systems
             return value.LengthSquared() > 0.000001f
                 ? Quaternion.Normalize(value)
                 : Quaternion.Identity;
+        }
+
+        private static GroundOverlayShape ResolveGroundOverlayShape(int assetId)
+        {
+            return assetId switch
+            {
+                0 => GroundOverlayShape.Circle,
+                1 => GroundOverlayShape.Cone,
+                2 => GroundOverlayShape.Line,
+                3 => GroundOverlayShape.Ring,
+                _ => throw new InvalidOperationException($"GroundOverlay AssetBinding has invalid shape id '{assetId}'."),
+            };
+        }
+
+        private static float ResolveYaw(Quaternion rotation)
+        {
+            rotation = NormalizeOrIdentity(rotation);
+            Vector3 forward = Vector3.Transform(Vector3.UnitZ, rotation);
+            return MathF.Atan2(forward.Z, forward.X);
         }
 
         private static Vector3 ResolvePosition(in PerformerInstance instance, in PerformerDefinition definition)

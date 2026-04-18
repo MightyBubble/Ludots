@@ -29,6 +29,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationEventStream _events;
         private readonly PerformerCommandBuffer _commands;
         private readonly PerformerDefinitionRegistry _definitions;
+        private readonly PerformerInstanceBuffer? _instances;
         private readonly GraphProgramRegistry _programs;
         private readonly IGraphRuntimeApi _graphApi;
         private readonly Dictionary<string, object> _globals;
@@ -53,6 +54,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private struct IndexedRule
         {
+            public int OwnerDefinitionId;
             public ConditionRef Condition;
             public PerformerCommand Command;
         }
@@ -62,6 +64,7 @@ namespace Ludots.Core.Presentation.Systems
             PresentationEventStream events,
             PerformerCommandBuffer commands,
             PerformerDefinitionRegistry definitions,
+            PerformerInstanceBuffer? instances,
             GraphProgramRegistry programs,
             IGraphRuntimeApi graphApi,
             Dictionary<string, object> globals)
@@ -70,6 +73,7 @@ namespace Ludots.Core.Presentation.Systems
             _events = events;
             _commands = commands;
             _definitions = definitions;
+            _instances = instances;
             _programs = programs;
             _graphApi = graphApi;
             _globals = globals;
@@ -95,7 +99,7 @@ namespace Ludots.Core.Presentation.Systems
                     for (int ri = 0; ri < exactRules.Length; ri++)
                     {
                         if (!EvaluateCondition(in exactRules[ri].Condition, in evt)) continue;
-                        EmitCommand(in exactRules[ri].Command, in evt);
+                        EmitRule(exactRules[ri], in evt);
                     }
                 }
 
@@ -105,7 +109,7 @@ namespace Ludots.Core.Presentation.Systems
                     for (int ri = 0; ri < wildcardRules.Length; ri++)
                     {
                         if (!EvaluateCondition(in wildcardRules[ri].Condition, in evt)) continue;
-                        EmitCommand(in wildcardRules[ri].Command, in evt);
+                        EmitRule(wildcardRules[ri], in evt);
                     }
                 }
             }
@@ -134,6 +138,7 @@ namespace Ludots.Core.Presentation.Systems
                     ref var rule = ref def.Rules[ri];
                     var entry = new IndexedRule
                     {
+                        OwnerDefinitionId = rule.OwnerDefinitionId,
                         Condition = rule.Condition,
                         Command = rule.Command,
                     };
@@ -284,7 +289,41 @@ namespace Ludots.Core.Presentation.Systems
 
         // ── Command Emission ──
 
-        private void EmitCommand(in PerformerCommand cmd, in PresentationEvent evt)
+        private void EmitRule(in IndexedRule rule, in PresentationEvent evt)
+        {
+            if (rule.OwnerDefinitionId > 0 &&
+                _instances != null &&
+                EventTargetsExistingPerformerInstances(evt.Kind))
+            {
+                EmitForMatchingInstances(rule.OwnerDefinitionId, in rule.Command, in evt);
+                return;
+            }
+
+            EmitCommand(in rule.Command, in evt, performerHandle: -1, ownerDefinitionId: rule.OwnerDefinitionId);
+        }
+
+        private void EmitForMatchingInstances(int ownerDefinitionId, in PerformerCommand command, in PresentationEvent evt)
+        {
+            bool globalEvent = IsGlobalEvent(evt.Kind);
+            int highWaterMark = _instances!.Capacity;
+            for (int handle = 0; handle < highWaterMark; handle++)
+            {
+                if (!_instances.IsActive(handle))
+                {
+                    continue;
+                }
+
+                ref readonly PerformerInstance instance = ref _instances.Get(handle);
+                if (instance.DefId != ownerDefinitionId || (!globalEvent && instance.Owner != evt.Source))
+                {
+                    continue;
+                }
+
+                EmitCommand(in command, in evt, handle, ownerDefinitionId);
+            }
+        }
+
+        private void EmitCommand(in PerformerCommand cmd, in PresentationEvent evt, int performerHandle, int ownerDefinitionId)
         {
             int scopeId = cmd.ScopeSource switch
             {
@@ -301,15 +340,66 @@ namespace Ludots.Core.Presentation.Systems
             emitted.Source = evt.Source;
             emitted.Target = evt.Target;
             emitted.Position = default;
+            emitted.PerformerHandle = performerHandle;
             emitted.ParentHandle = cmd.ParentHandle >= 0
                 ? cmd.ParentHandle
                 : (evt.Kind == PresentationEventKind.PerformerCreated ? evt.PayloadA : cmd.ParentHandle);
             emitted.ParamValue = cmd.ParamGraphProgramId > 0
                 ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
-                : cmd.ParamValue;
+                : ResolveParamFloatValue(in cmd, in evt);
+            emitted.IntValue = ResolveParamIntValue(in cmd, in evt);
             emitted.ParamGraphProgramId = 0;
+            emitted.ValueSource = PerformerCommandValueSource.Fixed;
+
+            if (emitted.CommandKind == PerformerCommandKind.CreatePerformer &&
+                emitted.ParentHandle < 0 &&
+                performerHandle >= 0 &&
+                ownerDefinitionId > 0)
+            {
+                emitted.ParentHandle = performerHandle;
+            }
 
             _commands.TryAdd(in emitted);
+        }
+
+        private static bool EventTargetsExistingPerformerInstances(PresentationEventKind kind)
+        {
+            return kind is PresentationEventKind.TagEffectiveChanged
+                or PresentationEventKind.GlobalDayNight
+                or PresentationEventKind.GlobalRegionChanged
+                or PresentationEventKind.GlobalWeather
+                or PresentationEventKind.AttributeValueChanged;
+        }
+
+        private static bool IsGlobalEvent(PresentationEventKind kind)
+        {
+            return kind is PresentationEventKind.GlobalDayNight
+                or PresentationEventKind.GlobalRegionChanged
+                or PresentationEventKind.GlobalWeather;
+        }
+
+        private static float ResolveParamFloatValue(in PerformerCommand cmd, in PresentationEvent evt)
+        {
+            return cmd.ValueSource switch
+            {
+                PerformerCommandValueSource.EventKeyId => evt.KeyId,
+                PerformerCommandValueSource.EventPayloadA => evt.PayloadA,
+                PerformerCommandValueSource.EventPayloadB => evt.PayloadB,
+                PerformerCommandValueSource.EventMagnitude => evt.Magnitude,
+                _ => cmd.ParamValue,
+            };
+        }
+
+        private static int ResolveParamIntValue(in PerformerCommand cmd, in PresentationEvent evt)
+        {
+            return cmd.ValueSource switch
+            {
+                PerformerCommandValueSource.EventKeyId => evt.KeyId,
+                PerformerCommandValueSource.EventPayloadA => evt.PayloadA,
+                PerformerCommandValueSource.EventPayloadB => evt.PayloadB,
+                PerformerCommandValueSource.EventMagnitude => (int)evt.Magnitude,
+                _ => cmd.IntValue,
+            };
         }
 
         /// <summary>

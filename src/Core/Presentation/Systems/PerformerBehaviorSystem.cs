@@ -3,6 +3,7 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
@@ -18,6 +19,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationEventStream _events;
         private readonly SoundRequestBuffer _soundRequests;
         private readonly Func<IVisualHeightmap?> _heightmapProvider;
+        private readonly IBoneTransformProvider? _boneTransformProvider;
         private readonly uint[] _activeSoundMasks;
         private readonly int[] _soundStableIds;
         private readonly int[] _soundDefinitionIds;
@@ -28,14 +30,16 @@ namespace Ludots.Core.Presentation.Systems
             PerformerDefinitionRegistry definitions,
             PresentationEventStream events,
             SoundRequestBuffer soundRequests,
-            IVisualHeightmap? heightmap = null)
+            IVisualHeightmap? heightmap = null,
+            IBoneTransformProvider? boneTransformProvider = null)
             : this(
                 world,
                 instances,
                 definitions,
                 events,
                 soundRequests,
-                () => heightmap)
+                () => heightmap,
+                boneTransformProvider)
         {
         }
 
@@ -45,7 +49,8 @@ namespace Ludots.Core.Presentation.Systems
             PerformerDefinitionRegistry definitions,
             PresentationEventStream events,
             SoundRequestBuffer soundRequests,
-            Func<IVisualHeightmap?> heightmapProvider)
+            Func<IVisualHeightmap?> heightmapProvider,
+            IBoneTransformProvider? boneTransformProvider = null)
             : base(world)
         {
             _instances = instances ?? throw new ArgumentNullException(nameof(instances));
@@ -53,6 +58,7 @@ namespace Ludots.Core.Presentation.Systems
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _soundRequests = soundRequests ?? throw new ArgumentNullException(nameof(soundRequests));
             _heightmapProvider = heightmapProvider ?? throw new ArgumentNullException(nameof(heightmapProvider));
+            _boneTransformProvider = boneTransformProvider;
             _activeSoundMasks = new uint[_instances.Capacity];
             _soundStableIds = new int[_instances.Capacity];
             _soundDefinitionIds = new int[_instances.Capacity];
@@ -69,6 +75,7 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 BehaviorSlot[] behaviors = definition.Behaviors;
+                instance.TransformSource = ResolveDefaultTransformSource(in instance);
                 HandleReusedSoundSlot(handle, in instance, behaviors);
                 uint currentSoundMask = 0u;
                 for (int i = 0; i < behaviors.Length; i++)
@@ -91,6 +98,10 @@ namespace Ludots.Core.Presentation.Systems
 
                         case BehaviorKind.Material:
                             ApplyMaterialBinding(handle, slot.Material);
+                            break;
+
+                        case BehaviorKind.Attachment:
+                            ApplyAttachment(ref instance, slot.Attachment);
                             break;
 
                         case BehaviorKind.Sound:
@@ -131,7 +142,9 @@ namespace Ludots.Core.Presentation.Systems
                 ref readonly ThresholdMapping threshold = ref thresholds[i];
                 if (value <= threshold.Threshold)
                 {
-                    _instances.SetParam(handle, threshold.OutputParamKey, ParamLane.Float, threshold.OutputValue, 0, Vector4.Zero);
+                    int thresholdIntValue = (int)threshold.OutputValue;
+                    _instances.SetParam(handle, threshold.OutputParamKey, ParamLane.Float, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
+                    _instances.SetParam(handle, threshold.OutputParamKey, ParamLane.Int, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
                     break;
                 }
             }
@@ -363,6 +376,34 @@ namespace Ludots.Core.Presentation.Systems
             instance.WorldScale = resolved.Scale;
         }
 
+        private void ApplyAttachment(ref PerformerInstance instance, in AttachmentConfig config)
+        {
+            if (_boneTransformProvider == null ||
+                config.BoneId <= 0 ||
+                instance.ParentHandle < 0 ||
+                !_instances.IsActive(instance.ParentHandle))
+            {
+                return;
+            }
+
+            PerformerInstance parent = _instances.Get(instance.ParentHandle);
+            if (!_boneTransformProvider.TryGetBoneWorldTransform(
+                    parent.StableId,
+                    config.BoneId,
+                    out Vector3 bonePosition,
+                    out Quaternion boneRotation,
+                    out Vector3 boneScale))
+            {
+                return;
+            }
+
+            Quaternion normalizedBoneRotation = NormalizeOrIdentity(boneRotation);
+            instance.TransformSource = TransformSource.BoneAttached;
+            instance.WorldPosition = bonePosition + Vector3.Transform(config.Offset, normalizedBoneRotation);
+            instance.WorldRotation = NormalizeOrIdentity(normalizedBoneRotation * NormalizeOrIdentity(config.RotationOffset));
+            instance.WorldScale = config.InheritScale ? NormalizeScale(boneScale) : Vector3.One;
+        }
+
         private static float ResolveAttributeValue(ref AttributeBuffer attributes, int attributeId, ValueSourceKind mode)
         {
             return mode switch
@@ -389,6 +430,30 @@ namespace Ludots.Core.Presentation.Systems
         private static bool IsBehaviorActive(uint mask, int slotIndex)
         {
             return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
+        }
+
+        private static TransformSource ResolveDefaultTransformSource(in PerformerInstance instance)
+        {
+            if (instance.ParentHandle >= 0)
+            {
+                return TransformSource.InheritParent;
+            }
+
+            return instance.AnchorKind == PresentationAnchorKind.Entity
+                ? TransformSource.EntityTransform
+                : TransformSource.WorldFixed;
+        }
+
+        private static Quaternion NormalizeOrIdentity(Quaternion value)
+        {
+            return value.LengthSquared() > 0.000001f
+                ? Quaternion.Normalize(value)
+                : Quaternion.Identity;
+        }
+
+        private static Vector3 NormalizeScale(Vector3 value)
+        {
+            return value == Vector3.Zero ? Vector3.One : value;
         }
     }
 }

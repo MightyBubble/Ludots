@@ -2,7 +2,6 @@ using System;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
-using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
@@ -19,7 +18,6 @@ namespace Ludots.Core.Presentation.Systems
     /// </summary>
     public sealed class PerformerRuntimeSystem : BaseSystem<World, float>
     {
-        private readonly PrefabRegistry _prefabs;
         private readonly PerformerCommandBuffer _commands;
         private readonly PresentationEventStream _events;
         private readonly TransientMarkerBuffer _markers;
@@ -31,7 +29,6 @@ namespace Ludots.Core.Presentation.Systems
 
         public PerformerRuntimeSystem(
             World world,
-            PrefabRegistry prefabs,
             PerformerCommandBuffer commands,
             PresentationEventStream events,
             TransientMarkerBuffer markers,
@@ -42,7 +39,6 @@ namespace Ludots.Core.Presentation.Systems
             PerformerAnimatorStateBuffer? animatorStates = null)
             : base(world)
         {
-            _prefabs = prefabs ?? throw new ArgumentNullException(nameof(prefabs));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _markers = markers ?? throw new ArgumentNullException(nameof(markers));
@@ -73,6 +69,12 @@ namespace Ludots.Core.Presentation.Systems
                         break;
 
                     case PerformerCommandKind.DestroyPerformerScope:
+                        if (cmd.ScopeTag <= 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"DestroyPerformerScope requires a positive scopeTag, got {cmd.ScopeTag}.");
+                        }
+
                         _instances.ReleaseScope(cmd.ScopeTag, EmitDestroyedEvent);
                         break;
 

@@ -1,58 +1,73 @@
 {
-    "_comment":  "RTS unit cube marker 鈥?renders all entities with VisualTransform",
-    "id":  "rts_unit_marker",
-    "visualKind":  "Marker3D",
-    "meshOrShapeId":  "cube",
-    "defaultScale":  1.0,
-    "positionOffset":  [
-                           0,
-                           0.5,
-                           0
-                       ],
-    "bindings":  [
-                     {
-                         "paramKey":  4,
-                         "source":  "entityColor",
-                         "sourceId":  0
-                     },
-                     {
-                         "paramKey":  5,
-                         "source":  "entityColor",
-                         "sourceId":  1
-                     },
-                     {
-                         "paramKey":  6,
-                         "source":  "entityColor",
-                         "sourceId":  2
-                     },
-                     {
-                         "paramKey":  7,
-                         "source":  "entityColor",
-                         "sourceId":  3
-                     }
-                 ],
-    "rules":  [
-                  {
-                      "event":  {
-                                    "kind":  "EntitySpawned"
-                                },
-                      "command":  {
-                                      "kind":  "CreatePerformer",
-                                      "scopeSource":  "EventPayloadA",
-                                      "definitionId":  "rts_unit_marker"
-                                  },
-                      "condition":  {
-                                        "inline":  "SourceHasVisualTransform"
-                                    }
-                  },
-                  {
-                      "event":  {
-                                    "kind":  "EntityDestroyed"
-                                },
-                      "command":  {
-                                      "kind":  "DestroyPerformerScope",
-                                      "scopeSource":  "EventPayloadA"
-                                  }
-                  }
-              ]
+  "_comment": "RTS unit cube marker 鈥?renders all entities with VisualTransform",
+  "id": "rts_unit_marker",
+  "positionOffset": [
+    0,
+    0.5,
+    0
+  ],
+  "bindings": [
+    {
+      "paramKey": 4,
+      "source": "entityColor",
+      "sourceId": 0
+    },
+    {
+      "paramKey": 5,
+      "source": "entityColor",
+      "sourceId": 1
+    },
+    {
+      "paramKey": 6,
+      "source": "entityColor",
+      "sourceId": 2
+    },
+    {
+      "paramKey": 7,
+      "source": "entityColor",
+      "sourceId": 3
+    }
+  ],
+  "rules": [
+    {
+      "event": {
+        "kind": "EntitySpawned"
+      },
+      "command": {
+        "kind": "CreatePerformer",
+        "scopeSource": "EventPayloadA",
+        "definitionId": "rts_unit_marker"
+      },
+      "condition": {
+        "inline": "SourceHasVisualTransform"
+      }
+    },
+    {
+      "event": {
+        "kind": "EntityDestroyed"
+      },
+      "command": {
+        "kind": "DestroyPerformerScope",
+        "scopeSource": "EventPayloadA"
+      }
+    }
+  ],
+  "behaviors": [
+    {
+      "slot": 0,
+      "kind": "AssetBinding",
+      "activeByDefault": true,
+      "assetBinding": {
+        "assetKind": "Mesh",
+        "assetId": "cube",
+        "renderPath": "StaticMesh",
+        "mobility": "Movable",
+        "localScale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    }
+  ]
 }

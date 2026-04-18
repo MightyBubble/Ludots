@@ -1,14 +1,19 @@
 [
   {
     "id": "road_surface_chunk",
-    "visualKind": "SurfaceSource",
     "defaultLifetime": -1,
     "surface": {
       "kind": "SplineRibbon",
       "profileId": "road_surface",
       "geometrySource": {
-        "controlPointSource": { "kind": "constant", "id": "road_network_chunk_segments" },
-        "widthSource": { "kind": "constant", "id": "road_network_chunk_width" },
+        "controlPointSource": {
+          "kind": "constant",
+          "id": "road_network_chunk_segments"
+        },
+        "widthSource": {
+          "kind": "constant",
+          "id": "road_network_chunk_width"
+        },
         "segmentationPolicy": "Bezier12"
       },
       "chunkBake": {

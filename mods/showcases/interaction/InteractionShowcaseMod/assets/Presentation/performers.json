@@ -1,19 +1,66 @@
 [
   {
     "id": "interaction_selection_indicator",
-    "visualKind": "GroundOverlay",
-    "meshOrShapeId": "Ring",
-    "defaultColor": [0.27, 0.74, 0.96, 0.18],
-    "defaultScale": 1.3,
+    "defaultColor": [
+      0.27,
+      0.74,
+      0.96,
+      0.18
+    ],
     "defaultLifetime": -1,
-    "positionOffset": [0, 0.04, 0],
+    "positionOffset": [
+      0,
+      0.04,
+      0
+    ],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.95 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.45 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.86 },
-      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.95 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.03 }
+      {
+        "paramKey": 1,
+        "source": "constant",
+        "constantValue": 0.95
+      },
+      {
+        "paramKey": 8,
+        "source": "constant",
+        "constantValue": 0.45
+      },
+      {
+        "paramKey": 9,
+        "source": "constant",
+        "constantValue": 0.86
+      },
+      {
+        "paramKey": 10,
+        "source": "constant",
+        "constantValue": 1.0
+      },
+      {
+        "paramKey": 11,
+        "source": "constant",
+        "constantValue": 0.95
+      },
+      {
+        "paramKey": 12,
+        "source": "constant",
+        "constantValue": 0.03
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "mobility": "Movable",
+          "localScale": [
+            1.3,
+            1.3,
+            1.3
+          ]
+        }
+      }
     ]
   }
 ]

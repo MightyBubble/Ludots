@@ -1,7 +1,7 @@
 using Arch.Core;
 using Ludots.Core.Gameplay.Components;
 
-namespace Ludots.Core.Presentation.Perform
+namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
     /// Normalized audience/viewer context consumed by perform phase resolution.

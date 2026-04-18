@@ -7,6 +7,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 
@@ -75,6 +76,7 @@ namespace Ludots.Core.Presentation.Config
             }
 
             var mergedByKey = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
+            var parsedByKey = new Dictionary<string, PerformerDefinition>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < merged.Count; i++)
             {
                 if (merged[i].Node is not JsonObject obj)
@@ -100,11 +102,26 @@ namespace Ludots.Core.Presentation.Config
                     var (_, def) = ParseDefinition(expanded);
                     if (def != null)
                     {
-                        _registry.Register(key, def);
+                        parsedByKey[key] = def;
                     }
                 }
                 catch (Exception ex)
                 {
+                    _registry.Unregister(key);
+                    Trace.WriteLine($"[PerformerDefinitionConfigLoader] Skipping performer '{key}': {ex.Message}");
+                }
+            }
+
+            foreach ((string key, PerformerDefinition def) in parsedByKey)
+            {
+                try
+                {
+                    ValidateChildGraph(key, parsedByKey, new HashSet<int>(), new List<string>());
+                    _registry.Register(key, def);
+                }
+                catch (Exception ex)
+                {
+                    _registry.Unregister(key);
                     Trace.WriteLine($"[PerformerDefinitionConfigLoader] Skipping performer '{key}': {ex.Message}");
                 }
             }
@@ -299,18 +316,15 @@ namespace Ludots.Core.Presentation.Config
 
             RejectLegacyFields(node, key);
 
-            PerformerVisualKind visualKind = ParseEnum(node["visualKind"]?.GetValue<string>(), PerformerVisualKind.GroundOverlay);
             var def = new PerformerDefinition
             {
                 Key = key,
                 Extends = node["extends"]?.GetValue<string>() ?? string.Empty,
-                VisualKind = visualKind,
-                MeshOrShapeId = ResolveMeshOrShape(node["meshOrShapeId"], visualKind),
                 DefaultColor = ParseColor(node["defaultColor"]),
-                DefaultScale = node["defaultScale"]?.GetValue<float>() ?? 1f,
                 DefaultLifetime = node["defaultLifetime"]?.GetValue<float>() ?? 0f,
                 DefaultFontSize = node["defaultFontSize"]?.GetValue<int>() ?? 16,
-                DefaultTextId = node["defaultTextId"]?.GetValue<int>() ?? 0,
+                DefaultTextId = ResolveOptionalTextTokenId(node["defaultTextId"]),
+                LegacyWorldTextMode = ParseEnum(node["legacyWorldTextMode"]?.GetValue<string>(), WorldHudValueMode.None),
                 PositionOffset = ParseVector3(node["positionOffset"]),
                 PositionYDriftPerSecond = node["positionYDriftPerSecond"]?.GetValue<float>() ?? 0f,
                 AlphaFadeOverLifetime = node["alphaFadeOverLifetime"]?.GetValue<bool>() ?? false,
@@ -318,21 +332,19 @@ namespace Ludots.Core.Presentation.Config
                 Rules = ParseRules(node["rules"]),
                 Bindings = ParseBindings(node["bindings"]),
                 Children = ParseChildren(node["children"]),
-                Behaviors = ParseBehaviors(node["behaviors"]),
+                Behaviors = ParseBehaviors(node["behaviors"], key),
                 ParamDefaults = ParseParamDefaults(node["paramDefaults"]),
             };
 
-            if (def.VisualKind == PerformerVisualKind.SurfaceSource)
+            def.Id = _registry.GetId(key);
+
+            if (node["surface"] != null)
             {
                 def.Surface = ParseSurface(node["surface"], key);
             }
-            else if (node["surface"] != null)
-            {
-                throw new InvalidOperationException(
-                    $"Performer '{key}' declares a surface block but visualKind '{def.VisualKind}' is not '{PerformerVisualKind.SurfaceSource}'.");
-            }
 
-            def.Rules = ExpandChildrenRules(def.Rules, def.Children);
+            def.Rules = ExpandChildrenRules(def.Id, def.Rules, def.Children);
+            StampRuleOwners(def.Id, def.Rules);
             return (key, def);
         }
 
@@ -349,37 +361,23 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException(
                     $"Performer '{key}' still uses removed field 'requiredTemplate'. Migrate it to event.key + lifecycle rules.");
             }
-        }
 
-        private int ResolveMeshOrShape(JsonNode? meshNode, PerformerVisualKind visualKind)
-        {
-            if (meshNode == null)
+            string[] removedVisualFields =
             {
-                return 0;
-            }
+                "visualKind",
+                "meshOrShapeId",
+                "defaultScale",
+            };
 
-            if (meshNode is JsonValue numericValue && numericValue.TryGetValue<int>(out int numericId))
+            for (int i = 0; i < removedVisualFields.Length; i++)
             {
-                return numericId;
-            }
-
-            string meshStr = meshNode.ToString().Trim('"');
-            if (string.IsNullOrWhiteSpace(meshStr))
-            {
-                return 0;
-            }
-
-            if (visualKind == PerformerVisualKind.GroundOverlay)
-            {
-                if (Enum.TryParse<GroundOverlayShape>(meshStr, ignoreCase: true, out var shape))
+                string field = removedVisualFields[i];
+                if (node[field] != null)
                 {
-                    return (int)shape;
+                    throw new InvalidOperationException(
+                        $"Performer '{key}' still uses removed field '{field}'. Migrate visual output to behaviors[].assetBinding.");
                 }
-
-                return 0;
             }
-
-            return _resolveMeshId(meshStr);
         }
 
         private PerformerRule[] ParseRules(JsonNode? node)
@@ -479,6 +477,7 @@ namespace Ludots.Core.Presentation.Config
                 ParamValue = node["paramValue"]?.GetValue<float>() ?? 0f,
                 IntValue = node["intValue"]?.GetValue<int>() ?? 0,
                 VectorValue = ParseVector4(node["vectorValue"]),
+                ValueSource = ParseEnum(node["valueSource"]?.GetValue<string>(), PerformerCommandValueSource.Fixed),
                 ParamGraphProgramId = node["paramGraphProgramId"]?.GetValue<int>() ?? 0,
                 TargetBehaviorSlot = node["targetBehaviorSlot"]?.GetValue<int>() ?? -1,
             };
@@ -567,6 +566,32 @@ namespace Ludots.Core.Presentation.Config
             return tokenId;
         }
 
+        private int ResolveOptionalTextTokenId(JsonNode? node)
+        {
+            if (node == null)
+            {
+                return 0;
+            }
+
+            if (node is JsonValue textValue && textValue.TryGetValue<string>(out string? tokenKey))
+            {
+                if (string.IsNullOrWhiteSpace(tokenKey))
+                {
+                    return 0;
+                }
+
+                int tokenId = _resolveTextTokenId(tokenKey);
+                if (tokenId <= 0)
+                {
+                    throw new InvalidOperationException($"Performer defaultTextId references unknown text token '{tokenKey}'.");
+                }
+
+                return tokenId;
+            }
+
+            throw new InvalidOperationException("Performer defaultTextId must be a text token string.");
+        }
+
         private int ResolveAttributeId(JsonNode node)
         {
             JsonNode? idNode = node["attributeId"];
@@ -647,11 +672,80 @@ namespace Ludots.Core.Presentation.Config
             return children;
         }
 
-        private BehaviorSlot[] ParseBehaviors(JsonNode? node)
+        private static void ValidateChildGraph(
+            string key,
+            IReadOnlyDictionary<string, PerformerDefinition> parsedByKey,
+            HashSet<int> pathIds,
+            List<string> path)
+        {
+            if (!parsedByKey.TryGetValue(key, out PerformerDefinition definition))
+            {
+                throw new InvalidOperationException($"Performer '{key}' is missing from the parsed definition graph.");
+            }
+
+            path.Add(key);
+            pathIds.Add(definition.Id);
+
+            try
+            {
+                ChildPerformerRef[] children = definition.Children;
+                if (children == null || children.Length == 0)
+                {
+                    return;
+                }
+
+                for (int i = 0; i < children.Length; i++)
+                {
+                    int childDefinitionId = children[i].DefinitionId;
+                    if (childDefinitionId <= 0)
+                    {
+                        throw new InvalidOperationException($"Performer '{key}' child[{i}] references an unknown definition.");
+                    }
+
+                    string childKey = definition.Key;
+                    childKey = string.Empty;
+                    foreach ((string parsedKey, PerformerDefinition parsedDefinition) in parsedByKey)
+                    {
+                        if (parsedDefinition.Id == childDefinitionId)
+                        {
+                            childKey = parsedKey;
+                            break;
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(childKey))
+                    {
+                        throw new InvalidOperationException($"Performer '{key}' child[{i}] references definition id={childDefinitionId} that failed to load.");
+                    }
+
+                    if (pathIds.Contains(childDefinitionId))
+                    {
+                        var cyclePath = new List<string>(path.Count + 1);
+                        cyclePath.AddRange(path);
+                        cyclePath.Add(childKey);
+                        throw new InvalidOperationException($"Circular child reference detected: {string.Join("->", cyclePath)}");
+                    }
+
+                    ValidateChildGraph(childKey, parsedByKey, pathIds, path);
+                }
+            }
+            finally
+            {
+                path.RemoveAt(path.Count - 1);
+                pathIds.Remove(definition.Id);
+            }
+        }
+
+        private BehaviorSlot[] ParseBehaviors(JsonNode? node, string ownerKey)
         {
             if (node is not JsonArray arr || arr.Count == 0)
             {
                 return Array.Empty<BehaviorSlot>();
+            }
+
+            if (arr.Count > 32)
+            {
+                throw new InvalidOperationException($"Performer '{ownerKey}' exceeds the max 32 behaviors per performer limit.");
             }
 
             var slots = new BehaviorSlot[arr.Count];
@@ -663,9 +757,15 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 BehaviorKind kind = ParseEnum(obj["kind"]?.GetValue<string>(), BehaviorKind.AssetBinding);
+                int slotIndex = obj["slot"]?.GetValue<int>() ?? i;
+                if (slotIndex is < 0 or >= 32)
+                {
+                    throw new InvalidOperationException($"Performer '{ownerKey}' behavior[{i}] uses slot {slotIndex}, but valid behavior slots are 0-31.");
+                }
+
                 var slot = new BehaviorSlot
                 {
-                    SlotIndex = obj["slot"]?.GetValue<int>() ?? i,
+                    SlotIndex = slotIndex,
                     Kind = kind,
                     ActiveByDefault = obj["activeByDefault"]?.GetValue<bool>() ?? false,
                     ActivationCondition = ParseConditionRef(obj["activationCondition"]),
@@ -774,7 +874,9 @@ namespace Ludots.Core.Presentation.Config
             return new AssetBindingConfig
             {
                 AssetKind = assetKind,
-                AssetId = ResolveBehaviorAssetId(assetKind, obj["assetId"]),
+                AssetId = assetKind == AssetKind.GroundOverlay
+                    ? ResolveGroundOverlayShapeId(obj["assetId"])
+                    : ResolveBehaviorAssetId(assetKind, obj["assetId"]),
                 MaterialId = ResolveRegisteredId(_resolveMaterialId, obj["materialId"], "material"),
                 RenderPath = ParseEnum(obj["renderPath"]?.GetValue<string>(), VisualRenderPath.None),
                 Mobility = ParseEnum(obj["mobility"]?.GetValue<string>(), VisualMobility.Movable),
@@ -979,7 +1081,9 @@ namespace Ludots.Core.Presentation.Config
 
                 if (value.TryGetValue<string>(out string key) && !string.IsNullOrWhiteSpace(key))
                 {
-                    int id = _resolveBehaviorAssetId(kind, key);
+                    int id = kind == AssetKind.WorldText
+                        ? _resolveTextTokenId(key)
+                        : _resolveBehaviorAssetId(kind, key);
                     if (id <= 0)
                     {
                         throw new InvalidOperationException($"Performer behavior references unknown {kind} asset '{key}'.");
@@ -990,6 +1094,39 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return 0;
+        }
+
+        private static int ResolveGroundOverlayShapeId(JsonNode? node)
+        {
+            if (node == null)
+            {
+                throw new InvalidOperationException("GroundOverlay AssetBinding requires explicit assetId shape 'Circle', 'Cone', 'Line', or 'Ring'.");
+            }
+
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    if (numericId is >= 0 and <= 3)
+                    {
+                        return numericId;
+                    }
+
+                    throw new InvalidOperationException($"GroundOverlay AssetBinding assetId '{numericId}' is invalid. Use 0=Circle, 1=Cone, 2=Line, or 3=Ring.");
+                }
+
+                if (value.TryGetValue<string>(out string key) && !string.IsNullOrWhiteSpace(key))
+                {
+                    if (Enum.TryParse(key, ignoreCase: true, out GroundOverlayShape shape))
+                    {
+                        return (int)shape;
+                    }
+
+                    throw new InvalidOperationException($"GroundOverlay AssetBinding assetId '{key}' is invalid. Use Circle, Cone, Line, or Ring.");
+                }
+            }
+
+            throw new InvalidOperationException("GroundOverlay AssetBinding assetId must be a shape string or numeric shape id.");
         }
 
         private static int ResolveRegisteredId(Func<string, int> resolver, JsonNode? node, string subject)
@@ -1064,7 +1201,7 @@ namespace Ludots.Core.Presentation.Config
             if (node is not JsonObject obj)
             {
                 throw new InvalidOperationException(
-                    $"Performer '{key}' uses visualKind '{PerformerVisualKind.SurfaceSource}' but is missing required object field 'surface'.");
+                    $"Performer '{key}' declares 'surface' but is missing the required surface object.");
             }
 
             return new SurfaceAuthoringBlock
@@ -1177,7 +1314,7 @@ namespace Ludots.Core.Presentation.Config
             return cond;
         }
 
-        private static PerformerRule[] ExpandChildrenRules(PerformerRule[] rules, ChildPerformerRef[] children)
+        private static PerformerRule[] ExpandChildrenRules(int ownerDefinitionId, PerformerRule[] rules, ChildPerformerRef[] children)
         {
             if (children == null || children.Length == 0)
             {
@@ -1196,10 +1333,11 @@ namespace Ludots.Core.Presentation.Config
                 ref readonly ChildPerformerRef child = ref children[i];
                 expanded[baseCount + i] = new PerformerRule
                 {
+                    OwnerDefinitionId = ownerDefinitionId,
                     Event = new EventFilter
                     {
                         Kind = PresentationEventKind.PerformerCreated,
-                        KeyId = -1,
+                        KeyId = ownerDefinitionId,
                     },
                     Condition = ConditionRef.AlwaysTrue,
                     Command = new PerformerCommand
@@ -1214,6 +1352,19 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return expanded;
+        }
+
+        private static void StampRuleOwners(int ownerDefinitionId, PerformerRule[] rules)
+        {
+            if (rules == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < rules.Length; i++)
+            {
+                rules[i].OwnerDefinitionId = ownerDefinitionId;
+            }
         }
 
         private static Vector3 ParseVector3(JsonNode? node)

@@ -1,7 +1,7 @@
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Presentation.Components;
 
-namespace Ludots.Core.Presentation.Perform
+namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
     /// Resolved performer-facing phase result derived from normalized audience and ownership facts.

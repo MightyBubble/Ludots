@@ -7,6 +7,7 @@ using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
+using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Systems
@@ -18,6 +19,7 @@ namespace Ludots.Core.Presentation.Systems
     {
         private readonly PerformerInstanceBuffer _instances;
         private readonly PerformerDefinitionRegistry _definitions;
+        private readonly PresentationRequestBuffer _requests;
         private readonly Dictionary<string, object> _globals;
         private readonly PerformerAssetEmitRuntime _assetEmitter;
 
@@ -33,6 +35,7 @@ namespace Ludots.Core.Presentation.Systems
         {
             _instances = instances ?? throw new ArgumentNullException(nameof(instances));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+            _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _globals = globals ?? new Dictionary<string, object>();
             _assetEmitter = new PerformerAssetEmitRuntime(
                 world,
@@ -70,14 +73,35 @@ namespace Ludots.Core.Presentation.Systems
                     return;
                 }
 
-                EmitAssetBindings(handle, in instance, definition);
+                LODLevel lod = ResolveOwnerLod(instance.Owner);
+                EmitSurfaceSourceIfAny(handle, in instance, definition, lod);
+                EmitAssetBindings(handle, in instance, definition, lod);
             });
         }
 
-        private void EmitAssetBindings(int handle, in PerformerInstance instance, PerformerDefinition definition)
+        private void EmitSurfaceSourceIfAny(int handle, in PerformerInstance instance, PerformerDefinition definition, LODLevel lod)
+        {
+            SurfaceAuthoringBlock? surface = definition.Surface;
+            if (surface == null)
+            {
+                return;
+            }
+
+            _requests.Add(PresentationRequest.FromSurfaceSource(instance.Owner, new SurfaceSourceRequest
+            {
+                StableId = instance.StableId,
+                PerformerDefinitionId = instance.DefId,
+                ScopeId = instance.ScopeId,
+                SurfaceKind = surface.Kind,
+                Authoring = surface,
+                AnchorPosition = instance.WorldPosition + definition.PositionOffset,
+                LodSeed = lod,
+            }, lod));
+        }
+
+        private void EmitAssetBindings(int handle, in PerformerInstance instance, PerformerDefinition definition, LODLevel lod)
         {
             BehaviorSlot[] behaviors = definition.Behaviors ?? Array.Empty<BehaviorSlot>();
-            LODLevel lod = ResolveOwnerLod(instance.Owner);
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];

@@ -433,11 +433,11 @@ namespace Ludots.Tests.GAS
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "Presentation/performers.json", @"[
-                { ""id"": ""1"", ""visualKind"": ""GroundOverlay"", ""defaultScale"": 1.0 },
-                { ""id"": ""2"", ""visualKind"": ""GroundOverlay"", ""defaultScale"": 2.0 }
+                { ""id"": ""1"", ""defaultLifetime"": 1.0 },
+                { ""id"": ""2"", ""defaultLifetime"": 2.0 }
             ]");
             WriteAssetFile("ModA", "Presentation/performers.json", @"[
-                { ""id"": ""1"", ""defaultScale"": 1.5 }
+                { ""id"": ""1"", ""defaultLifetime"": 1.5 }
             ]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
@@ -446,9 +446,9 @@ namespace Ludots.Tests.GAS
 
             That(merged.Count, Is.EqualTo(2));
             // id=1 should have merged scale
-            That(merged[0].Node["defaultScale"]?.GetValue<float>(), Is.EqualTo(1.5f).Within(0.01f));
+            That(merged[0].Node["defaultLifetime"]?.GetValue<float>(), Is.EqualTo(1.5f).Within(0.01f));
             // id=2 should be unchanged
-            That(merged[1].Node["defaultScale"]?.GetValue<float>(), Is.EqualTo(2.0f).Within(0.01f));
+            That(merged[1].Node["defaultLifetime"]?.GetValue<float>(), Is.EqualTo(2.0f).Within(0.01f));
         }
 
         // ═══════════════════════════════════════════════════════════════════

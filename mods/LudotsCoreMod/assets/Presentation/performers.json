@@ -1,148 +1,347 @@
 [
-    {
-        "id":  "entity_health_bar",
-        "visualKind":  "WorldBar",
-        "visibility":  {
-                           "inline":  "OwnerCullVisible"
-                       },
-        "maxVisibilityDistanceCm":  5000,
-        "positionOffset":  [
-                               0,
-                               0.65,
-                               0
-                           ],
-        "defaultColor":  [
-                             0.1,
-                             0.85,
-                             0.15,
-                             1.0
-                         ],
-        "bindings":  [
-                         {
-                             "paramKey":  0,
-                             "source":  "attributeRatio",
-                             "attributeName":  "Health"
-                         },
-                         {
-                             "paramKey":  1,
-                             "source":  "constant",
-                             "constantValue":  50
-                         },
-                         {
-                             "paramKey":  2,
-                             "source":  "constant",
-                             "constantValue":  8
-                         },
-                         {
-                             "paramKey":  8,
-                             "source":  "constant",
-                             "constantValue":  0.3
-                         },
-                         {
-                             "paramKey":  9,
-                             "source":  "constant",
-                             "constantValue":  0.0
-                         },
-                         {
-                             "paramKey":  10,
-                             "source":  "constant",
-                             "constantValue":  0.0
-                         },
-                         {
-                             "paramKey":  11,
-                             "source":  "constant",
-                             "constantValue":  0.85
-                         }
-                     ],
-        "rules":  [
-                      {
-                          "event":  {
-                                        "kind":  "EntitySpawned"
-                                    },
-                          "command":  {
-                                          "kind":  "CreatePerformer",
-                                          "scopeSource":  "EventPayloadA",
-                                          "definitionId":  "entity_health_bar"
-                                      },
-                          "condition":  {
-                                            "inline":  "SourceHasAttributes"
-                                        }
-                      },
-                      {
-                          "event":  {
-                                        "kind":  "EntityDestroyed"
-                                    },
-                          "command":  {
-                                          "kind":  "DestroyPerformerScope",
-                                          "scopeSource":  "EventPayloadA"
-                                      }
-                      }
-                  ]
+  {
+    "id": "entity_health_bar",
+    "visibility": {
+      "inline": "OwnerCullVisible"
     },
-    {
-        "id":  "entity_world_text",
-        "visualKind":  "WorldText",
-        "visibility":  {
-                           "inline":  "OwnerCullVisible"
-                       },
-        "maxVisibilityDistanceCm":  3000,
-        "positionOffset":  [
-                               0,
-                               0.80,
-                               0
-                           ],
-        "defaultColor":  [
-                             1,
-                             1,
-                             1,
-                             1
-                         ],
-        "defaultFontSize":  12,
-        "bindings":  [
-                         {
-                             "paramKey":  0,
-                             "source":  "attribute",
-                             "attributeName":  "Health"
-                         },
-                         {
-                             "paramKey":  1,
-                             "source":  "attributeBase",
-                             "attributeName":  "Health"
-                         },
-                         {
-                             "paramKey":  15,
-                             "source":  "textToken",
-                             "textToken":  "hud.attribute.current_over_base"
-                         },
-                         {
-                             "paramKey":  16,
-                             "source":  "constant",
-                             "constantValue":  1
-                         }
-                     ],
-        "rules":  [
-                      {
-                          "event":  {
-                                        "kind":  "EntitySpawned"
-                                    },
-                          "command":  {
-                                          "kind":  "CreatePerformer",
-                                          "scopeSource":  "EventPayloadA",
-                                          "definitionId":  "entity_world_text"
-                                      },
-                          "condition":  {
-                                            "inline":  "SourceHasAttributes"
-                                        }
-                      },
-                      {
-                          "event":  {
-                                        "kind":  "EntityDestroyed"
-                                    },
-                          "command":  {
-                                          "kind":  "DestroyPerformerScope",
-                                          "scopeSource":  "EventPayloadA"
-                                      }
-                      }
-                  ]
-    }
+    "maxVisibilityDistanceCm": 5000,
+    "positionOffset": [
+      0,
+      0.65,
+      0
+    ],
+    "defaultColor": [
+      0.1,
+      0.85,
+      0.15,
+      1.0
+    ],
+    "bindings": [
+      {
+        "paramKey": 0,
+        "source": "attributeRatio",
+        "attributeName": "Health"
+      },
+      {
+        "paramKey": 1,
+        "source": "constant",
+        "constantValue": 50
+      },
+      {
+        "paramKey": 2,
+        "source": "constant",
+        "constantValue": 8
+      },
+      {
+        "paramKey": 8,
+        "source": "constant",
+        "constantValue": 0.3
+      },
+      {
+        "paramKey": 9,
+        "source": "constant",
+        "constantValue": 0.0
+      },
+      {
+        "paramKey": 10,
+        "source": "constant",
+        "constantValue": 0.0
+      },
+      {
+        "paramKey": 11,
+        "source": "constant",
+        "constantValue": 0.85
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "mobility": "Movable",
+          "localScale": [
+            50.0,
+            8.0,
+            1.0
+          ],
+          "materialParamKey": 0
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "entity_health_bar"
+        },
+        "condition": {
+          "inline": "SourceHasAttributes"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "entity_world_text",
+    "visibility": {
+      "inline": "OwnerCullVisible"
+    },
+    "maxVisibilityDistanceCm": 3000,
+    "positionOffset": [
+      0,
+      0.80,
+      0
+    ],
+    "defaultColor": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "defaultFontSize": 12,
+    "bindings": [
+      {
+        "paramKey": 0,
+        "source": "attribute",
+        "attributeName": "Health"
+      },
+      {
+        "paramKey": 1,
+        "source": "attributeBase",
+        "attributeName": "Health"
+      },
+      {
+        "paramKey": 15,
+        "source": "textToken",
+        "textToken": "hud.attribute.current_over_base"
+      },
+      {
+        "paramKey": 16,
+        "source": "constant",
+        "constantValue": 1
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldText",
+          "assetId": "hud.attribute.current_over_base",
+          "mobility": "Movable",
+          "scaleParamKey": 0,
+          "materialParamKey": 1,
+          "localScale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "entity_world_text"
+        },
+        "condition": {
+          "inline": "SourceHasAttributes"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "cast_committed_marker",
+    "defaultColor": [
+      0.0,
+      1.0,
+      1.0,
+      0.9
+    ],
+    "defaultLifetime": 0.22,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [
+      0.0,
+      0.6,
+      0.0
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "localScale": [
+            0.55,
+            0.55,
+            0.55
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "CastCommitted"
+        },
+        "condition": {
+          "inline": "AlwaysTrue"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "cast_committed_marker",
+          "scopeTag": -1
+        }
+      }
+    ]
+  },
+  {
+    "id": "cast_failed_marker",
+    "defaultColor": [
+      0.7,
+      0.7,
+      0.7,
+      0.6
+    ],
+    "defaultLifetime": 0.15,
+    "alphaFadeOverLifetime": true,
+    "positionOffset": [
+      0.0,
+      0.9,
+      0.0
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "localScale": [
+            0.2,
+            0.2,
+            0.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "CastFailed"
+        },
+        "condition": {
+          "inline": "AlwaysTrue"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "cast_failed_marker",
+          "scopeTag": -1
+        }
+      }
+    ]
+  },
+  {
+    "id": "floating_combat_text",
+    "defaultColor": [
+      1.0,
+      0.2,
+      0.1,
+      1.0
+    ],
+    "defaultFontSize": 18,
+    "defaultTextId": "hud.combat.delta",
+    "legacyWorldTextMode": "AttributeCurrent",
+    "defaultLifetime": 1.2,
+    "positionOffset": [
+      0.0,
+      1.0,
+      0.0
+    ],
+    "positionYDriftPerSecond": 0.8,
+    "alphaFadeOverLifetime": true,
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldText",
+          "assetId": "hud.combat.delta",
+          "mobility": "Movable",
+          "localOffset": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "localScale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EffectApplied"
+        },
+        "condition": {
+          "inline": "AlwaysTrue"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "floating_combat_text",
+          "scopeTag": -1
+        }
+      }
+    ]
+  }
 ]

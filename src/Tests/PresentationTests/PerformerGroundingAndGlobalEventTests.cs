@@ -180,6 +180,30 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void ResolveBatch_AppliesGroundingPerMode_AndSkipsGroundingNone()
+        {
+            Vector3[] positions =
+            [
+                new Vector3(1f, 2f, 3f),
+                new Vector3(4f, 5f, 6f),
+                new Vector3(7f, 8f, 9f),
+            ];
+            GroundingMode[] modes =
+            [
+                GroundingMode.None,
+                GroundingMode.SnapToGround,
+                GroundingMode.AlignToSurface,
+            ];
+            float[] offsets = [0f, 1.25f, 0.5f];
+
+            PerformerGroundingUtility.ResolveBatch(positions, modes, offsets, new StubHeightmap(heightCm: 250f));
+
+            Assert.That(positions[0], Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            Assert.That(positions[1].Y, Is.EqualTo(3.75f).Within(0.001f));
+            Assert.That(positions[2].Y, Is.EqualTo(3f).Within(0.001f));
+        }
+
+        [Test]
         public void ResolveTransform_AlignToSurface_RotatesUpAxisToGroundNormal()
         {
             var instance = new PerformerInstance

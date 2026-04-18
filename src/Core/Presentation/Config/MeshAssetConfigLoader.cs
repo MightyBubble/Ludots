@@ -10,19 +10,32 @@ namespace Ludots.Core.Presentation.Config
     {
         private readonly ConfigPipeline _configs;
         private readonly MeshAssetRegistry _meshRegistry;
-        private readonly PrefabRegistry _prefabRegistry;
+        private readonly PrefabRegistry? _prefabRegistry;
+        private readonly bool _loadPrefabs;
+
+        public MeshAssetConfigLoader(ConfigPipeline configs, MeshAssetRegistry meshRegistry)
+        {
+            _configs = configs ?? throw new ArgumentNullException(nameof(configs));
+            _meshRegistry = meshRegistry ?? throw new ArgumentNullException(nameof(meshRegistry));
+            _prefabRegistry = null;
+            _loadPrefabs = false;
+        }
 
         public MeshAssetConfigLoader(ConfigPipeline configs, MeshAssetRegistry meshRegistry, PrefabRegistry prefabRegistry)
         {
-            _configs = configs;
-            _meshRegistry = meshRegistry;
-            _prefabRegistry = prefabRegistry;
+            _configs = configs ?? throw new ArgumentNullException(nameof(configs));
+            _meshRegistry = meshRegistry ?? throw new ArgumentNullException(nameof(meshRegistry));
+            _prefabRegistry = prefabRegistry ?? throw new ArgumentNullException(nameof(prefabRegistry));
+            _loadPrefabs = true;
         }
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
             LoadMeshAssets(catalog, report);
-            LoadPrefabs(catalog, report);
+            if (_loadPrefabs)
+            {
+                LoadPrefabs(catalog, report);
+            }
         }
 
         private void LoadMeshAssets(ConfigCatalog catalog, ConfigConflictReport report)
@@ -71,7 +84,7 @@ namespace Ludots.Core.Presentation.Config
                     prefabId = _meshRegistry.Register(prefabKey, in prefabDesc);
                 }
 
-                _prefabRegistry.Register(prefabKey, new PrefabDefinition
+                _prefabRegistry!.Register(prefabKey, new PrefabDefinition
                 {
                     MeshAssetId = meshAssetId > 0 ? meshAssetId : prefabId,
                     BaseScale = node["baseScale"]?.GetValue<float>() ?? 1f,
