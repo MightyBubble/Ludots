@@ -42,12 +42,14 @@ namespace Ludots.Tests.Presentation
         private GroundOverlayBuffer _overlays;
         private RoadSplineBuffer _roadSplines;
         private PresentationRequestBuffer _requests;
+        private SoundRequestBuffer _soundRequests;
         private PresentationRequestFlushSystem _flush;
         private PresentationBridgeSystem _bridge;
         private PresentationEntityLifecycleSystem _entityLifecycle;
         private PresentationEntityFinalizeDestroySystem _finalizeDestroy;
         private PerformerRuleSystem _ruleSystem;
         private PerformerRuntimeSystem _runtimeSystem;
+        private PerformerBehaviorSystem _behaviorSystem;
         private PerformerEmitSystem _emitSystem;
         private PresentationStableIdAllocator _stableIds;
         private int _healthAttrId;
@@ -69,6 +71,7 @@ namespace Ludots.Tests.Presentation
             _overlays = new GroundOverlayBuffer();
             _roadSplines = new RoadSplineBuffer();
             _requests = new PresentationRequestBuffer();
+            _soundRequests = new SoundRequestBuffer();
             _stableIds = new PresentationStableIdAllocator();
 
             _healthAttrId = AttributeRegistry.Register("Health");
@@ -78,24 +81,13 @@ namespace Ludots.Tests.Presentation
                 new MeshAssetRegistry(),
                 key => string.Equals(key, WellKnownHudTextKeys.CombatDelta, StringComparison.Ordinal) ? 1 : 0);
             int healthBarDefId = _defs.GetOrRegisterId(WellKnownPerformerKeys.EntityHealthBar);
-            _defs.Register(WellKnownPerformerKeys.EntityHealthBar, new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.WorldBar,
-                VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
-                DefaultColor = new Vector4(0f, 1f, 0f, 1f),
-                DefaultScale = 1f,
-                PositionOffset = new Vector3(0f, 1.5f, 0f),
-                Bindings = new[]
-                {
-                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarFillRatio, Value = ValueRef.FromAttributeRatio(_healthAttrId) },
-                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarWidth, Value = ValueRef.FromConstant(50f) },
-                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarHeight, Value = ValueRef.FromConstant(8f) },
-                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarBackgroundR, Value = ValueRef.FromConstant(0.2f) },
-                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarBackgroundG, Value = ValueRef.FromConstant(0f) },
-                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarBackgroundB, Value = ValueRef.FromConstant(0f) },
-                    new PerformerParamBinding { ParamKey = WellKnownPerformerParamKeys.BarBackgroundA, Value = ValueRef.FromConstant(0.85f) },
-                },
-                Rules = new[]
+            _defs.Register(WellKnownPerformerKeys.EntityHealthBar, CreateWorldBarDefinition(
+                _healthAttrId,
+                new Vector4(0f, 1f, 0f, 1f),
+                new Vector3(0f, 1.5f, 0f),
+                width: 50f,
+                height: 8f,
+                rules: new[]
                 {
                     new PerformerRule
                     {
@@ -118,8 +110,7 @@ namespace Ludots.Tests.Presentation
                             ScopeSource = PerformerCommandScopeSource.EventPayloadA,
                         }
                     }
-                },
-            });
+                }));
 
             var session = new GameSession();
             var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
@@ -129,7 +120,8 @@ namespace Ludots.Tests.Presentation
             _finalizeDestroy = new PresentationEntityFinalizeDestroySystem(_world);
             _ruleSystem = new PerformerRuleSystem(_world, _presEvents, _commands, _defs, _programs, graphApi, _globals);
             _runtimeSystem = new PerformerRuntimeSystem(_world, new PrefabRegistry(), _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
-            _emitSystem = new PerformerEmitSystem(_world, _instances, _defs, _requests, _programs, graphApi, _globals);
+            _behaviorSystem = new PerformerBehaviorSystem(_world, _instances, _defs, _presEvents, _soundRequests);
+            _emitSystem = new PerformerEmitSystem(_world, _instances, _defs, _requests, _globals);
             _flush = new PresentationRequestFlushSystem(_world, _requests, new PrefabRegistry(), new MeshAssetRegistry(), _primitives, _overlays, _hud, _roadSplines);
         }
 
@@ -137,6 +129,7 @@ namespace Ludots.Tests.Presentation
         public void TearDown()
         {
             _emitSystem?.Dispose();
+            _behaviorSystem?.Dispose();
             _flush?.Dispose();
             _runtimeSystem?.Dispose();
             _ruleSystem?.Dispose();
@@ -149,6 +142,7 @@ namespace Ludots.Tests.Presentation
         private void TickPipeline(float dt)
         {
             _requests.Clear();
+            _soundRequests.Clear();
             _hud.Clear();
             _primitives.Clear();
             _overlays.Clear();
@@ -157,6 +151,7 @@ namespace Ludots.Tests.Presentation
             _bridge.Update(dt);
             _ruleSystem.Update(dt);
             _runtimeSystem.Update(dt);
+            _behaviorSystem.Update(0f);
             _emitSystem.Update(dt);
             _flush.Update(dt);
             _finalizeDestroy.Update(dt);
@@ -435,8 +430,17 @@ namespace Ludots.Tests.Presentation
         {
             int overlayDefId = _defs.Register("test.overlay", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.GroundOverlay,
-                MeshOrShapeId = 0,
+                Behaviors = new[]
+                {
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = CreateMeshAssetBinding(assetId: 2, new Vector3(5f, 5f, 5f)),
+                    }
+                },
+                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultScale = 5f,
                 DefaultColor = new Vector4(0.3f, 0.7f, 1f, 0.5f),
             });
@@ -454,7 +458,7 @@ namespace Ludots.Tests.Presentation
                 Source = owner,
             });
             TickPipeline(0.016f);
-            Assert.That(_overlays.GetSpan().Length, Is.GreaterThan(0));
+            Assert.That(_primitives.GetSpan().Length, Is.GreaterThan(0));
 
             _commands.TryAdd(new PerformerCommand
             {
@@ -463,7 +467,7 @@ namespace Ludots.Tests.Presentation
             });
             TickPipeline(0.016f);
 
-            Assert.That(_overlays.GetSpan().Length, Is.EqualTo(0));
+            Assert.That(_primitives.GetSpan().Length, Is.EqualTo(0));
         }
 
         [Test]
@@ -528,20 +532,13 @@ namespace Ludots.Tests.Presentation
         {
             int heroTemplateId = 42;
             int defId = _defs.GetOrRegisterId("test.template.keyed.bar");
-            _defs.Register("test.template.keyed.bar", new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.WorldBar,
-                DefaultColor = new Vector4(1f, 0f, 0f, 1f),
-                PositionOffset = new Vector3(0f, 2f, 0f),
-                Bindings = new[]
-                {
-                    new PerformerParamBinding
-                    {
-                        ParamKey = WellKnownPerformerParamKeys.BarFillRatio,
-                        Value = ValueRef.FromAttributeRatio(_healthAttrId)
-                    }
-                },
-                Rules = new[]
+            _defs.Register("test.template.keyed.bar", CreateWorldBarDefinition(
+                _healthAttrId,
+                new Vector4(1f, 0f, 0f, 1f),
+                new Vector3(0f, 2f, 0f),
+                width: 40f,
+                height: 6f,
+                rules: new[]
                 {
                     new PerformerRule
                     {
@@ -564,8 +561,7 @@ namespace Ludots.Tests.Presentation
                             ScopeSource = PerformerCommandScopeSource.EventPayloadA,
                         }
                     }
-                }
-            });
+                }));
 
             var heroAttr = new AttributeBuffer();
             heroAttr.SetBase(_healthAttrId, 200f);
@@ -590,6 +586,91 @@ namespace Ludots.Tests.Presentation
             }
 
             Assert.That(totalBars, Is.EqualTo(3));
+        }
+
+        private static PerformerDefinition CreateWorldBarDefinition(
+            int attributeId,
+            Vector4 color,
+            Vector3 positionOffset,
+            float width,
+            float height,
+            PerformerRule[] rules)
+        {
+            return new PerformerDefinition
+            {
+                Behaviors = new[]
+                {
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AttributeBinding,
+                        ActiveByDefault = true,
+                        AttributeBinding = new AttributeBindingConfig
+                        {
+                            AttributeId = attributeId,
+                            TargetParamKey = WellKnownPerformerParamKeys.BarFillRatio,
+                            Mode = ValueSourceKind.AttributeRatio,
+                            Thresholds = Array.Empty<ThresholdMapping>(),
+                        }
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = CreateWorldHudAssetBinding(width, height, WellKnownPerformerParamKeys.BarFillRatio),
+                    }
+                },
+                VisualKind = PerformerVisualKind.WorldBar,
+                VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
+                DefaultColor = color,
+                DefaultScale = 1f,
+                PositionOffset = positionOffset,
+                Rules = rules,
+            };
+        }
+
+        private static AssetBindingConfig CreateWorldHudAssetBinding(float width, float height, int valueParamKey)
+        {
+            return new AssetBindingConfig
+            {
+                AssetKind = AssetKind.WorldHud,
+                MaterialId = 0,
+                RenderPath = VisualRenderPath.None,
+                Mobility = VisualMobility.Movable,
+                LocalOffset = Vector3.Zero,
+                LocalRotation = Quaternion.Identity,
+                LocalScale = new Vector3(width, height, 1f),
+                ScaleParamKey = -1,
+                ColorParamKey = -1,
+                MaterialParamKey = valueParamKey,
+                AssetSwapParamKey = -1,
+                VisibilityParamKey = -1,
+                Grounding = GroundingMode.None,
+                GroundingOffset = 0f,
+            };
+        }
+
+        private static AssetBindingConfig CreateMeshAssetBinding(int assetId, Vector3 scale)
+        {
+            return new AssetBindingConfig
+            {
+                AssetKind = AssetKind.Mesh,
+                AssetId = assetId,
+                MaterialId = 0,
+                RenderPath = VisualRenderPath.StaticMesh,
+                Mobility = VisualMobility.Movable,
+                LocalOffset = Vector3.Zero,
+                LocalRotation = Quaternion.Identity,
+                LocalScale = scale,
+                ScaleParamKey = -1,
+                ColorParamKey = -1,
+                MaterialParamKey = -1,
+                AssetSwapParamKey = -1,
+                VisibilityParamKey = -1,
+                Grounding = GroundingMode.None,
+                GroundingOffset = 0f,
+            };
         }
     }
 }

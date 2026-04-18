@@ -19,7 +19,7 @@ namespace AnimationAcceptanceMod.UI
         private const float PanelWidth = 556f;
         private const float PanelHeight = 688f;
         private static readonly QueryDescription RigQuery = new QueryDescription()
-            .WithAll<Name, VisualRuntimeState, AnimatorPackedState, AnimatorRuntimeState, AnimatorParameterBuffer, AnimationOverlayRequest, AnimatorFeedbackBuffer>();
+            .WithAll<Name, VisualRuntimeState, AnimatorPackedState, AnimatorRuntimeState, AnimationOverlayRequest, AnimatorFeedbackBuffer>();
 
         private readonly ReactivePage<AnimationAcceptancePanelState> _page;
         private GameEngine? _engine;
@@ -422,7 +422,6 @@ namespace AnimationAcceptanceMod.UI
                 var visuals = chunk.GetArray<VisualRuntimeState>();
                 var packedStates = chunk.GetArray<AnimatorPackedState>();
                 var runtimeStates = chunk.GetArray<AnimatorRuntimeState>();
-                var parameterBuffers = chunk.GetArray<AnimatorParameterBuffer>();
                 var overlays = chunk.GetArray<AnimationOverlayRequest>();
                 var feedbackBuffers = chunk.GetArray<AnimatorFeedbackBuffer>();
 
@@ -438,7 +437,6 @@ namespace AnimationAcceptanceMod.UI
                         EntityName: names[i].Value ?? definition.DisplayName,
                         PackedState: packedStates[i],
                         RuntimeState: runtimeStates[i],
-                        Parameters: parameterBuffers[i],
                         OverlayRequest: overlays[i],
                         Feedback: feedbackBuffers[i]);
                 }
@@ -469,17 +467,20 @@ namespace AnimationAcceptanceMod.UI
             for (int i = 0; i < definition.FloatParameters.Length; i++)
             {
                 var parameter = definition.FloatParameters[i];
-                parameterLines.Add($"{parameter.Label}[{parameter.Index}] = {sample.Parameters.GetFloat(parameter.Index):0.00}  ({parameter.Description})");
+                float value = parameter.Index == definition.SpeedParameterIndex ? slot.Speed : 0f;
+                parameterLines.Add($"{parameter.Label}[{parameter.Index}] = {value:0.00}  ({parameter.Description})");
             }
             for (int i = 0; i < definition.BoolParameters.Length; i++)
             {
                 var parameter = definition.BoolParameters[i];
-                parameterLines.Add($"{parameter.Label}[{parameter.Index}] = {sample.Parameters.GetBool(parameter.Index)}  ({parameter.Description})");
+                bool active = sample.PackedState.GetParameterBit(parameter.Index);
+                parameterLines.Add($"{parameter.Label}[{parameter.Index}] = {active}  ({parameter.Description})");
             }
             for (int i = 0; i < definition.TriggerParameters.Length; i++)
             {
                 var parameter = definition.TriggerParameters[i];
-                parameterLines.Add($"{parameter.Label}[{parameter.Index}] pending = {sample.Parameters.HasTrigger(parameter.Index)}  ({parameter.Description})");
+                bool active = sample.PackedState.GetParameterBit(parameter.Index);
+                parameterLines.Add($"{parameter.Label}[{parameter.Index}] active = {active}  ({parameter.Description})");
             }
 
             string[] overlayLines =
@@ -774,7 +775,6 @@ namespace AnimationAcceptanceMod.UI
             string EntityName,
             AnimatorPackedState PackedState,
             AnimatorRuntimeState RuntimeState,
-            AnimatorParameterBuffer Parameters,
             AnimationOverlayRequest OverlayRequest,
             AnimatorFeedbackBuffer Feedback)
         {
@@ -783,7 +783,6 @@ namespace AnimationAcceptanceMod.UI
                 string.Empty,
                 default,
                 AnimatorRuntimeState.Create(0),
-                default,
                 default,
                 default);
         }

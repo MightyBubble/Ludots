@@ -27,6 +27,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PerformerInstanceBuffer _instances;
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly PerformerDefinitionRegistry _definitions;
+        private readonly PerformerAnimatorStateBuffer? _animatorStates;
 
         public PerformerRuntimeSystem(
             World world,
@@ -37,7 +38,8 @@ namespace Ludots.Core.Presentation.Systems
             PresentationRequestBuffer requests,
             PerformerInstanceBuffer instances,
             PresentationStableIdAllocator stableIds,
-            PerformerDefinitionRegistry definitions)
+            PerformerDefinitionRegistry definitions,
+            PerformerAnimatorStateBuffer? animatorStates = null)
             : base(world)
         {
             _prefabs = prefabs ?? throw new ArgumentNullException(nameof(prefabs));
@@ -48,6 +50,7 @@ namespace Ludots.Core.Presentation.Systems
             _instances = instances ?? throw new ArgumentNullException(nameof(instances));
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+            _animatorStates = animatorStates;
         }
 
         public override void Update(in float dt)
@@ -66,14 +69,11 @@ namespace Ludots.Core.Presentation.Systems
                         break;
 
                     case PerformerCommandKind.DestroyPerformer:
-                        if (_instances.TryGetActive(cmd.PerformerHandle, out var instance) && _instances.Release(cmd.PerformerHandle))
-                        {
-                            EmitDestroyedEvent(cmd.PerformerHandle, instance);
-                        }
+                        _instances.Release(cmd.PerformerHandle, EmitDestroyedEvent);
                         break;
 
                     case PerformerCommandKind.DestroyPerformerScope:
-                        _instances.ReleaseScope(cmd.ScopeTag != 0 ? cmd.ScopeTag : cmd.PerformerDefinitionId, EmitDestroyedEvent);
+                        _instances.ReleaseScope(cmd.ScopeTag, EmitDestroyedEvent);
                         break;
 
                     case PerformerCommandKind.SetParam:
@@ -117,9 +117,12 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            int parentHandle = _instances.IsActive(cmd.ParentHandle)
-                ? cmd.ParentHandle
-                : -1;
+            int parentHandle = cmd.ParentHandle;
+            if (parentHandle >= 0 && !_instances.IsActive(parentHandle))
+            {
+                throw new InvalidOperationException(
+                    $"CreatePerformer defId={cmd.PerformerDefinitionId} references inactive parentHandle={parentHandle}.");
+            }
 
             if (!_instances.TryAllocate(
                     cmd.PerformerDefinitionId,
@@ -202,6 +205,8 @@ namespace Ludots.Core.Presentation.Systems
 
         private void EmitDestroyedEvent(int handle, PerformerInstance instance)
         {
+            _animatorStates?.Clear(handle);
+
             if (!_events.TryAdd(new PresentationEvent
                 {
                     Kind = PresentationEventKind.PerformerDestroyed,

@@ -226,12 +226,15 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PresentationFrameSetupSystem> PresentationFrameSetup = new("PresentationFrameSetup");
         public static readonly ServiceKey<TransientMarkerBuffer> TransientMarkerBuffer = new("TransientMarkerBuffer");
         public static readonly ServiceKey<GasPresentationEventBuffer> GasPresentationEventBuffer = new("GasPresentationEventBuffer");
+        public static readonly ServiceKey<GlobalPresentationEventBuffer> GlobalPresentationEventBuffer = new("GlobalPresentationEventBuffer");
         public static readonly ServiceKey<GroundOverlayBuffer> GroundOverlayBuffer = new("GroundOverlayBuffer");
         public static readonly ServiceKey<RoadSplineBuffer> RoadSplineBuffer = new("RoadSplineBuffer");
+        public static readonly ServiceKey<SoundRequestBuffer> SoundRequestBuffer = new("SoundRequestBuffer");
         public static readonly ServiceKey<DebugDrawCommandBuffer> DebugDrawCommandBuffer = new("DebugDrawCommandBuffer");
         // --- Performers ---
         public static readonly ServiceKey<PerformerDefinitionRegistry> PerformerDefinitionRegistry = new("PerformerDefinitionRegistry");
         public static readonly ServiceKey<PerformerInstanceBuffer> PerformerInstanceBuffer = new("PerformerInstanceBuffer");
+        public static readonly ServiceKey<PerformerAnimatorStateBuffer> PerformerAnimatorStateBuffer = new("PerformerAnimatorStateBuffer");
         public static readonly ServiceKey<SurfaceSourcePayloadRegistry> SurfaceSourcePayloadRegistry = new("SurfaceSourcePayloadRegistry");
         public static readonly ServiceKey<SurfaceSourceRuntimeRegistry> SurfaceSourceRuntimeRegistry = new("SurfaceSourceRuntimeRegistry");
 

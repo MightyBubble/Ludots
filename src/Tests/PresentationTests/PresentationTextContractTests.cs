@@ -541,7 +541,7 @@ namespace Ludots.Tests.Presentation
         }
 
         private static (VirtualFileSystem vfs, ModLoader modLoader, ConfigPipeline pipeline, ConfigCatalog catalog)
-            BuildPipeline(string root, string[] modIds = null)
+            BuildPipeline(string root, string[]? modIds = null)
         {
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", Path.Combine(root, "Core"));

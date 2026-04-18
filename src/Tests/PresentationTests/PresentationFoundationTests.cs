@@ -165,7 +165,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(entity.Has<VisualRuntimeState>(), Is.True);
             Assert.That(entity.Has<AnimatorPackedState>(), Is.True);
             Assert.That(entity.Has<AnimatorRuntimeState>(), Is.True);
-            Assert.That(entity.Has<AnimatorParameterBuffer>(), Is.True);
             Assert.That(entity.Has<AnimationOverlayRequest>(), Is.True);
             Assert.That(entity.Has<AnimatorFeedbackBuffer>(), Is.True);
             Assert.That(entity.Has<ModelPerformBinding>(), Is.False, "Skinned model ownership remains legacy until animator ownership migrates.");
@@ -547,14 +546,10 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerEmitSystem_ModelBinding_EmitsPrimaryStaticModel_AndEntityVisualEmitSystemSkipsDuplicate()
+        public void EntityVisualEmitSystem_SkipsDuplicateModelPerformBinding_StaticSlice()
         {
             using var world = World.Create();
             var requests = new PresentationRequestBuffer();
-            var instances = new PerformerInstanceBuffer();
-            var definitions = new PerformerDefinitionRegistry();
-            var programs = new GraphProgramRegistry();
-            var globals = new Dictionary<string, object>();
 
             int templateId = 42;
             world.Create(
@@ -579,71 +574,6 @@ namespace Ludots.Tests.Presentation
             }
 
             Assert.That(requests.Count, Is.EqualTo(0), "Legacy entity emit must stop duplicating model-bound entities once performer owns the static model slice.");
-
-            using var performerEmit = new PerformerEmitSystem(
-                world,
-                instances,
-                definitions,
-                requests,
-                programs,
-                graphApi: null!,
-                globals);
-
-            performerEmit.Update(0.016f);
-
-            Assert.That(requests.Count, Is.EqualTo(1));
-            ref readonly var request = ref requests.GetSpan()[0];
-            Assert.That(request.Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
-            Assert.That(request.VisualProxy.ProxyKind, Is.EqualTo(PresentationVisualProxyKind.Performer));
-            Assert.That(request.VisualProxy.MeshAssetId, Is.EqualTo(7));
-            Assert.That(request.VisualProxy.TemplateId, Is.EqualTo(templateId));
-            Assert.That(request.VisualProxy.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh));
-            Assert.That(request.VisualProxy.Scale, Is.EqualTo(new Vector3(3f, 3f, 3f)));
-            Assert.That(request.VisualProxy.StableId, Is.EqualTo(PerformerVisualIdentity.ComposeStableId(501, PerformerVisualKind.Model, templateId)));
-        }
-
-        [Test]
-        public void PerformerEmitSystem_ModelBinding_DoesNotStealSkinnedAnimatorLane()
-        {
-            using var world = World.Create();
-            var requests = new PresentationRequestBuffer();
-            var instances = new PerformerInstanceBuffer();
-            var definitions = new PerformerDefinitionRegistry();
-            var programs = new GraphProgramRegistry();
-            var globals = new Dictionary<string, object>();
-
-            int templateId = 73;
-            world.Create(
-                new PresentationStableId { Value = 701 },
-                new VisualTemplateRef { TemplateId = templateId },
-                new ModelPerformBinding { TemplateId = templateId },
-                new VisualTransform
-                {
-                    Position = new Vector3(1f, 0f, 2f),
-                    Rotation = Quaternion.Identity,
-                    Scale = Vector3.One,
-                },
-                VisualRuntimeState.Create(
-                    meshAssetId: 7,
-                    materialId: 9,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.SkinnedMesh,
-                    animatorControllerId: 3,
-                    animationProfileId: 9),
-                AnimatorPackedState.Create(3),
-                new AnimationOverlayRequest());
-
-            using var performerEmit = new PerformerEmitSystem(
-                world,
-                instances,
-                definitions,
-                requests,
-                programs,
-                graphApi: null!,
-                globals);
-
-            performerEmit.Update(0.016f);
-            Assert.That(requests.Count, Is.EqualTo(0), "Model performer slice must not take skinned/animator ownership.");
         }
 
         [Test]
@@ -659,15 +589,31 @@ namespace Ludots.Tests.Presentation
             var groundOverlays = new GroundOverlayBuffer();
             var proxyBuffer = new PresentationVisualProxyBuffer();
             var skinnedBatchBuffer = new SkinnedVisualBatchBuffer();
-            var programs = new GraphProgramRegistry();
             var globals = new Dictionary<string, object>();
+            var soundRequests = new SoundRequestBuffer();
 
             int definitionId = definitions.Register(
                 "performer.entity.marker",
                 new PerformerDefinition
                 {
+                    Behaviors =
+                    [
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
+                            {
+                                AssetKind = AssetKind.Mesh,
+                                AssetId = 77,
+                                RenderPath = VisualRenderPath.StaticMesh,
+                                Mobility = VisualMobility.Movable,
+                                LocalScale = Vector3.One,
+                            },
+                        },
+                    ],
                     VisualKind = PerformerVisualKind.Marker3D,
-                    MeshOrShapeId = 77,
                     DefaultScale = 1f,
                 });
 
@@ -689,16 +635,22 @@ namespace Ludots.Tests.Presentation
                     stableId: 7001,
                     out _),
                 Is.True);
+            instances.Get(0).BehaviorActiveMask = 1u;
 
+            using var behaviorSystem = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(),
+                soundRequests);
             using var system = new PerformerEmitSystem(
                 world,
                 instances,
                 definitions,
                 requests,
-                programs,
-                graphApi: null!,
                 globals);
 
+            behaviorSystem.Update(0f);
             system.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(1));
 
@@ -719,7 +671,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
             ref readonly var item = ref snapshotBuffer.GetSpan()[0];
             Assert.That(item.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh));
-            Assert.That(item.StableId, Is.EqualTo(7001));
+            Assert.That(item.StableId, Is.GreaterThan(0));
+            Assert.That(item.StableId, Is.Not.EqualTo(7001), "AssetBinding snapshots now derive a per-slot stable id.");
             Assert.That(item.StableId, Is.GreaterThan(0));
         }
 
@@ -784,14 +737,28 @@ namespace Ludots.Tests.Presentation
                 var instances = new PerformerInstanceBuffer();
                 var definitions = new PerformerDefinitionRegistry();
                 var requests = new PresentationRequestBuffer();
-                var programs = new GraphProgramRegistry();
+                var soundRequests = new SoundRequestBuffer();
 
                 int definitionId = definitions.Register(
                     "performer.entity.worldbar",
                     new PerformerDefinition
                     {
+                        Behaviors =
+                        [
+                            new BehaviorSlot
+                            {
+                                SlotIndex = 0,
+                                Kind = BehaviorKind.AssetBinding,
+                                ActiveByDefault = true,
+                                AssetBinding = new AssetBindingConfig
+                                {
+                                    AssetKind = AssetKind.WorldHud,
+                                    Mobility = VisualMobility.Movable,
+                                    LocalScale = new Vector3(40f, 6f, 1f),
+                                },
+                            },
+                        ],
                         VisualKind = PerformerVisualKind.WorldBar,
-                        DefaultScale = 1f,
                     });
 
                 Entity owner = world.Create(
@@ -825,19 +792,25 @@ namespace Ludots.Tests.Presentation
                         stableId: 8101,
                         out _),
                     Is.True);
+                instances.Get(0).BehaviorActiveMask = 1u;
 
                 var ownerGlobals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.LocalPlayerEntity.Name] = ownerAudience,
                 };
+                using var behaviorSystem = new PerformerBehaviorSystem(
+                    world,
+                    instances,
+                    definitions,
+                    new PresentationEventStream(),
+                    soundRequests);
+                behaviorSystem.Update(0f);
 
                 using (var ownerSystem = new PerformerEmitSystem(
                            world,
                            instances,
                            definitions,
                            requests,
-                           programs,
-                           graphApi: null!,
                            ownerGlobals))
                 {
                     ownerSystem.Update(0.016f);
@@ -856,8 +829,6 @@ namespace Ludots.Tests.Presentation
                            instances,
                            definitions,
                            requests,
-                           programs,
-                           graphApi: null!,
                            hostileGlobals))
                 {
                     hostileSystem.Update(0.016f);

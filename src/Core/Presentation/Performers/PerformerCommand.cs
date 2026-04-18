@@ -10,6 +10,13 @@ namespace Ludots.Core.Presentation.Performers
     /// </summary>
     public struct PerformerCommand
     {
+        public PerformerCommand()
+        {
+            PerformerHandle = -1;
+            ParentHandle = -1;
+            TargetBehaviorSlot = -1;
+        }
+
         public PerformerCommandKind CommandKind;
         public int PerformerDefinitionId;
         public int PerformerHandle;

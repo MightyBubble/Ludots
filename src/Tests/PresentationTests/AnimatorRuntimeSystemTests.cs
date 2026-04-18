@@ -4,7 +4,9 @@ using System.Text;
 using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
 
@@ -35,52 +37,43 @@ namespace Ludots.Tests.Presentation
                             FromStateIndex = 0,
                             ToStateIndex = 1,
                             ConditionKind = AnimatorConditionKind.FloatGreaterOrEqual,
-                            ParameterIndex = 0,
+                            ParameterIndex = 10,
                             Threshold = 0.5f,
                             DurationSeconds = 0.2f,
                         },
                     ],
                 });
 
-            var entity = world.Create(
-                VisualRuntimeState.Create(
-                    meshAssetId: 7,
-                    materialId: 1,
-                    baseScale: 1f,
-                renderPath: VisualRenderPath.SkinnedMesh,
-                animatorControllerId: controllerId),
-                AnimatorPackedState.Create(controllerId),
-                AnimatorRuntimeState.Create(controllerId),
-                default(AnimatorParameterBuffer),
-                default(AnimatorFeedbackBuffer));
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey: 20);
+            var instances = new PerformerInstanceBuffer(4);
+            var animatorStates = new PerformerAnimatorStateBuffer(4);
+            int handle = AllocateActiveAnimator(instances, world.Create(), defId);
+            instances.SetParam(handle, 10, ParamLane.Float, 0.75f, 0, default);
 
-            ref var parameters = ref world.Get<AnimatorParameterBuffer>(entity);
-            parameters.SetFloat(0, 0.75f);
-            parameters.SetBool(3, true);
-
-            using var system = new AnimatorRuntimeSystem(world, controllers);
+            using var system = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
             system.Update(0.1f);
 
-            ref readonly var packedAfterFirstTick = ref world.Get<AnimatorPackedState>(entity);
+            ref readonly AnimatorPackedState packedAfterFirstTick = ref animatorStates.GetPackedState(handle);
             Assert.That(packedAfterFirstTick.GetControllerId(), Is.EqualTo(controllerId));
             Assert.That(packedAfterFirstTick.GetPrimaryStateIndex(), Is.EqualTo(11));
             Assert.That(packedAfterFirstTick.GetSecondaryStateIndex(), Is.EqualTo(22));
             Assert.That((packedAfterFirstTick.GetFlags() & AnimatorPackedStateFlags.Active) != 0, Is.True);
             Assert.That((packedAfterFirstTick.GetFlags() & AnimatorPackedStateFlags.Looping) != 0, Is.True);
             Assert.That((packedAfterFirstTick.GetFlags() & AnimatorPackedStateFlags.InTransition) != 0, Is.True);
-            Assert.That(packedAfterFirstTick.GetParameterBit(3), Is.True);
             Assert.That(packedAfterFirstTick.GetTransitionProgress01(), Is.EqualTo(0.5f).Within(0.05f));
-            Assert.That(world.Get<AnimatorFeedbackBuffer>(entity).Count, Is.GreaterThanOrEqualTo(2));
+            Assert.That(animatorStates.GetFeedbackBuffer(handle).Count, Is.GreaterThanOrEqualTo(2));
 
             system.Update(0.1f);
 
-            ref readonly var runtime = ref world.Get<AnimatorRuntimeState>(entity);
-            ref readonly var packedAfterSecondTick = ref world.Get<AnimatorPackedState>(entity);
+            ref readonly AnimatorRuntimeState runtime = ref animatorStates.GetRuntimeState(handle);
+            ref readonly AnimatorPackedState packedAfterSecondTick = ref animatorStates.GetPackedState(handle);
             Assert.That(runtime.CurrentStateIndex, Is.EqualTo(1));
             Assert.That(runtime.IsTransitioning, Is.False);
             Assert.That(packedAfterSecondTick.GetPrimaryStateIndex(), Is.EqualTo(22));
             Assert.That(packedAfterSecondTick.GetSecondaryStateIndex(), Is.EqualTo(0));
             Assert.That((packedAfterSecondTick.GetFlags() & AnimatorPackedStateFlags.InTransition) == 0, Is.True);
+            Assert.That(instances.ResolveInt(handle, 20), Is.EqualTo(1));
         }
 
         [Test]
@@ -105,7 +98,7 @@ namespace Ludots.Tests.Presentation
                             FromStateIndex = 0,
                             ToStateIndex = 1,
                             ConditionKind = AnimatorConditionKind.Trigger,
-                            ParameterIndex = 2,
+                            ParameterIndex = 12,
                             DurationSeconds = 0f,
                             ConsumeTrigger = true,
                         },
@@ -120,36 +113,27 @@ namespace Ludots.Tests.Presentation
                     ],
                 });
 
-            var entity = world.Create(
-                new PresentationStableId { Value = 7001 },
-                VisualRuntimeState.Create(
-                    meshAssetId: 7,
-                    materialId: 1,
-                    baseScale: 1f,
-                renderPath: VisualRenderPath.SkinnedMesh,
-                animatorControllerId: controllerId),
-                AnimatorPackedState.Create(controllerId),
-                AnimatorRuntimeState.Create(controllerId),
-                default(AnimatorParameterBuffer),
-                default(AnimatorFeedbackBuffer));
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey: 20);
+            var instances = new PerformerInstanceBuffer(4);
+            var animatorStates = new PerformerAnimatorStateBuffer(4);
+            int handle = AllocateActiveAnimator(instances, world.Create(), defId);
+            instances.SetParam(handle, 12, ParamLane.Int, 0f, 1, default);
 
-            ref var parameters = ref world.Get<AnimatorParameterBuffer>(entity);
-            parameters.SetTrigger(2);
-
-            using var system = new AnimatorRuntimeSystem(world, controllers);
+            using var system = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
 
             var trace = new StringBuilder();
             system.Update(0.1f);
-            AppendTrace(trace, tick: 1, world.Get<PresentationStableId>(entity).Value, world.Get<AnimatorPackedState>(entity), world.Get<AnimatorRuntimeState>(entity));
+            AppendTrace(trace, tick: 1, instances.Get(handle).StableId, animatorStates.GetPackedState(handle), animatorStates.GetRuntimeState(handle));
 
-            Assert.That(world.Get<AnimatorPackedState>(entity).GetPrimaryStateIndex(), Is.EqualTo(9));
-            Assert.That(world.Get<AnimatorParameterBuffer>(entity).HasTrigger(2), Is.False, "Trigger should be consumed by the attack transition.");
+            Assert.That(animatorStates.GetPackedState(handle).GetPrimaryStateIndex(), Is.EqualTo(9));
+            Assert.That(instances.ResolveInt(handle, 12), Is.EqualTo(0), "Trigger should be consumed through performer blackboard.");
 
             system.Update(0.4f);
-            AppendTrace(trace, tick: 2, world.Get<PresentationStableId>(entity).Value, world.Get<AnimatorPackedState>(entity), world.Get<AnimatorRuntimeState>(entity));
+            AppendTrace(trace, tick: 2, instances.Get(handle).StableId, animatorStates.GetPackedState(handle), animatorStates.GetRuntimeState(handle));
 
-            Assert.That(world.Get<AnimatorPackedState>(entity).GetPrimaryStateIndex(), Is.EqualTo(5));
-            Assert.That(world.Get<AnimatorFeedbackBuffer>(entity).GetNewest(0).Kind, Is.EqualTo(AnimatorFeedbackKind.TransitionCompleted));
+            Assert.That(animatorStates.GetPackedState(handle).GetPrimaryStateIndex(), Is.EqualTo(5));
+            Assert.That(animatorStates.GetFeedbackBuffer(handle).GetNewest(0).Kind, Is.EqualTo(AnimatorFeedbackKind.TransitionStarted));
 
             string repoRoot = FindRepoRoot();
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "animator-runtime-mvp");
@@ -166,6 +150,94 @@ namespace Ludots.Tests.Presentation
             Assert.That(File.Exists(tracePath), Is.True);
             Assert.That(File.Exists(battleReportPath), Is.True);
             Assert.That(File.Exists(pathPath), Is.True);
+        }
+
+        [Test]
+        public void AnimatorRuntimeSystem_WritesFeedbackBackToBlackboard()
+        {
+            using var world = World.Create();
+            var controllers = new AnimatorControllerRegistry();
+            int controllerId = controllers.Register(
+                "hero.feedback",
+                new AnimatorControllerDefinition
+                {
+                    DefaultStateIndex = 0,
+                    States =
+                    [
+                        new AnimatorStateDefinition { PackedStateIndex = 5, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true },
+                        new AnimatorStateDefinition { PackedStateIndex = 9, DurationSeconds = 0.4f, PlaybackSpeed = 1f, Loop = false },
+                    ],
+                    Transitions =
+                    [
+                        new AnimatorTransitionDefinition
+                        {
+                            FromStateIndex = 0,
+                            ToStateIndex = 1,
+                            ConditionKind = AnimatorConditionKind.Trigger,
+                            ParameterIndex = 12,
+                            DurationSeconds = 0.25f,
+                            ConsumeTrigger = true,
+                        },
+                    ],
+                });
+
+            var definitions = new PerformerDefinitionRegistry();
+            int stateParamKey = 20;
+            int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey);
+            var instances = new PerformerInstanceBuffer(4);
+            var animatorStates = new PerformerAnimatorStateBuffer(4);
+            int handle = AllocateActiveAnimator(instances, world.Create(), defId);
+            instances.SetParam(handle, 12, ParamLane.Int, 0f, 1, default);
+
+            using var system = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
+            system.Update(0.1f);
+
+            Assert.That(instances.ResolveInt(handle, stateParamKey), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(handle, stateParamKey + 1), Is.EqualTo((int)AnimatorFeedbackKind.TransitionStarted));
+            Assert.That(instances.ResolveInt(handle, stateParamKey + 2), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(handle, stateParamKey + 3), Is.EqualTo(1));
+            Assert.That(instances.ResolveFloat(handle, stateParamKey + 4), Is.EqualTo(0.1f).Within(0.05f));
+            Assert.That(instances.ResolveFloat(handle, stateParamKey + 5), Is.EqualTo(0.25f).Within(0.001f));
+
+            system.Update(0.25f);
+
+            Assert.That(instances.ResolveInt(handle, stateParamKey), Is.EqualTo(1));
+            Assert.That(instances.ResolveInt(handle, stateParamKey + 1), Is.EqualTo((int)AnimatorFeedbackKind.TransitionCompleted));
+            Assert.That(instances.ResolveInt(handle, stateParamKey + 2), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(handle, stateParamKey + 3), Is.EqualTo(1));
+            Assert.That(instances.ResolveFloat(handle, stateParamKey + 4), Is.EqualTo(1f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(handle, stateParamKey + 5), Is.EqualTo(0f).Within(0.001f));
+        }
+
+        private static int RegisterAnimatorDefinition(PerformerDefinitionRegistry definitions, int controllerId, int stateParamKey)
+        {
+            return definitions.Register("animated", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Animator,
+                        ActiveByDefault = true,
+                        Animator = new AnimatorConfig
+                        {
+                            AnimatorControllerId = controllerId,
+                            SpeedParamKey = -1,
+                            StateParamKey = stateParamKey,
+                        },
+                    },
+                ],
+            });
+        }
+
+        private static int AllocateActiveAnimator(PerformerInstanceBuffer instances, Entity owner, int defId)
+        {
+            Assert.That(
+                instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, default, stableId: 7001, parentHandle: -1, out int handle),
+                Is.True);
+            instances.Get(handle).BehaviorActiveMask = 1u;
+            return handle;
         }
 
         private static void AppendTrace(StringBuilder trace, int tick, int stableId, AnimatorPackedState packed, AnimatorRuntimeState runtime)
@@ -195,14 +267,14 @@ namespace Ludots.Tests.Presentation
             sb.AppendLine("# Scenario: animator-runtime-mvp");
             sb.AppendLine();
             sb.AppendLine("## Header");
-            sb.AppendLine("- scenario name: trigger-driven animator runtime progression");
+            sb.AppendLine("- scenario name: trigger-driven performer-blackboard animator runtime progression");
             sb.AppendLine("- build/version: local PresentationTests");
             sb.AppendLine("- seed/map/clock: deterministic unit fixture / in-memory world / 2 ticks");
             sb.AppendLine($"- controller id: {controllerId}");
             sb.AppendLine($"- execution timestamp: {DateTime.UtcNow:O}");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
-            sb.AppendLine("- [T+001] trigger bit #2 consumed -> attack state entered immediately");
+            sb.AppendLine("- [T+001] blackboard trigger param #12 consumed -> attack state entered immediately");
             sb.AppendLine("- [T+002] attack clip reached end -> controller returned to idle");
             sb.AppendLine();
             sb.AppendLine("## Outcome");
@@ -217,7 +289,7 @@ namespace Ludots.Tests.Presentation
             return
                 """
                 flowchart TD
-                    A[start idle state] --> B{trigger bit #2 set}
+                    A[start idle state] --> B{blackboard trigger param #12 set}
                     B -->|yes| C[consume trigger]
                     C --> D[enter attack state]
                     D --> E{normalized time >= 1.0}

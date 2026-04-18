@@ -17,5 +17,13 @@ namespace Ludots.Core.Presentation.Events
         EffectApplied = 20,
         CastCommitted = 21,
         CastFailed = 22,
+
+        // Global domain events
+        GlobalDayNight = 30,
+        GlobalRegionChanged = 31,
+        GlobalWeather = 32,
+
+        // Attribute domain events
+        AttributeValueChanged = 40,
     }
 }

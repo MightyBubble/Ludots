@@ -32,6 +32,24 @@ namespace Ludots.Core.Presentation.Performers
             int id = registry.GetOrRegisterId(key);
             registry.Register(key, new PerformerDefinition
             {
+                Behaviors = new[]
+                {
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = sphereId,
+                            RenderPath = Components.VisualRenderPath.StaticMesh,
+                            Mobility = Components.VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalScale = new Vector3(0.55f, 0.55f, 0.55f),
+                        },
+                    },
+                },
                 VisualKind = PerformerVisualKind.Marker3D,
                 MeshOrShapeId = sphereId,
                 DefaultColor = new Vector4(0f, 1f, 1f, 0.9f),
@@ -66,6 +84,24 @@ namespace Ludots.Core.Presentation.Performers
             int id = registry.GetOrRegisterId(key);
             registry.Register(key, new PerformerDefinition
             {
+                Behaviors = new[]
+                {
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = sphereId,
+                            RenderPath = Components.VisualRenderPath.StaticMesh,
+                            Mobility = Components.VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalScale = new Vector3(0.2f, 0.2f, 0.2f),
+                        },
+                    },
+                },
                 VisualKind = PerformerVisualKind.Marker3D,
                 MeshOrShapeId = sphereId,
                 DefaultColor = new Vector4(0.7f, 0.7f, 0.7f, 0.6f),
@@ -107,6 +143,23 @@ namespace Ludots.Core.Presentation.Performers
 
             registry.Register(key, new PerformerDefinition
             {
+                Behaviors = new[]
+                {
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.WorldText,
+                            AssetId = textTokenId,
+                            Mobility = Components.VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalScale = Vector3.One,
+                        },
+                    },
+                },
                 VisualKind = PerformerVisualKind.WorldText,
                 DefaultColor = new Vector4(1f, 0.2f, 0.1f, 1f),
                 DefaultFontSize = 18,

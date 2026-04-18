@@ -341,11 +341,13 @@ GAS Domain              Global Domain
       ▼
   PerformerEmitSystem [重写]       AssetBinding → PresentationVisualProxy
       │                           (~200行，只做 asset emit)
-      ▼
-  PrimitiveDrawBuffer / SkinnedVisualBatchBuffer / SoundRequestBuffer[新]
-      │
-      ▼
-  Platform Adapter（不变）
+        ▼
+    PrimitiveDrawBuffer / SkinnedVisualBatchBuffer / SoundRequestBuffer[新]
+        │
+        ▼
+    Platform Adapter（不变）
+
+说明：迁移阶段允许保留一个 `LegacyPerformerEmitSystem` 承接旧 `VisualKind` / entity-scoped model 路径，但它不再承担 Wave 4 的 AssetBinding emit 职责；`PerformerEmitSystem` 的单一职责仍然是“只处理 AssetBinding emit”。
 ```
 
 ### 5.1 各系统职责

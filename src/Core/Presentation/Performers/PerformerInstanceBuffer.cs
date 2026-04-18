@@ -120,6 +120,14 @@ namespace Ludots.Core.Presentation.Performers
             return true;
         }
 
+        public bool Release(int handle, Action<int, PerformerInstance>? onReleased)
+        {
+            if (handle < 0 || handle >= _highWaterMark) return false;
+            if (!_slots[handle].Active) return false;
+            ReleaseRecursive(handle, onReleased);
+            return true;
+        }
+
         /// <summary>
         /// Release all instances belonging to the given scope. This is an internal
         /// built-in behavior — callers do not need to write rules for cascade destroy.
@@ -360,7 +368,9 @@ namespace Ludots.Core.Presentation.Performers
                 WorldRotation = Quaternion.Identity,
                 WorldScale = Vector3.One,
                 Elapsed = 0f,
-                TransformSource = anchorKind == PresentationAnchorKind.Entity
+                TransformSource = parentHandle >= 0
+                    ? TransformSource.InheritParent
+                    : anchorKind == PresentationAnchorKind.Entity
                     ? TransformSource.EntityTransform
                     : TransformSource.WorldFixed,
                 ParentHandle = parentHandle,

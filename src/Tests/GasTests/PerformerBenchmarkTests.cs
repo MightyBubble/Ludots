@@ -45,10 +45,12 @@ namespace Ludots.Tests.Presentation
         private GroundOverlayBuffer _overlays;
         private RoadSplineBuffer _roadSplines;
         private PresentationRequestBuffer _requests;
+        private SoundRequestBuffer _soundRequests;
         private PresentationRequestFlushSystem _flush;
         private PresentationBridgeSystem _bridge;
         private PerformerRuleSystem _ruleSystem;
         private PerformerRuntimeSystem _runtimeSystem;
+        private PerformerBehaviorSystem _behaviorSystem;
         private PerformerEmitSystem _emitSystem;
         private PresentationStableIdAllocator _stableIds;
         private int _healthAttrId;
@@ -71,6 +73,7 @@ namespace Ludots.Tests.Presentation
             _overlays = new GroundOverlayBuffer(4096);
             _roadSplines = new RoadSplineBuffer();
             _requests = new PresentationRequestBuffer();
+            _soundRequests = new SoundRequestBuffer();
             _stableIds = new PresentationStableIdAllocator();
 
             _healthAttrId = AttributeRegistry.Register("Health");
@@ -86,7 +89,8 @@ namespace Ludots.Tests.Presentation
             _bridge = new PresentationBridgeSystem(_world, _eventBus, _presEvents, session, _gasEvents);
             _ruleSystem = new PerformerRuleSystem(_world, _presEvents, _commands, _defs, _programs, graphApi, _globals);
             _runtimeSystem = new PerformerRuntimeSystem(_world, new PrefabRegistry(), _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
-            _emitSystem = new PerformerEmitSystem(_world, _instances, _defs, _requests, _programs, graphApi, _globals);
+            _behaviorSystem = new PerformerBehaviorSystem(_world, _instances, _defs, _presEvents, _soundRequests);
+            _emitSystem = new PerformerEmitSystem(_world, _instances, _defs, _requests, _globals);
             _flush = new PresentationRequestFlushSystem(_world, _requests, new PrefabRegistry(), new MeshAssetRegistry(), _primitives, _overlays, _hud, _roadSplines);
         }
 
@@ -94,6 +98,7 @@ namespace Ludots.Tests.Presentation
         public void TearDown()
         {
             _emitSystem?.Dispose();
+            _behaviorSystem?.Dispose();
             _flush?.Dispose();
             _runtimeSystem?.Dispose();
             _ruleSystem?.Dispose();
@@ -104,6 +109,7 @@ namespace Ludots.Tests.Presentation
         private void ClearOutputBuffers()
         {
             _requests.Clear();
+            _soundRequests.Clear();
             _hud.Clear();
             _primitives.Clear();
             _overlays.Clear();
@@ -131,6 +137,7 @@ namespace Ludots.Tests.Presentation
             _bridge.Update(dt);
             _ruleSystem.Update(dt);
             _runtimeSystem.Update(dt);
+            _behaviorSystem.Update(0f);
             _emitSystem.Update(dt);
             _flush.Update(dt);
         }
@@ -194,7 +201,8 @@ namespace Ludots.Tests.Presentation
             for (int i = 0; i < INSTANCE_COUNT; i++)
             {
                 var owner = CreateOwner(new Vector3(i, 0f, i));
-                _instances.TryAllocate(_defs.GetId(WellKnownPerformerKeys.FloatingCombatText), owner, -1, out _);
+                Assert.That(_instances.TryAllocate(_defs.GetId(WellKnownPerformerKeys.FloatingCombatText), owner, -1, out int handle), Is.True);
+                _instances.Get(handle).BehaviorActiveMask = 1u;
             }
 
             WarmUpGC();
@@ -223,7 +231,8 @@ namespace Ludots.Tests.Presentation
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 70f + (i % 30));
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true);
-                _instances.TryAllocate(defId, owner, i + 1, out _);
+                Assert.That(_instances.TryAllocate(defId, owner, i + 1, out int handle), Is.True);
+                _instances.Get(handle).BehaviorActiveMask = 0b11u;
             }
 
             WarmUpGC();
@@ -233,6 +242,7 @@ namespace Ludots.Tests.Presentation
             for (int frame = 0; frame < FRAMES; frame++)
             {
                 ClearOutputBuffers();
+                _behaviorSystem.Update(0f);
                 _emitSystem.Update(0.016f);
                 _flush.Update(0.016f);
             }
@@ -252,7 +262,8 @@ namespace Ludots.Tests.Presentation
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 80f);
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true, visible: i % 3 != 0);
-                _instances.TryAllocate(defId, owner, i + 1, out _);
+                Assert.That(_instances.TryAllocate(defId, owner, i + 1, out int handle), Is.True);
+                _instances.Get(handle).BehaviorActiveMask = 0b11u;
             }
 
             WarmUpGC();
@@ -262,6 +273,7 @@ namespace Ludots.Tests.Presentation
             for (int frame = 0; frame < FRAMES; frame++)
             {
                 ClearOutputBuffers();
+                _behaviorSystem.Update(0f);
                 _emitSystem.Update(0.016f);
                 _flush.Update(0.016f);
             }
@@ -407,27 +419,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Benchmark_ParamResolution_ManyBindings()
         {
-            int defId = _defs.Register("test.param_resolution", new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.WorldBar,
-                DefaultColor = new Vector4(0f, 1f, 0f, 1f),
-                PositionOffset = new Vector3(0f, 1.5f, 0f),
-                Bindings = new[]
-                {
-                    new PerformerParamBinding { ParamKey = 0, Value = ValueRef.FromAttributeRatio(_healthAttrId) },
-                    new PerformerParamBinding { ParamKey = 1, Value = ValueRef.FromConstant(50f) },
-                    new PerformerParamBinding { ParamKey = 2, Value = ValueRef.FromConstant(8f) },
-                    new PerformerParamBinding { ParamKey = 4, Value = ValueRef.FromConstant(0.1f) },
-                    new PerformerParamBinding { ParamKey = 5, Value = ValueRef.FromConstant(0.85f) },
-                    new PerformerParamBinding { ParamKey = 6, Value = ValueRef.FromConstant(0.15f) },
-                    new PerformerParamBinding { ParamKey = 7, Value = ValueRef.FromConstant(1.0f) },
-                    new PerformerParamBinding { ParamKey = 8, Value = ValueRef.FromConstant(0.2f) },
-                    new PerformerParamBinding { ParamKey = 9, Value = ValueRef.FromConstant(0.0f) },
-                    new PerformerParamBinding { ParamKey = 10, Value = ValueRef.FromConstant(0.0f) },
-                    new PerformerParamBinding { ParamKey = 11, Value = ValueRef.FromConstant(0.85f) },
-                    new PerformerParamBinding { ParamKey = 12, Value = ValueRef.FromConstant(0.02f) },
-                }
-            });
+            int defId = RegisterHealthBarDefinition(_defs, _healthAttrId);
 
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
@@ -435,7 +427,8 @@ namespace Ludots.Tests.Presentation
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 50f + (i % 50));
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true);
-                _instances.TryAllocate(defId, owner, i + 1, out _);
+                Assert.That(_instances.TryAllocate(defId, owner, i + 1, out int handle), Is.True);
+                _instances.Get(handle).BehaviorActiveMask = 0b11u;
             }
 
             WarmUpGC();
@@ -445,6 +438,7 @@ namespace Ludots.Tests.Presentation
             for (int frame = 0; frame < FRAMES; frame++)
             {
                 ClearOutputBuffers();
+                _behaviorSystem.Update(0f);
                 _emitSystem.Update(0.016f);
                 _flush.Update(0.016f);
             }
@@ -554,7 +548,8 @@ namespace Ludots.Tests.Presentation
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 80f);
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true);
-                _instances.TryAllocate(defId, owner, i + 1, out _);
+                Assert.That(_instances.TryAllocate(defId, owner, i + 1, out int handle), Is.True);
+                _instances.Get(handle).BehaviorActiveMask = 0b11u;
             }
 
             WarmUpGC();
@@ -562,6 +557,7 @@ namespace Ludots.Tests.Presentation
             for (int frame = 0; frame < FRAMES; frame++)
             {
                 ClearOutputBuffers();
+                _behaviorSystem.Update(0f);
                 _emitSystem.Update(0.016f);
                 _flush.Update(0.016f);
             }
@@ -599,21 +595,50 @@ namespace Ludots.Tests.Presentation
         {
             return defs.Register(WellKnownPerformerKeys.EntityHealthBar, new PerformerDefinition
             {
+                Behaviors = new[]
+                {
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AttributeBinding,
+                        ActiveByDefault = true,
+                        AttributeBinding = new AttributeBindingConfig
+                        {
+                            AttributeId = healthAttrId,
+                            TargetParamKey = WellKnownPerformerParamKeys.BarFillRatio,
+                            Mode = ValueSourceKind.AttributeRatio,
+                            Thresholds = Array.Empty<ThresholdMapping>(),
+                        }
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.WorldHud,
+                            MaterialId = 0,
+                            RenderPath = VisualRenderPath.None,
+                            Mobility = VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalRotation = Quaternion.Identity,
+                            LocalScale = new Vector3(50f, 8f, 1f),
+                            ScaleParamKey = -1,
+                            ColorParamKey = -1,
+                            MaterialParamKey = WellKnownPerformerParamKeys.BarFillRatio,
+                            AssetSwapParamKey = -1,
+                            VisibilityParamKey = -1,
+                            Grounding = GroundingMode.None,
+                            GroundingOffset = 0f,
+                        }
+                    }
+                },
                 VisualKind = PerformerVisualKind.WorldBar,
                 VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
                 DefaultColor = new Vector4(0f, 1f, 0f, 1f),
                 DefaultScale = 1f,
                 PositionOffset = new Vector3(0f, 1.5f, 0f),
-                Bindings = new[]
-                {
-                    new PerformerParamBinding { ParamKey = 0, Value = ValueRef.FromAttributeRatio(healthAttrId) },
-                    new PerformerParamBinding { ParamKey = 1, Value = ValueRef.FromConstant(50f) },
-                    new PerformerParamBinding { ParamKey = 2, Value = ValueRef.FromConstant(8f) },
-                    new PerformerParamBinding { ParamKey = 8, Value = ValueRef.FromConstant(0.2f) },
-                    new PerformerParamBinding { ParamKey = 9, Value = ValueRef.FromConstant(0f) },
-                    new PerformerParamBinding { ParamKey = 10, Value = ValueRef.FromConstant(0f) },
-                    new PerformerParamBinding { ParamKey = 11, Value = ValueRef.FromConstant(0.85f) },
-                },
             });
         }
     }
