@@ -127,6 +127,58 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void PerformerInstanceContract_ExposesT4TreeAndTransformFields()
+        {
+            FieldInfo[] fields = typeof(PerformerInstance).GetFields(BindingFlags.Instance | BindingFlags.Public);
+            string[] fieldNames = fields.Select(static field => field.Name).ToArray();
+
+            Assert.That(fieldNames, Does.Contain("ParentHandle"));
+            Assert.That(fieldNames, Does.Contain("FirstChildHandle"));
+            Assert.That(fieldNames, Does.Contain("NextSiblingHandle"));
+            Assert.That(fieldNames, Does.Contain("BehaviorActiveMask"));
+            Assert.That(fieldNames, Does.Contain("TransformSource"));
+            Assert.That(fieldNames, Does.Contain("WorldRotation"));
+            Assert.That(fieldNames, Does.Contain("WorldScale"));
+        }
+
+        [Test]
+        public void PerformerDefinitionContract_ExposesWave2DefinitionFields()
+        {
+            FieldInfo[] fields = typeof(PerformerDefinition).GetFields(BindingFlags.Instance | BindingFlags.Public);
+            string[] fieldNames = fields.Select(static field => field.Name).ToArray();
+
+            Assert.That(fieldNames, Does.Contain("Key"));
+            Assert.That(fieldNames, Does.Contain("Extends"));
+            Assert.That(fieldNames, Does.Contain("Children"));
+            Assert.That(fieldNames, Does.Contain("Behaviors"));
+            Assert.That(fieldNames, Does.Contain("ParamDefaults"));
+        }
+
+        [Test]
+        public void PerformerScopeTagRegistry_ProvidesStringToIntSsot()
+        {
+            PerformerScopeTagRegistry.Clear();
+
+            int working = PerformerScopeTagRegistry.Register("working");
+            int structure = PerformerScopeTagRegistry.Register("structure");
+
+            Assert.That(working, Is.GreaterThan(0));
+            Assert.That(structure, Is.GreaterThan(0));
+            Assert.That(PerformerScopeTagRegistry.GetId("working"), Is.EqualTo(working));
+            Assert.That(PerformerScopeTagRegistry.GetName(structure), Is.EqualTo("structure"));
+        }
+
+        [Test]
+        public void TransformSourceContract_MatchesArchitectureValues()
+        {
+            Assert.That((byte)TransformSource.InheritParent, Is.EqualTo(0));
+            Assert.That((byte)TransformSource.EntityTransform, Is.EqualTo(1));
+            Assert.That((byte)TransformSource.SplineDriven, Is.EqualTo(2));
+            Assert.That((byte)TransformSource.BoneAttached, Is.EqualTo(3));
+            Assert.That((byte)TransformSource.WorldFixed, Is.EqualTo(4));
+        }
+
+        [Test]
         public void PresentationRequest_RemainsAdapterNeutralOutputGate()
         {
             FieldInfo[] fields = typeof(PresentationRequest).GetFields(BindingFlags.Instance | BindingFlags.Public);

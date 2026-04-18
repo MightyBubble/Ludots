@@ -81,6 +81,61 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void TryAllocate_InitializesT4TransformAndTreeDefaults()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create();
+
+            Assert.That(_buf.TryAllocate(100, entity, 7, out int handle), Is.True);
+
+            ref readonly PerformerInstance instance = ref _buf.Get(handle);
+            Assert.That(instance.ScopeId, Is.EqualTo(7));
+            Assert.That(instance.WorldRotation, Is.EqualTo(Quaternion.Identity));
+            Assert.That(instance.WorldScale, Is.EqualTo(Vector3.One));
+            Assert.That(instance.TransformSource, Is.EqualTo(TransformSource.EntityTransform));
+            Assert.That(instance.ParentHandle, Is.EqualTo(-1));
+            Assert.That(instance.FirstChildHandle, Is.EqualTo(-1));
+            Assert.That(instance.NextSiblingHandle, Is.EqualTo(-1));
+            Assert.That(instance.BehaviorActiveMask, Is.EqualTo(0u));
+        }
+
+        [Test]
+        public void TryAllocate_WorldAnchor_InitializesWorldFixedTransformSource()
+        {
+            using var world = World.Create();
+
+            Assert.That(
+                _buf.TryAllocate(100, Entity.Null, 11, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 321, out int handle),
+                Is.True);
+
+            ref readonly PerformerInstance instance = ref _buf.Get(handle);
+            Assert.That(instance.AnchorKind, Is.EqualTo(PresentationAnchorKind.WorldPosition));
+            Assert.That(instance.WorldPosition, Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            Assert.That(instance.TransformSource, Is.EqualTo(TransformSource.WorldFixed));
+            Assert.That(instance.StableId, Is.EqualTo(321));
+        }
+
+        [Test]
+        public void TryAllocate_WithParent_LinksIntoTreeAndBlackboardParentChain()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create();
+
+            Assert.That(_buf.TryAllocate(100, entity, 7, out int parentHandle), Is.True);
+            Assert.That(
+                _buf.TryAllocate(101, entity, 7, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentHandle, out int childHandle),
+                Is.True);
+
+            ref readonly PerformerInstance parent = ref _buf.Get(parentHandle);
+            ref readonly PerformerInstance child = ref _buf.Get(childHandle);
+
+            Assert.That(parent.FirstChildHandle, Is.EqualTo(childHandle));
+            Assert.That(child.ParentHandle, Is.EqualTo(parentHandle));
+            Assert.That(child.NextSiblingHandle, Is.EqualTo(-1));
+            Assert.That(_buf.GetParentHandle(childHandle), Is.EqualTo(parentHandle));
+        }
+
+        [Test]
         public void Release_MakesInactive()
         {
             var world = World.Create();
@@ -109,6 +164,42 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Release_RecursivelyReleasesChildSubtree()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create();
+
+            Assert.That(_buf.TryAllocate(1, entity, 5, out int parentHandle), Is.True);
+            Assert.That(_buf.TryAllocate(2, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentHandle, out int childHandle), Is.True);
+            Assert.That(_buf.TryAllocate(3, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, childHandle, out int grandChildHandle), Is.True);
+
+            Assert.That(_buf.Release(parentHandle), Is.True);
+
+            Assert.That(_buf.IsActive(parentHandle), Is.False);
+            Assert.That(_buf.IsActive(childHandle), Is.False);
+            Assert.That(_buf.IsActive(grandChildHandle), Is.False);
+            Assert.That(_buf.ActiveCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ReleaseScope_RecursivelyReleasesScopedRootsAndChildren()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create();
+
+            Assert.That(_buf.TryAllocate(1, entity, 42, out int rootHandle), Is.True);
+            Assert.That(_buf.TryAllocate(2, entity, 99, PresentationAnchorKind.Entity, Vector3.Zero, 0, rootHandle, out int childHandle), Is.True);
+            Assert.That(_buf.TryAllocate(3, entity, 77, out int unrelatedHandle), Is.True);
+
+            int released = _buf.ReleaseScope(42);
+
+            Assert.That(released, Is.EqualTo(2));
+            Assert.That(_buf.IsActive(rootHandle), Is.False);
+            Assert.That(_buf.IsActive(childHandle), Is.False);
+            Assert.That(_buf.IsActive(unrelatedHandle), Is.True);
+        }
+
+        [Test]
         public void ParamOverride_IsRetrievable()
         {
             var world = World.Create();
@@ -128,6 +219,36 @@ namespace Ludots.Tests.Presentation
             _buf.TryAllocate(1, entity, 0, out int handle);
             Assert.That(_buf.TryGetParamOverride(handle, 99, out _), Is.False);
             world.Dispose();
+        }
+
+        [Test]
+        public void ResolveFloat_InheritsFromParentBlackboard()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create();
+
+            Assert.That(_buf.TryAllocate(1, entity, 0, out int parentHandle), Is.True);
+            Assert.That(_buf.TryAllocate(2, entity, 0, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentHandle, out int childHandle), Is.True);
+            _buf.SetParam(parentHandle, 15, ParamLane.Float, 9.5f, 0, Vector4.Zero);
+
+            Assert.That(_buf.ResolveFloat(childHandle, 15, -1f), Is.EqualTo(9.5f).Within(0.001f));
+            Assert.That(_buf.TryGetParamOverride(childHandle, 15, out _), Is.False);
+        }
+
+        [Test]
+        public void SetParam_WritesAllBlackboardLanes()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create();
+
+            Assert.That(_buf.TryAllocate(1, entity, 0, out int handle), Is.True);
+            _buf.SetParam(handle, 1, ParamLane.Float, 2.5f, 0, Vector4.Zero);
+            _buf.SetParam(handle, 2, ParamLane.Int, 0f, 7, Vector4.Zero);
+            _buf.SetParam(handle, 3, ParamLane.Vector, 0f, 0, new Vector4(1f, 2f, 3f, 4f));
+
+            Assert.That(_buf.ResolveFloat(handle, 1, -1f), Is.EqualTo(2.5f).Within(0.001f));
+            Assert.That(_buf.ResolveInt(handle, 2, -1), Is.EqualTo(7));
+            Assert.That(_buf.ResolveVector(handle, 3, Vector4.Zero), Is.EqualTo(new Vector4(1f, 2f, 3f, 4f)));
         }
     }
 
@@ -412,6 +533,142 @@ namespace Ludots.Tests.Presentation
             TickAndFlush(0.016f);
 
             Assert.That(_instances.ActiveCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void CreatePerformerCommand_WithParentHandle_LinksChildAndInheritsDefaults()
+        {
+            var owner = _world.Create();
+            int parentDefId = _definitions.Register("test.runtime.parent", new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Marker3D,
+                DefaultLifetime = -1f,
+                ParamDefaults = new[]
+                {
+                    new ParamDefault { ParamKey = 100, Lane = ParamLane.Int, IntValue = 3 }
+                }
+            });
+            int childDefId = _definitions.Register("test.runtime.child", new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Marker3D,
+                DefaultLifetime = -1f,
+                ParamDefaults = new[]
+                {
+                    new ParamDefault { ParamKey = 200, Lane = ParamLane.Float, FloatValue = 2.25f }
+                }
+            });
+
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = parentDefId,
+                ScopeTag = 10,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+            });
+            TickAndFlush(0.016f);
+            _commands.Clear();
+
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = childDefId,
+                PerformerHandle = -1,
+                ParentHandle = 0,
+                ScopeTag = 20,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+            });
+            TickAndFlush(0.016f);
+
+            Assert.That(_instances.ActiveCount, Is.EqualTo(2));
+            ref readonly PerformerInstance parent = ref _instances.Get(0);
+            ref readonly PerformerInstance child = ref _instances.Get(1);
+            Assert.That(parent.FirstChildHandle, Is.EqualTo(1));
+            Assert.That(child.ParentHandle, Is.EqualTo(0));
+            Assert.That(_instances.ResolveFloat(1, 200, -1f), Is.EqualTo(2.25f).Within(0.001f));
+            Assert.That(_instances.ResolveInt(0, 100, -1), Is.EqualTo(3));
+        }
+
+        [Test]
+        public void SetParamCommand_WritesRequestedLaneToBlackboard()
+        {
+            var owner = _world.Create();
+            int defId = _definitions.Register("test.runtime.param_lanes", new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Marker3D,
+                DefaultLifetime = -1f,
+            });
+
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = defId,
+                ScopeTag = 1,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+            });
+            TickAndFlush(0.016f);
+            _commands.Clear();
+
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.SetParam,
+                PerformerHandle = 0,
+                ParamKey = 10,
+                ParamLane = ParamLane.Float,
+                ParamValue = 4.5f,
+            });
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.SetParam,
+                PerformerHandle = 0,
+                ParamKey = 11,
+                ParamLane = ParamLane.Int,
+                IntValue = 9,
+            });
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.SetParam,
+                PerformerHandle = 0,
+                ParamKey = 12,
+                ParamLane = ParamLane.Vector,
+                VectorValue = new Vector4(8f, 7f, 6f, 5f),
+            });
+            TickAndFlush(0.016f);
+
+            Assert.That(_instances.ResolveFloat(0, 10, -1f), Is.EqualTo(4.5f).Within(0.001f));
+            Assert.That(_instances.ResolveInt(0, 11, -1), Is.EqualTo(9));
+            Assert.That(_instances.ResolveVector(0, 12, Vector4.Zero), Is.EqualTo(new Vector4(8f, 7f, 6f, 5f)));
+        }
+
+        [Test]
+        public void CreatePerformerDefinition_WithActiveByDefaultBehaviors_SeedsBehaviorMask()
+        {
+            var owner = _world.Create();
+            int defId = _definitions.Register("test.runtime.behaviors", new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Marker3D,
+                DefaultLifetime = -1f,
+                Behaviors = new[]
+                {
+                    new BehaviorSlot { SlotIndex = 0, ActiveByDefault = true },
+                    new BehaviorSlot { SlotIndex = 2, ActiveByDefault = true },
+                    new BehaviorSlot { SlotIndex = 5, ActiveByDefault = false },
+                }
+            });
+
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = defId,
+                ScopeTag = 3,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+            });
+            TickAndFlush(0.016f);
+
+            Assert.That(_instances.Get(0).BehaviorActiveMask, Is.EqualTo((1u << 0) | (1u << 2)));
         }
     }
 
@@ -1098,6 +1355,49 @@ namespace Ludots.Tests.Presentation
             Assert.That(span[0].PerformerDefinitionId, Is.EqualTo(77));
             Assert.That(span[0].ScopeTag, Is.EqualTo(456));
             Assert.That(span[0].Source, Is.EqualTo(owner));
+        }
+
+        [Test]
+        public void PerformerCreatedEvent_PromotesPayloadHandle_ToChildParentHandle()
+        {
+            _defs.Register("test.lifecycle.child", new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.WorldBar,
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.PerformerCreated, KeyId = -1 },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = 99,
+                            ParentHandle = -1,
+                            ScopeTag = 55,
+                        }
+                    }
+                }
+            });
+
+            var owner = _world.Create();
+            _events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.PerformerCreated,
+                KeyId = 1,
+                Source = owner,
+                Target = owner,
+                PayloadA = 23,
+                PayloadB = 77,
+            });
+
+            _system.Update(0.016f);
+
+            var span = _commands.GetSpan();
+            Assert.That(span.Length, Is.EqualTo(1));
+            Assert.That(span[0].PerformerDefinitionId, Is.EqualTo(99));
+            Assert.That(span[0].ParentHandle, Is.EqualTo(23));
+            Assert.That(span[0].ScopeTag, Is.EqualTo(55));
         }
     }
 

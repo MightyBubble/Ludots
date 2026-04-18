@@ -43,13 +43,57 @@ namespace Ludots.Core.Presentation.Performers
         public Vector3 WorldPosition;
 
         /// <summary>
+        /// Cached world-space rotation resolved by the runtime transform pipeline.
+        /// </summary>
+        public Quaternion WorldRotation;
+
+        /// <summary>
+        /// Cached world-space scale resolved by the runtime transform pipeline.
+        /// </summary>
+        public Vector3 WorldScale;
+
+        /// <summary>
         /// Time elapsed since creation (seconds). Always advances regardless of
         /// visibility state, so duration-based performers expire on time and
         /// time-based animations stay in sync.
         /// </summary>
         public float Elapsed;
 
+        /// <summary>
+        /// Declares how this instance's transform should be resolved.
+        /// </summary>
+        public TransformSource TransformSource;
+
+        /// <summary>
+        /// Handle of the parent performer in the instance buffer. -1 means root.
+        /// </summary>
+        public int ParentHandle;
+
+        /// <summary>
+        /// Handle of the first child performer in the instance buffer. -1 means leaf.
+        /// </summary>
+        public int FirstChildHandle;
+
+        /// <summary>
+        /// Handle of the next sibling performer in the instance buffer. -1 means end.
+        /// </summary>
+        public int NextSiblingHandle;
+
+        /// <summary>
+        /// Bitmask of active behavior slots. Bit=1 means active.
+        /// </summary>
+        public uint BehaviorActiveMask;
+
         /// <summary>Whether this slot is in use.</summary>
         public bool Active;
+    }
+
+    public enum TransformSource : byte
+    {
+        InheritParent = 0,
+        EntityTransform = 1,
+        SplineDriven = 2,
+        BoneAttached = 3,
+        WorldFixed = 4,
     }
 }

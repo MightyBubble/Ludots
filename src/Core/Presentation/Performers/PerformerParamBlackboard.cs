@@ -209,6 +209,27 @@ namespace Ludots.Core.Presentation.Performers
             return false;
         }
 
+        public bool TryResolveFloat(int handle, int paramKey, out float value)
+        {
+            ValidateParamKey(paramKey);
+            ValidateHandle(handle);
+
+            int current = handle;
+            int remainingDepth = HandleCapacity;
+            while (current >= 0 && remainingDepth-- > 0)
+            {
+                if (TryGetFloat(current, paramKey, out value))
+                {
+                    return true;
+                }
+
+                current = _parentHandles[current];
+            }
+
+            value = 0f;
+            return false;
+        }
+
         public bool TryGetInt(int handle, int paramKey, out int value)
         {
             ValidateParamKey(paramKey);
@@ -232,6 +253,27 @@ namespace Ludots.Core.Presentation.Performers
             return false;
         }
 
+        public bool TryResolveInt(int handle, int paramKey, out int value)
+        {
+            ValidateParamKey(paramKey);
+            ValidateHandle(handle);
+
+            int current = handle;
+            int remainingDepth = HandleCapacity;
+            while (current >= 0 && remainingDepth-- > 0)
+            {
+                if (TryGetInt(current, paramKey, out value))
+                {
+                    return true;
+                }
+
+                current = _parentHandles[current];
+            }
+
+            value = 0;
+            return false;
+        }
+
         public bool TryGetVector(int handle, int paramKey, out Vector4 value)
         {
             ValidateParamKey(paramKey);
@@ -249,6 +291,27 @@ namespace Ludots.Core.Presentation.Performers
 
                 value = _vectorValues[index];
                 return true;
+            }
+
+            value = Vector4.Zero;
+            return false;
+        }
+
+        public bool TryResolveVector(int handle, int paramKey, out Vector4 value)
+        {
+            ValidateParamKey(paramKey);
+            ValidateHandle(handle);
+
+            int current = handle;
+            int remainingDepth = HandleCapacity;
+            while (current >= 0 && remainingDepth-- > 0)
+            {
+                if (TryGetVector(current, paramKey, out value))
+                {
+                    return true;
+                }
+
+                current = _parentHandles[current];
             }
 
             value = Vector4.Zero;
@@ -306,6 +369,27 @@ namespace Ludots.Core.Presentation.Performers
             Array.Fill(_parentHandles, -1);
         }
 
+        public void ClearFloat(int handle, int paramKey)
+        {
+            ValidateParamKey(paramKey);
+            ValidateHandle(handle);
+            ClearLaneEntry(handle, paramKey, _floatKeys, _floatValues, _floatCapacityPerHandle, _floatCounts);
+        }
+
+        public void ClearInt(int handle, int paramKey)
+        {
+            ValidateParamKey(paramKey);
+            ValidateHandle(handle);
+            ClearLaneEntry(handle, paramKey, _intKeys, _intValues, _intCapacityPerHandle, _intCounts);
+        }
+
+        public void ClearVector(int handle, int paramKey)
+        {
+            ValidateParamKey(paramKey);
+            ValidateHandle(handle);
+            ClearLaneEntry(handle, paramKey, _vectorKeys, _vectorValues, _vectorCapacityPerHandle, _vectorCounts);
+        }
+
         private T ResolveValue<T>(int handle, int paramKey, T defaultValue, TryResolveValue<T> tryResolve)
         {
             ValidateParamKey(paramKey);
@@ -338,6 +422,28 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             counts[handle] = 0;
+        }
+
+        private static void ClearLaneEntry<TValue>(int handle, int paramKey, int[] keys, TValue[] values, int laneCapacityPerHandle, int[] counts)
+        {
+            int offset = handle * laneCapacityPerHandle;
+            int count = counts[handle];
+            for (int i = 0; i < count; i++)
+            {
+                int index = offset + i;
+                if (keys[index] != paramKey)
+                {
+                    continue;
+                }
+
+                int lastIndex = offset + count - 1;
+                keys[index] = keys[lastIndex];
+                values[index] = values[lastIndex];
+                keys[lastIndex] = -1;
+                values[lastIndex] = default!;
+                counts[handle] = count - 1;
+                return;
+            }
         }
 
         private void ValidateHandle(int handle)

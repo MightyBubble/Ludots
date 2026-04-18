@@ -3,6 +3,22 @@ using Ludots.Core.Presentation.Hud;
 
 namespace Ludots.Core.Presentation.Performers
 {
+    public struct ChildPerformerRef
+    {
+        public int DefinitionId;
+        public int ScopeTag;
+        public ParamDefault[] ParamOverrides;
+    }
+
+    public struct ParamDefault
+    {
+        public int ParamKey;
+        public ParamLane Lane;
+        public float FloatValue;
+        public int IntValue;
+        public Vector4 VectorValue;
+    }
+
     /// <summary>
     /// A complete declarative definition of a performer: what it looks like, when it
     /// reacts, when it is visible, and how its parameters are resolved.
@@ -13,6 +29,21 @@ namespace Ludots.Core.Presentation.Performers
     {
         /// <summary>Unique definition ID.</summary>
         public int Id;
+
+        /// <summary>Stable string key from config.</summary>
+        public string Key = string.Empty;
+
+        /// <summary>Optional parent definition key for config-time inheritance.</summary>
+        public string Extends = string.Empty;
+
+        /// <summary>
+        /// Config sugar for static child performer creation.
+        /// Expanded into PerformerCreated rules by the config loader.
+        /// </summary>
+        public ChildPerformerRef[] Children = System.Array.Empty<ChildPerformerRef>();
+
+        /// <summary>Composable performer behavior slots.</summary>
+        public BehaviorSlot[] Behaviors = System.Array.Empty<BehaviorSlot>();
 
         /// <summary>Visual output category — determines which draw buffer to write to.</summary>
         public PerformerVisualKind VisualKind;
@@ -36,6 +67,11 @@ namespace Ludots.Core.Presentation.Performers
         /// Parameters not bound here fall through to the static defaults below.
         /// </summary>
         public PerformerParamBinding[] Bindings = System.Array.Empty<PerformerParamBinding>();
+
+        /// <summary>
+        /// Blackboard defaults applied when an instance is created.
+        /// </summary>
+        public ParamDefault[] ParamDefaults = System.Array.Empty<ParamDefault>();
 
         /// <summary>
         /// Structured authoring contract for performer-driven procedural surfaces.

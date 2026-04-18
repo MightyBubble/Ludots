@@ -79,7 +79,23 @@ namespace Ludots.Core.Presentation.Systems
                     case PerformerCommandKind.SetParam:
                         if (_instances.IsActive(cmd.PerformerHandle))
                         {
-                            _instances.SetParamOverride(cmd.PerformerHandle, cmd.ParamKey, cmd.ParamValue);
+                            _instances.SetParam(cmd.PerformerHandle, cmd.ParamKey, cmd.ParamLane, cmd.ParamValue, cmd.IntValue, cmd.VectorValue);
+                        }
+                        break;
+
+                    case PerformerCommandKind.ActivateBehavior:
+                        if (_instances.IsActive(cmd.PerformerHandle) && cmd.TargetBehaviorSlot is >= 0 and < 32)
+                        {
+                            ref PerformerInstance active = ref _instances.Get(cmd.PerformerHandle);
+                            active.BehaviorActiveMask |= 1u << cmd.TargetBehaviorSlot;
+                        }
+                        break;
+
+                    case PerformerCommandKind.DeactivateBehavior:
+                        if (_instances.IsActive(cmd.PerformerHandle) && cmd.TargetBehaviorSlot is >= 0 and < 32)
+                        {
+                            ref PerformerInstance active = ref _instances.Get(cmd.PerformerHandle);
+                            active.BehaviorActiveMask &= ~(1u << cmd.TargetBehaviorSlot);
                         }
                         break;
                 }
@@ -101,6 +117,10 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
+            int parentHandle = _instances.IsActive(cmd.ParentHandle)
+                ? cmd.ParentHandle
+                : -1;
+
             if (!_instances.TryAllocate(
                     cmd.PerformerDefinitionId,
                     cmd.Source,
@@ -108,6 +128,7 @@ namespace Ludots.Core.Presentation.Systems
                     cmd.AnchorKind,
                     cmd.Position,
                     _stableIds.Allocate(),
+                    parentHandle,
                     out int handle))
             {
                 string performerKey = _definitions.GetName(cmd.PerformerDefinitionId);
@@ -117,6 +138,10 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException(
                     $"PerformerInstanceBuffer is full while creating performer '{performerKey}' (defId={cmd.PerformerDefinitionId}, scopeTag={cmd.ScopeTag}, owner={ownerText}, active={_instances.ActiveCount}, capacity={_instances.Capacity}).");
             }
+
+            ref PerformerInstance instance = ref _instances.Get(handle);
+            instance.BehaviorActiveMask = BuildDefaultBehaviorMask(definition);
+            _instances.SetParamDefault(definition, handle);
 
             EmitCreatedEvent(handle, _instances.Get(handle));
         }
@@ -134,6 +159,28 @@ namespace Ludots.Core.Presentation.Systems
                 cmd.ScopeTag,
                 cmd.AnchorKind,
                 cmd.Position);
+        }
+
+        private static uint BuildDefaultBehaviorMask(PerformerDefinition definition)
+        {
+            if (definition.Behaviors == null || definition.Behaviors.Length == 0)
+            {
+                return 0u;
+            }
+
+            uint mask = 0u;
+            for (int i = 0; i < definition.Behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref definition.Behaviors[i];
+                if (!slot.ActiveByDefault || slot.SlotIndex < 0 || slot.SlotIndex >= 32)
+                {
+                    continue;
+                }
+
+                mask |= 1u << slot.SlotIndex;
+            }
+
+            return mask;
         }
 
         private void EmitCreatedEvent(int handle, in PerformerInstance instance)

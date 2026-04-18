@@ -16,18 +16,15 @@ namespace Ludots.Core.Presentation.Performers
     {
         private readonly PerformerInstance[] _slots;
         private int _highWaterMark;
+        private readonly PerformerParamBlackboard _blackboard;
 
         // Free-list: O(1) allocation by reusing released slots.
-        // Array-based stack — no heap allocation on push/pop.
+        // Array-based stack – no heap allocation on push/pop.
         private readonly int[] _freeStack;
         private int _freeCount;
 
-        // Per-instance parameter overrides: flat [handle * MaxOverridesPerInstance + offset]
-        private const int MaxOverridesPerInstance = 8;
-        private readonly int[] _overrideKeys;    // -1 = unused
-        private readonly float[] _overrideValues;
-
         public int Capacity => _slots.Length;
+        public PerformerParamBlackboard Blackboard => _blackboard;
 
         /// <summary>
         /// Number of currently active instances.
@@ -49,10 +46,8 @@ namespace Ludots.Core.Presentation.Performers
                 throw new ArgumentOutOfRangeException(nameof(capacity), "PerformerInstanceBuffer capacity must be positive.");
 
             _slots = new PerformerInstance[capacity];
+            _blackboard = new PerformerParamBlackboard(capacity);
             _freeStack = new int[capacity];
-            _overrideKeys = new int[capacity * MaxOverridesPerInstance];
-            _overrideValues = new float[capacity * MaxOverridesPerInstance];
-            Array.Fill(_overrideKeys, -1);
         }
 
         /// <summary>
@@ -66,22 +61,29 @@ namespace Ludots.Core.Presentation.Performers
             PresentationAnchorKind anchorKind,
             in Vector3 worldPosition,
             int stableId,
+            int parentHandle,
             out int handle)
         {
-            // 1. Try free-list first — O(1)
+            if (parentHandle >= 0 && !IsActive(parentHandle))
+            {
+                handle = -1;
+                return false;
+            }
+
+            // 1. Try free-list first – O(1)
             if (_freeCount > 0)
             {
                 int idx = _freeStack[--_freeCount];
-                InitSlot(idx, defId, owner, scopeId, anchorKind, worldPosition, stableId);
+                InitSlot(idx, defId, owner, scopeId, anchorKind, worldPosition, stableId, parentHandle);
                 handle = idx;
                 return true;
             }
 
-            // 2. Append beyond high-water mark — O(1)
+            // 2. Append beyond high-water mark – O(1)
             if (_highWaterMark < _slots.Length)
             {
                 int idx = _highWaterMark++;
-                InitSlot(idx, defId, owner, scopeId, anchorKind, worldPosition, stableId);
+                InitSlot(idx, defId, owner, scopeId, anchorKind, worldPosition, stableId, parentHandle);
                 handle = idx;
                 return true;
             }
@@ -92,7 +94,19 @@ namespace Ludots.Core.Presentation.Performers
 
         public bool TryAllocate(int defId, Entity owner, int scopeId, out int handle)
         {
-            return TryAllocate(defId, owner, scopeId, PresentationAnchorKind.Entity, Vector3.Zero, 0, out handle);
+            return TryAllocate(defId, owner, scopeId, PresentationAnchorKind.Entity, Vector3.Zero, 0, -1, out handle);
+        }
+
+        public bool TryAllocate(
+            int defId,
+            Entity owner,
+            int scopeId,
+            PresentationAnchorKind anchorKind,
+            in Vector3 worldPosition,
+            int stableId,
+            out int handle)
+        {
+            return TryAllocate(defId, owner, scopeId, anchorKind, worldPosition, stableId, -1, out handle);
         }
 
         /// <summary>
@@ -102,9 +116,7 @@ namespace Ludots.Core.Presentation.Performers
         {
             if (handle < 0 || handle >= _highWaterMark) return false;
             if (!_slots[handle].Active) return false; // guard against double-free
-            _slots[handle].Active = false;
-            ClearAllOverrides(handle);
-            PushFree(handle);
+            ReleaseRecursive(handle, null);
             return true;
         }
 
@@ -124,11 +136,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 if (_slots[i].Active && _slots[i].ScopeId == scopeId)
                 {
-                    onReleased?.Invoke(i, _slots[i]);
-                    _slots[i].Active = false;
-                    ClearAllOverrides(i);
-                    PushFree(i);
-                    released++;
+                    released += ReleaseRecursive(i, onReleased);
                 }
             }
 
@@ -189,37 +197,12 @@ namespace Ludots.Core.Presentation.Performers
             return processed;
         }
 
-        // ── Imperative Parameter Overrides ──
-
         /// <summary>
         /// Set an imperative parameter override. Takes priority over declarative bindings.
         /// </summary>
         public void SetParamOverride(int handle, int paramKey, float value)
         {
-            int baseIdx = handle * MaxOverridesPerInstance;
-
-            // Try to find existing override for this key
-            for (int i = 0; i < MaxOverridesPerInstance; i++)
-            {
-                if (_overrideKeys[baseIdx + i] == paramKey)
-                {
-                    _overrideValues[baseIdx + i] = value;
-                    return;
-                }
-            }
-
-            // Find free slot
-            for (int i = 0; i < MaxOverridesPerInstance; i++)
-            {
-                if (_overrideKeys[baseIdx + i] < 0)
-                {
-                    _overrideKeys[baseIdx + i] = paramKey;
-                    _overrideValues[baseIdx + i] = value;
-                    return;
-                }
-            }
-
-            // Override slots full — silently ignore (could log warning)
+            _blackboard.SetFloat(handle, paramKey, value);
         }
 
         /// <summary>
@@ -227,17 +210,12 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public bool TryGetParamOverride(int handle, int paramKey, out float value)
         {
-            int baseIdx = handle * MaxOverridesPerInstance;
-            for (int i = 0; i < MaxOverridesPerInstance; i++)
-            {
-                if (_overrideKeys[baseIdx + i] == paramKey)
-                {
-                    value = _overrideValues[baseIdx + i];
-                    return true;
-                }
-            }
-            value = 0f;
-            return false;
+            return _blackboard.TryGetFloat(handle, paramKey, out value);
+        }
+
+        public bool TryResolveParamOverride(int handle, int paramKey, out float value)
+        {
+            return _blackboard.TryResolveFloat(handle, paramKey, out value);
         }
 
         /// <summary>
@@ -245,15 +223,55 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public void ClearParamOverride(int handle, int paramKey)
         {
-            int baseIdx = handle * MaxOverridesPerInstance;
-            for (int i = 0; i < MaxOverridesPerInstance; i++)
+            _blackboard.ClearFloat(handle, paramKey);
+        }
+
+        public void SetParam(int handle, int paramKey, ParamLane lane, float floatValue, int intValue, in Vector4 vectorValue)
+        {
+            switch (lane)
             {
-                if (_overrideKeys[baseIdx + i] == paramKey)
-                {
-                    _overrideKeys[baseIdx + i] = -1;
-                    return;
-                }
+                case ParamLane.Float:
+                    _blackboard.SetFloat(handle, paramKey, floatValue);
+                    break;
+                case ParamLane.Int:
+                    _blackboard.SetInt(handle, paramKey, intValue);
+                    break;
+                case ParamLane.Vector:
+                    _blackboard.SetVector(handle, paramKey, vectorValue);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(lane), lane, "Unsupported performer param lane.");
             }
+        }
+
+        public void SetParamDefault(in PerformerDefinition definition, int handle)
+        {
+            ParamDefault[] defaults = definition.ParamDefaults;
+            for (int i = 0; i < defaults.Length; i++)
+            {
+                ref readonly ParamDefault entry = ref defaults[i];
+                SetParam(handle, entry.ParamKey, entry.Lane, entry.FloatValue, entry.IntValue, entry.VectorValue);
+            }
+        }
+
+        public float ResolveFloat(int handle, int paramKey, float defaultValue = 0f)
+        {
+            return _blackboard.ResolveFloat(handle, paramKey, defaultValue);
+        }
+
+        public int ResolveInt(int handle, int paramKey, int defaultValue = 0)
+        {
+            return _blackboard.ResolveInt(handle, paramKey, defaultValue);
+        }
+
+        public Vector4 ResolveVector(int handle, int paramKey, Vector4 defaultValue)
+        {
+            return _blackboard.ResolveVector(handle, paramKey, defaultValue);
+        }
+
+        public int GetParentHandle(int handle)
+        {
+            return _blackboard.GetParent(handle);
         }
 
         /// <summary>
@@ -263,7 +281,7 @@ namespace Ludots.Core.Presentation.Performers
         {
             for (int i = 0; i < _highWaterMark; i++)
                 _slots[i].Active = false;
-            Array.Fill(_overrideKeys, -1);
+            _blackboard.ClearAll();
             _highWaterMark = 0;
             _freeCount = 0;
         }
@@ -289,11 +307,7 @@ namespace Ludots.Core.Presentation.Performers
                 if (world.IsAlive(_slots[i].Owner))
                     continue;
 
-                onReleased?.Invoke(i, _slots[i]);
-                _slots[i].Active = false;
-                ClearAllOverrides(i);
-                PushFree(i);
-                released++;
+                released += ReleaseRecursive(i, onReleased);
             }
 
             return released;
@@ -332,7 +346,8 @@ namespace Ludots.Core.Presentation.Performers
             int scopeId,
             PresentationAnchorKind anchorKind,
             in Vector3 worldPosition,
-            int stableId)
+            int stableId,
+            int parentHandle)
         {
             _slots[idx] = new PerformerInstance
             {
@@ -342,17 +357,86 @@ namespace Ludots.Core.Presentation.Performers
                 StableId = stableId,
                 AnchorKind = anchorKind,
                 WorldPosition = worldPosition,
+                WorldRotation = Quaternion.Identity,
+                WorldScale = Vector3.One,
                 Elapsed = 0f,
+                TransformSource = anchorKind == PresentationAnchorKind.Entity
+                    ? TransformSource.EntityTransform
+                    : TransformSource.WorldFixed,
+                ParentHandle = parentHandle,
+                FirstChildHandle = -1,
+                NextSiblingHandle = -1,
+                BehaviorActiveMask = 0u,
                 Active = true
             };
-            ClearAllOverrides(idx);
+            _blackboard.ClearAll(idx);
+            _blackboard.SetParent(idx, parentHandle);
+
+            if (parentHandle >= 0)
+            {
+                ref PerformerInstance parent = ref _slots[parentHandle];
+                _slots[idx].NextSiblingHandle = parent.FirstChildHandle;
+                parent.FirstChildHandle = idx;
+            }
         }
 
-        private void ClearAllOverrides(int handle)
+        private int ReleaseRecursive(int handle, Action<int, PerformerInstance>? onReleased)
         {
-            int baseIdx = handle * MaxOverridesPerInstance;
-            for (int i = 0; i < MaxOverridesPerInstance; i++)
-                _overrideKeys[baseIdx + i] = -1;
+            if (!IsActive(handle))
+            {
+                return 0;
+            }
+
+            int released = 0;
+            int child = _slots[handle].FirstChildHandle;
+            while (child >= 0)
+            {
+                int nextChild = _slots[child].NextSiblingHandle;
+                released += ReleaseRecursive(child, onReleased);
+                child = nextChild;
+            }
+
+            UnlinkFromParent(handle);
+
+            PerformerInstance snapshot = _slots[handle];
+            onReleased?.Invoke(handle, snapshot);
+
+            _slots[handle].Active = false;
+            _slots[handle].ParentHandle = -1;
+            _slots[handle].FirstChildHandle = -1;
+            _slots[handle].NextSiblingHandle = -1;
+            _slots[handle].BehaviorActiveMask = 0u;
+            _blackboard.ClearAll(handle);
+            PushFree(handle);
+            return released + 1;
+        }
+
+        private void UnlinkFromParent(int handle)
+        {
+            int parentHandle = _slots[handle].ParentHandle;
+            if (parentHandle < 0 || !IsActive(parentHandle))
+            {
+                return;
+            }
+
+            ref PerformerInstance parent = ref _slots[parentHandle];
+            if (parent.FirstChildHandle == handle)
+            {
+                parent.FirstChildHandle = _slots[handle].NextSiblingHandle;
+                return;
+            }
+
+            int current = parent.FirstChildHandle;
+            while (current >= 0)
+            {
+                if (_slots[current].NextSiblingHandle == handle)
+                {
+                    _slots[current].NextSiblingHandle = _slots[handle].NextSiblingHandle;
+                    return;
+                }
+
+                current = _slots[current].NextSiblingHandle;
+            }
         }
     }
 }

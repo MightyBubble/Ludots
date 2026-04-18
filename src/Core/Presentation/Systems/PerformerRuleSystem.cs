@@ -301,6 +301,9 @@ namespace Ludots.Core.Presentation.Systems
             emitted.Source = evt.Source;
             emitted.Target = evt.Target;
             emitted.Position = default;
+            emitted.ParentHandle = cmd.ParentHandle >= 0
+                ? cmd.ParentHandle
+                : (evt.Kind == PresentationEventKind.PerformerCreated ? evt.PayloadA : cmd.ParentHandle);
             emitted.ParamValue = cmd.ParamGraphProgramId > 0
                 ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
                 : cmd.ParamValue;
