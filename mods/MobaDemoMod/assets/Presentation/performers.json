@@ -18,15 +18,15 @@
         "event": { "kind": "EntitySpawned" },
         "condition": { "inline": "SourceHasVisualTransform" },
         "command": {
-          "commandKind": "CreatePerformer",
-          "performerDefinitionId": "moba_unit_marker",
+          "kind": "CreatePerformer",
+          "definitionId": "moba_unit_marker",
           "scopeSource": "EventPayloadA"
         }
       },
       {
         "event": { "kind": "EntityDestroyed" },
         "command": {
-          "commandKind": "DestroyPerformerScope",
+          "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
         }
       }

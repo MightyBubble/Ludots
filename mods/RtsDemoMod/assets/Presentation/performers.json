@@ -1,4 +1,4 @@
-﻿[
+[
     {
         "_comment":  "RTS actor ground ring: always-on entity-scoped overlay so units/buildings remain readable on the grid.",
         "id":  "rts_actor_ring",
@@ -59,9 +59,9 @@
                                         "kind":  "EntitySpawned"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "rts_actor_ring"
+                                          "definitionId":  "rts_actor_ring"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -72,7 +72,7 @@
                                         "kind":  "EntityDestroyed"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }
@@ -143,9 +143,9 @@
                                         "kind":  "EntitySpawned"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "rts_actor_marker"
+                                          "definitionId":  "rts_actor_marker"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -156,7 +156,7 @@
                                         "kind":  "EntityDestroyed"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }

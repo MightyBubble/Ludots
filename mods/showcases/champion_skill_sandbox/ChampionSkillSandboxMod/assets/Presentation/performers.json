@@ -1,4 +1,4 @@
-﻿[
+[
     {
         "id":  "champion_skill_sandbox.selection_indicator",
         "visualKind":  "GroundOverlay",
@@ -170,9 +170,9 @@
                                         "key":  "Effect.Champion.Jayce.Cannon.ShockBlastResolve"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "champion_skill_sandbox.projectile.jayce_q"
+                                          "definitionId":  "champion_skill_sandbox.projectile.jayce_q"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -183,7 +183,7 @@
                                         "kind":  "EntityDestroyed"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }
@@ -1170,9 +1170,9 @@
                                         "key":  "Effect.ChampionStress.FireMage.FireballResolve"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "champion_skill_sandbox.projectile.stress_fireball"
+                                          "definitionId":  "champion_skill_sandbox.projectile.stress_fireball"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -1183,7 +1183,7 @@
                                         "kind":  "EntityDestroyed"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }
@@ -1208,9 +1208,9 @@
                                         "key":  "Effect.ChampionStress.LaserMage.LaserResolve"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "champion_skill_sandbox.projectile.stress_laser"
+                                          "definitionId":  "champion_skill_sandbox.projectile.stress_laser"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -1221,7 +1221,7 @@
                                         "kind":  "EntityDestroyed"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }
@@ -1251,9 +1251,9 @@
                                         "key":  "champion_skill_sandbox_runic_beacon"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "champion_skill_sandbox.manifestation.runic_beacon"
+                                          "definitionId":  "champion_skill_sandbox.manifestation.runic_beacon"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -1265,7 +1265,7 @@
                                         "key":  "champion_skill_sandbox_runic_beacon"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }
@@ -1327,9 +1327,9 @@
                                         "key":  "champion_skill_sandbox_rune_field"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "champion_skill_sandbox.manifestation.rune_field"
+                                          "definitionId":  "champion_skill_sandbox.manifestation.rune_field"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -1341,7 +1341,7 @@
                                         "key":  "champion_skill_sandbox_rune_field"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }
@@ -1403,9 +1403,9 @@
                                         "key":  "champion_skill_sandbox_stone_pillar"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "champion_skill_sandbox.manifestation.stone_pillar"
+                                          "definitionId":  "champion_skill_sandbox.manifestation.stone_pillar"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -1417,7 +1417,7 @@
                                         "key":  "champion_skill_sandbox_stone_pillar"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }
@@ -1447,9 +1447,9 @@
                                         "key":  "champion_skill_sandbox_spell_beacon"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "champion_skill_sandbox.manifestation.spell_beacon"
+                                          "definitionId":  "champion_skill_sandbox.manifestation.spell_beacon"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -1461,7 +1461,7 @@
                                         "key":  "champion_skill_sandbox_spell_beacon"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }
@@ -1523,9 +1523,9 @@
                                         "key":  "champion_skill_sandbox_gravity_well"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "champion_skill_sandbox.manifestation.gravity_well"
+                                          "definitionId":  "champion_skill_sandbox.manifestation.gravity_well"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -1537,7 +1537,7 @@
                                         "key":  "champion_skill_sandbox_gravity_well"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }
@@ -1608,9 +1608,9 @@
                                         "key":  "champion_skill_sandbox_barrier_segment"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "champion_skill_sandbox.manifestation.barrier_segment"
+                                          "definitionId":  "champion_skill_sandbox.manifestation.barrier_segment"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -1622,7 +1622,7 @@
                                         "key":  "champion_skill_sandbox_barrier_segment"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }
@@ -1693,9 +1693,9 @@
                                         "key":  "champion_skill_sandbox_guided_laser"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "champion_skill_sandbox.manifestation.guided_laser"
+                                          "definitionId":  "champion_skill_sandbox.manifestation.guided_laser"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasVisualTransform"
@@ -1707,7 +1707,7 @@
                                         "key":  "champion_skill_sandbox_guided_laser"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }

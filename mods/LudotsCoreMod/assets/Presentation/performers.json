@@ -1,4 +1,4 @@
-﻿[
+[
     {
         "id":  "entity_health_bar",
         "visualKind":  "WorldBar",
@@ -60,9 +60,9 @@
                                         "kind":  "EntitySpawned"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "entity_health_bar"
+                                          "definitionId":  "entity_health_bar"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasAttributes"
@@ -73,7 +73,7 @@
                                         "kind":  "EntityDestroyed"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }
@@ -126,9 +126,9 @@
                                         "kind":  "EntitySpawned"
                                     },
                           "command":  {
-                                          "commandKind":  "CreatePerformer",
+                                          "kind":  "CreatePerformer",
                                           "scopeSource":  "EventPayloadA",
-                                          "performerDefinitionId":  "entity_world_text"
+                                          "definitionId":  "entity_world_text"
                                       },
                           "condition":  {
                                             "inline":  "SourceHasAttributes"
@@ -139,7 +139,7 @@
                                         "kind":  "EntityDestroyed"
                                     },
                           "command":  {
-                                          "commandKind":  "DestroyPerformerScope",
+                                          "kind":  "DestroyPerformerScope",
                                           "scopeSource":  "EventPayloadA"
                                       }
                       }

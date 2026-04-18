@@ -49,9 +49,9 @@ namespace Ludots.Tests.GAS
                               "key": "Effect.Test.ProjectileHit"
                             },
                             "command": {
-                              "commandKind": "CreatePerformer",
+                              "kind": "CreatePerformer",
                               "scopeSource": "EventPayloadA",
-                              "performerDefinitionId": "test.projectile.performer"
+                              "definitionId": "test.projectile.performer"
                             }
                           },
                           {
@@ -59,7 +59,7 @@ namespace Ludots.Tests.GAS
                               "kind": "EntityDestroyed"
                             },
                             "command": {
-                              "commandKind": "DestroyPerformerScope",
+                              "kind": "DestroyPerformerScope",
                               "scopeSource": "EventPayloadA"
                             }
                           }

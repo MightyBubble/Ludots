@@ -234,7 +234,7 @@ namespace Ludots.Core.Presentation.Config
                     continue;
                 }
 
-                int key = obj[keyField]?.GetValue<int>() ?? obj["slotIndex"]?.GetValue<int>() ?? i;
+                int key = obj[keyField]?.GetValue<int>() ?? i;
                 if (!byKey.ContainsKey(key))
                 {
                     order.Add(key);
@@ -246,8 +246,8 @@ namespace Ludots.Core.Presentation.Config
 
         private static JsonArray MergeParamDefaultsJson(JsonNode? existingNode, JsonNode? incomingNode)
         {
-            var byKey = new Dictionary<(int ParamKey, string Lane), JsonNode>();
-            var order = new List<(int ParamKey, string Lane)>();
+            var byKey = new Dictionary<(int ParamKey, ParamLane Lane), JsonNode>();
+            var order = new List<(int ParamKey, ParamLane Lane)>();
             AppendParamDefaultsJson(existingNode, byKey, order);
             AppendParamDefaultsJson(incomingNode, byKey, order);
 
@@ -262,8 +262,8 @@ namespace Ludots.Core.Presentation.Config
 
         private static void AppendParamDefaultsJson(
             JsonNode? node,
-            Dictionary<(int ParamKey, string Lane), JsonNode> byKey,
-            List<(int ParamKey, string Lane)> order)
+            Dictionary<(int ParamKey, ParamLane Lane), JsonNode> byKey,
+            List<(int ParamKey, ParamLane Lane)> order)
         {
             if (node is not JsonArray array)
             {
@@ -278,7 +278,7 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 int paramKey = obj["paramKey"]?.GetValue<int>() ?? 0;
-                string lane = NormalizeParamDefaultLane(obj);
+                ParamLane lane = ParseRequiredParamLane(obj, $"paramDefaults[{i}]");
                 var compositeKey = (paramKey, lane);
                 if (!byKey.ContainsKey(compositeKey))
                 {
@@ -287,26 +287,6 @@ namespace Ludots.Core.Presentation.Config
 
                 byKey[compositeKey] = obj;
             }
-        }
-
-        private static string NormalizeParamDefaultLane(JsonObject obj)
-        {
-            if (obj["lane"] != null)
-            {
-                return obj["lane"]!.GetValue<string>();
-            }
-
-            if (obj["intValue"] != null)
-            {
-                return nameof(ParamLane.Int);
-            }
-
-            if (obj["vectorValue"] != null || obj["value"] is JsonArray)
-            {
-                return nameof(ParamLane.Vector);
-            }
-
-            return nameof(ParamLane.Float);
         }
 
         private (string key, PerformerDefinition def) ParseDefinition(JsonNode node)
@@ -487,24 +467,20 @@ namespace Ludots.Core.Presentation.Config
                 return default;
             }
 
-            JsonNode? definitionNode = node["performerDefinitionId"] ?? node["definitionId"];
-            JsonNode? scopeNode = node["scopeTag"] ?? node["scopeId"];
-            JsonNode? kindNode = node["kind"] ?? node["commandKind"];
-
             return new PerformerCommand
             {
-                CommandKind = ParseEnum(kindNode?.GetValue<string>(), PerformerCommandKind.None),
-                PerformerDefinitionId = ResolvePerformerDefinitionId(definitionNode),
+                CommandKind = ParseEnum(node["kind"]?.GetValue<string>(), PerformerCommandKind.None),
+                PerformerDefinitionId = ResolvePerformerDefinitionId(node["definitionId"]),
                 ParentHandle = node["parentHandle"]?.GetValue<int>() ?? -1,
-                ScopeTag = ParseScopeTag(scopeNode),
+                ScopeTag = ParseScopeTag(node["scopeTag"]),
                 ScopeSource = ParseEnum(node["scopeSource"]?.GetValue<string>(), PerformerCommandScopeSource.Fixed),
                 ParamKey = node["paramKey"]?.GetValue<int>() ?? 0,
-                ParamLane = ParseEnum(node["paramLane"]?.GetValue<string>() ?? node["lane"]?.GetValue<string>(), ParamLane.Float),
-                ParamValue = node["paramValue"]?.GetValue<float>() ?? node["floatValue"]?.GetValue<float>() ?? 0f,
+                ParamLane = ParseEnum(node["paramLane"]?.GetValue<string>(), ParamLane.Float),
+                ParamValue = node["paramValue"]?.GetValue<float>() ?? 0f,
                 IntValue = node["intValue"]?.GetValue<int>() ?? 0,
                 VectorValue = ParseVector4(node["vectorValue"]),
                 ParamGraphProgramId = node["paramGraphProgramId"]?.GetValue<int>() ?? 0,
-                TargetBehaviorSlot = node["targetBehaviorSlot"]?.GetValue<int>() ?? node["behaviorSlot"]?.GetValue<int>() ?? -1,
+                TargetBehaviorSlot = node["targetBehaviorSlot"]?.GetValue<int>() ?? -1,
             };
         }
 
@@ -576,7 +552,7 @@ namespace Ludots.Core.Presentation.Config
 
         private int ResolveTextTokenId(JsonNode node)
         {
-            string tokenKey = node["textToken"]?.GetValue<string>() ?? node["sourceKey"]?.GetValue<string>() ?? string.Empty;
+            string tokenKey = node["textToken"]?.GetValue<string>() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(tokenKey))
             {
                 throw new InvalidOperationException("Performer WorldText textToken binding requires a non-empty 'textToken'.");
@@ -593,14 +569,23 @@ namespace Ludots.Core.Presentation.Config
 
         private int ResolveAttributeId(JsonNode node)
         {
-            JsonNode? idNode = node["sourceId"] ?? node["attributeId"];
+            JsonNode? idNode = node["attributeId"];
             if (idNode is JsonValue value && value.TryGetValue<int>(out int numericId))
             {
                 return numericId;
             }
 
             string name = node["attributeName"]?.GetValue<string>() ?? string.Empty;
-            return string.IsNullOrWhiteSpace(name) ? 0 : _resolveAttributeName(name);
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                int id = _resolveAttributeName(name);
+                if (id > 0)
+                {
+                    return id;
+                }
+            }
+
+            throw new InvalidOperationException("Performer attribute binding requires 'attributeId' or non-empty 'attributeName'.");
         }
 
         private static int ParseScopeTag(JsonNode? node)
@@ -654,7 +639,7 @@ namespace Ludots.Core.Presentation.Config
                 children[i] = new ChildPerformerRef
                 {
                     DefinitionId = ResolvePerformerDefinitionId(obj["definitionId"]),
-                    ScopeTag = ParseScopeTag(obj["scopeTag"] ?? obj["scopeId"]),
+                    ScopeTag = ParseScopeTag(obj["scopeTag"]),
                     ParamOverrides = ParseParamDefaults(obj["paramOverrides"]),
                 };
             }
@@ -680,7 +665,7 @@ namespace Ludots.Core.Presentation.Config
                 BehaviorKind kind = ParseEnum(obj["kind"]?.GetValue<string>(), BehaviorKind.AssetBinding);
                 var slot = new BehaviorSlot
                 {
-                    SlotIndex = obj["slot"]?.GetValue<int>() ?? obj["slotIndex"]?.GetValue<int>() ?? i,
+                    SlotIndex = obj["slot"]?.GetValue<int>() ?? i,
                     Kind = kind,
                     ActiveByDefault = obj["activeByDefault"]?.GetValue<bool>() ?? false,
                     ActivationCondition = ParseConditionRef(obj["activationCondition"]),
@@ -737,7 +722,7 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"paramDefaults[{i}] must be an object.");
                 }
 
-                ParamLane lane = ParseParamLane(obj);
+                ParamLane lane = ParseRequiredParamLane(obj, $"paramDefaults[{i}]");
                 var paramDefault = new ParamDefault
                 {
                     ParamKey = obj["paramKey"]?.GetValue<int>() ?? 0,
@@ -747,13 +732,28 @@ namespace Ludots.Core.Presentation.Config
                 switch (lane)
                 {
                     case ParamLane.Int:
-                        paramDefault.IntValue = obj["intValue"]?.GetValue<int>() ?? ParseLegacyIntValue(obj);
+                        if (obj["intValue"] is not JsonValue intValueNode || !intValueNode.TryGetValue<int>(out int intValue))
+                        {
+                            throw new InvalidOperationException($"paramDefaults[{i}] lane '{ParamLane.Int}' requires integer field 'intValue'.");
+                        }
+
+                        paramDefault.IntValue = intValue;
                         break;
                     case ParamLane.Vector:
-                        paramDefault.VectorValue = ParseVector4(obj["vectorValue"] ?? obj["value"]);
+                        if (obj["vectorValue"] is not JsonArray vectorValueNode || vectorValueNode.Count < 4)
+                        {
+                            throw new InvalidOperationException($"paramDefaults[{i}] lane '{ParamLane.Vector}' requires 4-component array field 'vectorValue'.");
+                        }
+
+                        paramDefault.VectorValue = ParseVector4(vectorValueNode);
                         break;
                     default:
-                        paramDefault.FloatValue = obj["floatValue"]?.GetValue<float>() ?? obj["value"]?.GetValue<float>() ?? 0f;
+                        if (obj["floatValue"] is not JsonValue floatValueNode || !floatValueNode.TryGetValue<float>(out float floatValue))
+                        {
+                            throw new InvalidOperationException($"paramDefaults[{i}] lane '{ParamLane.Float}' requires numeric field 'floatValue'.");
+                        }
+
+                        paramDefault.FloatValue = floatValue;
                         break;
                 }
 
@@ -814,9 +814,15 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("TagBinding behavior requires object field 'tagBinding'.");
             }
 
+            int tagId = ResolveTagId(obj["tagId"]);
+            if (tagId <= 0)
+            {
+                throw new InvalidOperationException("TagBinding behavior requires non-empty field 'tagBinding.tagId'.");
+            }
+
             return new TagBindingConfig
             {
-                TagId = ResolveTagId(obj["tagId"] ?? obj["tag"]),
+                TagId = tagId,
                 TargetParamKey = obj["targetParamKey"]?.GetValue<int>() ?? 0,
                 InvertLogic = obj["invertLogic"]?.GetValue<bool>() ?? false,
             };
@@ -892,10 +898,9 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("Spline behavior requires object field 'spline'.");
             }
 
-            JsonNode? assetNode = obj["splineAssetId"] ?? obj["splinePathId"];
             return new SplineConfig
             {
-                SplineAssetId = ResolveBehaviorAssetId(AssetKind.Spline, assetNode),
+                SplineAssetId = ResolveBehaviorAssetId(AssetKind.Spline, obj["splineAssetId"]),
                 Usage = ParseEnum(obj["usage"]?.GetValue<string>(), SplineUsage.Render),
                 WidthParamKey = obj["widthParamKey"]?.GetValue<int>() ?? -1,
                 ColorParamKey = obj["colorParamKey"]?.GetValue<int>() ?? -1,
@@ -975,7 +980,12 @@ namespace Ludots.Core.Presentation.Config
                 if (value.TryGetValue<string>(out string key) && !string.IsNullOrWhiteSpace(key))
                 {
                     int id = _resolveBehaviorAssetId(kind, key);
-                    return id > 0 ? id : PerformerScopeTagRegistry.Register($"asset:{kind}:{key}");
+                    if (id <= 0)
+                    {
+                        throw new InvalidOperationException($"Performer behavior references unknown {kind} asset '{key}'.");
+                    }
+
+                    return id;
                 }
             }
 
@@ -999,7 +1009,12 @@ namespace Ludots.Core.Presentation.Config
                 if (value.TryGetValue<string>(out string key) && !string.IsNullOrWhiteSpace(key))
                 {
                     int id = resolver(key);
-                    return id > 0 ? id : PerformerScopeTagRegistry.Register($"{subject}:{key}");
+                    if (id <= 0)
+                    {
+                        throw new InvalidOperationException($"Performer behavior references unknown {subject} '{key}'.");
+                    }
+
+                    return id;
                 }
             }
 
@@ -1029,42 +1044,19 @@ namespace Ludots.Core.Presentation.Config
             return 0;
         }
 
-        private static ParamLane ParseParamLane(JsonObject obj)
+        private static ParamLane ParseRequiredParamLane(JsonObject obj, string context)
         {
-            if (obj["lane"] != null)
+            if (obj["lane"] is not JsonValue laneNode || !laneNode.TryGetValue<string>(out string? laneText) || string.IsNullOrWhiteSpace(laneText))
             {
-                return ParseEnum(obj["lane"]?.GetValue<string>(), ParamLane.Float);
+                throw new InvalidOperationException($"{context} requires explicit string field 'lane'.");
             }
 
-            if (obj["intValue"] != null)
+            if (!Enum.TryParse(laneText, ignoreCase: true, out ParamLane lane))
             {
-                return ParamLane.Int;
+                throw new InvalidOperationException($"{context} has invalid lane '{laneText}'.");
             }
 
-            if (obj["vectorValue"] != null || obj["value"] is JsonArray)
-            {
-                return ParamLane.Vector;
-            }
-
-            return ParamLane.Float;
-        }
-
-        private static int ParseLegacyIntValue(JsonObject obj)
-        {
-            if (obj["value"] is JsonValue value)
-            {
-                if (value.TryGetValue<int>(out int intValue))
-                {
-                    return intValue;
-                }
-
-                if (value.TryGetValue<float>(out float floatValue))
-                {
-                    return (int)floatValue;
-                }
-            }
-
-            return 0;
+            return lane;
         }
 
         private SurfaceAuthoringBlock ParseSurface(JsonNode? node, string key)

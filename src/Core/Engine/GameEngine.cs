@@ -678,7 +678,19 @@ namespace Ludots.Core.Engine
                 meshAssets.GetId,
                 presentationTextCatalog.GetTokenId,
                 MapLoader.EntityTemplateKeys.GetId,
-                EffectTemplateIdRegistry.GetId).Load(ConfigCatalog, ConfigConflictReport);
+                EffectTemplateIdRegistry.GetId,
+                materialAssets.GetId,
+                animatorControllers.GetId,
+                animationProfiles.GetId,
+                (kind, key) => kind switch
+                {
+                    AssetKind.Mesh => meshAssets.GetId(key),
+                    AssetKind.SkinnedMesh => meshAssets.GetId(key),
+                    AssetKind.Decal => meshAssets.GetId(key),
+                    AssetKind.VFX => EffectTemplateIdRegistry.GetId(key),
+                    AssetKind.WorldText => presentationTextCatalog.GetTokenId(key),
+                    _ => 0,
+                }).Load(ConfigCatalog, ConfigConflictReport);
             var presentationAuthoring = new PresentationAuthoringContext(visualTemplates, animatorControllers, presentationStableIds);
             MapLoader.PresentationAuthoringContext = presentationAuthoring;
 

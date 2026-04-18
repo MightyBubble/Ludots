@@ -1,4 +1,4 @@
-﻿{
+{
     "_comment":  "RTS unit cube marker 鈥?renders all entities with VisualTransform",
     "id":  "rts_unit_marker",
     "visualKind":  "Marker3D",
@@ -37,9 +37,9 @@
                                     "kind":  "EntitySpawned"
                                 },
                       "command":  {
-                                      "commandKind":  "CreatePerformer",
+                                      "kind":  "CreatePerformer",
                                       "scopeSource":  "EventPayloadA",
-                                      "performerDefinitionId":  "rts_unit_marker"
+                                      "definitionId":  "rts_unit_marker"
                                   },
                       "condition":  {
                                         "inline":  "SourceHasVisualTransform"
@@ -50,7 +50,7 @@
                                     "kind":  "EntityDestroyed"
                                 },
                       "command":  {
-                                      "commandKind":  "DestroyPerformerScope",
+                                      "kind":  "DestroyPerformerScope",
                                       "scopeSource":  "EventPayloadA"
                                   }
                   }
