@@ -1,5 +1,8 @@
 {
   "startupMapId": "visual_terrain_editor",
+  "presentation": {
+    "performerInstanceCapacity": 4096
+  },
   "windowResizable": true,
   "windowStartMaximized": true
 }

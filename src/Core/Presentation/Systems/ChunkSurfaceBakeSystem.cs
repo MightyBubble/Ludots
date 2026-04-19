@@ -5,6 +5,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Surfaces;
@@ -13,20 +14,33 @@ namespace Ludots.Core.Presentation.Systems
 {
     public sealed class ChunkSurfaceBakeSystem : BaseSystem<World, float>
     {
+        private const int SurfaceMeshParamKey = 100_001;
+        private const int SurfaceMaterialParamKey = 100_002;
+        private const int SurfaceVisibilityParamKey = 100_003;
+
         private readonly SurfaceSourceRuntimeRegistry _runtime;
         private readonly MeshAssetRegistry _meshes;
         private readonly PresentationMaterialRegistry _materials;
+        private readonly PerformerDefinitionRegistry _performerDefinitions;
+        private readonly PerformerCommandBuffer _commands;
+        private readonly PerformerInstanceBuffer _performerInstances;
 
         public ChunkSurfaceBakeSystem(
             World world,
             SurfaceSourceRuntimeRegistry runtime,
             MeshAssetRegistry meshes,
-            PresentationMaterialRegistry materials)
+            PresentationMaterialRegistry materials,
+            PerformerDefinitionRegistry performerDefinitions,
+            PerformerCommandBuffer commands,
+            PerformerInstanceBuffer performerInstances)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
             _materials = materials ?? throw new ArgumentNullException(nameof(materials));
+            _performerDefinitions = performerDefinitions ?? throw new ArgumentNullException(nameof(performerDefinitions));
+            _commands = commands ?? throw new ArgumentNullException(nameof(commands));
+            _performerInstances = performerInstances ?? throw new ArgumentNullException(nameof(performerInstances));
         }
 
         public override void Update(in float dt)
@@ -46,6 +60,7 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (!record.Dirty && record.Entity != Entity.Null && World.IsAlive(record.Entity))
                 {
+                    EnsureRenderPerformer(record);
                     continue;
                 }
 
@@ -92,49 +107,55 @@ namespace Ludots.Core.Presentation.Systems
             string meshKey = $"surface_source.{record.SourceStableId}";
             int materialId = ResolvePrimaryMaterialId(record.Request.Authoring);
             int meshAssetId = _meshes.Register(meshKey, MeshAssetDescriptor.Procedural(id: 0, mesh));
-
-            if (record.Entity != Entity.Null && World.IsAlive(record.Entity))
-            {
-                UpdateEntity(record.Entity, meshAssetId, materialId, worldOrigin, mesh.LocalBounds, mesh.UsageHint);
-            }
-            else
-            {
-                WorldPositionCm worldPosition = WorldPositionCm.FromCmFloat(worldOrigin.X * 100f, worldOrigin.Z * 100f);
-                record.Entity = World.Create(
-                    worldPosition,
-                    new PreviousWorldPositionCm { Value = worldPosition.Value },
-                    new PresentationStableId { Value = record.SourceStableId },
-                    new VisualTransform
-                    {
-                        Position = new Vector3(worldOrigin.X, 0f, worldOrigin.Z),
-                        Rotation = Quaternion.Identity,
-                        Scale = Vector3.One,
-                    },
-                    VisualRuntimeState.Create(
-                        meshAssetId,
-                        materialId,
-                        baseScale: 1f,
-                        renderPath: VisualRenderPath.StaticMesh,
-                        mobility: mesh.UsageHint == ProceduralMeshUsageHint.Static ? VisualMobility.Static : VisualMobility.Movable),
-                    PresentationLocalBounds.Create(mesh.LocalBounds.Center, mesh.LocalBounds.Extents),
-                    new CullState
-                    {
-                        IsVisible = true,
-                        LOD = LODLevel.High,
-                    });
-            }
-
+            PresentationLodProfile lodProfile = ResolveSurfaceLodProfile(record.Request.Authoring);
+            Entity entity = EnsureBakedEntity(record, worldOrigin, mesh.LocalBounds, lodProfile);
             record.MeshAssetId = meshAssetId;
+
+            int renderDefinitionId = RegisterRenderDefinition(record, mesh.UsageHint, meshAssetId, materialId);
+            record.RenderPerformerDefinitionId = renderDefinitionId;
+            record.RenderScopeId = ComposeRenderScopeId(record.ScopeId, record.SourceStableId);
+
+            int renderHandle = EnsureRenderPerformer(record);
+            if (renderHandle >= 0)
+            {
+                _performerInstances.SetParam(renderHandle, SurfaceMeshParamKey, ParamLane.Int, 0f, meshAssetId, Vector4.Zero);
+                _performerInstances.SetParam(renderHandle, SurfaceMaterialParamKey, ParamLane.Int, 0f, materialId, Vector4.Zero);
+                _performerInstances.SetParam(renderHandle, SurfaceVisibilityParamKey, ParamLane.Int, 0f, 1, Vector4.Zero);
+            }
+
             record.Dirty = false;
         }
 
-        private void UpdateEntity(
-            Entity entity,
-            int meshAssetId,
-            int materialId,
-            in Vector3 worldOrigin,
-            in ProceduralMeshBounds bounds,
-            ProceduralMeshUsageHint usageHint)
+        private Entity EnsureBakedEntity(SurfaceSourceRecord record, in Vector3 worldOrigin, in ProceduralMeshBounds bounds, in PresentationLodProfile lodProfile)
+        {
+            if (record.Entity != Entity.Null && World.IsAlive(record.Entity))
+            {
+                UpdateEntity(record.Entity, worldOrigin, bounds, lodProfile);
+                return record.Entity;
+            }
+
+            WorldPositionCm worldPosition = WorldPositionCm.FromCmFloat(worldOrigin.X * 100f, worldOrigin.Z * 100f);
+            record.Entity = World.Create(
+                worldPosition,
+                new PreviousWorldPositionCm { Value = worldPosition.Value },
+                new PresentationStableId { Value = record.SourceStableId },
+                new VisualTransform
+                {
+                    Position = new Vector3(worldOrigin.X, 0f, worldOrigin.Z),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                PresentationLocalBounds.Create(bounds.Center, bounds.Extents),
+                lodProfile,
+                new CullState
+                {
+                    IsVisible = true,
+                    LOD = LODLevel.High,
+                });
+            return record.Entity;
+        }
+
+        private void UpdateEntity(Entity entity, in Vector3 worldOrigin, in ProceduralMeshBounds bounds, in PresentationLodProfile lodProfile)
         {
             WorldPositionCm worldPosition = WorldPositionCm.FromCmFloat(worldOrigin.X * 100f, worldOrigin.Z * 100f);
             World.Set(entity, worldPosition);
@@ -162,21 +183,6 @@ namespace Ludots.Core.Presentation.Systems
                 World.Add(entity, transform);
             }
 
-            VisualRuntimeState visual = VisualRuntimeState.Create(
-                meshAssetId,
-                materialId,
-                baseScale: 1f,
-                renderPath: VisualRenderPath.StaticMesh,
-                mobility: usageHint == ProceduralMeshUsageHint.Static ? VisualMobility.Static : VisualMobility.Movable);
-            if (World.Has<VisualRuntimeState>(entity))
-            {
-                World.Set(entity, visual);
-            }
-            else
-            {
-                World.Add(entity, visual);
-            }
-
             PresentationLocalBounds localBounds = PresentationLocalBounds.Create(bounds.Center, bounds.Extents);
             if (World.Has<PresentationLocalBounds>(entity))
             {
@@ -185,6 +191,15 @@ namespace Ludots.Core.Presentation.Systems
             else
             {
                 World.Add(entity, localBounds);
+            }
+
+            if (World.Has<PresentationLodProfile>(entity))
+            {
+                World.Set(entity, lodProfile);
+            }
+            else
+            {
+                World.Add(entity, lodProfile);
             }
 
             if (World.Has<PresentationLifecycleState>(entity))
@@ -196,15 +211,168 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
+        private int RegisterRenderDefinition(SurfaceSourceRecord record, ProceduralMeshUsageHint usageHint, int meshAssetId, int materialId)
+        {
+            string definitionKey = $"surface_baked.render.{record.SourceStableId}";
+            var definition = new PerformerDefinition
+            {
+                Key = definitionKey,
+                ParamDefaults = new[]
+                {
+                    new ParamDefault
+                    {
+                        ParamKey = SurfaceMeshParamKey,
+                        Lane = ParamLane.Int,
+                        IntValue = meshAssetId,
+                    },
+                    new ParamDefault
+                    {
+                        ParamKey = SurfaceMaterialParamKey,
+                        Lane = ParamLane.Int,
+                        IntValue = materialId,
+                    },
+                    new ParamDefault
+                    {
+                        ParamKey = SurfaceVisibilityParamKey,
+                        Lane = ParamLane.Int,
+                        IntValue = 1,
+                    },
+                },
+                Behaviors = new[]
+                {
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 0,
+                            MaterialId = 0,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = usageHint == ProceduralMeshUsageHint.Static ? VisualMobility.Static : VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalRotation = Quaternion.Identity,
+                            LocalScale = Vector3.One,
+                            AssetSwapParamKey = SurfaceMeshParamKey,
+                            MaterialParamKey = SurfaceMaterialParamKey,
+                            VisibilityParamKey = SurfaceVisibilityParamKey,
+                            Grounding = GroundingMode.None,
+                        },
+                    },
+                },
+            };
+            return _performerDefinitions.Register(definitionKey, definition);
+        }
+
+        private int EnsureRenderPerformer(SurfaceSourceRecord record)
+        {
+            if (record.Entity == Entity.Null || !World.IsAlive(record.Entity))
+            {
+                throw new InvalidOperationException(
+                    $"SurfaceSource stableId={record.SourceStableId} requires a baked entity before render performer creation.");
+            }
+
+            if (_performerInstances.IsActive(record.RenderPerformerHandle))
+            {
+                PerformerInstance active = _performerInstances.Get(record.RenderPerformerHandle);
+                if (active.Owner == record.Entity &&
+                    active.DefId == record.RenderPerformerDefinitionId &&
+                    active.ScopeId == record.RenderScopeId)
+                {
+                    return record.RenderPerformerHandle;
+                }
+
+                record.RenderPerformerHandle = -1;
+            }
+
+            int existingHandle = FindRenderPerformer(record);
+            if (existingHandle >= 0)
+            {
+                record.RenderPerformerHandle = existingHandle;
+                return existingHandle;
+            }
+
+            if (record.RenderPerformerDefinitionId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"SurfaceSource stableId={record.SourceStableId} is missing render performer definition registration.");
+            }
+
+            if (!_commands.TryAdd(new PerformerCommand
+                {
+                    CommandKind = PerformerCommandKind.CreatePerformer,
+                    PerformerDefinitionId = record.RenderPerformerDefinitionId,
+                    ScopeTag = record.RenderScopeId,
+                    Source = record.Entity,
+                    AnchorKind = PresentationAnchorKind.Entity,
+                }))
+            {
+                throw new InvalidOperationException(
+                    $"SurfaceSource stableId={record.SourceStableId} failed to queue baked render performer creation.");
+            }
+
+            return -1;
+        }
+
+        private int FindRenderPerformer(SurfaceSourceRecord record)
+        {
+            for (int handle = 0; handle < _performerInstances.Capacity; handle++)
+            {
+                if (!_performerInstances.IsActive(handle))
+                {
+                    continue;
+                }
+
+                PerformerInstance instance = _performerInstances.Get(handle);
+                if (instance.Owner == record.Entity &&
+                    instance.DefId == record.RenderPerformerDefinitionId &&
+                    instance.ScopeId == record.RenderScopeId)
+                {
+                    return handle;
+                }
+            }
+
+            return -1;
+        }
+
+        private static int ComposeRenderScopeId(int sourceScopeId, int stableId)
+        {
+            int hash = HashCode.Combine(sourceScopeId, stableId, 0x5A17);
+            hash &= int.MaxValue;
+            return hash == 0 ? 1 : hash;
+        }
+
+        private PresentationLodProfile ResolveSurfaceLodProfile(in SurfaceAuthoringBlock authoring)
+        {
+            if (string.IsNullOrWhiteSpace(authoring.LodProfileId))
+            {
+                throw new InvalidOperationException("SurfaceSource authoring must declare a non-empty lodProfileId.");
+            }
+
+            if (!string.Equals(authoring.LodProfileId, "default_surface_lod", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"SurfaceSource authoring references unknown lodProfileId '{authoring.LodProfileId}'.");
+            }
+
+            return new PresentationLodProfile(
+                new PresentationLodEntry(maxDistanceCm: 4000f, minScreenCoverage01: 0.30f),
+                new PresentationLodEntry(maxDistanceCm: 12000f, minScreenCoverage01: 0.05f),
+                new PresentationLodEntry(maxDistanceCm: 30000f, minScreenCoverage01: 0.01f));
+        }
+
         private int ResolvePrimaryMaterialId(SurfaceAuthoringBlock authoring)
         {
-            string key = string.IsNullOrWhiteSpace(authoring.MaterialSet.PrimaryMaterialId)
-                ? PresentationMaterialRegistry.DefaultSurfaceKey
-                : authoring.MaterialSet.PrimaryMaterialId;
-            int materialId = _materials.GetId(key);
+            if (string.IsNullOrWhiteSpace(authoring.MaterialSet.PrimaryMaterialId))
+            {
+                throw new InvalidOperationException("SurfaceSource authoring must declare materialSet.primaryMaterialId.");
+            }
+
+            int materialId = _materials.GetId(authoring.MaterialSet.PrimaryMaterialId);
             if (materialId <= 0)
             {
-                throw new InvalidOperationException($"SurfaceSource authoring references unknown material '{key}'.");
+                throw new InvalidOperationException($"SurfaceSource authoring references unknown material '{authoring.MaterialSet.PrimaryMaterialId}'.");
             }
 
             return materialId;

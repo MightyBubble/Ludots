@@ -1,11 +1,19 @@
 [
   {
-    "id": "entity_world_text",
-    "__delete": true
-  },
-  {
-    "id": "performance_visualization.benchmark_cube",
+    "id": "visual_terrain_editor.chunk_mesh",
     "defaultLifetime": -1,
+    "paramDefaults": [
+      {
+        "paramKey": 701,
+        "lane": "Int",
+        "intValue": 1
+      },
+      {
+        "paramKey": 702,
+        "lane": "Int",
+        "intValue": 1
+      }
+    ],
     "behaviors": [
       {
         "slot": 0,
@@ -17,11 +25,8 @@
           "materialId": "default_surface",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localScale": [
-            0.85,
-            0.85,
-            0.85
-          ]
+          "assetSwapParamKey": 701,
+          "materialParamKey": 702
         }
       }
     ]

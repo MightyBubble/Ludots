@@ -5,6 +5,7 @@ namespace PerformanceVisualizationMod
 {
     public static class VisualBenchmarkIds
     {
+        public const string BenchmarkCubePerformerId = "performance_visualization.benchmark_cube";
         public const string InstalledKey = "PerformanceVisualizationMod.Installed";
         public const string RuntimeServiceKey = "PerformanceVisualizationMod.Runtime";
         public const string StartupMapId = "entry";

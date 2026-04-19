@@ -10,9 +10,10 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
-using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using PerformanceVisualizationMod.UI;
@@ -21,14 +22,23 @@ namespace PerformanceVisualizationMod.Runtime
 {
     public sealed class VisualBenchmarkRuntime
     {
+        private static readonly PresentationLocalBounds BenchmarkBounds =
+            PresentationLocalBounds.Create(Vector3.Zero, new Vector3(0.425f, 0.425f, 0.425f));
+
+        private static readonly PresentationLodProfile BenchmarkLodProfile =
+            new(
+                new PresentationLodEntry(maxDistanceCm: 6000f, minScreenCoverage01: 0.06f),
+                new PresentationLodEntry(maxDistanceCm: 24000f, minScreenCoverage01: 0.01f),
+                new PresentationLodEntry(maxDistanceCm: 90000f, minScreenCoverage01: 0.0025f));
+
         private const int SpawnBatchSize = 2048;
         private const int DestroyBatchSize = 2048;
 
         private static readonly QueryDescription ScenarioEntitiesQuery = new QueryDescription()
-            .WithAll<MapEntity, Name, VisualRuntimeState, PresentationStableId>();
+            .WithAll<MapEntity, Name, PresentationStableId, PresentationLocalBounds>();
 
         private static readonly QueryDescription VisibleScenarioEntitiesQuery = new QueryDescription()
-            .WithAll<MapEntity, Name, VisualRuntimeState, PresentationStableId, CullState>();
+            .WithAll<MapEntity, Name, PresentationStableId, PresentationLocalBounds, CullState>();
 
         private readonly IModContext _context;
         private readonly VisualBenchmarkPanelController _panelController;
@@ -45,6 +55,7 @@ namespace PerformanceVisualizationMod.Runtime
         private int _lastHudCount;
         private int _lastHudDropped;
         private int _healthAttributeId;
+        private int _benchmarkCubeDefinitionId;
 
         public VisualBenchmarkRuntime(IModContext context)
         {
@@ -268,7 +279,7 @@ namespace PerformanceVisualizationMod.Runtime
             _lastVisibleCount = 0;
 
             MapId currentMapId = engine.CurrentMapSession?.MapId ?? default;
-            engine.World.Query(in ScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __) =>
+            engine.World.Query(in ScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref PresentationStableId __, ref PresentationLocalBounds ___) =>
             {
                 if (!MatchesScenarioEntity(mapEntity, name, currentMapId))
                 {
@@ -278,7 +289,7 @@ namespace PerformanceVisualizationMod.Runtime
                 _spawnedCount++;
             });
 
-            engine.World.Query(in VisibleScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __, ref CullState cull) =>
+            engine.World.Query(in VisibleScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref PresentationStableId __, ref PresentationLocalBounds ___, ref CullState cull) =>
             {
                 if (!MatchesScenarioEntity(mapEntity, name, currentMapId) || !cull.IsVisible)
                 {
@@ -317,14 +328,13 @@ namespace PerformanceVisualizationMod.Runtime
             }
 
             World world = engine.World;
-            int meshId = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)?.GetId(WellKnownMeshKeys.Cube) ?? 0;
-            if (meshId <= 0)
-            {
-                throw new InvalidOperationException("Cube mesh asset id is required for benchmark visuals.");
-            }
-
             var stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
                 ?? throw new InvalidOperationException("PresentationStableIdAllocator service is missing.");
+            var commands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
+                ?? throw new InvalidOperationException("PerformerCommandBuffer service is missing.");
+            var performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                ?? throw new InvalidOperationException("PerformerDefinitionRegistry service is missing.");
+            int definitionId = ResolveBenchmarkCubeDefinitionId(performers);
 
             MapId mapId = engine.CurrentMapSession?.MapId ?? default;
             int centerOffsetX = (scenario.Columns - 1) * scenario.SpacingCm / 2;
@@ -340,7 +350,8 @@ namespace PerformanceVisualizationMod.Runtime
                 typeof(PreviousWorldPositionCm),
                 typeof(VisualTransform),
                 typeof(PresentationStableId),
-                typeof(VisualRuntimeState),
+                typeof(PresentationLocalBounds),
+                typeof(PresentationLodProfile),
                 typeof(CullState),
             };
 
@@ -361,17 +372,25 @@ namespace PerformanceVisualizationMod.Runtime
                 world.Set(entity, new PreviousWorldPositionCm { Value = worldPos.Value });
                 world.Set(entity, VisualTransform.Default);
                 world.Set(entity, new PresentationStableId { Value = stableIds.Allocate() });
-                world.Set(entity, VisualRuntimeState.Create(
-                    meshAssetId: meshId,
-                    materialId: 1,
-                    baseScale: 0.85f,
-                    renderPath: VisualRenderPath.StaticMesh,
-                    mobility: VisualMobility.Static));
+                world.Set(entity, BenchmarkBounds);
+                world.Set(entity, BenchmarkLodProfile);
                 world.Set(entity, new CullState
                 {
                     IsVisible = true,
                     LOD = LODLevel.High,
                 });
+
+                if (!commands.TryAdd(new PerformerCommand
+                    {
+                        CommandKind = PerformerCommandKind.CreatePerformer,
+                        PerformerDefinitionId = definitionId,
+                        ScopeTag = ResolveScenarioScopeId(entity),
+                        Source = entity,
+                        AnchorKind = PresentationAnchorKind.Entity,
+                    }))
+                {
+                    throw new InvalidOperationException("PerformanceVisualizationMod failed to queue benchmark performer creation.");
+                }
 
                 if (scenario.AttachHealthAttributes)
                 {
@@ -394,7 +413,7 @@ namespace PerformanceVisualizationMod.Runtime
             }
 
             int marked = 0;
-            engine.World.Query(in ScenarioEntitiesQuery, (Entity entity, ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __) =>
+            engine.World.Query(in ScenarioEntitiesQuery, (Entity entity, ref MapEntity mapEntity, ref Name name, ref PresentationStableId __, ref PresentationLocalBounds ___) =>
             {
                 if (marked >= batchSize || !MatchesScenarioEntity(mapEntity, name, currentMapId))
                 {
@@ -452,7 +471,7 @@ namespace PerformanceVisualizationMod.Runtime
         {
             MapId currentMapId = engine.CurrentMapSession?.MapId ?? default;
             int count = 0;
-            engine.World.Query(in ScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref VisualRuntimeState _, ref PresentationStableId __) =>
+            engine.World.Query(in ScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref PresentationStableId __, ref PresentationLocalBounds ___) =>
             {
                 if (MatchesScenarioEntity(mapEntity, name, currentMapId))
                 {
@@ -460,6 +479,29 @@ namespace PerformanceVisualizationMod.Runtime
                 }
             });
             return count;
+        }
+
+        private int ResolveBenchmarkCubeDefinitionId(PerformerDefinitionRegistry performers)
+        {
+            if (_benchmarkCubeDefinitionId > 0)
+            {
+                return _benchmarkCubeDefinitionId;
+            }
+
+            _benchmarkCubeDefinitionId = performers.GetId(VisualBenchmarkIds.BenchmarkCubePerformerId);
+            if (_benchmarkCubeDefinitionId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Performer '{VisualBenchmarkIds.BenchmarkCubePerformerId}' is required by PerformanceVisualizationMod.");
+            }
+
+            return _benchmarkCubeDefinitionId;
+        }
+
+        private static int ResolveScenarioScopeId(Entity entity)
+        {
+            int scopeId = HashCode.Combine(VisualBenchmarkIds.ScenarioLabel, entity.Id, entity.WorldId, entity.Version) & int.MaxValue;
+            return scopeId == 0 ? 1 : scopeId;
         }
     }
 }

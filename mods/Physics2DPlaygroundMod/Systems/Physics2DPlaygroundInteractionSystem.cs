@@ -18,7 +18,9 @@ using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Ticking;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
@@ -30,10 +32,24 @@ namespace Physics2DPlaygroundMod.Systems
 {
     public sealed class Physics2DPlaygroundInteractionSystem : ISystem<float>
     {
+        private static readonly PresentationLocalBounds SpawnedBoxBounds =
+            PresentationLocalBounds.Create(Vector3.Zero, new Vector3(0.5f, 0.25f, 0.5f));
+
+        private static readonly PresentationLodProfile SpawnedBoxLodProfile =
+            new(
+                new PresentationLodEntry(maxDistanceCm: 8000f, minScreenCoverage01: 0.03f),
+                new PresentationLodEntry(maxDistanceCm: 24000f, minScreenCoverage01: 0.008f),
+                new PresentationLodEntry(maxDistanceCm: 50000f, minScreenCoverage01: 0.002f));
+
+        private const string SpawnedBoxPerformerId = "physics2d_playground.spawned_box";
+
         private readonly GameEngine _engine;
         private readonly World _world;
         private readonly Physics2DSimulationSystem _sim;
         private readonly List<Entity> _selectedEntities = new(1024);
+        private readonly PresentationStableIdAllocator _stableIds;
+        private readonly PerformerCommandBuffer _performerCommands;
+        private readonly PerformerDefinitionRegistry _performerDefinitions;
 
         private Entity _chainDemoEntity;
         private bool _chainDemoInited;
@@ -41,7 +57,6 @@ namespace Physics2DPlaygroundMod.Systems
         private int _boxShapeIndex = -1;
         private int _spawnCount = 10;
         private float _impulseMagnitude = 10f;
-        private int _boxTemplateId;
         private int _cueMarkerPrefabId;
 
         private bool _prevK1;
@@ -53,12 +68,19 @@ namespace Physics2DPlaygroundMod.Systems
         private bool _prevK7;
         private bool _prevK8;
         private bool _prevK9;
+        private int _spawnedBoxDefinitionId;
 
         public Physics2DPlaygroundInteractionSystem(GameEngine engine, Physics2DSimulationSystem sim)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _world = engine.World;
             _sim = sim ?? throw new ArgumentNullException(nameof(sim));
+            _stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
+                ?? throw new InvalidOperationException("Physics2DPlayground requires PresentationStableIdAllocator.");
+            _performerCommands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
+                ?? throw new InvalidOperationException("Physics2DPlayground requires PerformerCommandBuffer.");
+            _performerDefinitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                ?? throw new InvalidOperationException("Physics2DPlayground requires PerformerDefinitionRegistry.");
         }
 
         public void Initialize()
@@ -345,23 +367,12 @@ namespace Physics2DPlaygroundMod.Systems
 
         private void SpawnBox(Vector2 worldMeters, Vector2 initialVelocityMetersPerSecond)
         {
-            int templateId = ResolveBoxTemplateId();
-            var templates = _engine.GetService(CoreServiceKeys.PresentationVisualTemplateRegistry) as VisualTemplateRegistry
-                ?? throw new InvalidOperationException("Physics2DPlayground requires PresentationVisualTemplateRegistry.");
-            if (!templates.TryGet(templateId, out var template))
-            {
-                throw new InvalidOperationException($"Physics2DPlayground visual template id {templateId} is missing.");
-            }
-
-            var stableIds = _engine.GetService(CoreServiceKeys.PresentationStableIdAllocator) as PresentationStableIdAllocator
-                ?? throw new InvalidOperationException("Physics2DPlayground requires PresentationStableIdAllocator.");
-
             var worldCm = Fix64Vec2.FromFloat(worldMeters.X * WorldUnits.CmPerMeter, worldMeters.Y * WorldUnits.CmPerMeter);
             var velocityCmPerSec = Fix64Vec2.FromFloat(
                 initialVelocityMetersPerSecond.X * WorldUnits.CmPerMeter,
                 initialVelocityMetersPerSecond.Y * WorldUnits.CmPerMeter);
 
-            _world.Create(
+            Entity entity = _world.Create(
                 new Position2D { Value = worldCm },
                 new PreviousPosition2D { Value = worldCm },
                 new Velocity2D { Linear = velocityCmPerSec, Angular = Fix64.Zero },
@@ -376,30 +387,24 @@ namespace Physics2DPlaygroundMod.Systems
                     Rotation = Quaternion.Identity,
                     Scale = new Vector3(1f, 0.5f, 1f)
                 },
-                new VisualTemplateRef { TemplateId = templateId },
-                template.ToRuntimeState(),
-                new PresentationStableId { Value = stableIds.Allocate() },
+                new PresentationStableId { Value = _stableIds.Allocate() },
+                SpawnedBoxBounds,
+                SpawnedBoxLodProfile,
                 new CullState { IsVisible = true, LOD = LODLevel.High, DistanceToCameraSq = 0f },
                 default(SelectionSelectableTag),
                 SelectionSelectableState.EnabledByDefault);
-        }
 
-        private int ResolveBoxTemplateId()
-        {
-            if (_boxTemplateId > 0)
+            if (!_performerCommands.TryAdd(new PerformerCommand
+                {
+                    CommandKind = PerformerCommandKind.CreatePerformer,
+                    PerformerDefinitionId = ResolveSpawnedBoxDefinitionId(),
+                    ScopeTag = ResolveSpawnedBoxScopeId(entity),
+                    Source = entity,
+                    AnchorKind = PresentationAnchorKind.Entity,
+                }))
             {
-                return _boxTemplateId;
+                throw new InvalidOperationException("Physics2DPlayground failed to queue performer creation for spawned box.");
             }
-
-            var templates = _engine.GetService(CoreServiceKeys.PresentationVisualTemplateRegistry) as VisualTemplateRegistry
-                ?? throw new InvalidOperationException("Physics2DPlayground requires PresentationVisualTemplateRegistry.");
-            _boxTemplateId = templates.GetId("physics2d.playground.box");
-            if (_boxTemplateId <= 0)
-            {
-                throw new InvalidOperationException("Physics2DPlayground requires visual template 'physics2d.playground.box'.");
-            }
-
-            return _boxTemplateId;
         }
 
         private static bool ConsumePressed(string actionId, IInputActionReader input, ref bool prevDown)
@@ -412,6 +417,29 @@ namespace Physics2DPlaygroundMod.Systems
 
         public void Dispose()
         {
+        }
+
+        private int ResolveSpawnedBoxDefinitionId()
+        {
+            if (_spawnedBoxDefinitionId > 0)
+            {
+                return _spawnedBoxDefinitionId;
+            }
+
+            _spawnedBoxDefinitionId = _performerDefinitions.GetId(SpawnedBoxPerformerId);
+            if (_spawnedBoxDefinitionId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Performer '{SpawnedBoxPerformerId}' is required by Physics2DPlaygroundMod.");
+            }
+
+            return _spawnedBoxDefinitionId;
+        }
+
+        private static int ResolveSpawnedBoxScopeId(Entity entity)
+        {
+            int scopeId = HashCode.Combine(SpawnedBoxPerformerId, entity.Id, entity.WorldId, entity.Version) & int.MaxValue;
+            return scopeId == 0 ? 1 : scopeId;
         }
     }
 }

@@ -15,15 +15,22 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     private const float Tau = MathF.PI * 2f;
     private const float HeightAmplitudeCm = 4_000f;
     private readonly VisualTerrainAssetDescriptor _asset;
+    private readonly int _defaultMaterialAssetId;
     private readonly VisualTerrainErosionParameters _parameters = new();
     private readonly ChunkedVisualHeightmapStore _heightmapStore;
     private readonly ChunkedVisualHeightmapRuntime _heightmapRuntime;
     private readonly Dictionary<long, ChunkState> _chunks = new();
     private readonly List<ChunkState> _dirtyChunksScratch = new();
 
-    public VisualTerrainEditorDocument(VisualTerrainAssetDescriptor asset)
+    public VisualTerrainEditorDocument(VisualTerrainAssetDescriptor asset, int defaultMaterialAssetId)
     {
         _asset = asset ?? throw new ArgumentNullException(nameof(asset));
+        if (defaultMaterialAssetId <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(defaultMaterialAssetId), "Visual terrain editor requires a positive default material asset id.");
+        }
+
+        _defaultMaterialAssetId = defaultMaterialAssetId;
         _heightmapStore = new ChunkedVisualHeightmapStore(_asset.CreateHeightmapDescriptor());
         _heightmapRuntime = new ChunkedVisualHeightmapRuntime(_heightmapStore.Descriptor, _heightmapStore);
         Reset();
@@ -408,7 +415,8 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
             chunkY,
             _asset.SamplesPerChunkColumn,
             _asset.SamplesPerChunkRow,
-            _asset.RuntimeVertexCapacityPerChunk);
+            _asset.RuntimeVertexCapacityPerChunk,
+            _defaultMaterialAssetId);
         PopulateDefaultChunkBaseHeights(state);
         _chunks.Add(key, state);
         _heightmapStore.SetChunk(state.HeightChunk);
@@ -1219,7 +1227,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
     private sealed class ChunkState
     {
-        public ChunkState(int chunkX, int chunkY, int sampleColumns, int sampleRows, int runtimeVertexCapacity)
+        public ChunkState(int chunkX, int chunkY, int sampleColumns, int sampleRows, int runtimeVertexCapacity, int materialAssetId)
         {
             ChunkX = chunkX;
             ChunkY = chunkY;
@@ -1236,7 +1244,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
                 includeColors32: true);
             HeightChunk = new ChunkedVisualHeightmapChunk(chunkX, chunkY, HeightSamplesCm);
             Dirty = true;
-            MaterialAssetId = 1;
+            MaterialAssetId = materialAssetId;
         }
 
         public int ChunkX { get; }

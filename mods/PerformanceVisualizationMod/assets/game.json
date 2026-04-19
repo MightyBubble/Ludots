@@ -1,6 +1,6 @@
 {
   "startupMapId": "visual_benchmark",
   "presentation": {
-    "performerInstanceCapacity": 8192
+    "performerInstanceCapacity": 65536
   }
 }

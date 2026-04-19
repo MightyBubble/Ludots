@@ -6,7 +6,6 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Scripting;
@@ -35,13 +34,24 @@ namespace Ludots.Tests.GAS
             Assert.That(records.Any(record => record.Request.SurfaceKind == PerformerSurfaceKind.ClosedArea), Is.True);
             Assert.That(records.Any(record => record.Request.SurfaceKind == PerformerSurfaceKind.RawProceduralMesh), Is.True);
 
-            int bakedVisualCount = 0;
-            engine.World.Query(new QueryDescription().WithAll<PresentationStableId, VisualRuntimeState, PresentationLocalBounds>(), entity =>
+            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
+                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
+            int bakedPerformerCount = 0;
+            for (int handle = 0; handle < performers.Capacity; handle++)
             {
-                bakedVisualCount++;
-            });
+                if (!performers.IsActive(handle))
+                {
+                    continue;
+                }
 
-            Assert.That(bakedVisualCount, Is.GreaterThanOrEqualTo(4));
+                PerformerInstance instance = performers.Get(handle);
+                if (instance.TransformSource == TransformSource.SplineDriven || instance.DefId > 0)
+                {
+                    bakedPerformerCount++;
+                }
+            }
+
+            Assert.That(bakedPerformerCount, Is.GreaterThanOrEqualTo(4), "Spline surface UAT should bootstrap performer-backed surface sources instead of legacy visual runtime state.");
         }
 
         [Test]

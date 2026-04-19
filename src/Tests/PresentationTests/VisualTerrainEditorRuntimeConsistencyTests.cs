@@ -26,7 +26,8 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
                 samplesPerChunkRow: 9,
                 renderColumnsPerChunk: 9,
                 renderRowsPerChunk: 9,
-                defaultHeight01: 0.45f));
+                defaultHeight01: 0.45f),
+            defaultMaterialAssetId: 1);
 
         document.SetViewMode(TerrainViewMode.Eroded);
         document.EnsureChunkWindowLoaded(centerChunkX: 0, centerChunkY: 0, radius: 1);
@@ -72,7 +73,8 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
                     defaultHeight01: 0.45f,
                     storageLayout: VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
                     interpolationMode: VisualHeightmapInterpolationMode.TriangleHeightfield,
-                    sampleScale: VisualHeightSampleScale.IdentityCentimeters));
+                    sampleScale: VisualHeightSampleScale.IdentityCentimeters),
+                defaultMaterialAssetId: 1);
 
             document.EnsureChunkWindowLoaded(centerChunkX: 0, centerChunkY: 0, radius: 2);
             document.AdjustScale(0.03f);
