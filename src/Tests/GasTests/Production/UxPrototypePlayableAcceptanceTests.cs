@@ -341,8 +341,88 @@ namespace Ludots.Tests.GAS.Production
 
         private static void InvokeState(object state, string methodName, params object[] args)
         {
-            MethodInfo method = state.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                ?? throw new MissingMethodException(methodName);
+            MethodInfo[] candidates = state.GetType()
+                .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .Where(candidate => string.Equals(candidate.Name, methodName, StringComparison.Ordinal))
+                .ToArray();
+
+            MethodInfo? bestMethod = null;
+            int bestScore = int.MinValue;
+            bool ambiguous = false;
+            for (int candidateIndex = 0; candidateIndex < candidates.Length; candidateIndex++)
+            {
+                MethodInfo candidate = candidates[candidateIndex];
+                ParameterInfo[] parameters = candidate.GetParameters();
+                if (parameters.Length != args.Length)
+                {
+                    continue;
+                }
+
+                int score = 0;
+                bool matches = true;
+                for (int i = 0; i < parameters.Length; i++)
+                {
+                    object? arg = args[i];
+                    Type parameterType = parameters[i].ParameterType;
+                    Type underlyingParameterType = Nullable.GetUnderlyingType(parameterType) ?? parameterType;
+
+                    if (arg == null)
+                    {
+                        if (parameterType.IsValueType && Nullable.GetUnderlyingType(parameterType) == null)
+                        {
+                            matches = false;
+                            break;
+                        }
+
+                        continue;
+                    }
+
+                    Type argType = arg.GetType();
+                    if (underlyingParameterType == argType)
+                    {
+                        score += 4;
+                        continue;
+                    }
+
+                    if (underlyingParameterType.IsAssignableFrom(argType))
+                    {
+                        score += 2;
+                        continue;
+                    }
+
+                    matches = false;
+                    break;
+                }
+
+                if (!matches)
+                {
+                    continue;
+                }
+
+                if (score > bestScore)
+                {
+                    bestMethod = candidate;
+                    bestScore = score;
+                    ambiguous = false;
+                }
+                else if (score == bestScore)
+                {
+                    ambiguous = true;
+                }
+            }
+
+            if (bestMethod == null)
+            {
+                throw new MissingMethodException(state.GetType().FullName, methodName);
+            }
+
+            if (ambiguous)
+            {
+                string signature = string.Join(", ", args.Select(arg => arg?.GetType().Name ?? "null"));
+                throw new AmbiguousMatchException($"Multiple overloads of {state.GetType().Name}.{methodName} matched arguments ({signature}).");
+            }
+
+            MethodInfo method = bestMethod;
             method.Invoke(state, args);
         }
 
@@ -361,17 +441,49 @@ namespace Ludots.Tests.GAS.Production
         private static void AssertEntityUsesBillboardVisual(GameEngine engine, string entityName, string expectedMeshAssetKey)
         {
             Entity entity = FindEntityByName(engine.World, entityName);
-            Assert.That(engine.World.Has<VisualRuntimeState>(entity), Is.True, $"{entityName} should carry VisualRuntimeState.");
+            Vector3 expectedPosition = engine.World.TryGet(entity, out VisualTransform transform)
+                ? transform.Position
+                : WorldUnits.WorldCmToVisualMeters(engine.World.Get<WorldPositionCm>(entity).Value, yMeters: 0f);
 
-            var visual = engine.World.Get<VisualRuntimeState>(entity);
-            Assert.That(visual.MeshAssetId, Is.GreaterThan(0), $"{entityName} should resolve a mesh asset.");
-            Assert.That(visual.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh), $"{entityName} should render through the static mesh lane.");
-            Assert.That(visual.AnimatorControllerId, Is.EqualTo(0), $"{entityName} billboard visuals should not bind an animator.");
-            Assert.That(engine.World.Has<AnimatorPackedState>(entity), Is.False, $"{entityName} billboard visuals should not attach AnimatorPackedState.");
-
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
             var meshRegistry = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry
                 ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
-            Assert.That(meshRegistry.GetName(visual.MeshAssetId), Is.EqualTo(expectedMeshAssetKey), $"{entityName} should point at the expected billboard mesh asset.");
+            int expectedMeshAssetId = meshRegistry.GetId(expectedMeshAssetKey);
+            Assert.That(expectedMeshAssetId, Is.GreaterThan(0), $"{expectedMeshAssetKey} should resolve in the mesh registry.");
+
+            PrimitiveDrawItem? matched = null;
+            float bestDistanceSq = float.MaxValue;
+            foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
+            {
+                if (item.Visibility != VisualVisibility.Visible)
+                {
+                    continue;
+                }
+
+                if (item.MeshAssetId != expectedMeshAssetId)
+                {
+                    continue;
+                }
+
+                Vector2 primitivePosition = new(item.Position.X, item.Position.Z);
+                Vector2 entityPosition = new(expectedPosition.X, expectedPosition.Z);
+                float distanceSq = Vector2.DistanceSquared(primitivePosition, entityPosition);
+                if (distanceSq < bestDistanceSq)
+                {
+                    bestDistanceSq = distanceSq;
+                    matched = item;
+                }
+            }
+
+            Assert.That(matched.HasValue, Is.True, $"{entityName} should emit a visible primitive through the performer mainline.");
+            PrimitiveDrawItem primitive = matched!.Value;
+            Assert.That(bestDistanceSq, Is.LessThanOrEqualTo(0.25f), $"{entityName} should match the nearest visible primitive for {expectedMeshAssetKey}.");
+            Assert.That(primitive.MeshAssetId, Is.GreaterThan(0), $"{entityName} should resolve a mesh asset.");
+            Assert.That(primitive.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh), $"{entityName} should render through the static mesh lane.");
+            Assert.That(primitive.Animator.GetControllerId(), Is.EqualTo(0), $"{entityName} billboard visuals should not bind an animator.");
+            Assert.That(engine.World.Has<AnimatorPackedState>(entity), Is.False, $"{entityName} billboard visuals should not attach AnimatorPackedState.");
+            Assert.That(meshRegistry.GetName(primitive.MeshAssetId), Is.EqualTo(expectedMeshAssetKey), $"{entityName} should point at the expected billboard mesh asset.");
         }
 
         private static void AssertGlobalTabEntries(object state, GameEngine engine, string tab, params string[] expectedActionIds)
@@ -521,11 +633,11 @@ namespace Ludots.Tests.GAS.Production
         private static void ClickScreen(GameEngine engine, TestInputBackend backend, Vector2 screenPoint)
         {
             backend.SetMousePosition(screenPoint);
-            Tick(engine, 1);
+            Tick(engine, 2);
             backend.SetButton("<Mouse>/LeftButton", true);
-            Tick(engine, 2);
+            Tick(engine, 3);
             backend.SetButton("<Mouse>/LeftButton", false);
-            Tick(engine, 2);
+            Tick(engine, 3);
         }
 
         private static void DragMouse(GameEngine engine, TestInputBackend backend, Vector2 from, Vector2 to)
@@ -683,7 +795,15 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
 
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, timingDiagnostics);
+            var culling = new CameraCullingSystem(
+                engine.World,
+                engine.GameSession.Camera,
+                engine.SpatialQueries,
+                view,
+                meshes: null,
+                loadedChunks: null,
+                performers: engine.GetService(CoreServiceKeys.PerformerInstanceBuffer),
+                timingDiagnostics: timingDiagnostics);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext["Tests.UxPrototype.HeadlessCamera"] = new HeadlessCameraRuntime(
