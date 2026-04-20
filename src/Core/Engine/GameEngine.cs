@@ -114,7 +114,6 @@ namespace Ludots.Core.Engine
 
     public partial class GameEngine : IDisposable // Implement IDisposable
     {
-        private const int PerformerInstanceBufferCapacity = 4096;
         private const int PathStoreMaxPaths = 512;
         private const int PathStoreMaxPointsPerPath = 256;
         private const string SkipDefaultCameraOnLoadTag = "camera.skip_default_on_load";

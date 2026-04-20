@@ -113,7 +113,7 @@ namespace Ludots.Core.Scripting
         public const string RoadSplineBuffer = "RoadSplineBuffer";
         // IndicatorRequestBuffer removed �?unified into Performer direct API
         public const string PerformerDefinitionRegistry = "PerformerDefinitionRegistry";
-        public const string PerformerInstanceBuffer = "PerformerInstanceBuffer";
+        public const string PerformerEntityRuntime = "PerformerEntityRuntime";
         public const string Navigation2DRuntime = "Navigation2DRuntime";
         public const string Navigation2DTickPolicy = "Navigation2DTickPolicy";
         public const string NavMeshBakeConfig = "NavMeshBakeConfig";

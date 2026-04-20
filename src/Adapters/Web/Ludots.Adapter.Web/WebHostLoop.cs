@@ -44,7 +44,7 @@ namespace Ludots.Adapter.Web
 
             var cullingSystem = new CameraCullingSystem(
                 engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
-            if (engine.GetService(CoreServiceKeys.PerformerInstanceBuffer) is PerformerInstanceBuffer performerInstances)
+            if (engine.GetService(CoreServiceKeys.PerformerEntityRuntime) is PerformerEntityRuntime performerInstances)
             {
                 cullingSystem = new CameraCullingSystem(
                     engine.World,

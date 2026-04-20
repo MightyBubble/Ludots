@@ -121,7 +121,7 @@ namespace Ludots.Adapter.Raylib
                 engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
                 engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
-                var performerInstances = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer);
+                var performerInstances = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
                 var cullingSystem = new CameraCullingSystem(
                     engine.World,
                     engine.GameSession.Camera,
