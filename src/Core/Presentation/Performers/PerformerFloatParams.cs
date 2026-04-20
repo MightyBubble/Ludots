@@ -2,6 +2,13 @@ using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Presentation.Performers
 {
+    public enum ParamLane : byte
+    {
+        Float = 0,
+        Int = 1,
+        Vector = 2,
+    }
+
     public unsafe struct PerformerFloatParams
     {
         public const int MAX_ENTRIES = 16;

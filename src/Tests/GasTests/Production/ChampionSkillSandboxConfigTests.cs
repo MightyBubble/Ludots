@@ -23,6 +23,7 @@ using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Systems;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
@@ -158,8 +159,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.World.Has<Velocity2D>(warrior), Is.True);
             Assert.That(engine.World.Has<Mass2D>(warrior), Is.True);
 
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
             Assert.That(
                 HasEntityAnchoredPerformer(engine.World, performers, warrior),
                 Is.True,
@@ -1122,25 +1123,26 @@ namespace Ludots.Tests.GAS.Production
                 teamBPriests);
         }
 
-        private static bool HasEntityAnchoredPerformer(World world, PerformerInstanceBuffer performers, Entity owner)
+        private static bool HasEntityAnchoredPerformer(World world, PerformerEntityRuntime performers, Entity owner)
         {
-            for (int handle = 0; handle < performers.Capacity; handle++)
+            bool found = false;
+            var query = new QueryDescription().WithAll<PerformerState>();
+            world.Query(in query, (Entity entity, ref PerformerState state) =>
             {
-                if (!performers.IsActive(handle))
+                if (found)
                 {
-                    continue;
+                    return;
                 }
 
-                PerformerInstance instance = performers.Get(handle);
-                if (instance.AnchorKind == PresentationAnchorKind.Entity &&
-                    instance.Owner == owner &&
-                    world.IsAlive(instance.Owner))
+                if (state.AnchorKind == PresentationAnchorKind.Entity &&
+                    state.OwnerEntity == owner &&
+                    world.IsAlive(state.OwnerEntity))
                 {
-                    return true;
+                    found = true;
                 }
-            }
+            });
 
-            return false;
+            return found;
         }
 
         private static float ComputeMinimumStressTeamClearance(World world, string mapId, int teamId)

@@ -43,33 +43,30 @@ namespace Ludots.Tests.Presentation
 
         private static int CountPerformersByDef(Ludots.Core.Engine.GameEngine engine, int defId)
         {
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
             int count = 0;
-            for (int handle = 0; handle < performers.Capacity; handle++)
+            var query = new QueryDescription().WithAll<PerformerState>();
+            engine.World.Query(in query, (Entity entity, ref PerformerState state) =>
             {
-                if (performers.IsActive(handle) && performers.Get(handle).DefId == defId)
+                if (state.DefId == defId)
                 {
                     count++;
                 }
-            }
-
+            });
             return count;
         }
 
-        private static int FindHandleByDef(Ludots.Core.Engine.GameEngine engine, int defId)
+        private static Entity FindEntityByDef(Ludots.Core.Engine.GameEngine engine, int defId)
         {
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
-            for (int handle = 0; handle < performers.Capacity; handle++)
+            Entity found = Entity.Null;
+            var query = new QueryDescription().WithAll<PerformerState>();
+            engine.World.Query(in query, (Entity entity, ref PerformerState state) =>
             {
-                if (performers.IsActive(handle) && performers.Get(handle).DefId == defId)
+                if (state.DefId == defId && found == Entity.Null)
                 {
-                    return handle;
+                    found = entity;
                 }
-            }
-
-            return -1;
+            });
+            return found;
         }
 
         private static int CountVisiblePrimitivesByMesh(Ludots.Core.Engine.GameEngine engine, int meshAssetId)
@@ -255,13 +252,13 @@ namespace Ludots.Tests.Presentation
             int workerDefId = ResolvePerformerDefId(engine, PerformerBlacksmithShowcaseIds.WorkerDefinitionId);
             var sounds = engine.GetService(CoreServiceKeys.SoundRequestBuffer)
                 ?? throw new InvalidOperationException("SoundRequestBuffer missing.");
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
 
-            int smokeHandle = FindHandleByDef(engine, smokeDefId);
-            int workerHandle = FindHandleByDef(engine, workerDefId);
-            Assert.That(smokeHandle, Is.GreaterThanOrEqualTo(0));
-            Assert.That(workerHandle, Is.GreaterThanOrEqualTo(0));
+            Entity smokeEntity = FindEntityByDef(engine, smokeDefId);
+            Entity workerEntity = FindEntityByDef(engine, workerDefId);
+            Assert.That(smokeEntity, Is.Not.EqualTo(Entity.Null));
+            Assert.That(workerEntity, Is.Not.EqualTo(Entity.Null));
 
             Assert.That(CountVisiblePrimitivesByMesh(engine, smokeMeshId), Is.EqualTo(0), "Smoke should start hidden.");
             Assert.That(CountVisibleSkinnedByMesh(engine, workerMeshId), Is.EqualTo(0), "Worker should start hidden.");
@@ -273,19 +270,19 @@ namespace Ludots.Tests.Presentation
             Assert.That(CountVisiblePrimitivesByMesh(engine, smokeMeshId), Is.GreaterThanOrEqualTo(1), "Smoke should become visible when working.");
             Assert.That(CountVisibleSkinnedByMesh(engine, workerMeshId), Is.GreaterThanOrEqualTo(1), "Worker should become visible when working.");
             Assert.That(sounds.Count, Is.GreaterThanOrEqualTo(1), "Worker sound loop should emit when working.");
-            Assert.That((performers.Get(smokeHandle).BehaviorActiveMask & (1u << 0)) != 0u, Is.True, "Smoke asset binding slot should be active.");
-            Assert.That((performers.Get(workerHandle).BehaviorActiveMask & (1u << 0)) != 0u, Is.True, "Worker skinned mesh slot should be active.");
-            Assert.That((performers.Get(workerHandle).BehaviorActiveMask & (1u << 1)) != 0u, Is.True, "Worker animator slot should be active.");
-            Assert.That((performers.Get(workerHandle).BehaviorActiveMask & (1u << 2)) != 0u, Is.True, "Worker sound slot should be active.");
-            Assert.That((performers.Get(workerHandle).BehaviorActiveMask & (1u << 3)) != 0u, Is.True, "Worker spline slot should be active.");
+            Assert.That((engine.World.Get<PerformerState>(smokeEntity).BehaviorActiveMask & (1u << 0)) != 0u, Is.True, "Smoke asset binding slot should be active.");
+            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & (1u << 0)) != 0u, Is.True, "Worker skinned mesh slot should be active.");
+            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & (1u << 1)) != 0u, Is.True, "Worker animator slot should be active.");
+            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & (1u << 2)) != 0u, Is.True, "Worker sound slot should be active.");
+            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & (1u << 3)) != 0u, Is.True, "Worker spline slot should be active.");
 
             SetWorkingTag(engine, building, active: false);
             PerformerBlacksmithShowcaseTestHarness.Tick(engine, 8);
 
             Assert.That(CountVisiblePrimitivesByMesh(engine, smokeMeshId), Is.EqualTo(0), "Smoke should hide when working tag is removed.");
             Assert.That(CountVisibleSkinnedByMesh(engine, workerMeshId), Is.EqualTo(0), "Worker should hide when working tag is removed.");
-            Assert.That((performers.Get(smokeHandle).BehaviorActiveMask & (1u << 0)) == 0u, Is.True);
-            Assert.That((performers.Get(workerHandle).BehaviorActiveMask & 0b1111u) == 0u, Is.True, "Worker behavior slots should all deactivate.");
+            Assert.That((engine.World.Get<PerformerState>(smokeEntity).BehaviorActiveMask & (1u << 0)) == 0u, Is.True);
+            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & 0b1111u) == 0u, Is.True, "Worker behavior slots should all deactivate.");
         }
 
         [Test]
@@ -299,12 +296,12 @@ namespace Ludots.Tests.Presentation
             globalEvents.AddDayNight(PerformerBlacksmithShowcaseIds.ParamDayNight, 1f);
             PerformerBlacksmithShowcaseTestHarness.Tick(engine, 4);
 
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
-            int rootHandle = FindHandleByDef(engine, ResolvePerformerDefId(engine, PerformerBlacksmithShowcaseIds.RootDefinitionId));
-            Assert.That(rootHandle, Is.GreaterThanOrEqualTo(0));
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
+            Entity rootEntity = FindEntityByDef(engine, ResolvePerformerDefId(engine, PerformerBlacksmithShowcaseIds.RootDefinitionId));
+            Assert.That(rootEntity, Is.Not.EqualTo(Entity.Null));
 
-            float param = performers.Blackboard.ResolveFloat(rootHandle, PerformerBlacksmithShowcaseIds.ParamDayNight, -1f);
+            float param = performers.ResolveFloat(rootEntity, PerformerBlacksmithShowcaseIds.ParamDayNight, -1f);
             Assert.That(param, Is.EqualTo(1f).Within(0.001f));
         }
 
@@ -382,15 +379,13 @@ namespace Ludots.Tests.Presentation
 
             int smokeDefId = ResolvePerformerDefId(engine, PerformerBlacksmithShowcaseIds.SmokeDefinitionId);
             int chimneyDefId = ResolvePerformerDefId(engine, PerformerBlacksmithShowcaseIds.ChimneyDefinitionId);
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
-            int smokeHandle = FindHandleByDef(engine, smokeDefId);
-            Assert.That(smokeHandle, Is.GreaterThanOrEqualTo(0));
+            Entity smokeEntity = FindEntityByDef(engine, smokeDefId);
+            Assert.That(smokeEntity, Is.Not.EqualTo(Entity.Null));
 
-            PerformerInstance smoke = performers.Get(smokeHandle);
-            Assert.That(smoke.ParentHandle, Is.GreaterThanOrEqualTo(0), "Smoke should have a parent performer handle.");
-            Assert.That(performers.IsActive(smoke.ParentHandle), Is.True);
-            Assert.That(performers.Get(smoke.ParentHandle).DefId, Is.EqualTo(chimneyDefId), "Smoke should be parented under the chimney performer.");
+            ref readonly PerformerParent smokeParent = ref engine.World.Get<PerformerParent>(smokeEntity);
+            Assert.That(smokeParent.Parent, Is.Not.EqualTo(Entity.Null), "Smoke should have a parent performer.");
+            Assert.That(engine.World.IsAlive(smokeParent.Parent), Is.True);
+            Assert.That(engine.World.Get<PerformerState>(smokeParent.Parent).DefId, Is.EqualTo(chimneyDefId), "Smoke should be parented under the chimney performer.");
         }
 
         [Test]

@@ -147,13 +147,13 @@ namespace CoreInputMod.Systems
             }
 
             _globals.TryGetValue(CoreServiceKeys.PerformerDefinitionRegistry.Name, out var performerDefinitionsObj);
-            _globals.TryGetValue(CoreServiceKeys.PerformerInstanceBuffer.Name, out var performerInstancesObj);
+            _globals.TryGetValue(CoreServiceKeys.PerformerEntityRuntime.Name, out var performerRuntimeObj);
             bridge = new AbilityIndicatorOverlayBridge(
                 _world,
                 abilities,
                 overlays,
                 performerDefinitionsObj as PerformerDefinitionRegistry,
-                performerInstancesObj as PerformerInstanceBuffer);
+                performerRuntimeObj as PerformerEntityRuntime);
             return true;
         }
     }

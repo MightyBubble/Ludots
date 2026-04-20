@@ -6,6 +6,7 @@ using Arch.Core;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
@@ -46,15 +47,15 @@ namespace Ludots.Tests.Presentation
 
             var definitions = new PerformerDefinitionRegistry();
             int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey: 20);
-            var instances = new PerformerInstanceBuffer(4);
+            var instances = new PerformerEntityRuntime(world);
             var animatorStates = new PerformerAnimatorStateBuffer(4);
-            int handle = AllocateActiveAnimator(instances, world.Create(), defId);
-            instances.SetParam(handle, 10, ParamLane.Float, 0.75f, 0, default);
+            Entity performer = AllocateActiveAnimator(instances, world, world.Create(), defId);
+            instances.SetParam(performer, 10, ParamLane.Float, 0.75f, 0, default);
 
             using var system = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
             system.Update(0.1f);
 
-            ref readonly AnimatorPackedState packedAfterFirstTick = ref animatorStates.GetPackedState(handle);
+            ref readonly AnimatorPackedState packedAfterFirstTick = ref animatorStates.GetPackedState(performer);
             Assert.That(packedAfterFirstTick.GetControllerId(), Is.EqualTo(controllerId));
             Assert.That(packedAfterFirstTick.GetPrimaryStateIndex(), Is.EqualTo(11));
             Assert.That(packedAfterFirstTick.GetSecondaryStateIndex(), Is.EqualTo(22));
@@ -62,18 +63,18 @@ namespace Ludots.Tests.Presentation
             Assert.That((packedAfterFirstTick.GetFlags() & AnimatorPackedStateFlags.Looping) != 0, Is.True);
             Assert.That((packedAfterFirstTick.GetFlags() & AnimatorPackedStateFlags.InTransition) != 0, Is.True);
             Assert.That(packedAfterFirstTick.GetTransitionProgress01(), Is.EqualTo(0.5f).Within(0.05f));
-            Assert.That(animatorStates.GetFeedbackBuffer(handle).Count, Is.GreaterThanOrEqualTo(2));
+            Assert.That(animatorStates.GetFeedbackBuffer(performer).Count, Is.GreaterThanOrEqualTo(2));
 
             system.Update(0.1f);
 
-            ref readonly AnimatorRuntimeState runtime = ref animatorStates.GetRuntimeState(handle);
-            ref readonly AnimatorPackedState packedAfterSecondTick = ref animatorStates.GetPackedState(handle);
+            ref readonly AnimatorRuntimeState runtime = ref animatorStates.GetRuntimeState(performer);
+            ref readonly AnimatorPackedState packedAfterSecondTick = ref animatorStates.GetPackedState(performer);
             Assert.That(runtime.CurrentStateIndex, Is.EqualTo(1));
             Assert.That(runtime.IsTransitioning, Is.False);
             Assert.That(packedAfterSecondTick.GetPrimaryStateIndex(), Is.EqualTo(22));
             Assert.That(packedAfterSecondTick.GetSecondaryStateIndex(), Is.EqualTo(0));
             Assert.That((packedAfterSecondTick.GetFlags() & AnimatorPackedStateFlags.InTransition) == 0, Is.True);
-            Assert.That(instances.ResolveInt(handle, 20), Is.EqualTo(1));
+            Assert.That(instances.ResolveInt(performer, 20), Is.EqualTo(1));
         }
 
         [Test]
@@ -115,25 +116,25 @@ namespace Ludots.Tests.Presentation
 
             var definitions = new PerformerDefinitionRegistry();
             int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey: 20);
-            var instances = new PerformerInstanceBuffer(4);
+            var instances = new PerformerEntityRuntime(world);
             var animatorStates = new PerformerAnimatorStateBuffer(4);
-            int handle = AllocateActiveAnimator(instances, world.Create(), defId);
-            instances.SetParam(handle, 12, ParamLane.Int, 0f, 1, default);
+            Entity performer = AllocateActiveAnimator(instances, world, world.Create(), defId);
+            instances.SetParam(performer, 12, ParamLane.Int, 0f, 1, default);
 
             using var system = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
 
             var trace = new StringBuilder();
             system.Update(0.1f);
-            AppendTrace(trace, tick: 1, instances.Get(handle).StableId, animatorStates.GetPackedState(handle), animatorStates.GetRuntimeState(handle));
+            AppendTrace(trace, tick: 1, world.Get<PerformerState>(performer).StableId, animatorStates.GetPackedState(performer), animatorStates.GetRuntimeState(performer));
 
-            Assert.That(animatorStates.GetPackedState(handle).GetPrimaryStateIndex(), Is.EqualTo(9));
-            Assert.That(instances.ResolveInt(handle, 12), Is.EqualTo(0), "Trigger should be consumed through performer blackboard.");
+            Assert.That(animatorStates.GetPackedState(performer).GetPrimaryStateIndex(), Is.EqualTo(9));
+            Assert.That(instances.ResolveInt(performer, 12), Is.EqualTo(0), "Trigger should be consumed through performer blackboard.");
 
             system.Update(0.4f);
-            AppendTrace(trace, tick: 2, instances.Get(handle).StableId, animatorStates.GetPackedState(handle), animatorStates.GetRuntimeState(handle));
+            AppendTrace(trace, tick: 2, world.Get<PerformerState>(performer).StableId, animatorStates.GetPackedState(performer), animatorStates.GetRuntimeState(performer));
 
-            Assert.That(animatorStates.GetPackedState(handle).GetPrimaryStateIndex(), Is.EqualTo(5));
-            Assert.That(animatorStates.GetFeedbackBuffer(handle).GetNewest(0).Kind, Is.EqualTo(AnimatorFeedbackKind.TransitionStarted));
+            Assert.That(animatorStates.GetPackedState(performer).GetPrimaryStateIndex(), Is.EqualTo(5));
+            Assert.That(animatorStates.GetFeedbackBuffer(performer).GetNewest(0).Kind, Is.EqualTo(AnimatorFeedbackKind.TransitionStarted));
 
             string repoRoot = FindRepoRoot();
             string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "animator-runtime-mvp");
@@ -184,29 +185,29 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             int stateParamKey = 20;
             int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey);
-            var instances = new PerformerInstanceBuffer(4);
+            var instances = new PerformerEntityRuntime(world);
             var animatorStates = new PerformerAnimatorStateBuffer(4);
-            int handle = AllocateActiveAnimator(instances, world.Create(), defId);
-            instances.SetParam(handle, 12, ParamLane.Int, 0f, 1, default);
+            Entity performer = AllocateActiveAnimator(instances, world, world.Create(), defId);
+            instances.SetParam(performer, 12, ParamLane.Int, 0f, 1, default);
 
             using var system = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
             system.Update(0.1f);
 
-            Assert.That(instances.ResolveInt(handle, stateParamKey), Is.EqualTo(0));
-            Assert.That(instances.ResolveInt(handle, stateParamKey + 1), Is.EqualTo((int)AnimatorFeedbackKind.TransitionStarted));
-            Assert.That(instances.ResolveInt(handle, stateParamKey + 2), Is.EqualTo(0));
-            Assert.That(instances.ResolveInt(handle, stateParamKey + 3), Is.EqualTo(1));
-            Assert.That(instances.ResolveFloat(handle, stateParamKey + 4), Is.EqualTo(0.1f).Within(0.05f));
-            Assert.That(instances.ResolveFloat(handle, stateParamKey + 5), Is.EqualTo(0.25f).Within(0.001f));
+            Assert.That(instances.ResolveInt(performer, stateParamKey), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(performer, stateParamKey + 1), Is.EqualTo((int)AnimatorFeedbackKind.TransitionStarted));
+            Assert.That(instances.ResolveInt(performer, stateParamKey + 2), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(performer, stateParamKey + 3), Is.EqualTo(1));
+            Assert.That(instances.ResolveFloat(performer, stateParamKey + 4), Is.EqualTo(0.1f).Within(0.05f));
+            Assert.That(instances.ResolveFloat(performer, stateParamKey + 5), Is.EqualTo(0.25f).Within(0.001f));
 
             system.Update(0.25f);
 
-            Assert.That(instances.ResolveInt(handle, stateParamKey), Is.EqualTo(1));
-            Assert.That(instances.ResolveInt(handle, stateParamKey + 1), Is.EqualTo((int)AnimatorFeedbackKind.TransitionCompleted));
-            Assert.That(instances.ResolveInt(handle, stateParamKey + 2), Is.EqualTo(0));
-            Assert.That(instances.ResolveInt(handle, stateParamKey + 3), Is.EqualTo(1));
-            Assert.That(instances.ResolveFloat(handle, stateParamKey + 4), Is.EqualTo(1f).Within(0.001f));
-            Assert.That(instances.ResolveFloat(handle, stateParamKey + 5), Is.EqualTo(0f).Within(0.001f));
+            Assert.That(instances.ResolveInt(performer, stateParamKey), Is.EqualTo(1));
+            Assert.That(instances.ResolveInt(performer, stateParamKey + 1), Is.EqualTo((int)AnimatorFeedbackKind.TransitionCompleted));
+            Assert.That(instances.ResolveInt(performer, stateParamKey + 2), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(performer, stateParamKey + 3), Is.EqualTo(1));
+            Assert.That(instances.ResolveFloat(performer, stateParamKey + 4), Is.EqualTo(1f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(performer, stateParamKey + 5), Is.EqualTo(0f).Within(0.001f));
         }
 
         private static int RegisterAnimatorDefinition(PerformerDefinitionRegistry definitions, int controllerId, int stateParamKey)
@@ -231,13 +232,12 @@ namespace Ludots.Tests.Presentation
             });
         }
 
-        private static int AllocateActiveAnimator(PerformerInstanceBuffer instances, Entity owner, int defId)
+        private static Entity AllocateActiveAnimator(PerformerEntityRuntime instances, World world, Entity owner, int defId)
         {
-            Assert.That(
-                instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, default, stableId: 7001, parentHandle: -1, out int handle),
-                Is.True);
-            instances.Get(handle).BehaviorActiveMask = 1u;
-            return handle;
+            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, default, stableId: 7001, Entity.Null, default);
+            ref var state = ref world.Get<PerformerState>(performer);
+            state.BehaviorActiveMask = 1u;
+            return performer;
         }
 
         private static void AppendTrace(StringBuilder trace, int tick, int stableId, AnimatorPackedState packed, AnimatorRuntimeState runtime)

@@ -37,7 +37,7 @@ namespace Ludots.Tests.Presentation
         private PresentationEventStream _presEvents;
         private PerformerCommandBuffer _commands;
         private PerformerDefinitionRegistry _defs;
-        private PerformerInstanceBuffer _instances;
+        private PerformerEntityRuntime _instances;
         private GraphProgramRegistry _programs;
         private Dictionary<string, object> _globals;
         private PrimitiveDrawBuffer _primitives;
@@ -66,7 +66,7 @@ namespace Ludots.Tests.Presentation
             _presEvents = new PresentationEventStream();
             _commands = new PerformerCommandBuffer();
             _defs = new PerformerDefinitionRegistry();
-            _instances = new PerformerInstanceBuffer();
+            _instances = new PerformerEntityRuntime(_world);
             _programs = new GraphProgramRegistry();
             _globals = new Dictionary<string, object>();
             _primitives = new PrimitiveDrawBuffer();
@@ -195,20 +195,14 @@ namespace Ludots.Tests.Presentation
         private int CountActiveInstancesInScope(int scopeId)
         {
             int count = 0;
-            for (int handle = 0; handle < _instances.Capacity; handle++)
+            var query = new QueryDescription().WithAll<PerformerState>();
+            _world.Query(in query, (Entity entity, ref PerformerState state) =>
             {
-                if (!_instances.IsActive(handle))
-                {
-                    continue;
-                }
-
-                ref readonly PerformerInstance instance = ref _instances.Get(handle);
-                if (instance.ScopeId == scopeId)
+                if (state.ScopeId == scopeId)
                 {
                     count++;
                 }
-            }
-
+            });
             return count;
         }
 

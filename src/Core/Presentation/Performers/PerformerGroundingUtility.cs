@@ -13,8 +13,8 @@ namespace Ludots.Core.Presentation.Performers
         private const float GroundRayOriginMeters = 10000f;
 
         public static PerformerResolvedTransform ResolveTransform(
-            in PerformerInstance instance,
-            in PerformerInstance parent,
+            in PerformerTransformSnapshot performer,
+            in PerformerTransformSnapshot parent,
             bool hasParent,
             in VisualTransform ownerTransform,
             bool hasOwnerTransform,
@@ -25,71 +25,71 @@ namespace Ludots.Core.Presentation.Performers
             Quaternion baseRotation;
             Vector3 baseScale;
 
-            switch (instance.TransformSource)
+            switch (performer.TransformSource)
             {
                 case TransformSource.InheritParent:
-                    basePosition = hasParent ? parent.WorldPosition : instance.WorldPosition;
-                    baseRotation = hasParent ? NormalizeOrIdentity(parent.WorldRotation) : NormalizeOrIdentity(instance.WorldRotation);
-                    baseScale = hasParent ? NormalizeScale(parent.WorldScale) : NormalizeScale(instance.WorldScale);
+                    basePosition = hasParent ? parent.WorldPosition : performer.WorldPosition;
+                    baseRotation = hasParent ? NormalizeOrIdentity(parent.WorldRotation) : NormalizeOrIdentity(performer.WorldRotation);
+                    baseScale = hasParent ? NormalizeScale(parent.WorldScale) : NormalizeScale(performer.WorldScale);
                     return ApplyLocalAndGrounding(
                         basePosition,
                         baseRotation,
                         baseScale,
                         assetBinding,
                         inheritScale: true,
-                        instance.TransformSource,
+                        performer.TransformSource,
                         heightmap);
 
                 case TransformSource.EntityTransform:
-                    basePosition = hasOwnerTransform ? ownerTransform.Position : instance.WorldPosition;
-                    baseRotation = hasOwnerTransform ? NormalizeOrIdentity(ownerTransform.Rotation) : NormalizeOrIdentity(instance.WorldRotation);
-                    baseScale = hasOwnerTransform ? NormalizeScale(ownerTransform.Scale) : NormalizeScale(instance.WorldScale);
+                    basePosition = hasOwnerTransform ? ownerTransform.Position : performer.WorldPosition;
+                    baseRotation = hasOwnerTransform ? NormalizeOrIdentity(ownerTransform.Rotation) : NormalizeOrIdentity(performer.WorldRotation);
+                    baseScale = hasOwnerTransform ? NormalizeScale(ownerTransform.Scale) : NormalizeScale(performer.WorldScale);
                     return ApplyLocalAndGrounding(
                         basePosition,
                         baseRotation,
                         baseScale,
                         assetBinding,
                         inheritScale: true,
-                        instance.TransformSource,
+                        performer.TransformSource,
                         heightmap);
 
                 case TransformSource.SplineDriven:
-                    basePosition = instance.WorldPosition;
-                    baseRotation = NormalizeOrIdentity(instance.WorldRotation);
+                    basePosition = performer.WorldPosition;
+                    baseRotation = NormalizeOrIdentity(performer.WorldRotation);
                     baseScale = NormalizeScale(assetBinding.LocalScale);
                     return ApplyGrounding(
                         basePosition + assetBinding.LocalOffset,
                         NormalizeOrIdentity(baseRotation * NormalizeOrIdentity(assetBinding.LocalRotation)),
                         baseScale,
                         assetBinding,
-                        instance.TransformSource,
+                        performer.TransformSource,
                         heightmap);
 
                 case TransformSource.BoneAttached:
                 case TransformSource.AttachedToParent:
-                    basePosition = instance.WorldPosition;
-                    baseRotation = NormalizeOrIdentity(instance.WorldRotation);
-                    baseScale = NormalizeScale(instance.WorldScale);
+                    basePosition = performer.WorldPosition;
+                    baseRotation = NormalizeOrIdentity(performer.WorldRotation);
+                    baseScale = NormalizeScale(performer.WorldScale);
                     return ApplyLocalAndGrounding(
                         basePosition,
                         baseRotation,
                         baseScale,
                         assetBinding,
                         inheritScale: true,
-                        instance.TransformSource,
+                        performer.TransformSource,
                         heightmap);
 
                 case TransformSource.WorldFixed:
                     return ApplyGrounding(
-                        instance.WorldPosition,
-                        NormalizeOrIdentity(instance.WorldRotation),
+                        performer.WorldPosition,
+                        NormalizeOrIdentity(performer.WorldRotation),
                         NormalizeScale(assetBinding.LocalScale),
                         assetBinding,
-                        instance.TransformSource,
+                        performer.TransformSource,
                         heightmap);
 
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(instance.TransformSource), instance.TransformSource, "Unsupported performer transform source.");
+                    throw new ArgumentOutOfRangeException(nameof(performer.TransformSource), performer.TransformSource, "Unsupported performer transform source.");
             }
         }
 
@@ -317,5 +317,13 @@ namespace Ludots.Core.Presentation.Performers
         public Vector3 Position;
         public Quaternion Rotation;
         public Vector3 Scale;
+    }
+
+    public struct PerformerTransformSnapshot
+    {
+        public Vector3 WorldPosition;
+        public Quaternion WorldRotation;
+        public Vector3 WorldScale;
+        public TransformSource TransformSource;
     }
 }

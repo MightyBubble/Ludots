@@ -529,7 +529,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         private PerformerMetrics CapturePerformerMetrics(GameEngine engine)
         {
-            PerformerInstanceBuffer? performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer);
+            PerformerEntityRuntime? performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
             PerformerDefinitionRegistry? definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
             if (performers == null || definitions == null)
             {
@@ -560,9 +560,10 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             int textCount = 0;
             var lines = new List<string>(12);
 
-            performers.ProcessActive(0f, (int handle, ref PerformerInstance inst) =>
+            var query = new QueryDescription().WithAll<PerformerState, PerformerParent, PerformerTransformSource>();
+            engine.World.Query(in query, (Entity entity, ref PerformerState inst, ref PerformerParent parent, ref PerformerTransformSource transformSource) =>
             {
-                if (_buildingEntity == Entity.Null || inst.Owner != _buildingEntity)
+                if (_buildingEntity == Entity.Null || inst.OwnerEntity != _buildingEntity)
                 {
                     return;
                 }
@@ -585,9 +586,9 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 }
 
                 string definitionName = definitions.GetName(inst.DefId);
-                float durabilityRatio = performers.Blackboard.ResolveFloat(handle, PerformerBlacksmithShowcaseIds.ParamDurability, -1f);
-                int workshopState = performers.Blackboard.ResolveInt(handle, PerformerBlacksmithShowcaseIds.ParamWorkshopAssetState, -1);
-                lines.Add($"[{handle}] {definitionName} parent={inst.ParentHandle} source={inst.TransformSource} durability={durabilityRatio:F2} meshState={workshopState}");
+                float durabilityRatio = performers.ResolveFloat(entity, PerformerBlacksmithShowcaseIds.ParamDurability, -1f);
+                int workshopState = performers.ResolveInt(entity, PerformerBlacksmithShowcaseIds.ParamWorkshopAssetState, -1);
+                lines.Add($"[{entity.Id}] {definitionName} parent={parent.Parent.Id} source={transformSource.Value} durability={durabilityRatio:F2} meshState={workshopState}");
             });
 
             if (lines.Count == 0)
@@ -619,7 +620,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             GroundOverlayBuffer? overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
             RoadSplineBuffer? splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
             MeshAssetRegistry? meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
-            PerformerInstanceBuffer? performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer);
+            PerformerEntityRuntime? performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
             PerformerDefinitionRegistry? definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
             if (primitives == null || skinned == null || worldHud == null || overlays == null || splines == null || meshes == null || performers == null || definitions == null)
             {
@@ -701,14 +702,20 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             int smokeId = definitions.GetId(PerformerBlacksmithShowcaseIds.SmokeDefinitionId);
             int chimneyId = definitions.GetId(PerformerBlacksmithShowcaseIds.ChimneyDefinitionId);
             int smokeAttachedToChimneyCount = 0;
-            performers.ProcessActive(0f, (int _, ref PerformerInstance inst) =>
+            var smokeQuery = new QueryDescription().WithAll<PerformerState, PerformerParent>();
+            engine.World.Query(in smokeQuery, (Entity entity, ref PerformerState inst, ref PerformerParent parentComp) =>
             {
-                if (inst.DefId != smokeId || inst.ParentHandle < 0 || !performers.IsActive(inst.ParentHandle))
+                if (inst.DefId != smokeId || parentComp.Parent == Entity.Null || !engine.World.IsAlive(parentComp.Parent))
                 {
                     return;
                 }
 
-                if (performers.Get(inst.ParentHandle).DefId == chimneyId)
+                if (!engine.World.Has<PerformerState>(parentComp.Parent))
+                {
+                    return;
+                }
+
+                if (engine.World.Get<PerformerState>(parentComp.Parent).DefId == chimneyId)
                 {
                     smokeAttachedToChimneyCount++;
                 }
@@ -731,7 +738,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         private CapacityMetrics CaptureCapacityMetrics(GameEngine engine)
         {
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer);
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
             var events = engine.GetService(CoreServiceKeys.PresentationEventStream);
             var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
@@ -741,7 +748,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             var spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue);
 
             return new CapacityMetrics(
-                PerformerCapacity: performers?.Capacity ?? 0,
+                PerformerCapacity: performers?.ActiveCount ?? 0,
                 PerformerActive: performers?.ActiveCount ?? 0,
                 PresentationEventCapacity: events?.Capacity ?? 0,
                 PresentationEventCount: events?.Count ?? 0,

@@ -19,6 +19,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
@@ -1039,8 +1040,8 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("GroundOverlayBuffer service is missing.");
             var performerDefinitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
                 ?? throw new InvalidOperationException("PerformerDefinitionRegistry service is missing.");
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("PerformerInstanceBuffer service is missing.");
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
 
             overlays.Clear();
             performers.Clear();
@@ -1061,30 +1062,33 @@ namespace Ludots.Tests.GAS.Production
             string overlaySummary = string.Join(", ",
                 overlays.GetSpan().ToArray().GroupBy(item => item.Shape).Select(group => $"{group.Key}:{group.Count()}"));
 
-            for (int handle = 0; handle < performers.Capacity; handle++)
+            RtsPreviewSnapshot? preview = null;
+            var performerQuery = new QueryDescription().WithAll<PerformerState, PerformerWorldPosition>();
+            engine.World.Query(in performerQuery, (Entity entity, ref PerformerState state, ref PerformerWorldPosition worldPos) =>
             {
-                if (!performers.IsActive(handle))
-                {
-                    continue;
-                }
-
-                ref readonly var instance = ref performers.Get(handle);
-                string performerId = performerDefinitions.GetName(instance.DefId);
-                performers.TryGetParamOverride(handle, WellKnownPerformerParamKeys.MarkerScaleX, out float scaleX);
-                performers.TryGetParamOverride(handle, WellKnownPerformerParamKeys.MarkerScaleY, out float scaleY);
-                performers.TryGetParamOverride(handle, WellKnownPerformerParamKeys.MarkerScaleZ, out float scaleZ);
+                string performerId = performerDefinitions.GetName(state.DefId);
+                float scaleX = performers.ResolveFloat(entity, WellKnownPerformerParamKeys.MarkerScaleX, 0f);
+                float scaleY = performers.ResolveFloat(entity, WellKnownPerformerParamKeys.MarkerScaleY, 0f);
+                float scaleZ = performers.ResolveFloat(entity, WellKnownPerformerParamKeys.MarkerScaleZ, 0f);
                 bridge.ClearPreview();
                 overlays.Clear();
                 performers.Clear();
-                return new RtsPreviewSnapshot(
+                preview = new RtsPreviewSnapshot(
                     performerId,
-                    instance.WorldPosition.X,
-                    instance.WorldPosition.Y,
-                    instance.WorldPosition.Z,
+                    worldPos.Value.X,
+                    worldPos.Value.Y,
+                    worldPos.Value.Z,
                     scaleX,
                     scaleY,
                     scaleZ,
                     overlaySummary);
+            });
+
+            if (preview != null)
+            {
+                overlays.Clear();
+                performers.Clear();
+                return preview;
             }
 
             overlays.Clear();

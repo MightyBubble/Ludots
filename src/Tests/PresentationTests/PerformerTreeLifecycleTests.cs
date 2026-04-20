@@ -77,25 +77,24 @@ namespace Ludots.Tests.Presentation
             int childBId = fixture.Definitions.GetId("child_b");
             int rootId = fixture.Definitions.GetId("root");
 
-            int rootHandle = fixture.CreateRoot(rootId, scopeTag: 100);
+            Entity rootEntity = fixture.CreateRoot(rootId, scopeTag: 100);
             fixture.TickRuleThenRuntime();
 
             Assert.That(fixture.Instances.ActiveCount, Is.EqualTo(3));
 
-            ref readonly PerformerInstance root = ref fixture.Instances.Get(rootHandle);
-            Assert.That(root.FirstChildHandle, Is.GreaterThanOrEqualTo(0));
+            ref readonly PerformerChildren children = ref fixture.World.Get<PerformerChildren>(rootEntity);
+            Assert.That(children.Count, Is.GreaterThan(0));
 
             int childCount = 0;
-            int child = root.FirstChildHandle;
-            while (child >= 0)
+            for (int i = 0; i < children.Count; i++)
             {
+                Entity childEntity = children.Get(i);
                 childCount++;
-                ref readonly PerformerInstance childInstance = ref fixture.Instances.Get(child);
-                Assert.That(childInstance.ParentHandle, Is.EqualTo(rootHandle));
-                Assert.That(childInstance.DefId, Is.EqualTo(childAId).Or.EqualTo(childBId));
-                Assert.That(childInstance.ScopeId, Is.EqualTo(101).Or.EqualTo(102));
-
-                child = childInstance.NextSiblingHandle;
+                ref readonly PerformerState childState = ref fixture.World.Get<PerformerState>(childEntity);
+                ref readonly PerformerParent childParent = ref fixture.World.Get<PerformerParent>(childEntity);
+                Assert.That(childParent.Parent, Is.EqualTo(rootEntity));
+                Assert.That(childState.DefId, Is.EqualTo(childAId).Or.EqualTo(childBId));
+                Assert.That(childState.ScopeId, Is.EqualTo(101).Or.EqualTo(102));
             }
 
             Assert.That(childCount, Is.EqualTo(2));
@@ -110,7 +109,7 @@ namespace Ludots.Tests.Presentation
 
             fixture.Create(defId, sharedOwner, scopeTag: 400);
             fixture.Create(defId, sharedOwner, scopeTag: 400);
-            int survivorHandle = fixture.Create(defId, sharedOwner, scopeTag: 401);
+            Entity survivorEntity = fixture.Create(defId, sharedOwner, scopeTag: 401);
 
             fixture.Commands.TryAdd(new PerformerCommand
             {
@@ -120,8 +119,8 @@ namespace Ludots.Tests.Presentation
             fixture.Runtime.Update(0.016f);
 
             Assert.That(fixture.Instances.ActiveCount, Is.EqualTo(1));
-            Assert.That(fixture.Instances.IsActive(survivorHandle), Is.True);
-            Assert.That(fixture.Instances.Get(survivorHandle).ScopeId, Is.EqualTo(401));
+            Assert.That(fixture.World.IsAlive(survivorEntity), Is.True);
+            Assert.That(fixture.World.Get<PerformerState>(survivorEntity).ScopeId, Is.EqualTo(401));
         }
 
         [Test]
@@ -151,7 +150,7 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
-            int rootHandle = fixture.CreateRoot(rootId, scopeTag: 500);
+            Entity rootEntity = fixture.CreateRoot(rootId, scopeTag: 500);
             fixture.Events.Clear();
 
             Assert.That(fixture.Events.TryAdd(new PresentationEvent
@@ -166,11 +165,14 @@ namespace Ludots.Tests.Presentation
             fixture.TickRuleThenRuntime();
 
             Assert.That(fixture.Instances.ActiveCount, Is.EqualTo(2));
-            int childHandle = fixture.Instances.Get(rootHandle).FirstChildHandle;
-            Assert.That(childHandle, Is.GreaterThanOrEqualTo(0));
-            Assert.That(fixture.Instances.Get(childHandle).ParentHandle, Is.EqualTo(rootHandle));
-            Assert.That(fixture.Instances.Get(childHandle).ScopeId, Is.EqualTo(500));
-            Assert.That(fixture.Instances.Get(childHandle).DefId, Is.EqualTo(childId));
+            ref readonly PerformerChildren rootChildren = ref fixture.World.Get<PerformerChildren>(rootEntity);
+            Assert.That(rootChildren.Count, Is.GreaterThan(0));
+            Entity childEntity = rootChildren.Get(0);
+            ref readonly PerformerParent childParent = ref fixture.World.Get<PerformerParent>(childEntity);
+            ref readonly PerformerState childState = ref fixture.World.Get<PerformerState>(childEntity);
+            Assert.That(childParent.Parent, Is.EqualTo(rootEntity));
+            Assert.That(childState.ScopeId, Is.EqualTo(500));
+            Assert.That(childState.DefId, Is.EqualTo(childId));
         }
 
         [Test]
@@ -181,21 +183,21 @@ namespace Ludots.Tests.Presentation
             int grandChildId = fixture.Definitions.Register("grand_child", new PerformerDefinition());
             int rootId = fixture.Definitions.Register("root", new PerformerDefinition());
 
-            int rootHandle = fixture.CreateRoot(rootId, scopeTag: 600);
-            int childHandle = fixture.Create(childId, fixture.Owner, scopeTag: 601, parentHandle: rootHandle);
-            int grandChildHandle = fixture.Create(grandChildId, fixture.Owner, scopeTag: 602, parentHandle: childHandle);
+            Entity rootEntity = fixture.CreateRoot(rootId, scopeTag: 600);
+            Entity childEntity = fixture.Create(childId, fixture.Owner, scopeTag: 601, parentEntity: rootEntity);
+            Entity grandChildEntity = fixture.Create(grandChildId, fixture.Owner, scopeTag: 602, parentEntity: childEntity);
 
             fixture.Commands.TryAdd(new PerformerCommand
             {
                 CommandKind = PerformerCommandKind.DestroyPerformer,
-                PerformerHandle = rootHandle,
+                PerformerEntity = rootEntity,
             });
             fixture.Runtime.Update(0.016f);
 
             Assert.That(fixture.Instances.ActiveCount, Is.EqualTo(0));
-            Assert.That(fixture.Instances.IsActive(rootHandle), Is.False);
-            Assert.That(fixture.Instances.IsActive(childHandle), Is.False);
-            Assert.That(fixture.Instances.IsActive(grandChildHandle), Is.False);
+            Assert.That(fixture.World.IsAlive(rootEntity), Is.False);
+            Assert.That(fixture.World.IsAlive(childEntity), Is.False);
+            Assert.That(fixture.World.IsAlive(grandChildEntity), Is.False);
         }
 
         [Test]
@@ -205,12 +207,12 @@ namespace Ludots.Tests.Presentation
             int childId = fixture.Definitions.Register("child", new PerformerDefinition());
             int rootId = fixture.Definitions.Register("root", new PerformerDefinition());
 
-            int rootHandle = fixture.CreateRoot(rootId, scopeTag: 700);
-            int childHandle = fixture.Create(childId, fixture.Owner, scopeTag: 701, parentHandle: rootHandle);
+            Entity rootEntity = fixture.CreateRoot(rootId, scopeTag: 700);
+            Entity childEntity = fixture.Create(childId, fixture.Owner, scopeTag: 701, parentEntity: rootEntity);
 
-            fixture.Instances.SetParam(rootHandle, 300, ParamLane.Float, 1.5f, 0, Vector4.Zero);
+            fixture.Instances.SetParam(rootEntity, 300, ParamLane.Float, 1.5f, 0, Vector4.Zero);
 
-            Assert.That(fixture.Instances.ResolveFloat(childHandle, 300, -1f), Is.EqualTo(1.5f).Within(0.0001f));
+            Assert.That(fixture.Instances.ResolveFloat(childEntity, 300, -1f), Is.EqualTo(1.5f).Within(0.0001f));
         }
 
         [Test]
@@ -221,16 +223,16 @@ namespace Ludots.Tests.Presentation
             int grandChildId = fixture.Definitions.Register("grand_child", new PerformerDefinition());
             int rootId = fixture.Definitions.Register("root", new PerformerDefinition());
 
-            int rootHandle = fixture.CreateRoot(rootId, scopeTag: 800);
-            int childHandle = fixture.Create(childId, fixture.Owner, scopeTag: 801, parentHandle: rootHandle);
-            int grandChildHandle = fixture.Create(grandChildId, fixture.Owner, scopeTag: 802, parentHandle: childHandle);
+            Entity rootEntity = fixture.CreateRoot(rootId, scopeTag: 800);
+            Entity childEntity = fixture.Create(childId, fixture.Owner, scopeTag: 801, parentEntity: rootEntity);
+            Entity grandChildEntity = fixture.Create(grandChildId, fixture.Owner, scopeTag: 802, parentEntity: childEntity);
 
-            fixture.Instances.SetParam(rootHandle, 300, ParamLane.Float, 1f, 0, Vector4.Zero);
-            fixture.Instances.SetParam(childHandle, 300, ParamLane.Float, 2f, 0, Vector4.Zero);
+            fixture.Instances.SetParam(rootEntity, 300, ParamLane.Float, 1f, 0, Vector4.Zero);
+            fixture.Instances.SetParam(childEntity, 300, ParamLane.Float, 2f, 0, Vector4.Zero);
 
-            Assert.That(fixture.Instances.ResolveFloat(rootHandle, 300, -1f), Is.EqualTo(1f).Within(0.0001f));
-            Assert.That(fixture.Instances.ResolveFloat(childHandle, 300, -1f), Is.EqualTo(2f).Within(0.0001f));
-            Assert.That(fixture.Instances.ResolveFloat(grandChildHandle, 300, -1f), Is.EqualTo(2f).Within(0.0001f));
+            Assert.That(fixture.Instances.ResolveFloat(rootEntity, 300, -1f), Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(fixture.Instances.ResolveFloat(childEntity, 300, -1f), Is.EqualTo(2f).Within(0.0001f));
+            Assert.That(fixture.Instances.ResolveFloat(grandChildEntity, 300, -1f), Is.EqualTo(2f).Within(0.0001f));
         }
 
         [Test]
@@ -349,7 +351,7 @@ namespace Ludots.Tests.Presentation
             public readonly World World;
             public readonly PerformerCommandBuffer Commands;
             public readonly PresentationEventStream Events;
-            public readonly PerformerInstanceBuffer Instances;
+            public readonly PerformerEntityRuntime Instances;
             public readonly PerformerDefinitionRegistry Definitions;
             public readonly PerformerRuntimeSystem Runtime;
             public readonly PerformerRuleSystem Rules;
@@ -360,7 +362,7 @@ namespace Ludots.Tests.Presentation
                 World = Arch.Core.World.Create();
                 Commands = new PerformerCommandBuffer();
                 Events = new PresentationEventStream();
-                Instances = new PerformerInstanceBuffer(capacity: 32);
+                Instances = new PerformerEntityRuntime(World);
                 Definitions = new PerformerDefinitionRegistry();
                 Owner = this.World.Create();
                 Runtime = new PerformerRuntimeSystem(
@@ -385,18 +387,18 @@ namespace Ludots.Tests.Presentation
 
             public static PerformerTreeFixture Create() => new();
 
-            public int CreateRoot(int definitionId, int scopeTag)
+            public Entity CreateRoot(int definitionId, int scopeTag)
             {
-                return Create(definitionId, Owner, scopeTag, parentHandle: -1);
+                return Create(definitionId, Owner, scopeTag, parentEntity: Entity.Null);
             }
 
-            public int Create(int definitionId, Entity owner, int scopeTag, int parentHandle = -1)
+            public Entity Create(int definitionId, Entity owner, int scopeTag, Entity parentEntity = default)
             {
                 Commands.TryAdd(new PerformerCommand
                 {
                     CommandKind = PerformerCommandKind.CreatePerformer,
                     PerformerDefinitionId = definitionId,
-                    ParentHandle = parentHandle,
+                    ParentEntity = parentEntity,
                     ScopeTag = scopeTag,
                     AnchorKind = PresentationAnchorKind.Entity,
                     Source = owner,
@@ -406,8 +408,8 @@ namespace Ludots.Tests.Presentation
 
                 ReadOnlySpan<PresentationEvent> events = Events.GetSpan();
                 Assert.That(events.Length, Is.GreaterThan(0));
-                int handle = events[^1].PayloadA;
-                return handle;
+                Entity performer = events[^1].PerformerEntity;
+                return performer;
             }
 
             public void TickRuleThenRuntime()

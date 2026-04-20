@@ -801,7 +801,7 @@ namespace Ludots.Tests.GAS.Production
                 engine.SpatialQueries,
                 view,
                 loadedChunks: null,
-                performers: engine.GetService(CoreServiceKeys.PerformerInstanceBuffer),
+                performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
                 timingDiagnostics: timingDiagnostics);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);

@@ -15,7 +15,7 @@ namespace AnimationAcceptanceMod.Systems
     {
         private readonly GameEngine _engine;
         private readonly AnimationAcceptanceControlState _controls;
-        private readonly PerformerInstanceBuffer _instances;
+        private readonly PerformerEntityRuntime _instances;
         private readonly PerformerAnimatorStateBuffer _animatorStates;
         private readonly PerformerDefinitionRegistry _definitions;
 
@@ -31,8 +31,8 @@ namespace AnimationAcceptanceMod.Systems
             _engine = engine;
             _controls = engine.GetService(AnimationAcceptanceServiceKeys.ControlState)
                 ?? throw new InvalidOperationException("Animation acceptance requires control state service.");
-            _instances = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("Animation acceptance requires PerformerInstanceBuffer.");
+            _instances = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("Animation acceptance requires PerformerEntityRuntime.");
             _animatorStates = engine.GetService(CoreServiceKeys.PerformerAnimatorStateBuffer)
                 ?? throw new InvalidOperationException("Animation acceptance requires PerformerAnimatorStateBuffer.");
             _definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
@@ -45,29 +45,29 @@ namespace AnimationAcceptanceMod.Systems
             _elapsed += scaledDt;
             ResolveDefinitionIds();
 
-            for (int handle = 0; handle < _instances.Capacity; handle++)
+            var query = new QueryDescription().WithAll<PerformerState>();
+            World.Query(in query, (Entity entity, ref PerformerState instance) =>
             {
-                if (!_instances.IsActive(handle) || !_animatorStates.IsAllocated(handle))
+                if (!_animatorStates.IsAllocated(entity))
                 {
-                    continue;
+                    return;
                 }
 
-                ref PerformerInstance instance = ref _instances.Get(handle);
-                if (instance.AnchorKind != PresentationAnchorKind.Entity || !World.IsAlive(instance.Owner))
+                if (instance.AnchorKind != PresentationAnchorKind.Entity || !World.IsAlive(instance.OwnerEntity))
                 {
-                    continue;
+                    return;
                 }
 
-                if (!World.Has<WorldPositionCm>(instance.Owner) || !World.Has<FacingDirection>(instance.Owner))
+                if (!World.Has<WorldPositionCm>(instance.OwnerEntity) || !World.Has<FacingDirection>(instance.OwnerEntity))
                 {
-                    continue;
+                    return;
                 }
 
-                ref WorldPositionCm position = ref World.Get<WorldPositionCm>(instance.Owner);
-                ref FacingDirection facing = ref World.Get<FacingDirection>(instance.Owner);
-                ref AnimatorPackedState packed = ref _animatorStates.GetPackedState(handle);
-                ref AnimatorRuntimeState runtime = ref _animatorStates.GetRuntimeState(handle);
-                ref AnimationOverlayRequest overlay = ref _animatorStates.GetOverlay(handle);
+                ref WorldPositionCm position = ref World.Get<WorldPositionCm>(instance.OwnerEntity);
+                ref FacingDirection facing = ref World.Get<FacingDirection>(instance.OwnerEntity);
+                ref AnimatorPackedState packed = ref _animatorStates.GetPackedState(entity);
+                ref AnimatorRuntimeState runtime = ref _animatorStates.GetRuntimeState(entity);
+                ref AnimationOverlayRequest overlay = ref _animatorStates.GetOverlay(entity);
 
                 if (instance.DefId == _tankDefinitionId)
                 {
@@ -77,7 +77,7 @@ namespace AnimationAcceptanceMod.Systems
                 {
                     UpdateHumanoid(_controls.Humanoid, ref position, ref facing, ref packed, ref runtime, ref overlay, scaledDt);
                 }
-            }
+            });
         }
 
         private void ResolveDefinitionIds()

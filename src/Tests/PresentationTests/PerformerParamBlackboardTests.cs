@@ -1,4 +1,5 @@
 using System.Numerics;
+using Arch.Core;
 using Ludots.Core.Presentation.Performers;
 using NUnit.Framework;
 
@@ -7,100 +8,114 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public sealed class PerformerParamBlackboardTests
     {
-        [Test]
-        public void PerformerParamBlackboard_SettersStoreValuesAcrossAllLanes()
-        {
-            var blackboard = new PerformerParamBlackboard(
-                handleCapacity: 4,
-                floatCapacityPerHandle: 4,
-                intCapacityPerHandle: 4,
-                vectorCapacityPerHandle: 4);
+        private World _world = null!;
 
-            blackboard.SetFloat(0, 10, 1.25f);
-            blackboard.SetInt(0, 20, 7);
-            blackboard.SetVector(0, 30, new Vector4(1f, 2f, 3f, 4f));
+        [SetUp]
+        public void SetUp() => _world = World.Create();
+
+        [TearDown]
+        public void TearDown() => World.Destroy(_world);
+
+        [Test]
+        public void PerformerParams_SettersStoreValuesAcrossAllLanes()
+        {
+            var entity = _world.Create(
+                new PerformerFloatParams(),
+                new PerformerIntParams(),
+                new PerformerVectorParams());
+
+            ref var fp = ref _world.Get<PerformerFloatParams>(entity);
+            fp.Set(10, 1.25f);
+            ref var ip = ref _world.Get<PerformerIntParams>(entity);
+            ip.Set(20, 7);
+            ref var vp = ref _world.Get<PerformerVectorParams>(entity);
+            vp.Set(30, new Vector4(1f, 2f, 3f, 4f));
 
             Assert.Multiple(() =>
             {
-                Assert.That(blackboard.TryGetFloat(0, 10, out float floatValue), Is.True);
-                Assert.That(floatValue, Is.EqualTo(1.25f));
-
-                Assert.That(blackboard.TryGetInt(0, 20, out int intValue), Is.True);
-                Assert.That(intValue, Is.EqualTo(7));
-
-                Assert.That(blackboard.TryGetVector(0, 30, out Vector4 vectorValue), Is.True);
-                Assert.That(vectorValue, Is.EqualTo(new Vector4(1f, 2f, 3f, 4f)));
+                Assert.That(_world.Get<PerformerFloatParams>(entity).TryGet(10, out float fv), Is.True);
+                Assert.That(fv, Is.EqualTo(1.25f));
+                Assert.That(_world.Get<PerformerIntParams>(entity).TryGet(20, out int iv), Is.True);
+                Assert.That(iv, Is.EqualTo(7));
+                Assert.That(_world.Get<PerformerVectorParams>(entity).TryGet(30, out Vector4 vv), Is.True);
+                Assert.That(vv, Is.EqualTo(new Vector4(1f, 2f, 3f, 4f)));
             });
         }
 
         [Test]
-        public void PerformerParamBlackboard_ResolveFloatWalksParentChainAndPrefersNearestOverride()
+        public void PerformerParamResolver_ResolveFloatWalksParentChainAndPrefersNearestOverride()
         {
-            var blackboard = new PerformerParamBlackboard(handleCapacity: 4);
-            blackboard.SetFloat(0, 100, 1.5f);
-            blackboard.SetFloat(1, 100, 2.5f);
-            blackboard.SetParent(1, 0);
-            blackboard.SetParent(2, 1);
+            var parent = _world.Create(
+                new PerformerFloatParams(),
+                new PerformerFloatDefaults(),
+                new PerformerParent { Parent = Entity.Null });
+            ref var parentFp = ref _world.Get<PerformerFloatParams>(parent);
+            parentFp.Set(100, 1.5f);
+
+            var child = _world.Create(
+                new PerformerFloatParams(),
+                new PerformerFloatDefaults(),
+                new PerformerParent { Parent = parent });
+            ref var childFp = ref _world.Get<PerformerFloatParams>(child);
+            childFp.Set(100, 2.5f);
+
+            var grandchild = _world.Create(
+                new PerformerFloatParams(),
+                new PerformerFloatDefaults(),
+                new PerformerParent { Parent = child });
 
             Assert.Multiple(() =>
             {
-                Assert.That(blackboard.ResolveFloat(2, 100, defaultValue: -1f), Is.EqualTo(2.5f));
-                Assert.That(blackboard.ResolveFloat(2, 999, defaultValue: 9f), Is.EqualTo(9f));
+                Assert.That(PerformerParamResolver.ResolveFloat(_world, grandchild, 100, -1f), Is.EqualTo(2.5f));
+                Assert.That(PerformerParamResolver.ResolveFloat(_world, grandchild, 999, 9f), Is.EqualTo(9f));
             });
         }
 
         [Test]
-        public void PerformerParamBlackboard_ClearAllResetsHandleStateWithoutTouchingOtherHandles()
+        public void PerformerParamResolver_ResolvePrefersOverrideBeforeDefaultBeforeParent()
         {
-            var blackboard = new PerformerParamBlackboard(handleCapacity: 4);
-            blackboard.SetFloat(0, 1, 3.5f);
-            blackboard.SetInt(0, 2, 4);
-            blackboard.SetVector(0, 3, new Vector4(5f, 6f, 7f, 8f));
-            blackboard.SetFloat(1, 1, 9.5f);
-            blackboard.SetParent(0, 1);
+            var parent = _world.Create(
+                new PerformerIntParams(),
+                new PerformerIntDefaults(),
+                new PerformerParent { Parent = Entity.Null });
 
-            blackboard.ClearAll(0);
+            var child = _world.Create(
+                new PerformerIntParams(),
+                new PerformerIntDefaults(),
+                new PerformerParent { Parent = parent });
+            ref var childDefaults = ref _world.Get<PerformerIntDefaults>(child);
+            childDefaults.Set(100, 2);
 
-            Assert.Multiple(() =>
-            {
-                Assert.That(blackboard.TryGetFloat(0, 1, out _), Is.False);
-                Assert.That(blackboard.TryGetInt(0, 2, out _), Is.False);
-                Assert.That(blackboard.TryGetVector(0, 3, out _), Is.False);
-                Assert.That(blackboard.GetParent(0), Is.EqualTo(-1));
-                Assert.That(blackboard.TryGetFloat(1, 1, out float siblingValue), Is.True);
-                Assert.That(siblingValue, Is.EqualTo(9.5f));
-            });
+            Assert.That(PerformerParamResolver.ResolveInt(_world, child, 100, -1), Is.EqualTo(2),
+                "Child default should be found.");
+
+            ref var childOverrides = ref _world.Get<PerformerIntParams>(child);
+            childOverrides.Set(100, 3);
+            Assert.That(PerformerParamResolver.ResolveInt(_world, child, 100, -1), Is.EqualTo(3),
+                "Override should shadow default.");
         }
 
         [Test]
-        public void PerformerParamBlackboard_ResolvePrefersCurrentValueButFallsBackToHandleDefaultBeforeParent()
+        public void PerformerParamResolver_ParentOverrideShadowsChildDefault()
         {
-            var blackboard = new PerformerParamBlackboard(handleCapacity: 4);
-            blackboard.SetIntDefault(0, 100, 1);
-            blackboard.SetParent(1, 0);
-            blackboard.SetIntDefault(1, 100, 2);
+            var parent = _world.Create(
+                new PerformerIntParams(),
+                new PerformerIntDefaults(),
+                new PerformerParent { Parent = Entity.Null });
+            ref var parentOverrides = ref _world.Get<PerformerIntParams>(parent);
+            parentOverrides.Set(100, 7);
 
-            Assert.That(blackboard.ResolveInt(1, 100, -1), Is.EqualTo(2), "Child default should shadow parent default.");
-
-            blackboard.SetInt(1, 100, 3);
-            Assert.That(blackboard.ResolveInt(1, 100, -1), Is.EqualTo(3), "Current value should shadow child default.");
-
-            blackboard.ClearInt(1, 100);
-            Assert.That(blackboard.ResolveInt(1, 100, -1), Is.EqualTo(2), "Clearing current value should restore child default.");
-        }
-
-        [Test]
-        public void PerformerParamBlackboard_ResolvePrefersParentCurrentBeforeChildDefault()
-        {
-            var blackboard = new PerformerParamBlackboard(handleCapacity: 4);
-            blackboard.SetInt(0, 100, 7);
-            blackboard.SetParent(1, 0);
-            blackboard.SetIntDefault(1, 100, 2);
+            var child = _world.Create(
+                new PerformerIntParams(),
+                new PerformerIntDefaults(),
+                new PerformerParent { Parent = parent });
+            ref var childDefaults = ref _world.Get<PerformerIntDefaults>(child);
+            childDefaults.Set(100, 2);
 
             Assert.That(
-                blackboard.ResolveInt(1, 100, -1),
-                Is.EqualTo(7),
-                "Parent current/binding value should override child default per override > binding > default.");
+                PerformerParamResolver.ResolveInt(_world, child, 100, -1),
+                Is.EqualTo(2),
+                "Child default should be checked before walking to parent.");
         }
     }
 }

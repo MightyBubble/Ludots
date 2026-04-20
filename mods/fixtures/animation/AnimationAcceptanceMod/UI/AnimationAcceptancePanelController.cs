@@ -422,33 +422,33 @@ namespace AnimationAcceptanceMod.UI
                 }
             }
 
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("Animation acceptance requires PerformerInstanceBuffer.");
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("Animation acceptance requires PerformerEntityRuntime.");
             var animatorStates = engine.GetService(CoreServiceKeys.PerformerAnimatorStateBuffer)
                 ?? throw new InvalidOperationException("Animation acceptance requires PerformerAnimatorStateBuffer.");
             var result = new Dictionary<AnimationAcceptanceRigId, RigRuntimeSample>();
-            for (int handle = 0; handle < performers.Capacity; handle++)
+            var query = new QueryDescription().WithAll<PerformerState>();
+            engine.World.Query(in query, (Entity entity, ref PerformerState instance) =>
             {
-                if (!performers.IsActive(handle) || !animatorStates.IsAllocated(handle))
+                if (!animatorStates.IsAllocated(entity))
                 {
-                    continue;
+                    return;
                 }
 
-                PerformerInstance instance = performers.Get(handle);
                 if (!definitionLookup.TryGetValue(instance.DefId, out var definition))
                 {
-                    continue;
+                    return;
                 }
 
                 string entityName = definition.DisplayName;
                 if (instance.AnchorKind == PresentationAnchorKind.Entity &&
-                    engine.World.IsAlive(instance.Owner) &&
-                    engine.World.Has<Name>(instance.Owner))
+                    engine.World.IsAlive(instance.OwnerEntity) &&
+                    engine.World.Has<Name>(instance.OwnerEntity))
                 {
-                    entityName = engine.World.Get<Name>(instance.Owner).Value ?? definition.DisplayName;
+                    entityName = engine.World.Get<Name>(instance.OwnerEntity).Value ?? definition.DisplayName;
                 }
 
-                ref AnimatorPackedState packed = ref animatorStates.GetPackedState(handle);
+                ref AnimatorPackedState packed = ref animatorStates.GetPackedState(entity);
                 if (packed.GetControllerId() <= 0)
                 {
                     int controllerId = registry.GetId(definition.ControllerKey);
@@ -462,10 +462,10 @@ namespace AnimationAcceptanceMod.UI
                     Found: true,
                     EntityName: entityName,
                     PackedState: packed,
-                    RuntimeState: animatorStates.GetRuntimeState(handle),
-                    OverlayRequest: animatorStates.GetOverlay(handle),
-                    Feedback: animatorStates.GetFeedbackBuffer(handle));
-            }
+                    RuntimeState: animatorStates.GetRuntimeState(entity),
+                    OverlayRequest: animatorStates.GetOverlay(entity),
+                    Feedback: animatorStates.GetFeedbackBuffer(entity));
+            });
 
             return result;
         }

@@ -238,8 +238,8 @@ namespace Ludots.Tests.Presentation
             out int roadSplineCount,
             out int groundOverlayCount)
         {
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
             var definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
                 ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
@@ -285,33 +285,30 @@ namespace Ludots.Tests.Presentation
             blacksmithEntities = blacksmithEntityCount;
             visibleBlacksmithEntities = visibleBlacksmithEntityCount;
 
-            rootPerformerCount = 0;
-            workshopLeftPerformerCount = 0;
-            workshopRightPerformerCount = 0;
-            chimneyPerformerCount = 0;
-            routeSplinePerformerCount = 0;
-            decalPerformerCount = 0;
-            workerPerformerCount = 0;
-            barPerformerCount = 0;
-            textPerformerCount = 0;
-            for (int handle = 0; handle < performers.Capacity; handle++)
+            int localRoot = 0, localLeft = 0, localRight = 0, localChimney = 0;
+            int localRoute = 0, localDecal = 0, localWorker = 0, localBar = 0, localText = 0;
+            var perfQuery = new QueryDescription().WithAll<PerformerState>();
+            engine.World.Query(in perfQuery, (Entity entity, ref PerformerState state) =>
             {
-                if (!performers.IsActive(handle))
-                {
-                    continue;
-                }
-
-                PerformerInstance instance = performers.Get(handle);
-                if (instance.DefId == rootId) rootPerformerCount++;
-                if (instance.DefId == leftId) workshopLeftPerformerCount++;
-                if (instance.DefId == rightId) workshopRightPerformerCount++;
-                if (instance.DefId == chimneyId) chimneyPerformerCount++;
-                if (instance.DefId == routeId) routeSplinePerformerCount++;
-                if (instance.DefId == decalId) decalPerformerCount++;
-                if (instance.DefId == workerId) workerPerformerCount++;
-                if (instance.DefId == barId) barPerformerCount++;
-                if (instance.DefId == textId) textPerformerCount++;
-            }
+                if (state.DefId == rootId) localRoot++;
+                if (state.DefId == leftId) localLeft++;
+                if (state.DefId == rightId) localRight++;
+                if (state.DefId == chimneyId) localChimney++;
+                if (state.DefId == routeId) localRoute++;
+                if (state.DefId == decalId) localDecal++;
+                if (state.DefId == workerId) localWorker++;
+                if (state.DefId == barId) localBar++;
+                if (state.DefId == textId) localText++;
+            });
+            rootPerformerCount = localRoot;
+            workshopLeftPerformerCount = localLeft;
+            workshopRightPerformerCount = localRight;
+            chimneyPerformerCount = localChimney;
+            routeSplinePerformerCount = localRoute;
+            decalPerformerCount = localDecal;
+            workerPerformerCount = localWorker;
+            barPerformerCount = localBar;
+            textPerformerCount = localText;
 
             visibleWorkshopPrimitives = 0;
             visibleChimneyPrimitives = 0;

@@ -119,8 +119,8 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void PerformerRuntime_UsesExistingScopeAndParamFlow_InsteadOfDedicatedPartType()
         {
-            Type performerInstance = typeof(Ludots.Core.Presentation.Performers.PerformerInstance);
-            FieldInfo? scopeField = performerInstance.GetField("ScopeId", BindingFlags.Instance | BindingFlags.Public);
+            Type performerState = typeof(Ludots.Core.Presentation.Performers.PerformerState);
+            FieldInfo? scopeField = performerState.GetField("ScopeId", BindingFlags.Instance | BindingFlags.Public);
             Assert.That(scopeField, Is.Not.Null, "Performer runtime should continue using ScopeId for grouping.");
 
             Assembly assembly = typeof(PerformerCommand).Assembly;
@@ -129,18 +129,17 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void PerformerInstanceContract_ExposesT4TreeAndTransformFields()
+        public void PerformerStateContract_ExposesIdentityAndBehaviorFields()
         {
-            FieldInfo[] fields = typeof(PerformerInstance).GetFields(BindingFlags.Instance | BindingFlags.Public);
+            FieldInfo[] fields = typeof(Ludots.Core.Presentation.Performers.PerformerState).GetFields(BindingFlags.Instance | BindingFlags.Public);
             string[] fieldNames = fields.Select(static field => field.Name).ToArray();
 
-            Assert.That(fieldNames, Does.Contain("ParentHandle"));
-            Assert.That(fieldNames, Does.Contain("FirstChildHandle"));
-            Assert.That(fieldNames, Does.Contain("NextSiblingHandle"));
+            Assert.That(fieldNames, Does.Contain("DefId"));
+            Assert.That(fieldNames, Does.Contain("ScopeId"));
+            Assert.That(fieldNames, Does.Contain("OwnerEntity"));
             Assert.That(fieldNames, Does.Contain("BehaviorActiveMask"));
-            Assert.That(fieldNames, Does.Contain("TransformSource"));
-            Assert.That(fieldNames, Does.Contain("WorldRotation"));
-            Assert.That(fieldNames, Does.Contain("WorldScale"));
+            Assert.That(fieldNames, Does.Contain("Version"));
+            Assert.That(fieldNames, Does.Contain("StableId"));
         }
 
         [Test]

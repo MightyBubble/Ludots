@@ -18,7 +18,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void ResolveTransform_InheritParent_ComposesOffsetRotationScale()
         {
-            var parent = new PerformerInstance
+            var parent = new PerformerTransformSnapshot
             {
                 WorldPosition = new Vector3(10f, 2f, 20f),
                 WorldRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.5f),
@@ -26,7 +26,7 @@ namespace Ludots.Tests.Presentation
                 TransformSource = TransformSource.EntityTransform,
             };
 
-            var child = new PerformerInstance
+            var child = new PerformerTransformSnapshot
             {
                 TransformSource = TransformSource.InheritParent,
             };
@@ -54,7 +54,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void ResolveTransform_EntityTransform_UsesOwnerTransformAndLocalOffset()
         {
-            var instance = new PerformerInstance
+            var instance = new PerformerTransformSnapshot
             {
                 TransformSource = TransformSource.EntityTransform,
                 WorldPosition = new Vector3(-5f, -5f, -5f),
@@ -94,7 +94,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void ResolveTransform_SplineDriven_UsesInstanceTransformAndAssetLocalTransform()
         {
-            var instance = new PerformerInstance
+            var instance = new PerformerTransformSnapshot
             {
                 TransformSource = TransformSource.SplineDriven,
                 WorldPosition = new Vector3(3f, 4f, 5f),
@@ -125,7 +125,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void ResolveTransform_SnapToGround_UsesVisualHeightmap()
         {
-            var instance = new PerformerInstance
+            var instance = new PerformerTransformSnapshot
             {
                 TransformSource = TransformSource.WorldFixed,
                 WorldPosition = new Vector3(3f, 9f, 4f),
@@ -154,7 +154,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void ResolveTransform_GroundingNone_DoesNotTouchHeightmap()
         {
-            var instance = new PerformerInstance
+            var instance = new PerformerTransformSnapshot
             {
                 TransformSource = TransformSource.WorldFixed,
                 WorldPosition = new Vector3(7f, 8f, 9f),
@@ -206,7 +206,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void ResolveTransform_AlignToSurface_RotatesUpAxisToGroundNormal()
         {
-            var instance = new PerformerInstance
+            var instance = new PerformerTransformSnapshot
             {
                 TransformSource = TransformSource.WorldFixed,
                 WorldPosition = new Vector3(1f, 0f, 2f),
@@ -236,7 +236,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void ResolveTransform_BoneAttached_SkipsGrounding()
         {
-            var instance = new PerformerInstance
+            var instance = new PerformerTransformSnapshot
             {
                 TransformSource = TransformSource.BoneAttached,
                 WorldPosition = new Vector3(5f, 6f, 7f),
@@ -265,7 +265,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void ResolveTransform_AttachedToParent_SkipsGrounding()
         {
-            var instance = new PerformerInstance
+            var instance = new PerformerTransformSnapshot
             {
                 TransformSource = TransformSource.AttachedToParent,
                 WorldPosition = new Vector3(2f, 3f, 4f),

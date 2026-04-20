@@ -12,6 +12,7 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
+using Arch.Core.Extensions;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -56,10 +57,10 @@ namespace Ludots.Tests.Presentation
             attributes.SetCurrent(7, 50f);
             Entity owner = world.Create(attributes);
 
-            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            Assert.That(instances.TryAllocate(1, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7001, -1, out int handle), Is.True);
-            instances.Get(handle).BehaviorActiveMask = 1u;
+            Entity performer = instances.Create(1, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7001, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
             definitions.Register("behavior.attribute", new PerformerDefinition
             {
@@ -93,8 +94,8 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            Assert.That(instances.ResolveFloat(handle, 100), Is.EqualTo(0.5f).Within(0.001f));
-            Assert.That(instances.ResolveFloat(handle, 101), Is.EqualTo(1f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(performer, 100), Is.EqualTo(0.5f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(performer, 101), Is.EqualTo(1f).Within(0.001f));
         }
 
         [Test]
@@ -109,7 +110,7 @@ namespace Ludots.Tests.Presentation
                 new FacingDirection { AngleRad = MathF.PI * 0.5f },
                 new Ludots.Core.Gameplay.Components.Team { Id = 2 });
 
-            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             int defId = definitions.Register("behavior.bindings", new PerformerDefinition
             {
@@ -148,7 +149,7 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
-            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7102, -1, out int handle), Is.True);
+            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7102, Entity.Null, default);
 
             using var system = new PerformerBehaviorSystem(
                 world,
@@ -159,12 +160,12 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            Assert.That(instances.ResolveFloat(handle, 200), Is.EqualTo(0.25f).Within(0.001f));
-            Assert.That(instances.ResolveFloat(handle, 201), Is.EqualTo(0.9f).Within(0.001f));
-            Assert.That(instances.ResolveFloat(handle, 202), Is.EqualTo(0.2f).Within(0.001f));
-            Assert.That(instances.ResolveVector(handle, 205, Vector4.Zero), Is.EqualTo(new Vector4(0.9f, 0.2f, 0.2f, 1f)));
-            Assert.That(instances.ResolveFloat(handle, 203), Is.EqualTo(MathF.PI * 0.5f).Within(0.001f));
-            Assert.That(instances.ResolveFloat(handle, 204), Is.EqualTo(90f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(performer, 200), Is.EqualTo(0.25f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(performer, 201), Is.EqualTo(0.9f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(performer, 202), Is.EqualTo(0.2f).Within(0.001f));
+            Assert.That(instances.ResolveVector(performer, 205, Vector4.Zero), Is.EqualTo(new Vector4(0.9f, 0.2f, 0.2f, 1f)));
+            Assert.That(instances.ResolveFloat(performer, 203), Is.EqualTo(MathF.PI * 0.5f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(performer, 204), Is.EqualTo(90f).Within(0.001f));
         }
 
         [Test]
@@ -172,10 +173,10 @@ namespace Ludots.Tests.Presentation
         {
             using var world = World.Create();
             Entity owner = world.Create();
-            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            Assert.That(instances.TryAllocate(1, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7002, -1, out int handle), Is.True);
-            instances.Get(handle).BehaviorActiveMask = 0b11u;
+            Entity performer = instances.Create(1, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7002, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 0b11u;
 
             int workingTagId = TagRegistry.Register("working");
             definitions.Register("behavior.tag", new PerformerDefinition
@@ -216,16 +217,16 @@ namespace Ludots.Tests.Presentation
                 new SoundRequestBuffer());
 
             system.Update(0.016f);
-            Assert.That(instances.ResolveInt(handle, 110), Is.EqualTo(0));
-            Assert.That(instances.ResolveInt(handle, 111), Is.EqualTo(1));
+            Assert.That(instances.ResolveInt(performer, 110), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(performer, 111), Is.EqualTo(1));
 
             world.Add(owner, default(GameplayTagContainer));
             ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(owner);
             tags.AddTag(workingTagId);
 
             system.Update(0.016f);
-            Assert.That(instances.ResolveInt(handle, 110), Is.EqualTo(1));
-            Assert.That(instances.ResolveInt(handle, 111), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(performer, 110), Is.EqualTo(1));
+            Assert.That(instances.ResolveInt(performer, 111), Is.EqualTo(0));
         }
 
         [Test]
@@ -275,24 +276,24 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
-            var instances = new PerformerInstanceBuffer(capacity: 2);
-            Assert.That(instances.TryAllocate(defId, world.Create(), 0, PresentationAnchorKind.Entity, Vector3.Zero, 7003, -1, out int handle), Is.True);
-            instances.Get(handle).BehaviorActiveMask = 1u;
-            instances.SetParam(handle, 120, ParamLane.Float, 1f, 0, default);
+            var instances = new PerformerEntityRuntime(world);
+            Entity performer = instances.Create(defId, world.Create(), 0, PresentationAnchorKind.Entity, Vector3.Zero, 7003, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+            instances.SetParam(performer, 120, ParamLane.Float, 1f, 0, default);
             var animatorStates = new PerformerAnimatorStateBuffer(2);
 
             using var system = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
             system.Update(0.016f);
 
-            Assert.That(animatorStates.GetPackedState(handle).GetPrimaryStateIndex(), Is.EqualTo(2));
-            Assert.That(instances.ResolveInt(handle, 121), Is.EqualTo(1));
+            Assert.That(animatorStates.GetPackedState(performer).GetPrimaryStateIndex(), Is.EqualTo(2));
+            Assert.That(instances.ResolveInt(performer, 121), Is.EqualTo(1));
         }
 
         [Test]
         public void Attachment_UsesBoneTransformProviderAndBoneSpaceOffset()
         {
             using var world = World.Create();
-            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             Entity owner = world.Create();
 
@@ -317,10 +318,10 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
-            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7100, -1, out int parentHandle), Is.True);
-            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7101, parentHandle, out int childHandle), Is.True);
-            instances.Get(childHandle).BehaviorActiveMask = 1u;
-            instances.Get(parentHandle).StableId = 7100;
+            Entity parentPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7100, Entity.Null, default);
+            Entity childPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7101, parentPerformer, default);
+            world.Get<PerformerState>(childPerformer).BehaviorActiveMask = 1u;
+            world.Get<PerformerState>(parentPerformer).StableId = 7100;
 
             using var system = new PerformerBehaviorSystem(
                 world,
@@ -338,17 +339,19 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            ref PerformerInstance child = ref instances.Get(childHandle);
-            Assert.That(child.TransformSource, Is.EqualTo(TransformSource.BoneAttached));
-            Assert.That(child.WorldPosition, Is.EqualTo(new Vector3(3f, 4.5f, 5f)));
-            Assert.That(child.WorldScale, Is.EqualTo(Vector3.One));
+            ref var child = ref world.Get<PerformerTransformSource>(childPerformer);
+            ref var childPos = ref world.Get<PerformerWorldPosition>(childPerformer);
+            ref var childScale = ref world.Get<PerformerWorldScale>(childPerformer);
+            Assert.That(child.Value, Is.EqualTo(TransformSource.BoneAttached));
+            Assert.That(childPos.Value, Is.EqualTo(new Vector3(3f, 4.5f, 5f)));
+            Assert.That(childScale.Value, Is.EqualTo(Vector3.One));
         }
 
         [Test]
         public void Attachment_TargetParent_UsesParentTransformWithoutBoneProvider()
         {
             using var world = World.Create();
-            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             Entity owner = world.Create();
 
@@ -372,13 +375,15 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
-            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7200, -1, out int parentHandle), Is.True);
-            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7201, parentHandle, out int childHandle), Is.True);
-            instances.Get(childHandle).BehaviorActiveMask = 1u;
-            ref PerformerInstance parent = ref instances.Get(parentHandle);
-            parent.WorldPosition = new Vector3(10f, 4f, 6f);
-            parent.WorldRotation = Quaternion.Identity;
-            parent.WorldScale = new Vector3(3f, 3f, 3f);
+            Entity parentPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7200, Entity.Null, default);
+            Entity childPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7201, parentPerformer, default);
+            world.Get<PerformerState>(childPerformer).BehaviorActiveMask = 1u;
+            ref var parentPos = ref world.Get<PerformerWorldPosition>(parentPerformer);
+            parentPos.Value = new Vector3(10f, 4f, 6f);
+            ref var parentRot = ref world.Get<PerformerWorldRotation>(parentPerformer);
+            parentRot.Value = Quaternion.Identity;
+            ref var parentScale = ref world.Get<PerformerWorldScale>(parentPerformer);
+            parentScale.Value = new Vector3(3f, 3f, 3f);
 
             using var system = new PerformerBehaviorSystem(
                 world,
@@ -389,10 +394,12 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            ref PerformerInstance child = ref instances.Get(childHandle);
-            Assert.That(child.TransformSource, Is.EqualTo(TransformSource.AttachedToParent));
-            Assert.That(child.WorldPosition, Is.EqualTo(new Vector3(10f, 6f, 6f)));
-            Assert.That(child.WorldScale, Is.EqualTo(Vector3.One));
+            ref var childTransform = ref world.Get<PerformerTransformSource>(childPerformer);
+            ref var childPos = ref world.Get<PerformerWorldPosition>(childPerformer);
+            ref var childScale = ref world.Get<PerformerWorldScale>(childPerformer);
+            Assert.That(childTransform.Value, Is.EqualTo(TransformSource.AttachedToParent));
+            Assert.That(childPos.Value, Is.EqualTo(new Vector3(10f, 6f, 6f)));
+            Assert.That(childScale.Value, Is.EqualTo(Vector3.One));
         }
 
         [Test]
@@ -406,7 +413,7 @@ namespace Ludots.Tests.Presentation
                 Scale = new Vector3(2f, 3f, 4f),
             });
 
-            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             int defId = definitions.Register("behavior.entity_transform_scale", new PerformerDefinition
             {
@@ -429,8 +436,8 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
-            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7201, -1, out int handle), Is.True);
-            instances.Get(handle).BehaviorActiveMask = 1u;
+            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7201, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
             using var system = new PerformerBehaviorSystem(
                 world,
@@ -441,17 +448,19 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.016f);
 
-            ref readonly PerformerInstance instance = ref instances.Get(handle);
-            Assert.That(instance.TransformSource, Is.EqualTo(TransformSource.EntityTransform));
-            Assert.That(instance.WorldScale, Is.EqualTo(new Vector3(1f, 6f, 1f)));
-            Assert.That(instance.WorldPosition, Is.EqualTo(new Vector3(2f, 3f, 4f)));
+            ref var transformSource = ref world.Get<PerformerTransformSource>(performer);
+            ref var worldScale = ref world.Get<PerformerWorldScale>(performer);
+            ref var worldPos = ref world.Get<PerformerWorldPosition>(performer);
+            Assert.That(transformSource.Value, Is.EqualTo(TransformSource.EntityTransform));
+            Assert.That(worldScale.Value, Is.EqualTo(new Vector3(1f, 6f, 1f)));
+            Assert.That(worldPos.Value, Is.EqualTo(new Vector3(2f, 3f, 4f)));
         }
 
         [Test]
         public void Sound_EmitsPlayAndStopRequests()
         {
             using var world = World.Create();
-            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             var events = new PresentationEventStream();
             var soundRequests = new SoundRequestBuffer();
@@ -476,8 +485,8 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
-            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7004, -1, out int handle), Is.True);
-            instances.Get(handle).BehaviorActiveMask = 1u;
+            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7004, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
             using var system = new PerformerBehaviorSystem(world, instances, definitions, events, soundRequests);
             system.Update(0.016f);
@@ -485,7 +494,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(soundRequests.GetSpan()[0].Kind, Is.EqualTo(SoundRequestKind.PlayOrUpdate));
 
             soundRequests.Clear();
-            instances.Get(handle).BehaviorActiveMask = 0u;
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 0u;
             system.Update(0.016f);
             Assert.That(soundRequests.Count, Is.EqualTo(1));
             Assert.That(soundRequests.GetSpan()[0].Kind, Is.EqualTo(SoundRequestKind.Stop));
@@ -495,11 +504,11 @@ namespace Ludots.Tests.Presentation
         public void Material_MapsSwapTableToMaterialParam()
         {
             using var world = World.Create();
-            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            Assert.That(instances.TryAllocate(1, world.Create(), 0, PresentationAnchorKind.Entity, Vector3.Zero, 7005, -1, out int handle), Is.True);
-            instances.Get(handle).BehaviorActiveMask = 1u;
-            instances.SetParam(handle, 130, ParamLane.Float, 1f, 0, default);
+            Entity performer = instances.Create(1, world.Create(), 0, PresentationAnchorKind.Entity, Vector3.Zero, 7005, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+            instances.SetParam(performer, 130, ParamLane.Float, 1f, 0, default);
 
             definitions.Register("behavior.material", new PerformerDefinition
             {
@@ -531,14 +540,14 @@ namespace Ludots.Tests.Presentation
                 new SoundRequestBuffer());
 
             system.Update(0.016f);
-            Assert.That(instances.ResolveInt(handle, 130), Is.EqualTo(9002));
+            Assert.That(instances.ResolveInt(performer, 130), Is.EqualTo(9002));
         }
 
         [Test]
         public void Spline_Patrol_AdvancesProgressAndSetsSplineDrivenTransform()
         {
             using var world = World.Create();
-            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             Entity owner = world.Create();
 
@@ -563,9 +572,9 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
-            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 7006, -1, out int handle), Is.True);
-            instances.Get(handle).BehaviorActiveMask = 1u;
-            instances.SetParam(handle, 141, ParamLane.Float, 2f, 0, default);
+            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 7006, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+            instances.SetParam(performer, 141, ParamLane.Float, 2f, 0, default);
 
             using var system = new PerformerBehaviorSystem(
                 world,
@@ -576,10 +585,11 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0.25f);
 
-            ref PerformerInstance instance = ref instances.Get(handle);
-            Assert.That(instances.ResolveFloat(handle, 140), Is.EqualTo(0.5f).Within(0.001f));
-            Assert.That(instance.TransformSource, Is.EqualTo(TransformSource.SplineDriven));
-            Assert.That(instance.WorldPosition.X, Is.EqualTo(0.5f).Within(0.001f));
+            ref var transformSource = ref world.Get<PerformerTransformSource>(performer);
+            ref var worldPos = ref world.Get<PerformerWorldPosition>(performer);
+            Assert.That(instances.ResolveFloat(performer, 140), Is.EqualTo(0.5f).Within(0.001f));
+            Assert.That(transformSource.Value, Is.EqualTo(TransformSource.SplineDriven));
+            Assert.That(worldPos.Value.X, Is.EqualTo(0.5f).Within(0.001f));
         }
 
         private sealed class StubBoneTransformProvider : IBoneTransformProvider

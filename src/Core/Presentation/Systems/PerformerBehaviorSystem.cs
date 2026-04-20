@@ -423,27 +423,25 @@ namespace Ludots.Core.Presentation.Systems
 
             Entity parentEntity = World.Has<PerformerParent>(entity) ? World.Get<PerformerParent>(entity).Parent : Entity.Null;
             bool hasParent = parentEntity != Entity.Null && World.IsAlive(parentEntity) && World.Has<PerformerState>(parentEntity);
-            PerformerInstance parent = default;
+            PerformerTransformSnapshot parentSnapshot = default;
             if (hasParent)
             {
-                parent.WorldPosition = World.Has<PerformerWorldPosition>(parentEntity) ? World.Get<PerformerWorldPosition>(parentEntity).Value : Vector3.Zero;
-                parent.WorldRotation = World.Has<PerformerWorldRotation>(parentEntity) ? World.Get<PerformerWorldRotation>(parentEntity).Value : Quaternion.Identity;
-                parent.WorldScale = World.Has<PerformerWorldScale>(parentEntity) ? World.Get<PerformerWorldScale>(parentEntity).Value : Vector3.One;
+                parentSnapshot.WorldPosition = World.Has<PerformerWorldPosition>(parentEntity) ? World.Get<PerformerWorldPosition>(parentEntity).Value : Vector3.Zero;
+                parentSnapshot.WorldRotation = World.Has<PerformerWorldRotation>(parentEntity) ? World.Get<PerformerWorldRotation>(parentEntity).Value : Quaternion.Identity;
+                parentSnapshot.WorldScale = World.Has<PerformerWorldScale>(parentEntity) ? World.Get<PerformerWorldScale>(parentEntity).Value : Vector3.One;
             }
 
             bool hasOwnerTransform = World.IsAlive(state.OwnerEntity) && World.Has<VisualTransform>(state.OwnerEntity);
             VisualTransform ownerTransform = hasOwnerTransform ? World.Get<VisualTransform>(state.OwnerEntity) : default;
 
-            PerformerInstance instance = default;
-            instance.WorldPosition = World.Has<PerformerWorldPosition>(entity) ? World.Get<PerformerWorldPosition>(entity).Value : Vector3.Zero;
-            instance.WorldRotation = World.Has<PerformerWorldRotation>(entity) ? World.Get<PerformerWorldRotation>(entity).Value : Quaternion.Identity;
-            instance.WorldScale = World.Has<PerformerWorldScale>(entity) ? World.Get<PerformerWorldScale>(entity).Value : Vector3.One;
-            instance.TransformSource = World.Has<PerformerTransformSource>(entity) ? World.Get<PerformerTransformSource>(entity).Value : TransformSource.EntityTransform;
-            instance.AnchorKind = state.AnchorKind;
-            instance.ParentHandle = hasParent ? 0 : -1;
+            PerformerTransformSnapshot performerSnapshot = default;
+            performerSnapshot.WorldPosition = World.Has<PerformerWorldPosition>(entity) ? World.Get<PerformerWorldPosition>(entity).Value : Vector3.Zero;
+            performerSnapshot.WorldRotation = World.Has<PerformerWorldRotation>(entity) ? World.Get<PerformerWorldRotation>(entity).Value : Quaternion.Identity;
+            performerSnapshot.WorldScale = World.Has<PerformerWorldScale>(entity) ? World.Get<PerformerWorldScale>(entity).Value : Vector3.One;
+            performerSnapshot.TransformSource = World.Has<PerformerTransformSource>(entity) ? World.Get<PerformerTransformSource>(entity).Value : TransformSource.EntityTransform;
 
             PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
-                instance, parent, hasParent, ownerTransform, hasOwnerTransform, assetBinding, _heightmapProvider());
+                performerSnapshot, parentSnapshot, hasParent, ownerTransform, hasOwnerTransform, assetBinding, _heightmapProvider());
 
             if (World.Has<PerformerWorldPosition>(entity))
                 World.Get<PerformerWorldPosition>(entity).Value = resolved.Position;

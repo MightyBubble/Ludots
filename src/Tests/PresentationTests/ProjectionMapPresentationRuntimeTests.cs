@@ -38,8 +38,8 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine(ProjectionMods);
             LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
 
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
             var definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
                 ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
@@ -47,7 +47,7 @@ namespace Ludots.Tests.Presentation
             var snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer)
                 ?? throw new InvalidOperationException("PresentationVisualSnapshotBuffer missing.");
 
-            var activeDefinitions = CollectActiveDefinitionKeys(performers, definitions);
+            var activeDefinitions = CollectActiveDefinitionKeys(engine.World, performers, definitions);
             Assert.That(activeDefinitions.Count, Is.GreaterThanOrEqualTo(2), "Projection fixture should bootstrap skinned + static performer definitions.");
             Assert.That(FindPerformerOwners(engine.World, performers).Count, Is.EqualTo(3), "Projection fixture should bootstrap one performer-backed actor per map entity.");
 
@@ -93,8 +93,8 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine(ProjectionMods);
             LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
 
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
                 ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
             var snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer)
@@ -213,44 +213,35 @@ namespace Ludots.Tests.Presentation
             Assert.That(File.Exists(pathPath), Is.True);
         }
 
-        private static HashSet<string> CollectActiveDefinitionKeys(PerformerInstanceBuffer performers, PerformerDefinitionRegistry definitions)
+        private static HashSet<string> CollectActiveDefinitionKeys(World world, PerformerEntityRuntime performers, PerformerDefinitionRegistry definitions)
         {
             var keys = new HashSet<string>(StringComparer.Ordinal);
-            for (int handle = 0; handle < performers.Capacity; handle++)
+            var query = new QueryDescription().WithAll<PerformerState>();
+            world.Query(in query, (Entity entity, ref PerformerState state) =>
             {
-                if (!performers.IsActive(handle))
-                {
-                    continue;
-                }
-
-                keys.Add(definitions.GetName(performers.Get(handle).DefId));
-            }
+                keys.Add(definitions.GetName(state.DefId));
+            });
 
             return keys;
         }
 
-        private static List<Entity> FindPerformerOwners(World world, PerformerInstanceBuffer performers)
+        private static List<Entity> FindPerformerOwners(World world, PerformerEntityRuntime performers)
         {
             var owners = new List<Entity>();
             var seen = new HashSet<int>();
-            for (int handle = 0; handle < performers.Capacity; handle++)
+            var query = new QueryDescription().WithAll<PerformerState>();
+            world.Query(in query, (Entity entity, ref PerformerState state) =>
             {
-                if (!performers.IsActive(handle))
+                if (state.AnchorKind != PresentationAnchorKind.Entity || !world.IsAlive(state.OwnerEntity))
                 {
-                    continue;
+                    return;
                 }
 
-                PerformerInstance instance = performers.Get(handle);
-                if (instance.AnchorKind != PresentationAnchorKind.Entity || !world.IsAlive(instance.Owner))
+                if (seen.Add(state.OwnerEntity.Id))
                 {
-                    continue;
+                    owners.Add(state.OwnerEntity);
                 }
-
-                if (seen.Add(instance.Owner.Id))
-                {
-                    owners.Add(instance.Owner);
-                }
-            }
+            });
 
             return owners;
         }

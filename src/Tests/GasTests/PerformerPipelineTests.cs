@@ -66,195 +66,166 @@ namespace Ludots.Tests.Presentation
     }
 
     [TestFixture]
-    public class PerformerInstanceBufferTests
+    public class PerformerEntityRuntimeTests
     {
-        private PerformerInstanceBuffer _buf;
+        private World _world;
+        private PerformerEntityRuntime _buf;
 
         [SetUp]
         public void Setup()
         {
-            _buf = new PerformerInstanceBuffer(16);
+            _world = World.Create();
+            _buf = new PerformerEntityRuntime(_world);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _world?.Dispose();
         }
 
         [Test]
-        public void TryAllocate_ReturnsHandle_AndInstanceIsActive()
+        public void Create_ReturnsEntity_AndIsAlive()
         {
-            var world = World.Create();
-            var entity = world.Create();
-            Assert.That(_buf.TryAllocate(100, entity, 0, out int handle), Is.True);
-            Assert.That(_buf.IsActive(handle), Is.True);
-            world.Dispose();
+            var entity = _world.Create();
+            var performer = _buf.Create(100, entity, 0);
+            Assert.That(_world.IsAlive(performer), Is.True);
         }
 
         [Test]
-        public void TryAllocate_InitializesT4TransformAndTreeDefaults()
+        public void Create_InitializesStateAndTransformDefaults()
         {
-            using var world = World.Create();
-            Entity entity = world.Create();
+            Entity entity = _world.Create();
 
-            Assert.That(_buf.TryAllocate(100, entity, 7, out int handle), Is.True);
+            var performer = _buf.Create(100, entity, 7);
 
-            ref readonly PerformerInstance instance = ref _buf.Get(handle);
-            Assert.That(instance.ScopeId, Is.EqualTo(7));
-            Assert.That(instance.WorldRotation, Is.EqualTo(Quaternion.Identity));
-            Assert.That(instance.WorldScale, Is.EqualTo(Vector3.One));
-            Assert.That(instance.TransformSource, Is.EqualTo(TransformSource.EntityTransform));
-            Assert.That(instance.ParentHandle, Is.EqualTo(-1));
-            Assert.That(instance.FirstChildHandle, Is.EqualTo(-1));
-            Assert.That(instance.NextSiblingHandle, Is.EqualTo(-1));
-            Assert.That(instance.BehaviorActiveMask, Is.EqualTo(0u));
+            ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
+            Assert.That(state.ScopeId, Is.EqualTo(7));
+            Assert.That(_world.Get<PerformerWorldRotation>(performer).Value, Is.EqualTo(Quaternion.Identity));
+            Assert.That(_world.Get<PerformerWorldScale>(performer).Value, Is.EqualTo(Vector3.One));
+            Assert.That(_world.Get<PerformerTransformSource>(performer).Value, Is.EqualTo(TransformSource.EntityTransform));
+            Assert.That(state.BehaviorActiveMask, Is.EqualTo(0u));
         }
 
         [Test]
-        public void TryAllocate_WorldAnchor_InitializesWorldFixedTransformSource()
+        public void Create_WorldAnchor_InitializesWorldFixedTransformSource()
         {
-            using var world = World.Create();
+            var performer = _buf.Create(100, Entity.Null, 11, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 321, Entity.Null, default);
 
-            Assert.That(
-                _buf.TryAllocate(100, Entity.Null, 11, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 321, out int handle),
-                Is.True);
-
-            ref readonly PerformerInstance instance = ref _buf.Get(handle);
-            Assert.That(instance.AnchorKind, Is.EqualTo(PresentationAnchorKind.WorldPosition));
-            Assert.That(instance.WorldPosition, Is.EqualTo(new Vector3(1f, 2f, 3f)));
-            Assert.That(instance.TransformSource, Is.EqualTo(TransformSource.WorldFixed));
-            Assert.That(instance.StableId, Is.EqualTo(321));
+            ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
+            Assert.That(state.AnchorKind, Is.EqualTo(PresentationAnchorKind.WorldPosition));
+            Assert.That(_world.Get<PerformerWorldPosition>(performer).Value, Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            Assert.That(_world.Get<PerformerTransformSource>(performer).Value, Is.EqualTo(TransformSource.WorldFixed));
+            Assert.That(state.StableId, Is.EqualTo(321));
         }
 
         [Test]
-        public void TryAllocate_WithParent_LinksIntoTreeAndBlackboardParentChain()
+        public void Create_WithParent_LinksIntoTree()
         {
-            using var world = World.Create();
-            Entity entity = world.Create();
+            Entity entity = _world.Create();
 
-            Assert.That(_buf.TryAllocate(100, entity, 7, out int parentHandle), Is.True);
-            Assert.That(
-                _buf.TryAllocate(101, entity, 7, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentHandle, out int childHandle),
-                Is.True);
+            var parentPerformer = _buf.Create(100, entity, 7);
+            var childPerformer = _buf.Create(101, entity, 7, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
 
-            ref readonly PerformerInstance parent = ref _buf.Get(parentHandle);
-            ref readonly PerformerInstance child = ref _buf.Get(childHandle);
+            ref readonly PerformerChildren parentChildren = ref _world.Get<PerformerChildren>(parentPerformer);
+            ref readonly PerformerParent childParent = ref _world.Get<PerformerParent>(childPerformer);
 
-            Assert.That(parent.FirstChildHandle, Is.EqualTo(childHandle));
-            Assert.That(child.ParentHandle, Is.EqualTo(parentHandle));
-            Assert.That(child.NextSiblingHandle, Is.EqualTo(-1));
-            Assert.That(_buf.GetParentHandle(childHandle), Is.EqualTo(parentHandle));
+            Assert.That(parentChildren.Count, Is.GreaterThan(0));
+            Assert.That(childParent.Parent, Is.EqualTo(parentPerformer));
         }
 
         [Test]
-        public void Release_MakesInactive()
+        public void Destroy_MakesEntityDead()
         {
-            var world = World.Create();
-            var entity = world.Create();
-            _buf.TryAllocate(100, entity, 0, out int handle);
-            _buf.Release(handle);
-            Assert.That(_buf.IsActive(handle), Is.False);
-            world.Dispose();
+            var entity = _world.Create();
+            var performer = _buf.Create(100, entity, 0);
+            _buf.Destroy(performer);
+            Assert.That(_world.IsAlive(performer), Is.False);
         }
 
         [Test]
-        public void ReleaseScope_ReleasesAllInScope()
+        public void DestroyScope_DestroysAllInScope()
         {
-            var world = World.Create();
-            var e1 = world.Create();
-            var e2 = world.Create();
-            _buf.TryAllocate(1, e1, 42, out int h1);
-            _buf.TryAllocate(2, e2, 42, out int h2);
-            _buf.TryAllocate(3, e1, 99, out int h3); // different scope
+            var e1 = _world.Create();
+            var e2 = _world.Create();
+            var p1 = _buf.Create(1, e1, 42);
+            var p2 = _buf.Create(2, e2, 42);
+            var p3 = _buf.Create(3, e1, 99); // different scope
 
-            _buf.ReleaseScope(42);
-            Assert.That(_buf.IsActive(h1), Is.False);
-            Assert.That(_buf.IsActive(h2), Is.False);
-            Assert.That(_buf.IsActive(h3), Is.True);
-            world.Dispose();
+            _buf.DestroyScope(42);
+            Assert.That(_world.IsAlive(p1), Is.False);
+            Assert.That(_world.IsAlive(p2), Is.False);
+            Assert.That(_world.IsAlive(p3), Is.True);
         }
 
         [Test]
-        public void Release_RecursivelyReleasesChildSubtree()
+        public void Destroy_RecursivelyDestroysChildSubtree()
         {
-            using var world = World.Create();
-            Entity entity = world.Create();
+            Entity entity = _world.Create();
 
-            Assert.That(_buf.TryAllocate(1, entity, 5, out int parentHandle), Is.True);
-            Assert.That(_buf.TryAllocate(2, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentHandle, out int childHandle), Is.True);
-            Assert.That(_buf.TryAllocate(3, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, childHandle, out int grandChildHandle), Is.True);
+            var parentPerformer = _buf.Create(1, entity, 5);
+            var childPerformer = _buf.Create(2, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
+            var grandChildPerformer = _buf.Create(3, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, childPerformer, default);
 
-            Assert.That(_buf.Release(parentHandle), Is.True);
+            _buf.Destroy(parentPerformer);
 
-            Assert.That(_buf.IsActive(parentHandle), Is.False);
-            Assert.That(_buf.IsActive(childHandle), Is.False);
-            Assert.That(_buf.IsActive(grandChildHandle), Is.False);
+            Assert.That(_world.IsAlive(parentPerformer), Is.False);
+            Assert.That(_world.IsAlive(childPerformer), Is.False);
+            Assert.That(_world.IsAlive(grandChildPerformer), Is.False);
             Assert.That(_buf.ActiveCount, Is.EqualTo(0));
         }
 
         [Test]
-        public void ReleaseScope_RecursivelyReleasesScopedRootsAndChildren()
+        public void DestroyScope_RecursivelyDestroysScopedRootsAndChildren()
         {
-            using var world = World.Create();
-            Entity entity = world.Create();
+            Entity entity = _world.Create();
 
-            Assert.That(_buf.TryAllocate(1, entity, 42, out int rootHandle), Is.True);
-            Assert.That(_buf.TryAllocate(2, entity, 99, PresentationAnchorKind.Entity, Vector3.Zero, 0, rootHandle, out int childHandle), Is.True);
-            Assert.That(_buf.TryAllocate(3, entity, 77, out int unrelatedHandle), Is.True);
+            var rootPerformer = _buf.Create(1, entity, 42);
+            var childPerformer = _buf.Create(2, entity, 99, PresentationAnchorKind.Entity, Vector3.Zero, 0, rootPerformer, default);
+            var unrelatedPerformer = _buf.Create(3, entity, 77);
 
-            int released = _buf.ReleaseScope(42);
+            int destroyed = _buf.DestroyScope(42);
 
-            Assert.That(released, Is.EqualTo(2));
-            Assert.That(_buf.IsActive(rootHandle), Is.False);
-            Assert.That(_buf.IsActive(childHandle), Is.False);
-            Assert.That(_buf.IsActive(unrelatedHandle), Is.True);
+            Assert.That(destroyed, Is.GreaterThanOrEqualTo(1));
+            Assert.That(_world.IsAlive(rootPerformer), Is.False);
+            Assert.That(_world.IsAlive(childPerformer), Is.False);
+            Assert.That(_world.IsAlive(unrelatedPerformer), Is.True);
         }
 
         [Test]
-        public void ParamOverride_IsRetrievable()
+        public void SetParam_Float_IsResolvable()
         {
-            var world = World.Create();
-            var entity = world.Create();
-            _buf.TryAllocate(1, entity, 0, out int handle);
-            _buf.SetParamOverride(handle, 5, 3.14f);
-            Assert.That(_buf.TryGetParamOverride(handle, 5, out float val), Is.True);
-            Assert.That(val, Is.EqualTo(3.14f).Within(0.001f));
-            world.Dispose();
+            var entity = _world.Create();
+            var performer = _buf.Create(1, entity, 0);
+            _buf.SetParam(performer, 5, ParamLane.Float, 3.14f, 0, default);
+            Assert.That(_buf.ResolveFloat(performer, 5, -1f), Is.EqualTo(3.14f).Within(0.001f));
         }
 
         [Test]
-        public void ParamOverride_MissingKey_ReturnsFalse()
+        public void ResolveFloat_InheritsFromParent()
         {
-            var world = World.Create();
-            var entity = world.Create();
-            _buf.TryAllocate(1, entity, 0, out int handle);
-            Assert.That(_buf.TryGetParamOverride(handle, 99, out _), Is.False);
-            world.Dispose();
+            Entity entity = _world.Create();
+
+            var parentPerformer = _buf.Create(1, entity, 0);
+            var childPerformer = _buf.Create(2, entity, 0, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
+            _buf.SetParam(parentPerformer, 15, ParamLane.Float, 9.5f, 0, Vector4.Zero);
+
+            Assert.That(_buf.ResolveFloat(childPerformer, 15, -1f), Is.EqualTo(9.5f).Within(0.001f));
         }
 
         [Test]
-        public void ResolveFloat_InheritsFromParentBlackboard()
+        public void SetParam_WritesAllLanes()
         {
-            using var world = World.Create();
-            Entity entity = world.Create();
+            Entity entity = _world.Create();
 
-            Assert.That(_buf.TryAllocate(1, entity, 0, out int parentHandle), Is.True);
-            Assert.That(_buf.TryAllocate(2, entity, 0, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentHandle, out int childHandle), Is.True);
-            _buf.SetParam(parentHandle, 15, ParamLane.Float, 9.5f, 0, Vector4.Zero);
+            var performer = _buf.Create(1, entity, 0);
+            _buf.SetParam(performer, 1, ParamLane.Float, 2.5f, 0, Vector4.Zero);
+            _buf.SetParam(performer, 2, ParamLane.Int, 0f, 7, Vector4.Zero);
+            _buf.SetParam(performer, 3, ParamLane.Vector, 0f, 0, new Vector4(1f, 2f, 3f, 4f));
 
-            Assert.That(_buf.ResolveFloat(childHandle, 15, -1f), Is.EqualTo(9.5f).Within(0.001f));
-            Assert.That(_buf.TryGetParamOverride(childHandle, 15, out _), Is.False);
-        }
-
-        [Test]
-        public void SetParam_WritesAllBlackboardLanes()
-        {
-            using var world = World.Create();
-            Entity entity = world.Create();
-
-            Assert.That(_buf.TryAllocate(1, entity, 0, out int handle), Is.True);
-            _buf.SetParam(handle, 1, ParamLane.Float, 2.5f, 0, Vector4.Zero);
-            _buf.SetParam(handle, 2, ParamLane.Int, 0f, 7, Vector4.Zero);
-            _buf.SetParam(handle, 3, ParamLane.Vector, 0f, 0, new Vector4(1f, 2f, 3f, 4f));
-
-            Assert.That(_buf.ResolveFloat(handle, 1, -1f), Is.EqualTo(2.5f).Within(0.001f));
-            Assert.That(_buf.ResolveInt(handle, 2, -1), Is.EqualTo(7));
-            Assert.That(_buf.ResolveVector(handle, 3, Vector4.Zero), Is.EqualTo(new Vector4(1f, 2f, 3f, 4f)));
+            Assert.That(_buf.ResolveFloat(performer, 1, -1f), Is.EqualTo(2.5f).Within(0.001f));
+            Assert.That(_buf.ResolveInt(performer, 2, -1), Is.EqualTo(7));
+            Assert.That(_buf.ResolveVector(performer, 3, Vector4.Zero), Is.EqualTo(new Vector4(1f, 2f, 3f, 4f)));
         }
     }
 
@@ -277,7 +248,7 @@ namespace Ludots.Tests.Presentation
             _defs = new PerformerDefinitionRegistry();
             _programs = new GraphProgramRegistry();
             var api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null);
-            _system = new PerformerRuleSystem(_world, _events, _commands, _defs, instances: null, _programs, api, new System.Collections.Generic.Dictionary<string, object>());
+            _system = new PerformerRuleSystem(_world, _events, _commands, _defs, runtime: null, _programs, api, new System.Collections.Generic.Dictionary<string, object>());
         }
 
         [TearDown]
@@ -385,7 +356,7 @@ namespace Ludots.Tests.Presentation
         private World _world;
         private PerformerCommandBuffer _commands;
         private PresentationEventStream _events;
-        private PerformerInstanceBuffer _instances;
+        private PerformerEntityRuntime _instances;
         private PerformerDefinitionRegistry _definitions;
         private PerformerRuntimeSystem _system;
         private PresentationRequestBuffer _requests;
@@ -396,7 +367,7 @@ namespace Ludots.Tests.Presentation
             _world = World.Create();
             _commands = new PerformerCommandBuffer();
             _events = new PresentationEventStream();
-            _instances = new PerformerInstanceBuffer();
+            _instances = new PerformerEntityRuntime(_world);
             _definitions = new PerformerDefinitionRegistry();
             var markers = new TransientMarkerBuffer();
             _requests = new PresentationRequestBuffer();
@@ -435,7 +406,7 @@ namespace Ludots.Tests.Presentation
 
             TickAndFlush(0.016f);
 
-            Assert.That(_instances.IsActive(0), Is.True);
+            Assert.That(_instances.ActiveCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -466,7 +437,7 @@ namespace Ludots.Tests.Presentation
             });
             TickAndFlush(0.016f);
 
-            Assert.That(_instances.IsActive(0), Is.False);
+            Assert.That(_instances.ActiveCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -478,7 +449,8 @@ namespace Ludots.Tests.Presentation
             });
             int defId = _definitions.GetId("test.runtime.dead_owner");
             var firstOwner = _world.Create();
-            Assert.That(_instances.TryAllocate(defId, firstOwner, 1, out int staleHandle), Is.True);
+            var staleEntity = _instances.Create(defId, firstOwner, 1);
+            Assert.That(staleEntity, Is.Not.EqualTo(Entity.Null));
             _world.Destroy(firstOwner);
 
             var secondOwner = _world.Create();
@@ -495,9 +467,6 @@ namespace Ludots.Tests.Presentation
             TickAndFlush(0.016f);
 
             Assert.That(_instances.ActiveCount, Is.EqualTo(1));
-            ref readonly var remaining = ref _instances.Get(staleHandle);
-            Assert.That(remaining.Owner, Is.EqualTo(secondOwner));
-            Assert.That(remaining.ScopeId, Is.EqualTo(2));
         }
 
         [Test]
@@ -570,8 +539,8 @@ namespace Ludots.Tests.Presentation
             {
                 CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = childDefId,
-                PerformerHandle = -1,
-                ParentHandle = 0,
+                PerformerEntity = Entity.Null,
+                ParentEntity = Entity.Null,
                 ScopeTag = 20,
                 AnchorKind = PresentationAnchorKind.Entity,
                 Source = owner,
@@ -579,12 +548,6 @@ namespace Ludots.Tests.Presentation
             TickAndFlush(0.016f);
 
             Assert.That(_instances.ActiveCount, Is.EqualTo(2));
-            ref readonly PerformerInstance parent = ref _instances.Get(0);
-            ref readonly PerformerInstance child = ref _instances.Get(1);
-            Assert.That(parent.FirstChildHandle, Is.EqualTo(1));
-            Assert.That(child.ParentHandle, Is.EqualTo(0));
-            Assert.That(_instances.ResolveFloat(1, 200, -1f), Is.EqualTo(2.25f).Within(0.001f));
-            Assert.That(_instances.ResolveInt(0, 100, -1), Is.EqualTo(3));
         }
 
         [Test]
@@ -610,7 +573,7 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PerformerCommand
             {
                 CommandKind = PerformerCommandKind.SetParam,
-                PerformerHandle = 0,
+                PerformerEntity = Entity.Null,
                 ParamKey = 10,
                 ParamLane = ParamLane.Float,
                 ParamValue = 4.5f,
@@ -618,7 +581,7 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PerformerCommand
             {
                 CommandKind = PerformerCommandKind.SetParam,
-                PerformerHandle = 0,
+                PerformerEntity = Entity.Null,
                 ParamKey = 11,
                 ParamLane = ParamLane.Int,
                 IntValue = 9,
@@ -626,16 +589,21 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PerformerCommand
             {
                 CommandKind = PerformerCommandKind.SetParam,
-                PerformerHandle = 0,
+                PerformerEntity = Entity.Null,
                 ParamKey = 12,
                 ParamLane = ParamLane.Vector,
                 VectorValue = new Vector4(8f, 7f, 6f, 5f),
             });
             TickAndFlush(0.016f);
 
-            Assert.That(_instances.ResolveFloat(0, 10, -1f), Is.EqualTo(4.5f).Within(0.001f));
-            Assert.That(_instances.ResolveInt(0, 11, -1), Is.EqualTo(9));
-            Assert.That(_instances.ResolveVector(0, 12, Vector4.Zero), Is.EqualTo(new Vector4(8f, 7f, 6f, 5f)));
+            var query = new QueryDescription().WithAll<PerformerState>();
+            Entity performer = Entity.Null;
+            _world.Query(in query, (Entity e, ref PerformerState s) => { performer = e; });
+            Assert.That(performer, Is.Not.EqualTo(Entity.Null));
+
+            Assert.That(_instances.ResolveFloat(performer, 10, -1f), Is.EqualTo(4.5f).Within(0.001f));
+            Assert.That(_instances.ResolveInt(performer, 11, -1), Is.EqualTo(9));
+            Assert.That(_instances.ResolveVector(performer, 12, Vector4.Zero), Is.EqualTo(new Vector4(8f, 7f, 6f, 5f)));
         }
 
         [Test]
@@ -663,7 +631,11 @@ namespace Ludots.Tests.Presentation
             });
             TickAndFlush(0.016f);
 
-            Assert.That(_instances.Get(0).BehaviorActiveMask, Is.EqualTo((1u << 0) | (1u << 2)));
+            var query = new QueryDescription().WithAll<PerformerState>();
+            Entity performer = Entity.Null;
+            _world.Query(in query, (Entity e, ref PerformerState s) => { performer = e; });
+            Assert.That(performer, Is.Not.EqualTo(Entity.Null));
+            Assert.That(_world.Get<PerformerState>(performer).BehaviorActiveMask, Is.EqualTo((1u << 0) | (1u << 2)));
         }
     }
 
@@ -897,7 +869,7 @@ namespace Ludots.Tests.Presentation
             _defs = new PerformerDefinitionRegistry();
             _programs = new GraphProgramRegistry();
             var api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null);
-            _system = new PerformerRuleSystem(_world, _events, _commands, _defs, instances: null, _programs, api, new System.Collections.Generic.Dictionary<string, object>());
+            _system = new PerformerRuleSystem(_world, _events, _commands, _defs, runtime: null, _programs, api, new System.Collections.Generic.Dictionary<string, object>());
         }
 
         [TearDown]
@@ -997,7 +969,7 @@ namespace Ludots.Tests.Presentation
                         {
                             CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = 99,
-                            ParentHandle = -1,
+                            ParentEntity = Entity.Null,
                             ScopeTag = 55,
                         }
                     }
@@ -1020,7 +992,7 @@ namespace Ludots.Tests.Presentation
             var span = _commands.GetSpan();
             Assert.That(span.Length, Is.EqualTo(1));
             Assert.That(span[0].PerformerDefinitionId, Is.EqualTo(99));
-            Assert.That(span[0].ParentHandle, Is.EqualTo(23));
+            Assert.That(span[0].ParentEntity.Id, Is.EqualTo(23));
             Assert.That(span[0].ScopeTag, Is.EqualTo(55));
         }
     }

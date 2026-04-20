@@ -42,7 +42,7 @@ namespace Ludots.Tests.Presentation
         private PresentationEventStream _presEvents;
         private PerformerCommandBuffer _commands;
         private PerformerDefinitionRegistry _defs;
-        private PerformerInstanceBuffer _instances;
+        private PerformerEntityRuntime _instances;
         private GraphProgramRegistry _programs;
         private Dictionary<string, object> _globals;
         private PrimitiveDrawBuffer _primitives;
@@ -70,7 +70,7 @@ namespace Ludots.Tests.Presentation
             _presEvents = new PresentationEventStream(16384);
             _commands = new PerformerCommandBuffer(16384);
             _defs = new PerformerDefinitionRegistry();
-            _instances = new PerformerInstanceBuffer(8192);
+            _instances = new PerformerEntityRuntime(_world);
             _programs = new GraphProgramRegistry();
             _globals = new Dictionary<string, object>();
             _primitives = new PrimitiveDrawBuffer(16384);
@@ -206,8 +206,10 @@ namespace Ludots.Tests.Presentation
             for (int i = 0; i < INSTANCE_COUNT; i++)
             {
                 var owner = CreateOwner(new Vector3(i, 0f, i));
-                Assert.That(_instances.TryAllocate(_defs.GetId(WellKnownPerformerKeys.FloatingCombatText), owner, -1, out int handle), Is.True);
-                _instances.Get(handle).BehaviorActiveMask = 1u;
+                var entity = _instances.Create(_defs.GetId(WellKnownPerformerKeys.FloatingCombatText), owner, -1);
+                Assert.That(entity, Is.Not.EqualTo(Entity.Null));
+                ref var state = ref _world.Get<PerformerState>(entity);
+                state.BehaviorActiveMask = 1u;
             }
 
             WarmUpGC();
@@ -236,8 +238,10 @@ namespace Ludots.Tests.Presentation
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 70f + (i % 30));
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true);
-                Assert.That(_instances.TryAllocate(defId, owner, i + 1, out int handle), Is.True);
-                _instances.Get(handle).BehaviorActiveMask = 0b11u;
+                var entity = _instances.Create(defId, owner, i + 1);
+                Assert.That(entity, Is.Not.EqualTo(Entity.Null));
+                ref var state = ref _world.Get<PerformerState>(entity);
+                state.BehaviorActiveMask = 0b11u;
             }
 
             WarmUpGC();
@@ -267,8 +271,10 @@ namespace Ludots.Tests.Presentation
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 80f);
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true, visible: i % 3 != 0);
-                Assert.That(_instances.TryAllocate(defId, owner, i + 1, out int handle), Is.True);
-                _instances.Get(handle).BehaviorActiveMask = 0b11u;
+                var entity = _instances.Create(defId, owner, i + 1);
+                Assert.That(entity, Is.Not.EqualTo(Entity.Null));
+                ref var state = ref _world.Get<PerformerState>(entity);
+                state.BehaviorActiveMask = 0b11u;
             }
 
             WarmUpGC();
@@ -291,7 +297,8 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Benchmark_InstanceBuffer_AllocateRelease()
         {
-            var buf = new PerformerInstanceBuffer(8192);
+            var benchWorld = World.Create();
+            var buf = new PerformerEntityRuntime(benchWorld);
             var entity = CreateOwner(Vector3.Zero);
 
             WarmUpGC();
@@ -301,44 +308,46 @@ namespace Ludots.Tests.Presentation
             int totalOps = 0;
             for (int frame = 0; frame < FRAMES; frame++)
             {
+                var created = new Entity[INSTANCE_COUNT];
                 for (int i = 0; i < INSTANCE_COUNT; i++)
                 {
-                    buf.TryAllocate(1, entity, i % 10, out _);
+                    created[i] = buf.Create(1, entity, i % 10);
                     totalOps++;
                 }
 
                 for (int i = 0; i < INSTANCE_COUNT / 2; i++)
                 {
-                    buf.Release(i);
+                    buf.Destroy(created[i]);
                     totalOps++;
                 }
 
                 for (int s = 0; s < 5; s++)
                 {
-                    buf.ReleaseScope(s);
+                    buf.DestroyScope(s + 1);
                     totalOps++;
                 }
-
-                buf.Clear();
             }
 
             sw.Stop();
             long endAlloc = GC.GetAllocatedBytesForCurrentThread();
-            PrintResult("PerformerInstanceBuffer.AllocateRelease", sw, startAlloc, endAlloc, totalOps);
+            PrintResult("PerformerEntityRuntime.AllocateRelease", sw, startAlloc, endAlloc, totalOps);
+            benchWorld.Dispose();
         }
 
         [Test]
         public void Benchmark_InstanceBuffer_ProcessActive_SparseSlots()
         {
-            var buf = new PerformerInstanceBuffer(4096);
+            var benchWorld = World.Create();
+            var buf = new PerformerEntityRuntime(benchWorld);
             var entity = CreateOwner(Vector3.Zero);
+            var created = new Entity[2000];
             for (int i = 0; i < 2000; i++)
             {
-                buf.TryAllocate(1, entity, 0, out _);
+                created[i] = buf.Create(1, entity, 1);
             }
             for (int i = 0; i < 2000; i += 2)
             {
-                buf.Release(i);
+                buf.Destroy(created[i]);
             }
 
             int callbackCount = 0;
@@ -346,14 +355,16 @@ namespace Ludots.Tests.Presentation
             long startAlloc = GC.GetAllocatedBytesForCurrentThread();
             var sw = Stopwatch.StartNew();
 
+            var query = new QueryDescription().WithAll<PerformerState>();
             for (int frame = 0; frame < FRAMES * 10; frame++)
             {
-                callbackCount += buf.ProcessActive(0.016f, (int handle, ref PerformerInstance inst) => { });
+                benchWorld.Query(in query, (Entity e, ref PerformerState state) => { callbackCount++; });
             }
 
             sw.Stop();
             long endAlloc = GC.GetAllocatedBytesForCurrentThread();
-            PrintResult("PerformerInstanceBuffer.ProcessActive.SparseSlots", sw, startAlloc, endAlloc, callbackCount);
+            PrintResult("PerformerEntityRuntime.ProcessActive.SparseSlots", sw, startAlloc, endAlloc, callbackCount);
+            benchWorld.Dispose();
         }
 
         [Test]
@@ -432,8 +443,10 @@ namespace Ludots.Tests.Presentation
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 50f + (i % 50));
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true);
-                Assert.That(_instances.TryAllocate(defId, owner, i + 1, out int handle), Is.True);
-                _instances.Get(handle).BehaviorActiveMask = 0b11u;
+                var entity = _instances.Create(defId, owner, i + 1);
+                Assert.That(entity, Is.Not.EqualTo(Entity.Null));
+                ref var state = ref _world.Get<PerformerState>(entity);
+                state.BehaviorActiveMask = 0b11u;
             }
 
             WarmUpGC();
@@ -497,7 +510,7 @@ namespace Ludots.Tests.Presentation
             var commands = new PerformerCommandBuffer(16384);
                 var programs = new GraphProgramRegistry();
                 var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
-            using var system = new PerformerRuleSystem(_world, events, commands, defs, instances: null, programs, graphApi, _globals);
+            using var system = new PerformerRuleSystem(_world, events, commands, defs, runtime: null, programs, graphApi, _globals);
 
                 for (int d = 0; d < defCount; d++)
                 {
@@ -552,8 +565,10 @@ namespace Ludots.Tests.Presentation
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 80f);
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true);
-                Assert.That(_instances.TryAllocate(defId, owner, i + 1, out int handle), Is.True);
-                _instances.Get(handle).BehaviorActiveMask = 0b11u;
+                var entity = _instances.Create(defId, owner, i + 1);
+                Assert.That(entity, Is.Not.EqualTo(Entity.Null));
+                ref var state = ref _world.Get<PerformerState>(entity);
+                state.BehaviorActiveMask = 0b11u;
             }
 
             WarmUpGC();

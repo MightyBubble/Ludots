@@ -146,7 +146,7 @@ namespace Ludots.Tests.Presentation
                     ],
                 });
 
-            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var instances = new PerformerEntityRuntime(world);
             var animatorStates = new PerformerAnimatorStateBuffer(4);
             var requests = new PresentationRequestBuffer();
             Entity owner = world.Create(
@@ -159,11 +159,9 @@ namespace Ludots.Tests.Presentation
                 },
                 new CullState { IsVisible = true, LOD = LODLevel.High });
 
-            Assert.That(
-                instances.TryAllocate(defId, owner, scopeId: 42, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 7001, parentHandle: -1, out int handle),
-                Is.True);
-            instances.Get(handle).BehaviorActiveMask = (1u << 0) | (1u << 1);
-            instances.SetParam(handle, 91, ParamLane.Int, 0f, 1, default);
+            Entity performer = instances.Create(defId, owner, scopeId: 42, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 7001, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = (1u << 0) | (1u << 1);
+            instances.SetParam(performer, 91, ParamLane.Int, 0f, 1, default);
 
             using var animatorSystem = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
             using var emitSystem = new PerformerEmitSystem(
@@ -220,19 +218,19 @@ namespace Ludots.Tests.Presentation
                     ],
                 });
 
-            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var instances = new PerformerEntityRuntime(world);
             var requests = new PresentationRequestBuffer();
             Entity owner = world.Create(
                 new PresentationStableId { Value = 1 },
                 new CullState { IsVisible = true, LOD = LODLevel.High });
 
-            Assert.That(
-                instances.TryAllocate(defId, owner, scopeId: 0, PresentationAnchorKind.WorldPosition, new Vector3(4f, 5f, 6f), stableId: 2001, parentHandle: -1, out int handle),
-                Is.True);
-            ref PerformerInstance instance = ref instances.Get(handle);
-            instance.BehaviorActiveMask = 1u;
-            instance.WorldRotation = Quaternion.Identity;
-            instance.WorldScale = new Vector3(1f, 2f, 3f);
+            Entity performer = instances.Create(defId, owner, scopeId: 0, PresentationAnchorKind.WorldPosition, new Vector3(4f, 5f, 6f), stableId: 2001, Entity.Null, default);
+            ref var state = ref world.Get<PerformerState>(performer);
+            state.BehaviorActiveMask = 1u;
+            ref var rot = ref world.Get<PerformerWorldRotation>(performer);
+            rot.Value = Quaternion.Identity;
+            ref var scale = ref world.Get<PerformerWorldScale>(performer);
+            scale.Value = new Vector3(1f, 2f, 3f);
 
             using var system = new PerformerEmitSystem(
                 world,
@@ -434,7 +432,7 @@ namespace Ludots.Tests.Presentation
                     ],
                 });
 
-            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var instances = new PerformerEntityRuntime(world);
             var animatorStates = new PerformerAnimatorStateBuffer(4);
             Entity owner = world.Create(
                 new PresentationStableId { Value = 501 },
@@ -446,10 +444,8 @@ namespace Ludots.Tests.Presentation
                 },
                 new CullState { IsVisible = true, LOD = LODLevel.High });
 
-            Assert.That(
-                instances.TryAllocate(definitionId, owner, scopeId: 7, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 3001, parentHandle: -1, out int handle),
-                Is.True);
-            instances.Get(handle).BehaviorActiveMask = (1u << 0) | (1u << 1);
+            Entity performer = instances.Create(definitionId, owner, scopeId: 7, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 3001, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = (1u << 0) | (1u << 1);
 
             using var animatorSystem = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
             using var emitSystem = new PerformerEmitSystem(
@@ -498,7 +494,7 @@ namespace Ludots.Tests.Presentation
         public void PerformerEmitSystem_InstanceScopedMarker_UsesAllocatedStableId()
         {
             using var world = World.Create();
-            var instances = new PerformerInstanceBuffer();
+            var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             var requests = new PresentationRequestBuffer();
             var drawBuffer = new PrimitiveDrawBuffer();
@@ -541,17 +537,16 @@ namespace Ludots.Tests.Presentation
                     Rotation = Quaternion.Identity,
                     Scale = Vector3.One,
                 });
-            Assert.That(
-                instances.TryAllocate(
+            Entity performer = instances.Create(
                     definitionId,
                     owner,
                     scopeId: 9001,
                     PresentationAnchorKind.Entity,
                     Vector3.Zero,
                     stableId: 7001,
-                    out _),
-                Is.True);
-            instances.Get(0).BehaviorActiveMask = 1u;
+                    Entity.Null,
+                    default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
             using var behaviorSystem = new PerformerBehaviorSystem(
                 world,
@@ -651,7 +646,7 @@ namespace Ludots.Tests.Presentation
 
             try
             {
-                var instances = new PerformerInstanceBuffer();
+                var instances = new PerformerEntityRuntime(world);
                 var definitions = new PerformerDefinitionRegistry();
                 var requests = new PresentationRequestBuffer();
                 var soundRequests = new SoundRequestBuffer();
@@ -698,17 +693,8 @@ namespace Ludots.Tests.Presentation
 
                 TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
 
-                Assert.That(
-                    instances.TryAllocate(
-                        definitionId,
-                        owner,
-                        scopeId: 9101,
-                        PresentationAnchorKind.Entity,
-                        Vector3.Zero,
-                        stableId: 8101,
-                        out _),
-                    Is.True);
-                instances.Get(0).BehaviorActiveMask = 1u;
+                    Entity performer = instances.Create(definitionId, owner, scopeId: 9101, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 8101, Entity.Null, default);
+                world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
                 var ownerGlobals = new Dictionary<string, object>
                 {
@@ -938,7 +924,7 @@ namespace Ludots.Tests.Presentation
 
             var definitions = new PerformerDefinitionRegistry();
             int definitionId = RegisterStaticVisualDefinition(definitions, "performer.synced.static", assetId: 7, materialId: 9);
-            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var instances = new PerformerEntityRuntime(world);
 
             Entity owner = world.Create(
                 WorldPositionCm.FromCm(250, 500),
@@ -948,10 +934,8 @@ namespace Ludots.Tests.Presentation
                 new PresentationStableId { Value = 501 },
                 new CullState { IsVisible = true, LOD = LODLevel.High });
 
-            Assert.That(
-                instances.TryAllocate(definitionId, owner, scopeId: 0, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 6001, parentHandle: -1, out int handle),
-                Is.True);
-            instances.Get(handle).BehaviorActiveMask = 1u;
+            Entity performer = instances.Create(definitionId, owner, scopeId: 0, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 6001, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
             using var sync = new WorldToVisualSyncSystem(world);
             var drawBuffer = new PrimitiveDrawBuffer();
@@ -973,10 +957,12 @@ namespace Ludots.Tests.Presentation
                 new SkinnedVisualBatchBuffer());
 
             sync.Update(0.016f);
-            ref PerformerInstance instance = ref instances.Get(handle);
-            instance.WorldPosition = world.Get<VisualTransform>(owner).Position;
-            instance.WorldRotation = world.Get<VisualTransform>(owner).Rotation;
-            instance.WorldScale = world.Get<VisualTransform>(owner).Scale;
+            ref var pos = ref world.Get<PerformerWorldPosition>(performer);
+            pos.Value = world.Get<VisualTransform>(owner).Position;
+            ref var rot = ref world.Get<PerformerWorldRotation>(performer);
+            rot.Value = world.Get<VisualTransform>(owner).Rotation;
+            ref var scale = ref world.Get<PerformerWorldScale>(performer);
+            scale.Value = world.Get<VisualTransform>(owner).Scale;
             emit.Update(0.016f);
             flush.Update(0.016f);
 
@@ -1127,7 +1113,7 @@ namespace Ludots.Tests.Presentation
             int visibleDef = RegisterStaticVisualDefinition(definitions, "visible", assetId: 10, materialId: 20);
             int hiddenDef = RegisterStaticVisualDefinition(definitions, "hidden", assetId: 11, materialId: 21, visibilityParamKey: 500);
             int culledDef = RegisterStaticVisualDefinition(definitions, "culled", assetId: 12, materialId: 22, renderPath: VisualRenderPath.InstancedStaticMesh);
-            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var instances = new PerformerEntityRuntime(world);
 
             Quaternion visibleRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.25f);
             Quaternion hiddenRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, 0.5f);
@@ -1137,22 +1123,22 @@ namespace Ludots.Tests.Presentation
             Entity hiddenOwner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
             Entity culledOwner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Culled });
 
-            Assert.That(instances.TryAllocate(visibleDef, visibleOwner, 0, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 101, -1, out int visibleHandle), Is.True);
-            Assert.That(instances.TryAllocate(hiddenDef, hiddenOwner, 0, PresentationAnchorKind.WorldPosition, new Vector3(4f, 5f, 6f), 202, -1, out int hiddenHandle), Is.True);
-            Assert.That(instances.TryAllocate(culledDef, culledOwner, 0, PresentationAnchorKind.WorldPosition, new Vector3(7f, 8f, 9f), 303, -1, out int culledHandle), Is.True);
+            Entity visiblePerformer = instances.Create(visibleDef, visibleOwner, 0, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 101, Entity.Null, default);
+            Entity hiddenPerformer = instances.Create(hiddenDef, hiddenOwner, 0, PresentationAnchorKind.WorldPosition, new Vector3(4f, 5f, 6f), 202, Entity.Null, default);
+            Entity culledPerformer = instances.Create(culledDef, culledOwner, 0, PresentationAnchorKind.WorldPosition, new Vector3(7f, 8f, 9f), 303, Entity.Null, default);
 
-            instances.Get(visibleHandle).BehaviorActiveMask = 1u;
-            instances.Get(visibleHandle).WorldRotation = visibleRotation;
-            instances.Get(visibleHandle).WorldScale = new Vector3(2f, 3f, 4f);
+            world.Get<PerformerState>(visiblePerformer).BehaviorActiveMask = 1u;
+            world.Get<PerformerWorldRotation>(visiblePerformer).Value = visibleRotation;
+            world.Get<PerformerWorldScale>(visiblePerformer).Value = new Vector3(2f, 3f, 4f);
 
-            instances.Get(hiddenHandle).BehaviorActiveMask = 1u;
-            instances.Get(hiddenHandle).WorldRotation = hiddenRotation;
-            instances.Get(hiddenHandle).WorldScale = new Vector3(1f, 2f, 3f);
-            instances.SetParam(hiddenHandle, 500, ParamLane.Int, 0f, 0, default);
+            world.Get<PerformerState>(hiddenPerformer).BehaviorActiveMask = 1u;
+            world.Get<PerformerWorldRotation>(hiddenPerformer).Value = hiddenRotation;
+            world.Get<PerformerWorldScale>(hiddenPerformer).Value = new Vector3(1f, 2f, 3f);
+            instances.SetParam(hiddenPerformer, 500, ParamLane.Int, 0f, 0, default);
 
-            instances.Get(culledHandle).BehaviorActiveMask = 1u;
-            instances.Get(culledHandle).WorldRotation = culledRotation;
-            instances.Get(culledHandle).WorldScale = new Vector3(3f, 2f, 1f);
+            world.Get<PerformerState>(culledPerformer).BehaviorActiveMask = 1u;
+            world.Get<PerformerWorldRotation>(culledPerformer).Value = culledRotation;
+            world.Get<PerformerWorldScale>(culledPerformer).Value = new Vector3(3f, 2f, 1f);
 
             using var system = new PerformerEmitSystem(world, instances, definitions, requests, new Dictionary<string, object>(), null!, null!);
             using var flush = new PresentationRequestFlushSystem(
@@ -1206,25 +1192,25 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             Entity ownerA = world.Create();
             Entity ownerB = world.Create();
-            var instances = new PerformerInstanceBuffer(capacity: 8);
+            var instances = new PerformerEntityRuntime(world);
 
             Assert.That(instances.ActiveCount, Is.EqualTo(0));
             Assert.That(instances.HasOwnerPayload(ownerA), Is.False);
 
-            Assert.That(instances.TryAllocate(defId: 11, ownerA, scopeId: 1, out int rootA), Is.True);
-            Assert.That(instances.TryAllocate(defId: 12, ownerA, scopeId: 1, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 1001, parentHandle: rootA, out int childA), Is.True);
-            Assert.That(instances.TryAllocate(defId: 13, ownerB, scopeId: 2, out int rootB), Is.True);
+            Entity rootA = instances.Create(defId: 11, ownerA, scopeId: 1);
+            Entity childA = instances.Create(defId: 12, ownerA, scopeId: 1, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 1001, rootA, default);
+            Entity rootB = instances.Create(defId: 13, ownerB, scopeId: 2);
 
             Assert.That(instances.ActiveCount, Is.EqualTo(3));
             Assert.That(instances.HasOwnerPayload(ownerA), Is.True);
             Assert.That(instances.HasOwnerPayload(ownerB), Is.True);
 
-            Assert.That(instances.Release(rootA), Is.True, "Releasing a parent should recursively release descendants.");
-            Assert.That(instances.ActiveCount, Is.EqualTo(1));
+            instances.Destroy(rootA);
+            Assert.That(instances.ActiveCount, Is.EqualTo(1), "Destroying a parent should recursively destroy descendants.");
             Assert.That(instances.HasOwnerPayload(ownerA), Is.False);
             Assert.That(instances.HasOwnerPayload(ownerB), Is.True);
 
-            Assert.That(instances.Release(rootB), Is.True);
+            instances.Destroy(rootB);
             Assert.That(instances.ActiveCount, Is.EqualTo(0));
             Assert.That(instances.HasOwnerPayload(ownerB), Is.False);
         }

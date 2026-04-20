@@ -38,27 +38,22 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, "interaction_showcase_hub");
 
-            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
-                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
 
             int performerVisuals = 0;
             int skinnedCount = 0;
             int staticCount = 0;
-            for (int handle = 0; handle < performers.Capacity; handle++)
+            var performerQuery = new QueryDescription().WithAll<PerformerState>();
+            engine.World.Query(in performerQuery, (Entity entity, ref PerformerState state) =>
             {
-                if (!performers.IsActive(handle))
+                if (state.AnchorKind != PresentationAnchorKind.Entity || !engine.World.IsAlive(state.OwnerEntity) || !engine.World.Has<MapEntity>(state.OwnerEntity))
                 {
-                    continue;
-                }
-
-                PerformerInstance instance = performers.Get(handle);
-                if (instance.AnchorKind != PresentationAnchorKind.Entity || !engine.World.IsAlive(instance.Owner) || !engine.World.Has<MapEntity>(instance.Owner))
-                {
-                    continue;
+                    return;
                 }
 
                 performerVisuals++;
-            }
+            });
 
             Assert.That(performerVisuals, Is.GreaterThanOrEqualTo(8), "Interaction showcase hub should bootstrap performer instances for encounter actors.");
 

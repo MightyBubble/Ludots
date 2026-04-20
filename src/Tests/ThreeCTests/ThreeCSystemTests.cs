@@ -492,19 +492,19 @@ namespace Ludots.Tests.ThreeC
         //  D. Camera Culling
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
-        private static PerformerInstanceBuffer CreatePerformerPayload(Entity entity)
+        private static PerformerEntityRuntime CreatePerformerPayload(World world, Entity entity)
         {
-            var performers = new PerformerInstanceBuffer(capacity: 8);
-            bool allocated = performers.TryAllocate(
+            var performers = new PerformerEntityRuntime(world);
+            Entity performerEntity = performers.Create(
                 defId: 1,
                 owner: entity,
                 scopeId: 1,
                 PresentationAnchorKind.Entity,
                 Vector3.Zero,
                 stableId: 7001,
-                parentHandle: -1,
-                out _);
-            That(allocated, Is.True);
+                Entity.Null,
+                default);
+            That(performerEntity, Is.Not.EqualTo(Entity.Null));
             return performers;
         }
 
@@ -595,7 +595,7 @@ namespace Ludots.Tests.ThreeC
             var view = new StubViewController();
 
             var entity = CreateCullableEntity(world, 100, 100); // very close to camera target
-            var performers = CreatePerformerPayload(entity);
+            var performers = CreatePerformerPayload(world, entity);
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
@@ -621,7 +621,7 @@ namespace Ludots.Tests.ThreeC
 
             // Place entity at ~7000cm from origin 鈫?between High(4000) and Medium(10000)
             var entity = CreateCullableEntity(world, 5000, 5000); // dist 鈮?7071cm
-            var performers = CreatePerformerPayload(entity);
+            var performers = CreatePerformerPayload(world, entity);
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
@@ -647,7 +647,7 @@ namespace Ludots.Tests.ThreeC
 
             // Place entity at ~14142cm from origin 鈫?between Medium(10000) and Low(20000)
             var entity = CreateCullableEntity(world, 10000, 10000); // dist 鈮?14142cm
-            var performers = CreatePerformerPayload(entity);
+            var performers = CreatePerformerPayload(world, entity);
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
@@ -673,7 +673,7 @@ namespace Ludots.Tests.ThreeC
 
             // Place entity at ~28284cm 鈫?beyond Low(20000) threshold
             var entity = CreateCullableEntity(world, 20000, 20000); // dist 鈮?28284cm
-            var performers = CreatePerformerPayload(entity);
+            var performers = CreatePerformerPayload(world, entity);
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
@@ -698,7 +698,7 @@ namespace Ludots.Tests.ThreeC
             var view = new StubViewController();
 
             var entity = CreateCullableEntity(world, 100, 100);
-            var performers = CreatePerformerPayload(entity);
+            var performers = CreatePerformerPayload(world, entity);
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
@@ -742,7 +742,7 @@ namespace Ludots.Tests.ThreeC
                 yCm: 2000,
                 PresentationLocalBounds.Create(Vector3.Zero, new Vector3(20f, 1f, 20f)),
                 lodProfile);
-            var performers = CreatePerformerPayload(entity);
+            var performers = CreatePerformerPayload(world, entity);
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
@@ -831,7 +831,7 @@ namespace Ludots.Tests.ThreeC
             loadedChunks.SetLoaded(loadedKey);
 
             var entity = CreateCullableEntity(world, 100000, 100000);
-            var performers = CreatePerformerPayload(entity);
+            var performers = CreatePerformerPayload(world, entity);
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(

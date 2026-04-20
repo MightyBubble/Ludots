@@ -184,8 +184,8 @@ namespace Ludots.Tests.Presentation
             fixture.PublishGlobalDayNight(blacksmith, phase: 1f);
             fixture.Tick();
 
-            int rootHandle = fixture.RequireHandle(BlacksmithRootKey);
-            Assert.That(fixture.Instances.ResolveFloat(rootHandle, 200), Is.EqualTo(1f).Within(0.0001f));
+            Entity rootEntity = fixture.RequireHandle(BlacksmithRootKey);
+            Assert.That(fixture.Instances.ResolveFloat(rootEntity, 200), Is.EqualTo(1f).Within(0.0001f));
         }
 
         [Test]
@@ -282,7 +282,7 @@ namespace Ludots.Tests.Presentation
             private readonly PerformerDefinitionRegistry _definitions;
             private readonly PresentationEventStream _events;
             private readonly PerformerCommandBuffer _commands;
-            private readonly PerformerInstanceBuffer _instances;
+            private readonly PerformerEntityRuntime _instances;
             private readonly PerformerAnimatorStateBuffer _animatorStates;
             private readonly PresentationRequestBuffer _requests;
             private readonly SoundRequestBuffer _soundRequests;
@@ -304,7 +304,7 @@ namespace Ludots.Tests.Presentation
                 PerformerDefinitionRegistry definitions,
                 PresentationEventStream events,
                 PerformerCommandBuffer commands,
-                PerformerInstanceBuffer instances,
+                PerformerEntityRuntime instances,
                 PerformerAnimatorStateBuffer animatorStates,
                 PresentationRequestBuffer requests,
                 SoundRequestBuffer soundRequests,
@@ -336,7 +336,7 @@ namespace Ludots.Tests.Presentation
                 _emit = emit;
             }
 
-            public PerformerInstanceBuffer Instances => _instances;
+            public PerformerEntityRuntime Instances => _instances;
 
             public static BlacksmithPipelineFixture Create(string repoRoot, string coreRoot)
             {
@@ -401,7 +401,7 @@ namespace Ludots.Tests.Presentation
 
                 var events = new PresentationEventStream(512);
                 var commands = new PerformerCommandBuffer(512);
-                var instances = new PerformerInstanceBuffer(64);
+                var instances = new PerformerEntityRuntime(world);
                 var animatorStates = new PerformerAnimatorStateBuffer(64);
                 var requests = new PresentationRequestBuffer(512);
                 var soundRequests = new SoundRequestBuffer(256);
@@ -607,29 +607,32 @@ namespace Ludots.Tests.Presentation
             {
                 int definitionId = _definitions.GetId(definitionKey);
                 int count = 0;
-                for (int handle = 0; handle < _instances.Capacity; handle++)
+                var query = new QueryDescription().WithAll<PerformerState>();
+                _world.Query(in query, (Entity entity, ref PerformerState state) =>
                 {
-                    if (_instances.IsActive(handle) && _instances.Get(handle).DefId == definitionId)
+                    if (state.DefId == definitionId)
                     {
                         count++;
                     }
-                }
-
+                });
                 return count;
             }
 
-            public int RequireHandle(string definitionKey)
+            public Entity RequireHandle(string definitionKey)
             {
                 int definitionId = _definitions.GetId(definitionKey);
-                for (int handle = 0; handle < _instances.Capacity; handle++)
+                Entity found = Entity.Null;
+                var query = new QueryDescription().WithAll<PerformerState>();
+                _world.Query(in query, (Entity entity, ref PerformerState state) =>
                 {
-                    if (_instances.IsActive(handle) && _instances.Get(handle).DefId == definitionId)
+                    if (state.DefId == definitionId && found == Entity.Null)
                     {
-                        return handle;
+                        found = entity;
                     }
-                }
-
-                throw new InvalidOperationException($"No active performer for definition '{definitionKey}'.");
+                });
+                if (found == Entity.Null)
+                    throw new InvalidOperationException($"No active performer for definition '{definitionKey}'.");
+                return found;
             }
 
             public int CountVisualByAsset(int assetId)
