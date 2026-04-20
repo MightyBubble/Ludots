@@ -253,7 +253,7 @@ namespace Ludots.Core.Input.Orders
         /// <summary>
         /// Named selection set supplying entity targets for this mapping.
         /// </summary>
-        public string SelectionSetKey { get; set; } = SelectionSetKeys.Ambient;
+        public string SelectionSetKey { get; set; } = SelectionSetKeys.LivePrimary;
         
         /// <summary>
         /// The type of selection required.

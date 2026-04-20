@@ -14,7 +14,7 @@ namespace Ludots.Core.Input.Selection
 {
     /// <summary>
     /// Shared selection runtime for single-click and screen-space box selection.
-    /// Formal selection writes only to the selector's ambient selection set.
+        /// Formal selection writes only to the selector's primary live selection set.
     /// </summary>
     public sealed class CurrentSelectionApplySystem : ISystem<float>
     {
@@ -144,7 +144,7 @@ namespace Ludots.Core.Input.Selection
                 _world.Add(owner, default(SelectionDragState));
             }
 
-            _selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.Ambient, out _);
+            _selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
         }
 
         private void UpdateHoveredEntity(Entity hovered)
@@ -165,11 +165,11 @@ namespace Ludots.Core.Input.Selection
             {
                 Span<Entity> next = stackalloc Entity[1];
                 next[0] = clicked;
-                _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next);
+                _selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
                 return;
             }
 
-            _selection.ClearSelection(owner, SelectionSetKeys.Ambient);
+            _selection.ClearSelection(owner, SelectionSetKeys.LivePrimary);
         }
 
         private void ApplyBoxSelection(Entity owner, in SelectionDragState drag)
@@ -207,7 +207,7 @@ namespace Ludots.Core.Input.Selection
             });
 
             SortByEntityId(_boxSelectionScratch, nextCount);
-            _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, _boxSelectionScratch.AsSpan(0, nextCount));
+            _selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, _boxSelectionScratch.AsSpan(0, nextCount));
         }
 
         private void EnsureScratchCapacity(int required)

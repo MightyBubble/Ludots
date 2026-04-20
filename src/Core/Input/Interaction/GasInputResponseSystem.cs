@@ -10,7 +10,7 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// Generic GAS input-response system.
     /// Resolves InputRequest to InputResponse using the current interaction bindings
-    /// and the ambient selection of the active local selector.
+    /// and the primary live selection of the active local selector.
     /// </summary>
     public sealed class GasInputResponseSystem : ISystem<float>
     {
@@ -53,7 +53,7 @@ namespace Ludots.Core.Input.Interaction
                 _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
                 localObj is Entity local &&
                 _world.IsAlive(local) &&
-                _selection.TryGetPrimary(local, SelectionSetKeys.Ambient, out var selected))
+                _selection.TryGetPrimary(local, SelectionSetKeys.LivePrimary, out var selected))
             {
                 target = selected;
             }

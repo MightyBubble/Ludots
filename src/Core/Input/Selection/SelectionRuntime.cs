@@ -91,7 +91,12 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            descriptor = new SelectionViewDescriptor(viewer, NormalizeViewKey(viewKey), containerDescriptor);
+            if (!TryNormalizeViewKey(viewKey, out string normalizedViewKey))
+            {
+                return false;
+            }
+
+            descriptor = new SelectionViewDescriptor(viewer, normalizedViewKey, containerDescriptor);
             return true;
         }
 
@@ -103,7 +108,9 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            if (!_containerAliasRegistry.TryGetId(NormalizeAlias(aliasKey), out int aliasId) || aliasId <= 0)
+            if (!TryNormalizeAlias(aliasKey, out string normalizedAlias) ||
+                !_containerAliasRegistry.TryGetId(normalizedAlias, out int aliasId) ||
+                aliasId <= 0)
             {
                 return false;
             }
@@ -124,7 +131,12 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            int aliasId = _containerAliasRegistry.Register(NormalizeAlias(aliasKey));
+            if (!TryNormalizeAlias(aliasKey, out string normalizedAlias))
+            {
+                return false;
+            }
+
+            int aliasId = _containerAliasRegistry.Register(normalizedAlias);
             var key = new SelectionOwnerAliasKey(owner, aliasId);
             if (TryResolveContainer(key, out container))
             {
@@ -509,7 +521,12 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            int viewKeyId = _viewKeyRegistry.Register(NormalizeViewKey(viewKey));
+            if (!TryNormalizeViewKey(viewKey, out string normalizedViewKey))
+            {
+                return false;
+            }
+
+            int viewKeyId = _viewKeyRegistry.Register(normalizedViewKey);
             var key = new SelectionViewKey(viewer, viewKeyId);
             if (TryResolveViewBindingEntity(key, out Entity binding))
             {
@@ -541,7 +558,9 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            if (!_viewKeyRegistry.TryGetId(NormalizeViewKey(viewKey), out int viewKeyId) || viewKeyId <= 0)
+            if (!TryNormalizeViewKey(viewKey, out string normalizedViewKey) ||
+                !_viewKeyRegistry.TryGetId(normalizedViewKey, out int viewKeyId) ||
+                viewKeyId <= 0)
             {
                 return false;
             }
@@ -807,14 +826,28 @@ namespace Ludots.Core.Input.Selection
             }
         }
 
-        private static string NormalizeAlias(string? aliasKey)
+        private static bool TryNormalizeAlias(string? aliasKey, out string normalizedAlias)
         {
-            return string.IsNullOrWhiteSpace(aliasKey) ? SelectionSetKeys.LivePrimary : aliasKey.Trim();
+            normalizedAlias = string.Empty;
+            if (string.IsNullOrWhiteSpace(aliasKey))
+            {
+                return false;
+            }
+
+            normalizedAlias = aliasKey.Trim();
+            return normalizedAlias.Length > 0;
         }
 
-        private static string NormalizeViewKey(string? viewKey)
+        private static bool TryNormalizeViewKey(string? viewKey, out string normalizedViewKey)
         {
-            return string.IsNullOrWhiteSpace(viewKey) ? SelectionViewKeys.Primary : viewKey.Trim();
+            normalizedViewKey = string.Empty;
+            if (string.IsNullOrWhiteSpace(viewKey))
+            {
+                return false;
+            }
+
+            normalizedViewKey = viewKey.Trim();
+            return normalizedViewKey.Length > 0;
         }
 
         private static bool ContainsTarget(ReadOnlySpan<Entity> next, int uptoExclusive, Entity target)

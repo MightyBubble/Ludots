@@ -20,49 +20,25 @@ namespace Ludots.Core.Input.Selection
             out Entity container)
         {
             viewer = default;
-            viewKey = SelectionViewKeys.Primary;
+            viewKey = string.Empty;
             container = default;
 
-            if (globals.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out var viewObj) &&
-                viewObj is Entity viewed &&
-                world.IsAlive(viewed))
-            {
-                viewer = viewed;
-            }
-            else if (globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                     localObj is Entity local &&
-                     world.IsAlive(local))
-            {
-                globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = local;
-                viewer = local;
-            }
-            else
-            {
-                globals.Remove(CoreServiceKeys.SelectionViewViewerEntity.Name);
-                return false;
-            }
-
-            if (globals.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out var setObj) &&
-                setObj is string configuredViewKey &&
-                !string.IsNullOrWhiteSpace(configuredViewKey))
-            {
-                viewKey = configuredViewKey;
-            }
-            else
-            {
-                globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
-            }
-
-            if (selection.TryResolveViewContainer(viewer, viewKey, out container))
-            {
-                return true;
-            }
-
-            if (!selection.TryBindView(viewer, viewKey, viewer, SelectionSetKeys.LivePrimary))
+            if (!globals.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out var viewObj) ||
+                viewObj is not Entity viewed ||
+                !world.IsAlive(viewed))
             {
                 return false;
             }
 
+            if (!globals.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out var setObj) ||
+                setObj is not string configuredViewKey ||
+                string.IsNullOrWhiteSpace(configuredViewKey))
+            {
+                return false;
+            }
+
+            viewer = viewed;
+            viewKey = configuredViewKey;
             return selection.TryResolveViewContainer(viewer, viewKey, out container);
         }
 
