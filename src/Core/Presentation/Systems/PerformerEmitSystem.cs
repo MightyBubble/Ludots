@@ -9,6 +9,7 @@ using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Scripting;
@@ -22,6 +23,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationRequestBuffer _requests;
         private readonly Dictionary<string, object> _globals;
         private readonly PerformerAssetEmitRuntime _assetEmitter;
+        private readonly StableDrawCache? _stableDrawCache;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
         public PerformerEmitSystem(
@@ -32,7 +34,8 @@ namespace Ludots.Core.Presentation.Systems
             Dictionary<string, object> globals,
             PerformerAnimatorStateBuffer animatorStates = null,
             SoundRequestBuffer soundRequests = null,
-            PresentationTimingDiagnostics? timingDiagnostics = null)
+            PresentationTimingDiagnostics? timingDiagnostics = null,
+            StableDrawCache? stableDrawCache = null)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -40,6 +43,7 @@ namespace Ludots.Core.Presentation.Systems
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _globals = globals ?? new Dictionary<string, object>();
             _timingDiagnostics = timingDiagnostics;
+            _stableDrawCache = stableDrawCache;
             _assetEmitter = new PerformerAssetEmitRuntime(
                 world, _runtime, _definitions, requests, globals, animatorStates, soundRequests);
         }
@@ -59,9 +63,31 @@ namespace Ludots.Core.Presentation.Systems
                 }
                 if (definition.DefaultLifetime > 0f && state.Elapsed >= definition.DefaultLifetime) return;
                 if (!EvaluateVisibility(definition, state.OwnerEntity)) return;
+
+                if (_stableDrawCache != null && World.Has<PerformerEmitCache>(entity))
+                {
+                    ref PerformerEmitCache emitCache = ref World.Get<PerformerEmitCache>(entity);
+                    bool versionClean = emitCache.CachedVersion == state.Version;
+                    bool positionClean = emitCache.LastEmitPosition == pos.Value;
+                    if (versionClean && positionClean) return;
+                    if (versionClean && !positionClean)
+                    {
+                        _stableDrawCache.UpdatePosition(state.StableId, pos.Value);
+                        emitCache.LastEmitPosition = pos.Value;
+                        return;
+                    }
+                }
+
                 LODLevel lod = cull.LOD;
                 EmitSurfaceSourceIfAny(entity, in state, definition, lod);
                 EmitAssetBindings(entity, in state, definition, lod);
+
+                if (World.Has<PerformerEmitCache>(entity))
+                {
+                    ref PerformerEmitCache emitCache = ref World.Get<PerformerEmitCache>(entity);
+                    emitCache.CachedVersion = state.Version;
+                    emitCache.LastEmitPosition = pos.Value;
+                }
             });
             _runtime.ReleaseExpired(_definitions);
             if (_timingDiagnostics != null)

@@ -373,6 +373,7 @@ namespace Ludots.Core.Presentation.Config
             }
 
             def.Rules = ExpandChildrenRules(def.Id, def.Rules, def.Children);
+            def.Rules = ExpandInitializationRules(def.Id, def.Rules, def.Behaviors);
             StampRuleOwners(def.Id, def.Rules);
             return (key, def);
         }
@@ -1457,6 +1458,45 @@ namespace Ludots.Core.Presentation.Config
                 };
             }
 
+            return expanded;
+        }
+
+        private static PerformerRule[] ExpandInitializationRules(int ownerDefinitionId, PerformerRule[] rules, BehaviorSlot[] behaviors)
+        {
+            if (behaviors == null || behaviors.Length == 0)
+                return rules ?? Array.Empty<PerformerRule>();
+
+            bool hasAssetBinding = false;
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                if (behaviors[i].Kind == BehaviorKind.AssetBinding)
+                {
+                    hasAssetBinding = true;
+                    break;
+                }
+            }
+            if (!hasAssetBinding)
+                return rules ?? Array.Empty<PerformerRule>();
+
+            int baseCount = rules?.Length ?? 0;
+            var expanded = new PerformerRule[baseCount + 1];
+            if (baseCount > 0)
+                Array.Copy(rules!, expanded, baseCount);
+
+            expanded[baseCount] = new PerformerRule
+            {
+                OwnerDefinitionId = ownerDefinitionId,
+                Event = new EventFilter
+                {
+                    Kind = PresentationEventKind.PerformerCreated,
+                    KeyId = ownerDefinitionId,
+                },
+                Condition = ConditionRef.AlwaysTrue,
+                Command = new PerformerCommand
+                {
+                    CommandKind = PerformerCommandKind.InitializeTransform,
+                },
+            };
             return expanded;
         }
 

@@ -78,9 +78,14 @@ namespace Ludots.Core.Presentation.Systems
                 if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition))
                     return;
 
+                Entity owner = state.OwnerEntity;
+                bool ownerHasDirtyAttrs = World.IsAlive(owner) && World.Has<DirtyFlags>(owner) && World.Get<DirtyFlags>(owner).IsAnyAttributeDirty();
+                bool ownerHasDirtyTags = World.IsAlive(owner) && World.Has<GameplayTagEffectiveChangedBits>(owner) && World.Get<GameplayTagEffectiveChangedBits>(owner).IsAnyBitSet();
+                bool isFirstFrame = state.Version <= 1;
+
                 BehaviorSlot[] behaviors = definition.Behaviors;
                 ResolveDefaultTransformSource(entity, ref state);
-                ApplyBindings(entity, state.OwnerEntity, definition);
+                ApplyBindings(entity, owner, definition);
                 HandleReusedSoundSlot(entity, in state, behaviors);
                 uint currentSoundMask = 0u;
                 for (int i = 0; i < behaviors.Length; i++)
@@ -91,10 +96,12 @@ namespace Ludots.Core.Presentation.Systems
                     switch (slot.Kind)
                     {
                         case BehaviorKind.AttributeBinding:
-                            ApplyAttributeBinding(entity, state.OwnerEntity, slot.AttributeBinding);
+                            if (isFirstFrame || ownerHasDirtyAttrs)
+                                ApplyAttributeBinding(entity, owner, slot.AttributeBinding);
                             break;
                         case BehaviorKind.TagBinding:
-                            ApplyTagBinding(entity, state.OwnerEntity, slot.TagBinding);
+                            if (isFirstFrame || ownerHasDirtyTags)
+                                ApplyTagBinding(entity, owner, slot.TagBinding);
                             break;
                         case BehaviorKind.Material:
                             ApplyMaterialBinding(entity, slot.Material);

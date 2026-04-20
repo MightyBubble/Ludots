@@ -102,7 +102,7 @@ namespace Ludots.Core.Presentation.Requests
             }
 
             _visualProxyEmitter.ClearProjectionTargets();
-            _stableDrawCache.Project(_visualProxyEmitter, evictUntouched: true);
+            _stableDrawCache.Project(_visualProxyEmitter, evictUntouched: false);
 
             if (_timingDiagnostics != null)
             {

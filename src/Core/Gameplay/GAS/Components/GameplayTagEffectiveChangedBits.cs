@@ -19,6 +19,11 @@ namespace Ludots.Core.Gameplay.GAS.Components
             Bits[2] = 0;
             Bits[3] = 0;
         }
+
+        public bool IsAnyBitSet()
+        {
+            return (Bits[0] | Bits[1] | Bits[2] | Bits[3]) != 0;
+        }
     }
 }
 

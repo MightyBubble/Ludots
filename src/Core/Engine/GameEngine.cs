@@ -676,7 +676,8 @@ namespace Ludots.Core.Engine
             var performerEmitSystem = new PerformerEmitSystem(World, performerRuntime, performerDefinitions, presentationRequestBuffer, GlobalContext,
                 performerAnimatorStates,
                 soundRequestBuffer,
-                presentationTimingDiagnostics);
+                presentationTimingDiagnostics,
+                stableDrawCache);
             var surfaceSourceFlushSystem = new SurfaceSourceFlushSystem(World, presentationRequestBuffer, surfacePayloads, surfaceRuntime);
             var surfaceSourceLifecycleSystem = new SurfaceSourceLifecycleSystem(World, surfaceRuntime, performerCommandBuffer);
             var chunkSurfaceBakeSystem = new ChunkSurfaceBakeSystem(World, surfaceRuntime, meshAssets, materialAssets, performerDefinitions, performerCommandBuffer, performerRuntime);

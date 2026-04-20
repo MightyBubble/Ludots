@@ -110,6 +110,24 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 TagDirty[i] = 0;
             }
         }
+
+        public bool IsAnyAttributeDirty()
+        {
+            for (int i = 0; i < MAX_ATTRS; i++)
+            {
+                if (AttributeDirty[i] != 0) return true;
+            }
+            return false;
+        }
+
+        public bool IsAnyTagDirty()
+        {
+            for (int i = 0; i < TAG_DIRTY_BYTES; i++)
+            {
+                if (TagDirty[i] != 0) return true;
+            }
+            return false;
+        }
         
         /// <summary>
         /// 清除属性脏标记

@@ -92,6 +92,9 @@ namespace Ludots.Core.Presentation.Systems
                             state.BehaviorActiveMask &= ~(1u << cmd.TargetBehaviorSlot);
                         }
                         break;
+                    case PerformerCommandKind.InitializeTransform:
+                        HandleInitializeTransform(in cmd);
+                        break;
                 }
             }
             _commands.Clear();
@@ -99,6 +102,30 @@ namespace Ludots.Core.Presentation.Systems
             _runtime.SyncCullVisibility();
             _markers.TickAndRequest(_requests, dt, World);
         }
+        private void HandleInitializeTransform(in PerformerCommand cmd)
+        {
+            Entity performer = cmd.PerformerEntity;
+            if (!World.IsAlive(performer) || !World.Has<PerformerState>(performer)) return;
+            ref PerformerState state = ref World.Get<PerformerState>(performer);
+            if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition)) return;
+
+            Entity owner = state.OwnerEntity;
+            bool hasOwnerTransform = World.IsAlive(owner) && World.Has<VisualTransform>(owner);
+            VisualTransform ownerTransform = hasOwnerTransform ? World.Get<VisualTransform>(owner) : VisualTransform.Default;
+
+            Vector3 position = hasOwnerTransform ? ownerTransform.Position : World.Get<PerformerWorldPosition>(performer).Value;
+            Quaternion rotation = hasOwnerTransform ? ownerTransform.Rotation : Quaternion.Identity;
+            Vector3 scale = hasOwnerTransform ? ownerTransform.Scale : Vector3.One;
+
+            position += definition.PositionOffset;
+
+            World.Get<PerformerWorldPosition>(performer).Value = position;
+            if (World.Has<PerformerWorldRotation>(performer))
+                World.Get<PerformerWorldRotation>(performer).Value = rotation;
+            if (World.Has<PerformerWorldScale>(performer))
+                World.Get<PerformerWorldScale>(performer).Value = scale;
+        }
+
         private void HandleCreatePerformer(in PerformerCommand cmd)
         {
             if (!_definitions.TryGet(cmd.PerformerDefinitionId, out var definition))

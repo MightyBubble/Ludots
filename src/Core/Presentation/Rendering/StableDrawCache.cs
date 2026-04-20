@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace Ludots.Core.Presentation.Rendering
 {
@@ -66,6 +67,18 @@ namespace Ludots.Core.Presentation.Rendering
             }
 
             RemoveAt(slot);
+        }
+
+        public bool UpdatePosition(int stableId, Vector3 newPosition)
+        {
+            if (!_slotByStableId.TryGetValue(stableId, out int slot))
+            {
+                return false;
+            }
+
+            _entries[slot].Position = newPosition;
+            _frameTouched[slot] = _frameStamp;
+            return true;
         }
 
         public void Project(PresentationVisualProxyEmitter emitter, bool evictUntouched)
