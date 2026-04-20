@@ -20,6 +20,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public Entity TargetContext;
         public IntVector2 TargetPos;
+        public uint RandomSeed;
         public IGraphRuntimeApi Api;
         public Span<float> F;
         public Span<int> I;

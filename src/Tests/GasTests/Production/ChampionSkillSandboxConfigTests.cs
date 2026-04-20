@@ -22,6 +22,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Systems;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
@@ -72,21 +73,14 @@ namespace Ludots.Tests.GAS.Production
         public void ChampionSkillSandbox_TemplateConfig_LoadsJayceFormRouting()
         {
             using var engine = CreateEngine();
+            LoadMap(engine, "champion_skill_sandbox");
 
-            var templates = new Dictionary<string, EntityTemplate>(StringComparer.OrdinalIgnoreCase);
-            foreach (var template in engine.MapLoader.TemplateRegistry.GetAll())
-            {
-                templates[template.Id] = template;
-            }
-
-            var entity = new EntityBuilder(engine.World, templates, engine.MapLoader.PresentationAuthoringContext)
-                .UseTemplate("champion_skill_sandbox_jayce")
-                .Build();
+            var entity = FindEntityByName(engine.World, "Jayce Hammer");
 
             Assert.That(engine.World.Has<AbilityStateBuffer>(entity), Is.True);
             Assert.That(engine.World.Has<AbilityFormSetRef>(entity), Is.True);
             Assert.That(engine.World.Has<AbilityFormSlotBuffer>(entity), Is.True);
-            Assert.That(engine.World.Has<PlayerOwner>(entity), Is.False, "Template should not hardcode scene ownership.");
+            Assert.That(engine.World.Has<PlayerOwner>(entity), Is.True, "Sandbox runtime should resolve live player ownership for Jayce.");
 
             ref var abilities = ref engine.World.Get<AbilityStateBuffer>(entity);
             Assert.That(abilities.Count, Is.EqualTo(4));
@@ -124,16 +118,14 @@ namespace Ludots.Tests.GAS.Production
         public void ChampionSkillSandbox_StressTemplates_AuthorCollisionAndNavRuntimeComponents()
         {
             using var engine = CreateEngine();
-
-            var templates = new Dictionary<string, EntityTemplate>(StringComparer.OrdinalIgnoreCase);
-            foreach (var template in engine.MapLoader.TemplateRegistry.GetAll())
+            LoadMap(engine, StressMapId, frames: 8);
+            TickUntil(engine, () =>
             {
-                templates[template.Id] = template;
-            }
+                StressCounts counts = ReadStressCounts(engine.World);
+                return counts.TeamA >= 48 && counts.TeamB >= 48;
+            }, maxFrames: 240);
 
-            var warrior = new EntityBuilder(engine.World, templates, engine.MapLoader.PresentationAuthoringContext)
-                .UseTemplate("champion_skill_stress_team_a_warrior")
-                .Build();
+            var warrior = FindEntityByName(engine.World, "StressWarriorA");
 
             Assert.That(engine.World.Has<Collider2D>(warrior), Is.True);
             Assert.That(engine.World.Has<PhysicsMaterial2D>(warrior), Is.True);
@@ -165,6 +157,13 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.World.Has<PreviousPosition2D>(warrior), Is.True);
             Assert.That(engine.World.Has<Velocity2D>(warrior), Is.True);
             Assert.That(engine.World.Has<Mass2D>(warrior), Is.True);
+
+            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
+                ?? throw new InvalidOperationException("PerformerInstanceBuffer missing.");
+            Assert.That(
+                HasEntityAnchoredPerformer(engine.World, performers, warrior),
+                Is.True,
+                "Stress warrior should now participate in the performer mainline instead of relying on legacy presentation authoring.");
         }
 
         [Test]
@@ -1121,6 +1120,27 @@ namespace Ludots.Tests.GAS.Production
                 teamBFireMages,
                 teamBLaserMages,
                 teamBPriests);
+        }
+
+        private static bool HasEntityAnchoredPerformer(World world, PerformerInstanceBuffer performers, Entity owner)
+        {
+            for (int handle = 0; handle < performers.Capacity; handle++)
+            {
+                if (!performers.IsActive(handle))
+                {
+                    continue;
+                }
+
+                PerformerInstance instance = performers.Get(handle);
+                if (instance.AnchorKind == PresentationAnchorKind.Entity &&
+                    instance.Owner == owner &&
+                    world.IsAlive(instance.Owner))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static float ComputeMinimumStressTeamClearance(World world, string mapId, int teamId)

@@ -12,15 +12,13 @@ namespace Ludots.Core.Presentation.Performers
     {
         public PerformerCommand()
         {
-            PerformerHandle = -1;
-            ParentHandle = -1;
             TargetBehaviorSlot = -1;
         }
 
         public PerformerCommandKind CommandKind;
         public int PerformerDefinitionId;
-        public int PerformerHandle;
-        public int ParentHandle;
+        public Entity PerformerEntity;
+        public Entity ParentEntity;
         public int ScopeTag;
         public PerformerCommandScopeSource ScopeSource;
         public PresentationAnchorKind AnchorKind;

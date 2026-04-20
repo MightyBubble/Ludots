@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Surfaces;
@@ -12,116 +15,86 @@ using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Systems
 {
-    /// <summary>
-    /// Wave 4 asset emitter. Iterates performer instances and emits only AssetBinding behavior.
-    /// </summary>
     public sealed class PerformerEmitSystem : BaseSystem<World, float>
     {
-        private readonly PerformerInstanceBuffer _instances;
+        private readonly PerformerEntityRuntime _runtime;
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly PresentationRequestBuffer _requests;
         private readonly Dictionary<string, object> _globals;
         private readonly PerformerAssetEmitRuntime _assetEmitter;
+        private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
         public PerformerEmitSystem(
             World world,
-            PerformerInstanceBuffer instances,
+            PerformerEntityRuntime runtime,
             PerformerDefinitionRegistry definitions,
             PresentationRequestBuffer requests,
-            System.Collections.Generic.Dictionary<string, object> globals,
+            Dictionary<string, object> globals,
             PerformerAnimatorStateBuffer animatorStates = null,
-            SoundRequestBuffer soundRequests = null)
+            SoundRequestBuffer soundRequests = null,
+            PresentationTimingDiagnostics? timingDiagnostics = null)
             : base(world)
         {
-            _instances = instances ?? throw new ArgumentNullException(nameof(instances));
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _globals = globals ?? new Dictionary<string, object>();
+            _timingDiagnostics = timingDiagnostics;
             _assetEmitter = new PerformerAssetEmitRuntime(
-                world,
-                _instances,
-                _definitions,
-                requests,
-                globals,
-                animatorStates,
-                soundRequests);
+                world, _runtime, _definitions, requests, globals, animatorStates, soundRequests);
         }
-
         public override void Update(in float dt)
         {
-            _instances.ProcessActive(dt, (int handle, ref PerformerInstance instance) =>
+            long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
+            _runtime.AdvanceElapsed(dt);
+            var query = new QueryDescription().WithAll<PerformerState, PerformerCullState, PerformerWorldPosition>();
+            World.Query(in query, (Entity entity, ref PerformerState state, ref PerformerCullState cull, ref PerformerWorldPosition pos) =>
             {
-                if (!_definitions.TryGet(instance.DefId, out PerformerDefinition definition))
+                if (!cull.OwnerCullVisible) return;
+                if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition)) return;
+                if (state.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(state.OwnerEntity))
                 {
+                    _runtime.Destroy(entity);
                     return;
                 }
-
-                if (instance.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(instance.Owner))
-                {
-                    _instances.Release(handle);
-                    return;
-                }
-
-                if (definition.DefaultLifetime > 0f && instance.Elapsed >= definition.DefaultLifetime)
-                {
-                    _instances.Release(handle);
-                    return;
-                }
-
-                if (!EvaluateVisibility(definition, instance.Owner))
-                {
-                    return;
-                }
-
-                LODLevel lod = ResolveOwnerLod(instance.Owner);
-                EmitSurfaceSourceIfAny(handle, in instance, definition, lod);
-                EmitAssetBindings(handle, in instance, definition, lod);
+                if (definition.DefaultLifetime > 0f && state.Elapsed >= definition.DefaultLifetime) return;
+                if (!EvaluateVisibility(definition, state.OwnerEntity)) return;
+                LODLevel lod = cull.LOD;
+                EmitSurfaceSourceIfAny(entity, in state, definition, lod);
+                EmitAssetBindings(entity, in state, definition, lod);
             });
+            _runtime.ReleaseExpired(_definitions);
+            if (_timingDiagnostics != null)
+                _timingDiagnostics.ObservePerformerEmit((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
         }
 
-        private void EmitSurfaceSourceIfAny(int handle, in PerformerInstance instance, PerformerDefinition definition, LODLevel lod)
+        private void EmitSurfaceSourceIfAny(Entity entity, in PerformerState state, PerformerDefinition definition, LODLevel lod)
         {
             SurfaceAuthoringBlock? surface = definition.Surface;
-            if (surface == null)
+            if (surface == null) return;
+            Vector3 worldPos = World.Get<PerformerWorldPosition>(entity).Value;
+            _requests.Add(PresentationRequest.FromSurfaceSource(state.OwnerEntity, new SurfaceSourceRequest
             {
-                return;
-            }
-
-            _requests.Add(PresentationRequest.FromSurfaceSource(instance.Owner, new SurfaceSourceRequest
-            {
-                StableId = instance.StableId,
-                PerformerDefinitionId = instance.DefId,
-                ScopeId = instance.ScopeId,
+                StableId = state.StableId,
+                PerformerDefinitionId = state.DefId,
+                ScopeId = state.ScopeId,
                 SurfaceKind = surface.Kind,
                 Authoring = surface,
-                AnchorPosition = instance.WorldPosition + definition.PositionOffset,
+                AnchorPosition = worldPos + definition.PositionOffset,
                 LodSeed = lod,
             }, lod));
         }
 
-        private void EmitAssetBindings(int handle, in PerformerInstance instance, PerformerDefinition definition, LODLevel lod)
+        private void EmitAssetBindings(Entity entity, in PerformerState state, PerformerDefinition definition, LODLevel lod)
         {
             BehaviorSlot[] behaviors = definition.Behaviors ?? Array.Empty<BehaviorSlot>();
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.Kind != BehaviorKind.AssetBinding || !IsBehaviorActive(instance.BehaviorActiveMask, slot.SlotIndex))
-                {
+                if (slot.Kind != BehaviorKind.AssetBinding || !IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                     continue;
-                }
-
-                _assetEmitter.Emit(handle, instance.DefId, in instance, definition, slot.SlotIndex, slot.AssetBinding, lod);
+                _assetEmitter.Emit(entity, state.DefId, in state, definition, slot.SlotIndex, slot.AssetBinding, lod);
             }
-        }
-
-        private LODLevel ResolveOwnerLod(Entity owner)
-        {
-            if (!World.IsAlive(owner) || !World.Has<CullState>(owner))
-            {
-                return LODLevel.High;
-            }
-
-            return World.Get<CullState>(owner).LOD;
         }
 
         private static bool IsBehaviorActive(uint mask, int slotIndex)
@@ -132,16 +105,8 @@ namespace Ludots.Core.Presentation.Systems
         private bool EvaluateVisibility(in PerformerDefinition definition, Entity owner)
         {
             ref readonly ConditionRef condition = ref definition.VisibilityCondition;
-            if (condition.Inline == InlineConditionKind.None && condition.GraphProgramId <= 0)
-            {
-                return true;
-            }
-
-            if (condition.GraphProgramId > 0)
-            {
-                return true;
-            }
-
+            if (condition.Inline == InlineConditionKind.None && condition.GraphProgramId <= 0) return true;
+            if (condition.GraphProgramId > 0) return true;
             return condition.Inline switch
             {
                 InlineConditionKind.None => true,
@@ -150,7 +115,7 @@ namespace Ludots.Core.Presentation.Systems
                 InlineConditionKind.SourceIsAlive => World.IsAlive(owner),
                 InlineConditionKind.TargetIsAlive => World.IsAlive(owner),
                 InlineConditionKind.OwnerCullVisible => IsOwnerCullVisible(owner),
-                InlineConditionKind.SourceHasAttributes => World.IsAlive(owner) && World.Has<AttributeBuffer>(owner),
+                InlineConditionKind.SourceHasAttributes => OwnerSatisfiesAttributeRequirements(owner, definition),
                 InlineConditionKind.SourceHasVisualTransform => World.IsAlive(owner) && World.Has<VisualTransform>(owner),
                 _ => true,
             };
@@ -159,18 +124,26 @@ namespace Ludots.Core.Presentation.Systems
         private bool IsLocalPlayer(Entity owner)
         {
             return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? candidate) &&
-                   candidate is Entity localPlayer &&
-                   localPlayer == owner;
+                   candidate is Entity localPlayer && localPlayer == owner;
         }
 
         private bool IsOwnerCullVisible(Entity owner)
         {
-            if (!World.IsAlive(owner))
-            {
-                return false;
-            }
-
+            if (!World.IsAlive(owner)) return false;
             return !World.Has<CullState>(owner) || World.Get<CullState>(owner).IsVisible;
+        }
+
+        private bool OwnerSatisfiesAttributeRequirements(Entity owner, in PerformerDefinition definition)
+        {
+            if (!World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner)) return false;
+            ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
+            int[] required = definition.RequiredAttributeIds;
+            if (required == null || required.Length == 0) return true;
+            for (int i = 0; i < required.Length; i++)
+            {
+                if (!attributes.HasAttribute(required[i])) return false;
+            }
+            return true;
         }
     }
 }

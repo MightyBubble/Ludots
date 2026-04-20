@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
@@ -100,6 +101,106 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(engine.GetService(CoreServiceKeys.PresentationBehaviorRegistry), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.PresentationBehaviorResolver), Is.Not.Null);
+        }
+
+        [Test]
+        public void GameEngine_UsesMergedPresentationEventStreamCapacity()
+        {
+            string repoRoot = FindRepoRoot();
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") }, Path.Combine(repoRoot, "assets"));
+
+            PresentationEventStream stream = engine.GetService(CoreServiceKeys.PresentationEventStream)
+                ?? throw new InvalidOperationException("PresentationEventStream service missing.");
+
+            Assert.That(
+                stream.Capacity,
+                Is.EqualTo(engine.MergedConfig.Presentation.GetEffectivePresentationEventStreamCapacity()));
+        }
+
+        [Test]
+        public void ConfigPipeline_MergesPresentationRuntimeCapacities()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationRuntimeConfigContracts", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            string mod = Path.Combine(root, "ModPresentation");
+            Directory.CreateDirectory(Path.Combine(core, "Configs"));
+            Directory.CreateDirectory(Path.Combine(mod, "assets"));
+
+            File.WriteAllText(Path.Combine(core, "Configs", "game.json"), """
+{
+  "presentation": {
+    "performerInstanceCapacity": 2048,
+    "presentationEventStreamCapacity": 32768,
+    "performerCommandCapacity": 4096,
+    "primitiveDrawBufferCapacity": 8192,
+    "visualSnapshotBufferCapacity": 16384,
+    "visualProxyBufferCapacity": 16384,
+    "skinnedVisualBatchCapacity": 2048,
+    "presentationRequestCapacity": 16384,
+    "groundOverlayCapacity": 1024,
+    "roadSplineCapacity": 2048,
+    "worldHudCapacity": 4096,
+    "screenHudCapacity": 4096,
+    "runtimeEntitySpawnQueueCapacity": 8192
+  }
+}
+""");
+            File.WriteAllText(Path.Combine(mod, "assets", "game.json"), """
+{
+  "presentation": {
+    "performerInstanceCapacity": 8192,
+    "presentationEventStreamCapacity": 65536,
+    "performerCommandCapacity": 32768,
+    "primitiveDrawBufferCapacity": 65536,
+    "visualSnapshotBufferCapacity": 131072,
+    "visualProxyBufferCapacity": 131072,
+    "skinnedVisualBatchCapacity": 32768,
+    "presentationRequestCapacity": 131072,
+    "groundOverlayCapacity": 16384,
+    "roadSplineCapacity": 32768,
+    "worldHudCapacity": 65536,
+    "screenHudCapacity": 65536,
+    "runtimeEntitySpawnQueueCapacity": 65536
+  }
+}
+""");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", core);
+            vfs.Mount("ModPresentation", mod);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            modLoader.LoadedModIds.Add("ModPresentation");
+
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var config = pipeline.MergeGameConfig();
+
+            Assert.That(config.Presentation.PerformerInstanceCapacity, Is.EqualTo(8192));
+            Assert.That(config.Presentation.PresentationEventStreamCapacity, Is.EqualTo(65536));
+            Assert.That(config.Presentation.PerformerCommandCapacity, Is.EqualTo(32768));
+            Assert.That(config.Presentation.PrimitiveDrawBufferCapacity, Is.EqualTo(65536));
+            Assert.That(config.Presentation.VisualSnapshotBufferCapacity, Is.EqualTo(131072));
+            Assert.That(config.Presentation.VisualProxyBufferCapacity, Is.EqualTo(131072));
+            Assert.That(config.Presentation.SkinnedVisualBatchCapacity, Is.EqualTo(32768));
+            Assert.That(config.Presentation.PresentationRequestCapacity, Is.EqualTo(131072));
+            Assert.That(config.Presentation.GroundOverlayCapacity, Is.EqualTo(16384));
+            Assert.That(config.Presentation.RoadSplineCapacity, Is.EqualTo(32768));
+            Assert.That(config.Presentation.WorldHudCapacity, Is.EqualTo(65536));
+            Assert.That(config.Presentation.ScreenHudCapacity, Is.EqualTo(65536));
+            Assert.That(config.Presentation.RuntimeEntitySpawnQueueCapacity, Is.EqualTo(65536));
+            Assert.That(config.Presentation.GetEffectivePerformerInstanceCapacity(), Is.EqualTo(8192));
+            Assert.That(config.Presentation.GetEffectivePresentationEventStreamCapacity(), Is.EqualTo(65536));
+            Assert.That(config.Presentation.GetEffectivePerformerCommandCapacity(), Is.EqualTo(32768));
+            Assert.That(config.Presentation.GetEffectivePrimitiveDrawBufferCapacity(), Is.EqualTo(65536));
+            Assert.That(config.Presentation.GetEffectiveVisualSnapshotBufferCapacity(), Is.EqualTo(131072));
+            Assert.That(config.Presentation.GetEffectiveVisualProxyBufferCapacity(), Is.EqualTo(131072));
+            Assert.That(config.Presentation.GetEffectiveSkinnedVisualBatchCapacity(), Is.EqualTo(32768));
+            Assert.That(config.Presentation.GetEffectivePresentationRequestCapacity(), Is.EqualTo(131072));
+            Assert.That(config.Presentation.GetEffectiveGroundOverlayCapacity(), Is.EqualTo(16384));
+            Assert.That(config.Presentation.GetEffectiveRoadSplineCapacity(), Is.EqualTo(32768));
+            Assert.That(config.Presentation.GetEffectiveWorldHudCapacity(), Is.EqualTo(65536));
+            Assert.That(config.Presentation.GetEffectiveScreenHudCapacity(), Is.EqualTo(65536));
+            Assert.That(config.Presentation.GetEffectiveRuntimeEntitySpawnQueueCapacity(), Is.EqualTo(65536));
         }
 
         [Test]

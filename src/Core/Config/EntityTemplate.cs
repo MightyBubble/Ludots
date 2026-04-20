@@ -6,6 +6,7 @@ namespace Ludots.Core.Config
     public class EntityTemplate : IIdentifiable
     {
         public string Id { get; set; }
+        public string OnSpawnEffect { get; set; }
         
         // Map of ComponentName -> JsonObject Data
         public Dictionary<string, JsonNode> Components { get; set; } = new Dictionary<string, JsonNode>();

@@ -22,6 +22,14 @@ namespace Ludots.Core.Presentation.Rendering
             _skinnedBatchBuffer = skinnedBatchBuffer;
         }
 
+        public void ClearProjectionTargets()
+        {
+            _drawBuffer.Clear();
+            _snapshotBuffer?.Clear();
+            _proxyBuffer?.Clear();
+            _skinnedBatchBuffer?.Clear();
+        }
+
         public void Emit(in PresentationVisualProxy proxy)
         {
             if (_proxyBuffer != null && !_proxyBuffer.TryAdd(proxy))

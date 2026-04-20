@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Assets;
@@ -13,33 +14,39 @@ namespace Ludots.Core.Presentation.Requests
         private readonly PresentationRequestBuffer _requests;
         private readonly PrefabRegistry _prefabs;
         private readonly MeshAssetRegistry _meshes;
+        private readonly StableDrawCache _stableDrawCache;
         private readonly PresentationVisualProxyEmitter _visualProxyEmitter;
         private readonly GroundOverlayBuffer _groundOverlays;
         private readonly WorldHudBatchBuffer _worldHud;
         private readonly RoadSplineBuffer _roadSplines;
+        private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
         public PresentationRequestFlushSystem(
             World world,
             PresentationRequestBuffer requests,
             PrefabRegistry prefabs,
             MeshAssetRegistry meshes,
+            StableDrawCache stableDrawCache,
             PrimitiveDrawBuffer primitives,
             GroundOverlayBuffer groundOverlays,
             WorldHudBatchBuffer worldHud,
             RoadSplineBuffer roadSplines,
-            PrimitiveDrawBuffer? snapshotBuffer = null,
-            PresentationVisualProxyBuffer? proxyBuffer = null,
-            SkinnedVisualBatchBuffer? skinnedBatchBuffer = null)
+            PrimitiveDrawBuffer snapshotBuffer,
+            PresentationVisualProxyBuffer proxyBuffer,
+            SkinnedVisualBatchBuffer skinnedBatchBuffer,
+            PresentationTimingDiagnostics? timingDiagnostics = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _prefabs = prefabs ?? throw new ArgumentNullException(nameof(prefabs));
             _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
+            _stableDrawCache = stableDrawCache ?? throw new ArgumentNullException(nameof(stableDrawCache));
+            _timingDiagnostics = timingDiagnostics;
             _visualProxyEmitter = new PresentationVisualProxyEmitter(
                 primitives ?? throw new ArgumentNullException(nameof(primitives)),
-                snapshotBuffer,
-                proxyBuffer,
-                skinnedBatchBuffer);
+                snapshotBuffer ?? throw new ArgumentNullException(nameof(snapshotBuffer)),
+                proxyBuffer ?? throw new ArgumentNullException(nameof(proxyBuffer)),
+                skinnedBatchBuffer ?? throw new ArgumentNullException(nameof(skinnedBatchBuffer)));
             _groundOverlays = groundOverlays ?? throw new ArgumentNullException(nameof(groundOverlays));
             _worldHud = worldHud ?? throw new ArgumentNullException(nameof(worldHud));
             _roadSplines = roadSplines ?? throw new ArgumentNullException(nameof(roadSplines));
@@ -47,6 +54,8 @@ namespace Ludots.Core.Presentation.Requests
 
         public override void Update(in float dt)
         {
+            long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
+            _stableDrawCache.BeginFrame();
             ReadOnlySpan<PresentationRequest> span = _requests.GetSpan();
             for (int i = 0; i < span.Length; i++)
             {
@@ -91,6 +100,14 @@ namespace Ludots.Core.Presentation.Requests
                         throw new InvalidOperationException($"Unknown PresentationRequestKind '{request.Kind}'.");
                 }
             }
+
+            _visualProxyEmitter.ClearProjectionTargets();
+            _stableDrawCache.Project(_visualProxyEmitter, evictUntouched: true);
+
+            if (_timingDiagnostics != null)
+            {
+                _timingDiagnostics.ObservePresentationRequestFlush((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
+            }
         }
 
         private void EmitPrefab(in PresentationRequest request)
@@ -119,7 +136,7 @@ namespace Ludots.Core.Presentation.Requests
 
         private void EmitVisualProxy(in PresentationVisualProxy proxy)
         {
-            _visualProxyEmitter.Emit(proxy);
+            _stableDrawCache.Upsert(proxy);
         }
 
         private void EmitRoadSpline(in RoadSplineRequest spline)

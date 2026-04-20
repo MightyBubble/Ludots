@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 
 namespace Ludots.Core.Presentation.Systems
@@ -16,63 +19,79 @@ namespace Ludots.Core.Presentation.Systems
         private const int FeedbackValue0Offset = 5;
 
         private readonly AnimatorControllerRegistry _controllers;
-        private readonly PerformerInstanceBuffer _instances;
+        private readonly PerformerEntityRuntime _runtime;
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly PerformerAnimatorStateBuffer _animatorStates;
+        private readonly PresentationTimingDiagnostics? _timingDiagnostics;
+        private readonly List<Entity> _candidates = new();
+        private int _lastStructureVersion = -1;
+        private int _lastDefinitionVersion = -1;
 
         public AnimatorRuntimeSystem(
             World world,
             AnimatorControllerRegistry controllers,
-            PerformerInstanceBuffer instances,
+            PerformerEntityRuntime runtime,
             PerformerDefinitionRegistry definitions,
-            PerformerAnimatorStateBuffer animatorStates)
+            PerformerAnimatorStateBuffer animatorStates,
+            PresentationTimingDiagnostics? timingDiagnostics = null)
             : base(world)
         {
             _controllers = controllers ?? throw new ArgumentNullException(nameof(controllers));
-            _instances = instances ?? throw new ArgumentNullException(nameof(instances));
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _animatorStates = animatorStates ?? throw new ArgumentNullException(nameof(animatorStates));
+            _timingDiagnostics = timingDiagnostics;
         }
-
         public override void Update(in float dt)
         {
+            long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
+            RebuildCandidatesIfNeeded();
             float tickDt = dt;
-            _instances.ProcessActive(0f, (int handle, ref PerformerInstance instance) =>
+            for (int i = 0; i < _candidates.Count; i++)
             {
-                if (!_definitions.TryGet(instance.DefId, out PerformerDefinition definition))
-                {
-                    return;
-                }
-
+                Entity entity = _candidates[i];
+                if (!World.IsAlive(entity) || !World.Has<PerformerState>(entity)) continue;
+                ref PerformerState state = ref World.Get<PerformerState>(entity);
+                if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition)) continue;
+                if (!definition.HasAnimatorBehavior || (state.BehaviorActiveMask & definition.AnimatorSlotMask) == 0u) continue;
                 BehaviorSlot[] behaviors = definition.Behaviors;
-                for (int i = 0; i < behaviors.Length; i++)
+                for (int bi = 0; bi < behaviors.Length; bi++)
                 {
-                    ref readonly BehaviorSlot slot = ref behaviors[i];
-                    if (slot.Kind != BehaviorKind.Animator ||
-                        slot.Animator.AnimatorControllerId <= 0 ||
-                        !IsBehaviorActive(instance.BehaviorActiveMask, slot.SlotIndex))
-                    {
+                    ref readonly BehaviorSlot slot = ref behaviors[bi];
+                    if (slot.Kind != BehaviorKind.Animator || slot.Animator.AnimatorControllerId <= 0 ||
+                        !IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                         continue;
-                    }
-
-                    UpdateAnimator(handle, slot.Animator, tickDt);
+                    UpdateAnimator(entity, slot.Animator, tickDt);
                 }
-            });
+            }
+            if (_timingDiagnostics != null)
+                _timingDiagnostics.ObservePerformerAnimator((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
         }
 
-        private void UpdateAnimator(int handle, in AnimatorConfig config, float dt)
+        private void RebuildCandidatesIfNeeded()
         {
-            _animatorStates.Ensure(handle, config.AnimatorControllerId);
-            ref AnimatorPackedState packed = ref _animatorStates.GetPackedState(handle);
-            ref AnimatorRuntimeState runtime = ref _animatorStates.GetRuntimeState(handle);
-            ref AnimatorFeedbackBuffer feedback = ref _animatorStates.GetFeedbackBuffer(handle);
+            if (_lastStructureVersion == _runtime.StructureVersion && _lastDefinitionVersion == _definitions.Version)
+                return;
+            _candidates.Clear();
+            var query = new QueryDescription().WithAll<PerformerState, PerfHasAnimator>();
+            World.Query(in query, (Entity entity, ref PerformerState state) =>
+            {
+                if (_definitions.TryGet(state.DefId, out PerformerDefinition definition) && definition.HasAnimatorBehavior)
+                    _candidates.Add(entity);
+            });
+            _lastStructureVersion = _runtime.StructureVersion;
+            _lastDefinitionVersion = _definitions.Version;
+        }
+
+        private void UpdateAnimator(Entity entity, in AnimatorConfig config, float dt)
+        {
+            _animatorStates.Ensure(entity, config.AnimatorControllerId);
+            ref AnimatorPackedState packed = ref _animatorStates.GetPackedState(entity);
+            ref AnimatorRuntimeState runtime = ref _animatorStates.GetRuntimeState(entity);
+            ref AnimatorFeedbackBuffer feedback = ref _animatorStates.GetFeedbackBuffer(entity);
 
             int controllerId = packed.GetControllerId() > 0 ? packed.GetControllerId() : config.AnimatorControllerId;
-            if (controllerId <= 0)
-            {
-                return;
-            }
-
+            if (controllerId <= 0) return;
             packed.SetControllerId(controllerId);
 
             if (!_controllers.TryGet(controllerId, out AnimatorControllerDefinition definition))
@@ -88,12 +107,10 @@ namespace Ludots.Core.Presentation.Systems
                         ToStateIndex = runtime.NextStateIndex,
                     };
                     feedback.Push(evt);
-                    WriteFeedbackToBlackboard(handle, config, evt);
+                    WriteFeedbackToBlackboard(entity, config, evt);
                 }
-
                 return;
             }
-
             runtime.ReportedMissingControllerId = 0;
 
             if (!runtime.Initialized || runtime.ControllerId != controllerId)
@@ -110,35 +127,26 @@ namespace Ludots.Core.Presentation.Systems
                         ToStateIndex = runtime.CurrentStateIndex,
                     };
                     feedback.Push(evt);
-                    WriteFeedbackToBlackboard(handle, config, evt);
+                    WriteFeedbackToBlackboard(entity, config, evt);
                 }
             }
 
             if (!runtime.Initialized || !definition.TryGetState(runtime.CurrentStateIndex, out AnimatorStateDefinition currentState))
-            {
                 return;
-            }
 
-            float speed = config.SpeedParamKey >= 0
-                ? _instances.ResolveFloat(handle, config.SpeedParamKey, 0f)
-                : 1f;
-            if (speed <= 0f)
-            {
-                speed = currentState.PlaybackSpeed <= 0f ? 1f : currentState.PlaybackSpeed;
-            }
-
+            float speed = config.SpeedParamKey >= 0 ? _runtime.ResolveFloat(entity, config.SpeedParamKey, 0f) : 1f;
+            if (speed <= 0f) speed = currentState.PlaybackSpeed <= 0f ? 1f : currentState.PlaybackSpeed;
             runtime.StateElapsedSeconds += dt * speed;
             float duration = ResolveDuration(currentState.DurationSeconds);
             float normalizedTime = ResolveNormalizedTime(runtime.StateElapsedSeconds, duration, currentState.Loop);
 
-            TryStartTransition(handle, config, definition, ref runtime, ref feedback, normalizedTime);
+            TryStartTransition(entity, config, definition, ref runtime, ref feedback, normalizedTime);
             if (!runtime.IsTransitioning && definition.TryGetState(runtime.CurrentStateIndex, out AnimatorStateDefinition resolvedState))
             {
                 currentState = resolvedState;
                 duration = ResolveDuration(currentState.DurationSeconds);
                 normalizedTime = ResolveNormalizedTime(runtime.StateElapsedSeconds, duration, currentState.Loop);
             }
-
             if (runtime.IsTransitioning && definition.TryGetState(runtime.NextStateIndex, out AnimatorStateDefinition nextState))
             {
                 runtime.TransitionElapsedSeconds += dt;
@@ -146,19 +154,15 @@ namespace Ludots.Core.Presentation.Systems
                 float transitionProgress = transitionDuration <= 0f ? 1f : Math.Clamp(runtime.TransitionElapsedSeconds / transitionDuration, 0f, 1f);
                 packed.SetSecondaryStateIndex(ClampPackedStateIndex(nextState.PackedStateIndex));
                 packed.SetTransitionProgress01(transitionProgress);
-
                 if (transitionProgress >= 1f)
                 {
                     var evt = new AnimatorFeedbackEvent
                     {
-                        Kind = AnimatorFeedbackKind.TransitionCompleted,
-                        ControllerId = controllerId,
-                        FromStateIndex = runtime.CurrentStateIndex,
-                        ToStateIndex = runtime.NextStateIndex,
-                        NormalizedTime01 = 1f,
+                        Kind = AnimatorFeedbackKind.TransitionCompleted, ControllerId = controllerId,
+                        FromStateIndex = runtime.CurrentStateIndex, ToStateIndex = runtime.NextStateIndex, NormalizedTime01 = 1f,
                     };
                     feedback.Push(evt);
-                    WriteFeedbackToBlackboard(handle, config, evt);
+                    WriteFeedbackToBlackboard(entity, config, evt);
                     runtime.CurrentStateIndex = runtime.NextStateIndex;
                     runtime.NextStateIndex = AnimatorRuntimeState.NoState;
                     runtime.StateElapsedSeconds = 0f;
@@ -181,66 +185,34 @@ namespace Ludots.Core.Presentation.Systems
                 runtime.LastCompletedStateIndex = runtime.CurrentStateIndex;
                 var evt = new AnimatorFeedbackEvent
                 {
-                    Kind = AnimatorFeedbackKind.StateCompleted,
-                    ControllerId = controllerId,
-                    FromStateIndex = runtime.CurrentStateIndex,
-                    ToStateIndex = runtime.CurrentStateIndex,
-                    NormalizedTime01 = normalizedTime,
+                    Kind = AnimatorFeedbackKind.StateCompleted, ControllerId = controllerId,
+                    FromStateIndex = runtime.CurrentStateIndex, ToStateIndex = runtime.CurrentStateIndex, NormalizedTime01 = normalizedTime,
                 };
                 feedback.Push(evt);
-                WriteFeedbackToBlackboard(handle, config, evt);
+                WriteFeedbackToBlackboard(entity, config, evt);
             }
 
             packed.SetPrimaryStateIndex(ClampPackedStateIndex(currentState.PackedStateIndex));
             packed.SetNormalizedTime01(normalizedTime);
-
             AnimatorPackedStateFlags flags = AnimatorPackedStateFlags.Active;
-            if (currentState.Loop)
-            {
-                flags |= AnimatorPackedStateFlags.Looping;
-            }
-
-            if (runtime.IsTransitioning)
-            {
-                flags |= AnimatorPackedStateFlags.InTransition;
-            }
-
+            if (currentState.Loop) flags |= AnimatorPackedStateFlags.Looping;
+            if (runtime.IsTransitioning) flags |= AnimatorPackedStateFlags.InTransition;
             packed.SetFlags(flags);
-
             if (config.StateParamKey >= 0)
-            {
-                _instances.SetParam(handle, config.StateParamKey, ParamLane.Int, 0f, runtime.CurrentStateIndex, default);
-            }
+                _runtime.SetParam(entity, config.StateParamKey, ParamLane.Int, 0f, runtime.CurrentStateIndex, default);
         }
 
-        private void TryStartTransition(
-            int handle,
-            in AnimatorConfig config,
-            AnimatorControllerDefinition definition,
-            ref AnimatorRuntimeState runtime,
-            ref AnimatorFeedbackBuffer feedback,
-            float normalizedTime)
+        private void TryStartTransition(Entity entity, in AnimatorConfig config, AnimatorControllerDefinition definition,
+            ref AnimatorRuntimeState runtime, ref AnimatorFeedbackBuffer feedback, float normalizedTime)
         {
-            if (runtime.IsTransitioning)
-            {
-                return;
-            }
-
+            if (runtime.IsTransitioning) return;
             AnimatorTransitionDefinition[] transitions = definition.Transitions ?? Array.Empty<AnimatorTransitionDefinition>();
             for (int i = 0; i < transitions.Length; i++)
             {
                 ref readonly AnimatorTransitionDefinition transition = ref transitions[i];
-                if (transition.FromStateIndex != runtime.CurrentStateIndex)
-                {
-                    continue;
-                }
-
-                int intParam = transition.ParameterIndex >= 0
-                    ? _instances.ResolveInt(handle, transition.ParameterIndex, 0)
-                    : 0;
-                float floatParam = transition.ParameterIndex >= 0
-                    ? _instances.ResolveFloat(handle, transition.ParameterIndex, 0f)
-                    : 0f;
+                if (transition.FromStateIndex != runtime.CurrentStateIndex) continue;
+                int intParam = transition.ParameterIndex >= 0 ? _runtime.ResolveInt(entity, transition.ParameterIndex, 0) : 0;
+                float floatParam = transition.ParameterIndex >= 0 ? _runtime.ResolveFloat(entity, transition.ParameterIndex, 0f) : 0f;
                 bool matches = transition.ConditionKind switch
                 {
                     AnimatorConditionKind.None => true,
@@ -252,29 +224,17 @@ namespace Ludots.Core.Presentation.Systems
                     AnimatorConditionKind.AutoOnNormalizedTime => normalizedTime >= transition.Threshold,
                     _ => false,
                 };
-
-                if (!matches)
-                {
-                    continue;
-                }
-
+                if (!matches) continue;
                 if (transition.ConditionKind == AnimatorConditionKind.Trigger && transition.ConsumeTrigger && transition.ParameterIndex >= 0)
-                {
-                    _instances.SetParam(handle, transition.ParameterIndex, ParamLane.Int, 0f, 0, default);
-                }
-
+                    _runtime.SetParam(entity, transition.ParameterIndex, ParamLane.Int, 0f, 0, default);
                 var evt = new AnimatorFeedbackEvent
                 {
-                    Kind = AnimatorFeedbackKind.TransitionStarted,
-                    ControllerId = definition.ControllerId,
-                    FromStateIndex = runtime.CurrentStateIndex,
-                    ToStateIndex = transition.ToStateIndex,
-                    NormalizedTime01 = normalizedTime,
-                    Value0 = transition.DurationSeconds,
+                    Kind = AnimatorFeedbackKind.TransitionStarted, ControllerId = definition.ControllerId,
+                    FromStateIndex = runtime.CurrentStateIndex, ToStateIndex = transition.ToStateIndex,
+                    NormalizedTime01 = normalizedTime, Value0 = transition.DurationSeconds,
                 };
                 feedback.Push(evt);
-                WriteFeedbackToBlackboard(handle, config, evt);
-
+                WriteFeedbackToBlackboard(entity, config, evt);
                 if (transition.DurationSeconds <= 0f)
                 {
                     runtime.CurrentStateIndex = transition.ToStateIndex;
@@ -289,53 +249,33 @@ namespace Ludots.Core.Presentation.Systems
                     runtime.TransitionElapsedSeconds = 0f;
                     runtime.TransitionDurationSeconds = transition.DurationSeconds;
                 }
-
                 return;
             }
         }
 
-        private void WriteFeedbackToBlackboard(int handle, in AnimatorConfig config, in AnimatorFeedbackEvent feedback)
+        private void WriteFeedbackToBlackboard(Entity entity, in AnimatorConfig config, in AnimatorFeedbackEvent feedback)
         {
-            if (config.StateParamKey < 0)
-            {
-                return;
-            }
-
-            _instances.SetParam(handle, config.StateParamKey + FeedbackKindOffset, ParamLane.Int, 0f, (int)feedback.Kind, default);
-            _instances.SetParam(handle, config.StateParamKey + FeedbackFromStateOffset, ParamLane.Int, 0f, feedback.FromStateIndex, default);
-            _instances.SetParam(handle, config.StateParamKey + FeedbackToStateOffset, ParamLane.Int, 0f, feedback.ToStateIndex, default);
-            _instances.SetParam(handle, config.StateParamKey + FeedbackNormalizedTimeOffset, ParamLane.Float, feedback.NormalizedTime01, 0, default);
-            _instances.SetParam(handle, config.StateParamKey + FeedbackValue0Offset, ParamLane.Float, feedback.Value0, 0, default);
+            if (config.StateParamKey < 0) return;
+            _runtime.SetParam(entity, config.StateParamKey + FeedbackKindOffset, ParamLane.Int, 0f, (int)feedback.Kind, default);
+            _runtime.SetParam(entity, config.StateParamKey + FeedbackFromStateOffset, ParamLane.Int, 0f, feedback.FromStateIndex, default);
+            _runtime.SetParam(entity, config.StateParamKey + FeedbackToStateOffset, ParamLane.Int, 0f, feedback.ToStateIndex, default);
+            _runtime.SetParam(entity, config.StateParamKey + FeedbackNormalizedTimeOffset, ParamLane.Float, feedback.NormalizedTime01, 0, default);
+            _runtime.SetParam(entity, config.StateParamKey + FeedbackValue0Offset, ParamLane.Float, feedback.Value0, 0, default);
         }
 
-        private static float ResolveDuration(float durationSeconds)
-        {
-            return durationSeconds <= 0f ? 1f : durationSeconds;
-        }
+        private static float ResolveDuration(float durationSeconds) => durationSeconds <= 0f ? 1f : durationSeconds;
 
         private static float ResolveNormalizedTime(float elapsedSeconds, float durationSeconds, bool loop)
         {
-            if (durationSeconds <= 0f)
-            {
-                return 0f;
-            }
-
-            if (!loop)
-            {
-                return Math.Clamp(elapsedSeconds / durationSeconds, 0f, 1f);
-            }
-
+            if (durationSeconds <= 0f) return 0f;
+            if (!loop) return Math.Clamp(elapsedSeconds / durationSeconds, 0f, 1f);
             float cycles = elapsedSeconds / durationSeconds;
             return cycles - MathF.Floor(cycles);
         }
 
         private static int ClampPackedStateIndex(int packedStateIndex)
         {
-            if (packedStateIndex < 0)
-            {
-                return 0;
-            }
-
+            if (packedStateIndex < 0) return 0;
             return Math.Min(packedStateIndex, AnimatorPackedState.MaxStateIndex);
         }
 
@@ -345,3 +285,4 @@ namespace Ludots.Core.Presentation.Systems
         }
     }
 }
+

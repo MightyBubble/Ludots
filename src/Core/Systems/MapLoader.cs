@@ -5,9 +5,10 @@ using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
-using Ludots.Core.Presentation.Config;
 
 namespace Ludots.Core.Systems
 {
@@ -15,11 +16,11 @@ namespace Ludots.Core.Systems
     {
         private readonly World _world;
         private readonly WorldMap _worldMap;
+        private EffectRequestQueue _effectRequests;
         
         // New Registry
         public DataRegistry<EntityTemplate> TemplateRegistry { get; private set; }
         public EntityTemplateKeyRegistry EntityTemplateKeys { get; }
-        public PresentationAuthoringContext? PresentationAuthoringContext { get; set; }
 
         public MapLoader(World world, WorldMap worldMap, ConfigPipeline pipeline)
         {
@@ -27,6 +28,11 @@ namespace Ludots.Core.Systems
             _worldMap = worldMap;
             TemplateRegistry = new DataRegistry<EntityTemplate>(pipeline);
             EntityTemplateKeys = new EntityTemplateKeyRegistry();
+        }
+
+        public void SetEffectRequestQueue(EffectRequestQueue effectRequests)
+        {
+            _effectRequests = effectRequests;
         }
 
         public void LoadTemplates()
@@ -58,7 +64,7 @@ namespace Ludots.Core.Systems
                 templates[t.Id] = t;
             }
 
-            var builder = new EntityBuilder(_world, templates, PresentationAuthoringContext);
+            var builder = new EntityBuilder(_world, templates);
             var mapEntityTag = new MapEntity { MapId = new MapId(mapConfig.Id) };
             
             foreach (var entityData in mapConfig.Entities)
@@ -86,6 +92,7 @@ namespace Ludots.Core.Systems
                 var entity = builder.Build();
                 TryApplyTemplateKey(entity, entityData.Template);
                 _world.Add(entity, mapEntityTag);
+                PublishTemplateOnSpawnEffect(entity, entityData.Template);
             }
         }
 
@@ -106,6 +113,35 @@ namespace Ludots.Core.Systems
             {
                 _world.Add(entity, templateKey);
             }
+        }
+
+        private void PublishTemplateOnSpawnEffect(Entity entity, string templateId)
+        {
+            if (_effectRequests == null || string.IsNullOrWhiteSpace(templateId))
+            {
+                return;
+            }
+
+            EntityTemplate template = TemplateRegistry.Get(templateId);
+            if (template == null || string.IsNullOrWhiteSpace(template.OnSpawnEffect))
+            {
+                return;
+            }
+
+            int effectTemplateId = EffectTemplateIdRegistry.GetId(template.OnSpawnEffect);
+            if (effectTemplateId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Entity template '{templateId}' references unknown onSpawnEffect '{template.OnSpawnEffect}'.");
+            }
+
+            _effectRequests.Publish(new EffectRequest
+            {
+                Source = entity,
+                Target = entity,
+                TargetContext = entity,
+                TemplateId = effectTemplateId,
+            });
         }
         
         public void LoadMapBinary(byte[] data)

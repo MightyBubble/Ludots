@@ -605,7 +605,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 tpl.TagId,
                 templateId,
                 in mergedConfig,
-                builtinRuntime);
+                builtinRuntime,
+                BuildExecutionSeed(effectEntity, phase, templateId, context));
 
             _graphApiHost?.ClearConfigContext();
 
@@ -654,6 +655,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _listenerRegistrationDropped++;
                 }
             }
+        }
+
+        private static uint BuildExecutionSeed(Entity effectEntity, EffectPhaseId phase, int templateId, in EffectContext context)
+        {
+            uint hash = 2166136261u;
+            hash = Mix(hash, effectEntity.Id);
+            hash = Mix(hash, effectEntity.Version);
+            hash = Mix(hash, context.Source.Id);
+            hash = Mix(hash, context.Target.Id);
+            hash = Mix(hash, context.TargetContext.Id);
+            hash = Mix(hash, templateId);
+            hash = Mix(hash, (int)phase);
+            return hash == 0u ? 1u : hash;
+        }
+
+        private static uint Mix(uint hash, int value)
+        {
+            return (hash ^ unchecked((uint)value)) * 16777619u;
         }
     }
 }

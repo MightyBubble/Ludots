@@ -33,8 +33,8 @@ T3 PerformerCommand 扩展（7 种 CommandKind）
 
 T12 GlobalEventBridgeSystem（日夜/区域/天气）── 可与 T9 并行
 T16 VisualRenderPayload 提取（渲染三重镜像整合）── 可与 T11 并行
-T17 遗留代码清理（阶段性删除 BuiltinPerformerDefinitions / PerformerVisualKind / Perform 命名空间；EntityVisualEmitSystem / Prefab / VisualTemplate 仍为现役遗留通道）── T15 之后
-T18 UE5 适配 ── T17 剩余遗留通道完成后
+T17 遗留代码清理（删除 EntityVisualEmitSystem / BuiltinPerformerDefinitions / Perform 命名空间 / Prefab 系统）── T15 之后
+T18 UE5 适配 ── T17 之后
 ```
 
 ## 看板任务列表
@@ -43,7 +43,7 @@ T18 UE5 适配 ── T17 剩余遗留通道完成后
 
 | ID | 任务 | 产出文件 | 验收标准 | 状态 |
 |----|------|---------|---------|------|
-| T1 | BehaviorSlot + AssetKind + SplineConfig 类型定义 | `Performers/BehaviorSlot.cs`, `Performers/AssetKind.cs` | `dotnet build` 通过；BehaviorKind 8 种、AssetKind 9 种（含 `GroundOverlay=9`）、所有 Config struct 字段与架构文档一致 | **通过** |
+| T1 | BehaviorSlot + AssetKind + SplineConfig 类型定义 | `Performers/BehaviorSlot.cs`, `Performers/AssetKind.cs` | `dotnet build` 通过；BehaviorKind 8 种、AssetKind 8 种、所有 Config struct 字段与架构文档一致 | **通过** |
 | T2 | PerformerParamBlackboard 多类型三 lane | `Performers/PerformerParamBlackboard.cs` | 单元测试：SetFloat/SetInt/SetVector + ResolveFloat 父→子继承链 + ClearAll | **通过** |
 | T3 | PerformerCommand 重写 | `Performers/PerformerCommand.cs` | 独立 PerformerCommandKind 枚举（7 种）；多类型 SetParam 字段；`dotnet build` 通过 | **通过** |
 
@@ -83,22 +83,26 @@ T18 UE5 适配 ── T17 剩余遗留通道完成后
 - Blackboard 集成：SetParam 三 lane 分发、ResolveFloat/Int/Vector 父→子继承链、SetParamDefault 应用定义默认值
 - 9 个单元测试覆盖全部验收项
 
-**T6: 待修复（2026-04-18）**
+**T6: 通过（2026-04-18）**
 
-通过项：
 - children 展开为 PerformerCreated Rule ✓（`ExpandChildrenRules`）
 - extends 继承链展开 ✓（`ExpandDefinition` + 循环检测）
 - 8 种 BehaviorKind 全部有 Parse 方法 ✓
 - 无效字段报错不崩溃 ✓（`RejectLegacyFields` + try/catch）
 - `dotnet build` 0 error ✓
+- T6-F1 修复 ✓：全部 fallback 别名已删除，JSON 字段只保留规范名（commit ebd379fa）
+- T6-F2 修复 ✓：ScopeTagRegistry 滥用已替换为 throw InvalidOperationException
+- T6-F3 修复 ✓：新增 7 个 ConfigLoader 专项单元测试（children/extends/behaviors/legacy/cycle/alias rejection）
+- GameEngine.cs 正确接入新 resolver（materialAssets/animatorControllers/animationProfiles/behaviorAssetId）
+- 73 个 Performer pipeline 测试 + 25 个架构守卫测试全部通过
 
-修复项：
+修复记录（已关闭）：
 
-| ID | 严重度 | 描述 |
-|----|--------|------|
-| T6-F1 | HIGH | ConfigLoader 中存在 8 处别名解析（详见下方完整清单），每个 JSON 字段只应有一个规范名，多名称输入必须拒绝 |
-| T6-F2 | HIGH | PerformerScopeTagRegistry 被滥用为通用 string→int 注册表（line 978, 1002），resolver 返回 0 时应 throw 或保持 0 |
-| T6-F3 | HIGH | 缺少 ConfigLoader 专项单元测试（children 展开、extends 继承、behavior 解析、无效字段、循环继承） |
+| ID | 严重度 | 描述 | 修复 |
+|----|--------|------|------|
+| T6-F1 | HIGH | ConfigLoader 8+ 处 fallback 别名 | 全部删除，ParseLegacyIntValue/NormalizeParamDefaultLane 方法已移除 |
+| T6-F2 | HIGH | PerformerScopeTagRegistry 滥用 | 替换为 throw InvalidOperationException |
+| T6-F3 | HIGH | 缺少 ConfigLoader 单元测试 | 新增 PerformerDefinitionConfigLoaderTests（7 个测试） |
 
 #### ConfigLoader 别名完整清单（T6-F1）
 
@@ -119,7 +123,7 @@ T18 UE5 适配 ── T17 剩余遗留通道完成后
 
 #### JSON 迁移范围
 
-现有 mod JSON 文件中 `sourceId` 用于 ValueRef 绑定（graph/entityColor），这是该上下文的规范名，不需要迁移。仅 `ResolveAttributeId` 中的 `sourceId` 别名需要删除（attribute 上下文应使用 `attributeId` 或 `attributeName`）。其余别名（`tag`、`value`、`splinePathId` 等）目前无 mod JSON 使用，删除别名即可，无需迁移；后续若输入旧字段名，应直接拒绝加载。
+现有 mod JSON 文件中 `sourceId` 用于 ValueRef 绑定（graph/entityColor），这是该上下文的规范名，不需要迁移。仅 `ResolveAttributeId` 中的 `sourceId` 别名需要删除（attribute 上下文应使用 `attributeId` 或 `attributeName`）。其余别名（`tag`、`value`、`splinePathId` 等）目前无 mod JSON 使用，删除别名即可，无需迁移。
 
 #### 跨里程碑别名治理规则
 
@@ -128,37 +132,210 @@ T18 UE5 适配 ── T17 剩余遗留通道完成后
 2. JSON schema 每个字段只有一个规范名，与架构文档一致
 3. 不得将 PerformerScopeTagRegistry 用于非 scope tag 用途
 
+#### Wave 2 验收总结
+
+**全部通过（2026-04-18）**
+
+- T4：PerformerInstance 7 新增字段与架构文档 §4.3 逐字段一致，TransformSource 5 值正确
+- T5：树形链表（头插法）+ 递归销毁 + ReleaseScope + blackboard 三 lane 集成，9 个单元测试全覆盖
+- T6：ConfigLoader 新 JSON schema 解析正确，children/extends/behaviors/rules 全链路验证，别名全部清除，7 个专项测试
+
+**M2 里程碑达成 ✓ — Wave 3 (T7/T8) 已解锁**
+
 ### Wave 3 — 系统重写（依赖 Wave 2）
+
+当时的实现工作树记录：`C:\001_AI\LudotsProd_pr129_impl`，分支：`codex/pr129-pr135-integration`
 
 | ID | 任务 | 依赖 | 产出文件 | 验收标准 | 预估 |
 |----|------|------|---------|---------|------|
 | T7 | PerformerRuntimeSystem 重写 | T5, T6 | `Systems/PerformerRuntimeSystem.cs` | 单元测试：CreatePerformer(parentHandle) 建立正确层级；DestroyPerformer 递归销毁；DestroyPerformerScope 按 tag；ActivateBehavior/DeactivateBehavior 翻转 mask；SetParam 写入 blackboard | L |
 | T8 | PerformerGroundingUtility + Transform 计算 | T5 | `Performers/PerformerGroundingUtility.cs` | 单元测试：5 种 TransformSource 的位置/旋转/缩放计算正确；SnapToGround/AlignToSurface/None 三种 grounding 模式；BoneAttached 跳过 grounding | M |
 
+#### Wave 3 验收记录
+
+**T7: 通过（2026-04-19，commit 43ce36ef 修复）**
+
+- CreatePerformer(parentHandle) 层级正确 ✓
+- DestroyPerformer 递归销毁 ✓
+- DestroyPerformerScope 在 ScopeTag<=0 时 throw ✓（T7-F1 已修复）
+- ActivateBehavior / DeactivateBehavior 翻转 mask ✓
+- SetParam 写入 blackboard 三 lane ✓
+- 使用独立 `PerformerCommandKind`，旧 `PresentationCommand` / `PresentationCommandKind` 已删除 ✓
+- DestroyPerformerScope 专项测试已补充 ✓（T7-F2 已修复）
+
+**T8: 通过（2026-04-19，commit 43ce36ef 修复）**
+
+- 5 种 TransformSource 全部有实现和测试 ✓
+- SplineDriven 测试已补充 ✓（T8-F1 已修复）
+- EntityTransform hasOwnerTransform=true 直接测试已补充 ✓（T8-F2 已修复）
+- GroundingMode.None 显式测试已补充（ThrowingHeightmap 守卫）✓（T8-F3 已修复）
+- ResolveBatch 测试已补充 ✓（T8-F4 已修复）
+- BoneAttached 跳过 grounding ✓
+
+**Wave 3 全部通过 ✓**
+
 ### Wave 4 — 行为与发射（依赖 Wave 3）
+
+当时的实现工作树记录：`C:\001_AI\LudotsProd_pr129_impl`，分支：`codex/pr129-pr135-integration`
 
 | ID | 任务 | 依赖 | 产出文件 | 验收标准 | 预估 |
 |----|------|------|---------|---------|------|
 | T9 | PerformerBehaviorSystem | T7, T8 | `Systems/PerformerBehaviorSystem.cs` | 单元测试：AttributeBinding 读属性→写 param + 阈值映射；TagBinding tag on/off→param；Material param→materialId 查表；Sound 请求发射/停止 | L |
 | T10 | Animator 参数统一 | T7 | 修改 `Systems/AnimatorRuntimeSystem.cs` | 单元测试：Animator 从 blackboard 读 speed/trigger；AnimatorFeedback 写回 blackboard；删除 AnimatorParameterBuffer 后 build 通过 | M |
-| T11 | PerformerEmitSystem 重写 | T9 | `Systems/PerformerEmitSystem.cs` | ~200 行；只处理 AssetBinding emit；单元测试：Mesh/SkinnedMesh/Decal/VFX/Spline/WorldHud/WorldText/GroundOverlay 各 AssetKind 发射正确的 proxy | L |
+| T11 | PerformerEmitSystem 重写 | T9 | `Systems/PerformerEmitSystem.cs` | ~200 行；只处理 AssetBinding emit；单元测试：Mesh/SkinnedMesh/Decal/VFX/Spline/WorldHud/WorldText 各 AssetKind 发射正确的 proxy | L |
 | T12 | GlobalEventBridgeSystem | T3 | `Systems/GlobalEventBridgeSystem.cs` | 单元测试：日夜/区域/天气事件正确发射到 PresentationEventStream | S |
+
+#### Wave 4 验收记录
+
+**T9: 通过（2026-04-19，commit 43ce36ef 修复）**
+
+- AttributeBinding 读属性→写 param + 阈值映射 ✓
+- TagBinding tag on/off→param ✓，InvertLogic 测试已补充 ✓（T9-F1 已修复）
+- Material param→materialId 查表 ✓
+- Sound PlayOrUpdate + Stop 均由 PerformerBehaviorSystem 发射 ✓（T9-F2 已修复）
+- Animator 逻辑已从 PBS 移除，无双重路径 ✓（T9-F3 已修复）
+
+**T10: 通过（2026-04-19）**
+
+- Animator 从 blackboard 读 speed/trigger ✓
+- AnimatorFeedback 写回 blackboard ✓
+- `AnimatorParameterBuffer` 已删除，全仓库无引用 ✓
+
+**T11: 通过（2026-04-19，commit 43ce36ef 修复）**
+
+- `PerformerEmitSystem.cs` 176 行，只调用 `EmitAssetBindings` ✓
+- `LegacyPerformerEmitSystem.cs` 已删除 ✓（T11-F1 已修复）
+- 构造函数死参数已清理 ✓（T11-F2 已修复）
+- 7 种 AssetKind 逐项验证 proxy 内容 ✓（T11-F3 已修复）
+- 旧 GasTests 回归已修复 ✓（T11-F5 已修复）
+
+**T12: 通过（2026-04-19）**
+
+- GlobalDayNight=30 / GlobalRegionChanged=31 / GlobalWeather=32 ✓
+- 三种全局事件正确桥接到 PresentationEventStream ✓
+
+**Wave 4 全部通过 ✓ — M3 里程碑达成**
 
 ### Wave 5 — Raylib UAT（依赖 Wave 4）
 
+当时的实现工作树记录：`C:\001_AI\LudotsProd_pr129_impl`，分支：`codex/pr129-pr135-integration`
+
 | ID | 任务 | 依赖 | 产出文件 | 验收标准 | 预估 |
 |----|------|------|---------|---------|------|
-| T13 | Raylib UAT Layer 1 — 逐 AssetKind | T11 | `Tests/PresentationTests/PerformerAssetKindTests.cs` | 9 个 AssetKind 各一个渲染验证测试通过（详见 performer-raylib-uat.md §1-5） | M |
-| T14 | Raylib UAT Layer 2 — 逐 BehaviorKind | T9, T10 | `Tests/PresentationTests/PerformerBehaviorKindTests.cs` | 8 个 BehaviorKind 各一个驱动验证测试通过（详见 performer-raylib-uat.md §6-11） | M |
+| T13 | Raylib UAT Layer 1 — 逐 AssetKind | T11 | `Tests/PresentationTests/PerformerAssetKindTests.cs` | 7 个 AssetKind 各一个渲染验证测试通过（详见 performer-raylib-uat.md §1-5） | M |
+| T14 | Raylib UAT Layer 2 — 逐 BehaviorKind | T9, T10 | `Tests/PresentationTests/PerformerBehaviorKindTests.cs` | 9 个 BehaviorKind 各一个驱动验证测试通过（详见 performer-raylib-uat.md §6-11） | M |
 | T15 | Raylib UAT Layer 3 — 铁匠铺完整 | T13, T14 | `Tests/PresentationTests/BlacksmithPerformerUatTests.cs`, `mods/fixtures/blacksmith/` | 9 个铁匠铺场景全部通过（详见 performer-raylib-uat.md §13） | L |
 
+#### Wave 5 验收记录
+
+**T13: 通过（2026-04-19）**
+
+- 7 种 AssetKind 全部有独立测试 ✓（Mesh/SkinnedMesh/Decal/VFX/Spline/WorldHud/WorldText）
+- 额外覆盖 Sound 和 GroundOverlay（共 9 种）✓
+- 每种 AssetKind 逐项断言 proxy 内容（assetId/materialId/renderPath/position/scale）✓
+- 架构守卫 `AssetKindContract_ArchitectureExposesNineKinds` + `PreservesExplicitEnumValues` ✓
+
+**T14: 通过（2026-04-19）**
+
+- 7 种非 AssetBinding BehaviorKind 全部有独立测试 ✓
+- AttributeBinding 含阈值映射 ✓，TagBinding 含 tag-off + InvertLogic ✓
+- Animator 含 blackboard→packed state ✓，Attachment 含 bone offset + inheritScale ✓
+- Sound 含 Play + Stop ✓，Material 含 swapTable ✓，Spline 含 patrol progress ✓
+- AssetBinding 由 T13 覆盖，无重复 ✓
+
+**T15: 通过（2026-04-19，含 2 个低优先级备注）**
+
+- 9 个 §13 铁匠铺场景全部覆盖 ✓（出现/开工/停工/日夜/北方/南方/耐久度下降/归零/销毁）
+- `mods/fixtures/blacksmith/` 目录存在，含完整 performers.json + templates.json ✓
+- JSON schema 使用 `"kind": "AssetBinding"` 无 `"visualKind"` ✓
+- 额外架构守卫：无 PrefabRegistry 依赖 + 无 visualKind 字段 ✓
+
+备注（不阻塞验收）：
+
+| ID | 严重度 | 描述 |
+|----|--------|------|
+| T15-N1 | LOW | GlobalDayNight 测试中 rule 硬编码 `paramValue: 1.0`，未验证 phase 值传播 |
+| T15-N2 | LOW | `SetDurability` helper 复制了阈值 band 逻辑（9100/9101/9102），与生产代码耦合 |
+
+**Wave 5 全部通过 ✓ — M4 里程碑达成**
+
+§12 树生命周期测试（`PerformerTreeLifecycleTests.cs`）8 个场景全部覆盖 ✓
+
 ### Wave 6 — 整合与清理（依赖 Wave 5）
+
+当时的实现工作树记录：`C:\001_AI\LudotsProd_pr129_impl`，分支：`codex/pr129-pr135-integration`
 
 | ID | 任务 | 依赖 | 产出文件 | 验收标准 | 预估 |
 |----|------|------|---------|---------|------|
 | T16 | VisualRenderPayload 提取 | T11 | 修改 `Rendering/PresentationVisualProxy.cs` 等 | 提取 13 字段公共 struct；ProxyEmitter 改为 payload 整体赋值；`dotnet build` + 现有测试通过 | M |
-| T17 | 遗留代码清理 | T15 | 删除旧 Perform/VisualKind 文件，保留剩余清理清单 | 已删除 `BuiltinPerformerDefinitions` / `PerformerVisualKind` / `PerformerVisualIdentity` / `Presentation.Perform` 命名空间旧文件；`EntityVisualEmitSystem` / `Prefab*` / `VisualTemplate*` / `PresentationBehavior*` 仍被现役地图、Prefab 测试、Projection/Physics2D/Camera showcase 使用，不能在本波假报完成；`dotnet build` + 聚焦测试通过 | L |
-| T18 | UE5 适配 | T17 剩余清理完成后 | 修改 UE5 adapter | 9 种 AssetKind 到 UE5 渲染的映射；跑铁匠铺 UAT JSON 通过 | XL |
+| T17 | 遗留代码清理 | T15 | 删除 ~20 个文件 | 删除 EntityVisualEmitSystem / BuiltinPerformerDefinitions / EntityScopeFilter / PerformerVisualKind / Perform 命名空间 / Prefab 系统 / VisualTemplate 系统；`dotnet build` + 全量测试通过 | L |
+| T18 | UE5 适配 | T17 | 修改 UE5 adapter | 6 种 AssetKind 到 UE5 渲染的映射；跑铁匠铺 UAT JSON 通过 | XL |
+
+#### Wave 6 验收记录
+
+**T16: 通过（2026-04-19）**
+
+- `VisualRenderPayload` 为 `public struct`，含 13 个字段 ✓
+- `PresentationVisualProxyEmitter` 使用 `Payload = proxy.Payload` 整体赋值 ✓
+- `PrimitiveDrawItem` / `SkinnedVisualBatchItem` 通过 `VisualRenderPayload Payload` 字段暴露，不重复定义原始字段 ✓
+- 架构守卫 `VisualRenderPayloadContract_ExposesOnlySharedThirteenFields` + `Containers_StoreSharedStateOnlyThroughPayload` ✓
+
+**T17: 待收尾（2026-04-19）**
+
+安全删除子集（确认不存在）：
+- `BuiltinPerformerDefinitions.cs` ✓
+- `PerformerVisualKind.cs` ✓
+- `EntityScopeFilter.cs` ✓
+- `LegacyPerformerEmitSystem.cs` ✓
+- `Perform/` 命名空间（PerformCommand, PerformCommandBuffer 等）✓
+- `PresentationCommand` / `PresentationCommandKind` ✓
+
+T17-F1 ~ F4 进展（2026-04-19 审计，基于未提交改动 + commit 2948d443）：
+
+| ID | 状态 | 描述 |
+|----|------|------|
+| T17-F1 | ✓ 已完成 | `EntityVisualEmitSystem.cs` 已删除，`GameEngine.cs` 不再注册 |
+| T17-F2 | ✓ 已完成 | VisualTemplate 系统 5 文件全部删除（Definition/Registry/Ref/ConfigLoader/PresentationAuthoringContext），6 个 mod 的 `visual_templates.json` 全部删除，8 个 mod 全部迁移到 `performers.json` |
+| T17-F3 | 待确认 | 架构守卫测试需确认是否已补充（反射断言旧类型不存在） |
+| T17-F4 | 待确认 | `LoadFromJson_AllCoreBuiltinIds_Present` 测试适配状态待确认 |
+
+全量 grep 验证（2026-04-19）：C# 源码和 JSON 配置中 `VisualTemplate`/`EntityVisualEmit`/`PresentationAuthoringContext`/`ModelPerformBinding`/`visual_templates.json`/`visualTemplateId` 引用全部为零。
+
+阶段性修复提交（2026-04-19，commit 2948d443，由人工审核后提交）：
+- `RtsShowcaseMod/assets/Presentation/performers.json`：从裸对象修正为规范数组格式
+- `UxPrototypePlayableAcceptanceTests.cs`：修复 `InvokeState` 重载解析；`AssertEntityUsesBillboardVisual` 从读 `VisualRuntimeState` 组件改为从 `PresentationPrimitiveDrawBuffer` 匹配 performer 主链路渲染输出
+- 验证：62/62 测试全绿（PerformContracts 16/16 + Presentation 24/24 + UxPrototype 4/4 + ChampionSkill+SplineSurface+UxPrototype 18/18）
+
+新增遗留项（阻塞 M5 最终达成）：
+
+| ID | 严重度 | 描述 |
+|----|--------|------|
+| T17-F5 | HIGH | `VisualRuntimeEmitSystem.cs` + `VisualRuntimeState` 组件构成绕过 performer 的第二条渲染入口。当前唯一生产者是 `ChunkSurfaceBakeSystem`（程序化网格烘焙）。应将程序化网格改为通过 `PerformerCommand.CreatePerformer` + `AssetBinding(Mesh)` 创建 performer instance，然后删除 `VisualRuntimeEmitSystem` / `VisualRuntimeState`，消除 `CameraCullingSystem` 中的双路判断。 |
+| T17-F6 | MEDIUM | Codex 未提交改动（60 文件）需跑全量构建 + 测试后提交 |
+
+注意：Codex 在实现工作树中单方面修改了 T17 验收标准和 M5 里程碑定义，将旧文件重新归类为"现役遗留通道"。这不符合原始架构设计意图——Performer 是唯一的表现编排者，任何绕过 Performer 的渲染入口都是双重真相，必须消除。看板验收标准以本文件（主工作区）为准，实现工作树中的修改无效。
+
+**Wave 6 T16 通过，T17 待收尾（F1/F2 已完成，F5/F6 待处理）— M5 未达成**
+
+### Wave 7 — 性能迭代（依赖 Wave 6 M5）
+
+设计文档：[Performer 编译式执行分层](performer-compiled-lanes.md)
+
+目标：同屏 30K 实体（10K 动态 + 20K 静态），带特效、属性、血条，150K performer instances @ 60FPS。
+
+文档前置 gate：
+- 主架构、编译式执行、Raylib UAT 三份文档必须先统一 working showcase 语义：常驻 performer tree + behavior/tag/param 驱动，不再把 smoke/worker 写成动态创建/销毁示例
+- UAT 文档中的配置错误口径必须统一为 fail-fast / reject-load，不再接受 fallback、自动排序或静默兜底
+- 主架构中的类型片段必须与当前正式合同一致（AssetKind 9 种、AttachmentConfig 5 字段等）
+
+| ID | 任务 | 依赖 | 产出文件 | 验收标准 | 预估 |
+|----|------|------|---------|---------|------|
+| T19 | Persistent Draw Buffer + Static Freeze | T17 | 新增 `StableDrawCache` + 修改 `PerformerEmitSystem` + `PerformerInstanceBuffer` | Draw buffer 持久化不每帧 clear；静态实体 performer 创建后 0 cost/帧；动态实体每帧只更新 position lane；dirty 实例全量重算；30K 同屏稳态 < 2ms | L |
+| T20 | Dirty-Driven Behavior | T19 | 修改 `PerformerBehaviorSystem` | 直接读 owner entity 的 `GameplayTagEffectiveChangedBits` + `DirtyFlags.AttributeDirty`；只对 dirty entity 的 performer 求值 behavior；稳态下 behavior eval ~0；不自建 DirtyMask，复用 GAS 已有信号 | L |
+| T21 | LOD Children Pruning | T20 | 修改 `PerformerRuntimeSystem` | 读 `CullState.LOD` 控制 children 激活数量；Close=5/Medium=3/Far=2；通过 ActivateBehavior/DeactivateBehavior 控制；150K → ~74K active instances | M |
+| T22 | Culling Gate | T19 | 修改 `PerformerRuntimeSystem` + `PerformerInstanceBuffer` | `ProcessActive` 跳过 `!OwnerCullVisible`；子 performer 继承父 cull | S |
+| T23 | SoA Instance Buffer + Compiled Binding Table | T20 | 重构 `PerformerInstanceBuffer` 内部 + 修改 `PerformerDefinitionConfigLoader` | AoS→SoA 内部存储；注册时编译 `CompiledBinding[]`；运行时不走 `ResolveParam` | L |
+| T24 | LOD-Aware Behavior Ticking | T21 | 修改 `PerformerBehaviorSystem` | 按 LOD 分档执行；Medium=Animator 15fps；Far=只 AssetBinding | M |
 
 ## Codex 开发 → 验收流程
 
@@ -177,11 +354,12 @@ T18 UE5 适配 ── T17 剩余遗留通道完成后
 
 ## 关键里程碑
 
-| 里程碑 | 完成条件 | 包含任务 |
-|--------|---------|---------|
-| M1 基础类型就绪 | T1-T3 全部通过 | Wave 1 |
-| M2 实例树可运行 | T4-T7 全部通过 | Wave 1-3 |
-| M3 行为系统可运行 | T8-T12 全部通过 | Wave 1-4 |
-| M4 Raylib UAT 全绿 | T13-T15 全部通过 | Wave 1-5 |
-| M5 清理阶段完成 | T16 通过，T17 已完成安全删除子集且剩余现役遗留通道有清单 | Wave 1-6 |
+| 里程碑 | 完成条件 | 包含任务 | 状态 |
+|--------|---------|---------|------|
+| M1 基础类型就绪 | T1-T3 全部通过 | Wave 1 | **达成** |
+| M2 实例树可运行 | T4-T7 全部通过 | Wave 1-3 | **达成** |
+| M3 行为系统可运行 | T8-T12 全部通过 | Wave 1-4 | **达成** |
+| M4 Raylib UAT 全绿 | T13-T15 全部通过 | Wave 1-5 | **达成** |
+| M5 清理完成 | T16-T17 全部通过 | Wave 1-6 | T17 待收尾（F1/F2 旧链路已删除，F5 VisualRuntimeEmitSystem 双路残留待消除，F6 未提交改动待验证提交） |
 | M6 UE5 适配完成 | T18 通过 | 全部 |
+| M7 性能达标 | T19-T24 全部通过 | Wave 1-7 | 同屏 30K 实体（10K 动态 + 20K 静态）150K performer @ 60FPS |

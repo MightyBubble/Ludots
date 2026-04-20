@@ -37,6 +37,10 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < _telemetry.Count; i++)
             {
                 var evt = _telemetry[i];
+                if (evt.Kind != ResponseChainTelemetryKind.ProposalResolved)
+                {
+                    continue;
+                }
  
                 Vector3 pos = default;
                 if (evt.Target != Entity.Null && World.IsAlive(evt.Target) && World.Has<VisualTransform>(evt.Target))

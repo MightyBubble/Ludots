@@ -353,6 +353,10 @@ namespace Ludots.Adapter.Raylib
 
                         long overlayStart = Stopwatch.GetTimestamp();
                         overlaySkiaRenderer.ResetFrameStats();
+                        double overlayPaintMs = 0d;
+                        double overlayCompositeMs = 0d;
+                        double overlayUploadMs = 0d;
+                        double overlayFinalDrawMs = 0d;
 
                         bool hasUnderlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.UnderUi);
                         bool hasTopOverlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.TopMost);
@@ -365,6 +369,7 @@ namespace Ludots.Adapter.Raylib
                         bool underlayCanvasChanged = false;
                         if (refreshUnderlay)
                         {
+                            long underlayRenderStart = Stopwatch.GetTimestamp();
                             PresentationOverlayLanePacer.LaneRefreshPlan underlayPlan = default;
                             if (hasUnderlay)
                             {
@@ -390,6 +395,7 @@ namespace Ludots.Adapter.Raylib
 
                             underlayHadContent = hasUnderlay;
                             underlayLayerVersion = currentUnderlayVersion;
+                            overlayPaintMs += ElapsedMs(underlayRenderStart);
                         }
 
                         bool refreshUiLayer = hasUiLayer != uiHadContent || (drawSkiaUi && uiRoot.IsDirty);
@@ -403,7 +409,9 @@ namespace Ludots.Adapter.Raylib
                                 uiRoot.Render();
                                 uiLayer.SetHasContent(true);
                             }
-                            presentationTiming?.ObserveUiRender(ElapsedMs(uiRenderStart));
+                            double uiRenderMs = ElapsedMs(uiRenderStart);
+                            presentationTiming?.ObserveUiRender(uiRenderMs);
+                            overlayPaintMs += uiRenderMs;
                             uiHadContent = hasUiLayer;
                         }
                         else
@@ -415,12 +423,14 @@ namespace Ludots.Adapter.Raylib
                             (currentTopOverlayVersion != topOverlayLayerVersion || hasTopOverlay != overlayHadContent);
                         if (refreshTopOverlay)
                         {
+                            long topOverlayRenderStart = Stopwatch.GetTimestamp();
                             overlayLayer.Clear();
                             if (hasTopOverlay)
                             {
                                 overlaySkiaRenderer.Render(overlayScene!, overlayLayer.Canvas, PresentationOverlayLayer.TopMost);
                                 overlayLayer.SetHasContent(true);
                             }
+                            overlayPaintMs += ElapsedMs(topOverlayRenderStart);
                             overlayHadContent = hasTopOverlay;
                             topOverlayLayerVersion = currentTopOverlayVersion;
                         }
@@ -430,6 +440,7 @@ namespace Ludots.Adapter.Raylib
                             || hasCompositeContent != compositeHadContent;
                         if (refreshComposite)
                         {
+                            long compositeStart = Stopwatch.GetTimestamp();
                             compositeRenderer.Canvas.Clear(SKColors.Transparent);
                             if (hasUnderlay)
                             {
@@ -445,10 +456,12 @@ namespace Ludots.Adapter.Raylib
                             {
                                 overlayLayer.DrawTo(compositeRenderer.Canvas);
                             }
+                            overlayCompositeMs = ElapsedMs(compositeStart);
 
                             long uiUploadStart = Stopwatch.GetTimestamp();
                             compositeRenderer.UpdateTexture();
-                            presentationTiming?.ObserveUiUpload(hasCompositeContent ? ElapsedMs(uiUploadStart) : 0d);
+                            overlayUploadMs = hasCompositeContent ? ElapsedMs(uiUploadStart) : 0d;
+                            presentationTiming?.ObserveUiUpload(overlayUploadMs);
                             compositeHadContent = hasCompositeContent;
                         }
                         else
@@ -458,13 +471,19 @@ namespace Ludots.Adapter.Raylib
 
                         if (hasCompositeContent || compositeHadContent)
                         {
+                            long finalDrawStart = Stopwatch.GetTimestamp();
                             compositeRenderer.Draw();
+                            overlayFinalDrawMs = ElapsedMs(finalDrawStart);
                         }
 
                         presentationTiming?.ObserveCompositeSkip(!refreshComposite);
                         screenOverlayBuffer?.Clear();
                         presentationTiming?.ObserveScreenOverlayDraw(
                             ElapsedMs(overlayStart),
+                            overlayPaintMs,
+                            overlayCompositeMs,
+                            overlayUploadMs,
+                            overlayFinalDrawMs,
                             overlaySkiaRenderer.RebuiltLaneCountLastFrame,
                             overlaySkiaRenderer.CachedTextLayoutCount);
 

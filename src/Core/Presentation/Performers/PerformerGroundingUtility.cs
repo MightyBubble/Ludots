@@ -43,12 +43,13 @@ namespace Ludots.Core.Presentation.Performers
                 case TransformSource.EntityTransform:
                     basePosition = hasOwnerTransform ? ownerTransform.Position : instance.WorldPosition;
                     baseRotation = hasOwnerTransform ? NormalizeOrIdentity(ownerTransform.Rotation) : NormalizeOrIdentity(instance.WorldRotation);
-                    baseScale = NormalizeScale(assetBinding.LocalScale);
-                    return ApplyGrounding(
-                        basePosition + assetBinding.LocalOffset,
-                        NormalizeOrIdentity(baseRotation * NormalizeOrIdentity(assetBinding.LocalRotation)),
+                    baseScale = hasOwnerTransform ? NormalizeScale(ownerTransform.Scale) : NormalizeScale(instance.WorldScale);
+                    return ApplyLocalAndGrounding(
+                        basePosition,
+                        baseRotation,
                         baseScale,
                         assetBinding,
+                        inheritScale: true,
                         instance.TransformSource,
                         heightmap);
 
@@ -65,6 +66,7 @@ namespace Ludots.Core.Presentation.Performers
                         heightmap);
 
                 case TransformSource.BoneAttached:
+                case TransformSource.AttachedToParent:
                     basePosition = instance.WorldPosition;
                     baseRotation = NormalizeOrIdentity(instance.WorldRotation);
                     baseScale = NormalizeScale(instance.WorldScale);
@@ -153,7 +155,9 @@ namespace Ludots.Core.Presentation.Performers
             TransformSource transformSource,
             IVisualHeightmap? heightmap)
         {
-            if (assetBinding.Grounding == GroundingMode.None || transformSource == TransformSource.BoneAttached)
+            if (assetBinding.Grounding == GroundingMode.None ||
+                transformSource == TransformSource.BoneAttached ||
+                transformSource == TransformSource.AttachedToParent)
             {
                 return new PerformerResolvedTransform
                 {

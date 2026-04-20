@@ -2390,8 +2390,13 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 _surface.Canvas.Clear(SKColors.Transparent);
                 _renderer.Render(_scene, _surface.Canvas, PresentationOverlayLayer.UnderUi);
                 _renderer.Render(_scene, _surface.Canvas, PresentationOverlayLayer.TopMost);
+                double overlayDrawMs = ToElapsedMs(drawStart);
                 _timings.ObserveScreenOverlayDraw(
-                    ToElapsedMs(drawStart),
+                    overlayDrawMs,
+                    overlayDrawMs,
+                    0d,
+                    0d,
+                    0d,
                     _renderer.RebuiltLaneCountLastFrame,
                     _renderer.CachedTextLayoutCount);
             }

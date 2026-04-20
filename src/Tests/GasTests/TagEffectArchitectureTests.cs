@@ -668,10 +668,6 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates,
                 templateKeys,
-                new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
-                    new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
-                    new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    stableIds),
                 stableIds,
                 effects);
 
@@ -738,10 +734,6 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates,
                 templateKeys,
-                new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
-                    new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
-                    new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    stableIds),
                 stableIds,
                 effects);
 
@@ -808,10 +800,6 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates,
                 templateKeys,
-                new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
-                    new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
-                    new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    stableIds),
                 stableIds);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
@@ -873,10 +861,6 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates,
                 templateKeys,
-                new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
-                    new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
-                    new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    stableIds),
                 stableIds);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest

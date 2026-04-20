@@ -25,7 +25,7 @@
 
 ## 3 UAT 验收场景：铁匠铺
 
-一个铁匠铺 gameplay entity，由 Performer 树驱动全部表现：
+一个铁匠铺 gameplay entity，由 root performer 在创建时一次性展开完整表现树：
 
 ```
 blacksmith_root (hook entity "blacksmith", 无自身 asset, 只做 scope 管理)
@@ -35,22 +35,22 @@ blacksmith_root (hook entity "blacksmith", 无自身 asset, 只做 scope 管理)
 │   [AssetBinding(Mesh)] [AttributeBinding] [Material]
 ├── blacksmith_furnace (scope: structure)
 │   [AssetBinding(Mesh)]
-├── blacksmith_smoke (scope: working) ← "working" tag 控制此 scope 的创建/销毁
-│   [AssetBinding(VFX, chimney_smoke)]
+├── blacksmith_smoke (scope: working)
+│   [AssetBinding(VFX, chimney_smoke)] [TagBinding(working→visibility)]
 └── blacksmith_worker (scope: working)
-    [AssetBinding(SkinnedMesh)] [Animator(spline patrol)] [Sound(anvil, loop)]
+    [AssetBinding(SkinnedMesh)] [TagBinding(working→visibility)] [Animator(spline patrol)] [Sound(anvil, loop)]
 ```
 
 验收事件流：
 
-1. Entity 创建 → root performer 创建 → `children` 中的 structure scope 自动展开（3 个建筑 mesh）
-2. "working" tag ON → Rule → `CreatePerformer(smoke, parent=root)` + `CreatePerformer(worker, parent=root)` → 烟囱和工人动态创建
-3. "working" tag OFF → Rule → `DestroyPerformerScope(working)` → smoke + worker 销毁
+1. Entity 创建 → root performer 创建 → `children` 中的 structure/working scope 一次性自动展开
+2. "working" tag ON → `TagBinding` 写入 param / 激活位 → smoke 可见、worker 进入工作态
+3. "working" tag OFF → `TagBinding` 写入 param / 停用位 → smoke 隐藏、worker 退出工作态，但节点仍常驻
 4. 日夜切换 → `GlobalDayNight` → Rule → `SetParam(lampKey)` → Material behavior 切灯光材质
 5. 区域参数 → root param=0(北方) → 子 performer blackboard 继承 → Material behavior 查表 → 黑砖
 6. 耐久度变化 → AttributeBinding behavior 读比例 → 阈值映射 → AssetBinding 切 mesh（完善/破损/废墟）
 7. 工人 Animator behavior → 样条巡逻 → 到点播动画
-8. 工人 Sound behavior → 锤击声循环播放（working scope 存在时）
+8. 工人 Sound / VFX / HUD 等行为都由同一棵常驻 performer tree 驱动，不靠节点创建/销毁造假
 
 ## 4 核心类型
 
@@ -130,7 +130,7 @@ public enum AssetKind : byte
     Mesh = 1, SkinnedMesh = 2, Decal = 3, VFX = 4, Sound = 5, Spline = 6,
     WorldHud = 7,    // 血条、名字板等世界空间 HUD
     WorldText = 8,   // 浮动战斗文字
-    GroundOverlay = 9, // 地面指示器（Circle/Cone/Line/Ring）
+    GroundOverlay = 9, // 地面 quad / 低保真贴花降级通道
 }
 ```
 
@@ -140,7 +140,7 @@ public enum AssetKind : byte
 // ── Asset Binding：绑定一个可渲染资产 ──
 public struct AssetBindingConfig
 {
-    public AssetKind AssetKind;          // Mesh / SkinnedMesh / Decal / VFX / Sound / Spline / WorldHud / WorldText / GroundOverlay
+    public AssetKind AssetKind;          // Mesh / SkinnedMesh / Decal / VFX / Sound / Spline
     public int AssetId;                  // MeshAssetRegistry 中的 ID
     public int MaterialId;               // 默认材质
     public VisualRenderPath RenderPath;  // 渲染通道（从 VisualRuntimeState 迁入）
@@ -195,8 +195,17 @@ public struct AnimatorConfig
 // ── Attachment：骨骼挂点 ──
 public struct AttachmentConfig
 {
+    public AttachmentTarget Target;
     public int BoneId;
     public Vector3 Offset;
+    public Quaternion RotationOffset;
+    public bool InheritScale;
+}
+
+public enum AttachmentTarget : byte
+{
+    Parent = 0,
+    Bone = 1,
 }
 
 // ── Sound：声音 ──
@@ -342,13 +351,11 @@ GAS Domain              Global Domain
       ▼
   PerformerEmitSystem [重写]       AssetBinding → PresentationVisualProxy
       │                           (~200行，只做 asset emit)
-        ▼
-    PrimitiveDrawBuffer / SkinnedVisualBatchBuffer / SoundRequestBuffer[新]
-        │
-        ▼
-    Platform Adapter（不变）
-
-说明：迁移阶段允许保留一个 `LegacyPerformerEmitSystem` 承接旧 `VisualKind` / entity-scoped model 路径，但它不再承担 Wave 4 的 AssetBinding emit 职责；`PerformerEmitSystem` 的单一职责仍然是“只处理 AssetBinding emit”。
+      ▼
+  PrimitiveDrawBuffer / SkinnedVisualBatchBuffer / SoundRequestBuffer[新]
+      │
+      ▼
+  Platform Adapter（不变）
 ```
 
 ### 5.1 各系统职责
@@ -382,31 +389,19 @@ GAS Domain              Global Domain
     "children": [
       { "definitionId": "blacksmith_workshop_1", "scopeTag": "structure" },
       { "definitionId": "blacksmith_workshop_2", "scopeTag": "structure" },
-      { "definitionId": "blacksmith_furnace", "scopeTag": "structure" }
+      { "definitionId": "blacksmith_furnace", "scopeTag": "structure" },
+      { "definitionId": "blacksmith_smoke", "scopeTag": "working" },
+      { "definitionId": "blacksmith_worker", "scopeTag": "working" }
     ],
     "rules": [
-      {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "working" },
-        "condition": { "inline": "TagGained" },
-        "command": { "kind": "CreatePerformer", "definitionId": "blacksmith_smoke", "scopeTag": "working" }
-      },
-      {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "working" },
-        "condition": { "inline": "TagGained" },
-        "command": { "kind": "CreatePerformer", "definitionId": "blacksmith_worker", "scopeTag": "working" }
-      },
-      {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "working" },
-        "condition": { "inline": "TagLost" },
-        "command": { "kind": "DestroyPerformerScope", "scopeTag": "working" }
-      },
       {
         "event": { "kind": "GlobalDayNight" },
         "command": { "kind": "SetParam", "paramKey": 200, "paramValue": 1.0 }
       }
     ],
     "paramDefaults": [
-      { "paramKey": 300, "lane": "Float", "floatValue": 0 }
+      { "paramKey": 300, "lane": "Float", "floatValue": 0 },
+      { "paramKey": 400, "lane": "Int", "intValue": 0 }
     ]
   },
   {
@@ -450,21 +445,25 @@ GAS Domain              Global Domain
     "behaviors": [
       {
         "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
-        "assetBinding": { "assetKind": "SkinnedMesh", "assetId": "worker_model" }
+        "assetBinding": { "assetKind": "SkinnedMesh", "assetId": "worker_model", "visibilityParamKey": 400 }
       },
       {
-        "slot": 1, "kind": "Animator", "activeByDefault": true,
+        "slot": 1, "kind": "TagBinding", "activeByDefault": true,
+        "tagBinding": { "tagId": "working", "targetParamKey": 400 }
+      },
+      {
+        "slot": 2, "kind": "Animator", "activeByDefault": true,
         "animator": {
           "animatorControllerId": "worker_anim",
           "speedParamKey": 10
         }
       },
       {
-        "slot": 2, "kind": "Sound", "activeByDefault": true,
+        "slot": 3, "kind": "Sound", "activeByDefault": true,
         "sound": { "soundAssetId": "anvil_hammering", "loop": true }
       },
       {
-        "slot": 3, "kind": "Spline", "activeByDefault": true,
+        "slot": 4, "kind": "Spline", "activeByDefault": true,
         "spline": {
           "splineAssetId": "blacksmith_patrol",
           "usage": "Patrol",
@@ -481,8 +480,13 @@ GAS Domain              Global Domain
         "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
         "assetBinding": {
           "assetKind": "VFX", "assetId": "chimney_smoke",
-          "localOffset": [0, 5.0, 0]
+          "localOffset": [0, 5.0, 0],
+          "visibilityParamKey": 400
         }
+      },
+      {
+        "slot": 1, "kind": "TagBinding", "activeByDefault": true,
+        "tagBinding": { "tagId": "working", "targetParamKey": 400 }
       }
     ]
   }
@@ -571,6 +575,8 @@ Performer 的可见性由三层控制：
 
 ### 9.4 LOD 与大规模场景
 
+性能目标：30k entity × 5 children = 150k performer instances @ 60FPS。
+
 Performer 的 LOD 与 entity 仿真 LOD（`entity-simulation-layering.md`）协调：
 
 | Entity 车道 | Performer 行为 |
@@ -581,6 +587,13 @@ Performer 的 LOD 与 entity 仿真 LOD（`entity-simulation-layering.md`）协�
 | Culled | 跳过整棵 performer 树 |
 
 `PerformerBehaviorSystem` 读取 entity 的 `SimulationLodState`，按档位跳过非必要 behavior。
+
+达到此规模需要两个前置机制：
+
+- **Culling Gate**：owner entity 的 `CullState.IsVisible` 同步到 performer instance，不可见的 performer 跳过 behavior eval 和 emit
+- **Dirty-Driven Behavior**：直接读 owner entity 的 GAS dirty 信号（`GameplayTagEffectiveChangedBits` + `DirtyFlags.AttributeDirty`），只对有变化的 entity 求值 behavior，稳态下开销 ≈ 0
+
+完整的编译式执行分层设计见 [Performer 编译式执行分层](performer-compiled-lanes.md)。
 
 ### 9.5 Performer 池化
 
@@ -609,7 +622,7 @@ Performer 的 LOD 与 entity 仿真 LOD（`entity-simulation-layering.md`）协�
 | 血条/名字板 | 是 | AssetKind 扩展 `WorldHud`，PerformerEmitSystem 发射到 HudBuffer |
 | 浮动战斗文字 | 是 | 一次性 performer（DefaultLifetime > 0），AssetKind = WorldText |
 | 投射物视觉 | 是 | 投射物 entity 的 performer，AssetBinding(Mesh/VFX) + Spline(Patrol) |
-| 地面指示器 | 是 | AssetKind = GroundOverlay，GroundingMode = AlignToSurface |
+| 地面指示器 | 是 | AssetKind = Decal，GroundingMode = AlignToSurface |
 | 摄像机抖动/色调 | 否 | 走独立的 CameraEffectSystem，不属于 performer 职责 |
 
 ### 9.8 插值
@@ -657,6 +670,21 @@ JSON 中的 `children` 字段是语法糖——ConfigLoader 将其展开为 `Per
 
 这意味着：
 - 静态子树用 `children` 简写
-- 动态子树用 Rule + `CreatePerformer`（如 working tag 触发）
+- 动态子树用 Rule + `CreatePerformer`（用于真正的生命周期对象，如投射物、一次性受击文字）
 - 深层嵌套：子 performer 的定义中也可以有 `children` 或 Rule，递归展开
 - 所有层级关系最终都归结为 `CreatePerformer(parentHandle=X)`
+
+## 10 编译式执行分层
+
+Performer 配置（`performers.json` → `PerformerDefinition`）是 authoring IR，是唯一的语义真相（SSOT）。运行时不应每帧重新解释这棵语义树，而应在注册时将其编译为分层 execution lanes。
+
+五层运行时模型（其中前四层是执行分层，第五层是帧投影）：
+
+1. **Semantic Layer** — `PerformerDefinition`、children、rules、behaviors、bindings、paramDefaults。加载时一次解析。
+2. **Compiled Binding Table** — 注册时编译：pre-resolved attribute/tag ID、threshold table、material swap table。消除运行时 resolve 开销。
+3. **Runtime State** — `PerformerInstance` 最小状态：identity、owner、scope、tree、OwnerCullVisible、cached transform。命令驱动写入。Dirty 检测直接读 owner entity 的 GAS 组件（`GameplayTagEffectiveChangedBits` + `DirtyFlags`），不在 performer 层重复建设。
+4. **Execution Lanes** — Lifecycle lane（命令驱动）、Dirty Sync lane（attribute/tag/param 变化时）、Continuous Tick lane（Animator）、Visible Projection lane（emit to draw buffer）。
+
+这不改变 Performer 的语义模型——`BehaviorKind`、`PerformerCommand`、`performers.json` schema 全部不变。只改变执行模型：从"每帧全量解释"变为"dirty-driven 分层执行"。
+
+完整设计见 [Performer 编译式执行分层](performer-compiled-lanes.md)。实施任务见 [开发看板](performer-development-kanban.md) Wave 7。

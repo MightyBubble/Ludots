@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Diagnostics;
-using Ludots.Core.Presentation.Config;
 
 namespace Ludots.Core.Config
 {
@@ -10,7 +9,6 @@ namespace Ludots.Core.Config
     {
         private readonly World _world;
         private readonly Dictionary<string, EntityTemplate> _templates;
-        private readonly PresentationAuthoringContext? _presentationAuthoring;
         
         // Temporary storage for components to apply
         private EntityTemplate _activeTemplate;
@@ -18,12 +16,10 @@ namespace Ludots.Core.Config
 
         public EntityBuilder(
             World world,
-            Dictionary<string, EntityTemplate> templates,
-            PresentationAuthoringContext? presentationAuthoring = null)
+            Dictionary<string, EntityTemplate> templates)
         {
             _world = world;
             _templates = templates;
-            _presentationAuthoring = presentationAuthoring;
         }
 
         public EntityBuilder UseTemplate(string templateId)
@@ -87,11 +83,8 @@ namespace Ludots.Core.Config
         {
             if (string.Equals(componentName, "Presentation", System.StringComparison.OrdinalIgnoreCase))
             {
-                if (_presentationAuthoring == null)
-                    throw new System.InvalidOperationException("Presentation authoring requires PresentationAuthoringContext.");
-
-                _presentationAuthoring.Apply(entity, data);
-                return;
+                throw new System.InvalidOperationException(
+                    "Entity template component 'Presentation' has been removed. Migrate entity visuals to Presentation/performers.json keyed lifecycle rules.");
             }
 
             ComponentRegistry.Apply(entity, componentName, data);

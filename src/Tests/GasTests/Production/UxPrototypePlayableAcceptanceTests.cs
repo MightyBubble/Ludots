@@ -800,7 +800,6 @@ namespace Ludots.Tests.GAS.Production
                 engine.GameSession.Camera,
                 engine.SpatialQueries,
                 view,
-                meshes: null,
                 loadedChunks: null,
                 performers: engine.GetService(CoreServiceKeys.PerformerInstanceBuffer),
                 timingDiagnostics: timingDiagnostics);

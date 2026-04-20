@@ -476,6 +476,78 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PerformerInstanceBuffer_ProcessVisibleActive_SkipsOwnerCulledChildren_ButProcessActiveStillRuns()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Culled });
+            var instances = new PerformerInstanceBuffer(capacity: 4);
+
+            Assert.That(instances.TryAllocate(1, owner, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 701, parentHandle: -1, out int parentHandle), Is.True);
+            Assert.That(instances.TryAllocate(2, owner, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 702, parentHandle, out int childHandle), Is.True);
+
+            instances.SyncOwnerCullVisibility(world);
+            int callbackCount = 0;
+            int visibleProcessed = instances.ProcessVisibleActive(0.5f, (int _, ref PerformerInstance _) => callbackCount++);
+
+            Assert.That(visibleProcessed, Is.EqualTo(0));
+            Assert.That(callbackCount, Is.EqualTo(0));
+            Assert.That(instances.Get(parentHandle).OwnerCullVisible, Is.False);
+            Assert.That(instances.Get(childHandle).OwnerCullVisible, Is.False);
+            Assert.That(instances.Get(parentHandle).Elapsed, Is.EqualTo(0.5f).Within(0.001f));
+            Assert.That(instances.Get(childHandle).Elapsed, Is.EqualTo(0.5f).Within(0.001f));
+
+            int activeProcessed = instances.ProcessActive(0f, (int _, ref PerformerInstance _) => callbackCount++);
+            Assert.That(activeProcessed, Is.EqualTo(2));
+            Assert.That(callbackCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void PerformerBehaviorSystem_OwnerCulled_StillUpdatesDirtySyncState()
+        {
+            using var world = World.Create();
+            var attributes = default(AttributeBuffer);
+            attributes.SetBase(3, 100f);
+            attributes.SetCurrent(3, 25f);
+            Entity owner = world.Create(attributes, new CullState { IsVisible = false, LOD = LODLevel.Culled });
+            var instances = new PerformerInstanceBuffer(capacity: 4);
+            Assert.That(instances.TryAllocate(1, owner, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 703, parentHandle: -1, out int handle), Is.True);
+            instances.Get(handle).BehaviorActiveMask = 1u;
+            instances.SyncOwnerCullVisibility(world);
+
+            var definitions = new PerformerDefinitionRegistry();
+            definitions.Register("culled.behavior", new PerformerDefinition
+            {
+                Id = 1,
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AttributeBinding,
+                        ActiveByDefault = true,
+                        AttributeBinding = new AttributeBindingConfig
+                        {
+                            AttributeId = 3,
+                            TargetParamKey = 100,
+                            Mode = ValueSourceKind.AttributeRatio,
+                        },
+                    },
+                ],
+            });
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(),
+                new SoundRequestBuffer());
+
+            system.Update(0.016f);
+
+            Assert.That(instances.ResolveFloat(handle, 100, -1f), Is.EqualTo(0.25f).Within(0.001f));
+        }
+
+        [Test]
         public void PerformerBehaviorSystem_TagBinding_WritesZeroWhenTagMissing_AndInvertsWhenConfigured()
         {
             using var world = World.Create();
@@ -800,6 +872,83 @@ namespace Ludots.Tests.Presentation
             }
 
             Assert.That(visualCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void PerformerEmitSystem_OwnerCulled_SkipsAssetProjection()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Culled });
+            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var definitions = new PerformerDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+
+            int meshDef = RegisterAssetDefinition(definitions, "culled.mesh", AssetKind.Mesh, assetId: 10, materialId: 20, slot: 0);
+            int handle = AllocateActive(instances, meshDef, owner, 704);
+            instances.Get(handle).AnchorKind = PresentationAnchorKind.Entity;
+            instances.SyncOwnerCullVisibility(world);
+
+            using var system = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates: null!,
+                soundRequests: null!);
+
+            system.Update(0.016f);
+
+            Assert.That(requests.Count, Is.EqualTo(0));
+            Assert.That(instances.Get(handle).Elapsed, Is.EqualTo(0.016f).Within(0.001f));
+        }
+
+        [Test]
+        public void PerformerEmitSystem_OwnerCulled_StillExpiresLifetimeInstances()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Culled });
+            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var definitions = new PerformerDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+
+            int meshDef = definitions.Register("culled.transient", new PerformerDefinition
+            {
+                DefaultLifetime = 0.01f,
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 10,
+                            MaterialId = 20,
+                            LocalScale = Vector3.One,
+                        },
+                    },
+                ],
+            });
+            Assert.That(instances.TryAllocate(meshDef, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 705, parentHandle: -1, out int handle), Is.True);
+            instances.Get(handle).BehaviorActiveMask = 1u;
+            instances.SyncOwnerCullVisibility(world);
+
+            using var system = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates: null!,
+                soundRequests: null!);
+
+            system.Update(0.016f);
+
+            Assert.That(instances.IsActive(handle), Is.False);
+            Assert.That(requests.Count, Is.EqualTo(0));
         }
 
         private static int RegisterAssetDefinition(

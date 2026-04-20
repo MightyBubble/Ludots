@@ -21,11 +21,6 @@
 
 ## 2 VisualRuntimeState / VisualTemplate 整合
 
-状态说明：
-- 本节是目标态迁移方案，不代表本波已经全部落地。
-- 当前代码中 `VisualRuntimeState`、`VisualTemplateRegistry`、`VisualTemplateConfigLoader`、`VisualTemplateRef` 仍在现役路径中，被 `GameEngine`、`PresentationAuthoringContext`、Projection/Physics2D/Camera 相关测试与 showcase 使用。
-- 因此本波不能把 VisualTemplate/VisualRuntimeState 链路在实现上宣称为“已删除”；这里只保留目标态设计，审计口径以实现现状为准。
-
 | 文件 | 处置 | 说明 |
 |------|------|------|
 | `VisualRuntimeState.cs` | 删除 | 字段迁移到 AssetBindingConfig + AnimatorConfig |
@@ -53,11 +48,6 @@ Mobility                          →  AssetBindingConfig.Mobility
 ```
 
 ## 3 Prefab 系统整合 — 由 Performer 嵌套取代
-
-状态说明：
-- 本节同样是目标态迁移方案。
-- 当前代码中 `PrefabRegistry`、`PrefabFinalizationPipeline`、`PresentationRequestKind.Prefab` 仍在现役路径中，被 `GameEngine`、ResponseChain、Camera/Physics2D/Projection 相关代码与测试直接消费。
-- 因此本波不能把 Prefab 系统在实现上宣称为“已删除”；这里只定义后续迁移终态。
 
 Prefab 的本质是"一组固定偏移的子 mesh"，这与 performer 树的 children + AssetBinding(Mesh) + LocalOffset 完全同构。不再需要独立的 Prefab 系统。
 
@@ -174,16 +164,11 @@ SkinnedVisualBatchItem  = VisualRenderPayload
 
 ## 6 其他清理
 
-当前实现状态（2026-04-19）：
-- 已完成安全删除：`BuiltinPerformerDefinitions.cs`、`PerformerVisualKind.cs`、`PerformerVisualIdentity.cs`、旧 `Presentation.Perform` 命名空间文件。
-- 仍属现役遗留通道：`EntityVisualEmitSystem.cs`、`VisualTemplate*`、`Prefab*`、`PresentationBehavior*`。
-- 审计与看板必须按此现状记录，不能把仍在现役的系统写成“已删除”。
-
 | 文件 | 处置 |
 |------|------|
 | `EntityVisualEmitSystem.cs` | 删除（双真值源） |
 | `BuiltinPerformerDefinitions.cs` | 删除（迁移到 JSON） |
 | `EntityScopeFilter.cs` | 删除 |
-| `PerformerVisualKind.cs` | 删除（由 9 种 `AssetKind` 取代，包含 `GroundOverlay`） |
+| `PerformerVisualKind.cs` | 删除（由 AssetKind 取代） |
 | `PresentationStartupPerformers.cs` | 删除（子树自动展开） |
 | `WellKnownPerformerParamKeys.cs` | 重写 |

@@ -15,7 +15,10 @@ namespace Ludots.Core.Presentation.Hud
         public float UiRenderMs { get; private set; }
         public float UiUploadMs { get; private set; }
         public float ScreenOverlayBuildMs { get; private set; }
+        public float ScreenOverlayPaintMs { get; private set; }
+        public float ScreenOverlayCompositeMs { get; private set; }
         public float ScreenOverlayDrawMs { get; private set; }
+        public float ScreenOverlayFinalDrawMs { get; private set; }
         public float CameraCullingMs { get; private set; }
         public float CameraPresenterMs { get; private set; }
         public float WorldHudProjectionMs { get; private set; }
@@ -51,9 +54,20 @@ namespace Ludots.Core.Presentation.Hud
             ScreenOverlayItemsLastFrame = totalItems;
         }
 
-        public void ObserveScreenOverlayDraw(double sampleMs, int rebuiltLanes, int textLayoutCacheCount)
+        public void ObserveScreenOverlayDraw(
+            double totalMs,
+            double paintMs,
+            double compositeMs,
+            double uploadMs,
+            double finalDrawMs,
+            int rebuiltLanes,
+            int textLayoutCacheCount)
         {
-            ScreenOverlayDrawMs = Smooth(ScreenOverlayDrawMs, (float)sampleMs);
+            ScreenOverlayDrawMs = Smooth(ScreenOverlayDrawMs, (float)totalMs);
+            ScreenOverlayPaintMs = Smooth(ScreenOverlayPaintMs, (float)paintMs);
+            ScreenOverlayCompositeMs = Smooth(ScreenOverlayCompositeMs, (float)compositeMs);
+            UiUploadMs = Smooth(UiUploadMs, (float)uploadMs);
+            ScreenOverlayFinalDrawMs = Smooth(ScreenOverlayFinalDrawMs, (float)finalDrawMs);
             ScreenOverlayRebuiltLanesLastFrame = rebuiltLanes;
             ScreenOverlayTextLayoutCacheCount = textLayoutCacheCount;
         }

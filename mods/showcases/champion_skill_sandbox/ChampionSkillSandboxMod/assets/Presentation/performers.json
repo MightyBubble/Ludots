@@ -3043,5 +3043,449 @@
         }
       }
     ]
+  },
+  {
+    "id": "champion_skill_sandbox.hero_visual",
+    "extends": "core.character.hero_skinned",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_ezreal"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_ezreal"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_garen"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_garen"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_jayce"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_jayce"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_geomancer"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_geomancer"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_spell_engineer"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_spell_engineer"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_stress_team_a_warrior"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_stress_team_a_warrior"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_stress_team_a_fire_mage"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_stress_team_a_fire_mage"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_stress_team_a_laser_mage"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_stress_team_a_laser_mage"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_stress_team_a_priest"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_stress_team_a_priest"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_stress_team_b_warrior"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_stress_team_b_warrior"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_stress_team_b_fire_mage"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_stress_team_b_fire_mage"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_stress_team_b_laser_mage"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_stress_team_b_laser_mage"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_stress_team_b_priest"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_stress_team_b_priest"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "champion_skill_sandbox.dummy_visual",
+    "extends": "core.prop.dummy_static",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_runic_beacon"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.dummy_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_runic_beacon"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_rune_field"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.dummy_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_rune_field"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_stone_pillar"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.dummy_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_stone_pillar"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_enemy_dummy"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.dummy_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_enemy_dummy"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_enemy_brute"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.dummy_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_enemy_brute"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
   }
 ]

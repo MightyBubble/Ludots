@@ -5,7 +5,9 @@ using AnimationAcceptanceMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -18,8 +20,6 @@ namespace AnimationAcceptanceMod.UI
     {
         private const float PanelWidth = 556f;
         private const float PanelHeight = 688f;
-        private static readonly QueryDescription RigQuery = new QueryDescription()
-            .WithAll<Name, VisualRuntimeState, AnimatorPackedState, AnimatorRuntimeState, AnimationOverlayRequest, AnimatorFeedbackBuffer>();
 
         private readonly ReactivePage<AnimationAcceptancePanelState> _page;
         private GameEngine? _engine;
@@ -404,42 +404,67 @@ namespace AnimationAcceptanceMod.UI
 
         private static Dictionary<AnimationAcceptanceRigId, RigRuntimeSample> ResolveRigSamples(GameEngine engine, AnimatorControllerRegistry registry)
         {
-            var controllerLookup = new Dictionary<int, AnimationAcceptanceRigDefinition>();
+            var definitionLookup = new Dictionary<int, AnimationAcceptanceRigDefinition>();
             for (int i = 0; i < AnimationAcceptanceRigCatalog.All.Length; i++)
             {
-                int controllerId = registry.GetId(AnimationAcceptanceRigCatalog.All[i].ControllerKey);
-                if (controllerId > 0)
+                string performerKey = AnimationAcceptanceRigCatalog.All[i].RigId switch
                 {
-                    controllerLookup[controllerId] = AnimationAcceptanceRigCatalog.All[i];
+                    AnimationAcceptanceRigId.Tank => AnimationAcceptanceIds.TankPerformerDefinitionId,
+                    AnimationAcceptanceRigId.Humanoid => AnimationAcceptanceIds.HumanoidPerformerDefinitionId,
+                    _ => string.Empty,
+                };
+
+                int definitionId = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                    ?.GetId(performerKey) ?? 0;
+                if (definitionId > 0)
+                {
+                    definitionLookup[definitionId] = AnimationAcceptanceRigCatalog.All[i];
                 }
             }
 
+            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
+                ?? throw new InvalidOperationException("Animation acceptance requires PerformerInstanceBuffer.");
+            var animatorStates = engine.GetService(CoreServiceKeys.PerformerAnimatorStateBuffer)
+                ?? throw new InvalidOperationException("Animation acceptance requires PerformerAnimatorStateBuffer.");
             var result = new Dictionary<AnimationAcceptanceRigId, RigRuntimeSample>();
-            var query = engine.World.Query(in RigQuery);
-            foreach (var chunk in query)
+            for (int handle = 0; handle < performers.Capacity; handle++)
             {
-                var names = chunk.GetArray<Name>();
-                var visuals = chunk.GetArray<VisualRuntimeState>();
-                var packedStates = chunk.GetArray<AnimatorPackedState>();
-                var runtimeStates = chunk.GetArray<AnimatorRuntimeState>();
-                var overlays = chunk.GetArray<AnimationOverlayRequest>();
-                var feedbackBuffers = chunk.GetArray<AnimatorFeedbackBuffer>();
-
-                for (int i = 0; i < chunk.Count; i++)
+                if (!performers.IsActive(handle) || !animatorStates.IsAllocated(handle))
                 {
-                    if (!controllerLookup.TryGetValue(visuals[i].AnimatorControllerId, out var definition))
-                    {
-                        continue;
-                    }
-
-                    result[definition.RigId] = new RigRuntimeSample(
-                        Found: true,
-                        EntityName: names[i].Value ?? definition.DisplayName,
-                        PackedState: packedStates[i],
-                        RuntimeState: runtimeStates[i],
-                        OverlayRequest: overlays[i],
-                        Feedback: feedbackBuffers[i]);
+                    continue;
                 }
+
+                PerformerInstance instance = performers.Get(handle);
+                if (!definitionLookup.TryGetValue(instance.DefId, out var definition))
+                {
+                    continue;
+                }
+
+                string entityName = definition.DisplayName;
+                if (instance.AnchorKind == PresentationAnchorKind.Entity &&
+                    engine.World.IsAlive(instance.Owner) &&
+                    engine.World.Has<Name>(instance.Owner))
+                {
+                    entityName = engine.World.Get<Name>(instance.Owner).Value ?? definition.DisplayName;
+                }
+
+                ref AnimatorPackedState packed = ref animatorStates.GetPackedState(handle);
+                if (packed.GetControllerId() <= 0)
+                {
+                    int controllerId = registry.GetId(definition.ControllerKey);
+                    if (controllerId > 0)
+                    {
+                        packed.SetControllerId(controllerId);
+                    }
+                }
+
+                result[definition.RigId] = new RigRuntimeSample(
+                    Found: true,
+                    EntityName: entityName,
+                    PackedState: packed,
+                    RuntimeState: animatorStates.GetRuntimeState(handle),
+                    OverlayRequest: animatorStates.GetOverlay(handle),
+                    Feedback: animatorStates.GetFeedbackBuffer(handle));
             }
 
             return result;

@@ -65,6 +65,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             public int TemplateId;
             public int EffectEntityId;
+            public int ClockTick;
             public Entity EffectEntity;
             public Components.EffectContext Context;
         }
@@ -199,6 +200,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 EffectEntity = entity,
                                 TemplateId = World.Get<EffectTemplateRef>(entity).TemplateId,
                                 EffectEntityId = entity.Id,
+                                ClockTick = now,
                                 Context = context
                             });
                         }
@@ -273,7 +275,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (World.Has<EffectTemplateRef>(entity))
                 {
                     int tplId = World.Get<EffectTemplateRef>(entity).TemplateId;
-                    var entry = new PhaseGraphEntry { TemplateId = tplId, EffectEntityId = entity.Id, EffectEntity = entity, Context = context };
+                    var entry = new PhaseGraphEntry { TemplateId = tplId, EffectEntityId = entity.Id, ClockTick = now, EffectEntity = entity, Context = context };
                     if (!cancelled)
                     {
                         ExpirePhaseGraphs.Add(entry);
@@ -351,7 +353,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     tpl.TagId,
                     entry.TemplateId,
                     in mergedConfig,
-                    builtinRuntime);
+                    builtinRuntime,
+                    BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context));
 
                 if (builtinRuntime != null)
                 {
@@ -384,6 +387,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ref var buf = ref World.Get<EffectPhaseListenerBuffer>(context.Source);
                 buf.RemoveByOwner(ownerEffectId);
             }
+        }
+
+        private static uint BuildExecutionSeed(Entity effectEntity, EffectPhaseId phase, int templateId, int clockTick, in Components.EffectContext context)
+        {
+            uint hash = 2166136261u;
+            hash = Mix(hash, effectEntity.Id);
+            hash = Mix(hash, effectEntity.Version);
+            hash = Mix(hash, context.Source.Id);
+            hash = Mix(hash, context.Target.Id);
+            hash = Mix(hash, context.TargetContext.Id);
+            hash = Mix(hash, templateId);
+            hash = Mix(hash, (int)phase);
+            hash = Mix(hash, clockTick);
+            return hash == 0u ? 1u : hash;
+        }
+
+        private static uint Mix(uint hash, int value)
+        {
+            return (hash ^ unchecked((uint)value)) * 16777619u;
         }
     }
 }

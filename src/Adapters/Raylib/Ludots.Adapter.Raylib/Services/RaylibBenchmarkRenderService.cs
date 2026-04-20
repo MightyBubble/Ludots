@@ -150,7 +150,7 @@ namespace Ludots.Adapter.Raylib.Services
             const int panelLeft = 18;
             const int panelTop = 18;
             const int panelWidth = 560;
-            const int panelHeight = 132;
+            const int panelHeight = 154;
 
             _screenOverlay.AddRect(panelLeft, panelTop, panelWidth, panelHeight,
                 new Vector4(0.05f, 0.07f, 0.1f, 0.88f),
@@ -173,20 +173,30 @@ namespace Ludots.Adapter.Raylib.Services
                 dirtySerial: _frameSerial);
 
             float overlayBuild = timing?.ScreenOverlayBuildMs ?? 0f;
-            float overlayDraw = timing?.ScreenOverlayDrawMs ?? 0f;
+            float overlayPaint = timing?.ScreenOverlayPaintMs ?? 0f;
+            float overlayComposite = timing?.ScreenOverlayCompositeMs ?? 0f;
+            float overlayUpload = timing?.UiUploadMs ?? 0f;
+            float overlayDraw = timing?.ScreenOverlayFinalDrawMs ?? 0f;
             float primitiveDraw = timing?.PrimitiveRenderMs ?? 0f;
             _screenOverlay.AddText(panelLeft + 16, panelTop + 68,
-                $"bucketRebuild={stats.CpuBuildMs:0.00}ms  ismDraw={stats.CpuDrawMs:0.00}ms  skiaBuild={overlayBuild:0.00}ms  skiaDraw={overlayDraw:0.00}ms  primitive={primitiveDraw:0.00}ms",
+                $"bucketRebuild={stats.CpuBuildMs:0.00}ms  ismDraw={stats.CpuDrawMs:0.00}ms  build={overlayBuild:0.00}ms  paint={overlayPaint:0.00}ms  primitive={primitiveDraw:0.00}ms",
                 16,
                 new Vector4(0.67f, 0.93f, 0.72f, 1f),
                 stableId: 13,
                 dirtySerial: _frameSerial);
 
             _screenOverlay.AddText(panelLeft + 16, panelTop + 94,
-                "drag slider: 3k -> 300k instances | bars/text are Skia final overlay stress",
+                $"composite={overlayComposite:0.00}ms  upload={overlayUpload:0.00}ms  finalDraw={overlayDraw:0.00}ms  overlayTotal={(timing?.ScreenOverlayDrawMs ?? 0f):0.00}ms",
                 16,
                 new Vector4(0.93f, 0.8f, 0.56f, 1f),
                 stableId: 14,
+                dirtySerial: _frameSerial);
+
+            _screenOverlay.AddText(panelLeft + 16, panelTop + 118,
+                "drag slider: 3k -> 300k instances | bars/text are Skia final overlay stress",
+                16,
+                new Vector4(0.93f, 0.8f, 0.56f, 1f),
+                stableId: 18,
                 dirtySerial: _frameSerial);
 
             _screenOverlay.AddRect(SliderLeft, SliderTop, SliderTrackWidth, SliderTrackHeight,

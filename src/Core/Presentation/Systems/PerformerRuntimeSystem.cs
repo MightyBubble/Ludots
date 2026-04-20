@@ -11,18 +11,13 @@ using Ludots.Core.Presentation;
 
 namespace Ludots.Core.Presentation.Systems
 {
-    /// <summary>
-    /// Consumes performer commands and manages performer lifecycle.
-    ///
-    /// Handles persistent performer commands.
-    /// </summary>
     public sealed class PerformerRuntimeSystem : BaseSystem<World, float>
     {
         private readonly PerformerCommandBuffer _commands;
         private readonly PresentationEventStream _events;
         private readonly TransientMarkerBuffer _markers;
         private readonly PresentationRequestBuffer _requests;
-        private readonly PerformerInstanceBuffer _instances;
+        private readonly PerformerEntityRuntime _runtime;
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly PerformerAnimatorStateBuffer? _animatorStates;
@@ -33,7 +28,7 @@ namespace Ludots.Core.Presentation.Systems
             PresentationEventStream events,
             TransientMarkerBuffer markers,
             PresentationRequestBuffer requests,
-            PerformerInstanceBuffer instances,
+            PerformerEntityRuntime runtime,
             PresentationStableIdAllocator stableIds,
             PerformerDefinitionRegistry definitions,
             PerformerAnimatorStateBuffer? animatorStates = null)
@@ -43,17 +38,15 @@ namespace Ludots.Core.Presentation.Systems
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _markers = markers ?? throw new ArgumentNullException(nameof(markers));
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
-            _instances = instances ?? throw new ArgumentNullException(nameof(instances));
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _animatorStates = animatorStates;
         }
-
         public override void Update(in float dt)
         {
-            _instances.ReleaseDeadEntityAnchors(World, EmitDestroyedEvent);
+            _runtime.ReleaseDeadEntityAnchors(EmitDestroyedEvent);
 
-            // 1. Process all commands
             var cmdSpan = _commands.GetSpan();
             for (int i = 0; i < cmdSpan.Length; i++)
             {
@@ -65,7 +58,7 @@ namespace Ludots.Core.Presentation.Systems
                         break;
 
                     case PerformerCommandKind.DestroyPerformer:
-                        _instances.Release(cmd.PerformerHandle, EmitDestroyedEvent);
+                        _runtime.Destroy(cmd.PerformerEntity, EmitDestroyedEvent);
                         break;
 
                     case PerformerCommandKind.DestroyPerformerScope:
@@ -74,39 +67,38 @@ namespace Ludots.Core.Presentation.Systems
                             throw new InvalidOperationException(
                                 $"DestroyPerformerScope requires a positive scopeTag, got {cmd.ScopeTag}.");
                         }
-
-                        _instances.ReleaseScope(cmd.ScopeTag, EmitDestroyedEvent);
+                        _runtime.DestroyScope(cmd.ScopeTag, EmitDestroyedEvent);
                         break;
 
                     case PerformerCommandKind.SetParam:
-                        if (_instances.IsActive(cmd.PerformerHandle))
+                        if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity))
                         {
-                            _instances.SetParam(cmd.PerformerHandle, cmd.ParamKey, cmd.ParamLane, cmd.ParamValue, cmd.IntValue, cmd.VectorValue);
+                            _runtime.SetParam(cmd.PerformerEntity, cmd.ParamKey, cmd.ParamLane, cmd.ParamValue, cmd.IntValue, cmd.VectorValue);
                         }
                         break;
 
                     case PerformerCommandKind.ActivateBehavior:
-                        if (_instances.IsActive(cmd.PerformerHandle) && cmd.TargetBehaviorSlot is >= 0 and < 32)
+                        if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity) && cmd.TargetBehaviorSlot is >= 0 and < 32)
                         {
-                            ref PerformerInstance active = ref _instances.Get(cmd.PerformerHandle);
-                            active.BehaviorActiveMask |= 1u << cmd.TargetBehaviorSlot;
+                            ref PerformerState state = ref World.Get<PerformerState>(cmd.PerformerEntity);
+                            state.BehaviorActiveMask |= 1u << cmd.TargetBehaviorSlot;
                         }
                         break;
 
                     case PerformerCommandKind.DeactivateBehavior:
-                        if (_instances.IsActive(cmd.PerformerHandle) && cmd.TargetBehaviorSlot is >= 0 and < 32)
+                        if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity) && cmd.TargetBehaviorSlot is >= 0 and < 32)
                         {
-                            ref PerformerInstance active = ref _instances.Get(cmd.PerformerHandle);
-                            active.BehaviorActiveMask &= ~(1u << cmd.TargetBehaviorSlot);
+                            ref PerformerState state = ref World.Get<PerformerState>(cmd.PerformerEntity);
+                            state.BehaviorActiveMask &= ~(1u << cmd.TargetBehaviorSlot);
                         }
                         break;
                 }
             }
             _commands.Clear();
 
+            _runtime.SyncCullVisibility();
             _markers.TickAndRequest(_requests, dt, World);
         }
-
         private void HandleCreatePerformer(in PerformerCommand cmd)
         {
             if (!_definitions.TryGet(cmd.PerformerDefinitionId, out var definition))
@@ -119,105 +111,83 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            int parentHandle = cmd.ParentHandle;
-            if (parentHandle >= 0 && !_instances.IsActive(parentHandle))
+            Entity parentEntity = cmd.ParentEntity;
+            if (parentEntity != Entity.Null && (!World.IsAlive(parentEntity) || !World.Has<PerformerState>(parentEntity)))
             {
                 throw new InvalidOperationException(
-                    $"CreatePerformer defId={cmd.PerformerDefinitionId} references inactive parentHandle={parentHandle}.");
+                    $"CreatePerformer defId={cmd.PerformerDefinitionId} references inactive parent entity.");
             }
 
-            if (!_instances.TryAllocate(
-                    cmd.PerformerDefinitionId,
-                    cmd.Source,
-                    cmd.ScopeTag,
-                    cmd.AnchorKind,
-                    cmd.Position,
-                    _stableIds.Allocate(),
-                    parentHandle,
-                    out int handle))
-            {
-                string performerKey = _definitions.GetName(cmd.PerformerDefinitionId);
-                string ownerText = cmd.Source == Entity.Null
-                    ? "Entity.Null"
-                    : $"Entity(Id={cmd.Source.Id},World={cmd.Source.WorldId},Ver={cmd.Source.Version})";
-                throw new InvalidOperationException(
-                    $"PerformerInstanceBuffer is full while creating performer '{performerKey}' (defId={cmd.PerformerDefinitionId}, scopeTag={cmd.ScopeTag}, owner={ownerText}, active={_instances.ActiveCount}, capacity={_instances.Capacity}).");
-            }
+            Entity entity = _runtime.Create(
+                cmd.PerformerDefinitionId,
+                cmd.Source,
+                cmd.ScopeTag,
+                cmd.AnchorKind,
+                cmd.Position,
+                _stableIds.Allocate(),
+                parentEntity,
+                definition);
 
-            ref PerformerInstance instance = ref _instances.Get(handle);
-            instance.BehaviorActiveMask = BuildDefaultBehaviorMask(definition);
-            _instances.SetParamDefault(definition, handle);
+            ref PerformerState state = ref World.Get<PerformerState>(entity);
+            state.BehaviorActiveMask = BuildDefaultBehaviorMask(definition);
+            _runtime.SetParamDefault(definition, entity);
 
-            EmitCreatedEvent(handle, _instances.Get(handle));
+            EmitCreatedEvent(entity, World.Get<PerformerState>(entity));
         }
 
         private bool ShouldSkipDuplicatePersistentScopedCreate(in PerformerCommand cmd, PerformerDefinition definition)
         {
             if (definition.DefaultLifetime > 0f || cmd.ScopeTag <= 0)
-            {
                 return false;
-            }
-
-            return _instances.HasActiveScopedInstance(
-                cmd.PerformerDefinitionId,
-                cmd.Source,
-                cmd.ScopeTag,
-                cmd.AnchorKind,
-                cmd.Position);
+            return _runtime.HasActiveScopedInstance(
+                cmd.PerformerDefinitionId, cmd.Source, cmd.ScopeTag, cmd.AnchorKind, cmd.Position);
         }
 
         private static uint BuildDefaultBehaviorMask(PerformerDefinition definition)
         {
             if (definition.Behaviors == null || definition.Behaviors.Length == 0)
-            {
                 return 0u;
-            }
-
             uint mask = 0u;
             for (int i = 0; i < definition.Behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref definition.Behaviors[i];
                 if (!slot.ActiveByDefault || slot.SlotIndex < 0 || slot.SlotIndex >= 32)
-                {
                     continue;
-                }
-
                 mask |= 1u << slot.SlotIndex;
             }
-
             return mask;
         }
 
-        private void EmitCreatedEvent(int handle, in PerformerInstance instance)
+        private void EmitCreatedEvent(Entity performer, in PerformerState state)
         {
             if (!_events.TryAdd(new PresentationEvent
                 {
                     Kind = PresentationEventKind.PerformerCreated,
-                    KeyId = instance.DefId,
-                    Source = instance.Owner,
-                    Target = instance.Owner,
-                    PayloadA = handle,
-                    PayloadB = instance.ScopeId,
-                    Magnitude = instance.StableId,
+                    KeyId = state.DefId,
+                    Source = state.OwnerEntity,
+                    Target = state.OwnerEntity,
+                    PerformerEntity = performer,
+                    PayloadB = state.ScopeId,
+                    Magnitude = state.StableId,
                 }))
             {
                 throw new InvalidOperationException("PresentationEventStream is full while publishing PerformerCreated.");
             }
         }
 
-        private void EmitDestroyedEvent(int handle, PerformerInstance instance)
+        private void EmitDestroyedEvent(Entity performer, PerformerState state)
         {
-            _animatorStates?.Clear(handle);
+            _animatorStates?.Clear(performer);
 
             if (!_events.TryAdd(new PresentationEvent
                 {
                     Kind = PresentationEventKind.PerformerDestroyed,
-                    KeyId = instance.DefId,
-                    Source = instance.Owner,
-                    Target = instance.Owner,
-                    PayloadA = handle,
-                    PayloadB = instance.ScopeId,
-                    Magnitude = instance.StableId,
+                    KeyId = state.DefId,
+                    Source = state.OwnerEntity,
+                    Target = state.OwnerEntity,
+                    PerformerEntity = performer,
+                    PayloadB = state.ScopeId,
+                    Magnitude = state.StableId,
                 }))
             {
                 throw new InvalidOperationException("PresentationEventStream is full while publishing PerformerDestroyed.");
@@ -225,3 +195,4 @@ namespace Ludots.Core.Presentation.Systems
         }
     }
 }
+

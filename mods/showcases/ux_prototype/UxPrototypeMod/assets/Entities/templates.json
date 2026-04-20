@@ -2,13 +2,27 @@
   {
     "id": "ux_city",
     "components": {
-      "Name": { "Value": "City" },
-      "PlayerOwner": { "PlayerId": 1 },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "City"
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "ux.structure.city" },
-      "AttributeBuffer": { "base": { "Health": 2200 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2200
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {}
     }
@@ -16,12 +30,24 @@
   {
     "id": "ux_barracks",
     "components": {
-      "Name": { "Value": "Barracks" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Barracks"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "ux.structure.barracks" },
-      "AttributeBuffer": { "base": { "Health": 1400 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1400
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {}
     }
@@ -29,12 +55,24 @@
   {
     "id": "ux_stable",
     "components": {
-      "Name": { "Value": "Stable" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Stable"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "ux.structure.stable" },
-      "AttributeBuffer": { "base": { "Health": 1400 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1400
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {}
     }
@@ -42,12 +80,24 @@
   {
     "id": "ux_workshop",
     "components": {
-      "Name": { "Value": "Workshop" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Workshop"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "ux.structure.workshop" },
-      "AttributeBuffer": { "base": { "Health": 1450 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1450
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {}
     }
@@ -55,73 +105,148 @@
   {
     "id": "ux_farm",
     "components": {
-      "Name": { "Value": "Farm" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Farm"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "ux.structure.farm" },
-      "AttributeBuffer": { "base": { "Health": 900 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900
+        }
+      },
       "GameplayTagContainer": {}
     }
   },
   {
     "id": "ux_mine",
     "components": {
-      "Name": { "Value": "Mine" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Mine"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "ux.structure.mine" },
-      "AttributeBuffer": { "base": { "Health": 950 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 950
+        }
+      },
       "GameplayTagContainer": {}
     }
   },
   {
     "id": "ux_tower",
     "components": {
-      "Name": { "Value": "Tower" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Tower"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "ux.structure.tower" },
-      "AttributeBuffer": { "base": { "Health": 1200 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        }
+      },
       "GameplayTagContainer": {}
     }
   },
   {
     "id": "ux_watchtower",
     "components": {
-      "Name": { "Value": "Watchtower" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Watchtower"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "ux.structure.watchtower" },
-      "AttributeBuffer": { "base": { "Health": 1000 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000
+        }
+      },
       "GameplayTagContainer": {}
     }
   },
   {
     "id": "ux_fort",
     "components": {
-      "Name": { "Value": "Fort" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Fort"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "ux.structure.fort" },
-      "AttributeBuffer": { "base": { "Health": 2600 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2600
+        }
+      },
       "GameplayTagContainer": {}
     }
   },
   {
     "id": "ux_worker",
     "components": {
-      "Name": { "Value": "Worker" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Worker"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "ux.unit.worker" },
-      "AttributeBuffer": { "base": { "Health": 85, "MoveSpeed": 300 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 85,
+          "MoveSpeed": 300
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "BlackboardSpatialBuffer": {},
@@ -132,13 +257,28 @@
   {
     "id": "ux_soldier",
     "components": {
-      "Name": { "Value": "Soldier" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Soldier"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "ux.unit.soldier" },
-      "AttributeBuffer": { "base": { "Health": 140, "MoveSpeed": 320 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 140,
+          "MoveSpeed": 320
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "BlackboardSpatialBuffer": {},
@@ -149,13 +289,28 @@
   {
     "id": "ux_archer",
     "components": {
-      "Name": { "Value": "Archer" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Archer"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "ux.unit.archer" },
-      "AttributeBuffer": { "base": { "Health": 115, "MoveSpeed": 330 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 115,
+          "MoveSpeed": 330
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "BlackboardSpatialBuffer": {},
@@ -166,13 +321,28 @@
   {
     "id": "ux_mage",
     "components": {
-      "Name": { "Value": "Mage" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Mage"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "ux.unit.mage" },
-      "AttributeBuffer": { "base": { "Health": 110, "MoveSpeed": 320 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 110,
+          "MoveSpeed": 320
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "BlackboardSpatialBuffer": {},
@@ -183,13 +353,28 @@
   {
     "id": "ux_medic",
     "components": {
-      "Name": { "Value": "Medic" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Medic"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "ux.unit.medic" },
-      "AttributeBuffer": { "base": { "Health": 105, "MoveSpeed": 330 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 105,
+          "MoveSpeed": 330
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "BlackboardSpatialBuffer": {},
@@ -200,13 +385,28 @@
   {
     "id": "ux_heavy_cavalry",
     "components": {
-      "Name": { "Value": "Heavy Cavalry" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Heavy Cavalry"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "ux.unit.heavy_cavalry" },
-      "AttributeBuffer": { "base": { "Health": 220, "MoveSpeed": 360 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 220,
+          "MoveSpeed": 360
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "BlackboardSpatialBuffer": {},
@@ -217,13 +417,28 @@
   {
     "id": "ux_horse_archer",
     "components": {
-      "Name": { "Value": "Horse Archer" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Horse Archer"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "ux.unit.horse_archer" },
-      "AttributeBuffer": { "base": { "Health": 180, "MoveSpeed": 370 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 180,
+          "MoveSpeed": 370
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "BlackboardSpatialBuffer": {},
@@ -234,13 +449,28 @@
   {
     "id": "ux_ram",
     "components": {
-      "Name": { "Value": "Ram" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Ram"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "ux.unit.ram" },
-      "AttributeBuffer": { "base": { "Health": 320, "MoveSpeed": 220 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 320,
+          "MoveSpeed": 220
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "BlackboardSpatialBuffer": {},
@@ -251,13 +481,28 @@
   {
     "id": "ux_catapult",
     "components": {
-      "Name": { "Value": "Catapult" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Catapult"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "ux.unit.catapult" },
-      "AttributeBuffer": { "base": { "Health": 280, "MoveSpeed": 210 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 280,
+          "MoveSpeed": 210
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "BlackboardSpatialBuffer": {},
@@ -268,13 +513,28 @@
   {
     "id": "ux_well_column",
     "components": {
-      "Name": { "Value": "Well Column" },
-      "Team": { "Id": 1 },
+      "Name": {
+        "Value": "Well Column"
+      },
+      "Team": {
+        "Id": 1
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "ux.unit.well_column" },
-      "AttributeBuffer": { "base": { "Health": 360, "MoveSpeed": 180 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 360,
+          "MoveSpeed": 180
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "BlackboardSpatialBuffer": {},
@@ -285,24 +545,51 @@
   {
     "id": "ux_gold_deposit",
     "components": {
-      "Name": { "Value": "Gold Deposit" },
-      "Team": { "Id": 0 },
+      "Name": {
+        "Value": "Gold Deposit"
+      },
+      "Team": {
+        "Id": 0
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "ux.resource.deposit" },
-      "AttributeBuffer": { "base": { "Health": 9999 } }
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 9999
+        }
+      }
     }
   },
   {
     "id": "ux_enemy_raider",
     "components": {
-      "Name": { "Value": "Enemy Raider" },
-      "Team": { "Id": 2 },
+      "Name": {
+        "Value": "Enemy Raider"
+      },
+      "Team": {
+        "Id": 2
+      },
       "SelectionSelectableTag": {},
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "FacingDirection": { "AngleRad": 3.14159 },
-      "Presentation": { "visualTemplateId": "ux.unit.enemy_raider" },
-      "AttributeBuffer": { "base": { "Health": 150, "MoveSpeed": 320 } },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 3.14159
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 150,
+          "MoveSpeed": 320
+        }
+      },
       "OrderBuffer": {},
       "GameplayTagContainer": {}
     }

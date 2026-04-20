@@ -177,7 +177,8 @@ namespace Ludots.Tests.Architecture
             Assert.That((byte)TransformSource.EntityTransform, Is.EqualTo(1));
             Assert.That((byte)TransformSource.SplineDriven, Is.EqualTo(2));
             Assert.That((byte)TransformSource.BoneAttached, Is.EqualTo(3));
-            Assert.That((byte)TransformSource.WorldFixed, Is.EqualTo(4));
+            Assert.That((byte)TransformSource.AttachedToParent, Is.EqualTo(4));
+            Assert.That((byte)TransformSource.WorldFixed, Is.EqualTo(5));
         }
 
         [Test]
@@ -287,15 +288,17 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void EntityVisualEmitSystem_DoesNotDependOnPerformContracts()
+        public void PerformerMainlineSystems_ArePresentInCore()
         {
-            string repoRoot = FindRepoRoot();
-            string sourcePath = Path.Combine(repoRoot, "src", "Core", "Presentation", "Systems", "EntityVisualEmitSystem.cs");
-            Assert.That(File.Exists(sourcePath), Is.True, $"Missing: {sourcePath}");
-
-            string source = File.ReadAllText(sourcePath);
-
-            Assert.That(source, Does.Not.Contain("PerformerInstance"));
+            Assembly assembly = typeof(PerformerCommand).Assembly;
+            Assert.That(
+                assembly.GetType("Ludots.Core.Presentation.Systems.PerformerRuntimeSystem", throwOnError: false),
+                Is.Not.Null,
+                "PerformerRuntimeSystem must exist as lifecycle SSOT.");
+            Assert.That(
+                assembly.GetType("Ludots.Core.Presentation.Systems.PerformerEmitSystem", throwOnError: false),
+                Is.Not.Null,
+                "PerformerEmitSystem must exist as emit SSOT.");
         }
 
         private static IEnumerable<string> EnumerateForbiddenMemberDependencies(Type contractType)

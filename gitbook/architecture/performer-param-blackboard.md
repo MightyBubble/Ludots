@@ -151,17 +151,6 @@ public struct AnimatorConfig
 }
 ```
 
-`AnimatorFeedbackBuffer` 产生的反馈同样回写到 performer blackboard，避免第二套事件真相。约定如下：
-
-- `StateParamKey`：当前状态索引
-- `StateParamKey + 1`：最近一次 `AnimatorFeedbackKind`
-- `StateParamKey + 2`：最近一次反馈的 `FromStateIndex`
-- `StateParamKey + 3`：最近一次反馈的 `ToStateIndex`
-- `StateParamKey + 4`：最近一次反馈的 `NormalizedTime01`
-- `StateParamKey + 5`：最近一次反馈的 `Value0`
-
-这样 Rule/Behavior 只需要读取 blackboard，不需要额外桥接 `AnimatorFeedbackBuffer`。
-
 ### 3.5 迁移影响
 
 | 文件 | 处置 |

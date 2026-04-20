@@ -84,6 +84,17 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public uint BehaviorActiveMask;
 
+        /// <summary>
+        /// Hot-path visibility gate copied from the owner entity CullState.
+        /// Child performers inherit their parent's effective gate.
+        /// </summary>
+        public bool OwnerCullVisible;
+
+        /// <summary>
+        /// Monotonic mutation version for cheap runtime-side cache invalidation.
+        /// </summary>
+        public int Version;
+
         /// <summary>Whether this slot is in use.</summary>
         public bool Active;
     }
@@ -94,6 +105,7 @@ namespace Ludots.Core.Presentation.Performers
         EntityTransform = 1,
         SplineDriven = 2,
         BoneAttached = 3,
-        WorldFixed = 4,
+        AttachedToParent = 4,
+        WorldFixed = 5,
     }
 }

@@ -23,7 +23,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationMaterialRegistry _materials;
         private readonly PerformerDefinitionRegistry _performerDefinitions;
         private readonly PerformerCommandBuffer _commands;
-        private readonly PerformerInstanceBuffer _performerInstances;
+        private readonly PerformerEntityRuntime _performerRuntime;
 
         public ChunkSurfaceBakeSystem(
             World world,
@@ -32,7 +32,7 @@ namespace Ludots.Core.Presentation.Systems
             PresentationMaterialRegistry materials,
             PerformerDefinitionRegistry performerDefinitions,
             PerformerCommandBuffer commands,
-            PerformerInstanceBuffer performerInstances)
+            PerformerEntityRuntime performerRuntime)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -40,7 +40,7 @@ namespace Ludots.Core.Presentation.Systems
             _materials = materials ?? throw new ArgumentNullException(nameof(materials));
             _performerDefinitions = performerDefinitions ?? throw new ArgumentNullException(nameof(performerDefinitions));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
-            _performerInstances = performerInstances ?? throw new ArgumentNullException(nameof(performerInstances));
+            _performerRuntime = performerRuntime ?? throw new ArgumentNullException(nameof(performerRuntime));
         }
 
         public override void Update(in float dt)
@@ -115,12 +115,12 @@ namespace Ludots.Core.Presentation.Systems
             record.RenderPerformerDefinitionId = renderDefinitionId;
             record.RenderScopeId = ComposeRenderScopeId(record.ScopeId, record.SourceStableId);
 
-            int renderHandle = EnsureRenderPerformer(record);
-            if (renderHandle >= 0)
+            Entity renderEntity = EnsureRenderPerformer(record);
+            if (renderEntity != Entity.Null && World.IsAlive(renderEntity))
             {
-                _performerInstances.SetParam(renderHandle, SurfaceMeshParamKey, ParamLane.Int, 0f, meshAssetId, Vector4.Zero);
-                _performerInstances.SetParam(renderHandle, SurfaceMaterialParamKey, ParamLane.Int, 0f, materialId, Vector4.Zero);
-                _performerInstances.SetParam(renderHandle, SurfaceVisibilityParamKey, ParamLane.Int, 0f, 1, Vector4.Zero);
+                _performerRuntime.SetParam(renderEntity, SurfaceMeshParamKey, ParamLane.Int, 0f, meshAssetId, Vector4.Zero);
+                _performerRuntime.SetParam(renderEntity, SurfaceMaterialParamKey, ParamLane.Int, 0f, materialId, Vector4.Zero);
+                _performerRuntime.SetParam(renderEntity, SurfaceVisibilityParamKey, ParamLane.Int, 0f, 1, Vector4.Zero);
             }
 
             record.Dirty = false;
@@ -266,7 +266,7 @@ namespace Ludots.Core.Presentation.Systems
             return _performerDefinitions.Register(definitionKey, definition);
         }
 
-        private int EnsureRenderPerformer(SurfaceSourceRecord record)
+        private Entity EnsureRenderPerformer(SurfaceSourceRecord record)
         {
             if (record.Entity == Entity.Null || !World.IsAlive(record.Entity))
             {
@@ -274,24 +274,24 @@ namespace Ludots.Core.Presentation.Systems
                     $"SurfaceSource stableId={record.SourceStableId} requires a baked entity before render performer creation.");
             }
 
-            if (_performerInstances.IsActive(record.RenderPerformerHandle))
+            if (record.RenderPerformerEntity != Entity.Null && World.IsAlive(record.RenderPerformerEntity) && World.Has<PerformerState>(record.RenderPerformerEntity))
             {
-                PerformerInstance active = _performerInstances.Get(record.RenderPerformerHandle);
-                if (active.Owner == record.Entity &&
+                ref PerformerState active = ref World.Get<PerformerState>(record.RenderPerformerEntity);
+                if (active.OwnerEntity == record.Entity &&
                     active.DefId == record.RenderPerformerDefinitionId &&
                     active.ScopeId == record.RenderScopeId)
                 {
-                    return record.RenderPerformerHandle;
+                    return record.RenderPerformerEntity;
                 }
 
-                record.RenderPerformerHandle = -1;
+                record.RenderPerformerEntity = Entity.Null;
             }
 
-            int existingHandle = FindRenderPerformer(record);
-            if (existingHandle >= 0)
+            Entity existing = FindRenderPerformer(record);
+            if (existing != Entity.Null)
             {
-                record.RenderPerformerHandle = existingHandle;
-                return existingHandle;
+                record.RenderPerformerEntity = existing;
+                return existing;
             }
 
             if (record.RenderPerformerDefinitionId <= 0)
@@ -313,28 +313,24 @@ namespace Ludots.Core.Presentation.Systems
                     $"SurfaceSource stableId={record.SourceStableId} failed to queue baked render performer creation.");
             }
 
-            return -1;
+            return Entity.Null;
         }
 
-        private int FindRenderPerformer(SurfaceSourceRecord record)
+        private Entity FindRenderPerformer(SurfaceSourceRecord record)
         {
-            for (int handle = 0; handle < _performerInstances.Capacity; handle++)
+            Entity found = Entity.Null;
+            var query = new QueryDescription().WithAll<PerformerState>();
+            World.Query(in query, (Entity entity, ref PerformerState state) =>
             {
-                if (!_performerInstances.IsActive(handle))
+                if (found != Entity.Null) return;
+                if (state.OwnerEntity == record.Entity &&
+                    state.DefId == record.RenderPerformerDefinitionId &&
+                    state.ScopeId == record.RenderScopeId)
                 {
-                    continue;
+                    found = entity;
                 }
-
-                PerformerInstance instance = _performerInstances.Get(handle);
-                if (instance.Owner == record.Entity &&
-                    instance.DefId == record.RenderPerformerDefinitionId &&
-                    instance.ScopeId == record.RenderScopeId)
-                {
-                    return handle;
-                }
-            }
-
-            return -1;
+            });
+            return found;
         }
 
         private static int ComposeRenderScopeId(int sourceScopeId, int stableId)

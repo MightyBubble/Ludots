@@ -439,6 +439,108 @@ namespace Ludots.Tests.Presentation
             Assert.That(canonical.Behaviors[0].TagBinding.TagId, Is.EqualTo(TagRegistry.GetId("Status.Working")));
         }
 
+        [Test]
+        public void Load_RemovesFailedDefinitionIdMappings_AndSkipsParentsThatReferenceThem()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "broken_child",
+                    "behaviors": [
+                      {
+                        "slot": 0,
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "WorldText",
+                          "assetId": "hud.missing.token"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "root",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.Spawn" },
+                        "command": { "kind": "CreatePerformer", "definitionId": "broken_child", "scopeTag": "structure" }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ok_root"
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: _ => 0);
+
+            Assert.DoesNotThrow(() => loader.Load(catalog));
+            Assert.That(registry.GetId("broken_child"), Is.EqualTo(0), "Failed definitions must not leave ghost ids behind.");
+            Assert.That(registry.GetId("root"), Is.EqualTo(0), "Parents that reference failed child definitions must also be rejected.");
+            Assert.That(registry.TryGet(registry.GetId("ok_root"), out _), Is.True);
+        }
+
+        [Test]
+        public void Load_RemovesTransitiveParentsWhenReferencedDefinitionFailsLateValidation()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "bad_leaf",
+                    "behaviors": [
+                      {
+                        "slot": 0,
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "WorldText",
+                          "assetId": "hud.missing.token"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "mid_node",
+                    "children": [
+                      { "definitionId": "bad_leaf", "scopeTag": "structure" }
+                    ]
+                  },
+                  {
+                    "id": "top_root",
+                    "children": [
+                      { "definitionId": "mid_node", "scopeTag": "structure" }
+                    ]
+                  },
+                  {
+                    "id": "ok_root"
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: _ => 0);
+
+            Assert.DoesNotThrow(() => loader.Load(catalog));
+            Assert.That(registry.GetId("bad_leaf"), Is.EqualTo(0), "Failed leaf definitions must not leave ghost ids behind.");
+            Assert.That(registry.GetId("mid_node"), Is.EqualTo(0), "Parents that auto-expand children into failed leaf definitions must also be rejected.");
+            Assert.That(registry.GetId("top_root"), Is.EqualTo(0), "Transitive parents must be removed when a downstream child definition fails validation.");
+            Assert.That(registry.TryGet(registry.GetId("ok_root"), out _), Is.True);
+        }
+
         private (VirtualFileSystem Vfs, ModLoader ModLoader, ConfigPipeline Pipeline, ConfigCatalog Catalog) BuildPipeline()
         {
             var vfs = new VirtualFileSystem();

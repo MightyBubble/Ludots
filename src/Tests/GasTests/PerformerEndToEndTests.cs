@@ -122,7 +122,19 @@ namespace Ludots.Tests.Presentation
             _runtimeSystem = new PerformerRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
             _behaviorSystem = new PerformerBehaviorSystem(_world, _instances, _defs, _presEvents, _soundRequests);
             _emitSystem = new PerformerEmitSystem(_world, _instances, _defs, _requests, _globals);
-            _flush = new PresentationRequestFlushSystem(_world, _requests, new PrefabRegistry(), new MeshAssetRegistry(), _primitives, _overlays, _hud, _roadSplines);
+            _flush = new PresentationRequestFlushSystem(
+                _world,
+                _requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                new StableDrawCache(4096),
+                _primitives,
+                _overlays,
+                _hud,
+                _roadSplines,
+                new PrimitiveDrawBuffer(4096),
+                new PresentationVisualProxyBuffer(4096),
+                new SkinnedVisualBatchBuffer(1024));
         }
 
         [TearDown]

@@ -80,230 +80,177 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void VisualRuntimeState_Create_RejectsSkinnedPathWithoutAnimatorController()
-        {
-            Assert.That(
-                () => VisualRuntimeState.Create(
-                    meshAssetId: 7,
-                    materialId: 3,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.SkinnedMesh),
-                Throws.TypeOf<InvalidOperationException>()
-                    .With.Message.Contains("animatorControllerId"));
-
-            Assert.That(
-                () => VisualRuntimeState.Create(
-                    meshAssetId: 7,
-                    materialId: 3,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.GpuSkinnedInstance),
-                Throws.TypeOf<InvalidOperationException>()
-                    .With.Message.Contains("animatorControllerId"));
-        }
-
-        [Test]
-        public void VisualRuntimeState_Create_RejectsAnimationProfileOnStaticLane()
-        {
-            Assert.That(
-                () => VisualRuntimeState.Create(
-                    meshAssetId: 7,
-                    materialId: 3,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.StaticMesh,
-                    animationProfileId: 5),
-                Throws.TypeOf<InvalidOperationException>()
-                    .With.Message.Contains("animationProfileId"));
-        }
-
-        [Test]
-        public void PresentationAuthoringContext_Apply_AssignsStableIdVisualAndAnimatorState()
+        public void PerformerEmitSystem_SkinnedAsset_UsesAnimatorStateAndPerSlotStableId()
         {
             using var world = World.Create();
-            var entity = world.Create();
-
-            var visualTemplates = new VisualTemplateRegistry();
-            var animators = new AnimatorControllerRegistry();
-            var stableIds = new PresentationStableIdAllocator();
-
-            int controllerId = animators.Register("hero.controller");
-            int templateId = visualTemplates.Register(
-                "hero.template",
-                new VisualTemplateDefinition
+            var controllers = new AnimatorControllerRegistry();
+            int controllerId = controllers.Register(
+                "hero.controller",
+                new AnimatorControllerDefinition
                 {
-                    MeshAssetId = 101,
-                    MaterialId = 202,
-                    AnimatorControllerId = controllerId,
-                    AnimationProfileId = 77,
-                    BaseScale = 1.25f,
-                    RenderPath = VisualRenderPath.SkinnedMesh,
-                    Mobility = VisualMobility.Movable,
-                    VisibleByDefault = true,
+                    DefaultStateIndex = 0,
+                    States =
+                    [
+                        new AnimatorStateDefinition { PackedStateIndex = 12, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true },
+                        new AnimatorStateDefinition { PackedStateIndex = 24, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true },
+                    ],
+                    Transitions =
+                    [
+                        new AnimatorTransitionDefinition
+                        {
+                            FromStateIndex = 0,
+                            ToStateIndex = 1,
+                            ConditionKind = AnimatorConditionKind.Trigger,
+                            ParameterIndex = 91,
+                            DurationSeconds = 0f,
+                            ConsumeTrigger = true,
+                        },
+                    ],
                 });
 
-            var context = new PresentationAuthoringContext(visualTemplates, animators, stableIds);
-            JsonNode authoring = JsonNode.Parse(
-                """
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register(
+                "performer.hero.skinned",
+                new PerformerDefinition
                 {
-                  "visualTemplateId": "hero.template",
-                  "visible": false,
-                  "animator": {
-                    "primaryStateIndex": 12,
-                    "secondaryStateIndex": 3,
-                    "normalizedTime": 0.5,
-                    "transitionProgress": 0.25,
-                    "flags": ["Active", "Looping", "InTransition"],
-                    "parameterBits": [1, 7, 63]
-                  }
-                }
-                """)!;
-
-            context.Apply(entity, authoring);
-
-            Assert.That(entity.Has<PresentationStableId>(), Is.True);
-            Assert.That(entity.Has<VisualTemplateRef>(), Is.True);
-            Assert.That(entity.Has<VisualRuntimeState>(), Is.True);
-            Assert.That(entity.Has<AnimatorPackedState>(), Is.True);
-            Assert.That(entity.Has<AnimatorRuntimeState>(), Is.True);
-            Assert.That(entity.Has<AnimationOverlayRequest>(), Is.True);
-            Assert.That(entity.Has<AnimatorFeedbackBuffer>(), Is.True);
-            Assert.That(entity.Has<ModelPerformBinding>(), Is.False, "Skinned model ownership remains legacy until animator ownership migrates.");
-
-            int stableId = entity.Get<PresentationStableId>().Value;
-            Assert.That(stableId, Is.GreaterThan(0));
-            Assert.That(entity.Get<VisualTemplateRef>().TemplateId, Is.EqualTo(templateId));
-
-            var visual = entity.Get<VisualRuntimeState>();
-            Assert.That(visual.MeshAssetId, Is.EqualTo(101));
-            Assert.That(visual.MaterialId, Is.EqualTo(202));
-            Assert.That(visual.BaseScale, Is.EqualTo(1.25f).Within(0.001f));
-            Assert.That(visual.RenderPath, Is.EqualTo(VisualRenderPath.SkinnedMesh));
-            Assert.That(visual.AnimatorControllerId, Is.EqualTo(controllerId));
-            Assert.That(visual.AnimationProfileId, Is.EqualTo(77));
-            Assert.That(visual.IsVisibleRequested, Is.False);
-            Assert.That(visual.HasAnimator, Is.True);
-
-            var animator = entity.Get<AnimatorPackedState>();
-            Assert.That(animator.GetControllerId(), Is.EqualTo(controllerId));
-            Assert.That(animator.GetPrimaryStateIndex(), Is.EqualTo(12));
-            Assert.That(animator.GetSecondaryStateIndex(), Is.EqualTo(3));
-            Assert.That(animator.GetNormalizedTime01(), Is.EqualTo(0.5f).Within(0.001f));
-            Assert.That(animator.GetTransitionProgress01(), Is.EqualTo(0.25f).Within(0.001f));
-            Assert.That(
-                animator.GetFlags(),
-                Is.EqualTo(AnimatorPackedStateFlags.Active | AnimatorPackedStateFlags.Looping | AnimatorPackedStateFlags.InTransition));
-            Assert.That(animator.GetParameterBit(1), Is.True);
-            Assert.That(animator.GetParameterBit(7), Is.True);
-            Assert.That(animator.GetParameterBit(63), Is.True);
-            var overlay = entity.Get<AnimationOverlayRequest>();
-            Assert.That(overlay.HasAnyClip, Is.False);
-            Assert.That(overlay.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
-            Assert.That(overlay.LayerClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
-            Assert.That(overlay.OverlayClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.None));
-            Assert.That(entity.Get<AnimatorFeedbackBuffer>().Count, Is.EqualTo(0));
-
-            context.Apply(
-                entity,
-                JsonNode.Parse(
-                    """
-                    {
-                      "animator": {
-                        "controllerId": "hero.controller",
-                        "primaryStateIndex": 7
-                      }
-                    }
-                    """)!);
-
-            Assert.That(entity.Get<PresentationStableId>().Value, Is.EqualTo(stableId), "Reapplying presentation authoring must preserve stable ids.");
-            Assert.That(entity.Get<AnimatorPackedState>().GetPrimaryStateIndex(), Is.EqualTo(7));
-        }
-
-        [Test]
-        public void PresentationAuthoringContext_Apply_RejectsStartupPerformerIds()
-        {
-            using var world = World.Create();
-            var entity = world.Create();
-
-            var visualTemplates = new VisualTemplateRegistry();
-            var animators = new AnimatorControllerRegistry();
-            var stableIds = new PresentationStableIdAllocator();
-            var context = new PresentationAuthoringContext(visualTemplates, animators, stableIds);
-
-            JsonNode authoring = JsonNode.Parse(
-                """
-                {
-                  "startupPerformerIds": ["performer.cast_marker"]
-                }
-                """)!;
-
-            var ex = Assert.Throws<InvalidOperationException>(() => context.Apply(entity, authoring));
-            Assert.That(ex!.Message, Does.Contain("startupPerformerIds"));
-        }
-
-        [Test]
-        public void PresentationAuthoringContext_ApplyAnimator_RejectsStaticRenderPath()
-        {
-            using var world = World.Create();
-            var entity = world.Create();
-
-            var visualTemplates = new VisualTemplateRegistry();
-            var animators = new AnimatorControllerRegistry();
-            var stableIds = new PresentationStableIdAllocator();
-
-            visualTemplates.Register(
-                "static.template",
-                new VisualTemplateDefinition
-                {
-                    MeshAssetId = 101,
-                    MaterialId = 202,
-                    BaseScale = 1f,
-                    RenderPath = VisualRenderPath.StaticMesh,
-                    Mobility = VisualMobility.Movable,
-                    VisibleByDefault = true,
+                    Behaviors =
+                    [
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.Animator,
+                            ActiveByDefault = true,
+                            Animator = new AnimatorConfig
+                            {
+                                AnimatorControllerId = controllerId,
+                                AnimationProfileId = 77,
+                                StateParamKey = 120,
+                                SpeedParamKey = -1,
+                            },
+                        },
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 1,
+                            Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
+                            {
+                                AssetKind = AssetKind.SkinnedMesh,
+                                AssetId = 101,
+                                MaterialId = 202,
+                                RenderPath = VisualRenderPath.SkinnedMesh,
+                                Mobility = VisualMobility.Movable,
+                                LocalScale = Vector3.One,
+                            },
+                        },
+                    ],
                 });
 
-            var context = new PresentationAuthoringContext(visualTemplates, animators, stableIds);
-            JsonNode authoring = JsonNode.Parse(
-                """
-                {
-                  "visualTemplateId": "static.template",
-                  "animator": {
-                    "controllerId": "hero.controller",
-                    "primaryStateIndex": 12
-                  }
-                }
-                """)!;
-
-            Assert.That(
-                () => context.Apply(entity, authoring),
-                Throws.TypeOf<InvalidOperationException>()
-                    .With.Message.Contains("reserved for skinned lanes"));
-        }
-
-        [Test]
-        public void EntityVisualEmitSystem_RejectsAnimatorPayloadOnStaticLane()
-        {
-            using var world = World.Create();
-            var entity = world.Create();
-            entity.Add(new PresentationStableId { Value = 1 });
-            entity.Add(VisualTransform.Default);
-            entity.Add(VisualRuntimeState.Create(
-                meshAssetId: 11,
-                materialId: 12,
-                baseScale: 1f,
-                renderPath: VisualRenderPath.StaticMesh));
-            entity.Add(AnimatorPackedState.Create(3));
-            entity.Add(new AnimationOverlayRequest
-            {
-                BaseClip = AnimatorBuiltinClipState.Create(AnimatorBuiltinClipId.LocomotionCycle, 0.5f, 1f),
-            });
-
+            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var animatorStates = new PerformerAnimatorStateBuffer(4);
             var requests = new PresentationRequestBuffer();
-            using var system = new EntityVisualEmitSystem(world, requests);
+            Entity owner = world.Create(
+                new PresentationStableId { Value = 501 },
+                new VisualTransform
+                {
+                    Position = new Vector3(1f, 2f, 3f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
 
             Assert.That(
-                () => system.Update(0.016f),
-                Throws.TypeOf<InvalidOperationException>()
-                    .With.Message.Contains("stay separate from skinned runtime sync"));
+                instances.TryAllocate(defId, owner, scopeId: 42, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 7001, parentHandle: -1, out int handle),
+                Is.True);
+            instances.Get(handle).BehaviorActiveMask = (1u << 0) | (1u << 1);
+            instances.SetParam(handle, 91, ParamLane.Int, 0f, 1, default);
+
+            using var animatorSystem = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
+            using var emitSystem = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates,
+                new SoundRequestBuffer());
+
+            animatorSystem.Update(0.1f);
+            emitSystem.Update(0.016f);
+
+            Assert.That(requests.Count, Is.EqualTo(1));
+            ref readonly PresentationRequest request = ref requests.GetSpan()[0];
+            Assert.That(request.Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
+            Assert.That(request.VisualProxy.MeshAssetId, Is.EqualTo(101));
+            Assert.That(request.VisualProxy.MaterialId, Is.EqualTo(202));
+            Assert.That(request.VisualProxy.RenderPath, Is.EqualTo(VisualRenderPath.SkinnedMesh));
+            Assert.That(request.VisualProxy.AnimationProfileId, Is.EqualTo(77));
+            Assert.That(request.VisualProxy.Animator.GetControllerId(), Is.EqualTo(controllerId));
+            Assert.That(request.VisualProxy.Animator.GetPrimaryStateIndex(), Is.EqualTo(24));
+            Assert.That(request.VisualProxy.StableId, Is.GreaterThan(0));
+            Assert.That(request.VisualProxy.StableId, Is.Not.EqualTo(7001), "Skinned asset output should derive a per-slot stable id.");
+        }
+
+        [Test]
+        public void PerformerEmitSystem_StaticAsset_DoesNotCarryAnimatorPayload()
+        {
+            using var world = World.Create();
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register(
+                "performer.static.mesh",
+                new PerformerDefinition
+                {
+                    Behaviors =
+                    [
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
+                            {
+                                AssetKind = AssetKind.Mesh,
+                                AssetId = 11,
+                                MaterialId = 12,
+                                RenderPath = VisualRenderPath.StaticMesh,
+                                Mobility = VisualMobility.Movable,
+                                LocalScale = Vector3.One,
+                            },
+                        },
+                    ],
+                });
+
+            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var requests = new PresentationRequestBuffer();
+            Entity owner = world.Create(
+                new PresentationStableId { Value = 1 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+
+            Assert.That(
+                instances.TryAllocate(defId, owner, scopeId: 0, PresentationAnchorKind.WorldPosition, new Vector3(4f, 5f, 6f), stableId: 2001, parentHandle: -1, out int handle),
+                Is.True);
+            ref PerformerInstance instance = ref instances.Get(handle);
+            instance.BehaviorActiveMask = 1u;
+            instance.WorldRotation = Quaternion.Identity;
+            instance.WorldScale = new Vector3(1f, 2f, 3f);
+
+            using var system = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                new PerformerAnimatorStateBuffer(2),
+                new SoundRequestBuffer());
+
+            system.Update(0.016f);
+
+            Assert.That(requests.Count, Is.EqualTo(1));
+            ref readonly PresentationRequest request = ref requests.GetSpan()[0];
+            Assert.That(request.VisualProxy.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh));
+            Assert.That(request.VisualProxy.Animator.GetControllerId(), Is.EqualTo(0), "Static performer output must stay animator-free.");
+            Assert.That(request.VisualProxy.Position, Is.EqualTo(new Vector3(4f, 5f, 6f)));
+            Assert.That(request.VisualProxy.Scale, Is.EqualTo(new Vector3(1f, 2f, 3f)));
         }
 
         [Test]
@@ -350,12 +297,12 @@ namespace Ludots.Tests.Presentation
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
 
             var controllerRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimatorControllerRegistry);
-            var templateRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.PresentationVisualTemplateRegistry);
+            var performerRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.PerformerDefinitionRegistry);
             var profileRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimationProfileRegistry);
             var clipRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimationClipRegistry);
 
             Assert.That(controllerRegistry, Is.Not.Null);
-            Assert.That(templateRegistry, Is.Not.Null);
+            Assert.That(performerRegistry, Is.Not.Null);
             Assert.That(profileRegistry, Is.Not.Null);
             Assert.That(clipRegistry, Is.Not.Null);
 
@@ -396,26 +343,24 @@ namespace Ludots.Tests.Presentation
             Assert.That(humanoidRunRaylib.AssetRef, Does.Contain("humanoid_run"));
             Assert.That(humanoidAimUe5.AssetRef, Does.Contain("Humanoid_AimYawOffset"));
 
-            int tankTemplateId = templateRegistry!.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.TankVisualTemplateId);
-            int humanoidTemplateId = templateRegistry.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.HumanoidVisualTemplateId);
-            Assert.That(templateRegistry.TryGet(tankTemplateId, out var tankTemplate), Is.True);
-            Assert.That(templateRegistry.TryGet(humanoidTemplateId, out var humanoidTemplate), Is.True);
-            Assert.That(tankTemplate.AnimationProfileId, Is.EqualTo(tankProfileId));
-            Assert.That(humanoidTemplate.AnimationProfileId, Is.EqualTo(humanoidProfileId));
-            Assert.That(tankTemplate.AnimatorControllerId, Is.EqualTo(tankProfile.AnimatorControllerId));
-            Assert.That(humanoidTemplate.AnimatorControllerId, Is.EqualTo(humanoidProfile.AnimatorControllerId));
+            int healthBarDefId = performerRegistry!.GetId("entity_health_bar");
+            int worldTextDefId = performerRegistry.GetId("entity_world_text");
+            Assert.That(performerRegistry.TryGet(healthBarDefId, out var healthBar), Is.True);
+            Assert.That(performerRegistry.TryGet(worldTextDefId, out var worldText), Is.True);
+            Assert.That(healthBar.Behaviors.Length, Is.GreaterThan(0));
+            Assert.That(worldText.Behaviors.Length, Is.GreaterThan(0));
         }
 
         [Test]
-        public void RepositoryVisualTemplates_SkinnedEntries_MustBindThroughAnimationProfiles()
+        public void RepositoryPerformers_Definitions_MustHaveValidIds()
         {
             string repoRoot = FindRepoRoot();
-            string[] files = Directory.GetFiles(Path.Combine(repoRoot, "mods"), "visual_templates.json", SearchOption.AllDirectories);
+            string[] files = Directory.GetFiles(Path.Combine(repoRoot, "mods"), "performers.json", SearchOption.AllDirectories);
 
             foreach (string file in files)
             {
                 JsonNode? root = JsonNode.Parse(File.ReadAllText(file));
-                Assert.That(root, Is.TypeOf<JsonArray>(), $"Visual template file must contain a JSON array: {file}");
+                Assert.That(root, Is.TypeOf<JsonArray>(), $"Performer file must contain a JSON array: {file}");
 
                 foreach (JsonNode? item in (JsonArray)root!)
                 {
@@ -424,25 +369,17 @@ namespace Ludots.Tests.Presentation
                         continue;
                     }
 
-                    string templateId = obj["id"]?.GetValue<string>() ?? "<missing>";
-                    string renderPath = obj["renderPath"]?.GetValue<string>() ?? string.Empty;
-                    if (!string.Equals(renderPath, nameof(VisualRenderPath.SkinnedMesh), StringComparison.OrdinalIgnoreCase) &&
-                        !string.Equals(renderPath, nameof(VisualRenderPath.GpuSkinnedInstance), StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    string animationProfileId = obj["animationProfileId"]?.GetValue<string>() ?? string.Empty;
+                    string definitionId = obj["id"]?.GetValue<string>() ?? string.Empty;
                     Assert.That(
-                        string.IsNullOrWhiteSpace(animationProfileId),
+                        string.IsNullOrWhiteSpace(definitionId),
                         Is.False,
-                        $"Skinned visual template '{templateId}' in '{file}' must define animationProfileId.");
+                        $"Performer definition in '{file}' must define a non-empty id.");
                 }
             }
         }
 
         [Test]
-        public void EntityVisualEmitSystem_AndTransientMarkers_PopulateSharedVisualProxyAndSkinnedBatchContracts()
+        public void PerformerEmitSystem_AndTransientMarkers_PopulateSharedVisualProxyAndSkinnedBatchContracts()
         {
             using var world = World.Create();
             var drawBuffer = new PrimitiveDrawBuffer();
@@ -450,33 +387,82 @@ namespace Ludots.Tests.Presentation
             var proxyBuffer = new PresentationVisualProxyBuffer();
             var skinnedBatchBuffer = new SkinnedVisualBatchBuffer();
             var requests = new PresentationRequestBuffer();
+            var controllers = new AnimatorControllerRegistry();
+            int controllerId = controllers.Register(
+                "performer.skinned",
+                new AnimatorControllerDefinition
+                {
+                    DefaultStateIndex = 0,
+                    States = [ new AnimatorStateDefinition { PackedStateIndex = 3, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true } ],
+                });
 
-            world.Create(
+            var definitions = new PerformerDefinitionRegistry();
+            int definitionId = definitions.Register(
+                "performer.skinned.marker",
+                new PerformerDefinition
+                {
+                    Behaviors =
+                    [
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.Animator,
+                            ActiveByDefault = true,
+                            Animator = new AnimatorConfig
+                            {
+                                AnimatorControllerId = controllerId,
+                                AnimationProfileId = 9,
+                                StateParamKey = 40,
+                                SpeedParamKey = -1,
+                            },
+                        },
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 1,
+                            Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
+                            {
+                                AssetKind = AssetKind.SkinnedMesh,
+                                AssetId = 7,
+                                MaterialId = 9,
+                                RenderPath = VisualRenderPath.SkinnedMesh,
+                                Mobility = VisualMobility.Movable,
+                                LocalScale = Vector3.One,
+                            },
+                        },
+                    ],
+                });
+
+            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var animatorStates = new PerformerAnimatorStateBuffer(4);
+            Entity owner = world.Create(
                 new PresentationStableId { Value = 501 },
-                new VisualTemplateRef { TemplateId = 42 },
                 new VisualTransform
                 {
                     Position = new Vector3(1f, 0f, 2f),
                     Rotation = Quaternion.Identity,
                     Scale = Vector3.One,
                 },
-                VisualRuntimeState.Create(
-                    meshAssetId: 7,
-                    materialId: 9,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.SkinnedMesh,
-                    animatorControllerId: 3,
-                    animationProfileId: 9),
-                AnimatorPackedState.Create(3),
-                new AnimationOverlayRequest
-                {
-                    BaseClip = AnimatorBuiltinClipState.Create(AnimatorBuiltinClipId.LocomotionCycle, 0.25f, 0.8f),
-                });
+                new CullState { IsVisible = true, LOD = LODLevel.High });
 
-            using (var entityEmit = new EntityVisualEmitSystem(world, requests))
-            {
-                entityEmit.Update(0.016f);
-            }
+            Assert.That(
+                instances.TryAllocate(definitionId, owner, scopeId: 7, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 3001, parentHandle: -1, out int handle),
+                Is.True);
+            instances.Get(handle).BehaviorActiveMask = (1u << 0) | (1u << 1);
+
+            using var animatorSystem = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
+            using var emitSystem = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates,
+                new SoundRequestBuffer());
+
+            animatorSystem.Update(0.016f);
+            emitSystem.Update(0.016f);
 
             var markers = new TransientMarkerBuffer();
             Assert.That(markers.TryAddMesh(99, new Vector3(3f, 0.25f, 4f), Vector3.One, Vector4.One, 0.2f), Is.True);
@@ -488,6 +474,7 @@ namespace Ludots.Tests.Presentation
                 requests,
                 new PrefabRegistry(),
                 new MeshAssetRegistry(),
+                new StableDrawCache(),
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
@@ -502,77 +489,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(proxyBuffer.GetSpan()[0].AnimationProfileId, Is.EqualTo(9));
             Assert.That(snapshotBuffer.GetSpan()[0].AnimationProfileId, Is.EqualTo(9));
             Assert.That(skinnedBatchBuffer.GetSpan()[0].AnimationProfileId, Is.EqualTo(9));
-            Assert.That(skinnedBatchBuffer.GetSpan()[0].AnimationOverlay.BaseClip.ClipId, Is.EqualTo(AnimatorBuiltinClipId.LocomotionCycle));
+            Assert.That(skinnedBatchBuffer.GetSpan()[0].Animator.GetControllerId(), Is.EqualTo(controllerId));
             Assert.That(proxyBuffer.GetSpan()[1].StableId, Is.EqualTo(TransientMarkerIdentity.ComposeStableId(1)));
             Assert.That(proxyBuffer.GetSpan()[1].StableId, Is.GreaterThan(0));
-        }
-
-        [Test]
-        public void PresentationAuthoringContext_Apply_StaticTemplate_BindsEntityToModelPerformer()
-        {
-            using var world = World.Create();
-            var entity = world.Create();
-
-            var visualTemplates = new VisualTemplateRegistry();
-            var animators = new AnimatorControllerRegistry();
-            var stableIds = new PresentationStableIdAllocator();
-
-            int templateId = visualTemplates.Register(
-                "crate.template",
-                new VisualTemplateDefinition
-                {
-                    MeshAssetId = 17,
-                    MaterialId = 23,
-                    BaseScale = 1.1f,
-                    RenderPath = VisualRenderPath.StaticMesh,
-                    Mobility = VisualMobility.Movable,
-                    VisibleByDefault = true,
-                });
-
-            var context = new PresentationAuthoringContext(visualTemplates, animators, stableIds);
-            JsonNode authoring = JsonNode.Parse(
-                """
-                {
-                  "visualTemplateId": "crate.template"
-                }
-                """)!;
-
-            context.Apply(entity, authoring);
-
-            Assert.That(entity.Has<ModelPerformBinding>(), Is.True);
-            var binding = entity.Get<ModelPerformBinding>();
-            Assert.That(binding.TemplateId, Is.EqualTo(templateId));
-        }
-
-        [Test]
-        public void EntityVisualEmitSystem_SkipsDuplicateModelPerformBinding_StaticSlice()
-        {
-            using var world = World.Create();
-            var requests = new PresentationRequestBuffer();
-
-            int templateId = 42;
-            world.Create(
-                new PresentationStableId { Value = 501 },
-                new VisualTemplateRef { TemplateId = templateId },
-                new ModelPerformBinding { TemplateId = templateId },
-                new VisualTransform
-                {
-                    Position = new Vector3(1f, 0f, 2f),
-                    Rotation = Quaternion.Identity,
-                    Scale = Vector3.One * 2f,
-                },
-                VisualRuntimeState.Create(
-                    meshAssetId: 7,
-                    materialId: 9,
-                    baseScale: 1.5f,
-                    renderPath: VisualRenderPath.StaticMesh));
-
-            using (var legacyEmit = new EntityVisualEmitSystem(world, requests))
-            {
-                legacyEmit.Update(0.016f);
-            }
-
-            Assert.That(requests.Count, Is.EqualTo(0), "Legacy entity emit must stop duplicating model-bound entities once performer owns the static model slice.");
         }
 
         [Test]
@@ -656,6 +575,7 @@ namespace Ludots.Tests.Presentation
                 requests,
                 new PrefabRegistry(),
                 new MeshAssetRegistry(),
+                new StableDrawCache(),
                 drawBuffer,
                 groundOverlays,
                 worldHud,
@@ -883,6 +803,7 @@ namespace Ludots.Tests.Presentation
                 requests,
                 prefabs,
                 meshes,
+                new StableDrawCache(),
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
@@ -1010,41 +931,52 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldToVisualSyncSystem_AndEntityVisualEmitSystem_SnapshotCarriesSyncedTransformRotationAndIdentity()
+        public void WorldToVisualSyncSystem_AndPerformerEmitSystem_SnapshotCarriesSyncedTransformRotationAndIdentity()
         {
             using var world = World.Create();
             world.Create(PresentationFrameState.Default);
 
-            world.Create(
+            var definitions = new PerformerDefinitionRegistry();
+            int definitionId = RegisterStaticVisualDefinition(definitions, "performer.synced.static", assetId: 7, materialId: 9);
+            var instances = new PerformerInstanceBuffer(capacity: 2);
+
+            Entity owner = world.Create(
                 WorldPositionCm.FromCm(250, 500),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(100, 200) },
                 VisualTransform.Default,
                 new FacingDirection { AngleRad = MathF.PI * 0.5f },
-                new VisualTemplateRef { TemplateId = 42 },
-                VisualRuntimeState.Create(
-                    meshAssetId: 7,
-                    materialId: 9,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.StaticMesh),
-                new PresentationStableId { Value = 501 });
+                new PresentationStableId { Value = 501 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+
+            Assert.That(
+                instances.TryAllocate(definitionId, owner, scopeId: 0, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 6001, parentHandle: -1, out int handle),
+                Is.True);
+            instances.Get(handle).BehaviorActiveMask = 1u;
 
             using var sync = new WorldToVisualSyncSystem(world);
-            var drawBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
-            var snapshotBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
             var requests = new PresentationRequestBuffer();
-            using var emit = new EntityVisualEmitSystem(world, requests);
+            using var emit = new PerformerEmitSystem(world, instances, definitions, requests, new Dictionary<string, object>(), null!, null!);
             using var flush = new PresentationRequestFlushSystem(
                 world,
                 requests,
                 new PrefabRegistry(),
                 new MeshAssetRegistry(),
+                new StableDrawCache(),
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
                 new RoadSplineBuffer(),
-                snapshotBuffer);
+                snapshotBuffer,
+                new PresentationVisualProxyBuffer(),
+                new SkinnedVisualBatchBuffer());
 
             sync.Update(0.016f);
+            ref PerformerInstance instance = ref instances.Get(handle);
+            instance.WorldPosition = world.Get<VisualTransform>(owner).Position;
+            instance.WorldRotation = world.Get<VisualTransform>(owner).Rotation;
+            instance.WorldScale = world.Get<VisualTransform>(owner).Scale;
             emit.Update(0.016f);
             flush.Update(0.016f);
 
@@ -1052,8 +984,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
 
             var item = snapshotBuffer.GetSpan()[0];
-            Assert.That(item.StableId, Is.EqualTo(501));
-            Assert.That(item.TemplateId, Is.EqualTo(42));
+            Assert.That(item.TemplateId, Is.EqualTo(definitionId));
             Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
             Assert.That(item.Position.X, Is.EqualTo(2.5f).Within(0.001f));
             Assert.That(item.Position.Y, Is.EqualTo(0f).Within(0.001f));
@@ -1186,185 +1117,253 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void EntityVisualEmitSystem_WritesVisibilityIdentityAndTransformToSnapshot_WithoutChangingDrawBufferFiltering()
+        public void PerformerEmitSystem_WritesVisibilityIdentityAndTransformToSnapshot_WithoutChangingDrawBufferFiltering()
         {
             using var world = World.Create();
-            var drawBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
-            var snapshotBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
             var requests = new PresentationRequestBuffer();
+            var definitions = new PerformerDefinitionRegistry();
+            int visibleDef = RegisterStaticVisualDefinition(definitions, "visible", assetId: 10, materialId: 20);
+            int hiddenDef = RegisterStaticVisualDefinition(definitions, "hidden", assetId: 11, materialId: 21, visibilityParamKey: 500);
+            int culledDef = RegisterStaticVisualDefinition(definitions, "culled", assetId: 12, materialId: 22, renderPath: VisualRenderPath.InstancedStaticMesh);
+            var instances = new PerformerInstanceBuffer(capacity: 4);
 
             Quaternion visibleRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.25f);
             Quaternion hiddenRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, 0.5f);
             Quaternion culledRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, 0.75f);
 
-            world.Create(
-                new PresentationStableId { Value = 101 },
-                new VisualTemplateRef { TemplateId = 1001 },
-                new VisualTransform
-                {
-                    Position = new Vector3(1f, 2f, 3f),
-                    Rotation = visibleRotation,
-                    Scale = new Vector3(2f, 3f, 4f),
-                },
-                VisualRuntimeState.Create(
-                    meshAssetId: 10,
-                    materialId: 20,
-                    baseScale: 1.5f,
-                    renderPath: VisualRenderPath.StaticMesh));
+            Entity visibleOwner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity hiddenOwner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity culledOwner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Culled });
 
-            world.Create(
-                new PresentationStableId { Value = 202 },
-                new VisualTemplateRef { TemplateId = 2002 },
-                new VisualTransform
-                {
-                    Position = new Vector3(4f, 5f, 6f),
-                    Rotation = hiddenRotation,
-                    Scale = new Vector3(1f, 2f, 3f),
-                },
-                VisualRuntimeState.Create(
-                    meshAssetId: 11,
-                    materialId: 21,
-                    baseScale: 2f,
-                    renderPath: VisualRenderPath.StaticMesh,
-                    visible: false));
+            Assert.That(instances.TryAllocate(visibleDef, visibleOwner, 0, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 101, -1, out int visibleHandle), Is.True);
+            Assert.That(instances.TryAllocate(hiddenDef, hiddenOwner, 0, PresentationAnchorKind.WorldPosition, new Vector3(4f, 5f, 6f), 202, -1, out int hiddenHandle), Is.True);
+            Assert.That(instances.TryAllocate(culledDef, culledOwner, 0, PresentationAnchorKind.WorldPosition, new Vector3(7f, 8f, 9f), 303, -1, out int culledHandle), Is.True);
 
-            world.Create(
-                new PresentationStableId { Value = 303 },
-                new VisualTemplateRef { TemplateId = 3003 },
-                new VisualTransform
-                {
-                    Position = new Vector3(7f, 8f, 9f),
-                    Rotation = culledRotation,
-                    Scale = new Vector3(3f, 2f, 1f),
-                },
-                VisualRuntimeState.Create(
-                    meshAssetId: 12,
-                    materialId: 22,
-                    baseScale: 0.5f,
-                    renderPath: VisualRenderPath.InstancedStaticMesh),
-                new CullState { IsVisible = false, LOD = LODLevel.Culled });
+            instances.Get(visibleHandle).BehaviorActiveMask = 1u;
+            instances.Get(visibleHandle).WorldRotation = visibleRotation;
+            instances.Get(visibleHandle).WorldScale = new Vector3(2f, 3f, 4f);
 
-            using var system = new EntityVisualEmitSystem(world, requests);
+            instances.Get(hiddenHandle).BehaviorActiveMask = 1u;
+            instances.Get(hiddenHandle).WorldRotation = hiddenRotation;
+            instances.Get(hiddenHandle).WorldScale = new Vector3(1f, 2f, 3f);
+            instances.SetParam(hiddenHandle, 500, ParamLane.Int, 0f, 0, default);
+
+            instances.Get(culledHandle).BehaviorActiveMask = 1u;
+            instances.Get(culledHandle).WorldRotation = culledRotation;
+            instances.Get(culledHandle).WorldScale = new Vector3(3f, 2f, 1f);
+
+            using var system = new PerformerEmitSystem(world, instances, definitions, requests, new Dictionary<string, object>(), null!, null!);
             using var flush = new PresentationRequestFlushSystem(
                 world,
                 requests,
                 new PrefabRegistry(),
                 new MeshAssetRegistry(),
+                new StableDrawCache(),
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
                 new RoadSplineBuffer(),
-                snapshotBuffer);
+                snapshotBuffer,
+                new PresentationVisualProxyBuffer(),
+                new SkinnedVisualBatchBuffer());
+
             system.Update(0.016f);
             flush.Update(0.016f);
 
-            Assert.That(drawBuffer.Count, Is.EqualTo(1), "Legacy draw buffer should still contain only currently drawable visuals.");
-            Assert.That(snapshotBuffer.Count, Is.EqualTo(3), "Adapter-facing snapshot must retain hidden and culled visuals with explicit visibility.");
+            Assert.That(drawBuffer.Count, Is.EqualTo(1), "Visible draw buffer should still contain only currently drawable performer visuals.");
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(3), "Adapter-facing snapshot must retain hidden and culled performer visuals with explicit visibility.");
 
-            var snapshotsByStableId = new System.Collections.Generic.Dictionary<int, Ludots.Core.Presentation.Rendering.PrimitiveDrawItem>();
+            var snapshotsByTemplateId = new Dictionary<int, PrimitiveDrawItem>();
             foreach (ref readonly var item in snapshotBuffer.GetSpan())
             {
-                snapshotsByStableId[item.StableId] = item;
+                snapshotsByTemplateId[item.TemplateId] = item;
             }
 
-            Assert.That(snapshotsByStableId[101].Visibility, Is.EqualTo(VisualVisibility.Visible));
-            Assert.That(snapshotsByStableId[101].TemplateId, Is.EqualTo(1001));
-            Assert.That(snapshotsByStableId[101].Scale, Is.EqualTo(new Vector3(3f, 4.5f, 6f)));
-            AssertQuaternionEquivalent(snapshotsByStableId[101].Rotation, visibleRotation);
+            Assert.That(snapshotsByTemplateId[visibleDef].Visibility, Is.EqualTo(VisualVisibility.Visible));
+            Assert.That(snapshotsByTemplateId[visibleDef].Scale, Is.EqualTo(new Vector3(2f, 3f, 4f)));
+            AssertQuaternionEquivalent(snapshotsByTemplateId[visibleDef].Rotation, visibleRotation);
 
-            Assert.That(snapshotsByStableId[202].Visibility, Is.EqualTo(VisualVisibility.Hidden));
-            Assert.That(snapshotsByStableId[202].TemplateId, Is.EqualTo(2002));
-            Assert.That(snapshotsByStableId[202].Scale, Is.EqualTo(new Vector3(2f, 4f, 6f)));
-            AssertQuaternionEquivalent(snapshotsByStableId[202].Rotation, hiddenRotation);
+            Assert.That(snapshotsByTemplateId[hiddenDef].Visibility, Is.EqualTo(VisualVisibility.Hidden));
+            Assert.That(snapshotsByTemplateId[hiddenDef].Scale, Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            AssertQuaternionEquivalent(snapshotsByTemplateId[hiddenDef].Rotation, hiddenRotation);
 
-            Assert.That(snapshotsByStableId[303].Visibility, Is.EqualTo(VisualVisibility.Culled));
-            Assert.That(snapshotsByStableId[303].LOD, Is.EqualTo(LODLevel.Culled));
-            Assert.That(snapshotsByStableId[303].TemplateId, Is.EqualTo(3003));
-            Assert.That(snapshotsByStableId[303].Scale, Is.EqualTo(new Vector3(1.5f, 1f, 0.5f)));
-            AssertQuaternionEquivalent(snapshotsByStableId[303].Rotation, culledRotation);
+            Assert.That(snapshotsByTemplateId[culledDef].Visibility, Is.EqualTo(VisualVisibility.Culled));
+            Assert.That(snapshotsByTemplateId[culledDef].LOD, Is.EqualTo(LODLevel.Culled));
+            Assert.That(snapshotsByTemplateId[culledDef].Scale, Is.EqualTo(new Vector3(3f, 2f, 1f)));
+            AssertQuaternionEquivalent(snapshotsByTemplateId[culledDef].Rotation, culledRotation);
 
             var drawnItem = drawBuffer.GetSpan()[0];
-            Assert.That(drawnItem.StableId, Is.EqualTo(101));
+            Assert.That(drawnItem.TemplateId, Is.EqualTo(visibleDef));
             Assert.That(drawnItem.Visibility, Is.EqualTo(VisualVisibility.Visible));
             AssertQuaternionEquivalent(drawnItem.Rotation, visibleRotation);
         }
 
         [Test]
-        public void EntityVisualEmitSystem_Throws_WhenRenderableVisualIsMissingPresentationStableId()
+        public void PerformerInstanceBuffer_TracksActiveCountAndOwnerPayloadRefsIncrementally()
         {
             using var world = World.Create();
-            var requests = new PresentationRequestBuffer();
+            Entity ownerA = world.Create();
+            Entity ownerB = world.Create();
+            var instances = new PerformerInstanceBuffer(capacity: 8);
 
-            world.Create(
-                new VisualTransform
-                {
-                    Position = new Vector3(1f, 2f, 3f),
-                    Rotation = Quaternion.Identity,
-                    Scale = Vector3.One,
-                },
-                VisualRuntimeState.Create(
-                    meshAssetId: 10,
-                    materialId: 20,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.StaticMesh));
+            Assert.That(instances.ActiveCount, Is.EqualTo(0));
+            Assert.That(instances.HasOwnerPayload(ownerA), Is.False);
 
-            using var system = new EntityVisualEmitSystem(world, requests);
+            Assert.That(instances.TryAllocate(defId: 11, ownerA, scopeId: 1, out int rootA), Is.True);
+            Assert.That(instances.TryAllocate(defId: 12, ownerA, scopeId: 1, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 1001, parentHandle: rootA, out int childA), Is.True);
+            Assert.That(instances.TryAllocate(defId: 13, ownerB, scopeId: 2, out int rootB), Is.True);
 
-            var ex = Assert.Throws<InvalidOperationException>(() => system.Update(0.016f));
-            Assert.That(ex!.Message, Does.Contain("PresentationStableId"));
+            Assert.That(instances.ActiveCount, Is.EqualTo(3));
+            Assert.That(instances.HasOwnerPayload(ownerA), Is.True);
+            Assert.That(instances.HasOwnerPayload(ownerB), Is.True);
+
+            Assert.That(instances.Release(rootA), Is.True, "Releasing a parent should recursively release descendants.");
+            Assert.That(instances.ActiveCount, Is.EqualTo(1));
+            Assert.That(instances.HasOwnerPayload(ownerA), Is.False);
+            Assert.That(instances.HasOwnerPayload(ownerB), Is.True);
+
+            Assert.That(instances.Release(rootB), Is.True);
+            Assert.That(instances.ActiveCount, Is.EqualTo(0));
+            Assert.That(instances.HasOwnerPayload(ownerB), Is.False);
         }
 
         [Test]
-        public void EntityVisualEmitSystem_Throws_WhenSnapshotBufferOverflows()
+        public void PresentationVisualProxyEmitter_Throws_WhenSnapshotBufferOverflows()
+        {
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer(capacity: 1);
+            var emitter = new PresentationVisualProxyEmitter(drawBuffer, snapshotBuffer);
+
+            var proxy = new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                MeshAssetId = 10,
+                MaterialId = 20,
+                StableId = 1,
+                TemplateId = 101,
+                Position = new Vector3(1f, 2f, 3f),
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                RenderPath = VisualRenderPath.StaticMesh,
+                Visibility = VisualVisibility.Visible,
+                LOD = LODLevel.High,
+            };
+
+            emitter.Emit(proxy);
+            proxy.StableId = 2;
+            proxy.TemplateId = 102;
+            var ex = Assert.Throws<InvalidOperationException>(() => emitter.Emit(proxy));
+            Assert.That(ex!.Message, Does.Contain("overflowed"));
+        }
+
+        [Test]
+        public void PresentationRequestFlushSystem_StableDrawCache_UsesLatestProxyAsSingleTruth()
         {
             using var world = World.Create();
-            var drawBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer();
-            var snapshotBuffer = new Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer(capacity: 1);
             var requests = new PresentationRequestBuffer();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
+            var proxyBuffer = new PresentationVisualProxyBuffer();
+            var skinnedBatchBuffer = new SkinnedVisualBatchBuffer();
+            var stableDrawCache = new StableDrawCache();
 
-            world.Create(
-                new PresentationStableId { Value = 1 },
-                new VisualTransform
-                {
-                    Position = new Vector3(1f, 2f, 3f),
-                    Rotation = Quaternion.Identity,
-                    Scale = Vector3.One,
-                },
-                VisualRuntimeState.Create(
-                    meshAssetId: 10,
-                    materialId: 20,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.StaticMesh));
+            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                MeshAssetId = 10,
+                MaterialId = 20,
+                StableId = 9001,
+                TemplateId = 100,
+                Position = new Vector3(1f, 2f, 3f),
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+                Color = new Vector4(1f, 0f, 0f, 1f),
+                RenderPath = VisualRenderPath.StaticMesh,
+                Visibility = VisualVisibility.Visible,
+                LOD = LODLevel.High,
+            }));
+            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                MeshAssetId = 11,
+                MaterialId = 21,
+                StableId = 9001,
+                TemplateId = 101,
+                Position = new Vector3(4f, 5f, 6f),
+                Rotation = Quaternion.Identity,
+                Scale = new Vector3(2f, 2f, 2f),
+                Color = new Vector4(0f, 1f, 0f, 1f),
+                RenderPath = VisualRenderPath.StaticMesh,
+                Visibility = VisualVisibility.Visible,
+                LOD = LODLevel.Medium,
+            }));
 
-            world.Create(
-                new PresentationStableId { Value = 2 },
-                new VisualTransform
-                {
-                    Position = new Vector3(4f, 5f, 6f),
-                    Rotation = Quaternion.Identity,
-                    Scale = Vector3.One,
-                },
-                VisualRuntimeState.Create(
-                    meshAssetId: 11,
-                    materialId: 21,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.StaticMesh));
-
-            using var system = new EntityVisualEmitSystem(world, requests);
             using var flush = new PresentationRequestFlushSystem(
                 world,
                 requests,
                 new PrefabRegistry(),
                 new MeshAssetRegistry(),
+                stableDrawCache,
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
                 new RoadSplineBuffer(),
-                snapshotBuffer);
+                snapshotBuffer,
+                proxyBuffer,
+                skinnedBatchBuffer);
 
-            system.Update(0.016f);
-            var ex = Assert.Throws<InvalidOperationException>(() => flush.Update(0.016f));
-            Assert.That(ex!.Message, Does.Contain("overflowed"));
+            flush.Update(0.016f);
+
+            Assert.That(stableDrawCache.Count, Is.EqualTo(1));
+            Assert.That(drawBuffer.Count, Is.EqualTo(1));
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
+            Assert.That(proxyBuffer.Count, Is.EqualTo(1));
+
+            ref readonly PrimitiveDrawItem snapshot = ref snapshotBuffer.GetSpan()[0];
+            Assert.That(snapshot.StableId, Is.EqualTo(9001));
+            Assert.That(snapshot.MeshAssetId, Is.EqualTo(11));
+            Assert.That(snapshot.MaterialId, Is.EqualTo(21));
+            Assert.That(snapshot.TemplateId, Is.EqualTo(101));
+            Assert.That(snapshot.Position, Is.EqualTo(new Vector3(4f, 5f, 6f)));
+            Assert.That(snapshot.Scale, Is.EqualTo(new Vector3(2f, 2f, 2f)));
+            Assert.That(snapshot.LOD, Is.EqualTo(LODLevel.Medium));
+        }
+
+        private static int RegisterStaticVisualDefinition(
+            PerformerDefinitionRegistry definitions,
+            string key,
+            int assetId,
+            int materialId,
+            VisualRenderPath renderPath = VisualRenderPath.StaticMesh,
+            int visibilityParamKey = -1)
+        {
+            return definitions.Register(
+                key,
+                new PerformerDefinition
+                {
+                    Behaviors =
+                    [
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
+                            {
+                                AssetKind = AssetKind.Mesh,
+                                AssetId = assetId,
+                                MaterialId = materialId,
+                                RenderPath = renderPath,
+                                Mobility = VisualMobility.Movable,
+                                LocalScale = Vector3.One,
+                                VisibilityParamKey = visibilityParamKey,
+                            },
+                        },
+                    ],
+                });
         }
 
         private static void AssertQuaternionEquivalent(Quaternion actual, Quaternion expected, float epsilon = 0.0001f)

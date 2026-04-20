@@ -232,7 +232,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<DebugDrawCommandBuffer> DebugDrawCommandBuffer = new("DebugDrawCommandBuffer");
         // --- Performers ---
         public static readonly ServiceKey<PerformerDefinitionRegistry> PerformerDefinitionRegistry = new("PerformerDefinitionRegistry");
-        public static readonly ServiceKey<PerformerInstanceBuffer> PerformerInstanceBuffer = new("PerformerInstanceBuffer");
+        public static readonly ServiceKey<PerformerEntityRuntime> PerformerEntityRuntime = new("PerformerEntityRuntime");
         public static readonly ServiceKey<PerformerAnimatorStateBuffer> PerformerAnimatorStateBuffer = new("PerformerAnimatorStateBuffer");
         public static readonly ServiceKey<SurfaceSourcePayloadRegistry> SurfaceSourcePayloadRegistry = new("SurfaceSourcePayloadRegistry");
         public static readonly ServiceKey<SurfaceSourceRuntimeRegistry> SurfaceSourceRuntimeRegistry = new("SurfaceSourceRuntimeRegistry");

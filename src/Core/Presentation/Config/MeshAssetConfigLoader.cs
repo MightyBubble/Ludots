@@ -109,22 +109,16 @@ namespace Ludots.Core.Presentation.Config
                 case MeshAssetType.Model:
                 case MeshAssetType.Billboard:
                 {
-                    var urisNode = node["sourceUris"];
-                    string[] uris;
-                    if (urisNode is JsonArray arr)
+                    if (node["sourceUris"] != null)
                     {
-                        uris = new string[arr.Count];
-                        for (int j = 0; j < arr.Count; j++)
-                            uris[j] = arr[j]?.GetValue<string>() ?? string.Empty;
+                        string key = node["id"]?.GetValue<string>() ?? "<unknown>";
+                        throw new InvalidOperationException(
+                            $"Presentation/mesh_assets.json asset '{key}' declares sourceUris. Platform paths belong in Presentation/host_assets.json.");
                     }
-                    else
-                    {
-                        string single = urisNode?.GetValue<string>();
-                        uris = string.IsNullOrWhiteSpace(single) ? Array.Empty<string>() : new[] { single };
-                    }
+
                     return type == MeshAssetType.Billboard
-                        ? MeshAssetDescriptor.Billboard(0, uris)
-                        : MeshAssetDescriptor.Model(0, uris);
+                        ? MeshAssetDescriptor.Billboard(0, Array.Empty<string>())
+                        : MeshAssetDescriptor.Model(0, Array.Empty<string>());
                 }
                 case MeshAssetType.Prefab:
                 {

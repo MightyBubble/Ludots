@@ -668,6 +668,8 @@ namespace Ludots.Presentation.Skia
         private void DrawTextDirect(SKCanvas canvas, ReadOnlySpan<PresentationOverlayItem> span)
         {
             uint currentColorKey = uint.MaxValue;
+            int currentFastFontSize = 0;
+            SKFont? currentFastFont = null;
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly PresentationOverlayItem item = ref span[i];
@@ -685,8 +687,20 @@ namespace Ludots.Presentation.Skia
                 }
 
                 int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
-                CachedTextLayout layout = GetTextLayout(item.Text, fontSize);
                 float baselineY = item.Y + fontSize;
+                if (IsAsciiText(item.Text))
+                {
+                    if (fontSize != currentFastFontSize)
+                    {
+                        currentFastFont = GetFont(UiFontRegistry.ResolveTypeface(null, bold: false), fontSize);
+                        currentFastFontSize = fontSize;
+                    }
+
+                    canvas.DrawText(item.Text, item.X, baselineY, currentFastFont!, _textPaint);
+                    continue;
+                }
+
+                CachedTextLayout layout = GetTextLayout(item.Text, fontSize);
                 for (int runIndex = 0; runIndex < layout.Runs.Length; runIndex++)
                 {
                     CachedTextRun run = layout.Runs[runIndex];
@@ -696,6 +710,19 @@ namespace Ludots.Presentation.Skia
                     }
                 }
             }
+        }
+
+        private static bool IsAsciiText(string text)
+        {
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (text[i] > 0x7f)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private void DrawTextSpriteBatched(SKCanvas canvas, ReadOnlySpan<PresentationOverlayItem> span)
@@ -966,14 +993,14 @@ namespace Ludots.Presentation.Skia
 
         private static bool ShouldRenderImmediate(PresentationOverlayLayer layer, PresentationOverlayItemKind kind, int itemCount)
         {
-            if (layer != PresentationOverlayLayer.UnderUi || itemCount <= 0)
+            if (itemCount <= 0)
             {
                 return false;
             }
 
             return kind switch
             {
-                PresentationOverlayItemKind.Bar => itemCount >= ImmediateUnderUiBarThreshold,
+                PresentationOverlayItemKind.Bar => layer == PresentationOverlayLayer.UnderUi && itemCount >= ImmediateUnderUiBarThreshold,
                 PresentationOverlayItemKind.Text => itemCount >= ImmediateUnderUiTextThreshold,
                 _ => false,
             };

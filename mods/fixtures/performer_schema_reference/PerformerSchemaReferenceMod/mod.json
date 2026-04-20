@@ -1,0 +1,8 @@
+{
+  "id": "PerformerSchemaReferenceMod",
+  "name": "Performer Schema Reference",
+  "version": "1.0.0",
+  "description": "Schema reference fixture exercising every performer field, BehaviorKind, and AssetKind.",
+  "entryAssembly": null,
+  "dependencies": []
+}

@@ -13,7 +13,9 @@ using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -490,7 +492,28 @@ namespace Ludots.Tests.ThreeC
         //  D. Camera Culling
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
-        private static Entity CreateCullableEntity(World world, int xCm, int yCm)
+        private static PerformerInstanceBuffer CreatePerformerPayload(Entity entity)
+        {
+            var performers = new PerformerInstanceBuffer(capacity: 8);
+            bool allocated = performers.TryAllocate(
+                defId: 1,
+                owner: entity,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 7001,
+                parentHandle: -1,
+                out _);
+            That(allocated, Is.True);
+            return performers;
+        }
+
+        private static Entity CreateCullableEntity(
+            World world,
+            int xCm,
+            int yCm,
+            PresentationLocalBounds? bounds = null,
+            PresentationLodProfile? lodProfile = null)
         {
             var e = world.Create(
                 WorldPositionCm.FromCm(xCm, yCm),
@@ -500,29 +523,20 @@ namespace Ludots.Tests.ThreeC
                     Position = new Vector3(xCm * 0.01f, 0f, yCm * 0.01f),
                     Rotation = Quaternion.Identity,
                     Scale = Vector3.One,
-                },
-                VisualRuntimeState.Create(
-                    meshAssetId: 1,
-                    materialId: 1,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.StaticMesh)
+                }
             );
-            return e;
-        }
 
-        private static Entity CreateCullableEntity(World world, int xCm, int yCm, VisualLodProfile lodProfile, PresentationLocalBounds bounds)
-        {
-            Entity entity = CreateCullableEntity(world, xCm, yCm);
-            world.Add(entity, bounds);
-            world.Set(
-                entity,
-                VisualRuntimeState.Create(
-                    meshAssetId: lodProfile.High.MeshAssetId,
-                    materialId: 1,
-                    lodProfile,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.StaticMesh));
-            return entity;
+            if (bounds.HasValue)
+            {
+                world.Add(e, bounds.Value);
+            }
+
+            if (lodProfile.HasValue)
+            {
+                world.Add(e, lodProfile.Value);
+            }
+
+            return e;
         }
 
         [Test]
@@ -581,9 +595,10 @@ namespace Ludots.Tests.ThreeC
             var view = new StubViewController();
 
             var entity = CreateCullableEntity(world, 100, 100); // very close to camera target
+            var performers = CreatePerformerPayload(entity);
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view);
+            var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
@@ -606,9 +621,10 @@ namespace Ludots.Tests.ThreeC
 
             // Place entity at ~7000cm from origin 鈫?between High(4000) and Medium(10000)
             var entity = CreateCullableEntity(world, 5000, 5000); // dist 鈮?7071cm
+            var performers = CreatePerformerPayload(entity);
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view);
+            var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
@@ -631,9 +647,10 @@ namespace Ludots.Tests.ThreeC
 
             // Place entity at ~14142cm from origin 鈫?between Medium(10000) and Low(20000)
             var entity = CreateCullableEntity(world, 10000, 10000); // dist 鈮?14142cm
+            var performers = CreatePerformerPayload(entity);
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view);
+            var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
@@ -656,9 +673,10 @@ namespace Ludots.Tests.ThreeC
 
             // Place entity at ~28284cm 鈫?beyond Low(20000) threshold
             var entity = CreateCullableEntity(world, 20000, 20000); // dist 鈮?28284cm
+            var performers = CreatePerformerPayload(entity);
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view);
+            var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
@@ -680,9 +698,10 @@ namespace Ludots.Tests.ThreeC
             var view = new StubViewController();
 
             var entity = CreateCullableEntity(world, 100, 100);
+            var performers = CreatePerformerPayload(entity);
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view);
+            var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
 
             // Frame 1: entity is visible
             system.Update(0.016f);
@@ -697,7 +716,7 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void Culling_UsesBoundsAwareScreenCoverageAndVisualLodProfile()
+        public void Culling_UsesBoundsAwareScreenCoverageAndPresentationLodProfile()
         {
             using var world = World.Create();
             world.Create(
@@ -712,26 +731,83 @@ namespace Ludots.Tests.ThreeC
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
-            var lodProfile = new VisualLodProfile(
-                new VisualLodEntry(meshAssetId: 101, materialOverrideId: 1, maxDistanceCm: 4000f, minScreenCoverage01: 0.30f),
-                new VisualLodEntry(meshAssetId: 102, materialOverrideId: 1, maxDistanceCm: 12000f, minScreenCoverage01: 0.05f),
-                new VisualLodEntry(meshAssetId: 103, materialOverrideId: 1, maxDistanceCm: 30000f, minScreenCoverage01: 0.01f));
+            var lodProfile = new PresentationLodProfile(
+                new PresentationLodEntry(maxDistanceCm: 4000f, minScreenCoverage01: 0.30f),
+                new PresentationLodEntry(maxDistanceCm: 12000f, minScreenCoverage01: 0.05f),
+                new PresentationLodEntry(maxDistanceCm: 30000f, minScreenCoverage01: 0.01f));
 
             var entity = CreateCullableEntity(
                 world,
                 xCm: 2000,
                 yCm: 2000,
-                lodProfile,
-                PresentationLocalBounds.Create(Vector3.Zero, new Vector3(20f, 1f, 20f)));
+                PresentationLocalBounds.Create(Vector3.Zero, new Vector3(20f, 1f, 20f)),
+                lodProfile);
+            var performers = CreatePerformerPayload(entity);
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view);
+            var system = new CameraCullingSystem(world, manager, spatial, view, performers: performers);
             system.Update(0.016f);
 
             ref CullState cull = ref world.Get<CullState>(entity);
             That(cull.IsVisible, Is.True);
             That(cull.ScreenCoverage01, Is.GreaterThan(0.05f));
             That(cull.LOD, Is.EqualTo(LODLevel.High));
+        }
+
+        [Test]
+        public void Culling_WithoutPerformerBuffer_DoesNotForceCullEntities()
+        {
+            using var world = World.Create();
+            world.Create(
+                new PresentationFrameState { InterpolationAlpha = 1f, Enabled = true },
+                new PresentationFrameStateTag());
+
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.State.DistanceCm = 2000f;
+            manager.State.Pitch = 45f;
+            manager.State.FovYDeg = 60f;
+
+            var spatial = new StubSpatialQueryService();
+            var view = new StubViewController();
+            var entity = CreateCullableEntity(world, 100, 100);
+            spatial.Entities.Add(entity);
+
+            var system = new CameraCullingSystem(world, manager, spatial, view, performers: null);
+            system.Update(0.016f);
+
+            ref var cull = ref world.Get<CullState>(entity);
+            That(cull.IsVisible, Is.True);
+            That(cull.LOD, Is.EqualTo(LODLevel.High));
+        }
+
+        [Test]
+        public void Culling_EntityOutsideSpatialQuery_RemainsCulledInsteadOfDefaultVisible()
+        {
+            using var world = World.Create();
+            world.Create(
+                new PresentationFrameState { InterpolationAlpha = 1f, Enabled = true },
+                new PresentationFrameStateTag());
+
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.PreviousState.TargetCm = Vector2.Zero;
+
+            var view = new StubViewController();
+            var spatial = new StubSpatialQueryService();
+            Entity entity = world.Create(
+                WorldPositionCm.FromCm(50000, 50000),
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new Name { Value = "outside" });
+
+            using var system = new CameraCullingSystem(world, manager, spatial, view, timingDiagnostics: null);
+
+            system.Update(0.016f);
+
+            ref var cull = ref world.Get<CullState>(entity);
+            That(cull.IsVisible, Is.False);
+            That(cull.LOD, Is.EqualTo(LODLevel.Culled));
+            That(cull.ScreenCoverage01, Is.EqualTo(0f));
         }
 
         [Test]
@@ -755,6 +831,7 @@ namespace Ludots.Tests.ThreeC
             loadedChunks.SetLoaded(loadedKey);
 
             var entity = CreateCullableEntity(world, 100000, 100000);
+            var performers = CreatePerformerPayload(entity);
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(
@@ -762,8 +839,8 @@ namespace Ludots.Tests.ThreeC
                 manager,
                 spatial,
                 view,
-                meshes: null,
                 loadedChunks: loadedChunks,
+                performers: performers,
                 timingDiagnostics: null);
             system.Update(0.016f);
 

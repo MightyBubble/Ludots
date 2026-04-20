@@ -71,5 +71,36 @@ namespace Ludots.Tests.Presentation
                 Assert.That(siblingValue, Is.EqualTo(9.5f));
             });
         }
+
+        [Test]
+        public void PerformerParamBlackboard_ResolvePrefersCurrentValueButFallsBackToHandleDefaultBeforeParent()
+        {
+            var blackboard = new PerformerParamBlackboard(handleCapacity: 4);
+            blackboard.SetIntDefault(0, 100, 1);
+            blackboard.SetParent(1, 0);
+            blackboard.SetIntDefault(1, 100, 2);
+
+            Assert.That(blackboard.ResolveInt(1, 100, -1), Is.EqualTo(2), "Child default should shadow parent default.");
+
+            blackboard.SetInt(1, 100, 3);
+            Assert.That(blackboard.ResolveInt(1, 100, -1), Is.EqualTo(3), "Current value should shadow child default.");
+
+            blackboard.ClearInt(1, 100);
+            Assert.That(blackboard.ResolveInt(1, 100, -1), Is.EqualTo(2), "Clearing current value should restore child default.");
+        }
+
+        [Test]
+        public void PerformerParamBlackboard_ResolvePrefersParentCurrentBeforeChildDefault()
+        {
+            var blackboard = new PerformerParamBlackboard(handleCapacity: 4);
+            blackboard.SetInt(0, 100, 7);
+            blackboard.SetParent(1, 0);
+            blackboard.SetIntDefault(1, 100, 2);
+
+            Assert.That(
+                blackboard.ResolveInt(1, 100, -1),
+                Is.EqualTo(7),
+                "Parent current/binding value should override child default per override > binding > default.");
+        }
     }
 }

@@ -23,8 +23,8 @@
 
   { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" },
-  { "Path": "Presentation/visual_templates.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/mesh_assets.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/host_assets.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/prefabs.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/text_tokens.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/text_locales.json", "Policy": "DeepObject" },

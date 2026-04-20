@@ -26,6 +26,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly PresentationMaterialRegistry? _materials;
         private readonly string? _diagnosticPath;
         private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new PrefabFinalizedVisualBuffer();
+        private const int MaxModelInstancesPerDraw = 1024;
 
         private bool _initialized;
         private Mesh _cubeMesh;
@@ -37,7 +38,8 @@ namespace Ludots.Client.Raylib.Rendering
 
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
-        private readonly StaticMeshAdapterSyncPlanner _persistentStaticLaneSync = new StaticMeshAdapterSyncPlanner();
+        private readonly Dictionary<long, ModelInstanceBatch> _modelInstanceBatches = new Dictionary<long, ModelInstanceBatch>();
+        private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
         private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
@@ -60,6 +62,8 @@ namespace Ludots.Client.Raylib.Rendering
         public int TotalDecalVisualCount { get; private set; }
         public int TotalVfxVisualCount { get; private set; }
         public int TotalSurfaceVisualCount { get; private set; }
+
+        public RaylibIsmRenderBridge IsmBridge => _ismBridge;
 
         public RaylibPrimitiveRenderer(
             RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
@@ -109,10 +113,10 @@ namespace Ludots.Client.Raylib.Rendering
             bool usePersistentStaticLanes = snapshot != null;
             if (usePersistentStaticLanes)
             {
-                _persistentStaticLaneSync.Sync(snapshot);
-                LastPersistentCreates = _persistentStaticLaneSync.LastCreateCount;
-                LastPersistentUpdates = _persistentStaticLaneSync.LastUpdateCount;
-                LastPersistentRemoves = _persistentStaticLaneSync.LastRemoveCount;
+                _ismBridge.SyncPersistentLanes(snapshot);
+                LastPersistentCreates = _ismBridge.Planner.LastCreateCount;
+                LastPersistentUpdates = _ismBridge.Planner.LastUpdateCount;
+                LastPersistentRemoves = _ismBridge.Planner.LastRemoveCount;
                 DrawPersistentStaticLanes(camera, meshes, scaleMul, in finalizationContext);
                 if (skinnedBatch != null)
                 {
@@ -134,24 +138,9 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
         {
-            foreach (var pair in _persistentStaticLaneSync.ActiveBindings)
+            foreach (RaylibIsmRenderBridge.Bucket bucket in _ismBridge.ActiveBuckets)
             {
-                var binding = pair.Value;
-                var item = binding.Item;
-                if (!binding.IsVisible)
-                {
-                    continue;
-                }
-
-                DrawAssetRecursive(
-                    item.MeshAssetId,
-                    item.Position,
-                    item.Rotation,
-                    item.Scale * scaleMul,
-                    item.Color,
-                    camera,
-                    meshes,
-                    in finalizationContext);
+                DrawInstancedBucket(bucket, meshes, scaleMul);
             }
         }
 
@@ -201,7 +190,7 @@ namespace Ludots.Client.Raylib.Rendering
                 return false;
             }
 
-            return _persistentStaticLaneSync.TryGetBinding(item.StableId, out _);
+            return _ismBridge.ActiveBindings.ContainsKey(item.StableId);
         }
 
         private void DrawHybridInstanced(ReadOnlySpan<PrimitiveDrawItem> span, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
@@ -1364,8 +1353,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
-            LastInstancedInstances = 0;
-            LastInstancedBatches = 0;
+            ResetInstancedStats();
 
             EnsureInitialized();
 
@@ -1379,6 +1367,183 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             FlushInstancedBatches();
+        }
+
+        public void ResetInstancedStats()
+        {
+            LastInstancedInstances = 0;
+            LastInstancedBatches = 0;
+        }
+
+        public void DrawInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, MeshAssetRegistry meshes, float scaleMul = 1f)
+        {
+            if (bucket == null) throw new ArgumentNullException(nameof(bucket));
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            EnsureInitialized();
+
+            List<PrimitiveDrawItem> items = bucket.Items;
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            if (TryDrawModelInstancedBucket(items, meshes, scaleMul))
+            {
+                return;
+            }
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                PrimitiveDrawItem item = items[i];
+                if (!meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor))
+                {
+                    continue;
+                }
+
+                switch (descriptor.Type)
+                {
+                    case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere:
+                        SubmitPrimitive(descriptor.PrimitiveKind, item.Position, item.Rotation, item.Scale * scaleMul, item.Color);
+                        break;
+                    case MeshAssetType.Model:
+                    case MeshAssetType.Billboard:
+                    case MeshAssetType.ProceduralMesh:
+                        DrawAssetRecursive(
+                            item.MeshAssetId,
+                            item.Position,
+                            item.Rotation,
+                            item.Scale * scaleMul,
+                            item.Color,
+                            default,
+                            meshes,
+                            new PrefabFinalizationContext(null));
+                        break;
+                }
+            }
+
+            FlushInstancedBatches();
+        }
+
+        private bool TryDrawModelInstancedBucket(List<PrimitiveDrawItem> items, MeshAssetRegistry meshes, float scaleMul)
+        {
+            PrimitiveDrawItem first = items[0];
+            if (!meshes.TryGetDescriptor(first.MeshAssetId, out MeshAssetDescriptor descriptor) ||
+                descriptor.Type != MeshAssetType.Model)
+            {
+                return false;
+            }
+
+            if (!TryGetOrLoadModel(first.MeshAssetId, in descriptor, out CachedModel cached))
+            {
+                for (int i = 0; i < items.Count; i++)
+                {
+                    PrimitiveDrawItem item = items[i];
+                    DrawMissingModelMarker(item.Position, item.Scale * scaleMul);
+                }
+
+                return true;
+            }
+
+            uint colorKey = PackRgba(first.Color);
+            long batchKey = BuildModelInstanceBatchKey(first.MeshAssetId, colorKey);
+            ModelInstanceBatch batch = GetModelInstanceBatch(batchKey, colorKey);
+            batch.Count = 0;
+            for (int i = 0; i < items.Count; i++)
+            {
+                PrimitiveDrawItem item = items[i];
+                RaylibMatrix matrix = RaylibMatrix.FromSystemNumerics(
+                    Matrix4x4.CreateScale(item.Scale * scaleMul) *
+                    Matrix4x4.CreateFromQuaternion(PrefabTransformUtility.NormalizeOrIdentity(item.Rotation)) *
+                    Matrix4x4.CreateTranslation(item.Position));
+                batch.Add(matrix);
+            }
+
+            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey);
+            LastInstancedInstances += batch.Count;
+            LastInstancedBatches += drawCalls;
+            _modelInstanceBatches[batchKey] = batch;
+            return true;
+        }
+
+        private ModelInstanceBatch GetModelInstanceBatch(long batchKey, uint colorKey)
+        {
+            if (_modelInstanceBatches.TryGetValue(batchKey, out ModelInstanceBatch batch) &&
+                batch.ColorKey == colorKey)
+            {
+                return batch;
+            }
+
+            return new ModelInstanceBatch(colorKey);
+        }
+
+        private static long BuildModelInstanceBatchKey(int meshAssetId, uint colorKey)
+        {
+            return ((long)meshAssetId << 32) | colorKey;
+        }
+
+        private int DrawModelInstanceBatch(Model model, ModelInstanceBatch batch, uint colorKey)
+        {
+            if (model.meshCount <= 0 || batch.Count <= 0)
+            {
+                return 0;
+            }
+
+            int drawCalls = 0;
+            fixed (RaylibMatrix* transforms = batch.Transforms)
+            {
+                for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
+                {
+                    Mesh mesh = model.meshes[meshIndex];
+                    Material material = ResolveInstancedModelMaterial(model, meshIndex);
+                    ApplyInstancedMaterialTint(ref material, colorKey);
+                    for (int offset = 0; offset < batch.Count; offset += MaxModelInstancesPerDraw)
+                    {
+                        int chunkCount = Math.Min(MaxModelInstancesPerDraw, batch.Count - offset);
+                        Rl.DrawMeshInstanced(mesh, material, transforms + offset, chunkCount);
+                        drawCalls++;
+                    }
+                }
+            }
+
+            return drawCalls;
+        }
+
+        private Material ResolveInstancedModelMaterial(Model model, int meshIndex)
+        {
+            if (model.materialCount <= 0 || model.materials == null)
+            {
+                Material fallback = _material;
+                fallback.shader = _shader;
+                return fallback;
+            }
+
+            int materialIndex = 0;
+            if (model.meshMaterial != null && meshIndex >= 0 && meshIndex < model.meshCount)
+            {
+                materialIndex = model.meshMaterial[meshIndex];
+            }
+
+            if (materialIndex < 0 || materialIndex >= model.materialCount)
+            {
+                materialIndex = 0;
+            }
+
+            Material material = model.materials[materialIndex];
+            material.shader = _shader;
+            return material;
+        }
+
+        private void ApplyInstancedMaterialTint(ref Material material, uint colorKey)
+        {
+            SetTintUniform(colorKey);
+            if (_locColDiffuse >= 0 && material.maps != null)
+            {
+                int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
+                Color color = material.maps[albedoIndex].color;
+                Vector4 diffuse = new(color.r / 255f, color.g / 255f, color.b / 255f, color.a / 255f);
+                Rl.SetShaderValue(_shader, _locColDiffuse, &diffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            }
         }
 
         private void AddInstance(List<Batch> batches, uint colorKey, in RaylibMatrix matrix)
@@ -1406,8 +1571,8 @@ namespace Ludots.Client.Raylib.Rendering
             FlushMeshBatches(_cubeBatches, ref totalInstances, ref batches, ref _cubeMesh);
             FlushMeshBatches(_sphereBatches, ref totalInstances, ref batches, ref _sphereMesh);
 
-            LastInstancedInstances = totalInstances;
-            LastInstancedBatches = batches;
+            LastInstancedInstances += totalInstances;
+            LastInstancedBatches += batches;
         }
 
         private void FlushMeshBatches(List<Batch> batches, ref int totalInstances, ref int batchCount, ref Mesh mesh)
@@ -1580,6 +1745,30 @@ namespace Ludots.Client.Raylib.Rendering
                 {
                     Array.Resize(ref Transforms, Transforms.Length * 2);
                 }
+                Transforms[Count++] = matrix;
+            }
+        }
+
+        private struct ModelInstanceBatch
+        {
+            public readonly uint ColorKey;
+            public RaylibMatrix[] Transforms;
+            public int Count;
+
+            public ModelInstanceBatch(uint colorKey, int initialCapacity = 256)
+            {
+                ColorKey = colorKey;
+                Transforms = new RaylibMatrix[Math.Max(4, initialCapacity)];
+                Count = 0;
+            }
+
+            public void Add(in RaylibMatrix matrix)
+            {
+                if (Count >= Transforms.Length)
+                {
+                    Array.Resize(ref Transforms, Transforms.Length * 2);
+                }
+
                 Transforms[Count++] = matrix;
             }
         }

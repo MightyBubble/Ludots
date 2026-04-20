@@ -7,6 +7,8 @@ using Ludots.Core.Engine;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
@@ -32,6 +34,13 @@ namespace Ludots.Adapter.Raylib
             var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "launcher.runtime.json");
             var engine = result.Engine;
             var config = result.Config;
+            if (!engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshAssets))
+            {
+                throw new InvalidOperationException("Raylib host requires PresentationMeshAssetRegistry before host asset binding.");
+            }
+
+            new PresentationHostAssetConfigLoader(engine.ConfigPipeline, meshAssets)
+                .Apply("raylib", engine.ConfigCatalog, engine.ConfigConflictReport);
 
             // Upgrade backend with file logging if configured
             if (config.Logging.FileLogging)

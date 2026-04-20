@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Text.Json.Nodes;
+using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.Components;
@@ -77,6 +78,7 @@ namespace Ludots.Core.Presentation.Config
 
             var mergedByKey = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
             var parsedByKey = new Dictionary<string, PerformerDefinition>(StringComparer.OrdinalIgnoreCase);
+            var parsedOrder = new List<string>(merged.Count);
             for (int i = 0; i < merged.Count; i++)
             {
                 if (merged[i].Node is not JsonObject obj)
@@ -103,6 +105,7 @@ namespace Ludots.Core.Presentation.Config
                     if (def != null)
                     {
                         parsedByKey[key] = def;
+                        parsedOrder.Add(key);
                     }
                 }
                 catch (Exception ex)
@@ -112,18 +115,44 @@ namespace Ludots.Core.Presentation.Config
                 }
             }
 
-            foreach ((string key, PerformerDefinition def) in parsedByKey)
+            var validByKey = new Dictionary<string, PerformerDefinition>(parsedByKey, StringComparer.OrdinalIgnoreCase);
+            bool removedInvalidDefinition;
+            do
             {
-                try
+                removedInvalidDefinition = false;
+                for (int i = 0; i < parsedOrder.Count; i++)
                 {
-                    ValidateChildGraph(key, parsedByKey, new HashSet<int>(), new List<string>());
-                    _registry.Register(key, def);
+                    string key = parsedOrder[i];
+                    if (!validByKey.TryGetValue(key, out PerformerDefinition? definition))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        ValidateRuleReferences(key, definition, validByKey);
+                        ValidateChildGraph(key, validByKey, new HashSet<int>(), new List<string>());
+                    }
+                    catch (Exception ex)
+                    {
+                        validByKey.Remove(key);
+                        _registry.Unregister(key);
+                        Trace.WriteLine($"[PerformerDefinitionConfigLoader] Skipping performer '{key}': {ex.Message}");
+                        removedInvalidDefinition = true;
+                    }
                 }
-                catch (Exception ex)
+            }
+            while (removedInvalidDefinition);
+
+            for (int i = 0; i < parsedOrder.Count; i++)
+            {
+                string key = parsedOrder[i];
+                if (!validByKey.TryGetValue(key, out PerformerDefinition? definition))
                 {
-                    _registry.Unregister(key);
-                    Trace.WriteLine($"[PerformerDefinitionConfigLoader] Skipping performer '{key}': {ex.Message}");
+                    continue;
                 }
+
+                _registry.Register(key, definition);
             }
         }
 
@@ -469,7 +498,7 @@ namespace Ludots.Core.Presentation.Config
             {
                 CommandKind = ParseEnum(node["kind"]?.GetValue<string>(), PerformerCommandKind.None),
                 PerformerDefinitionId = ResolvePerformerDefinitionId(node["definitionId"]),
-                ParentHandle = node["parentHandle"]?.GetValue<int>() ?? -1,
+                ParentEntity = Entity.Null, // resolved at runtime
                 ScopeTag = ParseScopeTag(node["scopeTag"]),
                 ScopeSource = ParseEnum(node["scopeSource"]?.GetValue<string>(), PerformerCommandScopeSource.Fixed),
                 ParamKey = node["paramKey"]?.GetValue<int>() ?? 0,
@@ -542,6 +571,7 @@ namespace Ludots.Core.Presentation.Config
                 "attributebase" => ValueRef.FromAttributeBase(ResolveAttributeId(node)),
                 "graph" => ValueRef.FromGraph(node["sourceId"]?.GetValue<int>() ?? 0),
                 "entitycolor" => ValueRef.FromEntityColor(node["sourceId"]?.GetValue<int>() ?? 0),
+                "entitycolorvector" => ValueRef.FromEntityColorVector(),
                 "facingradians" => ValueRef.FromFacingRadians(),
                 "facingdegrees" => ValueRef.FromFacingDegrees(),
                 "texttoken" => ValueRef.FromConstant(ResolveTextTokenId(node)),
@@ -581,7 +611,7 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 int tokenId = _resolveTextTokenId(tokenKey);
-                if (tokenId <= 0)
+                if (tokenId < 0)
                 {
                     throw new InvalidOperationException($"Performer defaultTextId references unknown text token '{tokenKey}'.");
                 }
@@ -604,7 +634,7 @@ namespace Ludots.Core.Presentation.Config
             if (!string.IsNullOrWhiteSpace(name))
             {
                 int id = _resolveAttributeName(name);
-                if (id > 0)
+                if (id >= 0)
                 {
                     return id;
                 }
@@ -734,6 +764,55 @@ namespace Ludots.Core.Presentation.Config
                 path.RemoveAt(path.Count - 1);
                 pathIds.Remove(definition.Id);
             }
+        }
+
+        private static void ValidateRuleReferences(
+            string key,
+            PerformerDefinition definition,
+            IReadOnlyDictionary<string, PerformerDefinition> parsedByKey)
+        {
+            PerformerRule[] rules = definition.Rules;
+            if (rules == null || rules.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < rules.Length; i++)
+            {
+                ref readonly PerformerRule rule = ref rules[i];
+                if (rule.Command.CommandKind != PerformerCommandKind.CreatePerformer)
+                {
+                    continue;
+                }
+
+                int referencedDefinitionId = rule.Command.PerformerDefinitionId;
+                if (referencedDefinitionId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer '{key}' rule[{i}] references an unknown child definition.");
+                }
+
+                if (!ContainsDefinitionId(parsedByKey, referencedDefinitionId))
+                {
+                    throw new InvalidOperationException(
+                        $"Performer '{key}' rule[{i}] references definition id={referencedDefinitionId} that failed to load.");
+                }
+            }
+        }
+
+        private static bool ContainsDefinitionId(
+            IReadOnlyDictionary<string, PerformerDefinition> parsedByKey,
+            int definitionId)
+        {
+            foreach ((string _, PerformerDefinition parsedDefinition) in parsedByKey)
+            {
+                if (parsedDefinition.Id == definitionId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private BehaviorSlot[] ParseBehaviors(JsonNode? node, string ownerKey)
@@ -887,6 +966,7 @@ namespace Ludots.Core.Presentation.Config
                 ColorParamKey = obj["colorParamKey"]?.GetValue<int>() ?? -1,
                 MaterialParamKey = obj["materialParamKey"]?.GetValue<int>() ?? -1,
                 AssetSwapParamKey = obj["assetSwapParamKey"]?.GetValue<int>() ?? -1,
+                AssetSwapTable = ParseAssetSwapTable(assetKind, obj["assetSwapTable"]),
                 VisibilityParamKey = obj["visibilityParamKey"]?.GetValue<int>() ?? -1,
                 Grounding = ParseEnum(obj["grounding"]?.GetValue<string>(), GroundingMode.None),
                 GroundingOffset = obj["groundingOffset"]?.GetValue<float>() ?? 0f,
@@ -955,6 +1035,7 @@ namespace Ludots.Core.Presentation.Config
 
             return new AttachmentConfig
             {
+                Target = ParseEnum(obj["target"]?.GetValue<string>(), AttachmentTarget.Parent),
                 BoneId = obj["boneId"]?.GetValue<int>() ?? 0,
                 Offset = ParseVector3(obj["offset"]),
                 RotationOffset = ParseQuaternion(obj["rotationOffset"]),
@@ -1059,6 +1140,31 @@ namespace Ludots.Core.Presentation.Config
                 {
                     ParamValue = obj["paramValue"]?.GetValue<float>() ?? 0f,
                     MaterialId = ResolveRegisteredId(_resolveMaterialId, obj["materialId"], "material"),
+                };
+            }
+
+            return table;
+        }
+
+        private AssetSwapEntry[] ParseAssetSwapTable(AssetKind assetKind, JsonNode? node)
+        {
+            if (node is not JsonArray arr || arr.Count == 0)
+            {
+                return Array.Empty<AssetSwapEntry>();
+            }
+
+            var table = new AssetSwapEntry[arr.Count];
+            for (int i = 0; i < arr.Count; i++)
+            {
+                if (arr[i] is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"assetSwapTable[{i}] must be an object.");
+                }
+
+                table[i] = new AssetSwapEntry
+                {
+                    ParamValue = obj["paramValue"]?.GetValue<float>() ?? 0f,
+                    AssetId = ResolveBehaviorAssetId(assetKind, obj["assetId"]),
                 };
             }
 
@@ -1344,7 +1450,7 @@ namespace Ludots.Core.Presentation.Config
                     {
                         CommandKind = PerformerCommandKind.CreatePerformer,
                         PerformerDefinitionId = child.DefinitionId,
-                        ParentHandle = -1,
+                        ParentEntity = Entity.Null,
                         ScopeTag = child.ScopeTag,
                         ScopeSource = PerformerCommandScopeSource.Fixed,
                     },

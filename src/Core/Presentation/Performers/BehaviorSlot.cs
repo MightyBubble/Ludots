@@ -45,9 +45,16 @@ namespace Ludots.Core.Presentation.Performers
         public int ColorParamKey;
         public int MaterialParamKey;
         public int AssetSwapParamKey;
+        public AssetSwapEntry[] AssetSwapTable;
         public int VisibilityParamKey;
         public GroundingMode Grounding;
         public float GroundingOffset;
+    }
+
+    public struct AssetSwapEntry
+    {
+        public float ParamValue;
+        public int AssetId;
     }
 
     public struct AttributeBindingConfig
@@ -82,10 +89,17 @@ namespace Ludots.Core.Presentation.Performers
 
     public struct AttachmentConfig
     {
+        public AttachmentTarget Target;
         public int BoneId;
         public Vector3 Offset;
         public Quaternion RotationOffset;
         public bool InheritScale;
+    }
+
+    public enum AttachmentTarget : byte
+    {
+        Parent = 0,
+        Bone = 1,
     }
 
     public struct SoundConfig

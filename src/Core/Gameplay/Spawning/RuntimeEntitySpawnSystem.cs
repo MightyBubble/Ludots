@@ -12,7 +12,6 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Config;
 
 namespace Ludots.Core.Gameplay.Spawning
 {
@@ -31,7 +30,6 @@ namespace Ludots.Core.Gameplay.Spawning
             RuntimeEntitySpawnQueue requests,
             DataRegistry<EntityTemplate> templateRegistry,
             EntityTemplateKeyRegistry templateKeys,
-            PresentationAuthoringContext presentationAuthoring,
             PresentationStableIdAllocator stableIds,
             EffectRequestQueue effectRequests = null)
             : base(world)
@@ -40,7 +38,7 @@ namespace Ludots.Core.Gameplay.Spawning
             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
             _templateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
             _effectRequests = effectRequests;
-            _builder = new EntityBuilder(world, _cachedTemplates, presentationAuthoring ?? throw new ArgumentNullException(nameof(presentationAuthoring)));
+            _builder = new EntityBuilder(world, _cachedTemplates);
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
         }
 
@@ -71,7 +69,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 new WorldPositionCm { Value = request.WorldPositionCm },
                 new PreviousWorldPositionCm { Value = request.WorldPositionCm },
                 VisualTransform.Default,
-                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
                 new AttributeBuffer());
             EnsurePresentationStableId(entity);
 
@@ -197,7 +195,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
             if (!World.Has<CullState>(entity))
             {
-                World.Add(entity, new CullState { IsVisible = true, LOD = LODLevel.High });
+                World.Add(entity, new CullState { IsVisible = false, LOD = LODLevel.Culled });
             }
 
             EnsurePresentationStableId(entity);
@@ -316,7 +314,32 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void PublishOnSpawnEffect(in RuntimeEntitySpawnRequest request, Entity spawned)
         {
-            if (_effectRequests == null || request.OnSpawnEffectTemplateId <= 0)
+            if (_effectRequests == null)
+            {
+                return;
+            }
+
+            int effectTemplateId = request.OnSpawnEffectTemplateId;
+            bool useSpawnedAsSource = false;
+            if (effectTemplateId <= 0 &&
+                request.Kind == RuntimeEntitySpawnKind.Template &&
+                !string.IsNullOrWhiteSpace(request.TemplateId))
+            {
+                var template = _templateRegistry.Get(request.TemplateId);
+                if (template != null && !string.IsNullOrWhiteSpace(template.OnSpawnEffect))
+                {
+                    effectTemplateId = EffectTemplateIdRegistry.GetId(template.OnSpawnEffect);
+                    if (effectTemplateId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Entity template '{request.TemplateId}' references unknown onSpawnEffect '{template.OnSpawnEffect}'.");
+                    }
+
+                    useSpawnedAsSource = true;
+                }
+            }
+
+            if (effectTemplateId <= 0)
             {
                 return;
             }
@@ -324,10 +347,10 @@ namespace Ludots.Core.Gameplay.Spawning
             _effectRequests.Publish(new EffectRequest
             {
                 RootId = 0,
-                Source = request.Source,
+                Source = useSpawnedAsSource ? spawned : request.Source,
                 Target = spawned,
-                TargetContext = request.TargetContext,
-                TemplateId = request.OnSpawnEffectTemplateId,
+                TargetContext = useSpawnedAsSource ? spawned : request.TargetContext,
+                TemplateId = effectTemplateId,
             });
         }
     }

@@ -32,6 +32,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         ClampFloat = 26, // clamp(F[a], F[b], F[c]) → min=F[b], max=F[c]
         AbsFloat = 27,
         NegFloat = 28,
+        RandomFloat01 = 34,
         // ── Int Math (29, 31-33) ──
         AddInt            = 29,   // I[Dst] = I[A] + I[B]
         CompareGtFloat = 30,

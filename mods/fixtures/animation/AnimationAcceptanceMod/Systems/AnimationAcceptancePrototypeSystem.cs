@@ -4,7 +4,9 @@ using Arch.System;
 using AnimationAcceptanceMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 
 namespace AnimationAcceptanceMod.Systems
@@ -13,14 +15,15 @@ namespace AnimationAcceptanceMod.Systems
     {
         private readonly GameEngine _engine;
         private readonly AnimationAcceptanceControlState _controls;
-        private readonly QueryDescription _query = new QueryDescription()
-            .WithAll<WorldPositionCm, FacingDirection, VisualRuntimeState, AnimatorPackedState, AnimatorRuntimeState, AnimationOverlayRequest>();
+        private readonly PerformerInstanceBuffer _instances;
+        private readonly PerformerAnimatorStateBuffer _animatorStates;
+        private readonly PerformerDefinitionRegistry _definitions;
 
         private float _elapsed;
         private bool _tankFireGate;
         private bool _humanoidFireGate;
-        private int _tankControllerId;
-        private int _humanoidControllerId;
+        private int _tankDefinitionId;
+        private int _humanoidDefinitionId;
 
         public AnimationAcceptancePrototypeSystem(GameEngine engine)
             : base(engine.World)
@@ -28,50 +31,68 @@ namespace AnimationAcceptanceMod.Systems
             _engine = engine;
             _controls = engine.GetService(AnimationAcceptanceServiceKeys.ControlState)
                 ?? throw new InvalidOperationException("Animation acceptance requires control state service.");
+            _instances = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
+                ?? throw new InvalidOperationException("Animation acceptance requires PerformerInstanceBuffer.");
+            _animatorStates = engine.GetService(CoreServiceKeys.PerformerAnimatorStateBuffer)
+                ?? throw new InvalidOperationException("Animation acceptance requires PerformerAnimatorStateBuffer.");
+            _definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                ?? throw new InvalidOperationException("Animation acceptance requires PerformerDefinitionRegistry.");
         }
 
         public override void Update(in float dt)
         {
             float scaledDt = dt * _controls.PlaybackScale;
             _elapsed += scaledDt;
-            ResolveControllerIds();
+            ResolveDefinitionIds();
 
-            var query = World.Query(in _query);
-            foreach (var chunk in query)
+            for (int handle = 0; handle < _instances.Capacity; handle++)
             {
-                var positions = chunk.GetArray<WorldPositionCm>();
-                var facings = chunk.GetArray<FacingDirection>();
-                var visuals = chunk.GetArray<VisualRuntimeState>();
-                var packedStates = chunk.GetArray<AnimatorPackedState>();
-                var runtimeStates = chunk.GetArray<AnimatorRuntimeState>();
-                var overlays = chunk.GetArray<AnimationOverlayRequest>();
-
-                for (int i = 0; i < chunk.Count; i++)
+                if (!_instances.IsActive(handle) || !_animatorStates.IsAllocated(handle))
                 {
-                    if (visuals[i].AnimatorControllerId == _tankControllerId)
-                    {
-                        UpdateTank(_controls.Tank, ref positions[i], ref facings[i], ref packedStates[i], ref runtimeStates[i], ref overlays[i], scaledDt);
-                    }
-                    else if (visuals[i].AnimatorControllerId == _humanoidControllerId)
-                    {
-                        UpdateHumanoid(_controls.Humanoid, ref positions[i], ref facings[i], ref packedStates[i], ref runtimeStates[i], ref overlays[i], scaledDt);
-                    }
+                    continue;
+                }
+
+                ref PerformerInstance instance = ref _instances.Get(handle);
+                if (instance.AnchorKind != PresentationAnchorKind.Entity || !World.IsAlive(instance.Owner))
+                {
+                    continue;
+                }
+
+                if (!World.Has<WorldPositionCm>(instance.Owner) || !World.Has<FacingDirection>(instance.Owner))
+                {
+                    continue;
+                }
+
+                ref WorldPositionCm position = ref World.Get<WorldPositionCm>(instance.Owner);
+                ref FacingDirection facing = ref World.Get<FacingDirection>(instance.Owner);
+                ref AnimatorPackedState packed = ref _animatorStates.GetPackedState(handle);
+                ref AnimatorRuntimeState runtime = ref _animatorStates.GetRuntimeState(handle);
+                ref AnimationOverlayRequest overlay = ref _animatorStates.GetOverlay(handle);
+
+                if (instance.DefId == _tankDefinitionId)
+                {
+                    UpdateTank(_controls.Tank, ref position, ref facing, ref packed, ref runtime, ref overlay, scaledDt);
+                }
+                else if (instance.DefId == _humanoidDefinitionId)
+                {
+                    UpdateHumanoid(_controls.Humanoid, ref position, ref facing, ref packed, ref runtime, ref overlay, scaledDt);
                 }
             }
         }
 
-        private void ResolveControllerIds()
+        private void ResolveDefinitionIds()
         {
-            if (_tankControllerId != 0 && _humanoidControllerId != 0)
+            if (_tankDefinitionId > 0 && _humanoidDefinitionId > 0)
             {
                 return;
             }
 
-            var registry = _engine.GetService(CoreServiceKeys.AnimatorControllerRegistry)
-                ?? throw new InvalidOperationException("Animation acceptance requires AnimatorControllerRegistry.");
-
-            _tankControllerId = registry.GetId(AnimationAcceptanceIds.TankControllerKey);
-            _humanoidControllerId = registry.GetId(AnimationAcceptanceIds.HumanoidControllerKey);
+            _tankDefinitionId = _definitions.GetId(AnimationAcceptanceIds.TankPerformerDefinitionId);
+            _humanoidDefinitionId = _definitions.GetId(AnimationAcceptanceIds.HumanoidPerformerDefinitionId);
+            if (_tankDefinitionId <= 0 || _humanoidDefinitionId <= 0)
+            {
+                throw new InvalidOperationException("Animation acceptance performer definitions are missing.");
+            }
         }
 
         private void UpdateTank(

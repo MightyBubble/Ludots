@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Presentation.Performers
 {
@@ -17,6 +18,9 @@ namespace Ludots.Core.Presentation.Performers
         private readonly PerformerInstance[] _slots;
         private int _highWaterMark;
         private readonly PerformerParamBlackboard _blackboard;
+        private int _activeCount;
+        private int _structureVersion;
+        private readonly System.Collections.Generic.Dictionary<int, int> _ownerPayloadRefCounts = new System.Collections.Generic.Dictionary<int, int>();
 
         // Free-list: O(1) allocation by reusing released slots.
         // Array-based stack – no heap allocation on push/pop.
@@ -31,13 +35,12 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public int ActiveCount
         {
-            get
-            {
-                int count = 0;
-                for (int i = 0; i < _highWaterMark; i++)
-                    if (_slots[i].Active) count++;
-                return count;
-            }
+            get => _activeCount;
+        }
+
+        public int StructureVersion
+        {
+            get => _structureVersion;
         }
 
         public PerformerInstanceBuffer(int capacity = 256)
@@ -182,10 +185,16 @@ namespace Ludots.Core.Presentation.Performers
             return false;
         }
 
+        public bool HasOwnerPayload(Entity owner)
+        {
+            return owner != Entity.Null &&
+                   _ownerPayloadRefCounts.TryGetValue(owner.Id, out int count) &&
+                   count > 0;
+        }
+
         /// <summary>
-        /// Process all active instances: advance elapsed time, invoke callback,
-        /// and auto-expire duration-based instances.
-        /// Returns the number of active instances processed.
+        /// Process all active instances. This is used by lifecycle and dirty-sync lanes,
+        /// which must still update runtime state for culled owners.
         /// </summary>
         public delegate void ProcessCallback(int handle, ref PerformerInstance instance);
 
@@ -203,6 +212,84 @@ namespace Ludots.Core.Presentation.Performers
                 processed++;
             }
             return processed;
+        }
+
+        /// <summary>
+        /// Process only active instances whose culling gate is open. This is the
+        /// visible projection lane; do not use it for dirty sync.
+        /// </summary>
+        public int ProcessVisibleActive(float dt, ProcessCallback callback)
+        {
+            int processed = 0;
+            for (int i = 0; i < _highWaterMark; i++)
+            {
+                if (!_slots[i].Active) continue;
+
+                // Elapsed advances even when projection is skipped.
+                _slots[i].Elapsed += dt;
+
+                if (!_slots[i].OwnerCullVisible) continue;
+
+                callback(i, ref _slots[i]);
+                processed++;
+            }
+            return processed;
+        }
+
+        public int ReleaseExpired(PerformerDefinitionRegistry definitions, Action<int, PerformerInstance>? onReleased = null)
+        {
+            if (definitions == null)
+            {
+                throw new ArgumentNullException(nameof(definitions));
+            }
+
+            int released = 0;
+            for (int i = 0; i < _highWaterMark; i++)
+            {
+                if (!_slots[i].Active)
+                {
+                    continue;
+                }
+
+                if (!definitions.TryGet(_slots[i].DefId, out PerformerDefinition definition) ||
+                    definition.DefaultLifetime <= 0f ||
+                    _slots[i].Elapsed < definition.DefaultLifetime)
+                {
+                    continue;
+                }
+
+                released += ReleaseRecursive(i, onReleased);
+            }
+
+            return released;
+        }
+
+        /// <summary>
+        /// Synchronize the per-instance hot-path culling gate from owner CullState.
+        /// CullState remains the SSOT; this cache exists only to avoid repeated ECS
+        /// lookups in performer behavior/emit lanes.
+        /// </summary>
+        public void SyncOwnerCullVisibility(World world)
+        {
+            for (int i = 0; i < _highWaterMark; i++)
+            {
+                if (!_slots[i].Active)
+                {
+                    continue;
+                }
+
+                _slots[i].OwnerCullVisible = ResolveOwnerCullVisible(world, in _slots[i]);
+            }
+
+            for (int i = 0; i < _highWaterMark; i++)
+            {
+                if (!_slots[i].Active)
+                {
+                    continue;
+                }
+
+                _slots[i].OwnerCullVisible = _slots[i].OwnerCullVisible && AreParentCullGatesVisible(i);
+            }
         }
 
         /// <summary>
@@ -250,6 +337,11 @@ namespace Ludots.Core.Presentation.Performers
                 default:
                     throw new ArgumentOutOfRangeException(nameof(lane), lane, "Unsupported performer param lane.");
             }
+
+            if (IsActive(handle))
+            {
+                _slots[handle].Version++;
+            }
         }
 
         public void SetParamDefault(in PerformerDefinition definition, int handle)
@@ -258,7 +350,20 @@ namespace Ludots.Core.Presentation.Performers
             for (int i = 0; i < defaults.Length; i++)
             {
                 ref readonly ParamDefault entry = ref defaults[i];
-                SetParam(handle, entry.ParamKey, entry.Lane, entry.FloatValue, entry.IntValue, entry.VectorValue);
+                switch (entry.Lane)
+                {
+                    case ParamLane.Float:
+                        _blackboard.SetFloatDefault(handle, entry.ParamKey, entry.FloatValue);
+                        break;
+                    case ParamLane.Int:
+                        _blackboard.SetIntDefault(handle, entry.ParamKey, entry.IntValue);
+                        break;
+                    case ParamLane.Vector:
+                        _blackboard.SetVectorDefault(handle, entry.ParamKey, entry.VectorValue);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(entry.Lane), entry.Lane, "Unsupported performer param lane.");
+                }
             }
         }
 
@@ -292,6 +397,9 @@ namespace Ludots.Core.Presentation.Performers
             _blackboard.ClearAll();
             _highWaterMark = 0;
             _freeCount = 0;
+            _activeCount = 0;
+            _structureVersion++;
+            _ownerPayloadRefCounts.Clear();
         }
 
         /// <summary>
@@ -377,8 +485,13 @@ namespace Ludots.Core.Presentation.Performers
                 FirstChildHandle = -1,
                 NextSiblingHandle = -1,
                 BehaviorActiveMask = 0u,
+                OwnerCullVisible = true,
+                Version = 1,
                 Active = true
             };
+            _activeCount++;
+            _structureVersion++;
+            AddOwnerPayloadRef(owner);
             _blackboard.ClearAll(idx);
             _blackboard.SetParent(idx, parentHandle);
 
@@ -411,11 +524,15 @@ namespace Ludots.Core.Presentation.Performers
             PerformerInstance snapshot = _slots[handle];
             onReleased?.Invoke(handle, snapshot);
 
+            RemoveOwnerPayloadRef(snapshot.Owner);
+            _activeCount--;
+            _structureVersion++;
             _slots[handle].Active = false;
             _slots[handle].ParentHandle = -1;
             _slots[handle].FirstChildHandle = -1;
             _slots[handle].NextSiblingHandle = -1;
             _slots[handle].BehaviorActiveMask = 0u;
+            _slots[handle].Version++;
             _blackboard.ClearAll(handle);
             PushFree(handle);
             return released + 1;
@@ -447,6 +564,79 @@ namespace Ludots.Core.Presentation.Performers
 
                 current = _slots[current].NextSiblingHandle;
             }
+        }
+
+        private void AddOwnerPayloadRef(Entity owner)
+        {
+            if (owner == Entity.Null)
+            {
+                return;
+            }
+
+            if (_ownerPayloadRefCounts.TryGetValue(owner.Id, out int count))
+            {
+                _ownerPayloadRefCounts[owner.Id] = count + 1;
+                return;
+            }
+
+            _ownerPayloadRefCounts.Add(owner.Id, 1);
+        }
+
+        private void RemoveOwnerPayloadRef(Entity owner)
+        {
+            if (owner == Entity.Null)
+            {
+                return;
+            }
+
+            if (!_ownerPayloadRefCounts.TryGetValue(owner.Id, out int count))
+            {
+                return;
+            }
+
+            if (count <= 1)
+            {
+                _ownerPayloadRefCounts.Remove(owner.Id);
+                return;
+            }
+
+            _ownerPayloadRefCounts[owner.Id] = count - 1;
+        }
+
+        private static bool ResolveOwnerCullVisible(World world, in PerformerInstance instance)
+        {
+            if (instance.AnchorKind != PresentationAnchorKind.Entity)
+            {
+                return true;
+            }
+
+            if (!world.IsAlive(instance.Owner))
+            {
+                return false;
+            }
+
+            return !world.Has<CullState>(instance.Owner) || world.Get<CullState>(instance.Owner).IsVisible;
+        }
+
+        private bool AreParentCullGatesVisible(int handle)
+        {
+            int current = _slots[handle].ParentHandle;
+            while (current >= 0)
+            {
+                if (!IsActive(current))
+                {
+                    return false;
+                }
+
+                if (!_slots[current].OwnerCullVisible)
+                {
+                    return false;
+                }
+
+                current = _slots[current].ParentHandle;
+            }
+
+            return true;
         }
     }
 }

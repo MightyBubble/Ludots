@@ -62,5 +62,304 @@
         }
       }
     ]
+  },
+  {
+    "id": "interaction.character.hero_showcase",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localScale": [
+            2.2,
+            2.2,
+            2.2
+          ]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "core.hero.locomotion",
+          "animationProfileId": "core.hero.profile.locomotion",
+          "speedParamKey": 0,
+          "stateParamKey": -1
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "interaction_arcweaver"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "interaction.character.hero_showcase"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "interaction_arcweaver"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "interaction_vanguard"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "interaction.character.hero_showcase"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "interaction_vanguard"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "interaction_arcweaver_forms_demo"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "interaction.character.hero_showcase"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "interaction_arcweaver_forms_demo"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "interaction_commander"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "interaction.character.hero_showcase"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "interaction_commander"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "interaction_stress_red_mage"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "interaction.character.hero_showcase"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "interaction_stress_red_mage"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "interaction_stress_blue_mage"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "interaction.character.hero_showcase"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "interaction_stress_blue_mage"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "interaction.prop.dummy_showcase",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.8,
+            1.8,
+            1.8
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "interaction_enemy_raider"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "interaction.prop.dummy_showcase"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "interaction_enemy_raider"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "interaction_enemy_bruiser"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "interaction.prop.dummy_showcase"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "interaction_enemy_bruiser"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "interaction_stress_anchor_red"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "interaction.prop.dummy_showcase"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "interaction_stress_anchor_red"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "interaction_stress_anchor_blue"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "interaction.prop.dummy_showcase"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "interaction_stress_anchor_blue"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
   }
 ]

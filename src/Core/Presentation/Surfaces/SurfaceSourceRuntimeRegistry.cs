@@ -9,13 +9,16 @@ namespace Ludots.Core.Presentation.Surfaces
     {
         public int SourceStableId;
         public int PerformerDefinitionId;
+        public int RenderPerformerDefinitionId;
         public int ScopeId;
+        public int RenderScopeId;
         public SurfaceSourceRequest Request;
         public SurfacePayloadSnapshot Payload;
         public int PayloadVersion;
         public int LastSeenFrame;
         public int MeshAssetId;
         public Entity Entity;
+        public Entity RenderPerformerEntity;
         public bool Dirty = true;
         public bool PendingRemoval;
     }

@@ -8,6 +8,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
@@ -43,6 +44,15 @@ namespace Ludots.Adapter.Web
 
             var cullingSystem = new CameraCullingSystem(
                 engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
+            if (engine.GetService(CoreServiceKeys.PerformerInstanceBuffer) is PerformerInstanceBuffer performerInstances)
+            {
+                cullingSystem = new CameraCullingSystem(
+                    engine.World,
+                    engine.GameSession.Camera,
+                    engine.SpatialQueries,
+                    viewController,
+                    performers: performerInstances);
+            }
             engine.RegisterPresentationSystem(cullingSystem);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 

@@ -12,5 +12,6 @@ namespace Ludots.Core.Presentation.Events
         public float Magnitude;
         public int PayloadA;
         public int PayloadB;
+        public Entity PerformerEntity;
     }
 }

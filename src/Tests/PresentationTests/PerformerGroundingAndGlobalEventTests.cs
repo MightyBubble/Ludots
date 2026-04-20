@@ -263,6 +263,36 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void ResolveTransform_AttachedToParent_SkipsGrounding()
+        {
+            var instance = new PerformerInstance
+            {
+                TransformSource = TransformSource.AttachedToParent,
+                WorldPosition = new Vector3(2f, 3f, 4f),
+                WorldRotation = Quaternion.Identity,
+                WorldScale = new Vector3(1.5f, 1.5f, 1.5f),
+            };
+
+            var asset = new AssetBindingConfig
+            {
+                LocalScale = Vector3.One,
+                Grounding = GroundingMode.AlignToSurface,
+            };
+
+            PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
+                instance,
+                default,
+                hasParent: false,
+                ownerTransform: default,
+                hasOwnerTransform: false,
+                asset,
+                new StubHeightmap(heightCm: 999f));
+
+            Assert.That(resolved.Position, Is.EqualTo(instance.WorldPosition));
+            Assert.That(resolved.Scale, Is.EqualTo(instance.WorldScale));
+        }
+
+        [Test]
         public void GlobalEventBridgeSystem_BridgesQueuedEventsIntoPresentationStream()
         {
             using var world = World.Create();

@@ -1,0 +1,136 @@
+using System;
+using System.Collections.Generic;
+
+namespace Ludots.Core.Presentation.Rendering
+{
+    /// <summary>
+    /// Frame-persistent cache of the latest visual proxies keyed by StableId.
+    /// Request flush updates the cache; frame projection replays it into adapter-facing
+    /// buffers. This keeps authoring/runtime semantics unchanged while introducing
+    /// the Layer 5 cache boundary required by compiled lanes.
+    /// </summary>
+    public sealed class StableDrawCache
+    {
+        private readonly Dictionary<int, int> _slotByStableId;
+        private PresentationVisualProxy[] _entries;
+        private int[] _frameTouched;
+        private int _count;
+        private int _frameStamp;
+
+        public int Count => _count;
+
+        public StableDrawCache(int capacity = 131072)
+        {
+            if (capacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            }
+
+            _slotByStableId = new Dictionary<int, int>(capacity);
+            _entries = new PresentationVisualProxy[capacity];
+            _frameTouched = new int[capacity];
+        }
+
+        public void BeginFrame()
+        {
+            if (_frameStamp == int.MaxValue)
+            {
+                Array.Clear(_frameTouched, 0, _frameTouched.Length);
+                _frameStamp = 0;
+            }
+
+            _frameStamp++;
+        }
+
+        public void Upsert(in PresentationVisualProxy proxy)
+        {
+            if (_slotByStableId.TryGetValue(proxy.StableId, out int existing))
+            {
+                _entries[existing] = proxy;
+                _frameTouched[existing] = _frameStamp;
+                return;
+            }
+
+            EnsureCapacity(_count + 1);
+            int slot = _count++;
+            _slotByStableId.Add(proxy.StableId, slot);
+            _entries[slot] = proxy;
+            _frameTouched[slot] = _frameStamp;
+        }
+
+        public void Remove(int stableId)
+        {
+            if (!_slotByStableId.TryGetValue(stableId, out int slot))
+            {
+                return;
+            }
+
+            RemoveAt(slot);
+        }
+
+        public void Project(PresentationVisualProxyEmitter emitter, bool evictUntouched)
+        {
+            if (emitter == null)
+            {
+                throw new ArgumentNullException(nameof(emitter));
+            }
+
+            int index = 0;
+            while (index < _count)
+            {
+                if (evictUntouched && _frameTouched[index] != _frameStamp)
+                {
+                    RemoveAt(index);
+                    continue;
+                }
+
+                emitter.Emit(_entries[index]);
+                index++;
+            }
+        }
+
+        public void Clear()
+        {
+            _slotByStableId.Clear();
+            _count = 0;
+            _frameStamp = 0;
+            Array.Clear(_frameTouched, 0, _frameTouched.Length);
+        }
+
+        private void EnsureCapacity(int required)
+        {
+            if (required <= _entries.Length)
+            {
+                return;
+            }
+
+            int next = _entries.Length * 2;
+            if (next < required)
+            {
+                next = required;
+            }
+
+            Array.Resize(ref _entries, next);
+            Array.Resize(ref _frameTouched, next);
+        }
+
+        private void RemoveAt(int slot)
+        {
+            int last = _count - 1;
+            int removedStableId = _entries[slot].StableId;
+            _slotByStableId.Remove(removedStableId);
+
+            if (slot != last)
+            {
+                PresentationVisualProxy moved = _entries[last];
+                _entries[slot] = moved;
+                _frameTouched[slot] = _frameTouched[last];
+                _slotByStableId[moved.StableId] = slot;
+            }
+
+            _entries[last] = default;
+            _frameTouched[last] = 0;
+            _count = last;
+        }
+    }
+}

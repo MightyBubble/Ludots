@@ -1,15 +1,15 @@
 # Scenario: presentation-skinned-runtime-contract
 
 ## Header
-- scenario name: projection_map skinned vs static lane contract
+- scenario name: projection_map performer skinned vs static lane contract
 - build/version: local PresentationTests
 - seed/map/clock: deterministic fixture / camera_acceptance_projection / 5 ticks @ 60 Hz
-- execution timestamp: 2026-04-16T04:29:30.9242949Z
+- execution timestamp: 2026-04-19T08:33:41.4486493Z
 
 ## Timeline
-- [T+005] Hero#1.Spawn -> lane SkinnedMesh | Animator controller 1 bound | result = skinned runtime contract valid
-- [T+005] Dummy#3.Spawn -> lane StaticMesh | Animator none | result = static dirty-sync lane stays separate
-- [T+005] Dummy#2.Spawn -> lane StaticMesh | Animator none | result = static dirty-sync lane stays separate
+- [T+005] Hero#2033545.Emit -> lane SkinnedMesh | Animator controller 1 bound | result = performer skinned contract valid
+- [T+005] Dummy#2413110.Emit -> lane StaticMesh | Animator none | result = static performer lane stays separate
+- [T+005] Dummy#2796549.Emit -> lane StaticMesh | Animator none | result = static performer lane stays separate
 
 ## Outcome
 - success/failure decision: success

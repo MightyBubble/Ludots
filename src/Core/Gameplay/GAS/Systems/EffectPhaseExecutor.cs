@@ -119,32 +119,33 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int effectTagId,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
-            BuiltinHandlerExecutionContext? builtinRuntime = null)
+            BuiltinHandlerExecutionContext? builtinRuntime = null,
+            uint randomSeed = 0)
         {
             // ① Pre graph (user-defined)
             int preGraphId = behavior.GetGraphId(phase, PhaseSlot.Pre);
             if (preGraphId > 0)
             {
-                ExecuteGraph(world, api, caster, target, targetContext, targetPos, preGraphId);
+                ExecuteGraph(world, api, caster, target, targetContext, targetPos, preGraphId, effectTemplateId, phase, randomSeed);
             }
 
             // ② Main handler (unless SkipMain)
             if (!behavior.IsSkipMain(phase))
             {
-                ExecuteMainHandler(world, api, caster, target, targetContext, targetPos, phase, presetType, effectTemplateId, in mergedParams, builtinRuntime);
+                ExecuteMainHandler(world, api, caster, target, targetContext, targetPos, phase, presetType, effectTemplateId, in mergedParams, builtinRuntime, randomSeed);
             }
 
             // ③ Post graph (user-defined)
             int postGraphId = behavior.GetGraphId(phase, PhaseSlot.Post);
             if (postGraphId > 0)
             {
-                ExecuteGraph(world, api, caster, target, targetContext, targetPos, postGraphId);
+                ExecuteGraph(world, api, caster, target, targetContext, targetPos, postGraphId, effectTemplateId, phase, randomSeed);
             }
 
             // ④ Dispatch Phase Listeners
             if (effectTagId != 0 || effectTemplateId != 0)
             {
-                DispatchListeners(world, api, caster, target, targetContext, targetPos, phase, effectTagId, effectTemplateId);
+                DispatchListeners(world, api, caster, target, targetContext, targetPos, phase, effectTagId, effectTemplateId, randomSeed);
             }
         }
 
@@ -162,7 +163,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPresetType presetType,
             int effectTemplateId,
             in EffectConfigParams mergedParams,
-            BuiltinHandlerExecutionContext? builtinRuntime)
+            BuiltinHandlerExecutionContext? builtinRuntime,
+            uint randomSeed)
         {
             if (!_presetTypes.IsRegistered(presetType)) return;
 
@@ -190,7 +192,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
                 case PhaseHandlerKind.Graph:
                 {
-                    ExecuteGraph(world, api, caster, target, targetContext, targetPos, handler.HandlerId);
+                    ExecuteGraph(world, api, caster, target, targetContext, targetPos, handler.HandlerId, effectTemplateId, phase, randomSeed);
                     break;
                 }
             }
@@ -208,7 +210,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IntVector2 targetPos,
             EffectPhaseId phase,
             int effectTagId,
-            int effectTemplateId)
+            int effectTemplateId,
+            uint randomSeed = 0)
         {
             Span<PhaseListenerCollectedAction> scratch = _collectedActions;
             int totalCollected = 0;
@@ -261,7 +264,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if ((action.Flags & PhaseListenerActionFlags.ExecuteGraph) != 0 && action.GraphProgramId > 0)
                 {
-                    ExecuteGraph(world, api, caster, target, targetContext, targetPos, action.GraphProgramId);
+                    ExecuteGraph(world, api, caster, target, targetContext, targetPos, action.GraphProgramId, effectTemplateId, phase, randomSeed);
                 }
 
                 if ((action.Flags & PhaseListenerActionFlags.PublishEvent) != 0 && action.EventTagId != 0 && _eventBus != null)
@@ -309,7 +312,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int effectTagId,
             int effectTemplateId)
         {
-            DispatchListeners(world, api, caster, target, targetContext, targetPos, phase, effectTagId, effectTemplateId);
+            DispatchListeners(world, api, caster, target, targetContext, targetPos, phase, effectTagId, effectTemplateId, 0);
         }
 
         /// <summary>
@@ -323,6 +326,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             Entity targetContext,
             IntVector2 targetPos,
             int graphProgramId)
+        {
+            ExecuteGraph(world, api, caster, target, targetContext, targetPos, graphProgramId, 0, EffectPhaseId.OnApply, 0);
+        }
+
+        private void ExecuteGraph(
+            World world,
+            IGraphRuntimeApi api,
+            Entity caster,
+            Entity target,
+            Entity targetContext,
+            IntVector2 targetPos,
+            int graphProgramId,
+            int effectTemplateId,
+            EffectPhaseId phase,
+            uint randomSeed)
         {
             if (graphProgramId <= 0) return;
             if (!_programs.TryGetProgram(graphProgramId, out var program)) return;
@@ -351,6 +369,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ExplicitTarget = target,
                 TargetContext = targetContext,
                 TargetPos = targetPos,
+                RandomSeed = BuildRandomSeed(caster, target, targetContext, graphProgramId, effectTemplateId, phase, randomSeed),
                 Api = api,
                 F = _floatRegs,
                 I = _intRegs,
@@ -361,6 +380,33 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             };
 
             GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
+        }
+
+        private static uint BuildRandomSeed(
+            Entity caster,
+            Entity target,
+            Entity targetContext,
+            int graphProgramId,
+            int effectTemplateId,
+            EffectPhaseId phase,
+            uint executionSeed)
+        {
+            uint hash = executionSeed == 0u ? 2166136261u : executionSeed;
+            hash = Mix(hash, caster.Id);
+            hash = Mix(hash, caster.Version);
+            hash = Mix(hash, target.Id);
+            hash = Mix(hash, target.Version);
+            hash = Mix(hash, targetContext.Id);
+            hash = Mix(hash, targetContext.Version);
+            hash = Mix(hash, graphProgramId);
+            hash = Mix(hash, effectTemplateId);
+            hash = Mix(hash, (int)phase);
+            return hash == 0u ? 1u : hash;
+        }
+
+        private static uint Mix(uint hash, int value)
+        {
+            return (hash ^ unchecked((uint)value)) * 16777619u;
         }
 
         private ScratchUsage GetScratchUsage(int graphProgramId, ReadOnlySpan<GraphInstruction> program)

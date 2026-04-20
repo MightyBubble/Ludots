@@ -128,6 +128,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             h[(ushort)GraphNodeOp.CompareLtInt] = HandleCompareLtInt;
             h[(ushort)GraphNodeOp.CompareEqInt] = HandleCompareEqInt;
             h[(ushort)GraphNodeOp.HasTag] = HandleHasTag;
+            h[(ushort)GraphNodeOp.RandomFloat01] = HandleRandomFloat01;
 
             // ── Hex spatial queries (130-132) ──
             h[(ushort)GraphNodeOp.QueryHexRange] = HandleQueryHexRange;
@@ -654,6 +655,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // B[Dst] = E[A].HasTag(Imm) ? 1 : 0
             var entity = s.E[ins.A];
             s.B[ins.Dst] = (byte)(s.Api.HasTag(entity, ins.Imm) ? 1 : 0);
+        }
+
+        private static void HandleRandomFloat01(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            uint x = s.RandomSeed;
+            if (x == 0u)
+            {
+                x = 2463534242u;
+            }
+
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            s.RandomSeed = x;
+            s.F[ins.Dst] = (x & 0x00FFFFFFu) / 16777215f;
         }
 
         // ── Hex Spatial Queries (130-132) ──

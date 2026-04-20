@@ -38,6 +38,8 @@ namespace Ludots.Core.Presentation.Performers
             definition.Id = id;
             StampRuleOwners(definition, id);
             definition.BuildBindingIndex();
+            definition.BuildRequiredAttributeIds();
+            definition.BuildBehaviorMetadata();
             _items[id] = definition;
             if (!_has[id])
             {
@@ -62,16 +64,26 @@ namespace Ludots.Core.Presentation.Performers
         public bool Unregister(string key)
         {
             int id = _ids.GetId(key);
-            if (id <= 0 || id >= _items.Length || !_has[id])
+            bool removed = false;
+            if (id > 0 && id < _items.Length && _has[id])
             {
-                return false;
+                _items[id] = null!;
+                _has[id] = false;
+                _registeredIds.Remove(id);
+                removed = true;
             }
 
-            _items[id] = null!;
-            _has[id] = false;
-            _registeredIds.Remove(id);
-            Version++;
-            return true;
+            if (_ids.Unregister(key))
+            {
+                removed = true;
+            }
+
+            if (removed)
+            {
+                Version++;
+            }
+
+            return removed;
         }
 
         public bool TryGet(int id, out PerformerDefinition definition)

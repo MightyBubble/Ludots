@@ -14,7 +14,7 @@ namespace Ludots.Core.Presentation.Systems
     internal sealed class PerformerAssetEmitRuntime
     {
         private readonly World _world;
-        private readonly PerformerInstanceBuffer _instances;
+        private readonly PerformerEntityRuntime _runtime;
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly PresentationRequestBuffer _requests;
         private readonly Dictionary<string, object> _globals;
@@ -24,7 +24,7 @@ namespace Ludots.Core.Presentation.Systems
 
         public PerformerAssetEmitRuntime(
             World world,
-            PerformerInstanceBuffer instances,
+            PerformerEntityRuntime runtime,
             PerformerDefinitionRegistry definitions,
             PresentationRequestBuffer requests,
             Dictionary<string, object> globals,
@@ -32,7 +32,7 @@ namespace Ludots.Core.Presentation.Systems
             SoundRequestBuffer soundRequests)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
-            _instances = instances ?? throw new ArgumentNullException(nameof(instances));
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _globals = globals ?? new Dictionary<string, object>();
@@ -40,13 +40,13 @@ namespace Ludots.Core.Presentation.Systems
             _soundRequests = soundRequests;
         }
 
-        public void Emit(int handle, int definitionId, in PerformerInstance instance, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod)
+        public void Emit(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod)
         {
-            Vector3 position = ResolvePosition(in instance, in definition);
-            float alpha = ResolveAlpha(in instance, in definition);
-            if (lod == LODLevel.Culled || !ResolveAssetVisibility(handle, in asset))
+            Vector3 position = ResolvePosition(entity, in state, in definition);
+            float alpha = ResolveAlpha(in state, in definition);
+            if (lod == LODLevel.Culled || !ResolveAssetVisibility(entity, in asset))
             {
-                EmitHiddenSnapshotIfVisual(handle, definitionId, in instance, in definition, slotIndex, in asset, lod, position, alpha);
+                EmitHiddenSnapshotIfVisual(entity, definitionId, in state, in definition, slotIndex, in asset, lod, position, alpha);
                 return;
             }
 
@@ -56,27 +56,27 @@ namespace Ludots.Core.Presentation.Systems
                 case AssetKind.SkinnedMesh:
                 case AssetKind.Decal:
                 case AssetKind.VFX:
-                    EmitVisualAsset(handle, definitionId, in instance, in definition, slotIndex, in asset, lod, position, alpha);
+                    EmitVisualAsset(entity, definitionId, in state, in definition, slotIndex, in asset, lod, position, alpha);
                     return;
 
                 case AssetKind.Sound:
-                    EmitSoundAsset(in instance, slotIndex, in asset, position);
+                    EmitSoundAsset(in state, slotIndex, in asset, position);
                     return;
 
                 case AssetKind.Spline:
-                    EmitSplineAsset(handle, definitionId, in instance, in definition, slotIndex, in asset, lod, position, alpha);
+                    EmitSplineAsset(entity, definitionId, in state, in definition, slotIndex, in asset, lod, position, alpha);
                     return;
 
                 case AssetKind.WorldHud:
-                    EmitWorldHudAsset(handle, definitionId, in instance, in definition, in asset, lod, position, alpha);
+                    EmitWorldHudAsset(entity, definitionId, in state, in definition, in asset, lod, position, alpha);
                     return;
 
                 case AssetKind.WorldText:
-                    EmitWorldTextAsset(handle, definitionId, in instance, in definition, in asset, lod, position, alpha);
+                    EmitWorldTextAsset(entity, definitionId, in state, in definition, in asset, lod, position, alpha);
                     return;
 
                 case AssetKind.GroundOverlay:
-                    EmitGroundOverlayAsset(handle, definitionId, in instance, in definition, slotIndex, in asset, lod, position, alpha);
+                    EmitGroundOverlayAsset(entity, definitionId, in state, in definition, slotIndex, in asset, lod, position, alpha);
                     return;
 
                 default:
@@ -84,32 +84,33 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private void EmitVisualAsset(int handle, int definitionId, in PerformerInstance instance, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        private void EmitVisualAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
         {
             VisualRenderPath renderPath = ResolveRenderPath(in asset);
             var proxy = new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Performer,
-                MeshAssetId = ResolveAssetId(handle, in asset),
+                MeshAssetId = ResolveAssetId(entity, in asset),
                 Position = position,
-                Rotation = NormalizeOrIdentity(instance.WorldRotation),
-                Scale = ResolveScale(handle, in instance, in asset),
-                Color = ApplyAlpha(ResolveColor(handle, in asset, definition.DefaultColor), alpha),
-                StableId = ResolveStableId(instance.StableId, slotIndex, asset.AssetKind, definitionId),
-                MaterialId = ResolveMaterialId(handle, in asset),
+                Rotation = NormalizeOrIdentity(GetWorldRotation(entity)),
+                Scale = ResolveScale(entity, in state, in asset),
+                Color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha),
+                StableId = ResolveStableId(state.StableId, slotIndex, asset.AssetKind, definitionId),
+                MaterialId = ResolveMaterialId(entity, in asset),
                 TemplateId = definitionId,
                 AnimationProfileId = ResolveAnimationProfileId(definitionId),
                 RenderPath = renderPath,
                 Mobility = asset.Mobility,
                 Flags = VisualRuntimeFlags.Visible,
-                Animator = ResolveAnimator(handle, renderPath),
+                Animator = ResolveAnimator(entity, renderPath),
+                AnimationOverlay = ResolveAnimationOverlay(entity, renderPath),
                 Visibility = lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible,
                 LOD = lod,
             };
-            _requests.Add(PresentationRequest.FromVisualProxy(instance.Owner, proxy));
+            _requests.Add(PresentationRequest.FromVisualProxy(state.OwnerEntity, proxy));
         }
 
-        private void EmitHiddenSnapshotIfVisual(int handle, int definitionId, in PerformerInstance instance, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        private void EmitHiddenSnapshotIfVisual(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
         {
             if (asset.AssetKind is not (AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX))
             {
@@ -117,28 +118,29 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             VisualRenderPath renderPath = ResolveRenderPath(in asset);
-            _requests.Add(PresentationRequest.FromVisualProxy(instance.Owner, new PresentationVisualProxy
+            _requests.Add(PresentationRequest.FromVisualProxy(state.OwnerEntity, new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Performer,
-                MeshAssetId = ResolveAssetId(handle, in asset),
+                MeshAssetId = ResolveAssetId(entity, in asset),
                 Position = position,
-                Rotation = NormalizeOrIdentity(instance.WorldRotation),
-                Scale = ResolveScale(handle, in instance, in asset),
-                Color = ApplyAlpha(ResolveColor(handle, in asset, definition.DefaultColor), alpha),
-                StableId = ResolveStableId(instance.StableId, slotIndex, asset.AssetKind, definitionId),
-                MaterialId = ResolveMaterialId(handle, in asset),
+                Rotation = NormalizeOrIdentity(GetWorldRotation(entity)),
+                Scale = ResolveScale(entity, in state, in asset),
+                Color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha),
+                StableId = ResolveStableId(state.StableId, slotIndex, asset.AssetKind, definitionId),
+                MaterialId = ResolveMaterialId(entity, in asset),
                 TemplateId = definitionId,
                 AnimationProfileId = ResolveAnimationProfileId(definitionId),
                 RenderPath = renderPath,
                 Mobility = asset.Mobility,
                 Flags = VisualRuntimeFlags.Visible,
-                Animator = ResolveAnimator(handle, renderPath),
+                Animator = ResolveAnimator(entity, renderPath),
+                AnimationOverlay = ResolveAnimationOverlay(entity, renderPath),
                 Visibility = lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Hidden,
                 LOD = lod,
             }));
         }
 
-        private void EmitSoundAsset(in PerformerInstance instance, int slotIndex, in AssetBindingConfig asset, Vector3 position)
+        private void EmitSoundAsset(in PerformerState state, int slotIndex, in AssetBindingConfig asset, Vector3 position)
         {
             if (_soundRequests == null || asset.AssetId <= 0)
             {
@@ -148,29 +150,29 @@ namespace Ludots.Core.Presentation.Systems
             _soundRequests.Add(new SoundRequest
             {
                 Kind = SoundRequestKind.PlayOrUpdate,
-                StableId = PerformerBehaviorRuntimeUtility.ComposeBehaviorStableId(instance.StableId, slotIndex),
+                StableId = PerformerBehaviorRuntimeUtility.ComposeBehaviorStableId(state.StableId, slotIndex),
                 SoundAssetId = asset.AssetId,
                 Loop = true,
                 Volume = 1f,
                 WorldPosition = position,
-                Owner = instance.Owner,
+                Owner = state.OwnerEntity,
             });
         }
 
-        private void EmitSplineAsset(int handle, int definitionId, in PerformerInstance instance, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        private void EmitSplineAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
         {
             float width = asset.ScaleParamKey >= 0
-                ? _instances.ResolveFloat(handle, asset.ScaleParamKey, 1f)
-                : MathF.Max(ResolveScale(handle, in instance, in asset).X, 0.001f);
-            Vector4 color = ApplyAlpha(ResolveColor(handle, in asset, definition.DefaultColor), alpha);
+                ? _runtime.ResolveFloat(entity, asset.ScaleParamKey, 1f)
+                : MathF.Max(ResolveScale(entity, in state, in asset).X, 0.001f);
+            Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
             Vector3 p0 = position;
-            Vector3 p3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), NormalizeOrIdentity(instance.WorldRotation));
+            Vector3 p3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), NormalizeOrIdentity(GetWorldRotation(entity)));
             Vector3 p1 = Vector3.Lerp(p0, p3, 0.33f);
             Vector3 p2 = Vector3.Lerp(p0, p3, 0.66f);
 
-            _requests.Add(PresentationRequest.FromRoadSpline(instance.Owner, new RoadSplineRequest
+            _requests.Add(PresentationRequest.FromRoadSpline(state.OwnerEntity, new RoadSplineRequest
             {
-                StableId = ResolveStableId(instance.StableId, slotIndex, asset.AssetKind, definitionId),
+                StableId = ResolveStableId(state.StableId, slotIndex, asset.AssetKind, definitionId),
                 P0 = p0,
                 P1 = p1,
                 P2 = p2,
@@ -183,28 +185,28 @@ namespace Ludots.Core.Presentation.Systems
             }, lod));
         }
 
-        private void EmitWorldHudAsset(int handle, int definitionId, in PerformerInstance instance, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        private void EmitWorldHudAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
         {
             if (TryGetRenderDebugState(out var debug) && !debug.DrawWorldHudBars)
             {
                 return;
             }
 
-            if (!_worldHudBehavior.TryResolveProjection(_world, _globals, instance.Owner, lod, out PerformPhaseResult phaseResult))
+            if (!_worldHudBehavior.TryResolveProjection(_world, _globals, state.OwnerEntity, lod, out PerformPhaseResult phaseResult))
             {
                 return;
             }
 
-            Vector3 scale = ResolveScale(handle, in instance, in asset);
-            Vector4 foreground = ApplyAlpha(ResolveColor(handle, in asset, definition.DefaultColor), alpha);
+            Vector3 scale = ResolveScale(entity, in state, in asset);
+            Vector4 foreground = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
             Vector4 background = new Vector4(0.2f, 0.2f, 0.2f, foreground.W);
-            float value = asset.MaterialParamKey >= 0 ? _instances.ResolveFloat(handle, asset.MaterialParamKey, 1f) : 1f;
+            float value = asset.MaterialParamKey >= 0 ? _runtime.ResolveFloat(entity, asset.MaterialParamKey, 1f) : 1f;
             float width = scale.X > 0f ? scale.X : 40f;
             float height = scale.Y > 0f ? scale.Y : 6f;
 
-            _requests.Add(PresentationRequest.FromWorldHud(instance.Owner, new WorldHudItem
+            _requests.Add(PresentationRequest.FromWorldHud(state.OwnerEntity, new WorldHudItem
             {
-                StableId = HudItemIdentity.ComposeStableId(instance.StableId, WorldHudItemKind.Bar, definitionId),
+                StableId = HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Bar, definitionId),
                 DirtySerial = HudItemIdentity.ComposeBarDirtySerial(width, height, value, background, foreground),
                 Kind = WorldHudItemKind.Bar,
                 WorldPosition = position,
@@ -216,35 +218,35 @@ namespace Ludots.Core.Presentation.Systems
             }, phaseResult.LOD));
         }
 
-        private void EmitWorldTextAsset(int handle, int definitionId, in PerformerInstance instance, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        private void EmitWorldTextAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
         {
             if (TryGetRenderDebugState(out var debug) && !debug.DrawWorldHudText)
             {
                 return;
             }
 
-            if (!_worldHudBehavior.TryResolveProjection(_world, _globals, instance.Owner, lod, out PerformPhaseResult phaseResult))
+            if (!_worldHudBehavior.TryResolveProjection(_world, _globals, state.OwnerEntity, lod, out PerformPhaseResult phaseResult))
             {
                 return;
             }
 
-            Vector4 color = ApplyAlpha(ResolveColor(handle, in asset, definition.DefaultColor), alpha);
-            int tokenId = ResolveAssetId(handle, in asset);
+            Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
+            int tokenId = ResolveAssetId(entity, in asset);
             if (tokenId <= 0)
             {
                 tokenId = definition.DefaultTextId;
             }
 
-            float value0 = asset.ScaleParamKey >= 0 ? _instances.ResolveFloat(handle, asset.ScaleParamKey, 0f) : 0f;
-            float value1 = asset.MaterialParamKey >= 0 ? _instances.ResolveFloat(handle, asset.MaterialParamKey, 0f) : 0f;
+            float value0 = asset.ScaleParamKey >= 0 ? _runtime.ResolveFloat(entity, asset.ScaleParamKey, 0f) : 0f;
+            float value1 = asset.MaterialParamKey >= 0 ? _runtime.ResolveFloat(entity, asset.MaterialParamKey, 0f) : 0f;
             WorldHudValueMode valueMode = definition.LegacyWorldTextMode;
             int fontSize = definition.DefaultFontSize > 0 ? definition.DefaultFontSize : 16;
             int legacyStringId = valueMode == WorldHudValueMode.None ? tokenId : 0;
             PresentationTextPacket packet = PresentationTextPacket.FromLegacyWorldHud(tokenId, valueMode, value0, value1);
 
-            _requests.Add(PresentationRequest.FromWorldHud(instance.Owner, new WorldHudItem
+            _requests.Add(PresentationRequest.FromWorldHud(state.OwnerEntity, new WorldHudItem
             {
-                StableId = HudItemIdentity.ComposeStableId(instance.StableId, WorldHudItemKind.Text, definitionId),
+                StableId = HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Text, definitionId),
                 DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, legacyStringId, (int)valueMode, value0, value1, color, packet),
                 Kind = WorldHudItemKind.Text,
                 WorldPosition = position,
@@ -258,23 +260,23 @@ namespace Ludots.Core.Presentation.Systems
             }, phaseResult.LOD));
         }
 
-        private void EmitGroundOverlayAsset(int handle, int definitionId, in PerformerInstance instance, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        private void EmitGroundOverlayAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
         {
-            Vector3 scale = ResolveScale(handle, in instance, in asset);
+            Vector3 scale = ResolveScale(entity, in state, in asset);
             float radius = MathF.Max(scale.X, 0.001f);
             float innerRadius = Math.Clamp(scale.Y, 0f, radius);
             float length = MathF.Max(scale.X, 0.001f);
             float width = MathF.Max(scale.Y, 0.001f);
             GroundOverlayShape shape = ResolveGroundOverlayShape(asset.AssetId);
-            Vector4 color = ApplyAlpha(ResolveColor(handle, in asset, definition.DefaultColor), alpha);
+            Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
 
-            _requests.Add(PresentationRequest.FromGroundOverlay(instance.Owner, new GroundOverlayItem
+            _requests.Add(PresentationRequest.FromGroundOverlay(state.OwnerEntity, new GroundOverlayItem
             {
                 Shape = shape,
                 Center = position,
                 Radius = radius,
                 InnerRadius = shape == GroundOverlayShape.Ring ? innerRadius : 0f,
-                Rotation = ResolveYaw(instance.WorldRotation),
+                Rotation = ResolveYaw(GetWorldRotation(entity)),
                 Length = shape == GroundOverlayShape.Line ? length : 0f,
                 Width = shape == GroundOverlayShape.Line ? width : 0f,
                 FillColor = color,
@@ -283,51 +285,60 @@ namespace Ludots.Core.Presentation.Systems
             }, lod));
         }
 
-        private bool ResolveAssetVisibility(int handle, in AssetBindingConfig asset)
+        private bool ResolveAssetVisibility(Entity entity, in AssetBindingConfig asset)
         {
-            return asset.VisibilityParamKey < 0 || _instances.ResolveInt(handle, asset.VisibilityParamKey, 1) != 0;
+            return asset.VisibilityParamKey < 0 || _runtime.ResolveInt(entity, asset.VisibilityParamKey, 1) != 0;
         }
 
-        private int ResolveAssetId(int handle, in AssetBindingConfig asset)
+        private int ResolveAssetId(Entity entity, in AssetBindingConfig asset)
         {
-            return asset.AssetSwapParamKey >= 0
-                ? _instances.ResolveInt(handle, asset.AssetSwapParamKey, asset.AssetId)
-                : asset.AssetId;
+            if (asset.AssetSwapParamKey < 0) return asset.AssetId;
+            int resolved = _runtime.ResolveInt(entity, asset.AssetSwapParamKey, asset.AssetId);
+            AssetSwapEntry[] table = asset.AssetSwapTable ?? Array.Empty<AssetSwapEntry>();
+            if (table.Length == 0) return resolved;
+            for (int i = 0; i < table.Length; i++)
+            {
+                ref readonly AssetSwapEntry entry = ref table[i];
+                if (MathF.Abs(entry.ParamValue - resolved) <= 0.0001f) return entry.AssetId;
+            }
+            return asset.AssetId;
         }
 
-        private int ResolveMaterialId(int handle, in AssetBindingConfig asset)
+        private int ResolveMaterialId(Entity entity, in AssetBindingConfig asset)
         {
             return asset.MaterialParamKey >= 0
-                ? _instances.ResolveInt(handle, asset.MaterialParamKey, asset.MaterialId)
+                ? _runtime.ResolveInt(entity, asset.MaterialParamKey, asset.MaterialId)
                 : asset.MaterialId;
         }
 
-        private Vector3 ResolveScale(int handle, in PerformerInstance instance, in AssetBindingConfig asset)
+        private Vector3 ResolveScale(Entity entity, in PerformerState state, in AssetBindingConfig asset)
         {
-            Vector3 scale = instance.WorldScale == Vector3.Zero ? Vector3.One : instance.WorldScale;
+            Vector3 scale = GetWorldScale(entity);
+            scale = scale == Vector3.Zero ? Vector3.One : scale;
             if (asset.ScaleParamKey >= 0)
-            {
-                scale *= _instances.ResolveFloat(handle, asset.ScaleParamKey, 1f);
-            }
-
+                scale *= _runtime.ResolveFloat(entity, asset.ScaleParamKey, 1f);
             return scale;
         }
 
-        private Vector4 ResolveColor(int handle, in AssetBindingConfig asset, Vector4 fallback)
+        private Vector4 ResolveColor(Entity entity, in AssetBindingConfig asset, Vector4 fallback)
         {
             return asset.ColorParamKey >= 0
-                ? _instances.ResolveVector(handle, asset.ColorParamKey, fallback)
+                ? _runtime.ResolveVector(entity, asset.ColorParamKey, fallback)
                 : fallback;
         }
 
-        private AnimatorPackedState ResolveAnimator(int handle, VisualRenderPath renderPath)
+        private AnimatorPackedState ResolveAnimator(Entity entity, VisualRenderPath renderPath)
         {
-            if (!renderPath.SupportsAnimatorPackedState() || _animatorStates == null || !_animatorStates.IsAllocated(handle))
-            {
+            if (!renderPath.SupportsAnimatorPackedState() || _animatorStates == null || !_animatorStates.IsAllocated(entity))
                 return default;
-            }
+            return _animatorStates.GetPackedState(entity);
+        }
 
-            return _animatorStates.GetPackedState(handle);
+        private AnimationOverlayRequest ResolveAnimationOverlay(Entity entity, VisualRenderPath renderPath)
+        {
+            if (!renderPath.SupportsAnimatorPackedState() || _animatorStates == null || !_animatorStates.IsAllocated(entity))
+                return default;
+            return _animatorStates.GetOverlay(entity);
         }
 
         private int ResolveAnimationProfileId(int definitionId)
@@ -387,6 +398,16 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
+        private Quaternion GetWorldRotation(Entity entity)
+        {
+            return _world.Has<PerformerWorldRotation>(entity) ? _world.Get<PerformerWorldRotation>(entity).Value : Quaternion.Identity;
+        }
+
+        private Vector3 GetWorldScale(Entity entity)
+        {
+            return _world.Has<PerformerWorldScale>(entity) ? _world.Get<PerformerWorldScale>(entity).Value : Vector3.One;
+        }
+
         private static Quaternion NormalizeOrIdentity(Quaternion value)
         {
             return value.LengthSquared() > 0.000001f
@@ -413,21 +434,18 @@ namespace Ludots.Core.Presentation.Systems
             return MathF.Atan2(forward.Z, forward.X);
         }
 
-        private static Vector3 ResolvePosition(in PerformerInstance instance, in PerformerDefinition definition)
+        private Vector3 ResolvePosition(Entity entity, in PerformerState state, in PerformerDefinition definition)
         {
-            Vector3 position = instance.WorldPosition + definition.PositionOffset;
-            position.Y += definition.PositionYDriftPerSecond * instance.Elapsed;
+            Vector3 worldPos = _world.Has<PerformerWorldPosition>(entity) ? _world.Get<PerformerWorldPosition>(entity).Value : Vector3.Zero;
+            Vector3 position = worldPos + definition.PositionOffset;
+            position.Y += definition.PositionYDriftPerSecond * state.Elapsed;
             return position;
         }
 
-        private static float ResolveAlpha(in PerformerInstance instance, in PerformerDefinition definition)
+        private static float ResolveAlpha(in PerformerState state, in PerformerDefinition definition)
         {
-            if (!definition.AlphaFadeOverLifetime || definition.DefaultLifetime <= 0f)
-            {
-                return 1f;
-            }
-
-            return Math.Clamp(1f - (instance.Elapsed / definition.DefaultLifetime), 0f, 1f);
+            if (!definition.AlphaFadeOverLifetime || definition.DefaultLifetime <= 0f) return 1f;
+            return Math.Clamp(1f - (state.Elapsed / definition.DefaultLifetime), 0f, 1f);
         }
 
         private static Vector4 ApplyAlpha(Vector4 color, float alpha)

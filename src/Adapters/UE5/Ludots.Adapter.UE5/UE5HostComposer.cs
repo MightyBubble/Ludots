@@ -7,6 +7,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
@@ -266,7 +267,8 @@ namespace Ludots.Adapter.UE5
                 engine.World,
                 engine.GameSession.Camera,
                 engine.SpatialQueries,
-                viewController);
+                viewController,
+                performers: engine.GetService(CoreServiceKeys.PerformerInstanceBuffer));
             engine.RegisterPresentationSystem(cullingSystem);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 

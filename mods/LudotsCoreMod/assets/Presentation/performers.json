@@ -103,7 +103,7 @@
     "maxVisibilityDistanceCm": 3000,
     "positionOffset": [
       0,
-      0.80,
+      0.8,
       0
     ],
     "defaultColor": [
@@ -340,6 +340,173 @@
           "kind": "CreatePerformer",
           "definitionId": "floating_combat_text",
           "scopeTag": -1
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.character.hero_skinned",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.9,
+            0.9,
+            0.9
+          ]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "core.hero.locomotion",
+          "animationProfileId": "core.hero.profile.locomotion",
+          "speedParamKey": 0,
+          "stateParamKey": -1
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.prop.dummy_static",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            0.8,
+            0.8
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.foliage.tree_pine_hism",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "HierarchicalInstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.template.moba_hero_visual",
+    "extends": "core.character.hero_skinned",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "moba_hero"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "core.template.moba_hero_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "moba_hero"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.template.moba_dummy_visual",
+    "extends": "core.prop.dummy_static",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "moba_dummy"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "core.template.moba_dummy_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "moba_dummy"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.template.tree_pine_visual",
+    "extends": "core.foliage.tree_pine_hism",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "tree_pine"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "core.template.tree_pine_visual"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "tree_pine"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
         }
       }
     ]

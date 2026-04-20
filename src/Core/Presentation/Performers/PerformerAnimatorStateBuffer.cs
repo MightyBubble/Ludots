@@ -1,100 +1,110 @@
 using System;
+using System.Collections.Generic;
+using Arch.Core;
 using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Presentation.Performers
 {
     public sealed class PerformerAnimatorStateBuffer
     {
-        private readonly AnimatorPackedState[] _packedStates;
-        private readonly AnimatorRuntimeState[] _runtimeStates;
-        private readonly AnimatorFeedbackBuffer[] _feedbackBuffers;
-        private readonly AnimationOverlayRequest[] _overlays;
-        private readonly bool[] _allocated;
+        private readonly Dictionary<int, int> _entityToSlot = new();
+        private AnimatorPackedState[] _packedStates;
+        private AnimatorRuntimeState[] _runtimeStates;
+        private AnimatorFeedbackBuffer[] _feedbackBuffers;
+        private AnimationOverlayRequest[] _overlays;
+        private readonly Stack<int> _freeSlots = new();
+        private int _highWaterMark;
 
         public PerformerAnimatorStateBuffer(int capacity = 256)
         {
             if (capacity <= 0)
-            {
                 throw new ArgumentOutOfRangeException(nameof(capacity));
-            }
-
             _packedStates = new AnimatorPackedState[capacity];
             _runtimeStates = new AnimatorRuntimeState[capacity];
             _feedbackBuffers = new AnimatorFeedbackBuffer[capacity];
             _overlays = new AnimationOverlayRequest[capacity];
-            _allocated = new bool[capacity];
         }
 
-        public int Capacity => _packedStates.Length;
-
-        public bool IsAllocated(int handle)
+        public bool IsAllocated(Entity entity)
         {
-            ValidateHandle(handle);
-            return _allocated[handle];
+            return entity != Entity.Null && _entityToSlot.ContainsKey(entity.Id);
         }
 
-        public void Ensure(int handle, int controllerId)
+        public void Ensure(Entity entity, int controllerId)
         {
-            ValidateHandle(handle);
-            if (!_allocated[handle] || _packedStates[handle].GetControllerId() != controllerId)
+            if (entity == Entity.Null) return;
+            if (_entityToSlot.TryGetValue(entity.Id, out int slot))
             {
-                _packedStates[handle] = AnimatorPackedState.Create(controllerId);
-                _runtimeStates[handle] = AnimatorRuntimeState.Create(controllerId);
-                _feedbackBuffers[handle] = default;
-                _overlays[handle] = default;
-                _allocated[handle] = true;
+                if (_packedStates[slot].GetControllerId() != controllerId)
+                {
+                    _packedStates[slot] = AnimatorPackedState.Create(controllerId);
+                    _runtimeStates[slot] = AnimatorRuntimeState.Create(controllerId);
+                    _feedbackBuffers[slot] = default;
+                    _overlays[slot] = default;
+                }
+                return;
             }
+            slot = AllocateSlot();
+            _entityToSlot[entity.Id] = slot;
+            _packedStates[slot] = AnimatorPackedState.Create(controllerId);
+            _runtimeStates[slot] = AnimatorRuntimeState.Create(controllerId);
+            _feedbackBuffers[slot] = default;
+            _overlays[slot] = default;
         }
 
-        public void Clear(int handle)
+        public void Clear(Entity entity)
         {
-            ValidateHandle(handle);
-            _packedStates[handle] = default;
-            _runtimeStates[handle] = default;
-            _feedbackBuffers[handle] = default;
-            _overlays[handle] = default;
-            _allocated[handle] = false;
+            if (entity == Entity.Null) return;
+            if (!_entityToSlot.TryGetValue(entity.Id, out int slot)) return;
+            _packedStates[slot] = default;
+            _runtimeStates[slot] = default;
+            _feedbackBuffers[slot] = default;
+            _overlays[slot] = default;
+            _freeSlots.Push(slot);
+            _entityToSlot.Remove(entity.Id);
         }
 
-        public ref AnimatorPackedState GetPackedState(int handle)
+        public ref AnimatorPackedState GetPackedState(Entity entity)
         {
-            ValidateAllocated(handle);
-            return ref _packedStates[handle];
+            return ref _packedStates[ResolveSlot(entity)];
         }
 
-        public ref AnimatorRuntimeState GetRuntimeState(int handle)
+        public ref AnimatorRuntimeState GetRuntimeState(Entity entity)
         {
-            ValidateAllocated(handle);
-            return ref _runtimeStates[handle];
+            return ref _runtimeStates[ResolveSlot(entity)];
         }
 
-        public ref AnimatorFeedbackBuffer GetFeedbackBuffer(int handle)
+        public ref AnimatorFeedbackBuffer GetFeedbackBuffer(Entity entity)
         {
-            ValidateAllocated(handle);
-            return ref _feedbackBuffers[handle];
+            return ref _feedbackBuffers[ResolveSlot(entity)];
         }
 
-        public ref AnimationOverlayRequest GetOverlay(int handle)
+        public ref AnimationOverlayRequest GetOverlay(Entity entity)
         {
-            ValidateAllocated(handle);
-            return ref _overlays[handle];
+            return ref _overlays[ResolveSlot(entity)];
         }
 
-        private void ValidateAllocated(int handle)
+        private int ResolveSlot(Entity entity)
         {
-            ValidateHandle(handle);
-            if (!_allocated[handle])
-            {
-                throw new InvalidOperationException($"Performer animator state handle {handle} is not allocated.");
-            }
+            if (entity == Entity.Null || !_entityToSlot.TryGetValue(entity.Id, out int slot))
+                throw new InvalidOperationException($"Performer animator state for entity {entity.Id} is not allocated.");
+            return slot;
         }
 
-        private void ValidateHandle(int handle)
+        private int AllocateSlot()
         {
-            if ((uint)handle >= (uint)_packedStates.Length)
-            {
-                throw new ArgumentOutOfRangeException(nameof(handle));
-            }
+            if (_freeSlots.Count > 0) return _freeSlots.Pop();
+            if (_highWaterMark >= _packedStates.Length) Grow();
+            return _highWaterMark++;
+        }
+
+        private void Grow()
+        {
+            int newCapacity = _packedStates.Length * 2;
+            Array.Resize(ref _packedStates, newCapacity);
+            Array.Resize(ref _runtimeStates, newCapacity);
+            Array.Resize(ref _feedbackBuffers, newCapacity);
+            Array.Resize(ref _overlays, newCapacity);
         }
     }
 }

@@ -74,6 +74,10 @@ namespace Ludots.Tests.Presentation
             _programs = new GraphProgramRegistry();
             _globals = new Dictionary<string, object>();
             _primitives = new PrimitiveDrawBuffer(16384);
+            var stableDrawCache = new StableDrawCache(16384);
+            var snapshotBuffer = new PrimitiveDrawBuffer(16384);
+            var proxyBuffer = new PresentationVisualProxyBuffer(16384);
+            var skinnedBatchBuffer = new SkinnedVisualBatchBuffer(16384);
             _hud = new WorldHudBatchBuffer(16384);
             _overlays = new GroundOverlayBuffer(4096);
             _roadSplines = new RoadSplineBuffer();
@@ -93,7 +97,7 @@ namespace Ludots.Tests.Presentation
             _runtimeSystem = new PerformerRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
             _behaviorSystem = new PerformerBehaviorSystem(_world, _instances, _defs, _presEvents, _soundRequests);
             _emitSystem = new PerformerEmitSystem(_world, _instances, _defs, _requests, _globals);
-            _flush = new PresentationRequestFlushSystem(_world, _requests, new PrefabRegistry(), new MeshAssetRegistry(), _primitives, _overlays, _hud, _roadSplines);
+            _flush = new PresentationRequestFlushSystem(_world, _requests, new PrefabRegistry(), new MeshAssetRegistry(), stableDrawCache, _primitives, _overlays, _hud, _roadSplines, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
         }
 
         [TearDown]

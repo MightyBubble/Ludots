@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.Assets;
@@ -94,6 +95,76 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(instances.ResolveFloat(handle, 100), Is.EqualTo(0.5f).Within(0.001f));
             Assert.That(instances.ResolveFloat(handle, 101), Is.EqualTo(1f).Within(0.001f));
+        }
+
+        [Test]
+        public void PerformerBindings_ResolveAttributeRatioEntityColorAndFacingIntoBlackboard()
+        {
+            using var world = World.Create();
+            var attributes = default(AttributeBuffer);
+            attributes.SetBase(7, 100f);
+            attributes.SetCurrent(7, 25f);
+            Entity owner = world.Create(
+                attributes,
+                new FacingDirection { AngleRad = MathF.PI * 0.5f },
+                new Ludots.Core.Gameplay.Components.Team { Id = 2 });
+
+            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register("behavior.bindings", new PerformerDefinition
+            {
+                Bindings =
+                [
+                    new PerformerParamBinding
+                    {
+                        ParamKey = 200,
+                        Value = ValueRef.FromAttributeRatio(7),
+                    },
+                    new PerformerParamBinding
+                    {
+                        ParamKey = 201,
+                        Value = ValueRef.FromEntityColor(0),
+                    },
+                    new PerformerParamBinding
+                    {
+                        ParamKey = 202,
+                        Value = ValueRef.FromEntityColor(1),
+                    },
+                    new PerformerParamBinding
+                    {
+                        ParamKey = 205,
+                        Value = ValueRef.FromEntityColorVector(),
+                    },
+                    new PerformerParamBinding
+                    {
+                        ParamKey = 203,
+                        Value = ValueRef.FromFacingRadians(),
+                    },
+                    new PerformerParamBinding
+                    {
+                        ParamKey = 204,
+                        Value = ValueRef.FromFacingDegrees(),
+                    },
+                ],
+            });
+
+            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7102, -1, out int handle), Is.True);
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(),
+                new SoundRequestBuffer());
+
+            system.Update(0.016f);
+
+            Assert.That(instances.ResolveFloat(handle, 200), Is.EqualTo(0.25f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(handle, 201), Is.EqualTo(0.9f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(handle, 202), Is.EqualTo(0.2f).Within(0.001f));
+            Assert.That(instances.ResolveVector(handle, 205, Vector4.Zero), Is.EqualTo(new Vector4(0.9f, 0.2f, 0.2f, 1f)));
+            Assert.That(instances.ResolveFloat(handle, 203), Is.EqualTo(MathF.PI * 0.5f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(handle, 204), Is.EqualTo(90f).Within(0.001f));
         }
 
         [Test]
@@ -236,6 +307,7 @@ namespace Ludots.Tests.Presentation
                         ActiveByDefault = true,
                         Attachment = new AttachmentConfig
                         {
+                            Target = AttachmentTarget.Bone,
                             BoneId = 17,
                             Offset = new Vector3(0f, 0.5f, 0f),
                             RotationOffset = Quaternion.Identity,
@@ -270,6 +342,109 @@ namespace Ludots.Tests.Presentation
             Assert.That(child.TransformSource, Is.EqualTo(TransformSource.BoneAttached));
             Assert.That(child.WorldPosition, Is.EqualTo(new Vector3(3f, 4.5f, 5f)));
             Assert.That(child.WorldScale, Is.EqualTo(Vector3.One));
+        }
+
+        [Test]
+        public void Attachment_TargetParent_UsesParentTransformWithoutBoneProvider()
+        {
+            using var world = World.Create();
+            var instances = new PerformerInstanceBuffer(capacity: 4);
+            var definitions = new PerformerDefinitionRegistry();
+            Entity owner = world.Create();
+
+            int defId = definitions.Register("behavior.attachment.parent", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig
+                        {
+                            Target = AttachmentTarget.Parent,
+                            Offset = new Vector3(0f, 2f, 0f),
+                            RotationOffset = Quaternion.Identity,
+                            InheritScale = false,
+                        },
+                    },
+                ],
+            });
+
+            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7200, -1, out int parentHandle), Is.True);
+            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7201, parentHandle, out int childHandle), Is.True);
+            instances.Get(childHandle).BehaviorActiveMask = 1u;
+            ref PerformerInstance parent = ref instances.Get(parentHandle);
+            parent.WorldPosition = new Vector3(10f, 4f, 6f);
+            parent.WorldRotation = Quaternion.Identity;
+            parent.WorldScale = new Vector3(3f, 3f, 3f);
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(),
+                new SoundRequestBuffer());
+
+            system.Update(0.016f);
+
+            ref PerformerInstance child = ref instances.Get(childHandle);
+            Assert.That(child.TransformSource, Is.EqualTo(TransformSource.AttachedToParent));
+            Assert.That(child.WorldPosition, Is.EqualTo(new Vector3(10f, 6f, 6f)));
+            Assert.That(child.WorldScale, Is.EqualTo(Vector3.One));
+        }
+
+        [Test]
+        public void EntityTransform_InheritsOwnerScaleAndAppliesLocalScale()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(new VisualTransform
+            {
+                Position = new Vector3(2f, 3f, 4f),
+                Rotation = Quaternion.Identity,
+                Scale = new Vector3(2f, 3f, 4f),
+            });
+
+            var instances = new PerformerInstanceBuffer(capacity: 2);
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register("behavior.entity_transform_scale", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalScale = new Vector3(0.5f, 2f, 0.25f),
+                        },
+                    },
+                ],
+            });
+
+            Assert.That(instances.TryAllocate(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7201, -1, out int handle), Is.True);
+            instances.Get(handle).BehaviorActiveMask = 1u;
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(),
+                new SoundRequestBuffer());
+
+            system.Update(0.016f);
+
+            ref readonly PerformerInstance instance = ref instances.Get(handle);
+            Assert.That(instance.TransformSource, Is.EqualTo(TransformSource.EntityTransform));
+            Assert.That(instance.WorldScale, Is.EqualTo(new Vector3(1f, 6f, 1f)));
+            Assert.That(instance.WorldPosition, Is.EqualTo(new Vector3(2f, 3f, 4f)));
         }
 
         [Test]

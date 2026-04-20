@@ -57,8 +57,7 @@ namespace Ludots.Tests.Presentation
                 [
                   {
                     "id": "test.mesh.base",
-                    "type": "Model",
-                    "sourceUris": ["ue5.staticmesh:/Game/Test/Base.Base"]
+                    "type": "Model"
                   }
                 ]
                 """);

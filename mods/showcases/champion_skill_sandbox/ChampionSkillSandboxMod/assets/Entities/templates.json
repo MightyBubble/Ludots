@@ -1,1298 +1,1232 @@
 ﻿[
-    {
-        "id":  "champion_skill_sandbox_ezreal",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Ezreal"
-                                    },
-                           "Team":  {
-                                        "Id":  1
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  160,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  355,
-                                                                "Armor":  4
-                                                            }
-                                               },
-                           "Collider2D":  {
-                                              "shape":  {
-                                                            "type":  "circle",
-                                                            "radiusCm":  36
-                                                        }
-                                          },
-                           "PhysicsMaterial2D":  {
-                                                     "friction":  0.92,
-                                                     "restitution":  0.0,
-                                                     "baseDamping":  0.94
-                                                 },
-                           "NavKinematics2D":  {
-                                                   "maxAccelCmPerSec2":  1760,
-                                                   "radiusCm":  36,
-                                                   "neighborDistCm":  280,
-                                                   "timeHorizonSec":  2.4,
-                                                   "maxNeighbors":  20
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.Champion.Ezreal.MysticShot",
-                                                                         "Ability.Champion.Ezreal.EssenceFlux",
-                                                                         "Ability.Champion.Ezreal.ArcaneShift",
-                                                                         "Ability.Champion.Ezreal.TrueshotBarrage"
-                                                                     ]
+                  {
+                      "id":  "champion_skill_sandbox_ezreal",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Ezreal"
                                                   },
-                           "GameplayTagContainer":  {
-
-                                                    },
-                           "OrderBuffer":  {
-
-                                           },
-                           "BlackboardSpatialBuffer":  {
-
-                                                       },
-                           "BlackboardEntityBuffer":  {
-
-                                                      },
-                           "BlackboardIntBuffer":  {
-
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_garen",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Garen"
-                                    },
-                           "Team":  {
-                                        "Id":  1
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  240,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  325,
-                                                                "Armor":  14
-                                                            }
-                                               },
-                           "Collider2D":  {
-                                              "shape":  {
-                                                            "type":  "circle",
-                                                            "radiusCm":  46
-                                                        }
-                                          },
-                           "PhysicsMaterial2D":  {
-                                                     "friction":  0.92,
-                                                     "restitution":  0.0,
-                                                     "baseDamping":  0.94
-                                                 },
-                           "NavKinematics2D":  {
-                                                   "maxAccelCmPerSec2":  1800,
-                                                   "radiusCm":  46,
-                                                   "neighborDistCm":  320,
-                                                   "timeHorizonSec":  2.4,
-                                                   "maxNeighbors":  20
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.Champion.Garen.DecisiveStrike",
-                                                                         "Ability.Champion.Garen.Courage",
-                                                                         "Ability.Champion.Garen.Judgment",
-                                                                         "Ability.Champion.Garen.DemacianJustice"
-                                                                     ]
+                                         "Team":  {
+                                                      "Id":  1
                                                   },
-                           "GameplayTagContainer":  {
+                                         "SelectionSelectableTag":  {
 
-                                                    },
-                           "OrderBuffer":  {
-
-                                           },
-                           "BlackboardSpatialBuffer":  {
-
-                                                       },
-                           "BlackboardEntityBuffer":  {
-
-                                                      },
-                           "BlackboardIntBuffer":  {
-
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_jayce",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Jayce"
-                                    },
-                           "Team":  {
-                                        "Id":  1
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  190,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  340,
-                                                                "Armor":  8
-                                                            }
-                                               },
-                           "Collider2D":  {
-                                              "shape":  {
-                                                            "type":  "circle",
-                                                            "radiusCm":  40
-                                                        }
-                                          },
-                           "PhysicsMaterial2D":  {
-                                                     "friction":  0.92,
-                                                     "restitution":  0.0,
-                                                     "baseDamping":  0.94
-                                                 },
-                           "NavKinematics2D":  {
-                                                   "maxAccelCmPerSec2":  1780,
-                                                   "radiusCm":  40,
-                                                   "neighborDistCm":  296,
-                                                   "timeHorizonSec":  2.4,
-                                                   "maxNeighbors":  20
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.Champion.Jayce.Cannon.ShockBlast",
-                                                                         "Ability.Champion.Jayce.Cannon.HyperCharge",
-                                                                         "Ability.Champion.Jayce.Cannon.AccelerationGate",
-                                                                         "Ability.Champion.Jayce.Transform.Hammer"
-                                                                     ]
-                                                  },
-                           "AbilityFormSetRef":  {
-                                                     "formSetId":  "champion_skill_sandbox_jayce_forms"
-                                                 },
-                           "GameplayTagContainer":  {
-
-                                                    },
-                           "OrderBuffer":  {
-
-                                           },
-                           "BlackboardSpatialBuffer":  {
-
-                                                       },
-                           "BlackboardEntityBuffer":  {
-
-                                                      },
-                           "BlackboardIntBuffer":  {
-
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_geomancer",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Geomancer"
-                                    },
-                           "Team":  {
-                                        "Id":  1
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  185,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  335,
-                                                                "Armor":  7
-                                                            }
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.Champion.Geomancer.RunicBeacon",
-                                                                         "Ability.Champion.Geomancer.RuneField",
-                                                                         "Ability.Champion.Geomancer.StonePillar",
-                                                                         "Ability.Champion.Geomancer.PrismaticBeam"
-                                                                     ]
-                                                  },
-                           "GameplayTagContainer":  {
-
-                                                    },
-                           "OrderBuffer":  {
-
-                                           },
-                           "BlackboardSpatialBuffer":  {
-
-                                                       },
-                           "BlackboardEntityBuffer":  {
-
-                                                      },
-                           "BlackboardIntBuffer":  {
-
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_spell_engineer",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Spell Engineer"
-                                    },
-                           "Team":  {
-                                        "Id":  1
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  180,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  330,
-                                                                "Armor":  6
-                                                            }
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.Champion.SpellEngineer.SpellBeacon",
-                                                                         "Ability.Champion.SpellEngineer.GravityWell",
-                                                                         "Ability.Champion.SpellEngineer.CataclysmRing",
-                                                                         "Ability.Champion.SpellEngineer.GuidedLaser"
-                                                                     ]
-                                                  },
-                           "AbilityExecAimSync":  {
-                                                      "abilitySlot":  3,
-                                                      "syncFacing":  true
-                                                  },
-                           "GameplayTagContainer":  {
-
-                                                    },
-                           "OrderBuffer":  {
-
-                                           },
-                           "BlackboardSpatialBuffer":  {
-
-                                                       },
-                           "BlackboardEntityBuffer":  {
-
-                                                      },
-                           "BlackboardIntBuffer":  {
-
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_runic_beacon",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Runic Beacon"
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.prop.dummy_static"
-                                            },
-                           "VisualTransform":  {
-                                                   "Position":  {
-                                                                    "X":  0.0,
-                                                                    "Y":  0.0,
-                                                                    "Z":  0.0
-                                                                },
-                                                   "Rotation":  {
-                                                                    "X":  0.0,
-                                                                    "Y":  0.0,
-                                                                    "Z":  0.0,
-                                                                    "W":  1.0
-                                                                },
-                                                   "Scale":  {
-                                                                 "X":  0.72,
-                                                                 "Y":  1.38,
-                                                                 "Z":  0.72
-                                                             }
-                                               },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  60,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  0,
-                                                                "Armor":  0
-                                                            }
-                                               },
-                           "GameplayTagContainer":  {
-
-                                                    }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_rune_field",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Rune Field"
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.prop.dummy_static"
-                                            },
-                           "VisualTransform":  {
-                                                   "Position":  {
-                                                                    "X":  0.0,
-                                                                    "Y":  0.0,
-                                                                    "Z":  0.0
-                                                                },
-                                                   "Rotation":  {
-                                                                    "X":  0.0,
-                                                                    "Y":  0.0,
-                                                                    "Z":  0.0,
-                                                                    "W":  1.0
-                                                                },
-                                                   "Scale":  {
-                                                                 "X":  2.35,
-                                                                 "Y":  0.14,
-                                                                 "Z":  2.35
-                                                             }
-                                               },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  1,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  0,
-                                                                "Armor":  0
-                                                            }
-                                               },
-                           "GameplayTagContainer":  {
-
-                                                    }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_stone_pillar",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Stone Pillar"
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.prop.dummy_static"
-                                            },
-                           "VisualTransform":  {
-                                                   "Position":  {
-                                                                    "X":  0.0,
-                                                                    "Y":  0.0,
-                                                                    "Z":  0.0
-                                                                },
-                                                   "Rotation":  {
-                                                                    "X":  0.0,
-                                                                    "Y":  0.0,
-                                                                    "Z":  0.0,
-                                                                    "W":  1.0
-                                                                },
-                                                   "Scale":  {
-                                                                 "X":  1.08,
-                                                                 "Y":  2.16,
-                                                                 "Z":  1.08
-                                                             }
-                                               },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  120,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  0,
-                                                                "Armor":  8
-                                                            }
-                                               },
-                           "GameplayTagContainer":  {
-
-                                                    },
-                           "ManifestationObstacleIntent2D":  {
-                                                                 "shape":  "Circle",
-                                                                 "radiusCm":  120,
-                                                                 "sinkPhysicsCollider":  true,
-                                                                 "sinkNavigationObstacle":  true,
-                                                                 "navRadiusCm":  120
-                                                             }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_spell_beacon",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Spell Beacon"
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  48,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  0,
-                                                                "Armor":  0
-                                                            }
-                                               },
-                           "GameplayTagContainer":  {
-
-                                                    }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_gravity_well",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Gravity Well"
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  1,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  0,
-                                                                "Armor":  0
-                                                            }
-                                               },
-                           "GameplayTagContainer":  {
-
-                                                    }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_barrier_segment",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Barrier Segment"
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  90,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  0,
-                                                                "Armor":  10
-                                                            }
-                                               },
-                           "GameplayTagContainer":  {
-
-                                                    },
-                           "ManifestationObstacleIntent2D":  {
-                                                                 "shape":  "Box",
-                                                                 "halfWidthCm":  92,
-                                                                 "halfHeightCm":  20,
-                                                                 "sinkPhysicsCollider":  true,
-                                                                 "sinkNavigationObstacle":  true,
-                                                                 "navRadiusCm":  94
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
                                                              },
-                           "DestroyWhenParentExecutionEnds":  {
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  160,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  355,
+                                                                              "Armor":  4
+                                                                          }
+                                                             },
+                                         "Collider2D":  {
+                                                            "shape":  {
+                                                                          "type":  "circle",
+                                                                          "radiusCm":  36
+                                                                      }
+                                                        },
+                                         "PhysicsMaterial2D":  {
+                                                                   "friction":  0.92,
+                                                                   "restitution":  0.0,
+                                                                   "baseDamping":  0.94
+                                                               },
+                                         "NavKinematics2D":  {
+                                                                 "maxAccelCmPerSec2":  1760,
+                                                                 "radiusCm":  36,
+                                                                 "neighborDistCm":  280,
+                                                                 "timeHorizonSec":  2.4,
+                                                                 "maxNeighbors":  20
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.Champion.Ezreal.MysticShot",
+                                                                                       "Ability.Champion.Ezreal.EssenceFlux",
+                                                                                       "Ability.Champion.Ezreal.ArcaneShift",
+                                                                                       "Ability.Champion.Ezreal.TrueshotBarrage"
+                                                                                   ]
+                                                                },
+                                         "GameplayTagContainer":  {
 
-                                                              }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_guided_laser",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "Guided Laser"
-                                    },
-                           "SelectionSelectableTag":  {
+                                                                  },
+                                         "OrderBuffer":  {
 
-                                                      },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
 
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  1,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  0,
-                                                                "Armor":  0
-                                                            }
-                                               },
-                           "GameplayTagContainer":  {
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
 
-                                                    },
-                           "ManifestationMotion2D":  {
-                                                         "followParentPosition":  true,
-                                                         "facingSource":  "ParentExecutionTarget",
-                                                         "forwardOffsetCm":  450
-                                                     },
-                           "DestroyWhenParentExecutionEnds":  {
+                                                                    },
+                                         "BlackboardIntBuffer":  {
 
-                                                              }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_enemy_dummy",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "EnemyDummy"
-                                    },
-                           "Team":  {
-                                        "Id":  2
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  3.14159
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.prop.dummy_static"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  220,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  0,
-                                                                "Armor":  2
-                                                            }
-                                               },
-                           "GameplayTagContainer":  {
-
-                                                    }
-                       }
-    },
-    {
-        "id":  "champion_skill_sandbox_enemy_brute",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "EnemyBrute"
-                                    },
-                           "Team":  {
-                                        "Id":  2
-                                    },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  3.14159
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.prop.dummy_static"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  320,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  0,
-                                                                "Armor":  10
-                                                            }
-                                               },
-                           "GameplayTagContainer":  {
-
-                                                    }
-                       }
-    },
-    {
-        "id":  "champion_skill_stress_team_a_warrior",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "StressWarriorA"
-                                    },
-                           "Team":  {
-                                        "Id":  1
-                                    },
-                           "PlayerOwner":  {
-                                               "PlayerId":  1
-                                           },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  260,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  330,
-                                                                "Armor":  16
-                                                            }
-                                               },
-                           "Collider2D":  {
-                                              "shape":  {
-                                                            "type":  "circle",
-                                                            "radiusCm":  46
-                                                        }
-                                          },
-                           "PhysicsMaterial2D":  {
-                                                     "friction":  0.92,
-                                                     "restitution":  0.0,
-                                                     "baseDamping":  0.94
-                                                 },
-                           "NavKinematics2D":  {
-                                                   "maxAccelCmPerSec2":  1800,
-                                                   "radiusCm":  46,
-                                                   "neighborDistCm":  320,
-                                                   "timeHorizonSec":  2.4,
-                                                   "maxNeighbors":  20
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.ChampionStress.Warrior.Cleave"
-                                                                     ]
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_garen",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Garen"
                                                   },
-                           "GameplayTagContainer":  {
-
-                                                    },
-                           "OrderBuffer":  {
-
-                                           },
-                           "BlackboardSpatialBuffer":  {
-
-                                                       },
-                           "BlackboardEntityBuffer":  {
-
-                                                      },
-                           "BlackboardIntBuffer":  {
-
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_stress_team_a_fire_mage",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "StressFireMageA"
-                                    },
-                           "Team":  {
-                                        "Id":  1
-                                    },
-                           "PlayerOwner":  {
-                                               "PlayerId":  1
-                                           },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  170,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  320,
-                                                                "Armor":  4
-                                                            }
-                                               },
-                           "Collider2D":  {
-                                              "shape":  {
-                                                            "type":  "circle",
-                                                            "radiusCm":  38
-                                                        }
-                                          },
-                           "PhysicsMaterial2D":  {
-                                                     "friction":  0.92,
-                                                     "restitution":  0.0,
-                                                     "baseDamping":  0.94
-                                                 },
-                           "NavKinematics2D":  {
-                                                   "maxAccelCmPerSec2":  1700,
-                                                   "radiusCm":  38,
-                                                   "neighborDistCm":  280,
-                                                   "timeHorizonSec":  2.4,
-                                                   "maxNeighbors":  20
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.ChampionStress.FireMage.Fireball"
-                                                                     ]
+                                         "Team":  {
+                                                      "Id":  1
                                                   },
-                           "GameplayTagContainer":  {
+                                         "SelectionSelectableTag":  {
 
-                                                    },
-                           "OrderBuffer":  {
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  240,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  325,
+                                                                              "Armor":  14
+                                                                          }
+                                                             },
+                                         "Collider2D":  {
+                                                            "shape":  {
+                                                                          "type":  "circle",
+                                                                          "radiusCm":  46
+                                                                      }
+                                                        },
+                                         "PhysicsMaterial2D":  {
+                                                                   "friction":  0.92,
+                                                                   "restitution":  0.0,
+                                                                   "baseDamping":  0.94
+                                                               },
+                                         "NavKinematics2D":  {
+                                                                 "maxAccelCmPerSec2":  1800,
+                                                                 "radiusCm":  46,
+                                                                 "neighborDistCm":  320,
+                                                                 "timeHorizonSec":  2.4,
+                                                                 "maxNeighbors":  20
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.Champion.Garen.DecisiveStrike",
+                                                                                       "Ability.Champion.Garen.Courage",
+                                                                                       "Ability.Champion.Garen.Judgment",
+                                                                                       "Ability.Champion.Garen.DemacianJustice"
+                                                                                   ]
+                                                                },
+                                         "GameplayTagContainer":  {
 
-                                           },
-                           "BlackboardSpatialBuffer":  {
+                                                                  },
+                                         "OrderBuffer":  {
 
-                                                       },
-                           "BlackboardEntityBuffer":  {
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
 
-                                                      },
-                           "BlackboardIntBuffer":  {
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
 
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_stress_team_a_laser_mage",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "StressLaserMageA"
-                                    },
-                           "Team":  {
-                                        "Id":  1
-                                    },
-                           "PlayerOwner":  {
-                                               "PlayerId":  1
-                                           },
-                           "SelectionSelectableTag":  {
+                                                                    },
+                                         "BlackboardIntBuffer":  {
 
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  150,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  325,
-                                                                "Armor":  3
-                                                            }
-                                               },
-                           "Collider2D":  {
-                                              "shape":  {
-                                                            "type":  "circle",
-                                                            "radiusCm":  36
-                                                        }
-                                          },
-                           "PhysicsMaterial2D":  {
-                                                     "friction":  0.92,
-                                                     "restitution":  0.0,
-                                                     "baseDamping":  0.94
-                                                 },
-                           "NavKinematics2D":  {
-                                                   "maxAccelCmPerSec2":  1700,
-                                                   "radiusCm":  36,
-                                                   "neighborDistCm":  268,
-                                                   "timeHorizonSec":  2.4,
-                                                   "maxNeighbors":  20
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.ChampionStress.LaserMage.Laser"
-                                                                     ]
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_jayce",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Jayce"
                                                   },
-                           "GameplayTagContainer":  {
-
-                                                    },
-                           "OrderBuffer":  {
-
-                                           },
-                           "BlackboardSpatialBuffer":  {
-
-                                                       },
-                           "BlackboardEntityBuffer":  {
-
-                                                      },
-                           "BlackboardIntBuffer":  {
-
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_stress_team_a_priest",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "StressPriestA"
-                                    },
-                           "Team":  {
-                                        "Id":  1
-                                    },
-                           "PlayerOwner":  {
-                                               "PlayerId":  1
-                                           },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  0.0
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  180,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  315,
-                                                                "Armor":  5
-                                                            }
-                                               },
-                           "Collider2D":  {
-                                              "shape":  {
-                                                            "type":  "circle",
-                                                            "radiusCm":  34
-                                                        }
-                                          },
-                           "PhysicsMaterial2D":  {
-                                                     "friction":  0.92,
-                                                     "restitution":  0.0,
-                                                     "baseDamping":  0.94
-                                                 },
-                           "NavKinematics2D":  {
-                                                   "maxAccelCmPerSec2":  1600,
-                                                   "radiusCm":  34,
-                                                   "neighborDistCm":  256,
-                                                   "timeHorizonSec":  2.4,
-                                                   "maxNeighbors":  20
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.ChampionStress.Priest.Heal"
-                                                                     ]
+                                         "Team":  {
+                                                      "Id":  1
                                                   },
-                           "GameplayTagContainer":  {
+                                         "SelectionSelectableTag":  {
 
-                                                    },
-                           "OrderBuffer":  {
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  190,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  340,
+                                                                              "Armor":  8
+                                                                          }
+                                                             },
+                                         "Collider2D":  {
+                                                            "shape":  {
+                                                                          "type":  "circle",
+                                                                          "radiusCm":  40
+                                                                      }
+                                                        },
+                                         "PhysicsMaterial2D":  {
+                                                                   "friction":  0.92,
+                                                                   "restitution":  0.0,
+                                                                   "baseDamping":  0.94
+                                                               },
+                                         "NavKinematics2D":  {
+                                                                 "maxAccelCmPerSec2":  1780,
+                                                                 "radiusCm":  40,
+                                                                 "neighborDistCm":  296,
+                                                                 "timeHorizonSec":  2.4,
+                                                                 "maxNeighbors":  20
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.Champion.Jayce.Cannon.ShockBlast",
+                                                                                       "Ability.Champion.Jayce.Cannon.HyperCharge",
+                                                                                       "Ability.Champion.Jayce.Cannon.AccelerationGate",
+                                                                                       "Ability.Champion.Jayce.Transform.Hammer"
+                                                                                   ]
+                                                                },
+                                         "AbilityFormSetRef":  {
+                                                                   "formSetId":  "champion_skill_sandbox_jayce_forms"
+                                                               },
+                                         "GameplayTagContainer":  {
 
-                                           },
-                           "BlackboardSpatialBuffer":  {
+                                                                  },
+                                         "OrderBuffer":  {
 
-                                                       },
-                           "BlackboardEntityBuffer":  {
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
 
-                                                      },
-                           "BlackboardIntBuffer":  {
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
 
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_stress_team_b_warrior",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "StressWarriorB"
-                                    },
-                           "Team":  {
-                                        "Id":  2
-                                    },
-                           "PlayerOwner":  {
-                                               "PlayerId":  2
-                                           },
-                           "SelectionSelectableTag":  {
+                                                                    },
+                                         "BlackboardIntBuffer":  {
 
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  3.14159
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  260,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  330,
-                                                                "Armor":  16
-                                                            }
-                                               },
-                           "Collider2D":  {
-                                              "shape":  {
-                                                            "type":  "circle",
-                                                            "radiusCm":  46
-                                                        }
-                                          },
-                           "PhysicsMaterial2D":  {
-                                                     "friction":  0.92,
-                                                     "restitution":  0.0,
-                                                     "baseDamping":  0.94
-                                                 },
-                           "NavKinematics2D":  {
-                                                   "maxAccelCmPerSec2":  1800,
-                                                   "radiusCm":  46,
-                                                   "neighborDistCm":  320,
-                                                   "timeHorizonSec":  2.4,
-                                                   "maxNeighbors":  20
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.ChampionStress.Warrior.Cleave"
-                                                                     ]
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_geomancer",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Geomancer"
                                                   },
-                           "GameplayTagContainer":  {
-
-                                                    },
-                           "OrderBuffer":  {
-
-                                           },
-                           "BlackboardSpatialBuffer":  {
-
-                                                       },
-                           "BlackboardEntityBuffer":  {
-
-                                                      },
-                           "BlackboardIntBuffer":  {
-
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_stress_team_b_fire_mage",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "StressFireMageB"
-                                    },
-                           "Team":  {
-                                        "Id":  2
-                                    },
-                           "PlayerOwner":  {
-                                               "PlayerId":  2
-                                           },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  3.14159
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  170,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  320,
-                                                                "Armor":  4
-                                                            }
-                                               },
-                           "Collider2D":  {
-                                              "shape":  {
-                                                            "type":  "circle",
-                                                            "radiusCm":  38
-                                                        }
-                                          },
-                           "PhysicsMaterial2D":  {
-                                                     "friction":  0.92,
-                                                     "restitution":  0.0,
-                                                     "baseDamping":  0.94
-                                                 },
-                           "NavKinematics2D":  {
-                                                   "maxAccelCmPerSec2":  1700,
-                                                   "radiusCm":  38,
-                                                   "neighborDistCm":  280,
-                                                   "timeHorizonSec":  2.4,
-                                                   "maxNeighbors":  20
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.ChampionStress.FireMage.Fireball"
-                                                                     ]
+                                         "Team":  {
+                                                      "Id":  1
                                                   },
-                           "GameplayTagContainer":  {
+                                         "SelectionSelectableTag":  {
 
-                                                    },
-                           "OrderBuffer":  {
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  185,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  335,
+                                                                              "Armor":  7
+                                                                          }
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.Champion.Geomancer.RunicBeacon",
+                                                                                       "Ability.Champion.Geomancer.RuneField",
+                                                                                       "Ability.Champion.Geomancer.StonePillar",
+                                                                                       "Ability.Champion.Geomancer.PrismaticBeam"
+                                                                                   ]
+                                                                },
+                                         "GameplayTagContainer":  {
 
-                                           },
-                           "BlackboardSpatialBuffer":  {
+                                                                  },
+                                         "OrderBuffer":  {
 
-                                                       },
-                           "BlackboardEntityBuffer":  {
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
 
-                                                      },
-                           "BlackboardIntBuffer":  {
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
 
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_stress_team_b_laser_mage",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "StressLaserMageB"
-                                    },
-                           "Team":  {
-                                        "Id":  2
-                                    },
-                           "PlayerOwner":  {
-                                               "PlayerId":  2
-                                           },
-                           "SelectionSelectableTag":  {
+                                                                    },
+                                         "BlackboardIntBuffer":  {
 
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  3.14159
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  150,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  325,
-                                                                "Armor":  3
-                                                            }
-                                               },
-                           "Collider2D":  {
-                                              "shape":  {
-                                                            "type":  "circle",
-                                                            "radiusCm":  36
-                                                        }
-                                          },
-                           "PhysicsMaterial2D":  {
-                                                     "friction":  0.92,
-                                                     "restitution":  0.0,
-                                                     "baseDamping":  0.94
-                                                 },
-                           "NavKinematics2D":  {
-                                                   "maxAccelCmPerSec2":  1700,
-                                                   "radiusCm":  36,
-                                                   "neighborDistCm":  268,
-                                                   "timeHorizonSec":  2.4,
-                                                   "maxNeighbors":  20
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.ChampionStress.LaserMage.Laser"
-                                                                     ]
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_spell_engineer",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Spell Engineer"
                                                   },
-                           "GameplayTagContainer":  {
-
-                                                    },
-                           "OrderBuffer":  {
-
-                                           },
-                           "BlackboardSpatialBuffer":  {
-
-                                                       },
-                           "BlackboardEntityBuffer":  {
-
-                                                      },
-                           "BlackboardIntBuffer":  {
-
-                                                   }
-                       }
-    },
-    {
-        "id":  "champion_skill_stress_team_b_priest",
-        "components":  {
-                           "Name":  {
-                                        "Value":  "StressPriestB"
-                                    },
-                           "Team":  {
-                                        "Id":  2
-                                    },
-                           "PlayerOwner":  {
-                                               "PlayerId":  2
-                                           },
-                           "SelectionSelectableTag":  {
-
-                                                      },
-                           "WorldPositionCm":  {
-                                                   "Value":  {
-                                                                 "X":  0,
-                                                                 "Y":  0
-                                                             }
-                                               },
-                           "FacingDirection":  {
-                                                   "AngleRad":  3.14159
-                                               },
-                           "Presentation":  {
-                                                "visualTemplateId":  "core.character.hero_skinned"
-                                            },
-                           "AttributeBuffer":  {
-                                                   "base":  {
-                                                                "Health":  180,
-                                                                "Shield":  0,
-                                                                "MoveSpeed":  315,
-                                                                "Armor":  5
-                                                            }
-                                               },
-                           "Collider2D":  {
-                                              "shape":  {
-                                                            "type":  "circle",
-                                                            "radiusCm":  34
-                                                        }
-                                          },
-                           "PhysicsMaterial2D":  {
-                                                     "friction":  0.92,
-                                                     "restitution":  0.0,
-                                                     "baseDamping":  0.94
-                                                 },
-                           "NavKinematics2D":  {
-                                                   "maxAccelCmPerSec2":  1600,
-                                                   "radiusCm":  34,
-                                                   "neighborDistCm":  256,
-                                                   "timeHorizonSec":  2.4,
-                                                   "maxNeighbors":  20
-                                               },
-                           "AbilityStateBuffer":  {
-                                                      "abilityIds":  [
-                                                                         "Ability.ChampionStress.Priest.Heal"
-                                                                     ]
+                                         "Team":  {
+                                                      "Id":  1
                                                   },
-                           "GameplayTagContainer":  {
+                                         "SelectionSelectableTag":  {
 
-                                                    },
-                           "OrderBuffer":  {
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  180,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  330,
+                                                                              "Armor":  6
+                                                                          }
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.Champion.SpellEngineer.SpellBeacon",
+                                                                                       "Ability.Champion.SpellEngineer.GravityWell",
+                                                                                       "Ability.Champion.SpellEngineer.CataclysmRing",
+                                                                                       "Ability.Champion.SpellEngineer.GuidedLaser"
+                                                                                   ]
+                                                                },
+                                         "AbilityExecAimSync":  {
+                                                                    "abilitySlot":  3,
+                                                                    "syncFacing":  true
+                                                                },
+                                         "GameplayTagContainer":  {
 
-                                           },
-                           "BlackboardSpatialBuffer":  {
+                                                                  },
+                                         "OrderBuffer":  {
 
-                                                       },
-                           "BlackboardEntityBuffer":  {
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
 
-                                                      },
-                           "BlackboardIntBuffer":  {
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
 
-                                                   }
-                       }
-    }
-]
+                                                                    },
+                                         "BlackboardIntBuffer":  {
+
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_runic_beacon",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Runic Beacon"
+                                                  },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "VisualTransform":  {
+                                                                 "Position":  {
+                                                                                  "X":  0.0,
+                                                                                  "Y":  0.0,
+                                                                                  "Z":  0.0
+                                                                              },
+                                                                 "Rotation":  {
+                                                                                  "X":  0.0,
+                                                                                  "Y":  0.0,
+                                                                                  "Z":  0.0,
+                                                                                  "W":  1.0
+                                                                              },
+                                                                 "Scale":  {
+                                                                               "X":  0.72,
+                                                                               "Y":  1.38,
+                                                                               "Z":  0.72
+                                                                           }
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  60,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  0,
+                                                                              "Armor":  0
+                                                                          }
+                                                             },
+                                         "GameplayTagContainer":  {
+
+                                                                  }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_rune_field",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Rune Field"
+                                                  },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "VisualTransform":  {
+                                                                 "Position":  {
+                                                                                  "X":  0.0,
+                                                                                  "Y":  0.0,
+                                                                                  "Z":  0.0
+                                                                              },
+                                                                 "Rotation":  {
+                                                                                  "X":  0.0,
+                                                                                  "Y":  0.0,
+                                                                                  "Z":  0.0,
+                                                                                  "W":  1.0
+                                                                              },
+                                                                 "Scale":  {
+                                                                               "X":  2.35,
+                                                                               "Y":  0.14,
+                                                                               "Z":  2.35
+                                                                           }
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  1,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  0,
+                                                                              "Armor":  0
+                                                                          }
+                                                             },
+                                         "GameplayTagContainer":  {
+
+                                                                  }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_stone_pillar",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Stone Pillar"
+                                                  },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "VisualTransform":  {
+                                                                 "Position":  {
+                                                                                  "X":  0.0,
+                                                                                  "Y":  0.0,
+                                                                                  "Z":  0.0
+                                                                              },
+                                                                 "Rotation":  {
+                                                                                  "X":  0.0,
+                                                                                  "Y":  0.0,
+                                                                                  "Z":  0.0,
+                                                                                  "W":  1.0
+                                                                              },
+                                                                 "Scale":  {
+                                                                               "X":  1.08,
+                                                                               "Y":  2.16,
+                                                                               "Z":  1.08
+                                                                           }
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  120,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  0,
+                                                                              "Armor":  8
+                                                                          }
+                                                             },
+                                         "GameplayTagContainer":  {
+
+                                                                  },
+                                         "ManifestationObstacleIntent2D":  {
+                                                                               "shape":  "Circle",
+                                                                               "radiusCm":  120,
+                                                                               "sinkPhysicsCollider":  true,
+                                                                               "sinkNavigationObstacle":  true,
+                                                                               "navRadiusCm":  120
+                                                                           }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_spell_beacon",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Spell Beacon"
+                                                  },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  48,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  0,
+                                                                              "Armor":  0
+                                                                          }
+                                                             },
+                                         "GameplayTagContainer":  {
+
+                                                                  }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_gravity_well",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Gravity Well"
+                                                  },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  1,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  0,
+                                                                              "Armor":  0
+                                                                          }
+                                                             },
+                                         "GameplayTagContainer":  {
+
+                                                                  }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_barrier_segment",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Barrier Segment"
+                                                  },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  90,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  0,
+                                                                              "Armor":  10
+                                                                          }
+                                                             },
+                                         "GameplayTagContainer":  {
+
+                                                                  },
+                                         "ManifestationObstacleIntent2D":  {
+                                                                               "shape":  "Box",
+                                                                               "halfWidthCm":  92,
+                                                                               "halfHeightCm":  20,
+                                                                               "sinkPhysicsCollider":  true,
+                                                                               "sinkNavigationObstacle":  true,
+                                                                               "navRadiusCm":  94
+                                                                           },
+                                         "DestroyWhenParentExecutionEnds":  {
+
+                                                                            }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_guided_laser",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "Guided Laser"
+                                                  },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  1,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  0,
+                                                                              "Armor":  0
+                                                                          }
+                                                             },
+                                         "GameplayTagContainer":  {
+
+                                                                  },
+                                         "ManifestationMotion2D":  {
+                                                                       "followParentPosition":  true,
+                                                                       "facingSource":  "ParentExecutionTarget",
+                                                                       "forwardOffsetCm":  450
+                                                                   },
+                                         "DestroyWhenParentExecutionEnds":  {
+
+                                                                            }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_enemy_dummy",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "EnemyDummy"
+                                                  },
+                                         "Team":  {
+                                                      "Id":  2
+                                                  },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  3.14159
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  220,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  0,
+                                                                              "Armor":  2
+                                                                          }
+                                                             },
+                                         "GameplayTagContainer":  {
+
+                                                                  }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_sandbox_enemy_brute",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "EnemyBrute"
+                                                  },
+                                         "Team":  {
+                                                      "Id":  2
+                                                  },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  3.14159
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  320,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  0,
+                                                                              "Armor":  10
+                                                                          }
+                                                             },
+                                         "GameplayTagContainer":  {
+
+                                                                  }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_stress_team_a_warrior",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "StressWarriorA"
+                                                  },
+                                         "Team":  {
+                                                      "Id":  1
+                                                  },
+                                         "PlayerOwner":  {
+                                                             "PlayerId":  1
+                                                         },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  260,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  330,
+                                                                              "Armor":  16
+                                                                          }
+                                                             },
+                                         "Collider2D":  {
+                                                            "shape":  {
+                                                                          "type":  "circle",
+                                                                          "radiusCm":  46
+                                                                      }
+                                                        },
+                                         "PhysicsMaterial2D":  {
+                                                                   "friction":  0.92,
+                                                                   "restitution":  0.0,
+                                                                   "baseDamping":  0.94
+                                                               },
+                                         "NavKinematics2D":  {
+                                                                 "maxAccelCmPerSec2":  1800,
+                                                                 "radiusCm":  46,
+                                                                 "neighborDistCm":  320,
+                                                                 "timeHorizonSec":  2.4,
+                                                                 "maxNeighbors":  20
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.ChampionStress.Warrior.Cleave"
+                                                                                   ]
+                                                                },
+                                         "GameplayTagContainer":  {
+
+                                                                  },
+                                         "OrderBuffer":  {
+
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
+
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
+
+                                                                    },
+                                         "BlackboardIntBuffer":  {
+
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_stress_team_a_fire_mage",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "StressFireMageA"
+                                                  },
+                                         "Team":  {
+                                                      "Id":  1
+                                                  },
+                                         "PlayerOwner":  {
+                                                             "PlayerId":  1
+                                                         },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  170,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  320,
+                                                                              "Armor":  4
+                                                                          }
+                                                             },
+                                         "Collider2D":  {
+                                                            "shape":  {
+                                                                          "type":  "circle",
+                                                                          "radiusCm":  38
+                                                                      }
+                                                        },
+                                         "PhysicsMaterial2D":  {
+                                                                   "friction":  0.92,
+                                                                   "restitution":  0.0,
+                                                                   "baseDamping":  0.94
+                                                               },
+                                         "NavKinematics2D":  {
+                                                                 "maxAccelCmPerSec2":  1700,
+                                                                 "radiusCm":  38,
+                                                                 "neighborDistCm":  280,
+                                                                 "timeHorizonSec":  2.4,
+                                                                 "maxNeighbors":  20
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.ChampionStress.FireMage.Fireball"
+                                                                                   ]
+                                                                },
+                                         "GameplayTagContainer":  {
+
+                                                                  },
+                                         "OrderBuffer":  {
+
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
+
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
+
+                                                                    },
+                                         "BlackboardIntBuffer":  {
+
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_stress_team_a_laser_mage",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "StressLaserMageA"
+                                                  },
+                                         "Team":  {
+                                                      "Id":  1
+                                                  },
+                                         "PlayerOwner":  {
+                                                             "PlayerId":  1
+                                                         },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  150,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  325,
+                                                                              "Armor":  3
+                                                                          }
+                                                             },
+                                         "Collider2D":  {
+                                                            "shape":  {
+                                                                          "type":  "circle",
+                                                                          "radiusCm":  36
+                                                                      }
+                                                        },
+                                         "PhysicsMaterial2D":  {
+                                                                   "friction":  0.92,
+                                                                   "restitution":  0.0,
+                                                                   "baseDamping":  0.94
+                                                               },
+                                         "NavKinematics2D":  {
+                                                                 "maxAccelCmPerSec2":  1700,
+                                                                 "radiusCm":  36,
+                                                                 "neighborDistCm":  268,
+                                                                 "timeHorizonSec":  2.4,
+                                                                 "maxNeighbors":  20
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.ChampionStress.LaserMage.Laser"
+                                                                                   ]
+                                                                },
+                                         "GameplayTagContainer":  {
+
+                                                                  },
+                                         "OrderBuffer":  {
+
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
+
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
+
+                                                                    },
+                                         "BlackboardIntBuffer":  {
+
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_stress_team_a_priest",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "StressPriestA"
+                                                  },
+                                         "Team":  {
+                                                      "Id":  1
+                                                  },
+                                         "PlayerOwner":  {
+                                                             "PlayerId":  1
+                                                         },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  0.0
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  180,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  315,
+                                                                              "Armor":  5
+                                                                          }
+                                                             },
+                                         "Collider2D":  {
+                                                            "shape":  {
+                                                                          "type":  "circle",
+                                                                          "radiusCm":  34
+                                                                      }
+                                                        },
+                                         "PhysicsMaterial2D":  {
+                                                                   "friction":  0.92,
+                                                                   "restitution":  0.0,
+                                                                   "baseDamping":  0.94
+                                                               },
+                                         "NavKinematics2D":  {
+                                                                 "maxAccelCmPerSec2":  1600,
+                                                                 "radiusCm":  34,
+                                                                 "neighborDistCm":  256,
+                                                                 "timeHorizonSec":  2.4,
+                                                                 "maxNeighbors":  20
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.ChampionStress.Priest.Heal"
+                                                                                   ]
+                                                                },
+                                         "GameplayTagContainer":  {
+
+                                                                  },
+                                         "OrderBuffer":  {
+
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
+
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
+
+                                                                    },
+                                         "BlackboardIntBuffer":  {
+
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_stress_team_b_warrior",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "StressWarriorB"
+                                                  },
+                                         "Team":  {
+                                                      "Id":  2
+                                                  },
+                                         "PlayerOwner":  {
+                                                             "PlayerId":  2
+                                                         },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  3.14159
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  260,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  330,
+                                                                              "Armor":  16
+                                                                          }
+                                                             },
+                                         "Collider2D":  {
+                                                            "shape":  {
+                                                                          "type":  "circle",
+                                                                          "radiusCm":  46
+                                                                      }
+                                                        },
+                                         "PhysicsMaterial2D":  {
+                                                                   "friction":  0.92,
+                                                                   "restitution":  0.0,
+                                                                   "baseDamping":  0.94
+                                                               },
+                                         "NavKinematics2D":  {
+                                                                 "maxAccelCmPerSec2":  1800,
+                                                                 "radiusCm":  46,
+                                                                 "neighborDistCm":  320,
+                                                                 "timeHorizonSec":  2.4,
+                                                                 "maxNeighbors":  20
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.ChampionStress.Warrior.Cleave"
+                                                                                   ]
+                                                                },
+                                         "GameplayTagContainer":  {
+
+                                                                  },
+                                         "OrderBuffer":  {
+
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
+
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
+
+                                                                    },
+                                         "BlackboardIntBuffer":  {
+
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_stress_team_b_fire_mage",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "StressFireMageB"
+                                                  },
+                                         "Team":  {
+                                                      "Id":  2
+                                                  },
+                                         "PlayerOwner":  {
+                                                             "PlayerId":  2
+                                                         },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  3.14159
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  170,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  320,
+                                                                              "Armor":  4
+                                                                          }
+                                                             },
+                                         "Collider2D":  {
+                                                            "shape":  {
+                                                                          "type":  "circle",
+                                                                          "radiusCm":  38
+                                                                      }
+                                                        },
+                                         "PhysicsMaterial2D":  {
+                                                                   "friction":  0.92,
+                                                                   "restitution":  0.0,
+                                                                   "baseDamping":  0.94
+                                                               },
+                                         "NavKinematics2D":  {
+                                                                 "maxAccelCmPerSec2":  1700,
+                                                                 "radiusCm":  38,
+                                                                 "neighborDistCm":  280,
+                                                                 "timeHorizonSec":  2.4,
+                                                                 "maxNeighbors":  20
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.ChampionStress.FireMage.Fireball"
+                                                                                   ]
+                                                                },
+                                         "GameplayTagContainer":  {
+
+                                                                  },
+                                         "OrderBuffer":  {
+
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
+
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
+
+                                                                    },
+                                         "BlackboardIntBuffer":  {
+
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_stress_team_b_laser_mage",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "StressLaserMageB"
+                                                  },
+                                         "Team":  {
+                                                      "Id":  2
+                                                  },
+                                         "PlayerOwner":  {
+                                                             "PlayerId":  2
+                                                         },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  3.14159
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  150,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  325,
+                                                                              "Armor":  3
+                                                                          }
+                                                             },
+                                         "Collider2D":  {
+                                                            "shape":  {
+                                                                          "type":  "circle",
+                                                                          "radiusCm":  36
+                                                                      }
+                                                        },
+                                         "PhysicsMaterial2D":  {
+                                                                   "friction":  0.92,
+                                                                   "restitution":  0.0,
+                                                                   "baseDamping":  0.94
+                                                               },
+                                         "NavKinematics2D":  {
+                                                                 "maxAccelCmPerSec2":  1700,
+                                                                 "radiusCm":  36,
+                                                                 "neighborDistCm":  268,
+                                                                 "timeHorizonSec":  2.4,
+                                                                 "maxNeighbors":  20
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.ChampionStress.LaserMage.Laser"
+                                                                                   ]
+                                                                },
+                                         "GameplayTagContainer":  {
+
+                                                                  },
+                                         "OrderBuffer":  {
+
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
+
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
+
+                                                                    },
+                                         "BlackboardIntBuffer":  {
+
+                                                                 }
+                                     }
+                  },
+                  {
+                      "id":  "champion_skill_stress_team_b_priest",
+                      "components":  {
+                                         "Name":  {
+                                                      "Value":  "StressPriestB"
+                                                  },
+                                         "Team":  {
+                                                      "Id":  2
+                                                  },
+                                         "PlayerOwner":  {
+                                                             "PlayerId":  2
+                                                         },
+                                         "SelectionSelectableTag":  {
+
+                                                                    },
+                                         "WorldPositionCm":  {
+                                                                 "Value":  {
+                                                                               "X":  0,
+                                                                               "Y":  0
+                                                                           }
+                                                             },
+                                         "FacingDirection":  {
+                                                                 "AngleRad":  3.14159
+                                                             },
+                                         "AttributeBuffer":  {
+                                                                 "base":  {
+                                                                              "Health":  180,
+                                                                              "Shield":  0,
+                                                                              "MoveSpeed":  315,
+                                                                              "Armor":  5
+                                                                          }
+                                                             },
+                                         "Collider2D":  {
+                                                            "shape":  {
+                                                                          "type":  "circle",
+                                                                          "radiusCm":  34
+                                                                      }
+                                                        },
+                                         "PhysicsMaterial2D":  {
+                                                                   "friction":  0.92,
+                                                                   "restitution":  0.0,
+                                                                   "baseDamping":  0.94
+                                                               },
+                                         "NavKinematics2D":  {
+                                                                 "maxAccelCmPerSec2":  1600,
+                                                                 "radiusCm":  34,
+                                                                 "neighborDistCm":  256,
+                                                                 "timeHorizonSec":  2.4,
+                                                                 "maxNeighbors":  20
+                                                             },
+                                         "AbilityStateBuffer":  {
+                                                                    "abilityIds":  [
+                                                                                       "Ability.ChampionStress.Priest.Heal"
+                                                                                   ]
+                                                                },
+                                         "GameplayTagContainer":  {
+
+                                                                  },
+                                         "OrderBuffer":  {
+
+                                                         },
+                                         "BlackboardSpatialBuffer":  {
+
+                                                                     },
+                                         "BlackboardEntityBuffer":  {
+
+                                                                    },
+                                         "BlackboardIntBuffer":  {
+
+                                                                 }
+                                     }
+                  }
+              ]
