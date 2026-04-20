@@ -496,6 +496,33 @@ public sealed class NativeSkiaOverlayTests
             "Subsequent uniform-pan frames should reuse the retained pictures with translation only.");
     }
 
+    [Test]
+    public void SkiaOverlayRenderer_DoesNotCrash_WhenBarSpriteCacheTurnsOverWithinSingleFrame()
+    {
+        var scene = new PresentationOverlayScene(4096);
+        scene.BeginBuild();
+        for (int i = 0; i < 2400; i++)
+        {
+            scene.TryAddBar(
+                PresentationOverlayLayer.UnderUi,
+                x: 8f + ((i % 40) * 6f),
+                y: 8f + ((i / 40) * 3f),
+                width: 20f,
+                height: 2f,
+                value: i / 2399f,
+                background: new Vector4(0.15f, 0.15f, 0.15f, 1f),
+                foreground: new Vector4(0.2f, 0.8f, 0.2f, 1f),
+                stableId: 5000 + i,
+                dirtySerial: 9000 + i);
+        }
+        scene.EndBuild();
+
+        using var renderer = new SkiaOverlayRenderer();
+        using var surface = SKSurface.Create(new SKImageInfo(512, 256));
+
+        Assert.DoesNotThrow(() => renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi));
+    }
+
     private static void SeedLegacyOverlay(ScreenHudBatchBuffer screenHud, ScreenOverlayBuffer overlayBuffer, string topText)
     {
         screenHud.TryAdd(new ScreenHudItem

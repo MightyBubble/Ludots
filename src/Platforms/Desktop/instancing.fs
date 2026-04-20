@@ -1,7 +1,6 @@
 #version 330
 
 in vec2 fragTexCoord;
-in vec4 fragColor;
 
 out vec4 finalColor;
 
@@ -11,5 +10,6 @@ uniform vec4 tint;
 
 void main()
 {
-    finalColor = colDiffuse * fragColor * tint;
+    vec4 albedo = texture(texture0, fragTexCoord);
+    finalColor = albedo * colDiffuse * tint;
 }

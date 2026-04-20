@@ -1,0 +1,18 @@
+[
+  {
+    "id": "blacksmith_building",
+    "onSpawnEffect": "Effect.Showcase.Blacksmith.RandomDrift",
+    "components": {
+      "Name": { "Value": "Blacksmith" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]

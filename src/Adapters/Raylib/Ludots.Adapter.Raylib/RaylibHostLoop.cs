@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
@@ -36,6 +37,7 @@ namespace Ludots.Adapter.Raylib
     internal static class RaylibHostLoop
     {
         private const uint FlagWindowResizable = 4;
+        private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
         private static bool _uiPointerCaptured;
         private static bool _emptyBufferWarned;
 
@@ -119,7 +121,15 @@ namespace Ludots.Adapter.Raylib
                 engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
                 engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
-                var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController, presentationTiming);
+                var performerInstances = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer);
+                var cullingSystem = new CameraCullingSystem(
+                    engine.World,
+                    engine.GameSession.Camera,
+                    engine.SpatialQueries,
+                    viewController,
+                    loadedChunks: null,
+                    performers: performerInstances,
+                    timingDiagnostics: presentationTiming);
                 engine.RegisterPresentationSystem(cullingSystem);
                 engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
@@ -147,16 +157,26 @@ namespace Ludots.Adapter.Raylib
 
                 ValidateRequiredContextBeforeLoop(engine);
 
+                var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
+                PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
+                using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
+                RaylibBenchmarkRenderService? benchmarkRenderer = null;
+                if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry benchmarkMeshes))
+                {
+                    ScreenHudBatchBuffer benchmarkHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)
+                        ?? throw new InvalidOperationException("Raylib benchmark rendering requires PresentationScreenHudBuffer.");
+                    ScreenOverlayBuffer benchmarkOverlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+                        ?? throw new InvalidOperationException("Raylib benchmark rendering requires ScreenOverlayBuffer.");
+                    benchmarkRenderer = new RaylibBenchmarkRenderService(primitiveRenderer, benchmarkMeshes, benchmarkHud, benchmarkOverlay);
+                    engine.SetService(RaylibBenchmarkRendererKey, (IRaylibBenchmarkRenderer)benchmarkRenderer);
+                }
+
                 engine.Start();
                 if (string.IsNullOrWhiteSpace(config.StartupMapId))
                 {
                     throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
                 }
                 engine.LoadMap(config.StartupMapId);
-
-                var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
-                PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
-                using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
@@ -227,6 +247,7 @@ namespace Ludots.Adapter.Raylib
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
                         cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
                         hudProjection?.Update(dt);
+                        benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);
                         if (overlaySceneBuilder != null && overlayScene != null)
                         {
                             long overlayBuildStart = Stopwatch.GetTimestamp();
@@ -278,7 +299,14 @@ namespace Ludots.Adapter.Raylib
                             presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
                         }
 
-                        if (drawPrimitives &&
+                        bool benchmarkDrew = false;
+                        if (benchmarkRenderer != null)
+                        {
+                            benchmarkDrew = benchmarkRenderer.Draw(activeCamera);
+                        }
+
+                        if (!benchmarkDrew &&
+                            drawPrimitives &&
                             engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
                             engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
                         {

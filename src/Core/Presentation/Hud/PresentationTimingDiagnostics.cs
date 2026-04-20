@@ -19,6 +19,13 @@ namespace Ludots.Core.Presentation.Hud
         public float CameraCullingMs { get; private set; }
         public float CameraPresenterMs { get; private set; }
         public float WorldHudProjectionMs { get; private set; }
+        public float SimulationMs { get; private set; }
+        public float PresentationMs { get; private set; }
+        public float TotalTickMs { get; private set; }
+        public float PerformerBehaviorMs { get; private set; }
+        public float PerformerAnimatorMs { get; private set; }
+        public float PerformerEmitMs { get; private set; }
+        public float PresentationRequestFlushMs { get; private set; }
         public float TerrainRenderMs { get; private set; }
         public float TerrainChunkBuildMs { get; private set; }
         public float PrimitiveRenderMs { get; private set; }
@@ -59,6 +66,13 @@ namespace Ludots.Core.Presentation.Hud
 
         public void ObserveCameraPresenter(double sampleMs) => CameraPresenterMs = Smooth(CameraPresenterMs, (float)sampleMs);
         public void ObserveWorldHudProjection(double sampleMs) => WorldHudProjectionMs = Smooth(WorldHudProjectionMs, (float)sampleMs);
+        public void ObserveSimulation(double sampleMs) => SimulationMs = Smooth(SimulationMs, (float)sampleMs);
+        public void ObservePresentation(double sampleMs) => PresentationMs = Smooth(PresentationMs, (float)sampleMs);
+        public void ObserveTotalTick(double sampleMs) => TotalTickMs = Smooth(TotalTickMs, (float)sampleMs);
+        public void ObservePerformerBehavior(double sampleMs) => PerformerBehaviorMs = Smooth(PerformerBehaviorMs, (float)sampleMs);
+        public void ObservePerformerAnimator(double sampleMs) => PerformerAnimatorMs = Smooth(PerformerAnimatorMs, (float)sampleMs);
+        public void ObservePerformerEmit(double sampleMs) => PerformerEmitMs = Smooth(PerformerEmitMs, (float)sampleMs);
+        public void ObservePresentationRequestFlush(double sampleMs) => PresentationRequestFlushMs = Smooth(PresentationRequestFlushMs, (float)sampleMs);
 
         public void ObserveTerrain(double renderMs, double chunkBuildMs, int drawnChunks, int builtChunks)
         {

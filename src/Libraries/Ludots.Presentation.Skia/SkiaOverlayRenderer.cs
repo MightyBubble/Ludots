@@ -524,7 +524,8 @@ namespace Ludots.Presentation.Skia
 
             if (_textLayoutCache.Count >= MaxTextLayoutCacheEntries)
             {
-                ClearTextLayoutCache();
+                // Avoid disposing layouts that may still be referenced by the current frame's batching work.
+                _textLayoutCache.Clear();
             }
 
             var runs = new List<CachedTextRun>(8);
@@ -801,7 +802,8 @@ namespace Ludots.Presentation.Skia
 
             if (_textSpriteCache.Count >= MaxTextSpriteCacheEntries)
             {
-                ClearTextSpriteCache();
+                // Avoid disposing sprites that may still be referenced by the current frame's batching work.
+                _textSpriteCache.Clear();
             }
 
             CachedTextLayout layout = GetTextLayout(text, fontSize);
@@ -846,7 +848,8 @@ namespace Ludots.Presentation.Skia
 
             if (_barSpriteCache.Count >= MaxBarSpriteCacheEntries)
             {
-                ClearBarSpriteCache();
+                // Avoid disposing bar sprites that may still be referenced by the current frame's batching work.
+                _barSpriteCache.Clear();
             }
 
             int widthPx = Math.Max(1, (int)MathF.Ceiling(item.Width));

@@ -1,0 +1,36 @@
+using System.Threading.Tasks;
+using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
+using PerformerBlacksmithShowcaseMod.Runtime;
+using PerformerBlacksmithShowcaseMod.Systems;
+
+namespace PerformerBlacksmithShowcaseMod
+{
+    public sealed class PerformerBlacksmithShowcaseModEntry : IMod
+    {
+        public void OnLoad(IModContext context)
+        {
+            context.Log("[PerformerBlacksmithShowcaseMod] Loaded");
+            var runtime = new PerformerBlacksmithShowcaseRuntime();
+
+            context.OnEvent(GameEvents.GameStart, ctx =>
+            {
+                var engine = ctx.GetEngine();
+                if (engine != null)
+                {
+                    engine.RegisterPresentationSystem(
+                        new PerformerBlacksmithShowcasePresentationSystem(engine, runtime));
+                }
+
+                return Task.CompletedTask;
+            });
+            context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
+            context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
+            context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);
+        }
+
+        public void OnUnload()
+        {
+        }
+    }
+}

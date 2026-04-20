@@ -1,0 +1,18 @@
+{
+  "startupMapId": "performer_blacksmith_showcase",
+  "presentation": {
+    "performerInstanceCapacity": 524288,
+    "presentationEventStreamCapacity": 1048576,
+    "performerCommandCapacity": 1048576,
+    "primitiveDrawBufferCapacity": 262144,
+    "visualSnapshotBufferCapacity": 262144,
+    "visualProxyBufferCapacity": 262144,
+    "skinnedVisualBatchCapacity": 65536,
+    "presentationRequestCapacity": 1048576,
+    "groundOverlayCapacity": 65536,
+    "roadSplineCapacity": 65536,
+    "worldHudCapacity": 131072,
+    "screenHudCapacity": 131072,
+    "runtimeEntitySpawnQueueCapacity": 131072
+  }
+}

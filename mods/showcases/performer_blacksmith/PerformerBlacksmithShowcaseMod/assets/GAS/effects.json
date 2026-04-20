@@ -1,0 +1,62 @@
+[
+  {
+    "id": "Effect.Showcase.Blacksmith.RandomDrift",
+    "tags": ["Effect.Showcase.Blacksmith.RandomDrift"],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "periodTicks": 15
+    },
+    "phaseGraphs": {
+      "OnPeriod": {
+        "post": "Graph.Showcase.Blacksmith.RandomDrift"
+      }
+    }
+  },
+  {
+    "id": "Effect.Showcase.Blacksmith.SetDurabilityIntact",
+    "tags": ["Effect.Showcase.Blacksmith.Control"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Showcase.Blacksmith.SetDurabilityIntact"
+      }
+    }
+  },
+  {
+    "id": "Effect.Showcase.Blacksmith.SetDurabilityDamaged",
+    "tags": ["Effect.Showcase.Blacksmith.Control"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Showcase.Blacksmith.SetDurabilityDamaged"
+      }
+    }
+  },
+  {
+    "id": "Effect.Showcase.Blacksmith.SetDurabilityRuined",
+    "tags": ["Effect.Showcase.Blacksmith.Control"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Showcase.Blacksmith.SetDurabilityRuined"
+      }
+    }
+  }
+]

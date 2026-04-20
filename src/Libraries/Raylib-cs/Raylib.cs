@@ -273,8 +273,6 @@ namespace Raylib_cs
         public float* animNormals;
         public byte* boneIds;
         public float* boneWeights;
-        public RaylibMatrix* boneMatrices;
-        public int boneCount;
 
         // OpenGL identifiers
         public uint vaoId;
@@ -513,6 +511,21 @@ namespace Raylib_cs
             SHADER_LOC_MAP_IRRADIANCE,
             SHADER_LOC_MAP_PREFILTER,
             SHADER_LOC_MAP_BRDF
+        }
+
+        public enum MaterialMapIndex
+        {
+            MATERIAL_MAP_ALBEDO = 0,
+            MATERIAL_MAP_METALNESS,
+            MATERIAL_MAP_NORMAL,
+            MATERIAL_MAP_ROUGHNESS,
+            MATERIAL_MAP_OCCLUSION,
+            MATERIAL_MAP_EMISSION,
+            MATERIAL_MAP_HEIGHT,
+            MATERIAL_MAP_CUBEMAP,
+            MATERIAL_MAP_IRRADIANCE,
+            MATERIAL_MAP_PREFILTER,
+            MATERIAL_MAP_BRDF
         }
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]

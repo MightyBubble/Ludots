@@ -64,6 +64,14 @@
         "value": "mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod",
         "projectPath": "ChunkStreamingShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "performer_blacksmith_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod",
+        "projectPath": "PerformerBlacksmithShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {

@@ -63,6 +63,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "performer_blacksmith_showcase_raylib",
+      "name": "Performer Blacksmith Showcase Raylib",
+      "selectors": [
+        "$performer_blacksmith_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
