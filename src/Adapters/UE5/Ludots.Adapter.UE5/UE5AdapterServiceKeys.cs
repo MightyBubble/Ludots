@@ -15,6 +15,6 @@ namespace Ludots.Adapter.UE5
         public static readonly ServiceKey<UE5SharedCameraState> SharedCameraState = new("UE5.SharedCameraState");
         public static readonly ServiceKey<UE5HostCameraDiagnosticsSnapshot> HostCameraDiagnosticsSnapshot = new("UE5.HostCameraDiagnosticsSnapshot");
         public static readonly ServiceKey<UE5HostCameraDiagnosticsCommandState> HostCameraDiagnosticsCommands = new("UE5.HostCameraDiagnosticsCommands");
-        public static readonly ServiceKey<IHostApplicationActions> HostApplicationActions = new("UE5.HostApplicationActions");
+        public static readonly ServiceKey<IHostActions> HostActions = new("UE5.HostActions");
     }
 }
