@@ -7,15 +7,23 @@ namespace Ludots.Core.Presentation.Terrain
     public sealed class VisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapSampleAccessor
     {
         private readonly VisualHeightmapAsset _asset;
+        private readonly int _defaultLayerIndex;
 
-        public VisualHeightmapRuntime(VisualHeightmapAsset asset)
+        public VisualHeightmapRuntime(VisualHeightmapAsset asset, int defaultLayerIndex = -1)
         {
             _asset = asset ?? throw new ArgumentNullException(nameof(asset));
+            _defaultLayerIndex = defaultLayerIndex >= 0 ? defaultLayerIndex : asset.DefaultLayerIndex;
+            if ((uint)_defaultLayerIndex >= (uint)asset.Layers.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(defaultLayerIndex), "Visual heightmap default layer index is outside the asset layer range.");
+            }
         }
 
         public VisualHeightmapAsset Asset => _asset;
 
-        public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
+        public int DefaultLayerIndex => _defaultLayerIndex;
+
+        public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
         {
             heightCm = default;
             WorldAabbCm bounds = _asset.Bounds;
@@ -32,7 +40,7 @@ namespace Ludots.Core.Presentation.Terrain
                        out heightCm);
         }
 
-        public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)
+        public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = -1)
         {
             if (worldXCm.Length != worldYCm.Length || worldXCm.Length != outHeightCm.Length)
             {
@@ -54,7 +62,7 @@ namespace Ludots.Core.Presentation.Terrain
             return true;
         }
 
-        public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
+        public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = -1)
         {
             hit = default;
             WorldAabbCm bounds = _asset.Bounds;
@@ -87,7 +95,7 @@ namespace Ludots.Core.Presentation.Terrain
             Span<float> outNormalZ,
             Span<int> outLayerIndex,
             Span<byte> outHitMask,
-            int layerIndex = 0)
+            int layerIndex = -1)
         {
             int count = originXMeters.Length;
             if (originYMeters.Length != count ||
@@ -171,7 +179,7 @@ namespace Ludots.Core.Presentation.Terrain
 
         private bool TryResolveLayerIndex(int layerIndex, out int resolvedLayer)
         {
-            resolvedLayer = layerIndex >= 0 ? layerIndex : _asset.DefaultLayerIndex;
+            resolvedLayer = layerIndex >= 0 ? layerIndex : _defaultLayerIndex;
             return (uint)resolvedLayer < (uint)_asset.Layers.Length;
         }
 

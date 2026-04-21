@@ -194,10 +194,10 @@ namespace Physics2DPlaygroundMod.Systems
             commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.PlayOneShotPerformer,
-                IdA = ResolveCueMarkerPrefabId(),
+                PrefabId = ResolveCueMarkerPrefabId(),
                 Position = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0.15f),
-                Param0 = new Vector4(0.2f, 0.9f, 1f, 1f),
-                Param1 = 0.3f
+                Color = new Vector4(0.2f, 0.9f, 1f, 1f),
+                LifetimeSeconds = 0.3f
             });
         }
 

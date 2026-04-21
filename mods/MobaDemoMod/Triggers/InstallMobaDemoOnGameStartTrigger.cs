@@ -97,15 +97,15 @@ namespace MobaDemoMod.Triggers
                     capturedCmdBuffer.TryAdd(new PresentationCommand
                     {
                         Kind = PresentationCommandKind.DestroyPerformerScope,
-                        IdA = mobaConfig.Presentation.SelectionScopeId
+                        ScopeId = mobaConfig.Presentation.SelectionScopeId
                     });
                     if (engine.World.IsAlive(entity))
                     {
                         capturedCmdBuffer.TryAdd(new PresentationCommand
                         {
                             Kind = PresentationCommandKind.CreatePerformer,
-                            IdA = selectionIndicatorDefId,
-                            IdB = mobaConfig.Presentation.SelectionScopeId,
+                            PerformerDefinitionId = selectionIndicatorDefId,
+                            ScopeId = mobaConfig.Presentation.SelectionScopeId,
                             Source = entity
                         });
                     }

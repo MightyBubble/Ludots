@@ -647,11 +647,11 @@ namespace Ludots.Tests.Presentation
             Assert.That(firstPass.Length, Is.EqualTo(2));
             Assert.That(firstPass[0].Kind, Is.EqualTo(PresentationCommandKind.CreatePerformer));
             Assert.That(firstPass[0].AnchorKind, Is.EqualTo(PresentationAnchorKind.Entity));
-            Assert.That(firstPass[0].IdA, Is.EqualTo(11));
-            Assert.That(firstPass[0].IdB, Is.EqualTo(99));
+            Assert.That(firstPass[0].PerformerDefinitionId, Is.EqualTo(11));
+            Assert.That(firstPass[0].ScopeId, Is.EqualTo(99));
             Assert.That(firstPass[0].Source, Is.EqualTo(entity));
-            Assert.That(firstPass[1].IdA, Is.EqualTo(22));
-            Assert.That(firstPass[1].IdB, Is.EqualTo(99));
+            Assert.That(firstPass[1].PerformerDefinitionId, Is.EqualTo(22));
+            Assert.That(firstPass[1].ScopeId, Is.EqualTo(99));
             Assert.That(entity.Get<PresentationStartupState>().Initialized, Is.True);
 
             commands.Clear();

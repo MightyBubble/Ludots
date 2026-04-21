@@ -71,17 +71,24 @@ namespace Ludots.Core.Presentation.Systems
                         break;
 
                     case PresentationCommandKind.DestroyPerformer:
-                        _instances.Release(cmd.IdA);
+                        _instances.Release(cmd.PerformerHandle);
                         break;
 
                     case PresentationCommandKind.DestroyPerformerScope:
-                        _instances.ReleaseScope(cmd.IdA);
+                        _instances.ReleaseScope(cmd.ScopeId);
                         break;
 
                     case PresentationCommandKind.SetPerformerParam:
-                        if (_instances.IsActive(cmd.IdA))
+                        if (_instances.IsActive(cmd.PerformerHandle))
                         {
-                            _instances.SetParamOverride(cmd.IdA, cmd.IdB, cmd.Param1);
+                            _instances.SetParamOverride(cmd.PerformerHandle, cmd.LegacyParamKey, cmd.LegacyParamValue);
+                        }
+                        break;
+
+                    case PresentationCommandKind.SetPerformerField:
+                        if (_instances.IsActive(cmd.PerformerHandle))
+                        {
+                            _instances.SetFieldOverride(cmd.PerformerHandle, cmd.FieldName, in cmd.FieldValue);
                         }
                         break;
                 }
@@ -94,10 +101,10 @@ namespace Ludots.Core.Presentation.Systems
 
         private void HandlePlayOneShot(in PresentationCommand cmd)
         {
-            if (!_prefabs.TryGet(cmd.IdA, out var prefab)) return;
+            if (!_prefabs.TryGet(cmd.PrefabId, out var prefab)) return;
 
-            var color = cmd.Param0.W == 0 ? new Vector4(0f, 1f, 1f, 1f) : cmd.Param0;
-            float lifetime = cmd.Param1 > 0f ? cmd.Param1 : 0.35f;
+            var color = cmd.Color.W == 0 ? new Vector4(0f, 1f, 1f, 1f) : cmd.Color;
+            float lifetime = cmd.LifetimeSeconds > 0f ? cmd.LifetimeSeconds : 0.35f;
             var scale = new Vector3(prefab.BaseScale);
 
             bool follow = World.IsAlive(cmd.Target) && World.Has<VisualTransform>(cmd.Target);
@@ -113,10 +120,9 @@ namespace Ludots.Core.Presentation.Systems
 
         private void HandleCreatePerformer(in PresentationCommand cmd)
         {
-            // IdA = PerformerDefinitionId, IdB = ScopeId, Source = Owner
-            if (!_definitions.TryGet(cmd.IdA, out var definition))
+            if (!_definitions.TryGet(cmd.PerformerDefinitionId, out var definition))
             {
-                throw new InvalidOperationException($"Performer definition id={cmd.IdA} is not registered.");
+                throw new InvalidOperationException($"Performer definition id={cmd.PerformerDefinitionId} is not registered.");
             }
 
             if (ShouldSkipDuplicatePersistentScopedCreate(in cmd, definition))
@@ -125,34 +131,34 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             if (!_instances.TryAllocate(
-                    cmd.IdA,
+                    cmd.PerformerDefinitionId,
                     cmd.Source,
-                    cmd.IdB,
+                    cmd.ScopeId,
                     cmd.AnchorKind,
                     cmd.Position,
                     _stableIds.Allocate(),
                     out _))
             {
-                string performerKey = _definitions.GetName(cmd.IdA);
+                string performerKey = _definitions.GetName(cmd.PerformerDefinitionId);
                 string ownerText = cmd.Source == Entity.Null
                     ? "Entity.Null"
                     : $"Entity(Id={cmd.Source.Id},World={cmd.Source.WorldId},Ver={cmd.Source.Version})";
                 throw new InvalidOperationException(
-                    $"PerformerInstanceBuffer is full while creating performer '{performerKey}' (defId={cmd.IdA}, scopeId={cmd.IdB}, owner={ownerText}, active={_instances.ActiveCount}, capacity={_instances.Capacity}).");
+                    $"PerformerInstanceBuffer is full while creating performer '{performerKey}' (defId={cmd.PerformerDefinitionId}, scopeId={cmd.ScopeId}, owner={ownerText}, active={_instances.ActiveCount}, capacity={_instances.Capacity}).");
             }
         }
 
         private bool ShouldSkipDuplicatePersistentScopedCreate(in PresentationCommand cmd, PerformerDefinition definition)
         {
-            if (definition.DefaultLifetime > 0f || cmd.IdB <= 0)
+            if (definition.DefaultLifetime > 0f || cmd.ScopeId <= 0)
             {
                 return false;
             }
 
             return _instances.HasActiveScopedInstance(
-                cmd.IdA,
+                cmd.PerformerDefinitionId,
                 cmd.Source,
-                cmd.IdB,
+                cmd.ScopeId,
                 cmd.AnchorKind,
                 cmd.Position);
         }

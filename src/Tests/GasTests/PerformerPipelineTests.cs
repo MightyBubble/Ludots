@@ -128,6 +128,24 @@ namespace Ludots.Tests.Presentation
             Assert.That(_buf.TryGetParamOverride(handle, 99, out _), Is.False);
             world.Dispose();
         }
+
+        [Test]
+        public void ReusedSlot_DoesNotKeepStaleHandleAlive()
+        {
+            var world = World.Create();
+            var first = world.Create();
+            var second = world.Create();
+
+            Assert.That(_buf.TryAllocate(1, first, 0, out int staleHandle), Is.True);
+            _buf.Release(staleHandle);
+
+            Assert.That(_buf.TryAllocate(2, second, 0, out int reusedHandle), Is.True);
+            Assert.That(reusedHandle, Is.Not.EqualTo(staleHandle));
+            Assert.That(_buf.IsActive(staleHandle), Is.False);
+            Assert.That(_buf.IsActive(reusedHandle), Is.True);
+
+            world.Dispose();
+        }
     }
 
     [TestFixture]
@@ -196,7 +214,7 @@ namespace Ludots.Tests.Presentation
             var cmds = _commands.GetSpan();
             Assert.That(cmds.Length, Is.EqualTo(1));
             Assert.That(cmds[0].Kind, Is.EqualTo(PresentationCommandKind.CreatePerformer));
-            Assert.That(cmds[0].IdA, Is.EqualTo(1)); // PerformerDefinitionId
+            Assert.That(cmds[0].PerformerDefinitionId, Is.EqualTo(1));
         }
 
         [Test]
@@ -289,8 +307,8 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.CreatePerformer,
-                IdA = _definitions.GetId("test.runtime.basic"),
-                IdB = 5,   // scopeId
+                PerformerDefinitionId = _definitions.GetId("test.runtime.basic"),
+                ScopeId = 5,
                 Source = owner,
             });
 
@@ -311,8 +329,8 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.CreatePerformer,
-                IdA = _definitions.GetId("test.runtime.scope"),
-                IdB = 7,
+                PerformerDefinitionId = _definitions.GetId("test.runtime.scope"),
+                ScopeId = 7,
                 Source = owner,
             });
             _system.Update(0.016f);
@@ -321,7 +339,7 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.DestroyPerformerScope,
-                IdA = 7,
+                ScopeId = 7,
             });
             _system.Update(0.016f);
 
@@ -345,8 +363,8 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.CreatePerformer,
-                IdA = defId,
-                IdB = 2,
+                PerformerDefinitionId = defId,
+                ScopeId = 2,
                 Source = secondOwner,
             });
 
@@ -370,15 +388,15 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.CreatePerformer,
-                IdA = defId,
-                IdB = 77,
+                PerformerDefinitionId = defId,
+                ScopeId = 77,
                 Source = owner,
             });
             _commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.CreatePerformer,
-                IdA = defId,
-                IdB = 77,
+                PerformerDefinitionId = defId,
+                ScopeId = 77,
                 Source = owner,
             });
 
@@ -546,6 +564,158 @@ namespace Ludots.Tests.Presentation
             Assert.That(request.Payload[1].Name, Is.EqualTo("Intensity"));
             Assert.That(request.Payload[1].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Float));
             Assert.That(request.Payload[1].Value.FloatValue, Is.EqualTo(0.65f).Within(0.001f));
+        }
+
+        [Test]
+        public void InstanceScoped_TypedBindingWithDefaultParamKey_DoesNotOverrideScale()
+        {
+            var entity = _world.Create(
+                new VisualTransform { Position = Vector3.Zero },
+                new PresentationStableId { Value = 56 },
+                new AttributeBuffer());
+            ref var attributes = ref _world.Get<AttributeBuffer>(entity);
+            attributes.SetBase(7, 1f);
+            attributes.SetCurrent(7, 0.65f);
+
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Decal,
+                VisualAssetKey = "decal.scorch",
+                MaterialKey = "mat.scorch",
+                DefaultScale = 1.5f,
+                Bindings = new[]
+                {
+                    new PerformerParamBinding
+                    {
+                        FieldName = "Intensity",
+                        ValueKind = PresentationTypedValueKind.Float,
+                        Value = ValueRef.FromAttribute(7),
+                    }
+                }
+            };
+            int defId = _defs.Register("typed.decal.default_param_key", def);
+            _instances.TryAllocate(defId, entity, 0, out _);
+
+            _system.Update(0.016f);
+
+            var request = _visualRequests.GetSpan()[0];
+            Assert.That(request.Scale, Is.EqualTo(new Vector3(1.5f, 1.5f, 1.5f)));
+            Assert.That(request.Payload[0].Name, Is.EqualTo("Intensity"));
+            Assert.That(request.Payload[0].Value.FloatValue, Is.EqualTo(0.65f).Within(0.001f));
+        }
+
+        [Test]
+        public void InstanceScoped_TypedColorBinding_UsesEntityColorResolver()
+        {
+            _system.Dispose();
+            _system = new PerformerEmitSystem(
+                _world,
+                _instances,
+                _defs,
+                _overlays,
+                _primitives,
+                _hud,
+                new GraphProgramRegistry(),
+                new GasGraphRuntimeApi(_world, null, null, null),
+                _globals,
+                entityColorResolver: (_, _) => new Vector4(0.2f, 0.3f, 0.4f, 0.5f),
+                roadSplines: _roadSplines,
+                visualRequests: _visualRequests);
+
+            var entity = _world.Create(
+                new VisualTransform { Position = Vector3.Zero },
+                new PresentationStableId { Value = 57 });
+
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Decal,
+                VisualAssetKey = "decal.tint",
+                MaterialKey = "mat.tint",
+                Bindings = new[]
+                {
+                    new PerformerParamBinding
+                    {
+                        FieldName = "Tint",
+                        ValueKind = PresentationTypedValueKind.Color,
+                        Value = ValueRef.FromEntityColor(0),
+                    }
+                }
+            };
+            int defId = _defs.Register("typed.decal.color_binding", def);
+            _instances.TryAllocate(defId, entity, 0, out _);
+
+            _system.Update(0.016f);
+
+            var request = _visualRequests.GetSpan()[0];
+            Assert.That(request.Payload[0].Name, Is.EqualTo("Tint"));
+            Assert.That(request.Payload[0].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Color));
+            Assert.That(request.Payload[0].Value.VectorValue, Is.EqualTo(new Vector4(0.2f, 0.3f, 0.4f, 0.5f)));
+        }
+
+        [Test]
+        public void TypedBinding_RejectsUnsupportedDynamicAssetRef()
+        {
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Decal,
+                VisualAssetKey = "decal.asset",
+                MaterialKey = "mat.asset",
+                Bindings = new[]
+                {
+                    new PerformerParamBinding
+                    {
+                        FieldName = "Texture",
+                        ValueKind = PresentationTypedValueKind.AssetRef,
+                        Value = ValueRef.FromConstant(1f),
+                    }
+                }
+            };
+
+            Assert.That(
+                () => _defs.Register("typed.decal.invalid_asset_binding", def),
+                Throws.InvalidOperationException.With.Message.Contains("cannot be resolved"));
+        }
+
+        [Test]
+        public void TypedFieldCommandOverride_ReplacesStaticAndBindingPayload()
+        {
+            var entity = _world.Create(
+                new VisualTransform { Position = Vector3.Zero },
+                new PresentationStableId { Value = 58 },
+                new AttributeBuffer());
+            ref var attributes = ref _world.Get<AttributeBuffer>(entity);
+            attributes.SetBase(7, 1f);
+            attributes.SetCurrent(7, 0.4f);
+
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Decal,
+                VisualAssetKey = "decal.override",
+                MaterialKey = "mat.override",
+                DefaultPayload = new[]
+                {
+                    new PresentationPayloadField("Intensity", PresentationTypedValue.FromFloat(0.2f)),
+                },
+                Bindings = new[]
+                {
+                    new PerformerParamBinding
+                    {
+                        FieldName = "Intensity",
+                        ValueKind = PresentationTypedValueKind.Float,
+                        Value = ValueRef.FromAttribute(7),
+                    }
+                }
+            };
+            int defId = _defs.Register("typed.decal.field_override", def);
+            Assert.That(_instances.TryAllocate(defId, entity, 0, out int handle), Is.True);
+            _instances.SetFieldOverride(handle, "Intensity", PresentationTypedValue.FromFloat(0.9f));
+
+            _system.Update(0.016f);
+
+            var request = _visualRequests.GetSpan()[0];
+            Assert.That(request.Payload, Has.Length.EqualTo(1));
+            Assert.That(request.Payload[0].Name, Is.EqualTo("Intensity"));
+            Assert.That(request.Payload[0].Value.FloatValue, Is.EqualTo(0.9f).Within(0.001f));
         }
 
         [Test]

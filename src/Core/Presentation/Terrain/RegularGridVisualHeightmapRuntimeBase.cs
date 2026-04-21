@@ -20,7 +20,7 @@ namespace Ludots.Core.Presentation.Terrain
 
         protected abstract bool TryReadSampleCm(int layerSampleOffset, int globalSampleX, int globalSampleY, out float heightCm);
 
-        public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
+        public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
         {
             heightCm = default;
             if (!TryResolveLayer(layerIndex, out VisualHeightmapLayerDefinition layer) ||
@@ -43,7 +43,7 @@ namespace Ludots.Core.Presentation.Terrain
             return float.IsFinite(heightCm);
         }
 
-        public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)
+        public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = -1)
         {
             if (worldXCm.Length != worldYCm.Length || worldXCm.Length != outHeightCm.Length)
             {
@@ -65,7 +65,7 @@ namespace Ludots.Core.Presentation.Terrain
             return true;
         }
 
-        public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
+        public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = -1)
         {
             hit = default;
             if (!TryResolveLayerIndex(layerIndex, out int resolvedLayer))
@@ -102,7 +102,7 @@ namespace Ludots.Core.Presentation.Terrain
             Span<float> outNormalZ,
             Span<int> outLayerIndex,
             Span<byte> outHitMask,
-            int layerIndex = 0)
+            int layerIndex = -1)
         {
             int count = originXMeters.Length;
             if (originYMeters.Length != count ||

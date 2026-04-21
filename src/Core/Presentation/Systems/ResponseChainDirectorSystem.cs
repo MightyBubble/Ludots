@@ -69,11 +69,11 @@ namespace Ludots.Core.Presentation.Systems
                 {
                     LogicTickStamp = 0,
                     Kind = PresentationCommandKind.PlayOneShotPerformer,
-                    IdA = _cueMarkerPrefabId,
+                    PrefabId = _cueMarkerPrefabId,
                     Source = evt.Source,
                     Target = evt.Target,
                     Position = pos,
-                    Param0 = color
+                    Color = color
                 });
             }
 

@@ -352,6 +352,37 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void VisualHeightmapRuntime_UsesInstalledDefaultLayerOverride()
+        {
+            var runtime = new VisualHeightmapRuntime(
+                new VisualHeightmapAsset(
+                    new WorldAabbCm(0, 0, 100, 100),
+                    sampleColumns: 2,
+                    sampleRows: 2,
+                    new short[]
+                    {
+                        10, 10,
+                        10, 10,
+                        25, 25,
+                        25, 25,
+                    },
+                    new[]
+                    {
+                        new VisualHeightmapLayerDefinition(0, "base", sampleOffset: 0, sampleCount: 4),
+                        new VisualHeightmapLayerDefinition(1, "visual", sampleOffset: 4, sampleCount: 4),
+                    },
+                    VisualHeightmapStorageLayout.RowMajorInt16Centimeters,
+                    defaultLayerIndex: 0),
+                defaultLayerIndex: 1);
+
+            Assert.That(runtime.DefaultLayerIndex, Is.EqualTo(1));
+            Assert.That(runtime.TrySampleHeightCm(50f, 50f, out float defaultHeight), Is.True);
+            Assert.That(defaultHeight, Is.EqualTo(25f).Within(0.001f));
+            Assert.That(runtime.TrySampleHeightCm(50f, 50f, out float baseHeight, layerIndex: 0), Is.True);
+            Assert.That(baseHeight, Is.EqualTo(10f).Within(0.001f));
+        }
+
+        [Test]
         public void VisualHeightmapBinary_RoundTripsScaledUInt16ImportMetadata()
         {
             var asset = new VisualHeightmapAsset(

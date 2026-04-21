@@ -10,20 +10,20 @@ namespace Ludots.Core.Presentation.Terrain
     /// </summary>
     public sealed class FlatVisualHeightmap : IVisualHeightmap
     {
-        public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
+        public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
         {
             heightCm = 0f;
-            return layerIndex == 0;
+            return ResolveLayerIndex(layerIndex) == 0;
         }
 
-        public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)
+        public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = -1)
         {
             if (worldXCm.Length != worldYCm.Length || worldXCm.Length != outHeightCm.Length)
             {
                 throw new ArgumentException("FlatVisualHeightmap batch spans must have identical lengths.");
             }
 
-            if (layerIndex != 0)
+            if (ResolveLayerIndex(layerIndex) != 0)
             {
                 return false;
             }
@@ -32,10 +32,10 @@ namespace Ludots.Core.Presentation.Terrain
             return true;
         }
 
-        public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
+        public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = -1)
         {
             hit = default;
-            if (layerIndex != 0)
+            if (ResolveLayerIndex(layerIndex) != 0)
             {
                 return false;
             }
@@ -90,10 +90,10 @@ namespace Ludots.Core.Presentation.Terrain
             Span<float> outNormalZ,
             Span<int> outLayerIndex,
             Span<byte> outHitMask,
-            int layerIndex = 0)
+            int layerIndex = -1)
         {
             int count = originXMeters.Length;
-            if (layerIndex != 0)
+            if (ResolveLayerIndex(layerIndex) != 0)
             {
                 outHitMask.Clear();
                 return false;
@@ -160,6 +160,11 @@ namespace Ludots.Core.Presentation.Terrain
             }
 
             return true;
+        }
+
+        private static int ResolveLayerIndex(int layerIndex)
+        {
+            return layerIndex < 0 ? 0 : layerIndex;
         }
     }
 }

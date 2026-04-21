@@ -284,16 +284,19 @@ namespace Ludots.Core.Presentation.Systems
             {
                 LogicTickStamp = evt.LogicTickStamp,
                 Kind = cmd.CommandKind,
-                IdA = cmd.CommandKind == PresentationCommandKind.CreatePerformer
+                PerformerDefinitionId = cmd.CommandKind == PresentationCommandKind.CreatePerformer
                     ? cmd.PerformerDefinitionId
                     : 0,
-                IdB = cmd.ScopeId,
+                PerformerHandle = cmd.PerformerHandle,
+                ScopeId = cmd.ScopeId,
                 Source = evt.Source,
                 Target = evt.Target,
-                Param1 = cmd.ParamGraphProgramId > 0
-                    ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
-                    : cmd.ParamValue,
-                Param2 = cmd.ParamKey,
+                FieldName = cmd.FieldName,
+                FieldValue = cmd.FieldValue,
+                LegacyParamValue = cmd.LegacyParamGraphProgramId > 0
+                    ? EvaluateGraphFloat(cmd.LegacyParamGraphProgramId, evt.Source, evt.Target)
+                    : cmd.LegacyParamValue,
+                LegacyParamKey = cmd.LegacyParamKey,
             });
         }
 

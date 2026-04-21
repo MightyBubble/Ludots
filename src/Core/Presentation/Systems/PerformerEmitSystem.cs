@@ -543,7 +543,7 @@ namespace Ludots.Core.Presentation.Systems
                     def.VisualAssetKey,
                     pos,
                     Quaternion.Identity,
-                    new Vector3(ResolveParam(handle, def, owner, 0, def.DefaultScale)),
+                    new Vector3(def.DefaultScale),
                     color,
                     owner,
                     Entity.Null,
@@ -558,28 +558,11 @@ namespace Ludots.Core.Presentation.Systems
 
         private PresentationPayloadField[] ResolveTypedPayload(int handle, PerformerDefinition def, Entity owner)
         {
-            int dynamicCount = 0;
-            for (int i = 0; i < def.Bindings.Length; i++)
-            {
-                if (!string.IsNullOrWhiteSpace(def.Bindings[i].FieldName))
-                {
-                    dynamicCount++;
-                }
-            }
+            var fields = new List<PresentationPayloadField>(
+                (def.DefaultPayload?.Length ?? 0) + def.Bindings.Length + Math.Max(0, handle >= 0 ? _instances.GetFieldOverrideCount(handle) : 0));
 
-            int staticCount = def.DefaultPayload?.Length ?? 0;
-            if (staticCount == 0 && dynamicCount == 0)
-            {
-                return Array.Empty<PresentationPayloadField>();
-            }
+            AddPayloadFields(fields, def.DefaultPayload);
 
-            var payload = new PresentationPayloadField[staticCount + dynamicCount];
-            for (int i = 0; i < staticCount; i++)
-            {
-                payload[i] = def.DefaultPayload[i];
-            }
-
-            int write = staticCount;
             for (int i = 0; i < def.Bindings.Length; i++)
             {
                 ref readonly var binding = ref def.Bindings[i];
@@ -588,24 +571,80 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
-                float resolved = ResolveValueRef(in binding.Value, owner);
-                payload[write++] = new PresentationPayloadField(
-                    binding.FieldName,
-                    ToTypedValue(binding.ValueKind, resolved));
+                PresentationTypedValue value = ToTypedValue(binding.ValueKind, binding.Value, owner);
+                UpsertPayloadField(fields, binding.FieldName, in value);
             }
 
-            return payload;
+            if (handle >= 0 && _instances.IsActive(handle))
+            {
+                int count = _instances.GetFieldOverrideCount(handle);
+                for (int i = 0; i < count; i++)
+                {
+                    if (_instances.TryGetFieldOverrideAt(handle, i, out string fieldName, out PresentationTypedValue value))
+                    {
+                        UpsertPayloadField(fields, fieldName, in value);
+                    }
+                }
+            }
+
+            return fields.Count == 0 ? Array.Empty<PresentationPayloadField>() : fields.ToArray();
         }
 
-        private static PresentationTypedValue ToTypedValue(PresentationTypedValueKind kind, float value)
+        private static void AddPayloadFields(List<PresentationPayloadField> fields, PresentationPayloadField[]? payload)
         {
+            if (payload == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < payload.Length; i++)
+            {
+                fields.Add(payload[i]);
+            }
+        }
+
+        private static void UpsertPayloadField(List<PresentationPayloadField> fields, string fieldName, in PresentationTypedValue value)
+        {
+            for (int i = 0; i < fields.Count; i++)
+            {
+                if (string.Equals(fields[i].Name, fieldName, StringComparison.Ordinal))
+                {
+                    fields[i] = new PresentationPayloadField(fieldName, in value);
+                    return;
+                }
+            }
+
+            fields.Add(new PresentationPayloadField(fieldName, in value));
+        }
+
+        private PresentationTypedValue ToTypedValue(PresentationTypedValueKind kind, in ValueRef valueRef, Entity owner)
+        {
+            float scalar = ResolveValueRef(in valueRef, owner);
             return kind switch
             {
-                PresentationTypedValueKind.Bool => PresentationTypedValue.FromBool(MathF.Abs(value) > float.Epsilon),
-                PresentationTypedValueKind.Int => PresentationTypedValue.FromInt((int)MathF.Round(value)),
-                PresentationTypedValueKind.Float => PresentationTypedValue.FromFloat(value),
-                _ => throw new InvalidOperationException($"Dynamic performer binding cannot produce typed value kind '{kind}'. Use static payload for non-scalar values."),
+                PresentationTypedValueKind.Bool => PresentationTypedValue.FromBool(MathF.Abs(scalar) > float.Epsilon),
+                PresentationTypedValueKind.Int => PresentationTypedValue.FromInt((int)MathF.Round(scalar)),
+                PresentationTypedValueKind.Float => PresentationTypedValue.FromFloat(scalar),
+                PresentationTypedValueKind.Vector4 => PresentationTypedValue.FromVector4(ResolveVector4(valueRef, owner)),
+                PresentationTypedValueKind.Color => PresentationTypedValue.FromColor(ResolveVector4(valueRef, owner)),
+                _ => throw new InvalidOperationException($"Dynamic performer binding cannot produce typed value kind '{kind}'. Use static payload for structured values."),
             };
+        }
+
+        private Vector4 ResolveVector4(in ValueRef valueRef, Entity owner)
+        {
+            if (valueRef.Source == ValueSourceKind.EntityColor)
+            {
+                if (_entityColorResolver != null)
+                {
+                    return _entityColorResolver(World, owner);
+                }
+
+                return Vector4.One;
+            }
+
+            float scalar = ResolveValueRef(in valueRef, owner);
+            return new Vector4(scalar, scalar, scalar, scalar);
         }
 
         private static PresentationVisualRequestKind ToRequestKind(PerformerVisualKind kind)

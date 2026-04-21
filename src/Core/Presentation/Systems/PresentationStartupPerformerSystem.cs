@@ -42,8 +42,8 @@ namespace Ludots.Core.Presentation.Systems
                             {
                                 Kind = PresentationCommandKind.CreatePerformer,
                                 AnchorKind = PresentationAnchorKind.Entity,
-                                IdA = startupPerformers[i].Get(slot),
-                                IdB = scopeId,
+                                PerformerDefinitionId = startupPerformers[i].Get(slot),
+                                ScopeId = scopeId,
                                 Source = entity,
                             }))
                         {

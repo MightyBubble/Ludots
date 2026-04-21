@@ -765,8 +765,8 @@ namespace ChampionSkillSandboxMod.Runtime
             {
                 Kind = PresentationCommandKind.CreatePerformer,
                 AnchorKind = PresentationAnchorKind.Entity,
-                IdA = performerId,
-                IdB = 0,
+                PerformerDefinitionId = performerId,
+                ScopeId = 0,
                 Source = anchor,
             });
         }

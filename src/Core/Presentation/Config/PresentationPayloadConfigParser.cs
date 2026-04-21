@@ -99,7 +99,7 @@ namespace Ludots.Core.Presentation.Config
             return false;
         }
 
-        private static PresentationTypedValue ParseTypedValue(PresentationTypedValueKind kind, JsonNode node)
+        public static PresentationTypedValue ParseTypedValue(PresentationTypedValueKind kind, JsonNode node)
         {
             return kind switch
             {

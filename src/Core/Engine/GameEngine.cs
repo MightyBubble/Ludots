@@ -1562,11 +1562,14 @@ namespace Ludots.Core.Engine
 
             using Stream stream = OpenMapAssetStream(assetPath);
             VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
-            IVisualHeightmap runtime = new VisualHeightmapRuntime(asset);
+            int defaultLayerIndex = binding.DefaultLayerIndex >= 0
+                ? binding.DefaultLayerIndex
+                : asset.DefaultLayerIndex;
+            IVisualHeightmap runtime = new VisualHeightmapRuntime(asset, defaultLayerIndex);
             SetService(CoreServiceKeys.VisualHeightmap, runtime);
             Diagnostics.Log.Info(
                 in LogChannels.Engine,
-                $"Installed visual heightmap '{assetPath}' for map '{mapConfig?.Id ?? session.MapId.Value}' ({asset.SampleColumns}x{asset.SampleRows}, layers={asset.Layers.Length}).");
+                $"Installed visual heightmap '{assetPath}' for map '{mapConfig?.Id ?? session.MapId.Value}' ({asset.SampleColumns}x{asset.SampleRows}, layers={asset.Layers.Length}, defaultLayer={defaultLayerIndex}).");
         }
 
         private static VisualHeightmapBindingConfig ResolveVisualHeightmapBinding(MapSession session, MapConfig mapConfig)

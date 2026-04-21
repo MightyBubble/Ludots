@@ -157,8 +157,8 @@ namespace MobaDemoMod.Systems
                         commands.TryAdd(new PresentationCommand
                         {
                             Kind = PresentationCommandKind.CreatePerformer,
-                            IdA = rangeCircleDefId,
-                            IdB = scopeId,
+                            PerformerDefinitionId = rangeCircleDefId,
+                            ScopeId = scopeId,
                             Source = GetControlledActor()
                         });
                     }
@@ -168,7 +168,7 @@ namespace MobaDemoMod.Systems
                         commands.TryAdd(new PresentationCommand
                         {
                             Kind = PresentationCommandKind.DestroyPerformerScope,
-                            IdA = scopeId
+                            ScopeId = scopeId
                         });
                     }
                 });

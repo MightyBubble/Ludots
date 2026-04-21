@@ -3,10 +3,10 @@ using Ludots.Core.Presentation.Rendering;
 namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
-    /// Binds a performer parameter (identified by <see cref="ParamKey"/>) to a
-    /// data source (<see cref="Value"/>). The PerformerEmitSystem resolves bindings
-    /// each frame for visible instances, ensuring data freshness after off-screen
-    /// → on-screen transitions.
+    /// Binds either a legacy performer parameter slot or a typed semantic field to
+    /// a data source. The PerformerEmitSystem resolves bindings each frame for
+    /// visible instances, ensuring data freshness after off-screen -> on-screen
+    /// transitions.
     ///
     /// ParamKey interpretation is VisualKind-dependent (documented convention):
     ///   GroundOverlay: 0=Radius, 1=InnerRadius, 2=Angle, 3=Rotation, 4=FillColorR, ...
@@ -17,8 +17,8 @@ namespace Ludots.Core.Presentation.Performers
     public struct PerformerParamBinding
     {
         /// <summary>
-        /// Application-defined parameter key. Interpretation depends on the
-        /// PerformerDefinition's VisualKind.
+        /// Application-defined legacy parameter key. Interpretation depends on the
+        /// PerformerDefinition's VisualKind. Ignored when <see cref="FieldName"/> is set.
         /// </summary>
         public int ParamKey;
 

@@ -24,7 +24,7 @@ namespace Ludots.Core.Presentation.Terrain
 
         public ChunkedVisualHeightmapStore Store => _store;
 
-        public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
+        public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
         {
             heightCm = default;
             WorldAabbCm bounds = _descriptor.Bounds;
@@ -41,7 +41,7 @@ namespace Ludots.Core.Presentation.Terrain
                        out heightCm);
         }
 
-        public bool TrySampleSurface(float worldXCm, float worldYCm, out float heightCm, out Vector3 normal, int layerIndex = 0)
+        public bool TrySampleSurface(float worldXCm, float worldYCm, out float heightCm, out Vector3 normal, int layerIndex = -1)
         {
             heightCm = default;
             normal = Vector3.UnitY;
@@ -60,7 +60,7 @@ namespace Ludots.Core.Presentation.Terrain
                        out normal);
         }
 
-        public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)
+        public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = -1)
         {
             if (worldXCm.Length != worldYCm.Length || worldXCm.Length != outHeightCm.Length)
             {
@@ -82,7 +82,7 @@ namespace Ludots.Core.Presentation.Terrain
             return true;
         }
 
-        public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
+        public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = -1)
         {
             hit = default;
             WorldAabbCm bounds = _descriptor.Bounds;
@@ -115,7 +115,7 @@ namespace Ludots.Core.Presentation.Terrain
             Span<float> outNormalZ,
             Span<int> outLayerIndex,
             Span<byte> outHitMask,
-            int layerIndex = 0)
+            int layerIndex = -1)
         {
             int count = originXMeters.Length;
             if (originYMeters.Length != count ||

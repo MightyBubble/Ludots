@@ -153,15 +153,33 @@ namespace Ludots.Core.Presentation.Config
 
             string perfRef = node["performerDefinitionId"]?.GetValue<string>();
             int perfId = string.IsNullOrWhiteSpace(perfRef) ? 0 : _registry.GetId(perfRef);
+            string fieldName = node["fieldName"]?.GetValue<string>() ?? node["field"]?.GetValue<string>() ?? string.Empty;
+            string fieldKindText = node["fieldValueKind"]?.GetValue<string>() ?? node["valueKind"]?.GetValue<string>() ?? string.Empty;
+            PresentationTypedValue fieldValue = default;
+            if (!string.IsNullOrWhiteSpace(fieldName))
+            {
+                if (string.IsNullOrWhiteSpace(fieldKindText) ||
+                    !PresentationPayloadConfigParser.TryParseTypedValueKind(fieldKindText, out var fieldKind))
+                {
+                    throw new InvalidOperationException($"Performer command field '{fieldName}' requires a valid fieldValueKind/valueKind.");
+                }
+
+                fieldValue = PresentationPayloadConfigParser.ParseTypedValue(
+                    fieldKind,
+                    node["fieldValue"] ?? node["value"] ?? node["paramValue"]);
+            }
 
             return new PerformerCommand
             {
                 CommandKind = ParseEnum(node["commandKind"]?.GetValue<string>(), PresentationCommandKind.None),
                 PerformerDefinitionId = perfId,
+                PerformerHandle = node["performerHandle"]?.GetValue<int>() ?? node["handle"]?.GetValue<int>() ?? 0,
                 ScopeId = node["scopeId"]?.GetValue<int>() ?? -1,
-                ParamKey = node["paramKey"]?.GetValue<int>() ?? 0,
-                ParamValue = node["paramValue"]?.GetValue<float>() ?? 0f,
-                ParamGraphProgramId = node["paramGraphProgramId"]?.GetValue<int>() ?? 0,
+                FieldName = fieldName,
+                FieldValue = fieldValue,
+                LegacyParamKey = node["legacyParamKey"]?.GetValue<int>() ?? node["paramKey"]?.GetValue<int>() ?? -1,
+                LegacyParamValue = node["legacyParamValue"]?.GetValue<float>() ?? node["paramValue"]?.GetValue<float>() ?? 0f,
+                LegacyParamGraphProgramId = node["legacyParamGraphProgramId"]?.GetValue<int>() ?? node["paramGraphProgramId"]?.GetValue<int>() ?? 0,
             };
         }
 
@@ -200,6 +218,12 @@ namespace Ludots.Core.Presentation.Config
                 if (string.IsNullOrWhiteSpace(fieldName))
                 {
                     throw new InvalidOperationException($"Performer '{definitionKey}' binding[{index}] targets typed visual kind '{visualKind}' and requires fieldName.");
+                }
+
+                if (!CanResolveDynamicValueKind(valueKind))
+                {
+                    throw new InvalidOperationException(
+                        $"Performer '{definitionKey}' binding[{index}] valueKind '{valueKind}' cannot be resolved from dynamic scalar binding sources. Use static payload for structured/non-scalar values.");
                 }
             }
 
@@ -326,6 +350,15 @@ namespace Ludots.Core.Presentation.Config
                 kind == PerformerVisualKind.Surface ||
                 kind == PerformerVisualKind.MaterialOverride ||
                 kind == PerformerVisualKind.InstanceCustomData;
+        }
+
+        private static bool CanResolveDynamicValueKind(PresentationTypedValueKind kind)
+        {
+            return kind == PresentationTypedValueKind.Bool ||
+                kind == PresentationTypedValueKind.Int ||
+                kind == PresentationTypedValueKind.Float ||
+                kind == PresentationTypedValueKind.Vector4 ||
+                kind == PresentationTypedValueKind.Color;
         }
 
         private static void ValidateTypedPerformerDefinition(PerformerDefinition def, string key)

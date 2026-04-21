@@ -6,13 +6,15 @@ namespace Ludots.Core.Presentation.Commands
         PlayOneShotPerformer = 1,
 
         // ── Persistent performer lifecycle commands ──
-        /// <summary>Create a persistent performer instance (IdA=DefId, IdB=ScopeId, Source=Owner).</summary>
+        /// <summary>Create a persistent performer instance.</summary>
         CreatePerformer = 10,
-        /// <summary>Destroy a single performer instance (IdA=Handle).</summary>
+        /// <summary>Destroy a single performer instance.</summary>
         DestroyPerformer = 11,
-        /// <summary>Destroy all instances in a scope (IdA=ScopeId).</summary>
+        /// <summary>Destroy all instances in a scope.</summary>
         DestroyPerformerScope = 12,
-        /// <summary>Update a performer parameter override (IdA=Handle, IdB=ParamKey, Param1=Value).</summary>
+        /// <summary>Update a legacy performer parameter override.</summary>
         SetPerformerParam = 13,
+        /// <summary>Update a named typed performer field override.</summary>
+        SetPerformerField = 14,
     }
 }

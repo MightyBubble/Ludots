@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Performers
 {
@@ -15,6 +16,7 @@ namespace Ludots.Core.Presentation.Performers
     public sealed class PerformerInstanceBuffer
     {
         private readonly PerformerInstance[] _slots;
+        private readonly int[] _slotGenerations;
         private int _highWaterMark;
 
         // Free-list: O(1) allocation by reusing released slots.
@@ -26,6 +28,9 @@ namespace Ludots.Core.Presentation.Performers
         private const int MaxOverridesPerInstance = 8;
         private readonly int[] _overrideKeys;    // -1 = unused
         private readonly float[] _overrideValues;
+        private const int MaxTypedFieldOverridesPerInstance = 8;
+        private readonly string[] _typedFieldOverrideNames;
+        private readonly PresentationTypedValue[] _typedFieldOverrideValues;
 
         public int Capacity => _slots.Length;
 
@@ -49,15 +54,20 @@ namespace Ludots.Core.Presentation.Performers
                 throw new ArgumentOutOfRangeException(nameof(capacity), "PerformerInstanceBuffer capacity must be positive.");
 
             _slots = new PerformerInstance[capacity];
+            _slotGenerations = new int[capacity];
             _freeStack = new int[capacity];
             _overrideKeys = new int[capacity * MaxOverridesPerInstance];
             _overrideValues = new float[capacity * MaxOverridesPerInstance];
+            _typedFieldOverrideNames = new string[capacity * MaxTypedFieldOverridesPerInstance];
+            _typedFieldOverrideValues = new PresentationTypedValue[capacity * MaxTypedFieldOverridesPerInstance];
             Array.Fill(_overrideKeys, -1);
+            Array.Fill(_typedFieldOverrideNames, string.Empty);
         }
 
         /// <summary>
         /// Allocate a new performer instance. Returns false if the buffer is full.
-        /// The returned handle is the slot index.
+        /// The returned handle is an opaque runtime handle that remains valid only
+        /// for the currently active occupant of the slot.
         /// </summary>
         public bool TryAllocate(
             int defId,
@@ -73,7 +83,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 int idx = _freeStack[--_freeCount];
                 InitSlot(idx, defId, owner, scopeId, anchorKind, worldPosition, stableId);
-                handle = idx;
+                handle = EncodeOpaqueHandle(idx);
                 return true;
             }
 
@@ -82,7 +92,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 int idx = _highWaterMark++;
                 InitSlot(idx, defId, owner, scopeId, anchorKind, worldPosition, stableId);
-                handle = idx;
+                handle = EncodeOpaqueHandle(idx);
                 return true;
             }
 
@@ -100,11 +110,14 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public void Release(int handle)
         {
-            if (handle < 0 || handle >= _highWaterMark) return;
-            if (!_slots[handle].Active) return; // guard against double-free
-            _slots[handle].Active = false;
-            ClearAllOverrides(handle);
-            PushFree(handle);
+            if (!TryResolveActiveSlot(handle, out int slot))
+            {
+                return;
+            }
+
+            _slots[slot].Active = false;
+            ClearAllOverrides(slot);
+            PushFree(slot);
         }
 
         /// <summary>
@@ -133,14 +146,22 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>
         /// Get a reference to the instance at the given handle.
         /// </summary>
-        public ref PerformerInstance Get(int handle) => ref _slots[handle];
+        public ref PerformerInstance Get(int handle)
+        {
+            if (!TryResolveActiveSlot(handle, out int slot))
+            {
+                throw new InvalidOperationException($"Performer handle {handle} does not resolve to an active instance.");
+            }
+
+            return ref _slots[slot];
+        }
 
         /// <summary>
         /// Returns true if the handle points to an active instance.
         /// </summary>
         public bool IsActive(int handle)
         {
-            return handle >= 0 && handle < _highWaterMark && _slots[handle].Active;
+            return TryResolveActiveSlot(handle, out _);
         }
 
         /// <summary>
@@ -160,7 +181,7 @@ namespace Ludots.Core.Presentation.Performers
                 // Elapsed always advances (even when dormant)
                 _slots[i].Elapsed += dt;
 
-                callback(i, ref _slots[i]);
+                callback(EncodeOpaqueHandle(i), ref _slots[i]);
                 processed++;
             }
             return processed;
@@ -173,7 +194,12 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public void SetParamOverride(int handle, int paramKey, float value)
         {
-            int baseIdx = handle * MaxOverridesPerInstance;
+            if (!TryResolveActiveSlot(handle, out int slot))
+            {
+                return;
+            }
+
+            int baseIdx = slot * MaxOverridesPerInstance;
 
             // Try to find existing override for this key
             for (int i = 0; i < MaxOverridesPerInstance; i++)
@@ -200,11 +226,56 @@ namespace Ludots.Core.Presentation.Performers
         }
 
         /// <summary>
+        /// Set an imperative typed field override. Takes priority over typed field bindings.
+        /// </summary>
+        public void SetFieldOverride(int handle, string fieldName, in PresentationTypedValue value)
+        {
+            if (!TryResolveActiveSlot(handle, out int slot))
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(fieldName))
+            {
+                throw new ArgumentException("Typed performer field override requires a non-empty field name.", nameof(fieldName));
+            }
+
+            int baseIdx = slot * MaxTypedFieldOverridesPerInstance;
+            for (int i = 0; i < MaxTypedFieldOverridesPerInstance; i++)
+            {
+                if (string.Equals(_typedFieldOverrideNames[baseIdx + i], fieldName, StringComparison.Ordinal))
+                {
+                    _typedFieldOverrideValues[baseIdx + i] = value;
+                    return;
+                }
+            }
+
+            for (int i = 0; i < MaxTypedFieldOverridesPerInstance; i++)
+            {
+                if (string.IsNullOrEmpty(_typedFieldOverrideNames[baseIdx + i]))
+                {
+                    _typedFieldOverrideNames[baseIdx + i] = fieldName;
+                    _typedFieldOverrideValues[baseIdx + i] = value;
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Typed performer field override buffer is full for handle={handle}; cannot set '{fieldName}'.");
+        }
+
+        /// <summary>
         /// Try to read an imperative override for a parameter key.
         /// </summary>
         public bool TryGetParamOverride(int handle, int paramKey, out float value)
         {
-            int baseIdx = handle * MaxOverridesPerInstance;
+            if (!TryResolveActiveSlot(handle, out int slot))
+            {
+                value = 0f;
+                return false;
+            }
+
+            int baseIdx = slot * MaxOverridesPerInstance;
             for (int i = 0; i < MaxOverridesPerInstance; i++)
             {
                 if (_overrideKeys[baseIdx + i] == paramKey)
@@ -218,16 +289,122 @@ namespace Ludots.Core.Presentation.Performers
         }
 
         /// <summary>
+        /// Try to read an imperative typed field override.
+        /// </summary>
+        public bool TryGetFieldOverride(int handle, string fieldName, out PresentationTypedValue value)
+        {
+            if (string.IsNullOrWhiteSpace(fieldName) || !TryResolveActiveSlot(handle, out int slot))
+            {
+                value = default;
+                return false;
+            }
+
+            int baseIdx = slot * MaxTypedFieldOverridesPerInstance;
+            for (int i = 0; i < MaxTypedFieldOverridesPerInstance; i++)
+            {
+                if (string.Equals(_typedFieldOverrideNames[baseIdx + i], fieldName, StringComparison.Ordinal))
+                {
+                    value = _typedFieldOverrideValues[baseIdx + i];
+                    return true;
+                }
+            }
+
+            value = default;
+            return false;
+        }
+
+        public int GetFieldOverrideCount(int handle)
+        {
+            if (!TryResolveActiveSlot(handle, out int slot))
+            {
+                return 0;
+            }
+
+            int count = 0;
+            int baseIdx = slot * MaxTypedFieldOverridesPerInstance;
+            for (int i = 0; i < MaxTypedFieldOverridesPerInstance; i++)
+            {
+                if (!string.IsNullOrEmpty(_typedFieldOverrideNames[baseIdx + i]))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        public bool TryGetFieldOverrideAt(int handle, int index, out string fieldName, out PresentationTypedValue value)
+        {
+            if (index < 0 || !TryResolveActiveSlot(handle, out int slot))
+            {
+                fieldName = string.Empty;
+                value = default;
+                return false;
+            }
+
+            int seen = 0;
+            int baseIdx = slot * MaxTypedFieldOverridesPerInstance;
+            for (int i = 0; i < MaxTypedFieldOverridesPerInstance; i++)
+            {
+                string name = _typedFieldOverrideNames[baseIdx + i];
+                if (string.IsNullOrEmpty(name))
+                {
+                    continue;
+                }
+
+                if (seen == index)
+                {
+                    fieldName = name;
+                    value = _typedFieldOverrideValues[baseIdx + i];
+                    return true;
+                }
+
+                seen++;
+            }
+
+            fieldName = string.Empty;
+            value = default;
+            return false;
+        }
+
+        /// <summary>
         /// Remove an imperative override for a specific parameter key.
         /// </summary>
         public void ClearParamOverride(int handle, int paramKey)
         {
-            int baseIdx = handle * MaxOverridesPerInstance;
+            if (!TryResolveActiveSlot(handle, out int slot))
+            {
+                return;
+            }
+
+            int baseIdx = slot * MaxOverridesPerInstance;
             for (int i = 0; i < MaxOverridesPerInstance; i++)
             {
                 if (_overrideKeys[baseIdx + i] == paramKey)
                 {
                     _overrideKeys[baseIdx + i] = -1;
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Remove an imperative typed field override.
+        /// </summary>
+        public void ClearFieldOverride(int handle, string fieldName)
+        {
+            if (string.IsNullOrWhiteSpace(fieldName) || !TryResolveActiveSlot(handle, out int slot))
+            {
+                return;
+            }
+
+            int baseIdx = slot * MaxTypedFieldOverridesPerInstance;
+            for (int i = 0; i < MaxTypedFieldOverridesPerInstance; i++)
+            {
+                if (string.Equals(_typedFieldOverrideNames[baseIdx + i], fieldName, StringComparison.Ordinal))
+                {
+                    _typedFieldOverrideNames[baseIdx + i] = string.Empty;
+                    _typedFieldOverrideValues[baseIdx + i] = default;
                     return;
                 }
             }
@@ -241,6 +418,8 @@ namespace Ludots.Core.Presentation.Performers
             for (int i = 0; i < _highWaterMark; i++)
                 _slots[i].Active = false;
             Array.Fill(_overrideKeys, -1);
+            Array.Fill(_typedFieldOverrideNames, string.Empty);
+            Array.Clear(_typedFieldOverrideValues, 0, _typedFieldOverrideValues.Length);
             _highWaterMark = 0;
             _freeCount = 0;
         }
@@ -305,6 +484,7 @@ namespace Ludots.Core.Presentation.Performers
             in Vector3 worldPosition,
             int stableId)
         {
+            _slotGenerations[idx] = checked(_slotGenerations[idx] + 1);
             _slots[idx] = new PerformerInstance
             {
                 DefId = defId,
@@ -319,11 +499,61 @@ namespace Ludots.Core.Presentation.Performers
             ClearAllOverrides(idx);
         }
 
+        private int EncodeOpaqueHandle(int slot)
+        {
+            return checked(_slotGenerations[slot] * _slots.Length + slot);
+        }
+
+        private bool TryResolveAnySlot(int handle, out int slot)
+        {
+            if ((uint)handle < (uint)_slots.Length)
+            {
+                slot = handle;
+                return slot < _highWaterMark;
+            }
+
+            if (_slots.Length <= 0 || handle < _slots.Length)
+            {
+                slot = -1;
+                return false;
+            }
+
+            int resolvedSlot = handle % _slots.Length;
+            int generation = handle / _slots.Length;
+            if ((uint)resolvedSlot >= (uint)_highWaterMark ||
+                generation < 0 ||
+                _slotGenerations[resolvedSlot] != generation)
+            {
+                slot = -1;
+                return false;
+            }
+
+            slot = resolvedSlot;
+            return true;
+        }
+
+        private bool TryResolveActiveSlot(int handle, out int slot)
+        {
+            if (!TryResolveAnySlot(handle, out slot))
+            {
+                return false;
+            }
+
+            return _slots[slot].Active;
+        }
+
         private void ClearAllOverrides(int handle)
         {
             int baseIdx = handle * MaxOverridesPerInstance;
             for (int i = 0; i < MaxOverridesPerInstance; i++)
                 _overrideKeys[baseIdx + i] = -1;
+
+            int typedBaseIdx = handle * MaxTypedFieldOverridesPerInstance;
+            for (int i = 0; i < MaxTypedFieldOverridesPerInstance; i++)
+            {
+                _typedFieldOverrideNames[typedBaseIdx + i] = string.Empty;
+                _typedFieldOverrideValues[typedBaseIdx + i] = default;
+            }
         }
     }
 }

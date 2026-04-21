@@ -114,7 +114,7 @@ namespace InteractionShowcaseMod.Triggers
                 commands.TryAdd(new PresentationCommand
                 {
                     Kind = PresentationCommandKind.DestroyPerformerScope,
-                    IdA = InteractionShowcaseIds.SelectionScopeId
+                    ScopeId = InteractionShowcaseIds.SelectionScopeId
                 });
 
                 if (!engine.World.IsAlive(entity))
@@ -125,8 +125,8 @@ namespace InteractionShowcaseMod.Triggers
                 commands.TryAdd(new PresentationCommand
                 {
                     Kind = PresentationCommandKind.CreatePerformer,
-                    IdA = selectionDefId,
-                    IdB = InteractionShowcaseIds.SelectionScopeId,
+                    PerformerDefinitionId = selectionDefId,
+                    ScopeId = InteractionShowcaseIds.SelectionScopeId,
                     Source = entity
                 });
             });

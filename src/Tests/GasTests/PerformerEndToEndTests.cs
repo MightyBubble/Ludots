@@ -397,8 +397,8 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.CreatePerformer,
-                IdA = overlayDefId,
-                IdB = scopeId,
+                PerformerDefinitionId = overlayDefId,
+                ScopeId = scopeId,
                 Source = owner,
             });
             TickPipeline(0.016f);
@@ -410,7 +410,7 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.DestroyPerformerScope,
-                IdA = scopeId,
+                ScopeId = scopeId,
             });
             TickPipeline(0.016f);
 

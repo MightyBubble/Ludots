@@ -5,11 +5,11 @@ namespace Ludots.Core.Presentation.Terrain
 {
     public interface IVisualHeightmap
     {
-        bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0);
+        bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1);
 
-        bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0);
+        bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = -1);
 
-        bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0);
+        bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = -1);
 
         bool RaycastGroundBatch(
             ReadOnlySpan<float> originXMeters,
@@ -27,6 +27,6 @@ namespace Ludots.Core.Presentation.Terrain
             Span<float> outNormalZ,
             Span<int> outLayerIndex,
             Span<byte> outHitMask,
-            int layerIndex = 0);
+            int layerIndex = -1);
     }
 }

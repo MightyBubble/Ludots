@@ -856,8 +856,8 @@ namespace ChampionSkillSandboxMod.Runtime
             commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.CreatePerformer,
-                IdA = definitionId,
-                IdB = ChampionSkillSandboxIds.SelectionIndicatorScopeId,
+                PerformerDefinitionId = definitionId,
+                ScopeId = ChampionSkillSandboxIds.SelectionIndicatorScopeId,
                 Source = target,
             });
         }
@@ -872,7 +872,7 @@ namespace ChampionSkillSandboxMod.Runtime
             commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.DestroyPerformerScope,
-                IdA = ChampionSkillSandboxIds.SelectionIndicatorScopeId,
+                ScopeId = ChampionSkillSandboxIds.SelectionIndicatorScopeId,
             });
         }
 
@@ -960,7 +960,7 @@ namespace ChampionSkillSandboxMod.Runtime
             commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.DestroyPerformerScope,
-                IdA = ChampionSkillSandboxIds.HoverIndicatorScopeId,
+                ScopeId = ChampionSkillSandboxIds.HoverIndicatorScopeId,
             });
         }
 
@@ -974,7 +974,7 @@ namespace ChampionSkillSandboxMod.Runtime
             commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.DestroyPerformerScope,
-                IdA = ChampionSkillSandboxIds.AimHoverIndicatorScopeId,
+                ScopeId = ChampionSkillSandboxIds.AimHoverIndicatorScopeId,
             });
         }
 
@@ -1014,8 +1014,8 @@ namespace ChampionSkillSandboxMod.Runtime
             commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.CreatePerformer,
-                IdA = definitionId,
-                IdB = scopeId,
+                PerformerDefinitionId = definitionId,
+                ScopeId = scopeId,
                 Source = target,
             });
         }
@@ -1030,7 +1030,7 @@ namespace ChampionSkillSandboxMod.Runtime
             commands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.DestroyPerformerScope,
-                IdA = scopeId,
+                ScopeId = scopeId,
             });
         }
     }

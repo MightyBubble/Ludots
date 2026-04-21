@@ -117,8 +117,8 @@ namespace Ludots.Core.Presentation.Performers
         // ── Binding index (built by PerformerDefinitionRegistry.Register) ──
 
         /// <summary>
-        /// Pre-built index for O(1) binding lookup by ParamKey.
-        /// <c>_bindingIndex[paramKey]</c> → index into <see cref="Bindings"/> array, or -1 if unbound.
+        /// Pre-built index for O(1) legacy binding lookup by ParamKey.
+        /// <c>_bindingIndex[paramKey]</c> -> index into <see cref="Bindings"/> array, or -1 if unbound.
         /// Built once at registration time; never mutated at runtime.
         /// </summary>
         internal int[] BindingIndex = System.Array.Empty<int>();
@@ -136,18 +136,27 @@ namespace Ludots.Core.Presentation.Performers
                 return;
             }
 
-            // Determine required size from max ParamKey
+            for (int i = 0; i < Bindings.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(Bindings[i].FieldName) &&
+                    !CanResolveDynamicFieldBinding(Bindings[i].ValueKind))
+                {
+                    throw new InvalidOperationException(
+                        $"PerformerDefinition id={Id} binding[{i}] field '{Bindings[i].FieldName}' valueKind '{Bindings[i].ValueKind}' cannot be resolved from dynamic binding sources. Use static payload or typed command field overrides for this value kind.");
+                }
+            }
+
+            // Determine required size from max legacy ParamKey.
             int maxKey = 0;
             bool hasLegacyParamKey = false;
             for (int i = 0; i < Bindings.Length; i++)
             {
-                if (Bindings[i].ParamKey >= 0)
+                if (IsLegacyBinding(in Bindings[i]))
                 {
                     hasLegacyParamKey = true;
+                    if (Bindings[i].ParamKey > maxKey)
+                        maxKey = Bindings[i].ParamKey;
                 }
-
-                if (Bindings[i].ParamKey > maxKey)
-                    maxKey = Bindings[i].ParamKey;
             }
 
             if (!hasLegacyParamKey)
@@ -161,10 +170,24 @@ namespace Ludots.Core.Presentation.Performers
             for (int i = 0; i < Bindings.Length; i++)
             {
                 int key = Bindings[i].ParamKey;
-                if (key >= 0 && key < index.Length)
+                if (IsLegacyBinding(in Bindings[i]) && key < index.Length)
                     index[key] = i;
             }
             BindingIndex = index;
+        }
+
+        private static bool IsLegacyBinding(in PerformerParamBinding binding)
+        {
+            return binding.ParamKey >= 0 && string.IsNullOrWhiteSpace(binding.FieldName);
+        }
+
+        private static bool CanResolveDynamicFieldBinding(PresentationTypedValueKind kind)
+        {
+            return kind == PresentationTypedValueKind.Bool ||
+                kind == PresentationTypedValueKind.Int ||
+                kind == PresentationTypedValueKind.Float ||
+                kind == PresentationTypedValueKind.Vector4 ||
+                kind == PresentationTypedValueKind.Color;
         }
     }
 }

@@ -125,15 +125,15 @@ namespace RoadNetworkShowcaseMod.Systems
             _presentationCommands.TryAdd(new PresentationCommand
             {
                 Kind = PresentationCommandKind.PlayOneShotPerformer,
-                IdA = prefabId,
+                PrefabId = prefabId,
                 Position = new System.Numerics.Vector3(
                     WorldUnits.CmToM(targetWorldCm.X),
                     0.15f,
                     WorldUnits.CmToM(targetWorldCm.Z)),
-                Param0 = accepted
+                Color = accepted
                     ? new System.Numerics.Vector4(0.28f, 0.94f, 0.60f, 1f)
                     : new System.Numerics.Vector4(1.0f, 0.52f, 0.18f, 1f),
-                Param1 = accepted ? 0.75f : 0.90f
+                LifetimeSeconds = accepted ? 0.75f : 0.90f
             });
         }
 

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Commands
 {
@@ -9,15 +10,23 @@ namespace Ludots.Core.Presentation.Commands
         public PresentationCommandKind Kind;
         public PresentationAnchorKind AnchorKind;
 
-        public int IdA;
-        public int IdB;
+        public int PrefabId;
+        public int PerformerDefinitionId;
+        public int PerformerHandle;
+        public int ScopeId;
 
         public Entity Source;
         public Entity Target;
 
         public Vector3 Position;
-        public Vector4 Param0;
-        public float Param1;
-        public float Param2;
+
+        public Vector4 Color;
+        public float LifetimeSeconds;
+
+        public string FieldName;
+        public PresentationTypedValue FieldValue;
+
+        public int LegacyParamKey;
+        public float LegacyParamValue;
     }
 }
