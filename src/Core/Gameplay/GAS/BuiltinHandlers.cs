@@ -38,9 +38,8 @@ namespace Ludots.Core.Gameplay.GAS
             if (!world.IsAlive(context.Target)) return;
             if (!world.Has<AttributeBuffer>(context.Target)) return;
 
-            ref var attrBuffer = ref world.Get<AttributeBuffer>(context.Target);
             var modifiers = templateData.Modifiers;
-            EffectModifierOps.Apply(in modifiers, ref attrBuffer);
+            AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers);
         }
 
         public static void HandleApplyForce(
@@ -56,11 +55,10 @@ namespace Ludots.Core.Gameplay.GAS
             mergedParams.TryGetFloat(EffectParamKeys.ForceXAttribute, out float fx);
             mergedParams.TryGetFloat(EffectParamKeys.ForceYAttribute, out float fy);
 
-            ref var attrBuffer = ref world.Get<AttributeBuffer>(context.Target);
             if (templateData.PresetAttribute0 > 0)
-                attrBuffer.SetCurrent(templateData.PresetAttribute0, attrBuffer.GetCurrent(templateData.PresetAttribute0) + fx);
+                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx);
             if (templateData.PresetAttribute1 > 0)
-                attrBuffer.SetCurrent(templateData.PresetAttribute1, attrBuffer.GetCurrent(templateData.PresetAttribute1) + fy);
+                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy);
         }
 
         public static void HandleSpatialQuery(

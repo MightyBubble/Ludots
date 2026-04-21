@@ -56,6 +56,7 @@ namespace Ludots.Core.Presentation.Performers
         internal bool HasAssetBindingBehavior;
         internal bool HasAnimatorBehavior;
         internal bool HasSurfaceAuthoring;
+        internal bool RequiresBootstrapProcessing;
 
         internal void BuildBindingIndex()
         {
@@ -141,6 +142,7 @@ namespace Ludots.Core.Presentation.Performers
             HasAssetBindingBehavior = false;
             HasAnimatorBehavior = false;
             HasSurfaceAuthoring = Surface != null;
+            RequiresBootstrapProcessing = (Bindings != null && Bindings.Length > 0) || HasSurfaceAuthoring;
 
             if (Behaviors == null || Behaviors.Length == 0)
             {
@@ -161,11 +163,21 @@ namespace Ludots.Core.Presentation.Performers
                     case BehaviorKind.AssetBinding:
                         AssetBindingSlotMask |= bit;
                         HasAssetBindingBehavior = true;
+                        RequiresBootstrapProcessing = true;
                         break;
 
                     case BehaviorKind.Animator:
                         AnimatorSlotMask |= bit;
                         HasAnimatorBehavior = true;
+                        break;
+
+                    case BehaviorKind.AttributeBinding:
+                    case BehaviorKind.TagBinding:
+                    case BehaviorKind.Attachment:
+                    case BehaviorKind.Sound:
+                    case BehaviorKind.Material:
+                    case BehaviorKind.Spline:
+                        RequiresBootstrapProcessing = true;
                         break;
                 }
             }

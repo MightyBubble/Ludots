@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Events;
@@ -26,15 +27,18 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
     {
         private const float RootSearchRadiusCm = 50f;
         private const int ScatterMinTotal = 1;
-        private const int ScatterUiHardMaxTotal = 100_000;
-        private const int ScatterDefaultTarget = 100;
+        private const int ScatterUiHardMaxTotal = 300_000;
+        private const int ScatterDefaultTarget = 30_000;
         private const int BenchmarkSampleFrames = 60;
         private const int PerformerCountPerBlacksmith = 9;
         private const int PrimitiveCountPerBlacksmith = 3;
         private const int WorldHudCountPerBlacksmith = 2;
+        private const int ScreenHudCountPerBlacksmith = 2;
         private const int RoadSplineCountPerBlacksmith = 1;
         private const int GroundOverlayCountPerBlacksmith = 1;
         private const int SkinnedCountPerBlacksmith = 1;
+        private const string AutoScatterTotalEnvKey = "LUDOTS_BLACKSMITH_AUTO_SCATTER_TOTAL";
+        private const float PanelRefreshIntervalSeconds = 0.25f;
 
         private readonly PerformerBlacksmithShowcasePanelController _panelController;
         private GameEngine? _activeEngine;
@@ -62,7 +66,10 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private double _tickSampleSumMs;
         private double _tickSampleMaxMs;
         private double _lastFrameTickMs;
-
+        private bool _autoScatterApplied;
+        private float _panelRefreshCooldown;
+        private bool _panelDirty = true;
+        private PerformerBlacksmithShowcasePanelState _cachedPanelState = PerformerBlacksmithShowcasePanelState.Empty;
         private static readonly string[] RegionNames = { "NORTH", "SOUTH" };
 
         public PerformerBlacksmithShowcaseRuntime()
@@ -91,6 +98,9 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _activeEngine = engine;
             ResetControlState();
             _buildingEntity = FindRootBuildingEntity(engine);
+            _autoScatterApplied = CountBlacksmithEntities(engine, out _) > 1;
+            TryApplyAutoScatter(engine);
+            MarkPanelDirty();
             return Task.CompletedTask;
         }
 
@@ -104,6 +114,10 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _activeEngine = null;
             _buildingEntity = Entity.Null;
             _destroyed = false;
+            _autoScatterApplied = false;
+            _panelDirty = true;
+            _panelRefreshCooldown = 0f;
+            _cachedPanelState = PerformerBlacksmithShowcasePanelState.Empty;
             return Task.CompletedTask;
         }
 
@@ -118,9 +132,11 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             long start = Stopwatch.GetTimestamp();
             _activeEngine = engine;
             RefreshRootEntity(engine);
+            _panelRefreshCooldown = MathF.Max(0f, _panelRefreshCooldown - (1f / 60f));
             if (_changeFlashTimer > 0f)
             {
                 _changeFlashTimer = MathF.Max(0f, _changeFlashTimer - 0.016f);
+                _panelDirty = true;
             }
 
             RefreshPanel(engine);
@@ -317,8 +333,14 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
+            Entity previousBuilding = _buildingEntity;
+            bool previousDestroyed = _destroyed;
             _buildingEntity = FindRootBuildingEntity(engine);
             _destroyed = _buildingEntity == Entity.Null;
+            if (_buildingEntity != previousBuilding || _destroyed != previousDestroyed)
+            {
+                MarkPanelDirty();
+            }
         }
 
         private Entity FindRootBuildingEntity(GameEngine engine)
@@ -414,7 +436,14 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
-            _panelController.MountOrSync(root, engine, BuildPanelState(engine, root));
+            if (_panelDirty || _panelRefreshCooldown <= 0f)
+            {
+                _cachedPanelState = BuildPanelState(engine, root);
+                _panelDirty = false;
+                _panelRefreshCooldown = PanelRefreshIntervalSeconds;
+            }
+
+            _panelController.MountOrSync(root, engine, _cachedPanelState);
         }
 
         private PerformerBlacksmithShowcasePanelState BuildPanelState(GameEngine engine, UIRoot root)
@@ -474,6 +503,11 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 renderMetrics.WorldHudBarCount >= (_destroyed ? 0 : 1) && renderMetrics.WorldHudTextCount >= (_destroyed ? 0 : 1)
                     ? $"PASS durability HUD: bar {renderMetrics.WorldHudBarCount}, text {renderMetrics.WorldHudTextCount}, ratio {renderMetrics.PrimaryHudBarValue:F2}, text {renderMetrics.PrimaryHudTextCurrent:F0}/{renderMetrics.PrimaryHudTextBase:F0}."
                     : "WARN durability HUD: expected both world HUD bar and text.",
+                totalBlacksmiths <= 1 ||
+                renderMetrics.WorldHudBarValueRange > 0.01f ||
+                renderMetrics.WorldHudTextCurrentRange > 0.5f
+                    ? $"PASS random drift: world HUD range bar {renderMetrics.WorldHudBarValueRange:F2}, text {renderMetrics.WorldHudTextCurrentRange:F1}."
+                    : "WAIT random drift: durability effect has not fanned out across the crowd yet.",
                 renderMetrics.RoadSplineCount >= (_destroyed ? 0 : 1)
                     ? $"PASS spline route: {renderMetrics.RoadSplineCount} spline request(s) visible."
                     : "WARN spline route: worker route spline missing.",
@@ -494,8 +528,9 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 $"Blacksmith entities: {totalBlacksmiths} total | extras {scatterExtras}",
                 $"Performers: owned {performerMetrics.RootOwnedCount} | active buffer {performerMetrics.BufferActiveCount}",
                 $"Meshes: workshops {renderMetrics.VisibleWorkshopCount} | chimney {renderMetrics.VisibleChimneyCount} | smoke {renderMetrics.VisibleSmokeCount} | worker skinned {renderMetrics.VisibleWorkerCount}",
-                $"Presentation: spline {renderMetrics.RoadSplineCount} | decal {renderMetrics.GroundOverlayCount} | hud bars {renderMetrics.WorldHudBarCount} | hud text {renderMetrics.WorldHudTextCount}",
-                $"HUD truth: bar {renderMetrics.PrimaryHudBarValue:F2} | text current {renderMetrics.PrimaryHudTextCurrent:F0} | text base {renderMetrics.PrimaryHudTextBase:F0} | stream drops evt {capacityMetrics.PresentationEventDrops} hud {capacityMetrics.WorldHudDrops} prim {capacityMetrics.PrimitiveDrops}",
+                $"Presentation: spline {renderMetrics.RoadSplineCount} | decal {renderMetrics.GroundOverlayCount} | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount}",
+                $"HUD truth: bar {renderMetrics.PrimaryHudBarValue:F2} | text current {renderMetrics.PrimaryHudTextCurrent:F0} | text base {renderMetrics.PrimaryHudTextBase:F0} | crowd range {renderMetrics.WorldHudBarValueRange:F2}/{renderMetrics.WorldHudTextCurrentRange:F1}",
+                $"Drops: evt {capacityMetrics.PresentationEventDrops} | worldHud {capacityMetrics.WorldHudDrops} | screenHud {capacityMetrics.ScreenHudDrops} | prim {capacityMetrics.PrimitiveDrops} | skinned {capacityMetrics.SkinnedDrops}",
                 $"State: region {_regionIndex} ({regionLabel}) | durability {durabilityRatio:F2} | working {(_isWorking ? 1 : 0)} | night {(_isNight ? 1 : 0)}"
             };
 
@@ -617,12 +652,13 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             PrimitiveDrawBuffer? primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             SkinnedVisualBatchBuffer? skinned = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
             WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
             GroundOverlayBuffer? overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
             RoadSplineBuffer? splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
             MeshAssetRegistry? meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
             PerformerEntityRuntime? performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
             PerformerDefinitionRegistry? definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
-            if (primitives == null || skinned == null || worldHud == null || overlays == null || splines == null || meshes == null || performers == null || definitions == null)
+            if (primitives == null || skinned == null || worldHud == null || screenHud == null || overlays == null || splines == null || meshes == null || performers == null || definitions == null)
             {
                 return RenderMetrics.Empty;
             }
@@ -675,6 +711,10 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
             int barCount = 0;
             int textCount = 0;
+            float minHudBarValue = float.MaxValue;
+            float maxHudBarValue = float.MinValue;
+            float minHudTextCurrent = float.MaxValue;
+            float maxHudTextCurrent = float.MinValue;
             float primaryHudBarValue = 0f;
             float primaryHudTextCurrent = 0f;
             float primaryHudTextBase = 0f;
@@ -683,6 +723,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 if (item.Kind == WorldHudItemKind.Bar)
                 {
                     barCount++;
+                    minHudBarValue = MathF.Min(minHudBarValue, item.Value0);
+                    maxHudBarValue = MathF.Max(maxHudBarValue, item.Value0);
                     if (primaryHudBarValue <= 0f)
                     {
                         primaryHudBarValue = item.Value0;
@@ -691,12 +733,26 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 else if (item.Kind == WorldHudItemKind.Text)
                 {
                     textCount++;
+                    minHudTextCurrent = MathF.Min(minHudTextCurrent, item.Value0);
+                    maxHudTextCurrent = MathF.Max(maxHudTextCurrent, item.Value0);
                     if (primaryHudTextBase <= 0f)
                     {
                         primaryHudTextCurrent = item.Value0;
                         primaryHudTextBase = item.Value1;
                     }
                 }
+            }
+
+            if (barCount == 0)
+            {
+                minHudBarValue = 0f;
+                maxHudBarValue = 0f;
+            }
+
+            if (textCount == 0)
+            {
+                minHudTextCurrent = 0f;
+                maxHudTextCurrent = 0f;
             }
 
             int smokeId = definitions.GetId(PerformerBlacksmithShowcaseIds.SmokeDefinitionId);
@@ -730,7 +786,11 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 overlays.Count,
                 barCount,
                 textCount,
+                screenHud.BarCount,
+                screenHud.TextCount,
                 smokeAttachedToChimneyCount,
+                maxHudBarValue - minHudBarValue,
+                maxHudTextCurrent - minHudTextCurrent,
                 primaryHudBarValue,
                 primaryHudTextCurrent,
                 primaryHudTextBase);
@@ -738,9 +798,11 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         private CapacityMetrics CaptureCapacityMetrics(GameEngine engine)
         {
+            PresentationRuntimeConfig runtimeConfig = engine.MergedConfig?.Presentation ?? new PresentationRuntimeConfig();
             var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
             var events = engine.GetService(CoreServiceKeys.PresentationEventStream);
             var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             var skinned = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
             var roadSplines = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
@@ -748,25 +810,28 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             var spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue);
 
             return new CapacityMetrics(
-                PerformerCapacity: performers?.ActiveCount ?? 0,
+                PerformerCapacity: runtimeConfig.GetEffectivePerformerInstanceCapacity(),
                 PerformerActive: performers?.ActiveCount ?? 0,
-                PresentationEventCapacity: events?.Capacity ?? 0,
+                PresentationEventCapacity: events?.Capacity ?? runtimeConfig.GetEffectivePresentationEventStreamCapacity(),
                 PresentationEventCount: events?.Count ?? 0,
                 PresentationEventDrops: events?.DroppedSinceClear ?? 0,
-                PrimitiveCapacity: primitives?.Capacity ?? 0,
+                PrimitiveCapacity: primitives?.Capacity ?? runtimeConfig.GetEffectivePrimitiveDrawBufferCapacity(),
                 PrimitiveCount: primitives?.Count ?? 0,
                 PrimitiveDrops: primitives?.DroppedSinceClear ?? 0,
-                WorldHudCapacity: worldHud?.Capacity ?? 0,
+                WorldHudCapacity: worldHud?.Capacity ?? runtimeConfig.GetEffectiveWorldHudCapacity(),
                 WorldHudCount: worldHud?.Count ?? 0,
                 WorldHudDrops: worldHud?.DroppedSinceClear ?? 0,
-                SkinnedCapacity: skinned?.Capacity ?? 0,
+                ScreenHudCapacity: screenHud?.Capacity ?? runtimeConfig.GetEffectiveScreenHudCapacity(),
+                ScreenHudCount: screenHud?.Count ?? 0,
+                ScreenHudDrops: screenHud?.DroppedSinceClear ?? 0,
+                SkinnedCapacity: skinned?.Capacity ?? runtimeConfig.GetEffectiveSkinnedVisualBatchCapacity(),
                 SkinnedCount: skinned?.Count ?? 0,
                 SkinnedDrops: skinned?.DroppedSinceClear ?? 0,
-                RoadSplineCapacity: roadSplines?.Capacity ?? 0,
+                RoadSplineCapacity: roadSplines?.Capacity ?? runtimeConfig.GetEffectiveRoadSplineCapacity(),
                 RoadSplineCount: roadSplines?.Count ?? 0,
-                GroundOverlayCapacity: overlays?.Capacity ?? 0,
+                GroundOverlayCapacity: overlays?.Capacity ?? runtimeConfig.GetEffectiveGroundOverlayCapacity(),
                 GroundOverlayCount: overlays?.Count ?? 0,
-                SpawnQueueCapacity: spawnQueue?.Capacity ?? 0,
+                SpawnQueueCapacity: spawnQueue?.Capacity ?? runtimeConfig.GetEffectiveRuntimeEntitySpawnQueueCapacity(),
                 SpawnQueueCount: spawnQueue?.Count ?? 0);
         }
 
@@ -821,6 +886,35 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         {
             _lastChangedField = field;
             _changeFlashTimer = 0.5f;
+            MarkPanelDirty();
+        }
+
+        private void TryApplyAutoScatter(GameEngine engine)
+        {
+            if (_autoScatterApplied)
+            {
+                return;
+            }
+
+            int currentTotal = CountBlacksmithEntities(engine, out _);
+            if (currentTotal > 1)
+            {
+                _scatterRequestedTotal = currentTotal;
+                _scatterTargetTotal = currentTotal;
+                _autoScatterApplied = true;
+                return;
+            }
+
+            // Auto scatter is an explicit benchmark/debug opt-in. The showcase should
+            // boot into its authored single-root baseline unless a launch env requests
+            // a larger crowd. Tests and normal UAT then stay on the same baseline path.
+            int requested = ReadEnvInt(AutoScatterTotalEnvKey, 0);
+            if (requested > 1)
+            {
+                ApplyScatterLayout(requested);
+            }
+
+            _autoScatterApplied = true;
         }
 
         private void ResetControlState()
@@ -831,6 +925,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _destroyed = false;
             _scatterRequestedTotal = 1;
             _scatterTargetTotal = ScatterDefaultTarget;
+            MarkPanelDirty();
         }
 
         private void EnsureGameplayTagState(GameEngine engine, Entity entity)
@@ -937,14 +1032,14 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         {
             double avgTickMs = _tickSampleCount == 0 ? 0d : _tickSampleSumMs / _tickSampleCount;
             double avgFps = avgTickMs <= 0d ? 0d : 1000d / avgTickMs;
-            return $"Benchmark: last {_tickSampleCount} tick(s) avg {avgTickMs:F2} ms | max {_tickSampleMaxMs:F2} ms | last {_lastFrameTickMs:F2} ms | fps {avgFps:F1} | scene bars/text {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} @ blacksmiths {totalBlacksmiths}";
+            return $"Benchmark: last {_tickSampleCount} tick(s) avg {avgTickMs:F2} ms | max {_tickSampleMaxMs:F2} ms | last {_lastFrameTickMs:F2} ms | fps {avgFps:F1} | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount} @ blacksmiths {totalBlacksmiths}";
         }
 
         private string BuildCapacitySummary(in CapacityMetrics metrics, int totalBlacksmiths)
         {
             int scatterUiMax = ComputeScatterCapacityMax(metrics);
 
-            return $"Capacity: performers {metrics.PerformerActive}/{metrics.PerformerCapacity}, events {metrics.PresentationEventCount}/{metrics.PresentationEventCapacity}, primitives {metrics.PrimitiveCount}/{metrics.PrimitiveCapacity}, hud {metrics.WorldHudCount}/{metrics.WorldHudCapacity}, skinned {metrics.SkinnedCount}/{metrics.SkinnedCapacity}, spline {metrics.RoadSplineCount}/{metrics.RoadSplineCapacity}, decal {metrics.GroundOverlayCount}/{metrics.GroundOverlayCapacity}, spawnQ {metrics.SpawnQueueCount}/{metrics.SpawnQueueCapacity} | UI max {scatterUiMax} | requested {totalBlacksmiths}";
+            return $"Capacity: performers {metrics.PerformerActive}/{metrics.PerformerCapacity}, events {metrics.PresentationEventCount}/{metrics.PresentationEventCapacity}, primitives {metrics.PrimitiveCount}/{metrics.PrimitiveCapacity}, world HUD {metrics.WorldHudCount}/{metrics.WorldHudCapacity}, screen HUD {metrics.ScreenHudCount}/{metrics.ScreenHudCapacity}, skinned {metrics.SkinnedCount}/{metrics.SkinnedCapacity}, spline {metrics.RoadSplineCount}/{metrics.RoadSplineCapacity}, decal {metrics.GroundOverlayCount}/{metrics.GroundOverlayCapacity}, spawnQ {metrics.SpawnQueueCount}/{metrics.SpawnQueueCapacity} | UI max {scatterUiMax} | requested {totalBlacksmiths}";
         }
 
         private static int ComputeScatterCapacityMax(in CapacityMetrics metrics)
@@ -952,6 +1047,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             int performerBound = ResolveCapacityBound(metrics.PerformerCapacity, PerformerCountPerBlacksmith);
             int primitiveBound = ResolveCapacityBound(metrics.PrimitiveCapacity, PrimitiveCountPerBlacksmith);
             int worldHudBound = ResolveCapacityBound(metrics.WorldHudCapacity, WorldHudCountPerBlacksmith);
+            int screenHudBound = ResolveCapacityBound(metrics.ScreenHudCapacity, ScreenHudCountPerBlacksmith);
             int roadSplineBound = ResolveCapacityBound(metrics.RoadSplineCapacity, RoadSplineCountPerBlacksmith);
             int overlayBound = ResolveCapacityBound(metrics.GroundOverlayCapacity, GroundOverlayCountPerBlacksmith);
             int skinnedBound = ResolveCapacityBound(metrics.SkinnedCapacity, SkinnedCountPerBlacksmith);
@@ -962,6 +1058,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             int lowestBound = performerBound;
             lowestBound = Math.Min(lowestBound, primitiveBound);
             lowestBound = Math.Min(lowestBound, worldHudBound);
+            lowestBound = Math.Min(lowestBound, screenHudBound);
             lowestBound = Math.Min(lowestBound, roadSplineBound);
             lowestBound = Math.Min(lowestBound, overlayBound);
             lowestBound = Math.Min(lowestBound, skinnedBound);
@@ -990,6 +1087,24 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             {
                 _activeEngine = null;
             }
+
+            _panelDirty = true;
+            _panelRefreshCooldown = 0f;
+            _cachedPanelState = PerformerBlacksmithShowcasePanelState.Empty;
+        }
+
+        private void MarkPanelDirty()
+        {
+            _panelDirty = true;
+            _panelRefreshCooldown = 0f;
+        }
+
+        private static int ReadEnvInt(string key, int fallback)
+        {
+            string? raw = Environment.GetEnvironmentVariable(key);
+            return int.TryParse(raw, out int parsed) && parsed > 0
+                ? parsed
+                : fallback;
         }
 
         private readonly record struct PerformerMetrics(
@@ -1032,12 +1147,16 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             int GroundOverlayCount,
             int WorldHudBarCount,
             int WorldHudTextCount,
+            int ScreenHudBarCount,
+            int ScreenHudTextCount,
             int SmokeAttachedToChimneyCount,
+            float WorldHudBarValueRange,
+            float WorldHudTextCurrentRange,
             float PrimaryHudBarValue,
             float PrimaryHudTextCurrent,
             float PrimaryHudTextBase)
         {
-            public static readonly RenderMetrics Empty = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0f, 0f, 0f);
+            public static readonly RenderMetrics Empty = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0f, 0f, 0f, 0f, 0f);
         }
 
         private readonly record struct CapacityMetrics(
@@ -1052,6 +1171,9 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             int WorldHudCapacity,
             int WorldHudCount,
             int WorldHudDrops,
+            int ScreenHudCapacity,
+            int ScreenHudCount,
+            int ScreenHudDrops,
             int SkinnedCapacity,
             int SkinnedCount,
             int SkinnedDrops,
@@ -1062,7 +1184,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             int SpawnQueueCapacity,
             int SpawnQueueCount)
         {
-            public static readonly CapacityMetrics Empty = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            public static readonly CapacityMetrics Empty = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         }
     }
 }

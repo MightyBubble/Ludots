@@ -14,7 +14,7 @@ namespace Ludots.Tests.Presentation
         public void SetUp() => _world = World.Create();
 
         [TearDown]
-        public void TearDown() => World.Destroy(_world);
+        public void TearDown() => _world?.Dispose();
 
         [Test]
         public void PerformerParams_SettersStoreValuesAcrossAllLanes()

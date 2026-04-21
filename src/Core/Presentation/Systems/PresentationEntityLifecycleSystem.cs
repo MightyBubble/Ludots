@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Performers;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -16,6 +17,8 @@ namespace Ludots.Core.Presentation.Systems
     public sealed class PresentationEntityLifecycleSystem : BaseSystem<World, float>
     {
         private readonly PresentationEventStream _events;
+        private readonly PerformerEntityRuntime? _performerRuntime;
+        private readonly PerformerDefinitionRegistry? _definitions;
 
         private readonly QueryDescription _spawnedQuery = new QueryDescription()
             .WithAll<PresentationStableId>()
@@ -24,10 +27,16 @@ namespace Ludots.Core.Presentation.Systems
         private readonly QueryDescription _aliveQuery = new QueryDescription()
             .WithAll<PresentationStableId, PresentationLifecycleState>();
 
-        public PresentationEntityLifecycleSystem(World world, PresentationEventStream events)
+        public PresentationEntityLifecycleSystem(
+            World world,
+            PresentationEventStream events,
+            PerformerEntityRuntime? performerRuntime = null,
+            PerformerDefinitionRegistry? definitions = null)
             : base(world)
         {
             _events = events ?? throw new ArgumentNullException(nameof(events));
+            _performerRuntime = performerRuntime;
+            _definitions = definitions;
         }
 
         public override void Update(in float dt)
@@ -96,6 +105,8 @@ namespace Ludots.Core.Presentation.Systems
                         throw new InvalidOperationException("PresentationEventStream is full while publishing EntityDestroyed.");
                     }
 
+                    TryDestroyBootstrappedPerformers(entity, stableIds[i].Value, templateKeyId);
+
                     states[i].DestroyEventPublished = true;
                 }
             }
@@ -111,6 +122,29 @@ namespace Ludots.Core.Presentation.Systems
                 KeyId = templateKeyId,
                 PayloadA = stableId,
             });
+        }
+
+        private void TryDestroyBootstrappedPerformers(Entity entity, int stableId, int templateKeyId)
+        {
+            if (_performerRuntime == null || _definitions == null || templateKeyId <= 0)
+            {
+                return;
+            }
+
+            var bootstrap = _definitions.BootstrapRegistry;
+            if (!bootstrap.TryGetEntityDestroyedDestroys(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapDestroyRule[] rules))
+            {
+                return;
+            }
+
+            for (int i = 0; i < rules.Length; i++)
+            {
+                int scopeId = rules[i].ResolveScopeTag(stableId);
+                if (scopeId > 0)
+                {
+                    _performerRuntime.DestroyScope(scopeId);
+                }
+            }
         }
     }
 }

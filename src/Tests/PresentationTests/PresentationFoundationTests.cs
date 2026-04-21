@@ -1187,7 +1187,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerInstanceBuffer_TracksActiveCountAndOwnerPayloadRefsIncrementally()
+        public void PerformerEntityRuntime_TracksActiveCountAndOwnerPayloadRefsIncrementally()
         {
             using var world = World.Create();
             Entity ownerA = world.Create();

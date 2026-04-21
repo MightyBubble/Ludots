@@ -810,7 +810,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 // Snapshot primary attribute for delta calculation
                                 int primaryAttrId = e.Modifiers.Count > 0 ? e.Modifiers.Get(0).AttributeId : -1;
                                 float before = primaryAttrId >= 0 ? attr.GetCurrent(primaryAttrId) : 0f;
-                                EffectModifierOps.Apply(in e.Modifiers, ref attr);
+                                AttributeMutationOps.ApplyModifiers(World, e.Target, in e.Modifiers);
                                 float after = primaryAttrId >= 0 ? attr.GetCurrent(primaryAttrId) : 0f;
                                 delta = after - before;
                                 if (_presentationEvents != null)

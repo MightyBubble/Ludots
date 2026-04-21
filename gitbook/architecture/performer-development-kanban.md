@@ -321,6 +321,8 @@ T17-F1 ~ F4 进展（2026-04-19 审计，基于未提交改动 + commit 2948d443
 
 设计文档：[Performer 编译式执行分层](performer-compiled-lanes.md)
 
+§8.4 Entity-Backed Runtime 迁移已完成（2026-04-20）：`PerformerInstanceBuffer` / `PerformerInstance` / `PerformerParamBlackboard` 已删除，替换为 `PerformerEntityRuntime` + Arch entity 组件。所有系统和测试已迁移。
+
 目标：同屏 30K 实体（10K 动态 + 20K 静态），带特效、属性、血条，150K performer instances @ 60FPS。
 
 文档前置 gate：
@@ -330,8 +332,8 @@ T17-F1 ~ F4 进展（2026-04-19 审计，基于未提交改动 + commit 2948d443
 
 | ID | 任务 | 依赖 | 产出文件 | 验收标准 | 预估 |
 |----|------|------|---------|---------|------|
-| T19 | Persistent Draw Buffer + Static Freeze | T17 | 新增 `StableDrawCache` + 修改 `PerformerEmitSystem` + `PerformerInstanceBuffer` | Draw buffer 持久化不每帧 clear；静态实体 performer 创建后 0 cost/帧；动态实体每帧只更新 position lane；dirty 实例全量重算；30K 同屏稳态 < 2ms | L |
-| T20 | Dirty-Driven Behavior | T19 | 修改 `PerformerBehaviorSystem` | 直接读 owner entity 的 `GameplayTagEffectiveChangedBits` + `DirtyFlags.AttributeDirty`；只对 dirty entity 的 performer 求值 behavior；稳态下 behavior eval ~0；不自建 DirtyMask，复用 GAS 已有信号 | L |
+| T19 | Persistent Draw Buffer + Static Freeze | T17 | 新增 `StableDrawCache` + 修改 `PerformerEmitSystem` + `PerformerInstanceBuffer` | Draw buffer 持久化不每帧 clear；静态实体 performer 创建后 0 cost/帧；动态实体每帧只更新 position lane；dirty 实例全量重算；30K 同屏稳态 < 2ms | L | 基建就绪（`StableDrawCache`、`PerformerEmitCache` 组件已实现），验收标准待验证 |
+| T20 | Dirty-Driven Behavior | T19 | 修改 `PerformerBehaviorSystem` | 直接读 owner entity 的 `GameplayTagEffectiveChangedBits` + `DirtyFlags.AttributeDirty`；只对 dirty entity 的 performer 求值 behavior；稳态下 behavior eval ~0；不自建 DirtyMask，复用 GAS 已有信号 | L | 基建就绪（`DirtyFlags.IsAnyAttributeDirty`、`GameplayTagEffectiveChangedBits.IsAnyBitSet` 已实现），验收标准待验证 |
 | T21 | LOD Children Pruning | T20 | 修改 `PerformerRuntimeSystem` | 读 `CullState.LOD` 控制 children 激活数量；Close=5/Medium=3/Far=2；通过 ActivateBehavior/DeactivateBehavior 控制；150K → ~74K active instances | M |
 | T22 | Culling Gate | T19 | 修改 `PerformerRuntimeSystem` + `PerformerInstanceBuffer` | `ProcessActive` 跳过 `!OwnerCullVisible`；子 performer 继承父 cull | S |
 | T23 | SoA Instance Buffer + Compiled Binding Table | T20 | 重构 `PerformerInstanceBuffer` 内部 + 修改 `PerformerDefinitionConfigLoader` | AoS→SoA 内部存储；注册时编译 `CompiledBinding[]`；运行时不走 `ResolveParam` | L |

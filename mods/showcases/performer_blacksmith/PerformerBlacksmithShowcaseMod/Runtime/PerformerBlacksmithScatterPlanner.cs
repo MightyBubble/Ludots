@@ -10,6 +10,9 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         public const float DefaultMinRadiusCm = 750f;
         public const float DefaultMaxRadiusCm = 2400f;
         public const float DefaultJitterCm = 140f;
+        private const int ScatterScratchCapacity = 4096;
+        [ThreadStatic]
+        private static RuntimeEntitySpawnRequest[]? _scatterScratch;
 
         public static int EnqueueScatter(
             RuntimeEntitySpawnQueue queue,
@@ -40,43 +43,51 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             int ringCount = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(extraBuildings)));
             int ringCapacity = Math.Max(6, extraBuildings / ringCount + 2);
             int queued = 0;
+            RuntimeEntitySpawnRequest[] scratch = _scatterScratch ??= new RuntimeEntitySpawnRequest[ScatterScratchCapacity];
 
             for (int index = 0; index < extraBuildings; index++)
             {
-                int ring = index / ringCapacity;
-                int slot = index % ringCapacity;
-                float ringAlpha = ringCount <= 1 ? 1f : (ring + 1f) / ringCount;
-                float radius = minRadiusCm + ((maxRadiusCm - minRadiusCm) * ringAlpha);
-                float angle = ((slot / (float)ringCapacity) * MathF.PI * 2f) + ((float)random.NextDouble() * 0.55f);
-                float jitterX = ((float)random.NextDouble() * 2f - 1f) * DefaultJitterCm;
-                float jitterY = ((float)random.NextDouble() * 2f - 1f) * DefaultJitterCm;
-                float x = MathF.Cos(angle) * radius + jitterX;
-                float y = MathF.Sin(angle) * radius + jitterY;
-
-                if ((x * x) + (y * y) < (minRadiusCm * minRadiusCm))
+                int batchCount = Math.Min(scratch.Length, extraBuildings - index);
+                for (int batchIndex = 0; batchIndex < batchCount; batchIndex++)
                 {
-                    float scale = minRadiusCm / MathF.Max(1f, MathF.Sqrt((x * x) + (y * y)));
-                    x *= scale;
-                    y *= scale;
+                    int spawnIndex = index + batchIndex;
+                    int ring = spawnIndex / ringCapacity;
+                    int slot = spawnIndex % ringCapacity;
+                    float ringAlpha = ringCount <= 1 ? 1f : (ring + 1f) / ringCount;
+                    float radius = minRadiusCm + ((maxRadiusCm - minRadiusCm) * ringAlpha);
+                    float angle = ((slot / (float)ringCapacity) * MathF.PI * 2f) + ((float)random.NextDouble() * 0.55f);
+                    float jitterX = ((float)random.NextDouble() * 2f - 1f) * DefaultJitterCm;
+                    float jitterY = ((float)random.NextDouble() * 2f - 1f) * DefaultJitterCm;
+                    float x = MathF.Cos(angle) * radius + jitterX;
+                    float y = MathF.Sin(angle) * radius + jitterY;
+
+                    if ((x * x) + (y * y) < (minRadiusCm * minRadiusCm))
+                    {
+                        float scale = minRadiusCm / MathF.Max(1f, MathF.Sqrt((x * x) + (y * y)));
+                        x *= scale;
+                        y *= scale;
+                    }
+
+                    scratch[batchIndex] = new RuntimeEntitySpawnRequest
+                    {
+                        Kind = RuntimeEntitySpawnKind.Template,
+                        TemplateId = PerformerBlacksmithShowcaseIds.TemplateId,
+                        MapId = mapId,
+                        WorldPositionCm = Fix64Vec2.FromFloat(x, y),
+                        HasWorldPosition = 1,
+                        HasFacing = 1,
+                        FacingAngleRad = angle + MathF.PI,
+                    };
                 }
 
-                var request = new RuntimeEntitySpawnRequest
+                int written = queue.EnqueueMany(scratch.AsSpan(0, batchCount));
+                queued += written;
+                if (written != batchCount)
                 {
-                    Kind = RuntimeEntitySpawnKind.Template,
-                    TemplateId = PerformerBlacksmithShowcaseIds.TemplateId,
-                    MapId = mapId,
-                    WorldPositionCm = Fix64Vec2.FromFloat(x, y),
-                    HasWorldPosition = 1,
-                    HasFacing = 1,
-                    FacingAngleRad = angle + MathF.PI,
-                };
-
-                if (!queue.TryEnqueue(in request))
-                {
-                    break;
+                    return queued;
                 }
 
-                queued++;
+                index += batchCount - 1;
             }
 
             return queued;

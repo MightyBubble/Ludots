@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.GraphRuntime;
@@ -907,8 +908,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             var self = s.Caster;
             if (s.World.IsAlive(self) && s.World.Has<AttributeBuffer>(self))
             {
-                ref var buf = ref s.World.Get<AttributeBuffer>(self);
-                buf.SetCurrent(ins.Imm, s.F[ins.A]);
+                AttributeMutationOps.SetCurrent(s.World, self, ins.Imm, s.F[ins.A]);
             }
         }
     }

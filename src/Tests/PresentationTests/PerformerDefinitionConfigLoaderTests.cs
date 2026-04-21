@@ -151,15 +151,12 @@ namespace Ludots.Tests.Presentation
             Assert.That(knight.Children.Length, Is.EqualTo(1));
             Assert.That(knight.Children[0].DefinitionId, Is.EqualTo(registry.GetId("child_a")));
             Assert.That(knight.Children[0].ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("structure")));
-            Assert.That(knight.Rules.Length, Is.EqualTo(2));
+            Assert.That(knight.Rules.Length, Is.EqualTo(1));
             Assert.That(knight.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.GameplayEvent));
             Assert.That(knight.Rules[0].Command.CommandKind, Is.EqualTo(PerformerCommandKind.SetParam));
             Assert.That(knight.Rules[0].Command.ParamKey, Is.EqualTo(300));
             Assert.That(knight.Rules[0].Command.ParamLane, Is.EqualTo(ParamLane.Int));
             Assert.That(knight.Rules[0].Command.ValueSource, Is.EqualTo(PerformerCommandValueSource.EventKeyId));
-            Assert.That(knight.Rules[1].Event.Kind, Is.EqualTo(PresentationEventKind.PerformerCreated));
-            Assert.That(knight.Rules[1].Event.KeyId, Is.EqualTo(knightId));
-            Assert.That(knight.Rules[1].Command.PerformerDefinitionId, Is.EqualTo(registry.GetId("child_a")));
             Assert.That(knight.Bindings.Length, Is.EqualTo(1));
             Assert.That(knight.Bindings[0].Value.ConstantValue, Is.EqualTo(9f));
             Assert.That(knight.ParamDefaults.Length, Is.EqualTo(1));
@@ -181,7 +178,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Load_ExpandsChildrenIntoPerformerCreatedRule()
+        public void Load_PreservesChildrenAsDeclarativeHierarchy_WithoutSyntheticRules()
         {
             WriteCatalog();
             WritePerformers(
@@ -204,12 +201,10 @@ namespace Ludots.Tests.Presentation
             loader.Load(catalog);
 
             Assert.That(registry.TryGet(registry.GetId("root"), out var root), Is.True);
-            Assert.That(root.Rules.Length, Is.EqualTo(1));
-            Assert.That(root.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.PerformerCreated));
-            Assert.That(root.Rules[0].Event.KeyId, Is.EqualTo(registry.GetId("root")));
-            Assert.That(root.Rules[0].Command.CommandKind, Is.EqualTo(PerformerCommandKind.CreatePerformer));
-            Assert.That(root.Rules[0].Command.PerformerDefinitionId, Is.EqualTo(registry.GetId("child_a")));
-            Assert.That(root.Rules[0].Command.ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("structure")));
+            Assert.That(root.Rules.Length, Is.EqualTo(0));
+            Assert.That(root.Children.Length, Is.EqualTo(1));
+            Assert.That(root.Children[0].DefinitionId, Is.EqualTo(registry.GetId("child_a")));
+            Assert.That(root.Children[0].ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("structure")));
         }
 
         [Test]

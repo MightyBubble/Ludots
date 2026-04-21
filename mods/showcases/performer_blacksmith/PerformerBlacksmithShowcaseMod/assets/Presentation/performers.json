@@ -38,7 +38,7 @@
             { "paramValue": 3, "assetId": "blacksmith.building.ruined" }
           ],
           "materialId": "default_surface",
-          "renderPath": "StaticMesh",
+          "renderPath": "InstancedStaticMesh",
           "mobility": "Static",
           "grounding": "SnapToGround",
           "localOffset": [0.0, 0.0, 0.0],
@@ -84,7 +84,7 @@
             { "paramValue": 3, "assetId": "blacksmith.building.ruined" }
           ],
           "materialId": "default_surface",
-          "renderPath": "StaticMesh",
+          "renderPath": "InstancedStaticMesh",
           "mobility": "Static",
           "grounding": "SnapToGround",
           "localOffset": [2.0, 0.0, 0.0],
@@ -115,7 +115,7 @@
             { "paramValue": 3, "assetId": "blacksmith.building.ruined" }
           ],
           "materialId": "default_surface",
-          "renderPath": "StaticMesh",
+          "renderPath": "InstancedStaticMesh",
           "mobility": "Static",
           "grounding": "SnapToGround",
           "localOffset": [-2.0, 0.0, 0.0],
@@ -138,7 +138,7 @@
           "assetKind": "Mesh",
           "assetId": "blacksmith.furnace",
           "materialId": "default_surface",
-          "renderPath": "StaticMesh",
+          "renderPath": "InstancedStaticMesh",
           "mobility": "Static",
           "grounding": "SnapToGround",
           "localOffset": [0.0, 0.0, 3.0],

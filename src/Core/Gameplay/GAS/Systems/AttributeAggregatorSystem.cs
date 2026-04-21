@@ -78,6 +78,73 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe ulong RecomputeEffectiveValues(
+            World world,
+            Entity entity,
+            ref AttributeBuffer attrBuffer,
+            ref ActiveEffectContainer effects,
+            GraphProgramRegistry graphPrograms,
+            IGraphRuntimeApi graphApi)
+        {
+            ulong touchedMask = 0UL;
+
+            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            {
+                attrBuffer.CurrentValues[i] = attrBuffer.BaseValues[i];
+            }
+
+            if (effects.Count > 0)
+            {
+                for (int i = 0; i < effects.Count; i++)
+                {
+                    Entity effectEntity = effects.GetEntity(i);
+                    if (!world.IsAlive(effectEntity))
+                    {
+                        continue;
+                    }
+
+                    ref readonly var modifiers = ref world.Get<EffectModifiers>(effectEntity);
+                    touchedMask |= BuildTouchedMask(in modifiers);
+                    EffectModifierOps.ApplyAggregated(in modifiers, ref attrBuffer);
+                }
+            }
+
+            Span<float> beforeDerived = stackalloc float[AttributeBuffer.MAX_ATTRS];
+            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            {
+                beforeDerived[i] = attrBuffer.CurrentValues[i];
+            }
+
+            ExecuteDerivedGraphs(world, entity, graphPrograms, graphApi);
+
+            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            {
+                if (beforeDerived[i] != attrBuffer.CurrentValues[i])
+                {
+                    touchedMask |= 1UL << i;
+                }
+            }
+
+            return touchedMask;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe ulong BuildTouchedMask(in EffectModifiers modifiers)
+        {
+            ulong mask = 0UL;
+            for (int i = 0; i < modifiers.Count; i++)
+            {
+                int attributeId = modifiers.Get(i).AttributeId;
+                if ((uint)attributeId < AttributeBuffer.MAX_ATTRS)
+                {
+                    mask |= 1UL << attributeId;
+                }
+            }
+
+            return mask;
+        }
+
         struct AttributeAggregatorWithDirtyJob : IForEachWithEntity<AttributeBuffer, ActiveEffectContainer, DirtyFlags>
         {
             public World World;
@@ -93,30 +160,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     oldValues[i] = attrBuffer.CurrentValues[i];
                 }
 
-                // 1. Reset Current = Base
-                for(int i=0; i<AttributeBuffer.MAX_ATTRS; i++)
-                {
-                    attrBuffer.CurrentValues[i] = attrBuffer.BaseValues[i];
-                }
-
-                // 2. Aggregate Active Effects
-                if (effects.Count > 0)
-                {
-                for (int i = 0; i < effects.Count; i++)
-                {
-                    Entity effectEntity = effects.GetEntity(i);
-
-                    if (World.IsAlive(effectEntity))
-                    {
-                        ref var modifiers = ref World.Get<EffectModifiers>(effectEntity);
-                        EffectModifierOps.ApplyAggregated(in modifiers, ref attrBuffer);
-                    }
-                    }
-                }
-
-                // 3. Execute derived graphs (non-linear attribute formulas)
-                ExecuteDerivedGraphs(World, entity, GraphPrograms, GraphApi);
-                RestorePersistentCurrentValues(ref attrBuffer, oldValues);
+                ulong touchedMask = RecomputeEffectiveValues(
+                    World,
+                    entity,
+                    ref attrBuffer,
+                    ref effects,
+                    GraphPrograms,
+                    GraphApi);
+                RestorePersistentCurrentValues(ref attrBuffer, oldValues, touchedMask);
 
                 // 4. 标记脏属性（用于延迟触发器）
                 for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
@@ -146,26 +197,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     oldValues[i] = attrBuffer.CurrentValues[i];
                 }
 
-                for(int i=0; i<AttributeBuffer.MAX_ATTRS; i++)
-                {
-                    attrBuffer.CurrentValues[i] = attrBuffer.BaseValues[i];
-                }
-
-                if (effects.Count > 0)
-                {
-                    for (int i = 0; i < effects.Count; i++)
-                    {
-                        Entity effectEntity = effects.GetEntity(i);
-                        if (!World.IsAlive(effectEntity)) continue;
-
-                        ref var modifiers = ref World.Get<EffectModifiers>(effectEntity);
-                        EffectModifierOps.ApplyAggregated(in modifiers, ref attrBuffer);
-                    }
-                }
-
-                // Execute derived graphs (non-linear attribute formulas)
-                ExecuteDerivedGraphs(World, entity, GraphPrograms, GraphApi);
-                RestorePersistentCurrentValues(ref attrBuffer, oldValues);
+                ulong touchedMask = RecomputeEffectiveValues(
+                    World,
+                    entity,
+                    ref attrBuffer,
+                    ref effects,
+                    GraphPrograms,
+                    GraphApi);
+                RestorePersistentCurrentValues(ref attrBuffer, oldValues, touchedMask);
 
                 var dirtyFlags = new DirtyFlags();
                 bool anyDirty = false;
@@ -187,13 +226,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe void RestorePersistentCurrentValues(ref AttributeBuffer attrBuffer, Span<float> previousCurrentValues)
+        private static unsafe void RestorePersistentCurrentValues(ref AttributeBuffer attrBuffer, Span<float> previousCurrentValues, ulong touchedMask)
         {
+            ulong definedMask = attrBuffer.DefinedMask;
             for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
             {
+                ulong bit = 1UL << i;
+                if ((definedMask & bit) == 0UL)
+                {
+                    continue;
+                }
+
                 attrBuffer.CapValues[i] = attrBuffer.CurrentValues[i];
-                if (AttributeRegistry.TryGetConstraints(i, out var constraints) &&
-                    constraints.ClampCurrentToBase)
+                bool touchedByAggregation = (touchedMask & bit) != 0UL;
+                bool clampsToEffectiveCap =
+                    AttributeRegistry.TryGetConstraints(i, out var constraints) &&
+                    constraints.ClampCurrentToBase;
+                if (!touchedByAggregation || clampsToEffectiveCap)
                 {
                     attrBuffer.SetCurrent(i, previousCurrentValues[i]);
                 }

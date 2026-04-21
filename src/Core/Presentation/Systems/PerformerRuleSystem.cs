@@ -360,13 +360,26 @@ namespace Ludots.Core.Presentation.Systems
             bool globalEvent = IsGlobalEvent(evt.Kind);
             PerformerCommand localCmd = command;
             PresentationEvent localEvt = evt;
-            var query = new QueryDescription().WithAll<PerformerState>();
-            World.Query(in query, (Entity entity, ref PerformerState state) =>
+            IReadOnlyList<Entity> candidates = globalEvent
+                ? _runtime!.GetActiveByDefinition(ownerDefinitionId)
+                : _runtime!.GetActiveByOwnerDefinition(ownerDefinitionId, evt.Source);
+
+            for (int i = 0; i < candidates.Count; i++)
             {
+                Entity entity = candidates[i];
+                if (!World.IsAlive(entity) || !World.Has<PerformerState>(entity))
+                {
+                    continue;
+                }
+
+                ref PerformerState state = ref World.Get<PerformerState>(entity);
                 if (state.DefId != ownerDefinitionId || (!globalEvent && state.OwnerEntity != localEvt.Source))
-                    return;
+                {
+                    continue;
+                }
+
                 EmitCommand(in localCmd, in localEvt, entity, ownerDefinitionId);
-            });
+            }
         }
 
         private void EmitCommand(in PerformerCommand cmd, in PresentationEvent evt, Entity performerEntity, int ownerDefinitionId)
@@ -387,9 +400,10 @@ namespace Ludots.Core.Presentation.Systems
             emitted.Target = evt.Target;
             emitted.Position = default;
             emitted.PerformerEntity = performerEntity;
-            emitted.ParentEntity = cmd.ParentEntity != Entity.Null
-                ? cmd.ParentEntity
-                : (evt.Kind == PresentationEventKind.PerformerCreated ? evt.PerformerEntity : cmd.ParentEntity);
+            Entity normalizedParent = NormalizeOptionalEntity(cmd.ParentEntity);
+            emitted.ParentEntity = normalizedParent != Entity.Null
+                ? normalizedParent
+                : (evt.Kind == PresentationEventKind.PerformerCreated ? NormalizeOptionalEntity(evt.PerformerEntity) : Entity.Null);
             emitted.ParamValue = cmd.ParamGraphProgramId > 0
                 ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
                 : ResolveParamFloatValue(in cmd, in evt);
@@ -406,6 +420,11 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             _commands.TryAdd(in emitted);
+        }
+
+        private static Entity NormalizeOptionalEntity(Entity entity)
+        {
+            return entity == default || entity.Id < 0 ? Entity.Null : entity;
         }
 
         private static bool EventTargetsExistingPerformerInstances(PresentationEventKind kind)

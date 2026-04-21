@@ -606,7 +606,8 @@ namespace Ludots.Core.Engine
             var globalPresentationEvents = new GlobalPresentationEventBuffer();
             var presentationConfig = config.Presentation ?? new PresentationRuntimeConfig();
             var presentationEventStream = new PresentationEventStream(presentationConfig.GetEffectivePresentationEventStreamCapacity());
-            var presentationBridgeSystem = new PresentationBridgeSystem(World, EventBus, presentationEventStream, GameSession, gasPresentationEvents);
+            var presentationOwnerChanges = new PresentationOwnerChangeBuffer(presentationConfig.GetEffectivePresentationEventStreamCapacity());
+            var presentationBridgeSystem = new PresentationBridgeSystem(World, EventBus, presentationEventStream, GameSession, gasPresentationEvents, presentationOwnerChanges);
             var globalEventBridgeSystem = new GlobalEventBridgeSystem(World, globalPresentationEvents, presentationEventStream, GameSession);
             var performerCommandBuffer = new PerformerCommandBuffer(presentationConfig.GetEffectivePerformerCommandCapacity());
             var presentationPrefabs = new PrefabRegistry();
@@ -643,8 +644,9 @@ namespace Ludots.Core.Engine
             new AnimationProfileConfigLoader(ConfigPipeline, animationProfiles, animatorControllers, animationClips).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
+            performerDefinitions.RebuildCompiledViews();
             var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performerCommandBuffer, performerDefinitions, performerRuntime, graphProgramRegistry, performerGraphApi, GlobalContext);
-            var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(World, presentationEventStream);
+            var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(World, presentationEventStream, performerRuntime, performerDefinitions);
             var presentationEntityFinalizeDestroySystem = new PresentationEntityFinalizeDestroySystem(World);
             var performerRuntimeSystem = new PerformerRuntimeSystem(
                 World,
@@ -661,6 +663,7 @@ namespace Ludots.Core.Engine
                 performerRuntime,
                 performerDefinitions,
                 presentationEventStream,
+                presentationOwnerChanges,
                 soundRequestBuffer,
                 () => GetService(CoreServiceKeys.VisualHeightmap),
                 boneTransformProvider: null,
@@ -863,6 +866,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AuthoritativeInput, authoritativeInput);
             SetService(CoreServiceKeys.AuthoritativePointerButtons, authoritativePointerButtons);
             SetService(CoreServiceKeys.PresentationEventStream, presentationEventStream);
+            SetService(CoreServiceKeys.PresentationOwnerChangeBuffer, presentationOwnerChanges);
             SetService(CoreServiceKeys.PerformerCommandBuffer, performerCommandBuffer);
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
@@ -1017,7 +1021,17 @@ namespace Ludots.Core.Engine
             RegisterSystem(new ManifestationMotion2DSystem(World), SystemGroup.EffectProcessing);
             RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, effectRequestQueue, SpatialQueries), SystemGroup.EffectProcessing);
-            RegisterSystem(new RuntimeEntitySpawnSystem(World, runtimeEntitySpawnQueue, MapLoader.TemplateRegistry, MapLoader.EntityTemplateKeys, presentationStableIds, effectRequestQueue), SystemGroup.EffectProcessing);
+            RegisterSystem(
+                new RuntimeEntitySpawnSystem(
+                    World,
+                    runtimeEntitySpawnQueue,
+                    MapLoader.TemplateRegistry,
+                    MapLoader.EntityTemplateKeys,
+                    presentationStableIds,
+                    effectRequestQueue,
+                    performerRuntime,
+                    performerDefinitions),
+                SystemGroup.EffectProcessing);
             const string manifestationObstacleBridgeSystemTypeName = "Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem";
             var manifestationObstacleBridgeType = Type.GetType($"{manifestationObstacleBridgeSystemTypeName}, Ludots.Physics2D", throwOnError: false);
             if (manifestationObstacleBridgeType != null)
@@ -1046,9 +1060,10 @@ namespace Ludots.Core.Engine
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget), SystemGroup.EventDispatch);
             
-            // Phase 7.1: ClearPresentationFlags
+            // Phase 7.1: Bridge gameplay-side presentation facts into the presentation stream.
+            // Changed-bit components must remain readable until presentation systems consume them,
+            // so the actual clear runs at the tail of the presentation pipeline.
             RegisterSystem(presentationBridgeSystem, SystemGroup.ClearPresentationFlags);
-            RegisterSystem(clearPresentationFlagsSystem, SystemGroup.ClearPresentationFlags);
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(_systemGroups, OnFixedStepCompleted);
 
             var responseChainUiState = new ResponseChainUiState();
@@ -1081,6 +1096,7 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(animatorRuntimeSystem);
             // PerformerEmitSystem is the Wave 4 asset-binding emitter.
             RegisterPresentationSystem(performerEmitSystem);
+            RegisterPresentationSystem(clearPresentationFlagsSystem);
             RegisterPresentationSystem(surfaceSourceFlushSystem);
             RegisterPresentationSystem(surfaceSourceLifecycleSystem);
             RegisterPresentationSystem(chunkSurfaceBakeSystem);

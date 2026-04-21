@@ -1,5 +1,7 @@
 # Performer 参数黑板与 Animator 统一
 
+> **实现状态（2026-04-20）**：集中式 `PerformerParamBlackboard` 类已删除，替换为 per-performer-entity ECS 组件实现：`PerformerFloatParams` / `PerformerIntParams` / `PerformerVectorParams`（override）+ `PerformerFloatDefaults` / `PerformerIntDefaults` / `PerformerVectorDefaults`（definition 默认值）。父→子继承链通过 `PerformerParamResolver.ResolveFloat/Int/Vector(World, Entity, paramKey, defaultValue)` + `PerformerParent.Parent` entity 引用实现。`int handle` 参数已替换为 `Entity`。三 lane 多类型语义、继承规则、ParamDefault 结构均与本文设计一致。
+
 本文定义 Performer 参数黑板的多类型设计，以及如何将现有 Animator 参数系统统一到同一个黑板中。
 
 ## 1 动机

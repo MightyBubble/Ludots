@@ -236,7 +236,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 ref var attrBuffer = ref World.Get<AttributeBuffer>(context.Target);
                                 int primaryAttrId = modifiers.Count > 0 ? modifiers.Get(0).AttributeId : -1;
                                 float before = primaryAttrId >= 0 ? attrBuffer.GetCurrent(primaryAttrId) : 0f;
-                                EffectModifierOps.Apply(in modifiers, ref attrBuffer);
+                                AttributeMutationOps.ApplyModifiers(World, context.Target, in modifiers);
                                 float after = primaryAttrId >= 0 ? attrBuffer.GetCurrent(primaryAttrId) : 0f;
                                 float delta = after - before;
                                 if (_presentationEvents != null)

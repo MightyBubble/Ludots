@@ -1,3 +1,4 @@
+using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Map;
@@ -49,6 +50,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
         public int Count => _count;
         public int Capacity => _items.Length;
+        public int FreeCapacity => _items.Length - _count;
 
         public bool TryEnqueue(in RuntimeEntitySpawnRequest request)
         {
@@ -63,6 +65,27 @@ namespace Ludots.Core.Gameplay.Spawning
             return true;
         }
 
+        public int EnqueueMany(ReadOnlySpan<RuntimeEntitySpawnRequest> requests)
+        {
+            int writable = requests.Length < FreeCapacity ? requests.Length : FreeCapacity;
+            if (writable <= 0)
+            {
+                return 0;
+            }
+
+            int firstCopy = Math.Min(writable, _items.Length - _tail);
+            requests.Slice(0, firstCopy).CopyTo(_items.AsSpan(_tail, firstCopy));
+            int remaining = writable - firstCopy;
+            if (remaining > 0)
+            {
+                requests.Slice(firstCopy, remaining).CopyTo(_items.AsSpan(0, remaining));
+            }
+
+            _tail = (_tail + writable) % _items.Length;
+            _count += writable;
+            return writable;
+        }
+
         public bool TryDequeue(out RuntimeEntitySpawnRequest request)
         {
             if (_count == 0)
@@ -74,6 +97,18 @@ namespace Ludots.Core.Gameplay.Spawning
             request = _items[_head];
             _head = (_head + 1) % _items.Length;
             _count--;
+            return true;
+        }
+
+        public bool TryPeek(out RuntimeEntitySpawnRequest request)
+        {
+            if (_count == 0)
+            {
+                request = default;
+                return false;
+            }
+
+            request = _items[_head];
             return true;
         }
 

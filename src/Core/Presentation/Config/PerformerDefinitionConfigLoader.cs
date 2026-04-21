@@ -372,8 +372,6 @@ namespace Ludots.Core.Presentation.Config
                 def.Surface = ParseSurface(node["surface"], key);
             }
 
-            def.Rules = ExpandChildrenRules(def.Id, def.Rules, def.Children);
-            def.Rules = ExpandInitializationRules(def.Id, def.Rules, def.Behaviors);
             StampRuleOwners(def.Id, def.Rules);
             return (key, def);
         }
@@ -1419,85 +1417,6 @@ namespace Ludots.Core.Presentation.Config
 
             cond.GraphProgramId = node["graphProgramId"]?.GetValue<int>() ?? 0;
             return cond;
-        }
-
-        private static PerformerRule[] ExpandChildrenRules(int ownerDefinitionId, PerformerRule[] rules, ChildPerformerRef[] children)
-        {
-            if (children == null || children.Length == 0)
-            {
-                return rules ?? Array.Empty<PerformerRule>();
-            }
-
-            int baseCount = rules?.Length ?? 0;
-            var expanded = new PerformerRule[baseCount + children.Length];
-            if (baseCount > 0)
-            {
-                Array.Copy(rules!, expanded, baseCount);
-            }
-
-            for (int i = 0; i < children.Length; i++)
-            {
-                ref readonly ChildPerformerRef child = ref children[i];
-                expanded[baseCount + i] = new PerformerRule
-                {
-                    OwnerDefinitionId = ownerDefinitionId,
-                    Event = new EventFilter
-                    {
-                        Kind = PresentationEventKind.PerformerCreated,
-                        KeyId = ownerDefinitionId,
-                    },
-                    Condition = ConditionRef.AlwaysTrue,
-                    Command = new PerformerCommand
-                    {
-                        CommandKind = PerformerCommandKind.CreatePerformer,
-                        PerformerDefinitionId = child.DefinitionId,
-                        ParentEntity = Entity.Null,
-                        ScopeTag = child.ScopeTag,
-                        ScopeSource = PerformerCommandScopeSource.Fixed,
-                    },
-                };
-            }
-
-            return expanded;
-        }
-
-        private static PerformerRule[] ExpandInitializationRules(int ownerDefinitionId, PerformerRule[] rules, BehaviorSlot[] behaviors)
-        {
-            if (behaviors == null || behaviors.Length == 0)
-                return rules ?? Array.Empty<PerformerRule>();
-
-            bool hasAssetBinding = false;
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                if (behaviors[i].Kind == BehaviorKind.AssetBinding)
-                {
-                    hasAssetBinding = true;
-                    break;
-                }
-            }
-            if (!hasAssetBinding)
-                return rules ?? Array.Empty<PerformerRule>();
-
-            int baseCount = rules?.Length ?? 0;
-            var expanded = new PerformerRule[baseCount + 1];
-            if (baseCount > 0)
-                Array.Copy(rules!, expanded, baseCount);
-
-            expanded[baseCount] = new PerformerRule
-            {
-                OwnerDefinitionId = ownerDefinitionId,
-                Event = new EventFilter
-                {
-                    Kind = PresentationEventKind.PerformerCreated,
-                    KeyId = ownerDefinitionId,
-                },
-                Condition = ConditionRef.AlwaysTrue,
-                Command = new PerformerCommand
-                {
-                    CommandKind = PerformerCommandKind.InitializeTransform,
-                },
-            };
-            return expanded;
         }
 
         private static void StampRuleOwners(int ownerDefinitionId, PerformerRule[] rules)

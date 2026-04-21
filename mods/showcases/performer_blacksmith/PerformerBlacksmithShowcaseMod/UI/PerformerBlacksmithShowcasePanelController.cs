@@ -232,10 +232,10 @@ namespace PerformerBlacksmithShowcaseMod.UI
                         .Gap(8f),
                     Ui.Row(
                             ActionButton("Root Only", state.ScatterTarget == 1, "#244E66", "#162432", _ => Execute(runtime => runtime.ApplyScatterLayout(1))),
-                            ActionButton("100", state.ScatterTarget == 100, "#244E66", "#162432", _ => Execute(runtime => runtime.ApplyScatterLayout(100))),
-                            ActionButton("500", state.ScatterTarget == 500, "#244E66", "#162432", _ => Execute(runtime => runtime.ApplyScatterLayout(500))),
-                            ActionButton("1000", state.ScatterTarget == 1000, "#244E66", "#162432", _ => Execute(runtime => runtime.ApplyScatterLayout(1000))),
-                            ActionButton("2000", state.ScatterTarget == 2000, "#244E66", "#162432", _ => Execute(runtime => runtime.ApplyScatterLayout(2000))))
+                            ActionButton("3K", state.ScatterTarget == 3000, "#244E66", "#162432", _ => Execute(runtime => runtime.ApplyScatterLayout(3000))),
+                            ActionButton("30K", state.ScatterTarget == 30000, "#244E66", "#162432", _ => Execute(runtime => runtime.ApplyScatterLayout(30000))),
+                            ActionButton("100K", state.ScatterTarget == 100000, "#244E66", "#162432", _ => Execute(runtime => runtime.ApplyScatterLayout(100000))),
+                            ActionButton("300K", state.ScatterTarget == 300000, "#244E66", "#162432", _ => Execute(runtime => runtime.ApplyScatterLayout(300000))))
                         .Wrap()
                         .Gap(8f))
                 .Gap(9f)

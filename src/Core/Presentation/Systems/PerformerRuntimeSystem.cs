@@ -7,6 +7,7 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation;
 
 namespace Ludots.Core.Presentation.Systems
@@ -74,6 +75,7 @@ namespace Ludots.Core.Presentation.Systems
                         if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity))
                         {
                             _runtime.SetParam(cmd.PerformerEntity, cmd.ParamKey, cmd.ParamLane, cmd.ParamValue, cmd.IntValue, cmd.VectorValue);
+                            MarkHierarchyForBootstrap(cmd.PerformerEntity);
                         }
                         break;
 
@@ -105,25 +107,18 @@ namespace Ludots.Core.Presentation.Systems
         private void HandleInitializeTransform(in PerformerCommand cmd)
         {
             Entity performer = cmd.PerformerEntity;
-            if (!World.IsAlive(performer) || !World.Has<PerformerState>(performer)) return;
+            if (!World.IsAlive(performer) || !World.Has<PerformerState>(performer))
+            {
+                return;
+            }
+
             ref PerformerState state = ref World.Get<PerformerState>(performer);
-            if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition)) return;
+            if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition))
+            {
+                return;
+            }
 
-            Entity owner = state.OwnerEntity;
-            bool hasOwnerTransform = World.IsAlive(owner) && World.Has<VisualTransform>(owner);
-            VisualTransform ownerTransform = hasOwnerTransform ? World.Get<VisualTransform>(owner) : VisualTransform.Default;
-
-            Vector3 position = hasOwnerTransform ? ownerTransform.Position : World.Get<PerformerWorldPosition>(performer).Value;
-            Quaternion rotation = hasOwnerTransform ? ownerTransform.Rotation : Quaternion.Identity;
-            Vector3 scale = hasOwnerTransform ? ownerTransform.Scale : Vector3.One;
-
-            position += definition.PositionOffset;
-
-            World.Get<PerformerWorldPosition>(performer).Value = position;
-            if (World.Has<PerformerWorldRotation>(performer))
-                World.Get<PerformerWorldRotation>(performer).Value = rotation;
-            if (World.Has<PerformerWorldScale>(performer))
-                World.Get<PerformerWorldScale>(performer).Value = scale;
+            _runtime.InitializeTransform(performer, definition);
         }
 
         private void HandleCreatePerformer(in PerformerCommand cmd)
@@ -138,14 +133,23 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Entity parentEntity = cmd.ParentEntity;
+            if (World.IsAlive(cmd.Source) &&
+                World.Has<PerformerRootBootstrapHandled>(cmd.Source) &&
+                cmd.AnchorKind == PresentationAnchorKind.Entity &&
+                cmd.ParentEntity == Entity.Null)
+            {
+                return;
+            }
+
+            Entity parentEntity = NormalizeOptionalEntity(cmd.ParentEntity);
             if (parentEntity != Entity.Null && (!World.IsAlive(parentEntity) || !World.Has<PerformerState>(parentEntity)))
             {
                 throw new InvalidOperationException(
                     $"CreatePerformer defId={cmd.PerformerDefinitionId} references inactive parent entity.");
             }
 
-            Entity entity = _runtime.Create(
+            Entity entity = _runtime.CreateHierarchy(
+                _definitions,
                 cmd.PerformerDefinitionId,
                 cmd.Source,
                 cmd.ScopeTag,
@@ -153,13 +157,21 @@ namespace Ludots.Core.Presentation.Systems
                 cmd.Position,
                 _stableIds.Allocate(),
                 parentEntity,
-                definition);
+                definition,
+                _stableIds.Allocate);
 
             ref PerformerState state = ref World.Get<PerformerState>(entity);
             state.BehaviorActiveMask = BuildDefaultBehaviorMask(definition);
-            _runtime.SetParamDefault(definition, entity);
+            MarkHierarchyForBootstrapIfNeeded(entity);
+            if (_definitions.HasPerformerCreatedRules)
+            {
+                EmitCreatedEvent(entity, World.Get<PerformerState>(entity));
+            }
+        }
 
-            EmitCreatedEvent(entity, World.Get<PerformerState>(entity));
+        private static Entity NormalizeOptionalEntity(Entity entity)
+        {
+            return entity == default || entity.Id < 0 ? Entity.Null : entity;
         }
 
         private bool ShouldSkipDuplicatePersistentScopedCreate(in PerformerCommand cmd, PerformerDefinition definition)
@@ -220,6 +232,59 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException("PresentationEventStream is full while publishing PerformerDestroyed.");
             }
         }
+
+        private void MarkHierarchyForBootstrap(Entity root)
+        {
+            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            {
+                return;
+            }
+
+            MarkSingle(root);
+            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (World.IsAlive(child))
+                {
+                    MarkHierarchyForBootstrap(child);
+                }
+            }
+        }
+
+        private void MarkSingle(Entity performer)
+        {
+            if (World.Has<PerformerBootstrapPending>(performer))
+            {
+                return;
+            }
+
+            World.Add(performer, new PerformerBootstrapPending());
+        }
+
+        private void MarkHierarchyForBootstrapIfNeeded(Entity root)
+        {
+            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            {
+                return;
+            }
+
+            ref readonly PerformerState state = ref World.Get<PerformerState>(root);
+            if (_definitions.TryGet(state.DefId, out PerformerDefinition definition) &&
+                definition.RequiresBootstrapProcessing)
+            {
+                MarkSingle(root);
+            }
+
+            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (World.IsAlive(child))
+                {
+                    MarkHierarchyForBootstrapIfNeeded(child);
+                }
+            }
+        }
     }
 }
-

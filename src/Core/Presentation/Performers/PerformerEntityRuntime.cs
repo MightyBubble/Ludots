@@ -13,6 +13,9 @@ namespace Ludots.Core.Presentation.Performers
         private int _activeCount;
         private int _structureVersion;
         private readonly Dictionary<int, int> _ownerPayloadRefCounts = new();
+        private readonly Dictionary<int, List<Entity>> _byDefinition = new();
+        private readonly Dictionary<OwnerDefinitionKey, List<Entity>> _byOwnerDefinition = new();
+        private readonly Dictionary<ScopedOwnerKey, Entity> _scopedInstances = new();
 
         public int ActiveCount => _activeCount;
         public int StructureVersion => _structureVersion;
@@ -79,7 +82,57 @@ namespace Ludots.Core.Presentation.Performers
             _activeCount++;
             _structureVersion++;
             AddOwnerPayloadRef(owner);
+            AddIndexes(entity, in state);
             return entity;
+        }
+
+        public Entity CreateHierarchy(
+            PerformerDefinitionRegistry definitions,
+            int defId,
+            Entity owner,
+            int scopeId,
+            PresentationAnchorKind anchorKind,
+            in Vector3 worldPosition,
+            int stableId,
+            Entity parent,
+            PerformerDefinition definition,
+            Func<int>? allocateStableId = null)
+        {
+            Entity entity = Create(defId, owner, scopeId, anchorKind, in worldPosition, stableId, parent, definition);
+            SetParamDefault(definition, entity);
+            InitializeTransform(entity, definition);
+            CreateChildrenRecursive(definitions, entity, owner, scopeId, anchorKind, allocateStableId);
+            return entity;
+        }
+
+        public void InitializeTransform(Entity performer, PerformerDefinition definition)
+        {
+            if (!_world.IsAlive(performer) || !_world.Has<PerformerState>(performer))
+            {
+                return;
+            }
+
+            ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
+            Entity owner = state.OwnerEntity;
+            bool hasOwnerTransform = _world.IsAlive(owner) && _world.Has<VisualTransform>(owner);
+            VisualTransform ownerTransform = hasOwnerTransform ? _world.Get<VisualTransform>(owner) : VisualTransform.Default;
+
+            Vector3 position = hasOwnerTransform ? ownerTransform.Position : _world.Get<PerformerWorldPosition>(performer).Value;
+            Quaternion rotation = hasOwnerTransform ? ownerTransform.Rotation : Quaternion.Identity;
+            Vector3 scale = hasOwnerTransform ? ownerTransform.Scale : Vector3.One;
+
+            position += definition.PositionOffset;
+
+            _world.Get<PerformerWorldPosition>(performer).Value = position;
+            if (_world.Has<PerformerWorldRotation>(performer))
+            {
+                _world.Get<PerformerWorldRotation>(performer).Value = rotation;
+            }
+
+            if (_world.Has<PerformerWorldScale>(performer))
+            {
+                _world.Get<PerformerWorldScale>(performer).Value = scale;
+            }
         }
 
         public Entity Create(int defId, Entity owner, int scopeId)
@@ -87,6 +140,7 @@ namespace Ludots.Core.Presentation.Performers
             return Create(defId, owner, scopeId, PresentationAnchorKind.Entity,
                 Vector3.Zero, 0, Entity.Null, default);
         }
+
         public void Destroy(Entity performer, Action<Entity, PerformerState>? onDestroyed = null)
         {
             if (!_world.IsAlive(performer) || !_world.Has<PerformerState>(performer))
@@ -103,6 +157,7 @@ namespace Ludots.Core.Presentation.Performers
             UnlinkFromParent(performer);
 
             var snapshot = _world.Get<PerformerState>(performer);
+            RemoveIndexes(performer, in snapshot);
             onDestroyed?.Invoke(performer, snapshot);
 
             RemoveOwnerPayloadRef(snapshot.OwnerEntity);
@@ -211,18 +266,33 @@ namespace Ludots.Core.Presentation.Performers
             int defId, Entity owner, int scopeId,
             PresentationAnchorKind anchorKind, Vector3 worldPosition)
         {
-            bool found = false;
-            var query = new QueryDescription().WithAll<PerformerState, PerformerWorldPosition>();
-            _world.Query(in query, (Entity entity, ref PerformerState state, ref PerformerWorldPosition pos) =>
+            var key = new ScopedOwnerKey(defId, owner, scopeId, anchorKind, worldPosition);
+            if (!_scopedInstances.TryGetValue(key, out Entity entity))
             {
-                if (found) return;
-                if (state.DefId != defId || state.ScopeId != scopeId ||
-                    state.OwnerEntity != owner || state.AnchorKind != anchorKind)
-                    return;
-                if (anchorKind != PresentationAnchorKind.WorldPosition || pos.Value == worldPosition)
-                    found = true;
-            });
-            return found;
+                return false;
+            }
+
+            if (_world.IsAlive(entity) && _world.Has<PerformerState>(entity))
+            {
+                return true;
+            }
+
+            _scopedInstances.Remove(key);
+            return false;
+        }
+
+        public IReadOnlyList<Entity> GetActiveByDefinition(int defId)
+        {
+            return _byDefinition.TryGetValue(defId, out var entities)
+                ? entities
+                : Array.Empty<Entity>();
+        }
+
+        public IReadOnlyList<Entity> GetActiveByOwnerDefinition(int defId, Entity owner)
+        {
+            return _byOwnerDefinition.TryGetValue(new OwnerDefinitionKey(owner, defId), out var entities)
+                ? entities
+                : Array.Empty<Entity>();
         }
 
         public void SyncCullVisibility()
@@ -313,7 +383,11 @@ namespace Ludots.Core.Presentation.Performers
             _activeCount = 0;
             _structureVersion++;
             _ownerPayloadRefCounts.Clear();
+            _byDefinition.Clear();
+            _byOwnerDefinition.Clear();
+            _scopedInstances.Clear();
         }
+
         private void AddBehaviorMarkers(Entity entity, PerformerDefinition definition)
         {
             BehaviorSlot[] behaviors = definition.Behaviors;
@@ -346,6 +420,100 @@ namespace Ludots.Core.Presentation.Performers
             if (hasSound) _world.Add<PerfHasSound>(entity);
             if (hasSpline) _world.Add<PerfHasSpline>(entity);
             if (hasAttachment) _world.Add<PerfHasAttachment>(entity);
+        }
+
+        private void CreateChildrenRecursive(
+            PerformerDefinitionRegistry definitions,
+            Entity parentEntity,
+            Entity owner,
+            int parentScopeId,
+            PresentationAnchorKind anchorKind,
+            Func<int>? allocateStableId)
+        {
+            if (!definitions.TryGet(_world.Get<PerformerState>(parentEntity).DefId, out PerformerDefinition parentDefinition))
+            {
+                return;
+            }
+
+            ChildPerformerRef[] children = parentDefinition.Children;
+            if (children == null || children.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < children.Length; i++)
+            {
+                ref readonly ChildPerformerRef child = ref children[i];
+                if (!definitions.TryGet(child.DefinitionId, out PerformerDefinition childDefinition))
+                {
+                    throw new InvalidOperationException($"Performer child definition id={child.DefinitionId} is not registered.");
+                }
+
+                int childScopeId = child.ScopeTag > 0 ? child.ScopeTag : parentScopeId;
+                Entity childEntity = Create(
+                    child.DefinitionId,
+                    owner,
+                    childScopeId,
+                    anchorKind,
+                    Vector3.Zero,
+                    allocateStableId != null ? allocateStableId() : 0,
+                    parentEntity,
+                    childDefinition);
+
+                ref PerformerState childState = ref _world.Get<PerformerState>(childEntity);
+                childState.BehaviorActiveMask = BuildDefaultBehaviorMask(childDefinition);
+                SetParamDefault(childDefinition, childEntity);
+                ApplyParamOverrides(childEntity, child.ParamOverrides);
+                InitializeTransform(childEntity, childDefinition);
+                CreateChildrenRecursive(definitions, childEntity, owner, childScopeId, anchorKind, allocateStableId);
+            }
+        }
+
+        private static uint BuildDefaultBehaviorMask(PerformerDefinition definition)
+        {
+            if (definition.Behaviors == null || definition.Behaviors.Length == 0)
+            {
+                return 0u;
+            }
+
+            uint mask = 0u;
+            for (int i = 0; i < definition.Behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref definition.Behaviors[i];
+                if (!slot.ActiveByDefault || slot.SlotIndex < 0 || slot.SlotIndex >= 32)
+                {
+                    continue;
+                }
+
+                mask |= 1u << slot.SlotIndex;
+            }
+
+            return mask;
+        }
+
+        private void ApplyParamOverrides(Entity performer, ParamDefault[] overrides)
+        {
+            if (overrides == null || overrides.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < overrides.Length; i++)
+            {
+                ref readonly ParamDefault entry = ref overrides[i];
+                switch (entry.Lane)
+                {
+                    case ParamLane.Float:
+                        SetParam(performer, entry.ParamKey, ParamLane.Float, entry.FloatValue, 0, Vector4.Zero);
+                        break;
+                    case ParamLane.Int:
+                        SetParam(performer, entry.ParamKey, ParamLane.Int, 0f, entry.IntValue, Vector4.Zero);
+                        break;
+                    case ParamLane.Vector:
+                        SetParam(performer, entry.ParamKey, ParamLane.Vector, 0f, 0, entry.VectorValue);
+                        break;
+                }
+            }
         }
 
         private void UnlinkFromParent(Entity performer)
@@ -391,6 +559,161 @@ namespace Ludots.Core.Presentation.Performers
                 _ownerPayloadRefCounts.Remove(owner.Id);
             else
                 _ownerPayloadRefCounts[owner.Id] = count - 1;
+        }
+
+        private void AddIndexes(Entity performer, in PerformerState state)
+        {
+            AddToIndex(_byDefinition, state.DefId, performer);
+            AddToIndex(_byOwnerDefinition, new OwnerDefinitionKey(state.OwnerEntity, state.DefId), performer);
+            if (state.ScopeId > 0 && state.DefaultLifetime <= 0f)
+            {
+                Vector3 position = _world.Get<PerformerWorldPosition>(performer).Value;
+                _scopedInstances[new ScopedOwnerKey(
+                    state.DefId,
+                    state.OwnerEntity,
+                    state.ScopeId,
+                    state.AnchorKind,
+                    position)] = performer;
+            }
+        }
+
+        private void RemoveIndexes(Entity performer, in PerformerState state)
+        {
+            RemoveFromIndex(_byDefinition, state.DefId, performer);
+            RemoveFromIndex(_byOwnerDefinition, new OwnerDefinitionKey(state.OwnerEntity, state.DefId), performer);
+            if (state.ScopeId > 0 && state.DefaultLifetime <= 0f)
+            {
+                Vector3 position = _world.Has<PerformerWorldPosition>(performer)
+                    ? _world.Get<PerformerWorldPosition>(performer).Value
+                    : Vector3.Zero;
+                _scopedInstances.Remove(new ScopedOwnerKey(
+                    state.DefId,
+                    state.OwnerEntity,
+                    state.ScopeId,
+                    state.AnchorKind,
+                    position));
+            }
+        }
+
+        private static void AddToIndex<TKey>(Dictionary<TKey, List<Entity>> index, TKey key, Entity performer)
+            where TKey : notnull
+        {
+            if (!index.TryGetValue(key, out var entities))
+            {
+                entities = new List<Entity>(4);
+                index[key] = entities;
+            }
+
+            entities.Add(performer);
+        }
+
+        private static void RemoveFromIndex<TKey>(Dictionary<TKey, List<Entity>> index, TKey key, Entity performer)
+            where TKey : notnull
+        {
+            if (!index.TryGetValue(key, out var entities))
+            {
+                return;
+            }
+
+            for (int i = entities.Count - 1; i >= 0; i--)
+            {
+                if (entities[i] != performer)
+                {
+                    continue;
+                }
+
+                int last = entities.Count - 1;
+                entities[i] = entities[last];
+                entities.RemoveAt(last);
+                break;
+            }
+
+            if (entities.Count == 0)
+            {
+                index.Remove(key);
+            }
+        }
+
+        private readonly struct OwnerDefinitionKey : IEquatable<OwnerDefinitionKey>
+        {
+            private readonly int _ownerId;
+            private readonly int _ownerWorldId;
+            private readonly int _ownerVersion;
+            private readonly int _defId;
+
+            public OwnerDefinitionKey(Entity owner, int defId)
+            {
+                _ownerId = owner.Id;
+                _ownerWorldId = owner.WorldId;
+                _ownerVersion = owner.Version;
+                _defId = defId;
+            }
+
+            public bool Equals(OwnerDefinitionKey other)
+            {
+                return _ownerId == other._ownerId &&
+                       _ownerWorldId == other._ownerWorldId &&
+                       _ownerVersion == other._ownerVersion &&
+                       _defId == other._defId;
+            }
+
+            public override bool Equals(object? obj)
+            {
+                return obj is OwnerDefinitionKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(_ownerId, _ownerWorldId, _ownerVersion, _defId);
+            }
+        }
+
+        private readonly struct ScopedOwnerKey : IEquatable<ScopedOwnerKey>
+        {
+            private readonly int _defId;
+            private readonly int _ownerId;
+            private readonly int _ownerWorldId;
+            private readonly int _ownerVersion;
+            private readonly int _scopeId;
+            private readonly PresentationAnchorKind _anchorKind;
+            private readonly Vector3 _worldPosition;
+
+            public ScopedOwnerKey(
+                int defId,
+                Entity owner,
+                int scopeId,
+                PresentationAnchorKind anchorKind,
+                in Vector3 worldPosition)
+            {
+                _defId = defId;
+                _ownerId = owner.Id;
+                _ownerWorldId = owner.WorldId;
+                _ownerVersion = owner.Version;
+                _scopeId = scopeId;
+                _anchorKind = anchorKind;
+                _worldPosition = anchorKind == PresentationAnchorKind.WorldPosition ? worldPosition : Vector3.Zero;
+            }
+
+            public bool Equals(ScopedOwnerKey other)
+            {
+                return _defId == other._defId &&
+                       _ownerId == other._ownerId &&
+                       _ownerWorldId == other._ownerWorldId &&
+                       _ownerVersion == other._ownerVersion &&
+                       _scopeId == other._scopeId &&
+                       _anchorKind == other._anchorKind &&
+                       _worldPosition == other._worldPosition;
+            }
+
+            public override bool Equals(object? obj)
+            {
+                return obj is ScopedOwnerKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(_defId, _ownerId, _ownerWorldId, _ownerVersion, _scopeId, _anchorKind, _worldPosition);
+            }
         }
     }
 }

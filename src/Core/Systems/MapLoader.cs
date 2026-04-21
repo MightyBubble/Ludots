@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
@@ -17,6 +20,7 @@ namespace Ludots.Core.Systems
         private readonly World _world;
         private readonly WorldMap _worldMap;
         private EffectRequestQueue _effectRequests;
+        private readonly TemplateEntityBatchSpawner _templateBatchSpawner;
         
         // New Registry
         public DataRegistry<EntityTemplate> TemplateRegistry { get; private set; }
@@ -28,6 +32,7 @@ namespace Ludots.Core.Systems
             _worldMap = worldMap;
             TemplateRegistry = new DataRegistry<EntityTemplate>(pipeline);
             EntityTemplateKeys = new EntityTemplateKeyRegistry();
+            _templateBatchSpawner = new TemplateEntityBatchSpawner(world, EntityTemplateKeys);
         }
 
         public void SetEffectRequestQueue(EffectRequestQueue effectRequests)
@@ -66,6 +71,50 @@ namespace Ludots.Core.Systems
 
             var builder = new EntityBuilder(_world, templates);
             var mapEntityTag = new MapEntity { MapId = new MapId(mapConfig.Id) };
+            var pendingBatchRequests = new List<TemplateEntityBatchSpawner.TemplateBatchSpawnRequest>(_templateBatchSpawner.ScratchCapacity);
+            string? activeBatchTemplateId = null;
+
+            void FlushPendingTemplateBatch()
+            {
+                if (activeBatchTemplateId == null || pendingBatchRequests.Count == 0)
+                {
+                    pendingBatchRequests.Clear();
+                    activeBatchTemplateId = null;
+                    return;
+                }
+
+                if (_templateBatchSpawner.TryCreateBatch(
+                    activeBatchTemplateId,
+                    templates[activeBatchTemplateId],
+                    CollectionsMarshal.AsSpan(pendingBatchRequests),
+                    TemplateBatchSpawnFeatures.MapEntity,
+                    out var created))
+                {
+                    for (int i = 0; i < created.Length; i++)
+                    {
+                        PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < pendingBatchRequests.Count; i++)
+                    {
+                        builder.UseTemplate(activeBatchTemplateId);
+                        if (pendingBatchRequests[i].HasWorldPosition)
+                        {
+                            builder.WithOverride("WorldPositionCm", BuildWorldPositionNode(pendingBatchRequests[i].WorldPositionCm));
+                        }
+
+                        var entity = builder.Build();
+                        TryApplyTemplateKey(entity, activeBatchTemplateId);
+                        _world.Add(entity, pendingBatchRequests[i].MapEntity);
+                        PublishTemplateOnSpawnEffect(entity, activeBatchTemplateId);
+                    }
+                }
+
+                pendingBatchRequests.Clear();
+                activeBatchTemplateId = null;
+            }
             
             foreach (var entityData in mapConfig.Entities)
             {
@@ -79,6 +128,28 @@ namespace Ludots.Core.Systems
                     Log.Warn(in LogChannels.Map, $"Entity entry missing template in map '{mapConfig.Id}', skipping.");
                     continue;
                 }
+
+                if (!templates.ContainsKey(entityData.Template))
+                {
+                    Log.Warn(in LogChannels.Map, $"Unknown entity template '{entityData.Template}' in map '{mapConfig.Id}', skipping.");
+                    continue;
+                }
+
+                if (TryBuildBatchRequest(entityData, mapEntityTag, out var batchRequest))
+                {
+                    if (!string.Equals(activeBatchTemplateId, entityData.Template, StringComparison.Ordinal) ||
+                        pendingBatchRequests.Count >= _templateBatchSpawner.ScratchCapacity)
+                    {
+                        FlushPendingTemplateBatch();
+                    }
+
+                    activeBatchTemplateId = entityData.Template;
+                    pendingBatchRequests.Add(batchRequest);
+                    continue;
+                }
+
+                FlushPendingTemplateBatch();
+
                 builder.UseTemplate(entityData.Template);
                 
                 if (entityData.Overrides != null)
@@ -94,6 +165,60 @@ namespace Ludots.Core.Systems
                 _world.Add(entity, mapEntityTag);
                 PublishTemplateOnSpawnEffect(entity, entityData.Template);
             }
+
+            FlushPendingTemplateBatch();
+        }
+
+        private static bool TryBuildBatchRequest(
+            EntitySpawnData entityData,
+            in MapEntity mapEntity,
+            out TemplateEntityBatchSpawner.TemplateBatchSpawnRequest request)
+        {
+            request = default;
+            if (entityData.Overrides == null || entityData.Overrides.Count == 0)
+            {
+                request = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
+                    default,
+                    hasWorldPosition: false,
+                    mapEntity: mapEntity,
+                    hasMapEntity: true);
+                return true;
+            }
+
+            if (entityData.Overrides.Count != 1 ||
+                !entityData.Overrides.TryGetValue("WorldPositionCm", out var worldPositionNode) ||
+                worldPositionNode is not JsonObject obj)
+            {
+                return false;
+            }
+
+            JsonNode valueNode = obj["Value"] ?? obj["value"] ?? worldPositionNode;
+            if (valueNode is not JsonObject valueObj)
+            {
+                return false;
+            }
+
+            int x = valueObj["X"]?.GetValue<int>() ?? 0;
+            int y = valueObj["Y"]?.GetValue<int>() ?? 0;
+            request = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
+                Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(x, y),
+                hasWorldPosition: true,
+                mapEntity: mapEntity,
+                hasMapEntity: true);
+            return true;
+        }
+
+        private static JsonObject BuildWorldPositionNode(in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPositionCm)
+        {
+            var vector = worldPositionCm.ToWorldCmInt2();
+            return new JsonObject
+            {
+                ["Value"] = new JsonObject
+                {
+                    ["X"] = vector.X,
+                    ["Y"] = vector.Y,
+                }
+            };
         }
 
         private void TryApplyTemplateKey(Entity entity, string templateId)

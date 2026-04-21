@@ -68,7 +68,7 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(fieldNames, Does.Contain("CommandKind"));
             Assert.That(fieldNames, Does.Contain("PerformerDefinitionId"));
-            Assert.That(fieldNames, Does.Contain("ParentHandle"));
+            Assert.That(fieldNames, Does.Contain("ParentEntity"));
             Assert.That(fieldNames, Does.Contain("ScopeTag"));
             Assert.That(fieldNames, Does.Contain("ParamKey"));
             Assert.That(fieldNames, Does.Contain("ParamLane"));

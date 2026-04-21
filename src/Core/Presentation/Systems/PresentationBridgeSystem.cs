@@ -14,16 +14,26 @@ namespace Ludots.Core.Presentation.Systems
         private readonly GameplayEventBus _eventBus;
         private readonly GasPresentationEventBuffer _gasEvents;
         private readonly PresentationEventStream _stream;
+        private readonly PresentationOwnerChangeBuffer _ownerChanges;
         private readonly GameSession _session;
 
         private readonly QueryDescription _tagChangedQuery = new QueryDescription()
             .WithAll<GameplayTagEffectiveChangedBits, GameplayTagEffectiveCache>();
+        private readonly QueryDescription _attributeChangedQuery = new QueryDescription()
+            .WithAll<GameplayAttributeChangedBits, AttributeBuffer>();
 
-        public PresentationBridgeSystem(World world, GameplayEventBus eventBus, PresentationEventStream stream, GameSession session, GasPresentationEventBuffer gasEvents = null) : base(world)
+        public PresentationBridgeSystem(
+            World world,
+            GameplayEventBus eventBus,
+            PresentationEventStream stream,
+            GameSession session,
+            GasPresentationEventBuffer gasEvents = null,
+            PresentationOwnerChangeBuffer ownerChanges = null) : base(world)
         {
             _eventBus = eventBus;
             _gasEvents = gasEvents;
             _stream = stream;
+            _ownerChanges = ownerChanges;
             _session = session;
         }
 
@@ -103,14 +113,24 @@ namespace Ludots.Core.Presentation.Systems
             var job = new TagChangedJob
             {
                 Stream = _stream,
+                OwnerChanges = _ownerChanges,
                 Tick = tick
             };
             World.InlineEntityQuery<TagChangedJob, GameplayTagEffectiveChangedBits, GameplayTagEffectiveCache>(in _tagChangedQuery, ref job);
+
+            var attributeJob = new AttributeChangedJob
+            {
+                Stream = _stream,
+                OwnerChanges = _ownerChanges,
+                Tick = tick
+            };
+            World.InlineEntityQuery<AttributeChangedJob, GameplayAttributeChangedBits, AttributeBuffer>(in _attributeChangedQuery, ref attributeJob);
         }
 
         private struct TagChangedJob : IForEachWithEntity<GameplayTagEffectiveChangedBits, GameplayTagEffectiveCache>
         {
             public PresentationEventStream Stream;
+            public PresentationOwnerChangeBuffer OwnerChanges;
             public int Tick;
 
             public unsafe void Update(Entity entity, ref GameplayTagEffectiveChangedBits changed, ref GameplayTagEffectiveCache cache)
@@ -136,8 +156,38 @@ namespace Ludots.Core.Presentation.Systems
                                 Target = entity,
                                 Magnitude = now ? 1f : 0f
                             });
+                            OwnerChanges?.TryAdd(new PresentationOwnerChange(entity, PresentationOwnerChangeKind.Tag, tagId));
                         }
                     }
+                }
+            }
+        }
+
+        private struct AttributeChangedJob : IForEachWithEntity<GameplayAttributeChangedBits, AttributeBuffer>
+        {
+            public PresentationEventStream Stream;
+            public PresentationOwnerChangeBuffer OwnerChanges;
+            public int Tick;
+
+            public unsafe void Update(Entity entity, ref GameplayAttributeChangedBits changed, ref AttributeBuffer attributes)
+            {
+                for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+                {
+                    if (!changed.IsSet(attributeId))
+                    {
+                        continue;
+                    }
+
+                    Stream.TryAdd(new PresentationEvent
+                    {
+                        LogicTickStamp = Tick,
+                        Kind = PresentationEventKind.AttributeValueChanged,
+                        KeyId = attributeId,
+                        Source = entity,
+                        Target = entity,
+                        Magnitude = attributes.GetCurrent(attributeId),
+                    });
+                    OwnerChanges?.TryAdd(new PresentationOwnerChange(entity, PresentationOwnerChangeKind.Attribute, attributeId));
                 }
             }
         }

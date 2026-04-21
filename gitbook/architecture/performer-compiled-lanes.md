@@ -470,6 +470,8 @@ struct PerfHasSpline {}
 
 这是 Wave 7 的核心探索与迁移目标，不是已定论的架构公理。迭代 1-3（culling gate、dirty-driven、stable cache）可以先在现有 buffer 上实现，迭代 4（SoA）自然过渡到 entity-backed runtime。
 
+**实现状态（2026-04-20）**：Entity-backed runtime 已实现。`PerformerInstanceBuffer` / `PerformerInstance` / `PerformerParamBlackboard` 已删除，替换为 Arch entity 组件：`PerformerState`、`PerformerWorldPosition`/`Rotation`/`Scale`、`PerformerTransformSource`、`PerformerParent`、`PerformerChildren`、`PerformerFloatParams`/`IntParams`/`VectorParams`（含 Defaults 变体）、`PerformerCullState`、`PerformerEmitCache`、Behavior marker 组件。`PerformerEntityRuntime` 提供等价 API。Blackboard 父→子继承链通过 `PerformerParamResolver` + `PerformerParent` entity 引用实现。
+
 ## 9 与现有架构文档的关系
 
 | 文档 | 关系 |

@@ -135,6 +135,50 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void CreateHierarchy_RecursivelyBuildsChildrenAndAppliesDefaults()
+        {
+            Entity owner = _world.Create(new VisualTransform());
+            var definitions = new PerformerDefinitionRegistry();
+            int childId = definitions.Register("test.child", new PerformerDefinition
+            {
+                ParamDefaults = new[]
+                {
+                    new ParamDefault { ParamKey = 7, Lane = ParamLane.Int, IntValue = 99 }
+                }
+            });
+            int rootId = definitions.Register("test.root", new PerformerDefinition
+            {
+                Children = new[]
+                {
+                    new ChildPerformerRef
+                    {
+                        DefinitionId = childId,
+                        ScopeTag = 42
+                    }
+                }
+            });
+
+            Entity root = _buf.CreateHierarchy(
+                definitions,
+                rootId,
+                owner,
+                11,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                500,
+                Entity.Null,
+                definitions.Get(rootId));
+
+            ref readonly PerformerChildren children = ref _world.Get<PerformerChildren>(root);
+            Assert.That(children.Count, Is.EqualTo(1));
+            Entity child = children.Get(0);
+            Assert.That(_world.IsAlive(child), Is.True);
+            Assert.That(_world.Get<PerformerParent>(child).Parent, Is.EqualTo(root));
+            Assert.That(_world.Get<PerformerState>(child).ScopeId, Is.EqualTo(42));
+            Assert.That(_buf.ResolveInt(child, 7, -1), Is.EqualTo(99));
+        }
+
+        [Test]
         public void Destroy_MakesEntityDead()
         {
             var entity = _world.Create();
@@ -955,7 +999,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerCreatedEvent_PromotesPayloadHandle_ToChildParentHandle()
+        public void PerformerCreatedEvent_PromotesPayloadEntity_ToChildParentEntity()
         {
             _defs.Register("test.lifecycle.child", new PerformerDefinition
             {

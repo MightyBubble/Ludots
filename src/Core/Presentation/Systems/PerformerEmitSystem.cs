@@ -69,8 +69,9 @@ namespace Ludots.Core.Presentation.Systems
                     ref PerformerEmitCache emitCache = ref World.Get<PerformerEmitCache>(entity);
                     bool versionClean = emitCache.CachedVersion == state.Version;
                     bool positionClean = emitCache.LastEmitPosition == pos.Value;
-                    if (versionClean && positionClean) return;
-                    if (versionClean && !positionClean)
+                    bool stableCacheEligible = DefinitionUsesStableVisualCache(definition);
+                    if (stableCacheEligible && versionClean && positionClean) return;
+                    if (stableCacheEligible && versionClean && !positionClean)
                     {
                         _stableDrawCache.UpdatePosition(state.StableId, pos.Value);
                         emitCache.LastEmitPosition = pos.Value;
@@ -126,6 +127,32 @@ namespace Ludots.Core.Presentation.Systems
         private static bool IsBehaviorActive(uint mask, int slotIndex)
         {
             return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
+        }
+
+        private static bool DefinitionUsesStableVisualCache(PerformerDefinition definition)
+        {
+            BehaviorSlot[] behaviors = definition.Behaviors ?? Array.Empty<BehaviorSlot>();
+            bool hasCacheableVisual = false;
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                if (behaviors[i].Kind != BehaviorKind.AssetBinding)
+                {
+                    continue;
+                }
+
+                AssetKind kind = behaviors[i].AssetBinding.AssetKind;
+                if (kind is AssetKind.WorldHud or AssetKind.WorldText or AssetKind.Spline or AssetKind.GroundOverlay)
+                {
+                    return false;
+                }
+
+                if (kind is AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX)
+                {
+                    hasCacheableVisual = true;
+                }
+            }
+
+            return hasCacheableVisual;
         }
 
         private bool EvaluateVisibility(in PerformerDefinition definition, Entity owner)

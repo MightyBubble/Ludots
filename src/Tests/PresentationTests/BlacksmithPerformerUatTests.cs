@@ -412,7 +412,7 @@ namespace Ludots.Tests.Presentation
                 var graphApi = new GasGraphRuntimeApi(world);
                 var stableIds = new PresentationStableIdAllocator();
 
-                var entityLifecycle = new PresentationEntityLifecycleSystem(world, events);
+                var entityLifecycle = new PresentationEntityLifecycleSystem(world, events, instances, definitions);
                 var globalBridge = new GlobalEventBridgeSystem(world, globalEvents, events, gameSession);
                 var rules = new PerformerRuleSystem(world, events, commands, definitions, instances, graphPrograms, graphApi, new Dictionary<string, object>());
                 var runtime = new PerformerRuntimeSystem(
@@ -481,9 +481,6 @@ namespace Ludots.Tests.Presentation
             public Entity SpawnBlacksmithAndWarmup()
             {
                 Entity owner = SpawnBlacksmith();
-                // Tick 1: EntitySpawned -> create root.
-                // Tick 2: PerformerCreated(root) -> expand children and emit visuals.
-                Tick();
                 Tick();
                 return owner;
             }

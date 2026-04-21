@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
@@ -93,6 +94,165 @@ namespace Ludots.Tests.Presentation
                 Assert.That(result.ScreenHudDrops, Is.EqualTo(0), $"{result.Name}: screen HUD buffer should not drop.");
                 Assert.That(result.SkinnedDrops, Is.EqualTo(0), $"{result.Name}: skinned buffer should not drop.");
             }
+        }
+
+        [Test]
+        public void Scatter_3000_ProductionPathRandomDrift_PropagatesToIsmAndScreenHud()
+        {
+            using var engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();
+            var hudProjection = PerformerBlacksmithShowcaseTestHarness.CreateHeadlessHudProjection(engine);
+            PerformerBlacksmithShowcaseTestHarness.LoadMap(engine, PerformerBlacksmithShowcaseIds.ShowcaseMapId, frames: 8);
+
+            int queued = PerformerBlacksmithShowcaseTestHarness.EnqueueScatter(
+                engine,
+                totalBuildings: 3000,
+                seed: 31415926,
+                minRadiusCm: 750f,
+                maxRadiusCm: 2400f);
+            Assert.That(queued, Is.EqualTo(2999));
+
+            PerformerBlacksmithShowcaseTestHarness.TickWithHudProjection(engine, hudProjection, 24);
+
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
+                ?? throw new InvalidOperationException("PresentationWorldHudBuffer missing.");
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)
+                ?? throw new InvalidOperationException("PresentationScreenHudBuffer missing.");
+            var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
+                ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
+            int durabilityAttributeId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId("Durability");
+            int randomDriftEffectId = Ludots.Core.Gameplay.GAS.Registry.EffectTemplateIdRegistry.GetId("Effect.Showcase.Blacksmith.RandomDrift");
+
+            int northAssetId = meshes.GetId("blacksmith.building.north.intact");
+            int southAssetId = meshes.GetId("blacksmith.building.south.intact");
+            int damagedAssetId = meshes.GetId("blacksmith.building.damaged");
+            int ruinedAssetId = meshes.GetId("blacksmith.building.ruined");
+            int chimneyAssetId = meshes.GetId("blacksmith.furnace");
+
+            int workshopPrimitiveCount = 0;
+            int chimneyPrimitiveCount = 0;
+            foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
+            {
+                if (item.Visibility != VisualVisibility.Visible)
+                {
+                    continue;
+                }
+
+                Assert.That(item.RenderPath, Is.EqualTo(VisualRenderPath.InstancedStaticMesh),
+                    "Crowd showcase structures must remain on the production ISM lane.");
+
+                if (item.MeshAssetId == northAssetId ||
+                    item.MeshAssetId == southAssetId ||
+                    item.MeshAssetId == damagedAssetId ||
+                    item.MeshAssetId == ruinedAssetId)
+                {
+                    workshopPrimitiveCount++;
+                }
+
+                if (item.MeshAssetId == chimneyAssetId)
+                {
+                    chimneyPrimitiveCount++;
+                }
+            }
+
+            Assert.That(workshopPrimitiveCount, Is.EqualTo(6000));
+            Assert.That(chimneyPrimitiveCount, Is.EqualTo(3000));
+
+            int blacksmithAttributeCount = 0;
+            int blacksmithWithActiveEffects = 0;
+            float minDurability = float.MaxValue;
+            float maxDurability = float.MinValue;
+            var attributeQuery = new QueryDescription().WithAll<Name, AttributeBuffer>();
+            engine.World.Query(in attributeQuery, (Entity entity, ref Name name, ref AttributeBuffer attributes) =>
+            {
+                if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                blacksmithAttributeCount++;
+                float current = attributes.GetCurrent(durabilityAttributeId);
+                minDurability = MathF.Min(minDurability, current);
+                maxDurability = MathF.Max(maxDurability, current);
+
+                if (!engine.World.Has<ActiveEffectContainer>(entity))
+                {
+                    return;
+                }
+
+                ref ActiveEffectContainer activeEffects = ref engine.World.Get<ActiveEffectContainer>(entity);
+                for (int i = 0; i < activeEffects.Count; i++)
+                {
+                    Entity effectEntity = activeEffects.GetEntity(i);
+                    if (!engine.World.IsAlive(effectEntity) || !engine.World.Has<EffectTemplateRef>(effectEntity))
+                    {
+                        continue;
+                    }
+
+                    if (engine.World.Get<EffectTemplateRef>(effectEntity).TemplateId == randomDriftEffectId)
+                    {
+                        blacksmithWithActiveEffects++;
+                        break;
+                    }
+                }
+            });
+
+            TestContext.Out.WriteLine(
+                $"Blacksmith durability spread: count={blacksmithAttributeCount}, min={minDurability:F2}, max={maxDurability:F2}, activeRandomDrift={blacksmithWithActiveEffects}");
+
+            int worldBarCount = 0;
+            int worldTextCount = 0;
+            float minBar = float.MaxValue;
+            float maxBar = float.MinValue;
+            float minCurrent = float.MaxValue;
+            float maxCurrent = float.MinValue;
+            foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
+            {
+                if (item.Kind == WorldHudItemKind.Bar)
+                {
+                    worldBarCount++;
+                    minBar = MathF.Min(minBar, item.Value0);
+                    maxBar = MathF.Max(maxBar, item.Value0);
+                }
+                else if (item.Kind == WorldHudItemKind.Text)
+                {
+                    worldTextCount++;
+                    minCurrent = MathF.Min(minCurrent, item.Value0);
+                    maxCurrent = MathF.Max(maxCurrent, item.Value0);
+                }
+            }
+
+            Assert.That(worldBarCount, Is.EqualTo(3000));
+            Assert.That(worldTextCount, Is.EqualTo(3000));
+            Assert.That(maxBar - minBar, Is.GreaterThan(0.01f),
+                "Random durability effect should produce a spread of bar values across the crowd.");
+            Assert.That(maxCurrent - minCurrent, Is.GreaterThan(0.5f),
+                "Random durability effect should produce a spread of text current values across the crowd.");
+
+            Assert.That(screenHud.BarCount, Is.EqualTo(3000));
+            Assert.That(screenHud.TextCount, Is.EqualTo(3000));
+
+            float minScreenBar = float.MaxValue;
+            float maxScreenBar = float.MinValue;
+            foreach (ref readonly ScreenHudBarItem item in screenHud.GetBarSpan())
+            {
+                minScreenBar = MathF.Min(minScreenBar, item.Value0);
+                maxScreenBar = MathF.Max(maxScreenBar, item.Value0);
+            }
+
+            float minScreenCurrent = float.MaxValue;
+            float maxScreenCurrent = float.MinValue;
+            foreach (ref readonly ScreenHudTextItem item in screenHud.GetTextSpan())
+            {
+                minScreenCurrent = MathF.Min(minScreenCurrent, item.Value0);
+                maxScreenCurrent = MathF.Max(maxScreenCurrent, item.Value0);
+            }
+
+            Assert.That(maxScreenBar - minScreenBar, Is.GreaterThan(0.01f));
+            Assert.That(maxScreenCurrent - minScreenCurrent, Is.GreaterThan(0.5f));
+            Assert.That(worldHud.DroppedTotal, Is.EqualTo(0));
+            Assert.That(screenHud.DroppedTotal, Is.EqualTo(0));
         }
 
         private static ScatterScenarioResult RunScenario(ScatterScenario scenario)
