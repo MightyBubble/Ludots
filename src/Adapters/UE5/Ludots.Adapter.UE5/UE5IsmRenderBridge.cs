@@ -58,6 +58,7 @@ namespace Ludots.Adapter.UE5
         private readonly List<IsmBucket> _bucketList = new();
         private readonly List<AllegroDrawItem> _allegroItems = new();
         private readonly PrefabFinalizedLeafBuffer _prefabLeaves = new();
+        private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new();
 
         public IReadOnlyList<IsmBucket> HismBuckets => _bucketList;
         public IReadOnlyList<AllegroDrawItem> AllegroItems => _allegroItems;
@@ -72,6 +73,8 @@ namespace Ludots.Adapter.UE5
             }
 
             MeshAssetRegistry? meshRegistry = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
+            PresentationVisualRequestBuffer? visualRequests = engine.GetService(CoreServiceKeys.PresentationVisualRequestBuffer);
+            PresentationAdapterCapabilities? capabilities = engine.GetService(CoreServiceKeys.PresentationAdapterCapabilities);
             var visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
             var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
 
@@ -81,19 +84,19 @@ namespace Ludots.Adapter.UE5
 
             if (snapshot != null)
             {
-                CollectStaticBuckets(snapshot, meshRegistry, in finalizationContext);
+                CollectStaticBuckets(snapshot, meshRegistry, visualRequests, capabilities, in finalizationContext);
             }
 
             SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
             if (skinnedBatch != null)
             {
-                CollectSkinnedItems(skinnedBatch, meshRegistry, in finalizationContext);
+                CollectSkinnedItems(skinnedBatch, meshRegistry, visualRequests, capabilities, in finalizationContext);
                 return;
             }
 
             if (snapshot != null)
             {
-                CollectSkinnedFallback(snapshot, meshRegistry, in finalizationContext);
+                CollectSkinnedFallback(snapshot, meshRegistry, visualRequests, capabilities, in finalizationContext);
             }
         }
 
@@ -126,7 +129,12 @@ namespace Ludots.Adapter.UE5
             _allegroItems.Clear();
         }
 
-        private void CollectStaticBuckets(PrimitiveDrawBuffer buffer, MeshAssetRegistry? meshRegistry, in PrefabFinalizationContext finalizationContext)
+        private void CollectStaticBuckets(
+            PrimitiveDrawBuffer buffer,
+            MeshAssetRegistry? meshRegistry,
+            PresentationVisualRequestBuffer? visualRequests,
+            PresentationAdapterCapabilities? capabilities,
+            in PrefabFinalizationContext finalizationContext)
         {
             ReadOnlySpan<PrimitiveDrawItem> span = buffer.GetSpan();
             for (int i = 0; i < span.Length; i++)
@@ -146,6 +154,8 @@ namespace Ludots.Adapter.UE5
                     item.Scale,
                     item.Visibility,
                     meshRegistry,
+                    visualRequests,
+                    capabilities,
                     in finalizationContext);
             }
         }
@@ -159,6 +169,8 @@ namespace Ludots.Adapter.UE5
             Vector3 scale,
             VisualVisibility visibility,
             MeshAssetRegistry? meshRegistry,
+            PresentationVisualRequestBuffer? visualRequests,
+            PresentationAdapterCapabilities? capabilities,
             in PrefabFinalizationContext finalizationContext)
         {
             if (meshRegistry == null)
@@ -167,7 +179,8 @@ namespace Ludots.Adapter.UE5
             }
 
             _prefabLeaves.Clear();
-            PrefabFinalizationPipeline.FinalizeLeaves(
+            _prefabVisuals.Clear();
+            PrefabFinalizationPipeline.FinalizeVisuals(
                 meshRegistry,
                 meshAssetId,
                 stableId,
@@ -176,7 +189,8 @@ namespace Ludots.Adapter.UE5
                 scale,
                 Vector4.One,
                 finalizationContext,
-                _prefabLeaves);
+                _prefabLeaves,
+                _prefabVisuals);
 
             foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
             {
@@ -202,9 +216,16 @@ namespace Ludots.Adapter.UE5
                     Visibility = visibility,
                 });
             }
+
+            AppendTypedPrefabVisualRequests(visualRequests, capabilities, _prefabVisuals);
         }
 
-        private void CollectSkinnedItems(SkinnedVisualBatchBuffer buffer, MeshAssetRegistry? meshRegistry, in PrefabFinalizationContext finalizationContext)
+        private void CollectSkinnedItems(
+            SkinnedVisualBatchBuffer buffer,
+            MeshAssetRegistry? meshRegistry,
+            PresentationVisualRequestBuffer? visualRequests,
+            PresentationAdapterCapabilities? capabilities,
+            in PrefabFinalizationContext finalizationContext)
         {
             ReadOnlySpan<SkinnedVisualBatchItem> span = buffer.GetSpan();
             for (int i = 0; i < span.Length; i++)
@@ -223,11 +244,18 @@ namespace Ludots.Adapter.UE5
                     item.AnimationOverlay,
                     item.Visibility,
                     meshRegistry,
+                    visualRequests,
+                    capabilities,
                     in finalizationContext);
             }
         }
 
-        private void CollectSkinnedFallback(PrimitiveDrawBuffer buffer, MeshAssetRegistry? meshRegistry, in PrefabFinalizationContext finalizationContext)
+        private void CollectSkinnedFallback(
+            PrimitiveDrawBuffer buffer,
+            MeshAssetRegistry? meshRegistry,
+            PresentationVisualRequestBuffer? visualRequests,
+            PresentationAdapterCapabilities? capabilities,
+            in PrefabFinalizationContext finalizationContext)
         {
             ReadOnlySpan<PrimitiveDrawItem> span = buffer.GetSpan();
             for (int i = 0; i < span.Length; i++)
@@ -251,6 +279,8 @@ namespace Ludots.Adapter.UE5
                     item.AnimationOverlay,
                     item.Visibility,
                     meshRegistry,
+                    visualRequests,
+                    capabilities,
                     in finalizationContext);
             }
         }
@@ -268,6 +298,8 @@ namespace Ludots.Adapter.UE5
             AnimationOverlayRequest animationOverlay,
             VisualVisibility visibility,
             MeshAssetRegistry? meshRegistry,
+            PresentationVisualRequestBuffer? visualRequests,
+            PresentationAdapterCapabilities? capabilities,
             in PrefabFinalizationContext finalizationContext)
         {
             if (meshRegistry == null)
@@ -276,7 +308,8 @@ namespace Ludots.Adapter.UE5
             }
 
             _prefabLeaves.Clear();
-            PrefabFinalizationPipeline.FinalizeLeaves(
+            _prefabVisuals.Clear();
+            PrefabFinalizationPipeline.FinalizeVisuals(
                 meshRegistry,
                 meshAssetId,
                 stableId,
@@ -285,7 +318,8 @@ namespace Ludots.Adapter.UE5
                 scale,
                 color,
                 finalizationContext,
-                _prefabLeaves);
+                _prefabLeaves,
+                _prefabVisuals);
 
             foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
             {
@@ -302,6 +336,37 @@ namespace Ludots.Adapter.UE5
                     animationOverlay,
                     visibility);
             }
+
+            AppendTypedPrefabVisualRequests(visualRequests, capabilities, _prefabVisuals);
+        }
+
+        private static void AppendTypedPrefabVisualRequests(
+            PresentationVisualRequestBuffer? visualRequests,
+            PresentationAdapterCapabilities? capabilities,
+            PrefabFinalizedVisualBuffer visuals)
+        {
+            if (visuals.Count == 0)
+            {
+                return;
+            }
+
+            if (visualRequests == null)
+            {
+                throw new InvalidOperationException(
+                    $"Typed prefab finalization produced {visuals.Count} non-mesh visual request(s), but PresentationVisualRequestBuffer is not registered.");
+            }
+
+            foreach (ref readonly var visual in visuals.GetSpan())
+            {
+                var request = visual.ToVisualRequest();
+                if (!visualRequests.TryAdd(in request))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation visual request buffer overflowed while forwarding prefab visual stableId={visual.StableId} kind={visual.Kind}.");
+                }
+            }
+
+            PresentationVisualCapabilityValidator.Validate(visualRequests, capabilities);
         }
 
         private void AddFinalizedSkinnedLeaf(

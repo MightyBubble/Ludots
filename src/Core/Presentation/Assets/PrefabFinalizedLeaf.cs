@@ -1,4 +1,5 @@
 using System.Numerics;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Assets
 {
@@ -20,6 +21,16 @@ namespace Ludots.Core.Presentation.Assets
             Rotation = rotation;
             Scale = scale;
             Color = color;
+            Visual = new PrefabFinalizedVisual(
+                PrefabPartKind.Mesh,
+                meshAssetId,
+                string.Empty,
+                stableId,
+                position,
+                rotation,
+                scale,
+                color,
+                System.Array.Empty<PresentationPayloadField>());
         }
 
         public int MeshAssetId { get; }
@@ -35,5 +46,7 @@ namespace Ludots.Core.Presentation.Assets
         public Vector3 Scale { get; }
 
         public Vector4 Color { get; }
+
+        public PrefabFinalizedVisual Visual { get; }
     }
 }

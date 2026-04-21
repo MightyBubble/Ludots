@@ -7,6 +7,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
@@ -189,6 +190,126 @@ namespace Ludots.Tests.Presentation
                     scale: Vector3.One,
                     color: Vector4.One,
                     output));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_MixedPrefabProducesMeshLeavesAndTypedVisuals()
+        {
+            var meshes = new MeshAssetRegistry();
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+            int rootPrefabId = meshes.Register(
+                "prefab.mixed",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        Kind = PrefabPartKind.Mesh,
+                        MeshAssetId = cubeId,
+                        LocalPosition = new Vector3(1f, 0f, 0f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                    },
+                    new PrefabPart
+                    {
+                        Kind = PrefabPartKind.Decal,
+                        AssetKey = "decal.scorch",
+                        MaterialKey = "mat.scorch",
+                        LocalPosition = new Vector3(2f, 0f, 0f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = new Vector3(3f, 1f, 3f),
+                        ColorTint = new Vector4(1f, 0.5f, 0.25f, 1f),
+                        Payload = new[]
+                        {
+                            new PresentationPayloadField("Intensity", PresentationTypedValue.FromFloat(0.75f)),
+                        },
+                    },
+                    new PrefabPart
+                    {
+                        Kind = PrefabPartKind.Vfx,
+                        AssetKey = "vfx.spark",
+                        LocalPosition = new Vector3(3f, 0f, 0f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                    },
+                    new PrefabPart
+                    {
+                        Kind = PrefabPartKind.Surface,
+                        AssetKey = "surface.mud",
+                        SurfaceLayerKey = "mud",
+                        LocalPosition = new Vector3(4f, 0f, 0f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                    }));
+
+            var leaves = new PrefabFinalizedLeafBuffer();
+            var visuals = new PrefabFinalizedVisualBuffer();
+            PrefabFinalizationPipeline.FinalizeVisuals(
+                meshes,
+                rootPrefabId,
+                stableId: 200,
+                position: new Vector3(10f, 0f, 30f),
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                color: Vector4.One,
+                new PrefabFinalizationContext(new FlatVisualHeightmap()),
+                leaves,
+                visuals);
+
+            Assert.That(leaves.Count, Is.EqualTo(1));
+            Assert.That(leaves.GetSpan()[0].MeshAssetId, Is.EqualTo(cubeId));
+            Assert.That(visuals.Count, Is.EqualTo(3));
+
+            var finalized = visuals.GetSpan();
+            Assert.That(finalized[0].Kind, Is.EqualTo(PrefabPartKind.Decal));
+            Assert.That(finalized[0].AssetKey, Is.EqualTo("decal.scorch"));
+            Assert.That(finalized[0].MaterialKey, Is.EqualTo("mat.scorch"));
+            Assert.That(finalized[0].Position, Is.EqualTo(new Vector3(12f, 0f, 30f)));
+            Assert.That(finalized[0].Payload, Has.Length.EqualTo(1));
+            Assert.That(finalized[0].Payload[0].Name, Is.EqualTo("Intensity"));
+            Assert.That(finalized[0].Payload[0].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Float));
+            Assert.That(finalized[0].ToVisualRequest().Kind, Is.EqualTo(PresentationVisualRequestKind.Decal));
+            Assert.That(finalized[1].Kind, Is.EqualTo(PrefabPartKind.Vfx));
+            Assert.That(finalized[1].ToVisualRequest().Kind, Is.EqualTo(PresentationVisualRequestKind.Vfx));
+            Assert.That(finalized[2].Kind, Is.EqualTo(PrefabPartKind.Surface));
+            Assert.That(finalized[2].SurfaceLayerKey, Is.EqualTo("mud"));
+            Assert.That(finalized[2].ToVisualRequest().Kind, Is.EqualTo(PresentationVisualRequestKind.Surface));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_LegacyFinalizeLeavesThrowsForNonMeshPart()
+        {
+            var meshes = new MeshAssetRegistry();
+            int rootPrefabId = meshes.Register(
+                "prefab.decal_only",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        Kind = PrefabPartKind.Decal,
+                        AssetKey = "decal.warning",
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                    }));
+
+            var output = new PrefabFinalizedLeafBuffer();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                PrefabFinalizationPipeline.FinalizeLeaves(
+                    meshes,
+                    rootPrefabId,
+                    stableId: 12,
+                    position: Vector3.Zero,
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    color: Vector4.One,
+                    new PrefabFinalizationContext(new FlatVisualHeightmap()),
+                    output));
+
+            Assert.That(ex!.Message, Does.Contain("typed visual finalization"));
         }
 
         [Test]

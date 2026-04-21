@@ -40,7 +40,12 @@ namespace GasTests
                 HexEdgeLengthCm = 600,
                 ChunkSizeCells = 32,
                 NavigationEnabled = true,
-                DataFile = "Data/Maps/battle.vtxm"
+                DataFile = "Data/Maps/battle.vtxm",
+                VisualHeightmap = new Ludots.Core.Presentation.Terrain.VisualHeightmapBindingConfig
+                {
+                    Asset = "Data/Maps/battle.vhtm",
+                    BoardName = "battle",
+                }
             };
 
             Assert.That(config.Name, Is.EqualTo("battle"));
@@ -52,6 +57,7 @@ namespace GasTests
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
             Assert.That(config.NavigationEnabled, Is.True);
             Assert.That(config.DataFile, Is.EqualTo("Data/Maps/battle.vtxm"));
+            Assert.That(config.VisualHeightmap!.Asset, Is.EqualTo("Data/Maps/battle.vhtm"));
         }
 
         [Test]
@@ -62,7 +68,11 @@ namespace GasTests
                 Name = "world",
                 SpatialType = "Hex",
                 WidthInTiles = 256,
-                DataFile = "terrain.vtxm"
+                DataFile = "terrain.vtxm",
+                VisualHeightmap = new Ludots.Core.Presentation.Terrain.VisualHeightmapBindingConfig
+                {
+                    Asset = "terrain.vhtm",
+                }
             };
 
             var clone = original.Clone();
@@ -70,10 +80,13 @@ namespace GasTests
             Assert.That(clone.SpatialType, Is.EqualTo("Hex"));
             Assert.That(clone.WidthInTiles, Is.EqualTo(256));
             Assert.That(clone.DataFile, Is.EqualTo("terrain.vtxm"));
+            Assert.That(clone.VisualHeightmap!.Asset, Is.EqualTo("terrain.vhtm"));
 
             // Modify clone, original unchanged
             clone.WidthInTiles = 512;
+            clone.VisualHeightmap.Asset = "other.vhtm";
             Assert.That(original.WidthInTiles, Is.EqualTo(256));
+            Assert.That(original.VisualHeightmap!.Asset, Is.EqualTo("terrain.vhtm"));
         }
 
         [Test]
@@ -87,7 +100,11 @@ namespace GasTests
                 "heightInTiles": 128,
                 "hexEdgeLengthCm": 600,
                 "chunkSizeCells": 32,
-                "navigationEnabled": true
+                "navigationEnabled": true,
+                "visualHeightmap": {
+                  "asset": "Data/Maps/strategic.vhtm",
+                  "boardName": "strategic"
+                }
             }
             """;
 
@@ -100,6 +117,9 @@ namespace GasTests
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
             Assert.That(config.NavigationEnabled, Is.True);
+            Assert.That(config.VisualHeightmap, Is.Not.Null);
+            Assert.That(config.VisualHeightmap!.Asset, Is.EqualTo("Data/Maps/strategic.vhtm"));
+            Assert.That(config.VisualHeightmap.BoardName, Is.EqualTo("strategic"));
         }
     }
 }

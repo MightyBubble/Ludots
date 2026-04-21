@@ -395,6 +395,7 @@ namespace Ludots.Tests.Presentation
         private PerformerInstanceBuffer _instances;
         private PerformerDefinitionRegistry _defs;
         private PrimitiveDrawBuffer _primitives;
+        private PresentationVisualRequestBuffer _visualRequests;
         private WorldHudBatchBuffer _hud;
         private GroundOverlayBuffer _overlays;
         private RoadSplineBuffer _roadSplines;
@@ -409,6 +410,7 @@ namespace Ludots.Tests.Presentation
             _instances = new PerformerInstanceBuffer();
             _defs = new PerformerDefinitionRegistry();
             _primitives = new PrimitiveDrawBuffer();
+            _visualRequests = new PresentationVisualRequestBuffer();
             _hud = new WorldHudBatchBuffer();
             _overlays = new GroundOverlayBuffer();
             _roadSplines = new RoadSplineBuffer();
@@ -417,7 +419,7 @@ namespace Ludots.Tests.Presentation
             _globals = new System.Collections.Generic.Dictionary<string, object>();
             _renderDebug = new RenderDebugState();
             _globals[CoreServiceKeys.RenderDebugState.Name] = _renderDebug;
-            _system = new PerformerEmitSystem(_world, _instances, _defs, _overlays, _primitives, _hud, programs, api, _globals, roadSplines: _roadSplines);
+            _system = new PerformerEmitSystem(_world, _instances, _defs, _overlays, _primitives, _hud, programs, api, _globals, roadSplines: _roadSplines, visualRequests: _visualRequests);
         }
 
         [TearDown]
@@ -492,6 +494,82 @@ namespace Ludots.Tests.Presentation
 
             _system.Update(0.06f); // total elapsed > 0.1
             Assert.That(_instances.IsActive(handle), Is.False);
+        }
+
+        [Test]
+        public void InstanceScoped_TypedDecalPerformer_EmitsVisualRequest()
+        {
+            var entity = _world.Create(
+                new VisualTransform { Position = new Vector3(1f, 2f, 3f) },
+                new PresentationStableId { Value = 55 },
+                new AttributeBuffer());
+            ref var attributes = ref _world.Get<AttributeBuffer>(entity);
+            attributes.SetBase(7, 1f);
+            attributes.SetCurrent(7, 0.65f);
+
+            var def = new PerformerDefinition
+            {
+                VisualKind = PerformerVisualKind.Decal,
+                VisualAssetKey = "decal.scorch",
+                MaterialKey = "mat.scorch",
+                DefaultScale = 1.5f,
+                DefaultColor = new Vector4(1f, 0.4f, 0.1f, 0.9f),
+                DefaultPayload = new[]
+                {
+                    new PresentationPayloadField("Tint", PresentationTypedValue.FromColor(new Vector4(1f, 0.5f, 0.25f, 1f))),
+                },
+                Bindings = new[]
+                {
+                    new PerformerParamBinding
+                    {
+                        FieldName = "Intensity",
+                        ValueKind = PresentationTypedValueKind.Float,
+                        Value = ValueRef.FromAttribute(7),
+                    }
+                }
+            };
+            int defId = _defs.Register("typed.decal", def);
+            _instances.TryAllocate(defId, entity, 0, out _);
+
+            _system.Update(0.016f);
+
+            Assert.That(_visualRequests.Count, Is.EqualTo(1));
+            var request = _visualRequests.GetSpan()[0];
+            Assert.That(request.Kind, Is.EqualTo(PresentationVisualRequestKind.Decal));
+            Assert.That(request.AssetKey, Is.EqualTo("decal.scorch"));
+            Assert.That(request.MaterialKey, Is.EqualTo("mat.scorch"));
+            Assert.That(request.Source, Is.EqualTo(entity));
+            Assert.That(request.Scale, Is.EqualTo(new Vector3(1.5f, 1.5f, 1.5f)));
+            Assert.That(request.Payload, Has.Length.EqualTo(2));
+            Assert.That(request.Payload[0].Name, Is.EqualTo("Tint"));
+            Assert.That(request.Payload[0].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Color));
+            Assert.That(request.Payload[1].Name, Is.EqualTo("Intensity"));
+            Assert.That(request.Payload[1].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Float));
+            Assert.That(request.Payload[1].Value.FloatValue, Is.EqualTo(0.65f).Within(0.001f));
+        }
+
+        [Test]
+        public void PresentationVisualCapabilityValidator_ThrowsForTypedPerformerRequestWithoutCapability()
+        {
+            Assert.That(
+                _visualRequests.TryAdd(new PresentationVisualRequest(
+                    PresentationVisualRequestKind.Vfx,
+                    stableId: 77,
+                    assetKey: "vfx.hit",
+                    position: Vector3.Zero,
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    color: Vector4.One,
+                    source: Entity.Null,
+                    target: Entity.Null,
+                    payload: Array.Empty<PresentationPayloadField>())),
+                Is.True);
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                PresentationVisualCapabilityValidator.Validate(
+                    _visualRequests,
+                    new PresentationAdapterCapabilities(PresentationVisualCapabilities.Decal)));
+            Assert.That(ex!.Message, Does.Contain("Vfx"));
         }
 
         [Test]

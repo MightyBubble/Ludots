@@ -41,6 +41,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly GroundOverlayBuffer _groundOverlays;
         private readonly RoadSplineBuffer _roadSplines;
         private readonly PresentationVisualProxyEmitter _proxyEmitter;
+        private readonly PresentationVisualRequestBuffer? _visualRequests;
         private readonly WorldHudBatchBuffer _worldHud;
         private readonly GraphProgramRegistry _programs;
         private readonly IGraphRuntimeApi _graphApi;
@@ -83,7 +84,8 @@ namespace Ludots.Core.Presentation.Systems
             PrimitiveDrawBuffer? snapshotBuffer = null,
             PresentationVisualProxyBuffer? proxyBuffer = null,
             SkinnedVisualBatchBuffer? skinnedBatchBuffer = null,
-            RoadSplineBuffer? roadSplines = null)
+            RoadSplineBuffer? roadSplines = null,
+            PresentationVisualRequestBuffer? visualRequests = null)
             : base(world)
         {
             _instances = instances;
@@ -91,6 +93,7 @@ namespace Ludots.Core.Presentation.Systems
             _groundOverlays = groundOverlays;
             _roadSplines = roadSplines ?? new RoadSplineBuffer();
             _proxyEmitter = new PresentationVisualProxyEmitter(primitives, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
+            _visualRequests = visualRequests;
             _worldHud = worldHud;
             _programs = programs;
             _graphApi = graphApi;
@@ -308,6 +311,13 @@ namespace Ludots.Core.Presentation.Systems
                 case PerformerVisualKind.RoadSpline:
                     EmitRoadSpline(handle, definitionId, def, owner, pos, alphaMod);
                     break;
+                case PerformerVisualKind.Decal:
+                case PerformerVisualKind.Vfx:
+                case PerformerVisualKind.Surface:
+                case PerformerVisualKind.MaterialOverride:
+                case PerformerVisualKind.InstanceCustomData:
+                    EmitTypedVisualRequest(handle, definitionId, def, owner, pos, alphaMod);
+                    break;
             }
         }
 
@@ -514,6 +524,103 @@ namespace Ludots.Core.Presentation.Systems
             _roadSplines.TryAdd(stableId, pos, control0, control1, end, width, fill, border, borderWidth, style);
         }
 
+        private void EmitTypedVisualRequest(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
+        {
+            if (_visualRequests == null)
+            {
+                throw new InvalidOperationException(
+                    $"Performer '{_definitions.GetName(definitionId)}' emits typed visual kind '{def.VisualKind}', but PresentationVisualRequestBuffer is not registered.");
+            }
+
+            var color = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
+            color.W *= alphaMod;
+            int stableId = ResolveTypedStableId(handle, definitionId, def.VisualKind, owner);
+            var payload = ResolveTypedPayload(handle, def, owner);
+
+            if (!_visualRequests.TryAdd(new PresentationVisualRequest(
+                    ToRequestKind(def.VisualKind),
+                    stableId,
+                    def.VisualAssetKey,
+                    pos,
+                    Quaternion.Identity,
+                    new Vector3(ResolveParam(handle, def, owner, 0, def.DefaultScale)),
+                    color,
+                    owner,
+                    Entity.Null,
+                    payload,
+                    def.MaterialKey,
+                    def.SurfaceLayerKey)))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation visual request buffer overflowed while emitting performer '{_definitions.GetName(definitionId)}' stableId={stableId} kind={def.VisualKind}.");
+            }
+        }
+
+        private PresentationPayloadField[] ResolveTypedPayload(int handle, PerformerDefinition def, Entity owner)
+        {
+            int dynamicCount = 0;
+            for (int i = 0; i < def.Bindings.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(def.Bindings[i].FieldName))
+                {
+                    dynamicCount++;
+                }
+            }
+
+            int staticCount = def.DefaultPayload?.Length ?? 0;
+            if (staticCount == 0 && dynamicCount == 0)
+            {
+                return Array.Empty<PresentationPayloadField>();
+            }
+
+            var payload = new PresentationPayloadField[staticCount + dynamicCount];
+            for (int i = 0; i < staticCount; i++)
+            {
+                payload[i] = def.DefaultPayload[i];
+            }
+
+            int write = staticCount;
+            for (int i = 0; i < def.Bindings.Length; i++)
+            {
+                ref readonly var binding = ref def.Bindings[i];
+                if (string.IsNullOrWhiteSpace(binding.FieldName))
+                {
+                    continue;
+                }
+
+                float resolved = ResolveValueRef(in binding.Value, owner);
+                payload[write++] = new PresentationPayloadField(
+                    binding.FieldName,
+                    ToTypedValue(binding.ValueKind, resolved));
+            }
+
+            return payload;
+        }
+
+        private static PresentationTypedValue ToTypedValue(PresentationTypedValueKind kind, float value)
+        {
+            return kind switch
+            {
+                PresentationTypedValueKind.Bool => PresentationTypedValue.FromBool(MathF.Abs(value) > float.Epsilon),
+                PresentationTypedValueKind.Int => PresentationTypedValue.FromInt((int)MathF.Round(value)),
+                PresentationTypedValueKind.Float => PresentationTypedValue.FromFloat(value),
+                _ => throw new InvalidOperationException($"Dynamic performer binding cannot produce typed value kind '{kind}'. Use static payload for non-scalar values."),
+            };
+        }
+
+        private static PresentationVisualRequestKind ToRequestKind(PerformerVisualKind kind)
+        {
+            return kind switch
+            {
+                PerformerVisualKind.Decal => PresentationVisualRequestKind.Decal,
+                PerformerVisualKind.Vfx => PresentationVisualRequestKind.Vfx,
+                PerformerVisualKind.Surface => PresentationVisualRequestKind.Surface,
+                PerformerVisualKind.MaterialOverride => PresentationVisualRequestKind.MaterialOverride,
+                PerformerVisualKind.InstanceCustomData => PresentationVisualRequestKind.InstanceCustomData,
+                _ => PresentationVisualRequestKind.None,
+            };
+        }
+
         private int ResolveMarkerStableId(int handle, int definitionId, Entity owner)
         {
             if (handle >= 0 && _instances.IsActive(handle))
@@ -552,6 +659,26 @@ namespace Ludots.Core.Presentation.Systems
 
             throw new InvalidOperationException(
                 $"Entity-scoped RoadSpline performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
+        }
+
+        private int ResolveTypedStableId(int handle, int definitionId, PerformerVisualKind visualKind, Entity owner)
+        {
+            if (handle >= 0 && _instances.IsActive(handle))
+            {
+                return _instances.Get(handle).StableId;
+            }
+
+            if (World.IsAlive(owner) && World.Has<PresentationStableId>(owner))
+            {
+                int ownerStableId = World.Get<PresentationStableId>(owner).Value;
+                if (ownerStableId > 0)
+                {
+                    return PerformerVisualIdentity.ComposeStableId(ownerStableId, visualKind, definitionId);
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Entity-scoped typed performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
         }
 
         private void EmitWorldBar(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)

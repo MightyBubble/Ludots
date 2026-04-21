@@ -5,6 +5,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -115,6 +116,82 @@ namespace Ludots.Tests.Presentation
             Assert.That(part.Grounding.VerticalOffsetMeters, Is.EqualTo(0.5f).Within(0.0001f));
             Assert.That(part.Grounding.AlignToGroundNormal, Is.True);
             Assert.That(part.Grounding.LayerIndex, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void MeshAssetConfigLoader_ParsesTypedNonMeshPrefabParts()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_PrefabTransformUtilityTests", Guid.NewGuid().ToString("N"));
+            string mod = Path.Combine(root, "TypedPrefabTestMod");
+            Directory.CreateDirectory(Path.Combine(mod, "assets", "Presentation"));
+
+            File.WriteAllText(
+                Path.Combine(mod, "assets", "Presentation", "mesh_assets.json"),
+                """
+                [
+                  {
+                    "id": "test.mesh.base",
+                    "type": "Model",
+                    "sourceUris": ["ue5.staticmesh:/Game/Test/Base.Base"]
+                  }
+                ]
+                """);
+            File.WriteAllText(
+                Path.Combine(mod, "assets", "Presentation", "prefabs.json"),
+                """
+                [
+                  {
+                    "id": "test.prefab.typed",
+                    "parts": [
+                      {
+                        "meshAssetId": "test.mesh.base",
+                        "localPosition": [1, 2, 3]
+                      },
+                      {
+                        "kind": "Decal",
+                        "assetKey": "decal.scorch",
+                        "materialKey": "mat.scorch",
+                        "localScale": [2, 1, 2],
+                        "payload": [
+                          { "name": "Intensity", "type": "Float", "value": 0.8 },
+                          { "name": "Tint", "type": "Color", "value": [1, 0.25, 0.1, 1] }
+                        ]
+                      },
+                      {
+                        "kind": "Surface",
+                        "surfaceLayerKey": "mud"
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("TypedPrefabTestMod", mod);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            modLoader.LoadedModIds.Add("TypedPrefabTestMod");
+
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var meshRegistry = new MeshAssetRegistry();
+            var prefabRegistry = new PrefabRegistry();
+            var loader = new MeshAssetConfigLoader(pipeline, meshRegistry, prefabRegistry);
+
+            loader.Load();
+
+            int prefabMeshId = meshRegistry.GetId("test.prefab.typed");
+            Assert.That(meshRegistry.TryGetDescriptor(prefabMeshId, out var descriptor), Is.True);
+            Assert.That(descriptor.Type, Is.EqualTo(MeshAssetType.Prefab));
+            Assert.That(descriptor.PrefabParts, Has.Length.EqualTo(3));
+            Assert.That(descriptor.PrefabParts[0].Kind, Is.EqualTo(PrefabPartKind.Mesh));
+            Assert.That(descriptor.PrefabParts[1].Kind, Is.EqualTo(PrefabPartKind.Decal));
+            Assert.That(descriptor.PrefabParts[1].AssetKey, Is.EqualTo("decal.scorch"));
+            Assert.That(descriptor.PrefabParts[1].MaterialKey, Is.EqualTo("mat.scorch"));
+            Assert.That(descriptor.PrefabParts[1].Payload, Has.Length.EqualTo(2));
+            Assert.That(descriptor.PrefabParts[1].Payload[0].Name, Is.EqualTo("Intensity"));
+            Assert.That(descriptor.PrefabParts[1].Payload[0].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Float));
+            Assert.That(descriptor.PrefabParts[1].Payload[1].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Color));
+            Assert.That(descriptor.PrefabParts[2].Kind, Is.EqualTo(PrefabPartKind.Surface));
+            Assert.That(descriptor.PrefabParts[2].SurfaceLayerKey, Is.EqualTo("mud"));
         }
     }
 }

@@ -7,6 +7,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
@@ -208,6 +209,14 @@ namespace Ludots.Adapter.UE5
             engine.SetService(UE5AdapterServiceKeys.SharedCameraState, sharedState);
             engine.SetService(UE5AdapterServiceKeys.HostCameraDiagnosticsSnapshot, hostCameraDiagnosticsSnapshot);
             engine.SetService(UE5AdapterServiceKeys.HostCameraDiagnosticsCommands, hostCameraDiagnosticsCommands);
+            engine.SetService(
+                CoreServiceKeys.PresentationAdapterCapabilities,
+                new PresentationAdapterCapabilities(
+                    PresentationVisualCapabilities.Decal |
+                    PresentationVisualCapabilities.Vfx |
+                    PresentationVisualCapabilities.Surface |
+                    PresentationVisualCapabilities.MaterialOverride |
+                    PresentationVisualCapabilities.InstanceCustomData));
 
             // ── 4. 注入 UE5 适配器 ───────────────────────────────────────
 

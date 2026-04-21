@@ -206,6 +206,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationPrimitiveDrawBuffer = new("PresentationPrimitiveDrawBuffer");
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationVisualSnapshotBuffer = new("PresentationVisualSnapshotBuffer");
         public static readonly ServiceKey<PresentationVisualProxyBuffer> PresentationVisualProxyBuffer = new("PresentationVisualProxyBuffer");
+        public static readonly ServiceKey<PresentationVisualRequestBuffer> PresentationVisualRequestBuffer = new("PresentationVisualRequestBuffer");
+        public static readonly ServiceKey<PresentationAdapterCapabilities> PresentationAdapterCapabilities = new("PresentationAdapterCapabilities");
         public static readonly ServiceKey<SkinnedVisualBatchBuffer> PresentationSkinnedVisualBatchBuffer = new("PresentationSkinnedVisualBatchBuffer");
         public static readonly ServiceKey<WorldHudBatchBuffer> PresentationWorldHudBuffer = new("PresentationWorldHudBuffer");
         public static readonly ServiceKey<WorldHudStringTable> PresentationWorldHudStrings = new("PresentationWorldHudStrings");

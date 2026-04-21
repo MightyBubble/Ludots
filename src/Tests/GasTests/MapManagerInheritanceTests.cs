@@ -22,6 +22,9 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "parent", """
                 {
                   "id": "parent",
+                  "visualHeightmap": {
+                    "asset": "Data/Maps/parent_visual.vhtm"
+                  },
                   "boards": [
                     {
                       "name": "default",
@@ -53,6 +56,8 @@ namespace GasTests
                 Assert.That(board.SpatialType, Is.EqualTo("Hex"));
                 Assert.That(board.WidthInTiles, Is.EqualTo(128));
                 Assert.That(board.HexEdgeLengthCm, Is.EqualTo(900));
+                Assert.That(cfg.VisualHeightmap, Is.Not.Null);
+                Assert.That(cfg.VisualHeightmap!.Asset, Is.EqualTo("Data/Maps/parent_visual.vhtm"));
             }
             finally
             {
@@ -83,6 +88,44 @@ namespace GasTests
                 var manager = CreateMapManager(tempRoot);
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("a"));
                 Assert.That(ex!.Message, Does.Contain("Cyclic map inheritance detected"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenChildDeclaresVisualHeightmap_OverridesParent()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "parent", """
+                {
+                  "id": "parent",
+                  "visualHeightmap": {
+                    "asset": "Data/Maps/parent_visual.vhtm"
+                  }
+                }
+                """);
+
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "parent",
+                  "visualHeightmap": {
+                    "asset": "Data/Maps/child_visual.vhtm"
+                  }
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("child");
+
+                Assert.That(cfg, Is.Not.Null);
+                Assert.That(cfg!.VisualHeightmap, Is.Not.Null);
+                Assert.That(cfg.VisualHeightmap!.Asset, Is.EqualTo("Data/Maps/child_visual.vhtm"));
             }
             finally
             {

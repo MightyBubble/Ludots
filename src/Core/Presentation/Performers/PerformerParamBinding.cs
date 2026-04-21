@@ -1,3 +1,5 @@
+using Ludots.Core.Presentation.Rendering;
+
 namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
@@ -19,6 +21,17 @@ namespace Ludots.Core.Presentation.Performers
         /// PerformerDefinition's VisualKind.
         /// </summary>
         public int ParamKey;
+
+        /// <summary>
+        /// Named semantic field for typed non-mesh performer payloads.
+        /// Required for Decal/Vfx/Surface/MaterialOverride/InstanceCustomData bindings.
+        /// </summary>
+        public string FieldName;
+
+        /// <summary>
+        /// Runtime value type submitted to <see cref="PresentationVisualRequest.Payload"/>.
+        /// </summary>
+        public PresentationTypedValueKind ValueKind;
 
         /// <summary>
         /// The data source to resolve each frame.

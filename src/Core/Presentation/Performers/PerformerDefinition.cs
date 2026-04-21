@@ -1,5 +1,6 @@
 using System.Numerics;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Performers
 {
@@ -77,6 +78,18 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>Mesh asset ID (Marker3D) or GroundOverlayShape ordinal (GroundOverlay).</summary>
         public int MeshOrShapeId;
 
+        /// <summary>Adapter-neutral asset key for typed non-mesh requests.</summary>
+        public string VisualAssetKey = string.Empty;
+
+        /// <summary>Optional material key for material/decal/custom-data requests.</summary>
+        public string MaterialKey = string.Empty;
+
+        /// <summary>Optional surface layer key for surface/RVT requests.</summary>
+        public string SurfaceLayerKey = string.Empty;
+
+        /// <summary>Static typed payload fields submitted with typed non-mesh requests.</summary>
+        public PresentationPayloadField[] DefaultPayload = System.Array.Empty<PresentationPayloadField>();
+
         /// <summary>Default color (RGBA).</summary>
         public Vector4 DefaultColor = new(1f, 1f, 1f, 1f);
 
@@ -125,10 +138,22 @@ namespace Ludots.Core.Presentation.Performers
 
             // Determine required size from max ParamKey
             int maxKey = 0;
+            bool hasLegacyParamKey = false;
             for (int i = 0; i < Bindings.Length; i++)
             {
+                if (Bindings[i].ParamKey >= 0)
+                {
+                    hasLegacyParamKey = true;
+                }
+
                 if (Bindings[i].ParamKey > maxKey)
                     maxKey = Bindings[i].ParamKey;
+            }
+
+            if (!hasLegacyParamKey)
+            {
+                BindingIndex = System.Array.Empty<int>();
+                return;
             }
 
             var index = new int[maxKey + 1];

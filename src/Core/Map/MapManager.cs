@@ -193,6 +193,7 @@ namespace Ludots.Core.Map
         private void MergeMapConfig(MapConfig target, MapConfig source)
         {
             if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
+            if (source.VisualHeightmap != null) target.VisualHeightmap = source.VisualHeightmap.Clone();
 
             if (source.Dependencies != null)
             {

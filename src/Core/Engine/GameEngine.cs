@@ -189,6 +189,7 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer _primitiveDrawBuffer;
         private Ludots.Core.Presentation.Rendering.PrimitiveDrawBuffer _visualSnapshotBuffer;
         private Ludots.Core.Presentation.Rendering.PresentationVisualProxyBuffer _visualProxyBuffer;
+        private Ludots.Core.Presentation.Rendering.PresentationVisualRequestBuffer _visualRequestBuffer;
         private Ludots.Core.Presentation.Rendering.SkinnedVisualBatchBuffer _skinnedVisualBatchBuffer;
         private GasPresentationEventBuffer _gasPresentationEvents;
         private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
@@ -616,6 +617,7 @@ namespace Ludots.Core.Engine
             var primitiveDrawBuffer = new PrimitiveDrawBuffer(PrimitiveDrawBufferCapacity);
             var visualSnapshotBuffer = new PrimitiveDrawBuffer(VisualSnapshotBufferCapacity);
             var visualProxyBuffer = new PresentationVisualProxyBuffer(VisualSnapshotBufferCapacity);
+            var visualRequestBuffer = new PresentationVisualRequestBuffer(VisualSnapshotBufferCapacity);
             var skinnedVisualBatchBuffer = new SkinnedVisualBatchBuffer(VisualSnapshotBufferCapacity);
             var transientMarkerBuffer = new TransientMarkerBuffer();
             var groundOverlayBuffer = new GroundOverlayBuffer();
@@ -652,7 +654,8 @@ namespace Ludots.Core.Engine
                 snapshotBuffer: visualSnapshotBuffer,
                 proxyBuffer: visualProxyBuffer,
                 skinnedBatchBuffer: skinnedVisualBatchBuffer,
-                roadSplines: roadSplineBuffer);
+                roadSplines: roadSplineBuffer,
+                visualRequests: visualRequestBuffer);
             new PerformerDefinitionConfigLoader(
                 ConfigPipeline,
                 performerDefinitions,
@@ -827,6 +830,7 @@ namespace Ludots.Core.Engine
             _primitiveDrawBuffer = primitiveDrawBuffer;
             _visualSnapshotBuffer = visualSnapshotBuffer;
             _visualProxyBuffer = visualProxyBuffer;
+            _visualRequestBuffer = visualRequestBuffer;
             _skinnedVisualBatchBuffer = skinnedVisualBatchBuffer;
             _gasPresentationEvents = gasPresentationEvents;
             _groundOverlayBuffer = groundOverlayBuffer;
@@ -835,6 +839,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, primitiveDrawBuffer);
             SetService(CoreServiceKeys.PresentationVisualSnapshotBuffer, visualSnapshotBuffer);
             SetService(CoreServiceKeys.PresentationVisualProxyBuffer, visualProxyBuffer);
+            SetService(CoreServiceKeys.PresentationVisualRequestBuffer, visualRequestBuffer);
+            SetService(CoreServiceKeys.PresentationAdapterCapabilities, new PresentationAdapterCapabilities(PresentationVisualCapabilities.None));
             SetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer, skinnedVisualBatchBuffer);
             SetService(CoreServiceKeys.PresentationWorldHudBuffer, worldHudBuffer);
             SetService(CoreServiceKeys.PresentationWorldHudStrings, worldHudStrings);
@@ -1516,6 +1522,7 @@ namespace Ludots.Core.Engine
         {
             VertexMap?.UnsubscribeFromLoadedChunks();
             VertexMap = null;
+            InstallVisualHeightmapForMap(session, mapConfig);
 
             foreach (var board in session.AllBoards)
             {
@@ -1537,6 +1544,78 @@ namespace Ludots.Core.Engine
             }
         }
 
+        private void InstallVisualHeightmapForMap(MapSession session, MapConfig mapConfig)
+        {
+            VisualHeightmapBindingConfig binding = ResolveVisualHeightmapBinding(session, mapConfig);
+            if (binding == null)
+            {
+                SetService(CoreServiceKeys.VisualHeightmap, new FlatVisualHeightmap());
+                return;
+            }
+
+            string assetPath = binding.Asset;
+            if (string.IsNullOrWhiteSpace(assetPath))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapConfig?.Id ?? session?.MapId.Value ?? "<unknown>"}' declares a visual heightmap binding without an asset path.");
+            }
+
+            using Stream stream = OpenMapAssetStream(assetPath);
+            VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
+            IVisualHeightmap runtime = new VisualHeightmapRuntime(asset);
+            SetService(CoreServiceKeys.VisualHeightmap, runtime);
+            Diagnostics.Log.Info(
+                in LogChannels.Engine,
+                $"Installed visual heightmap '{assetPath}' for map '{mapConfig?.Id ?? session.MapId.Value}' ({asset.SampleColumns}x{asset.SampleRows}, layers={asset.Layers.Length}).");
+        }
+
+        private static VisualHeightmapBindingConfig ResolveVisualHeightmapBinding(MapSession session, MapConfig mapConfig)
+        {
+            if (mapConfig?.VisualHeightmap != null)
+            {
+                return mapConfig.VisualHeightmap;
+            }
+
+            if (mapConfig?.Boards == null || mapConfig.Boards.Count == 0)
+            {
+                return null;
+            }
+
+            IBoard primary = session?.PrimaryBoard;
+            if (primary != null)
+            {
+                for (int i = 0; i < mapConfig.Boards.Count; i++)
+                {
+                    BoardConfig board = mapConfig.Boards[i];
+                    if (board.VisualHeightmap != null &&
+                        string.Equals(board.Name, primary.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return board.VisualHeightmap;
+                    }
+                }
+            }
+
+            VisualHeightmapBindingConfig singleBinding = null;
+            for (int i = 0; i < mapConfig.Boards.Count; i++)
+            {
+                VisualHeightmapBindingConfig boardBinding = mapConfig.Boards[i].VisualHeightmap;
+                if (boardBinding == null)
+                {
+                    continue;
+                }
+
+                if (singleBinding != null)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' declares multiple board visual heightmaps but no map-level visualHeightmap binding.");
+                }
+
+                singleBinding = boardBinding;
+            }
+
+            return singleBinding;
+        }
+
         private string FindDataFileForBoard(string boardName, MapConfig mapConfig)
         {
             if (mapConfig.Boards == null) return null;
@@ -1548,6 +1627,60 @@ namespace Ludots.Core.Engine
                 }
             }
             return null;
+        }
+
+        private Stream OpenMapAssetStream(string assetPath)
+        {
+            if (string.IsNullOrWhiteSpace(assetPath))
+            {
+                throw new ArgumentException("Asset path must not be empty.", nameof(assetPath));
+            }
+
+            if (assetPath.StartsWith("/") || assetPath.StartsWith("\\"))
+            {
+                assetPath = assetPath.Substring(1);
+            }
+
+            string rel = assetPath.Replace('\\', '/');
+            var candidates = new List<string>(6) { rel };
+            if (!rel.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add($"assets/{rel}");
+            }
+            if (!rel.Contains("Data/Maps", StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add($"assets/Data/Maps/{rel}");
+            }
+
+            Stream TryOpen(string uri)
+            {
+                try { return VFS.GetStream(uri); }
+                catch (FileNotFoundException) { return null; }
+                catch (DirectoryNotFoundException) { return null; }
+            }
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                Stream coreStream = TryOpen($"Core:{candidates[i]}");
+                if (coreStream != null)
+                {
+                    return coreStream;
+                }
+            }
+
+            foreach (var modId in ModLoader.LoadedModIds)
+            {
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    Stream modStream = TryOpen($"{modId}:{candidates[i]}");
+                    if (modStream != null)
+                    {
+                        return modStream;
+                    }
+                }
+            }
+
+            throw new FileNotFoundException($"Map visual heightmap asset '{assetPath}' was not found in Core or loaded mods.");
         }
 
         private VertexMap LoadVertexMapFromFile(string dataFile)
@@ -2097,6 +2230,7 @@ namespace Ludots.Core.Engine
             _primitiveDrawBuffer?.Clear();
             _visualSnapshotBuffer?.Clear();
             _visualProxyBuffer?.Clear();
+            _visualRequestBuffer?.Clear();
             _skinnedVisualBatchBuffer?.Clear();
             _groundOverlayBuffer?.Clear();
             _roadSplineBuffer?.Clear();
@@ -2104,6 +2238,12 @@ namespace Ludots.Core.Engine
             for (int i = 0; i < _presentationSystems.Count; i++)
             {
                 _presentationSystems[i].Update(dt);
+            }
+            if (_visualRequestBuffer != null)
+            {
+                PresentationVisualCapabilityValidator.Validate(
+                    _visualRequestBuffer,
+                    GetService(CoreServiceKeys.PresentationAdapterCapabilities));
             }
             // Clear GAS presentation events AFTER all presentation systems have consumed them
             _gasPresentationEvents?.Clear();

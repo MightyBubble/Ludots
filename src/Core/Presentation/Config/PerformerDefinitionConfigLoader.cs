@@ -69,9 +69,13 @@ namespace Ludots.Core.Presentation.Config
             if (string.IsNullOrWhiteSpace(key)) return (null, null);
 
             var def = new PerformerDefinition();
-            def.VisualKind = ParseEnum(node["visualKind"]?.GetValue<string>(), PerformerVisualKind.GroundOverlay);
+            def.VisualKind = ParseEnumStrict(node["visualKind"]?.GetValue<string>(), PerformerVisualKind.GroundOverlay, "performer visualKind");
             def.EntityScope = ParseEnum(node["entityScope"]?.GetValue<string>(), EntityScopeFilter.None);
             def.MeshOrShapeId = ResolveMeshOrShape(node["meshOrShapeId"], def.VisualKind);
+            def.VisualAssetKey = node["assetKey"]?.GetValue<string>() ?? node["asset"]?.GetValue<string>() ?? string.Empty;
+            def.MaterialKey = node["materialKey"]?.GetValue<string>() ?? node["material"]?.GetValue<string>() ?? string.Empty;
+            def.SurfaceLayerKey = node["surfaceLayerKey"]?.GetValue<string>() ?? node["surfaceLayer"]?.GetValue<string>() ?? string.Empty;
+            def.DefaultPayload = PresentationPayloadConfigParser.ParsePayload(node["payload"], $"Performer '{key}'");
             def.DefaultColor = ParseColor(node["defaultColor"]);
             def.DefaultScale = node["defaultScale"]?.GetValue<float>() ?? 1f;
             def.DefaultLifetime = node["defaultLifetime"]?.GetValue<float>() ?? 0f;
@@ -81,7 +85,8 @@ namespace Ludots.Core.Presentation.Config
             def.AlphaFadeOverLifetime = node["alphaFadeOverLifetime"]?.GetValue<bool>() ?? false;
             def.VisibilityCondition = ParseConditionRef(node["visibility"]);
             def.Rules = ParseRules(node["rules"]);
-            def.Bindings = ParseBindings(node["bindings"]);
+            def.Bindings = ParseBindings(node["bindings"], def.VisualKind, key);
+            ValidateTypedPerformerDefinition(def, key);
 
             // ── Entity-scoped filters ──
             string requiredTemplate = node["requiredTemplate"]?.GetValue<string>();
@@ -162,7 +167,7 @@ namespace Ludots.Core.Presentation.Config
 
         // ── Bindings ──
 
-        private PerformerParamBinding[] ParseBindings(JsonNode node)
+        private PerformerParamBinding[] ParseBindings(JsonNode node, PerformerVisualKind visualKind, string definitionKey)
         {
             if (node is not JsonArray arr || arr.Count == 0)
                 return Array.Empty<PerformerParamBinding>();
@@ -170,16 +175,39 @@ namespace Ludots.Core.Presentation.Config
             var bindings = new PerformerParamBinding[arr.Count];
             for (int i = 0; i < arr.Count; i++)
             {
-                bindings[i] = ParseBinding(arr[i]!);
+                bindings[i] = ParseBinding(arr[i]!, visualKind, definitionKey, i);
             }
             return bindings;
         }
 
-        private PerformerParamBinding ParseBinding(JsonNode node)
+        private PerformerParamBinding ParseBinding(JsonNode node, PerformerVisualKind visualKind, string definitionKey, int index)
         {
+            string fieldName = node["fieldName"]?.GetValue<string>() ?? node["field"]?.GetValue<string>() ?? string.Empty;
+            int paramKey = node["paramKey"]?.GetValue<int>() ?? -1;
+            string valueKindText = node["valueKind"]?.GetValue<string>() ?? node["type"]?.GetValue<string>() ?? nameof(PresentationTypedValueKind.Float);
+            if (!PresentationPayloadConfigParser.TryParseTypedValueKind(valueKindText, out var valueKind))
+            {
+                throw new InvalidOperationException($"Performer '{definitionKey}' binding[{index}] has invalid valueKind '{valueKindText}'.");
+            }
+
+            if (IsTypedRequestVisualKind(visualKind))
+            {
+                if (paramKey >= 0)
+                {
+                    throw new InvalidOperationException($"Performer '{definitionKey}' binding[{index}] targets typed visual kind '{visualKind}' and must use fieldName instead of paramKey.");
+                }
+
+                if (string.IsNullOrWhiteSpace(fieldName))
+                {
+                    throw new InvalidOperationException($"Performer '{definitionKey}' binding[{index}] targets typed visual kind '{visualKind}' and requires fieldName.");
+                }
+            }
+
             return new PerformerParamBinding
             {
-                ParamKey = node["paramKey"]?.GetValue<int>() ?? 0,
+                ParamKey = paramKey,
+                FieldName = fieldName,
+                ValueKind = valueKind,
                 Value = ParseValueRef(node),
             };
         }
@@ -282,6 +310,51 @@ namespace Ludots.Core.Presentation.Config
             if (string.IsNullOrWhiteSpace(s)) return fallback;
             if (Enum.TryParse<T>(s, ignoreCase: true, out var parsed)) return parsed;
             return fallback;
+        }
+
+        private static T ParseEnumStrict<T>(string s, T fallback, string label) where T : struct, Enum
+        {
+            if (string.IsNullOrWhiteSpace(s)) return fallback;
+            if (Enum.TryParse<T>(s, ignoreCase: true, out var parsed)) return parsed;
+            throw new InvalidOperationException($"{label} has invalid value '{s}'.");
+        }
+
+        private static bool IsTypedRequestVisualKind(PerformerVisualKind kind)
+        {
+            return kind == PerformerVisualKind.Decal ||
+                kind == PerformerVisualKind.Vfx ||
+                kind == PerformerVisualKind.Surface ||
+                kind == PerformerVisualKind.MaterialOverride ||
+                kind == PerformerVisualKind.InstanceCustomData;
+        }
+
+        private static void ValidateTypedPerformerDefinition(PerformerDefinition def, string key)
+        {
+            if (!IsTypedRequestVisualKind(def.VisualKind))
+            {
+                return;
+            }
+
+            if (def.VisualKind == PerformerVisualKind.Decal || def.VisualKind == PerformerVisualKind.Vfx)
+            {
+                if (string.IsNullOrWhiteSpace(def.VisualAssetKey))
+                {
+                    throw new InvalidOperationException($"Performer '{key}' visualKind '{def.VisualKind}' requires assetKey.");
+                }
+            }
+
+            if (def.VisualKind == PerformerVisualKind.Surface &&
+                string.IsNullOrWhiteSpace(def.SurfaceLayerKey))
+            {
+                throw new InvalidOperationException($"Performer '{key}' visualKind Surface requires surfaceLayerKey.");
+            }
+
+            if ((def.VisualKind == PerformerVisualKind.MaterialOverride ||
+                    def.VisualKind == PerformerVisualKind.InstanceCustomData) &&
+                string.IsNullOrWhiteSpace(def.MaterialKey))
+            {
+                throw new InvalidOperationException($"Performer '{key}' visualKind '{def.VisualKind}' requires materialKey.");
+            }
         }
     }
 }

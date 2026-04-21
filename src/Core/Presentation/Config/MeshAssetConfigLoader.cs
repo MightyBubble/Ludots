@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -132,23 +133,85 @@ namespace Ludots.Core.Presentation.Config
             for (int j = 0; j < arr.Count; j++)
             {
                 var p = arr[j];
-                string meshRef = p?["meshAssetId"]?.GetValue<string>();
-                int meshId = 0;
-                if (!string.IsNullOrWhiteSpace(meshRef))
-                    meshId = _meshRegistry.GetId(meshRef);
-
-                parts[j] = new PrefabPart
-                {
-                    MeshAssetId = meshId,
-                    LocalPosition = ParseVector3(p?["localPosition"]),
-                    LocalRotation = ParseQuaternionWithDefault(p?["localRotation"], Quaternion.Identity),
-                    LocalScale = ParseVector3WithDefault(p?["localScale"], Vector3.One),
-                    ColorTint = ParseVector4WithDefault(p?["colorTint"], Vector4.One),
-                    Grounding = ParseGrounding(p?["grounding"]),
-                };
+                parts[j] = ParsePart(p, j);
             }
             return parts;
         }
+
+        private PrefabPart ParsePart(JsonNode node, int index)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"Prefab part at index {index} must be an object.");
+            }
+
+            string kindText = obj["kind"]?.GetValue<string>() ?? nameof(PrefabPartKind.Mesh);
+            if (!Enum.TryParse(kindText, ignoreCase: true, out PrefabPartKind kind))
+            {
+                throw new InvalidOperationException($"Prefab part at index {index} has invalid kind '{kindText}'.");
+            }
+
+            var part = new PrefabPart
+            {
+                Kind = kind,
+                LocalPosition = ParseVector3(obj["localPosition"]),
+                LocalRotation = ParseQuaternionWithDefault(obj["localRotation"], Quaternion.Identity),
+                LocalScale = ParseVector3WithDefault(obj["localScale"], Vector3.One),
+                ColorTint = ParseVector4WithDefault(obj["colorTint"], Vector4.One),
+                Grounding = ParseGrounding(obj["grounding"]),
+                Payload = PresentationPayloadConfigParser.ParsePayload(obj["payload"], $"Prefab part[{index}]"),
+                AssetKey = ReadString(obj, "assetKey", "asset"),
+                MaterialKey = ReadString(obj, "materialKey", "material"),
+                SurfaceLayerKey = ReadString(obj, "surfaceLayerKey", "surfaceLayer"),
+            };
+
+            switch (kind)
+            {
+                case PrefabPartKind.Mesh:
+                    string meshRef = obj["meshAssetId"]?.GetValue<string>() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(meshRef))
+                    {
+                        throw new InvalidOperationException($"Prefab mesh part at index {index} requires a non-empty meshAssetId.");
+                    }
+
+                    int meshId = _meshRegistry.GetId(meshRef);
+                    if (meshId <= 0)
+                    {
+                        throw new InvalidOperationException($"Prefab mesh part at index {index} references unknown meshAssetId '{meshRef}'.");
+                    }
+
+                    part.MeshAssetId = meshId;
+                    break;
+
+                case PrefabPartKind.Decal:
+                case PrefabPartKind.Vfx:
+                    if (string.IsNullOrWhiteSpace(part.AssetKey))
+                    {
+                        throw new InvalidOperationException($"Prefab {kind} part at index {index} requires a non-empty assetKey.");
+                    }
+                    break;
+
+                case PrefabPartKind.Surface:
+                    if (string.IsNullOrWhiteSpace(part.SurfaceLayerKey))
+                    {
+                        part.SurfaceLayerKey = part.AssetKey;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(part.SurfaceLayerKey))
+                    {
+                        throw new InvalidOperationException($"Prefab Surface part at index {index} requires a non-empty surfaceLayerKey.");
+                    }
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Prefab part at index {index} has unsupported kind '{kind}'.");
+            }
+
+            return part;
+        }
+
+        private static string ReadString(JsonObject obj, string primary, string alternate)
+            => obj[primary]?.GetValue<string>() ?? obj[alternate]?.GetValue<string>() ?? string.Empty;
 
         private static PrefabPartGrounding ParseGrounding(JsonNode node)
         {

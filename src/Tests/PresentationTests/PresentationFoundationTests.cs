@@ -111,6 +111,36 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PresentationVisualCapabilityValidator_RejectsUnsupportedTypedRequests()
+        {
+            var requests = new PresentationVisualRequestBuffer();
+            Assert.That(
+                requests.TryAdd(new PresentationVisualRequest(
+                    PresentationVisualRequestKind.Decal,
+                    stableId: 42,
+                    assetKey: "decal.scorch",
+                    position: Vector3.Zero,
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    color: Vector4.One,
+                    source: Entity.Null,
+                    target: Entity.Null,
+                    payload: Array.Empty<PresentationPayloadField>())),
+                Is.True);
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                PresentationVisualCapabilityValidator.Validate(
+                    requests,
+                    new PresentationAdapterCapabilities(PresentationVisualCapabilities.None)));
+
+            Assert.That(ex!.Message, Does.Contain("does not support"));
+            Assert.DoesNotThrow(() =>
+                PresentationVisualCapabilityValidator.Validate(
+                    requests,
+                    new PresentationAdapterCapabilities(PresentationVisualCapabilities.Decal)));
+        }
+
+        [Test]
         public void PresentationAuthoringContext_Apply_AssignsStableIdVisualAnimatorAndStartupPerformers()
         {
             using var world = World.Create();

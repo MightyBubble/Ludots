@@ -20,5 +20,20 @@ namespace Ludots.Core.Presentation.Performers
 
         /// <summary>Ground-following cubic spline ribbon for roads, lanes, and route highlights.</summary>
         RoadSpline = 4,
+
+        /// <summary>Adapter-neutral decal request emitted through PresentationVisualRequestBuffer.</summary>
+        Decal = 5,
+
+        /// <summary>Adapter-neutral VFX request emitted through PresentationVisualRequestBuffer.</summary>
+        Vfx = 6,
+
+        /// <summary>Adapter-neutral surface/RVT request emitted through PresentationVisualRequestBuffer.</summary>
+        Surface = 7,
+
+        /// <summary>Adapter-neutral material override request emitted through PresentationVisualRequestBuffer.</summary>
+        MaterialOverride = 8,
+
+        /// <summary>Adapter-neutral per-instance custom data request emitted through PresentationVisualRequestBuffer.</summary>
+        InstanceCustomData = 9,
     }
 }

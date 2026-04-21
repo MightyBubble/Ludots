@@ -9,6 +9,7 @@ using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -363,6 +364,52 @@ namespace Ludots.Tests.Presentation
             Assert.That(def.Bindings.Length, Is.EqualTo(1));
             Assert.That(def.Bindings[0].ParamKey, Is.EqualTo(3));
             Assert.That(def.Bindings[0].Value.Source, Is.EqualTo(ValueSourceKind.FacingRadians));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_ParsesTypedVisualBindingsAndPayload()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""scorch_decal"",
+    ""visualKind"": ""Decal"",
+    ""assetKey"": ""decal.scorch"",
+    ""materialKey"": ""mat.scorch"",
+    ""payload"": [
+      { ""name"": ""Tint"", ""type"": ""Color"", ""value"": [1, 0.2, 0.1, 1] }
+    ],
+    ""bindings"": [
+      { ""fieldName"": ""Intensity"", ""valueKind"": ""Float"", ""source"": ""attribute"", ""attributeName"": ""burn"" }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveAttributeName: key => string.Equals(key, "burn", StringComparison.Ordinal) ? 9 : 0);
+
+            loader.Load(catalog);
+
+            int defId = registry.GetId("scorch_decal");
+            Assert.That(registry.TryGet(defId, out var def), Is.True);
+            Assert.That(def.VisualKind, Is.EqualTo(PerformerVisualKind.Decal));
+            Assert.That(def.VisualAssetKey, Is.EqualTo("decal.scorch"));
+            Assert.That(def.MaterialKey, Is.EqualTo("mat.scorch"));
+            Assert.That(def.DefaultPayload, Has.Length.EqualTo(1));
+            Assert.That(def.DefaultPayload[0].Name, Is.EqualTo("Tint"));
+            Assert.That(def.DefaultPayload[0].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Color));
+            Assert.That(def.Bindings, Has.Length.EqualTo(1));
+            Assert.That(def.Bindings[0].FieldName, Is.EqualTo("Intensity"));
+            Assert.That(def.Bindings[0].ParamKey, Is.EqualTo(-1));
+            Assert.That(def.Bindings[0].ValueKind, Is.EqualTo(PresentationTypedValueKind.Float));
+            Assert.That(def.Bindings[0].Value.Source, Is.EqualTo(ValueSourceKind.Attribute));
+            Assert.That(def.Bindings[0].Value.SourceId, Is.EqualTo(9));
         }
 
         [Test]
