@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Ludots.Core.Presentation.Rendering;
 
@@ -10,13 +11,19 @@ namespace Ludots.Core.Presentation.AdapterSync
     /// </summary>
     public sealed class StaticMeshAdapterSyncPlanner
     {
-        private readonly Dictionary<int, StaticMeshAdapterBindingState> _bindingsByStableId = new();
+        private readonly Dictionary<int, BindingEntry> _bindingsByStableId = new();
+        private readonly ActiveBindingView _activeBindings;
         private readonly Dictionary<StaticMeshLaneKey, LaneState> _lanes = new();
-        private readonly HashSet<int> _seenStableIds = new();
         private readonly List<int> _pendingRemovals = new();
         private readonly List<StaticMeshAdapterSyncOp> _operations = new();
+        private int _syncFrame;
 
-        public IReadOnlyDictionary<int, StaticMeshAdapterBindingState> ActiveBindings => _bindingsByStableId;
+        public StaticMeshAdapterSyncPlanner()
+        {
+            _activeBindings = new ActiveBindingView(_bindingsByStableId);
+        }
+
+        public IReadOnlyDictionary<int, StaticMeshAdapterBindingState> ActiveBindings => _activeBindings;
 
         public IReadOnlyList<StaticMeshAdapterSyncOp> Operations => _operations;
 
@@ -30,9 +37,9 @@ namespace Ludots.Core.Presentation.AdapterSync
         {
             _bindingsByStableId.Clear();
             _lanes.Clear();
-            _seenStableIds.Clear();
             _pendingRemovals.Clear();
             _operations.Clear();
+            _syncFrame = 0;
             LastCreateCount = 0;
             LastUpdateCount = 0;
             LastRemoveCount = 0;
@@ -40,7 +47,14 @@ namespace Ludots.Core.Presentation.AdapterSync
 
         public bool TryGetBinding(int stableId, out StaticMeshAdapterBindingState binding)
         {
-            return _bindingsByStableId.TryGetValue(stableId, out binding);
+            if (_bindingsByStableId.TryGetValue(stableId, out var entry))
+            {
+                binding = entry.Binding;
+                return true;
+            }
+
+            binding = default;
+            return false;
         }
 
         public void Sync(PrimitiveDrawBuffer? snapshot)
@@ -51,11 +65,12 @@ namespace Ludots.Core.Presentation.AdapterSync
         public void Sync(ReadOnlySpan<PrimitiveDrawItem> snapshot)
         {
             _operations.Clear();
-            _seenStableIds.Clear();
             _pendingRemovals.Clear();
             LastCreateCount = 0;
             LastUpdateCount = 0;
             LastRemoveCount = 0;
+            AdvanceSyncFrame();
+            int supportedCount = 0;
 
             for (int i = 0; i < snapshot.Length; i++)
             {
@@ -66,18 +81,18 @@ namespace Ludots.Core.Presentation.AdapterSync
                 }
 
                 ValidateStableId(item.StableId);
-                if (!_seenStableIds.Add(item.StableId))
-                {
-                    throw new InvalidOperationException(
-                        $"Static lane snapshot contains duplicate PresentationStableId {item.StableId}.");
-                }
-
                 SyncItem(item.StableId, item);
+                supportedCount++;
+            }
+
+            if (supportedCount == _bindingsByStableId.Count)
+            {
+                return;
             }
 
             foreach (var pair in _bindingsByStableId)
             {
-                if (!_seenStableIds.Contains(pair.Key))
+                if (pair.Value.SeenFrame != _syncFrame)
                 {
                     _pendingRemovals.Add(pair.Key);
                 }
@@ -89,15 +104,38 @@ namespace Ludots.Core.Presentation.AdapterSync
             }
         }
 
+        private void AdvanceSyncFrame()
+        {
+            if (_syncFrame == int.MaxValue)
+            {
+                foreach (var pair in _bindingsByStableId)
+                {
+                    pair.Value.SeenFrame = 0;
+                }
+
+                _syncFrame = 0;
+            }
+
+            _syncFrame++;
+        }
+
         private void SyncItem(int stableId, in PrimitiveDrawItem item)
         {
             StaticMeshLaneKey lane = StaticMeshLaneKey.FromItem(item);
-            if (!_bindingsByStableId.TryGetValue(stableId, out var current))
+            if (!_bindingsByStableId.TryGetValue(stableId, out var entry))
             {
                 CreateBinding(stableId, lane, item);
                 return;
             }
 
+            if (entry.SeenFrame == _syncFrame)
+            {
+                throw new InvalidOperationException(
+                    $"Static lane snapshot contains duplicate PresentationStableId {stableId}.");
+            }
+
+            entry.SeenFrame = _syncFrame;
+            StaticMeshAdapterBindingState current = entry.Binding;
             if (!current.Lane.Equals(lane))
             {
                 RemoveBinding(stableId);
@@ -112,7 +150,7 @@ namespace Ludots.Core.Presentation.AdapterSync
             }
 
             var updated = current.WithItem(item);
-            _bindingsByStableId[stableId] = updated;
+            entry.Binding = updated;
             _operations.Add(new StaticMeshAdapterSyncOp(StaticMeshAdapterSyncOpKind.Update, updated));
             LastUpdateCount++;
         }
@@ -122,18 +160,19 @@ namespace Ludots.Core.Presentation.AdapterSync
             LaneState state = GetOrCreateLaneState(lane);
             (int slot, int generation) = state.Allocate();
             var binding = new StaticMeshAdapterBindingState(stableId, lane, slot, generation, item);
-            _bindingsByStableId[stableId] = binding;
+            _bindingsByStableId[stableId] = new BindingEntry(binding, _syncFrame);
             _operations.Add(new StaticMeshAdapterSyncOp(StaticMeshAdapterSyncOpKind.Create, binding));
             LastCreateCount++;
         }
 
         private void RemoveBinding(int stableId)
         {
-            if (!_bindingsByStableId.TryGetValue(stableId, out var binding))
+            if (!_bindingsByStableId.TryGetValue(stableId, out var entry))
             {
                 return;
             }
 
+            StaticMeshAdapterBindingState binding = entry.Binding;
             GetOrCreateLaneState(binding.Lane).Release(binding.Slot);
             _bindingsByStableId.Remove(stableId);
             _operations.Add(new StaticMeshAdapterSyncOp(StaticMeshAdapterSyncOpKind.Remove, binding));
@@ -176,6 +215,75 @@ namespace Ludots.Core.Presentation.AdapterSync
                 && a.Animator.Equals(b.Animator)
                 && a.AnimationOverlay.Equals(b.AnimationOverlay)
                 && a.Visibility == b.Visibility;
+        }
+
+        private sealed class BindingEntry
+        {
+            public BindingEntry(in StaticMeshAdapterBindingState binding, int seenFrame)
+            {
+                Binding = binding;
+                SeenFrame = seenFrame;
+            }
+
+            public StaticMeshAdapterBindingState Binding;
+            public int SeenFrame;
+        }
+
+        private sealed class ActiveBindingView : IReadOnlyDictionary<int, StaticMeshAdapterBindingState>
+        {
+            private readonly Dictionary<int, BindingEntry> _source;
+
+            public ActiveBindingView(Dictionary<int, BindingEntry> source)
+            {
+                _source = source;
+            }
+
+            public int Count => _source.Count;
+
+            public IEnumerable<int> Keys => _source.Keys;
+
+            public IEnumerable<StaticMeshAdapterBindingState> Values
+            {
+                get
+                {
+                    foreach (var pair in _source)
+                    {
+                        yield return pair.Value.Binding;
+                    }
+                }
+            }
+
+            public StaticMeshAdapterBindingState this[int key] => _source[key].Binding;
+
+            public bool ContainsKey(int key)
+            {
+                return _source.ContainsKey(key);
+            }
+
+            public bool TryGetValue(int key, out StaticMeshAdapterBindingState value)
+            {
+                if (_source.TryGetValue(key, out var entry))
+                {
+                    value = entry.Binding;
+                    return true;
+                }
+
+                value = default;
+                return false;
+            }
+
+            public IEnumerator<KeyValuePair<int, StaticMeshAdapterBindingState>> GetEnumerator()
+            {
+                foreach (var pair in _source)
+                {
+                    yield return new KeyValuePair<int, StaticMeshAdapterBindingState>(pair.Key, pair.Value.Binding);
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
         }
 
         private sealed class LaneState

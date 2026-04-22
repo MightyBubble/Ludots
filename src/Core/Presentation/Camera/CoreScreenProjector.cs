@@ -10,11 +10,13 @@ namespace Ludots.Core.Presentation.Camera
     /// ensuring HUD projection matches the actual 3D camera (no smoothing desync).
     /// Falls back to computing from logical <see cref="CameraState"/> if no presenter is set.
     /// </summary>
-    public sealed class CoreScreenProjector : IScreenProjector
+    public sealed class CoreScreenProjector : IScreenProjector, IProjectionRevisionProvider
     {
         private readonly CameraManager _cameraManager;
         private readonly IViewController _view;
         private CameraPresenter _presenter;
+        private int _projectionRevision = 1;
+        private int _lastProjectionHash;
 
         public CoreScreenProjector(CameraManager cameraManager, IViewController view)
         {
@@ -28,27 +30,52 @@ namespace Ludots.Core.Presentation.Camera
         /// </summary>
         public void BindPresenter(CameraPresenter presenter) => _presenter = presenter;
 
+        public int ProjectionRevision
+        {
+            get
+            {
+                CameraRenderState3D camera = ResolveCamera();
+                var resolution = _view.Resolution;
+                int hash = HashCode.Combine(
+                    camera.Position,
+                    camera.Target,
+                    camera.Up,
+                    camera.FovYDeg,
+                    resolution.X,
+                    resolution.Y,
+                    _view.AspectRatio);
+                if (hash != _lastProjectionHash)
+                {
+                    _lastProjectionHash = hash;
+                    _projectionRevision++;
+                }
+
+                return _projectionRevision;
+            }
+        }
+
         public Vector2 WorldToScreen(Vector3 worldPosition)
         {
-            CameraRenderState3D camera;
-
-            if (_presenter != null)
-            {
-                camera = _presenter.SmoothedRenderState;
-            }
-            else
-            {
-                var state = _cameraManager.State;
-                if (state == null)
-                    return new Vector2(float.NaN, float.NaN);
-                camera = CameraViewportUtil.StateToRenderState(state);
-            }
+            CameraRenderState3D camera = ResolveCamera();
 
             return CameraViewportUtil.WorldToScreen(
                 worldPosition,
                 camera,
                 _view.Resolution,
                 _view.AspectRatio);
+        }
+
+        private CameraRenderState3D ResolveCamera()
+        {
+            if (_presenter != null)
+            {
+                return _presenter.SmoothedRenderState;
+            }
+
+            var state = _cameraManager.State;
+            return state == null
+                ? new CameraRenderState3D(new Vector3(float.NaN), new Vector3(float.NaN), Vector3.UnitY, 60f)
+                : CameraViewportUtil.StateToRenderState(state);
         }
     }
 }

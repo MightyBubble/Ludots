@@ -19,6 +19,34 @@ namespace Ludots.Core.Presentation.Systems
 {
     public sealed class PerformerBehaviorSystem : BaseSystem<World, float>
     {
+        private readonly struct OwnerAttributeWorkTarget
+        {
+            public readonly int DefinitionId;
+            public readonly PerformerDefinition Definition;
+            public readonly PerformerDefinition.OwnerAttributeWorkItem Work;
+
+            public OwnerAttributeWorkTarget(int definitionId, PerformerDefinition definition, in PerformerDefinition.OwnerAttributeWorkItem work)
+            {
+                DefinitionId = definitionId;
+                Definition = definition;
+                Work = work;
+            }
+        }
+
+        private readonly struct OwnerTagWorkTarget
+        {
+            public readonly int DefinitionId;
+            public readonly PerformerDefinition Definition;
+            public readonly PerformerDefinition.OwnerTagWorkItem Work;
+
+            public OwnerTagWorkTarget(int definitionId, PerformerDefinition definition, in PerformerDefinition.OwnerTagWorkItem work)
+            {
+                DefinitionId = definitionId;
+                Definition = definition;
+                Work = work;
+            }
+        }
+
         private readonly PerformerEntityRuntime _runtime;
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly PresentationEventStream _events;
@@ -27,9 +55,19 @@ namespace Ludots.Core.Presentation.Systems
         private readonly Func<IVisualHeightmap?> _heightmapProvider;
         private readonly IBoneTransformProvider? _boneTransformProvider;
         private readonly Dictionary<int, SoundTrackingState> _soundTracking = new();
+        private readonly Dictionary<int, OwnerAttributeWorkTarget[]> _ownerAttributeWorkIndex;
+        private readonly Dictionary<int, OwnerTagWorkTarget[]> _ownerTagWorkIndex;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly QueryDescription _bootstrapPendingQuery = new QueryDescription()
             .WithAll<PerformerState, PerformerBootstrapPending>();
+        private readonly QueryDescription _dirtyOwnerAttributeQuery = new QueryDescription()
+            .WithAll<GameplayAttributeChangedBits>();
+        private readonly QueryDescription _dirtyOwnerTagQuery = new QueryDescription()
+            .WithAll<GameplayTagEffectiveChangedBits>();
+        private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
+            .WithAll<PerformerState, PerformerWorldPosition>()
+            .WithAny<PerfHasSpline, PerfHasAttachment, PerfHasSound>();
+        private readonly List<Entity> _bootstrapClearList = new(256);
 
         private struct SoundTrackingState
         {
@@ -85,6 +123,8 @@ namespace Ludots.Core.Presentation.Systems
             _soundRequests = soundRequests ?? throw new ArgumentNullException(nameof(soundRequests));
             _heightmapProvider = heightmapProvider ?? throw new ArgumentNullException(nameof(heightmapProvider));
             _boneTransformProvider = boneTransformProvider;
+            _ownerAttributeWorkIndex = BuildOwnerAttributeWorkIndex(definitions);
+            _ownerTagWorkIndex = BuildOwnerTagWorkIndex(definitions);
             _timingDiagnostics = timingDiagnostics;
         }
 
@@ -92,42 +132,58 @@ namespace Ludots.Core.Presentation.Systems
         {
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
             ProcessCreatedPerformers();
-            ProcessOwnerChanges();
-            ProcessTickDrivenPerformers(dt);
-            StopDestroyedSounds();
+            int ownerChanges = ProcessOwnerChanges();
+            int tickDrivenCount = ProcessTickDrivenPerformers(dt);
+            int destroyEventScanCount = StopDestroyedSounds();
             _ownerChanges?.Clear();
 
             if (_timingDiagnostics != null)
+            {
+                _timingDiagnostics.ObservePerformerBehaviorCounts(
+                    _bootstrapClearList.Count,
+                    ownerChanges,
+                    _lastOwnerAttributeChangeCount,
+                    _lastOwnerTagChangeCount,
+                    tickDrivenCount,
+                    CountActiveSoundTrackingPerformers(),
+                    destroyEventScanCount);
                 _timingDiagnostics.ObservePerformerBehavior((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
+            }
         }
+
+        private int _lastOwnerAttributeChangeCount;
+        private int _lastOwnerTagChangeCount;
 
         private void ProcessCreatedPerformers()
         {
-            var toClear = new List<Entity>();
+            _bootstrapClearList.Clear();
             World.Query(in _bootstrapPendingQuery, (Entity entity, ref PerformerState state, ref PerformerBootstrapPending pending) =>
             {
                 ProcessPerformer(entity, firstFrame: true, updateAttributeBindings: true, updateTagBindings: true, tickDt: 0f, tickDrivenOnly: false);
-                toClear.Add(entity);
+                _bootstrapClearList.Add(entity);
             });
 
-            for (int i = 0; i < toClear.Count; i++)
+            for (int i = 0; i < _bootstrapClearList.Count; i++)
             {
-                if (World.IsAlive(toClear[i]) && World.Has<PerformerBootstrapPending>(toClear[i]))
+                Entity entity = _bootstrapClearList[i];
+                if (World.IsAlive(entity) && World.Has<PerformerBootstrapPending>(entity))
                 {
-                    World.Remove<PerformerBootstrapPending>(toClear[i]);
+                    World.Remove<PerformerBootstrapPending>(entity);
                 }
             }
         }
 
-        private void ProcessOwnerChanges()
+        private int ProcessOwnerChanges()
         {
+            _lastOwnerAttributeChangeCount = 0;
+            _lastOwnerTagChangeCount = 0;
             if (_ownerChanges == null)
             {
-                ProcessDirtyOwnersFromComponents();
-                return;
+                return ProcessDirtyOwnersFromComponents();
             }
 
             ReadOnlySpan<PresentationOwnerChange> changes = _ownerChanges.GetSpan();
+            int processed = 0;
             for (int i = 0; i < changes.Length; i++)
             {
                 ref readonly var change = ref changes[i];
@@ -136,63 +192,145 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
-                ProcessOwnerBoundPerformers(
-                    change.Owner,
-                    updateAttributeBindings: change.Kind == PresentationOwnerChangeKind.Attribute,
-                    updateTagBindings: change.Kind == PresentationOwnerChangeKind.Tag);
+                switch (change.Kind)
+                {
+                    case PresentationOwnerChangeKind.Attribute:
+                        ProcessOwnerAttributeChange(change.Owner, change.KeyId);
+                        _lastOwnerAttributeChangeCount++;
+                        processed++;
+                        break;
+                    case PresentationOwnerChangeKind.Tag:
+                        ProcessOwnerTagChange(change.Owner, change.KeyId, change.TagActive);
+                        _lastOwnerTagChangeCount++;
+                        processed++;
+                        break;
+                }
+            }
+
+            return processed;
+        }
+
+        private int ProcessDirtyOwnersFromComponents()
+        {
+            int processed = 0;
+            World.Query(in _dirtyOwnerAttributeQuery, (Entity owner, ref GameplayAttributeChangedBits bits) =>
+            {
+                for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+                {
+                    if (bits.IsSet(attributeId))
+                    {
+                        ProcessOwnerAttributeChange(owner, attributeId);
+                        _lastOwnerAttributeChangeCount++;
+                        processed++;
+                    }
+                }
+            });
+
+            World.Query(in _dirtyOwnerTagQuery, (Entity owner, ref GameplayTagEffectiveChangedBits bits) =>
+            {
+                unsafe
+                {
+                    fixed (ulong* words = bits.Bits)
+                    {
+                        for (int wordIndex = 0; wordIndex < 4; wordIndex++)
+                        {
+                            ulong word = words[wordIndex];
+                            while (word != 0)
+                            {
+                                int bit = BitOperations.TrailingZeroCount(word);
+                                word &= word - 1;
+                                int tagId = (wordIndex << 6) + bit;
+                                bool tagActive = World.Has<GameplayTagContainer>(owner) && World.Get<GameplayTagContainer>(owner).HasTag(tagId);
+                                ProcessOwnerTagChange(owner, tagId, tagActive);
+                                _lastOwnerTagChangeCount++;
+                                processed++;
+                            }
+                        }
+                    }
+                }
+            });
+
+            return processed;
+        }
+
+        private void ProcessOwnerAttributeChange(Entity owner, int attributeId)
+        {
+            if (!World.IsAlive(owner) ||
+                !World.Has<AttributeBuffer>(owner) ||
+                !_ownerAttributeWorkIndex.TryGetValue(attributeId, out OwnerAttributeWorkTarget[] targets))
+            {
+                return;
+            }
+
+            ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
+            for (int i = 0; i < targets.Length; i++)
+            {
+                ProcessOwnerAttributeChangeBucket(owner, ref attributes, in targets[i]);
             }
         }
 
-        private void ProcessDirtyOwnersFromComponents()
+        private void ProcessOwnerAttributeChangeBucket(
+            Entity owner,
+            ref AttributeBuffer attributes,
+            in OwnerAttributeWorkTarget target)
         {
-            var attrQuery = new QueryDescription().WithAll<GameplayAttributeChangedBits>();
-            World.Query(in attrQuery, (Entity owner, ref GameplayAttributeChangedBits bits) =>
+            IReadOnlyList<Entity> performers = _runtime.GetActiveByOwnerDefinition(target.DefinitionId, owner);
+            for (int i = 0; i < performers.Count; i++)
             {
-                if (bits.IsAnyBitSet())
-                {
-                    ProcessOwnerBoundPerformers(owner, updateAttributeBindings: true, updateTagBindings: false);
-                }
-            });
-
-            var tagQuery = new QueryDescription().WithAll<GameplayTagEffectiveChangedBits>();
-            World.Query(in tagQuery, (Entity owner, ref GameplayTagEffectiveChangedBits bits) =>
-            {
-                if (bits.IsAnyBitSet())
-                {
-                    ProcessOwnerBoundPerformers(owner, updateAttributeBindings: false, updateTagBindings: true);
-                }
-            });
-        }
-
-        private void ProcessOwnerBoundPerformers(Entity owner, bool updateAttributeBindings, bool updateTagBindings)
-        {
-            IReadOnlyList<int> registeredIds = _definitions.RegisteredIds;
-            for (int i = 0; i < registeredIds.Count; i++)
-            {
-                int defId = registeredIds[i];
-                if (!_definitions.TryGet(defId, out PerformerDefinition definition) ||
-                    !DefinitionHasBindingWork(definition, updateAttributeBindings, updateTagBindings))
+                Entity performer = performers[i];
+                if (!World.IsAlive(performer) || !World.Has<PerformerState>(performer))
                 {
                     continue;
                 }
 
-                IReadOnlyList<Entity> performers = _runtime.GetActiveByOwnerDefinition(defId, owner);
-                for (int j = 0; j < performers.Count; j++)
-                {
-                    ProcessPerformer(performers[j], firstFrame: false, updateAttributeBindings, updateTagBindings, tickDt: 0f, tickDrivenOnly: false);
-                }
+                ApplyOwnerAttributeWork(performer, target.Definition, ref attributes, in target.Work);
             }
         }
 
-        private void ProcessTickDrivenPerformers(float tickDt)
+        private void ProcessOwnerTagChange(Entity owner, int tagId, bool? tagActiveOverride = null)
         {
-            var query = new QueryDescription()
-                .WithAll<PerformerState, PerformerWorldPosition>()
-                .WithAny<PerfHasSpline, PerfHasAttachment, PerfHasSound>();
-            World.Query(in query, (Entity entity, ref PerformerState state, ref PerformerWorldPosition pos) =>
+            if (!World.IsAlive(owner) ||
+                !_ownerTagWorkIndex.TryGetValue(tagId, out OwnerTagWorkTarget[] targets))
             {
+                return;
+            }
+
+            bool tagActive = tagActiveOverride ??
+                (World.Has<GameplayTagContainer>(owner) && World.Get<GameplayTagContainer>(owner).HasTag(tagId));
+            for (int i = 0; i < targets.Length; i++)
+            {
+                ProcessOwnerTagChangeBucket(owner, tagActive, in targets[i]);
+            }
+        }
+
+        private void ProcessOwnerTagChangeBucket(
+            Entity owner,
+            bool tagActive,
+            in OwnerTagWorkTarget target)
+        {
+            IReadOnlyList<Entity> performers = _runtime.GetActiveByOwnerDefinition(target.DefinitionId, owner);
+            for (int i = 0; i < performers.Count; i++)
+            {
+                Entity performer = performers[i];
+                if (!World.IsAlive(performer) || !World.Has<PerformerState>(performer))
+                {
+                    continue;
+                }
+
+                ApplyOwnerTagWork(performer, target.Definition, in target.Work, tagActive);
+            }
+        }
+
+        private int ProcessTickDrivenPerformers(float tickDt)
+        {
+            int processed = 0;
+            World.Query(in _tickDrivenQuery, (Entity entity, ref PerformerState state, ref PerformerWorldPosition pos) =>
+            {
+                processed++;
                 ProcessPerformer(entity, firstFrame: false, updateAttributeBindings: false, updateTagBindings: false, tickDt, tickDrivenOnly: true);
             });
+
+            return processed;
         }
 
         private void ProcessPerformer(
@@ -222,76 +360,92 @@ namespace Ludots.Core.Presentation.Systems
                 ApplyBindings(entity, owner, definition);
             }
 
-            HandleReusedSoundSlot(entity, in state, behaviors);
-            uint currentSoundMask = 0u;
-            for (int i = 0; i < behaviors.Length; i++)
+            bool hasSoundBehavior = HasSoundBehavior(behaviors);
+            if (hasSoundBehavior)
             {
-                ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
-                    continue;
-                switch (slot.Kind)
+                HandleReusedSoundSlot(entity, in state, behaviors);
+            }
+
+            uint currentSoundMask = 0u;
+            if (tickDrivenOnly)
+            {
+                int[] tickBehaviorIndices = definition.TickBehaviorIndices;
+                for (int i = 0; i < tickBehaviorIndices.Length; i++)
                 {
-                    case BehaviorKind.AttributeBinding:
-                        if (!tickDrivenOnly && (firstFrame || updateAttributeBindings))
-                            ApplyAttributeBinding(entity, owner, slot.AttributeBinding);
-                        break;
-                    case BehaviorKind.TagBinding:
-                        if (!tickDrivenOnly && (firstFrame || updateTagBindings))
-                            ApplyTagBinding(entity, owner, slot.TagBinding);
-                        break;
-                    case BehaviorKind.Material:
-                        if (!tickDrivenOnly)
+                    ref readonly BehaviorSlot slot = ref behaviors[tickBehaviorIndices[i]];
+                    if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                    {
+                        continue;
+                    }
+
+                    switch (slot.Kind)
+                    {
+                        case BehaviorKind.Attachment:
+                            ApplyAttachment(entity, in slot.Attachment);
+                            break;
+                        case BehaviorKind.Sound:
+                            ApplySound(entity, in state, slot);
+                            currentSoundMask |= 1u << slot.SlotIndex;
+                            break;
+                        case BehaviorKind.Spline:
+                            ApplySpline(entity, ref state, slot.Spline, tickDt);
+                            break;
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < behaviors.Length; i++)
+                {
+                    ref readonly BehaviorSlot slot = ref behaviors[i];
+                    if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                        continue;
+                    switch (slot.Kind)
+                    {
+                        case BehaviorKind.AttributeBinding:
+                            if (firstFrame || updateAttributeBindings)
+                                ApplyAttributeBinding(entity, owner, slot.AttributeBinding);
+                            break;
+                        case BehaviorKind.TagBinding:
+                            if (firstFrame || updateTagBindings)
+                                ApplyTagBinding(entity, owner, slot.TagBinding);
+                            break;
+                        case BehaviorKind.Material:
                             ApplyMaterialBinding(entity, slot.Material);
-                        break;
-                    case BehaviorKind.Attachment:
-                        ApplyAttachment(entity, ref state, slot.Attachment);
-                        break;
-                    case BehaviorKind.Sound:
-                        ApplySound(entity, in state, slot);
-                        currentSoundMask |= 1u << slot.SlotIndex;
-                        break;
-                    case BehaviorKind.Spline:
-                        ApplySpline(entity, ref state, slot.Spline, tickDt);
-                        break;
+                            break;
+                        case BehaviorKind.Attachment:
+                            ApplyAttachment(entity, in slot.Attachment);
+                            break;
+                        case BehaviorKind.Sound:
+                            ApplySound(entity, in state, slot);
+                            currentSoundMask |= 1u << slot.SlotIndex;
+                            break;
+                        case BehaviorKind.Spline:
+                            ApplySpline(entity, ref state, slot.Spline, tickDt);
+                            break;
+                    }
                 }
             }
 
-            if (tickDrivenOnly || HasSoundBehavior(behaviors))
+            if (hasSoundBehavior)
             {
                 StopInactiveSounds(entity, in state, behaviors, currentSoundMask);
-                _soundTracking[entity.Id] = new SoundTrackingState
+                if (currentSoundMask != 0u)
                 {
-                    ActiveMask = currentSoundMask,
-                    StableId = state.StableId,
-                    DefinitionId = state.DefId,
-                };
-            }
-
-            ResolveTransform(entity, ref state, behaviors);
-        }
-
-        private static bool DefinitionHasBindingWork(PerformerDefinition definition, bool updateAttributeBindings, bool updateTagBindings)
-        {
-            if (updateAttributeBindings && definition.Bindings != null && definition.Bindings.Length > 0)
-            {
-                return true;
-            }
-
-            BehaviorSlot[] behaviors = definition.Behaviors;
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                BehaviorKind kind = behaviors[i].Kind;
-                if (updateAttributeBindings && kind is BehaviorKind.AttributeBinding or BehaviorKind.Material)
-                {
-                    return true;
+                    _soundTracking[entity.Id] = new SoundTrackingState
+                    {
+                        ActiveMask = currentSoundMask,
+                        StableId = state.StableId,
+                        DefinitionId = state.DefId,
+                    };
                 }
-                if (updateTagBindings && kind == BehaviorKind.TagBinding)
+                else
                 {
-                    return true;
+                    _soundTracking.Remove(entity.Id);
                 }
             }
 
-            return false;
+            ResolveTransform(entity, ref state, definition, behaviors);
         }
 
         private static bool HasSoundBehavior(BehaviorSlot[] behaviors)
@@ -310,6 +464,7 @@ namespace Ludots.Core.Presentation.Systems
         {
             PerformerParamBinding[] bindings = definition.Bindings;
             if (bindings == null || bindings.Length == 0) return;
+            bool hasAttributes = World.IsAlive(owner) && World.Has<AttributeBuffer>(owner);
             for (int i = 0; i < bindings.Length; i++)
             {
                 ref readonly PerformerParamBinding binding = ref bindings[i];
@@ -331,7 +486,7 @@ namespace Ludots.Core.Presentation.Systems
                     case ValueSourceKind.Attribute:
                     case ValueSourceKind.AttributeRatio:
                     case ValueSourceKind.AttributeBase:
-                        if (!World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner)) continue;
+                        if (!hasAttributes) continue;
                         ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
                         float resolved = ResolveAttributeValue(ref attributes, value.SourceId, value.Source);
                         _runtime.SetParam(entity, binding.ParamKey, ParamLane.Float, resolved, 0, Vector4.Zero);
@@ -345,54 +500,99 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
+        private void ApplyOwnerAttributeWork(
+            Entity entity,
+            PerformerDefinition definition,
+            ref AttributeBuffer attributes,
+            in PerformerDefinition.OwnerAttributeWorkItem work)
+        {
+            int[] paramBindingIndices = work.ParamBindingIndices;
+            for (int i = 0; i < paramBindingIndices.Length; i++)
+            {
+                ref readonly PerformerParamBinding binding = ref definition.Bindings[paramBindingIndices[i]];
+                float resolved = ResolveAttributeValue(ref attributes, binding.Value.SourceId, binding.Value.Source);
+                _runtime.SetParam(entity, binding.ParamKey, ParamLane.Float, resolved, 0, Vector4.Zero);
+            }
+
+            int[] behaviorIndices = work.BehaviorIndices;
+            for (int i = 0; i < behaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref definition.Behaviors[behaviorIndices[i]];
+                ApplyAttributeBinding(entity, ref attributes, in slot.AttributeBinding);
+            }
+        }
+
+        private void ApplyOwnerTagWork(
+            Entity entity,
+            PerformerDefinition definition,
+            in PerformerDefinition.OwnerTagWorkItem work,
+            bool tagActive)
+        {
+            int[] behaviorIndices = work.BehaviorIndices;
+            for (int i = 0; i < behaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref definition.Behaviors[behaviorIndices[i]];
+                ApplyTagBinding(entity, in slot.TagBinding, tagActive);
+            }
+        }
+
         private void ApplyAttributeBinding(Entity entity, Entity owner, in AttributeBindingConfig config)
         {
             if (!World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner)) return;
             ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
-            float value = ResolveAttributeValue(ref attributes, config.AttributeId, config.Mode);
-            _runtime.SetParam(entity, config.TargetParamKey, ParamLane.Float, value, 0, Vector4.Zero);
-            ThresholdMapping[] thresholds = config.Thresholds ?? Array.Empty<ThresholdMapping>();
-            bool thresholdMatched = false;
-            for (int i = 0; i < thresholds.Length; i++)
-            {
-                ref readonly ThresholdMapping threshold = ref thresholds[i];
-                if (value <= threshold.Threshold)
-                {
-                    int thresholdIntValue = (int)threshold.OutputValue;
-                    _runtime.SetParam(entity, threshold.OutputParamKey, ParamLane.Float, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
-                    _runtime.SetParam(entity, threshold.OutputParamKey, ParamLane.Int, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
-                    thresholdMatched = true;
-                    break;
-                }
-            }
-            if (!thresholdMatched)
-            {
-                for (int i = 0; i < thresholds.Length; i++)
-                {
-                    ref readonly ThresholdMapping threshold = ref thresholds[i];
-                    if (World.Has<PerformerFloatParams>(entity))
-                    {
-                        ref var fp = ref World.Get<PerformerFloatParams>(entity);
-                        fp.Clear(threshold.OutputParamKey);
-                    }
-                    if (World.Has<PerformerIntParams>(entity))
-                    {
-                        ref var ip = ref World.Get<PerformerIntParams>(entity);
-                        ip.Clear(threshold.OutputParamKey);
-                    }
-                }
-            }
+            ApplyAttributeBinding(entity, ref attributes, config);
         }
 
         private void ApplyTagBinding(Entity entity, Entity owner, in TagBindingConfig config)
         {
-            bool active = false;
-            if (World.IsAlive(owner) && World.Has<GameplayTagContainer>(owner))
+            bool active = World.IsAlive(owner) && World.Has<GameplayTagContainer>(owner) && World.Get<GameplayTagContainer>(owner).HasTag(config.TagId);
+            ApplyTagBinding(entity, in config, active);
+        }
+
+        private void ApplyAttributeBinding(Entity entity, ref AttributeBuffer attributes, in AttributeBindingConfig config)
+        {
+            float value = ResolveAttributeValue(ref attributes, config.AttributeId, config.Mode);
+            _runtime.SetParam(entity, config.TargetParamKey, ParamLane.Float, value, 0, Vector4.Zero);
+
+            ThresholdMapping[] thresholds = config.Thresholds ?? Array.Empty<ThresholdMapping>();
+            for (int i = 0; i < thresholds.Length; i++)
             {
-                ref GameplayTagContainer tags = ref World.Get<GameplayTagContainer>(owner);
-                active = tags.HasTag(config.TagId);
+                ref readonly ThresholdMapping threshold = ref thresholds[i];
+                if (value > threshold.Threshold)
+                {
+                    continue;
+                }
+
+                int thresholdIntValue = (int)threshold.OutputValue;
+                _runtime.SetParam(entity, threshold.OutputParamKey, ParamLane.Float, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
+                _runtime.SetParam(entity, threshold.OutputParamKey, ParamLane.Int, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
+                return;
             }
-            if (config.InvertLogic) active = !active;
+
+            bool hasFloatParams = World.Has<PerformerFloatParams>(entity);
+            bool hasIntParams = World.Has<PerformerIntParams>(entity);
+            for (int i = 0; i < thresholds.Length; i++)
+            {
+                ref readonly ThresholdMapping threshold = ref thresholds[i];
+                if (hasFloatParams)
+                {
+                    _runtime.ClearParam(entity, threshold.OutputParamKey, ParamLane.Float);
+                }
+
+                if (hasIntParams)
+                {
+                    _runtime.ClearParam(entity, threshold.OutputParamKey, ParamLane.Int);
+                }
+            }
+        }
+
+        private void ApplyTagBinding(Entity entity, in TagBindingConfig config, bool active)
+        {
+            if (config.InvertLogic)
+            {
+                active = !active;
+            }
+
             _runtime.SetParam(entity, config.TargetParamKey, ParamLane.Int, 0f, active ? 1 : 0, Vector4.Zero);
         }
 
@@ -438,6 +638,83 @@ namespace Ludots.Core.Presentation.Systems
             });
         }
 
+        private static Dictionary<int, OwnerAttributeWorkTarget[]> BuildOwnerAttributeWorkIndex(PerformerDefinitionRegistry definitions)
+        {
+            var buckets = new Dictionary<int, List<OwnerAttributeWorkTarget>>();
+            IReadOnlyList<int> registeredIds = definitions.RegisteredIds;
+            for (int i = 0; i < registeredIds.Count; i++)
+            {
+                int definitionId = registeredIds[i];
+                if (!definitions.TryGet(definitionId, out PerformerDefinition definition) ||
+                    !definition.HasOwnerAttributeBindingWork)
+                {
+                    continue;
+                }
+
+                PerformerDefinition.OwnerAttributeWorkItem[] workItems = definition.OwnerAttributeWork;
+                for (int workIndex = 0; workIndex < workItems.Length; workIndex++)
+                {
+                    ref readonly PerformerDefinition.OwnerAttributeWorkItem work = ref workItems[workIndex];
+                    if (!buckets.TryGetValue(work.AttributeId, out List<OwnerAttributeWorkTarget>? bucket))
+                    {
+                        bucket = new List<OwnerAttributeWorkTarget>(1);
+                        buckets.Add(work.AttributeId, bucket);
+                    }
+
+                    bucket.Add(new OwnerAttributeWorkTarget(definitionId, definition, in work));
+                }
+            }
+
+            return FreezeBuckets(buckets);
+        }
+
+        private static Dictionary<int, OwnerTagWorkTarget[]> BuildOwnerTagWorkIndex(PerformerDefinitionRegistry definitions)
+        {
+            var buckets = new Dictionary<int, List<OwnerTagWorkTarget>>();
+            IReadOnlyList<int> registeredIds = definitions.RegisteredIds;
+            for (int i = 0; i < registeredIds.Count; i++)
+            {
+                int definitionId = registeredIds[i];
+                if (!definitions.TryGet(definitionId, out PerformerDefinition definition) ||
+                    !definition.HasOwnerTagBindingWork)
+                {
+                    continue;
+                }
+
+                PerformerDefinition.OwnerTagWorkItem[] workItems = definition.OwnerTagWork;
+                for (int workIndex = 0; workIndex < workItems.Length; workIndex++)
+                {
+                    ref readonly PerformerDefinition.OwnerTagWorkItem work = ref workItems[workIndex];
+                    if (!buckets.TryGetValue(work.TagId, out List<OwnerTagWorkTarget>? bucket))
+                    {
+                        bucket = new List<OwnerTagWorkTarget>(1);
+                        buckets.Add(work.TagId, bucket);
+                    }
+
+                    bucket.Add(new OwnerTagWorkTarget(definitionId, definition, in work));
+                }
+            }
+
+            var frozen = new Dictionary<int, OwnerTagWorkTarget[]>(buckets.Count);
+            foreach ((int key, List<OwnerTagWorkTarget> value) in buckets)
+            {
+                frozen[key] = value.ToArray();
+            }
+
+            return frozen;
+        }
+
+        private static Dictionary<int, OwnerAttributeWorkTarget[]> FreezeBuckets(Dictionary<int, List<OwnerAttributeWorkTarget>> buckets)
+        {
+            var frozen = new Dictionary<int, OwnerAttributeWorkTarget[]>(buckets.Count);
+            foreach ((int key, List<OwnerAttributeWorkTarget> value) in buckets)
+            {
+                frozen[key] = value.ToArray();
+            }
+
+            return frozen;
+        }
+
         private void StopInactiveSounds(Entity entity, in PerformerState state, BehaviorSlot[] behaviors, uint currentSoundMask)
         {
             if (!_soundTracking.TryGetValue(entity.Id, out var prev)) return;
@@ -447,11 +724,13 @@ namespace Ludots.Core.Presentation.Systems
             EmitStopRequests(stopMask, behaviors, state.StableId, state.OwnerEntity, worldPos);
         }
 
-        private void StopDestroyedSounds()
+        private int StopDestroyedSounds()
         {
             ReadOnlySpan<PresentationEvent> events = _events.GetSpan();
+            int scanned = 0;
             for (int i = 0; i < events.Length; i++)
             {
+                scanned++;
                 ref readonly PresentationEvent evt = ref events[i];
                 if (evt.Kind != PresentationEventKind.PerformerDestroyed) continue;
                 Entity performer = evt.PerformerEntity;
@@ -466,6 +745,8 @@ namespace Ludots.Core.Presentation.Systems
                 EmitStopRequests(prev.ActiveMask, definition.Behaviors, stableId, evt.Source, Vector3.Zero);
                 _soundTracking.Remove(performer.Id);
             }
+
+            return scanned;
         }
 
         private void HandleReusedSoundSlot(Entity entity, in PerformerState state, BehaviorSlot[] _)
@@ -499,6 +780,11 @@ namespace Ludots.Core.Presentation.Systems
                 });
             }
         }
+
+        private int CountActiveSoundTrackingPerformers()
+        {
+            return _soundTracking.Count;
+        }
         private void ApplySpline(Entity entity, ref PerformerState state, in SplineConfig config, float dt)
         {
             if (config.Usage != SplineUsage.Patrol || config.ProgressParamKey < 0) return;
@@ -525,23 +811,21 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private void ApplyAttachment(Entity entity, ref PerformerState state, in AttachmentConfig config)
+        private void ApplyAttachment(Entity entity, in AttachmentConfig config)
         {
-            if (!World.Has<PerformerParent>(entity)) return;
             Entity parentEntity = World.Get<PerformerParent>(entity).Parent;
             if (parentEntity == Entity.Null || !World.IsAlive(parentEntity)) return;
-            if (!World.Has<PerformerState>(parentEntity)) return;
-            PerformerState parentState = World.Get<PerformerState>(parentEntity);
-            Vector3 parentPos = World.Has<PerformerWorldPosition>(parentEntity) ? World.Get<PerformerWorldPosition>(parentEntity).Value : Vector3.Zero;
-            Quaternion parentRot = World.Has<PerformerWorldRotation>(parentEntity) ? World.Get<PerformerWorldRotation>(parentEntity).Value : Quaternion.Identity;
-            Vector3 parentScale = World.Has<PerformerWorldScale>(parentEntity) ? World.Get<PerformerWorldScale>(parentEntity).Value : Vector3.One;
             switch (config.Target)
             {
                 case AttachmentTarget.Parent:
+                    Vector3 parentPos = World.Has<PerformerWorldPosition>(parentEntity) ? World.Get<PerformerWorldPosition>(parentEntity).Value : Vector3.Zero;
+                    Quaternion parentRot = World.Has<PerformerWorldRotation>(parentEntity) ? World.Get<PerformerWorldRotation>(parentEntity).Value : Quaternion.Identity;
+                    Vector3 parentScale = World.Has<PerformerWorldScale>(parentEntity) ? World.Get<PerformerWorldScale>(parentEntity).Value : Vector3.One;
                     ApplyParentAttachment(entity, parentPos, parentRot, parentScale, config);
                     return;
                 case AttachmentTarget.Bone:
-                    ApplyBoneAttachment(entity, parentState.StableId, config);
+                    if (!World.Has<PerformerState>(parentEntity)) return;
+                    ApplyBoneAttachment(entity, World.Get<PerformerState>(parentEntity).StableId, config);
                     return;
             }
         }
@@ -581,16 +865,41 @@ namespace Ludots.Core.Presentation.Systems
             if (World.Has<PerformerWorldScale>(entity))
                 World.Get<PerformerWorldScale>(entity).Value = scale;
         }
-        private void ResolveTransform(Entity entity, ref PerformerState state, BehaviorSlot[] behaviors)
+        private void ResolveTransform(Entity entity, ref PerformerState state, PerformerDefinition definition, BehaviorSlot[] behaviors)
         {
             AssetBindingConfig assetBinding = new AssetBindingConfig { LocalScale = Vector3.One };
-            for (int i = 0; i < behaviors.Length; i++)
+            int primaryAssetBehaviorIndex = definition.PrimaryAssetBehaviorIndex;
+            if (primaryAssetBehaviorIndex >= 0 && primaryAssetBehaviorIndex < behaviors.Length)
             {
-                ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.Kind == BehaviorKind.AssetBinding && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
+                if (primarySlot.Kind == BehaviorKind.AssetBinding &&
+                    IsBehaviorActive(state.BehaviorActiveMask, primarySlot.SlotIndex))
                 {
-                    assetBinding = slot.AssetBinding;
-                    break;
+                    assetBinding = primarySlot.AssetBinding;
+                }
+                else
+                {
+                    for (int i = 0; i < behaviors.Length; i++)
+                    {
+                        ref readonly BehaviorSlot slot = ref behaviors[i];
+                        if (slot.Kind == BehaviorKind.AssetBinding && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                        {
+                            assetBinding = slot.AssetBinding;
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < behaviors.Length; i++)
+                {
+                    ref readonly BehaviorSlot slot = ref behaviors[i];
+                    if (slot.Kind == BehaviorKind.AssetBinding && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                    {
+                        assetBinding = slot.AssetBinding;
+                        break;
+                    }
                 }
             }
 
@@ -692,4 +1001,3 @@ namespace Ludots.Core.Presentation.Systems
         }
     }
 }
-

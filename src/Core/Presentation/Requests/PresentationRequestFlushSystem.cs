@@ -13,13 +13,14 @@ namespace Ludots.Core.Presentation.Requests
     {
         private readonly PresentationRequestBuffer _requests;
         private readonly PrefabRegistry _prefabs;
-        private readonly MeshAssetRegistry _meshes;
         private readonly StableDrawCache _stableDrawCache;
         private readonly PresentationVisualProxyEmitter _visualProxyEmitter;
+        private readonly PrimitiveDrawBuffer _snapshotBuffer;
         private readonly GroundOverlayBuffer _groundOverlays;
         private readonly WorldHudBatchBuffer _worldHud;
         private readonly RoadSplineBuffer _roadSplines;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
+        private int _lastProjectedRevision = -1;
 
         public PresentationRequestFlushSystem(
             World world,
@@ -39,12 +40,13 @@ namespace Ludots.Core.Presentation.Requests
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _prefabs = prefabs ?? throw new ArgumentNullException(nameof(prefabs));
-            _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
+            _ = meshes ?? throw new ArgumentNullException(nameof(meshes));
             _stableDrawCache = stableDrawCache ?? throw new ArgumentNullException(nameof(stableDrawCache));
             _timingDiagnostics = timingDiagnostics;
+            _snapshotBuffer = snapshotBuffer ?? throw new ArgumentNullException(nameof(snapshotBuffer));
             _visualProxyEmitter = new PresentationVisualProxyEmitter(
                 primitives ?? throw new ArgumentNullException(nameof(primitives)),
-                snapshotBuffer ?? throw new ArgumentNullException(nameof(snapshotBuffer)),
+                _snapshotBuffer,
                 proxyBuffer ?? throw new ArgumentNullException(nameof(proxyBuffer)),
                 skinnedBatchBuffer ?? throw new ArgumentNullException(nameof(skinnedBatchBuffer)));
             _groundOverlays = groundOverlays ?? throw new ArgumentNullException(nameof(groundOverlays));
@@ -71,7 +73,7 @@ namespace Ludots.Core.Presentation.Requests
                         break;
 
                     case PresentationRequestKind.GroundOverlay:
-                        if (!_groundOverlays.TryAdd(request.GroundOverlay))
+                        if (!_groundOverlays.Upsert(request.GroundOverlay))
                         {
                             throw new InvalidOperationException("GroundOverlayBuffer overflowed while flushing PresentationRequest.");
                         }
@@ -96,13 +98,32 @@ namespace Ludots.Core.Presentation.Requests
                         // before the legacy request flush reaches adapter-facing buffers.
                         break;
 
+                    case PresentationRequestKind.RemoveGroundOverlay:
+                        _groundOverlays.Remove(request.StableId);
+                        break;
+
+                    case PresentationRequestKind.RemoveWorldHud:
+                        _worldHud.Remove(request.StableId);
+                        break;
+
+                    case PresentationRequestKind.RemoveRoadSpline:
+                        _roadSplines.Remove(request.StableId);
+                        break;
+
                     default:
                         throw new InvalidOperationException($"Unknown PresentationRequestKind '{request.Kind}'.");
                 }
             }
 
-            _visualProxyEmitter.ClearProjectionTargets();
-            _stableDrawCache.Project(_visualProxyEmitter, evictUntouched: false);
+            int contentRevision = _stableDrawCache.ContentRevision;
+            if (_lastProjectedRevision != contentRevision)
+            {
+                _visualProxyEmitter.ClearProjectionTargets();
+                _stableDrawCache.Project(_visualProxyEmitter, evictUntouched: false);
+                _lastProjectedRevision = contentRevision;
+                _snapshotBuffer.SetRevision(contentRevision);
+            }
+            _requests.Clear();
 
             if (_timingDiagnostics != null)
             {

@@ -32,22 +32,26 @@ namespace Ludots.Core.Presentation.Systems
     {
         private static readonly QueryDescription _stateQuery = new QueryDescription()
             .WithAll<PresentationFrameState>();
+
+        private static readonly QueryDescription _staticPendingQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, PresentationStaticTransform, PresentationStaticVisualPending>();
         
         private static readonly QueryDescription _noCullQuery = new QueryDescription()
             .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform>()
-            .WithNone<CullState, FacingDirection>();
+            .WithNone<CullState, FacingDirection, PresentationStaticTransform>();
             
         private static readonly QueryDescription _withCullQuery = new QueryDescription()
             .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, CullState>()
-            .WithNone<FacingDirection>();
+            .WithNone<FacingDirection, PresentationStaticTransform>();
             
         // 带 FacingDirection 的查询（同步位置 + 旋转）
         private static readonly QueryDescription _facingNoCullQuery = new QueryDescription()
             .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection>()
-            .WithNone<CullState>();
+            .WithNone<CullState, PresentationStaticTransform>();
             
         private static readonly QueryDescription _facingWithCullQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection, CullState>();
+            .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection, CullState>()
+            .WithNone<PresentationStaticTransform>();
 
         public WorldToVisualSyncSystem(World world) : base(world)
         {
@@ -59,6 +63,16 @@ namespace Ludots.Core.Presentation.Systems
             var readAlphaJob = new ReadAlphaJob();
             World.InlineQuery<ReadAlphaJob, PresentationFrameState>(in _stateQuery, ref readAlphaJob);
             Fix64 alpha = readAlphaJob.Alpha;
+
+            World.Query(in _staticPendingQuery, (Entity entity, ref WorldPositionCm current, ref PreviousWorldPositionCm previous, ref VisualTransform visual) =>
+            {
+                visual.Position = InterpolateToVisual(in previous.Value, in current.Value, alpha);
+                if (World.TryGet(entity, out FacingDirection facing))
+                {
+                    visual.Rotation = FacingToYRotation(facing.AngleRad);
+                }
+            });
+            World.Remove<PresentationStaticVisualPending>(in _staticPendingQuery);
             
             // 2. 同步仅位置的实体（无 FacingDirection）
             var noCullJob = new SyncNoCullJob { Alpha = alpha };

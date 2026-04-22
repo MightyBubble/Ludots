@@ -25,7 +25,10 @@ namespace Ludots.Core.Presentation.Systems
         private readonly World _world;
         private readonly IReadOnlyDictionary<string, object> _globals;
         private static readonly QueryDescription _query = new QueryDescription()
-            .WithAll<WorldPositionCm, VisualTransform>();
+            .WithAll<WorldPositionCm, VisualTransform>()
+            .WithNone<PresentationStaticTransform>();
+        private static readonly QueryDescription _staticPendingQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, VisualTransform, PresentationStaticTransform, PresentationStaticHeightPending>();
         private static readonly QueryDescription _frameStateQuery = new QueryDescription()
             .WithAll<PresentationFrameState>();
         private Entity[] _projectedEntities = Array.Empty<Entity>();
@@ -56,7 +59,11 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             float alpha = ReadInterpolationAlpha();
-            TrySyncFromHeightmap(heightmap, alpha);
+            TrySyncFromHeightmap(heightmap, alpha, in _query);
+            if (TrySyncFromHeightmap(heightmap, alpha, in _staticPendingQuery))
+            {
+                _world.Remove<PresentationStaticHeightPending>(in _staticPendingQuery);
+            }
         }
 
         public void AfterUpdate(in float dt) { }
@@ -73,10 +80,10 @@ namespace Ludots.Core.Presentation.Systems
             return alpha;
         }
 
-        private bool TrySyncFromHeightmap(IVisualHeightmap heightmap, float alpha)
+        private bool TrySyncFromHeightmap(IVisualHeightmap heightmap, float alpha, in QueryDescription query)
         {
             int count = 0;
-            _world.Query(in _query, (Entity entity, ref WorldPositionCm current, ref VisualTransform visual) =>
+            _world.Query(in query, (Entity entity, ref WorldPositionCm current, ref VisualTransform visual) =>
             {
                 EnsureProjectionCapacity(count + 1);
                 Vector2 worldCm = ResolveWorldCm(entity, current.Value, alpha);

@@ -20,6 +20,8 @@ namespace Ludots.Core.Presentation.Systems
         private readonly IViewController _view;
         private readonly ScreenHudBatchBuffer _screenHud;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
+        private int _lastWorldHudRevision = -1;
+        private int _lastProjectionRevision = -1;
 
         private const int MaxBarDim = 512;
         private const int Margin = 200;
@@ -45,6 +47,18 @@ namespace Ludots.Core.Presentation.Systems
         public override void Update(in float dt)
         {
             long start = Stopwatch.GetTimestamp();
+            int worldHudRevision = _worldHud.ContentRevision;
+            int projectionRevision = _projector is IProjectionRevisionProvider revisionProvider
+                ? revisionProvider.ProjectionRevision
+                : -1;
+            if (projectionRevision >= 0 &&
+                worldHudRevision == _lastWorldHudRevision &&
+                projectionRevision == _lastProjectionRevision)
+            {
+                _timingDiagnostics?.ObserveWorldHudProjection((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+                return;
+            }
+
             _screenHud.Clear();
 
             var res = _view.Resolution;
@@ -117,6 +131,8 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             _timingDiagnostics?.ObserveWorldHudProjection((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+            _lastWorldHudRevision = worldHudRevision;
+            _lastProjectionRevision = projectionRevision;
         }
     }
 }

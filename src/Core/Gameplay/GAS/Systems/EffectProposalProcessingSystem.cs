@@ -1087,6 +1087,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             ref var effectState = ref World.Get<GameplayEffect>(newEffect);
             effectState.State = EffectState.Pending;
+            effectState.AggregatesModifiers = tpl.PresetType == EffectPresetType.Buff;
 
             World.Add(newEffect, new ExcludeFromChain());
 

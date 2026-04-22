@@ -37,6 +37,16 @@ namespace Ludots.Core.Presentation.Requests
             return _buffer.AsSpan(0, _count);
         }
 
+        public ref readonly PresentationRequest Get(int index)
+        {
+            if ((uint)index >= (uint)_count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            return ref _buffer[index];
+        }
+
         public void Clear()
         {
             _count = 0;

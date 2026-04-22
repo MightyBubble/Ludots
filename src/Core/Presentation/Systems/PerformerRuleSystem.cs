@@ -136,6 +136,11 @@ namespace Ludots.Core.Presentation.Systems
                 for (int ri = 0; ri < def.Rules.Length; ri++)
                 {
                     ref var rule = ref def.Rules[ri];
+                    if (_definitions.BootstrapRegistry.IsRootBootstrapRule(in rule))
+                    {
+                        continue;
+                    }
+
                     var entry = new IndexedRule
                     {
                         OwnerDefinitionId = rule.OwnerDefinitionId,

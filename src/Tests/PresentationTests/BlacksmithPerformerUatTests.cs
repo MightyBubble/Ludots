@@ -556,12 +556,18 @@ namespace Ludots.Tests.Presentation
             {
                 if (!_world.Has<PresentationLifecycleState>(owner))
                 {
-                    _world.Add(owner, new PresentationLifecycleState { PendingDestroy = true, Spawned = true });
-                    return;
+                    _world.Add(owner, new PresentationLifecycleState { Spawned = true });
                 }
 
-                ref PresentationLifecycleState state = ref _world.Get<PresentationLifecycleState>(owner);
-                state.PendingDestroy = true;
+                if (!_world.Has<PresentationDestroyPending>(owner))
+                {
+                    _world.Add(owner, new PresentationDestroyPending());
+                }
+
+                if (_world.Has<PresentationDestroyEventPublished>(owner))
+                {
+                    _world.Remove<PresentationDestroyEventPublished>(owner);
+                }
             }
 
             public void Tick(float dt = 0.016f)

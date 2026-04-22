@@ -155,7 +155,7 @@ namespace Ludots.Tests.Presentation
                 loadedChunks: null,
                 performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
                 timingDiagnostics: timings);
-            engine.RegisterPresentationSystem(culling);
+            engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext["Tests.PerformerBlacksmith.HeadlessCamera"] = new HeadlessCameraRuntime(
                 cameraPresenter,

@@ -6,9 +6,11 @@ namespace Ludots.Core.Presentation.Rendering
     {
         private readonly PrimitiveDrawItem[] _buffer;
         private int _count;
+        private int _revision;
 
         public int Count => _count;
         public int Capacity => _buffer.Length;
+        public int Revision => _revision;
         public int DroppedSinceClear { get; private set; }
         public int DroppedTotal { get; private set; }
 
@@ -32,6 +34,11 @@ namespace Ludots.Core.Presentation.Rendering
         }
 
         public ReadOnlySpan<PrimitiveDrawItem> GetSpan() => new ReadOnlySpan<PrimitiveDrawItem>(_buffer, 0, _count);
+
+        public void SetRevision(int revision)
+        {
+            _revision = revision;
+        }
 
         public void Clear()
         {

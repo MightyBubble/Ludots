@@ -10,6 +10,20 @@ namespace Ludots.Core.Presentation.Hud
         private const int CompositeWindowSize = 60;
         private int _compositeSkipAccumulator;
         private int _compositeFrameAccumulator;
+        private string _lastPresentationTopSystem1Name = string.Empty;
+        private float _lastPresentationTopSystem1Ms;
+        private string _lastPresentationTopSystem2Name = string.Empty;
+        private float _lastPresentationTopSystem2Ms;
+        private string _lastPresentationTopSystem3Name = string.Empty;
+        private float _lastPresentationTopSystem3Ms;
+        private string _lastSimulationTopSystem1Name = string.Empty;
+        private float _lastSimulationTopSystem1Ms;
+        private string _lastSimulationTopSystem2Name = string.Empty;
+        private float _lastSimulationTopSystem2Ms;
+        private string _lastSimulationTopSystem3Name = string.Empty;
+        private float _lastSimulationTopSystem3Ms;
+
+        public bool SystemBreakdownEnabled { get; set; }
 
         public float UiInputMs { get; private set; }
         public float UiRenderMs { get; private set; }
@@ -20,15 +34,52 @@ namespace Ludots.Core.Presentation.Hud
         public float ScreenOverlayDrawMs { get; private set; }
         public float ScreenOverlayFinalDrawMs { get; private set; }
         public float CameraCullingMs { get; private set; }
+        public float LastCameraCullingMs { get; private set; }
+        public float CameraCullingEntityProcessMs { get; private set; }
+        public float LastCameraCullingEntityProcessMs { get; private set; }
+        public float CameraCullingPerformerSyncMs { get; private set; }
+        public float LastCameraCullingPerformerSyncMs { get; private set; }
         public float CameraPresenterMs { get; private set; }
         public float WorldHudProjectionMs { get; private set; }
+        public float LastWorldHudProjectionMs { get; private set; }
         public float SimulationMs { get; private set; }
+        public float LastSimulationMs { get; private set; }
         public float PresentationMs { get; private set; }
+        public float LastPresentationMs { get; private set; }
         public float TotalTickMs { get; private set; }
+        public float LastTotalTickMs { get; private set; }
+        public string LastPresentationTopSystem1Name => _lastPresentationTopSystem1Name;
+        public float LastPresentationTopSystem1Ms => _lastPresentationTopSystem1Ms;
+        public string LastPresentationTopSystem2Name => _lastPresentationTopSystem2Name;
+        public float LastPresentationTopSystem2Ms => _lastPresentationTopSystem2Ms;
+        public string LastPresentationTopSystem3Name => _lastPresentationTopSystem3Name;
+        public float LastPresentationTopSystem3Ms => _lastPresentationTopSystem3Ms;
+        public string LastSimulationTopSystem1Name => _lastSimulationTopSystem1Name;
+        public float LastSimulationTopSystem1Ms => _lastSimulationTopSystem1Ms;
+        public string LastSimulationTopSystem2Name => _lastSimulationTopSystem2Name;
+        public float LastSimulationTopSystem2Ms => _lastSimulationTopSystem2Ms;
+        public string LastSimulationTopSystem3Name => _lastSimulationTopSystem3Name;
+        public float LastSimulationTopSystem3Ms => _lastSimulationTopSystem3Ms;
         public float PerformerBehaviorMs { get; private set; }
+        public float LastPerformerBehaviorMs { get; private set; }
+        public int PerformerBootstrapCountLastFrame { get; private set; }
+        public int PerformerOwnerChangesLastFrame { get; private set; }
+        public int PerformerOwnerAttributeChangesLastFrame { get; private set; }
+        public int PerformerOwnerTagChangesLastFrame { get; private set; }
+        public int PerformerTickDrivenCountLastFrame { get; private set; }
+        public int PerformerActiveSoundTrackingCountLastFrame { get; private set; }
+        public int PerformerDestroyEventScanCountLastFrame { get; private set; }
         public float PerformerAnimatorMs { get; private set; }
+        public float LastPerformerAnimatorMs { get; private set; }
         public float PerformerEmitMs { get; private set; }
+        public float LastPerformerEmitMs { get; private set; }
+        public float PerformerEmitDirtyProcessMs { get; private set; }
+        public float LastPerformerEmitDirtyProcessMs { get; private set; }
+        public float PerformerEmitDirtyCleanupMs { get; private set; }
+        public float LastPerformerEmitDirtyCleanupMs { get; private set; }
+        public int PerformerEmitDirtyCountLastFrame { get; private set; }
         public float PresentationRequestFlushMs { get; private set; }
+        public float LastPresentationRequestFlushMs { get; private set; }
         public float TerrainRenderMs { get; private set; }
         public float TerrainChunkBuildMs { get; private set; }
         public float PrimitiveRenderMs { get; private set; }
@@ -74,19 +125,139 @@ namespace Ludots.Core.Presentation.Hud
 
         public void ObserveCameraCulling(double sampleMs, int visibleEntities)
         {
+            LastCameraCullingMs = (float)sampleMs;
             CameraCullingMs = Smooth(CameraCullingMs, (float)sampleMs);
             VisibleEntitiesLastFrame = visibleEntities;
         }
 
+        public void ObserveCameraCullingBreakdown(double entityProcessMs, double performerSyncMs)
+        {
+            LastCameraCullingEntityProcessMs = (float)entityProcessMs;
+            CameraCullingEntityProcessMs = Smooth(CameraCullingEntityProcessMs, (float)entityProcessMs);
+            LastCameraCullingPerformerSyncMs = (float)performerSyncMs;
+            CameraCullingPerformerSyncMs = Smooth(CameraCullingPerformerSyncMs, (float)performerSyncMs);
+        }
+
         public void ObserveCameraPresenter(double sampleMs) => CameraPresenterMs = Smooth(CameraPresenterMs, (float)sampleMs);
-        public void ObserveWorldHudProjection(double sampleMs) => WorldHudProjectionMs = Smooth(WorldHudProjectionMs, (float)sampleMs);
-        public void ObserveSimulation(double sampleMs) => SimulationMs = Smooth(SimulationMs, (float)sampleMs);
-        public void ObservePresentation(double sampleMs) => PresentationMs = Smooth(PresentationMs, (float)sampleMs);
-        public void ObserveTotalTick(double sampleMs) => TotalTickMs = Smooth(TotalTickMs, (float)sampleMs);
-        public void ObservePerformerBehavior(double sampleMs) => PerformerBehaviorMs = Smooth(PerformerBehaviorMs, (float)sampleMs);
-        public void ObservePerformerAnimator(double sampleMs) => PerformerAnimatorMs = Smooth(PerformerAnimatorMs, (float)sampleMs);
-        public void ObservePerformerEmit(double sampleMs) => PerformerEmitMs = Smooth(PerformerEmitMs, (float)sampleMs);
-        public void ObservePresentationRequestFlush(double sampleMs) => PresentationRequestFlushMs = Smooth(PresentationRequestFlushMs, (float)sampleMs);
+        public void ObserveWorldHudProjection(double sampleMs)
+        {
+            LastWorldHudProjectionMs = (float)sampleMs;
+            WorldHudProjectionMs = Smooth(WorldHudProjectionMs, (float)sampleMs);
+        }
+        public void ObserveSimulation(double sampleMs)
+        {
+            LastSimulationMs = (float)sampleMs;
+            SimulationMs = Smooth(SimulationMs, (float)sampleMs);
+        }
+
+        public void ObservePresentation(double sampleMs)
+        {
+            LastPresentationMs = (float)sampleMs;
+            PresentationMs = Smooth(PresentationMs, (float)sampleMs);
+        }
+
+        public void ObserveTotalTick(double sampleMs)
+        {
+            LastTotalTickMs = (float)sampleMs;
+            TotalTickMs = Smooth(TotalTickMs, (float)sampleMs);
+        }
+
+        public void BeginPresentationSystemBreakdown()
+        {
+            _lastPresentationTopSystem1Name = string.Empty;
+            _lastPresentationTopSystem1Ms = 0f;
+            _lastPresentationTopSystem2Name = string.Empty;
+            _lastPresentationTopSystem2Ms = 0f;
+            _lastPresentationTopSystem3Name = string.Empty;
+            _lastPresentationTopSystem3Ms = 0f;
+        }
+
+        public void ObservePresentationSystem(string systemName, double sampleMs)
+        {
+            InsertTopSystem(
+                systemName,
+                (float)sampleMs,
+                ref _lastPresentationTopSystem1Name,
+                ref _lastPresentationTopSystem1Ms,
+                ref _lastPresentationTopSystem2Name,
+                ref _lastPresentationTopSystem2Ms,
+                ref _lastPresentationTopSystem3Name,
+                ref _lastPresentationTopSystem3Ms);
+        }
+
+        public void BeginSimulationSystemBreakdown()
+        {
+            _lastSimulationTopSystem1Name = string.Empty;
+            _lastSimulationTopSystem1Ms = 0f;
+            _lastSimulationTopSystem2Name = string.Empty;
+            _lastSimulationTopSystem2Ms = 0f;
+            _lastSimulationTopSystem3Name = string.Empty;
+            _lastSimulationTopSystem3Ms = 0f;
+        }
+
+        public void ObserveSimulationSystem(string systemName, double sampleMs)
+        {
+            InsertTopSystem(
+                systemName,
+                (float)sampleMs,
+                ref _lastSimulationTopSystem1Name,
+                ref _lastSimulationTopSystem1Ms,
+                ref _lastSimulationTopSystem2Name,
+                ref _lastSimulationTopSystem2Ms,
+                ref _lastSimulationTopSystem3Name,
+                ref _lastSimulationTopSystem3Ms);
+        }
+
+        public void ObservePerformerBehavior(double sampleMs)
+        {
+            LastPerformerBehaviorMs = (float)sampleMs;
+            PerformerBehaviorMs = Smooth(PerformerBehaviorMs, (float)sampleMs);
+        }
+
+        public void ObservePerformerBehaviorCounts(
+            int bootstrapCount,
+            int ownerChanges,
+            int ownerAttributeChanges,
+            int ownerTagChanges,
+            int tickDrivenCount,
+            int activeSoundTrackingCount,
+            int destroyEventScanCount)
+        {
+            PerformerBootstrapCountLastFrame = bootstrapCount;
+            PerformerOwnerChangesLastFrame = ownerChanges;
+            PerformerOwnerAttributeChangesLastFrame = ownerAttributeChanges;
+            PerformerOwnerTagChangesLastFrame = ownerTagChanges;
+            PerformerTickDrivenCountLastFrame = tickDrivenCount;
+            PerformerActiveSoundTrackingCountLastFrame = activeSoundTrackingCount;
+            PerformerDestroyEventScanCountLastFrame = destroyEventScanCount;
+        }
+
+        public void ObservePerformerAnimator(double sampleMs)
+        {
+            LastPerformerAnimatorMs = (float)sampleMs;
+            PerformerAnimatorMs = Smooth(PerformerAnimatorMs, (float)sampleMs);
+        }
+
+        public void ObservePerformerEmit(double sampleMs)
+        {
+            LastPerformerEmitMs = (float)sampleMs;
+            PerformerEmitMs = Smooth(PerformerEmitMs, (float)sampleMs);
+        }
+
+        public void ObservePerformerEmitDirtyBreakdown(double processMs, double cleanupMs, int dirtyCount)
+        {
+            LastPerformerEmitDirtyProcessMs = (float)processMs;
+            PerformerEmitDirtyProcessMs = Smooth(PerformerEmitDirtyProcessMs, (float)processMs);
+            LastPerformerEmitDirtyCleanupMs = (float)cleanupMs;
+            PerformerEmitDirtyCleanupMs = Smooth(PerformerEmitDirtyCleanupMs, (float)cleanupMs);
+            PerformerEmitDirtyCountLastFrame = dirtyCount;
+        }
+
+        public void ObservePresentationRequestFlush(double sampleMs)
+        {
+            LastPresentationRequestFlushMs = (float)sampleMs;
+            PresentationRequestFlushMs = Smooth(PresentationRequestFlushMs, (float)sampleMs);
+        }
 
         public void ObserveTerrain(double renderMs, double chunkBuildMs, int drawnChunks, int builtChunks)
         {
@@ -125,6 +296,48 @@ namespace Ludots.Core.Presentation.Hud
             return current <= 0.001f
                 ? sampleMs
                 : (current * (1f - SampleWeight)) + (sampleMs * SampleWeight);
+        }
+
+        private static void InsertTopSystem(
+            string systemName,
+            float sampleMs,
+            ref string top1Name,
+            ref float top1Ms,
+            ref string top2Name,
+            ref float top2Ms,
+            ref string top3Name,
+            ref float top3Ms)
+        {
+            if (sampleMs <= 0f)
+            {
+                return;
+            }
+
+            if (sampleMs > top1Ms)
+            {
+                top3Name = top2Name;
+                top3Ms = top2Ms;
+                top2Name = top1Name;
+                top2Ms = top1Ms;
+                top1Name = systemName;
+                top1Ms = sampleMs;
+                return;
+            }
+
+            if (sampleMs > top2Ms)
+            {
+                top3Name = top2Name;
+                top3Ms = top2Ms;
+                top2Name = systemName;
+                top2Ms = sampleMs;
+                return;
+            }
+
+            if (sampleMs > top3Ms)
+            {
+                top3Name = systemName;
+                top3Ms = sampleMs;
+            }
         }
     }
 }

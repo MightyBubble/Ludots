@@ -10,6 +10,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using PerformerBlacksmithShowcaseMod;
@@ -28,7 +29,9 @@ namespace Ludots.Tests.Presentation
             new("scatter_25", 25, 24681357, 750f, 2400f, ExpectFullVisibility: true),
             new("scatter_100", 100, 97531864, 750f, 2400f, ExpectFullVisibility: true),
             new("scatter_1000", 1000, 41592653, 750f, 2400f, ExpectFullVisibility: true),
+            new("scatter_3000_tight", 3000, 14142135, 750f, 2400f, ExpectFullVisibility: true),
             new("scatter_5000", 5000, 27182818, 750f, 2400f, ExpectFullVisibility: true),
+            new("scatter_10000_tight", 10000, 17320508, 750f, 2400f, ExpectFullVisibility: true),
             new("scatter_30000_tight", 30000, 31415926, 750f, 2400f, ExpectFullVisibility: true),
             new("scatter_30000_wide", 30000, 16180339, 5000f, 12000f, ExpectFullVisibility: false),
         };
@@ -267,7 +270,8 @@ namespace Ludots.Tests.Presentation
                 scenario.Seed,
                 scenario.MinRadiusCm,
                 scenario.MaxRadiusCm);
-            PerformerBlacksmithShowcaseTestHarness.TickWithHudProjection(engine, hudProjection, 16);
+
+            InitializationPhaseResult initialization = WaitForInitialization(engine, hudProjection);
 
             SnapshotCounts(
                 engine,
@@ -293,6 +297,7 @@ namespace Ludots.Tests.Presentation
 
             var timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
                 ?? throw new InvalidOperationException("PresentationTimingDiagnostics missing.");
+            timings.SystemBreakdownEnabled = true;
             var eventStream = engine.GetService(CoreServiceKeys.PresentationEventStream)
                 ?? throw new InvalidOperationException("PresentationEventStream missing.");
             var commandBuffer = engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
@@ -315,6 +320,17 @@ namespace Ludots.Tests.Presentation
             double[] emitMs = new double[MeasuredFrames];
             double[] requestFlushMs = new double[MeasuredFrames];
             double[] hudProjectionMs = new double[MeasuredFrames];
+            string[] presentationTop1Names = new string[MeasuredFrames];
+            double[] presentationTop1Ms = new double[MeasuredFrames];
+            string[] simulationTop1Names = new string[MeasuredFrames];
+            double[] simulationTop1Ms = new double[MeasuredFrames];
+            int[] performerBootstrapCounts = new int[MeasuredFrames];
+            int[] performerOwnerChanges = new int[MeasuredFrames];
+            int[] performerOwnerAttributeChanges = new int[MeasuredFrames];
+            int[] performerOwnerTagChanges = new int[MeasuredFrames];
+            int[] performerTickDrivenCounts = new int[MeasuredFrames];
+            int[] performerActiveSoundTrackingCounts = new int[MeasuredFrames];
+            int[] performerDestroyEventScanCounts = new int[MeasuredFrames];
             int[] visibleEntities = new int[MeasuredFrames];
             int[] primitiveInstances = new int[MeasuredFrames];
             for (int frame = 0; frame < MeasuredFrames; frame++)
@@ -322,14 +338,25 @@ namespace Ludots.Tests.Presentation
                 long start = Stopwatch.GetTimestamp();
                 PerformerBlacksmithShowcaseTestHarness.TickWithHudProjection(engine, hudProjection, 1);
                 frameTotals[frame] = ElapsedMs(start);
-                simulationMs[frame] = timings.SimulationMs;
-                presentationMs[frame] = timings.PresentationMs;
-                cullingMs[frame] = timings.CameraCullingMs;
-                behaviorMs[frame] = timings.PerformerBehaviorMs;
-                animatorMs[frame] = timings.PerformerAnimatorMs;
-                emitMs[frame] = timings.PerformerEmitMs;
-                requestFlushMs[frame] = timings.PresentationRequestFlushMs;
-                hudProjectionMs[frame] = timings.WorldHudProjectionMs;
+                simulationMs[frame] = timings.LastSimulationMs;
+                presentationMs[frame] = timings.LastPresentationMs;
+                cullingMs[frame] = timings.LastCameraCullingMs;
+                behaviorMs[frame] = timings.LastPerformerBehaviorMs;
+                animatorMs[frame] = timings.LastPerformerAnimatorMs;
+                emitMs[frame] = timings.LastPerformerEmitMs;
+                requestFlushMs[frame] = timings.LastPresentationRequestFlushMs;
+                hudProjectionMs[frame] = timings.LastWorldHudProjectionMs;
+                presentationTop1Names[frame] = timings.LastPresentationTopSystem1Name;
+                presentationTop1Ms[frame] = timings.LastPresentationTopSystem1Ms;
+                simulationTop1Names[frame] = timings.LastSimulationTopSystem1Name;
+                simulationTop1Ms[frame] = timings.LastSimulationTopSystem1Ms;
+                performerBootstrapCounts[frame] = timings.PerformerBootstrapCountLastFrame;
+                performerOwnerChanges[frame] = timings.PerformerOwnerChangesLastFrame;
+                performerOwnerAttributeChanges[frame] = timings.PerformerOwnerAttributeChangesLastFrame;
+                performerOwnerTagChanges[frame] = timings.PerformerOwnerTagChangesLastFrame;
+                performerTickDrivenCounts[frame] = timings.PerformerTickDrivenCountLastFrame;
+                performerActiveSoundTrackingCounts[frame] = timings.PerformerActiveSoundTrackingCountLastFrame;
+                performerDestroyEventScanCounts[frame] = timings.PerformerDestroyEventScanCountLastFrame;
                 visibleEntities[frame] = timings.VisibleEntitiesLastFrame;
                 primitiveInstances[frame] = primitives.Count;
             }
@@ -342,6 +369,11 @@ namespace Ludots.Tests.Presentation
                 scenario.MaxRadiusCm,
                 scenario.ExpectFullVisibility,
                 queued,
+                initialization.Frames,
+                initialization.TotalMs,
+                initialization.MaxFrameMs,
+                initialization.QueueCountAfterSettle,
+                initialization.StableFramesReached,
                 blacksmithEntities,
                 rootPerformerCount,
                 workshopLeftPerformerCount,
@@ -374,8 +406,113 @@ namespace Ludots.Tests.Presentation
                 emitMs,
                 requestFlushMs,
                 hudProjectionMs,
+                presentationTop1Names,
+                presentationTop1Ms,
+                simulationTop1Names,
+                simulationTop1Ms,
+                performerBootstrapCounts,
+                performerOwnerChanges,
+                performerOwnerAttributeChanges,
+                performerOwnerTagChanges,
+                performerTickDrivenCounts,
+                performerActiveSoundTrackingCounts,
+                performerDestroyEventScanCounts,
                 visibleEntities,
                 primitiveInstances);
+        }
+
+        private static InitializationPhaseResult WaitForInitialization(
+            Ludots.Core.Engine.GameEngine engine,
+            WorldHudToScreenSystem hudProjection)
+        {
+            const int MaxInitializationFrames = 240;
+            const int StableFrameTarget = 8;
+
+            var spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+                ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
+
+            int stableFrames = 0;
+            int previousSignature = int.MinValue;
+            double totalMs = 0d;
+            double maxFrameMs = 0d;
+            int executedFrames = 0;
+
+            while (executedFrames < MaxInitializationFrames)
+            {
+                long start = Stopwatch.GetTimestamp();
+                PerformerBlacksmithShowcaseTestHarness.TickWithHudProjection(engine, hudProjection, 1);
+                double frameMs = ElapsedMs(start);
+                totalMs += frameMs;
+                if (frameMs > maxFrameMs)
+                {
+                    maxFrameMs = frameMs;
+                }
+
+                executedFrames++;
+
+                SnapshotCounts(
+                    engine,
+                    out int blacksmithEntities,
+                    out int rootPerformerCount,
+                    out int workshopLeftPerformerCount,
+                    out int workshopRightPerformerCount,
+                    out int chimneyPerformerCount,
+                    out int routeSplinePerformerCount,
+                    out int decalPerformerCount,
+                    out int workerPerformerCount,
+                    out int barPerformerCount,
+                    out int textPerformerCount,
+                    out int visibleBlacksmithEntities,
+                    out int visibleWorkshopPrimitives,
+                    out int visibleChimneyPrimitives,
+                    out int worldHudBarCount,
+                    out int worldHudTextCount,
+                    out int roadSplineCount,
+                    out int groundOverlayCount);
+
+                var signatureBuilder = new HashCode();
+                signatureBuilder.Add(spawnQueue.Count);
+                signatureBuilder.Add(blacksmithEntities);
+                signatureBuilder.Add(rootPerformerCount);
+                signatureBuilder.Add(workshopLeftPerformerCount);
+                signatureBuilder.Add(workshopRightPerformerCount);
+                signatureBuilder.Add(chimneyPerformerCount);
+                signatureBuilder.Add(routeSplinePerformerCount);
+                signatureBuilder.Add(decalPerformerCount);
+                signatureBuilder.Add(workerPerformerCount);
+                signatureBuilder.Add(barPerformerCount);
+                signatureBuilder.Add(textPerformerCount);
+                signatureBuilder.Add(visibleBlacksmithEntities);
+                signatureBuilder.Add(visibleWorkshopPrimitives);
+                signatureBuilder.Add(visibleChimneyPrimitives);
+                signatureBuilder.Add(worldHudBarCount);
+                signatureBuilder.Add(worldHudTextCount);
+                signatureBuilder.Add(roadSplineCount);
+                signatureBuilder.Add(groundOverlayCount);
+                int signature = signatureBuilder.ToHashCode();
+
+                if (spawnQueue.Count == 0 && signature == previousSignature)
+                {
+                    stableFrames++;
+                    if (stableFrames >= StableFrameTarget)
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    stableFrames = 0;
+                }
+
+                previousSignature = signature;
+            }
+
+            return new InitializationPhaseResult(
+                executedFrames,
+                totalMs,
+                maxFrameMs,
+                spawnQueue.Count,
+                stableFrames >= StableFrameTarget);
         }
 
         private static void SnapshotCounts(
@@ -517,7 +654,8 @@ namespace Ludots.Tests.Presentation
             sb.AppendLine("# Performer Blacksmith Showcase Scatter Benchmark");
             sb.AppendLine();
             sb.AppendLine("- workload: random-scattered `blacksmith_building` templates on the showcase map");
-            sb.AppendLine("- measured frames: `120` after warmup");
+            sb.AppendLine($"- measured frames: `{MeasuredFrames}` after warmup");
+            sb.AppendLine("- initialization is measured separately until runtime spawn + performer/presentation counts stop changing");
             sb.AppendLine("- focus: canonical performer tree + HUD + spline + decal stability under many blacksmith roots");
             sb.AppendLine("- note: `tight` scenarios are full-visibility stress; `wide` scenarios validate camera culling / LOD under the same production actor graph");
             sb.AppendLine();
@@ -532,6 +670,7 @@ namespace Ludots.Tests.Presentation
                 sb.AppendLine($"- scatter radius cm: `{result.MinRadiusCm:F0}` -> `{result.MaxRadiusCm:F0}`");
                 sb.AppendLine($"- full visibility expected: `{result.ExpectFullVisibility}`");
                 sb.AppendLine($"- queued extras: `{result.QueuedExtraBuildings}`");
+                sb.AppendLine($"- initialization: frames `{result.InitializationFrames}` | total `{result.InitializationTotalMs:F4} ms` | max frame `{result.InitializationMaxFrameMs:F4} ms` | queue after settle `{result.QueueCountAfterInitialization}` | stable settle `{result.InitializationStable}`");
                 sb.AppendLine($"- blacksmith entities: `{result.BlacksmithEntities}`");
                 sb.AppendLine($"- visible blacksmith entities: `{result.VisibleBlacksmithEntities}`");
                 sb.AppendLine($"- performers: root `{result.RootPerformerCount}` | left `{result.WorkshopLeftPerformerCount}` | right `{result.WorkshopRightPerformerCount}` | chimney `{result.ChimneyPerformerCount}` | route `{result.RouteSplinePerformerCount}` | decal `{result.DecalPerformerCount}` | worker `{result.WorkerPerformerCount}` | bar `{result.BarPerformerCount}` | text `{result.TextPerformerCount}`");
@@ -542,6 +681,10 @@ namespace Ludots.Tests.Presentation
                 sb.AppendLine($"- max tick: `{result.MaxTickMs:F4} ms`");
                 sb.AppendLine($"- avg simulation: `{result.AverageSimulationMs:F4} ms` | avg presentation: `{result.AveragePresentationMs:F4} ms`");
                 sb.AppendLine($"- avg performer behavior: `{result.AverageBehaviorMs:F4} ms` | avg animator: `{result.AverageAnimatorMs:F4} ms` | avg emit: `{result.AverageEmitMs:F4} ms` | avg request flush: `{result.AverageRequestFlushMs:F4} ms`");
+                sb.AppendLine($"- hottest presentation system: `{result.HottestPresentationSystemName}` avg `{result.HottestPresentationSystemAverageMs:F4} ms`");
+                sb.AppendLine($"- hottest simulation system: `{result.HottestSimulationSystemName}` avg `{result.HottestSimulationSystemAverageMs:F4} ms`");
+                sb.AppendLine($"- performer behavior counts avg/max: bootstrap `{result.AveragePerformerBootstrapCount:F1}`/`{result.MaxPerformerBootstrapCount}` | owner changes `{result.AveragePerformerOwnerChanges:F1}`/`{result.MaxPerformerOwnerChanges}` | attr changes `{result.AveragePerformerOwnerAttributeChanges:F1}`/`{result.MaxPerformerOwnerAttributeChanges}` | tag changes `{result.AveragePerformerOwnerTagChanges:F1}`/`{result.MaxPerformerOwnerTagChanges}`");
+                sb.AppendLine($"- performer behavior counts avg/max: tick-driven `{result.AveragePerformerTickDrivenCount:F1}`/`{result.MaxPerformerTickDrivenCount}` | active sound tracking `{result.AveragePerformerActiveSoundTrackingCount:F1}`/`{result.MaxPerformerActiveSoundTrackingCount}` | destroy-scan `{result.AveragePerformerDestroyEventScanCount:F1}`/`{result.MaxPerformerDestroyEventScanCount}`");
                 sb.AppendLine($"- avg culling: `{result.AverageCameraCullingMs:F4} ms` | p95 culling: `{result.P95CameraCullingMs:F4} ms` | max culling: `{result.MaxCameraCullingMs:F4} ms`");
                 sb.AppendLine($"- avg HUD projection: `{result.AverageHudProjectionMs:F4} ms` | p95 HUD projection: `{result.P95HudProjectionMs:F4} ms` | max HUD projection: `{result.MaxHudProjectionMs:F4} ms`");
                 sb.AppendLine($"- visible entities avg/max: `{AverageInt(result.VisibleEntities):F1}` / `{MaxInt(result.VisibleEntities):F0}`");
@@ -571,6 +714,11 @@ namespace Ludots.Tests.Presentation
                     sb.Append("\"expect_full_visibility\":").Append(result.ExpectFullVisibility ? "true" : "false").Append(",");
                     sb.Append("\"blacksmith_entities\":").Append(result.BlacksmithEntities).Append(",");
                     sb.Append("\"visible_blacksmith_entities\":").Append(result.VisibleBlacksmithEntities).Append(",");
+                    sb.Append("\"init_frames\":").Append(result.InitializationFrames).Append(",");
+                    sb.Append("\"init_total_ms\":").Append(result.InitializationTotalMs.ToString("F4", CultureInfo.InvariantCulture)).Append(",");
+                    sb.Append("\"init_max_frame_ms\":").Append(result.InitializationMaxFrameMs.ToString("F4", CultureInfo.InvariantCulture)).Append(",");
+                    sb.Append("\"init_queue_after_settle\":").Append(result.QueueCountAfterInitialization).Append(",");
+                    sb.Append("\"init_stable\":").Append(result.InitializationStable ? "true" : "false").Append(",");
                     sb.Append("\"root_performers\":").Append(result.RootPerformerCount).Append(",");
                     sb.Append("\"visible_workshops\":").Append(result.VisibleWorkshopPrimitives).Append(",");
                     sb.Append("\"visible_chimneys\":").Append(result.VisibleChimneyPrimitives).Append(",");
@@ -594,6 +742,17 @@ namespace Ludots.Tests.Presentation
                     sb.Append(",\"performer_animator_ms\":").Append(result.AnimatorMs[frame].ToString("F4", CultureInfo.InvariantCulture));
                     sb.Append(",\"performer_emit_ms\":").Append(result.EmitMs[frame].ToString("F4", CultureInfo.InvariantCulture));
                     sb.Append(",\"presentation_request_flush_ms\":").Append(result.RequestFlushMs[frame].ToString("F4", CultureInfo.InvariantCulture));
+                    sb.Append(",\"presentation_top1\":\"").Append(EscapeJson(result.PresentationTop1Names[frame])).Append("\"");
+                    sb.Append(",\"presentation_top1_ms\":").Append(result.PresentationTop1Ms[frame].ToString("F4", CultureInfo.InvariantCulture));
+                    sb.Append(",\"simulation_top1\":\"").Append(EscapeJson(result.SimulationTop1Names[frame])).Append("\"");
+                    sb.Append(",\"simulation_top1_ms\":").Append(result.SimulationTop1Ms[frame].ToString("F4", CultureInfo.InvariantCulture));
+                    sb.Append(",\"performer_bootstrap_count\":").Append(result.PerformerBootstrapCounts[frame]);
+                    sb.Append(",\"performer_owner_changes\":").Append(result.PerformerOwnerChanges[frame]);
+                    sb.Append(",\"performer_owner_attribute_changes\":").Append(result.PerformerOwnerAttributeChanges[frame]);
+                    sb.Append(",\"performer_owner_tag_changes\":").Append(result.PerformerOwnerTagChanges[frame]);
+                    sb.Append(",\"performer_tick_driven_count\":").Append(result.PerformerTickDrivenCounts[frame]);
+                    sb.Append(",\"performer_active_sound_tracking_count\":").Append(result.PerformerActiveSoundTrackingCounts[frame]);
+                    sb.Append(",\"performer_destroy_event_scan_count\":").Append(result.PerformerDestroyEventScanCounts[frame]);
                     sb.AppendLine("}");
                 }
             }
@@ -604,6 +763,13 @@ namespace Ludots.Tests.Presentation
         private static double ElapsedMs(long startTimestamp)
         {
             return (Stopwatch.GetTimestamp() - startTimestamp) * 1000d / Stopwatch.Frequency;
+        }
+
+        private static string EscapeJson(string value)
+        {
+            return string.IsNullOrEmpty(value)
+                ? string.Empty
+                : value.Replace("\\", "\\\\").Replace("\"", "\\\"");
         }
 
         private static double AverageInt(int[] values)
@@ -638,6 +804,13 @@ namespace Ludots.Tests.Presentation
 
         private readonly record struct ScatterScenario(string Name, int TotalBuildings, int Seed, float MinRadiusCm, float MaxRadiusCm, bool ExpectFullVisibility);
 
+        private readonly record struct InitializationPhaseResult(
+            int Frames,
+            double TotalMs,
+            double MaxFrameMs,
+            int QueueCountAfterSettle,
+            bool StableFramesReached);
+
         private sealed class ScatterScenarioResult
         {
             public ScatterScenarioResult(
@@ -648,6 +821,11 @@ namespace Ludots.Tests.Presentation
                 float maxRadiusCm,
                 bool expectFullVisibility,
                 int queuedExtraBuildings,
+                int initializationFrames,
+                double initializationTotalMs,
+                double initializationMaxFrameMs,
+                int queueCountAfterInitialization,
+                bool initializationStable,
                 int blacksmithEntities,
                 int rootPerformerCount,
                 int workshopLeftPerformerCount,
@@ -680,6 +858,17 @@ namespace Ludots.Tests.Presentation
                 double[] emitMs,
                 double[] requestFlushMs,
                 double[] hudProjectionMs,
+                string[] presentationTop1Names,
+                double[] presentationTop1Ms,
+                string[] simulationTop1Names,
+                double[] simulationTop1Ms,
+                int[] performerBootstrapCounts,
+                int[] performerOwnerChanges,
+                int[] performerOwnerAttributeChanges,
+                int[] performerOwnerTagChanges,
+                int[] performerTickDrivenCounts,
+                int[] performerActiveSoundTrackingCounts,
+                int[] performerDestroyEventScanCounts,
                 int[] visibleEntities,
                 int[] primitiveInstances)
             {
@@ -690,6 +879,11 @@ namespace Ludots.Tests.Presentation
                 MaxRadiusCm = maxRadiusCm;
                 ExpectFullVisibility = expectFullVisibility;
                 QueuedExtraBuildings = queuedExtraBuildings;
+                InitializationFrames = initializationFrames;
+                InitializationTotalMs = initializationTotalMs;
+                InitializationMaxFrameMs = initializationMaxFrameMs;
+                QueueCountAfterInitialization = queueCountAfterInitialization;
+                InitializationStable = initializationStable;
                 BlacksmithEntities = blacksmithEntities;
                 RootPerformerCount = rootPerformerCount;
                 WorkshopLeftPerformerCount = workshopLeftPerformerCount;
@@ -722,6 +916,17 @@ namespace Ludots.Tests.Presentation
                 EmitMs = emitMs;
                 RequestFlushMs = requestFlushMs;
                 HudProjectionMs = hudProjectionMs;
+                PresentationTop1Names = presentationTop1Names;
+                PresentationTop1Ms = presentationTop1Ms;
+                SimulationTop1Names = simulationTop1Names;
+                SimulationTop1Ms = simulationTop1Ms;
+                PerformerBootstrapCounts = performerBootstrapCounts;
+                PerformerOwnerChanges = performerOwnerChanges;
+                PerformerOwnerAttributeChanges = performerOwnerAttributeChanges;
+                PerformerOwnerTagChanges = performerOwnerTagChanges;
+                PerformerTickDrivenCounts = performerTickDrivenCounts;
+                PerformerActiveSoundTrackingCounts = performerActiveSoundTrackingCounts;
+                PerformerDestroyEventScanCounts = performerDestroyEventScanCounts;
                 VisibleEntities = visibleEntities;
                 PrimitiveInstances = primitiveInstances;
             }
@@ -733,6 +938,11 @@ namespace Ludots.Tests.Presentation
             public float MaxRadiusCm { get; }
             public bool ExpectFullVisibility { get; }
             public int QueuedExtraBuildings { get; }
+            public int InitializationFrames { get; }
+            public double InitializationTotalMs { get; }
+            public double InitializationMaxFrameMs { get; }
+            public int QueueCountAfterInitialization { get; }
+            public bool InitializationStable { get; }
             public int BlacksmithEntities { get; }
             public int RootPerformerCount { get; }
             public int WorkshopLeftPerformerCount { get; }
@@ -765,6 +975,17 @@ namespace Ludots.Tests.Presentation
             public double[] EmitMs { get; }
             public double[] RequestFlushMs { get; }
             public double[] HudProjectionMs { get; }
+            public string[] PresentationTop1Names { get; }
+            public double[] PresentationTop1Ms { get; }
+            public string[] SimulationTop1Names { get; }
+            public double[] SimulationTop1Ms { get; }
+            public int[] PerformerBootstrapCounts { get; }
+            public int[] PerformerOwnerChanges { get; }
+            public int[] PerformerOwnerAttributeChanges { get; }
+            public int[] PerformerOwnerTagChanges { get; }
+            public int[] PerformerTickDrivenCounts { get; }
+            public int[] PerformerActiveSoundTrackingCounts { get; }
+            public int[] PerformerDestroyEventScanCounts { get; }
             public int[] VisibleEntities { get; }
             public int[] PrimitiveInstances { get; }
 
@@ -783,6 +1004,24 @@ namespace Ludots.Tests.Presentation
             public double AverageHudProjectionMs => Average(HudProjectionMs);
             public double P95HudProjectionMs => Percentile(HudProjectionMs, 0.95);
             public double MaxHudProjectionMs => Max(HudProjectionMs);
+            public string HottestPresentationSystemName => MostFrequentNonEmpty(PresentationTop1Names);
+            public double HottestPresentationSystemAverageMs => AverageForName(PresentationTop1Names, PresentationTop1Ms, HottestPresentationSystemName);
+            public string HottestSimulationSystemName => MostFrequentNonEmpty(SimulationTop1Names);
+            public double HottestSimulationSystemAverageMs => AverageForName(SimulationTop1Names, SimulationTop1Ms, HottestSimulationSystemName);
+            public double AveragePerformerBootstrapCount => Average(PerformerBootstrapCounts);
+            public int MaxPerformerBootstrapCount => Max(PerformerBootstrapCounts);
+            public double AveragePerformerOwnerChanges => Average(PerformerOwnerChanges);
+            public int MaxPerformerOwnerChanges => Max(PerformerOwnerChanges);
+            public double AveragePerformerOwnerAttributeChanges => Average(PerformerOwnerAttributeChanges);
+            public int MaxPerformerOwnerAttributeChanges => Max(PerformerOwnerAttributeChanges);
+            public double AveragePerformerOwnerTagChanges => Average(PerformerOwnerTagChanges);
+            public int MaxPerformerOwnerTagChanges => Max(PerformerOwnerTagChanges);
+            public double AveragePerformerTickDrivenCount => Average(PerformerTickDrivenCounts);
+            public int MaxPerformerTickDrivenCount => Max(PerformerTickDrivenCounts);
+            public double AveragePerformerActiveSoundTrackingCount => Average(PerformerActiveSoundTrackingCounts);
+            public int MaxPerformerActiveSoundTrackingCount => Max(PerformerActiveSoundTrackingCounts);
+            public double AveragePerformerDestroyEventScanCount => Average(PerformerDestroyEventScanCounts);
+            public int MaxPerformerDestroyEventScanCount => Max(PerformerDestroyEventScanCounts);
             public double AverageFps => AverageTickMs <= 0d ? 0d : 1000d / AverageTickMs;
 
             private static double Average(double[] values)
@@ -799,6 +1038,22 @@ namespace Ludots.Tests.Presentation
                 }
 
                 return sum / values.Length;
+            }
+
+            private static double Average(int[] values)
+            {
+                if (values.Length == 0)
+                {
+                    return 0d;
+                }
+
+                long sum = 0L;
+                for (int i = 0; i < values.Length; i++)
+                {
+                    sum += values[i];
+                }
+
+                return (double)sum / values.Length;
             }
 
             private static double Percentile(double[] values, double percentile)
@@ -829,23 +1084,7 @@ namespace Ludots.Tests.Presentation
                 return max;
             }
 
-            private static double Average(int[] values)
-            {
-                if (values.Length == 0)
-                {
-                    return 0d;
-                }
-
-                long sum = 0L;
-                for (int i = 0; i < values.Length; i++)
-                {
-                    sum += values[i];
-                }
-
-                return (double)sum / values.Length;
-            }
-
-            private static double Max(int[] values)
+            private static int Max(int[] values)
             {
                 int max = 0;
                 for (int i = 0; i < values.Length; i++)
@@ -857,6 +1096,60 @@ namespace Ludots.Tests.Presentation
                 }
 
                 return max;
+            }
+
+            private static string MostFrequentNonEmpty(string[] values)
+            {
+                string bestName = string.Empty;
+                int bestCount = 0;
+                for (int i = 0; i < values.Length; i++)
+                {
+                    string candidate = values[i];
+                    if (string.IsNullOrEmpty(candidate))
+                    {
+                        continue;
+                    }
+
+                    int count = 0;
+                    for (int j = 0; j < values.Length; j++)
+                    {
+                        if (values[j] == candidate)
+                        {
+                            count++;
+                        }
+                    }
+
+                    if (count > bestCount)
+                    {
+                        bestName = candidate;
+                        bestCount = count;
+                    }
+                }
+
+                return bestName;
+            }
+
+            private static double AverageForName(string[] names, double[] values, string targetName)
+            {
+                if (string.IsNullOrEmpty(targetName))
+                {
+                    return 0d;
+                }
+
+                double sum = 0d;
+                int count = 0;
+                for (int i = 0; i < names.Length && i < values.Length; i++)
+                {
+                    if (names[i] != targetName)
+                    {
+                        continue;
+                    }
+
+                    sum += values[i];
+                    count++;
+                }
+
+                return count == 0 ? 0d : sum / count;
             }
         }
 

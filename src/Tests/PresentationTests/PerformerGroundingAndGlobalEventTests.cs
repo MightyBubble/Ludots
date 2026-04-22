@@ -2,9 +2,13 @@ using System;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay;
+using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Platform.Abstractions;
@@ -290,6 +294,87 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(resolved.Position, Is.EqualTo(instance.WorldPosition));
             Assert.That(resolved.Scale, Is.EqualTo(instance.WorldScale));
+        }
+
+        [Test]
+        public void RuntimeCreate_GroundedStaticMesh_KeepsBootstrapAndEventDrivenStaticEmit()
+        {
+            using var world = World.Create();
+            var commands = new PerformerCommandBuffer();
+            var events = new PresentationEventStream();
+            var runtime = new PerformerEntityRuntime(world);
+            var stableIds = new PresentationStableIdAllocator();
+            var definitions = new PerformerDefinitionRegistry();
+            Entity owner = world.Create(new VisualTransform
+            {
+                Position = new Vector3(10f, 0f, 20f),
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+            });
+
+            int defId = definitions.Register("grounded.static.mesh", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 77,
+                            MaterialId = 11,
+                            RenderPath = VisualRenderPath.InstancedStaticMesh,
+                            Mobility = VisualMobility.Static,
+                            LocalOffset = new Vector3(2f, 0f, -3f),
+                            LocalScale = new Vector3(1.5f, 1f, 1.5f),
+                            Grounding = GroundingMode.SnapToGround,
+                            GroundingOffset = 0.25f,
+                            ScaleParamKey = -1,
+                            ColorParamKey = -1,
+                            MaterialParamKey = -1,
+                            AssetSwapParamKey = -1,
+                            VisibilityParamKey = -1,
+                        },
+                    },
+                ],
+            });
+
+            using var runtimeSystem = new PerformerRuntimeSystem(
+                world,
+                commands,
+                events,
+                new TransientMarkerBuffer(),
+                new PresentationRequestBuffer(),
+                runtime,
+                stableIds,
+                definitions);
+
+            Assert.That(commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = defId,
+                Source = owner,
+                AnchorKind = PresentationAnchorKind.Entity,
+            }), Is.True);
+
+            runtimeSystem.Update(0.016f);
+
+            Entity performer = Entity.Null;
+            world.Query(new QueryDescription().WithAll<PerformerState>(), (Entity entity, ref PerformerState state) =>
+            {
+                if (state.DefId == defId)
+                {
+                    performer = entity;
+                }
+            });
+
+            Assert.That(performer, Is.Not.EqualTo(Entity.Null));
+            Assert.That(world.Has<PerformerBootstrapPending>(performer), Is.True, "grounding/local transform still require one-shot bootstrap.");
+            Assert.That(world.Has<PerfStaticStableVisual>(performer), Is.True, "grounded static mesh should still use event-driven stable emit after bootstrap.");
+            Assert.That(world.Get<PerformerEmitCache>(performer).StaticDirty, Is.EqualTo((byte)1));
         }
 
         [Test]

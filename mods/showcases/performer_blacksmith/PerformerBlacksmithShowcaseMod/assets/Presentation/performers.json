@@ -21,6 +21,44 @@
     ]
   },
   {
+    "id": "blacksmith_mesh_benchmark_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "blacksmith_mesh_benchmark_entity" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "blacksmith_mesh_benchmark_ism",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "blacksmith_mesh_benchmark_entity" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_mesh_benchmark_ism",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.building.north.intact",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static"
+        }
+      }
+    ]
+  },
+  {
     "id": "blacksmith_workshop_base",
     "behaviors": [
       {

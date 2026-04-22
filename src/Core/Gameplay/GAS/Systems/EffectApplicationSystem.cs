@@ -257,19 +257,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                         else
                         {
-                            bool attachToActiveEffects = true;
-                            if (_templates != null && World.Has<EffectTemplateRef>(effectEntity))
-                            {
-                                int tplId3 = World.Get<EffectTemplateRef>(effectEntity).TemplateId;
-                                if (tplId3 > 0 && _templates.TryGetRef(tplId3, out int tplIdx3))
-                                {
-                                    ref readonly var tplData3 = ref _templates.GetRef(tplIdx3);
-                                    attachToActiveEffects = tplData3.PresetType == EffectPresetType.Buff;
-                                }
-                            }
-
                             bool attachRejectedByCapacity = false;
-                            if (attachToActiveEffects && World.IsAlive(context.Target))
+                            if (World.IsAlive(context.Target))
                             {
                                 if (World.Has<ActiveEffectContainer>(context.Target))
                                 {

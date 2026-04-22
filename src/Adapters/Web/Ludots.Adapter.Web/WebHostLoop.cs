@@ -53,7 +53,7 @@ namespace Ludots.Adapter.Web
                     viewController,
                     performers: performerInstances);
             }
-            engine.RegisterPresentationSystem(cullingSystem);
+            engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
             var renderCameraDebug = new RenderCameraDebugState();

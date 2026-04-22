@@ -1,4 +1,5 @@
 using System.Numerics;
+using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Presentation.Performers
 {
@@ -6,5 +7,11 @@ namespace Ludots.Core.Presentation.Performers
     {
         public int CachedVersion;
         public Vector3 LastEmitPosition;
+        public byte LastOwnerCullVisible;
+        public byte LastDefinitionVisible;
+        public byte StableVisualPresent;
+        public byte StaticDirty;
+        public byte RetainedDirty;
+        public LODLevel LastLod;
     }
 }

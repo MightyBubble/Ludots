@@ -8,12 +8,21 @@ namespace Ludots.Core.Presentation.Events
         public readonly Entity Owner;
         public readonly PresentationOwnerChangeKind Kind;
         public readonly int KeyId;
+        public readonly byte StateValue;
+
+        public bool TagActive => StateValue != 0;
 
         public PresentationOwnerChange(Entity owner, PresentationOwnerChangeKind kind, int keyId)
+            : this(owner, kind, keyId, stateValue: 0)
+        {
+        }
+
+        public PresentationOwnerChange(Entity owner, PresentationOwnerChangeKind kind, int keyId, byte stateValue)
         {
             Owner = owner;
             Kind = kind;
             KeyId = keyId;
+            StateValue = stateValue;
         }
     }
 

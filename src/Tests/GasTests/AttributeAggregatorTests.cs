@@ -187,6 +187,34 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public unsafe void NonAggregatingGameplayEffect_DoesNotModifyEffectiveCap()
+        {
+            int healthId = EnsureAttribute("Health");
+            AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
+
+            using var world = World.Create();
+            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            ref var attr = ref world.Get<AttributeBuffer>(entity);
+            attr.SetBase(healthId, 100f);
+            attr.SetCurrent(healthId, 70f);
+
+            var effect = world.Create(
+                new GameplayEffect { AggregatesModifiers = false },
+                new EffectModifiers());
+            ref var modifiers = ref world.Get<EffectModifiers>(effect);
+            modifiers.Add(healthId, ModifierOp.Add, 25f);
+
+            ref var container = ref world.Get<ActiveEffectContainer>(entity);
+            That(container.Add(effect), Is.True);
+
+            var aggregator = new AttributeAggregatorSystem(world);
+            aggregator.Update(0f);
+
+            That(attr.GetCurrent(healthId), Is.EqualTo(70f));
+            That(attr.GetBase(healthId), Is.EqualTo(100f));
+        }
+
+        [Test]
         public void InstantDamage_PreservesCurrentStateAfterAggregation()
         {
             int healthId = EnsureAttribute("Health");

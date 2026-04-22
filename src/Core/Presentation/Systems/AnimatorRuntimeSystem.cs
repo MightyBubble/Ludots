@@ -73,7 +73,7 @@ namespace Ludots.Core.Presentation.Systems
             if (_lastStructureVersion == _runtime.StructureVersion && _lastDefinitionVersion == _definitions.Version)
                 return;
             _candidates.Clear();
-            var query = new QueryDescription().WithAll<PerformerState, PerfHasAnimator>();
+            var query = new QueryDescription().WithAll<PerformerState>();
             World.Query(in query, (Entity entity, ref PerformerState state) =>
             {
                 if (_definitions.TryGet(state.DefId, out PerformerDefinition definition) && definition.HasAnimatorBehavior)
@@ -285,4 +285,3 @@ namespace Ludots.Core.Presentation.Systems
         }
     }
 }
-

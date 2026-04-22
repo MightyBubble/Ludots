@@ -11,7 +11,7 @@ namespace Ludots.Core.Presentation.Systems
     public sealed class PresentationEntityFinalizeDestroySystem : BaseSystem<World, float>
     {
         private readonly QueryDescription _query = new QueryDescription()
-            .WithAll<PresentationLifecycleState>();
+            .WithAll<PresentationDestroyPending, PresentationDestroyEventPublished>();
 
         public PresentationEntityFinalizeDestroySystem(World world)
             : base(world)
@@ -23,15 +23,8 @@ namespace Ludots.Core.Presentation.Systems
             var query = World.Query(in _query);
             foreach (var chunk in query)
             {
-                var states = chunk.GetArray<PresentationLifecycleState>();
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    ref var state = ref states[i];
-                    if (!state.PendingDestroy || !state.DestroyEventPublished)
-                    {
-                        continue;
-                    }
-
                     Entity entity = chunk.Entity(i);
                     if (World.IsAlive(entity))
                     {

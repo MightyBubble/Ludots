@@ -50,18 +50,14 @@ namespace Ludots.Core.Presentation.Systems
                         record.RenderPerformerEntity = Entity.Null;
                     }
 
-                    PresentationLifecycleState lifecycle = World.Has<PresentationLifecycleState>(record.Entity)
-                        ? World.Get<PresentationLifecycleState>(record.Entity)
-                        : default;
-                    lifecycle.PendingDestroy = true;
-                    lifecycle.DestroyEventPublished = false;
-                    if (World.Has<PresentationLifecycleState>(record.Entity))
+                    if (!World.Has<PresentationDestroyPending>(record.Entity))
                     {
-                        World.Set(record.Entity, lifecycle);
+                        World.Add(record.Entity, new PresentationDestroyPending());
                     }
-                    else
+
+                    if (World.Has<PresentationDestroyEventPublished>(record.Entity))
                     {
-                        World.Add(record.Entity, lifecycle);
+                        World.Remove<PresentationDestroyEventPublished>(record.Entity);
                     }
                 }
                 else

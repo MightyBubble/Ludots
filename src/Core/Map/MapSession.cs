@@ -108,18 +108,16 @@ namespace Ludots.Core.Map
                 {
                     if (world.Has<PresentationStableId>(toDestroy[i]))
                     {
-                        var lifecycle = world.Has<PresentationLifecycleState>(toDestroy[i])
-                            ? world.Get<PresentationLifecycleState>(toDestroy[i])
-                            : default;
-                        lifecycle.PendingDestroy = true;
-                        if (world.Has<PresentationLifecycleState>(toDestroy[i]))
+                        if (!world.Has<PresentationDestroyPending>(toDestroy[i]))
                         {
-                            world.Set(toDestroy[i], lifecycle);
+                            world.Add(toDestroy[i], new PresentationDestroyPending());
                         }
-                        else
+
+                        if (world.Has<PresentationDestroyEventPublished>(toDestroy[i]))
                         {
-                            world.Add(toDestroy[i], lifecycle);
+                            world.Remove<PresentationDestroyEventPublished>(toDestroy[i]);
                         }
+
                         continue;
                     }
 

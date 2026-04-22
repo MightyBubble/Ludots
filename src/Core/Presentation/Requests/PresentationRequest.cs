@@ -106,5 +106,35 @@ namespace Ludots.Core.Presentation.Requests
                 LOD = lod,
             };
         }
+
+        public static PresentationRequest RemoveGroundOverlay(Entity owner, int stableId)
+        {
+            return new PresentationRequest
+            {
+                Kind = PresentationRequestKind.RemoveGroundOverlay,
+                Owner = owner,
+                StableId = stableId,
+            };
+        }
+
+        public static PresentationRequest RemoveWorldHud(Entity owner, int stableId)
+        {
+            return new PresentationRequest
+            {
+                Kind = PresentationRequestKind.RemoveWorldHud,
+                Owner = owner,
+                StableId = stableId,
+            };
+        }
+
+        public static PresentationRequest RemoveRoadSpline(Entity owner, int stableId)
+        {
+            return new PresentationRequest
+            {
+                Kind = PresentationRequestKind.RemoveRoadSpline,
+                Owner = owner,
+                StableId = stableId,
+            };
+        }
     }
 }

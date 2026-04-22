@@ -5,11 +5,26 @@
     "components": {
       "Name": { "Value": "Blacksmith" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "AttributeBuffer": {
         "base": {
           "Durability": 100
         }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "blacksmith_mesh_benchmark_entity",
+    "components": {
+      "Name": { "Value": "BlacksmithMeshBenchmark" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {}
       },
       "GameplayTagContainer": {},
       "TagCountContainer": {}

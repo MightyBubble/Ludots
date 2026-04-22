@@ -60,6 +60,7 @@ namespace Ludots.Core.Config
             Register<BlackboardIntBuffer>("BlackboardIntBuffer");
             Register("AbilityExecAimSync", SetAbilityExecAimSync);
             Register<VisualTransform>("VisualTransform");
+            Register("PresentationStaticTransform", SetPresentationStaticTransform);
             Register("ManifestationObstacleIntent2D", SetManifestationObstacleIntent2D);
             Register("ManifestationObstaclePolygon2D", SetManifestationObstaclePolygon2D);
             Register("ManifestationMotion2D", SetManifestationMotion2D);
@@ -348,6 +349,14 @@ namespace Ludots.Core.Config
             entity.Add(new PreviousWorldPositionCm { Value = fix64Pos });
             entity.Add(VisualTransform.Default);
             entity.Add(new CullState { IsVisible = false, LOD = LODLevel.Culled });
+        }
+
+        private static void SetPresentationStaticTransform(Entity entity, JsonNode data)
+        {
+            entity.Add(new PresentationStaticTransform());
+            entity.Add(new PresentationStaticVisualPending());
+            entity.Add(new PresentationStaticHeightPending());
+            entity.Add(new PresentationStaticCullPending());
         }
 
         private static void SetAbilityFormSetRef(Entity entity, JsonNode data)

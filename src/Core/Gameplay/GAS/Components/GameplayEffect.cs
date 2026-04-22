@@ -18,6 +18,11 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
     public struct GameplayEffect
     {
+        private const byte CancelRequestedBit = 0x01;
+        private const int StateShift = 1;
+        private const byte StateMask = 0x0E;
+        private const byte AggregatesModifiersBit = 0x10;
+
         public EffectLifetimeKind LifetimeKind;
         public GasClockId ClockId;
         public int TotalTicks;
@@ -34,22 +39,38 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// </summary>
         public EffectState State
         {
-            readonly get => (EffectState)((Flags >> 1) & 0x07);
-            set => Flags = (byte)((Flags & 0xF1) | ((byte)value << 1));
+            readonly get => (EffectState)((Flags & StateMask) >> StateShift);
+            set => Flags = (byte)((Flags & ~StateMask) | ((byte)value << StateShift));
         }
 
-        public bool CancelRequested
+        public bool AggregatesModifiers
         {
-            readonly get => (Flags & 0x01) != 0;
+            readonly get => (Flags & AggregatesModifiersBit) != 0;
             set
             {
                 if (value)
                 {
-                    Flags |= 0x01;
+                    Flags |= AggregatesModifiersBit;
                 }
                 else
                 {
-                    Flags &= 0xFE;
+                    Flags &= unchecked((byte)~AggregatesModifiersBit);
+                }
+            }
+        }
+
+        public bool CancelRequested
+        {
+            readonly get => (Flags & CancelRequestedBit) != 0;
+            set
+            {
+                if (value)
+                {
+                    Flags |= CancelRequestedBit;
+                }
+                else
+                {
+                    Flags &= unchecked((byte)~CancelRequestedBit);
                 }
             }
         }

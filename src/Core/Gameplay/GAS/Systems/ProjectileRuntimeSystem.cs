@@ -48,18 +48,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     if (World.Has<PresentationStableId>(_toDestroy[i]))
                     {
-                        var lifecycle = World.Has<PresentationLifecycleState>(_toDestroy[i])
-                            ? World.Get<PresentationLifecycleState>(_toDestroy[i])
-                            : default;
-                        lifecycle.PendingDestroy = true;
-                        if (World.Has<PresentationLifecycleState>(_toDestroy[i]))
+                        if (!World.Has<PresentationDestroyPending>(_toDestroy[i]))
                         {
-                            World.Set(_toDestroy[i], lifecycle);
+                            World.Add(_toDestroy[i], new PresentationDestroyPending());
                         }
-                        else
+
+                        if (World.Has<PresentationDestroyEventPublished>(_toDestroy[i]))
                         {
-                            World.Add(_toDestroy[i], lifecycle);
+                            World.Remove<PresentationDestroyEventPublished>(_toDestroy[i]);
                         }
+
                         continue;
                     }
 

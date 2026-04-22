@@ -6,4 +6,9 @@ namespace Ludots.Platform.Abstractions
     {
         Vector2 WorldToScreen(Vector3 worldPosition);
     }
+
+    public interface IProjectionRevisionProvider
+    {
+        int ProjectionRevision { get; }
+    }
 }

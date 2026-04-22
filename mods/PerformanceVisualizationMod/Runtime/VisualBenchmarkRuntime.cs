@@ -420,21 +420,12 @@ namespace PerformanceVisualizationMod.Runtime
                     return;
                 }
 
-                if (engine.World.Has<PresentationLifecycleState>(entity))
+                if (engine.World.Has<PresentationDestroyPending>(entity))
                 {
-                    var lifecycle = engine.World.Get<PresentationLifecycleState>(entity);
-                    if (lifecycle.PendingDestroy)
-                    {
-                        return;
-                    }
+                    return;
+                }
 
-                    lifecycle.PendingDestroy = true;
-                    engine.World.Set(entity, lifecycle);
-                }
-                else
-                {
-                    engine.World.Add(entity, new PresentationLifecycleState { PendingDestroy = true });
-                }
+                engine.World.Add(entity, new PresentationDestroyPending());
                 marked++;
             });
 

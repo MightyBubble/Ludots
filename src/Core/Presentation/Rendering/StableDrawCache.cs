@@ -17,8 +17,10 @@ namespace Ludots.Core.Presentation.Rendering
         private int[] _frameTouched;
         private int _count;
         private int _frameStamp;
+        private int _contentRevision;
 
         public int Count => _count;
+        public int ContentRevision => _contentRevision;
 
         public StableDrawCache(int capacity = 131072)
         {
@@ -47,6 +49,11 @@ namespace Ludots.Core.Presentation.Rendering
         {
             if (_slotByStableId.TryGetValue(proxy.StableId, out int existing))
             {
+                if (!ProxyEquals(_entries[existing], proxy))
+                {
+                    _contentRevision++;
+                }
+
                 _entries[existing] = proxy;
                 _frameTouched[existing] = _frameStamp;
                 return;
@@ -57,6 +64,17 @@ namespace Ludots.Core.Presentation.Rendering
             _slotByStableId.Add(proxy.StableId, slot);
             _entries[slot] = proxy;
             _frameTouched[slot] = _frameStamp;
+            _contentRevision++;
+        }
+
+        public void AddNew(in PresentationVisualProxy proxy)
+        {
+            EnsureCapacity(_count + 1);
+            int slot = _count++;
+            _slotByStableId.Add(proxy.StableId, slot);
+            _entries[slot] = proxy;
+            _frameTouched[slot] = _frameStamp;
+            _contentRevision++;
         }
 
         public void Remove(int stableId)
@@ -76,8 +94,15 @@ namespace Ludots.Core.Presentation.Rendering
                 return false;
             }
 
+            if (_entries[slot].Position == newPosition)
+            {
+                _frameTouched[slot] = _frameStamp;
+                return true;
+            }
+
             _entries[slot].Position = newPosition;
             _frameTouched[slot] = _frameStamp;
+            _contentRevision++;
             return true;
         }
 
@@ -107,6 +132,7 @@ namespace Ludots.Core.Presentation.Rendering
             _slotByStableId.Clear();
             _count = 0;
             _frameStamp = 0;
+            _contentRevision = 0;
             Array.Clear(_frameTouched, 0, _frameTouched.Length);
         }
 
@@ -144,6 +170,16 @@ namespace Ludots.Core.Presentation.Rendering
             _entries[last] = default;
             _frameTouched[last] = 0;
             _count = last;
+            _contentRevision++;
+        }
+
+        private static bool ProxyEquals(in PresentationVisualProxy a, in PresentationVisualProxy b)
+        {
+            return a.ProxyKind == b.ProxyKind
+                && a.Payload.Equals(b.Payload)
+                && a.Mobility == b.Mobility
+                && a.Flags == b.Flags
+                && a.LOD == b.LOD;
         }
     }
 }

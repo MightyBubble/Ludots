@@ -900,9 +900,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(world.Has<PresentationLifecycleState>(entity), Is.True);
 
             events.Clear();
-            var state = world.Get<PresentationLifecycleState>(entity);
-            state.PendingDestroy = true;
-            world.Set(entity, state);
+            world.Add(entity, new PresentationDestroyPending());
 
             lifecycle.Update(0.016f);
 
@@ -1316,6 +1314,207 @@ namespace Ludots.Tests.Presentation
             Assert.That(snapshot.Position, Is.EqualTo(new Vector3(4f, 5f, 6f)));
             Assert.That(snapshot.Scale, Is.EqualTo(new Vector3(2f, 2f, 2f)));
             Assert.That(snapshot.LOD, Is.EqualTo(LODLevel.Medium));
+        }
+
+        [Test]
+        public void PresentationRequestFlushSystem_StableDrawCache_WritesSnapshotRevisionFromContentChanges()
+        {
+            using var world = World.Create();
+            var requests = new PresentationRequestBuffer();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
+            var stableDrawCache = new StableDrawCache();
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                stableDrawCache,
+                drawBuffer,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshotBuffer,
+                new PresentationVisualProxyBuffer(),
+                new SkinnedVisualBatchBuffer());
+
+            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                MeshAssetId = 10,
+                MaterialId = 20,
+                StableId = 9002,
+                TemplateId = 200,
+                Position = new Vector3(1f, 2f, 3f),
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                RenderPath = VisualRenderPath.InstancedStaticMesh,
+                Visibility = VisualVisibility.Visible,
+                LOD = LODLevel.High,
+            }));
+
+            flush.Update(0.016f);
+            int firstRevision = snapshotBuffer.Revision;
+            Assert.That(firstRevision, Is.GreaterThan(0));
+            Assert.That(drawBuffer.Count, Is.EqualTo(1));
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
+
+            flush.Update(0.016f);
+            Assert.That(snapshotBuffer.Revision, Is.EqualTo(firstRevision));
+            Assert.That(drawBuffer.Count, Is.EqualTo(1), "Stable visuals should stay projected when content revision is unchanged.");
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1), "Snapshot buffer must not be cleared on unchanged stable content.");
+
+            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                MeshAssetId = 10,
+                MaterialId = 20,
+                StableId = 9002,
+                TemplateId = 200,
+                Position = new Vector3(5f, 2f, 3f),
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                RenderPath = VisualRenderPath.InstancedStaticMesh,
+                Visibility = VisualVisibility.Visible,
+                LOD = LODLevel.High,
+            }));
+
+            flush.Update(0.016f);
+            Assert.That(snapshotBuffer.Revision, Is.GreaterThan(firstRevision));
+        }
+
+        [Test]
+        public void PerformerEmitSystem_StableCache_RemovesVisual_WhenOwnerBecomesCulled()
+        {
+            using var world = World.Create();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
+            var requests = new PresentationRequestBuffer();
+            var definitions = new PerformerDefinitionRegistry();
+            int definitionId = RegisterStaticVisualDefinition(
+                definitions,
+                "stable.cull.removal",
+                assetId: 31,
+                materialId: 41,
+                renderPath: VisualRenderPath.InstancedStaticMesh);
+            var instances = new PerformerEntityRuntime(world);
+            var stableDrawCache = new StableDrawCache();
+            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity performer = instances.Create(
+                definitionId,
+                owner,
+                0,
+                PresentationAnchorKind.WorldPosition,
+                new Vector3(3f, 4f, 5f),
+                404,
+                Entity.Null,
+                default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+
+            using var emit = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                null!,
+                null!,
+                null,
+                stableDrawCache);
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                stableDrawCache,
+                drawBuffer,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshotBuffer,
+                new PresentationVisualProxyBuffer(),
+                new SkinnedVisualBatchBuffer());
+
+            emit.Update(0.016f);
+            flush.Update(0.016f);
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
+            Assert.That(drawBuffer.Count, Is.EqualTo(1));
+
+            ref CullState ownerCull = ref world.Get<CullState>(owner);
+            ownerCull.IsVisible = false;
+            ownerCull.LOD = LODLevel.Culled;
+            instances.SyncCullVisibility();
+
+            emit.Update(0.016f);
+            flush.Update(0.016f);
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(0));
+            Assert.That(drawBuffer.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void PerformerEmitSystem_StableVisual_DoesNotReemit_WhenInputsStayUnchanged()
+        {
+            using var world = World.Create();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
+            var requests = new PresentationRequestBuffer();
+            var definitions = new PerformerDefinitionRegistry();
+            int definitionId = RegisterStaticVisualDefinition(
+                definitions,
+                "stable.no.reemit",
+                assetId: 61,
+                materialId: 71,
+                renderPath: VisualRenderPath.InstancedStaticMesh);
+            var instances = new PerformerEntityRuntime(world);
+            var stableDrawCache = new StableDrawCache();
+            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity performer = instances.Create(
+                definitionId,
+                owner,
+                0,
+                PresentationAnchorKind.WorldPosition,
+                new Vector3(6f, 7f, 8f),
+                505,
+                Entity.Null,
+                default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+
+            using var emit = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                null!,
+                null!,
+                null,
+                stableDrawCache);
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                stableDrawCache,
+                drawBuffer,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshotBuffer,
+                new PresentationVisualProxyBuffer(),
+                new SkinnedVisualBatchBuffer());
+
+            emit.Update(0.016f);
+            Assert.That(requests.Count, Is.EqualTo(1));
+            flush.Update(0.016f);
+
+            emit.Update(0.016f);
+            Assert.That(requests.Count, Is.EqualTo(0), "Unchanged stable visuals should not enqueue fresh visual proxies every tick.");
+            flush.Update(0.016f);
+
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
+            Assert.That(drawBuffer.Count, Is.EqualTo(1));
         }
 
         private static int RegisterStaticVisualDefinition(

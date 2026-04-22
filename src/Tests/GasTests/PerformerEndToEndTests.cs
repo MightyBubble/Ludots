@@ -449,8 +449,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(CountActiveInstancesInScope(scopeId), Is.GreaterThan(0));
             Assert.That(CountHudBars(), Is.GreaterThan(0));
 
-            ref var lifecycle = ref _world.Get<PresentationLifecycleState>(entity);
-            lifecycle.PendingDestroy = true;
+            _world.Add(entity, new PresentationDestroyPending());
 
             TickPipeline(0.016f);
 

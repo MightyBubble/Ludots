@@ -130,7 +130,7 @@ namespace Ludots.Adapter.Raylib
                     loadedChunks: null,
                     performers: performerInstances,
                     timingDiagnostics: presentationTiming);
-                engine.RegisterPresentationSystem(cullingSystem);
+                engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
                 engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
                 var renderCameraDebug = new RenderCameraDebugState();

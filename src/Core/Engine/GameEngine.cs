@@ -230,6 +230,22 @@ namespace Ludots.Core.Engine
             system.Initialize();
         }
 
+        public void InsertPresentationSystemBefore<TAnchor>(ISystem<float> system)
+            where TAnchor : class
+        {
+            for (int i = 0; i < _presentationSystems.Count; i++)
+            {
+                if (_presentationSystems[i] is TAnchor)
+                {
+                    _presentationSystems.Insert(i, system);
+                    system.Initialize();
+                    return;
+                }
+            }
+
+            RegisterPresentationSystem(system);
+        }
+
         public ScriptContext CreateContext()
         {
             var ctx = new ScriptContext();
@@ -657,7 +673,8 @@ namespace Ludots.Core.Engine
                 performerRuntime,
                 presentationStableIds,
                 performerDefinitions,
-                performerAnimatorStates);
+                performerAnimatorStates,
+                stableDrawCache);
             var performerBehaviorSystem = new PerformerBehaviorSystem(
                 World,
                 performerRuntime,
@@ -718,6 +735,12 @@ namespace Ludots.Core.Engine
                     AssetKind.GroundOverlay => ResolveGroundOverlayShapeId(key),
                     _ => 0,
                 }).Load(ConfigCatalog, ConfigConflictReport);
+            MapLoader.SetPresentationRuntime(
+                presentationStableIds,
+                performerRuntime,
+                performerDefinitions,
+                _spatialPartition,
+                WorldSizeSpec);
 
             System.Diagnostics.Debug.Assert(
                 meshAssets.TryGetDescriptor(meshAssets.GetId(WellKnownMeshKeys.Cube), out var _cubeDbg) && _cubeDbg.Type == MeshAssetType.Primitive,
@@ -1025,12 +1048,15 @@ namespace Ludots.Core.Engine
                 new RuntimeEntitySpawnSystem(
                     World,
                     runtimeEntitySpawnQueue,
-                    MapLoader.TemplateRegistry,
-                    MapLoader.EntityTemplateKeys,
-                    presentationStableIds,
-                    effectRequestQueue,
-                    performerRuntime,
-                    performerDefinitions),
+                MapLoader.TemplateRegistry,
+                MapLoader.EntityTemplateKeys,
+                presentationStableIds,
+                effectRequestQueue,
+                performerRuntime,
+                performerDefinitions,
+                presentationEventStream,
+                _spatialPartition,
+                WorldSizeSpec),
                 SystemGroup.EffectProcessing);
             const string manifestationObstacleBridgeSystemTypeName = "Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem";
             var manifestationObstacleBridgeType = Type.GetType($"{manifestationObstacleBridgeSystemTypeName}, Ludots.Physics2D", throwOnError: false);
@@ -1064,7 +1090,10 @@ namespace Ludots.Core.Engine
             // Changed-bit components must remain readable until presentation systems consume them,
             // so the actual clear runs at the tail of the presentation pipeline.
             RegisterSystem(presentationBridgeSystem, SystemGroup.ClearPresentationFlags);
-            _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(_systemGroups, OnFixedStepCompleted);
+            _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(
+                _systemGroups,
+                OnFixedStepCompleted,
+                presentationTimingDiagnostics);
 
             var responseChainUiState = new ResponseChainUiState();
             SetService(CoreServiceKeys.ResponseChainUiState, responseChainUiState);
@@ -2157,6 +2186,11 @@ namespace Ludots.Core.Engine
             {
                 long simulationStart = System.Diagnostics.Stopwatch.GetTimestamp();
                 int tickBefore = GameSession.CurrentTick;
+                if (presentationTiming?.SystemBreakdownEnabled == true)
+                {
+                    presentationTiming.BeginSimulationSystemBreakdown();
+                }
+
                 Pacemaker.Update(dt, _cooperativeSimulation, SimulationBudgetMsPerFrame, SimulationMaxSlicesPerLogicFrame);
                 presentationTiming?.ObserveSimulation((System.Diagnostics.Stopwatch.GetTimestamp() - simulationStart) * 1000d / System.Diagnostics.Stopwatch.Frequency);
 
@@ -2196,18 +2230,29 @@ namespace Ludots.Core.Engine
 
         private void Update(float dt)
         {
-            _primitiveDrawBuffer?.Clear();
-            _visualSnapshotBuffer?.Clear();
-            _visualProxyBuffer?.Clear();
-            _skinnedVisualBatchBuffer?.Clear();
             _presentationRequestBuffer?.Clear();
             _soundRequestBuffer?.Clear();
-            _groundOverlayBuffer?.Clear();
-            _roadSplineBuffer?.Clear();
-            _worldHudBuffer?.Clear();
+            _groundOverlayBuffer?.ClearTransient();
+            _roadSplineBuffer?.ClearTransient();
+            _worldHudBuffer?.ClearTransient();
+            var timingDiagnostics = GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+            bool captureSystemBreakdown = timingDiagnostics?.SystemBreakdownEnabled == true;
+            if (captureSystemBreakdown)
+            {
+                timingDiagnostics!.BeginPresentationSystemBreakdown();
+            }
+
             for (int i = 0; i < _presentationSystems.Count; i++)
             {
+                long systemStart = captureSystemBreakdown
+                    ? System.Diagnostics.Stopwatch.GetTimestamp()
+                    : 0L;
                 _presentationSystems[i].Update(dt);
+                if (captureSystemBreakdown)
+                {
+                    double elapsedMs = (System.Diagnostics.Stopwatch.GetTimestamp() - systemStart) * 1000d / System.Diagnostics.Stopwatch.Frequency;
+                    timingDiagnostics!.ObservePresentationSystem(_presentationSystems[i].GetType().Name, elapsedMs);
+                }
             }
             // Clear GAS presentation events AFTER all presentation systems have consumed them
             _gasPresentationEvents?.Clear();

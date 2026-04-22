@@ -104,6 +104,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
 
+                    if (world.Has<GameplayEffect>(effectEntity) &&
+                        !world.Get<GameplayEffect>(effectEntity).AggregatesModifiers)
+                    {
+                        continue;
+                    }
+
                     ref readonly var modifiers = ref world.Get<EffectModifiers>(effectEntity);
                     touchedMask |= BuildTouchedMask(in modifiers);
                     EffectModifierOps.ApplyAggregated(in modifiers, ref attrBuffer);

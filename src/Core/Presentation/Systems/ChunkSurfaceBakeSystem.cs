@@ -202,12 +202,14 @@ namespace Ludots.Core.Presentation.Systems
                 World.Add(entity, lodProfile);
             }
 
-            if (World.Has<PresentationLifecycleState>(entity))
+            if (World.Has<PresentationDestroyPending>(entity))
             {
-                PresentationLifecycleState lifecycle = World.Get<PresentationLifecycleState>(entity);
-                lifecycle.PendingDestroy = false;
-                lifecycle.DestroyEventPublished = false;
-                World.Set(entity, lifecycle);
+                World.Remove<PresentationDestroyPending>(entity);
+            }
+
+            if (World.Has<PresentationDestroyEventPublished>(entity))
+            {
+                World.Remove<PresentationDestroyEventPublished>(entity);
             }
         }
 

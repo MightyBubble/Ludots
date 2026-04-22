@@ -39,18 +39,16 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
                 {
                     if (World.Has<PresentationStableId>(_pendingDestroy[i]))
                     {
-                        var lifecycle = World.Has<PresentationLifecycleState>(_pendingDestroy[i])
-                            ? World.Get<PresentationLifecycleState>(_pendingDestroy[i])
-                            : default;
-                        lifecycle.PendingDestroy = true;
-                        if (World.Has<PresentationLifecycleState>(_pendingDestroy[i]))
+                        if (!World.Has<PresentationDestroyPending>(_pendingDestroy[i]))
                         {
-                            World.Set(_pendingDestroy[i], lifecycle);
+                            World.Add(_pendingDestroy[i], new PresentationDestroyPending());
                         }
-                        else
+
+                        if (World.Has<PresentationDestroyEventPublished>(_pendingDestroy[i]))
                         {
-                            World.Add(_pendingDestroy[i], lifecycle);
+                            World.Remove<PresentationDestroyEventPublished>(_pendingDestroy[i]);
                         }
+
                         continue;
                     }
 

@@ -11,6 +11,13 @@ namespace Ludots.Client.Raylib.Rendering
 {
     public sealed class RaylibIsmRenderBridge
     {
+        private enum BucketCacheOwner : byte
+        {
+            None = 0,
+            PersistentSync = 1,
+            BenchmarkScene = 2,
+        }
+
         public sealed class Bucket
         {
             public Bucket(in StaticMeshLaneKey lane)
@@ -21,16 +28,34 @@ namespace Ludots.Client.Raylib.Rendering
             public StaticMeshLaneKey Lane { get; }
 
             public List<PrimitiveDrawItem> Items { get; } = new();
+
+            public bool HasVisibleItems => Items.Count > 0;
+        }
+
+        private readonly struct BucketSlot
+        {
+            public BucketSlot(Bucket bucket, int itemIndex)
+            {
+                Bucket = bucket;
+                ItemIndex = itemIndex;
+            }
+
+            public Bucket Bucket { get; }
+
+            public int ItemIndex { get; }
         }
 
         private readonly StaticMeshAdapterSyncPlanner _planner = new();
         private readonly Dictionary<StaticMeshLaneKey, Bucket> _bucketMap = new();
         private readonly List<Bucket> _activeBuckets = new();
+        private readonly Dictionary<int, BucketSlot> _bucketSlotsByStableId = new();
         private readonly Dictionary<int, Vector4> _materialColors = new();
         private RaylibBenchmarkScene _benchmarkScene;
         private RaylibBenchmarkStats _lastStats;
         private int _benchmarkActiveInstanceCount;
+        private int _lastPersistentSnapshotRevision = -1;
         private double _lastBenchmarkBucketRebuildMs;
+        private BucketCacheOwner _bucketOwner;
 
         public StaticMeshAdapterSyncPlanner Planner => _planner;
 
@@ -42,8 +67,31 @@ namespace Ludots.Client.Raylib.Rendering
 
         public void SyncPersistentLanes(PrimitiveDrawBuffer? snapshot)
         {
+            if (snapshot == null)
+            {
+                _planner.Sync(snapshot);
+                ClearBucketCache();
+                _lastPersistentSnapshotRevision = -1;
+                return;
+            }
+
+            bool requiresFullRebuild = _bucketOwner != BucketCacheOwner.PersistentSync;
+            int snapshotRevision = snapshot.Revision;
+            if (!requiresFullRebuild && snapshotRevision == _lastPersistentSnapshotRevision)
+            {
+                return;
+            }
+
             _planner.Sync(snapshot);
-            RebuildBuckets(_planner.ActiveBindings.Values);
+            _lastPersistentSnapshotRevision = snapshotRevision;
+            if (requiresFullRebuild)
+            {
+                RebuildBuckets(_planner.ActiveBindings.Values);
+                _bucketOwner = BucketCacheOwner.PersistentSync;
+                return;
+            }
+
+            ApplySyncOperations(_planner.Operations);
         }
 
         public void SetBenchmarkScene(in RaylibBenchmarkScene scene)
@@ -63,8 +111,7 @@ namespace Ludots.Client.Raylib.Rendering
             else
             {
                 _benchmarkActiveInstanceCount = 0;
-                _activeBuckets.Clear();
-                _bucketMap.Clear();
+                ClearBucketCache();
             }
 
             if (!scene.Enabled)
@@ -103,13 +150,13 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (!_benchmarkScene.Enabled)
             {
-            _activeBuckets.Clear();
-            _bucketMap.Clear();
-            _materialColors.Clear();
-            _lastBenchmarkBucketRebuildMs = 0d;
-            _lastStats = default;
-            return _lastStats;
-        }
+                ClearBucketCache();
+                _materialColors.Clear();
+                _lastBenchmarkBucketRebuildMs = 0d;
+                _lastStats = default;
+                return _lastStats;
+            }
+
             _lastStats = new RaylibBenchmarkStats(
                 active: true,
                 instanceCount: _benchmarkActiveInstanceCount,
@@ -137,26 +184,132 @@ namespace Ludots.Client.Raylib.Rendering
                 cpuDrawMs: drawMs);
         }
 
+        private void ClearBucketCache()
+        {
+            _activeBuckets.Clear();
+            _bucketMap.Clear();
+            _bucketSlotsByStableId.Clear();
+            _bucketOwner = BucketCacheOwner.None;
+            _lastPersistentSnapshotRevision = -1;
+        }
+
         private void RebuildBuckets(IEnumerable<StaticMeshAdapterBindingState> bindings)
         {
             _activeBuckets.Clear();
             _bucketMap.Clear();
+            _bucketSlotsByStableId.Clear();
+            _bucketSlotsByStableId.EnsureCapacity(_planner.ActiveBindings.Count);
 
             foreach (StaticMeshAdapterBindingState binding in bindings)
             {
-                if (!binding.IsVisible)
-                {
-                    continue;
-                }
+                AddVisibleBinding(binding);
+            }
+        }
 
-                if (!_bucketMap.TryGetValue(binding.Lane, out Bucket? bucket))
+        private void ApplySyncOperations(IReadOnlyList<StaticMeshAdapterSyncOp> operations)
+        {
+            for (int i = 0; i < operations.Count; i++)
+            {
+                StaticMeshAdapterSyncOp operation = operations[i];
+                switch (operation.Kind)
                 {
-                    bucket = new Bucket(binding.Lane);
-                    _bucketMap.Add(binding.Lane, bucket);
-                    _activeBuckets.Add(bucket);
+                    case StaticMeshAdapterSyncOpKind.Create:
+                        AddVisibleBinding(operation.Binding);
+                        break;
+                    case StaticMeshAdapterSyncOpKind.Update:
+                        UpdateVisibleBinding(operation.Binding);
+                        break;
+                    case StaticMeshAdapterSyncOpKind.Remove:
+                        RemoveVisibleBinding(operation.Binding.StableId);
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Unknown static mesh adapter sync op kind '{operation.Kind}'.");
                 }
+            }
+        }
 
-                bucket.Items.Add(binding.Item);
+        private void AddVisibleBinding(in StaticMeshAdapterBindingState binding)
+        {
+            if (!binding.IsVisible)
+            {
+                return;
+            }
+
+            Bucket bucket = GetOrCreateBucket(binding.Lane);
+            int itemIndex = bucket.Items.Count;
+            bucket.Items.Add(binding.Item);
+            _bucketSlotsByStableId[binding.StableId] = new BucketSlot(bucket, itemIndex);
+        }
+
+        private void UpdateVisibleBinding(in StaticMeshAdapterBindingState binding)
+        {
+            if (!_bucketSlotsByStableId.TryGetValue(binding.StableId, out BucketSlot slot))
+            {
+                AddVisibleBinding(binding);
+                return;
+            }
+
+            if (!binding.IsVisible)
+            {
+                RemoveVisibleBinding(binding.StableId);
+                return;
+            }
+
+            if (!slot.Bucket.Lane.Equals(binding.Lane))
+            {
+                RemoveVisibleBinding(binding.StableId);
+                AddVisibleBinding(binding);
+                return;
+            }
+
+            slot.Bucket.Items[slot.ItemIndex] = binding.Item;
+        }
+
+        private void RemoveVisibleBinding(int stableId)
+        {
+            if (!_bucketSlotsByStableId.TryGetValue(stableId, out BucketSlot slot))
+            {
+                return;
+            }
+
+            Bucket bucket = slot.Bucket;
+            int lastIndex = bucket.Items.Count - 1;
+            if (slot.ItemIndex != lastIndex)
+            {
+                PrimitiveDrawItem moved = bucket.Items[lastIndex];
+                bucket.Items[slot.ItemIndex] = moved;
+                _bucketSlotsByStableId[moved.StableId] = new BucketSlot(bucket, slot.ItemIndex);
+            }
+
+            bucket.Items.RemoveAt(lastIndex);
+            _bucketSlotsByStableId.Remove(stableId);
+            if (!bucket.HasVisibleItems)
+            {
+                RemoveBucket(bucket);
+            }
+        }
+
+        private Bucket GetOrCreateBucket(in StaticMeshLaneKey lane)
+        {
+            if (_bucketMap.TryGetValue(lane, out Bucket? bucket))
+            {
+                return bucket;
+            }
+
+            bucket = new Bucket(lane);
+            _bucketMap.Add(lane, bucket);
+            _activeBuckets.Add(bucket);
+            return bucket;
+        }
+
+        private void RemoveBucket(Bucket bucket)
+        {
+            _bucketMap.Remove(bucket.Lane);
+            int index = _activeBuckets.IndexOf(bucket);
+            if (index >= 0)
+            {
+                _activeBuckets.RemoveAt(index);
             }
         }
 
@@ -165,8 +318,11 @@ namespace Ludots.Client.Raylib.Rendering
             long rebuildStart = Stopwatch.GetTimestamp();
             _activeBuckets.Clear();
             _bucketMap.Clear();
+            _bucketSlotsByStableId.Clear();
             ReadOnlySpan<RaylibBenchmarkInstance> instances = scene.Instances.Span;
             int activeCount = Math.Min(_benchmarkActiveInstanceCount, instances.Length);
+            _bucketSlotsByStableId.EnsureCapacity(activeCount);
+            _bucketOwner = BucketCacheOwner.BenchmarkScene;
             for (int i = 0; i < activeCount; i++)
             {
                 ref readonly RaylibBenchmarkInstance instance = ref instances[i];
@@ -195,6 +351,7 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 bucket.Items.Add(item);
+                _bucketSlotsByStableId[item.StableId] = new BucketSlot(bucket, bucket.Items.Count - 1);
             }
 
             _lastBenchmarkBucketRebuildMs = (Stopwatch.GetTimestamp() - rebuildStart) * 1000.0 / Stopwatch.Frequency;

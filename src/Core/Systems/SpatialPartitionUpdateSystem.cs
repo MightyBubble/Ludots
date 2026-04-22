@@ -5,6 +5,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Systems
@@ -13,7 +14,9 @@ namespace Ludots.Core.Systems
     {
         private ISpatialPartitionWorld _partition;
         private WorldSizeSpec _spec;
-        private readonly QueryDescription _trackedQuery = new QueryDescription().WithAll<WorldPositionCm, SpatialCellRef>();
+        private readonly QueryDescription _trackedQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, SpatialCellRef>()
+            .WithNone<PresentationStaticTransform>();
         private readonly QueryDescription _untrackedQuery = new QueryDescription().WithAll<WorldPositionCm>().WithNone<SpatialCellRef>();
 
         private readonly CommandBuffer _commandBuffer = new();

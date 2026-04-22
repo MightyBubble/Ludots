@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Presentation.Hud;
 
 namespace Ludots.Core.Engine.Pacemaker
 {
@@ -24,15 +25,20 @@ namespace Ludots.Core.Engine.Pacemaker
 
         private readonly Dictionary<SystemGroup, List<ISystem<float>>> _systemGroups;
         private readonly Action<float> _onStepCompleted;
+        private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
         private bool _stepActive;
         private int _phaseIndex;
         private int _systemIndex;
 
-        public PhaseOrderedCooperativeSimulation(Dictionary<SystemGroup, List<ISystem<float>>> systemGroups, Action<float> onStepCompleted = null)
+        public PhaseOrderedCooperativeSimulation(
+            Dictionary<SystemGroup, List<ISystem<float>>> systemGroups,
+            Action<float> onStepCompleted = null,
+            PresentationTimingDiagnostics? timingDiagnostics = null)
         {
             _systemGroups = systemGroups;
             _onStepCompleted = onStepCompleted;
+            _timingDiagnostics = timingDiagnostics;
         }
 
         public bool Step(float fixedDt, int timeBudgetMs)
@@ -69,12 +75,16 @@ namespace Ludots.Core.Engine.Pacemaker
                         }
 
                         var sys = systems[i];
+                        long systemStart = _timingDiagnostics?.SystemBreakdownEnabled == true
+                            ? System.Diagnostics.Stopwatch.GetTimestamp()
+                            : 0L;
                         if (sys is ITimeSlicedSystem timeSliced)
                         {
                             int remainingMs = (int)((budgetTicks - elapsed) * 1000 / System.Diagnostics.Stopwatch.Frequency);
                             if (remainingMs <= 0) remainingMs = 1;
                             if (!timeSliced.UpdateSlice(fixedDt, remainingMs))
                             {
+                                ObserveSystemTiming(sys, systemStart);
                                 _systemIndex = i;
                                 return false;
                             }
@@ -83,6 +93,7 @@ namespace Ludots.Core.Engine.Pacemaker
                         {
                             sys.Update(fixedDt);
                         }
+                        ObserveSystemTiming(sys, systemStart);
 
                         _systemIndex = i + 1;
                     }
@@ -97,6 +108,17 @@ namespace Ludots.Core.Engine.Pacemaker
             _systemIndex = 0;
             _onStepCompleted?.Invoke(fixedDt);
             return true;
+        }
+
+        private void ObserveSystemTiming(ISystem<float> system, long startTimestamp)
+        {
+            if (_timingDiagnostics?.SystemBreakdownEnabled != true)
+            {
+                return;
+            }
+
+            double elapsedMs = (System.Diagnostics.Stopwatch.GetTimestamp() - startTimestamp) * 1000d / System.Diagnostics.Stopwatch.Frequency;
+            _timingDiagnostics.ObserveSimulationSystem(system.GetType().Name, elapsedMs);
         }
 
         public void Reset()

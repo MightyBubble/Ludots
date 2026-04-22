@@ -8,5 +8,8 @@ namespace Ludots.Core.Presentation.Requests
         WorldHud = 4,
         RoadSpline = 5,
         SurfaceSource = 6,
+        RemoveGroundOverlay = 7,
+        RemoveWorldHud = 8,
+        RemoveRoadSpline = 9,
     }
 }

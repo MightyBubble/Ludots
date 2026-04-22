@@ -24,8 +24,9 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<PresentationStableId>()
             .WithNone<PresentationLifecycleState>();
 
-        private readonly QueryDescription _aliveQuery = new QueryDescription()
-            .WithAll<PresentationStableId, PresentationLifecycleState>();
+        private readonly QueryDescription _pendingDestroyQuery = new QueryDescription()
+            .WithAll<PresentationStableId, PresentationDestroyPending>()
+            .WithNone<PresentationDestroyEventPublished>();
 
         public PresentationEntityLifecycleSystem(
             World world,
@@ -75,26 +76,20 @@ namespace Ludots.Core.Presentation.Systems
                             throw new InvalidOperationException("PresentationEventStream is full while publishing ProjectileSpawned.");
                         }
                     }
-
-                    World.Add(entity, new PresentationLifecycleState { Spawned = true });
                 }
             }
+
+            World.Add(_spawnedQuery, new PresentationLifecycleState { Spawned = true });
         }
 
         private void EmitDestroyed()
         {
-            var query = World.Query(in _aliveQuery);
+            var query = World.Query(in _pendingDestroyQuery);
             foreach (var chunk in query)
             {
                 var stableIds = chunk.GetArray<PresentationStableId>();
-                var states = chunk.GetArray<PresentationLifecycleState>();
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    if (!states[i].PendingDestroy)
-                    {
-                        continue;
-                    }
-
                     Entity entity = chunk.Entity(i);
                     int templateKeyId = World.Has<EntityTemplateKeyCm>(entity)
                         ? World.Get<EntityTemplateKeyCm>(entity).TemplateKeyId
@@ -106,10 +101,10 @@ namespace Ludots.Core.Presentation.Systems
                     }
 
                     TryDestroyBootstrappedPerformers(entity, stableIds[i].Value, templateKeyId);
-
-                    states[i].DestroyEventPublished = true;
                 }
             }
+
+            World.Add<PresentationDestroyEventPublished>(in _pendingDestroyQuery);
         }
 
         private bool TryPublish(PresentationEventKind kind, Entity entity, int stableId, int templateKeyId)

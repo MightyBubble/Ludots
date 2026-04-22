@@ -6,12 +6,14 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Presentation;
 using Arch.Core.Extensions;
 using NUnit.Framework;
 
@@ -96,6 +98,87 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(instances.ResolveFloat(performer, 100), Is.EqualTo(0.5f).Within(0.001f));
             Assert.That(instances.ResolveFloat(performer, 101), Is.EqualTo(1f).Within(0.001f));
+        }
+
+        [Test]
+        public void OwnerAttributeChangeBuffer_OnlyUpdatesMatchingAttributeWork()
+        {
+            using var world = World.Create();
+            var attributes = default(AttributeBuffer);
+            attributes.SetBase(7, 100f);
+            attributes.SetCurrent(7, 25f);
+            attributes.SetBase(8, 200f);
+            attributes.SetCurrent(8, 100f);
+            Entity owner = world.Create(attributes);
+
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register("behavior.owner.attr.fastpath", new PerformerDefinition
+            {
+                Bindings =
+                [
+                    new PerformerParamBinding { ParamKey = 200, Value = ValueRef.FromAttributeRatio(7) },
+                    new PerformerParamBinding { ParamKey = 201, Value = ValueRef.FromAttributeRatio(8) },
+                ],
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AttributeBinding,
+                        ActiveByDefault = true,
+                        AttributeBinding = new AttributeBindingConfig
+                        {
+                            AttributeId = 7,
+                            TargetParamKey = 210,
+                            Mode = ValueSourceKind.AttributeRatio,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.AttributeBinding,
+                        ActiveByDefault = true,
+                        AttributeBinding = new AttributeBindingConfig
+                        {
+                            AttributeId = 8,
+                            TargetParamKey = 211,
+                            Mode = ValueSourceKind.AttributeRatio,
+                        },
+                    },
+                ],
+            });
+
+            Assert.That(definitions.TryGet(defId, out PerformerDefinition definition), Is.True);
+            Entity performer = instances.CreateHierarchy(definitions, defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7103, Entity.Null, definition);
+            world.Add(performer, new PerformerBootstrapPending());
+
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
+            using var system = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(),
+                ownerChanges,
+                new SoundRequestBuffer());
+
+            system.Update(0.016f);
+            Assert.That(instances.ResolveFloat(performer, 200), Is.EqualTo(0.25f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(performer, 201), Is.EqualTo(0.5f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(performer, 210), Is.EqualTo(0.25f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(performer, 211), Is.EqualTo(0.5f).Within(0.001f));
+
+            ref AttributeBuffer updated = ref world.Get<AttributeBuffer>(owner);
+            updated.SetCurrent(7, 80f);
+            updated.SetCurrent(8, 150f);
+            Assert.That(ownerChanges.TryAdd(new PresentationOwnerChange(owner, PresentationOwnerChangeKind.Attribute, 8)), Is.True);
+
+            system.Update(0.016f);
+
+            Assert.That(instances.ResolveFloat(performer, 200), Is.EqualTo(0.25f).Within(0.001f), "attribute 7 binding must stay untouched when only attribute 8 changed.");
+            Assert.That(instances.ResolveFloat(performer, 201), Is.EqualTo(0.75f).Within(0.001f));
+            Assert.That(instances.ResolveFloat(performer, 210), Is.EqualTo(0.25f).Within(0.001f), "attribute behavior for attr 7 must not be rescanned.");
+            Assert.That(instances.ResolveFloat(performer, 211), Is.EqualTo(0.75f).Within(0.001f));
         }
 
         [Test]
@@ -230,6 +313,200 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void OwnerTagChangeBuffer_OnlyUpdatesMatchingTagBinding()
+        {
+            using var world = World.Create();
+            int workingTagId = TagRegistry.Register("working.fastpath");
+            int alertTagId = TagRegistry.Register("alert.fastpath");
+            Entity owner = world.Create(default(GameplayTagContainer));
+
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register("behavior.owner.tag.fastpath", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.TagBinding,
+                        ActiveByDefault = true,
+                        TagBinding = new TagBindingConfig
+                        {
+                            TagId = workingTagId,
+                            TargetParamKey = 310,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.TagBinding,
+                        ActiveByDefault = true,
+                        TagBinding = new TagBindingConfig
+                        {
+                            TagId = alertTagId,
+                            TargetParamKey = 311,
+                        },
+                    },
+                ],
+            });
+
+            Assert.That(definitions.TryGet(defId, out PerformerDefinition definition), Is.True);
+            Entity performer = instances.CreateHierarchy(definitions, defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7104, Entity.Null, definition);
+            world.Add(performer, new PerformerBootstrapPending());
+
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
+            using var system = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(),
+                ownerChanges,
+                new SoundRequestBuffer());
+
+            system.Update(0.016f);
+            Assert.That(instances.ResolveInt(performer, 310), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(performer, 311), Is.EqualTo(0));
+
+            ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(owner);
+            tags.AddTag(workingTagId);
+            tags.AddTag(alertTagId);
+            Assert.That(ownerChanges.TryAdd(new PresentationOwnerChange(owner, PresentationOwnerChangeKind.Tag, alertTagId, stateValue: 1)), Is.True);
+
+            system.Update(0.016f);
+
+            Assert.That(instances.ResolveInt(performer, 310), Is.EqualTo(0), "tag binding for unrelated tag must stay untouched.");
+            Assert.That(instances.ResolveInt(performer, 311), Is.EqualTo(1));
+
+            tags.RemoveTag(alertTagId);
+            Assert.That(ownerChanges.TryAdd(new PresentationOwnerChange(owner, PresentationOwnerChangeKind.Tag, alertTagId, stateValue: 0)), Is.True);
+
+            system.Update(0.016f);
+
+            Assert.That(instances.ResolveInt(performer, 310), Is.EqualTo(0));
+            Assert.That(instances.ResolveInt(performer, 311), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TickBehaviorMarkers_TrackActiveBehaviorMask()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register("behavior.tick.markers", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Sound,
+                        ActiveByDefault = false,
+                        Sound = new SoundConfig { SoundAssetId = 99, Loop = true, Volume = 1f },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Spline,
+                        ActiveByDefault = false,
+                        Spline = new SplineConfig { Usage = SplineUsage.Patrol, ProgressParamKey = 100, SpeedParamKey = 101, Loop = true },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 2,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig { Target = AttachmentTarget.Parent },
+                    },
+                ],
+            });
+
+            Assert.That(definitions.TryGet(defId, out PerformerDefinition definition), Is.True);
+            Entity performer = instances.CreateHierarchy(definitions, defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 9001, Entity.Null, definition);
+
+            Assert.That(world.Has<PerfHasAttachment>(performer), Is.True);
+            Assert.That(world.Has<PerfHasSound>(performer), Is.False);
+            Assert.That(world.Has<PerfHasSpline>(performer), Is.False);
+
+            var runtime = new PerformerRuntimeSystem(
+                world,
+                new PerformerCommandBuffer(8),
+                new PresentationEventStream(8),
+                new TransientMarkerBuffer(),
+                new PresentationRequestBuffer(),
+                instances,
+                new PresentationStableIdAllocator(),
+                definitions);
+
+            var commands = new PerformerCommandBuffer(8);
+            commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.ActivateBehavior,
+                PerformerEntity = performer,
+                TargetBehaviorSlot = 0,
+            });
+            commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.ActivateBehavior,
+                PerformerEntity = performer,
+                TargetBehaviorSlot = 1,
+            });
+
+            using var system = new PerformerRuntimeSystem(
+                world,
+                commands,
+                new PresentationEventStream(8),
+                new TransientMarkerBuffer(),
+                new PresentationRequestBuffer(),
+                instances,
+                new PresentationStableIdAllocator(),
+                definitions);
+
+            system.Update(0.016f);
+
+            Assert.That(world.Has<PerfHasAttachment>(performer), Is.True);
+            Assert.That(world.Has<PerfHasSound>(performer), Is.True);
+            Assert.That(world.Has<PerfHasSpline>(performer), Is.True);
+
+            var deactivateCommands = new PerformerCommandBuffer(8);
+            deactivateCommands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.DeactivateBehavior,
+                PerformerEntity = performer,
+                TargetBehaviorSlot = 0,
+            });
+            deactivateCommands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.DeactivateBehavior,
+                PerformerEntity = performer,
+                TargetBehaviorSlot = 1,
+            });
+            deactivateCommands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.DeactivateBehavior,
+                PerformerEntity = performer,
+                TargetBehaviorSlot = 2,
+            });
+
+            using var deactivateSystem = new PerformerRuntimeSystem(
+                world,
+                deactivateCommands,
+                new PresentationEventStream(8),
+                new TransientMarkerBuffer(),
+                new PresentationRequestBuffer(),
+                instances,
+                new PresentationStableIdAllocator(),
+                definitions);
+
+            deactivateSystem.Update(0.016f);
+
+            Assert.That(world.Has<PerfHasAttachment>(performer), Is.False);
+            Assert.That(world.Has<PerfHasSound>(performer), Is.False);
+            Assert.That(world.Has<PerfHasSpline>(performer), Is.False);
+        }
+
+        [Test]
         public void Animator_ReadsBlackboardAndWritesRuntimeState()
         {
             using var world = World.Create();
@@ -297,7 +574,7 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             Entity owner = world.Create();
 
-            int defId = definitions.Register("behavior.attachment", new PerformerDefinition
+            var definition = new PerformerDefinition
             {
                 Behaviors =
                 [
@@ -316,10 +593,11 @@ namespace Ludots.Tests.Presentation
                         },
                     },
                 ],
-            });
+            };
+            int defId = definitions.Register("behavior.attachment", definition);
 
-            Entity parentPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7100, Entity.Null, default);
-            Entity childPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7101, parentPerformer, default);
+            Entity parentPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7100, Entity.Null, definition);
+            Entity childPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7101, parentPerformer, definition);
             world.Get<PerformerState>(childPerformer).BehaviorActiveMask = 1u;
             world.Get<PerformerState>(parentPerformer).StableId = 7100;
 
@@ -355,7 +633,7 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             Entity owner = world.Create();
 
-            int defId = definitions.Register("behavior.attachment.parent", new PerformerDefinition
+            var definition = new PerformerDefinition
             {
                 Behaviors =
                 [
@@ -373,10 +651,11 @@ namespace Ludots.Tests.Presentation
                         },
                     },
                 ],
-            });
+            };
+            int defId = definitions.Register("behavior.attachment.parent", definition);
 
-            Entity parentPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7200, Entity.Null, default);
-            Entity childPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7201, parentPerformer, default);
+            Entity parentPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7200, Entity.Null, definition);
+            Entity childPerformer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7201, parentPerformer, definition);
             world.Get<PerformerState>(childPerformer).BehaviorActiveMask = 1u;
             ref var parentPos = ref world.Get<PerformerWorldPosition>(parentPerformer);
             parentPos.Value = new Vector3(10f, 4f, 6f);

@@ -269,7 +269,7 @@ namespace Ludots.Adapter.UE5
                 engine.SpatialQueries,
                 viewController,
                 performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime));
-            engine.RegisterPresentationSystem(cullingSystem);
+            engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
             // 5c. 可视化调试系统（可选，UE5 侧通常不使用，但保持与 Raylib 对称）

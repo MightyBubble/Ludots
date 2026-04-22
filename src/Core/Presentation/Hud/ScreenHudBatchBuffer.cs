@@ -19,6 +19,7 @@ namespace Ludots.Core.Presentation.Hud
         public int DroppedTotal { get; private set; }
         public int BarCount => _barCount;
         public int TextCount => _textCount;
+        public int ContentRevision { get; private set; }
 
         public ScreenHudBatchBuffer(int capacity = 65536)
         {
@@ -77,6 +78,7 @@ namespace Ludots.Core.Presentation.Hud
 
             _count++;
             _flattenedDirty = true;
+            ContentRevision++;
             return true;
         }
 
@@ -92,6 +94,7 @@ namespace Ludots.Core.Presentation.Hud
             _bars[_barCount++] = item;
             _count++;
             _flattenedDirty = true;
+            ContentRevision++;
             return true;
         }
 
@@ -107,6 +110,7 @@ namespace Ludots.Core.Presentation.Hud
             _texts[_textCount++] = item;
             _count++;
             _flattenedDirty = true;
+            ContentRevision++;
             return true;
         }
 
@@ -131,6 +135,7 @@ namespace Ludots.Core.Presentation.Hud
             _count = 0;
             DroppedSinceClear = 0;
             _flattenedDirty = false;
+            ContentRevision++;
         }
 
         private void RebuildFlattened()

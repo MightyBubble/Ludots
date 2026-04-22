@@ -502,6 +502,32 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PerformerEntityRuntime_SyncCullVisibility_ChangedOwners_OnlyTouchesTargetOwnerHierarchy()
+        {
+            using var world = World.Create();
+            Entity ownerA = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity ownerB = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PerformerEntityRuntime(world);
+
+            Entity ownerARoot = instances.Create(1, ownerA, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 711, Entity.Null, default);
+            Entity ownerAChild = instances.Create(2, ownerA, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 712, ownerARoot, default);
+            Entity ownerBRoot = instances.Create(3, ownerB, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 713, Entity.Null, default);
+
+            instances.SyncCullVisibility();
+
+            world.Get<CullState>(ownerA).IsVisible = false;
+            world.Get<CullState>(ownerA).LOD = LODLevel.Culled;
+            instances.SyncCullVisibility([ownerA]);
+
+            Assert.That(world.Get<PerformerCullState>(ownerARoot).OwnerCullVisible, Is.False);
+            Assert.That(world.Get<PerformerCullState>(ownerARoot).LOD, Is.EqualTo(LODLevel.Culled));
+            Assert.That(world.Get<PerformerCullState>(ownerAChild).OwnerCullVisible, Is.False);
+            Assert.That(world.Get<PerformerCullState>(ownerAChild).LOD, Is.EqualTo(LODLevel.Culled));
+            Assert.That(world.Get<PerformerCullState>(ownerBRoot).OwnerCullVisible, Is.True);
+            Assert.That(world.Get<PerformerCullState>(ownerBRoot).LOD, Is.EqualTo(LODLevel.High));
+        }
+
+        [Test]
         public void PerformerBehaviorSystem_OwnerCulled_StillUpdatesDirtySyncState()
         {
             using var world = World.Create();

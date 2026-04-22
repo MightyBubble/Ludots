@@ -22,6 +22,8 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly PerformerAnimatorStateBuffer? _animatorStates;
+        private readonly StableDrawCache? _stableDrawCache;
+        private int _lastCullSyncStructureVersion = -1;
 
         public PerformerRuntimeSystem(
             World world,
@@ -32,7 +34,8 @@ namespace Ludots.Core.Presentation.Systems
             PerformerEntityRuntime runtime,
             PresentationStableIdAllocator stableIds,
             PerformerDefinitionRegistry definitions,
-            PerformerAnimatorStateBuffer? animatorStates = null)
+            PerformerAnimatorStateBuffer? animatorStates = null,
+            StableDrawCache? stableDrawCache = null)
             : base(world)
         {
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
@@ -43,10 +46,12 @@ namespace Ludots.Core.Presentation.Systems
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _animatorStates = animatorStates;
+            _stableDrawCache = stableDrawCache;
+            _runtime.BindDefinitions(_definitions);
         }
         public override void Update(in float dt)
         {
-            _runtime.ReleaseDeadEntityAnchors(EmitDestroyedEvent);
+            ReleaseDestroyedOwnerAnchors();
 
             var cmdSpan = _commands.GetSpan();
             for (int i = 0; i < cmdSpan.Length; i++)
@@ -83,7 +88,13 @@ namespace Ludots.Core.Presentation.Systems
                         if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity) && cmd.TargetBehaviorSlot is >= 0 and < 32)
                         {
                             ref PerformerState state = ref World.Get<PerformerState>(cmd.PerformerEntity);
-                            state.BehaviorActiveMask |= 1u << cmd.TargetBehaviorSlot;
+                            if (_definitions.TryGet(state.DefId, out PerformerDefinition definition))
+                            {
+                                if (_runtime.SetBehaviorActive(cmd.PerformerEntity, definition, cmd.TargetBehaviorSlot, active: true))
+                                {
+                                    MarkHierarchyForBootstrap(cmd.PerformerEntity);
+                                }
+                            }
                         }
                         break;
 
@@ -91,7 +102,13 @@ namespace Ludots.Core.Presentation.Systems
                         if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity) && cmd.TargetBehaviorSlot is >= 0 and < 32)
                         {
                             ref PerformerState state = ref World.Get<PerformerState>(cmd.PerformerEntity);
-                            state.BehaviorActiveMask &= ~(1u << cmd.TargetBehaviorSlot);
+                            if (_definitions.TryGet(state.DefId, out PerformerDefinition definition))
+                            {
+                                if (_runtime.SetBehaviorActive(cmd.PerformerEntity, definition, cmd.TargetBehaviorSlot, active: false))
+                                {
+                                    MarkHierarchyForBootstrap(cmd.PerformerEntity);
+                                }
+                            }
                         }
                         break;
                     case PerformerCommandKind.InitializeTransform:
@@ -101,8 +118,62 @@ namespace Ludots.Core.Presentation.Systems
             }
             _commands.Clear();
 
-            _runtime.SyncCullVisibility();
+            int structureVersion = _runtime.StructureVersion;
+            if (_lastCullSyncStructureVersion != structureVersion)
+            {
+                _runtime.SyncCullVisibility();
+                _lastCullSyncStructureVersion = structureVersion;
+            }
+
             _markers.TickAndRequest(_requests, dt, World);
+        }
+
+        private void ReleaseDestroyedOwnerAnchors()
+        {
+            ReadOnlySpan<PresentationEvent> events = _events.GetSpan();
+            for (int i = 0; i < events.Length; i++)
+            {
+                ref readonly PresentationEvent evt = ref events[i];
+                if (evt.Kind != PresentationEventKind.EntityDestroyed)
+                {
+                    continue;
+                }
+
+                DestroyPerformersOwnedBy(evt.Source);
+            }
+        }
+
+        private void DestroyPerformersOwnedBy(Entity owner)
+        {
+            if (!_runtime.TryGetActiveByOwner(owner, out Entity single, out System.Collections.Generic.List<Entity>? many))
+            {
+                return;
+            }
+
+            if (single != Entity.Null)
+            {
+                if (World.IsAlive(single) && World.Has<PerformerState>(single))
+                {
+                    _runtime.Destroy(single, EmitDestroyedEvent);
+                }
+
+                return;
+            }
+
+            if (many == null || many.Count == 0)
+            {
+                return;
+            }
+
+            Entity[] owned = many.ToArray();
+            for (int i = 0; i < owned.Length; i++)
+            {
+                Entity performer = owned[i];
+                if (World.IsAlive(performer) && World.Has<PerformerState>(performer))
+                {
+                    _runtime.Destroy(performer, EmitDestroyedEvent);
+                }
+            }
         }
         private void HandleInitializeTransform(in PerformerCommand cmd)
         {
@@ -216,6 +287,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private void EmitDestroyedEvent(Entity performer, PerformerState state)
         {
+            RemoveStableVisualCacheIfPresent(performer, in state);
             _animatorStates?.Clear(performer);
 
             if (!_events.TryAdd(new PresentationEvent
@@ -230,6 +302,30 @@ namespace Ludots.Core.Presentation.Systems
                 }))
             {
                 throw new InvalidOperationException("PresentationEventStream is full while publishing PerformerDestroyed.");
+            }
+        }
+
+        private void RemoveStableVisualCacheIfPresent(Entity performer, in PerformerState state)
+        {
+            if (_stableDrawCache == null ||
+                !World.IsAlive(performer) ||
+                !World.Has<PerformerEmitCache>(performer) ||
+                World.Get<PerformerEmitCache>(performer).StableVisualPresent == 0 ||
+                !_definitions.TryGet(state.DefId, out PerformerDefinition definition))
+            {
+                return;
+            }
+
+            int[] behaviorIndices = definition.CacheableAssetBehaviorIndices;
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < behaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndices[i]];
+                _stableDrawCache.Remove(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+                    state.StableId,
+                    slot.SlotIndex,
+                    slot.AssetBinding.AssetKind,
+                    state.DefId));
             }
         }
 

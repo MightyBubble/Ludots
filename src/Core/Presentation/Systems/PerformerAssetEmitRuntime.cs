@@ -15,7 +15,6 @@ namespace Ludots.Core.Presentation.Systems
     {
         private readonly World _world;
         private readonly PerformerEntityRuntime _runtime;
-        private readonly PerformerDefinitionRegistry _definitions;
         private readonly PresentationRequestBuffer _requests;
         private readonly Dictionary<string, object> _globals;
         private readonly PerformerAnimatorStateBuffer _animatorStates;
@@ -25,7 +24,6 @@ namespace Ludots.Core.Presentation.Systems
         public PerformerAssetEmitRuntime(
             World world,
             PerformerEntityRuntime runtime,
-            PerformerDefinitionRegistry definitions,
             PresentationRequestBuffer requests,
             Dictionary<string, object> globals,
             PerformerAnimatorStateBuffer animatorStates,
@@ -33,20 +31,28 @@ namespace Ludots.Core.Presentation.Systems
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _globals = globals ?? new Dictionary<string, object>();
             _animatorStates = animatorStates;
             _soundRequests = soundRequests;
         }
 
-        public void Emit(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod)
+        public void Emit(
+            Entity entity,
+            in PerformerState state,
+            in PerformerDefinition definition,
+            int slotIndex,
+            in AssetBindingConfig asset,
+            LODLevel lod,
+            Vector3 performerWorldPosition,
+            Quaternion performerWorldRotation,
+            Vector3 performerWorldScale)
         {
-            Vector3 position = ResolvePosition(entity, in state, in definition);
+            Vector3 position = ResolvePosition(in state, in definition, performerWorldPosition);
             float alpha = ResolveAlpha(in state, in definition);
             if (lod == LODLevel.Culled || !ResolveAssetVisibility(entity, in asset))
             {
-                EmitHiddenSnapshotIfVisual(entity, definitionId, in state, in definition, slotIndex, in asset, lod, position, alpha);
+                EmitHiddenSnapshotIfVisual(entity, in state, in definition, slotIndex, in asset, lod, position, performerWorldRotation, performerWorldScale, alpha);
                 return;
             }
 
@@ -56,7 +62,7 @@ namespace Ludots.Core.Presentation.Systems
                 case AssetKind.SkinnedMesh:
                 case AssetKind.Decal:
                 case AssetKind.VFX:
-                    EmitVisualAsset(entity, definitionId, in state, in definition, slotIndex, in asset, lod, position, alpha);
+                    EmitVisualAsset(entity, in state, in definition, slotIndex, in asset, lod, position, performerWorldRotation, performerWorldScale, alpha);
                     return;
 
                 case AssetKind.Sound:
@@ -64,19 +70,19 @@ namespace Ludots.Core.Presentation.Systems
                     return;
 
                 case AssetKind.Spline:
-                    EmitSplineAsset(entity, definitionId, in state, in definition, slotIndex, in asset, lod, position, alpha);
+                    EmitSplineAsset(entity, in state, in definition, slotIndex, in asset, lod, position, performerWorldRotation, performerWorldScale, alpha);
                     return;
 
                 case AssetKind.WorldHud:
-                    EmitWorldHudAsset(entity, definitionId, in state, in definition, in asset, lod, position, alpha);
+                    EmitWorldHudAsset(entity, state.DefId, in state, in definition, in asset, lod, position, performerWorldScale, alpha);
                     return;
 
                 case AssetKind.WorldText:
-                    EmitWorldTextAsset(entity, definitionId, in state, in definition, in asset, lod, position, alpha);
+                    EmitWorldTextAsset(entity, state.DefId, in state, in definition, in asset, lod, position, performerWorldScale, alpha);
                     return;
 
                 case AssetKind.GroundOverlay:
-                    EmitGroundOverlayAsset(entity, definitionId, in state, in definition, slotIndex, in asset, lod, position, alpha);
+                    EmitGroundOverlayAsset(entity, state.DefId, in state, in definition, slotIndex, in asset, lod, position, performerWorldRotation, performerWorldScale, alpha);
                     return;
 
                 default:
@@ -84,60 +90,143 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private void EmitVisualAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        public bool EmitStaticStableVisualDirect(
+            Entity entity,
+            in PerformerState state,
+            in PerformerDefinition definition,
+            LODLevel lod,
+            Vector3 performerWorldPosition,
+            Quaternion performerWorldRotation,
+            Vector3 performerWorldScale,
+            StableDrawCache stableDrawCache,
+            bool addOnly)
         {
-            VisualRenderPath renderPath = ResolveRenderPath(in asset);
-            var proxy = new PresentationVisualProxy
+            if (stableDrawCache == null)
             {
-                ProxyKind = PresentationVisualProxyKind.Performer,
-                MeshAssetId = ResolveAssetId(entity, in asset),
-                Position = position,
-                Rotation = NormalizeOrIdentity(GetWorldRotation(entity)),
-                Scale = ResolveScale(entity, in state, in asset),
-                Color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha),
-                StableId = ResolveStableId(state.StableId, slotIndex, asset.AssetKind, definitionId),
-                MaterialId = ResolveMaterialId(entity, in asset),
-                TemplateId = definitionId,
-                AnimationProfileId = ResolveAnimationProfileId(definitionId),
-                RenderPath = renderPath,
-                Mobility = asset.Mobility,
-                Flags = VisualRuntimeFlags.Visible,
-                Animator = ResolveAnimator(entity, renderPath),
-                AnimationOverlay = ResolveAnimationOverlay(entity, renderPath),
-                Visibility = lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible,
-                LOD = lod,
-            };
-            _requests.Add(PresentationRequest.FromVisualProxy(state.OwnerEntity, proxy));
+                throw new ArgumentNullException(nameof(stableDrawCache));
+            }
+
+            int[] assetBehaviorIndices = definition.AssetBehaviorIndices;
+            if (assetBehaviorIndices.Length == 0)
+            {
+                return false;
+            }
+
+            bool emitted = false;
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            Vector3 position = ResolvePosition(in state, in definition, performerWorldPosition);
+            for (int i = 0; i < assetBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
+                if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                {
+                    continue;
+                }
+
+                ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
+                if (!ResolveAssetVisibility(entity, in asset))
+                {
+                    stableDrawCache.Remove(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId));
+                    continue;
+                }
+
+                VisualRenderPath renderPath = ResolveRenderPath(in asset);
+                Quaternion rotation = NormalizeOrIdentity(performerWorldRotation);
+                Vector3 scale = ResolveScale(entity, in asset, performerWorldScale);
+                Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), ResolveAlpha(in state, in definition));
+                PresentationVisualProxy proxy = new PresentationVisualProxy
+                {
+                    ProxyKind = PresentationVisualProxyKind.Performer,
+                    MeshAssetId = ResolveAssetId(entity, in asset),
+                    Position = position,
+                    Rotation = rotation,
+                    Scale = scale,
+                    Color = color,
+                    StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId),
+                    MaterialId = ResolveMaterialId(entity, in asset),
+                    TemplateId = state.DefId,
+                    AnimationProfileId = definition.AnimationProfileId,
+                    RenderPath = renderPath,
+                    Mobility = asset.Mobility,
+                    Flags = VisualRuntimeFlags.Visible,
+                    Animator = ResolveAnimator(entity, renderPath),
+                    AnimationOverlay = default,
+                    Visibility = lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible,
+                    LOD = lod,
+                };
+                if (addOnly)
+                {
+                    stableDrawCache.AddNew(proxy);
+                }
+                else
+                {
+                    stableDrawCache.Upsert(proxy);
+                }
+                emitted = true;
+            }
+
+            return emitted;
         }
 
-        private void EmitHiddenSnapshotIfVisual(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        private void EmitVisualAsset(
+            Entity entity,
+            in PerformerState state,
+            in PerformerDefinition definition,
+            int slotIndex,
+            in AssetBindingConfig asset,
+            LODLevel lod,
+            Vector3 position,
+            Quaternion performerWorldRotation,
+            Vector3 performerWorldScale,
+            float alpha)
+        {
+            _requests.Add(PresentationRequest.FromVisualProxy(
+                state.OwnerEntity,
+                BuildVisualProxy(
+                    entity,
+                    in state,
+                    in definition,
+                    slotIndex,
+                    in asset,
+                    lod,
+                    position,
+                    performerWorldRotation,
+                    performerWorldScale,
+                    alpha,
+                    lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Visible)));
+        }
+
+        private void EmitHiddenSnapshotIfVisual(
+            Entity entity,
+            in PerformerState state,
+            in PerformerDefinition definition,
+            int slotIndex,
+            in AssetBindingConfig asset,
+            LODLevel lod,
+            Vector3 position,
+            Quaternion performerWorldRotation,
+            Vector3 performerWorldScale,
+            float alpha)
         {
             if (asset.AssetKind is not (AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX))
             {
                 return;
             }
 
-            VisualRenderPath renderPath = ResolveRenderPath(in asset);
-            _requests.Add(PresentationRequest.FromVisualProxy(state.OwnerEntity, new PresentationVisualProxy
-            {
-                ProxyKind = PresentationVisualProxyKind.Performer,
-                MeshAssetId = ResolveAssetId(entity, in asset),
-                Position = position,
-                Rotation = NormalizeOrIdentity(GetWorldRotation(entity)),
-                Scale = ResolveScale(entity, in state, in asset),
-                Color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha),
-                StableId = ResolveStableId(state.StableId, slotIndex, asset.AssetKind, definitionId),
-                MaterialId = ResolveMaterialId(entity, in asset),
-                TemplateId = definitionId,
-                AnimationProfileId = ResolveAnimationProfileId(definitionId),
-                RenderPath = renderPath,
-                Mobility = asset.Mobility,
-                Flags = VisualRuntimeFlags.Visible,
-                Animator = ResolveAnimator(entity, renderPath),
-                AnimationOverlay = ResolveAnimationOverlay(entity, renderPath),
-                Visibility = lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Hidden,
-                LOD = lod,
-            }));
+            _requests.Add(PresentationRequest.FromVisualProxy(
+                state.OwnerEntity,
+                BuildVisualProxy(
+                    entity,
+                    in state,
+                    in definition,
+                    slotIndex,
+                    in asset,
+                    lod,
+                    position,
+                    performerWorldRotation,
+                    performerWorldScale,
+                    alpha,
+                    lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Hidden)));
         }
 
         private void EmitSoundAsset(in PerformerState state, int slotIndex, in AssetBindingConfig asset, Vector3 position)
@@ -159,20 +248,30 @@ namespace Ludots.Core.Presentation.Systems
             });
         }
 
-        private void EmitSplineAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        private void EmitSplineAsset(
+            Entity entity,
+            in PerformerState state,
+            in PerformerDefinition definition,
+            int slotIndex,
+            in AssetBindingConfig asset,
+            LODLevel lod,
+            Vector3 position,
+            Quaternion performerWorldRotation,
+            Vector3 performerWorldScale,
+            float alpha)
         {
             float width = asset.ScaleParamKey >= 0
                 ? _runtime.ResolveFloat(entity, asset.ScaleParamKey, 1f)
-                : MathF.Max(ResolveScale(entity, in state, in asset).X, 0.001f);
+                : MathF.Max(ResolveScale(entity, in asset, performerWorldScale).X, 0.001f);
             Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
             Vector3 p0 = position;
-            Vector3 p3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), NormalizeOrIdentity(GetWorldRotation(entity)));
+            Vector3 p3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), NormalizeOrIdentity(performerWorldRotation));
             Vector3 p1 = Vector3.Lerp(p0, p3, 0.33f);
             Vector3 p2 = Vector3.Lerp(p0, p3, 0.66f);
 
             _requests.Add(PresentationRequest.FromRoadSpline(state.OwnerEntity, new RoadSplineRequest
             {
-                StableId = ResolveStableId(state.StableId, slotIndex, asset.AssetKind, definitionId),
+                StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),
                 P0 = p0,
                 P1 = p1,
                 P2 = p2,
@@ -185,7 +284,7 @@ namespace Ludots.Core.Presentation.Systems
             }, lod));
         }
 
-        private void EmitWorldHudAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        private void EmitWorldHudAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, Vector3 performerWorldScale, float alpha)
         {
             if (TryGetRenderDebugState(out var debug) && !debug.DrawWorldHudBars)
             {
@@ -197,7 +296,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Vector3 scale = ResolveScale(entity, in state, in asset);
+            Vector3 scale = ResolveScale(entity, in asset, performerWorldScale);
             Vector4 foreground = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
             Vector4 background = new Vector4(0.2f, 0.2f, 0.2f, foreground.W);
             float value = asset.MaterialParamKey >= 0 ? _runtime.ResolveFloat(entity, asset.MaterialParamKey, 1f) : 1f;
@@ -218,7 +317,7 @@ namespace Ludots.Core.Presentation.Systems
             }, phaseResult.LOD));
         }
 
-        private void EmitWorldTextAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        private void EmitWorldTextAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, in AssetBindingConfig asset, LODLevel lod, Vector3 position, Vector3 performerWorldScale, float alpha)
         {
             if (TryGetRenderDebugState(out var debug) && !debug.DrawWorldHudText)
             {
@@ -260,9 +359,20 @@ namespace Ludots.Core.Presentation.Systems
             }, phaseResult.LOD));
         }
 
-        private void EmitGroundOverlayAsset(Entity entity, int definitionId, in PerformerState state, in PerformerDefinition definition, int slotIndex, in AssetBindingConfig asset, LODLevel lod, Vector3 position, float alpha)
+        private void EmitGroundOverlayAsset(
+            Entity entity,
+            int definitionId,
+            in PerformerState state,
+            in PerformerDefinition definition,
+            int slotIndex,
+            in AssetBindingConfig asset,
+            LODLevel lod,
+            Vector3 position,
+            Quaternion performerWorldRotation,
+            Vector3 performerWorldScale,
+            float alpha)
         {
-            Vector3 scale = ResolveScale(entity, in state, in asset);
+            Vector3 scale = ResolveScale(entity, in asset, performerWorldScale);
             float radius = MathF.Max(scale.X, 0.001f);
             float innerRadius = Math.Clamp(scale.Y, 0f, radius);
             float length = MathF.Max(scale.X, 0.001f);
@@ -272,11 +382,12 @@ namespace Ludots.Core.Presentation.Systems
 
             _requests.Add(PresentationRequest.FromGroundOverlay(state.OwnerEntity, new GroundOverlayItem
             {
+                StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, definitionId),
                 Shape = shape,
                 Center = position,
                 Radius = radius,
                 InnerRadius = shape == GroundOverlayShape.Ring ? innerRadius : 0f,
-                Rotation = ResolveYaw(GetWorldRotation(entity)),
+                Rotation = ResolveYaw(performerWorldRotation),
                 Length = shape == GroundOverlayShape.Line ? length : 0f,
                 Width = shape == GroundOverlayShape.Line ? width : 0f,
                 FillColor = color,
@@ -311,9 +422,9 @@ namespace Ludots.Core.Presentation.Systems
                 : asset.MaterialId;
         }
 
-        private Vector3 ResolveScale(Entity entity, in PerformerState state, in AssetBindingConfig asset)
+        private Vector3 ResolveScale(Entity entity, in AssetBindingConfig asset, Vector3 performerWorldScale)
         {
-            Vector3 scale = GetWorldScale(entity);
+            Vector3 scale = performerWorldScale;
             scale = scale == Vector3.Zero ? Vector3.One : scale;
             if (asset.ScaleParamKey >= 0)
                 scale *= _runtime.ResolveFloat(entity, asset.ScaleParamKey, 1f);
@@ -341,25 +452,6 @@ namespace Ludots.Core.Presentation.Systems
             return _animatorStates.GetOverlay(entity);
         }
 
-        private int ResolveAnimationProfileId(int definitionId)
-        {
-            if (!_definitions.TryGet(definitionId, out PerformerDefinition definition))
-            {
-                return 0;
-            }
-
-            BehaviorSlot[] behaviors = definition.Behaviors ?? Array.Empty<BehaviorSlot>();
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                if (behaviors[i].Kind == BehaviorKind.Animator)
-                {
-                    return behaviors[i].Animator.AnimationProfileId;
-                }
-            }
-
-            return 0;
-        }
-
         private bool TryGetRenderDebugState(out RenderDebugState debug)
         {
             if (_globals.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out var obj) && obj is RenderDebugState state)
@@ -384,35 +476,52 @@ namespace Ludots.Core.Presentation.Systems
                 : VisualRenderPath.StaticMesh;
         }
 
-        private static int ResolveStableId(int performerStableId, int slotIndex, AssetKind assetKind, int discriminator)
-        {
-            int seed = PerformerBehaviorRuntimeUtility.ComposeBehaviorStableId(performerStableId, slotIndex);
-            unchecked
-            {
-                int hash = 17;
-                hash = hash * 31 + seed;
-                hash = hash * 31 + (int)assetKind;
-                hash = hash * 31 + discriminator;
-                hash &= int.MaxValue;
-                return hash == 0 ? 1 : hash;
-            }
-        }
-
-        private Quaternion GetWorldRotation(Entity entity)
-        {
-            return _world.Has<PerformerWorldRotation>(entity) ? _world.Get<PerformerWorldRotation>(entity).Value : Quaternion.Identity;
-        }
-
-        private Vector3 GetWorldScale(Entity entity)
-        {
-            return _world.Has<PerformerWorldScale>(entity) ? _world.Get<PerformerWorldScale>(entity).Value : Vector3.One;
-        }
-
         private static Quaternion NormalizeOrIdentity(Quaternion value)
         {
             return value.LengthSquared() > 0.000001f
                 ? Quaternion.Normalize(value)
                 : Quaternion.Identity;
+        }
+
+        private PresentationVisualProxy BuildVisualProxy(
+            Entity entity,
+            in PerformerState state,
+            in PerformerDefinition definition,
+            int slotIndex,
+            in AssetBindingConfig asset,
+            LODLevel lod,
+            Vector3 position,
+            Quaternion performerWorldRotation,
+            Vector3 performerWorldScale,
+            float alpha,
+            VisualVisibility visibility)
+        {
+            VisualRenderPath renderPath = ResolveRenderPath(in asset);
+            return new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                MeshAssetId = ResolveAssetId(entity, in asset),
+                Position = position,
+                Rotation = NormalizeOrIdentity(performerWorldRotation),
+                Scale = ResolveScale(entity, in asset, performerWorldScale),
+                Color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha),
+                StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),
+                MaterialId = ResolveMaterialId(entity, in asset),
+                TemplateId = state.DefId,
+                AnimationProfileId = definition.AnimationProfileId,
+                RenderPath = renderPath,
+                Mobility = asset.Mobility,
+                Flags = VisualRuntimeFlags.Visible,
+                Animator = ResolveAnimator(entity, renderPath),
+                AnimationOverlay = ResolveAnimationOverlay(entity, renderPath),
+                Visibility = visibility,
+                LOD = lod,
+            };
+        }
+
+        private static bool IsBehaviorActive(uint mask, int slotIndex)
+        {
+            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
         }
 
         private static GroundOverlayShape ResolveGroundOverlayShape(int assetId)
@@ -434,10 +543,9 @@ namespace Ludots.Core.Presentation.Systems
             return MathF.Atan2(forward.Z, forward.X);
         }
 
-        private Vector3 ResolvePosition(Entity entity, in PerformerState state, in PerformerDefinition definition)
+        internal static Vector3 ResolvePosition(in PerformerState state, in PerformerDefinition definition, Vector3 performerWorldPosition)
         {
-            Vector3 worldPos = _world.Has<PerformerWorldPosition>(entity) ? _world.Get<PerformerWorldPosition>(entity).Value : Vector3.Zero;
-            Vector3 position = worldPos + definition.PositionOffset;
+            Vector3 position = performerWorldPosition + definition.PositionOffset;
             position.Y += definition.PositionYDriftPerSecond * state.Elapsed;
             return position;
         }

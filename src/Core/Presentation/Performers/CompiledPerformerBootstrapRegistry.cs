@@ -10,6 +10,7 @@ namespace Ludots.Core.Presentation.Performers
     {
         private readonly Dictionary<int, BootstrapCreateRule[]> _entitySpawnCreates = new();
         private readonly Dictionary<int, BootstrapDestroyRule[]> _entityDestroyedDestroys = new();
+        private readonly HashSet<int> _entitySpawnNonBootstrapRules = new();
 
         public void Rebuild(PerformerDefinitionRegistry definitions)
         {
@@ -20,6 +21,7 @@ namespace Ludots.Core.Presentation.Performers
 
             _entitySpawnCreates.Clear();
             _entityDestroyedDestroys.Clear();
+            _entitySpawnNonBootstrapRules.Clear();
 
             IReadOnlyList<int> registeredIds = definitions.RegisteredIds;
             for (int i = 0; i < registeredIds.Count; i++)
@@ -50,6 +52,10 @@ namespace Ludots.Core.Presentation.Performers
                             {
                                 AppendCreate(rule.Event.KeyId, in createRule);
                             }
+                            else
+                            {
+                                _entitySpawnNonBootstrapRules.Add(rule.Event.KeyId);
+                            }
                             break;
 
                         case PresentationEventKind.EntityDestroyed:
@@ -71,6 +77,11 @@ namespace Ludots.Core.Presentation.Performers
         public bool TryGetEntityDestroyedDestroys(int templateKeyId, out BootstrapDestroyRule[] rules)
         {
             return _entityDestroyedDestroys.TryGetValue(templateKeyId, out rules!);
+        }
+
+        public bool HasNonBootstrapEntitySpawnRules(int templateKeyId)
+        {
+            return _entitySpawnNonBootstrapRules.Contains(templateKeyId);
         }
 
         public bool IsRootBootstrapRule(in PerformerRule rule)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace Ludots.Core.Presentation.Rendering
@@ -34,7 +35,9 @@ namespace Ludots.Core.Presentation.Rendering
         private readonly float[] _borderB;
         private readonly float[] _borderA;
         private readonly byte[] _style;
+        private readonly Dictionary<int, int> _retainedIndexByStableId = new();
         private int _count;
+        private int _transientCount;
 
         public int Count => _count;
         public int Capacity => _stableIds.Length;
@@ -84,12 +87,44 @@ namespace Ludots.Core.Presentation.Rendering
             float borderWidth,
             byte style = 0)
         {
+            if (stableId > 0 && _retainedIndexByStableId.TryGetValue(stableId, out int existingIndex))
+            {
+                Set(existingIndex, stableId, in p0, in p1, in p2, in p3, width, in fillColor, in borderColor, borderWidth, style);
+                return true;
+            }
+
             if (_count >= _stableIds.Length)
             {
                 return false;
             }
 
             int index = _count++;
+            Set(index, stableId, in p0, in p1, in p2, in p3, width, in fillColor, in borderColor, borderWidth, style);
+            if (stableId > 0)
+            {
+                _retainedIndexByStableId[stableId] = index;
+            }
+            else
+            {
+                _transientCount++;
+            }
+
+            return true;
+        }
+
+        private void Set(
+            int index,
+            int stableId,
+            in Vector3 p0,
+            in Vector3 p1,
+            in Vector3 p2,
+            in Vector3 p3,
+            float width,
+            in Vector4 fillColor,
+            in Vector4 borderColor,
+            float borderWidth,
+            byte style)
+        {
             _stableIds[index] = stableId;
             _p0x[index] = p0.X;
             _p0y[index] = p0.Y;
@@ -114,7 +149,92 @@ namespace Ludots.Core.Presentation.Rendering
             _borderB[index] = borderColor.Z;
             _borderA[index] = borderColor.W;
             _style[index] = style;
-            return true;
+        }
+
+        public void Remove(int stableId)
+        {
+            if (stableId <= 0 || !_retainedIndexByStableId.TryGetValue(stableId, out int index))
+            {
+                return;
+            }
+
+            int lastIndex = _count - 1;
+            if (index != lastIndex)
+            {
+                Copy(lastIndex, index);
+                int movedStableId = _stableIds[index];
+                if (movedStableId > 0)
+                {
+                    _retainedIndexByStableId[movedStableId] = index;
+                }
+            }
+
+            _count = lastIndex;
+            _retainedIndexByStableId.Remove(stableId);
+        }
+
+        public void ClearTransient()
+        {
+            if (_transientCount == 0)
+            {
+                return;
+            }
+
+            for (int index = _count - 1; index >= 0; index--)
+            {
+                if (_stableIds[index] > 0)
+                {
+                    continue;
+                }
+
+                RemoveAt(index);
+            }
+
+            _transientCount = 0;
+        }
+
+        private void RemoveAt(int index)
+        {
+            int lastIndex = _count - 1;
+            if (index != lastIndex)
+            {
+                Copy(lastIndex, index);
+                int movedStableId = _stableIds[index];
+                if (movedStableId > 0)
+                {
+                    _retainedIndexByStableId[movedStableId] = index;
+                }
+            }
+
+            _count = lastIndex;
+        }
+
+        private void Copy(int source, int destination)
+        {
+            _stableIds[destination] = _stableIds[source];
+            _p0x[destination] = _p0x[source];
+            _p0y[destination] = _p0y[source];
+            _p0z[destination] = _p0z[source];
+            _p1x[destination] = _p1x[source];
+            _p1y[destination] = _p1y[source];
+            _p1z[destination] = _p1z[source];
+            _p2x[destination] = _p2x[source];
+            _p2y[destination] = _p2y[source];
+            _p2z[destination] = _p2z[source];
+            _p3x[destination] = _p3x[source];
+            _p3y[destination] = _p3y[source];
+            _p3z[destination] = _p3z[source];
+            _width[destination] = _width[source];
+            _borderWidth[destination] = _borderWidth[source];
+            _fillR[destination] = _fillR[source];
+            _fillG[destination] = _fillG[source];
+            _fillB[destination] = _fillB[source];
+            _fillA[destination] = _fillA[source];
+            _borderR[destination] = _borderR[source];
+            _borderG[destination] = _borderG[source];
+            _borderB[destination] = _borderB[source];
+            _borderA[destination] = _borderA[source];
+            _style[destination] = _style[source];
         }
 
         public bool TryAddLine(
@@ -135,6 +255,8 @@ namespace Ludots.Core.Presentation.Rendering
         public void Clear()
         {
             _count = 0;
+            _transientCount = 0;
+            _retainedIndexByStableId.Clear();
         }
 
         public ReadOnlySpan<int> StableIds => _stableIds.AsSpan(0, _count);

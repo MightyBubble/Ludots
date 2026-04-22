@@ -156,7 +156,7 @@ namespace Ludots.Core.Presentation.Systems
                                 Target = entity,
                                 Magnitude = now ? 1f : 0f
                             });
-                            OwnerChanges?.TryAdd(new PresentationOwnerChange(entity, PresentationOwnerChangeKind.Tag, tagId));
+                            OwnerChanges?.TryAdd(new PresentationOwnerChange(entity, PresentationOwnerChangeKind.Tag, tagId, now ? (byte)1 : (byte)0));
                         }
                     }
                 }
