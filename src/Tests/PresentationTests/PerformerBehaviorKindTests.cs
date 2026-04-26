@@ -87,11 +87,13 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
             using var system = new PerformerBehaviorSystem(
                 world,
                 instances,
                 definitions,
                 new PresentationEventStream(),
+                ownerChanges,
                 new SoundRequestBuffer());
 
             system.Update(0.016f);
@@ -234,11 +236,13 @@ namespace Ludots.Tests.Presentation
 
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7102, Entity.Null, default);
 
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
             using var system = new PerformerBehaviorSystem(
                 world,
                 instances,
                 definitions,
                 new PresentationEventStream(),
+                ownerChanges,
                 new SoundRequestBuffer());
 
             system.Update(0.016f);
@@ -292,11 +296,13 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
             using var system = new PerformerBehaviorSystem(
                 world,
                 instances,
                 definitions,
                 new PresentationEventStream(),
+                ownerChanges,
                 new SoundRequestBuffer());
 
             system.Update(0.016f);
@@ -306,6 +312,7 @@ namespace Ludots.Tests.Presentation
             world.Add(owner, default(GameplayTagContainer));
             ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(owner);
             tags.AddTag(workingTagId);
+            Assert.That(ownerChanges.TryAdd(new PresentationOwnerChange(owner, PresentationOwnerChangeKind.Tag, workingTagId, stateValue: 1)), Is.True);
 
             system.Update(0.016f);
             Assert.That(instances.ResolveInt(performer, 110), Is.EqualTo(1));

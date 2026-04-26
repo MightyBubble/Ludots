@@ -7,9 +7,11 @@ using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Components;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
@@ -37,9 +39,16 @@ namespace Ludots.Adapter.Raylib
     internal static class RaylibHostLoop
     {
         private const uint FlagWindowResizable = 4;
+        private const string ForceBenchmarkUiEnvKey = "LUDOTS_BLACKSMITH_FORCE_BENCHMARK_UI";
+        private const string NativeBenchmarkHudEnvKey = "LUDOTS_RAYLIB_NATIVE_BENCHMARK_HUD";
         private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
         private static bool _uiPointerCaptured;
         private static bool _emptyBufferWarned;
+        private static bool _nativeBenchmarkSliderDragging;
+        private static string _nativeBenchmarkHudText = string.Empty;
+        private static string[] _nativeBenchmarkHudLines = Array.Empty<string>();
+        private static int _nativeBenchmarkHudCountdown;
+        private static int _nativeBenchmarkHudPanelHeight;
 
         public static void Run(RaylibHostSetup setup)
         {
@@ -143,6 +152,11 @@ namespace Ludots.Adapter.Raylib
                 PresentationOverlaySceneBuilder? overlaySceneBuilder = null;
                 PresentationOverlayScene? overlayScene = null;
                 ScreenOverlayBuffer? screenOverlayBuffer = null;
+                ScreenHudBatchBuffer? screenHudBuffer = null;
+                using var nativeWorldHudRenderer = new RaylibWorldHudRenderer(
+                    engine.GetService(CoreServiceKeys.PresentationWorldHudStrings),
+                    engine.GetService(CoreServiceKeys.PresentationTextCatalog),
+                    engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection));
                 if (engine.TryGetService(CoreServiceKeys.PresentationWorldHudBuffer, out WorldHudBatchBuffer worldHud) &&
                     engine.TryGetService(CoreServiceKeys.PresentationScreenHudBuffer, out ScreenHudBatchBuffer screenHud))
                 {
@@ -150,7 +164,9 @@ namespace Ludots.Adapter.Raylib
                     PresentationTextCatalog? textCatalog = engine.GetService(CoreServiceKeys.PresentationTextCatalog);
                     PresentationTextLocaleSelection? localeSelection = engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection);
                     screenOverlayBuffer = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
-                    hudProjection = new WorldHudToScreenSystem(engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud, presentationTiming);
+                    screenHudBuffer = screenHud;
+                    CameraCullingDebugState? cullingDebug = engine.GetService(CoreServiceKeys.CameraCullingDebugState);
+                    hudProjection = new WorldHudToScreenSystem(engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud, presentationTiming, cullingDebug);
                     overlaySceneBuilder = new PresentationOverlaySceneBuilder(screenHud, worldHudStrings, textCatalog, localeSelection, screenOverlayBuffer);
                     overlayScene = new PresentationOverlayScene(screenHud.Capacity + ScreenOverlayBuffer.MaxItems);
                 }
@@ -187,6 +203,7 @@ namespace Ludots.Adapter.Raylib
                 int underlayLayerVersion = -1;
                 int topOverlayLayerVersion = -1;
                 var underlayPacer = new PresentationOverlayLanePacer(PresentationOverlayLayer.UnderUi);
+                bool underlayHasPendingRefresh = false;
                 string? screenshotPath = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH");
                 string? diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
                 string? screenshotTargetPath = string.IsNullOrWhiteSpace(screenshotPath)
@@ -202,12 +219,34 @@ namespace Ludots.Adapter.Raylib
                 int screenshotFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAME"), out int parsedScreenshotFrame)
                     ? Math.Max(1, parsedScreenshotFrame)
                     : 60;
+                int autoExitFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_AUTO_EXIT_FRAME"), out int parsedAutoExitFrame)
+                    ? Math.Max(0, parsedAutoExitFrame)
+                    : 0;
+                int timingLogIntervalFrames = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_TIMING_LOG_INTERVAL_FRAMES"), out int parsedTimingLogIntervalFrames)
+                    ? Math.Max(0, parsedTimingLogIntervalFrames)
+                    : 0;
+                float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
+                    ? parsedAutoOrbitDegPerSecond
+                    : 0f;
                 int frameIndex = 0;
+                long previousLoopEnd = Stopwatch.GetTimestamp();
 
-                while (!Rl.WindowShouldClose())
+                while (true)
                 {
+                    long windowPollStart = Stopwatch.GetTimestamp();
+                    bool shouldClose = Rl.WindowShouldClose();
+                    double windowPollMs = ElapsedMs(windowPollStart);
+                    if (shouldClose)
+                    {
+                        break;
+                    }
+
                     try
                     {
+                        long wallFrameStart = Stopwatch.GetTimestamp();
+                        presentationTiming?.ObserveHostLoopGap((wallFrameStart - previousLoopEnd) * 1000d / Stopwatch.Frequency);
+                        presentationTiming?.ObserveWindowPoll(windowPollMs);
+                        long preTickStart = wallFrameStart;
                         int w = Math.Max(1, Rl.GetScreenWidth());
                         int h = Math.Max(1, Rl.GetScreenHeight());
                         if (w != lastW || h != lastH)
@@ -224,10 +263,15 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         float dt = Rl.GetFrameTime();
+                        presentationTiming?.ObserveFrame(dt * 1000d);
                         var renderDebug = ResolveRenderDebugState(engine);
-                        bool drawTerrain = renderDebug.DrawTerrain;
+                        string? activeMapId = engine.CurrentMapSession?.MapId.Value;
+                        IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
+                        bool blacksmithBenchmarkMapActive = IsBlacksmithBenchmarkMap(activeMapId);
+                        bool blacksmithCleanPerformanceMode = IsBlacksmithCleanPerformanceMode(activeMapId, benchmarkController);
+                        bool drawTerrain = renderDebug.DrawTerrain && !blacksmithCleanPerformanceMode;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
-                        bool drawDebugDraw = renderDebug.DrawDebugDraw;
+                        bool drawDebugDraw = renderDebug.DrawDebugDraw && !blacksmithCleanPerformanceMode;
                         bool drawSkiaUi = renderDebug.DrawSkiaUi;
 
                         double uiInputMs = 0d;
@@ -241,14 +285,28 @@ namespace Ludots.Adapter.Raylib
 
                         presentationTiming?.ObserveUiInput(uiInputMs);
                         engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
+                        presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
                         engine.Tick(dt);
+                        long postTickStart = Stopwatch.GetTimestamp();
+                        if (autoOrbitDegPerSecond != 0f)
+                        {
+                            CameraState cameraState = engine.GameSession.Camera.State;
+                            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+                            {
+                                Yaw = WrapDegrees(cameraState.Yaw + (autoOrbitDegPerSecond * dt))
+                            });
+                        }
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
                         cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
                         hudProjection?.Update(dt);
                         benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);
-                        if (overlaySceneBuilder != null && overlayScene != null)
+
+                        bool uxPrototypeMapActive = string.Equals(activeMapId, "ux_prototype_battle", StringComparison.OrdinalIgnoreCase);
+                        bool benchmarkUiDisabled = blacksmithBenchmarkMapActive && !ReadEnvBool(ForceBenchmarkUiEnvKey);
+                        bool useNativeWorldHud = blacksmithBenchmarkMapActive && screenHudBuffer != null && nativeWorldHudRenderer != null;
+                        if (!useNativeWorldHud && overlaySceneBuilder != null && overlayScene != null)
                         {
                             long overlayBuildStart = Stopwatch.GetTimestamp();
                             overlaySceneBuilder.Build(overlayScene);
@@ -261,19 +319,20 @@ namespace Ludots.Adapter.Raylib
                         {
                             presentationTiming?.ObserveScreenOverlayBuild(0d, 0, 0);
                         }
+                        presentationTiming?.ObserveHostPostTick(ElapsedMs(postTickStart));
 
-                        string? activeMapId = engine.CurrentMapSession?.MapId.Value;
-                        bool uxPrototypeMapActive = string.Equals(activeMapId, "ux_prototype_battle", StringComparison.OrdinalIgnoreCase);
-
+                        long beginDrawingStart = Stopwatch.GetTimestamp();
                         Rl.BeginDrawing();
+                        presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
                         Rl.ClearBackground(uxPrototypeMapActive
                             ? new Raylib_cs.Color(6, 10, 16, 255)
                             : new Raylib_cs.Color(0, 0, 0, 255));
 
                         var activeCamera = cameraAdapter.Camera;
+                        long mode3DStart = Stopwatch.GetTimestamp();
                         Rl.BeginMode3D(activeCamera);
 
-                        if (drawDebugDraw && !uxPrototypeMapActive)
+                        if (drawDebugDraw && !uxPrototypeMapActive && !blacksmithBenchmarkMapActive)
                         {
                             DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
 
@@ -331,25 +390,48 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         // Draw ground overlays (range circles, cones, etc.)
-                        if (engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
+                        if (!blacksmithCleanPerformanceMode &&
+                            engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
                             overlays.Count > 0)
                         {
+                            long groundOverlayStart = Stopwatch.GetTimestamp();
                             DrawGroundOverlays(overlays);
+                            presentationTiming?.ObserveGroundOverlayRender(ElapsedMs(groundOverlayStart), overlays.Count);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveGroundOverlayRender(0d, 0);
                         }
 
-                        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.RoadSplineBuffer.Name, out var splineObj) &&
+                        if (!blacksmithCleanPerformanceMode &&
+                            engine.GlobalContext.TryGetValue(CoreServiceKeys.RoadSplineBuffer.Name, out var splineObj) &&
                             splineObj is RoadSplineBuffer roadSplines && roadSplines.Count > 0)
                         {
+                            long roadSplineStart = Stopwatch.GetTimestamp();
                             DrawRoadSplines(roadSplines);
+                            presentationTiming?.ObserveRoadSplineRender(ElapsedMs(roadSplineStart), roadSplines.Count);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveRoadSplineRender(0d, 0);
                         }
 
                         if (drawDebugDraw &&
                             engine.TryGetService(CoreServiceKeys.DebugDrawCommandBuffer, out DebugDrawCommandBuffer dd))
                         {
+                            long debugDrawStart = Stopwatch.GetTimestamp();
                             debugDrawRenderer.Draw(dd);
+                            presentationTiming?.ObserveDebugDrawRender(
+                                ElapsedMs(debugDrawStart),
+                                dd.Lines.Count + dd.Circles.Count + dd.Boxes.Count);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveDebugDrawRender(0d, 0);
                         }
 
                         Rl.EndMode3D();
+                        presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
 
                         long overlayStart = Stopwatch.GetTimestamp();
                         overlaySkiaRenderer.ResetFrameStats();
@@ -357,15 +439,19 @@ namespace Ludots.Adapter.Raylib
                         double overlayCompositeMs = 0d;
                         double overlayUploadMs = 0d;
                         double overlayFinalDrawMs = 0d;
+                        double nativeWorldHudMs = 0d;
 
-                        bool hasUnderlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.UnderUi);
-                        bool hasTopOverlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.TopMost);
-                        bool hasUiLayer = drawSkiaUi && uiRoot.Scene != null;
+                        // Benchmark maps still need production-path world HUD/text rendering.
+                        // Only the heavyweight UI layer / top overlay debug panels are suppressed.
+                        bool hasUnderlay = !useNativeWorldHud && overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.UnderUi);
+                        bool hasTopOverlay = !benchmarkUiDisabled && overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.TopMost);
+                        bool hasUiLayer = !benchmarkUiDisabled && drawSkiaUi && uiRoot.Scene != null;
+                        bool directUnderlayComposite = hasUnderlay && !hasUiLayer && !hasTopOverlay;
 
                         int currentUnderlayVersion = overlayScene?.GetLayerVersion(PresentationOverlayLayer.UnderUi) ?? 0;
                         int currentTopOverlayVersion = overlayScene?.GetLayerVersion(PresentationOverlayLayer.TopMost) ?? 0;
                         bool refreshUnderlay = overlayScene != null && (hasUnderlay || underlayHadContent) &&
-                            (currentUnderlayVersion != underlayLayerVersion || hasUnderlay != underlayHadContent);
+                            (underlayHasPendingRefresh || currentUnderlayVersion != underlayLayerVersion || hasUnderlay != underlayHadContent);
                         bool underlayCanvasChanged = false;
                         if (refreshUnderlay)
                         {
@@ -376,29 +462,45 @@ namespace Ludots.Adapter.Raylib
                                 underlayPlan = underlayPacer.BuildPlan(overlayScene!);
                             }
 
-                            if (!hasUnderlay || underlayPlan.HasAnyRefresh)
+                            if (directUnderlayComposite)
+                            {
+                                compositeRenderer.Canvas.Clear(SKColors.Transparent);
+                            }
+                            else
                             {
                                 underlayLayer.Clear();
-                                if (hasUnderlay)
-                                {
-                                    overlaySkiaRenderer.Render(overlayScene!, underlayLayer.Canvas,
-                                        PresentationOverlayLayer.UnderUi, underlayPlan);
-                                    underlayLayer.SetHasContent(true);
-                                }
-                                underlayCanvasChanged = true;
                             }
 
                             if (hasUnderlay)
+                            {
+                                SKCanvas targetCanvas = directUnderlayComposite
+                                    ? compositeRenderer.Canvas
+                                    : underlayLayer.Canvas;
+                                overlaySkiaRenderer.Render(overlayScene!, targetCanvas,
+                                    PresentationOverlayLayer.UnderUi, underlayPlan);
+                                underlayLayer.SetHasContent(!directUnderlayComposite);
+                            }
+                            underlayCanvasChanged = true;
+
+                            if (hasUnderlay)
+                            {
                                 underlayPacer.MarkPresented(overlayScene!, underlayPlan);
+                                underlayHasPendingRefresh = underlayPlan.HasPendingRefresh;
+                            }
                             else
+                            {
                                 underlayPacer.Reset();
+                                underlayHasPendingRefresh = false;
+                            }
 
                             underlayHadContent = hasUnderlay;
                             underlayLayerVersion = currentUnderlayVersion;
                             overlayPaintMs += ElapsedMs(underlayRenderStart);
                         }
 
-                        bool refreshUiLayer = hasUiLayer != uiHadContent || (drawSkiaUi && uiRoot.IsDirty);
+                        bool refreshUiLayer = hasUiLayer
+                            ? (!uiHadContent || uiRoot.IsDirty)
+                            : uiHadContent;
                         if (refreshUiLayer)
                         {
                             long uiRenderStart = Stopwatch.GetTimestamp();
@@ -438,7 +540,17 @@ namespace Ludots.Adapter.Raylib
                         bool hasCompositeContent = hasUnderlay || hasUiLayer || hasTopOverlay;
                         bool refreshComposite = underlayCanvasChanged || refreshUiLayer || refreshTopOverlay
                             || hasCompositeContent != compositeHadContent;
-                        if (refreshComposite)
+                        if (refreshComposite && directUnderlayComposite)
+                        {
+                            overlayCompositeMs = 0d;
+
+                            long uiUploadStart = Stopwatch.GetTimestamp();
+                            compositeRenderer.UpdateTexture();
+                            overlayUploadMs = hasCompositeContent ? ElapsedMs(uiUploadStart) : 0d;
+                            presentationTiming?.ObserveUiUpload(overlayUploadMs);
+                            compositeHadContent = hasCompositeContent;
+                        }
+                        else if (refreshComposite)
                         {
                             long compositeStart = Stopwatch.GetTimestamp();
                             compositeRenderer.Canvas.Clear(SKColors.Transparent);
@@ -472,8 +584,22 @@ namespace Ludots.Adapter.Raylib
                         if (hasCompositeContent || compositeHadContent)
                         {
                             long finalDrawStart = Stopwatch.GetTimestamp();
-                            compositeRenderer.Draw();
+                            if (directUnderlayComposite)
+                            {
+                                compositeRenderer.Draw();
+                            }
+                            else
+                            {
+                                compositeRenderer.Draw();
+                            }
                             overlayFinalDrawMs = ElapsedMs(finalDrawStart);
+                        }
+
+                        if (useNativeWorldHud)
+                        {
+                            long nativeHudStart = Stopwatch.GetTimestamp();
+                            nativeWorldHudRenderer!.Draw(screenHudBuffer!);
+                            nativeWorldHudMs = ElapsedMs(nativeHudStart);
                         }
 
                         presentationTiming?.ObserveCompositeSkip(!refreshComposite);
@@ -483,13 +609,40 @@ namespace Ludots.Adapter.Raylib
                             overlayPaintMs,
                             overlayCompositeMs,
                             overlayUploadMs,
-                            overlayFinalDrawMs,
+                            overlayFinalDrawMs + nativeWorldHudMs,
                             overlaySkiaRenderer.RebuiltLaneCountLastFrame,
                             overlaySkiaRenderer.CachedTextLayoutCount);
+                        if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
+                        {
+                            AppendRaylibDiagnostic(
+                                diagnosticPath,
+                                $"overlay-lanes backend={(useNativeWorldHud ? "raylib-native-hud" : "skia")} underBar={overlaySkiaRenderer.LastUnderUiBarMs:F2} underText={overlaySkiaRenderer.LastUnderUiTextMs:F2} barBuild={overlaySkiaRenderer.LastBarBatchBuildMs:F2} barDraw={overlaySkiaRenderer.LastBarBatchDrawMs:F2} textBuild={overlaySkiaRenderer.LastTextBatchBuildMs:F2} textDraw={overlaySkiaRenderer.LastTextBatchDrawMs:F2} nativeHud={nativeWorldHudMs:F2} nativeBar={nativeWorldHudRenderer?.LastBarMs ?? 0d:F2} nativeText={nativeWorldHudRenderer?.LastTextMs ?? 0d:F2} nativeBars={nativeWorldHudRenderer?.LastBarCount ?? 0} nativeTextItems={nativeWorldHudRenderer?.LastTextCount ?? 0} nativeTextCache={nativeWorldHudRenderer?.LastTextTextureCacheCount ?? 0}");
+                        }
 
+                        if (ReadEnvBool(NativeBenchmarkHudEnvKey))
+                        {
+                            long nativeDiagnosticStart = Stopwatch.GetTimestamp();
+                            DrawNativeBenchmarkHud(activeMapId, engine, presentationTiming);
+                            presentationTiming?.ObserveNativeDiagnosticHud(ElapsedMs(nativeDiagnosticStart));
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveNativeDiagnosticHud(0d);
+                        }
+
+                        long endDrawingStart = Stopwatch.GetTimestamp();
                         Rl.EndDrawing();
+                        presentationTiming?.ObserveEndDrawing(ElapsedMs(endDrawingStart));
+                        presentationTiming?.ObserveWallFrame(ElapsedMs(wallFrameStart));
+                        previousLoopEnd = Stopwatch.GetTimestamp();
 
                         frameIndex++;
+                        if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
+                        {
+                            AppendRaylibDiagnostic(diagnosticPath, $"sample frame={frameIndex}");
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming));
+                        }
+
                         if (screenshotPending && frameIndex >= screenshotFrame)
                         {
                             string fullScreenshotPath = screenshotTargetPath!;
@@ -502,9 +655,11 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(
                                 diagnosticPath,
                                 $"screenshot frame={frameIndex} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming));
                             AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
                             AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
 
+                            long screenshotStart = Stopwatch.GetTimestamp();
                             Rl.TakeScreenshot(screenshotFileName!);
                             if (!string.IsNullOrWhiteSpace(screenshotWorkingPath) &&
                                 !string.Equals(screenshotWorkingPath, fullScreenshotPath, StringComparison.OrdinalIgnoreCase) &&
@@ -513,9 +668,17 @@ namespace Ludots.Adapter.Raylib
                                 File.Copy(screenshotWorkingPath, fullScreenshotPath, overwrite: true);
                                 File.Delete(screenshotWorkingPath);
                             }
+                            presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
 
                             screenshotPending = false;
                             Log.Info(in LogChannels.Engine, $"Captured runtime screenshot: {fullScreenshotPath}");
+                        }
+
+                        if (autoExitFrame > 0 && frameIndex >= autoExitFrame)
+                        {
+                            AppendRaylibDiagnostic(diagnosticPath, $"auto-exit frame={frameIndex}");
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming));
+                            break;
                         }
                     }
                     catch (Exception ex)
@@ -549,6 +712,276 @@ namespace Ludots.Adapter.Raylib
 
             File.AppendAllText(fullPath, $"[{DateTime.UtcNow:O}] {message}{Environment.NewLine}");
         }
+
+        private static bool ReadEnvBool(string key)
+        {
+            string? raw = Environment.GetEnvironmentVariable(key);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return false;
+            }
+
+            return raw.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("on", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsBlacksmithBenchmarkMap(string? mapId)
+        {
+            return string.Equals(mapId, "performer_blacksmith_showcase", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(mapId, "performer_blacksmith_mesh_ism_benchmark", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(mapId, "performer_blacksmith_scatter_benchmark", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(mapId, "performer_blacksmith_scatter_hudbar_benchmark", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(mapId, "performer_blacksmith_scatter_hudtext_benchmark", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsBlacksmithCleanPerformanceMode(string? mapId, IBenchmarkSceneController? benchmarkController)
+        {
+            if (benchmarkController is { IsActive: true, IsCleanPerformanceScene: true })
+            {
+                return true;
+            }
+
+            return string.Equals(mapId, "performer_blacksmith_mesh_ism_benchmark", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(mapId, "performer_blacksmith_scatter_benchmark", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(mapId, "performer_blacksmith_scatter_hudbar_benchmark", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(mapId, "performer_blacksmith_scatter_hudtext_benchmark", StringComparison.OrdinalIgnoreCase) ||
+                   (string.Equals(mapId, "performer_blacksmith_showcase", StringComparison.OrdinalIgnoreCase) &&
+                    ReadEnvInt("LUDOTS_BLACKSMITH_AUTO_SCATTER_TOTAL", 0) > 1);
+        }
+
+        private static int ReadEnvInt(string key, int fallback)
+        {
+            string? raw = Environment.GetEnvironmentVariable(key);
+            return int.TryParse(raw, out int value) ? value : fallback;
+        }
+
+        private static float WrapDegrees(float degrees)
+        {
+            degrees %= 360f;
+            return degrees < 0f ? degrees + 360f : degrees;
+        }
+
+        private static string BuildTimingDiagnostic(GameEngine engine, PresentationTimingDiagnostics? timing)
+        {
+            if (timing == null)
+            {
+                return "timing unavailable";
+            }
+
+            WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
+            GroundOverlayBuffer? groundOverlay = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
+            RoadSplineBuffer? roadSpline = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+            DebugDrawCommandBuffer? debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
+            string? activeMapId = engine.CurrentMapSession?.MapId.Value;
+            IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
+            bool cleanPerformanceMode = IsBlacksmithCleanPerformanceMode(activeMapId, benchmarkController);
+            float frameMs = timing.LastWallFrameMs > 0.001f
+                ? timing.LastWallFrameMs
+                : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
+            float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
+            int rawDebugDrawCount = debugDraw == null ? 0 : debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count;
+            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} presentation={timing.LastPresentationMs:F2} cull={timing.LastCameraCullingMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPerformerSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} primitive={timing.LastPrimitiveRenderMs:F2} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastRoadSplineRenderMs:F2} splineCount={timing.RoadSplinesLastFrame} splineRaw={roadSpline?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPerformerEmitMs:F2} emitDirty={timing.LastPerformerEmitDirtyProcessMs:F2} emitDirtyCount={timing.PerformerEmitDirtyCountLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0}";
+        }
+
+        private static void DrawNativeBenchmarkHud(string? activeMapId, GameEngine engine, PresentationTimingDiagnostics? timing)
+        {
+            if (!string.Equals(activeMapId, "performer_blacksmith_mesh_ism_benchmark", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(activeMapId, "performer_blacksmith_showcase", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(activeMapId, "performer_blacksmith_scatter_benchmark", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(activeMapId, "performer_blacksmith_scatter_hudbar_benchmark", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(activeMapId, "performer_blacksmith_scatter_hudtext_benchmark", StringComparison.OrdinalIgnoreCase))
+            {
+                _nativeBenchmarkHudText = string.Empty;
+                _nativeBenchmarkHudLines = Array.Empty<string>();
+                _nativeBenchmarkHudCountdown = 0;
+                _nativeBenchmarkHudPanelHeight = 0;
+                _nativeBenchmarkSliderDragging = false;
+                return;
+            }
+
+            if (timing == null)
+            {
+                return;
+            }
+
+            IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
+            HandleNativeBenchmarkControls(engine, benchmarkController);
+
+            if (_nativeBenchmarkHudCountdown <= 0 || string.IsNullOrEmpty(_nativeBenchmarkHudText))
+            {
+                WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+                ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
+                GroundOverlayBuffer? groundOverlay = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
+                RoadSplineBuffer? roadSpline = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+                DebugDrawCommandBuffer? debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
+                bool cleanPerformanceMode = IsBlacksmithCleanPerformanceMode(activeMapId, benchmarkController);
+                int rawDebugDrawCount = debugDraw == null ? 0 : debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count;
+                float frameMs = timing.LastWallFrameMs > 0.001f
+                    ? timing.LastWallFrameMs
+                    : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
+                float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
+                float uiRenderMs = timing.LastUiRenderMs;
+                float overlayPaintMs = MathF.Max(0f, timing.LastScreenOverlayPaintMs - uiRenderMs);
+                _nativeBenchmarkHudText =
+                    $"FPS {fps:F0}  frame {frameMs:F2} ms  tick {timing.LastTotalTickMs:F2} ms  prim {timing.LastPrimitiveRenderMs:F2} ms  cleanPerf={(cleanPerformanceMode ? 1 : 0)}\n" +
+                    $"sim {timing.LastSimulationMs:F2}  present {timing.LastPresentationMs:F2}  cull {timing.LastCameraCullingMs:F2} ({timing.LastCameraCullingEntityProcessMs:F2}+{timing.LastCameraCullingPerformerSyncMs:F2})  visible {timing.VisibleEntitiesLastFrame}\n" +
+                    $"hudProj {timing.LastWorldHudProjectionMs:F2}  mode3D {timing.LastMode3DMs:F2}  ground {timing.LastGroundOverlayRenderMs:F2} x{timing.GroundOverlaysLastFrame}/{groundOverlay?.Count ?? 0}  spline {timing.LastRoadSplineRenderMs:F2} x{timing.RoadSplinesLastFrame}/{roadSpline?.Count ?? 0}  debug {timing.LastDebugDrawRenderMs:F2} x{timing.DebugDrawCommandsLastFrame}/{rawDebugDrawCount}\n" +
+                    $"overlayBuild {timing.LastScreenOverlayBuildMs:F2}  dirtyLanes {timing.ScreenOverlayDirtyLanesLastFrame}  rebuilt {timing.ScreenOverlayRebuiltLanesLastFrame}\n" +
+                    $"ui {uiRenderMs:F2}  overlayPaint {overlayPaintMs:F2}  overlayComposite {timing.LastScreenOverlayCompositeMs:F2}  upload {timing.LastUiUploadMs:F2}\n" +
+                    $"emit {timing.LastPerformerEmitMs:F2}  emitDirty {timing.LastPerformerEmitDirtyProcessMs:F2} x{timing.PerformerEmitDirtyCountLastFrame}  worldHud {worldHud?.Count ?? 0}  bars {screenHud?.BarCount ?? 0}  text {screenHud?.TextCount ?? 0}";
+                if (benchmarkController is { IsActive: true, SupportsScatterControl: true })
+                {
+                    _nativeBenchmarkHudText += $"\nscatter applied {benchmarkController.ScatterAppliedTotal:n0}  target {benchmarkController.ScatterTarget:n0}";
+                }
+                _nativeBenchmarkHudLines = _nativeBenchmarkHudText.Split('\n', StringSplitOptions.None);
+                _nativeBenchmarkHudPanelHeight = 12 + (_nativeBenchmarkHudLines.Length * 18);
+                _nativeBenchmarkHudCountdown = 30;
+            }
+            else
+            {
+                _nativeBenchmarkHudCountdown--;
+            }
+
+            int x = 18;
+            int y = 18;
+            int boxHeight = _nativeBenchmarkHudPanelHeight <= 0 ? 14 : _nativeBenchmarkHudPanelHeight;
+            Rl.DrawRectangle(x - 8, y - 8, 620, boxHeight, new Color(6, 10, 16, 150));
+            for (int i = 0; i < _nativeBenchmarkHudLines.Length; i++)
+            {
+                Color color = i == 0 ? Color.YELLOW : (i == 2 ? Color.GREEN : Color.WHITE);
+                Rl.DrawText(_nativeBenchmarkHudLines[i], x, y + (i * 18), 16, color);
+            }
+
+            DrawNativeBenchmarkControls(benchmarkController, x, y + boxHeight + 10);
+        }
+
+        private static void HandleNativeBenchmarkControls(GameEngine engine, IBenchmarkSceneController? controller)
+        {
+            if (controller is not { IsActive: true, SupportsScatterControl: true })
+            {
+                _nativeBenchmarkSliderDragging = false;
+                return;
+            }
+
+            Vector2 mouse = Rl.GetMousePosition();
+            bool mousePressed = Rl.IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON);
+            bool mouseDown = Rl.IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON);
+            int panelX = 18;
+            int panelY = 18 + (_nativeBenchmarkHudPanelHeight <= 0 ? 14 : _nativeBenchmarkHudPanelHeight) + 10;
+            int sliderX = panelX + 14;
+            int sliderY = panelY + 52;
+            const int sliderWidth = 280;
+            const int sliderHeight = 12;
+            bool overSlider = mouse.X >= sliderX &&
+                              mouse.X <= sliderX + sliderWidth &&
+                              mouse.Y >= sliderY - 8 &&
+                              mouse.Y <= sliderY + sliderHeight + 8;
+
+            if (mousePressed && overSlider)
+            {
+                _nativeBenchmarkSliderDragging = true;
+            }
+
+            if (!mouseDown)
+            {
+                _nativeBenchmarkSliderDragging = false;
+            }
+
+            if (_nativeBenchmarkSliderDragging)
+            {
+                float ratio = Math.Clamp((mouse.X - sliderX) / sliderWidth, 0f, 1f);
+                controller.SetScatterTargetFromRatio(ratio);
+                _nativeBenchmarkHudCountdown = 0;
+            }
+
+            DrawNativeBenchmarkButton(controller, panelX + 14, panelY + 78, 70, 24, 3000, mousePressed, mouse);
+            DrawNativeBenchmarkButton(controller, panelX + 92, panelY + 78, 70, 24, 10000, mousePressed, mouse);
+            DrawNativeBenchmarkButton(controller, panelX + 170, panelY + 78, 70, 24, 30000, mousePressed, mouse);
+            DrawNativeBenchmarkButton(controller, panelX + 248, panelY + 78, 70, 24, 100000, mousePressed, mouse);
+            DrawNativeBenchmarkApplyButton(controller, panelX + 326, panelY + 78, 92, 24, mousePressed, mouse);
+        }
+
+        private static void DrawNativeBenchmarkControls(IBenchmarkSceneController? controller, int x, int y)
+        {
+            if (controller is not { IsActive: true, SupportsScatterControl: true })
+            {
+                return;
+            }
+
+            const int panelWidth = 434;
+            const int panelHeight = 114;
+            const int sliderWidth = 280;
+            const int sliderHeight = 12;
+            int sliderX = x + 14;
+            int sliderY = y + 52;
+            float ratio = controller.ScatterMax <= controller.ScatterMin
+                ? 0f
+                : (controller.ScatterTarget - controller.ScatterMin) / (float)(controller.ScatterMax - controller.ScatterMin);
+            ratio = Math.Clamp(ratio, 0f, 1f);
+            int knobX = sliderX + (int)MathF.Round(ratio * sliderWidth);
+
+            Rl.DrawRectangle(x - 10, y - 6, panelWidth, panelHeight, new Color(6, 10, 16, 190));
+            Rl.DrawText($"Scatter control  applied={controller.ScatterAppliedTotal:n0}  target={controller.ScatterTarget:n0}", x, y + 4, 18, new Color(132, 214, 255, 255));
+            Rl.DrawRectangle(sliderX, sliderY, sliderWidth, sliderHeight, new Color(38, 46, 60, 255));
+            Rl.DrawRectangle(sliderX, sliderY, Math.Max(4, knobX - sliderX), sliderHeight, new Color(46, 134, 222, 255));
+            Rl.DrawRectangle(knobX - 6, sliderY - 6, 12, sliderHeight + 12, new Color(245, 248, 252, 255));
+            Rl.DrawText($"{controller.ScatterMin:n0}", sliderX, sliderY + 18, 14, Color.LIGHTGRAY);
+            Rl.DrawText($"{controller.ScatterMax:n0}", sliderX + sliderWidth - 54, sliderY + 18, 14, Color.LIGHTGRAY);
+        }
+
+        private static void DrawNativeBenchmarkButton(
+            IBenchmarkSceneController controller,
+            int x,
+            int y,
+            int width,
+            int height,
+            int total,
+            bool mousePressed,
+            Vector2 mouse)
+        {
+            bool hot = mouse.X >= x && mouse.X <= x + width && mouse.Y >= y && mouse.Y <= y + height;
+            Color fill = controller.ScatterAppliedTotal == total ? new Color(38, 130, 78, 255) : new Color(28, 39, 54, 255);
+            if (hot)
+            {
+                fill = controller.ScatterAppliedTotal == total ? new Color(46, 156, 92, 255) : new Color(44, 63, 88, 255);
+            }
+
+            Rl.DrawRectangle(x, y, width, height, fill);
+            Rl.DrawRectangleLines(x, y, width, height, new Color(110, 140, 170, 255));
+            Rl.DrawText($"{total / 1000}K", x + 22, y + 4, 16, new Color(245, 248, 252, 255));
+
+            if (mousePressed && hot)
+            {
+                controller.ApplyScatterLayout(total);
+                _nativeBenchmarkHudCountdown = 0;
+            }
+        }
+
+        private static void DrawNativeBenchmarkApplyButton(
+            IBenchmarkSceneController controller,
+            int x,
+            int y,
+            int width,
+            int height,
+            bool mousePressed,
+            Vector2 mouse)
+        {
+            bool hot = mouse.X >= x && mouse.X <= x + width && mouse.Y >= y && mouse.Y <= y + height;
+            Color fill = hot ? new Color(156, 94, 28, 255) : new Color(118, 72, 22, 255);
+            Rl.DrawRectangle(x, y, width, height, fill);
+            Rl.DrawRectangleLines(x, y, width, height, new Color(198, 154, 94, 255));
+            Rl.DrawText("Apply", x + 24, y + 4, 16, new Color(245, 248, 252, 255));
+
+            if (mousePressed && hot)
+            {
+                controller.ApplyScatterTarget();
+                _nativeBenchmarkHudCountdown = 0;
+            }
+        }
+
 
         private static void ValidateRequiredContextBeforeLoop(GameEngine engine)
         {

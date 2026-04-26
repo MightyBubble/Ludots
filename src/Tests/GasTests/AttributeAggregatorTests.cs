@@ -148,13 +148,14 @@ namespace Ludots.Tests.GAS
             AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
 
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new AttributeAggregateDirty());
             ref var attr = ref world.Get<AttributeBuffer>(entity);
             attr.SetBase(healthId, 100f);
             attr.SetCurrent(healthId, 70f);
 
-            var effect = world.Create();
-            world.Add(effect, new EffectModifiers());
+            var effect = world.Create(
+                new GameplayEffect { AggregatesModifiers = true },
+                new EffectModifiers());
             ref var modifiers = ref world.Get<EffectModifiers>(effect);
             modifiers.Add(healthId, ModifierOp.Add, 25f);
 

@@ -50,9 +50,10 @@ namespace Ludots.Core.Presentation.Systems
         {
             Vector3 position = ResolvePosition(in state, in definition, performerWorldPosition);
             float alpha = ResolveAlpha(in state, in definition);
-            if (lod == LODLevel.Culled || !ResolveAssetVisibility(entity, in asset))
+            if (lod == LODLevel.Culled || !IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset))
             {
                 EmitHiddenSnapshotIfVisual(entity, in state, in definition, slotIndex, in asset, lod, position, performerWorldRotation, performerWorldScale, alpha);
+                RemoveHiddenWorldHudIfNeeded(state.DefId, in state, in asset);
                 return;
             }
 
@@ -124,7 +125,7 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
-                if (!ResolveAssetVisibility(entity, in asset))
+                if (!IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset))
                 {
                     stableDrawCache.Remove(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId));
                     continue;
@@ -227,6 +228,27 @@ namespace Ludots.Core.Presentation.Systems
                     performerWorldScale,
                     alpha,
                     lod == LODLevel.Culled ? VisualVisibility.Culled : VisualVisibility.Hidden)));
+        }
+
+        private void RemoveHiddenWorldHudIfNeeded(
+            int definitionId,
+            in PerformerState state,
+            in AssetBindingConfig asset)
+        {
+            WorldHudItemKind kind = asset.AssetKind switch
+            {
+                AssetKind.WorldHud => WorldHudItemKind.Bar,
+                AssetKind.WorldText => WorldHudItemKind.Text,
+                _ => default
+            };
+
+            if (kind == default)
+            {
+                return;
+            }
+
+            int stableId = HudItemIdentity.ComposeStableId(state.StableId, kind, definitionId);
+            _requests.Add(PresentationRequest.RemoveWorldHud(state.OwnerEntity, stableId));
         }
 
         private void EmitSoundAsset(in PerformerState state, int slotIndex, in AssetBindingConfig asset, Vector3 position)
@@ -474,6 +496,11 @@ namespace Ludots.Core.Presentation.Systems
             return asset.AssetKind == AssetKind.SkinnedMesh
                 ? VisualRenderPath.SkinnedMesh
                 : VisualRenderPath.StaticMesh;
+        }
+
+        private static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)
+        {
+            return lod != LODLevel.Culled && (!asset.HasMaxLod || lod <= asset.MaxLod);
         }
 
         private static Quaternion NormalizeOrIdentity(Quaternion value)

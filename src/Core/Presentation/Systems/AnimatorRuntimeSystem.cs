@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using Arch.Core;
 using Arch.System;
@@ -23,9 +22,8 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly PerformerAnimatorStateBuffer _animatorStates;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
-        private readonly List<Entity> _candidates = new();
-        private int _lastStructureVersion = -1;
-        private int _lastDefinitionVersion = -1;
+        private readonly QueryDescription _activeAnimatorQuery = new QueryDescription()
+            .WithAll<PerformerState, PerfHasAnimator>();
 
         public AnimatorRuntimeSystem(
             World world,
@@ -41,46 +39,40 @@ namespace Ludots.Core.Presentation.Systems
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _animatorStates = animatorStates ?? throw new ArgumentNullException(nameof(animatorStates));
             _timingDiagnostics = timingDiagnostics;
+            _runtime.BindDefinitions(_definitions);
         }
         public override void Update(in float dt)
         {
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
-            RebuildCandidatesIfNeeded();
             float tickDt = dt;
-            for (int i = 0; i < _candidates.Count; i++)
+            World.Query(in _activeAnimatorQuery, (Entity entity, ref PerformerState state) =>
             {
-                Entity entity = _candidates[i];
-                if (!World.IsAlive(entity) || !World.Has<PerformerState>(entity)) continue;
-                ref PerformerState state = ref World.Get<PerformerState>(entity);
-                if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition)) continue;
-                if (!definition.HasAnimatorBehavior || (state.BehaviorActiveMask & definition.AnimatorSlotMask) == 0u) continue;
+                if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition))
+                {
+                    return;
+                }
+
+                if (!definition.HasAnimatorBehavior || (state.BehaviorActiveMask & definition.AnimatorSlotMask) == 0u)
+                {
+                    return;
+                }
+
                 BehaviorSlot[] behaviors = definition.Behaviors;
                 for (int bi = 0; bi < behaviors.Length; bi++)
                 {
                     ref readonly BehaviorSlot slot = ref behaviors[bi];
                     if (slot.Kind != BehaviorKind.Animator || slot.Animator.AnimatorControllerId <= 0 ||
                         !IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                    {
                         continue;
+                    }
+
                     UpdateAnimator(entity, slot.Animator, tickDt);
                 }
-            }
+            });
+
             if (_timingDiagnostics != null)
                 _timingDiagnostics.ObservePerformerAnimator((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
-        }
-
-        private void RebuildCandidatesIfNeeded()
-        {
-            if (_lastStructureVersion == _runtime.StructureVersion && _lastDefinitionVersion == _definitions.Version)
-                return;
-            _candidates.Clear();
-            var query = new QueryDescription().WithAll<PerformerState>();
-            World.Query(in query, (Entity entity, ref PerformerState state) =>
-            {
-                if (_definitions.TryGet(state.DefId, out PerformerDefinition definition) && definition.HasAnimatorBehavior)
-                    _candidates.Add(entity);
-            });
-            _lastStructureVersion = _runtime.StructureVersion;
-            _lastDefinitionVersion = _definitions.Version;
         }
 
         private void UpdateAnimator(Entity entity, in AnimatorConfig config, float dt)

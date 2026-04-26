@@ -27,12 +27,27 @@ namespace Ludots.Core.Presentation.Hud
 
         public float UiInputMs { get; private set; }
         public float UiRenderMs { get; private set; }
+        public float LastUiRenderMs { get; private set; }
         public float UiUploadMs { get; private set; }
+        public float LastUiUploadMs { get; private set; }
+        public float FrameMs { get; private set; }
+        public float LastFrameMs { get; private set; }
+        public float WallFrameMs { get; private set; }
+        public float LastWallFrameMs { get; private set; }
         public float ScreenOverlayBuildMs { get; private set; }
+        public float LastScreenOverlayBuildMs { get; private set; }
         public float ScreenOverlayPaintMs { get; private set; }
+        public float LastScreenOverlayPaintMs { get; private set; }
         public float ScreenOverlayCompositeMs { get; private set; }
+        public float LastScreenOverlayCompositeMs { get; private set; }
         public float ScreenOverlayDrawMs { get; private set; }
+        public float LastScreenOverlayDrawMs { get; private set; }
         public float ScreenOverlayFinalDrawMs { get; private set; }
+        public float LastScreenOverlayFinalDrawMs { get; private set; }
+        public float EndDrawingMs { get; private set; }
+        public float LastEndDrawingMs { get; private set; }
+        public float ScreenshotMs { get; private set; }
+        public float LastScreenshotMs { get; private set; }
         public float CameraCullingMs { get; private set; }
         public float LastCameraCullingMs { get; private set; }
         public float CameraCullingEntityProcessMs { get; private set; }
@@ -81,8 +96,30 @@ namespace Ludots.Core.Presentation.Hud
         public float PresentationRequestFlushMs { get; private set; }
         public float LastPresentationRequestFlushMs { get; private set; }
         public float TerrainRenderMs { get; private set; }
+        public float LastTerrainRenderMs { get; private set; }
         public float TerrainChunkBuildMs { get; private set; }
         public float PrimitiveRenderMs { get; private set; }
+        public float LastPrimitiveRenderMs { get; private set; }
+        public float HostPreTickMs { get; private set; }
+        public float LastHostPreTickMs { get; private set; }
+        public float HostPostTickMs { get; private set; }
+        public float LastHostPostTickMs { get; private set; }
+        public float BeginDrawingMs { get; private set; }
+        public float LastBeginDrawingMs { get; private set; }
+        public float Mode3DMs { get; private set; }
+        public float LastMode3DMs { get; private set; }
+        public float GroundOverlayRenderMs { get; private set; }
+        public float LastGroundOverlayRenderMs { get; private set; }
+        public float RoadSplineRenderMs { get; private set; }
+        public float LastRoadSplineRenderMs { get; private set; }
+        public float DebugDrawRenderMs { get; private set; }
+        public float LastDebugDrawRenderMs { get; private set; }
+        public float NativeDiagnosticHudMs { get; private set; }
+        public float LastNativeDiagnosticHudMs { get; private set; }
+        public float HostLoopGapMs { get; private set; }
+        public float LastHostLoopGapMs { get; private set; }
+        public float WindowPollMs { get; private set; }
+        public float LastWindowPollMs { get; private set; }
 
         public int VisibleEntitiesLastFrame { get; private set; }
         public int ScreenOverlayDirtyLanesLastFrame { get; private set; }
@@ -93,13 +130,39 @@ namespace Ludots.Core.Presentation.Hud
         public int TerrainChunksBuiltLastFrame { get; private set; }
         public int PrimitiveInstancesLastFrame { get; private set; }
         public int PrimitiveBatchesLastFrame { get; private set; }
+        public int GroundOverlaysLastFrame { get; private set; }
+        public int RoadSplinesLastFrame { get; private set; }
+        public int DebugDrawCommandsLastFrame { get; private set; }
         public int CompositeSkipCountLastSecond { get; private set; }
 
+        public void ObserveFrame(double sampleMs)
+        {
+            LastFrameMs = (float)sampleMs;
+            FrameMs = Smooth(FrameMs, (float)sampleMs);
+        }
+
+        public void ObserveWallFrame(double sampleMs)
+        {
+            LastWallFrameMs = (float)sampleMs;
+            WallFrameMs = Smooth(WallFrameMs, (float)sampleMs);
+        }
+
         public void ObserveUiInput(double sampleMs) => UiInputMs = Smooth(UiInputMs, (float)sampleMs);
-        public void ObserveUiRender(double sampleMs) => UiRenderMs = Smooth(UiRenderMs, (float)sampleMs);
-        public void ObserveUiUpload(double sampleMs) => UiUploadMs = Smooth(UiUploadMs, (float)sampleMs);
+        public void ObserveUiRender(double sampleMs)
+        {
+            LastUiRenderMs = (float)sampleMs;
+            UiRenderMs = Smooth(UiRenderMs, (float)sampleMs);
+        }
+
+        public void ObserveUiUpload(double sampleMs)
+        {
+            LastUiUploadMs = (float)sampleMs;
+            UiUploadMs = Smooth(UiUploadMs, (float)sampleMs);
+        }
+
         public void ObserveScreenOverlayBuild(double sampleMs, int dirtyLanes, int totalItems)
         {
+            LastScreenOverlayBuildMs = (float)sampleMs;
             ScreenOverlayBuildMs = Smooth(ScreenOverlayBuildMs, (float)sampleMs);
             ScreenOverlayDirtyLanesLastFrame = dirtyLanes;
             ScreenOverlayItemsLastFrame = totalItems;
@@ -114,13 +177,30 @@ namespace Ludots.Core.Presentation.Hud
             int rebuiltLanes,
             int textLayoutCacheCount)
         {
+            LastScreenOverlayDrawMs = (float)totalMs;
+            LastScreenOverlayPaintMs = (float)paintMs;
+            LastScreenOverlayCompositeMs = (float)compositeMs;
+            LastScreenOverlayFinalDrawMs = (float)finalDrawMs;
             ScreenOverlayDrawMs = Smooth(ScreenOverlayDrawMs, (float)totalMs);
             ScreenOverlayPaintMs = Smooth(ScreenOverlayPaintMs, (float)paintMs);
             ScreenOverlayCompositeMs = Smooth(ScreenOverlayCompositeMs, (float)compositeMs);
+            LastUiUploadMs = (float)uploadMs;
             UiUploadMs = Smooth(UiUploadMs, (float)uploadMs);
             ScreenOverlayFinalDrawMs = Smooth(ScreenOverlayFinalDrawMs, (float)finalDrawMs);
             ScreenOverlayRebuiltLanesLastFrame = rebuiltLanes;
             ScreenOverlayTextLayoutCacheCount = textLayoutCacheCount;
+        }
+
+        public void ObserveEndDrawing(double sampleMs)
+        {
+            LastEndDrawingMs = (float)sampleMs;
+            EndDrawingMs = Smooth(EndDrawingMs, (float)sampleMs);
+        }
+
+        public void ObserveScreenshot(double sampleMs)
+        {
+            LastScreenshotMs = (float)sampleMs;
+            ScreenshotMs = Smooth(ScreenshotMs, (float)sampleMs);
         }
 
         public void ObserveCameraCulling(double sampleMs, int visibleEntities)
@@ -261,6 +341,7 @@ namespace Ludots.Core.Presentation.Hud
 
         public void ObserveTerrain(double renderMs, double chunkBuildMs, int drawnChunks, int builtChunks)
         {
+            LastTerrainRenderMs = (float)renderMs;
             TerrainRenderMs = Smooth(TerrainRenderMs, (float)renderMs);
             TerrainChunkBuildMs = Smooth(TerrainChunkBuildMs, (float)chunkBuildMs);
             TerrainChunksDrawnLastFrame = drawnChunks;
@@ -269,9 +350,73 @@ namespace Ludots.Core.Presentation.Hud
 
         public void ObservePrimitiveRender(double sampleMs, int instances, int batches)
         {
+            LastPrimitiveRenderMs = (float)sampleMs;
             PrimitiveRenderMs = Smooth(PrimitiveRenderMs, (float)sampleMs);
             PrimitiveInstancesLastFrame = instances;
             PrimitiveBatchesLastFrame = batches;
+        }
+
+        public void ObserveHostPreTick(double sampleMs)
+        {
+            LastHostPreTickMs = (float)sampleMs;
+            HostPreTickMs = Smooth(HostPreTickMs, (float)sampleMs);
+        }
+
+        public void ObserveHostPostTick(double sampleMs)
+        {
+            LastHostPostTickMs = (float)sampleMs;
+            HostPostTickMs = Smooth(HostPostTickMs, (float)sampleMs);
+        }
+
+        public void ObserveBeginDrawing(double sampleMs)
+        {
+            LastBeginDrawingMs = (float)sampleMs;
+            BeginDrawingMs = Smooth(BeginDrawingMs, (float)sampleMs);
+        }
+
+        public void ObserveMode3D(double sampleMs)
+        {
+            LastMode3DMs = (float)sampleMs;
+            Mode3DMs = Smooth(Mode3DMs, (float)sampleMs);
+        }
+
+        public void ObserveGroundOverlayRender(double sampleMs, int count)
+        {
+            LastGroundOverlayRenderMs = (float)sampleMs;
+            GroundOverlayRenderMs = Smooth(GroundOverlayRenderMs, (float)sampleMs);
+            GroundOverlaysLastFrame = count;
+        }
+
+        public void ObserveRoadSplineRender(double sampleMs, int count)
+        {
+            LastRoadSplineRenderMs = (float)sampleMs;
+            RoadSplineRenderMs = Smooth(RoadSplineRenderMs, (float)sampleMs);
+            RoadSplinesLastFrame = count;
+        }
+
+        public void ObserveDebugDrawRender(double sampleMs, int count)
+        {
+            LastDebugDrawRenderMs = (float)sampleMs;
+            DebugDrawRenderMs = Smooth(DebugDrawRenderMs, (float)sampleMs);
+            DebugDrawCommandsLastFrame = count;
+        }
+
+        public void ObserveNativeDiagnosticHud(double sampleMs)
+        {
+            LastNativeDiagnosticHudMs = (float)sampleMs;
+            NativeDiagnosticHudMs = Smooth(NativeDiagnosticHudMs, (float)sampleMs);
+        }
+
+        public void ObserveHostLoopGap(double sampleMs)
+        {
+            LastHostLoopGapMs = (float)sampleMs;
+            HostLoopGapMs = Smooth(HostLoopGapMs, (float)sampleMs);
+        }
+
+        public void ObserveWindowPoll(double sampleMs)
+        {
+            LastWindowPollMs = (float)sampleMs;
+            WindowPollMs = Smooth(WindowPollMs, (float)sampleMs);
         }
 
         public void ObserveCompositeSkip(bool skipped)

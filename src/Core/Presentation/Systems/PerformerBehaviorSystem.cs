@@ -55,8 +55,9 @@ namespace Ludots.Core.Presentation.Systems
         private readonly Func<IVisualHeightmap?> _heightmapProvider;
         private readonly IBoneTransformProvider? _boneTransformProvider;
         private readonly Dictionary<int, SoundTrackingState> _soundTracking = new();
-        private readonly Dictionary<int, OwnerAttributeWorkTarget[]> _ownerAttributeWorkIndex;
-        private readonly Dictionary<int, OwnerTagWorkTarget[]> _ownerTagWorkIndex;
+        private Dictionary<int, OwnerAttributeWorkTarget[]> _ownerAttributeWorkIndex;
+        private Dictionary<int, OwnerTagWorkTarget[]> _ownerTagWorkIndex;
+        private int _definitionVersion = -1;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly QueryDescription _bootstrapPendingQuery = new QueryDescription()
             .WithAll<PerformerState, PerformerBootstrapPending>();
@@ -66,7 +67,8 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<GameplayTagEffectiveChangedBits>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PerformerState, PerformerWorldPosition>()
-            .WithAny<PerfHasSpline, PerfHasAttachment, PerfHasSound>();
+            .WithAny<PerfHasSpline, PerfHasAttachment, PerfHasSound>()
+            .WithNone<PerformerBootstrapPending>();
         private readonly List<Entity> _bootstrapClearList = new(256);
 
         private struct SoundTrackingState
@@ -123,17 +125,19 @@ namespace Ludots.Core.Presentation.Systems
             _soundRequests = soundRequests ?? throw new ArgumentNullException(nameof(soundRequests));
             _heightmapProvider = heightmapProvider ?? throw new ArgumentNullException(nameof(heightmapProvider));
             _boneTransformProvider = boneTransformProvider;
-            _ownerAttributeWorkIndex = BuildOwnerAttributeWorkIndex(definitions);
-            _ownerTagWorkIndex = BuildOwnerTagWorkIndex(definitions);
+            RefreshDefinitionIndexes();
             _timingDiagnostics = timingDiagnostics;
+            _runtime.BindDefinitions(_definitions);
         }
 
         public override void Update(in float dt)
         {
+            EnsureDefinitionIndexesCurrent();
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
-            ProcessCreatedPerformers();
+            ProcessCreatedPerformers(dt);
             int ownerChanges = ProcessOwnerChanges();
             int tickDrivenCount = ProcessTickDrivenPerformers(dt);
+            ClearProcessedBootstrapMarkers();
             int destroyEventScanCount = StopDestroyedSounds();
             _ownerChanges?.Clear();
 
@@ -154,15 +158,36 @@ namespace Ludots.Core.Presentation.Systems
         private int _lastOwnerAttributeChangeCount;
         private int _lastOwnerTagChangeCount;
 
-        private void ProcessCreatedPerformers()
+        private void EnsureDefinitionIndexesCurrent()
+        {
+            if (_definitionVersion == _definitions.Version)
+            {
+                return;
+            }
+
+            RefreshDefinitionIndexes();
+            _runtime.BindDefinitions(_definitions);
+        }
+
+        private void RefreshDefinitionIndexes()
+        {
+            _ownerAttributeWorkIndex = BuildOwnerAttributeWorkIndex(_definitions);
+            _ownerTagWorkIndex = BuildOwnerTagWorkIndex(_definitions);
+            _definitionVersion = _definitions.Version;
+        }
+
+        private void ProcessCreatedPerformers(float tickDt)
         {
             _bootstrapClearList.Clear();
             World.Query(in _bootstrapPendingQuery, (Entity entity, ref PerformerState state, ref PerformerBootstrapPending pending) =>
             {
-                ProcessPerformer(entity, firstFrame: true, updateAttributeBindings: true, updateTagBindings: true, tickDt: 0f, tickDrivenOnly: false);
+                ProcessPerformer(entity, firstFrame: true, updateAttributeBindings: true, updateTagBindings: true, tickDt, tickDrivenOnly: false);
                 _bootstrapClearList.Add(entity);
             });
+        }
 
+        private void ClearProcessedBootstrapMarkers()
+        {
             for (int i = 0; i < _bootstrapClearList.Count; i++)
             {
                 Entity entity = _bootstrapClearList[i];

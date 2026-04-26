@@ -17,6 +17,8 @@ namespace PerformerBlacksmithShowcaseMod.UI
         private readonly PerformerBlacksmithShowcaseRuntime _runtime;
         private ReactivePage<PerformerBlacksmithShowcasePanelState>? _page;
         private GameEngine? _engine;
+        private PerformerBlacksmithShowcasePanelState _lastState = PerformerBlacksmithShowcasePanelState.Empty;
+        private bool _hasLastState;
 
         public PerformerBlacksmithShowcasePanelController(PerformerBlacksmithShowcaseRuntime runtime)
         {
@@ -35,10 +37,17 @@ namespace PerformerBlacksmithShowcaseMod.UI
                 return false;
             }
 
-            PerformerBlacksmithShowcasePanelState snapshot = state;
-            page.SetState(_ => snapshot);
-            root.IsDirty = true;
-            if (!ReferenceEquals(root.Scene, page.Scene))
+            bool mounted = ReferenceEquals(root.Scene, page.Scene);
+            if (!_hasLastState || !StateEquals(in _lastState, in state))
+            {
+                PerformerBlacksmithShowcasePanelState snapshot = state;
+                page.SetState(_ => snapshot);
+                _lastState = snapshot;
+                _hasLastState = true;
+                root.IsDirty = true;
+            }
+
+            if (!mounted)
             {
                 root.MountScene(page.Scene);
             }
@@ -56,6 +65,7 @@ namespace PerformerBlacksmithShowcaseMod.UI
             }
 
             _engine = null;
+            _hasLastState = false;
         }
 
         private ReactivePage<PerformerBlacksmithShowcasePanelState>? EnsurePage()
@@ -110,7 +120,6 @@ namespace PerformerBlacksmithShowcaseMod.UI
                 .Radius(22f)
                 .Background("#09131C")
                 .Border(1f, ParseColor("#2E526D"))
-                .BackdropBlur(8f)
                 .Absolute(state.PanelLeft, state.PanelTop)
                 .ZIndex(40);
         }
@@ -385,6 +394,60 @@ namespace PerformerBlacksmithShowcaseMod.UI
             }
 
             return color;
+        }
+
+        private static bool StateEquals(
+            in PerformerBlacksmithShowcasePanelState left,
+            in PerformerBlacksmithShowcasePanelState right)
+        {
+            return left.PanelLeft == right.PanelLeft &&
+                   left.PanelTop == right.PanelTop &&
+                   left.PanelWidth == right.PanelWidth &&
+                   left.PanelHeight == right.PanelHeight &&
+                   left.ScrollHeight == right.ScrollHeight &&
+                   string.Equals(left.Title, right.Title, StringComparison.Ordinal) &&
+                   string.Equals(left.Subtitle, right.Subtitle, StringComparison.Ordinal) &&
+                   string.Equals(left.ViewportLabel, right.ViewportLabel, StringComparison.Ordinal) &&
+                   string.Equals(left.SceneSummary, right.SceneSummary, StringComparison.Ordinal) &&
+                   string.Equals(left.ScatterSummary, right.ScatterSummary, StringComparison.Ordinal) &&
+                   string.Equals(left.LastChange, right.LastChange, StringComparison.Ordinal) &&
+                   left.WorkingActive == right.WorkingActive &&
+                   left.NightActive == right.NightActive &&
+                   left.RootDestroyed == right.RootDestroyed &&
+                   left.RegionIndex == right.RegionIndex &&
+                   left.DurabilityPreset == right.DurabilityPreset &&
+                   left.ScatterTarget == right.ScatterTarget &&
+                   left.ScatterAppliedTotal == right.ScatterAppliedTotal &&
+                   left.ScatterMin == right.ScatterMin &&
+                   left.ScatterMax == right.ScatterMax &&
+                   string.Equals(left.BenchmarkSummary, right.BenchmarkSummary, StringComparison.Ordinal) &&
+                   string.Equals(left.CapacitySummary, right.CapacitySummary, StringComparison.Ordinal) &&
+                   SequenceEqual(left.ChecklistLines, right.ChecklistLines) &&
+                   SequenceEqual(left.DiagnosticLines, right.DiagnosticLines) &&
+                   SequenceEqual(left.PerformerLines, right.PerformerLines);
+        }
+
+        private static bool SequenceEqual(string[]? left, string[]? right)
+        {
+            if (ReferenceEquals(left, right))
+            {
+                return true;
+            }
+
+            if (left == null || right == null || left.Length != right.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < left.Length; i++)
+            {
+                if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

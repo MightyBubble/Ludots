@@ -36,6 +36,7 @@ namespace Ludots.Tests.GAS
 
             var e = world.Create();
             var attrs = new AttributeBuffer();
+            attrs.SetBase(0, 20f);
             attrs.SetCurrent(0, 20f);
             world.Add(e, attrs);
 

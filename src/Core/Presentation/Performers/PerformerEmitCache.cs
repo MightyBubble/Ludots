@@ -10,6 +10,7 @@ namespace Ludots.Core.Presentation.Performers
         public byte LastOwnerCullVisible;
         public byte LastDefinitionVisible;
         public byte StableVisualPresent;
+        public byte RetainedRequestPresent;
         public byte StaticDirty;
         public byte RetainedDirty;
         public LODLevel LastLod;

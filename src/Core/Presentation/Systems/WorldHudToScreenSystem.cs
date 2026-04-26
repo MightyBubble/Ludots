@@ -1,9 +1,12 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Systems
@@ -20,11 +23,13 @@ namespace Ludots.Core.Presentation.Systems
         private readonly IViewController _view;
         private readonly ScreenHudBatchBuffer _screenHud;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
+        private readonly CameraCullingDebugState? _cullingDebug;
         private int _lastWorldHudRevision = -1;
         private int _lastProjectionRevision = -1;
 
         private const int MaxBarDim = 512;
         private const int Margin = 200;
+        private const float WorldHudCoarseMarginCm = 600f;
 
         public WorldHudToScreenSystem(
             World world,
@@ -33,7 +38,8 @@ namespace Ludots.Core.Presentation.Systems
             IScreenProjector projector,
             IViewController view,
             ScreenHudBatchBuffer screenHud,
-            PresentationTimingDiagnostics? timingDiagnostics = null)
+            PresentationTimingDiagnostics? timingDiagnostics = null,
+            CameraCullingDebugState? cullingDebug = null)
             : base(world)
         {
             _worldHud = worldHud ?? throw new System.ArgumentNullException(nameof(worldHud));
@@ -42,6 +48,7 @@ namespace Ludots.Core.Presentation.Systems
             _view = view ?? throw new System.ArgumentNullException(nameof(view));
             _screenHud = screenHud ?? throw new System.ArgumentNullException(nameof(screenHud));
             _timingDiagnostics = timingDiagnostics;
+            _cullingDebug = cullingDebug;
         }
 
         public override void Update(in float dt)
@@ -64,12 +71,46 @@ namespace Ludots.Core.Presentation.Systems
             var res = _view.Resolution;
             float screenWidth = res.X;
             float screenHeight = res.Y;
+            ProjectionSnapshot projectionSnapshot = default;
+            bool hasProjectionSnapshot = _projector is IProjectionSnapshotProvider snapshotProvider &&
+                                         snapshotProvider.TryGetProjectionSnapshot(out projectionSnapshot);
 
             var span = _worldHud.GetSpan();
+            var lastWorldPosition = new System.Numerics.Vector3(float.NaN, float.NaN, float.NaN);
+            var lastScreen = new System.Numerics.Vector2(float.NaN, float.NaN);
+            bool useCoarseCull = _cullingDebug != null && _cullingDebug.MaxX > _cullingDebug.MinX && _cullingDebug.MaxY > _cullingDebug.MinY;
+            float minX = useCoarseCull ? _cullingDebug!.MinX - WorldHudCoarseMarginCm : 0f;
+            float maxX = useCoarseCull ? _cullingDebug!.MaxX + WorldHudCoarseMarginCm : 0f;
+            float minZ = useCoarseCull ? _cullingDebug!.MinY - WorldHudCoarseMarginCm : 0f;
+            float maxZ = useCoarseCull ? _cullingDebug!.MaxY + WorldHudCoarseMarginCm : 0f;
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                var screen = _projector.WorldToScreen(item.WorldPosition);
+                if (item.Owner != Entity.Null &&
+                    (!World.IsAlive(item.Owner) ||
+                     (World.Has<CullState>(item.Owner) && !World.Get<CullState>(item.Owner).IsVisible)))
+                {
+                    continue;
+                }
+
+                float itemXCm = item.WorldPosition.X * 100f;
+                float itemZCm = item.WorldPosition.Z * 100f;
+                if (useCoarseCull &&
+                    (itemXCm < minX ||
+                     itemXCm > maxX ||
+                     itemZCm < minZ ||
+                     itemZCm > maxZ))
+                {
+                    continue;
+                }
+
+                var screen = item.WorldPosition == lastWorldPosition
+                    ? lastScreen
+                    : hasProjectionSnapshot
+                        ? ProjectWorldToScreenFast(item.WorldPosition, in projectionSnapshot)
+                        : _projector.WorldToScreen(item.WorldPosition);
+                lastWorldPosition = item.WorldPosition;
+                lastScreen = screen;
                 if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) ||
                     float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
                     continue;
@@ -133,6 +174,32 @@ namespace Ludots.Core.Presentation.Systems
             _timingDiagnostics?.ObserveWorldHudProjection((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
             _lastWorldHudRevision = worldHudRevision;
             _lastProjectionRevision = projectionRevision;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static System.Numerics.Vector2 ProjectWorldToScreenFast(
+            in System.Numerics.Vector3 worldPosition,
+            in ProjectionSnapshot projection)
+        {
+            var clip = System.Numerics.Vector4.Transform(
+                new System.Numerics.Vector4(worldPosition, 1f),
+                projection.ViewProjection);
+            if (clip.W <= 0.001f)
+            {
+                return new System.Numerics.Vector2(float.NaN, float.NaN);
+            }
+
+            float invW = 1f / clip.W;
+            float ndcX = clip.X * invW;
+            float ndcY = clip.Y * invW;
+            if (ndcX < -1f || ndcX > 1f || ndcY < -1f || ndcY > 1f)
+            {
+                return new System.Numerics.Vector2(float.NaN, float.NaN);
+            }
+
+            float screenX = (ndcX + 1f) * 0.5f * projection.Resolution.X;
+            float screenY = (1f - ndcY) * 0.5f * projection.Resolution.Y;
+            return new System.Numerics.Vector2(screenX, screenY);
         }
     }
 }

@@ -1,5 +1,6 @@
 {
   "startupMapId": "performer_blacksmith_showcase",
+  "targetFps": 0,
   "presentation": {
     "performerInstanceCapacity": 524288,
     "presentationEventStreamCapacity": 1048576,

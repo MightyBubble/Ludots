@@ -2,11 +2,11 @@
   {
     "id": "Effect.Showcase.Blacksmith.RandomDrift",
     "tags": ["Effect.Showcase.Blacksmith.RandomDrift"],
-    "presetType": "Buff",
+    "presetType": "DoT",
     "lifetime": "Infinite",
     "participatesInResponse": false,
     "duration": {
-      "periodTicks": 15
+      "periodTicks": 60
     },
     "phaseGraphs": {
       "OnPeriod": {

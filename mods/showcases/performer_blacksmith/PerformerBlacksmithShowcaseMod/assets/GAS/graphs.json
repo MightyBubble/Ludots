@@ -8,7 +8,7 @@
       { "id": "durabilityRandom", "op": "RandomFloat01", "next": "durabilityCenter" },
       { "id": "durabilityCenter", "op": "ConstFloat", "floatValue": 0.5, "next": "durabilitySigned" },
       { "id": "durabilitySigned", "op": "SubFloat", "inputs": ["durabilityRandom", "durabilityCenter"], "next": "durabilityScale" },
-      { "id": "durabilityScale", "op": "ConstFloat", "floatValue": 10.0, "next": "durabilityDelta" },
+      { "id": "durabilityScale", "op": "ConstFloat", "floatValue": 24.0, "next": "durabilityDelta" },
       { "id": "durabilityDelta", "op": "MulFloat", "inputs": ["durabilitySigned", "durabilityScale"], "next": "modifyDurability" },
       { "id": "modifyDurability", "op": "ModifyAttributeAdd", "attribute": "Durability", "inputs": ["target", "durabilityDelta"] }
     ]

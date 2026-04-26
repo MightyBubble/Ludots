@@ -16,6 +16,8 @@ namespace Ludots.Core.Presentation.Performers
         private static readonly PerformerDefinition EmptyDefinition = new();
         private static readonly QueryDescription _performerCullQuery = new QueryDescription()
             .WithAll<PerformerState, PerformerCullState>();
+        private static readonly QueryDescription _ownerPayloadMarkerQuery = new QueryDescription()
+            .WithAll<PresentationOwnerHasPerformerPayload>();
 
         private readonly World _world;
         private PerformerDefinitionRegistry? _definitions;
@@ -43,7 +45,13 @@ namespace Ludots.Core.Presentation.Performers
 
         public void BindDefinitions(PerformerDefinitionRegistry definitions)
         {
+            if (ReferenceEquals(_definitions, definitions))
+            {
+                return;
+            }
+
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+            ReconcileBoundDefinitions();
         }
 
         public Entity Create(
@@ -56,7 +64,7 @@ namespace Ludots.Core.Presentation.Performers
             Entity parent,
             PerformerDefinition definition)
         {
-            definition ??= EmptyDefinition;
+            definition = ResolveDefinition(defId, definition);
 
             var state = new PerformerState
             {
@@ -205,7 +213,7 @@ namespace Ludots.Core.Presentation.Performers
             PerformerDefinition definition,
             Func<int>? allocateStableId = null)
         {
-            definition ??= EmptyDefinition;
+            definition = ResolveDefinition(defId, definition);
 
             Entity entity = Create(defId, owner, scopeId, anchorKind, in worldPosition, stableId, parent, definition);
             ref PerformerState state = ref _world.Get<PerformerState>(entity);
@@ -705,6 +713,7 @@ namespace Ludots.Core.Presentation.Performers
                 if (_world.IsAlive(entity))
                     _world.Destroy(entity);
             }
+            ClearOwnerPayloadMarkers();
             _activeCount = 0;
             _structureVersion++;
             _nonRootCount = 0;
@@ -731,6 +740,7 @@ namespace Ludots.Core.Presentation.Performers
             bool hasSound = false;
             bool hasSpline = false;
             bool hasAttachment = false;
+            bool hasAnimator = false;
 
             for (int i = 0; i < behaviors.Length; i++)
             {
@@ -745,6 +755,7 @@ namespace Ludots.Core.Presentation.Performers
                 {
                     case BehaviorKind.Sound: hasSound = true; break;
                     case BehaviorKind.Spline: hasSpline = true; break;
+                    case BehaviorKind.Animator: hasAnimator = true; break;
                     case BehaviorKind.Attachment:
                         if (AttachmentRequiresTick(entity, in slot.Attachment))
                         {
@@ -758,6 +769,7 @@ namespace Ludots.Core.Presentation.Performers
             SyncTickBehaviorMarker<PerfHasSound>(entity, hasSound);
             SyncTickBehaviorMarker<PerfHasSpline>(entity, hasSpline);
             SyncTickBehaviorMarker<PerfHasAttachment>(entity, hasAttachment);
+            SyncTickBehaviorMarker<PerfHasAnimator>(entity, hasAnimator);
         }
 
         public void SyncEmitWorkMarkers(Entity entity, PerformerDefinition definition, uint activeBehaviorMask)
@@ -846,6 +858,11 @@ namespace Ludots.Core.Presentation.Performers
             if (_world.Has<PerfHasAttachment>(entity))
             {
                 _world.Remove<PerfHasAttachment>(entity);
+            }
+
+            if (_world.Has<PerfHasAnimator>(entity))
+            {
+                _world.Remove<PerfHasAnimator>(entity);
             }
 
             if (_world.Has<PerfHasEmitWork>(entity))
@@ -1102,6 +1119,7 @@ namespace Ludots.Core.Presentation.Performers
                 bool hasSound = false;
                 bool hasSpline = false;
                 bool hasAttachment = false;
+                bool hasAnimator = false;
                 for (int i = 0; i < behaviors.Length; i++)
                 {
                     ref readonly BehaviorSlot slot = ref behaviors[i];
@@ -1115,12 +1133,14 @@ namespace Ludots.Core.Presentation.Performers
                     {
                         case BehaviorKind.Sound: hasSound = true; break;
                         case BehaviorKind.Spline: hasSpline = true; break;
+                        case BehaviorKind.Animator: hasAnimator = true; break;
                         case BehaviorKind.Attachment: hasAttachment = true; break;
                     }
                 }
 
                 if (hasSound) signature += Component<PerfHasSound>.Signature;
                 if (hasSpline) signature += Component<PerfHasSpline>.Signature;
+                if (hasAnimator) signature += Component<PerfHasAnimator>.Signature;
                 if (hasAttachment) signature += Component<PerfHasAttachment>.Signature;
                 if ((definition.HasSurfaceAuthoring || definition.HasAssetBindingBehavior) &&
                     !definition.UsesEventDrivenStaticEmit &&
@@ -1141,6 +1161,67 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             return signature;
+        }
+
+        private PerformerDefinition ResolveDefinition(int defId, PerformerDefinition definition)
+        {
+            if (definition != null)
+            {
+                return definition;
+            }
+
+            return _definitions != null && _definitions.TryGet(defId, out PerformerDefinition resolved)
+                ? resolved
+                : EmptyDefinition;
+        }
+
+        private void ReconcileBoundDefinitions()
+        {
+            if (_definitions == null)
+            {
+                return;
+            }
+
+            ClearOwnerPayloadMarkers();
+            _byDefinition.Clear();
+            _byOwner.Clear();
+            _byOwnerDefinition.Clear();
+            _scopedInstances.Clear();
+            var query = new QueryDescription().WithAll<PerformerState>();
+            _world.Query(in query, (Entity entity, ref PerformerState state) =>
+            {
+                if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition))
+                {
+                    RemoveTickBehaviorMarkers(entity);
+                    if (_world.Has<PerfStaticStableVisual>(entity))
+                    {
+                        _world.Remove<PerfStaticStableVisual>(entity);
+                    }
+
+                    AddToOwnerIndex(state.OwnerEntity, entity);
+                    return;
+                }
+
+                AddIndexes(entity, in state, definition);
+                SyncTickBehaviorMarkers(entity, definition, state.BehaviorActiveMask);
+                SyncEmitWorkMarkers(entity, definition, state.BehaviorActiveMask);
+                if (definition.RequiresBootstrapProcessing && !_world.Has<PerformerBootstrapPending>(entity))
+                {
+                    _world.Add<PerformerBootstrapPending>(entity);
+                }
+
+                if (definition.UsesEventDrivenStaticEmit)
+                {
+                    if (!_world.Has<PerfStaticStableVisual>(entity))
+                    {
+                        _world.Add<PerfStaticStableVisual>(entity);
+                    }
+                }
+                else if (_world.Has<PerfStaticStableVisual>(entity))
+                {
+                    _world.Remove<PerfStaticStableVisual>(entity);
+                }
+            });
         }
 
         private void FillEntityAnchoredRootBatch(
@@ -1505,6 +1586,7 @@ namespace Ludots.Core.Presentation.Performers
 
             ref OwnerPerformerBucket bucket = ref CollectionsMarshal.GetValueRefOrAddDefault(_byOwner, new OwnerKey(owner), out _);
             bucket.Add(performer);
+            IncrementOwnerPayloadMarker(owner);
         }
 
         private void RemoveFromOwnerIndex(Entity owner, Entity performer)
@@ -1525,6 +1607,45 @@ namespace Ludots.Core.Presentation.Performers
             {
                 _byOwner.Remove(key);
             }
+
+            DecrementOwnerPayloadMarker(owner);
+        }
+
+        private void IncrementOwnerPayloadMarker(Entity owner)
+        {
+            if (owner == Entity.Null || !_world.IsAlive(owner))
+            {
+                return;
+            }
+
+            if (_world.Has<PresentationOwnerHasPerformerPayload>(owner))
+            {
+                ref PresentationOwnerHasPerformerPayload marker = ref _world.Get<PresentationOwnerHasPerformerPayload>(owner);
+                marker.Count++;
+                return;
+            }
+
+            _world.Add(owner, new PresentationOwnerHasPerformerPayload { Count = 1 });
+        }
+
+        private void DecrementOwnerPayloadMarker(Entity owner)
+        {
+            if (owner == Entity.Null || !_world.IsAlive(owner) || !_world.Has<PresentationOwnerHasPerformerPayload>(owner))
+            {
+                return;
+            }
+
+            ref PresentationOwnerHasPerformerPayload marker = ref _world.Get<PresentationOwnerHasPerformerPayload>(owner);
+            marker.Count--;
+            if (marker.Count <= 0)
+            {
+                _world.Remove<PresentationOwnerHasPerformerPayload>(owner);
+            }
+        }
+
+        private void ClearOwnerPayloadMarkers()
+        {
+            _world.Remove<PresentationOwnerHasPerformerPayload>(in _ownerPayloadMarkerQuery);
         }
 
         private void SyncOwnerRootCull(Entity performer, bool ownerVisible, LODLevel ownerLod)

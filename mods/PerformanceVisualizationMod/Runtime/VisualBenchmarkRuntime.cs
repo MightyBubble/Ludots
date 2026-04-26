@@ -54,8 +54,11 @@ namespace PerformanceVisualizationMod.Runtime
         private int _lastVisibleCount;
         private int _lastHudCount;
         private int _lastHudDropped;
+        private int _screenHudCount;
+        private int _screenHudDropped;
         private int _healthAttributeId;
         private int _benchmarkCubeDefinitionId;
+        private uint _directHudRandomState = 0x5EED_1000u;
 
         public VisualBenchmarkRuntime(IModContext context)
         {
@@ -88,6 +91,25 @@ namespace PerformanceVisualizationMod.Runtime
             }
 
             _activeMapId = mapId;
+            if (string.Equals(mapId, VisualBenchmarkIds.Hud100kMapId, StringComparison.OrdinalIgnoreCase))
+            {
+                _scenario = VisualBenchmarkScenarioConfig.Hud100k;
+                _requestedScenario = _scenario;
+                _hasRequestedScenario = false;
+                _clearRequested = false;
+                _pipelinePhase = BenchmarkPipelinePhase.Idle;
+                _status = "HUD 100K direct-screen benchmark active.";
+            }
+            else if (string.Equals(mapId, VisualBenchmarkIds.SkiaHotpathMapId, StringComparison.OrdinalIgnoreCase))
+            {
+                _scenario = VisualBenchmarkScenarioConfig.SkiaHotpath;
+                _requestedScenario = _scenario;
+                _hasRequestedScenario = false;
+                _clearRequested = false;
+                _pipelinePhase = BenchmarkPipelinePhase.Idle;
+                _status = "Skia hotpath direct-screen benchmark active.";
+            }
+
             ConfigureCamera(engine, _scenario);
             RefreshPanel(engine);
             return Task.CompletedTask;
@@ -130,6 +152,18 @@ namespace PerformanceVisualizationMod.Runtime
         {
             if (engine == null || !IsActive || engine.CurrentMapSession == null)
             {
+                return;
+            }
+
+            if (_scenario.WorkloadKind == VisualBenchmarkWorkloadKind.DirectScreenHud100k)
+            {
+                FillDirectHud100k(engine);
+                return;
+            }
+
+            if (_scenario.WorkloadKind == VisualBenchmarkWorkloadKind.DirectScreenHudHotpath)
+            {
+                FillDirectSkiaHotpath(engine);
                 return;
             }
 
@@ -253,14 +287,16 @@ namespace PerformanceVisualizationMod.Runtime
                 Title: "Visual Benchmark Showcase",
                 Status: _status,
                 Scenario: $"Scenario: {_scenario.Label} | Spawned: {_spawnedCount:N0}",
-                Metrics: $"Entities: {_spawnedCount:N0} | Visible: {_lastVisibleCount:N0} | WorldHUD Bars: {_lastHudCount:N0} | Dropped: {_lastHudDropped:N0}",
+                Metrics: $"Entities: {_spawnedCount:N0} | Visible: {_lastVisibleCount:N0} | WorldHUD Bars: {_lastHudCount:N0} | ScreenHUD Items: {_screenHudCount:N0} | Drops W:{_lastHudDropped:N0}/S:{_screenHudDropped:N0}",
                 Camera: $"Camera target ({cameraTarget.X:0},{cameraTarget.Y:0}) | Distance {engine.GameSession.Camera.State.DistanceCm:0}",
-                Hint: $"Pipeline: {_pipelinePhase} | Run 2K/8K to validate the formal performer HUD path. Run 32K for pure visual-instance stress with no HUD performers.",
+                Hint: $"Pipeline: {_pipelinePhase} | Run 2K/8K to validate performer HUD, 32K for pure visual stress, HUD100K/SkiaHotpath for direct screen-HUD overlay throughput.",
                 Actions: new[]
                 {
                     VisualBenchmarkScenarioConfig.Small.Label,
                     VisualBenchmarkScenarioConfig.Medium.Label,
                     VisualBenchmarkScenarioConfig.Large.Label,
+                    VisualBenchmarkScenarioConfig.Hud100k.Label,
+                    VisualBenchmarkScenarioConfig.SkiaHotpath.Label,
                     "Clear scenario",
                 });
         }
@@ -277,6 +313,8 @@ namespace PerformanceVisualizationMod.Runtime
         {
             _spawnedCount = 0;
             _lastVisibleCount = 0;
+            _screenHudCount = 0;
+            _screenHudDropped = 0;
 
             MapId currentMapId = engine.CurrentMapSession?.MapId ?? default;
             engine.World.Query(in ScenarioEntitiesQuery, (ref MapEntity mapEntity, ref Name name, ref PresentationStableId __, ref PresentationLocalBounds ___) =>
@@ -302,6 +340,9 @@ namespace PerformanceVisualizationMod.Runtime
             WorldHudBatchBuffer? hud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
             _lastHudCount = hud?.Count ?? 0;
             _lastHudDropped = hud?.DroppedSinceClear ?? 0;
+            ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
+            _screenHudCount = screenHud?.Count ?? 0;
+            _screenHudDropped = screenHud?.DroppedSinceClear ?? 0;
         }
 
         private void ConfigureCamera(GameEngine engine, VisualBenchmarkScenarioConfig scenario)
@@ -443,6 +484,8 @@ namespace PerformanceVisualizationMod.Runtime
             _lastVisibleCount = 0;
             _lastHudCount = 0;
             _lastHudDropped = 0;
+            _screenHudCount = 0;
+            _screenHudDropped = 0;
             _status = "Ready. Choose a benchmark profile to spawn map-scoped visuals.";
 
             if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
@@ -493,6 +536,138 @@ namespace PerformanceVisualizationMod.Runtime
         {
             int scopeId = HashCode.Combine(VisualBenchmarkIds.ScenarioLabel, entity.Id, entity.WorldId, entity.Version) & int.MaxValue;
             return scopeId == 0 ? 1 : scopeId;
+        }
+
+        private void FillDirectHud100k(GameEngine engine)
+        {
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)
+                ?? throw new InvalidOperationException("PresentationScreenHudBuffer service is missing.");
+            screenHud.Clear();
+
+            const int columns = 400;
+            const int maxHealth = 1000;
+            const float baseX = 4f;
+            const float baseY = 6f;
+            const float colSpacing = 4.1f;
+            const float rowSpacing = 3.6f;
+            const float barWidth = 3f;
+            const float barHeight = 2f;
+            const int fontSize = 8;
+            Vector4 barBackground = new(0.10f, 0.12f, 0.16f, 0.86f);
+            Vector4 barForeground = new(0.16f, 0.82f, 0.36f, 0.96f);
+            Vector4 textColor = new(0.94f, 0.96f, 0.88f, 1f);
+
+            for (int i = 0; i < VisualBenchmarkScenarioConfig.Hud100k.EntityCount; i++)
+            {
+                int currentHealth = (int)(NextRandom(ref _directHudRandomState) % (uint)(maxHealth + 1));
+                int row = i / columns;
+                int column = i % columns;
+                float x = baseX + (column * colSpacing);
+                float y = baseY + (row * rowSpacing);
+                float fill = currentHealth / (float)maxHealth;
+
+                screenHud.TryAddBar(new ScreenHudBarItem
+                {
+                    StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Bar, discriminator: _healthAttributeId == 0 ? 1 : _healthAttributeId),
+                    DirtySerial = HudItemIdentity.ComposeBarDirtySerial(barWidth, barHeight, fill, barBackground, barForeground),
+                    ScreenX = x,
+                    ScreenY = y,
+                    Width = barWidth,
+                    Height = barHeight,
+                    Value0 = fill,
+                    Color0 = barBackground,
+                    Color1 = barForeground,
+                });
+
+                screenHud.TryAddText(new ScreenHudTextItem
+                {
+                    StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Text, discriminator: _healthAttributeId == 0 ? 1 : _healthAttributeId),
+                    DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, 0, (int)WorldHudValueMode.AttributeCurrentOverBase, currentHealth, maxHealth, textColor, default),
+                    ScreenX = x,
+                    ScreenY = y - 7f,
+                    FontSize = fontSize,
+                    Color0 = textColor,
+                    Value0 = currentHealth,
+                    Value1 = maxHealth,
+                    Id1 = (int)WorldHudValueMode.AttributeCurrentOverBase,
+                });
+            }
+
+            _spawnedCount = VisualBenchmarkScenarioConfig.Hud100k.EntityCount;
+            _lastVisibleCount = VisualBenchmarkScenarioConfig.Hud100k.EntityCount;
+            _status = "HUD 100K direct-screen benchmark active.";
+        }
+
+        private void FillDirectSkiaHotpath(GameEngine engine)
+        {
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)
+                ?? throw new InvalidOperationException("PresentationScreenHudBuffer service is missing.");
+            screenHud.Clear();
+
+            const int visibleEntityCount = 10240;
+            const int columns = 64;
+            const float baseBarX = 14f;
+            const float baseBarY = 12f;
+            const float colSpacing = 18.5f;
+            const float rowSpacing = 4.25f;
+            const float barWidth = 16f;
+            const float barHeight = 3f;
+            const int fontSize = 11;
+            Vector4 barBackground = new(0.10f, 0.12f, 0.16f, 0.88f);
+            Vector4 barForeground = new(0.15f, 0.82f, 0.46f, 0.96f);
+            Vector4 textColor = new(0.96f, 0.96f, 0.90f, 1f);
+
+            int valueOffset = (int)(NextRandom(ref _directHudRandomState) % 4096u);
+            for (int i = 0; i < visibleEntityCount; i++)
+            {
+                int row = i / columns;
+                int column = i % columns;
+                float x = baseBarX + (column * colSpacing);
+                float y = baseBarY + (row * rowSpacing);
+                float fill = 0.18f + (((i + valueOffset) % 12) * 0.06f);
+                if (fill > 0.98f)
+                {
+                    fill = 0.98f;
+                }
+
+                int numericValue = 100 + ((i + valueOffset) % 900);
+                screenHud.TryAddBar(new ScreenHudBarItem
+                {
+                    StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Bar, discriminator: 1),
+                    DirtySerial = HudItemIdentity.ComposeBarDirtySerial(barWidth, barHeight, fill, barBackground, barForeground),
+                    ScreenX = x,
+                    ScreenY = y,
+                    Width = barWidth,
+                    Height = barHeight,
+                    Value0 = fill,
+                    Color0 = barBackground,
+                    Color1 = barForeground,
+                });
+
+                screenHud.TryAddText(new ScreenHudTextItem
+                {
+                    StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Text, discriminator: 2),
+                    DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, 0, (int)WorldHudValueMode.AttributeCurrent, numericValue, 0f, textColor, default),
+                    ScreenX = x + 1f,
+                    ScreenY = y - 9f,
+                    FontSize = fontSize,
+                    Color0 = textColor,
+                    Value0 = numericValue,
+                    Id1 = (int)WorldHudValueMode.AttributeCurrent,
+                });
+            }
+
+            _spawnedCount = visibleEntityCount;
+            _lastVisibleCount = visibleEntityCount;
+            _status = "Skia hotpath direct-screen benchmark active.";
+        }
+
+        private static uint NextRandom(ref uint state)
+        {
+            state ^= state << 13;
+            state ^= state >> 17;
+            state ^= state << 5;
+            return state;
         }
     }
 }

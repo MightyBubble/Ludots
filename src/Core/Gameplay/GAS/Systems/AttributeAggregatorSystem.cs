@@ -13,13 +13,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public class AttributeAggregatorSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription _withDirtyFlagsQuery = new QueryDescription()
-            .WithAll<AttributeBuffer, ActiveEffectContainer, DirtyFlags>();
+            .WithAll<AttributeBuffer, ActiveEffectContainer, AttributeAggregateDirty, DirtyFlags>();
 
         private static readonly QueryDescription _withoutDirtyFlagsQuery = new QueryDescription()
-            .WithAll<AttributeBuffer, ActiveEffectContainer>()
+            .WithAll<AttributeBuffer, ActiveEffectContainer, AttributeAggregateDirty>()
             .WithNone<DirtyFlags>();
 
-        private readonly CommandBuffer _commandBuffer = new CommandBuffer();
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
 
@@ -31,9 +30,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override unsafe void Update(in float dt)
         {
+            var commandBuffer = new CommandBuffer();
             var withDirtyJob = new AttributeAggregatorWithDirtyJob
             {
                 World = World,
+                CommandBuffer = commandBuffer,
                 GraphPrograms = _graphPrograms,
                 GraphApi = _graphApi,
             };
@@ -42,13 +43,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             var withoutDirtyJob = new AttributeAggregatorWithoutDirtyJob
             {
                 World = World,
-                CommandBuffer = _commandBuffer,
+                CommandBuffer = commandBuffer,
                 GraphPrograms = _graphPrograms,
                 GraphApi = _graphApi,
             };
             World.InlineEntityQuery<AttributeAggregatorWithoutDirtyJob, AttributeBuffer, ActiveEffectContainer>(in _withoutDirtyFlagsQuery, ref withoutDirtyJob);
 
-            _commandBuffer.Playback(World, dispose: true);
+            commandBuffer.Playback(World, dispose: true);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -154,6 +155,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         struct AttributeAggregatorWithDirtyJob : IForEachWithEntity<AttributeBuffer, ActiveEffectContainer, DirtyFlags>
         {
             public World World;
+            public CommandBuffer CommandBuffer;
             public GraphProgramRegistry GraphPrograms;
             public IGraphRuntimeApi GraphApi;
 
@@ -183,6 +185,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         dirtyFlags.MarkAttributeDirty(i);
                     }
                 }
+
+                CommandBuffer.Remove<AttributeAggregateDirty>(entity);
             }
 
         }
@@ -223,10 +227,28 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
 
-                if (anyDirty)
+                if (!anyDirty)
+                {
+                    return;
+                }
+
+                if (World.Has<DirtyFlags>(entity))
+                {
+                    ref DirtyFlags existingDirty = ref World.Get<DirtyFlags>(entity);
+                    for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+                    {
+                        if (dirtyFlags.IsAttributeDirty(i))
+                        {
+                            existingDirty.MarkAttributeDirty(i);
+                        }
+                    }
+                }
+                else
                 {
                     CommandBuffer.Add(entity, dirtyFlags);
                 }
+
+                CommandBuffer.Remove<AttributeAggregateDirty>(entity);
             }
 
         }

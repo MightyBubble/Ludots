@@ -42,6 +42,48 @@
     ]
   },
   {
+    "id": "blacksmith_mesh_hudbar_benchmark_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "blacksmith_mesh_hudbar_benchmark_entity" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "blacksmith_mesh_benchmark_hudbar",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "blacksmith_mesh_hudbar_benchmark_entity" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_mesh_hudtext_benchmark_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "blacksmith_mesh_hudtext_benchmark_entity" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "blacksmith_mesh_benchmark_hudtext",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "blacksmith_mesh_hudtext_benchmark_entity" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
     "id": "blacksmith_mesh_benchmark_ism",
     "behaviors": [
       {
@@ -56,6 +98,101 @@
           "mobility": "Static"
         }
       }
+    ]
+  },
+  {
+    "id": "blacksmith_mesh_benchmark_hudbar",
+    "children": [
+      { "definitionId": "blacksmith_durability_hud_bar_benchmark", "scopeTag": "structure" }
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.building.north.intact",
+          "assetSwapParamKey": 104,
+          "assetSwapTable": [
+            { "paramValue": 0, "assetId": "blacksmith.building.north.intact" },
+            { "paramValue": 1, "assetId": "blacksmith.building.south.intact" },
+            { "paramValue": 2, "assetId": "blacksmith.building.damaged" },
+            { "paramValue": 3, "assetId": "blacksmith.building.ruined" }
+          ],
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static"
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeName": "Durability",
+          "targetParamKey": 101,
+          "mode": "AttributeRatio",
+          "thresholds": [
+            { "threshold": 0.0, "outputParamKey": 104, "outputValue": 3.0 },
+            { "threshold": 0.5, "outputParamKey": 104, "outputValue": 2.0 }
+          ]
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": 101, "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": 104, "lane": "Int", "intValue": 0 },
+      { "paramKey": 106, "lane": "Float", "floatValue": 1.0 }
+    ]
+  },
+  {
+    "id": "blacksmith_mesh_benchmark_hudtext",
+    "children": [
+      { "definitionId": "blacksmith_durability_hud_bar_benchmark", "scopeTag": "structure" },
+      { "definitionId": "blacksmith_durability_hud_text_benchmark", "scopeTag": "structure" }
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.building.north.intact",
+          "assetSwapParamKey": 104,
+          "assetSwapTable": [
+            { "paramValue": 0, "assetId": "blacksmith.building.north.intact" },
+            { "paramValue": 1, "assetId": "blacksmith.building.south.intact" },
+            { "paramValue": 2, "assetId": "blacksmith.building.damaged" },
+            { "paramValue": 3, "assetId": "blacksmith.building.ruined" }
+          ],
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static"
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeName": "Durability",
+          "targetParamKey": 101,
+          "mode": "AttributeRatio",
+          "thresholds": [
+            { "threshold": 0.0, "outputParamKey": 104, "outputValue": 3.0 },
+            { "threshold": 0.5, "outputParamKey": 104, "outputValue": 2.0 }
+          ]
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": 101, "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": 104, "lane": "Int", "intValue": 0 },
+      { "paramKey": 106, "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": 107, "lane": "Float", "floatValue": 100.0 },
+      { "paramKey": 108, "lane": "Float", "floatValue": 100.0 }
     ]
   },
   {
@@ -385,6 +522,27 @@
     "defaultColor": [0.15, 0.88, 0.32, 1.0]
   },
   {
+    "id": "blacksmith_durability_hud_bar_benchmark",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": 106,
+          "mobility": "Movable",
+          "localOffset": [0.0, 4.1, 0.0],
+          "localScale": [56.0, 7.0, 1.0]
+        }
+      }
+    ],
+    "bindings": [
+      { "paramKey": 106, "source": "attributeRatio", "attributeName": "Durability" }
+    ],
+    "defaultColor": [0.98, 0.22, 0.14, 1.0]
+  },
+  {
     "id": "blacksmith_durability_hud_text",
     "defaultTextId": "hud.attribute.current_over_base",
     "legacyWorldTextMode": "AttributeCurrentOverBase",
@@ -410,6 +568,33 @@
       { "paramKey": 108, "source": "attributeBase", "attributeName": "Durability" }
     ],
     "defaultColor": [1.0, 0.96, 0.86, 1.0]
+  },
+  {
+    "id": "blacksmith_durability_hud_text_benchmark",
+    "defaultTextId": "hud.attribute.current_over_base",
+    "legacyWorldTextMode": "AttributeCurrentOverBase",
+    "defaultFontSize": 11,
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldText",
+          "assetId": "hud.attribute.current_over_base",
+          "scaleParamKey": 107,
+          "materialParamKey": 108,
+          "mobility": "Movable",
+          "localOffset": [0.0, 5.1, 0.0],
+          "localScale": [1.0, 1.0, 1.0]
+        }
+      }
+    ],
+    "bindings": [
+      { "paramKey": 107, "source": "attribute", "attributeName": "Durability" },
+      { "paramKey": 108, "source": "attributeBase", "attributeName": "Durability" }
+    ],
+    "defaultColor": [1.0, 0.98, 0.92, 1.0]
   },
   {
     "id": "blacksmith_root",

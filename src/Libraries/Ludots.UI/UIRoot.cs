@@ -110,12 +110,14 @@ public class UIRoot
 			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Scroll, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId, pointerEvent.DeltaX, pointerEvent.DeltaY)).Handled;
 			break;
 		}
+		bool sceneChanged = Scene.IsDirty;
 		bool runtimeChanged = false;
-		if (flag || Scene.IsDirty)
+		if (flag || sceneChanged)
 		{
 			runtimeChanged = RefreshReactiveSceneRuntime();
+			sceneChanged = Scene.IsDirty;
 		}
-		if (flag || Scene.IsDirty)
+		if (sceneChanged || runtimeChanged)
 		{
 			IsDirty = true;
 		}

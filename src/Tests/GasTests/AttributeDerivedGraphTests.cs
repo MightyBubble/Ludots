@@ -23,7 +23,8 @@ namespace Ludots.Tests.GAS
 
             var entity = world.Create(
                 new AttributeBuffer(),
-                new ActiveEffectContainer()
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetBase(abilityHasteAttrId, 50f);
@@ -79,7 +80,8 @@ namespace Ludots.Tests.GAS
 
             var entity = world.Create(
                 new AttributeBuffer(),
-                new ActiveEffectContainer()
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetBase(hpAttrId, 1000f);
@@ -132,7 +134,8 @@ namespace Ludots.Tests.GAS
 
             var entity = world.Create(
                 new AttributeBuffer(),
-                new ActiveEffectContainer()
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetBase(1, 42f);
@@ -158,7 +161,8 @@ namespace Ludots.Tests.GAS
 
             var entity = world.Create(
                 new AttributeBuffer(),
-                new ActiveEffectContainer()
+                new ActiveEffectContainer(),
+                new AttributeAggregateDirty()
             );
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetBase(sourceAttr, 10f);

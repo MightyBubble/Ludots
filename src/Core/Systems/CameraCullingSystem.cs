@@ -1100,7 +1100,7 @@ namespace Ludots.Core.Systems
                 return true;
             }
 
-            return _performers.HasOwnerPayload(entity);
+            return World.Has<PresentationOwnerHasPerformerPayload>(entity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

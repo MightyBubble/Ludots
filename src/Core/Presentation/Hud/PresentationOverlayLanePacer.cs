@@ -39,6 +39,7 @@ namespace Ludots.Core.Presentation.Hud
             ArgumentNullException.ThrowIfNull(scene);
 
             byte refreshFlags = 0;
+            byte pendingFlags = 0;
             int deferredLargeCount = 0;
             Span<PresentationOverlayItemKind> deferredLargeKinds = stackalloc PresentationOverlayItemKind[LargeLaneOrder.Length];
 
@@ -76,7 +77,7 @@ namespace Ludots.Core.Presentation.Hud
                     refreshFlags |= ToFlag(deferredLargeKinds[i]);
                 }
 
-                return new LaneRefreshPlan(refreshFlags);
+                return new LaneRefreshPlan(refreshFlags, pendingFlags);
             }
 
             int selectedLargeCount = 0;
@@ -95,7 +96,16 @@ namespace Ludots.Core.Presentation.Hud
                 }
             }
 
-            return new LaneRefreshPlan(refreshFlags);
+            for (int i = 0; i < deferredLargeCount; i++)
+            {
+                byte flag = ToFlag(deferredLargeKinds[i]);
+                if ((refreshFlags & flag) == 0)
+                {
+                    pendingFlags |= flag;
+                }
+            }
+
+            return new LaneRefreshPlan(refreshFlags, pendingFlags);
         }
 
         public void MarkPresented(PresentationOverlayScene scene, in LaneRefreshPlan plan)
@@ -146,7 +156,6 @@ namespace Ludots.Core.Presentation.Hud
             PresentationOverlayLaneMutationKind mutationKind = scene.GetLaneMutationKind(_layer, kind);
             return mutationKind switch
             {
-                PresentationOverlayLaneMutationKind.Content => kind is PresentationOverlayItemKind.Text or PresentationOverlayItemKind.Bar,
                 PresentationOverlayLaneMutationKind.PositionOnly =>
                     scene.TryGetLaneUniformTranslation(_layer, kind, out _) &&
                     kind is PresentationOverlayItemKind.Text or PresentationOverlayItemKind.Bar,
@@ -214,9 +223,11 @@ namespace Ludots.Core.Presentation.Hud
             };
         }
 
-        public readonly record struct LaneRefreshPlan(byte Flags)
+        public readonly record struct LaneRefreshPlan(byte Flags, byte PendingFlags = 0)
         {
             public bool HasAnyRefresh => Flags != 0;
+
+            public bool HasPendingRefresh => PendingFlags != 0;
 
             public bool ShouldRefresh(PresentationOverlayItemKind kind)
             {

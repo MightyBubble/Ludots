@@ -10,6 +10,9 @@
       "AttributeBuffer": {
         "base": {
           "Durability": 100
+        },
+        "current": {
+          "Durability": 72
         }
       },
       "GameplayTagContainer": {},
@@ -25,6 +28,46 @@
       "FacingDirection": { "AngleRad": 0.0 },
       "AttributeBuffer": {
         "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "blacksmith_mesh_hudbar_benchmark_entity",
+    "onSpawnEffect": "Effect.Showcase.Blacksmith.RandomDrift",
+    "components": {
+      "Name": { "Value": "BlacksmithMeshHudBarBenchmark" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        },
+        "current": {
+          "Durability": 72
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "blacksmith_mesh_hudtext_benchmark_entity",
+    "onSpawnEffect": "Effect.Showcase.Blacksmith.RandomDrift",
+    "components": {
+      "Name": { "Value": "BlacksmithMeshHudTextBenchmark" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        },
+        "current": {
+          "Durability": 72
+        }
       },
       "GameplayTagContainer": {},
       "TagCountContainer": {}

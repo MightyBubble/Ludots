@@ -967,6 +967,8 @@ namespace Ludots.Core.Presentation.Config
                 AssetSwapParamKey = obj["assetSwapParamKey"]?.GetValue<int>() ?? -1,
                 AssetSwapTable = ParseAssetSwapTable(assetKind, obj["assetSwapTable"]),
                 VisibilityParamKey = obj["visibilityParamKey"]?.GetValue<int>() ?? -1,
+                HasMaxLod = obj.ContainsKey("maxLod"),
+                MaxLod = ParseEnum(obj["maxLod"]?.GetValue<string>(), LODLevel.Low),
                 Grounding = ParseEnum(obj["grounding"]?.GetValue<string>(), GroundingMode.None),
                 GroundingOffset = obj["groundingOffset"]?.GetValue<float>() ?? 0f,
             };

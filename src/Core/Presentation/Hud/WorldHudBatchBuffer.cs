@@ -26,6 +26,11 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (item.StableId > 0 && _retainedIndexByStableId.TryGetValue(item.StableId, out int existingIndex))
             {
+                if (WorldHudItemEquals(in _buffer[existingIndex], in item))
+                {
+                    return true;
+                }
+
                 _buffer[existingIndex] = item;
                 ContentRevision++;
                 return true;
@@ -114,6 +119,44 @@ namespace Ludots.Core.Presentation.Hud
         }
 
         public ReadOnlySpan<WorldHudItem> GetSpan() => new ReadOnlySpan<WorldHudItem>(_buffer, 0, _count);
+
+        private static bool WorldHudItemEquals(in WorldHudItem left, in WorldHudItem right)
+        {
+            return left.StableId == right.StableId &&
+                   left.Owner == right.Owner &&
+                   left.DirtySerial == right.DirtySerial &&
+                   left.Kind == right.Kind &&
+                   left.WorldPosition == right.WorldPosition &&
+                   left.Color0 == right.Color0 &&
+                   left.Color1 == right.Color1 &&
+                   left.Width == right.Width &&
+                   left.Height == right.Height &&
+                   left.Value0 == right.Value0 &&
+                   left.Value1 == right.Value1 &&
+                   left.Id0 == right.Id0 &&
+                   left.Id1 == right.Id1 &&
+                   left.FontSize == right.FontSize &&
+                   TextPacketEquals(in left.Text, in right.Text);
+        }
+
+        private static bool TextPacketEquals(in PresentationTextPacket left, in PresentationTextPacket right)
+        {
+            return left.TokenId == right.TokenId &&
+                   left.ArgCount == right.ArgCount &&
+                   left.Reserved0 == right.Reserved0 &&
+                   left.Reserved1 == right.Reserved1 &&
+                   TextArgEquals(in left.Arg0, in right.Arg0) &&
+                   TextArgEquals(in left.Arg1, in right.Arg1) &&
+                   TextArgEquals(in left.Arg2, in right.Arg2) &&
+                   TextArgEquals(in left.Arg3, in right.Arg3);
+        }
+
+        private static bool TextArgEquals(in PresentationTextArg left, in PresentationTextArg right)
+        {
+            return left.Type == right.Type &&
+                   left.Format == right.Format &&
+                   left.Raw32 == right.Raw32;
+        }
 
         public void Clear()
         {

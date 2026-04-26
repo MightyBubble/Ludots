@@ -268,6 +268,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         _activeEffectAttachDropped++;
                                         attachRejectedByCapacity = true;
                                     }
+                                    else
+                                    {
+                                        MarkAggregateDirtyIfNeeded(context.Target, effectEntity);
+                                    }
                                 }
                                 else
                                 {
@@ -358,6 +362,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 {
                                     _effectsToDestroy.Add(item.Effect);
                                 }
+                            }
+                            else
+                            {
+                                MarkAggregateDirtyIfNeeded(item.Target, item.Effect);
                             }
                         }
                         workUnits++;
@@ -472,6 +480,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
                 _sliceActive = false;
                 return true;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void MarkAggregateDirtyIfNeeded(Entity target, Entity effect)
+        {
+            if (!World.IsAlive(target) || !World.IsAlive(effect))
+            {
+                return;
+            }
+
+            if (!World.Has<GameplayEffect>(effect) || !World.Get<GameplayEffect>(effect).AggregatesModifiers)
+            {
+                return;
+            }
+
+            if (!World.Has<AttributeAggregateDirty>(target))
+            {
+                World.Add(target, new AttributeAggregateDirty());
             }
         }
 

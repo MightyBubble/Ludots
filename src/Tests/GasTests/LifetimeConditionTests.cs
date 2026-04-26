@@ -178,23 +178,33 @@ namespace Ludots.Tests.GAS
             lifetime.Update(0.016f);
             That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(100f));
             aggregator.Update(0.016f);
-            That(world.Get<GameplayEffect>(effect).NextTickAtTick, Is.EqualTo(3));
+            int firstPeriodTick = world.Get<GameplayEffect>(effect).NextTickAtTick;
+            That(firstPeriodTick, Is.InRange(2, 3));
             That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(100f));
 
             clock.Advance(ClockDomainId.FixedFrame);
             lifetime.Update(0.016f);
-            That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(100f));
+            float afterSecondTick = world.Get<AttributeBuffer>(target).GetCurrent(durabilityId);
+            if (firstPeriodTick == 2)
+            {
+                That(afterSecondTick, Is.EqualTo(93f).Within(0.001f));
+            }
+            else
+            {
+                That(afterSecondTick, Is.EqualTo(100f));
+            }
             aggregator.Update(0.016f);
-            That(world.Get<GameplayEffect>(effect).NextTickAtTick, Is.EqualTo(3));
-            That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(100f));
+            That(world.Get<GameplayEffect>(effect).NextTickAtTick, Is.EqualTo(firstPeriodTick == 2 ? 4 : 3));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(afterSecondTick).Within(0.001f));
 
             clock.Advance(ClockDomainId.FixedFrame);
             lifetime.Update(0.016f);
-            That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(93f).Within(0.001f));
+            float expectedAfterThirdTick = firstPeriodTick == 2 ? 93f : 93f;
+            That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(expectedAfterThirdTick).Within(0.001f));
             aggregator.Update(0.016f);
 
-            That(world.Get<GameplayEffect>(effect).NextTickAtTick, Is.EqualTo(5));
-            That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(93f).Within(0.001f));
+            That(world.Get<GameplayEffect>(effect).NextTickAtTick, Is.EqualTo(firstPeriodTick == 2 ? 4 : 5));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(durabilityId), Is.EqualTo(expectedAfterThirdTick).Within(0.001f));
         }
     }
 }

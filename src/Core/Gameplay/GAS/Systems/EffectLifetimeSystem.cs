@@ -184,7 +184,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     if (effect.NextTickAtTick == 0)
                     {
-                        effect.NextTickAtTick = now + effect.PeriodTicks;
+                        effect.NextTickAtTick = now + ResolveInitialPeriodOffset(entity, effect.PeriodTicks);
                     }
 
                     if (now >= effect.NextTickAtTick)
@@ -208,6 +208,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         effect.NextTickAtTick = now + effect.PeriodTicks;
                     }
                 }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static int ResolveInitialPeriodOffset(Entity entity, int periodTicks)
+            {
+                if (periodTicks <= 1)
+                {
+                    return 1;
+                }
+
+                uint hash = (uint)entity.Id;
+                hash ^= (uint)entity.Version * 0x9E3779B9u;
+                hash ^= hash >> 16;
+                return 1 + (int)(hash % (uint)periodTicks);
             }
         }
 
@@ -295,6 +309,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     ref var container = ref World.Get<ActiveEffectContainer>(context.Target);
                     container.Remove(entity);
+                    if (effect.AggregatesModifiers && !World.Has<AttributeAggregateDirty>(context.Target))
+                    {
+                        CommandBuffer.Add(context.Target, new AttributeAggregateDirty());
+                    }
                 }
 
                 CommandBuffer.Destroy(entity);

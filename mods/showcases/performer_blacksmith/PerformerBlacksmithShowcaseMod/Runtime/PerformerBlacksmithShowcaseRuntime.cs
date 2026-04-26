@@ -23,14 +23,19 @@ using PerformerBlacksmithShowcaseMod.UI;
 
 namespace PerformerBlacksmithShowcaseMod.Runtime
 {
-    internal sealed class PerformerBlacksmithShowcaseRuntime
+    internal sealed class PerformerBlacksmithShowcaseRuntime : IBenchmarkSceneController
     {
         private const float RootSearchRadiusCm = 50f;
         private const int ScatterMinTotal = 1;
         private const int ScatterUiHardMaxTotal = 300_000;
         private const int ScatterDefaultTarget = 30_000;
         private const int BenchmarkSampleFrames = 60;
+        private const int DetailedPanelCrowdThreshold = 2048;
         private const int PerformerCountPerBlacksmith = 9;
+        private const int BenchmarkHudTextPerformerCountPerBlacksmith = 3;
+        private const int BenchmarkHudTextPrimitiveCountPerBlacksmith = 1;
+        private const int BenchmarkHudTextWorldHudCountPerBlacksmith = 2;
+        private const int BenchmarkHudTextScreenHudCountPerBlacksmith = 2;
         private const int PrimitiveCountPerBlacksmith = 3;
         private const int WorldHudCountPerBlacksmith = 2;
         private const int ScreenHudCountPerBlacksmith = 2;
@@ -38,7 +43,14 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private const int GroundOverlayCountPerBlacksmith = 1;
         private const int SkinnedCountPerBlacksmith = 1;
         private const string AutoScatterTotalEnvKey = "LUDOTS_BLACKSMITH_AUTO_SCATTER_TOTAL";
+        private const string AutoScatterMinRadiusEnvKey = "LUDOTS_BLACKSMITH_AUTO_SCATTER_MIN_RADIUS_CM";
+        private const string AutoScatterMaxRadiusEnvKey = "LUDOTS_BLACKSMITH_AUTO_SCATTER_MAX_RADIUS_CM";
+        private const string AutoMeshBenchmarkTotalEnvKey = "LUDOTS_BLACKSMITH_MESH_BENCHMARK_TOTAL";
+        private const string ForcePanelEnvKey = "LUDOTS_BLACKSMITH_FORCE_PANEL";
+        private const string ForceBenchmarkUiEnvKey = "LUDOTS_BLACKSMITH_FORCE_BENCHMARK_UI";
+        private const string NativeBenchmarkHudEnvKey = "LUDOTS_RAYLIB_NATIVE_BENCHMARK_HUD";
         private const float PanelRefreshIntervalSeconds = 0.25f;
+        private const float LargeCrowdPanelRefreshIntervalSeconds = 1.5f;
 
         private readonly PerformerBlacksmithShowcasePanelController _panelController;
         private GameEngine? _activeEngine;
@@ -60,17 +72,26 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private int _lastScatterSeed;
         private int _scatterGeneration;
         private int _lastQueuedScatterExtras;
-        private readonly double[] _tickSamplesMs = new double[BenchmarkSampleFrames];
-        private int _tickSampleCursor;
-        private int _tickSampleCount;
-        private double _tickSampleSumMs;
-        private double _tickSampleMaxMs;
-        private double _lastFrameTickMs;
         private bool _autoScatterApplied;
+        private bool _autoMeshBenchmarkApplied;
         private float _panelRefreshCooldown;
         private bool _panelDirty = true;
         private PerformerBlacksmithShowcasePanelState _cachedPanelState = PerformerBlacksmithShowcasePanelState.Empty;
         private static readonly string[] RegionNames = { "NORTH", "SOUTH" };
+
+        public bool IsActive => _activeEngine != null && PerformerBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value);
+
+        public bool SupportsScatterControl => _activeEngine != null && SupportsBlacksmithScatter(_activeEngine);
+
+        public bool IsCleanPerformanceScene => _activeEngine != null && ShouldUseCleanPerformanceScene(_activeEngine);
+
+        public int ScatterMin => ScatterMinTotal;
+
+        public int ScatterMax => _activeEngine != null ? ResolveScatterUiMax(_activeEngine) : ScatterUiHardMaxTotal;
+
+        public int ScatterTarget => _scatterTargetTotal;
+
+        public int ScatterAppliedTotal => _activeEngine != null ? CountTrackedBlacksmithEntities(_activeEngine, out _) : 0;
 
         public PerformerBlacksmithShowcaseRuntime()
         {
@@ -97,9 +118,15 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _durabilityRuinedEffectId = EffectTemplateIdRegistry.GetId(PerformerBlacksmithShowcaseIds.EffectSetDurabilityRuined);
             _activeEngine = engine;
             ResetControlState();
-            _buildingEntity = FindRootBuildingEntity(engine);
-            _autoScatterApplied = CountBlacksmithEntities(engine, out _) > 1;
-            TryApplyAutoScatter(engine);
+            _buildingEntity = IsInteractiveMode(engine)
+                ? FindRootBuildingEntity(engine)
+                : Entity.Null;
+            _autoScatterApplied =
+                (IsScatterBenchmarkMode(engine) && CountMeshBenchmarkEntities(engine) > 0) ||
+                (IsScatterHudBarBenchmarkMode(engine) && CountMeshHudBarBenchmarkEntities(engine) > 0) ||
+                (IsScatterHudTextBenchmarkMode(engine) && CountMeshHudTextBenchmarkEntities(engine) > 0);
+            _autoMeshBenchmarkApplied = IsMeshBenchmarkMode(engine) && CountMeshBenchmarkEntities(engine) > 0;
+            TryApplyStartupBenchmarkLayout(engine);
             MarkPanelDirty();
             return Task.CompletedTask;
         }
@@ -115,6 +142,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _buildingEntity = Entity.Null;
             _destroyed = false;
             _autoScatterApplied = false;
+            _autoMeshBenchmarkApplied = false;
             _panelDirty = true;
             _panelRefreshCooldown = 0f;
             _cachedPanelState = PerformerBlacksmithShowcasePanelState.Empty;
@@ -129,9 +157,12 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
-            long start = Stopwatch.GetTimestamp();
             _activeEngine = engine;
-            RefreshRootEntity(engine);
+            if (IsInteractiveMode(engine))
+            {
+                RefreshRootEntity(engine);
+            }
+
             _panelRefreshCooldown = MathF.Max(0f, _panelRefreshCooldown - (1f / 60f));
             if (_changeFlashTimer > 0f)
             {
@@ -140,7 +171,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             }
 
             RefreshPanel(engine);
-            ObserveTickSample((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
         }
 
         internal void ToggleWorking()
@@ -255,16 +285,31 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             QueueRootRespawn(RequireShowcaseEngine());
         }
 
-        internal void ApplyScatterLayout(int totalBuildings)
+        public void ApplyScatterLayout(int totalBuildings)
         {
             GameEngine engine = RequireShowcaseEngine();
+            if (!SupportsBlacksmithScatter(engine))
+            {
+                Flash("Scatter unavailable on this benchmark map");
+                return;
+            }
+
             int clampedTotal = ClampScatterTotal(engine, totalBuildings);
+            if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is RuntimeEntitySpawnQueue resetQueue)
+            {
+                resetQueue.Clear();
+            }
+
             ClearScatterBuildings(engine);
             _scatterRequestedTotal = clampedTotal;
             _scatterTargetTotal = clampedTotal;
             _lastQueuedScatterExtras = 0;
 
-            if (_destroyed)
+            bool cleanHudTextScatter = UsesCleanHudTextScatter(engine);
+            bool meshOnlyScatter = IsScatterBenchmarkMode(engine);
+            bool meshHudBarScatter = IsScatterHudBarBenchmarkMode(engine);
+            bool meshHudTextScatter = IsScatterHudTextBenchmarkMode(engine) || cleanHudTextScatter;
+            if (_destroyed && !meshOnlyScatter && !meshHudBarScatter && !meshHudTextScatter)
             {
                 QueueRootRespawn(engine);
                 _scatterRequestedTotal = clampedTotal;
@@ -284,11 +329,19 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
             int seed = unchecked(Environment.TickCount ^ (clampedTotal * 7919) ^ (++_scatterGeneration * 104729));
             _lastScatterSeed = seed;
-            int queued = PerformerBlacksmithScatterPlanner.EnqueueScatter(
+            string templateId = ResolveScatterTemplateId(engine);
+            int requestedEntityCount = cleanHudTextScatter || meshOnlyScatter || meshHudBarScatter || meshHudTextScatter
+                ? clampedTotal
+                : clampedTotal - 1;
+            int queued = PerformerBlacksmithScatterPlanner.EnqueueTemplateScatter(
                 spawnQueue,
                 engine.CurrentMapSession?.MapId ?? default,
-                clampedTotal - 1,
-                seed);
+                templateId,
+                requestedEntityCount,
+                seed,
+                ResolveAutoScatterMinRadiusCm(),
+                ResolveAutoScatterMaxRadiusCm(),
+                PerformerBlacksmithScatterPlanner.DefaultJitterCm);
             _lastQueuedScatterExtras = queued;
             Flash($"Scatter total => {clampedTotal} (seed {seed}, queued {queued})");
         }
@@ -300,7 +353,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             Flash($"Scatter target => {_scatterTargetTotal}");
         }
 
-        internal void SetScatterTargetFromRatio(float ratio)
+        public void SetScatterTargetFromRatio(float ratio)
         {
             GameEngine engine = RequireShowcaseEngine();
             float clampedRatio = Math.Clamp(ratio, 0f, 1f);
@@ -310,7 +363,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             Flash($"Scatter target => {_scatterTargetTotal}");
         }
 
-        internal void ApplyScatterTarget()
+        public void ApplyScatterTarget()
         {
             ApplyScatterLayout(_scatterTargetTotal);
         }
@@ -324,6 +377,81 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             }
 
             throw new InvalidOperationException("Blacksmith showcase actions require the showcase map to be active.");
+        }
+
+        private static bool IsInteractiveMode(GameEngine engine)
+        {
+            return PerformerBlacksmithShowcaseIds.IsInteractiveShowcaseMap(engine.CurrentMapSession?.MapId.Value);
+        }
+
+        private static bool IsScatterBenchmarkMode(GameEngine engine)
+        {
+            return PerformerBlacksmithShowcaseIds.IsScatterBenchmarkMap(engine.CurrentMapSession?.MapId.Value);
+        }
+
+        private static bool IsScatterHudBarBenchmarkMode(GameEngine engine)
+        {
+            return PerformerBlacksmithShowcaseIds.IsScatterHudBarBenchmarkMap(engine.CurrentMapSession?.MapId.Value);
+        }
+
+        private static bool IsScatterHudTextBenchmarkMode(GameEngine engine)
+        {
+            return PerformerBlacksmithShowcaseIds.IsScatterHudTextBenchmarkMap(engine.CurrentMapSession?.MapId.Value);
+        }
+
+        private static bool IsMeshBenchmarkMode(GameEngine engine)
+        {
+            return PerformerBlacksmithShowcaseIds.IsMeshBenchmarkMap(engine.CurrentMapSession?.MapId.Value);
+        }
+
+        private static bool IsBenchmarkMode(GameEngine engine)
+        {
+            return IsMeshBenchmarkMode(engine) ||
+                   IsScatterBenchmarkMode(engine) ||
+                   IsScatterHudBarBenchmarkMode(engine) ||
+                   IsScatterHudTextBenchmarkMode(engine);
+        }
+
+        private static bool UsesCleanHudTextScatter(GameEngine engine)
+        {
+            return IsInteractiveMode(engine);
+        }
+
+        private static bool ShouldUseCleanPerformanceScene(GameEngine engine)
+        {
+            return IsMeshBenchmarkMode(engine) ||
+                   IsScatterBenchmarkMode(engine) ||
+                   IsScatterHudBarBenchmarkMode(engine) ||
+                   IsScatterHudTextBenchmarkMode(engine) ||
+                   (IsInteractiveMode(engine) && CountMeshHudTextBenchmarkEntities(engine) > 0);
+        }
+
+        private static string ResolveScatterTemplateId(GameEngine engine)
+        {
+            if (IsScatterBenchmarkMode(engine))
+            {
+                return PerformerBlacksmithShowcaseIds.MeshBenchmarkTemplateId;
+            }
+
+            if (IsScatterHudBarBenchmarkMode(engine))
+            {
+                return PerformerBlacksmithShowcaseIds.MeshHudBarBenchmarkTemplateId;
+            }
+
+            if (IsScatterHudTextBenchmarkMode(engine) || UsesCleanHudTextScatter(engine))
+            {
+                return PerformerBlacksmithShowcaseIds.MeshHudTextBenchmarkTemplateId;
+            }
+
+            return PerformerBlacksmithShowcaseIds.TemplateId;
+        }
+
+        private static bool SupportsBlacksmithScatter(GameEngine engine)
+        {
+            return IsInteractiveMode(engine) ||
+                   IsScatterBenchmarkMode(engine) ||
+                   IsScatterHudBarBenchmarkMode(engine) ||
+                   IsScatterHudTextBenchmarkMode(engine);
         }
 
         private void RefreshRootEntity(GameEngine engine)
@@ -341,6 +469,99 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             {
                 MarkPanelDirty();
             }
+        }
+
+        private void TryApplyStartupBenchmarkLayout(GameEngine engine)
+        {
+            if (IsMeshBenchmarkMode(engine))
+            {
+                TryApplyMeshBenchmark(engine);
+                return;
+            }
+
+            if (IsInteractiveMode(engine))
+            {
+                TryApplyAutoScatter(engine);
+                return;
+            }
+
+            if (IsScatterBenchmarkMode(engine))
+            {
+                TryApplyAutoScatter(engine);
+                return;
+            }
+
+            if (IsScatterHudBarBenchmarkMode(engine))
+            {
+                TryApplyAutoScatter(engine);
+                return;
+            }
+
+            if (IsScatterHudTextBenchmarkMode(engine))
+            {
+                TryApplyAutoScatter(engine);
+            }
+        }
+
+        private void TryApplyMeshBenchmark(GameEngine engine)
+        {
+            if (_autoMeshBenchmarkApplied)
+            {
+                return;
+            }
+
+            if (CountMeshBenchmarkEntities(engine) > 0)
+            {
+                _autoMeshBenchmarkApplied = true;
+                return;
+            }
+
+            if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue spawnQueue)
+            {
+                Flash("Mesh benchmark unavailable: RuntimeEntitySpawnQueue missing");
+                return;
+            }
+
+            int requested = ReadEnvInt(AutoMeshBenchmarkTotalEnvKey, PerformerBlacksmithShowcaseIds.MeshBenchmarkDefaultTotal);
+            int total = Math.Clamp(requested, ScatterMinTotal, ScatterUiHardMaxTotal);
+            int enqueued = EnqueueMeshBenchmark(spawnQueue, engine, total);
+            _scatterRequestedTotal = total;
+            _scatterTargetTotal = total;
+            _lastQueuedScatterExtras = enqueued;
+            _autoMeshBenchmarkApplied = true;
+            Flash($"Mesh benchmark total => {enqueued}");
+        }
+
+        private static int EnqueueMeshBenchmark(RuntimeEntitySpawnQueue queue, GameEngine engine, int total)
+        {
+            int count = Math.Max(0, total);
+            if (count == 0)
+            {
+                return 0;
+            }
+
+            int seed = unchecked(Environment.TickCount ^ (count * 48611));
+            var config = engine.GetService(CoreServiceKeys.GameConfig)
+                ?? throw new InvalidOperationException("GameConfig service missing.");
+            float halfWorldWidthCm = config.WorldWidthInTiles * config.GridCellSizeCm * 0.5f;
+            float halfWorldHeightCm = config.WorldHeightInTiles * config.GridCellSizeCm * 0.5f;
+            float maxWorldRadiusCm = MathF.Max(1000f, MathF.Min(halfWorldWidthCm, halfWorldHeightCm) - 600f);
+            float minRadiusCm = MathF.Min(
+                PerformerBlacksmithScatterPlanner.DefaultMinRadiusCm * 2.5f,
+                MathF.Max(750f, maxWorldRadiusCm * 0.28f));
+            float requestedRadiusCm = PerformerBlacksmithScatterPlanner.DefaultMaxRadiusCm * MathF.Max(3.5f, MathF.Sqrt(count / 220f));
+            float maxRadiusCm = MathF.Max(minRadiusCm + 500f, MathF.Min(maxWorldRadiusCm, requestedRadiusCm));
+            float jitterCm = PerformerBlacksmithScatterPlanner.DefaultJitterCm * 1.5f;
+
+            return PerformerBlacksmithScatterPlanner.EnqueueTemplateScatter(
+                queue,
+                engine.CurrentMapSession?.MapId ?? default,
+                PerformerBlacksmithShowcaseIds.MeshBenchmarkTemplateId,
+                count,
+                seed,
+                minRadiusCm,
+                maxRadiusCm,
+                jitterCm);
         }
 
         private Entity FindRootBuildingEntity(GameEngine engine)
@@ -401,12 +622,26 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private void ClearScatterBuildings(GameEngine engine)
         {
             var toDestroy = new List<Entity>();
+            bool meshOnlyScatter = IsScatterBenchmarkMode(engine) ||
+                                   IsScatterHudBarBenchmarkMode(engine) ||
+                                   IsScatterHudTextBenchmarkMode(engine) ||
+                                   UsesCleanHudTextScatter(engine);
             var query = new QueryDescription().WithAll<Name, WorldPositionCm>();
             float rootDistanceSq = RootSearchRadiusCm * RootSearchRadiusCm;
             engine.World.Query(in query, (Entity entity, ref Name name, ref WorldPositionCm position) =>
             {
-                if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.OrdinalIgnoreCase))
+                bool isBlacksmith = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.OrdinalIgnoreCase);
+                bool isMeshBenchmark = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshBenchmarkEntityName, StringComparison.OrdinalIgnoreCase);
+                bool isMeshHudBarBenchmark = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudBarBenchmarkEntityName, StringComparison.OrdinalIgnoreCase);
+                bool isMeshHudTextBenchmark = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudTextBenchmarkEntityName, StringComparison.OrdinalIgnoreCase);
+                if (!isBlacksmith && !isMeshBenchmark && !isMeshHudBarBenchmark && !isMeshHudTextBenchmark)
                 {
+                    return;
+                }
+
+                if (meshOnlyScatter)
+                {
+                    toDestroy.Add(entity);
                     return;
                 }
 
@@ -436,11 +671,26 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
+            int totalBlacksmiths = CountTrackedBlacksmithEntities(engine, out _);
+            bool largeCrowd = totalBlacksmiths > DetailedPanelCrowdThreshold;
+            bool forcePanel = ReadEnvBool(ForcePanelEnvKey);
+            bool nativeBenchmarkHud = ReadEnvBool(NativeBenchmarkHudEnvKey);
+            bool benchmarkPanelSuppressed = IsBenchmarkMode(engine) && !forcePanel;
+            if (nativeBenchmarkHud || (largeCrowd && !forcePanel) || benchmarkPanelSuppressed)
+            {
+                _panelController.ClearIfOwned(root);
+                return;
+            }
+
+            float refreshInterval = largeCrowd
+                ? LargeCrowdPanelRefreshIntervalSeconds
+                : PanelRefreshIntervalSeconds;
+
             if (_panelDirty || _panelRefreshCooldown <= 0f)
             {
                 _cachedPanelState = BuildPanelState(engine, root);
                 _panelDirty = false;
-                _panelRefreshCooldown = PanelRefreshIntervalSeconds;
+                _panelRefreshCooldown = refreshInterval;
             }
 
             _panelController.MountOrSync(root, engine, _cachedPanelState);
@@ -459,14 +709,20 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             float panelHeight = MathF.Min(780f, availableHeight);
             float scrollHeight = MathF.Max(180f, panelHeight - 118f);
 
-            PerformerMetrics performerMetrics = CapturePerformerMetrics(engine);
-            RenderMetrics renderMetrics = CaptureRenderMetrics(engine);
+            int totalBlacksmiths = CountTrackedBlacksmithEntities(engine, out int scatterExtras);
+            bool useDetailedPanelScan = totalBlacksmiths <= DetailedPanelCrowdThreshold;
             CapacityMetrics capacityMetrics = CaptureCapacityMetrics(engine);
-            int totalBlacksmiths = CountBlacksmithEntities(engine, out int scatterExtras);
             int durabilityPreset = ResolveDurabilityPreset(engine);
             float durabilityRatio = ResolveDurabilityRatio(engine);
             float durabilityCurrent = ResolveDurabilityCurrent(engine);
             float durabilityBase = ResolveDurabilityBase(engine);
+            PerformerMetrics performerMetrics = CapturePerformerMetrics(engine);
+            RenderMetrics renderMetrics = CaptureRenderMetrics(
+                engine,
+                useDetailedPanelScan,
+                durabilityRatio,
+                durabilityCurrent,
+                durabilityBase);
             string regionLabel = RegionNames[Math.Clamp(_regionIndex, 0, RegionNames.Length - 1)];
             string dayNightLabel = _isNight ? "NIGHT" : "DAY";
             string rootLabel = _buildingEntity != Entity.Null && engine.World.IsAlive(_buildingEntity)
@@ -476,8 +732,10 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             string sceneSummary = _destroyed
                 ? "Root OFFLINE | click Respawn Root to rebuild the canonical showcase actor."
                 : $"Root ONLINE | Working {(_isWorking ? "ON" : "OFF")} | Region {regionLabel} | Durability {durabilityCurrent:F0}/{durabilityBase:F0} ({durabilityRatio:F2}) | {dayNightLabel}";
-            string scatterSummary = $"Scatter total {totalBlacksmiths} (target {_scatterRequestedTotal}, extras {scatterExtras}, queued {_lastQueuedScatterExtras}, seed {_lastScatterSeed})";
-            string benchmarkSummary = BuildBenchmarkSummary(totalBlacksmiths, renderMetrics);
+            string scatterSummary = IsMeshBenchmarkMode(engine)
+                ? $"Mesh benchmark total {totalBlacksmiths} (target {_scatterRequestedTotal}, queued {_lastQueuedScatterExtras})"
+                : $"Scatter total {totalBlacksmiths} (target {_scatterRequestedTotal}, extras {scatterExtras}, queued {_lastQueuedScatterExtras}, seed {_lastScatterSeed})";
+            string benchmarkSummary = BuildBenchmarkSummary(engine, totalBlacksmiths, renderMetrics);
             string capacitySummary = BuildCapacitySummary(capacityMetrics, totalBlacksmiths);
             string lastChange = _changeFlashTimer > 0f && !string.IsNullOrWhiteSpace(_lastChangedField)
                 ? $"Last change: {_lastChangedField}"
@@ -503,6 +761,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 renderMetrics.WorldHudBarCount >= (_destroyed ? 0 : 1) && renderMetrics.WorldHudTextCount >= (_destroyed ? 0 : 1)
                     ? $"PASS durability HUD: bar {renderMetrics.WorldHudBarCount}, text {renderMetrics.WorldHudTextCount}, ratio {renderMetrics.PrimaryHudBarValue:F2}, text {renderMetrics.PrimaryHudTextCurrent:F0}/{renderMetrics.PrimaryHudTextBase:F0}."
                     : "WARN durability HUD: expected both world HUD bar and text.",
+                !useDetailedPanelScan ||
                 totalBlacksmiths <= 1 ||
                 renderMetrics.WorldHudBarValueRange > 0.01f ||
                 renderMetrics.WorldHudTextCurrentRange > 0.5f
@@ -531,7 +790,10 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 $"Presentation: spline {renderMetrics.RoadSplineCount} | decal {renderMetrics.GroundOverlayCount} | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount}",
                 $"HUD truth: bar {renderMetrics.PrimaryHudBarValue:F2} | text current {renderMetrics.PrimaryHudTextCurrent:F0} | text base {renderMetrics.PrimaryHudTextBase:F0} | crowd range {renderMetrics.WorldHudBarValueRange:F2}/{renderMetrics.WorldHudTextCurrentRange:F1}",
                 $"Drops: evt {capacityMetrics.PresentationEventDrops} | worldHud {capacityMetrics.WorldHudDrops} | screenHud {capacityMetrics.ScreenHudDrops} | prim {capacityMetrics.PrimitiveDrops} | skinned {capacityMetrics.SkinnedDrops}",
-                $"State: region {_regionIndex} ({regionLabel}) | durability {durabilityRatio:F2} | working {(_isWorking ? 1 : 0)} | night {(_isNight ? 1 : 0)}"
+                $"State: region {_regionIndex} ({regionLabel}) | durability {durabilityRatio:F2} | working {(_isWorking ? 1 : 0)} | night {(_isNight ? 1 : 0)}",
+                useDetailedPanelScan
+                    ? "Diagnostics mode: detailed"
+                    : $"Diagnostics mode: throttled for crowd>{DetailedPanelCrowdThreshold:n0}; panel avoids full-world scans."
             };
 
             return new PerformerBlacksmithShowcasePanelState(
@@ -582,49 +844,28 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             int barId = definitions.GetId(PerformerBlacksmithShowcaseIds.DurabilityBarDefinitionId);
             int textId = definitions.GetId(PerformerBlacksmithShowcaseIds.DurabilityTextDefinitionId);
 
-            int rootOwnedCount = 0;
-            int rootCount = 0;
-            int workshopLeftCount = 0;
-            int workshopRightCount = 0;
-            int chimneyCount = 0;
-            int smokeCount = 0;
-            int routeSplineCount = 0;
-            int decalCount = 0;
-            int workerCount = 0;
-            int barCount = 0;
-            int textCount = 0;
+            int rootCount = CountAlive(performers.GetActiveByOwnerDefinition(rootId, _buildingEntity));
+            int workshopLeftCount = CountAlive(performers.GetActiveByOwnerDefinition(workshopLeftId, _buildingEntity));
+            int workshopRightCount = CountAlive(performers.GetActiveByOwnerDefinition(workshopRightId, _buildingEntity));
+            int chimneyCount = CountAlive(performers.GetActiveByOwnerDefinition(chimneyId, _buildingEntity));
+            int smokeCount = CountAlive(performers.GetActiveByOwnerDefinition(smokeId, _buildingEntity));
+            int routeSplineCount = CountAlive(performers.GetActiveByOwnerDefinition(routeSplineId, _buildingEntity));
+            int decalCount = CountAlive(performers.GetActiveByOwnerDefinition(decalId, _buildingEntity));
+            int workerCount = CountAlive(performers.GetActiveByOwnerDefinition(workerId, _buildingEntity));
+            int barCount = CountAlive(performers.GetActiveByOwnerDefinition(barId, _buildingEntity));
+            int textCount = CountAlive(performers.GetActiveByOwnerDefinition(textId, _buildingEntity));
+            int rootOwnedCount = rootCount + workshopLeftCount + workshopRightCount + chimneyCount + smokeCount + routeSplineCount + decalCount + workerCount + barCount + textCount;
             var lines = new List<string>(12);
-
-            var query = new QueryDescription().WithAll<PerformerState, PerformerParent, PerformerTransformSource>();
-            engine.World.Query(in query, (Entity entity, ref PerformerState inst, ref PerformerParent parent, ref PerformerTransformSource transformSource) =>
-            {
-                if (_buildingEntity == Entity.Null || inst.OwnerEntity != _buildingEntity)
-                {
-                    return;
-                }
-
-                rootOwnedCount++;
-                if (inst.DefId == rootId) rootCount++;
-                if (inst.DefId == workshopLeftId) workshopLeftCount++;
-                if (inst.DefId == workshopRightId) workshopRightCount++;
-                if (inst.DefId == chimneyId) chimneyCount++;
-                if (inst.DefId == smokeId) smokeCount++;
-                if (inst.DefId == routeSplineId) routeSplineCount++;
-                if (inst.DefId == decalId) decalCount++;
-                if (inst.DefId == workerId) workerCount++;
-                if (inst.DefId == barId) barCount++;
-                if (inst.DefId == textId) textCount++;
-
-                if (lines.Count >= 12)
-                {
-                    return;
-                }
-
-                string definitionName = definitions.GetName(inst.DefId);
-                float durabilityRatio = performers.ResolveFloat(entity, PerformerBlacksmithShowcaseIds.ParamDurability, -1f);
-                int workshopState = performers.ResolveInt(entity, PerformerBlacksmithShowcaseIds.ParamWorkshopAssetState, -1);
-                lines.Add($"[{entity.Id}] {definitionName} parent={parent.Parent.Id} source={transformSource.Value} durability={durabilityRatio:F2} meshState={workshopState}");
-            });
+            AppendPerformerLines(engine, performers, definitions, lines, rootId);
+            AppendPerformerLines(engine, performers, definitions, lines, workshopLeftId);
+            AppendPerformerLines(engine, performers, definitions, lines, workshopRightId);
+            AppendPerformerLines(engine, performers, definitions, lines, chimneyId);
+            AppendPerformerLines(engine, performers, definitions, lines, smokeId);
+            AppendPerformerLines(engine, performers, definitions, lines, routeSplineId);
+            AppendPerformerLines(engine, performers, definitions, lines, decalId);
+            AppendPerformerLines(engine, performers, definitions, lines, workerId);
+            AppendPerformerLines(engine, performers, definitions, lines, barId);
+            AppendPerformerLines(engine, performers, definitions, lines, textId);
 
             if (lines.Count == 0)
             {
@@ -647,7 +888,12 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 lines.ToArray());
         }
 
-        private RenderMetrics CaptureRenderMetrics(GameEngine engine)
+        private RenderMetrics CaptureRenderMetrics(
+            GameEngine engine,
+            bool useDetailedPanelScan,
+            float rootDurabilityRatio,
+            float rootDurabilityCurrent,
+            float rootDurabilityBase)
         {
             PrimitiveDrawBuffer? primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             SkinnedVisualBatchBuffer? skinned = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
@@ -663,49 +909,52 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return RenderMetrics.Empty;
             }
 
-            int northWorkshop = meshes.GetId("blacksmith.building.north.intact");
-            int southWorkshop = meshes.GetId("blacksmith.building.south.intact");
-            int damagedWorkshop = meshes.GetId("blacksmith.building.damaged");
-            int ruinedWorkshop = meshes.GetId("blacksmith.building.ruined");
-            int chimneyAsset = meshes.GetId("blacksmith.furnace");
-            int smokeAsset = meshes.GetId("blacksmith.smoke.billboard");
-            int workerAsset = meshes.GetId("blacksmith.worker.knight");
-
             int visibleWorkshopCount = 0;
             int visibleChimneyCount = 0;
             int visibleSmokeCount = 0;
-            foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
-            {
-                if (item.Visibility != VisualVisibility.Visible)
-                {
-                    continue;
-                }
-
-                if (item.MeshAssetId == northWorkshop ||
-                    item.MeshAssetId == southWorkshop ||
-                    item.MeshAssetId == damagedWorkshop ||
-                    item.MeshAssetId == ruinedWorkshop)
-                {
-                    visibleWorkshopCount++;
-                }
-
-                if (item.MeshAssetId == chimneyAsset)
-                {
-                    visibleChimneyCount++;
-                }
-
-                if (item.MeshAssetId == smokeAsset)
-                {
-                    visibleSmokeCount++;
-                }
-            }
-
             int visibleWorkerCount = 0;
-            foreach (ref readonly SkinnedVisualBatchItem item in skinned.GetSpan())
+            if (useDetailedPanelScan)
             {
-                if (item.MeshAssetId == workerAsset)
+                int northWorkshop = meshes.GetId("blacksmith.building.north.intact");
+                int southWorkshop = meshes.GetId("blacksmith.building.south.intact");
+                int damagedWorkshop = meshes.GetId("blacksmith.building.damaged");
+                int ruinedWorkshop = meshes.GetId("blacksmith.building.ruined");
+                int chimneyAsset = meshes.GetId("blacksmith.furnace");
+                int smokeAsset = meshes.GetId("blacksmith.smoke.billboard");
+                int workerAsset = meshes.GetId("blacksmith.worker.knight");
+
+                foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
                 {
-                    visibleWorkerCount++;
+                    if (item.Visibility != VisualVisibility.Visible)
+                    {
+                        continue;
+                    }
+
+                    if (item.MeshAssetId == northWorkshop ||
+                        item.MeshAssetId == southWorkshop ||
+                        item.MeshAssetId == damagedWorkshop ||
+                        item.MeshAssetId == ruinedWorkshop)
+                    {
+                        visibleWorkshopCount++;
+                    }
+
+                    if (item.MeshAssetId == chimneyAsset)
+                    {
+                        visibleChimneyCount++;
+                    }
+
+                    if (item.MeshAssetId == smokeAsset)
+                    {
+                        visibleSmokeCount++;
+                    }
+                }
+
+                foreach (ref readonly SkinnedVisualBatchItem item in skinned.GetSpan())
+                {
+                    if (item.MeshAssetId == workerAsset)
+                    {
+                        visibleWorkerCount++;
+                    }
                 }
             }
 
@@ -715,9 +964,9 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             float maxHudBarValue = float.MinValue;
             float minHudTextCurrent = float.MaxValue;
             float maxHudTextCurrent = float.MinValue;
-            float primaryHudBarValue = 0f;
-            float primaryHudTextCurrent = 0f;
-            float primaryHudTextBase = 0f;
+            float primaryHudBarValue = rootDurabilityRatio;
+            float primaryHudTextCurrent = rootDurabilityCurrent;
+            float primaryHudTextBase = rootDurabilityBase;
             foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
             {
                 if (item.Kind == WorldHudItemKind.Bar)
@@ -725,21 +974,12 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                     barCount++;
                     minHudBarValue = MathF.Min(minHudBarValue, item.Value0);
                     maxHudBarValue = MathF.Max(maxHudBarValue, item.Value0);
-                    if (primaryHudBarValue <= 0f)
-                    {
-                        primaryHudBarValue = item.Value0;
-                    }
                 }
                 else if (item.Kind == WorldHudItemKind.Text)
                 {
                     textCount++;
                     minHudTextCurrent = MathF.Min(minHudTextCurrent, item.Value0);
                     maxHudTextCurrent = MathF.Max(maxHudTextCurrent, item.Value0);
-                    if (primaryHudTextBase <= 0f)
-                    {
-                        primaryHudTextCurrent = item.Value0;
-                        primaryHudTextBase = item.Value1;
-                    }
                 }
             }
 
@@ -755,27 +995,30 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 maxHudTextCurrent = 0f;
             }
 
-            int smokeId = definitions.GetId(PerformerBlacksmithShowcaseIds.SmokeDefinitionId);
-            int chimneyId = definitions.GetId(PerformerBlacksmithShowcaseIds.ChimneyDefinitionId);
             int smokeAttachedToChimneyCount = 0;
-            var smokeQuery = new QueryDescription().WithAll<PerformerState, PerformerParent>();
-            engine.World.Query(in smokeQuery, (Entity entity, ref PerformerState inst, ref PerformerParent parentComp) =>
+            if (useDetailedPanelScan)
             {
-                if (inst.DefId != smokeId || parentComp.Parent == Entity.Null || !engine.World.IsAlive(parentComp.Parent))
+                int smokeId = definitions.GetId(PerformerBlacksmithShowcaseIds.SmokeDefinitionId);
+                int chimneyId = definitions.GetId(PerformerBlacksmithShowcaseIds.ChimneyDefinitionId);
+                var smokeQuery = new QueryDescription().WithAll<PerformerState, PerformerParent>();
+                engine.World.Query(in smokeQuery, (Entity entity, ref PerformerState inst, ref PerformerParent parentComp) =>
                 {
-                    return;
-                }
+                    if (inst.DefId != smokeId || parentComp.Parent == Entity.Null || !engine.World.IsAlive(parentComp.Parent))
+                    {
+                        return;
+                    }
 
-                if (!engine.World.Has<PerformerState>(parentComp.Parent))
-                {
-                    return;
-                }
+                    if (!engine.World.Has<PerformerState>(parentComp.Parent))
+                    {
+                        return;
+                    }
 
-                if (engine.World.Get<PerformerState>(parentComp.Parent).DefId == chimneyId)
-                {
-                    smokeAttachedToChimneyCount++;
-                }
-            });
+                    if (engine.World.Get<PerformerState>(parentComp.Parent).DefId == chimneyId)
+                    {
+                        smokeAttachedToChimneyCount++;
+                    }
+                });
+            }
 
             return new RenderMetrics(
                 visibleWorkshopCount,
@@ -861,6 +1104,87 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             return total;
         }
 
+        private static int CountMeshBenchmarkEntities(GameEngine engine)
+        {
+            int total = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            engine.World.Query(in query, (ref Name name) =>
+            {
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshBenchmarkEntityName, StringComparison.OrdinalIgnoreCase))
+                {
+                    total++;
+                }
+            });
+
+            return total;
+        }
+
+        private static int CountMeshHudBarBenchmarkEntities(GameEngine engine)
+        {
+            int total = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            engine.World.Query(in query, (ref Name name) =>
+            {
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudBarBenchmarkEntityName, StringComparison.OrdinalIgnoreCase))
+                {
+                    total++;
+                }
+            });
+
+            return total;
+        }
+
+        private static int CountMeshHudTextBenchmarkEntities(GameEngine engine)
+        {
+            int total = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            engine.World.Query(in query, (ref Name name) =>
+            {
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudTextBenchmarkEntityName, StringComparison.OrdinalIgnoreCase))
+                {
+                    total++;
+                }
+            });
+
+            return total;
+        }
+
+        private int CountTrackedBlacksmithEntities(GameEngine engine, out int scatterExtras)
+        {
+            if (UsesCleanHudTextScatter(engine))
+            {
+                int total = CountMeshHudTextBenchmarkEntities(engine);
+                if (total > 0)
+                {
+                    scatterExtras = total;
+                    return total;
+                }
+            }
+
+            if (IsMeshBenchmarkMode(engine))
+            {
+                int total = CountMeshBenchmarkEntities(engine);
+                scatterExtras = total;
+                return total;
+            }
+
+            if (IsScatterHudBarBenchmarkMode(engine))
+            {
+                int total = CountMeshHudBarBenchmarkEntities(engine);
+                scatterExtras = total;
+                return total;
+            }
+
+            if (IsScatterHudTextBenchmarkMode(engine))
+            {
+                int total = CountMeshHudTextBenchmarkEntities(engine);
+                scatterExtras = total;
+                return total;
+            }
+
+            return CountBlacksmithEntities(engine, out scatterExtras);
+        }
+
         private int ResolveDurabilityPreset(GameEngine engine)
         {
             float ratio = ResolveDurabilityRatio(engine);
@@ -896,7 +1220,13 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
-            int currentTotal = CountBlacksmithEntities(engine, out _);
+            if (!SupportsBlacksmithScatter(engine))
+            {
+                _autoScatterApplied = true;
+                return;
+            }
+
+            int currentTotal = CountTrackedBlacksmithEntities(engine, out _);
             if (currentTotal > 1)
             {
                 _scatterRequestedTotal = currentTotal;
@@ -925,6 +1255,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _destroyed = false;
             _scatterRequestedTotal = 1;
             _scatterTargetTotal = ScatterDefaultTarget;
+            _autoMeshBenchmarkApplied = false;
             MarkPanelDirty();
         }
 
@@ -979,7 +1310,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         private int ResolveScatterUiMax(GameEngine engine)
         {
-            return ComputeScatterCapacityMax(CaptureCapacityMetrics(engine));
+            return ComputeScatterCapacityMax(CaptureCapacityMetrics(engine), UsesCleanHudTextScatter(engine));
         }
 
         private int ClampScatterTotal(GameEngine engine, int total)
@@ -987,70 +1318,98 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             return Math.Clamp(total, ScatterMinTotal, ResolveScatterUiMax(engine));
         }
 
-        private void ObserveTickSample(double tickMs)
+        private static int CountAlive(IReadOnlyList<Entity> entities)
         {
-            _lastFrameTickMs = tickMs;
-            if (_tickSampleCount < BenchmarkSampleFrames)
+            int count = 0;
+            for (int i = 0; i < entities.Count; i++)
             {
-                _tickSamplesMs[_tickSampleCount++] = tickMs;
-                _tickSampleSumMs += tickMs;
-                if (tickMs > _tickSampleMaxMs)
+                if (entities[i] != Entity.Null)
                 {
-                    _tickSampleMaxMs = tickMs;
+                    count++;
                 }
+            }
 
+            return count;
+        }
+
+        private void AppendPerformerLines(
+            GameEngine engine,
+            PerformerEntityRuntime performers,
+            PerformerDefinitionRegistry definitions,
+            List<string> lines,
+            int definitionId)
+        {
+            if (_buildingEntity == Entity.Null || lines.Count >= 12)
+            {
                 return;
             }
 
-            double removed = _tickSamplesMs[_tickSampleCursor];
-            _tickSamplesMs[_tickSampleCursor] = tickMs;
-            _tickSampleCursor = (_tickSampleCursor + 1) % BenchmarkSampleFrames;
-            _tickSampleSumMs += tickMs - removed;
-
-            if (tickMs >= _tickSampleMaxMs)
+            IReadOnlyList<Entity> scoped = performers.GetActiveByOwnerDefinition(definitionId, _buildingEntity);
+            for (int i = 0; i < scoped.Count && lines.Count < 12; i++)
             {
-                _tickSampleMaxMs = tickMs;
-                return;
-            }
-
-            if (Math.Abs(removed - _tickSampleMaxMs) < 0.0001d)
-            {
-                double recomputedMax = 0d;
-                for (int i = 0; i < _tickSampleCount; i++)
+                Entity entity = scoped[i];
+                if (entity == Entity.Null || !engine.World.IsAlive(entity) || !engine.World.Has<PerformerState>(entity))
                 {
-                    if (_tickSamplesMs[i] > recomputedMax)
-                    {
-                        recomputedMax = _tickSamplesMs[i];
-                    }
+                    continue;
                 }
 
-                _tickSampleMaxMs = recomputedMax;
+                PerformerState inst = engine.World.Get<PerformerState>(entity);
+                int parentId = engine.World.Has<PerformerParent>(entity)
+                    ? engine.World.Get<PerformerParent>(entity).Parent.Id
+                    : 0;
+                TransformSource source = engine.World.Has<PerformerTransformSource>(entity)
+                    ? engine.World.Get<PerformerTransformSource>(entity).Value
+                    : TransformSource.EntityTransform;
+                float durabilityRatio = performers.ResolveFloat(entity, PerformerBlacksmithShowcaseIds.ParamDurability, -1f);
+                int workshopState = performers.ResolveInt(entity, PerformerBlacksmithShowcaseIds.ParamWorkshopAssetState, -1);
+                string definitionName = definitions.GetName(inst.DefId);
+                lines.Add($"[{entity.Id}] {definitionName} parent={parentId} source={source} durability={durabilityRatio:F2} meshState={workshopState}");
             }
         }
 
-        private string BuildBenchmarkSummary(int totalBlacksmiths, in RenderMetrics renderMetrics)
+        private string BuildBenchmarkSummary(GameEngine engine, int totalBlacksmiths, in RenderMetrics renderMetrics)
         {
-            double avgTickMs = _tickSampleCount == 0 ? 0d : _tickSampleSumMs / _tickSampleCount;
-            double avgFps = avgTickMs <= 0d ? 0d : 1000d / avgTickMs;
-            return $"Benchmark: last {_tickSampleCount} tick(s) avg {avgTickMs:F2} ms | max {_tickSampleMaxMs:F2} ms | last {_lastFrameTickMs:F2} ms | fps {avgFps:F1} | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount} @ blacksmiths {totalBlacksmiths}";
+            PresentationTimingDiagnostics? timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+            if (timings == null)
+            {
+                return $"Runtime: timing diagnostics unavailable | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount} @ blacksmiths {totalBlacksmiths}";
+            }
+
+            float frameMs = timings.LastWallFrameMs > 0.001f
+                ? timings.LastWallFrameMs
+                : (timings.WallFrameMs > 0.001f ? timings.WallFrameMs : (timings.LastFrameMs > 0.001f ? timings.LastFrameMs : timings.FrameMs));
+            float tickMs = timings.LastTotalTickMs > 0.001f ? timings.LastTotalTickMs : timings.TotalTickMs;
+            float uiRenderMs = timings.LastUiRenderMs;
+            float uiUploadMs = timings.LastUiUploadMs;
+            float overlayTotalMs = timings.LastScreenOverlayDrawMs;
+            float overlayPaintMs = MathF.Max(0f, timings.LastScreenOverlayPaintMs - uiRenderMs);
+            return $"Runtime: wall {frameMs:F2} ms | tick {tickMs:F2} ms | sim {timings.LastSimulationMs:F2} ms | presentation {timings.LastPresentationMs:F2} ms | cull {timings.LastCameraCullingMs:F2} ms | hudProj {timings.LastWorldHudProjectionMs:F2} ms | primitive {timings.PrimitiveRenderMs:F2} ms | uiRender {uiRenderMs:F2} ms | uiUpload {uiUploadMs:F2} ms | overlayPaint {overlayPaintMs:F2} ms | overlayComposite {timings.LastScreenOverlayCompositeMs:F2} ms | overlayFinal {timings.LastScreenOverlayFinalDrawMs:F2} ms | overlayTotal {overlayTotalMs:F2} ms | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount} @ blacksmiths {totalBlacksmiths}";
         }
 
         private string BuildCapacitySummary(in CapacityMetrics metrics, int totalBlacksmiths)
         {
-            int scatterUiMax = ComputeScatterCapacityMax(metrics);
+            int scatterUiMax = ComputeScatterCapacityMax(metrics, _activeEngine != null && UsesCleanHudTextScatter(_activeEngine));
 
             return $"Capacity: performers {metrics.PerformerActive}/{metrics.PerformerCapacity}, events {metrics.PresentationEventCount}/{metrics.PresentationEventCapacity}, primitives {metrics.PrimitiveCount}/{metrics.PrimitiveCapacity}, world HUD {metrics.WorldHudCount}/{metrics.WorldHudCapacity}, screen HUD {metrics.ScreenHudCount}/{metrics.ScreenHudCapacity}, skinned {metrics.SkinnedCount}/{metrics.SkinnedCapacity}, spline {metrics.RoadSplineCount}/{metrics.RoadSplineCapacity}, decal {metrics.GroundOverlayCount}/{metrics.GroundOverlayCapacity}, spawnQ {metrics.SpawnQueueCount}/{metrics.SpawnQueueCapacity} | UI max {scatterUiMax} | requested {totalBlacksmiths}";
         }
 
-        private static int ComputeScatterCapacityMax(in CapacityMetrics metrics)
+        private static int ComputeScatterCapacityMax(in CapacityMetrics metrics, bool cleanHudTextScatter)
         {
-            int performerBound = ResolveCapacityBound(metrics.PerformerCapacity, PerformerCountPerBlacksmith);
-            int primitiveBound = ResolveCapacityBound(metrics.PrimitiveCapacity, PrimitiveCountPerBlacksmith);
-            int worldHudBound = ResolveCapacityBound(metrics.WorldHudCapacity, WorldHudCountPerBlacksmith);
-            int screenHudBound = ResolveCapacityBound(metrics.ScreenHudCapacity, ScreenHudCountPerBlacksmith);
-            int roadSplineBound = ResolveCapacityBound(metrics.RoadSplineCapacity, RoadSplineCountPerBlacksmith);
-            int overlayBound = ResolveCapacityBound(metrics.GroundOverlayCapacity, GroundOverlayCountPerBlacksmith);
-            int skinnedBound = ResolveCapacityBound(metrics.SkinnedCapacity, SkinnedCountPerBlacksmith);
+            int performerPerBlacksmith = cleanHudTextScatter ? BenchmarkHudTextPerformerCountPerBlacksmith : PerformerCountPerBlacksmith;
+            int primitivePerBlacksmith = cleanHudTextScatter ? BenchmarkHudTextPrimitiveCountPerBlacksmith : PrimitiveCountPerBlacksmith;
+            int worldHudPerBlacksmith = cleanHudTextScatter ? BenchmarkHudTextWorldHudCountPerBlacksmith : WorldHudCountPerBlacksmith;
+            int screenHudPerBlacksmith = cleanHudTextScatter ? BenchmarkHudTextScreenHudCountPerBlacksmith : ScreenHudCountPerBlacksmith;
+            int roadSplinePerBlacksmith = cleanHudTextScatter ? 0 : RoadSplineCountPerBlacksmith;
+            int overlayPerBlacksmith = cleanHudTextScatter ? 0 : GroundOverlayCountPerBlacksmith;
+            int skinnedPerBlacksmith = cleanHudTextScatter ? 0 : SkinnedCountPerBlacksmith;
+
+            int performerBound = ResolveCapacityBound(metrics.PerformerCapacity, performerPerBlacksmith);
+            int primitiveBound = ResolveCapacityBound(metrics.PrimitiveCapacity, primitivePerBlacksmith);
+            int worldHudBound = ResolveCapacityBound(metrics.WorldHudCapacity, worldHudPerBlacksmith);
+            int screenHudBound = ResolveCapacityBound(metrics.ScreenHudCapacity, screenHudPerBlacksmith);
+            int roadSplineBound = ResolveCapacityBound(metrics.RoadSplineCapacity, roadSplinePerBlacksmith);
+            int overlayBound = ResolveCapacityBound(metrics.GroundOverlayCapacity, overlayPerBlacksmith);
+            int skinnedBound = ResolveCapacityBound(metrics.SkinnedCapacity, skinnedPerBlacksmith);
             int spawnQueueBound = metrics.SpawnQueueCapacity > 0
                 ? Math.Max(ScatterMinTotal, metrics.SpawnQueueCapacity + 1)
                 : ScatterMinTotal;
@@ -1068,7 +1427,12 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         private static int ResolveCapacityBound(int capacity, int perBlacksmith)
         {
-            if (capacity <= 0 || perBlacksmith <= 0)
+            if (perBlacksmith <= 0)
+            {
+                return int.MaxValue;
+            }
+
+            if (capacity <= 0)
             {
                 return ScatterMinTotal;
             }
@@ -1078,7 +1442,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         private void Disable(GameEngine engine)
         {
-            if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+            if (IsInteractiveMode(engine) &&
+                engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
             {
                 _panelController.ClearIfOwned(root);
             }
@@ -1105,6 +1470,45 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             return int.TryParse(raw, out int parsed) && parsed > 0
                 ? parsed
                 : fallback;
+        }
+
+        private static float ResolveAutoScatterMinRadiusCm()
+        {
+            return ReadEnvFloat(
+                AutoScatterMinRadiusEnvKey,
+                PerformerBlacksmithScatterPlanner.DefaultMinRadiusCm);
+        }
+
+        private static float ResolveAutoScatterMaxRadiusCm()
+        {
+            float minRadius = ResolveAutoScatterMinRadiusCm();
+            float fallbackMax = MathF.Max(
+                minRadius + 1f,
+                PerformerBlacksmithScatterPlanner.DefaultMaxRadiusCm);
+            float maxRadius = ReadEnvFloat(AutoScatterMaxRadiusEnvKey, fallbackMax);
+            return MathF.Max(minRadius + 1f, maxRadius);
+        }
+
+        private static float ReadEnvFloat(string key, float fallback)
+        {
+            string? raw = Environment.GetEnvironmentVariable(key);
+            return float.TryParse(raw, out float parsed) && parsed > 0f
+                ? parsed
+                : fallback;
+        }
+
+        private static bool ReadEnvBool(string key)
+        {
+            string? raw = Environment.GetEnvironmentVariable(key);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return false;
+            }
+
+            return raw.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("on", StringComparison.OrdinalIgnoreCase);
         }
 
         private readonly record struct PerformerMetrics(

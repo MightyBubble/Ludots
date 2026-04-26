@@ -5,8 +5,23 @@ namespace PerformerBlacksmithShowcaseMod
     public static class PerformerBlacksmithShowcaseIds
     {
         public const string ShowcaseMapId = "performer_blacksmith_showcase";
+        public const string ScatterBenchmarkMapId = "performer_blacksmith_scatter_benchmark";
+        public const string ScatterHudBarBenchmarkMapId = "performer_blacksmith_scatter_hudbar_benchmark";
+        public const string ScatterHudTextBenchmarkMapId = "performer_blacksmith_scatter_hudtext_benchmark";
+        public const string MeshBenchmarkMapId = "performer_blacksmith_mesh_ism_benchmark";
         public const string EntityName = "Blacksmith";
         public const string TemplateId = "blacksmith_building";
+        public const string MeshBenchmarkEntityName = "BlacksmithMeshBenchmark";
+        public const string MeshBenchmarkTemplateId = "blacksmith_mesh_benchmark_entity";
+        public const string MeshBenchmarkDefinitionId = "blacksmith_mesh_benchmark_ism";
+        public const string MeshHudBarBenchmarkEntityName = "BlacksmithMeshHudBarBenchmark";
+        public const string MeshHudBarBenchmarkTemplateId = "blacksmith_mesh_hudbar_benchmark_entity";
+        public const string MeshHudBarBenchmarkDefinitionId = "blacksmith_mesh_benchmark_hudbar";
+        public const string MeshHudTextBenchmarkEntityName = "BlacksmithMeshHudTextBenchmark";
+        public const string MeshHudTextBenchmarkTemplateId = "blacksmith_mesh_hudtext_benchmark_entity";
+        public const string MeshHudTextBenchmarkDefinitionId = "blacksmith_mesh_benchmark_hudtext";
+        public const int ScatterBenchmarkDefaultTotal = 30_000;
+        public const int MeshBenchmarkDefaultTotal = 30_000;
         public const string RootDefinitionId = "blacksmith_root";
         public const string WorkshopLeftDefinitionId = "blacksmith_workshop_left_mesh";
         public const string WorkshopRightDefinitionId = "blacksmith_workshop_right_mesh";
@@ -35,7 +50,36 @@ namespace PerformerBlacksmithShowcaseMod
 
         public static bool IsShowcaseMap(string? mapId)
         {
+            return IsInteractiveShowcaseMap(mapId) ||
+                   IsScatterBenchmarkMap(mapId) ||
+                   IsScatterHudBarBenchmarkMap(mapId) ||
+                   IsScatterHudTextBenchmarkMap(mapId) ||
+                   IsMeshBenchmarkMap(mapId);
+        }
+
+        public static bool IsInteractiveShowcaseMap(string? mapId)
+        {
             return string.Equals(mapId, ShowcaseMapId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsScatterBenchmarkMap(string? mapId)
+        {
+            return string.Equals(mapId, ScatterBenchmarkMapId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsScatterHudBarBenchmarkMap(string? mapId)
+        {
+            return string.Equals(mapId, ScatterHudBarBenchmarkMapId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsScatterHudTextBenchmarkMap(string? mapId)
+        {
+            return string.Equals(mapId, ScatterHudTextBenchmarkMapId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsMeshBenchmarkMap(string? mapId)
+        {
+            return string.Equals(mapId, MeshBenchmarkMapId, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

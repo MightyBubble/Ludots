@@ -93,6 +93,10 @@ namespace PerformanceVisualizationMod.UI
                         CommandButton("Run 32K", RunLarge, "#5E4518"))
                         .Gap(8f),
                     Ui.Row(
+                        CommandButton("HUD 100K", RunHud100k, "#5A2E66"),
+                        CommandButton("Skia 10K", RunSkiaHotpath, "#1F5C58"))
+                        .Gap(8f),
+                    Ui.Row(
                         CommandButton("Reset Camera", ResetCamera, "#3B3665"),
                         CommandButton("Clear", ClearScenario, "#6B1E2D"))
                         .Gap(8f),
@@ -121,6 +125,16 @@ namespace PerformanceVisualizationMod.UI
         private void RunLarge()
         {
             Invoke(engine => _runtime.TryRunScenario(engine, VisualBenchmarkScenarioConfig.Large.Key));
+        }
+
+        private void RunHud100k()
+        {
+            Invoke(engine => _runtime.TryRunScenario(engine, VisualBenchmarkScenarioConfig.Hud100k.Key));
+        }
+
+        private void RunSkiaHotpath()
+        {
+            Invoke(engine => _runtime.TryRunScenario(engine, VisualBenchmarkScenarioConfig.SkiaHotpath.Key));
         }
 
         private void ResetCamera()

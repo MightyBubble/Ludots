@@ -21,10 +21,14 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 background,
             in Vector4 foreground)
         {
+            int widthPx = Math.Max(1, (int)MathF.Round(width));
+            int heightPx = Math.Max(1, (int)MathF.Round(height));
+            int fillPx = (int)MathF.Round(widthPx * Math.Clamp(value, 0f, 1f));
+            fillPx = Math.Clamp(fillPx, 0, widthPx);
             int hash = 23;
-            hash = Mix(hash, BitConverter.SingleToInt32Bits(width));
-            hash = Mix(hash, BitConverter.SingleToInt32Bits(height));
-            hash = Mix(hash, BitConverter.SingleToInt32Bits(value));
+            hash = Mix(hash, widthPx);
+            hash = Mix(hash, heightPx);
+            hash = Mix(hash, fillPx);
             hash = Mix(hash, background);
             hash = Mix(hash, foreground);
             return Finalize(hash);

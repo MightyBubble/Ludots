@@ -1,4 +1,5 @@
 using Arch.Core;
+using Arch.Buffer;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
 
@@ -15,26 +16,34 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override void Update(in float dt)
         {
-            var tagJob = new ClearTagJob();
+            var commandBuffer = new CommandBuffer();
+            var tagJob = new ClearTagJob { CommandBuffer = commandBuffer };
             World.InlineEntityQuery<ClearTagJob, GameplayTagEffectiveChangedBits>(in _tagQuery, ref tagJob);
 
-            var attributeJob = new ClearAttributeJob();
+            var attributeJob = new ClearAttributeJob { CommandBuffer = commandBuffer };
             World.InlineEntityQuery<ClearAttributeJob, GameplayAttributeChangedBits>(in _attributeQuery, ref attributeJob);
+            commandBuffer.Playback(World, dispose: true);
         }
 
         private struct ClearTagJob : IForEachWithEntity<GameplayTagEffectiveChangedBits>
         {
+            public CommandBuffer CommandBuffer;
+
             public void Update(Entity entity, ref GameplayTagEffectiveChangedBits bits)
             {
                 bits.Clear();
+                CommandBuffer.Remove<GameplayTagEffectiveChangedBits>(entity);
             }
         }
 
         private struct ClearAttributeJob : IForEachWithEntity<GameplayAttributeChangedBits>
         {
+            public CommandBuffer CommandBuffer;
+
             public void Update(Entity entity, ref GameplayAttributeChangedBits bits)
             {
                 bits.Clear();
+                CommandBuffer.Remove<GameplayAttributeChangedBits>(entity);
             }
         }
     }

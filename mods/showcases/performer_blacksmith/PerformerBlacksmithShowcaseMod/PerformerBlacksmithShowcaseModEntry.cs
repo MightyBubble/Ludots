@@ -18,6 +18,7 @@ namespace PerformerBlacksmithShowcaseMod
                 var engine = ctx.GetEngine();
                 if (engine != null)
                 {
+                    engine.SetService(CoreServiceKeys.BenchmarkSceneController, runtime);
                     engine.RegisterPresentationSystem(
                         new PerformerBlacksmithShowcasePresentationSystem(engine, runtime));
                 }

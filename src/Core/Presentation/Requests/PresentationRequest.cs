@@ -75,11 +75,13 @@ namespace Ludots.Core.Presentation.Requests
 
         public static PresentationRequest FromWorldHud(Entity owner, in WorldHudItem item, LODLevel lod)
         {
+            WorldHudItem ownedItem = item;
+            ownedItem.Owner = owner;
             return new PresentationRequest
             {
                 Kind = PresentationRequestKind.WorldHud,
                 Owner = owner,
-                WorldHud = item,
+                WorldHud = ownedItem,
                 LOD = lod,
             };
         }

@@ -47,6 +47,8 @@ namespace Ludots.Core.Presentation.Performers
         public int AssetSwapParamKey;
         public AssetSwapEntry[] AssetSwapTable;
         public int VisibilityParamKey;
+        public bool HasMaxLod;
+        public LODLevel MaxLod;
         public GroundingMode Grounding;
         public float GroundingOffset;
     }

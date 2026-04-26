@@ -1075,6 +1075,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             ref readonly var grantedTags = ref World.Get<EffectGrantedTags>(existing);
                             EffectTagContributionHelper.UpdateOnEntity(World, proposal.Target, in grantedTags, oldCount, stack.Count, _tagOps, _budget);
                         }
+                        MarkAggregateDirtyIfNeeded(proposal.Target, existing);
                         return; // Merged into existing stack, no new entity
                     }
                     // TryAddStack returned false = stack full + RejectNew policy
@@ -1142,6 +1143,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
             return Entity.Null;
+        }
+
+        private void MarkAggregateDirtyIfNeeded(Entity target, Entity effect)
+        {
+            if (!World.IsAlive(target) || !World.IsAlive(effect))
+            {
+                return;
+            }
+
+            if (!World.Has<GameplayEffect>(effect) || !World.Get<GameplayEffect>(effect).AggregatesModifiers)
+            {
+                return;
+            }
+
+            if (!World.Has<AttributeAggregateDirty>(target))
+            {
+                World.Add(target, new AttributeAggregateDirty());
+            }
         }
 
         /// <summary>

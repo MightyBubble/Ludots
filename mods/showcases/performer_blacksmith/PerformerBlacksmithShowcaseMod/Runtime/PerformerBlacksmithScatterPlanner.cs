@@ -22,9 +22,31 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             float minRadiusCm = DefaultMinRadiusCm,
             float maxRadiusCm = DefaultMaxRadiusCm)
         {
-            ArgumentNullException.ThrowIfNull(queue);
+            return EnqueueTemplateScatter(
+                queue,
+                mapId,
+                PerformerBlacksmithShowcaseIds.TemplateId,
+                extraBuildings,
+                seed,
+                minRadiusCm,
+                maxRadiusCm,
+                DefaultJitterCm);
+        }
 
-            if (extraBuildings <= 0)
+        public static int EnqueueTemplateScatter(
+            RuntimeEntitySpawnQueue queue,
+            MapId mapId,
+            string templateId,
+            int entityCount,
+            int seed,
+            float minRadiusCm = DefaultMinRadiusCm,
+            float maxRadiusCm = DefaultMaxRadiusCm,
+            float jitterCm = DefaultJitterCm)
+        {
+            ArgumentNullException.ThrowIfNull(queue);
+            ArgumentException.ThrowIfNullOrWhiteSpace(templateId);
+
+            if (entityCount <= 0)
             {
                 return 0;
             }
@@ -39,15 +61,20 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 throw new ArgumentOutOfRangeException(nameof(maxRadiusCm));
             }
 
+            if (jitterCm < 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(jitterCm));
+            }
+
             var random = new Random(seed);
-            int ringCount = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(extraBuildings)));
-            int ringCapacity = Math.Max(6, extraBuildings / ringCount + 2);
+            int ringCount = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(entityCount)));
+            int ringCapacity = Math.Max(6, entityCount / ringCount + 2);
             int queued = 0;
             RuntimeEntitySpawnRequest[] scratch = _scatterScratch ??= new RuntimeEntitySpawnRequest[ScatterScratchCapacity];
 
-            for (int index = 0; index < extraBuildings; index++)
+            for (int index = 0; index < entityCount; index++)
             {
-                int batchCount = Math.Min(scratch.Length, extraBuildings - index);
+                int batchCount = Math.Min(scratch.Length, entityCount - index);
                 for (int batchIndex = 0; batchIndex < batchCount; batchIndex++)
                 {
                     int spawnIndex = index + batchIndex;
@@ -56,8 +83,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                     float ringAlpha = ringCount <= 1 ? 1f : (ring + 1f) / ringCount;
                     float radius = minRadiusCm + ((maxRadiusCm - minRadiusCm) * ringAlpha);
                     float angle = ((slot / (float)ringCapacity) * MathF.PI * 2f) + ((float)random.NextDouble() * 0.55f);
-                    float jitterX = ((float)random.NextDouble() * 2f - 1f) * DefaultJitterCm;
-                    float jitterY = ((float)random.NextDouble() * 2f - 1f) * DefaultJitterCm;
+                    float jitterX = ((float)random.NextDouble() * 2f - 1f) * jitterCm;
+                    float jitterY = ((float)random.NextDouble() * 2f - 1f) * jitterCm;
                     float x = MathF.Cos(angle) * radius + jitterX;
                     float y = MathF.Sin(angle) * radius + jitterY;
 
@@ -71,7 +98,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                     scratch[batchIndex] = new RuntimeEntitySpawnRequest
                     {
                         Kind = RuntimeEntitySpawnKind.Template,
-                        TemplateId = PerformerBlacksmithShowcaseIds.TemplateId,
+                        TemplateId = templateId,
                         MapId = mapId,
                         WorldPositionCm = Fix64Vec2.FromFloat(x, y),
                         HasWorldPosition = 1,

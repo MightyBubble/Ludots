@@ -4,6 +4,7 @@ using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -15,7 +16,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private readonly DeferredTriggerQueue _triggerQueue;
         private readonly TagOps _tagOps;
-        private readonly CommandBuffer _commandBuffer = new CommandBuffer();
 
         public DeferredTriggerCollectionSystem(World world, DeferredTriggerQueue triggerQueue, TagOps tagOps = null) : base(world)
         {
@@ -25,16 +25,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override void Update(in float dt)
         {
+            var commandBuffer = new CommandBuffer();
             var job = new CollectionJob
             {
                 World = World,
                 TriggerQueue = _triggerQueue,
-                CommandBuffer = _commandBuffer,
+                CommandBuffer = commandBuffer,
                 TagOps = _tagOps
             };
 
             World.InlineEntityQuery<CollectionJob, DirtyFlags>(in _dirtyQuery, ref job);
-            _commandBuffer.Playback(World, dispose: true);
+            commandBuffer.Playback(World, dispose: true);
         }
 
         unsafe struct CollectionJob : IForEachWithEntity<DirtyFlags>
@@ -56,11 +57,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (!hasSnapshot)
                     {
                         var snap = default(AttributeLastSnapshot);
-                        for (int i = 0; i < DirtyFlags.MAX_ATTRS; i++)
+                        ulong dirtyMask = dirtyFlags.AttributeDirtyMask;
+                        while (dirtyMask != 0UL)
                         {
+                            int i = BitOperations.TrailingZeroCount(dirtyMask);
+                            dirtyMask &= dirtyMask - 1UL;
                             float newValue = attrBuffer.GetCurrent(i);
                             snap.Values[i] = newValue;
-                            if (!dirtyFlags.IsAttributeDirty(i)) continue;
 
                             TriggerQueue.EnqueueAttributeChanged(new AttributeChangedTrigger
                             {
@@ -88,9 +91,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     else
                     {
                         ref var snap = ref World.Get<AttributeLastSnapshot>(entity);
-                        for (int i = 0; i < DirtyFlags.MAX_ATTRS; i++)
+                        ulong dirtyMask = dirtyFlags.AttributeDirtyMask;
+                        while (dirtyMask != 0UL)
                         {
-                            if (!dirtyFlags.IsAttributeDirty(i)) continue;
+                            int i = BitOperations.TrailingZeroCount(dirtyMask);
+                            dirtyMask &= dirtyMask - 1UL;
                             float oldValue = snap.Values[i];
                             float newValue = attrBuffer.GetCurrent(i);
                             snap.Values[i] = newValue;
@@ -123,7 +128,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 bool hasTags = World.Has<GameplayTagContainer>(entity);
                 bool hasCounts = World.Has<TagCountContainer>(entity);
-                if (!hasTags && !hasCounts) return;
+                if (!hasTags && !hasCounts)
+                {
+                    RemoveDirtyFlagsIfClean(entity, ref dirtyFlags);
+                    return;
+                }
 
                 bool anyDirty = false;
                 for (int i = 0; i < DirtyFlags.TAG_DIRTY_BYTES; i++)
@@ -134,7 +143,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         break;
                     }
                 }
-                if (!anyDirty) return;
+                if (!anyDirty)
+                {
+                    RemoveDirtyFlagsIfClean(entity, ref dirtyFlags);
+                    return;
+                }
 
                 ref var counts = ref World.TryGetRef<TagCountContainer>(entity, out bool hasCountsRef);
 
@@ -306,6 +319,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (hasTags && !hasEffectiveChanged && (effChangedLocal.Bits[0] | effChangedLocal.Bits[1] | effChangedLocal.Bits[2] | effChangedLocal.Bits[3]) != 0)
                 {
                     CommandBuffer.Add(entity, effChangedLocal);
+                }
+
+                RemoveDirtyFlagsIfClean(entity, ref dirtyFlags);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void RemoveDirtyFlagsIfClean(Entity entity, ref DirtyFlags dirtyFlags)
+            {
+                if (!dirtyFlags.IsAnyAttributeDirty() && !dirtyFlags.IsAnyTagDirty())
+                {
+                    CommandBuffer.Remove<DirtyFlags>(entity);
                 }
             }
         }

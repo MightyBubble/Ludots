@@ -286,6 +286,11 @@ namespace Ludots.Core.Presentation.Performers
                             case AssetKind.GroundOverlay:
                                 hasDynamicVisualLane = true;
                                 hasStaticOnlyVisuals = false;
+                                CollectRetainedPresentationRequestParams(
+                                    staticFloatParams,
+                                    staticIntParams,
+                                    staticVectorParams,
+                                    slot.AssetBinding);
                                 break;
 
                             default:
@@ -427,6 +432,19 @@ namespace Ludots.Core.Presentation.Performers
         {
             AddIfValid(floatParams, asset.ScaleParamKey);
             AddIfValid(intParams, asset.MaterialParamKey);
+            AddIfValid(intParams, asset.AssetSwapParamKey);
+            AddIfValid(intParams, asset.VisibilityParamKey);
+            AddIfValid(vectorParams, asset.ColorParamKey);
+        }
+
+        private static void CollectRetainedPresentationRequestParams(
+            System.Collections.Generic.HashSet<int> floatParams,
+            System.Collections.Generic.HashSet<int> intParams,
+            System.Collections.Generic.HashSet<int> vectorParams,
+            in AssetBindingConfig asset)
+        {
+            AddIfValid(floatParams, asset.ScaleParamKey);
+            AddIfValid(floatParams, asset.MaterialParamKey);
             AddIfValid(intParams, asset.AssetSwapParamKey);
             AddIfValid(intParams, asset.VisibilityParamKey);
             AddIfValid(vectorParams, asset.ColorParamKey);
