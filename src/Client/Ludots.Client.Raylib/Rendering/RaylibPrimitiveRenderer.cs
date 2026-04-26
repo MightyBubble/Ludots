@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using Ludots.Core.Modding;
@@ -39,6 +40,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
         private readonly Dictionary<long, ModelInstanceBatch> _modelInstanceBatches = new Dictionary<long, ModelInstanceBatch>();
+        private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _staticModelInstanceBatches = new();
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
@@ -51,6 +53,10 @@ namespace Ludots.Client.Raylib.Rendering
 
         public int LastInstancedInstances { get; private set; }
         public int LastInstancedBatches { get; private set; }
+        public double LastInstancedMatrixBuildMs { get; private set; }
+        public double LastInstancedMeshDrawMs { get; private set; }
+        public int LastInstancedMatrixCacheHits { get; private set; }
+        public int LastInstancedMatrixCacheMisses { get; private set; }
         public int LastPersistentCreates { get; private set; }
         public int LastPersistentUpdates { get; private set; }
         public int LastPersistentRemoves { get; private set; }
@@ -100,6 +106,10 @@ namespace Ludots.Client.Raylib.Rendering
 
             LastInstancedInstances = 0;
             LastInstancedBatches = 0;
+            LastInstancedMatrixBuildMs = 0d;
+            LastInstancedMeshDrawMs = 0d;
+            LastInstancedMatrixCacheHits = 0;
+            LastInstancedMatrixCacheMisses = 0;
             LastPersistentCreates = 0;
             LastPersistentUpdates = 0;
             LastPersistentRemoves = 0;
@@ -1373,6 +1383,10 @@ namespace Ludots.Client.Raylib.Rendering
         {
             LastInstancedInstances = 0;
             LastInstancedBatches = 0;
+            LastInstancedMatrixBuildMs = 0d;
+            LastInstancedMeshDrawMs = 0d;
+            LastInstancedMatrixCacheHits = 0;
+            LastInstancedMatrixCacheMisses = 0;
         }
 
         public void DrawInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, MeshAssetRegistry meshes, float scaleMul = 1f)
@@ -1388,7 +1402,7 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            if (TryDrawModelInstancedBucket(items, meshes, scaleMul))
+            if (TryDrawModelInstancedBucket(bucket, items, meshes, scaleMul))
             {
                 return;
             }
@@ -1425,7 +1439,7 @@ namespace Ludots.Client.Raylib.Rendering
             FlushInstancedBatches();
         }
 
-        private bool TryDrawModelInstancedBucket(List<PrimitiveDrawItem> items, MeshAssetRegistry meshes, float scaleMul)
+        private bool TryDrawModelInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, List<PrimitiveDrawItem> items, MeshAssetRegistry meshes, float scaleMul)
         {
             PrimitiveDrawItem first = items[0];
             if (!meshes.TryGetDescriptor(first.MeshAssetId, out MeshAssetDescriptor descriptor) ||
@@ -1447,8 +1461,52 @@ namespace Ludots.Client.Raylib.Rendering
 
             uint colorKey = PackRgba(first.Color);
             long batchKey = BuildModelInstanceBatchKey(first.MeshAssetId, colorKey);
-            ModelInstanceBatch batch = GetModelInstanceBatch(batchKey, colorKey);
+            bool canCacheStaticMatrices = bucket.Lane.Mobility == VisualMobility.Static && MathF.Abs(scaleMul - 1f) <= 0.0001f;
+            ModelInstanceBatch batch;
+            if (canCacheStaticMatrices)
+            {
+                batch = GetStaticModelInstanceBatch(bucket, colorKey);
+                if (batch.Revision != bucket.Revision || batch.Count != items.Count)
+                {
+                    LastInstancedMatrixCacheMisses++;
+                    RebuildModelInstanceBatch(ref batch, items, scaleMul, bucket.Revision);
+                    _staticModelInstanceBatches[bucket] = batch;
+                }
+                else
+                {
+                    LastInstancedMatrixCacheHits++;
+                }
+            }
+            else
+            {
+                LastInstancedMatrixCacheMisses++;
+                batch = GetModelInstanceBatch(batchKey, colorKey);
+                RebuildModelInstanceBatch(ref batch, items, scaleMul, bucket.Revision);
+                _modelInstanceBatches[batchKey] = batch;
+            }
+
+            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey);
+            LastInstancedInstances += batch.Count;
+            LastInstancedBatches += drawCalls;
+            return true;
+        }
+
+        private ModelInstanceBatch GetStaticModelInstanceBatch(RaylibIsmRenderBridge.Bucket bucket, uint colorKey)
+        {
+            if (_staticModelInstanceBatches.TryGetValue(bucket, out ModelInstanceBatch batch) &&
+                batch.ColorKey == colorKey)
+            {
+                return batch;
+            }
+
+            return new ModelInstanceBatch(colorKey);
+        }
+
+        private void RebuildModelInstanceBatch(ref ModelInstanceBatch batch, List<PrimitiveDrawItem> items, float scaleMul, int revision)
+        {
+            long start = Stopwatch.GetTimestamp();
             batch.Count = 0;
+            batch.Revision = revision;
             for (int i = 0; i < items.Count; i++)
             {
                 PrimitiveDrawItem item = items[i];
@@ -1459,11 +1517,7 @@ namespace Ludots.Client.Raylib.Rendering
                 batch.Add(matrix);
             }
 
-            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey);
-            LastInstancedInstances += batch.Count;
-            LastInstancedBatches += drawCalls;
-            _modelInstanceBatches[batchKey] = batch;
-            return true;
+            LastInstancedMatrixBuildMs += (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
         }
 
         private ModelInstanceBatch GetModelInstanceBatch(long batchKey, uint colorKey)
@@ -1490,6 +1544,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             int drawCalls = 0;
+            long drawStart = Stopwatch.GetTimestamp();
             fixed (RaylibMatrix* transforms = batch.Transforms)
             {
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
@@ -1506,6 +1561,7 @@ namespace Ludots.Client.Raylib.Rendering
                 }
             }
 
+            LastInstancedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000.0 / Stopwatch.Frequency;
             return drawCalls;
         }
 
@@ -1754,12 +1810,14 @@ namespace Ludots.Client.Raylib.Rendering
             public readonly uint ColorKey;
             public RaylibMatrix[] Transforms;
             public int Count;
+            public int Revision;
 
             public ModelInstanceBatch(uint colorKey, int initialCapacity = 256)
             {
                 ColorKey = colorKey;
                 Transforms = new RaylibMatrix[Math.Max(4, initialCapacity)];
                 Count = 0;
+                Revision = int.MinValue;
             }
 
             public void Add(in RaylibMatrix matrix)

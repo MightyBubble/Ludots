@@ -30,6 +30,14 @@ namespace Ludots.Core.Presentation.Systems
         private const int MaxBarDim = 512;
         private const int Margin = 200;
         private const float WorldHudCoarseMarginCm = 600f;
+        private const int DensityGateThreshold = 12000;
+        private const int DenseCellSizePx = 28;
+        private const int MaxDenseScreenOwners = 4096;
+        private readonly HashSet<int> _acceptedDenseOwners = new(MaxDenseScreenOwners);
+        private readonly HashSet<int> _rejectedDenseOwners = new(MaxDenseScreenOwners);
+        private int[] _denseCellOwners = Array.Empty<int>();
+        private int _denseCellColumns;
+        private int _denseCellRows;
 
         public WorldHudToScreenSystem(
             World world,
@@ -62,7 +70,8 @@ namespace Ludots.Core.Presentation.Systems
                 worldHudRevision == _lastWorldHudRevision &&
                 projectionRevision == _lastProjectionRevision)
             {
-                _timingDiagnostics?.ObserveWorldHudProjection((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+                _timingDiagnostics?.ObserveWorldHudProjection(
+                    (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
                 return;
             }
 
@@ -71,11 +80,22 @@ namespace Ludots.Core.Presentation.Systems
             var res = _view.Resolution;
             float screenWidth = res.X;
             float screenHeight = res.Y;
+            var span = _worldHud.GetSpan();
+            bool useDensityGate = span.Length >= DensityGateThreshold;
+            if (useDensityGate)
+            {
+                PrepareDenseOwnerGate(screenWidth, screenHeight);
+            }
+            else
+            {
+                _acceptedDenseOwners.Clear();
+                _rejectedDenseOwners.Clear();
+            }
+
             ProjectionSnapshot projectionSnapshot = default;
             bool hasProjectionSnapshot = _projector is IProjectionSnapshotProvider snapshotProvider &&
                                          snapshotProvider.TryGetProjectionSnapshot(out projectionSnapshot);
 
-            var span = _worldHud.GetSpan();
             var lastWorldPosition = new System.Numerics.Vector3(float.NaN, float.NaN, float.NaN);
             var lastScreen = new System.Numerics.Vector2(float.NaN, float.NaN);
             bool useCoarseCull = _cullingDebug != null && _cullingDebug.MaxX > _cullingDebug.MinX && _cullingDebug.MaxY > _cullingDebug.MinY;
@@ -83,6 +103,8 @@ namespace Ludots.Core.Presentation.Systems
             float maxX = useCoarseCull ? _cullingDebug!.MaxX + WorldHudCoarseMarginCm : 0f;
             float minZ = useCoarseCull ? _cullingDebug!.MinY - WorldHudCoarseMarginCm : 0f;
             float maxZ = useCoarseCull ? _cullingDebug!.MaxY + WorldHudCoarseMarginCm : 0f;
+            int projectedItems = 0;
+            int densitySkippedItems = 0;
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
@@ -90,6 +112,11 @@ namespace Ludots.Core.Presentation.Systems
                     (!World.IsAlive(item.Owner) ||
                      (World.Has<CullState>(item.Owner) && !World.Get<CullState>(item.Owner).IsVisible)))
                 {
+                    continue;
+                }
+                if (useDensityGate && IsDenseOwnerRejected(item.Owner, item.StableId))
+                {
+                    densitySkippedItems++;
                     continue;
                 }
 
@@ -129,8 +156,13 @@ namespace Ludots.Core.Presentation.Systems
                     if (ix + iw < -Margin || iy + ih < -Margin ||
                         ix > screenWidth + Margin || iy > screenHeight + Margin)
                         continue;
+                    if (useDensityGate && !ShouldSubmitDenseOwner(item.Owner, item.StableId, ix, iy, screenWidth, screenHeight))
+                    {
+                        densitySkippedItems++;
+                        continue;
+                    }
 
-                    _screenHud.TryAddBar(new ScreenHudBarItem
+                    if (_screenHud.TryAddBar(new ScreenHudBarItem
                     {
                         StableId = item.StableId,
                         DirtySerial = item.DirtySerial,
@@ -141,7 +173,10 @@ namespace Ludots.Core.Presentation.Systems
                         Width = item.Width,
                         Height = item.Height,
                         Value0 = item.Value0,
-                    });
+                    }))
+                    {
+                        projectedItems++;
+                    }
                     continue;
                 }
 
@@ -153,8 +188,13 @@ namespace Ludots.Core.Presentation.Systems
                     {
                         continue;
                     }
+                    if (useDensityGate && !ShouldSubmitDenseOwner(item.Owner, item.StableId, ix, iy, screenWidth, screenHeight))
+                    {
+                        densitySkippedItems++;
+                        continue;
+                    }
 
-                    _screenHud.TryAddText(new ScreenHudTextItem
+                    if (_screenHud.TryAddText(new ScreenHudTextItem
                     {
                         StableId = item.StableId,
                         DirtySerial = item.DirtySerial,
@@ -167,13 +207,84 @@ namespace Ludots.Core.Presentation.Systems
                         Id1 = item.Id1,
                         FontSize = item.FontSize,
                         Text = item.Text,
-                    });
+                    }))
+                    {
+                        projectedItems++;
+                    }
                 }
             }
 
-            _timingDiagnostics?.ObserveWorldHudProjection((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+            _timingDiagnostics?.ObserveWorldHudProjection(
+                (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency,
+                span.Length,
+                projectedItems,
+                densitySkippedItems);
             _lastWorldHudRevision = worldHudRevision;
             _lastProjectionRevision = projectionRevision;
+        }
+
+        private void PrepareDenseOwnerGate(float screenWidth, float screenHeight)
+        {
+            _acceptedDenseOwners.Clear();
+            _rejectedDenseOwners.Clear();
+            _denseCellColumns = Math.Max(1, (int)MathF.Ceiling(screenWidth / DenseCellSizePx));
+            _denseCellRows = Math.Max(1, (int)MathF.Ceiling(screenHeight / DenseCellSizePx));
+            int cellCount = _denseCellColumns * _denseCellRows;
+            if (_denseCellOwners.Length < cellCount)
+            {
+                _denseCellOwners = new int[cellCount];
+            }
+
+            Array.Fill(_denseCellOwners, 0, 0, cellCount);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool ShouldSubmitDenseOwner(Entity owner, int stableId, int x, int y, float screenWidth, float screenHeight)
+        {
+            int ownerKey = ResolveDenseOwnerKey(owner, stableId);
+            if (ownerKey <= 0)
+            {
+                return true;
+            }
+
+            if (_acceptedDenseOwners.Contains(ownerKey))
+            {
+                return true;
+            }
+
+            if (_acceptedDenseOwners.Count >= MaxDenseScreenOwners)
+            {
+                _rejectedDenseOwners.Add(ownerKey);
+                return false;
+            }
+
+            int clampedX = Math.Clamp(x, 0, Math.Max(0, (int)screenWidth - 1));
+            int clampedY = Math.Clamp(y, 0, Math.Max(0, (int)screenHeight - 1));
+            int cellX = Math.Clamp(clampedX / DenseCellSizePx, 0, _denseCellColumns - 1);
+            int cellY = Math.Clamp(clampedY / DenseCellSizePx, 0, _denseCellRows - 1);
+            int cellIndex = cellY * _denseCellColumns + cellX;
+            if (_denseCellOwners[cellIndex] != 0)
+            {
+                _rejectedDenseOwners.Add(ownerKey);
+                return false;
+            }
+
+            _denseCellOwners[cellIndex] = ownerKey;
+            _acceptedDenseOwners.Add(ownerKey);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsDenseOwnerRejected(Entity owner, int stableId)
+        {
+            int ownerKey = ResolveDenseOwnerKey(owner, stableId);
+            return ownerKey > 0 && _rejectedDenseOwners.Contains(ownerKey);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int ResolveDenseOwnerKey(Entity owner, int stableId)
+        {
+            return owner != Entity.Null ? owner.Id : stableId;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

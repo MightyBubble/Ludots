@@ -30,6 +30,16 @@ namespace Ludots.Client.Raylib.Rendering
             public List<PrimitiveDrawItem> Items { get; } = new();
 
             public bool HasVisibleItems => Items.Count > 0;
+
+            public int Revision { get; private set; }
+
+            public void MarkDirty()
+            {
+                unchecked
+                {
+                    Revision++;
+                }
+            }
         }
 
         private readonly struct BucketSlot
@@ -239,6 +249,7 @@ namespace Ludots.Client.Raylib.Rendering
             Bucket bucket = GetOrCreateBucket(binding.Lane);
             int itemIndex = bucket.Items.Count;
             bucket.Items.Add(binding.Item);
+            bucket.MarkDirty();
             _bucketSlotsByStableId[binding.StableId] = new BucketSlot(bucket, itemIndex);
         }
 
@@ -264,6 +275,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             slot.Bucket.Items[slot.ItemIndex] = binding.Item;
+            slot.Bucket.MarkDirty();
         }
 
         private void RemoveVisibleBinding(int stableId)
@@ -283,6 +295,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             bucket.Items.RemoveAt(lastIndex);
+            bucket.MarkDirty();
             _bucketSlotsByStableId.Remove(stableId);
             if (!bucket.HasVisibleItems)
             {
@@ -351,6 +364,7 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 bucket.Items.Add(item);
+                bucket.MarkDirty();
                 _bucketSlotsByStableId[item.StableId] = new BucketSlot(bucket, bucket.Items.Count - 1);
             }
 

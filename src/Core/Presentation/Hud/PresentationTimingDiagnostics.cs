@@ -100,6 +100,10 @@ namespace Ludots.Core.Presentation.Hud
         public float TerrainChunkBuildMs { get; private set; }
         public float PrimitiveRenderMs { get; private set; }
         public float LastPrimitiveRenderMs { get; private set; }
+        public float PrimitiveMatrixBuildMs { get; private set; }
+        public float LastPrimitiveMatrixBuildMs { get; private set; }
+        public float PrimitiveMeshDrawMs { get; private set; }
+        public float LastPrimitiveMeshDrawMs { get; private set; }
         public float HostPreTickMs { get; private set; }
         public float LastHostPreTickMs { get; private set; }
         public float HostPostTickMs { get; private set; }
@@ -130,6 +134,11 @@ namespace Ludots.Core.Presentation.Hud
         public int TerrainChunksBuiltLastFrame { get; private set; }
         public int PrimitiveInstancesLastFrame { get; private set; }
         public int PrimitiveBatchesLastFrame { get; private set; }
+        public int PrimitiveMatrixCacheHitsLastFrame { get; private set; }
+        public int PrimitiveMatrixCacheMissesLastFrame { get; private set; }
+        public int WorldHudItemsLastProjection { get; private set; }
+        public int WorldHudProjectedLastFrame { get; private set; }
+        public int WorldHudDensitySkippedLastFrame { get; private set; }
         public int GroundOverlaysLastFrame { get; private set; }
         public int RoadSplinesLastFrame { get; private set; }
         public int DebugDrawCommandsLastFrame { get; private set; }
@@ -221,8 +230,16 @@ namespace Ludots.Core.Presentation.Hud
         public void ObserveCameraPresenter(double sampleMs) => CameraPresenterMs = Smooth(CameraPresenterMs, (float)sampleMs);
         public void ObserveWorldHudProjection(double sampleMs)
         {
+            ObserveWorldHudProjection(sampleMs, WorldHudItemsLastProjection, WorldHudProjectedLastFrame, WorldHudDensitySkippedLastFrame);
+        }
+
+        public void ObserveWorldHudProjection(double sampleMs, int rawItems, int projectedItems, int densitySkippedItems)
+        {
             LastWorldHudProjectionMs = (float)sampleMs;
             WorldHudProjectionMs = Smooth(WorldHudProjectionMs, (float)sampleMs);
+            WorldHudItemsLastProjection = rawItems;
+            WorldHudProjectedLastFrame = projectedItems;
+            WorldHudDensitySkippedLastFrame = densitySkippedItems;
         }
         public void ObserveSimulation(double sampleMs)
         {
@@ -350,10 +367,28 @@ namespace Ludots.Core.Presentation.Hud
 
         public void ObservePrimitiveRender(double sampleMs, int instances, int batches)
         {
+            ObservePrimitiveRender(sampleMs, instances, batches, 0d, 0d, 0, 0);
+        }
+
+        public void ObservePrimitiveRender(
+            double sampleMs,
+            int instances,
+            int batches,
+            double matrixBuildMs,
+            double meshDrawMs,
+            int matrixCacheHits,
+            int matrixCacheMisses)
+        {
             LastPrimitiveRenderMs = (float)sampleMs;
             PrimitiveRenderMs = Smooth(PrimitiveRenderMs, (float)sampleMs);
+            LastPrimitiveMatrixBuildMs = (float)matrixBuildMs;
+            PrimitiveMatrixBuildMs = Smooth(PrimitiveMatrixBuildMs, (float)matrixBuildMs);
+            LastPrimitiveMeshDrawMs = (float)meshDrawMs;
+            PrimitiveMeshDrawMs = Smooth(PrimitiveMeshDrawMs, (float)meshDrawMs);
             PrimitiveInstancesLastFrame = instances;
             PrimitiveBatchesLastFrame = batches;
+            PrimitiveMatrixCacheHitsLastFrame = matrixCacheHits;
+            PrimitiveMatrixCacheMissesLastFrame = matrixCacheMisses;
         }
 
         public void ObserveHostPreTick(double sampleMs)
