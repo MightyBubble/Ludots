@@ -93,6 +93,9 @@ namespace Ludots.Core.Presentation.Hud
         public float PerformerEmitDirtyCleanupMs { get; private set; }
         public float LastPerformerEmitDirtyCleanupMs { get; private set; }
         public int PerformerEmitDirtyCountLastFrame { get; private set; }
+        public float PerformerEmitRetainedProcessMs { get; private set; }
+        public float LastPerformerEmitRetainedProcessMs { get; private set; }
+        public int PerformerEmitRetainedCountLastFrame { get; private set; }
         public float PresentationRequestFlushMs { get; private set; }
         public float LastPresentationRequestFlushMs { get; private set; }
         public float TerrainRenderMs { get; private set; }
@@ -104,6 +107,12 @@ namespace Ludots.Core.Presentation.Hud
         public float LastPrimitiveMatrixBuildMs { get; private set; }
         public float PrimitiveMeshDrawMs { get; private set; }
         public float LastPrimitiveMeshDrawMs { get; private set; }
+        public float PrimitivePersistentSyncMs { get; private set; }
+        public float LastPrimitivePersistentSyncMs { get; private set; }
+        public float PrimitivePersistentBucketDrawMs { get; private set; }
+        public float LastPrimitivePersistentBucketDrawMs { get; private set; }
+        public float PrimitiveImmediateDrawMs { get; private set; }
+        public float LastPrimitiveImmediateDrawMs { get; private set; }
         public float HostPreTickMs { get; private set; }
         public float LastHostPreTickMs { get; private set; }
         public float HostPostTickMs { get; private set; }
@@ -136,6 +145,7 @@ namespace Ludots.Core.Presentation.Hud
         public int PrimitiveBatchesLastFrame { get; private set; }
         public int PrimitiveMatrixCacheHitsLastFrame { get; private set; }
         public int PrimitiveMatrixCacheMissesLastFrame { get; private set; }
+        public int PrimitiveImmediateSkippedLastFrame { get; private set; }
         public int WorldHudItemsLastProjection { get; private set; }
         public int WorldHudProjectedLastFrame { get; private set; }
         public int WorldHudDensitySkippedLastFrame { get; private set; }
@@ -350,6 +360,13 @@ namespace Ludots.Core.Presentation.Hud
             PerformerEmitDirtyCountLastFrame = dirtyCount;
         }
 
+        public void ObservePerformerEmitRetainedBreakdown(double processMs, int dirtyCount)
+        {
+            LastPerformerEmitRetainedProcessMs = (float)processMs;
+            PerformerEmitRetainedProcessMs = Smooth(PerformerEmitRetainedProcessMs, (float)processMs);
+            PerformerEmitRetainedCountLastFrame = dirtyCount;
+        }
+
         public void ObservePresentationRequestFlush(double sampleMs)
         {
             LastPresentationRequestFlushMs = (float)sampleMs;
@@ -367,7 +384,7 @@ namespace Ludots.Core.Presentation.Hud
 
         public void ObservePrimitiveRender(double sampleMs, int instances, int batches)
         {
-            ObservePrimitiveRender(sampleMs, instances, batches, 0d, 0d, 0, 0);
+            ObservePrimitiveRender(sampleMs, instances, batches, 0d, 0d, 0, 0, 0d, 0d, 0d, 0);
         }
 
         public void ObservePrimitiveRender(
@@ -379,16 +396,50 @@ namespace Ludots.Core.Presentation.Hud
             int matrixCacheHits,
             int matrixCacheMisses)
         {
+            ObservePrimitiveRender(
+                sampleMs,
+                instances,
+                batches,
+                matrixBuildMs,
+                meshDrawMs,
+                matrixCacheHits,
+                matrixCacheMisses,
+                0d,
+                0d,
+                0d,
+                0);
+        }
+
+        public void ObservePrimitiveRender(
+            double sampleMs,
+            int instances,
+            int batches,
+            double matrixBuildMs,
+            double meshDrawMs,
+            int matrixCacheHits,
+            int matrixCacheMisses,
+            double persistentSyncMs,
+            double persistentBucketDrawMs,
+            double immediateDrawMs,
+            int immediateSkippedCount)
+        {
             LastPrimitiveRenderMs = (float)sampleMs;
             PrimitiveRenderMs = Smooth(PrimitiveRenderMs, (float)sampleMs);
             LastPrimitiveMatrixBuildMs = (float)matrixBuildMs;
             PrimitiveMatrixBuildMs = Smooth(PrimitiveMatrixBuildMs, (float)matrixBuildMs);
             LastPrimitiveMeshDrawMs = (float)meshDrawMs;
             PrimitiveMeshDrawMs = Smooth(PrimitiveMeshDrawMs, (float)meshDrawMs);
+            LastPrimitivePersistentSyncMs = (float)persistentSyncMs;
+            PrimitivePersistentSyncMs = Smooth(PrimitivePersistentSyncMs, (float)persistentSyncMs);
+            LastPrimitivePersistentBucketDrawMs = (float)persistentBucketDrawMs;
+            PrimitivePersistentBucketDrawMs = Smooth(PrimitivePersistentBucketDrawMs, (float)persistentBucketDrawMs);
+            LastPrimitiveImmediateDrawMs = (float)immediateDrawMs;
+            PrimitiveImmediateDrawMs = Smooth(PrimitiveImmediateDrawMs, (float)immediateDrawMs);
             PrimitiveInstancesLastFrame = instances;
             PrimitiveBatchesLastFrame = batches;
             PrimitiveMatrixCacheHitsLastFrame = matrixCacheHits;
             PrimitiveMatrixCacheMissesLastFrame = matrixCacheMisses;
+            PrimitiveImmediateSkippedLastFrame = immediateSkippedCount;
         }
 
         public void ObserveHostPreTick(double sampleMs)

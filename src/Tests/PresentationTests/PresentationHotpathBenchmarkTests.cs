@@ -423,6 +423,7 @@ namespace Ludots.Tests.Presentation
 
                 if (refreshUnderlay)
                 {
+                    long renderStart = Stopwatch.GetTimestamp();
                     if (hasUnderlay)
                     {
                         plan = _pacer.BuildPlan(scene);
@@ -450,6 +451,18 @@ namespace Ludots.Tests.Presentation
 
                     _underlayHadContent = hasUnderlay;
                     _underlayLayerVersion = layerVersion;
+                    double renderMs = ElapsedMs(renderStart);
+
+                    bool refreshedCompositeContent = hasUnderlay;
+                    bool refreshedComposite = underlayCanvasChanged || refreshedCompositeContent != _compositeHadContent;
+                    if (!refreshedComposite)
+                    {
+                        _compositeSkipCount++;
+                    }
+
+                    _compositeHadContent = refreshedCompositeContent;
+                    rebuiltLaneCount = renderer.RebuiltLaneCountLastFrame;
+                    return renderMs;
                 }
 
                 bool hasCompositeContent = hasUnderlay;
@@ -461,7 +474,6 @@ namespace Ludots.Tests.Presentation
                     return 0d;
                 }
 
-                long renderStart = Stopwatch.GetTimestamp();
                 if (!underlayCanvasChanged)
                 {
                     canvas.Clear(SKColors.Transparent);
@@ -469,7 +481,7 @@ namespace Ludots.Tests.Presentation
 
                 _compositeHadContent = hasCompositeContent;
                 rebuiltLaneCount = renderer.RebuiltLaneCountLastFrame;
-                return ElapsedMs(renderStart);
+                return 0d;
             }
         }
 

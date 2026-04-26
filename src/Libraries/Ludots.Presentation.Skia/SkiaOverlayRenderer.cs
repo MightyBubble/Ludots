@@ -743,18 +743,6 @@ namespace Ludots.Presentation.Skia
 
                 int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
                 float baselineY = item.Y + fontSize;
-                if (IsAsciiText(item.Text))
-                {
-                    if (fontSize != currentFastFontSize)
-                    {
-                        currentFastFont = GetFont(UiFontRegistry.ResolveTypeface(null, bold: false), fontSize);
-                        currentFastFontSize = fontSize;
-                    }
-
-                    canvas.DrawText(item.Text, item.X, baselineY, currentFastFont!, _textPaint);
-                    continue;
-                }
-
                 CachedTextLayout layout = GetTextLayout(item.Text, fontSize);
                 for (int runIndex = 0; runIndex < layout.Runs.Length; runIndex++)
                 {

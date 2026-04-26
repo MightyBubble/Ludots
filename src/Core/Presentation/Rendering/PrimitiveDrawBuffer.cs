@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Presentation.Rendering
 {
@@ -7,10 +8,16 @@ namespace Ludots.Core.Presentation.Rendering
         private readonly PrimitiveDrawItem[] _buffer;
         private int _count;
         private int _revision;
+        private int _staticMeshGeometryRevision;
+        private int _staticMeshLaneItemCount;
+        private int _skinnedLaneItemCount;
 
         public int Count => _count;
         public int Capacity => _buffer.Length;
         public int Revision => _revision;
+        public int StaticMeshGeometryRevision => _staticMeshGeometryRevision;
+        public int StaticMeshLaneItemCount => _staticMeshLaneItemCount;
+        public int SkinnedLaneItemCount => _skinnedLaneItemCount;
         public int DroppedSinceClear { get; private set; }
         public int DroppedTotal { get; private set; }
 
@@ -30,6 +37,15 @@ namespace Ludots.Core.Presentation.Rendering
             }
 
             _buffer[_count++] = item;
+            if (item.RenderPath.IsStaticInstanceLane())
+            {
+                _staticMeshLaneItemCount++;
+            }
+            else if (item.RenderPath.IsSkinnedLane())
+            {
+                _skinnedLaneItemCount++;
+            }
+
             return true;
         }
 
@@ -40,9 +56,16 @@ namespace Ludots.Core.Presentation.Rendering
             _revision = revision;
         }
 
+        public void SetStaticMeshGeometryRevision(int revision)
+        {
+            _staticMeshGeometryRevision = revision;
+        }
+
         public void Clear()
         {
             _count = 0;
+            _staticMeshLaneItemCount = 0;
+            _skinnedLaneItemCount = 0;
             DroppedSinceClear = 0;
         }
     }

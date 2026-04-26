@@ -48,7 +48,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private const string AutoMeshBenchmarkTotalEnvKey = "LUDOTS_BLACKSMITH_MESH_BENCHMARK_TOTAL";
         private const string ForcePanelEnvKey = "LUDOTS_BLACKSMITH_FORCE_PANEL";
         private const string ForceBenchmarkUiEnvKey = "LUDOTS_BLACKSMITH_FORCE_BENCHMARK_UI";
-        private const string NativeBenchmarkHudEnvKey = "LUDOTS_RAYLIB_NATIVE_BENCHMARK_HUD";
         private const float PanelRefreshIntervalSeconds = 0.25f;
         private const float LargeCrowdPanelRefreshIntervalSeconds = 1.5f;
 
@@ -674,9 +673,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             int totalBlacksmiths = CountTrackedBlacksmithEntities(engine, out _);
             bool largeCrowd = totalBlacksmiths > DetailedPanelCrowdThreshold;
             bool forcePanel = ReadEnvBool(ForcePanelEnvKey);
-            bool nativeBenchmarkHud = ReadEnvBool(NativeBenchmarkHudEnvKey);
             bool benchmarkPanelSuppressed = IsBenchmarkMode(engine) && !forcePanel;
-            if (nativeBenchmarkHud || (largeCrowd && !forcePanel) || benchmarkPanelSuppressed)
+            if ((largeCrowd && !forcePanel) || benchmarkPanelSuppressed)
             {
                 _panelController.ClearIfOwned(root);
                 return;

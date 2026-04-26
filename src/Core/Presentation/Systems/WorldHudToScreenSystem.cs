@@ -31,13 +31,20 @@ namespace Ludots.Core.Presentation.Systems
         private const int Margin = 200;
         private const float WorldHudCoarseMarginCm = 600f;
         private const int DensityGateThreshold = 12000;
-        private const int DenseCellSizePx = 28;
+        private const int DenseCellSizePx = 56;
         private const int MaxDenseScreenOwners = 4096;
-        private readonly HashSet<int> _acceptedDenseOwners = new(MaxDenseScreenOwners);
-        private readonly HashSet<int> _rejectedDenseOwners = new(MaxDenseScreenOwners);
+        private const int DenseOwnerAccepted = 1;
+        private const int DenseOwnerRejected = 2;
         private int[] _denseCellOwners = Array.Empty<int>();
+        private int[] _denseOwnerMarks = Array.Empty<int>();
+        private int[] _denseOwnerStamps = Array.Empty<int>();
         private int _denseCellColumns;
         private int _denseCellRows;
+        private int _denseOwnerStamp;
+        private int _acceptedDenseOwnerCount;
+        private OwnerVisibilityCacheEntry[] _ownerVisibilityCache = Array.Empty<OwnerVisibilityCacheEntry>();
+        private ProjectionCacheEntry[] _projectionCache = Array.Empty<ProjectionCacheEntry>();
+        private int _frameCacheStamp;
 
         public WorldHudToScreenSystem(
             World world,
@@ -76,6 +83,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             _screenHud.Clear();
+            AdvanceFrameCacheStamp();
 
             var res = _view.Resolution;
             float screenWidth = res.X;
@@ -88,8 +96,7 @@ namespace Ludots.Core.Presentation.Systems
             }
             else
             {
-                _acceptedDenseOwners.Clear();
-                _rejectedDenseOwners.Clear();
+                _acceptedDenseOwnerCount = 0;
             }
 
             ProjectionSnapshot projectionSnapshot = default;
@@ -108,12 +115,6 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
-                if (item.Owner != Entity.Null &&
-                    (!World.IsAlive(item.Owner) ||
-                     (World.Has<CullState>(item.Owner) && !World.Get<CullState>(item.Owner).IsVisible)))
-                {
-                    continue;
-                }
                 if (useDensityGate && IsDenseOwnerRejected(item.Owner, item.StableId))
                 {
                     densitySkippedItems++;
@@ -131,11 +132,20 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
+                bool hasOwner = IsAssignedOwner(item.Owner);
+                if (hasOwner && !IsOwnerVisible(item.Owner))
+                {
+                    continue;
+                }
+
                 var screen = item.WorldPosition == lastWorldPosition
                     ? lastScreen
-                    : hasProjectionSnapshot
-                        ? ProjectWorldToScreenFast(item.WorldPosition, in projectionSnapshot)
-                        : _projector.WorldToScreen(item.WorldPosition);
+                    : TryGetCachedProjection(item.Owner, item.StableId, item.WorldPosition, out var cachedScreen)
+                        ? cachedScreen
+                        : hasProjectionSnapshot
+                            ? ProjectWorldToScreenFast(item.WorldPosition, in projectionSnapshot)
+                            : _projector.WorldToScreen(item.WorldPosition);
+                CacheProjection(item.Owner, item.StableId, item.WorldPosition, screen);
                 lastWorldPosition = item.WorldPosition;
                 lastScreen = screen;
                 if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) ||
@@ -225,8 +235,14 @@ namespace Ludots.Core.Presentation.Systems
 
         private void PrepareDenseOwnerGate(float screenWidth, float screenHeight)
         {
-            _acceptedDenseOwners.Clear();
-            _rejectedDenseOwners.Clear();
+            _acceptedDenseOwnerCount = 0;
+            _denseOwnerStamp++;
+            if (_denseOwnerStamp == int.MaxValue)
+            {
+                Array.Clear(_denseOwnerStamps, 0, _denseOwnerStamps.Length);
+                _denseOwnerStamp = 1;
+            }
+
             _denseCellColumns = Math.Max(1, (int)MathF.Ceiling(screenWidth / DenseCellSizePx));
             _denseCellRows = Math.Max(1, (int)MathF.Ceiling(screenHeight / DenseCellSizePx));
             int cellCount = _denseCellColumns * _denseCellRows;
@@ -239,6 +255,78 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool IsOwnerVisible(Entity owner)
+        {
+            int ownerKey = ResolveOwnerCacheKey(owner);
+            if ((uint)ownerKey < (uint)_ownerVisibilityCache.Length)
+            {
+                ref OwnerVisibilityCacheEntry cached = ref _ownerVisibilityCache[ownerKey];
+                if (cached.Stamp == _frameCacheStamp && cached.Version == owner.Version)
+                {
+                    return cached.IsVisible;
+                }
+            }
+
+            bool visible = World.IsAlive(owner) &&
+                (!World.Has<CullState>(owner) || World.Get<CullState>(owner).IsVisible);
+            SetOwnerVisible(ownerKey, owner.Version, visible);
+            return visible;
+        }
+
+        private void SetOwnerVisible(int ownerKey, int ownerVersion, bool visible)
+        {
+            if (ownerKey >= _ownerVisibilityCache.Length)
+            {
+                int next = _ownerVisibilityCache.Length == 0 ? 1024 : _ownerVisibilityCache.Length;
+                while (next <= ownerKey)
+                {
+                    next *= 2;
+                }
+
+                Array.Resize(ref _ownerVisibilityCache, next);
+            }
+
+            _ownerVisibilityCache[ownerKey] = new OwnerVisibilityCacheEntry(_frameCacheStamp, ownerVersion, visible);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TryGetCachedProjection(Entity owner, int stableId, System.Numerics.Vector3 worldPosition, out System.Numerics.Vector2 screen)
+        {
+            int ownerKey = IsAssignedOwner(owner) ? ResolveOwnerCacheKey(owner) : ResolveStableProjectionKey(stableId);
+            if ((uint)ownerKey < (uint)_projectionCache.Length)
+            {
+                ref ProjectionCacheEntry cached = ref _projectionCache[ownerKey];
+                if (cached.Stamp == _frameCacheStamp &&
+                    cached.Version == owner.Version &&
+                    cached.WorldPosition == worldPosition)
+                {
+                    screen = cached.ScreenPosition;
+                    return true;
+                }
+            }
+
+            screen = default;
+            return false;
+        }
+
+        private void CacheProjection(Entity owner, int stableId, System.Numerics.Vector3 worldPosition, System.Numerics.Vector2 screen)
+        {
+            int ownerKey = IsAssignedOwner(owner) ? ResolveOwnerCacheKey(owner) : ResolveStableProjectionKey(stableId);
+            if (ownerKey >= _projectionCache.Length)
+            {
+                int next = _projectionCache.Length == 0 ? 1024 : _projectionCache.Length;
+                while (next <= ownerKey)
+                {
+                    next *= 2;
+                }
+
+                Array.Resize(ref _projectionCache, next);
+            }
+
+            _projectionCache[ownerKey] = new ProjectionCacheEntry(_frameCacheStamp, owner.Version, worldPosition, screen);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool ShouldSubmitDenseOwner(Entity owner, int stableId, int x, int y, float screenWidth, float screenHeight)
         {
             int ownerKey = ResolveDenseOwnerKey(owner, stableId);
@@ -247,14 +335,20 @@ namespace Ludots.Core.Presentation.Systems
                 return true;
             }
 
-            if (_acceptedDenseOwners.Contains(ownerKey))
+            int mark = GetDenseOwnerMark(ownerKey);
+            if (mark == DenseOwnerAccepted)
             {
                 return true;
             }
 
-            if (_acceptedDenseOwners.Count >= MaxDenseScreenOwners)
+            if (mark == DenseOwnerRejected)
             {
-                _rejectedDenseOwners.Add(ownerKey);
+                return false;
+            }
+
+            if (_acceptedDenseOwnerCount >= MaxDenseScreenOwners)
+            {
+                SetDenseOwnerMark(ownerKey, DenseOwnerRejected);
                 return false;
             }
 
@@ -265,12 +359,13 @@ namespace Ludots.Core.Presentation.Systems
             int cellIndex = cellY * _denseCellColumns + cellX;
             if (_denseCellOwners[cellIndex] != 0)
             {
-                _rejectedDenseOwners.Add(ownerKey);
+                SetDenseOwnerMark(ownerKey, DenseOwnerRejected);
                 return false;
             }
 
             _denseCellOwners[cellIndex] = ownerKey;
-            _acceptedDenseOwners.Add(ownerKey);
+            SetDenseOwnerMark(ownerKey, DenseOwnerAccepted);
+            _acceptedDenseOwnerCount++;
             return true;
         }
 
@@ -278,13 +373,60 @@ namespace Ludots.Core.Presentation.Systems
         private bool IsDenseOwnerRejected(Entity owner, int stableId)
         {
             int ownerKey = ResolveDenseOwnerKey(owner, stableId);
-            return ownerKey > 0 && _rejectedDenseOwners.Contains(ownerKey);
+            return ownerKey > 0 && GetDenseOwnerMark(ownerKey) == DenseOwnerRejected;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int GetDenseOwnerMark(int ownerKey)
+        {
+            if ((uint)ownerKey >= (uint)_denseOwnerStamps.Length)
+            {
+                return 0;
+            }
+
+            return _denseOwnerStamps[ownerKey] == _denseOwnerStamp ? _denseOwnerMarks[ownerKey] : 0;
+        }
+
+        private void SetDenseOwnerMark(int ownerKey, int mark)
+        {
+            if (ownerKey >= _denseOwnerMarks.Length)
+            {
+                int next = _denseOwnerMarks.Length == 0 ? 1024 : _denseOwnerMarks.Length;
+                while (next <= ownerKey)
+                {
+                    next *= 2;
+                }
+
+                Array.Resize(ref _denseOwnerMarks, next);
+                Array.Resize(ref _denseOwnerStamps, next);
+            }
+
+            _denseOwnerMarks[ownerKey] = mark;
+            _denseOwnerStamps[ownerKey] = _denseOwnerStamp;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int ResolveDenseOwnerKey(Entity owner, int stableId)
         {
-            return owner != Entity.Null ? owner.Id : stableId;
+            return IsAssignedOwner(owner) ? ResolveOwnerCacheKey(owner) : ResolveStableProjectionKey(stableId);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int ResolveOwnerCacheKey(Entity owner)
+        {
+            return owner.Id + 1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int ResolveStableProjectionKey(int stableId)
+        {
+            return stableId > 0 ? stableId : 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsAssignedOwner(Entity owner)
+        {
+            return owner.Id >= 0 && owner.Version > 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -312,5 +454,26 @@ namespace Ludots.Core.Presentation.Systems
             float screenY = (1f - ndcY) * 0.5f * projection.Resolution.Y;
             return new System.Numerics.Vector2(screenX, screenY);
         }
+
+        private void AdvanceFrameCacheStamp()
+        {
+            _frameCacheStamp++;
+            if (_frameCacheStamp != int.MaxValue)
+            {
+                return;
+            }
+
+            Array.Clear(_ownerVisibilityCache, 0, _ownerVisibilityCache.Length);
+            Array.Clear(_projectionCache, 0, _projectionCache.Length);
+            _frameCacheStamp = 1;
+        }
+
+        private readonly record struct OwnerVisibilityCacheEntry(int Stamp, int Version, bool IsVisible);
+
+        private readonly record struct ProjectionCacheEntry(
+            int Stamp,
+            int Version,
+            System.Numerics.Vector3 WorldPosition,
+            System.Numerics.Vector2 ScreenPosition);
     }
 }

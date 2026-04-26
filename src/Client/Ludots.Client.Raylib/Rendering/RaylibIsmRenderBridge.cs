@@ -64,6 +64,7 @@ namespace Ludots.Client.Raylib.Rendering
         private RaylibBenchmarkStats _lastStats;
         private int _benchmarkActiveInstanceCount;
         private int _lastPersistentSnapshotRevision = -1;
+        private int _lastPersistentStaticMeshGeometryRevision = -1;
         private double _lastBenchmarkBucketRebuildMs;
         private BucketCacheOwner _bucketOwner;
 
@@ -75,33 +76,40 @@ namespace Ludots.Client.Raylib.Rendering
 
         public RaylibBenchmarkStats LastStats => _lastStats;
 
+        public double LastPersistentSyncMs { get; private set; }
+
         public void SyncPersistentLanes(PrimitiveDrawBuffer? snapshot)
         {
+            long syncStart = Stopwatch.GetTimestamp();
             if (snapshot == null)
             {
                 _planner.Sync(snapshot);
                 ClearBucketCache();
-                _lastPersistentSnapshotRevision = -1;
+                LastPersistentSyncMs = (Stopwatch.GetTimestamp() - syncStart) * 1000d / Stopwatch.Frequency;
                 return;
             }
 
             bool requiresFullRebuild = _bucketOwner != BucketCacheOwner.PersistentSync;
-            int snapshotRevision = snapshot.Revision;
-            if (!requiresFullRebuild && snapshotRevision == _lastPersistentSnapshotRevision)
+            int staticMeshGeometryRevision = snapshot.StaticMeshGeometryRevision;
+            if (!requiresFullRebuild && staticMeshGeometryRevision == _lastPersistentStaticMeshGeometryRevision)
             {
+                LastPersistentSyncMs = (Stopwatch.GetTimestamp() - syncStart) * 1000d / Stopwatch.Frequency;
                 return;
             }
 
             _planner.Sync(snapshot);
-            _lastPersistentSnapshotRevision = snapshotRevision;
+            _lastPersistentSnapshotRevision = snapshot.Revision;
+            _lastPersistentStaticMeshGeometryRevision = staticMeshGeometryRevision;
             if (requiresFullRebuild)
             {
                 RebuildBuckets(_planner.ActiveBindings.Values);
                 _bucketOwner = BucketCacheOwner.PersistentSync;
+                LastPersistentSyncMs = (Stopwatch.GetTimestamp() - syncStart) * 1000d / Stopwatch.Frequency;
                 return;
             }
 
             ApplySyncOperations(_planner.Operations);
+            LastPersistentSyncMs = (Stopwatch.GetTimestamp() - syncStart) * 1000d / Stopwatch.Frequency;
         }
 
         public void SetBenchmarkScene(in RaylibBenchmarkScene scene)
@@ -201,6 +209,7 @@ namespace Ludots.Client.Raylib.Rendering
             _bucketSlotsByStableId.Clear();
             _bucketOwner = BucketCacheOwner.None;
             _lastPersistentSnapshotRevision = -1;
+            _lastPersistentStaticMeshGeometryRevision = -1;
         }
 
         private void RebuildBuckets(IEnumerable<StaticMeshAdapterBindingState> bindings)
@@ -274,8 +283,19 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
+            PrimitiveDrawItem current = slot.Bucket.Items[slot.ItemIndex];
             slot.Bucket.Items[slot.ItemIndex] = binding.Item;
-            slot.Bucket.MarkDirty();
+            if (!InstanceMatrixEquals(current, binding.Item))
+            {
+                slot.Bucket.MarkDirty();
+            }
+        }
+
+        private static bool InstanceMatrixEquals(in PrimitiveDrawItem a, in PrimitiveDrawItem b)
+        {
+            return a.Position.Equals(b.Position)
+                && a.Rotation.Equals(b.Rotation)
+                && a.Scale.Equals(b.Scale);
         }
 
         private void RemoveVisibleBinding(int stableId)

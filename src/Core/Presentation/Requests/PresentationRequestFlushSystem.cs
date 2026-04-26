@@ -122,6 +122,7 @@ namespace Ludots.Core.Presentation.Requests
                 _stableDrawCache.Project(_visualProxyEmitter, evictUntouched: false);
                 _lastProjectedRevision = contentRevision;
                 _snapshotBuffer.SetRevision(contentRevision);
+                _snapshotBuffer.SetStaticMeshGeometryRevision(_stableDrawCache.StaticMeshGeometryRevision);
             }
             _requests.Clear();
 

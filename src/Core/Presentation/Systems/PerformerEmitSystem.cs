@@ -100,11 +100,14 @@ namespace Ludots.Core.Presentation.Systems
         {
             if (!_runtime.HasDirtyRetainedPresentationRequests)
             {
+                _timingDiagnostics?.ObservePerformerEmitRetainedBreakdown(processMs: 0d, dirtyCount: 0);
                 return;
             }
 
+            long processStart = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
             int cachedDefId = -1;
             PerformerDefinition? cachedDefinition = null;
+            int dirtyCount = 0;
             foreach (ref var chunk in World.Query(in DirtyRetainedRequestEmitQuery))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
@@ -121,6 +124,7 @@ namespace Ludots.Core.Presentation.Systems
                         continue;
                     }
 
+                    dirtyCount++;
                     Entity entity = Unsafe.Add(ref entityFirst, index);
                     ref PerformerState state = ref states[index];
                     if (state.DefId != cachedDefId)
@@ -148,6 +152,13 @@ namespace Ludots.Core.Presentation.Systems
                         deltaTime: 0f,
                         clearDirtyAfterProcessing: true);
                 }
+            }
+
+            if (_timingDiagnostics != null)
+            {
+                _timingDiagnostics.ObservePerformerEmitRetainedBreakdown(
+                    (Stopwatch.GetTimestamp() - processStart) * 1000d / Stopwatch.Frequency,
+                    dirtyCount);
             }
         }
 

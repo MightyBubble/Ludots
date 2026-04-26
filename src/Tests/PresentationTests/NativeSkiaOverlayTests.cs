@@ -390,7 +390,7 @@ public sealed class NativeSkiaOverlayTests
     }
 
     [Test]
-    public void SkiaOverlayRenderer_ReusesSkippedLargeLanePicture_WhenPacerDefersRefresh()
+    public void SkiaOverlayRenderer_UsesLargeLaneHotpath_WhenPacerDefersRefresh()
     {
         var scene = new PresentationOverlayScene(256);
         BuildLargeUnderUiScene(scene, xOffset: 0f);
@@ -404,7 +404,8 @@ public sealed class NativeSkiaOverlayTests
         renderer.ResetFrameStats();
         renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi, coldStartPlan);
         pacer.MarkPresented(scene, coldStartPlan);
-        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(2));
+        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0),
+            "Large UnderUi bar/text lanes should stay on the immediate hotpath instead of rebuilding SKPictures.");
 
         BuildLargeUnderUiScene(scene, xOffset: 1f);
         PresentationOverlayLanePacer.LaneRefreshPlan refreshPlan = pacer.BuildPlan(scene);
@@ -421,7 +422,7 @@ public sealed class NativeSkiaOverlayTests
 
         Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0));
         Assert.That(CountOpaquePixels(bitmap, 96, 4, 132, 28), Is.GreaterThan(0),
-            "Large text lane should stay current-frame while the skipped bar lane reuses translated retained content.");
+            "Large text lane should stay current-frame while the skipped bar lane remains drawable through the large-lane hotpath.");
     }
 
     [Test]

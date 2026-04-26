@@ -55,6 +55,10 @@ namespace Ludots.Client.Raylib.Rendering
         public int LastInstancedBatches { get; private set; }
         public double LastInstancedMatrixBuildMs { get; private set; }
         public double LastInstancedMeshDrawMs { get; private set; }
+        public double LastPersistentSyncMs { get; private set; }
+        public double LastPersistentBucketDrawMs { get; private set; }
+        public double LastImmediateDrawMs { get; private set; }
+        public int LastImmediateSkippedCount { get; private set; }
         public int LastInstancedMatrixCacheHits { get; private set; }
         public int LastInstancedMatrixCacheMisses { get; private set; }
         public int LastPersistentCreates { get; private set; }
@@ -108,6 +112,10 @@ namespace Ludots.Client.Raylib.Rendering
             LastInstancedBatches = 0;
             LastInstancedMatrixBuildMs = 0d;
             LastInstancedMeshDrawMs = 0d;
+            LastPersistentSyncMs = 0d;
+            LastPersistentBucketDrawMs = 0d;
+            LastImmediateDrawMs = 0d;
+            LastImmediateSkippedCount = 0;
             LastInstancedMatrixCacheHits = 0;
             LastInstancedMatrixCacheMisses = 0;
             LastPersistentCreates = 0;
@@ -124,16 +132,31 @@ namespace Ludots.Client.Raylib.Rendering
             if (usePersistentStaticLanes)
             {
                 _ismBridge.SyncPersistentLanes(snapshot);
+                LastPersistentSyncMs = _ismBridge.LastPersistentSyncMs;
                 LastPersistentCreates = _ismBridge.Planner.LastCreateCount;
                 LastPersistentUpdates = _ismBridge.Planner.LastUpdateCount;
                 LastPersistentRemoves = _ismBridge.Planner.LastRemoveCount;
+                long bucketStart = Stopwatch.GetTimestamp();
                 DrawPersistentStaticLanes(camera, meshes, scaleMul, in finalizationContext);
+                LastPersistentBucketDrawMs = (Stopwatch.GetTimestamp() - bucketStart) * 1000d / Stopwatch.Frequency;
                 if (skinnedBatch != null)
                 {
                     DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul, in finalizationContext);
                 }
 
-                DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: true, skinnedBatchActive: skinnedBatch != null, in finalizationContext);
+                int coveredByPersistentLanes = draw.StaticMeshLaneItemCount +
+                    (skinnedBatch != null ? draw.SkinnedLaneItemCount : 0);
+                if (coveredByPersistentLanes == span.Length)
+                {
+                    LastImmediateSkippedCount = span.Length;
+                }
+                else
+                {
+                    long immediateStart = Stopwatch.GetTimestamp();
+                    DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: true, skinnedBatchActive: skinnedBatch != null, in finalizationContext);
+                    LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateStart) * 1000d / Stopwatch.Frequency;
+                }
+
                 return;
             }
 
@@ -143,7 +166,9 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
+            long fallbackImmediateStart = Stopwatch.GetTimestamp();
             DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: false, in finalizationContext);
+            LastImmediateDrawMs = (Stopwatch.GetTimestamp() - fallbackImmediateStart) * 1000d / Stopwatch.Frequency;
         }
 
         private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
@@ -168,11 +193,13 @@ namespace Ludots.Client.Raylib.Rendering
                 ref readonly var item = ref span[i];
                 if (skinnedBatchActive && item.RenderPath.IsSkinnedLane())
                 {
+                    LastImmediateSkippedCount++;
                     continue;
                 }
 
                 if (ShouldSkipImmediateDraw(item, persistentStaticLanesActive))
                 {
+                    LastImmediateSkippedCount++;
                     continue;
                 }
 
@@ -1385,6 +1412,10 @@ namespace Ludots.Client.Raylib.Rendering
             LastInstancedBatches = 0;
             LastInstancedMatrixBuildMs = 0d;
             LastInstancedMeshDrawMs = 0d;
+            LastPersistentSyncMs = 0d;
+            LastPersistentBucketDrawMs = 0d;
+            LastImmediateDrawMs = 0d;
+            LastImmediateSkippedCount = 0;
             LastInstancedMatrixCacheHits = 0;
             LastInstancedMatrixCacheMisses = 0;
         }
@@ -1756,8 +1787,10 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
             if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
+            _material.shader = default;
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);
+            _initialized = false;
         }
 
         private struct CachedModel

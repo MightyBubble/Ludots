@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Presentation.Rendering
 {
@@ -18,9 +19,11 @@ namespace Ludots.Core.Presentation.Rendering
         private int _count;
         private int _frameStamp;
         private int _contentRevision;
+        private int _staticMeshGeometryRevision;
 
         public int Count => _count;
         public int ContentRevision => _contentRevision;
+        public int StaticMeshGeometryRevision => _staticMeshGeometryRevision;
 
         public StableDrawCache(int capacity = 131072)
         {
@@ -49,9 +52,15 @@ namespace Ludots.Core.Presentation.Rendering
         {
             if (_slotByStableId.TryGetValue(proxy.StableId, out int existing))
             {
-                if (!ProxyEquals(_entries[existing], proxy))
+                PresentationVisualProxy current = _entries[existing];
+                if (!ProxyEquals(current, proxy))
                 {
                     _contentRevision++;
+                }
+
+                if (!StaticMeshLaneStateEquals(current, proxy))
+                {
+                    _staticMeshGeometryRevision++;
                 }
 
                 _entries[existing] = proxy;
@@ -65,6 +74,10 @@ namespace Ludots.Core.Presentation.Rendering
             _entries[slot] = proxy;
             _frameTouched[slot] = _frameStamp;
             _contentRevision++;
+            if (proxy.RenderPath.IsStaticInstanceLane())
+            {
+                _staticMeshGeometryRevision++;
+            }
         }
 
         public void AddNew(in PresentationVisualProxy proxy)
@@ -75,6 +88,10 @@ namespace Ludots.Core.Presentation.Rendering
             _entries[slot] = proxy;
             _frameTouched[slot] = _frameStamp;
             _contentRevision++;
+            if (proxy.RenderPath.IsStaticInstanceLane())
+            {
+                _staticMeshGeometryRevision++;
+            }
         }
 
         public void Remove(int stableId)
@@ -103,6 +120,10 @@ namespace Ludots.Core.Presentation.Rendering
             _entries[slot].Position = newPosition;
             _frameTouched[slot] = _frameStamp;
             _contentRevision++;
+            if (_entries[slot].RenderPath.IsStaticInstanceLane())
+            {
+                _staticMeshGeometryRevision++;
+            }
             return true;
         }
 
@@ -133,6 +154,7 @@ namespace Ludots.Core.Presentation.Rendering
             _count = 0;
             _frameStamp = 0;
             _contentRevision = 0;
+            _staticMeshGeometryRevision = 0;
             Array.Clear(_frameTouched, 0, _frameTouched.Length);
         }
 
@@ -157,6 +179,11 @@ namespace Ludots.Core.Presentation.Rendering
         {
             int last = _count - 1;
             int removedStableId = _entries[slot].StableId;
+            if (_entries[slot].RenderPath.IsStaticInstanceLane())
+            {
+                _staticMeshGeometryRevision++;
+            }
+
             _slotByStableId.Remove(removedStableId);
 
             if (slot != last)
@@ -180,6 +207,38 @@ namespace Ludots.Core.Presentation.Rendering
                 && a.Mobility == b.Mobility
                 && a.Flags == b.Flags
                 && a.LOD == b.LOD;
+        }
+
+        private static bool StaticMeshLaneStateEquals(in PresentationVisualProxy a, in PresentationVisualProxy b)
+        {
+            PrimitiveDrawItem itemA = ToPrimitive(a);
+            PrimitiveDrawItem itemB = ToPrimitive(b);
+            bool supportsA = itemA.RenderPath.IsStaticInstanceLane();
+            bool supportsB = itemB.RenderPath.IsStaticInstanceLane();
+            if (!supportsA || !supportsB)
+            {
+                return supportsA == supportsB;
+            }
+
+            return itemA.MeshAssetId == itemB.MeshAssetId
+                && itemA.MaterialId == itemB.MaterialId
+                && itemA.RenderPath == itemB.RenderPath
+                && itemA.Mobility == itemB.Mobility
+                && itemA.Position.Equals(itemB.Position)
+                && itemA.Rotation.Equals(itemB.Rotation)
+                && itemA.Scale.Equals(itemB.Scale)
+                && itemA.Visibility == itemB.Visibility;
+        }
+
+        private static PrimitiveDrawItem ToPrimitive(in PresentationVisualProxy proxy)
+        {
+            return new PrimitiveDrawItem
+            {
+                Payload = proxy.Payload,
+                Mobility = proxy.Mobility,
+                Flags = proxy.Flags,
+                LOD = proxy.LOD,
+            };
         }
     }
 }
