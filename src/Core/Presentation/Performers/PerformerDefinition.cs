@@ -81,6 +81,7 @@ namespace Ludots.Core.Presentation.Performers
         internal uint AnimatorSlotMask;
         internal bool HasAssetBindingBehavior;
         internal bool HasAnimatorBehavior;
+        internal bool HasSoundBehavior;
         internal bool HasSurfaceAuthoring;
         internal bool RequiresBootstrapProcessing;
         internal bool UsesStableVisualCache;
@@ -98,7 +99,10 @@ namespace Ludots.Core.Presentation.Performers
         internal int[] AssetBehaviorIndices = System.Array.Empty<int>();
         internal int[] CacheableAssetBehaviorIndices = System.Array.Empty<int>();
         internal int[] TickBehaviorIndices = System.Array.Empty<int>();
+        internal int[] BootstrapGroundingBehaviorIndices = System.Array.Empty<int>();
         internal int[] MaterialBehaviorIndices = System.Array.Empty<int>();
+        internal bool HasEveryFrameGroundingWork;
+        internal bool TickBehaviorsAreGroundingOnly;
         internal int[] MaterialSourceFloatParamKeys = System.Array.Empty<int>();
         internal int[] StaticVisualFloatParamKeys = System.Array.Empty<int>();
         internal int[] StaticVisualIntParamKeys = System.Array.Empty<int>();
@@ -191,6 +195,7 @@ namespace Ludots.Core.Presentation.Performers
             AnimatorSlotMask = 0u;
             HasAssetBindingBehavior = false;
             HasAnimatorBehavior = false;
+            HasSoundBehavior = false;
             HasSurfaceAuthoring = Surface != null;
             RequiresBootstrapProcessing = (Bindings != null && Bindings.Length > 0) || HasSurfaceAuthoring;
             UsesStableVisualCache = false;
@@ -208,7 +213,10 @@ namespace Ludots.Core.Presentation.Performers
             AssetBehaviorIndices = System.Array.Empty<int>();
             CacheableAssetBehaviorIndices = System.Array.Empty<int>();
             TickBehaviorIndices = System.Array.Empty<int>();
+            BootstrapGroundingBehaviorIndices = System.Array.Empty<int>();
             MaterialBehaviorIndices = System.Array.Empty<int>();
+            HasEveryFrameGroundingWork = false;
+            TickBehaviorsAreGroundingOnly = false;
             MaterialSourceFloatParamKeys = System.Array.Empty<int>();
             StaticVisualFloatParamKeys = System.Array.Empty<int>();
             StaticVisualIntParamKeys = System.Array.Empty<int>();
@@ -259,6 +267,7 @@ namespace Ludots.Core.Presentation.Performers
             System.Collections.Generic.List<int>? assetBehaviorIndices = null;
             System.Collections.Generic.List<int>? cacheableAssetBehaviorIndices = null;
             System.Collections.Generic.List<int>? tickBehaviorIndices = null;
+            System.Collections.Generic.List<int>? bootstrapGroundingBehaviorIndices = null;
             bool hasCacheableVisual = false;
             bool hasDynamicVisualLane = false;
             bool hasStaticOnlyVisuals = true;
@@ -355,21 +364,30 @@ namespace Ludots.Core.Presentation.Performers
                         }
                         break;
                     case BehaviorKind.Grounding:
-                        if (slot.Grounding.Mode != GroundingMode.None &&
-                            slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.EveryFrame)
+                        if (slot.Grounding.Mode == GroundingMode.None)
+                        {
+                            break;
+                        }
+
+                        if (slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.EveryFrame)
                         {
                             tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
                             tickBehaviorIndices.Add(i);
+                            HasEveryFrameGroundingWork = true;
                             blocksEventDrivenStaticEmit = true;
                             hasStaticOnlyVisuals = false;
-                        }
-                        if (slot.Grounding.Mode != GroundingMode.None &&
-                            slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.Once)
-                        {
                             RequiresBootstrapProcessing = true;
+                            bootstrapGroundingBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
+                            bootstrapGroundingBehaviorIndices.Add(i);
+                            break;
                         }
+
+                        RequiresBootstrapProcessing = true;
+                        bootstrapGroundingBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
+                        bootstrapGroundingBehaviorIndices.Add(i);
                         break;
                     case BehaviorKind.Sound:
+                        HasSoundBehavior = true;
                         tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
                         tickBehaviorIndices.Add(i);
                         blocksEventDrivenStaticEmit = true;
@@ -393,7 +411,11 @@ namespace Ludots.Core.Presentation.Performers
             AssetBehaviorIndices = assetBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             CacheableAssetBehaviorIndices = cacheableAssetBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             TickBehaviorIndices = tickBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            BootstrapGroundingBehaviorIndices = bootstrapGroundingBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             MaterialBehaviorIndices = materialBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            TickBehaviorsAreGroundingOnly = HasEveryFrameGroundingWork &&
+                                           TickBehaviorIndices.Length != 0 &&
+                                           TickBehaviorIndices.Length == CountEveryFrameGroundingTickBehaviors(Behaviors, TickBehaviorIndices);
             MaterialSourceFloatParamKeys = materialSourceFloatParams.Count == 0 ? System.Array.Empty<int>() : Sort(materialSourceFloatParams);
             StaticVisualFloatParamKeys = staticFloatParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticFloatParams);
             StaticVisualIntParamKeys = staticIntParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticIntParams);
@@ -492,6 +514,23 @@ namespace Ludots.Core.Presentation.Performers
         private static bool SupportsReplayableSingleRequest(AssetKind kind)
         {
             return kind is AssetKind.WorldHud or AssetKind.WorldText or AssetKind.Spline or AssetKind.GroundOverlay;
+        }
+
+        private static int CountEveryFrameGroundingTickBehaviors(BehaviorSlot[] behaviors, int[] tickBehaviorIndices)
+        {
+            int count = 0;
+            for (int i = 0; i < tickBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[tickBehaviorIndices[i]];
+                if (slot.Kind == BehaviorKind.Grounding &&
+                    slot.Grounding.Mode != GroundingMode.None &&
+                    slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.EveryFrame)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private static int ResolveAttributeId(in ValueRef value)

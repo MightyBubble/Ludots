@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Reflection;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay;
@@ -179,6 +180,57 @@ namespace Ludots.Tests.Presentation
                 asset);
 
             Assert.That(resolved.Position, Is.EqualTo(new Vector3(7f, 8f, 9f)));
+        }
+
+        [Test]
+        public void DefinitionMetadata_SplitsBootstrapAndEveryFrameGroundingLanes()
+        {
+            var definitions = new PerformerDefinitionRegistry();
+
+            int defId = definitions.Register("grounding.lane.split", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            UpdatePolicy = GroundingUpdatePolicy.Once,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.AlignToSurface,
+                            UpdatePolicy = GroundingUpdatePolicy.EveryFrame,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 2,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.None,
+                            UpdatePolicy = GroundingUpdatePolicy.EveryFrame,
+                        },
+                    },
+                ],
+            });
+
+            PerformerDefinition definition = definitions.Get(defId);
+
+            Assert.That(ReadInternalIntArray(definition, "BootstrapGroundingBehaviorIndices"), Is.EqualTo(new[] { 0, 1 }));
+            Assert.That(ReadInternalIntArray(definition, "TickBehaviorIndices"), Is.EqualTo(new[] { 1 }));
         }
 
         [Test]
@@ -973,6 +1025,13 @@ namespace Ludots.Tests.Presentation
             {
                 throw new AssertionException("GroundingMode.None should not raycast heightmap.");
             }
+        }
+
+        private static int[] ReadInternalIntArray(PerformerDefinition definition, string fieldName)
+        {
+            FieldInfo? field = typeof(PerformerDefinition).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null, $"Missing internal performer metadata field '{fieldName}'.");
+            return (int[])field!.GetValue(definition)!;
         }
     }
 }

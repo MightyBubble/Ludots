@@ -87,6 +87,7 @@ namespace Ludots.Core.Presentation.Systems
         private float[] _groundingWorldZCm = Array.Empty<float>();
         private float[] _groundingHeightsCm = Array.Empty<float>();
         private bool _warnedMissingGroundingHeightmap;
+        private bool _warnedGroundingSampleFailure;
 
         private struct SoundTrackingState
         {
@@ -293,6 +294,7 @@ namespace Ludots.Core.Presentation.Systems
             {
                 if (TrySkipOwnerBackedSnapToGroundBatch(
                         states,
+                        definition.BootstrapGroundingBehaviorIndices,
                         definition.Behaviors,
                         chunk))
                 {
@@ -306,6 +308,7 @@ namespace Ludots.Core.Presentation.Systems
                     SetBootstrapGroundingMissingHeightmapHeightBatch(
                         positions,
                         states,
+                        definition.BootstrapGroundingBehaviorIndices,
                         definition.Behaviors,
                         chunk);
                 }
@@ -315,6 +318,7 @@ namespace Ludots.Core.Presentation.Systems
                         positions,
                         rotations,
                         states,
+                        definition.BootstrapGroundingBehaviorIndices,
                         definition.Behaviors,
                         heightmap,
                         chunk);
@@ -503,13 +507,13 @@ namespace Ludots.Core.Presentation.Systems
                     singleDefinitionChunk = false;
                 }
 
-                bool batchGrounding = singleDefinitionChunk && chunkDefinition != null && DefinitionHasGroundingWork(chunkDefinition);
+                bool batchGrounding = singleDefinitionChunk && chunkDefinition != null && chunkDefinition.HasEveryFrameGroundingWork;
                 Span<PerformerWorldRotation> rotations = batchGrounding
                     ? chunk.GetSpan<PerformerWorldRotation>()
                     : Span<PerformerWorldRotation>.Empty;
                 ref Entity entityFirst = ref chunk.Entity(0);
 
-                if (batchGrounding && DefinitionIsGroundingOnly(chunkDefinition!))
+                if (batchGrounding && chunkDefinition!.TickBehaviorsAreGroundingOnly)
                 {
                     if (TrySkipOwnerBackedSnapToGroundBatch(
                             states,
@@ -697,7 +701,7 @@ namespace Ludots.Core.Presentation.Systems
                 ApplyBindings(entity, owner, definition);
             }
 
-            bool hasSoundBehavior = HasSoundBehavior(behaviors);
+            bool hasSoundBehavior = definition.HasSoundBehavior;
             if (hasSoundBehavior)
             {
                 HandleReusedSoundSlot(entity, in state, behaviors);
@@ -796,19 +800,6 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
-        }
-
-        private static bool HasSoundBehavior(BehaviorSlot[] behaviors)
-        {
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                if (behaviors[i].Kind == BehaviorKind.Sound)
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private void ProcessMaterialBehaviors(Entity entity, in PerformerState state, PerformerDefinition definition)
@@ -1281,6 +1272,17 @@ namespace Ludots.Core.Presentation.Systems
             _warnedMissingGroundingHeightmap = true;
         }
 
+        private void WarnGroundingSampleFailure()
+        {
+            if (_warnedGroundingSampleFailure)
+            {
+                return;
+            }
+
+            Log.Warn(in LogChannels.Presentation, "Performer grounding batch could not sample visual heights; grounding writes height 0.");
+            _warnedGroundingSampleFailure = true;
+        }
+
         private void SetGroundingMissingHeightmapHeight(Entity entity, float offset)
         {
             if (!World.Has<PerformerWorldPosition>(entity))
@@ -1323,12 +1325,13 @@ namespace Ludots.Core.Presentation.Systems
         private void SetBootstrapGroundingMissingHeightmapHeightBatch(
             Span<PerformerWorldPosition> positions,
             Span<PerformerState> states,
+            int[] behaviorIndices,
             BehaviorSlot[] behaviors,
             Chunk chunk)
         {
-            for (int behaviorIndex = 0; behaviorIndex < behaviors.Length; behaviorIndex++)
+            for (int i = 0; i < behaviorIndices.Length; i++)
             {
-                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndices[i]];
                 if (slot.Kind != BehaviorKind.Grounding ||
                     slot.Grounding.Mode == GroundingMode.None)
                 {
@@ -1378,49 +1381,6 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             return true;
-        }
-
-        private bool TrySkipOwnerBackedSnapToGroundBatch(
-            Span<PerformerState> states,
-            BehaviorSlot[] behaviors,
-            Chunk chunk)
-        {
-            if (behaviors.Length == 0 || !chunk.Has<PerformerTransformSource>())
-            {
-                return false;
-            }
-
-            Span<PerformerTransformSource> transformSources = chunk.GetSpan<PerformerTransformSource>();
-            bool sawGrounding = false;
-            for (int behaviorIndex = 0; behaviorIndex < behaviors.Length; behaviorIndex++)
-            {
-                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
-                if (slot.Kind != BehaviorKind.Grounding || slot.Grounding.Mode == GroundingMode.None)
-                {
-                    continue;
-                }
-
-                sawGrounding = true;
-                if (!CanSkipOwnerBackedSnapToGroundBehavior(in slot.Grounding))
-                {
-                    return false;
-                }
-
-                foreach (int index in chunk)
-                {
-                    if (!IsBehaviorActive(states[index].BehaviorActiveMask, slot.SlotIndex))
-                    {
-                        continue;
-                    }
-
-                    if (!CanSkipOwnerBackedSnapToGroundPerformer(in states[index], transformSources[index].Value))
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return sawGrounding;
         }
 
         private bool TrySkipOwnerBackedSnapToGroundBatch(
@@ -1565,13 +1525,14 @@ namespace Ludots.Core.Presentation.Systems
             Span<PerformerWorldPosition> positions,
             Span<PerformerWorldRotation> rotations,
             Span<PerformerState> states,
+            int[] behaviorIndices,
             BehaviorSlot[] behaviors,
             IVisualHeightmap heightmap,
             Chunk chunk)
         {
-            for (int behaviorIndex = 0; behaviorIndex < behaviors.Length; behaviorIndex++)
+            for (int behaviorIndex = 0; behaviorIndex < behaviorIndices.Length; behaviorIndex++)
             {
-                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndices[behaviorIndex]];
                 if (slot.Kind != BehaviorKind.Grounding || slot.Grounding.Mode == GroundingMode.None)
                 {
                     continue;
@@ -1654,7 +1615,7 @@ namespace Ludots.Core.Presentation.Systems
                     _groundingPositions[i].Y = _groundingOffsets[i];
                 }
 
-                Log.Warn(in LogChannels.Presentation, "Performer grounding batch could not sample visual heights; missing-heightmap grounding writes height 0.");
+                WarnGroundingSampleFailure();
                 return;
             }
 
@@ -1925,58 +1886,9 @@ namespace Ludots.Core.Presentation.Systems
             return mask;
         }
 
-        private static bool DefinitionHasGroundingWork(PerformerDefinition definition)
-        {
-            int[] tickBehaviorIndices = definition.TickBehaviorIndices;
-            BehaviorSlot[] behaviors = definition.Behaviors;
-            for (int i = 0; i < tickBehaviorIndices.Length; i++)
-            {
-                ref readonly BehaviorSlot slot = ref behaviors[tickBehaviorIndices[i]];
-                if (slot.Kind == BehaviorKind.Grounding &&
-                    slot.Grounding.Mode != GroundingMode.None &&
-                    slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.EveryFrame)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         private static bool DefinitionHasBootstrapGroundingWork(PerformerDefinition definition)
         {
-            BehaviorSlot[] behaviors = definition.Behaviors;
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.Kind == BehaviorKind.Grounding && slot.Grounding.Mode != GroundingMode.None)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool DefinitionIsGroundingOnly(PerformerDefinition definition)
-        {
-            int[] tickBehaviorIndices = definition.TickBehaviorIndices;
-            if (tickBehaviorIndices.Length == 0)
-            {
-                return false;
-            }
-
-            BehaviorSlot[] behaviors = definition.Behaviors;
-            for (int i = 0; i < tickBehaviorIndices.Length; i++)
-            {
-                ref readonly BehaviorSlot slot = ref behaviors[tickBehaviorIndices[i]];
-                if (slot.Kind != BehaviorKind.Grounding || slot.Grounding.Mode == GroundingMode.None)
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            return definition.BootstrapGroundingBehaviorIndices.Length != 0;
         }
 
         private static bool TryResolveParentAttachmentOnly(
